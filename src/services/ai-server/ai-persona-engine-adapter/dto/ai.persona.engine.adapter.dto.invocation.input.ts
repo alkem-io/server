@@ -4,6 +4,7 @@ import {
   IExternalConfig,
   InteractionMessage,
 } from '@services/ai-server/ai-persona/dto';
+import { PromptGraph } from '@services/ai-server/ai-persona/dto/prompt.graph.dto';
 
 export enum InvocationResultAction {
   POST_REPLY = 'postReply',
@@ -34,6 +35,7 @@ export interface AiPersonaEngineAdapterInvocationInput
   externalConfig: IExternalConfig;
   externalMetadata: ExternalMetadata;
   resultHandler: ResultHandler;
-  personaServiceID: string;
+  personaID: string;
   language?: string;
+  promptGraph?: PromptGraph;
 }

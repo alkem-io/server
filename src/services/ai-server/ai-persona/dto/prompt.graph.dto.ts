@@ -33,7 +33,7 @@ export class PromptGraphDataPoint {
   description?: string;
 
   @Field(() => Boolean, { nullable: false })
-  optional!: boolean;
+  optional?: boolean;
 }
 
 @ObjectType()

@@ -7,35 +7,43 @@
       "output": {
         "title": "FunctionOutput",
         "type": "object",
-        "properties": {
-          "rephrased_question": {
-            "type": ["string", "null"],
+        "properties": [
+          {
+            "name": "rephrased_question",
+            "type": "string",
+            "optional": true,
             "description": "The rephrased question to make it more clear and concise."
           },
-          "context_answer": {
-            "type": ["string", "null"],
+          {
+            "name": "context_answer",
+            "type": "string",
+            "optional": true,
             "description": "The answer to the last message if it is already contained in the conversation."
           },
-          "context_question": {
-            "type": ["string", "null"],
+          {
+            "name": "context_question",
+            "type": "string",
+            "optional": true,
             "description": "A question asking the user to provide more information if needed."
           }
-        }
+        ]
       }
     },
     {
       "name": "retrieve",
       "input_variables": ["rephrased_question", "messages", "bok_id"],
-      "prompt": null,
+      "prompt": "",
       "output": {
         "title": "RetrieveOutput",
         "type": "object",
-        "properties": {
-          "knowledge_docs": {
-            "type": ["object", "null"],
+        "properties": [
+          {
+            "name": "knowledge_docs",
+            "type": "object",
+            "optional": true,
             "description": "List of knowledge documents"
           }
-        }
+        ]
       }
     },
     {
@@ -51,12 +59,14 @@
       "output": {
         "title": "AnswerResponse",
         "type": "object",
-        "properties": {
-          "knowledge_answer": {
+        "properties": [
+          {
+            "name": "knowledge_answer",
             "type": "string",
             "description": "Response to the human message"
           },
-          "source_scores": {
+          {
+            "name": "source_scores",
             "type": "object",
             "description": "Mapping of source_index to relevance_score (0-10)",
             "patternProperties": {
@@ -68,19 +78,22 @@
             },
             "x-key-type": "integer"
           },
-          "human_language": {
+          {
+            "name": "human_language",
             "type": "string",
             "description": "ISO-639-1 code of human's message"
           },
-          "answer_language": {
+          {
+            "name": "answer_language",
             "type": "string",
             "description": "ISO-639-1 code of your response"
           },
-          "knowledge_language": {
+          {
+            "name": "knowledge_language",
             "type": "string",
             "description": "ISO-639-1 code of knowledge text"
           }
-        },
+        ],
         "required": [
           "knowledge_answer",
           "source_scores",
@@ -103,16 +116,19 @@
       "output": {
         "title": "EvaluationResponse",
         "type": "object",
-        "properties": {
-          "final_answer": {
+        "properties": [
+          {
+            "name": "final_answer",
             "type": "string",
             "description": "The final answer to the user's question after evaluation and translation."
           },
-          "original_answer": {
-            "type": ["string", "null"],
+          {
+            "name": "original_answer",
+            "type": "string",
+            "optional": true,
             "description": "The original answer before translation."
           }
-        },
+        ],
         "required": ["final_answer"]
       }
     }
@@ -129,58 +145,78 @@
   "state": {
     "title": "State",
     "type": "object",
-    "properties": {
-      "messages": {
+    "properties": [
+      {
+        "name": "messages",
         "type": "array",
         "items": {
           "type": "object",
-          "properties": {
-            "type": { "type": "string" },
-            "content": { "type": "string" }
-          },
+          "properties": [
+            { "name": "type", "type": "string" },
+            { "name": "content", "type": "string" }
+          ],
           "required": ["type", "content"]
         },
         "description": "Sequence of BaseMessage objects"
       },
-      "prompt": {
-        "type": ["array", "null"],
+      {
+        "name": "prompt",
+        "type": "array",
+        "optional": true,
         "items": { "type": "string" },
         "description": "Optional list of prompt strings"
       },
-      "bok_id": {
+      {
+        "name": "bok_id",
         "type": "string",
         "description": "Book or knowledge base identifier"
       },
-      "knowledge_docs": {
-        "type": ["object", "null"],
+      {
+        "name": "knowledge_docs",
+        "type": "object",
+        "optional": true,
         "description": "List of knowledge documents"
       },
-      "context_answer": {
-        "type": ["string", "null"],
+      {
+        "name": "context_answer",
+        "type": "string",
+        "optional": true,
         "description": "The answer to the last message if it is already contained in the conversation."
       },
-      "rephrased_question": {
-        "type": ["string", "null"],
+      {
+        "name": "rephrased_question",
+        "type": "string",
+        "optional": true,
         "description": "The rephrased question to make it more clear and concise."
       },
-      "context_question": {
-        "type": ["string", "null"],
+      {
+        "name": "context_question",
+        "type": "string",
+        "optional": true,
         "description": "A question asking the user to provide more information if needed."
       },
-      "description": {
-        "type": ["string", "null"],
+      {
+        "name": "description",
+        "type": "string",
+        "optional": true,
         "description": "Description of the expert or context"
       },
-      "display_name": {
-        "type": ["string", "null"],
+      {
+        "name": "display_name",
+        "type": "string",
+        "optional": true,
         "description": "Display name of the expert"
       },
-      "knowledge_answer": {
-        "type": ["string", "null"],
+      {
+        "name": "knowledge_answer",
+        "type": "string",
+        "optional": true,
         "description": "Response to the human message"
       },
-      "source_scores": {
-        "type": ["object", "null"],
+      {
+        "name": "source_scores",
+        "type": "object",
+        "optional": true,
         "description": "Mapping of source_index to relevance_score (0-10)",
         "patternProperties": {
           "^[0-9]+$": {
@@ -191,19 +227,25 @@
         },
         "x-key-type": "integer"
       },
-      "human_language": {
-        "type": ["string", "null"],
+      {
+        "name": "human_language",
+        "type": "string",
+        "optional": true,
         "description": "ISO-639-1 code of human's message"
       },
-      "knowledge_language": {
-        "type": ["string", "null"],
+      {
+        "name": "knowledge_language",
+        "type": "string",
+        "optional": true,
         "description": "ISO-639-1 code of knowledge text"
       },
-      "final_answer": {
-        "type": ["string", "null"],
+      {
+        "name": "final_answer",
+        "type": "string",
+        "optional": true,
         "description": "The final answer to the user's question after evaluation and translation."
       }
-    },
+    ],
     "required": ["messages", "bok_id"]
   }
 }

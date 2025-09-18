@@ -59,10 +59,10 @@ export class AiServerAdapter {
   }
 
   async resetAuthorizationOnAiPersona(
-    personaServiceID: string
+    personaID: string
   ): Promise<IAuthorizationPolicy[]> {
     return await this.aiServerService.resetAuthorizationPolicyOnAiPersona(
-      personaServiceID
+      personaID
     );
   }
 

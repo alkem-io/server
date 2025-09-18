@@ -1,6 +1,7 @@
 import { UUID } from '@domain/common/scalars';
 import { ExternalMetadata } from '@domain/communication/vc-interaction/vc.interaction.entity';
 import { Field, InputType, registerEnumType } from '@nestjs/graphql';
+import { PromptGraph } from './prompt.graph.dto';
 
 export enum InvocationOperation {
   QUERY = 'query',
@@ -136,4 +137,10 @@ export class AiPersonaInvocationInput {
   })
   operation?: InvocationOperation = InvocationOperation.QUERY;
   language?: string;
+
+  @Field(() => PromptGraph, {
+    nullable: true,
+    description: 'Optional prompt graph to use for this invocation',
+  })
+  promptGraph?: PromptGraph;
 }
