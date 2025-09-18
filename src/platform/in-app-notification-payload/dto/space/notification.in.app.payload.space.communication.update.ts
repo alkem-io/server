@@ -5,5 +5,5 @@ import { ObjectType } from '@nestjs/graphql';
   implements: () => IInAppNotificationPayload,
 })
 export abstract class InAppNotificationPayloadSpaceCommunicationUpdate extends InAppNotificationPayloadSpace {
-  updateID!: string;
+  update?: string;
 }

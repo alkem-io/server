@@ -1592,7 +1592,15 @@ export class RoleSetService {
     const application =
       await this.applicationService.createApplication(applicationData);
     application.roleSet = roleSet;
-    return await this.applicationService.save(application);
+
+    const savedApplication = await this.applicationService.save(application);
+
+    await this.roleSetCacheService.deleteMembershipStatusCache(
+      agent.id,
+      roleSet.id
+    );
+
+    return savedApplication;
   }
 
   async createInvitationExistingContributor(
@@ -1621,6 +1629,11 @@ export class RoleSetService {
     if (roleSet.type === RoleSetType.SPACE) {
       await this.assignSpaceInviteeCredential(agent, roleSet);
     }
+
+    await this.roleSetCacheService.deleteMembershipStatusCache(
+      agent.id,
+      roleSet.id
+    );
 
     return result;
   }

@@ -614,7 +614,7 @@ export class NotificationSpaceAdapter {
       const inAppPayload: InAppNotificationPayloadSpaceCommunicationUpdate = {
         type: NotificationEventPayload.SPACE_COMMUNICATION_UPDATE,
         spaceID: space.id,
-        updateID: eventData.updates.id,
+        update: eventData.lastMessage?.message,
       };
 
       await this.notificationInAppAdapter.sendInAppNotifications(

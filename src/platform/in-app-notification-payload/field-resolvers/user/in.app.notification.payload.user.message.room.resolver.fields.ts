@@ -1,3 +1,4 @@
+import { LogContext } from '@common/enums/logging.context';
 import { UserLoaderCreator } from '@core/dataloader/creators';
 import { Loader } from '@core/dataloader/decorators/data.loader.decorator';
 import { ILoader } from '@core/dataloader/loader.interface';
@@ -38,9 +39,23 @@ export class InAppNotificationPayloadUserMessageRoomResolverFields {
     @Parent()
     payload: InAppNotificationPayloadUserMessageRoom
   ): Promise<MessageDetails | null> {
-    return await this.messageDetailsService.getMessageDetails(
-      payload.roomID,
-      payload.messageID
-    );
+    try {
+      return await this.messageDetailsService.getMessageDetails(
+        payload.roomID,
+        payload.messageID
+      );
+    } catch (error) {
+      this.logger.error(
+        {
+          messageId: payload.messageID,
+          roomId: payload.roomID,
+          msg: 'BROKEN_NOTIFICATION_PAYLOAD',
+          name: InAppNotificationPayloadUserMessageRoom.name,
+        },
+        (error as Error)?.stack,
+        LogContext.IN_APP_NOTIFICATION
+      );
+      return null;
+    }
   }
 }

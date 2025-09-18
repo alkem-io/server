@@ -26,6 +26,7 @@ describe('GeoLocationService', () => {
   MockConfigService.useValue = {
     ...MockConfigService.useValue,
     get: () => ({
+      enabled: true,
       service_endpoint: 'mock',
       allowed_calls_to_service: 1,
       allowed_calls_to_service_window: 1,

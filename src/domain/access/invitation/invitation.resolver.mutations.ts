@@ -26,12 +26,12 @@ export class InvitationResolverMutations {
     const invitation = await this.invitationService.getInvitationOrFail(
       deleteData.ID
     );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       invitation.authorization,
       AuthorizationPrivilege.DELETE,
       `delete invitation to community: ${invitation.id}`
     );
-    return await this.invitationService.deleteInvitation(deleteData);
+    return this.invitationService.deleteInvitation(deleteData);
   }
 }
