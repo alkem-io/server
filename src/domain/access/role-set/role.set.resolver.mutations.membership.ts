@@ -436,7 +436,9 @@ export class RoleSetResolverMutationsMembership {
       {
         relations: {
           roleSet: true,
-          user: true,
+          user: {
+            agent: true,
+          },
         },
       }
     );
@@ -460,12 +462,12 @@ export class RoleSetResolverMutationsMembership {
       });
     }
 
-    if (!application.user || !application.roleSet) {
+    if (!application.user || !application.user.agent || !application.roleSet) {
       this.logger.error(
         {
           message:
             'Unable to invalidate application cache because of missing relations',
-          cause: 'Application user or role set is null',
+          cause: 'Application user, user agent or role set is null',
           applicationID: application.id,
         },
         undefined,
@@ -482,11 +484,11 @@ export class RoleSetResolverMutationsMembership {
         application.roleSet.id
       );
       await this.roleSetCacheService.deleteMembershipStatusCache(
-        application.user.id,
+        application.user.agent.id,
         application.roleSet.id
       );
       await this.roleSetCacheService.setAgentIsMemberCache(
-        application.user.id,
+        application.user.agent.id,
         application.roleSet.id,
         isMember
       );
