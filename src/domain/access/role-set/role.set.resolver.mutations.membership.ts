@@ -436,6 +436,9 @@ export class RoleSetResolverMutationsMembership {
       {
         relations: {
           roleSet: true,
+          user: {
+            agent: true,
+          },
         },
       }
     );
@@ -459,26 +462,39 @@ export class RoleSetResolverMutationsMembership {
       });
     }
 
-    if (agentInfo.userID && application.roleSet) {
+    if (!application.user || !application.user.agent || !application.roleSet) {
+      this.logger.error(
+        {
+          message:
+            'Unable to invalidate application cache because of missing relations',
+          cause: 'Application user, user agent or role set is null',
+          applicationID: application.id,
+        },
+        undefined,
+        LogContext.COMMUNITY
+      );
+    } else {
       applicationState = this.lifecycleService.getState(
         application.lifecycle,
         this.roleSetServiceLifecycleApplication.getApplicationMachine()
       );
       const isMember = applicationState === ApplicationLifecycleState.APPROVED;
-      if (agentInfo.userID && application.roleSet) {
-        await this.roleSetCacheService.deleteOpenApplicationFromCache(
-          agentInfo.userID,
-          application.roleSet?.id
-        );
-        await this.roleSetCacheService.setAgentIsMemberCache(
-          agentInfo.agentID,
-          application.roleSet?.id,
-          isMember
-        );
-      }
+      await this.roleSetCacheService.deleteOpenApplicationFromCache(
+        application.user.id,
+        application.roleSet.id
+      );
+      await this.roleSetCacheService.deleteMembershipStatusCache(
+        application.user.agent.id,
+        application.roleSet.id
+      );
+      await this.roleSetCacheService.setAgentIsMemberCache(
+        application.user.agent.id,
+        application.roleSet.id,
+        isMember
+      );
     }
 
-    return await this.applicationService.getApplicationOrFail(
+    return this.applicationService.getApplicationOrFail(
       eventData.applicationID
     );
   }
