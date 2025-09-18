@@ -29,28 +29,8 @@ export class AiPersonaResolverFields {
     nullable: true,
     description: 'The PromptGraph for this Virtual.',
   })
-  async promptGraph(
-    @Parent() parent: AiPersona,
-    @CurrentUser() agentInfo: AgentInfo
-  ) {
-    // Deep clone to avoid mutating the imported object
-    const graph = graphJson;
-    if (Array.isArray(graph.nodes)) {
-      graph.nodes.forEach((node: any) => {
-        if (
-          node.output &&
-          node.output.properties &&
-          typeof node.output.properties === 'object' &&
-          !Array.isArray(node.output.properties)
-        ) {
-          node.output.properties = Object.entries(node.output.properties).map(
-            //@ts-ignore-next-line
-            ([key, value]) => ({ name: key, ...value })
-          );
-        }
-      });
-    }
-    return graph;
+  async promptGraph() {
+    return graphJson;
   }
 
   @ResolveField('authorization', () => IAuthorizationPolicy, {

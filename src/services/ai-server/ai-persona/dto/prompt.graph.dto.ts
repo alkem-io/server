@@ -1,27 +1,6 @@
 import { ObjectType, Field } from '@nestjs/graphql';
 
 @ObjectType()
-export class SourceScore {
-  @Field({ nullable: true })
-  source_index?: string;
-
-  @Field({ nullable: true })
-  score?: number;
-}
-
-@ObjectType()
-export class KnowledgeDoc {
-  @Field({ nullable: true })
-  id?: string;
-
-  @Field({ nullable: true })
-  title?: string;
-
-  @Field({ nullable: true })
-  content?: string;
-}
-
-@ObjectType()
 export class PromptGraphDataPoint {
   @Field(() => String, { nullable: false })
   name!: string;
@@ -32,7 +11,7 @@ export class PromptGraphDataPoint {
   @Field({ nullable: true })
   description?: string;
 
-  @Field(() => Boolean, { nullable: false })
+  @Field(() => Boolean, { nullable: true })
   optional?: boolean;
 }
 
@@ -70,15 +49,6 @@ export class PromptGraphEdge {
 
   @Field({ nullable: true })
   to?: string;
-}
-
-@ObjectType()
-export class PromptGraphStateMessage {
-  @Field({ nullable: true })
-  type?: string;
-
-  @Field({ nullable: true })
-  content?: string;
 }
 
 @ObjectType()
