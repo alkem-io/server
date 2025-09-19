@@ -196,7 +196,7 @@ export class ConversionResolverMutations {
         LogContext.CONVERSION
       );
     }
-    const spaceID = virtualContributor.knowledgeSpace?.id;
+    const spaceID = virtualContributor.bodyOfKnowledgeID;
     if (!spaceID) {
       throw new ValidationException(
         `Virtual Contributor does not have a body of knowledge: ${virtualContributor.id}`,

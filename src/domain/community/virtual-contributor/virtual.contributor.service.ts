@@ -54,7 +54,7 @@ export class VirtualContributorService {
     private profileService: ProfileService,
     private contributorService: ContributorService,
     private communicationAdapter: CommunicationAdapter,
-    private aiPersona: AiPersonaService,
+    private aiPersonaService: AiPersonaService,
     private aiServerAdapter: AiServerAdapter,
     private knowledgeBaseService: KnowledgeBaseService,
     private virtualContributorLookupService: VirtualContributorLookupService,
@@ -125,12 +125,11 @@ export class VirtualContributorService {
 
     const aiPersonaInput: CreateAiPersonaInput = {
       ...virtualContributorData.aiPersona,
-      description: `AI Persona for virtual contributor ${virtualContributor.nameID}`,
     };
 
     // Get the default AI server
     const aiServer = await this.aiServerAdapter.getAiServer();
-    const aiPersona = await this.aiPersona.createAiPersona(
+    const aiPersona = await this.aiPersonaService.createAiPersona(
       aiPersonaInput,
       aiServer
     );
@@ -329,9 +328,16 @@ export class VirtualContributorService {
     result.id = virtualContributorID;
 
     if (virtualContributor.aiPersonaID) {
-      await this.aiPersona.deleteAiPersona({
-        ID: virtualContributor.aiPersonaID,
-      });
+      try {
+        await this.aiPersonaService.deleteAiPersona({
+          ID: virtualContributor.aiPersonaID,
+        });
+      } catch {
+        this.logger.error(
+          `Failed to delete external AI Persona ${virtualContributor.aiPersonaID} for VC ${virtualContributorID}`,
+          LogContext.AI_PERSONA
+        );
+      }
     }
 
     await this.knowledgeBaseService.delete(virtualContributor.knowledgeBase);
@@ -519,7 +525,7 @@ export class VirtualContributorService {
   async getAiPersonaOrFail(
     virtualContributor: IVirtualContributor
   ): Promise<IAiPersona> {
-    return await this.aiPersona.getAiPersonaOrFail(
+    return await this.aiPersonaService.getAiPersonaOrFail(
       virtualContributor.aiPersonaID
     );
   }

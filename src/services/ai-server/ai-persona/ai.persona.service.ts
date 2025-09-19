@@ -193,7 +193,7 @@ export class AiPersonaService {
     if (!config) {
       return {};
     }
-    const result: IExternalConfig = config;
+    const result: IExternalConfig = { ...config };
     if (config.apiKey) {
       result.apiKey = this.crypto.encrypt(config.apiKey);
     }
@@ -209,7 +209,7 @@ export class AiPersonaService {
     if (!config) {
       return {};
     }
-    const result: IExternalConfig = config;
+    const result: IExternalConfig = { ...config };
     if (config.apiKey) {
       result.apiKey = this.crypto.decrypt(config.apiKey);
     }
