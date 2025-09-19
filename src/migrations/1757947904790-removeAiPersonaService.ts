@@ -41,10 +41,6 @@ export class RemoveAiPersonaService1757947904790 implements MigrationInterface {
       `ALTER TABLE \`virtual_contributor\` ADD \`bodyOfKnowledgeID\` varchar(128) NULL`
     );
 
-    await queryRunner.query(
-      `ALTER TABLE \`ai_persona_service\` ADD \`description\` text NULL`
-    );
-
     await queryRunner.query(`
       UPDATE \`virtual_contributor\` vc
       LEFT JOIN \`ai_persona\` ap ON vc.aiPersonaId = ap.id
@@ -56,13 +52,6 @@ export class RemoveAiPersonaService1757947904790 implements MigrationInterface {
         vc.bodyOfKnowledgeType = aps.bodyOfKnowledgeType,
         vc.bodyOfKnowledgeDescription = ap.bodyOfKnowledge,
         vc.bodyOfKnowledgeID = aps.bodyOfKnowledgeID
-    `);
-
-    await queryRunner.query(`
-      UPDATE \`ai_persona_service\` aps
-      LEFT JOIN \`ai_persona\` ap ON ap.aiPersonaServiceID = aps.id
-      SET
-        aps.description = ap.description
     `);
 
     await queryRunner.query(

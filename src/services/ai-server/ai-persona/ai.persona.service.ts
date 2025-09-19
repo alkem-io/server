@@ -46,7 +46,6 @@ export class AiPersonaService {
 
     aiPersona.engine = aiPersonaData.engine;
     aiPersona.prompt = aiPersonaData.prompt;
-    aiPersona.description = aiPersonaData.description ?? '';
     aiPersona.externalConfig = this.encryptExternalConfig(
       aiPersonaData.externalConfig
     );

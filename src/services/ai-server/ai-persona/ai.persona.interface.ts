@@ -3,7 +3,6 @@ import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { IAiServer } from '../ai-server/ai.server.interface';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 import { IExternalConfig } from './dto/external.config';
-import { Markdown } from '@domain/common/scalars/scalar.markdown';
 
 @ObjectType('AiPersona')
 export abstract class IAiPersona extends IAuthorizable {
@@ -26,12 +25,6 @@ export abstract class IAiPersona extends IAuthorizable {
     description: 'The external configuration for this AI Persona.',
   })
   externalConfig?: IExternalConfig;
-
-  @Field(() => Markdown, {
-    nullable: true,
-    description: 'The description for this AI Persona.',
-  })
-  description?: string;
 
   @Field(() => Date, {
     nullable: true,

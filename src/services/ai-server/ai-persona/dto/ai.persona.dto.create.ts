@@ -21,8 +21,4 @@ export class CreateAiPersonaInput {
 
   @Field(() => IExternalConfig, { nullable: true })
   externalConfig?: IExternalConfig;
-
-  @Field(() => String, { nullable: true })
-  @MaxLength(LONG_TEXT_LENGTH)
-  description?: string;
 }

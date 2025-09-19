@@ -125,7 +125,6 @@ export class VirtualContributorService {
 
     const aiPersonaInput: CreateAiPersonaInput = {
       ...virtualContributorData.aiPersona,
-      description: `AI Persona for virtual contributor ${virtualContributor.nameID}`,
     };
 
     // Get the default AI server

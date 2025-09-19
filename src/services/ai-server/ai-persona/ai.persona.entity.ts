@@ -6,7 +6,6 @@ import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 import { ENUM_LENGTH } from '@common/constants';
 import { IExternalConfig } from './dto/external.config';
 
-// TODO: go through the fields and remove duplicates
 @Entity()
 export class AiPersona extends AuthorizableEntity implements IAiPersona {
   @ManyToOne(() => AiServer, aiServer => aiServer.aiPersonas, {
@@ -26,9 +25,6 @@ export class AiPersona extends AuthorizableEntity implements IAiPersona {
     nullable: true,
   })
   externalConfig?: IExternalConfig = {};
-
-  @Column('text', { nullable: true })
-  description?: string;
 
   @Column({ type: 'datetime', nullable: true })
   bodyOfKnowledgeLastUpdated: Date | null = null;
