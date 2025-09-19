@@ -21,6 +21,7 @@ import { ICredentialDefinition } from '@domain/agent/credential/credential.defin
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { SearchVisibility } from '@common/enums/search.visibility';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
+import { IAccount } from '@domain/space/account/account.interface';
 
 @Injectable()
 export class VirtualContributorAuthorizationService {
@@ -41,7 +42,9 @@ export class VirtualContributorAuthorizationService {
       virtualInput.id,
       {
         relations: {
-          account: true,
+          account: {
+            spaces: true,
+          },
           profile: true,
           agent: true,
           knowledgeBase: true,
@@ -50,14 +53,15 @@ export class VirtualContributorAuthorizationService {
     );
     if (
       !virtual.account ||
+      !virtual.account.spaces ||
       !virtual.profile ||
       !virtual.agent ||
-      !virtual.knowledgeBase ||
-      !virtual.account
+      !virtual.knowledgeBase
     )
       throw new RelationshipNotFoundException(
-        `Unable to load entities for virtual: ${virtual.id} `,
-        LogContext.COMMUNITY
+        'Unable to load entities for VC',
+        LogContext.COMMUNITY,
+        { virtualContributorID: virtual.id }
       );
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
     const accountAdminCredential: ICredentialDefinition = {
@@ -69,7 +73,7 @@ export class VirtualContributorAuthorizationService {
     const credentialCriteriasWithAccessToVC =
       await this.getCredentialsWithVisibilityOfVirtualContributor(
         virtual.searchVisibility,
-        accountAdminCredential
+        virtual.account
       );
 
     virtual.authorization = this.resetToBaseVirtualContributorAuthorization(
@@ -138,7 +142,7 @@ export class VirtualContributorAuthorizationService {
 
   private async getCredentialsWithVisibilityOfVirtualContributor(
     searchVisibility: SearchVisibility,
-    accountAdminCredential?: ICredentialDefinition
+    account: IAccount
   ): Promise<ICredentialDefinition[]> {
     const credentialCriteriasWithAccess: ICredentialDefinition[] = [];
 
@@ -152,8 +156,10 @@ export class VirtualContributorAuthorizationService {
 
       case SearchVisibility.ACCOUNT:
         // ACCOUNT visibility: only accessible within the scope of the account
-        if (accountAdminCredential) {
-          credentialCriteriasWithAccess.push(accountAdminCredential);
+        const accountSpaceMemberCredentials =
+          this.getAccountSpaceMemberCredentials(account);
+        if (accountSpaceMemberCredentials.length > 0) {
+          credentialCriteriasWithAccess.push(...accountSpaceMemberCredentials);
         }
         break;
 
@@ -233,5 +239,24 @@ export class VirtualContributorAuthorizationService {
       updatedAuthorization,
       newRules
     );
+  }
+
+  private getAccountSpaceMemberCredentials(account: IAccount) {
+    if (!account.spaces) {
+      throw new RelationshipNotFoundException(
+        'Unable to load Account with spaces to get membership credentials',
+        LogContext.ACCOUNT,
+        { accountID: account.id }
+      );
+    }
+    const accountMemberCredentials: ICredentialDefinition[] = [];
+    for (const space of account.spaces) {
+      const spaceMemberCredential: ICredentialDefinition = {
+        type: AuthorizationCredential.SPACE_MEMBER,
+        resourceID: space.id,
+      };
+      accountMemberCredentials.push(spaceMemberCredential);
+    }
+    return accountMemberCredentials;
   }
 }

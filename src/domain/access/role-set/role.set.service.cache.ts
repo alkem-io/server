@@ -236,6 +236,13 @@ export class RoleSetCacheService {
     );
   }
 
+  public deleteMembershipStatusCache(
+    agentId: string,
+    roleSetId: string
+  ): Promise<any> {
+    return this.cacheDel(this.getMembershipStatusCacheKey(agentId, roleSetId));
+  }
+
   /**
    * Set open invitation in cache.
    * @param userId - User identifier.
