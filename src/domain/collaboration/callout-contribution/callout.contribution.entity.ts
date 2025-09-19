@@ -1,20 +1,41 @@
-import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
+import {
+  Column,
+  Entity,
+  Generated,
+  JoinColumn,
+  ManyToOne,
+  OneToOne,
+} from 'typeorm';
 import { ICalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import { Post } from '../post/post.entity';
 import { Callout } from '../callout/callout.entity';
 import { Link } from '../link/link.entity';
-import { UUID_LENGTH } from '@common/constants';
+import { ENUM_LENGTH, UUID_LENGTH } from '@common/constants';
 import { Memo } from '@domain/common/memo/memo.entity';
+import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 
 @Entity()
 export class CalloutContribution
   extends AuthorizableEntity
   implements ICalloutContribution
 {
+  @Column({
+    unique: true,
+  })
+  @Generated('increment')
+  rowId!: number;
+
   @Column('char', { length: UUID_LENGTH, nullable: true })
   createdBy?: string;
+
+  @Column('varchar', {
+    length: ENUM_LENGTH,
+    nullable: false,
+    default: CalloutContributionType.POST,
+  })
+  type!: CalloutContributionType;
 
   @OneToOne(() => Whiteboard, {
     eager: false,

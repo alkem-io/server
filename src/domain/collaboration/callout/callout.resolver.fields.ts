@@ -78,14 +78,13 @@ export class CalloutResolverFields {
   })
   async contributionsPaginated(
     @Parent() callout: Callout,
-    @Args('pagination', { nullable: true }) pagination: PaginationArgs,
+    @Args() pagination: PaginationArgs,
     @Args('filter', { nullable: true }) filter?: ContributionsFilterInput
   ): Promise<PaginatedContributions> {
-    return await this.calloutService.getContributions(
+    return await this.calloutService.getContributionsPaginated(
       callout,
-      filter?.IDs,
-      filter?.types,
-      pagination.first
+      pagination,
+      filter
     );
   }
 

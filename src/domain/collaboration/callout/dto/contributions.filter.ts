@@ -1,18 +1,19 @@
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
+import { UUID } from '@domain/common/scalars';
 import { InputType, Field } from '@nestjs/graphql';
 
 @InputType()
 export class ContributionsFilterInput {
-  @Field(() => [String], {
+  @Field(() => [UUID], {
     nullable: true,
     description:
       'The IDs of the Contributions to return. If omitted return all.',
   })
-  IDs!: string[];
+  IDs?: string[];
 
   @Field(() => [CalloutContributionType], {
     nullable: true,
     description: 'The contributions types to return. If omitted return all.',
   })
-  types!: CalloutContributionType[];
+  types?: CalloutContributionType[];
 }

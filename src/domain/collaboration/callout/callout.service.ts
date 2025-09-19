@@ -62,11 +62,12 @@ export class CalloutService {
     private calloutFramingService: CalloutFramingService,
     private contributionDefaultsService: CalloutContributionDefaultsService,
     private contributionService: CalloutContributionService,
-    private contributionRepository: Repository<CalloutContribution>,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
     private classificationService: ClassificationService,
     @InjectRepository(Callout)
-    private calloutRepository: Repository<Callout>
+    private calloutRepository: Repository<Callout>,
+    @InjectRepository(CalloutContribution)
+    private calloutContributionRepository: Repository<CalloutContribution>
   ) {}
 
   public async createCallout(
@@ -652,22 +653,24 @@ export class CalloutService {
     return limitAndShuffled;
   }
 
-  async getPaginatedContributions(
+  async getContributionsPaginated(
     callout: ICallout,
     paginationArgs: PaginationArgs,
     filter?: ContributionsFilterInput
-  ): Promise<IPaginatedType<ICalloutContribution>> {
-    const qb = this.contributionRepository.createQueryBuilder('contribution');
+  ): Promise<IPaginatedType<CalloutContribution>> {
+    const qb =
+      this.calloutContributionRepository.createQueryBuilder('contribution');
     qb.where('contribution.calloutId = :calloutId', { calloutId: callout.id });
-    if (filter?.IDs && filter.IDs.length > 0) {
-      qb.andWhere('contribution.id IN (:...ids)', { ids: filter.IDs });
-    }
-    if (filter?.types && filter.types.length > 0) {
-      qb.andWhere('contribution.type IN (:...ids)', { ids: filter.IDs });
-    }
 
     if (filter) {
-      applyUserFilter(qb, filter);
+      if (filter?.IDs) {
+        qb.andWhere('contribution.id IN (:...ids)', { ids: filter.IDs });
+      }
+      if (filter?.types) {
+        qb.andWhere('contribution.type IN (:...types)', {
+          types: filter.types,
+        });
+      }
     }
 
     return getPaginationResults(qb, paginationArgs);
