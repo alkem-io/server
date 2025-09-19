@@ -1,5 +1,5 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { IsEnum } from 'class-validator';
+import { IsEnum, IsUUID } from 'class-validator';
 import { IContributorBase } from '../contributor/contributor.base.interface';
 import { IAccount } from '@domain/space/account/account.interface';
 import { IContributor } from '../contributor/contributor.interface';
@@ -28,6 +28,7 @@ export class IVirtualContributor
     nullable: false,
     description: 'The ID of the AI Persona powering this Virtual Contributor.',
   })
+  @IsUUID('4')
   aiPersonaID!: string;
 
   @Field(() => SearchVisibility, {
@@ -52,14 +53,14 @@ export class IVirtualContributor
   @Field(() => VirtualContributorDataAccessMode, {
     nullable: false,
     description:
-      'The type of context sharing that are supported by this AI Persona when used.',
+      'The data access mode defining what data this Virtual Contributor can access.',
   })
   @IsEnum(VirtualContributorDataAccessMode)
   dataAccessMode!: VirtualContributorDataAccessMode;
 
   @Field(() => VirtualContributorInteractionMode, {
     nullable: false,
-    description: 'Interaction modes supported by this AI Persona when used.',
+    description: 'Interaction modes supported by this Virtual Contributor.',
   })
   @IsEnum([VirtualContributorInteractionMode], { each: true })
   interactionModes!: VirtualContributorInteractionMode[];
