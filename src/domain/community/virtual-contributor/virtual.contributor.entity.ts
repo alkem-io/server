@@ -16,6 +16,8 @@ import { IVirtualContributorSettings } from '../virtual-contributor-settings/vir
 import { VirtualContributorInteractionMode } from '@common/enums/virtual.contributor.interaction.mode';
 import { VirtualContributorDataAccessMode } from '@common/enums/virtual.contributor.data.access.mode';
 import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
+import { PromptGraphTransformer } from './transformers/prompt.graph.transformer';
+import { PromptGraphDefinition } from './dto/prompt.graph.defintion.dto';
 
 @Entity()
 export class VirtualContributor
@@ -44,6 +46,9 @@ export class VirtualContributor
 
   @Column('varchar', { nullable: true, length: SMALL_TEXT_LENGTH })
   bodyOfKnowledgeID!: string;
+
+  @Column('json', { nullable: true, transformer: PromptGraphTransformer })
+  promptGraphDefinition?: PromptGraphDefinition;
 
   @Column()
   listedInStore!: boolean;

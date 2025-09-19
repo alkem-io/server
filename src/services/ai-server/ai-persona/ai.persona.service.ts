@@ -21,8 +21,8 @@ import { IExternalConfig } from './dto/external.config';
 import { EncryptionService } from '@hedger/nestjs-encryption';
 import { AiPersonaEngineAdapterInvocationInput } from '../ai-persona-engine-adapter/dto/ai.persona.engine.adapter.dto.invocation.input';
 import { IAiServer } from '../ai-server/ai.server.interface';
-import graphJson from './dto/graph.json';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
+import graphJson from './dto/expert.graph.json';
 
 @Injectable()
 export class AiPersonaService {

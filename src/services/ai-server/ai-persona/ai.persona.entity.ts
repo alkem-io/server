@@ -5,6 +5,8 @@ import { AiServer } from '../ai-server/ai.server.entity';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 import { ENUM_LENGTH } from '@common/constants';
 import { IExternalConfig } from './dto/external.config';
+import { PromptGraph } from './dto/prompt.graph.dto';
+import { PromptGraphTransformer } from './transformers/prompt.graph.transformer';
 
 @Entity()
 export class AiPersona extends AuthorizableEntity implements IAiPersona {
@@ -28,4 +30,7 @@ export class AiPersona extends AuthorizableEntity implements IAiPersona {
 
   @Column({ type: 'datetime', nullable: true })
   bodyOfKnowledgeLastUpdated: Date | null = null;
+
+  @Column('json', { nullable: true, transformer: PromptGraphTransformer })
+  promptGraph?: PromptGraph;
 }
