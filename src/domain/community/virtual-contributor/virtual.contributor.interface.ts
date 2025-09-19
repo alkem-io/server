@@ -1,4 +1,5 @@
 import { Field, ObjectType } from '@nestjs/graphql';
+import { IsEnum } from 'class-validator';
 import { IContributorBase } from '../contributor/contributor.base.interface';
 import { IAccount } from '@domain/space/account/account.interface';
 import { IContributor } from '../contributor/contributor.interface';
@@ -36,6 +37,7 @@ export class IVirtualContributor
     description: 'Visibility of the VC in searches.',
     nullable: false,
   })
+  @IsEnum(SearchVisibility)
   searchVisibility!: SearchVisibility;
 
   @Field(() => Boolean, {
@@ -55,12 +57,14 @@ export class IVirtualContributor
     description:
       'The type of context sharing that are supported by this AI Persona when used.',
   })
+  @IsEnum(VirtualContributorDataAccessMode)
   dataAccessMode!: VirtualContributorDataAccessMode;
 
   @Field(() => VirtualContributorInteractionMode, {
     nullable: false,
     description: 'Interaction modes supported by this AI Persona when used.',
   })
+  @IsEnum([VirtualContributorInteractionMode], { each: true })
   interactionModes!: VirtualContributorInteractionMode[];
 
   @Field(() => VirtualContributorBodyOfKnowledgeType, {
@@ -68,6 +72,7 @@ export class IVirtualContributor
     description:
       'The type of body of knowledge used by this Virtual Contributor.',
   })
+  @IsEnum(VirtualContributorBodyOfKnowledgeType)
   bodyOfKnowledgeType!: VirtualContributorBodyOfKnowledgeType;
 
   @Field(() => ISpace, {

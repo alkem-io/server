@@ -1,4 +1,5 @@
 import { Field, InputType } from '@nestjs/graphql';
+import { IsEnum } from 'class-validator';
 import { UpdateContributorInput } from '@domain/community/contributor/dto/contributor.dto.update';
 import { IsOptional, ValidateNested } from 'class-validator';
 import { SearchVisibility } from '@common/enums/search.visibility';
@@ -8,7 +9,7 @@ import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.con
 import { VirtualContributorDataAccessMode } from '@common/enums/virtual.contributor.data.access.mode';
 import { VirtualContributorInteractionMode } from '@common/enums/virtual.contributor.interaction.mode';
 import { MaxLength } from 'class-validator';
-import { LONG_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@common/constants';
+import { LONG_TEXT_LENGTH } from '@common/constants';
 
 @InputType()
 export class UpdateVirtualContributorInput extends UpdateContributorInput {
@@ -39,13 +40,15 @@ export class UpdateVirtualContributorInput extends UpdateContributorInput {
   @Field(() => VirtualContributorBodyOfKnowledgeType, {
     nullable: true,
   })
-  @MaxLength(SMALL_TEXT_LENGTH)
+  @IsEnum(VirtualContributorBodyOfKnowledgeType)
   bodyOfKnowledgeType?: VirtualContributorBodyOfKnowledgeType;
 
   @Field(() => VirtualContributorDataAccessMode, { nullable: true })
+  @IsEnum(VirtualContributorDataAccessMode)
   dataAccessMode?: VirtualContributorDataAccessMode;
 
   @Field(() => [VirtualContributorInteractionMode], { nullable: true })
+  @IsEnum(VirtualContributorInteractionMode, { each: true })
   interactionModes?: VirtualContributorInteractionMode[];
 
   @Field(() => String, { nullable: true })

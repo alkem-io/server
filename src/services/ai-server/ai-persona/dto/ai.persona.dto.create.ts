@@ -1,5 +1,7 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { ArrayMaxSize, IsEnum, IsString, MaxLength } from 'class-validator';
+import { IsOptional, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
 import { LONG_TEXT_LENGTH } from '@src/common/constants';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 import { IExternalConfig } from './external.config';
@@ -20,5 +22,8 @@ export class CreateAiPersonaInput {
   prompt!: string[];
 
   @Field(() => IExternalConfig, { nullable: true })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => IExternalConfig)
   externalConfig?: IExternalConfig;
 }
