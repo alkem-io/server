@@ -29,7 +29,6 @@ export const virtualContributorData: {
     },
     // Add other required IVirtualContributor fields as needed for type safety
     // e.g., aiPersona, knowledgeBase, searchVisibility, listedInStore, settings, etc.,
-    aiPersona: undefined as any, // Replace with a valid mock if required by tests
     knowledgeBase: undefined as any, // Replace with a valid mock if required by tests
     searchVisibility: undefined as any, // Replace with a valid SearchVisibility if required
     listedInStore: false, // Default value, update as needed
