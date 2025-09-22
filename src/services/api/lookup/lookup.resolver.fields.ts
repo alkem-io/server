@@ -78,6 +78,8 @@ import { SpaceAboutService } from '@domain/space/space.about/space.about.service
 import { ISpaceAbout } from '@domain/space/space.about';
 import { TemplateContentSpaceService } from '@domain/template/template-content-space/template.content.space.service';
 import { ITemplateContentSpace } from '@domain/template/template-content-space/template.content.space.interface';
+import { ICalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.interface';
+import { CalloutContributionService } from '@domain/collaboration/callout-contribution/callout.contribution.service';
 
 @Resolver(() => LookupQueryResults)
 export class LookupResolverFields {
@@ -100,6 +102,7 @@ export class LookupResolverFields {
     private postService: PostService,
     private calloutsSetService: CalloutsSetService,
     private calloutService: CalloutService,
+    private contributionService: CalloutContributionService,
     private roomService: RoomService,
     private innovationFlowService: InnovationFlowService,
     private calendarEventService: CalendarEventService,
@@ -629,6 +632,26 @@ export class LookupResolverFields {
     );
 
     return callout;
+  }
+
+  @ResolveField(() => ICalloutContribution, {
+    nullable: true,
+    description: 'Lookup the specified CalloutContribution',
+  })
+  async contribution(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('ID', { type: () => UUID }) id: string
+  ): Promise<ICalloutContribution> {
+    const contribution =
+      await this.contributionService.getCalloutContributionOrFail(id);
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      contribution.authorization,
+      AuthorizationPrivilege.READ,
+      `lookup CalloutContribution: ${contribution.id}`
+    );
+
+    return contribution;
   }
 
   @ResolveField(() => IPost, {
