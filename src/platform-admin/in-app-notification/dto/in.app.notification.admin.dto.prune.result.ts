@@ -1,9 +1,7 @@
-import { Field, ObjectType } from '@nestjs/graphql';
+import { Field, ObjectType, Int } from '@nestjs/graphql';
 
 @ObjectType()
 export class PruneInAppNotificationAdminResult {
-import { Field, ObjectType, Int } from '@nestjs/graphql';
-
   @Field(() => Int, {
     nullable: false,
     description:
