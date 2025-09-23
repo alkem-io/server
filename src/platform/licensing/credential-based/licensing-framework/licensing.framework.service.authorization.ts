@@ -57,7 +57,7 @@ export class LicensingFrameworkAuthorizationService {
         licensing.authorization,
         parentAuthorization
       );
-    // TODO: this is too
+    // For now allow all registered users to see the license plans + policy
     licensing.authorization =
       this.authorizationPolicyService.appendCredentialRuleRegisteredAccess(
         licensing.authorization,
