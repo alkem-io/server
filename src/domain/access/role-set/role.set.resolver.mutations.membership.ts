@@ -545,16 +545,11 @@ export class RoleSetResolverMutationsMembership {
         },
       }
     );
+
     let invitationState = await this.invitationService.getLifecycleState(
       invitation.id
     );
     if (invitationState === InvitationLifecycleState.ACCEPTING) {
-      if (invitation.roleSet && agentInfo.userID) {
-        await this.roleSetCacheService.deleteOpenInvitationFromCache(
-          agentInfo.userID,
-          invitation.roleSet.id
-        );
-      }
       await this.roleSetService.acceptInvitationToRoleSet(
         eventData.invitationID,
         agentInfo
@@ -568,23 +563,46 @@ export class RoleSetResolverMutationsMembership {
       });
     }
 
-    if (agentInfo.userID && invitation.roleSet) {
+    const invitedContributor = await this.contributorService.getContributor(
+      invitation.invitedContributorID,
+      { relations: { agent: true } }
+    );
+
+    if (
+      !invitedContributor ||
+      !invitedContributor.agent ||
+      !invitation.roleSet
+    ) {
+      this.logger.error(
+        {
+          message:
+            'Unable to invalidate invitation cache because of missing relations',
+          cause: 'Invited Contributor, Contributor Agent or role set is null',
+          invitationID: invitation.id,
+          invitedContributorID: invitation.invitedContributorID,
+        },
+        undefined,
+        LogContext.COMMUNITY
+      );
+    } else {
       invitationState = this.lifecycleService.getState(
         invitation.lifecycle,
         this.roleSetServiceLifecycleInvitation.getInvitationMachine()
       );
       const isMember = invitationState === InvitationLifecycleState.ACCEPTED;
-      if (agentInfo.userID && invitation.roleSet) {
-        await this.roleSetCacheService.deleteOpenInvitationFromCache(
-          agentInfo.userID,
-          invitation.roleSet.id
-        );
-        await this.roleSetCacheService.setAgentIsMemberCache(
-          agentInfo.agentID,
-          invitation.roleSet.id,
-          isMember
-        );
-      }
+      await this.roleSetCacheService.deleteOpenInvitationFromCache(
+        invitedContributor.id,
+        invitation.roleSet.id
+      );
+      await this.roleSetCacheService.deleteMembershipStatusCache(
+        invitedContributor.agent.id,
+        invitation.roleSet.id
+      );
+      await this.roleSetCacheService.setAgentIsMemberCache(
+        invitedContributor.agent.id,
+        invitation.roleSet.id,
+        isMember
+      );
     }
 
     return await this.invitationService.getInvitationOrFail(invitation.id);
