@@ -7,6 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
 import { AlkemioConfig } from '@src/types/alkemio.config';
 import { LogContext } from '@common/enums';
+import { ValidationException } from '@common/exceptions';
 
 @Injectable()
 export class InAppNotificationAdminService {
@@ -33,24 +34,20 @@ export class InAppNotificationAdminService {
 
     // Validate config to avoid destructive pruning
     if (!Number.isInteger(retentionDays) || retentionDays <= 0) {
-      this.logger.error(
-        'Invalid config: notifications.in_app.max_retention_period_days must be a positive integer.',
-        undefined,
-        LogContext.NOTIFICATIONS
+      throw new ValidationException(
+        'Invalid notifications.in_app.max_retention_period_days',
+        LogContext.IN_APP_NOTIFICATION
       );
-      throw new Error('Invalid notifications.in_app.max_retention_period_days');
     }
     if (!Number.isInteger(maxPerUser) || maxPerUser <= 0) {
-      this.logger.error(
-        'Invalid config: notifications.in_app.max_notifications_per_user must be a positive integer.',
-        undefined,
-        LogContext.NOTIFICATIONS
+      throw new ValidationException(
+        'Invalid notifications.in_app.max_notifications_per_user',
+        LogContext.IN_APP_NOTIFICATION
       );
-      throw new Error('Invalid notifications.in_app.max_notifications_per_user');
     }
     this.logger.verbose?.(
       `Starting pruning of in-app notifications: a) older than ${retentionDays} days b) max per user ${maxPerUser}`,
-      LogContext.NOTIFICATIONS
+      LogContext.IN_APP_NOTIFICATION
     );
 
     // Calculate the cutoff date - notifications older than this will be removed
