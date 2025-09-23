@@ -21,7 +21,7 @@ export class LicensePolicyResolverMutations {
   @Mutation(() => ILicensingCredentialBasedPolicyCredentialRule, {
     description: 'Deletes the specified LicensePolicy.',
   })
-  async deleteLicensePolicyCredentialRule(
+  async adminLicensePolicyDeleteCredentialRule(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('deleteData') deleteData: DeleteLicensePolicyCredentialRuleInput
   ): Promise<ILicensingCredentialBasedPolicyCredentialRule> {
@@ -43,7 +43,7 @@ export class LicensePolicyResolverMutations {
   @Mutation(() => ILicensingCredentialBasedPolicyCredentialRule, {
     description: 'Updates a CredentialRule on the LicensePolicy.',
   })
-  async updateLicensePolicyCredentialRule(
+  async adminLicensePolicyUpdateCredentialRule(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('updateData') updateData: UpdateLicensePolicyCredentialRuleInput
   ): Promise<ILicensingCredentialBasedPolicyCredentialRule> {
@@ -63,7 +63,7 @@ export class LicensePolicyResolverMutations {
   @Mutation(() => ILicensingCredentialBasedPolicyCredentialRule, {
     description: 'Creates a CredentialRule on the LicensePolicy.',
   })
-  async createLicensePolicyCredentialRule(
+  async adminLicensePolicyCreateCredentialRule(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('createData') createData: CreateLicensePolicyCredentialRuleInput
   ): Promise<ILicensingCredentialBasedPolicyCredentialRule> {
