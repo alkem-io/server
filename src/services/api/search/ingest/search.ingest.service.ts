@@ -30,7 +30,6 @@ import { yjsStateToMarkdown } from '@domain/common/memo/conversion';
 import { isDefined } from '@common/utils';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { Memo } from '@domain/common/memo/memo.entity';
-import { TaskStatus } from '@domain/task/dto';
 
 const profileRelationOptions = {
   location: true,
@@ -138,36 +137,86 @@ export class SearchIngestService {
    */
   public async ingestFromScratch(task: Task) {
     this.logger.verbose?.('Starting search ingest from scratch');
-    // create new indices with suffix
-    await this.taskService.updateTaskResults(task.id, 'Creating indices');
+    // generate suffix; will be used across the whole ingest operation
+    const suffix = this.generateSuffix();
+    try {
+      // create new indices with suffix
+      await this.ingestStepCreateIndices(task, suffix);
+      // ingest data into the new indices
+      await this.ingestStepIngestIntoIndices(task, suffix);
+      // manage the aliases
+      const previouslyActiveAliasData = await this.ingestStepAssignAliases(
+        task,
+        suffix
+      );
+      // delete old indices, if aliases existed
+      if (previouslyActiveAliasData.length > 0) {
+        // get the old index names from the old active aliases
+        const oldIndexNames = previouslyActiveAliasData.map(
+          ({ index }) => index
+        );
+        await this.ingestStepDeleteOldIndices(task, oldIndexNames);
+      }
+      // cleanup and complete
+      await this.taskService.complete(task.id);
+      this.logger.verbose?.(
+        'Search ingest from scratch completed successfully',
+        LogContext.SEARCH_INGEST
+      );
+    } catch (e: any) {
+      await this.taskService.completeWithError(
+        task.id,
+        `Ingest from scratch failed: ${e?.message}`
+      );
+      this.logger.verbose?.(
+        'Search ingest from scratch completed with errors',
+        LogContext.SEARCH_INGEST
+      );
+      this.logger.error?.(e?.message, e?.stack, LogContext.SEARCH_INGEST);
+    }
+  }
 
-    const suffix = Date.now().toString(36);
-    const creationResult = await this.ensureIndicesExist(suffix);
+  /**
+   * @throws Error when index creation fails
+   * @private
+   */
+  private async ingestStepCreateIndices(task: Task, indexSuffix: string) {
+    await this.taskService.updateTaskResults(task.id, 'Creating indices');
+    const creationResult = await this.ensureIndicesExist(indexSuffix);
 
     if (!creationResult.acknowledged) {
       await this.taskService.updateTaskErrors(
         task.id,
         `Failed to create indices: ${creationResult.message}`
       );
-      await this.taskService.complete(task.id, TaskStatus.ERRORED);
-      return;
+      throw new Error(`Failed to create indices: ${creationResult.message}`);
     }
 
     await this.taskService.updateTaskResults(task.id, 'Indices created');
-    // ingest data into the new indices
+  }
+
+  /**
+   * @throws Error when ingest fails
+   * @private
+   */
+  private async ingestStepIngestIntoIndices(task: Task, indexSuffix: string) {
     try {
-      await this.ingest(task, suffix);
+      await this.ingest(task, indexSuffix);
     } catch (e: any) {
-      await this.taskService.updateTaskErrors(task.id, e?.message);
-      await this.taskService.complete(task.id, TaskStatus.ERRORED);
-      this.logger.error?.(
-        `Search ingest from scratch completed with error: ${e?.message}`,
-        e?.stack,
-        LogContext.SEARCH_INGEST
+      await this.taskService.completeWithError(
+        task.id,
+        `Ingest completed with errors: ${e?.message}`
       );
-      return;
+      throw new Error(`Ingest completed with errors: ${e?.message}`);
     }
-    // aliases
+  }
+
+  /**
+   *
+   * @returns The active aliases (old) before the reassignment
+   * @private
+   */
+  private async ingestStepAssignAliases(task: Task, indexSuffix: string) {
     const activeAliasData = await this.getActiveAliases();
     const aliasesExist = activeAliasData.length > 0;
 
@@ -182,32 +231,54 @@ export class SearchIngestService {
     // map the aliases to the new indices
     const data = this.getAliases().map(alias => ({
       alias,
-      index: `${alias}-${suffix}`,
+      index: `${alias}-${indexSuffix}`,
     }));
     // assign the aliases to the new indices and delete the old ones if the aliases already existed
     await this.assignAliasToIndex(data, aliasesExist);
-    // delete old indices, if aliases existed
-    if (aliasesExist) {
-      await this.taskService.updateTaskResults(task.id, 'Removing old indices');
-      this.logger.verbose?.('Removing old indices', LogContext.SEARCH_INGEST);
-      // get the old index names from the then active aliases
-      const indexNames = activeAliasData.map(({ index }) => index);
 
-      const removalResult = await this.removeIndices(indexNames);
-      if (!removalResult.acknowledged) {
-        await this.taskService.updateTaskErrors(
-          task.id,
-          `Failed to delete old indices: ${removalResult.message}`
-        );
-        await this.taskService.complete(task.id, TaskStatus.ERRORED);
-        return;
-      }
-    }
-    await this.taskService.complete(task.id);
+    return activeAliasData;
+  }
+
+  /**
+   * @throws Error when deletion fails
+   * @private
+   */
+  private async ingestStepDeleteOldIndices(
+    task: Task,
+    oldIndexNames: string[]
+  ) {
+    await this.taskService.updateTaskResults(
+      task.id,
+      `Removing the old indices: ${oldIndexNames.toString()}`
+    );
     this.logger.verbose?.(
-      'Search ingest from scratch completed',
+      `Removing the old indices: ${oldIndexNames.toString()}`,
       LogContext.SEARCH_INGEST
     );
+
+    const removalResult = await this.removeIndices(oldIndexNames);
+    if (!removalResult.acknowledged) {
+      await this.taskService.completeWithError(
+        task.id,
+        `Failed to delete old indices: ${removalResult.message}`
+      );
+      throw new Error(`Failed to delete old indices: ${removalResult.message}`);
+    }
+  }
+
+  /**
+   * Returns a suffix based on the current date and time in the format YYYYMMDDHHmmss
+   * @private
+   */
+  private generateSuffix(): string {
+    const now = new Date();
+    const year = now.getFullYear().toString();
+    const month = (now.getMonth() + 1).toString().padStart(2, '0');
+    const day = now.getDate().toString().padStart(2, '0');
+    const hours = now.getHours().toString().padStart(2, '0');
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    const seconds = now.getSeconds().toString().padStart(2, '0');
+    return `${year}${month}${day}${hours}${minutes}${seconds}`;
   }
 
   private async getActiveAliases() {
