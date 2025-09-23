@@ -4,7 +4,6 @@ import { IContributorBase } from '../contributor/contributor.base.interface';
 import { IAccount } from '@domain/space/account/account.interface';
 import { IContributor } from '../contributor/contributor.interface';
 import { SearchVisibility } from '@common/enums/search.visibility';
-import { IAiPersona } from '@services/ai-server/ai-persona/ai.persona.interface';
 import { IKnowledgeBase } from '@domain/common/knowledge-base/knowledge.base.interface';
 import { IVirtualContributorSettings } from '../virtual-contributor-settings/virtual.contributor.settings.interface';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
@@ -14,6 +13,7 @@ import { UUID } from '@domain/common/scalars';
 import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 import { ISpace } from '@domain/space/space/space.interface';
 import { PromptGraphDefinition } from './dto/prompt.graph.defintion.dto';
+import { IAiPersona } from '@services/ai-server/ai-persona';
 
 @ObjectType('VirtualContributor', {
   implements: () => [IContributor],
@@ -26,12 +26,12 @@ export class IVirtualContributor
 
   account?: IAccount;
 
-  @Field(() => UUID, {
-    nullable: false,
-    description: 'The ID of the AI Persona powering this Virtual Contributor.',
-  })
   aiPersonaID!: string;
 
+  @Field(() => IAiPersona, {
+    nullable: true,
+    description: 'The AI persona associated with this Virtual Contributor.',
+  })
   aiPersona?: IAiPersona;
 
   @Field(() => PromptGraphDefinition, {
@@ -62,14 +62,14 @@ export class IVirtualContributor
   @Field(() => VirtualContributorDataAccessMode, {
     nullable: false,
     description:
-      'The type of context sharing that are supported by this AI Persona when used.',
+      'The data access mode defining what data this Virtual Contributor can access.',
   })
   @IsEnum(VirtualContributorDataAccessMode)
   dataAccessMode!: VirtualContributorDataAccessMode;
 
   @Field(() => VirtualContributorInteractionMode, {
     nullable: false,
-    description: 'Interaction modes supported by this AI Persona when used.',
+    description: 'Interaction modes supported by this Virtual Contributor.',
   })
   @IsEnum([VirtualContributorInteractionMode], { each: true })
   interactionModes!: VirtualContributorInteractionMode[];

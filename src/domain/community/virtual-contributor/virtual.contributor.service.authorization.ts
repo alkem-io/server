@@ -21,6 +21,7 @@ import { ICredentialDefinition } from '@domain/agent/credential/credential.defin
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { SearchVisibility } from '@common/enums/search.visibility';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
+import { IAccount } from '@domain/space/account/account.interface';
 
 @Injectable()
 export class VirtualContributorAuthorizationService {
@@ -37,49 +38,51 @@ export class VirtualContributorAuthorizationService {
   async applyAuthorizationPolicy(
     virtualInput: IVirtualContributor
   ): Promise<IAuthorizationPolicy[]> {
-    const virtual = await this.virtualService.getVirtualContributorOrFail(
-      virtualInput.id,
-      {
+    const virtualContributor =
+      await this.virtualService.getVirtualContributorOrFail(virtualInput.id, {
         relations: {
-          account: true,
+          account: {
+            spaces: true,
+          },
           profile: true,
           agent: true,
           knowledgeBase: true,
         },
-      }
-    );
+      });
     if (
-      !virtual.account ||
-      !virtual.profile ||
-      !virtual.agent ||
-      !virtual.knowledgeBase ||
-      !virtual.account
+      !virtualContributor.account ||
+      !virtualContributor.account.spaces ||
+      !virtualContributor.profile ||
+      !virtualContributor.agent ||
+      !virtualContributor.knowledgeBase
     )
       throw new RelationshipNotFoundException(
-        `Unable to load entities for virtual: ${virtual.id} `,
-        LogContext.COMMUNITY
+        'Unable to load entities for VC',
+        LogContext.COMMUNITY,
+        { virtualContributorID: virtualContributor.id }
       );
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
     const accountAdminCredential: ICredentialDefinition = {
       type: AuthorizationCredential.ACCOUNT_ADMIN,
-      resourceID: virtual.account.id,
+      resourceID: virtualContributor.account.id,
     };
 
     // Key: what are the credentials that should be able to read about this VC
     const credentialCriteriasWithAccessToVC =
       await this.getCredentialsWithVisibilityOfVirtualContributor(
-        virtual.searchVisibility,
-        accountAdminCredential
+        virtualContributor.searchVisibility,
+        virtualContributor.account
       );
 
-    virtual.authorization = this.resetToBaseVirtualContributorAuthorization(
-      virtual.authorization,
-      accountAdminCredential
-    );
+    virtualContributor.authorization =
+      this.resetToBaseVirtualContributorAuthorization(
+        virtualContributor.authorization,
+        accountAdminCredential
+      );
     // Create a clone of the base policy, for usage with KnowledgeBase
     const clonedBaseVirtualContributorAuthorization =
       this.authorizationPolicyService.cloneAuthorizationPolicy(
-        virtual.authorization
+        virtualContributor.authorization
       );
 
     if (credentialCriteriasWithAccessToVC.length > 0) {
@@ -89,56 +92,57 @@ export class VirtualContributorAuthorizationService {
         CREDENTIAL_RULE_TYPES_VC_GLOBAL_COMMUNITY_READ
       );
       rule.cascade = true;
-      virtual.authorization.credentialRules.push(rule);
+      virtualContributor.authorization.credentialRules.push(rule);
     }
-    virtual.authorization =
+    virtualContributor.authorization =
       this.authorizationPolicyService.appendPrivilegeAuthorizationRuleMapping(
-        virtual.authorization,
+        virtualContributor.authorization,
         AuthorizationPrivilege.READ,
         [AuthorizationPrivilege.READ_ABOUT],
         POLICY_RULE_READ_ABOUT
       );
 
-    updatedAuthorizations.push(virtual.authorization);
+    updatedAuthorizations.push(virtualContributor.authorization);
 
     const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
-        virtual.profile.id,
-        virtual.authorization
+        virtualContributor.profile.id,
+        virtualContributor.authorization
       );
     updatedAuthorizations.push(...profileAuthorizations);
 
     const agentAuthorization =
       this.agentAuthorizationService.applyAuthorizationPolicy(
-        virtual.agent,
-        virtual.authorization
+        virtualContributor.agent,
+        virtualContributor.authorization
       );
     updatedAuthorizations.push(agentAuthorization);
 
-    // TODO: this is a hack to deal with the fact that the AI Persona Service has an authorization policy that uses the VC's account
+    // TODO: this is a hack to deal with the fact that the AI Persona has an authorization policy that uses the VC's account
     const aiPersonaAuthorizations =
-      await this.aiServerAdapter.resetAuthorizationOnAiPersona(
-        virtual.aiPersonaID
+      await this.aiServerAdapter.applyAuthorizationOnAiPersona(
+        virtualContributor.aiPersonaID,
+        virtualContributor.authorization
       );
     updatedAuthorizations.push(...aiPersonaAuthorizations);
 
     // The KnowledgeBase needs to start from a reset VC auth, and then use the criterias with access to go further
     const knowledgeBaseAuthorizations =
       await this.knowledgeBaseAuthorizations.applyAuthorizationPolicy(
-        virtual.knowledgeBase,
+        virtualContributor.knowledgeBase,
         clonedBaseVirtualContributorAuthorization,
         credentialCriteriasWithAccessToVC,
-        virtual.settings.privacy.knowledgeBaseContentVisible
+        virtualContributor.settings.privacy.knowledgeBaseContentVisible
       );
     updatedAuthorizations.push(...knowledgeBaseAuthorizations);
 
-    updatedAuthorizations.push(virtual.authorization);
+    updatedAuthorizations.push(virtualContributor.authorization);
     return updatedAuthorizations;
   }
 
   private async getCredentialsWithVisibilityOfVirtualContributor(
     searchVisibility: SearchVisibility,
-    accountAdminCredential?: ICredentialDefinition
+    account: IAccount
   ): Promise<ICredentialDefinition[]> {
     const credentialCriteriasWithAccess: ICredentialDefinition[] = [];
 
@@ -152,8 +156,10 @@ export class VirtualContributorAuthorizationService {
 
       case SearchVisibility.ACCOUNT:
         // ACCOUNT visibility: only accessible within the scope of the account
-        if (accountAdminCredential) {
-          credentialCriteriasWithAccess.push(accountAdminCredential);
+        const accountSpaceMemberCredentials =
+          this.getAccountSpaceMemberCredentials(account);
+        if (accountSpaceMemberCredentials.length > 0) {
+          credentialCriteriasWithAccess.push(...accountSpaceMemberCredentials);
         }
         break;
 
@@ -233,5 +239,24 @@ export class VirtualContributorAuthorizationService {
       updatedAuthorization,
       newRules
     );
+  }
+
+  private getAccountSpaceMemberCredentials(account: IAccount) {
+    if (!account.spaces) {
+      throw new RelationshipNotFoundException(
+        'Unable to load Account with spaces to get membership credentials',
+        LogContext.ACCOUNT,
+        { accountID: account.id }
+      );
+    }
+    const accountMemberCredentials: ICredentialDefinition[] = [];
+    for (const space of account.spaces) {
+      const spaceMemberCredential: ICredentialDefinition = {
+        type: AuthorizationCredential.SPACE_MEMBER,
+        resourceID: space.id,
+      };
+      accountMemberCredentials.push(spaceMemberCredential);
+    }
+    return accountMemberCredentials;
   }
 }
