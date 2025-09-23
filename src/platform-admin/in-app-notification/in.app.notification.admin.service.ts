@@ -30,6 +30,24 @@ export class InAppNotificationAdminService {
       'notifications.in_app.max_notifications_per_user',
       { infer: true }
     );
+
+    // Validate config to avoid destructive pruning
+    if (!Number.isInteger(retentionDays) || retentionDays <= 0) {
+      this.logger.error(
+        'Invalid config: notifications.in_app.max_retention_period_days must be a positive integer.',
+        undefined,
+        LogContext.NOTIFICATIONS
+      );
+      throw new Error('Invalid notifications.in_app.max_retention_period_days');
+    }
+    if (!Number.isInteger(maxPerUser) || maxPerUser <= 0) {
+      this.logger.error(
+        'Invalid config: notifications.in_app.max_notifications_per_user must be a positive integer.',
+        undefined,
+        LogContext.NOTIFICATIONS
+      );
+      throw new Error('Invalid notifications.in_app.max_notifications_per_user');
+    }
     this.logger.verbose?.(
       `Starting pruning of in-app notifications: a) older than ${retentionDays} days b) max per user ${maxPerUser}`,
       LogContext.NOTIFICATIONS
