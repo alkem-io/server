@@ -20,6 +20,18 @@ class DiscussionDetails {
   displayName!: string;
 
   @Field(() => String, {
+    nullable: true,
+    description: 'The discussion content.',
+  })
+  description?: string | undefined;
+
+  @Field(() => String, {
+    nullable: true,
+    description: 'The discussion category.',
+  })
+  category?: string | undefined;
+
+  @Field(() => String, {
     description: 'The discussion URL.',
   })
   url!: string;

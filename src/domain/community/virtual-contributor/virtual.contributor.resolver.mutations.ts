@@ -1,7 +1,7 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Resolver, Mutation, ObjectType } from '@nestjs/graphql';
 import { VirtualContributorService } from './virtual.contributor.service';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { CurrentUser } from '@src/common/decorators';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -34,25 +34,36 @@ export class VirtualContributorResolverMutations {
   @Mutation(() => IVirtualContributor, {
     description: 'Updates the specified VirtualContributor.',
   })
-  @Profiling.api
   async updateVirtualContributor(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('virtualContributorData')
     virtualContributorData: UpdateVirtualContributorInput
   ): Promise<IVirtualContributor> {
-    const virtual =
+    const virtualContributor =
       await this.virtualContributorService.getVirtualContributorOrFail(
         virtualContributorData.ID
       );
     this.authorizationService.grantAccessOrFail(
       agentInfo,
-      virtual.authorization,
+      virtualContributor.authorization,
       AuthorizationPrivilege.UPDATE,
-      `virtual contribtor Update: ${virtual.id}`
+      `virtual contributor Update: ${virtualContributor.id}`
     );
 
-    return await this.virtualContributorService.updateVirtualContributor(
-      virtualContributorData
+    const updatedVirtualContributor =
+      await this.virtualContributorService.updateVirtualContributor(
+        virtualContributorData
+      );
+
+    // Reset authorization policy as updates may affect authorization (e.g. searchVisibility changes)
+    const updatedAuthorizations =
+      await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
+        updatedVirtualContributor
+      );
+    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+
+    return this.virtualContributorService.getVirtualContributorOrFail(
+      updatedVirtualContributor.id
     );
   }
 
