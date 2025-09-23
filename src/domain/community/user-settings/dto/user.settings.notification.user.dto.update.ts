@@ -1,35 +1,44 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { ValidateNested } from 'class-validator';
 import { UpdateUserSettingsNotificationUserMembershipInput } from './user.settings.notification.user.membership.dto.update';
+import { NotificationSettingInput } from './notification.setting.input';
 import { Type } from 'class-transformer';
 
 @InputType()
 export class UpdateUserSettingsNotificationUserInput {
-  @Field(() => Boolean, {
+  @Field(() => NotificationSettingInput, {
     nullable: true,
     description: 'Receive notification when I receive a message.',
   })
-  messageReceived?: boolean;
+  @ValidateNested()
+  @Type(() => NotificationSettingInput)
+  messageReceived?: NotificationSettingInput;
 
-  @Field(() => Boolean, {
+  @Field(() => NotificationSettingInput, {
     nullable: true,
     description:
       'Receive notification I send a message to a User, Organization or Space.',
   })
-  copyOfMessageSent?: boolean;
+  @ValidateNested()
+  @Type(() => NotificationSettingInput)
+  copyOfMessageSent?: NotificationSettingInput;
 
-  @Field(() => Boolean, {
+  @Field(() => NotificationSettingInput, {
     nullable: true,
     description: 'Receive a notification you are mentioned',
   })
-  mentioned?: boolean;
+  @ValidateNested()
+  @Type(() => NotificationSettingInput)
+  mentioned?: NotificationSettingInput;
 
-  @Field(() => Boolean, {
+  @Field(() => NotificationSettingInput, {
     nullable: true,
     description:
       'Receive a notification when someone replies to a comment I made.',
   })
-  commentReply?: boolean;
+  @ValidateNested()
+  @Type(() => NotificationSettingInput)
+  commentReply?: NotificationSettingInput;
 
   @Field(() => UpdateUserSettingsNotificationUserMembershipInput, {
     nullable: true,
