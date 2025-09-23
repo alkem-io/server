@@ -1,4 +1,4 @@
-import { PromptGraphDefinition } from '../dto/prompt.graph.defintion.dto';
+import { PromptGraphDefinition } from '../dto/prompt-graph-definition/prompt.graph.defintion.dto';
 
 export const PromptGraphTransformer = {
   to: (value?: PromptGraphDefinition) => value,

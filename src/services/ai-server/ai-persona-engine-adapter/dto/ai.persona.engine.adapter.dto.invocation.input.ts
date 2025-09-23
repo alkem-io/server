@@ -4,7 +4,7 @@ import {
   IExternalConfig,
   InteractionMessage,
 } from '@services/ai-server/ai-persona/dto';
-import { PromptGraph } from '@services/ai-server/ai-persona/dto/prompt.graph.dto';
+import { PromptGraph } from '@services/ai-server/prompt-graph/dto/prompt.graph.dto';
 
 export enum InvocationResultAction {
   POST_REPLY = 'postReply',

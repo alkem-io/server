@@ -1,7 +1,7 @@
 import { UUID } from '@domain/common/scalars';
 import { ExternalMetadata } from '@domain/communication/vc-interaction/vc.interaction.entity';
 import { Field, InputType, registerEnumType } from '@nestjs/graphql';
-import { PromptGraph } from './prompt.graph.dto';
+import { PromptGraph } from '../../prompt-graph/dto/prompt.graph.dto';
 
 export enum InvocationOperation {
   QUERY = 'query',

@@ -3,7 +3,7 @@ import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { IAiServer } from '../ai-server/ai.server.interface';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 import { IExternalConfig } from './dto/external.config';
-import { PromptGraph } from './dto/prompt.graph.dto';
+import { PromptGraph } from '../prompt-graph/dto/prompt.graph.dto';
 
 @ObjectType('AiPersona')
 export abstract class IAiPersona extends IAuthorizable {

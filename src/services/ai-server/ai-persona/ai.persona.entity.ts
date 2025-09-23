@@ -5,7 +5,7 @@ import { AiServer } from '../ai-server/ai.server.entity';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 import { ENUM_LENGTH } from '@common/constants';
 import { IExternalConfig } from './dto/external.config';
-import { PromptGraph } from './dto/prompt.graph.dto';
+import { PromptGraph } from '../prompt-graph/dto/prompt.graph.dto';
 import { PromptGraphTransformer } from './transformers/prompt.graph.transformer';
 
 @Entity()

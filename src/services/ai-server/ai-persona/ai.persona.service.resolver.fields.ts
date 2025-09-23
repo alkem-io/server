@@ -9,9 +9,8 @@ import { IExternalConfig } from './dto';
 import { IAiPersona } from './ai.persona.interface';
 import { AiPersonaService } from './ai.persona.service';
 import { AiPersona } from './ai.persona.entity';
-
-import graphJson from './dto/expert.graph.json';
-import { PromptGraph } from './dto/prompt.graph.dto';
+import graphJson from '../prompt-graph/config/prompt.graph.expert.json';
+import { PromptGraph } from '../prompt-graph/dto/prompt.graph.dto';
 
 const EXTERNALY_CONFIGURABLE_ENGINES = [
   AiPersonaEngine.LIBRA_FLOW,

@@ -1,4 +1,4 @@
-import { PromptGraph } from '../dto/prompt.graph.dto';
+import { PromptGraph } from '../../prompt-graph/dto/prompt.graph.dto';
 
 export const PromptGraphTransformer = {
   to: (value?: PromptGraph) => value,
