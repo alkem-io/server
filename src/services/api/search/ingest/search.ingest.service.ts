@@ -180,7 +180,10 @@ export class SearchIngestService {
    * @throws Error when index creation fails
    * @private
    */
-  private async ingestStepCreateIndices(task: Task, indexSuffix: string) {
+  private async ingestStepCreateIndices(
+    task: Task,
+    indexSuffix: string
+  ): Promise<void> {
     await this.taskService.updateTaskResults(task.id, 'Creating indices');
     const creationResult = await this.ensureIndicesExist(indexSuffix);
 
@@ -199,7 +202,10 @@ export class SearchIngestService {
    * @throws Error when ingest fails
    * @private
    */
-  private async ingestStepIngestIntoIndices(task: Task, indexSuffix: string) {
+  private async ingestStepIngestIntoIndices(
+    task: Task,
+    indexSuffix: string
+  ): Promise<void> {
     try {
       await this.ingest(task, indexSuffix);
     } catch (e: any) {
@@ -246,7 +252,7 @@ export class SearchIngestService {
   private async ingestStepDeleteOldIndices(
     task: Task,
     oldIndexNames: string[]
-  ) {
+  ): Promise<void> {
     await this.taskService.updateTaskResults(
       task.id,
       `Removing the old indices: ${oldIndexNames.toString()}`
