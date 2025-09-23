@@ -10,7 +10,7 @@ import { Field, ObjectType, Int } from '@nestjs/graphql';
       'The number of InAppNotifications that were removed due to being outside the retention period.',
   })
   removedCountOutsideRetentionPeriod!: number;
-  @Field(() => Number, {
+  @Field(() => Int, {
     nullable: false,
     description:
       'The number of InAppNotifications that were removed due to exceeding the maximum allowed per user.',
