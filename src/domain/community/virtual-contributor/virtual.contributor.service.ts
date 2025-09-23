@@ -45,6 +45,7 @@ import { virtualContributorSettingsDefault } from './definition/virtual.contribu
 import { UpdateVirtualContributorSettingsEntityInput } from '../virtual-contributor-settings';
 import { VirtualContributorSettingsService } from '../virtual-contributor-settings/virtual.contributor.settings.service';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
+import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 
 @Injectable()
 export class VirtualContributorService {
@@ -115,12 +116,23 @@ export class VirtualContributorService {
         agentInfo?.userID
       );
 
+    const kb = await this.knowledgeBaseService.save(
+      virtualContributor.knowledgeBase
+    );
+
     const communicationID = await this.communicationAdapter.tryRegisterNewUser(
       `virtual-contributor-${virtualContributor.nameID}@alkem.io`
     );
 
     if (communicationID) {
       virtualContributor.communicationID = communicationID;
+    }
+
+    if (
+      virtualContributorData.bodyOfKnowledgeType ===
+      VirtualContributorBodyOfKnowledgeType.ALKEMIO_KNOWLEDGE_BASE
+    ) {
+      virtualContributor.bodyOfKnowledgeID = kb.id;
     }
 
     const aiPersonaInput: CreateAiPersonaInput = {

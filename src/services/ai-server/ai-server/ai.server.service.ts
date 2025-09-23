@@ -463,15 +463,15 @@ export class AiServerService {
   }
 
   public async resetAuthorizationPolicyOnAiPersona(
-    aiPersonaID: string
+    aiPersonaID: string,
+    parentAuthorization?: IAuthorizationPolicy
   ): Promise<IAuthorizationPolicy[]> {
-    const aiServerAuthorization = await this.getAuthorizationPolicyAiServer();
     const aiPersona =
       await this.aiPersonaService.getAiPersonaOrFail(aiPersonaID);
 
     return await this.aiPersonaAuthorizationService.applyAuthorizationPolicy(
       aiPersona,
-      aiServerAuthorization
+      parentAuthorization
     );
   }
 

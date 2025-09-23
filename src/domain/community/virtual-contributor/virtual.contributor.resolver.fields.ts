@@ -25,6 +25,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { VirtualContributorModelCard } from '../virtual-contributor-model-card/dto/virtual.contributor.model.card.dto.result';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 import { IAiPersona } from '@services/ai-server/ai-persona';
+import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 
 @Resolver(() => IVirtualContributor)
 export class VirtualContributorResolverFields {
@@ -33,6 +34,20 @@ export class VirtualContributorResolverFields {
     private authorizationService: AuthorizationService,
     private aiServerAdapter: AiServerAdapter
   ) {}
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('engine', () => AiPersonaEngine, {
+    nullable: false,
+    description: 'The engine powering this Virtual Contributor',
+  })
+  async engine(
+    @Parent() virtualContributor: VirtualContributor
+  ): Promise<AiPersonaEngine> {
+    return await this.aiServerAdapter.getPersonaEngine(
+      virtualContributor.aiPersonaID
+    );
+  }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)

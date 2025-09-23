@@ -1,5 +1,5 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { IsEnum, IsUUID } from 'class-validator';
+import { IsEnum } from 'class-validator';
 import { IContributorBase } from '../contributor/contributor.base.interface';
 import { IAccount } from '@domain/space/account/account.interface';
 import { IContributor } from '../contributor/contributor.interface';
@@ -24,11 +24,6 @@ export class IVirtualContributor
 
   account?: IAccount;
 
-  @Field(() => UUID, {
-    nullable: false,
-    description: 'The ID of the AI Persona powering this Virtual Contributor.',
-  })
-  @IsUUID('4')
   aiPersonaID!: string;
 
   @Field(() => SearchVisibility, {
