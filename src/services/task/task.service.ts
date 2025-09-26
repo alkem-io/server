@@ -20,9 +20,8 @@ export class TaskService {
   ) {}
 
   public async getTaskList() {
-    const list = await this.cacheManager.get<Array<string>>(
-      TASK_LIST_CACHE_KEY
-    );
+    const list =
+      await this.cacheManager.get<Array<string>>(TASK_LIST_CACHE_KEY);
 
     if (list) {
       return list;
