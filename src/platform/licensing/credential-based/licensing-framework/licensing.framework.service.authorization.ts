@@ -57,8 +57,9 @@ export class LicensingFrameworkAuthorizationService {
         licensing.authorization,
         parentAuthorization
       );
+    // For now allow all registered users to see the license plans + policy
     licensing.authorization =
-      this.authorizationPolicyService.appendCredentialRuleAnonymousRegisteredAccess(
+      this.authorizationPolicyService.appendCredentialRuleRegisteredAccess(
         licensing.authorization,
         AuthorizationPrivilege.READ
       );
@@ -96,9 +97,11 @@ export class LicensingFrameworkAuthorizationService {
           AuthorizationPrivilege.READ,
           AuthorizationPrivilege.UPDATE,
           AuthorizationPrivilege.DELETE,
-          AuthorizationPrivilege.GRANT,
         ],
-        [AuthorizationCredential.GLOBAL_LICENSE_MANAGER],
+        [
+          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+          AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
+        ],
         CREDENTIAL_RULE_LICENSE_MANAGER
       );
     licensings.cascade = true;
