@@ -399,8 +399,6 @@ integrations:
     tls:
       ca_cert_path: ${ELASTIC_TLS_CA_CERT_PATH}:none
       rejectUnauthorized: ${ELASTIC_TLS_REJECT_UNAUTHORIZED}:false
-    policies:
-      space_name_enrich_policy: ${ELASTIC_POLICY_SPACE_NAME_ENRICH}:space_name_enrich_policy
 
 notifications:
   enabled: ${NOTIFICATIONS_ENABLED}:true
