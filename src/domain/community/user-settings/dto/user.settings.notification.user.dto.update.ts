@@ -16,15 +16,6 @@ export class UpdateUserSettingsNotificationUserInput {
 
   @Field(() => NotificationSettingInput, {
     nullable: true,
-    description:
-      'Receive notification I send a message to a User, Organization or Space.',
-  })
-  @ValidateNested()
-  @Type(() => NotificationSettingInput)
-  copyOfMessageSent?: NotificationSettingInput;
-
-  @Field(() => NotificationSettingInput, {
-    nullable: true,
     description: 'Receive a notification you are mentioned',
   })
   @ValidateNested()

@@ -275,9 +275,7 @@ export class UserService {
           mentioned: { email: true, inApp: true },
           commentReply: { email: false, inApp: true },
           messageReceived: { email: true, inApp: true },
-          copyOfMessageSent: { email: false, inApp: false },
           membership: {
-            spaceCommunityApplicationSubmitted: { email: false, inApp: false },
             spaceCommunityInvitationReceived: { email: true, inApp: true },
             spaceCommunityJoined: { email: true, inApp: true },
           },

@@ -170,10 +170,6 @@ export class UserSettingsService {
         notificationUserData.messageReceived
       );
       this.updateNotificationSetting(
-        settings.notification.user.copyOfMessageSent,
-        notificationUserData.copyOfMessageSent
-      );
-      this.updateNotificationSetting(
         settings.notification.user.mentioned,
         notificationUserData.mentioned
       );
@@ -186,11 +182,6 @@ export class UserSettingsService {
       if (notificationUserData.membership) {
         const membershipData = notificationUserData.membership;
 
-        this.updateNotificationSetting(
-          settings.notification.user.membership
-            .spaceCommunityApplicationSubmitted,
-          membershipData.spaceCommunityApplicationSubmitted
-        );
         this.updateNotificationSetting(
           settings.notification.user.membership
             .spaceCommunityInvitationReceived,

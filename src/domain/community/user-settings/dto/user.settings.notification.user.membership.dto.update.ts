@@ -7,14 +7,6 @@ import { Type } from 'class-transformer';
 export class UpdateUserSettingsNotificationUserMembershipInput {
   @Field(() => NotificationSettingInput, {
     nullable: true,
-    description: 'Receive a notification when an application is submitted',
-  })
-  @ValidateNested()
-  @Type(() => NotificationSettingInput)
-  spaceCommunityApplicationSubmitted?: NotificationSettingInput;
-
-  @Field(() => NotificationSettingInput, {
-    nullable: true,
     description: 'Receive a notification for community invitation',
   })
   @ValidateNested()
