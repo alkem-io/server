@@ -10,7 +10,7 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AiPersona, IAiPersona } from '@services/ai-server/ai-persona';
 import { AiPersonaService } from '../ai-persona/ai.persona.service';
 import { CreateAiPersonaInput, UpdateAiPersonaInput } from '../ai-persona/dto';
-import { AiPersonaInvocationInput } from '../ai-persona/dto/ai.persona.invocation.dto.input';
+import { AiPersonaInvocationInput } from '../ai-persona/dto/ai.persona.invocation/ai.persona.invocation.dto.input';
 import {
   IngestBodyOfKnowledge,
   IngestionPurpose,
@@ -28,10 +28,8 @@ import { SubscriptionPublishService } from '@services/subscriptions/subscription
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 import { InvokeEngineResult } from '@services/infrastructure/event-bus/messages/invoke.engine.result';
-import {
-  InvocationResultAction,
-  RoomDetails,
-} from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.invocation';
+import { InvocationResultAction } from '../ai-persona/dto/ai.persona.invocation/invocation.result.action.dto';
+import { RoomDetails } from '../ai-persona/dto/ai.persona.invocation/room.details.dto';
 import { RoomControllerService } from '@services/room-integration/room.controller.service';
 import { IMessage } from '@domain/communication/message/message.interface';
 import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';

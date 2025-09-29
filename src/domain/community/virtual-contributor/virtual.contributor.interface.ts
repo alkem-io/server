@@ -12,6 +12,8 @@ import { VirtualContributorInteractionMode } from '@common/enums/virtual.contrib
 import { UUID } from '@domain/common/scalars';
 import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 import { ISpace } from '@domain/space/space/space.interface';
+import { PromptGraphDefinition } from './dto/prompt-graph-definition/prompt.graph.definition.dto';
+import { IAiPersona } from '@services/ai-server/ai-persona';
 
 @ObjectType('VirtualContributor', {
   implements: () => [IContributor],
@@ -25,6 +27,18 @@ export class IVirtualContributor
   account?: IAccount;
 
   aiPersonaID!: string;
+
+  @Field(() => IAiPersona, {
+    nullable: true,
+    description: 'The AI persona associated with this Virtual Contributor.',
+  })
+  aiPersona?: IAiPersona;
+
+  @Field(() => PromptGraphDefinition, {
+    nullable: true,
+    description: 'Prompt graph definition for this Virtual Contributor.',
+  })
+  promptGraphDefinition?: PromptGraphDefinition;
 
   @Field(() => SearchVisibility, {
     description: 'Visibility of the VC in searches.',
