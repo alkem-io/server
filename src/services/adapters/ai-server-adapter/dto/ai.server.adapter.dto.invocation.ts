@@ -25,7 +25,8 @@ export class ResultHandler {
 export class AiServerAdapterInvocationInput {
   operation?: InvocationOperation = InvocationOperation.QUERY;
   message!: string;
-  aiPersonaServiceID!: string;
+  aiPersonaID!: string;
+  bodyOfKnowledgeID?: string;
   contextID?: string;
   userID?: string;
   vcInteractionID?: string;
