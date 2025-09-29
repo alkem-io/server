@@ -35,19 +35,12 @@ export class VirtualContributorMessageService {
   ) {
     const virtualContributor =
       await this.virtualContributorLookupService.getVirtualContributorOrFail(
-        virtualContributorID,
-        {
-          relations: {
-            aiPersona: true,
-          },
-        }
+        virtualContributorID
       );
 
-    const virtualPersona = virtualContributor?.aiPersona;
-
-    if (!virtualPersona) {
+    if (!virtualContributor.aiPersonaID) {
       throw new EntityNotInitializedException(
-        `VirtualPersona not loaded for VirtualContributor ${virtualContributor?.id}`,
+        `AI Persona ID not set for VirtualContributor ${virtualContributor?.id}`,
         LogContext.VIRTUAL_CONTRIBUTOR
       );
     }
@@ -80,7 +73,6 @@ export class VirtualContributorMessageService {
         {
           relations: {
             authorization: true,
-            aiPersona: true,
             agent: true,
             profile: true,
           },
@@ -95,11 +87,12 @@ export class VirtualContributorMessageService {
 
     this.logger.verbose?.(
       `still need to use the context ${invocationInput.contextSpaceID}, ${invocationInput.userID}`,
-      LogContext.AI_PERSONA_SERVICE_ENGINE
+      LogContext.AI_PERSONA_ENGINE
     );
 
     const aiServerAdapterInvocationInput: AiServerAdapterInvocationInput = {
-      aiPersonaServiceID: virtualContributor.aiPersona.aiPersonaServiceID,
+      bodyOfKnowledgeID: virtualContributor.bodyOfKnowledgeID,
+      aiPersonaID: virtualContributor.aiPersonaID,
       message: invocationInput.message,
       contextID: invocationInput.contextSpaceID,
       userID: invocationInput.userID,

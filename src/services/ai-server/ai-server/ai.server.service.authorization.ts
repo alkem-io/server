@@ -9,26 +9,26 @@ import {
 } from '@common/enums';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
-import { AiPersonaServiceAuthorizationService } from '../ai-persona-service/ai.persona.service.service.authorization';
 import { CREDENTIAL_RULE_AI_SERVER_GLOBAL_ADMINS } from '@common/constants/authorization/credential.rule.types.constants';
+import { AiPersonaAuthorizationService } from '../ai-persona/ai.persona.service.authorization';
 
 @Injectable()
 export class AiServerAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private aiServerService: AiServerService,
-    private aiPersonaServiceAuthorizationService: AiPersonaServiceAuthorizationService
+    private aiPersonaAuthorizationService: AiPersonaAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(): Promise<IAuthorizationPolicy[]> {
     const aiServer = await this.aiServerService.getAiServerOrFail({
       relations: {
         authorization: true,
-        aiPersonaServices: true,
+        aiPersonas: true,
       },
     });
 
-    if (!aiServer.authorization || !aiServer.aiPersonaServices) {
+    if (!aiServer.authorization || !aiServer.aiPersonas) {
       throw new RelationshipNotFoundException(
         `Unable to load entities for aiServer: ${aiServer.id} `,
         LogContext.AI_SERVER
@@ -45,10 +45,10 @@ export class AiServerAuthorizationService {
     );
     updatedAuthorizations.push(aiServer.authorization);
 
-    for (const aiPersonaService of aiServer.aiPersonaServices) {
+    for (const aiPersona of aiServer.aiPersonas) {
       const updatedPersonaAuthorizations =
-        await this.aiPersonaServiceAuthorizationService.applyAuthorizationPolicy(
-          aiPersonaService.id,
+        await this.aiPersonaAuthorizationService.applyAuthorizationPolicy(
+          aiPersona,
           aiServer.authorization
         );
       updatedAuthorizations.push(...updatedPersonaAuthorizations);

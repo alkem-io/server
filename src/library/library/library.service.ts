@@ -53,9 +53,6 @@ export class LibraryService {
           listedInStore: true,
           searchVisibility: SearchVisibility.PUBLIC,
         },
-        relations: {
-          aiPersona: true,
-        },
       }
     );
     return virtualContributors;
