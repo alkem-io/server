@@ -21,6 +21,8 @@ import { IExternalConfig } from './dto/external.config';
 import { EncryptionService } from '@hedger/nestjs-encryption';
 import { AiPersonaEngineAdapterInvocationInput } from '../ai-persona-engine-adapter/dto/ai.persona.engine.adapter.dto.invocation.input';
 import { IAiServer } from '../ai-server/ai.server.interface';
+import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
+import graphJson from '../prompt-graph/config/prompt.graph.expert.json';
 
 @Injectable()
 export class AiPersonaService {
@@ -158,9 +160,16 @@ export class AiPersonaService {
       description: invocationInput.description,
       externalConfig: this.decryptExternalConfig(aiPersona.externalConfig),
       resultHandler: invocationInput.resultHandler,
-      personaServiceID: invocationInput.aiPersonaID,
+      personaID: invocationInput.aiPersonaID,
       language: invocationInput.language,
     };
+
+    if (
+      input.engine === AiPersonaEngine.EXPERT &&
+      !invocationInput.promptGraph
+    ) {
+      input.promptGraph = graphJson;
+    }
 
     return this.aiPersonaEngineAdapter.invoke(input);
   }

@@ -9,6 +9,8 @@ import { IExternalConfig } from './dto';
 import { IAiPersona } from './ai.persona.interface';
 import { AiPersonaService } from './ai.persona.service';
 import { AiPersona } from './ai.persona.entity';
+import graphJson from '../prompt-graph/config/prompt.graph.expert.json';
+import { PromptGraph } from '../prompt-graph/dto/prompt.graph.dto';
 
 const EXTERNALY_CONFIGURABLE_ENGINES = [
   AiPersonaEngine.LIBRA_FLOW,
@@ -22,6 +24,37 @@ export class AiPersonaResolverFields {
     private aiPersonaServiceService: AiPersonaService
   ) {}
 
+  @ResolveField('promptGraph', () => PromptGraph, {
+    nullable: true,
+    description: 'The PromptGraph for this Virtual.',
+  })
+  async promptGraph(
+    @Parent() parent: AiPersona,
+    @CurrentUser() agentInfo: AgentInfo
+  ) {
+    // Reload to ensure the authorization is loaded
+    const aiPersona = await this.aiPersonaServiceService.getAiPersonaOrFail(
+      parent.id
+    );
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      aiPersona.authorization,
+      AuthorizationPrivilege.READ,
+      `ai persona authorization access: ${aiPersona.id}`
+    );
+
+    if (aiPersona.promptGraph) {
+      return aiPersona.promptGraph;
+    }
+
+    if (aiPersona.engine === AiPersonaEngine.EXPERT) {
+      return graphJson;
+    }
+
+    return null;
+  }
+
   @ResolveField('authorization', () => IAuthorizationPolicy, {
     nullable: true,
     description: 'The Authorization for this Virtual.',
@@ -32,17 +65,18 @@ export class AiPersonaResolverFields {
     @CurrentUser() agentInfo: AgentInfo
   ) {
     // Reload to ensure the authorization is loaded
-    const aiPersonaService =
-      await this.aiPersonaServiceService.getAiPersonaOrFail(parent.id);
+    const aiPersona = await this.aiPersonaServiceService.getAiPersonaOrFail(
+      parent.id
+    );
 
     this.authorizationService.grantAccessOrFail(
       agentInfo,
-      aiPersonaService.authorization,
+      aiPersona.authorization,
       AuthorizationPrivilege.READ,
-      `ai persona authorization access: ${aiPersonaService.id}`
+      `ai persona authorization access: ${aiPersona.id}`
     );
 
-    return aiPersonaService.authorization;
+    return aiPersona.authorization;
   }
 
   @ResolveField('externalConfig', () => IExternalConfig, {
