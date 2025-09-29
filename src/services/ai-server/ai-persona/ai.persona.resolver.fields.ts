@@ -28,7 +28,21 @@ export class AiPersonaResolverFields {
     nullable: true,
     description: 'The PromptGraph for this Virtual.',
   })
-  async promptGraph() {
+  async promptGraph(
+    @Parent() parent: AiPersona,
+    @CurrentUser() agentInfo: AgentInfo
+  ) {
+    // Reload to ensure the authorization is loaded
+    const aiPersonaService =
+      await this.aiPersonaServiceService.getAiPersonaOrFail(parent.id);
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      aiPersonaService.authorization,
+      AuthorizationPrivilege.READ,
+      `ai persona authorization access: ${aiPersonaService.id}`
+    );
+
     return graphJson;
   }
 

@@ -17,7 +17,7 @@ import { VirtualContributorInteractionMode } from '@common/enums/virtual.contrib
 import { VirtualContributorDataAccessMode } from '@common/enums/virtual.contributor.data.access.mode';
 import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 import { PromptGraphTransformer } from './transformers/prompt.graph.transformer';
-import { PromptGraphDefinition } from './dto/prompt-graph-definition/prompt.graph.defintion.dto';
+import { PromptGraphDefinition } from './dto/prompt-graph-definition/prompt.graph.definition.dto';
 
 @Entity()
 export class VirtualContributor

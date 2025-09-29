@@ -1,6 +1,7 @@
-import { ObjectType, Field } from '@nestjs/graphql';
-import { PromptGrapDataStruct } from './prompt.grap.data.struct.dto';
+import { ObjectType, Field, InputType } from '@nestjs/graphql';
+import { PromptGraphDataStruct } from './prompt.graph.data.struct.dto';
 
+@InputType('PromptGraphNodeInput')
 @ObjectType()
 export class PromptGraphNode {
   @Field(() => String, { nullable: false })
@@ -12,6 +13,6 @@ export class PromptGraphNode {
   @Field({ nullable: true })
   prompt?: string;
 
-  @Field(() => PromptGrapDataStruct, { nullable: true })
-  output?: PromptGrapDataStruct;
+  @Field(() => PromptGraphDataStruct, { nullable: true })
+  output?: PromptGraphDataStruct;
 }

@@ -1,5 +1,6 @@
-import { ObjectType, Field } from '@nestjs/graphql';
+import { ObjectType, Field, InputType } from '@nestjs/graphql';
 
+@InputType('PromptGraphEdgeInput')
 @ObjectType()
 export class PromptGraphEdge {
   @Field({ nullable: true })

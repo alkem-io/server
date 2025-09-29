@@ -1,71 +1,19 @@
 import { UUID } from '@domain/common/scalars';
 import { ExternalMetadata } from '@domain/communication/vc-interaction/vc.interaction.entity';
-import { Field, InputType, registerEnumType } from '@nestjs/graphql';
-import { PromptGraph } from '../../prompt-graph/dto/prompt.graph.dto';
-
-export enum InvocationOperation {
-  QUERY = 'query',
-  INGEST = 'ingest',
-}
-registerEnumType(InvocationOperation, {
-  name: 'InvocationOperation',
-  description: 'Available operations for the engine to execute.',
-});
-
-export enum InvocationResultAction {
-  POST_REPLY = 'postReply',
-  POST_MESSAGE = 'postMessage',
-  NONE = 'none',
-}
-
-registerEnumType(InvocationResultAction, {
-  name: 'InvocationResultAction',
-  description: 'Available actions for handling AI engines invocation results.',
-});
-
-@InputType()
-export class RoomDetails {
-  @Field(() => String, {
-    nullable: false,
-    description: 'The room to which the reply shold be posted.',
-  })
-  roomID!: string;
-  @Field(() => String, {
-    nullable: true,
-    description: 'The thread to which the reply shold be posted.',
-  })
-  threadID?: string;
-  @Field(() => String, {
-    nullable: false,
-    description: 'The communicationID for the VC',
-  })
-  communicationID!: string;
-  @Field(() => String, {
-    nullable: true,
-    description:
-      'The Virtual Contributor interaciton part of which is this question',
-  })
-  vcInteractionID?: string | undefined = undefined;
-}
-
-@InputType()
-export class ResultHandler {
-  @Field(() => InvocationResultAction, {
-    nullable: false,
-    description:
-      'The action that should be taken with the result of the invocation',
-  })
-  action!: InvocationResultAction;
-
-  @Field(() => RoomDetails, {
-    nullable: true,
-    description: 'The context needed for the result handler',
-  })
-  roomDetails?: RoomDetails;
-}
+import { Field, InputType } from '@nestjs/graphql';
+import { PromptGraph } from '../../../prompt-graph/dto/prompt.graph.dto';
+import { ResultHandler } from './result.handler.dto';
+import { InvocationOperation } from './invocation.operation.dto';
 
 @InputType()
 export class AiPersonaInvocationInput {
+  @Field(() => UUID, {
+    nullable: false,
+    description: 'AI Persona ID.',
+    deprecationReason: 'Use aiPersonaID instead',
+  })
+  aiPersonaServiceID?: string;
+
   @Field(() => UUID, {
     nullable: false,
     description: 'AI Persona ID.',
