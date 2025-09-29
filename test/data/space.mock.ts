@@ -152,6 +152,7 @@ export const spaceData: { space: ISpace } = {
         allowMembersToCreateSubspaces: false,
         allowMembersToCreateCallouts: false,
         allowEventsFromSubspaces: true,
+        allowMembersToVideoCall: false,
       },
     },
   },

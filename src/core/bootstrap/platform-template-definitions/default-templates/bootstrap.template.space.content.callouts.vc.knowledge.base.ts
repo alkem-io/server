@@ -332,6 +332,7 @@ export const bootstrapTemplateSpaceContentCalloutsVcKnowledgeBase: CreateTemplat
         allowMembersToCreateSubspaces: false,
         allowMembersToCreateCallouts: false,
         allowEventsFromSubspaces: true,
+        allowMembersToVideoCall: false,
       },
     },
     about: {

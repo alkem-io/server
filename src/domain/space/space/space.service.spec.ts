@@ -498,6 +498,7 @@ const spaceSettings = {
     allowMembersToCreateSubspaces: true,
     allowMembersToCreateCallouts: true,
     allowEventsFromSubspaces: true,
+    allowMembersToVideoCall: false,
   },
 };
 

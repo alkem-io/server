@@ -845,6 +845,7 @@ export class SearchResultService {
             allowMembersToCreateCallouts: true,
             allowMembersToCreateSubspaces: true,
             inheritMembershipRights: true,
+            allowMembersToVideoCall: false,
           },
           membership: {
             allowSubspaceAdminsToInviteMembers: true,
