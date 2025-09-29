@@ -20,7 +20,7 @@ export class RoomDetails {
   @Field(() => String, {
     nullable: true,
     description:
-      'The Virtual Contributor interaciton part of which is this question',
+      'The Virtual Contributor interaction part of which is this question',
   })
   vcInteractionID?: string | undefined = undefined;
 }
