@@ -184,9 +184,6 @@ export type AlkemioConfig = {
         ca_cert_path: string | 'none';
         rejectUnauthorized: boolean;
       };
-      policies: {
-        space_name_enrich_policy: string;
-      };
     };
   };
   notifications: {
