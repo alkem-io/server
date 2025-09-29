@@ -33,17 +33,26 @@ export class AiPersonaResolverFields {
     @CurrentUser() agentInfo: AgentInfo
   ) {
     // Reload to ensure the authorization is loaded
-    const aiPersonaService =
-      await this.aiPersonaServiceService.getAiPersonaOrFail(parent.id);
+    const aiPersona = await this.aiPersonaServiceService.getAiPersonaOrFail(
+      parent.id
+    );
 
     this.authorizationService.grantAccessOrFail(
       agentInfo,
-      aiPersonaService.authorization,
+      aiPersona.authorization,
       AuthorizationPrivilege.READ,
-      `ai persona authorization access: ${aiPersonaService.id}`
+      `ai persona authorization access: ${aiPersona.id}`
     );
 
-    return graphJson;
+    if (aiPersona.promptGraph) {
+      return aiPersona.promptGraph;
+    }
+
+    if (aiPersona.engine === AiPersonaEngine.EXPERT) {
+      return graphJson;
+    }
+
+    return null;
   }
 
   @ResolveField('authorization', () => IAuthorizationPolicy, {
@@ -56,17 +65,18 @@ export class AiPersonaResolverFields {
     @CurrentUser() agentInfo: AgentInfo
   ) {
     // Reload to ensure the authorization is loaded
-    const aiPersonaService =
-      await this.aiPersonaServiceService.getAiPersonaOrFail(parent.id);
+    const aiPersona = await this.aiPersonaServiceService.getAiPersonaOrFail(
+      parent.id
+    );
 
     this.authorizationService.grantAccessOrFail(
       agentInfo,
-      aiPersonaService.authorization,
+      aiPersona.authorization,
       AuthorizationPrivilege.READ,
-      `ai persona authorization access: ${aiPersonaService.id}`
+      `ai persona authorization access: ${aiPersona.id}`
     );
 
-    return aiPersonaService.authorization;
+    return aiPersona.authorization;
   }
 
   @ResolveField('externalConfig', () => IExternalConfig, {

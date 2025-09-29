@@ -8,7 +8,7 @@ import { InvocationOperation } from './invocation.operation.dto';
 @InputType()
 export class AiPersonaInvocationInput {
   @Field(() => UUID, {
-    nullable: false,
+    nullable: true,
     description: 'AI Persona ID.',
     deprecationReason: 'Use aiPersonaID instead',
   })

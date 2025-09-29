@@ -28,7 +28,6 @@ import { SubscriptionPublishService } from '@services/subscriptions/subscription
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 import { InvokeEngineResult } from '@services/infrastructure/event-bus/messages/invoke.engine.result';
-import {} from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.invocation';
 import { InvocationResultAction } from '../ai-persona/dto/ai.persona.invocation/invocation.result.action.dto';
 import { RoomDetails } from '../ai-persona/dto/ai.persona.invocation/room.details.dto';
 import { RoomControllerService } from '@services/room-integration/room.controller.service';
