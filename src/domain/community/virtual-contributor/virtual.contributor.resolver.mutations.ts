@@ -160,12 +160,7 @@ export class VirtualContributorResolverMutations {
 
     const virtual =
       await this.virtualContributorService.getVirtualContributorOrFail(
-        refreshData.virtualContributorID,
-        {
-          relations: {
-            aiPersona: true,
-          },
-        }
+        refreshData.virtualContributorID
       );
     this.logger.verbose?.(
       `VC ${refreshData.virtualContributorID} found`,

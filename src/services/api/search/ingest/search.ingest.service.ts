@@ -1,11 +1,14 @@
-import { setTimeout } from 'timers/promises';
+import { setTimeout } from 'node:timers/promises';
 import { EntityManager, FindManyOptions } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { Client as ElasticClient } from '@elastic/elasticsearch';
-import { ErrorCause } from '@elastic/elasticsearch/lib/api/types';
+import {
+  ErrorCause,
+  IndicesUpdateAliasesAction,
+} from '@elastic/elasticsearch/lib/api/types';
 import { ELASTICSEARCH_CLIENT_PROVIDER } from '@common/constants';
 import { Space } from '@domain/space/space/space.entity';
 import { Organization } from '@domain/community/organization';
@@ -89,7 +92,7 @@ type IngestBulkReturnType = {
 
 type IngestReturnType = Record<string, IngestBulkReturnType>;
 
-const getIndices = (indexPattern: string) => [
+const getIndexAliases = (indexPattern: string) => [
   `${indexPattern}spaces`,
   `${indexPattern}subspaces`,
   `${indexPattern}organizations`,
@@ -122,7 +125,225 @@ export class SearchIngestService {
     }
   }
 
-  public async ensureIndicesExist(): Promise<{
+  /**
+   * create new indices with new names
+   * ingest into new indices
+   * does the aliases exist?
+   * - no - fresh new setup -> assign alias to new indices
+   * - yes - we have old indices -> remove old aliases; assign alias to new indices
+   * did we have aliases?
+   *  - no -> do nothing
+   *  - yes -> delete index
+   */
+  public async ingestFromScratch(task: Task) {
+    this.logger.verbose?.('Starting search ingest from scratch');
+    // generate suffix; will be used across the whole ingest operation
+    const suffix = this.generateSuffix();
+    try {
+      // create new indices with suffix
+      await this.ingestStepCreateIndices(task, suffix);
+      // ingest data into the new indices
+      await this.ingestStepIngestIntoIndices(task, suffix);
+      // manage the aliases
+      const previouslyActiveAliasData = await this.ingestStepAssignAliases(
+        task,
+        suffix
+      );
+      // delete old indices, if aliases existed
+      if (previouslyActiveAliasData.length > 0) {
+        // get the old index names from the old active aliases
+        const oldIndexNames = previouslyActiveAliasData.map(
+          ({ index }) => index
+        );
+        await this.ingestStepDeleteOldIndices(task, oldIndexNames);
+      }
+      // cleanup and complete
+      await this.taskService.complete(task.id);
+      this.logger.verbose?.(
+        'Search ingest from scratch completed successfully',
+        LogContext.SEARCH_INGEST
+      );
+    } catch (e: any) {
+      await this.taskService.completeWithError(
+        task.id,
+        `Ingest from scratch failed: ${e?.message}`
+      );
+      this.logger.verbose?.(
+        'Search ingest from scratch completed with errors',
+        LogContext.SEARCH_INGEST
+      );
+      this.logger.error?.(e?.message, e?.stack, LogContext.SEARCH_INGEST);
+    }
+  }
+
+  /**
+   * @throws Error when index creation fails
+   * @private
+   */
+  private async ingestStepCreateIndices(
+    task: Task,
+    indexSuffix: string
+  ): Promise<void> {
+    await this.taskService.updateTaskResults(task.id, 'Creating indices');
+    const creationResult = await this.ensureIndicesExist(indexSuffix);
+
+    if (!creationResult.acknowledged) {
+      await this.taskService.updateTaskErrors(
+        task.id,
+        `Failed to create indices: ${creationResult.message}`
+      );
+      throw new Error(`Failed to create indices: ${creationResult.message}`);
+    }
+
+    await this.taskService.updateTaskResults(task.id, 'Indices created');
+  }
+
+  /**
+   * @throws Error when ingest fails
+   * @private
+   */
+  private async ingestStepIngestIntoIndices(
+    task: Task,
+    indexSuffix: string
+  ): Promise<void> {
+    try {
+      await this.ingest(task, indexSuffix);
+    } catch (e: any) {
+      await this.taskService.completeWithError(
+        task.id,
+        `Ingest completed with errors: ${e?.message}`
+      );
+      throw new Error(`Ingest completed with errors: ${e?.message}`);
+    }
+  }
+
+  /**
+   *
+   * @returns The active aliases (old) before the reassignment
+   * @private
+   */
+  private async ingestStepAssignAliases(task: Task, indexSuffix: string) {
+    const activeAliasData = await this.getActiveAliases();
+    const aliasesExist = activeAliasData.length > 0;
+
+    await this.taskService.updateTaskResults(
+      task.id,
+      aliasesExist ? 'Active aliases found' : 'No active aliases found'
+    );
+    await this.taskService.updateTaskResults(
+      task.id,
+      'Assigning aliases to new indices'
+    );
+    // map the aliases to the new indices
+    const data = this.getAliases().map(alias => ({
+      alias,
+      index: `${alias}-${indexSuffix}`,
+    }));
+    // assign the aliases to the new indices and delete the old ones if the aliases already existed
+    await this.assignAliasToIndex(data, aliasesExist);
+
+    return activeAliasData;
+  }
+
+  /**
+   * @throws Error when deletion fails
+   * @private
+   */
+  private async ingestStepDeleteOldIndices(
+    task: Task,
+    oldIndexNames: string[]
+  ): Promise<void> {
+    await this.taskService.updateTaskResults(
+      task.id,
+      `Removing the old indices: ${oldIndexNames.toString()}`
+    );
+    this.logger.verbose?.(
+      `Removing the old indices: ${oldIndexNames.toString()}`,
+      LogContext.SEARCH_INGEST
+    );
+
+    const removalResult = await this.removeIndices(oldIndexNames);
+    if (!removalResult.acknowledged) {
+      await this.taskService.completeWithError(
+        task.id,
+        `Failed to delete old indices: ${removalResult.message}`
+      );
+      throw new Error(`Failed to delete old indices: ${removalResult.message}`);
+    }
+  }
+
+  /**
+   * Returns a suffix based on the current date and time in the format YYYYMMDDHHmmss
+   * @private
+   */
+  private generateSuffix(): string {
+    const now = new Date();
+    const year = now.getFullYear().toString();
+    const month = (now.getMonth() + 1).toString().padStart(2, '0');
+    const day = now.getDate().toString().padStart(2, '0');
+    const hours = now.getHours().toString().padStart(2, '0');
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    const seconds = now.getSeconds().toString().padStart(2, '0');
+    return `${year}${month}${day}${hours}${minutes}${seconds}`;
+  }
+
+  private async getActiveAliases() {
+    if (!this.elasticClient) {
+      throw new Error('Elasticsearch client not initialized');
+    }
+
+    const aliases = getIndexAliases(this.indexPattern);
+
+    try {
+      const data = await this.elasticClient.indices.getAlias({
+        name: aliases,
+      });
+
+      // index names with these aliases
+      return Object.entries(data).flatMap(([index, aliases]) => ({
+        index,
+        alias: Object.keys(aliases.aliases)[0], // we expect just one alias per index
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  private getAliases() {
+    return getIndexAliases(this.indexPattern);
+  }
+
+  private async assignAliasToIndex(
+    data: { alias: string; index: string }[],
+    removeOldAlias?: boolean
+  ) {
+    if (!this.elasticClient) {
+      throw new Error('Elasticsearch client not initialized');
+    }
+
+    const actions: IndicesUpdateAliasesAction[] = [];
+
+    for (const { alias, index } of data) {
+      if (removeOldAlias) {
+        this.logger.verbose?.(
+          `Removing alias '${alias}'`,
+          LogContext.SEARCH_INGEST
+        );
+        actions.push({ remove: { index: '*', alias } });
+      }
+
+      this.logger.verbose?.(
+        `Assigning alias '${alias}' to point to index '${index}'`,
+        LogContext.SEARCH_INGEST
+      );
+      actions.push({ add: { index, alias } });
+    }
+
+    // Execute all alias updates in a single atomic operation
+    await this.elasticClient.indices.updateAliases({ actions });
+  }
+
+  private async ensureIndicesExist(suffix: string): Promise<{
     acknowledged: boolean;
     message?: string;
   }> {
@@ -133,11 +354,13 @@ export class SearchIngestService {
       };
     }
 
-    const indices = getIndices(this.indexPattern);
+    const aliases = getIndexAliases(this.indexPattern);
 
-    const results = await asyncMap(indices, async index => {
+    const results = await asyncMap(aliases, async alias => {
       try {
-        const ack = await this.elasticClient!.indices.create({ index });
+        const ack = await this.elasticClient!.indices.create({
+          index: `${alias}-${suffix}`,
+        });
         return { acknowledged: ack.acknowledged };
       } catch (error) {
         const err = error as ElasticResponseError;
@@ -160,7 +383,7 @@ export class SearchIngestService {
     );
   }
 
-  public async removeIndices(): Promise<{
+  private async removeIndices(indices: Array<string>): Promise<{
     acknowledged: boolean;
     message?: string;
   }> {
@@ -170,23 +393,21 @@ export class SearchIngestService {
         message: 'Elasticsearch client not initialized',
       };
     }
-    const indices = getIndices(this.indexPattern);
 
     const results = await asyncMap(indices, async index => {
-      // if it does not exist exit early, no need to delete
       try {
-        if (!(await this.elasticClient!.indices.exists({ index }))) {
+        const ack = await this.elasticClient!.indices.delete({
+          index,
+        });
+        return { acknowledged: ack.acknowledged };
+      } catch (error) {
+        const err = error as ElasticResponseError;
+        // the API returns a number
+        if ((err.meta.statusCode as unknown as number) === 404) {
+          // already deleted or it never existed
           return { acknowledged: true };
         }
-      } catch (e: any) {
-        return { acknowledged: false, message: e?.message };
-      }
 
-      try {
-        const ack = await this.elasticClient!.indices.delete({ index });
-        return { acknowledged: ack.acknowledged };
-      } catch (error) {
-        const err = error as ElasticResponseError;
         return {
           acknowledged: false,
           message: err.meta.body.error.reason,
@@ -206,7 +427,7 @@ export class SearchIngestService {
     );
   }
 
-  public async ingest(task: Task): Promise<IngestReturnType> {
+  private async ingest(task: Task, suffix: string): Promise<IngestReturnType> {
     if (!this.elasticClient) {
       return {
         'N/A': {
@@ -225,55 +446,55 @@ export class SearchIngestService {
     const result: IngestReturnType = {};
     const params = [
       {
-        index: `${this.indexPattern}spaces`,
+        index: `${this.indexPattern}spaces-${suffix}`,
         fetchFn: this.fetchSpacesLevel0.bind(this),
         countFn: this.fetchSpacesLevel0Count.bind(this),
         batchSize: 100,
       },
       {
-        index: `${this.indexPattern}subspaces`,
+        index: `${this.indexPattern}subspaces-${suffix}`,
         fetchFn: this.fetchSpacesLevel1.bind(this),
         countFn: this.fetchSpacesLevel1Count.bind(this),
         batchSize: 100,
       },
       {
-        index: `${this.indexPattern}subspaces`,
+        index: `${this.indexPattern}subspaces-${suffix}`,
         fetchFn: this.fetchSpacesLevel2.bind(this),
         countFn: this.fetchSpacesLevel2Count.bind(this),
         batchSize: 100,
       },
       {
-        index: `${this.indexPattern}organizations`,
+        index: `${this.indexPattern}organizations-${suffix}`,
         fetchFn: this.fetchOrganizations.bind(this),
         countFn: this.fetchOrganizationsCount.bind(this),
         batchSize: 100,
       },
       {
-        index: `${this.indexPattern}users`,
+        index: `${this.indexPattern}users-${suffix}`,
         fetchFn: this.fetchUsers.bind(this),
         countFn: this.fetchUsersCount.bind(this),
         batchSize: 100,
       },
       {
-        index: `${this.indexPattern}callouts`,
+        index: `${this.indexPattern}callouts-${suffix}`,
         fetchFn: this.fetchCallout.bind(this),
         countFn: this.fetchCalloutCount.bind(this),
         batchSize: 30,
       },
       {
-        index: `${this.indexPattern}posts`,
+        index: `${this.indexPattern}posts-${suffix}`,
         fetchFn: this.fetchPosts.bind(this),
         countFn: this.fetchPostsCount.bind(this),
         batchSize: 30,
       },
       {
-        index: `${this.indexPattern}whiteboards`,
+        index: `${this.indexPattern}whiteboards-${suffix}`,
         fetchFn: this.fetchWhiteboard.bind(this),
         countFn: this.fetchWhiteboardCount.bind(this),
         batchSize: 30,
       },
       {
-        index: `${this.indexPattern}memos`,
+        index: `${this.indexPattern}memos-${suffix}`,
         fetchFn: this.fetchMemo.bind(this),
         countFn: this.fetchMemoCount.bind(this),
         batchSize: 30,
@@ -346,7 +567,7 @@ export class SearchIngestService {
 
       start += batchSize;
       // delay between batches
-      await setTimeout(1000, null);
+      await setTimeout(500);
     }
 
     return results;

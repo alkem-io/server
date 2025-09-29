@@ -399,11 +399,12 @@ integrations:
     tls:
       ca_cert_path: ${ELASTIC_TLS_CA_CERT_PATH}:none
       rejectUnauthorized: ${ELASTIC_TLS_REJECT_UNAUTHORIZED}:false
-    policies:
-      space_name_enrich_policy: ${ELASTIC_POLICY_SPACE_NAME_ENRICH}:space_name_enrich_policy
 
 notifications:
   enabled: ${NOTIFICATIONS_ENABLED}:true
+  in_app:
+    max_notifications_per_user: ${IN_APP_MAX_NOTIFICATIONS_PER_USER}:100
+    max_retention_period_days: ${IN_APP_MAX_RETENTION_PERIOD_DAYS}:90
 
 collaboration:
   membership:

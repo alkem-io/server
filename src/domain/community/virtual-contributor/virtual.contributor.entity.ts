@@ -10,10 +10,12 @@ import { IVirtualContributor } from './virtual.contributor.interface';
 import { ContributorBase } from '../contributor/contributor.base.entity';
 import { Account } from '@domain/space/account/account.entity';
 import { SearchVisibility } from '@common/enums/search.visibility';
-import { AiPersona } from '../ai-persona';
-import { ENUM_LENGTH } from '@common/constants';
+import { ENUM_LENGTH, SMALL_TEXT_LENGTH, UUID_LENGTH } from '@common/constants';
 import { KnowledgeBase } from '@domain/common/knowledge-base/knowledge.base.entity';
 import { IVirtualContributorSettings } from '../virtual-contributor-settings/virtual.contributor.settings.interface';
+import { VirtualContributorInteractionMode } from '@common/enums/virtual.contributor.interaction.mode';
+import { VirtualContributorDataAccessMode } from '@common/enums/virtual.contributor.data.access.mode';
+import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 
 @Entity()
 export class VirtualContributor
@@ -36,21 +38,12 @@ export class VirtualContributor
   @Column('json', { nullable: false })
   settings!: IVirtualContributorSettings;
 
-  @OneToOne(() => AiPersona, {
-    eager: false,
-    cascade: true,
-    nullable: false,
-  })
-  @JoinColumn()
-  aiPersona!: AiPersona;
+  // Direct reference to AiPersona using aiPersonaID as potentially in a separate server.
+  @Column('char', { nullable: false, length: UUID_LENGTH })
+  aiPersonaID!: string;
 
-  @OneToOne(() => KnowledgeBase, {
-    eager: false,
-    cascade: true,
-    nullable: false,
-  })
-  @JoinColumn()
-  knowledgeBase!: KnowledgeBase;
+  @Column('varchar', { nullable: true, length: SMALL_TEXT_LENGTH })
+  bodyOfKnowledgeID!: string;
 
   @Column()
   listedInStore!: boolean;
@@ -60,4 +53,24 @@ export class VirtualContributor
     nullable: false,
   })
   searchVisibility!: SearchVisibility;
+
+  @Column('varchar', { length: ENUM_LENGTH, nullable: false })
+  dataAccessMode!: VirtualContributorDataAccessMode;
+
+  @Column('simple-array', { nullable: false })
+  interactionModes!: VirtualContributorInteractionMode[];
+
+  @Column('varchar', { length: ENUM_LENGTH, nullable: false })
+  bodyOfKnowledgeType!: VirtualContributorBodyOfKnowledgeType;
+
+  @OneToOne(() => KnowledgeBase, {
+    eager: false,
+    cascade: true,
+    nullable: true,
+  })
+  @JoinColumn()
+  knowledgeBase!: KnowledgeBase;
+
+  @Column('text', { nullable: true })
+  bodyOfKnowledgeDescription?: string;
 }
