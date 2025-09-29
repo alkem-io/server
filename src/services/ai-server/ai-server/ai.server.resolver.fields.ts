@@ -6,13 +6,15 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy/author
 import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { IAiPersonaService } from '@services/ai-server/ai-persona-service';
+import { IAiPersona } from '@services/ai-server/ai-persona';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 
 @Resolver(() => IAiServer)
 export class AiServerResolverFields {
   constructor(private aiServerService: AiServerService) {}
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('authorization', () => IAuthorizationPolicy, {
     description: 'The authorization policy for the aiServer',
     nullable: false,
@@ -23,29 +25,33 @@ export class AiServerResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('defaultAiPersonaService', () => IAiPersonaService, {
+  @ResolveField('defaultAiPersona', () => IAiPersona, {
     nullable: false,
-    description: 'The default AiPersonaService in use on the aiServer.',
+    description: 'The default AiPersona in use on the aiServer.',
   })
-  async defaultAiPersonaService(): Promise<IAiPersonaService> {
-    return await this.aiServerService.getDefaultAiPersonaServiceOrFail();
+  async defaultAiPersona(): Promise<IAiPersona> {
+    return await this.aiServerService.getDefaultAiPersonaOrFail();
   }
 
-  @ResolveField(() => [IAiPersonaService], {
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => [IAiPersona], {
     nullable: false,
-    description: 'The AiPersonaServices on this aiServer',
+    description: 'The AiPersonas on this aiServer',
   })
-  async aiPersonaServices(): Promise<IAiPersonaService[]> {
-    return await this.aiServerService.getAiPersonaServices();
+  async aiPersonas(): Promise<IAiPersona[]> {
+    return await this.aiServerService.getAiPersonas();
   }
 
-  @ResolveField(() => IAiPersonaService, {
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => IAiPersona, {
     nullable: false,
-    description: 'A particular AiPersonaService',
+    description: 'A particular AiPersona',
   })
-  async aiPersonaService(
+  async aiPersona(
     @Args('ID', { type: () => UUID, nullable: false }) id: string
-  ): Promise<IAiPersonaService> {
-    return await this.aiServerService.getAiPersonaServiceOrFail(id);
+  ): Promise<IAiPersona> {
+    return await this.aiServerService.getAiPersonaOrFail(id);
   }
 }

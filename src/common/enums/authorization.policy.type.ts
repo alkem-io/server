@@ -59,7 +59,6 @@ export enum AuthorizationPolicyType {
   LICENSE = 'license',
   LICENSE_POLICY = 'license-policy',
   UNKNOWN = 'unknown',
-  AI_PERSONA_SERVICE = 'ai-persona-service',
 }
 
 registerEnumType(AuthorizationPolicyType, {
