@@ -9,7 +9,7 @@ import { AdminAuthorizationService } from './admin.authorization.service';
 import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/platform.authorization.policy.module';
 import { AuthResetModule } from '@services/auth-reset/publisher/auth-reset.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
-import { AiPersonaModule } from '@domain/community/ai-persona/ai.persona.module';
+import { AiPersonaModule } from '@services/ai-server/ai-persona/ai.persona.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { OrganizationLookupModule } from '@domain/community/organization-lookup/organization.lookup.module';
 import { SpaceModule } from '@domain/space/space/space.module';

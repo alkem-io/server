@@ -17,7 +17,6 @@ import { ContributorModule } from '@domain/community/contributor/contributor.mod
 import { TemplatesSetModule } from '@domain/template/templates-set/templates.set.module';
 import { TemplateDefaultModule } from '@domain/template/template-default/template.default.module';
 import { LicenseModule } from '@domain/common/license/license.module';
-import { AiPersonaServiceModule } from '@services/ai-server/ai-persona-service/ai.persona.service.module';
 import { LicensingFrameworkModule } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.module';
 import { LicensePlanModule } from '@platform/licensing/credential-based/license-plan/license.plan.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
@@ -26,11 +25,12 @@ import { PlatformTemplatesModule } from '@platform/platform-templates/platform.t
 import { TemplatesManagerModule } from '@domain/template/templates-manager/templates.manager.module';
 import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/agent.info.module';
 import { AdminAuthorizationModule } from '@src/platform-admin/domain/authorization/admin.authorization.module';
+import { AiPersonaModule } from '@services/ai-server/ai-persona';
 
 @Module({
   imports: [
     AiServerModule,
-    AiPersonaServiceModule,
+    AiPersonaModule,
     AgentModule,
     AuthenticationAgentInfoModule,
     AuthorizationPolicyModule,

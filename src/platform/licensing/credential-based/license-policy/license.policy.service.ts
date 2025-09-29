@@ -1,14 +1,15 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { ILicensePolicy } from './license.policy.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LicensePolicy } from './license.policy.entity';
 import { LogContext } from '@common/enums/logging.context';
 import { ILicensingCredentialBasedPolicyCredentialRule } from '@platform/licensing/credential-based/licensing-credential-based-entitlements-engine';
-import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
-import { LicensingGrantedEntitlement } from '@platform/licensing/dto/licensing.dto.granted.entitlement';
+import { randomUUID } from 'crypto';
+import { UpdateLicensePolicyCredentialRuleInput } from './dto/license.policy.dto.credential.rule.update';
+import { CreateLicensePolicyCredentialRuleInput } from './dto/license.policy.dto.credential.rule.create';
 
 @Injectable()
 export class LicensePolicyService {
@@ -16,22 +17,46 @@ export class LicensePolicyService {
     @InjectRepository(LicensePolicy)
     private licensePolicyRepository: Repository<LicensePolicy>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService
+    private readonly logger: LoggerService,
+    @InjectEntityManager('default')
+    private entityManager: EntityManager
   ) {}
 
-  createCredentialRule(
-    grantedEntitlements: LicensingGrantedEntitlement[],
-    credentialType: LicensingCredentialBasedCredentialType,
-    name: string
-  ): ILicensingCredentialBasedPolicyCredentialRule {
-    return {
-      grantedEntitlements: grantedEntitlements,
-      credentialType,
-      name,
+  public async createCredentialRule(
+    createData: CreateLicensePolicyCredentialRuleInput
+  ): Promise<ILicensingCredentialBasedPolicyCredentialRule> {
+    const licensePolicy = await this.getDefaultLicensePolicyOrFail();
+
+    const newRule: ILicensingCredentialBasedPolicyCredentialRule = {
+      id: randomUUID(),
+      grantedEntitlements: createData.grantedEntitlements,
+      credentialType: createData.credentialType,
+      name: createData.name,
     };
+
+    licensePolicy.credentialRules.push(newRule);
+    await this.licensePolicyRepository.save(licensePolicy as LicensePolicy);
+    return newRule;
   }
 
-  async getLicensePolicyOrFail(
+  // TODO: a work around, need to look at how to make the license policy more readily available
+  // in all contexts
+  public async getDefaultLicensePolicyOrFail(): Promise<ILicensePolicy> {
+    let licensePolicy: ILicensePolicy | null = null;
+    licensePolicy = (
+      await this.entityManager.find(LicensePolicy, { take: 1 })
+    )?.[0];
+
+    if (!licensePolicy) {
+      throw new EntityNotFoundException(
+        'Unable to find default License Policy',
+        LogContext.LICENSE
+      );
+    }
+    return licensePolicy;
+  }
+
+  public async getLicensePolicyOrFail(
     licensePolicyID: string
   ): Promise<ILicensePolicy> {
     const licensePolicy = await this.licensePolicyRepository.findOneBy({
@@ -43,6 +68,57 @@ export class LicensePolicyService {
         LogContext.LICENSE
       );
     return licensePolicy;
+  }
+
+  // delete a specific credential rule
+  async deleteLicensePolicyCredentialRule(
+    credentialRuleID: string,
+    licensePolicy: ILicensePolicy
+  ): Promise<ILicensingCredentialBasedPolicyCredentialRule> {
+    const ruleIndex = licensePolicy.credentialRules.findIndex(
+      rule => rule.id === credentialRuleID
+    );
+    if (ruleIndex === -1) {
+      throw new EntityNotFoundException(
+        `Credential Rule with ID ${credentialRuleID} not found in License Policy ${licensePolicy.id}`,
+        LogContext.LICENSE
+      );
+    }
+    const [removedRule] = licensePolicy.credentialRules.splice(ruleIndex, 1);
+    await this.licensePolicyRepository.save(licensePolicy as LicensePolicy);
+    return removedRule;
+  }
+
+  // update a specific credential rule
+  async updateCredentialRule(
+    updateData: UpdateLicensePolicyCredentialRuleInput
+  ): Promise<ILicensingCredentialBasedPolicyCredentialRule> {
+    const licensePolicy = await this.getDefaultLicensePolicyOrFail();
+    const ruleIndex = licensePolicy.credentialRules.findIndex(
+      rule => rule.id === updateData.ID
+    );
+    if (ruleIndex === -1) {
+      throw new EntityNotFoundException(
+        `Credential Rule with ID ${updateData.ID} not found in License Policy ${licensePolicy.id}`,
+        LogContext.LICENSE
+      );
+    }
+    const ruleToUpdate = licensePolicy.credentialRules[ruleIndex];
+
+    // Update fields if provided
+    if (updateData.name !== undefined) {
+      ruleToUpdate.name = updateData.name;
+    }
+    if (updateData.credentialType !== undefined) {
+      ruleToUpdate.credentialType = updateData.credentialType;
+    }
+    if (updateData.grantedEntitlements !== undefined) {
+      ruleToUpdate.grantedEntitlements = updateData.grantedEntitlements;
+    }
+
+    // Save the updated license policy
+    await this.licensePolicyRepository.save(licensePolicy as LicensePolicy);
+    return ruleToUpdate;
   }
 
   async delete(licensePolicy: ILicensePolicy): Promise<ILicensePolicy> {

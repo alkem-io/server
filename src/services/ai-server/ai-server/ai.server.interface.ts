@@ -1,9 +1,14 @@
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
-import { ObjectType } from '@nestjs/graphql';
-import { IAiPersonaService } from '../ai-persona-service/ai.persona.service.interface';
+import { ObjectType, Field } from '@nestjs/graphql';
+import { IAiPersona } from '../ai-persona/ai.persona.interface';
 
 @ObjectType('AiServer')
 export abstract class IAiServer extends IAuthorizable {
-  aiPersonaServices?: IAiPersonaService[];
-  defaultAiPersonaService?: IAiPersonaService;
+  @Field(() => [IAiPersona], {
+    nullable: false,
+    description: 'The AI Personas hosted by this AI Server.',
+  })
+  aiPersonas?: IAiPersona[];
+
+  defaultAiPersona?: IAiPersona;
 }

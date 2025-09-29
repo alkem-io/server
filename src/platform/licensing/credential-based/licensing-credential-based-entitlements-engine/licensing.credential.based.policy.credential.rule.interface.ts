@@ -4,6 +4,9 @@ import { LicensingGrantedEntitlement } from '@platform/licensing/dto/licensing.d
 
 @ObjectType('LicensingCredentialBasedPolicyCredentialRule')
 export abstract class ILicensingCredentialBasedPolicyCredentialRule {
+  @Field(() => String)
+  id!: string;
+
   @Field(() => LicensingCredentialBasedCredentialType)
   credentialType!: LicensingCredentialBasedCredentialType;
 

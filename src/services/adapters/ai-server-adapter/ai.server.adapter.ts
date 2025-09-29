@@ -2,92 +2,78 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AiServerAdapterInvocationInput } from './dto/ai.server.adapter.dto.invocation';
 import { AiServerService } from '@services/ai-server/ai-server/ai.server.service';
-import {
-  CreateAiPersonaServiceInput,
-  UpdateAiPersonaServiceInput,
-} from '@services/ai-server/ai-persona-service/dto';
-import { IAiPersonaService } from '@services/ai-server/ai-persona-service';
-import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
+import { IAiPersona } from '@services/ai-server/ai-persona/ai.persona.interface';
+import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 import { LogContext } from '@common/enums';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import {
+  CreateAiPersonaInput,
+  UpdateAiPersonaInput,
+} from '@services/ai-server/ai-persona';
 
 @Injectable()
 export class AiServerAdapter {
   constructor(
-    private aiServer: AiServerService,
+    private aiServerService: AiServerService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
 
-  async getBodyOfKnowledgeLastUpdated(
-    personaServiceId: string
-  ): Promise<Date | null> {
-    return this.aiServer.getBodyOfKnowledgeLastUpdated(personaServiceId);
-  }
-
-  async refreshBodyOfKnowledge(personaServiceId: string): Promise<boolean> {
+  async refreshBodyOfKnowledge(
+    bokId: string,
+    bokType: VirtualContributorBodyOfKnowledgeType,
+    personaId: string
+  ): Promise<boolean> {
     this.logger.verbose?.(
-      `Refresh body of knowledge mutation invoked for AI Persona service ${personaServiceId}`,
+      `Refresh body of knowledge mutation invoked for bokId: ${bokId}, bokType: ${bokType}, personaId: ${personaId}`,
       LogContext.AI_SERVER_ADAPTER
     );
-    return this.aiServer.ensurePersonaIsUsable(personaServiceId);
+    return this.aiServerService.ingestBodyOfKnowledge(
+      bokId,
+      bokType,
+      personaId
+    );
   }
 
   async ensureContextIsLoaded(spaceID: string): Promise<void> {
-    await this.aiServer.ensureContextIsIngested(spaceID);
+    await this.aiServerService.ensureContextIsIngested(spaceID);
   }
 
-  async getPersonaServiceBodyOfKnowledgeType(
-    personaServiceId: string
-  ): Promise<AiPersonaBodyOfKnowledgeType> {
-    const aiPersonaService =
-      await this.aiServer.getAiPersonaServiceOrFail(personaServiceId);
-    return aiPersonaService.bodyOfKnowledgeType;
+  async getPersonaEngine(personaServiceId: string): Promise<AiPersonaEngine> {
+    const aiPersona =
+      await this.aiServerService.getAiPersonaOrFail(personaServiceId);
+    return aiPersona.engine;
   }
 
-  async getPersonaServiceEngine(
-    personaServiceId: string
-  ): Promise<AiPersonaEngine> {
-    const aiPersonaService =
-      await this.aiServer.getAiPersonaServiceOrFail(personaServiceId);
-    return aiPersonaService.engine;
+  async getPersonaOrFail(personaId: string): Promise<IAiPersona> {
+    return this.aiServerService.getAiPersonaOrFail(personaId);
   }
 
-  async getPersonaServiceBodyOfKnowledgeID(
-    personaServiceId: string
-  ): Promise<string> {
-    const aiPersonaService =
-      await this.aiServer.getAiPersonaServiceOrFail(personaServiceId);
-    return aiPersonaService.bodyOfKnowledgeID;
+  async createAPersona(personaServiceData: CreateAiPersonaInput) {
+    return this.aiServerService.createAiPersona(personaServiceData);
   }
 
-  async getPersonaServiceOrFail(
-    personaServiceId: string
-  ): Promise<IAiPersonaService> {
-    return this.aiServer.getAiPersonaServiceOrFail(personaServiceId);
+  async updateAiPersona(updateData: UpdateAiPersonaInput) {
+    return this.aiServerService.updateAiPersona(updateData);
   }
 
-  async createAiPersonaService(
-    personaServiceData: CreateAiPersonaServiceInput
-  ) {
-    return this.aiServer.createAiPersonaService(personaServiceData);
-  }
-
-  async updateAiPersonaService(updateData: UpdateAiPersonaServiceInput) {
-    return this.aiServer.updateAiPersonaService(updateData);
-  }
-
-  async resetAuthorizationOnAiPersonaService(
-    personaServiceID: string
+  async applyAuthorizationOnAiPersona(
+    personaServiceID: string,
+    parentAuthorization?: IAuthorizationPolicy
   ): Promise<IAuthorizationPolicy[]> {
-    return await this.aiServer.resetAuthorizationPolicyOnAiPersonaService(
-      personaServiceID
+    return await this.aiServerService.resetAuthorizationPolicyOnAiPersona(
+      personaServiceID,
+      parentAuthorization
     );
   }
 
+  async getAiServer() {
+    return this.aiServerService.getAiServerOrFail();
+  }
+
   invoke(invocationInput: AiServerAdapterInvocationInput): Promise<void> {
-    return this.aiServer.invoke({
+    return this.aiServerService.invoke({
       ...invocationInput,
       externalMetadata: invocationInput.externalMetadata || {},
     });

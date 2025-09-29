@@ -98,8 +98,8 @@ export class TaskService {
   ) {
     const task = await this.getOrFail(id);
 
-    if (task.itemsCount && completeItem) {
-      task.itemsDone !== undefined && (task.itemsDone += 1);
+    if (task.itemsDone !== undefined && completeItem) {
+      task.itemsDone += 1;
     }
 
     if (task.itemsCount && task.itemsCount === task.itemsDone) {
@@ -120,8 +120,8 @@ export class TaskService {
   ) {
     const task = await this.getOrFail(id);
 
-    if (task.itemsCount && completeItem) {
-      task.itemsDone !== undefined && (task.itemsDone += 1);
+    if (task.itemsDone !== undefined && completeItem) {
+      task.itemsDone += 1;
     }
 
     if (task.itemsCount === task.itemsDone) {
@@ -142,6 +142,18 @@ export class TaskService {
     const task = await this.getOrFail(id);
 
     task.status = status;
+    task.end = new Date().getTime();
+
+    await this.cacheManager.set(task.id, task, {
+      ttl: TTL,
+    });
+  }
+
+  public async completeWithError(id: string, error: string) {
+    const task = await this.getOrFail(id);
+
+    task.errors.unshift(error);
+    task.status = TaskStatus.ERRORED;
     task.end = new Date().getTime();
 
     await this.cacheManager.set(task.id, task, {
