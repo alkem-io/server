@@ -31,7 +31,7 @@ export class UpdateSpaceSettingsCollaborationInput {
   @Field(() => Boolean, {
     nullable: false,
     description:
-      'Flag to control if members can create video calls in this Space. Only available for Level 0 (L0) spaces.',
+      'Flag to control if members can create video calls in this Space.',
   })
   allowMembersToVideoCall?: boolean;
 }
