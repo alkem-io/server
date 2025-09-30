@@ -6,8 +6,6 @@ export class AddSettingAllowMembersToVideoCall1759156590119
   name = 'AddSettingAllowMembersToVideoCall1759156590119';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    console.log('Adding allowMembersToVideoCall setting to all spaces...');
-
     // 1. Update regular spaces in the 'space' table
     await queryRunner.query(`
       UPDATE space
@@ -18,8 +16,6 @@ export class AddSettingAllowMembersToVideoCall1759156590119
       )
       WHERE JSON_EXTRACT(settings, '$.collaboration') IS NOT NULL
     `);
-
-    console.log('Updated settings for regular spaces.');
 
     // 2. Update template content spaces in the 'template_content_space' table
     await queryRunner.query(`
@@ -32,13 +28,12 @@ export class AddSettingAllowMembersToVideoCall1759156590119
       WHERE JSON_EXTRACT(settings, '$.collaboration') IS NOT NULL
     `);
 
-    console.log('Updated settings for template content spaces.');
-    console.log('Migration completed successfully.');
+    console.log(
+      'Success: Updated settings for regular spaces and template content spaces.'
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    console.log('Removing allowMembersToVideoCall setting from all spaces...');
-
     // 1. Remove from regular spaces in the 'space' table
     await queryRunner.query(`
       UPDATE space
@@ -48,8 +43,6 @@ export class AddSettingAllowMembersToVideoCall1759156590119
       )
       WHERE JSON_EXTRACT(settings, '$.collaboration.allowMembersToVideoCall') IS NOT NULL
     `);
-
-    console.log('Removed setting from regular spaces.');
 
     // 2. Remove from template content spaces in the 'template_content_space' table
     await queryRunner.query(`
@@ -61,7 +54,8 @@ export class AddSettingAllowMembersToVideoCall1759156590119
       WHERE JSON_EXTRACT(settings, '$.collaboration.allowMembersToVideoCall') IS NOT NULL
     `);
 
-    console.log('Removed setting from template content spaces.');
-    console.log('Rollback completed successfully.');
+    console.log(
+      'Success: Removed setting from regular spaces and template content spaces.'
+    );
   }
 }
