@@ -1,25 +1,28 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { IsBoolean, ValidateNested } from 'class-validator';
+import { ValidateNested } from 'class-validator';
 import { UpdateUserSettingsNotificationPlatformAdminInput } from './user.settings.notification.platform.admin.dto.update';
+import { NotificationSettingInput } from './notification.setting.input';
 import { Type } from 'class-transformer';
 
 @InputType()
 export class UpdateUserSettingsNotificationPlatformInput {
-  @Field(() => Boolean, {
+  @Field(() => NotificationSettingInput, {
     nullable: true,
     description:
       'Receive a notification when a new Discussion is created in the Forum',
   })
-  @IsBoolean()
-  forumDiscussionCreated?: boolean;
+  @ValidateNested()
+  @Type(() => NotificationSettingInput)
+  forumDiscussionCreated?: NotificationSettingInput;
 
-  @Field(() => Boolean, {
+  @Field(() => NotificationSettingInput, {
     nullable: true,
     description:
       'Receive a notification when a new comment is added to a Discussion I created in the Forum',
   })
-  @IsBoolean()
-  forumDiscussionComment?: boolean;
+  @ValidateNested()
+  @Type(() => NotificationSettingInput)
+  forumDiscussionComment?: NotificationSettingInput;
 
   @Field(() => UpdateUserSettingsNotificationPlatformAdminInput, {
     nullable: true,

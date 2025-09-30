@@ -15,13 +15,6 @@ export class CreateUserSettingsNotificationUserInput {
 
   @Field(() => CreateUserSettingsNotificationChannelsInput, {
     nullable: false,
-    description: 'Receive notification I send a message.',
-  })
-  @IsBoolean()
-  copyOfMessageSent!: CreateUserSettingsNotificationChannelsInput;
-
-  @Field(() => CreateUserSettingsNotificationChannelsInput, {
-    nullable: false,
     description: 'Receive a notification you are mentioned',
   })
   @IsBoolean()

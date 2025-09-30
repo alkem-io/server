@@ -1,21 +1,25 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { IsBoolean } from 'class-validator';
+import { ValidateNested } from 'class-validator';
+import { NotificationSettingInput } from './notification.setting.input';
+import { Type } from 'class-transformer';
 
 @InputType()
 export class UpdateUserSettingsNotificationOrganizationInput {
-  @Field(() => Boolean, {
+  @Field(() => NotificationSettingInput, {
     nullable: true,
     description:
       'Receive notification when the organization you are admin of is messaged',
   })
-  @IsBoolean()
-  adminMessageReceived?: boolean;
+  @ValidateNested()
+  @Type(() => NotificationSettingInput)
+  adminMessageReceived?: NotificationSettingInput;
 
-  @Field(() => Boolean, {
+  @Field(() => NotificationSettingInput, {
     nullable: true,
     description:
       'Receive a notification when the organization you are admin of is mentioned',
   })
-  @IsBoolean()
-  adminMentioned?: boolean;
+  @ValidateNested()
+  @Type(() => NotificationSettingInput)
+  adminMentioned?: NotificationSettingInput;
 }
