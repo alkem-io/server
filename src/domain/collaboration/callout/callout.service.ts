@@ -672,6 +672,7 @@ export class CalloutService {
         });
       }
     }
+    qb.orderBy('contribution.sortOrder', 'ASC');
 
     return getPaginationResults(qb, paginationArgs);
   }
