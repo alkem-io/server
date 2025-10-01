@@ -71,7 +71,7 @@ export class CalloutResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField(() => PaginatedContributions, {
+  @ResolveField('contributionsPaginated', () => PaginatedContributions, {
     nullable: false,
     description:
       'The Contributions that have been made to this Callout, paginated.',
