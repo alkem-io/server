@@ -1,35 +1,41 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { IsBoolean } from 'class-validator';
+import { ValidateNested } from 'class-validator';
+import { NotificationSettingInput } from './notification.setting.input';
+import { Type } from 'class-transformer';
 
 @InputType()
 export class UpdateUserSettingsNotificationSpaceAdminInput {
-  @Field(() => Boolean, {
+  @Field(() => NotificationSettingInput, {
     nullable: true,
     description:
       'Receive a notification when a message is sent to a Space I lead',
   })
-  @IsBoolean()
-  communicationMessageReceived?: boolean;
+  @ValidateNested()
+  @Type(() => NotificationSettingInput)
+  communicationMessageReceived?: NotificationSettingInput;
 
-  @Field(() => Boolean, {
+  @Field(() => NotificationSettingInput, {
     nullable: true,
     description: 'Receive a notification when an application is received',
   })
-  @IsBoolean()
-  communityApplicationReceived?: boolean;
+  @ValidateNested()
+  @Type(() => NotificationSettingInput)
+  communityApplicationReceived?: NotificationSettingInput;
 
-  @Field(() => Boolean, {
+  @Field(() => NotificationSettingInput, {
     nullable: true,
     description:
       'Receive a notification when a new member joins the community (admin)',
   })
-  @IsBoolean()
-  communityNewMember?: boolean;
+  @ValidateNested()
+  @Type(() => NotificationSettingInput)
+  communityNewMember?: NotificationSettingInput;
 
-  @Field(() => Boolean, {
+  @Field(() => NotificationSettingInput, {
     nullable: true,
     description: 'Receive a notification when a contribution is added (admin)',
   })
-  @IsBoolean()
-  collaborationCalloutContributionCreated?: boolean;
+  @ValidateNested()
+  @Type(() => NotificationSettingInput)
+  collaborationCalloutContributionCreated?: NotificationSettingInput;
 }

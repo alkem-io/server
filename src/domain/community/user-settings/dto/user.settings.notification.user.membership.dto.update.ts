@@ -1,26 +1,23 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { IsBoolean } from 'class-validator';
+import { ValidateNested } from 'class-validator';
+import { NotificationSettingInput } from './notification.setting.input';
+import { Type } from 'class-transformer';
 
 @InputType()
 export class UpdateUserSettingsNotificationUserMembershipInput {
-  @Field(() => Boolean, {
-    nullable: true,
-    description: 'Receive a notification when an application is submitted',
-  })
-  @IsBoolean()
-  spaceCommunityApplicationSubmitted?: boolean;
-
-  @Field(() => Boolean, {
+  @Field(() => NotificationSettingInput, {
     nullable: true,
     description: 'Receive a notification for community invitation',
   })
-  @IsBoolean()
-  spaceCommunityInvitationReceived?: boolean;
+  @ValidateNested()
+  @Type(() => NotificationSettingInput)
+  spaceCommunityInvitationReceived?: NotificationSettingInput;
 
-  @Field(() => Boolean, {
+  @Field(() => NotificationSettingInput, {
     nullable: true,
     description: 'Receive a notification when I join a new community',
   })
-  @IsBoolean()
-  spaceCommunityJoined?: boolean;
+  @ValidateNested()
+  @Type(() => NotificationSettingInput)
+  spaceCommunityJoined?: NotificationSettingInput;
 }

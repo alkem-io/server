@@ -104,6 +104,7 @@ import { UpdateUserSettingsNotificationOrganizationInput } from '@domain/communi
 import { CreateUserSettingsNotificationSpaceAdminInput } from '@domain/community/user-settings/dto/user.settings.notification.space.admin.dto.create';
 import { UpdateUserSettingsNotificationSpaceAdminInput } from '@domain/community/user-settings/dto/user.settings.notification.space.admin.dto.update';
 import { UpdateUserSettingsNotificationSpaceInput } from '@domain/community/user-settings/dto/user.settings.notification.space.dto.update';
+import { NotificationSettingInput } from '@domain/community/user-settings/dto/notification.setting.input';
 import { UpdateCalloutEntityInput } from '@domain/collaboration/callout/dto';
 
 export class BaseHandler extends AbstractHandler {
@@ -198,6 +199,7 @@ export class BaseHandler extends AbstractHandler {
       UpdateUserSettingsNotificationOrganizationInput,
       UpdateUserSettingsNotificationSpaceInput,
       UpdateUserSettingsNotificationSpaceAdminInput,
+      NotificationSettingInput,
       VisualUploadImageInput,
       ForumCreateDiscussionInput,
       SendMessageOnCalloutInput,
