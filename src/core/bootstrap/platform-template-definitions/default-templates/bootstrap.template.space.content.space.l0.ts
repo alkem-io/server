@@ -83,6 +83,7 @@ export const bootstrapTemplateSpaceContentSpaceL0: CreateTemplateContentSpaceInp
         allowMembersToCreateSubspaces: false,
         allowMembersToCreateCallouts: false,
         allowEventsFromSubspaces: true,
+        allowMembersToVideoCall: false,
       },
     },
     about: {

@@ -27,4 +27,11 @@ export abstract class ISpaceSettingsCollaboration {
       'Flag to control if events from Subspaces are visible on this Space calendar as well.',
   })
   allowEventsFromSubspaces!: boolean;
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description:
+      'Flag to control if members can create video calls in this Space.',
+  })
+  allowMembersToVideoCall!: boolean;
 }
