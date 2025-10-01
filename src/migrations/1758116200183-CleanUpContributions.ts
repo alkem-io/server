@@ -19,7 +19,11 @@ export class CleanUpContributions1758116200183 implements MigrationInterface {
       `UPDATE \`callout_contribution\` SET \`type\` = 'memo' WHERE \`memoId\` IS NOT NULL`
     );
     await queryRunner.query(
-      `DELETE FROM \`callout_contribution\` WHERE \`whiteboardId\` IS NULL AND \`postId\` IS NULL AND \`linkId\` IS NULL AND \`whiteboardId\` IS NULL`
+      `DELETE FROM \`callout_contribution\` WHERE
+        \`whiteboardId\` IS NULL AND
+        \`postId\` IS NULL AND
+        \`linkId\` IS NULL AND
+        \`memoId\` IS NULL;`
     );
 
     const problems = [
