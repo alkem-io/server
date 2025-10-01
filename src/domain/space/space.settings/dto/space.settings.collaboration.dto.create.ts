@@ -33,5 +33,5 @@ export class CreateSpaceSettingsCollaborationInput {
     description:
       'Flag to control if members can create video calls in this Space.',
   })
-  allowMembersToVideoCall?: boolean;
+  allowMembersToVideoCall!: boolean;
 }
