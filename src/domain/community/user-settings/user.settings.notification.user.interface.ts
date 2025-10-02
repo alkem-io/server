@@ -19,13 +19,6 @@ export abstract class IUserSettingsNotificationUser {
 
   @Field(() => IUserSettingsNotificationChannels, {
     nullable: false,
-    description:
-      'Receive notification I send a message to a User, Organization or Space.',
-  })
-  copyOfMessageSent!: IUserSettingsNotificationChannels;
-
-  @Field(() => IUserSettingsNotificationChannels, {
-    nullable: false,
     description: 'Receive a notification you are mentioned',
   })
   mentioned!: IUserSettingsNotificationChannels;
