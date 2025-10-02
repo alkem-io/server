@@ -389,12 +389,6 @@ export class NotificationSpaceAdapter {
         eventData.community.id
       );
 
-    // Send to the user
-    await this.notificationUserAdapter.userSpaceCommunityApplication(
-      eventData,
-      space
-    );
-
     const adminEvent = NotificationEvent.SPACE_ADMIN_COMMUNITY_APPLICATION;
     const adminRecipients = await this.getNotificationRecipientsSpace(
       adminEvent,

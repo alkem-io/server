@@ -255,9 +255,6 @@ export class NotificationRecipientsService {
         return notificationSettings.organization.adminMessageReceived;
       case NotificationEvent.ORGANIZATION_ADMIN_MENTIONED:
         return notificationSettings.organization.adminMentioned;
-      case NotificationEvent.USER_SPACE_COMMUNITY_APPLICATION:
-        return notificationSettings.user.membership
-          .spaceCommunityApplicationSubmitted;
       case NotificationEvent.USER_SPACE_COMMUNITY_INVITATION:
         return notificationSettings.user.membership
           .spaceCommunityInvitationReceived;
@@ -271,8 +268,6 @@ export class NotificationRecipientsService {
         return notificationSettings.user.messageReceived;
       case NotificationEvent.USER_MESSAGE_SENDER:
       case NotificationEvent.ORGANIZATION_MESSAGE_SENDER:
-      case NotificationEvent.SPACE_COMMUNICATION_MESSAGE_SENDER:
-        return notificationSettings.user.copyOfMessageSent;
       case NotificationEvent.SPACE_ADMIN_COMMUNITY_APPLICATION:
         return notificationSettings.space.admin.communityApplicationReceived;
       case NotificationEvent.SPACE_LEAD_COMMUNICATION_MESSAGE:
@@ -399,7 +394,6 @@ export class NotificationRecipientsService {
         credentialCriteria = this.getUserSelfCriteria(userID);
         break;
       }
-      case NotificationEvent.USER_SPACE_COMMUNITY_APPLICATION:
       case NotificationEvent.USER_SPACE_COMMUNITY_JOINED:
       case NotificationEvent.SPACE_COMMUNITY_INVITATION_USER_PLATFORM:
       case NotificationEvent.USER_SPACE_COMMUNITY_INVITATION: {
@@ -494,7 +488,6 @@ export class NotificationRecipientsService {
       case NotificationEvent.PLATFORM_FORUM_DISCUSSION_COMMENT:
       case NotificationEvent.USER_COMMENT_REPLY:
       case NotificationEvent.USER_SPACE_COMMUNITY_JOINED:
-      case NotificationEvent.USER_SPACE_COMMUNITY_APPLICATION:
       case NotificationEvent.USER_SPACE_COMMUNITY_INVITATION: {
         // get the User authorization policy
         // Use userID if provided, otherwise fall back to entityID for backward compatibility

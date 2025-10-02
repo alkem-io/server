@@ -20,8 +20,6 @@ import { NotificationInputUserMention } from './dto/user/notification.dto.input.
 import { ISpace } from '@domain/space/space/space.interface';
 import { InAppNotificationPayloadSpaceCommunityInvitation } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.invitation';
 import { NotificationInputCommunityInvitation } from './dto/space/notification.dto.input.space.community.invitation';
-import { NotificationInputCommunityApplication } from './dto/space/notification.dto.input.space.community.application';
-import { InAppNotificationPayloadSpaceCommunityApplication } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.application';
 import { NotificationInputCommunityNewMember } from './dto/space/notification.dto.input.space.community.new.member';
 import { InAppNotificationPayloadSpaceCommunityContributor } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.contributor';
 import { MessageDetailsService } from '@domain/communication/message.details/message.details.service';
@@ -71,49 +69,6 @@ export class NotificationUserAdapter {
       await this.notificationInAppAdapter.sendInAppNotifications(
         NotificationEvent.USER_SIGN_UP_WELCOME,
         NotificationEventCategory.PLATFORM,
-        eventData.triggeredBy,
-        inAppReceiverIDs,
-        inAppPayload
-      );
-    }
-  }
-
-  public async userSpaceCommunityApplication(
-    eventData: NotificationInputCommunityApplication,
-    space: ISpace
-  ): Promise<void> {
-    const event = NotificationEvent.USER_SPACE_COMMUNITY_APPLICATION;
-
-    const recipients = await this.getNotificationRecipientsUser(
-      event,
-      eventData,
-      eventData.triggeredBy
-    );
-
-    const payload =
-      await this.notificationExternalAdapter.buildSpaceCommunityApplicationCreatedNotificationPayload(
-        event,
-        eventData.triggeredBy,
-        recipients.emailRecipients,
-        space
-      );
-
-    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
-
-    // Send in-app notifications
-    const inAppReceiverIDs = recipients.inAppRecipients.map(
-      recipient => recipient.id
-    );
-    if (inAppReceiverIDs.length > 0) {
-      const inAppPayload: InAppNotificationPayloadSpaceCommunityApplication = {
-        type: NotificationEventPayload.SPACE_COMMUNITY_APPLICATION,
-        spaceID: space.id,
-        applicationID: eventData.application.id,
-      };
-
-      await this.notificationInAppAdapter.sendInAppNotifications(
-        NotificationEvent.USER_SPACE_COMMUNITY_APPLICATION,
-        NotificationEventCategory.SPACE_MEMBER,
         eventData.triggeredBy,
         inAppReceiverIDs,
         inAppPayload
@@ -299,64 +254,6 @@ export class NotificationUserAdapter {
 
       await this.notificationInAppAdapter.sendInAppNotifications(
         NotificationEvent.USER_MESSAGE,
-        NotificationEventCategory.USER,
-        eventData.triggeredBy,
-        inAppReceiverIDs,
-        inAppPayload
-      );
-    }
-
-    // send a copy to the sender if they have that flag enabled
-    await this.userCopyOfMessageSent(eventData, eventData.receiverID);
-  }
-
-  public async userCopyOfMessageSent(
-    eventData: NotificationInputUserMessage,
-    userID?: string,
-    spaceID?: string,
-    organizationID?: string
-  ): Promise<void> {
-    this.logger.verbose?.(
-      'sending message notification',
-      LogContext.NOTIFICATIONS,
-      { userID, spaceID, organizationID }
-    );
-    const event = NotificationEvent.USER_MESSAGE_SENDER;
-    const recipients = await this.getNotificationRecipientsUser(
-      event,
-      eventData,
-      eventData.triggeredBy
-    );
-
-    if (recipients.emailRecipients.length > 0) {
-      const payload =
-        await this.notificationExternalAdapter.buildUserMessageSentNotificationPayload(
-          event,
-          eventData.triggeredBy,
-          recipients.emailRecipients,
-          eventData.receiverID,
-          eventData.message
-          // TODO: send also the details of what was sent to
-        );
-      this.notificationExternalAdapter.sendExternalNotifications(
-        event,
-        payload
-      );
-    }
-
-    // In-app notification
-    const inAppReceiverIDs = recipients.inAppRecipients.map(
-      recipient => recipient.id
-    );
-    if (inAppReceiverIDs.length > 0) {
-      const inAppPayload: InAppNotificationPayloadUserMessageDirect = {
-        type: NotificationEventPayload.USER_MESSAGE_DIRECT,
-        userID: eventData.receiverID,
-        message: eventData.message,
-      };
-
-      await this.notificationInAppAdapter.sendInAppNotifications(
-        NotificationEvent.USER_MESSAGE_SENDER,
         NotificationEventCategory.USER,
         eventData.triggeredBy,
         inAppReceiverIDs,
