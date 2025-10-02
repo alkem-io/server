@@ -438,7 +438,7 @@ export class VirtualContributorService {
     );
 
     return this.aiServerAdapter.refreshBodyOfKnowledge(
-      virtualContributor.bodyOfKnowledgeID,
+      virtualContributor.bodyOfKnowledgeID ?? '',
       virtualContributor.bodyOfKnowledgeType,
       virtualContributor.aiPersonaID
     );

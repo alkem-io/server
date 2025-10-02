@@ -45,7 +45,7 @@ export class VirtualContributor
   aiPersonaID!: string;
 
   @Column('varchar', { nullable: true, length: SMALL_TEXT_LENGTH })
-  bodyOfKnowledgeID!: string;
+  bodyOfKnowledgeID?: string;
 
   @Column('json', { nullable: true, transformer: PromptGraphTransformer })
   promptGraphDefinition?: PromptGraphDefinition;
