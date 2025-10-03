@@ -437,6 +437,23 @@ export class VirtualContributorService {
       LogContext.VIRTUAL_CONTRIBUTOR
     );
 
+    // no refresh needed for these types
+    if (
+      [
+        VirtualContributorBodyOfKnowledgeType.NONE,
+        VirtualContributorBodyOfKnowledgeType.OTHER,
+      ].includes(virtualContributor.bodyOfKnowledgeType)
+    ) {
+      return Promise.resolve(false);
+    }
+
+    if (!virtualContributor.bodyOfKnowledgeID) {
+      throw new ValidationException(
+        `Virtual Contributor Body of Knowledge ID missing: ${virtualContributor.id}`,
+        LogContext.VIRTUAL_CONTRIBUTOR
+      );
+    }
+
     return this.aiServerAdapter.refreshBodyOfKnowledge(
       virtualContributor.bodyOfKnowledgeID,
       virtualContributor.bodyOfKnowledgeType,
