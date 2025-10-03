@@ -17,6 +17,7 @@ import { ICalloutContribution } from '../callout-contribution/callout.contributi
 import { ICalloutContributionDefaults } from '../callout-contribution-defaults/callout.contribution.defaults.interface';
 import { IClassification } from '@domain/common/classification/classification.interface';
 import { ContributionsFilterInput } from './dto/contributions.filter';
+import { CalloutContributionsCountOutput } from './dto/callout.contributions.count.dto';
 
 @Resolver(() => ICallout)
 export class CalloutResolverFields {
@@ -65,6 +66,17 @@ export class CalloutResolverFields {
       limit,
       shuffle
     );
+  }
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('contributionsCount', () => CalloutContributionsCountOutput, {
+    nullable: false,
+    description: 'The Contributions that have been made to this Callout.',
+  })
+  async contributionsCount(
+    @Parent() callout: Callout
+  ): Promise<CalloutContributionsCountOutput> {
+    return await this.calloutService.getContributionsCount(callout);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

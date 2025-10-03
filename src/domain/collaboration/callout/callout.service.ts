@@ -46,6 +46,7 @@ import {
 } from '@common/enums/callout.contribution.type';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { DefaultCalloutSettings } from '../callout-settings/callout.settings.default';
+import { CalloutContributionsCountOutput } from './dto/callout.contributions.count.dto';
 
 @Injectable()
 export class CalloutService {
@@ -645,5 +646,40 @@ export class CalloutService {
 
     const limitAndShuffled = limitAndShuffle(results, limit, shuffle);
     return limitAndShuffled;
+  }
+
+  public async getContributionsCount(
+    callout: ICallout
+  ): Promise<CalloutContributionsCountOutput> {
+    const counts = await this.calloutRepository
+      .createQueryBuilder('callout')
+      .leftJoin('callout.contributions', 'contribution')
+      .select('contribution.type', 'type')
+      .addSelect('COUNT(contribution.id)', 'count')
+      .where('callout.id = :calloutId', { calloutId: callout.id })
+      .groupBy('contribution.type')
+      .getRawMany<{ type: CalloutContributionType; count: string }>();
+
+    const result: CalloutContributionsCountOutput = {
+      post: 0,
+      link: 0,
+      whiteboard: 0,
+      memo: 0,
+    };
+
+    for (const { type, count } of counts) {
+      const numCount = parseInt(count, 10);
+      if (type === CalloutContributionType.POST) {
+        result.post = numCount;
+      } else if (type === CalloutContributionType.LINK) {
+        result.link = numCount;
+      } else if (type === CalloutContributionType.WHITEBOARD) {
+        result.whiteboard = numCount;
+      } else if (type === CalloutContributionType.MEMO) {
+        result.memo = numCount;
+      }
+    }
+
+    return result;
   }
 }
