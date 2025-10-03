@@ -156,7 +156,7 @@
             { "name": "role", "type": "string" },
             { "name": "content", "type": "string" }
           ],
-          "required": ["type", "content"]
+          "required": ["role", "content"]
         },
         "description": "Sequence of HistoryItem objects"
       },
