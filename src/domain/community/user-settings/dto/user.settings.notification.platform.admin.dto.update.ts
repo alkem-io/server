@@ -1,36 +1,42 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { IsBoolean } from 'class-validator';
+import { ValidateNested } from 'class-validator';
+import { NotificationSettingInput } from './notification.setting.input';
+import { Type } from 'class-transformer';
 
 @InputType()
 export class UpdateUserSettingsNotificationPlatformAdminInput {
-  @Field(() => Boolean, {
+  @Field(() => NotificationSettingInput, {
     nullable: true,
     description: '[Admin] Receive notification when a new user signs up',
   })
-  @IsBoolean()
-  userProfileCreated?: boolean;
+  @ValidateNested()
+  @Type(() => NotificationSettingInput)
+  userProfileCreated?: NotificationSettingInput;
 
-  @Field(() => Boolean, {
+  @Field(() => NotificationSettingInput, {
     nullable: true,
     description:
       '[Admin] Receive a notification when a user profile is removed',
   })
-  @IsBoolean()
-  userProfileRemoved?: boolean;
+  @ValidateNested()
+  @Type(() => NotificationSettingInput)
+  userProfileRemoved?: NotificationSettingInput;
 
-  @Field(() => Boolean, {
+  @Field(() => NotificationSettingInput, {
     nullable: true,
     description:
       '[Admin] Receive a notification when a new L0 Space is created',
   })
-  @IsBoolean()
-  spaceCreated?: boolean;
+  @ValidateNested()
+  @Type(() => NotificationSettingInput)
+  spaceCreated?: NotificationSettingInput;
 
-  @Field(() => Boolean, {
+  @Field(() => NotificationSettingInput, {
     nullable: true,
     description:
       '[Admin] Receive a notification user is assigned or removed from a global role',
   })
-  @IsBoolean()
-  userGlobalRoleChanged?: boolean;
+  @ValidateNested()
+  @Type(() => NotificationSettingInput)
+  userGlobalRoleChanged?: NotificationSettingInput;
 }

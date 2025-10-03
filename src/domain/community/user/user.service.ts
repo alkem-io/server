@@ -240,13 +240,13 @@ export class UserService {
           adminMentioned: { email: true, inApp: true },
         },
         platform: {
-          forumDiscussionCreated: { email: false, inApp: false },
+          forumDiscussionCreated: { email: true, inApp: false },
           forumDiscussionComment: { email: true, inApp: true },
           admin: {
-            userProfileCreated: { email: true, inApp: true },
-            userProfileRemoved: { email: true, inApp: true },
-            spaceCreated: { email: true, inApp: true },
-            userGlobalRoleChanged: { email: true, inApp: true },
+            userProfileCreated: { email: false, inApp: false },
+            userProfileRemoved: { email: false, inApp: false },
+            spaceCreated: { email: false, inApp: false },
+            userGlobalRoleChanged: { email: false, inApp: false },
           },
         },
         space: {
@@ -255,26 +255,27 @@ export class UserService {
             communityNewMember: { email: true, inApp: true },
             communicationMessageReceived: { email: true, inApp: true },
             collaborationCalloutContributionCreated: {
-              email: true,
+              email: false,
               inApp: true,
             },
           },
           communicationUpdates: { email: true, inApp: true },
-          collaborationCalloutContributionCreated: { email: true, inApp: true },
-          collaborationCalloutPostContributionComment: {
-            email: true,
+          collaborationCalloutContributionCreated: {
+            email: false,
             inApp: true,
           },
-          collaborationCalloutComment: { email: true, inApp: true },
+          collaborationCalloutPostContributionComment: {
+            email: false,
+            inApp: true,
+          },
+          collaborationCalloutComment: { email: false, inApp: true },
           collaborationCalloutPublished: { email: true, inApp: true },
         },
         user: {
           mentioned: { email: true, inApp: true },
-          commentReply: { email: true, inApp: true },
+          commentReply: { email: false, inApp: true },
           messageReceived: { email: true, inApp: true },
-          copyOfMessageSent: { email: true, inApp: true },
           membership: {
-            spaceCommunityApplicationSubmitted: { email: true, inApp: true },
             spaceCommunityInvitationReceived: { email: true, inApp: true },
             spaceCommunityJoined: { email: true, inApp: true },
           },
