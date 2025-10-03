@@ -29,7 +29,7 @@ export class CreateCalloutContributionInput {
   @Field(() => CreateMemoInput, { nullable: true })
   @IsOptional()
   @ValidateNested({ each: true })
-  memo?: CreateLinkInput;
+  memo?: CreateMemoInput;
 
   @Field(() => Number, {
     nullable: true,

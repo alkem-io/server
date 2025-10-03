@@ -1,4 +1,4 @@
-import { Args, Float, Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { Args, Int, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { LoggerService } from '@nestjs/common';
 import { Inject, UseGuards } from '@nestjs/common/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -45,7 +45,7 @@ export class CalloutResolverFields {
     filter?: ContributionsFilterInput,
     @Args({
       name: 'limit',
-      type: () => Float,
+      type: () => Int,
       description:
         'The number of Contributions to return; if omitted return all Contributions.',
       nullable: true,

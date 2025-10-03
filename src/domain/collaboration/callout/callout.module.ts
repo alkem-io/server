@@ -45,7 +45,7 @@ import { CalloutContribution } from '../callout-contribution/callout.contributio
     ClassificationModule,
     TemporaryStorageModule,
     RoleSetModule,
-    TypeOrmModule.forFeature([Callout, CalloutContribution]), // Added CalloutContribution so its repository can be injected
+    TypeOrmModule.forFeature([Callout, CalloutContribution]),
   ],
   providers: [
     CalloutResolverMutations,
