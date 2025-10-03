@@ -1,11 +1,4 @@
-import {
-  Column,
-  Entity,
-  Generated,
-  JoinColumn,
-  ManyToOne,
-  OneToOne,
-} from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import { ICalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
@@ -21,12 +14,6 @@ export class CalloutContribution
   extends AuthorizableEntity
   implements ICalloutContribution
 {
-  @Column({
-    unique: true,
-  })
-  @Generated('increment')
-  rowId!: number;
-
   @Column('char', { length: UUID_LENGTH, nullable: true })
   createdBy?: string;
 

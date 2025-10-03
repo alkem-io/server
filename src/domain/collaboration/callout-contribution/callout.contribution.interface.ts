@@ -6,7 +6,7 @@ import { ILink } from '../link/link.interface';
 import { ICallout } from '../callout/callout.interface';
 
 @ObjectType('CalloutContribution')
-export class ICalloutContribution extends IAuthorizable {
+export abstract class ICalloutContribution extends IAuthorizable {
   link?: ILink;
 
   whiteboard?: IWhiteboard;
