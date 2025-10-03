@@ -46,6 +46,11 @@ import {
 } from '@common/enums/callout.contribution.type';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { DefaultCalloutSettings } from '../callout-settings/callout.settings.default';
+import { PaginationArgs } from '@core/pagination';
+import { IPaginatedType } from '@core/pagination/paginated.type';
+import { ContributionsFilterInput } from './dto/contributions.filter';
+import { CalloutContribution } from '../callout-contribution/callout.contribution.entity';
+import { getPaginationResults } from '@core/pagination/pagination.fn';
 
 @Injectable()
 export class CalloutService {
@@ -60,7 +65,9 @@ export class CalloutService {
     private storageAggregatorResolverService: StorageAggregatorResolverService,
     private classificationService: ClassificationService,
     @InjectRepository(Callout)
-    private calloutRepository: Repository<Callout>
+    private calloutRepository: Repository<Callout>,
+    @InjectRepository(CalloutContribution)
+    private calloutContributionRepository: Repository<CalloutContribution>
   ) {}
 
   public async createCallout(
@@ -610,7 +617,6 @@ export class CalloutService {
           post: types.includes(CalloutContributionType.POST),
           whiteboard: types.includes(CalloutContributionType.WHITEBOARD),
           link: types.includes(CalloutContributionType.LINK),
-          memo: types.includes(CalloutContributionType.MEMO),
         },
       },
       ...(contributionIDs
@@ -645,5 +651,29 @@ export class CalloutService {
 
     const limitAndShuffled = limitAndShuffle(results, limit, shuffle);
     return limitAndShuffled;
+  }
+
+  async getContributionsPaginated(
+    callout: ICallout,
+    paginationArgs: PaginationArgs,
+    filter?: ContributionsFilterInput
+  ): Promise<IPaginatedType<CalloutContribution>> {
+    const qb =
+      this.calloutContributionRepository.createQueryBuilder('contribution');
+    qb.where('contribution.calloutId = :calloutId', { calloutId: callout.id });
+
+    if (filter) {
+      if (filter?.IDs) {
+        qb.andWhere('contribution.id IN (:...ids)', { ids: filter.IDs });
+      }
+      if (filter?.types) {
+        qb.andWhere('contribution.type IN (:...types)', {
+          types: filter.types,
+        });
+      }
+    }
+    qb.orderBy('contribution.sortOrder', 'ASC');
+
+    return getPaginationResults(qb, paginationArgs);
   }
 }

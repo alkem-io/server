@@ -23,6 +23,7 @@ import { TemporaryStorageModule } from '@services/infrastructure/temporary-stora
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { ClassificationModule } from '@domain/common/classification/classification.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
+import { CalloutContribution } from '../callout-contribution/callout.contribution.entity';
 
 @Module({
   imports: [
@@ -44,7 +45,7 @@ import { RoleSetModule } from '@domain/access/role-set/role.set.module';
     ClassificationModule,
     TemporaryStorageModule,
     RoleSetModule,
-    TypeOrmModule.forFeature([Callout]),
+    TypeOrmModule.forFeature([Callout, CalloutContribution]),
   ],
   providers: [
     CalloutResolverMutations,

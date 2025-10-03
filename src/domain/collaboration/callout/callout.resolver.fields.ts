@@ -16,7 +16,9 @@ import { IRoom } from '@domain/communication/room/room.interface';
 import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
 import { ICalloutContributionDefaults } from '../callout-contribution-defaults/callout.contribution.defaults.interface';
 import { IClassification } from '@domain/common/classification/classification.interface';
+import { PaginationArgs } from '@core/pagination';
 import { ContributionsFilterInput } from './dto/contributions.filter';
+import { PaginatedContributions } from '@core/pagination/paginated.contribution';
 
 @Resolver(() => ICallout)
 export class CalloutResolverFields {
@@ -64,6 +66,25 @@ export class CalloutResolverFields {
       filter?.types,
       limit,
       shuffle
+    );
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('contributionsPaginated', () => PaginatedContributions, {
+    nullable: false,
+    description:
+      'The Contributions that have been made to this Callout, paginated.',
+  })
+  async contributionsPaginated(
+    @Parent() callout: Callout,
+    @Args() pagination: PaginationArgs,
+    @Args('filter', { nullable: true }) filter?: ContributionsFilterInput
+  ): Promise<PaginatedContributions> {
+    return await this.calloutService.getContributionsPaginated(
+      callout,
+      pagination,
+      filter
     );
   }
 
