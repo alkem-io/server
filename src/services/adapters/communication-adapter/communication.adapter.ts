@@ -12,9 +12,14 @@ import { IMessage } from '@domain/communication/message/message.interface';
 import { MATRIX_ADAPTER_SERVICE } from '@common/constants';
 import { ClientProxy } from '@nestjs/microservices';
 import {
+  AdminAllRoomsPayload,
+  AdminReplicateRoomMembershipPayload,
+  AdminReplicateRoomMembershipResponsePayload,
   MatrixAdapterEventType,
   RoomCreatePayload,
   RoomCreateResponsePayload,
+  RoomDeletePayload,
+  RoomDeleteResponsePayload,
   RoomMessageAddReactionPayload,
   RoomMessageAddReactionResponsePayload,
   RoomMessageDeletePayload,
@@ -25,8 +30,16 @@ import {
   RoomMessageSendPayload,
   RoomMessageSendReplyPayload,
   RoomMessageSendResponsePayload,
+  RoomUpdateStatePayload,
+  UserAddToRoomsPayload,
+  UserAddToRoomsResponsePayload,
   UserRegisterPayload,
   UserRegisterResponsePayload,
+  UserRemoveFromRoomsPayload,
+  UserRemoveFromRoomsResponsePayload,
+  UserRoomsDirectPayload,
+  UserRoomsPayload,
+  UserRoomsResponsePayload,
   UserSendDirectMessagePayload,
 } from '@alkemio/matrix-adapter-lib';
 import { RoomDetailsPayload } from '@alkemio/matrix-adapter-lib';
@@ -474,7 +487,7 @@ export class CommunicationAdapter {
     }
   }
 
-  async grantUserAccessToRooms(
+  async userAddToRooms(
     roomIDs: string[],
     matrixUserID: string
   ): Promise<boolean> {
@@ -483,7 +496,7 @@ export class CommunicationAdapter {
       return false;
     }
     const eventType = MatrixAdapterEventType.USER_ADD_TO_ROOMS;
-    const inputPayload: AddUserToRoomsPayload = {
+    const inputPayload: UserAddToRoomsPayload = {
       triggeredBy: '',
       roomIDs,
       userID: matrixUserID,
@@ -496,7 +509,7 @@ export class CommunicationAdapter {
 
     try {
       const responseData =
-        await firstValueFrom<AddUserToRoomsResponsePayload>(response);
+        await firstValueFrom<UserAddToRoomsResponsePayload>(response);
       this.logResponsePayload(eventType, responseData, eventID);
       return responseData.success;
     } catch (err: any) {
@@ -518,7 +531,7 @@ export class CommunicationAdapter {
       return rooms;
     }
     const eventType = MatrixAdapterEventType.USER_ROOMS;
-    const inputPayload: RoomsUserPayload = {
+    const inputPayload: UserRoomsPayload = {
       triggeredBy: '',
       userID: matrixUserID,
     };
@@ -530,7 +543,7 @@ export class CommunicationAdapter {
 
     try {
       const responseData =
-        await firstValueFrom<RoomsUserResponsePayload>(response);
+        await firstValueFrom<UserRoomsResponsePayload>(response);
       this.logResponsePayload(eventType, responseData, eventID);
       return responseData.rooms.map(room => {
         return {
@@ -558,14 +571,14 @@ export class CommunicationAdapter {
     }
   }
 
-  async getDirectRooms(matrixUserID: string): Promise<DirectRoomResult[]> {
+  async userGetDirectRooms(matrixUserID: string): Promise<DirectRoomResult[]> {
     const rooms: DirectRoomResult[] = [];
     // If not enabled just return an empty array
     if (!this.enabled) {
       return rooms;
     }
     const eventType = MatrixAdapterEventType.USER_ROOMS_DIRECT;
-    const inputPayload: RoomsUserDirectPayload = {
+    const inputPayload: UserRoomsDirectPayload = {
       triggeredBy: '',
       userID: matrixUserID,
     };
@@ -577,7 +590,7 @@ export class CommunicationAdapter {
 
     try {
       const responseData =
-        await firstValueFrom<RoomsUserDirectResponsePayload>(response);
+        await firstValueFrom<UserRoomsResponsePayload>(response);
       this.logResponsePayload(eventType, responseData, eventID);
       return responseData.rooms.map(room => {
         return {
@@ -618,7 +631,7 @@ export class CommunicationAdapter {
       `Removing user (${matrixUserID}) from rooms (${roomIDs})`,
       LogContext.COMMUNICATION
     );
-    const inputPayload: RemoveUserFromRoomsPayload = {
+    const inputPayload: UserRemoveFromRoomsPayload = {
       triggeredBy: '',
       userID: matrixUserID,
       roomIDs,
@@ -631,7 +644,7 @@ export class CommunicationAdapter {
 
     try {
       const responseData =
-        await firstValueFrom<RemoveUserFromRoomsResponsePayload>(response);
+        await firstValueFrom<UserRemoveFromRoomsResponsePayload>(response);
       this.logResponsePayload(eventType, responseData, eventID);
       return responseData.success;
     } catch (err: any) {
@@ -643,8 +656,8 @@ export class CommunicationAdapter {
     }
   }
 
-  async getAllRooms(): Promise<RoomResult[]> {
-    const inputPayload: RoomsPayload = {
+  async adminGetAllRooms(): Promise<RoomResult[]> {
+    const inputPayload: AdminAllRoomsPayload = {
       triggeredBy: '',
     };
     const eventType = MatrixAdapterEventType.ADMIN_ALL_ROOMS;
@@ -655,7 +668,8 @@ export class CommunicationAdapter {
     );
 
     try {
-      const responseData = await firstValueFrom<RoomsResponsePayload>(response);
+      const responseData =
+        await firstValueFrom<UserRoomsResponsePayload>(response);
       this.logResponsePayload(eventType, responseData, eventID);
       return responseData.rooms;
     } catch (err: any) {
@@ -667,7 +681,7 @@ export class CommunicationAdapter {
     }
   }
 
-  async replicateRoomMembership(
+  async adminReplicateRoomMembership(
     targetRoomID: string,
     sourceRoomID: string,
     userToPrioritize: string
@@ -677,7 +691,7 @@ export class CommunicationAdapter {
       LogContext.COMMUNICATION
     );
     const eventType = MatrixAdapterEventType.ADMIN_REPLICATE_ROOM_MEMBERSHIP;
-    const inputPayload: ReplicateRoomMembershipPayload = {
+    const inputPayload: AdminReplicateRoomMembershipPayload = {
       triggeredBy: '',
       targetRoomID,
       sourceRoomID,
@@ -691,7 +705,9 @@ export class CommunicationAdapter {
 
     try {
       const responseData =
-        await firstValueFrom<ReplicateRoomMembershipResponsePayload>(response);
+        await firstValueFrom<AdminReplicateRoomMembershipResponsePayload>(
+          response
+        );
       this.logResponsePayload(eventType, responseData, eventID);
       return responseData.success;
     } catch (err: any) {
@@ -703,41 +719,13 @@ export class CommunicationAdapter {
     }
   }
 
-  public async addUserToRoom(roomID: string, matrixUserID: string) {
-    const eventType = MatrixAdapterEventType.USER_ADD_TO_ROOMS;
-    const inputPayload: AddUserToRoomPayload = {
-      triggeredBy: '',
-      roomID,
-      userID: matrixUserID,
-    };
-    const eventID = this.logInputPayload(eventType, inputPayload);
-    const response = this.matrixAdapterClient.send(
-      { cmd: eventType },
-      inputPayload
-    );
-
-    try {
-      const responseData =
-        await firstValueFrom<AddUserToRoomResponsePayload>(response);
-      this.logResponsePayload(eventType, responseData, eventID);
-      return responseData.success;
-    } catch (err: any) {
-      this.logInteractionError(eventType, err, eventID);
-      this.logger.error(
-        `[Membership] Exception user joining a room (user: ${matrixUserID}) room: ${roomID}) - ${err.toString()}`,
-        err?.stack,
-        LogContext.COMMUNICATION
-      );
-    }
-  }
-
   async removeRoom(matrixRoomID: string) {
     this.logger.verbose?.(
       `[Membership] Removing members from matrix room: ${matrixRoomID}`,
       LogContext.COMMUNICATION
     );
     const eventType = MatrixAdapterEventType.ROOM_DELETE;
-    const inputPayload: RemoveRoomPayload = {
+    const inputPayload: RoomDeletePayload = {
       triggeredBy: '',
       roomID: matrixRoomID,
     };
@@ -749,7 +737,7 @@ export class CommunicationAdapter {
 
     try {
       const responseData =
-        await firstValueFrom<RemoveRoomResponsePayload>(response);
+        await firstValueFrom<RoomDeleteResponsePayload>(response);
       this.logResponsePayload(eventType, responseData, eventID);
       this.logger.verbose?.(
         `[Membership] Removed members from room: ${matrixRoomID}`,
@@ -806,7 +794,7 @@ export class CommunicationAdapter {
     allowGuests = true
   ): Promise<CommunicationRoomResult> {
     const eventType = MatrixAdapterEventType.ROOM_UPDATE_STATE;
-    const inputPayload: UpdateRoomStatePayload = {
+    const inputPayload: RoomUpdateStatePayload = {
       triggeredBy: '',
       roomID,
       historyWorldVisibile: worldVisible,

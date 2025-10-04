@@ -167,7 +167,7 @@ export class AdminCommunicationService {
     const roomsUsed = await this.getRoomsUsed();
 
     // Get all the rooms used in Matrix + filter to only create results for those not used
-    const matrixRooms = await this.communicationAdapter.getAllRooms();
+    const matrixRooms = await this.communicationAdapter.adminGetAllRooms();
     for (const matrixRoom of matrixRooms) {
       const found = roomsUsed.find(roomID => roomID === matrixRoom.id);
       if (!found) {

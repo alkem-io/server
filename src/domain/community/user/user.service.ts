@@ -796,7 +796,7 @@ export class UserService {
   }
 
   async getDirectRooms(user: IUser): Promise<DirectRoomResult[]> {
-    const directRooms = await this.communicationAdapter.getDirectRooms(
+    const directRooms = await this.communicationAdapter.userGetDirectRooms(
       user.communicationID
     );
 

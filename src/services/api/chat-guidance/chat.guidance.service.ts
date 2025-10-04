@@ -29,12 +29,12 @@ export class ChatGuidanceService {
       await this.platformService.getGuidanceVirtualContributorOrFail();
     const room = await this.userService.createGuidanceRoom(agentInfo.userID);
 
-    await this.communicationAdapter.addUserToRoom(
-      room.externalRoomID,
+    await this.communicationAdapter.userAddToRooms(
+      [room.externalRoomID],
       agentInfo.communicationID
     );
-    await this.communicationAdapter.addUserToRoom(
-      room.externalRoomID,
+    await this.communicationAdapter.userAddToRooms(
+      [room.externalRoomID],
       guidanceVc.communicationID
     );
     return room;
