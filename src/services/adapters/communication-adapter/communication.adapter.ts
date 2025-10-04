@@ -11,7 +11,24 @@ import { CommunicationSendMessageUserInput } from './dto/communication.dto.messa
 import { IMessage } from '@domain/communication/message/message.interface';
 import { MATRIX_ADAPTER_SERVICE } from '@common/constants';
 import { ClientProxy } from '@nestjs/microservices';
-import { MatrixAdapterEventType } from '@alkemio/matrix-adapter-lib';
+import {
+  MatrixAdapterEventType,
+  RoomCreatePayload,
+  RoomCreateResponsePayload,
+  RoomMessageAddReactionPayload,
+  RoomMessageAddReactionResponsePayload,
+  RoomMessageDeletePayload,
+  RoomMessageDeleteResponsePayload,
+  RoomMessageReactionSenderPayload,
+  RoomMessageReactionSenderResponsePayload,
+  RoomMessageRemoveReactionPayload,
+  RoomMessageSendPayload,
+  RoomMessageSendReplyPayload,
+  RoomMessageSendResponsePayload,
+  UserRegisterPayload,
+  UserRegisterResponsePayload,
+  UserSendDirectMessagePayload,
+} from '@alkemio/matrix-adapter-lib';
 import { RoomDetailsPayload } from '@alkemio/matrix-adapter-lib';
 import { RoomDetailsResponsePayload } from '@alkemio/matrix-adapter-lib';
 import { CommunicationSendMessageInput } from './dto/communication.dto.message.send';
@@ -30,6 +47,7 @@ import { CommunicationRoomResult } from '@services/adapters/communication-adapte
 import { IMessageReaction } from '@domain/communication/message.reaction/message.reaction.interface';
 import { RoomResult } from '@alkemio/matrix-adapter-lib/dist/types/room';
 import { AlkemioConfig } from '@src/types';
+import { CommunicationRemoveReactionToMessageInput } from './dto/communication.dto.remove.reaction';
 
 @Injectable()
 export class CommunicationAdapter {
@@ -53,7 +71,7 @@ export class CommunicationAdapter {
     sendMessageData: CommunicationSendMessageInput
   ): Promise<IMessage> {
     const eventType = MatrixAdapterEventType.ROOM_MESSAGE_SEND;
-    const inputPayload: RoomSendMessagePayload = {
+    const inputPayload: RoomMessageSendPayload = {
       triggeredBy: sendMessageData.senderCommunicationsID,
       roomID: sendMessageData.roomID,
       message: sendMessageData.message,
@@ -68,7 +86,7 @@ export class CommunicationAdapter {
 
     try {
       const responseData =
-        await firstValueFrom<RoomSendMessageResponsePayload>(response);
+        await firstValueFrom<RoomMessageSendResponsePayload>(response);
       this.logResponsePayload(eventType, responseData, eventID);
 
       const message = responseData.message;
@@ -100,7 +118,7 @@ export class CommunicationAdapter {
     senderType: 'user' | 'virtualContributor'
   ): Promise<IMessage> {
     const eventType = MatrixAdapterEventType.ROOM_MESSAGE_SEND_REPLY;
-    const inputPayload: RoomSendMessageReplyPayload = {
+    const inputPayload: RoomMessageSendReplyPayload = {
       triggeredBy: '',
       roomID: sendMessageData.roomID,
       message: sendMessageData.message,
@@ -116,7 +134,7 @@ export class CommunicationAdapter {
 
     try {
       const responseData =
-        await firstValueFrom<RoomSendMessageResponsePayload>(response);
+        await firstValueFrom<RoomMessageSendResponsePayload>(response);
       this.logResponsePayload(eventType, responseData, eventID);
 
       const message = responseData.message;
@@ -146,8 +164,8 @@ export class CommunicationAdapter {
   async addReaction(
     sendMessageData: CommunicationAddReactionToMessageInput
   ): Promise<IMessageReaction> {
-    const eventType = MatrixAdapterEventType.ROOM_ADD_REACTION_TO_MESSAGE;
-    const inputPayload: RoomAddMessageReactionPayload = {
+    const eventType = MatrixAdapterEventType.ROOM_MESSAGE_ADD_REACTION;
+    const inputPayload: RoomMessageAddReactionPayload = {
       triggeredBy: '',
       roomID: sendMessageData.roomID,
       emoji: sendMessageData.emoji,
@@ -163,7 +181,7 @@ export class CommunicationAdapter {
 
     try {
       const responseData =
-        await firstValueFrom<RoomAddMessageReactionResponsePayload>(response);
+        await firstValueFrom<RoomMessageAddReactionResponsePayload>(response);
       this.logResponsePayload(eventType, responseData, eventID);
 
       const reaction = responseData.reaction;
@@ -185,10 +203,10 @@ export class CommunicationAdapter {
   }
 
   async removeReaction(
-    removeReactionData: CommunicationRemoveRectionToMessageInput
+    removeReactionData: CommunicationRemoveReactionToMessageInput
   ): Promise<string> {
     const eventType = MatrixAdapterEventType.ROOM_MESSAGE_REMOVE_REACTION;
-    const inputPayload: RoomRemoveMessageReactionPayload = {
+    const inputPayload: RoomMessageRemoveReactionPayload = {
       triggeredBy: removeReactionData.senderCommunicationsID,
       roomID: removeReactionData.roomID,
       reactionID: removeReactionData.reactionID,
@@ -203,7 +221,7 @@ export class CommunicationAdapter {
 
     try {
       const responseData =
-        await firstValueFrom<RoomDeleteMessageResponsePayload>(response);
+        await firstValueFrom<RoomMessageDeleteResponsePayload>(response);
       this.logResponsePayload(eventType, responseData, eventID);
       return responseData.messageID;
     } catch (err: any) {
@@ -278,7 +296,7 @@ export class CommunicationAdapter {
     deleteMessageData: CommunicationDeleteMessageInput
   ): Promise<string> {
     const eventType = MatrixAdapterEventType.ROOM_MESSAGE_DELETE;
-    const inputPayload: RoomDeleteMessagePayload = {
+    const inputPayload: RoomMessageDeletePayload = {
       triggeredBy: deleteMessageData.senderCommunicationsID,
       roomID: deleteMessageData.roomID,
       messageID: deleteMessageData.messageId,
@@ -293,7 +311,7 @@ export class CommunicationAdapter {
 
     try {
       const responseData =
-        await firstValueFrom<RoomDeleteMessageResponsePayload>(response);
+        await firstValueFrom<RoomMessageDeleteResponsePayload>(response);
       this.logResponsePayload(eventType, responseData, eventID);
       return responseData.messageID;
     } catch (err: any) {
@@ -309,7 +327,7 @@ export class CommunicationAdapter {
     sendMessageUserData: CommunicationSendMessageUserInput
   ): Promise<string> {
     const eventType = MatrixAdapterEventType.USER_SEND_DIRECT_MESSAGE;
-    const inputPayload: SendMessageToUserPayload = {
+    const inputPayload: UserSendDirectMessagePayload = {
       triggeredBy: '',
       message: sendMessageUserData.message,
       receiverID: sendMessageUserData.receiverCommunicationsID,
@@ -324,9 +342,9 @@ export class CommunicationAdapter {
 
     try {
       const responseData =
-        await firstValueFrom<SendMessageToUserResponsePayload>(response);
+        await firstValueFrom<RoomMessageSendResponsePayload>(response);
       this.logResponsePayload(eventType, responseData, eventID);
-      return responseData.messageID;
+      return responseData.message.id;
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
@@ -365,7 +383,7 @@ export class CommunicationAdapter {
 
   async getReactionSender(roomID: string, reactionID: string): Promise<string> {
     const eventType = MatrixAdapterEventType.ROOM_MESSAGE_REACTION_SENDER;
-    const inputPayload: RoomReactionSenderPayload = {
+    const inputPayload: RoomMessageReactionSenderPayload = {
       triggeredBy: '',
       roomID: roomID,
       reactionID: reactionID,
@@ -378,7 +396,9 @@ export class CommunicationAdapter {
 
     try {
       const responseData =
-        await firstValueFrom<RoomReactionSenderResponsePayload>(response);
+        await firstValueFrom<RoomMessageReactionSenderResponsePayload>(
+          response
+        );
       this.logResponsePayload(eventType, responseData, eventID);
       return responseData.senderID;
     } catch (err: any) {
@@ -392,7 +412,7 @@ export class CommunicationAdapter {
 
   async tryRegisterNewUser(email: string): Promise<string | undefined> {
     const eventType = MatrixAdapterEventType.USER_REGISTER;
-    const inputPayload: RegisterNewUserPayload = {
+    const inputPayload: UserRegisterPayload = {
       triggeredBy: '',
       email,
     };
@@ -404,7 +424,7 @@ export class CommunicationAdapter {
 
     try {
       const responseData =
-        await firstValueFrom<RegisterNewUserResponsePayload>(response);
+        await firstValueFrom<UserRegisterResponsePayload>(response);
       this.logResponsePayload(eventType, responseData, eventID);
       return responseData.userID;
     } catch (err: any) {
@@ -424,8 +444,8 @@ export class CommunicationAdapter {
     if (!this.enabled) {
       return '';
     }
-    const eventType = MatrixAdapterEventType.ROOM_DELETE;
-    const inputPayload: CreateRoomPayload = {
+    const eventType = MatrixAdapterEventType.ROOM_CREATE;
+    const inputPayload: RoomCreatePayload = {
       triggeredBy: '',
       roomName: name,
       metadata: metadata,
@@ -438,7 +458,7 @@ export class CommunicationAdapter {
 
     try {
       const responseData =
-        await firstValueFrom<CreateRoomResponsePayload>(response);
+        await firstValueFrom<RoomCreateResponsePayload>(response);
       this.logResponsePayload(eventType, responseData, eventID);
       this.logger.verbose?.(
         `Created community room:'${responseData.roomID}'`,
