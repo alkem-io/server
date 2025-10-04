@@ -11,57 +11,21 @@ import { CommunicationSendMessageUserInput } from './dto/communication.dto.messa
 import { IMessage } from '@domain/communication/message/message.interface';
 import { MATRIX_ADAPTER_SERVICE } from '@common/constants';
 import { ClientProxy } from '@nestjs/microservices';
-import {
-  MatrixAdapterEventType,
-  RoomSendMessagePayload,
-  RoomSendMessageResponsePayload,
-  RoomSendMessageReplyPayload,
-  RoomAddMessageReactionPayload,
-  RoomRemoveMessageReactionPayload,
-  RoomAddMessageReactionResponsePayload,
-  UpdateRoomStatePayload,
-} from '@alkemio/matrix-adapter-lib';
+import { MatrixAdapterEventType } from '@alkemio/matrix-adapter-lib';
 import { RoomDetailsPayload } from '@alkemio/matrix-adapter-lib';
 import { RoomDetailsResponsePayload } from '@alkemio/matrix-adapter-lib';
 import { CommunicationSendMessageInput } from './dto/communication.dto.message.send';
-import { RoomDeleteMessagePayload } from '@alkemio/matrix-adapter-lib';
-import { RoomDeleteMessageResponsePayload } from '@alkemio/matrix-adapter-lib';
 import { RoomMessageSenderResponsePayload } from '@alkemio/matrix-adapter-lib';
 import { RoomMessageSenderPayload } from '@alkemio/matrix-adapter-lib';
-import { RoomReactionSenderResponsePayload } from '@alkemio/matrix-adapter-lib';
-import { RoomReactionSenderPayload } from '@alkemio/matrix-adapter-lib';
-import { CreateRoomPayload } from '@alkemio/matrix-adapter-lib';
-import { CreateRoomResponsePayload } from '@alkemio/matrix-adapter-lib';
-import { RoomsUserPayload } from '@alkemio/matrix-adapter-lib';
-import { RoomsUserResponsePayload } from '@alkemio/matrix-adapter-lib';
-import { RoomsPayload } from '@alkemio/matrix-adapter-lib';
-import { RoomsResponsePayload } from '@alkemio/matrix-adapter-lib';
-import { RemoveUserFromRoomsPayload } from '@alkemio/matrix-adapter-lib';
-import { RemoveUserFromRoomsResponsePayload } from '@alkemio/matrix-adapter-lib';
-import { ReplicateRoomMembershipPayload } from '@alkemio/matrix-adapter-lib';
-import { ReplicateRoomMembershipResponsePayload } from '@alkemio/matrix-adapter-lib';
-import { AddUserToRoomsPayload } from '@alkemio/matrix-adapter-lib';
-import { AddUserToRoomsResponsePayload } from '@alkemio/matrix-adapter-lib';
-import { RemoveRoomPayload } from '@alkemio/matrix-adapter-lib';
-import { RemoveRoomResponsePayload } from '@alkemio/matrix-adapter-lib';
 import { RoomMembersPayload } from '@alkemio/matrix-adapter-lib';
 import { RoomMembersResponsePayload } from '@alkemio/matrix-adapter-lib';
-import { SendMessageToUserPayload } from '@alkemio/matrix-adapter-lib';
-import { SendMessageToUserResponsePayload } from '@alkemio/matrix-adapter-lib';
-import { RoomsUserDirectPayload } from '@alkemio/matrix-adapter-lib';
-import { RoomsUserDirectResponsePayload } from '@alkemio/matrix-adapter-lib';
-import { AddUserToRoomPayload } from '@alkemio/matrix-adapter-lib';
-import { AddUserToRoomResponsePayload } from '@alkemio/matrix-adapter-lib';
-import { RegisterNewUserPayload } from '@alkemio/matrix-adapter-lib';
-import { RegisterNewUserResponsePayload } from '@alkemio/matrix-adapter-lib';
 import { BaseMatrixAdapterEventPayload } from '@alkemio/matrix-adapter-lib';
 import { BaseMatrixAdapterEventResponsePayload } from '@alkemio/matrix-adapter-lib/dist/dto/base.event.response.payload';
 import { getRandomId } from '@common/utils/random.id.generator.util';
 import { stringifyWithoutAuthorizationMetaInfo } from '@common/utils/stringify.util';
 import { CommunicationTimedOutException } from '@common/exceptions/communication';
 import { CommunicationSendMessageReplyInput } from './dto/communications.dto.message.reply';
-import { CommunicationAddRectionToMessageInput } from './dto/communication.dto.add.reaction';
-import { CommunicationRemoveRectionToMessageInput } from './dto/communication.dto.remove.reaction';
+import { CommunicationAddReactionToMessageInput } from './dto/communication.dto.add.reaction';
 import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
 import { IMessageReaction } from '@domain/communication/message.reaction/message.reaction.interface';
 import { RoomResult } from '@alkemio/matrix-adapter-lib/dist/types/room';
@@ -88,7 +52,7 @@ export class CommunicationAdapter {
   async sendMessage(
     sendMessageData: CommunicationSendMessageInput
   ): Promise<IMessage> {
-    const eventType = MatrixAdapterEventType.ROOM_SEND_MESSAGE;
+    const eventType = MatrixAdapterEventType.ROOM_MESSAGE_SEND;
     const inputPayload: RoomSendMessagePayload = {
       triggeredBy: sendMessageData.senderCommunicationsID,
       roomID: sendMessageData.roomID,
@@ -135,7 +99,7 @@ export class CommunicationAdapter {
     sendMessageData: CommunicationSendMessageReplyInput,
     senderType: 'user' | 'virtualContributor'
   ): Promise<IMessage> {
-    const eventType = MatrixAdapterEventType.ROOM_SEND_MESSAGE_REPLY;
+    const eventType = MatrixAdapterEventType.ROOM_MESSAGE_SEND_REPLY;
     const inputPayload: RoomSendMessageReplyPayload = {
       triggeredBy: '',
       roomID: sendMessageData.roomID,
@@ -180,7 +144,7 @@ export class CommunicationAdapter {
   }
 
   async addReaction(
-    sendMessageData: CommunicationAddRectionToMessageInput
+    sendMessageData: CommunicationAddReactionToMessageInput
   ): Promise<IMessageReaction> {
     const eventType = MatrixAdapterEventType.ROOM_ADD_REACTION_TO_MESSAGE;
     const inputPayload: RoomAddMessageReactionPayload = {
@@ -223,7 +187,7 @@ export class CommunicationAdapter {
   async removeReaction(
     removeReactionData: CommunicationRemoveRectionToMessageInput
   ): Promise<string> {
-    const eventType = MatrixAdapterEventType.ROOM_REMOVE_REACTION_TO_MESSAGE;
+    const eventType = MatrixAdapterEventType.ROOM_MESSAGE_REMOVE_REACTION;
     const inputPayload: RoomRemoveMessageReactionPayload = {
       triggeredBy: removeReactionData.senderCommunicationsID,
       roomID: removeReactionData.roomID,
@@ -313,7 +277,7 @@ export class CommunicationAdapter {
   async deleteMessage(
     deleteMessageData: CommunicationDeleteMessageInput
   ): Promise<string> {
-    const eventType = MatrixAdapterEventType.ROOM_DELETE_MESSAGE;
+    const eventType = MatrixAdapterEventType.ROOM_MESSAGE_DELETE;
     const inputPayload: RoomDeleteMessagePayload = {
       triggeredBy: deleteMessageData.senderCommunicationsID,
       roomID: deleteMessageData.roomID,
@@ -344,7 +308,7 @@ export class CommunicationAdapter {
   async sendMessageToUser(
     sendMessageUserData: CommunicationSendMessageUserInput
   ): Promise<string> {
-    const eventType = MatrixAdapterEventType.SEND_MESSAGE_TO_USER;
+    const eventType = MatrixAdapterEventType.USER_SEND_DIRECT_MESSAGE;
     const inputPayload: SendMessageToUserPayload = {
       triggeredBy: '',
       message: sendMessageUserData.message,
@@ -400,7 +364,7 @@ export class CommunicationAdapter {
   }
 
   async getReactionSender(roomID: string, reactionID: string): Promise<string> {
-    const eventType = MatrixAdapterEventType.ROOM_REACTION_SENDER;
+    const eventType = MatrixAdapterEventType.ROOM_MESSAGE_REACTION_SENDER;
     const inputPayload: RoomReactionSenderPayload = {
       triggeredBy: '',
       roomID: roomID,
@@ -427,7 +391,7 @@ export class CommunicationAdapter {
   }
 
   async tryRegisterNewUser(email: string): Promise<string | undefined> {
-    const eventType = MatrixAdapterEventType.REGISTER_NEW_USER;
+    const eventType = MatrixAdapterEventType.USER_REGISTER;
     const inputPayload: RegisterNewUserPayload = {
       triggeredBy: '',
       email,
@@ -460,7 +424,7 @@ export class CommunicationAdapter {
     if (!this.enabled) {
       return '';
     }
-    const eventType = MatrixAdapterEventType.CREATE_ROOM;
+    const eventType = MatrixAdapterEventType.ROOM_DELETE;
     const inputPayload: CreateRoomPayload = {
       triggeredBy: '',
       roomName: name,
@@ -498,7 +462,7 @@ export class CommunicationAdapter {
     if (!this.enabled) {
       return false;
     }
-    const eventType = MatrixAdapterEventType.ADD_USER_TO_ROOMS;
+    const eventType = MatrixAdapterEventType.USER_ADD_TO_ROOMS;
     const inputPayload: AddUserToRoomsPayload = {
       triggeredBy: '',
       roomIDs,
@@ -533,7 +497,7 @@ export class CommunicationAdapter {
     if (!this.enabled) {
       return rooms;
     }
-    const eventType = MatrixAdapterEventType.ROOMS_USER;
+    const eventType = MatrixAdapterEventType.USER_ROOMS;
     const inputPayload: RoomsUserPayload = {
       triggeredBy: '',
       userID: matrixUserID,
@@ -580,7 +544,7 @@ export class CommunicationAdapter {
     if (!this.enabled) {
       return rooms;
     }
-    const eventType = MatrixAdapterEventType.ROOMS_USER_DIRECT;
+    const eventType = MatrixAdapterEventType.USER_ROOMS_DIRECT;
     const inputPayload: RoomsUserDirectPayload = {
       triggeredBy: '',
       userID: matrixUserID,
@@ -629,7 +593,7 @@ export class CommunicationAdapter {
     if (!this.enabled) {
       return false;
     }
-    const eventType = MatrixAdapterEventType.REMOVE_USER_FROM_ROOMS;
+    const eventType = MatrixAdapterEventType.USER_REMOVE_FROM_ROOMS;
     this.logger.verbose?.(
       `Removing user (${matrixUserID}) from rooms (${roomIDs})`,
       LogContext.COMMUNICATION
@@ -663,7 +627,7 @@ export class CommunicationAdapter {
     const inputPayload: RoomsPayload = {
       triggeredBy: '',
     };
-    const eventType = MatrixAdapterEventType.ROOMS;
+    const eventType = MatrixAdapterEventType.ADMIN_ALL_ROOMS;
     const eventID = this.logInputPayload(eventType, inputPayload);
     const response = this.matrixAdapterClient.send(
       { cmd: eventType },
@@ -692,7 +656,7 @@ export class CommunicationAdapter {
       `[Replication] Replicating room membership from ${sourceRoomID} to ${targetRoomID}`,
       LogContext.COMMUNICATION
     );
-    const eventType = MatrixAdapterEventType.REPLICATE_ROOM_MEMBERSHIP;
+    const eventType = MatrixAdapterEventType.ADMIN_REPLICATE_ROOM_MEMBERSHIP;
     const inputPayload: ReplicateRoomMembershipPayload = {
       triggeredBy: '',
       targetRoomID,
@@ -720,7 +684,7 @@ export class CommunicationAdapter {
   }
 
   public async addUserToRoom(roomID: string, matrixUserID: string) {
-    const eventType = MatrixAdapterEventType.ADD_USER_TO_ROOM;
+    const eventType = MatrixAdapterEventType.USER_ADD_TO_ROOMS;
     const inputPayload: AddUserToRoomPayload = {
       triggeredBy: '',
       roomID,
@@ -752,7 +716,7 @@ export class CommunicationAdapter {
       `[Membership] Removing members from matrix room: ${matrixRoomID}`,
       LogContext.COMMUNICATION
     );
-    const eventType = MatrixAdapterEventType.REMOVE_ROOM;
+    const eventType = MatrixAdapterEventType.ROOM_DELETE;
     const inputPayload: RemoveRoomPayload = {
       triggeredBy: '',
       roomID: matrixRoomID,
@@ -821,7 +785,7 @@ export class CommunicationAdapter {
     worldVisible = true,
     allowGuests = true
   ): Promise<CommunicationRoomResult> {
-    const eventType = MatrixAdapterEventType.UPDATE_ROOM_STATE;
+    const eventType = MatrixAdapterEventType.ROOM_UPDATE_STATE;
     const inputPayload: UpdateRoomStatePayload = {
       triggeredBy: '',
       roomID,
