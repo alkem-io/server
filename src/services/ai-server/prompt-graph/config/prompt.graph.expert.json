@@ -250,7 +250,7 @@
         "name": "conversation",
         "type": "string",
         "optional": true,
-        "description": "The final answer to the user's question after evaluation and translation."
+        "description": "The entire conversation formatted as a single string."
       }
     ],
     "required": ["messages", "bok_id"]

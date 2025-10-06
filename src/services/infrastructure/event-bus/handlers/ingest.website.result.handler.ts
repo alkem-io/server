@@ -20,7 +20,7 @@ export class IngestWebsiteResultHandler
     const original = event.original;
     const response = event.response;
 
-    const personaId = original.personaServiceId;
+    const personaId = original.personaId;
     if (response.result === IngestionResult.FAILURE) {
       this.logger.verbose?.(
         `IngestWebsiteResultHandler invoked. Event data: PersonaServiceId: ${personaId}; Result: failure`,
@@ -46,9 +46,6 @@ export class IngestWebsiteResultHandler
     if (response.timestamp) {
       now = new Date(response.timestamp);
     }
-    this.aiServerService.updatePersonaBoKLastUpdated(
-      original.personaServiceId,
-      now
-    );
+    this.aiServerService.updatePersonaBoKLastUpdated(original.personaId, now);
   }
 }

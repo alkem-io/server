@@ -321,7 +321,7 @@ services:
       - 4003
 
   chromadb:
-    image: chromadb/chroma:0.6.2
+    image: chromadb/chroma:1.1.1-amd64
     extra_hosts:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_chromadb
