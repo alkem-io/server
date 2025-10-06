@@ -103,9 +103,9 @@ export class IVirtualContributor
   bodyOfKnowledgeDescription?: string;
 
   @Field(() => UUID, {
-    nullable: false,
+    nullable: true,
     description:
       'The ID of the body of knowledge used by this Virtual Contributor.',
   })
-  bodyOfKnowledgeID!: string;
+  bodyOfKnowledgeID?: string;
 }
