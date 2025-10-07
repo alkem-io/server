@@ -7,7 +7,7 @@ export const MockSearchIngestService: ValueProvider<
 > = {
   provide: SearchIngestService,
   useValue: {
-    ingest: jest.fn(),
-    removeIndices: jest.fn(),
+    // Provide only mocked public methods actually used in tests; removed non-existent 'ingest' and private 'removeIndices'
+    ingestFromScratch: jest.fn(),
   },
 };
