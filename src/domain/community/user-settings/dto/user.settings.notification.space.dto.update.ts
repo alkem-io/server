@@ -1,6 +1,7 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { IsBoolean, ValidateNested } from 'class-validator';
+import { ValidateNested } from 'class-validator';
 import { UpdateUserSettingsNotificationSpaceAdminInput } from './user.settings.notification.space.admin.dto.update';
+import { NotificationSettingInput } from './notification.setting.input';
 import { Type } from 'class-transformer';
 
 @InputType()
@@ -13,39 +14,44 @@ export class UpdateUserSettingsNotificationSpaceInput {
   @Type(() => UpdateUserSettingsNotificationSpaceAdminInput)
   admin?: UpdateUserSettingsNotificationSpaceAdminInput;
 
-  @Field(() => Boolean, {
+  @Field(() => NotificationSettingInput, {
     nullable: true,
     description: 'Receive a notification for community updates',
   })
-  @IsBoolean()
-  communicationUpdates?: boolean;
+  @ValidateNested()
+  @Type(() => NotificationSettingInput)
+  communicationUpdates?: NotificationSettingInput;
 
-  @Field(() => Boolean, {
+  @Field(() => NotificationSettingInput, {
     nullable: true,
     description: 'Receive a notification when a contribution is added',
   })
-  @IsBoolean()
-  collaborationCalloutContributionCreated?: boolean;
+  @ValidateNested()
+  @Type(() => NotificationSettingInput)
+  collaborationCalloutContributionCreated?: NotificationSettingInput;
 
-  @Field(() => Boolean, {
+  @Field(() => NotificationSettingInput, {
     nullable: true,
     description:
       'Receive a notification when a comment is created on a contribution',
   })
-  @IsBoolean()
-  collaborationCalloutPostContributionComment?: boolean;
+  @ValidateNested()
+  @Type(() => NotificationSettingInput)
+  collaborationCalloutPostContributionComment?: NotificationSettingInput;
 
-  @Field(() => Boolean, {
+  @Field(() => NotificationSettingInput, {
     nullable: true,
     description: 'Receive a notification when a comment is added to a Callout',
   })
-  @IsBoolean()
-  collaborationCalloutComment?: boolean;
+  @ValidateNested()
+  @Type(() => NotificationSettingInput)
+  collaborationCalloutComment?: NotificationSettingInput;
 
-  @Field(() => Boolean, {
+  @Field(() => NotificationSettingInput, {
     nullable: true,
     description: 'Receive a notification when a callout is published',
   })
-  @IsBoolean()
-  collaborationCalloutPublished?: boolean;
+  @ValidateNested()
+  @Type(() => NotificationSettingInput)
+  collaborationCalloutPublished?: NotificationSettingInput;
 }

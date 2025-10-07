@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { ChatGuidanceInput } from './dto/chat.guidance.dto.input';
 import { AlkemioConfig } from '@src/types';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
-import { InvocationResultAction } from '@services/ai-server/ai-persona-service/dto';
+import { InvocationResultAction } from '@services/ai-server/ai-persona/dto';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { RoomService } from '@domain/communication/room/room.service';
@@ -71,9 +71,10 @@ export class ChatGuidanceService {
     });
 
     this.aiServerAdapter.invoke({
+      bodyOfKnowledgeID: '',
       operation: InvocationOperation.QUERY,
       message: chatData.question,
-      aiPersonaServiceID: guidanceVc.aiPersona.aiPersonaServiceID,
+      aiPersonaID: guidanceVc.aiPersonaID,
       userID: agentInfo.userID,
       displayName: 'Guidance',
       language: chatData.language,

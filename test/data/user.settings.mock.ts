@@ -112,15 +112,7 @@ export const userSettingsData: { userSettings: IUserSettings } = {
           email: true,
           inApp: true,
         },
-        copyOfMessageSent: {
-          email: true,
-          inApp: true,
-        },
         membership: {
-          spaceCommunityApplicationSubmitted: {
-            email: true,
-            inApp: true,
-          },
           spaceCommunityInvitationReceived: {
             email: true,
             inApp: true,

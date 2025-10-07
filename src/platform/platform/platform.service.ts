@@ -137,9 +137,7 @@ export class PlatformService {
   async getGuidanceVirtualContributorOrFail(): Promise<IVirtualContributor> {
     const platform = await this.getPlatformOrFail({
       relations: {
-        guidanceVirtualContributor: {
-          aiPersona: true,
-        },
+        guidanceVirtualContributor: true,
       },
     });
     const guidanceVC = platform.guidanceVirtualContributor;
@@ -214,7 +212,7 @@ export class PlatformService {
           where: { category: ForumDiscussionCategory.RELEASES },
           order: { createdDate: 'DESC' },
         });
-    } catch (error) {
+    } catch {
       return undefined;
     }
 

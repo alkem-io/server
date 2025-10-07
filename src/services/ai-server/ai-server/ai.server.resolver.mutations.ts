@@ -7,10 +7,6 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { IAiServer } from './ai.server.interface';
 import { AiServerAuthorizationService } from './ai.server.service.authorization';
 import { AiServerService } from './ai.server.service';
-import { AiPersonaServiceService } from '../ai-persona-service/ai.persona.service.service';
-import { AiPersonaServiceAuthorizationService } from '../ai-persona-service/ai.persona.service.service.authorization';
-import { CreateAiPersonaServiceInput } from '../ai-persona-service/dto/ai.persona.service.dto.create';
-import { IAiPersonaService } from '../ai-persona-service/ai.persona.service.interface';
 import { Space } from '@domain/space/space/space.entity';
 import { ChromaClient } from 'chromadb';
 import { ConfigService } from '@nestjs/config';
@@ -21,6 +17,12 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AlkemioConfig } from '@src/types';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { InstrumentResolver } from '@src/apm/decorators';
+import {
+  AiPersonaService,
+  CreateAiPersonaInput,
+  IAiPersona,
+} from '../ai-persona';
+import { AiPersonaAuthorizationService } from '../ai-persona/ai.persona.service.authorization';
 
 @ObjectType('MigrateEmbeddings')
 class IMigrateEmbeddingsResponse {
@@ -36,8 +38,8 @@ export class AiServerResolverMutations {
     private authorizationPolicyService: AuthorizationPolicyService,
     private aiServerService: AiServerService,
     private aiServerAuthorizationService: AiServerAuthorizationService,
-    private aiPersonaServiceService: AiPersonaServiceService,
-    private aiPersonaServiceAuthorizationService: AiPersonaServiceAuthorizationService,
+    private aiPersonaService: AiPersonaService,
+    private aiPersonaAuthorizationService: AiPersonaAuthorizationService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     @InjectEntityManager('default')
     private entityManager: EntityManager,
@@ -136,38 +138,35 @@ export class AiServerResolverMutations {
     return await this.aiServerService.getAiServerOrFail();
   }
 
-  @Mutation(() => IAiPersonaService, {
-    description: 'Creates a new AiPersonaService on the aiServer.',
+  @Mutation(() => IAiPersona, {
+    description: 'Creates a new AiPersona on the aiServer.',
   })
-  async aiServerCreateAiPersonaService(
+  async aiServerCreateAiPersona(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('aiPersonaServiceData')
-    aiPersonaServiceData: CreateAiPersonaServiceInput
-  ): Promise<IAiPersonaService> {
+    @Args('aiPersonaData')
+    aiPersonaData: CreateAiPersonaInput
+  ): Promise<IAiPersona> {
     const aiServer = await this.aiServerService.getAiServerOrFail();
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       aiServer.authorization,
       AuthorizationPrivilege.CREATE,
-      `create Virtual persona: ${aiPersonaServiceData.engine}`
+      `create Virtual persona: ${aiPersonaData.engine}`
     );
-    let aiPersonaService =
-      await this.aiPersonaServiceService.createAiPersonaService(
-        aiPersonaServiceData
-      );
-    aiPersonaService.aiServer = aiServer;
-    aiPersonaService =
-      await this.aiPersonaServiceService.save(aiPersonaService);
+    let aiPersona = await this.aiPersonaService.createAiPersona(
+      aiPersonaData,
+      aiServer
+    );
+    aiPersona.aiServer = aiServer;
+    aiPersona = await this.aiPersonaService.save(aiPersona);
 
     const authorizations =
-      await this.aiPersonaServiceAuthorizationService.applyAuthorizationPolicy(
-        aiPersonaService.id,
+      await this.aiPersonaAuthorizationService.applyAuthorizationPolicy(
+        aiPersona,
         aiServer.authorization
       );
     await this.authorizationPolicyService.saveAll(authorizations);
 
-    return this.aiPersonaServiceService.getAiPersonaServiceOrFail(
-      aiPersonaService.id
-    );
+    return this.aiPersonaService.getAiPersonaOrFail(aiPersona.id);
   }
 }

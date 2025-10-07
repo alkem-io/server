@@ -389,12 +389,6 @@ export class NotificationSpaceAdapter {
         eventData.community.id
       );
 
-    // Send to the user
-    await this.notificationUserAdapter.userSpaceCommunityApplication(
-      eventData,
-      space
-    );
-
     const adminEvent = NotificationEvent.SPACE_ADMIN_COMMUNITY_APPLICATION;
     const adminRecipients = await this.getNotificationRecipientsSpace(
       adminEvent,
@@ -508,53 +502,6 @@ export class NotificationSpaceAdapter {
         NotificationEventCategory.SPACE_ADMIN,
         eventData.triggeredBy,
         inAppReceiverIDs,
-        inAppPayload
-      );
-    }
-
-    // And for the sender
-    const eventRecipientsSender =
-      NotificationEvent.SPACE_COMMUNICATION_MESSAGE_SENDER;
-
-    const recipientsSender = await this.getNotificationRecipientsSpace(
-      eventRecipientsSender,
-      eventData,
-      space.id,
-      eventData.triggeredBy
-    );
-    if (recipientsSender.emailRecipients.length > 0) {
-      // Emit the events to notify others
-      const payloadRecipients =
-        await this.notificationExternalAdapter.buildSpaceCommunicationMessageDirectNotificationPayload(
-          eventRecipientsSender,
-          eventData.triggeredBy,
-          recipientsSender.emailRecipients,
-          space,
-          eventData.message
-        );
-      this.notificationExternalAdapter.sendExternalNotifications(
-        eventRecipientsSender,
-        payloadRecipients
-      );
-    }
-
-    // Send in-app notifications
-    const inAppReceiverSenderIDs = recipientsSender.inAppRecipients.map(
-      recipient => recipient.id
-    );
-    if (inAppReceiverSenderIDs.length > 0) {
-      const inAppPayload: InAppNotificationPayloadSpaceCommunicationMessageDirect =
-        {
-          type: NotificationEventPayload.SPACE_COMMUNICATION_MESSAGE_DIRECT,
-          spaceID: space.id,
-          message: eventData.message,
-        };
-
-      await this.notificationInAppAdapter.sendInAppNotifications(
-        NotificationEvent.SPACE_COMMUNICATION_MESSAGE_SENDER,
-        NotificationEventCategory.SPACE_ADMIN,
-        eventData.triggeredBy,
-        inAppReceiverSenderIDs,
         inAppPayload
       );
     }

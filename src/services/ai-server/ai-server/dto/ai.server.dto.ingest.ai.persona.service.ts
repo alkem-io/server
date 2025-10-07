@@ -2,7 +2,7 @@ import { UUID } from '@domain/common/scalars';
 import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
-export class AiServerIngestAiPersonaServiceInput {
+export class AiServerIngestAiPersonaInput {
   @Field(() => UUID, { nullable: false })
-  aiPersonaServiceID!: string;
+  aiPersonaID!: string;
 }

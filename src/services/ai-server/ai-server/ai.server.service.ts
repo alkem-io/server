@@ -7,17 +7,10 @@ import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { AiServer } from './ai.server.entity';
 import { IAiServer } from './ai.server.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import {
-  AiPersonaService,
-  IAiPersonaService,
-} from '@services/ai-server/ai-persona-service';
-import { AiPersonaServiceService } from '../ai-persona-service/ai.persona.service.service';
-import {
-  CreateAiPersonaServiceInput,
-  isInputValidForAction,
-  UpdateAiPersonaServiceInput,
-} from '../ai-persona-service/dto';
-import { AiPersonaServiceInvocationInput } from '../ai-persona-service/dto/ai.persona.service.invocation.dto.input';
+import { AiPersona, IAiPersona } from '@services/ai-server/ai-persona';
+import { AiPersonaService } from '../ai-persona/ai.persona.service';
+import { CreateAiPersonaInput, UpdateAiPersonaInput } from '../ai-persona/dto';
+import { AiPersonaInvocationInput } from '../ai-persona/dto/ai.persona.invocation/ai.persona.invocation.dto.input';
 import {
   IngestBodyOfKnowledge,
   IngestionPurpose,
@@ -28,24 +21,23 @@ import { ChromaClient } from 'chromadb';
 import {
   InteractionMessage,
   MessageSenderRole,
-} from '../ai-persona-service/dto/interaction.message';
+} from '../ai-persona/dto/interaction.message';
 import { AlkemioConfig } from '@src/types';
-import { AiPersonaServiceAuthorizationService } from '@services/ai-server/ai-persona-service/ai.persona.service.service.authorization';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 import { InvokeEngineResult } from '@services/infrastructure/event-bus/messages/invoke.engine.result';
-import {
-  InvocationResultAction,
-  RoomDetails,
-} from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.invocation';
+import { InvocationResultAction } from '../ai-persona/dto/ai.persona.invocation/invocation.result.action.dto';
+import { RoomDetails } from '../ai-persona/dto/ai.persona.invocation/room.details.dto';
 import { RoomControllerService } from '@services/room-integration/room.controller.service';
 import { IMessage } from '@domain/communication/message/message.interface';
-import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
+import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 import { IngestWebsite } from '@services/infrastructure/event-bus/messages/ingest.website';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { Post } from '@domain/collaboration/post/post.entity';
+import { AiPersonaAuthorizationService } from '../ai-persona/ai.persona.service.authorization';
+import { isInputValidForAction } from '@domain/community/virtual-contributor/dto';
 
 @Injectable()
 export class AiServerService {
@@ -72,11 +64,11 @@ export class AiServerService {
 
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    private aiPersonaServiceService: AiPersonaServiceService,
-    private aiPersonaServiceAuthorizationService: AiPersonaServiceAuthorizationService,
+    private aiPersonaService: AiPersonaService,
     private subscriptionPublishService: SubscriptionPublishService,
     private config: ConfigService<AlkemioConfig, true>,
     private roomControllerService: RoomControllerService,
+    private aiPersonaAuthorizationService: AiPersonaAuthorizationService,
     @InjectRepository(AiServer)
     private aiServerRepository: Repository<AiServer>,
     @InjectRepository(VirtualContributor)
@@ -86,47 +78,16 @@ export class AiServerService {
     private eventBus: EventBus
   ) {}
 
-  async getBodyOfKnowledgeLastUpdated(
-    personaServiceId: string
-  ): Promise<Date | null> {
-    const aiPersonaService =
-      await this.aiPersonaServiceService.getAiPersonaServiceOrFail(
-        personaServiceId
-      );
-    return aiPersonaService.bodyOfKnowledgeLastUpdated;
-  }
-
-  async ensurePersonaIsUsable(personaServiceId: string): Promise<boolean> {
-    this.logger.verbose?.(
-      `AI server ensurePersonaIsUsable for AI Persona service ${personaServiceId} invoked`,
-      LogContext.AI_SERVER
-    );
-
-    const aiPersonaService =
-      await this.aiPersonaServiceService.getAiPersonaServiceOrFail(
-        personaServiceId
-      );
-    this.logger.verbose?.(
-      `AI Persona service ${personaServiceId} found for BOK refresh`,
-      LogContext.AI_SERVER
-    );
-
-    await this.ensureBoNIsIngested(aiPersonaService);
-    return true;
-  }
-
   public async updatePersonaBoKLastUpdated(
     personaServiceId: string,
     lastUpdated: Date | null
   ) {
-    const personaService =
-      await this.aiPersonaServiceService.getAiPersonaServiceOrFail(
-        personaServiceId
-      );
+    const persona =
+      await this.aiPersonaService.getAiPersonaOrFail(personaServiceId);
 
-    personaService.bodyOfKnowledgeLastUpdated = lastUpdated;
+    persona.bodyOfKnowledgeLastUpdated = lastUpdated;
 
-    await this.aiPersonaServiceService.save(personaService);
+    await this.aiPersonaService.save(persona);
 
     this.logger.verbose?.(
       `AI Persona service ${personaServiceId} bodyOfKnowledgeLastUpdated set to ${lastUpdated}`,
@@ -137,11 +98,8 @@ export class AiServerService {
     // from the AI to the Collaboration servers
     const virtualContributor = await this.vcRespository.findOne({
       where: {
-        aiPersona: {
-          aiPersonaServiceID: personaService.id,
-        },
+        aiPersonaID: persona.id,
       },
-      relations: { aiPersona: true },
     });
 
     if (virtualContributor) {
@@ -161,7 +119,13 @@ export class AiServerService {
     }
   }
 
-  public async ensureBoNIsIngested(persona: IAiPersonaService): Promise<void> {
+  public async ingestBodyOfKnowledge(
+    bokId: string,
+    bokType: VirtualContributorBodyOfKnowledgeType,
+    personaId: string
+  ): Promise<boolean> {
+    const persona = await this.aiPersonaService.getAiPersonaOrFail(personaId);
+
     this.logger.verbose?.(
       `AI Persona service ${persona.id} found for BOK refresh`,
       LogContext.AI_SERVER
@@ -175,36 +139,37 @@ export class AiServerService {
         this.eventBus.publish(
           new IngestWebsite(
             url,
-            AiPersonaBodyOfKnowledgeType.WEBSITE,
+            VirtualContributorBodyOfKnowledgeType.WEBSITE,
             IngestionPurpose.KNOWLEDGE,
             persona.id
           )
         );
       });
-      return;
+      return true;
     }
     this.eventBus.publish(
       new IngestBodyOfKnowledge(
-        persona.bodyOfKnowledgeID,
-        persona.bodyOfKnowledgeType,
+        bokId,
+        bokType,
         IngestionPurpose.KNOWLEDGE,
         persona.id
       )
     );
+    return true;
   }
 
   public async ensureContextIsIngested(spaceID: string): Promise<void> {
     this.eventBus.publish(
       new IngestBodyOfKnowledge(
         spaceID,
-        AiPersonaBodyOfKnowledgeType.ALKEMIO_SPACE,
+        VirtualContributorBodyOfKnowledgeType.ALKEMIO_SPACE,
         IngestionPurpose.CONTEXT
       )
     );
   }
 
   public async invoke(
-    invocationInput: AiPersonaServiceInvocationInput
+    invocationInput: AiPersonaInvocationInput
   ): Promise<void> {
     // the context is currently not used so no point in keeping this
     // commenting it out for now to save some work
@@ -217,10 +182,9 @@ export class AiServerService {
     //   );
     // }
 
-    const personaService =
-      await this.aiPersonaServiceService.getAiPersonaServiceOrFail(
-        invocationInput.aiPersonaServiceID
-      );
+    const persona = await this.aiPersonaService.getAiPersonaOrFail(
+      invocationInput.aiPersonaID
+    );
 
     const HISTORY_ENABLED_ENGINES = new Set<AiPersonaEngine>([
       AiPersonaEngine.EXPERT,
@@ -233,7 +197,7 @@ export class AiServerService {
     let history: InteractionMessage[] = [];
 
     if (
-      HISTORY_ENABLED_ENGINES.has(personaService.engine) &&
+      HISTORY_ENABLED_ENGINES.has(persona.engine) &&
       invocationInput.resultHandler.roomDetails
     ) {
       const historyLimit = parseInt(
@@ -249,7 +213,7 @@ export class AiServerService {
       const includeEntityContents = [
         AiPersonaEngine.LIBRA_FLOW,
         AiPersonaEngine.EXPERT,
-      ].includes(personaService.engine);
+      ].includes(persona.engine);
 
       history = await this.getLastNInteractionMessages(
         invocationInput.resultHandler.roomDetails,
@@ -258,7 +222,7 @@ export class AiServerService {
       );
     }
 
-    return this.aiPersonaServiceService.invoke(invocationInput, history);
+    return this.aiPersonaService.invoke(invocationInput, history);
   }
 
   async getLastNInteractionMessages(
@@ -365,37 +329,32 @@ export class AiServerService {
     }
   }
 
-  async updateAiPersonaService(updateData: UpdateAiPersonaServiceInput) {
-    const aiPersonaService =
-      await this.aiPersonaServiceService.updateAiPersonaService(updateData);
-
+  async updateAiPersona(updateData: UpdateAiPersonaInput) {
+    const aiPersona = await this.aiPersonaService.updateAiPersona(updateData);
     // TBD: trigger a re-ingest?
-
-    return aiPersonaService;
+    return aiPersona;
   }
 
-  async createAiPersonaService(
-    personaServiceData: CreateAiPersonaServiceInput
-  ) {
+  async createAiPersona(personaData: CreateAiPersonaInput) {
     const server = await this.getAiServerOrFail({
-      relations: { aiPersonaServices: true },
+      relations: { aiPersonas: true },
     });
-    const aiPersonaService =
-      await this.aiPersonaServiceService.createAiPersonaService(
-        personaServiceData
-      );
-    aiPersonaService.aiServer = server;
+    const aiPersona = await this.aiPersonaService.createAiPersona(
+      personaData,
+      server
+    );
+    aiPersona.aiServer = server;
 
-    await this.aiPersonaServiceService.save(aiPersonaService);
+    await this.aiPersonaService.save(aiPersona);
 
     const updatedAuthorizations =
-      await this.aiPersonaServiceAuthorizationService.applyAuthorizationPolicy(
-        aiPersonaService.id,
+      await this.aiPersonaAuthorizationService.applyAuthorizationPolicy(
+        aiPersona,
         server.authorization
       );
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
-    return aiPersonaService;
+    return aiPersona;
   }
 
   async getAiServerOrFail(
@@ -419,35 +378,35 @@ export class AiServerService {
     return await this.aiServerRepository.save(aiServer);
   }
 
-  async getAiPersonaServices(
+  async getAiPersonas(
     relations?: FindOptionsRelations<IAiServer>
-  ): Promise<IAiPersonaService[]> {
+  ): Promise<IAiPersona[]> {
     const aiServer = await this.getAiServerOrFail({
       relations: {
-        aiPersonaServices: true,
+        aiPersonas: true,
         ...relations,
       },
     });
-    const aiPersonaServices = aiServer.aiPersonaServices;
-    if (!aiPersonaServices) {
+    const aiPersonas = aiServer.aiPersonas;
+    if (!aiPersonas) {
       throw new EntityNotFoundException(
         'No AI Persona Services found!',
-        LogContext.AI_PERSONA_SERVICE
+        LogContext.AI_PERSONA
       );
     }
-    return aiPersonaServices;
+    return aiPersonas;
   }
 
-  async getDefaultAiPersonaServiceOrFail(
+  async getDefaultAiPersonaOrFail(
     relations?: FindOptionsRelations<IAiServer>
-  ): Promise<IAiPersonaService> {
+  ): Promise<IAiPersona> {
     const aiServer = await this.getAiServerOrFail({
       relations: {
-        defaultAiPersonaService: true,
+        defaultAiPersona: true,
         ...relations,
       },
     });
-    const defaultAiPersonaService = aiServer.defaultAiPersonaService;
+    const defaultAiPersonaService = aiServer.defaultAiPersona;
     if (!defaultAiPersonaService) {
       throw new EntityNotFoundException(
         'No default Virtual Personas found!',
@@ -457,14 +416,11 @@ export class AiServerService {
     return defaultAiPersonaService;
   }
 
-  public async getAiPersonaServiceOrFail(
+  public async getAiPersonaOrFail(
     virtualID: string,
-    options?: FindOneOptions<AiPersonaService>
-  ): Promise<IAiPersonaService | never> {
-    return await this.aiPersonaServiceService.getAiPersonaServiceOrFail(
-      virtualID,
-      options
-    );
+    options?: FindOneOptions<AiPersona>
+  ): Promise<IAiPersona | never> {
+    return this.aiPersonaService.getAiPersonaOrFail(virtualID, options);
   }
 
   getAuthorizationPolicy(aiServer: IAiServer): IAuthorizationPolicy {
@@ -504,14 +460,16 @@ export class AiServerService {
     return authorization;
   }
 
-  public async resetAuthorizationPolicyOnAiPersonaService(
-    aiPersonaServiceID: string
+  public async resetAuthorizationPolicyOnAiPersona(
+    aiPersonaID: string,
+    parentAuthorization?: IAuthorizationPolicy
   ): Promise<IAuthorizationPolicy[]> {
-    const aiServerAuthorization = await this.getAuthorizationPolicyAiServer();
+    const aiPersona =
+      await this.aiPersonaService.getAiPersonaOrFail(aiPersonaID);
 
-    return await this.aiPersonaServiceAuthorizationService.applyAuthorizationPolicy(
-      aiPersonaServiceID,
-      aiServerAuthorization
+    return await this.aiPersonaAuthorizationService.applyAuthorizationPolicy(
+      aiPersona,
+      parentAuthorization
     );
   }
 

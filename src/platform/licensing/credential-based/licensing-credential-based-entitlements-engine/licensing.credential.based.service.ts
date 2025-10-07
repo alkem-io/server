@@ -7,21 +7,18 @@ import {
 import { LogContext } from '@common/enums';
 import { ILicensePolicy } from '@platform/licensing/credential-based/license-policy/license.policy.interface';
 import { ForbiddenLicensePolicyException } from '@common/exceptions/forbidden.license.policy.exception';
-import { EntityManager } from 'typeorm';
-import { InjectEntityManager } from '@nestjs/typeorm';
-import { LicensePolicy } from '@platform/licensing/credential-based/license-policy';
 import { IAgent, ICredential } from '@domain/agent';
 import { ILicensingCredentialBasedPolicyCredentialRule } from './licensing.credential.based.policy.credential.rule.interface';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { LicensingGrantedEntitlement } from '@platform/licensing/dto/licensing.dto.granted.entitlement';
+import { LicensePolicyService } from '../license-policy/license.policy.service';
 
 @Injectable()
 export class LicensingCredentialBasedService {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    @InjectEntityManager('default')
-    private entityManager: EntityManager
+    private licensePolicyService: LicensePolicyService
   ) {}
 
   public async grantEntitlementOrFail(
@@ -121,7 +118,7 @@ export class LicensingCredentialBasedService {
   ): Promise<ILicensePolicy> {
     let policy = licensePolicy;
     if (!policy) {
-      policy = await this.getDefaultLicensePolicyOrFail();
+      policy = await this.licensePolicyService.getDefaultLicensePolicyOrFail();
     }
     return policy;
   }
@@ -167,22 +164,5 @@ export class LicensingCredentialBasedService {
       this.logger.error(msg, error?.stack, LogContext.AUTH);
       throw new ForbiddenException(msg, LogContext.AUTH);
     }
-  }
-
-  // TODO: a work around, need to look at how to make the license policy more readily available
-  // in all contexts
-  private async getDefaultLicensePolicyOrFail(): Promise<ILicensePolicy> {
-    let licensePolicy: ILicensePolicy | null = null;
-    licensePolicy = (
-      await this.entityManager.find(LicensePolicy, { take: 1 })
-    )?.[0];
-
-    if (!licensePolicy) {
-      throw new EntityNotFoundException(
-        'Unable to find default License Policy',
-        LogContext.LICENSE
-      );
-    }
-    return licensePolicy;
   }
 }
