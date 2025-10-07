@@ -71,6 +71,7 @@ export class ChatGuidanceService {
     });
 
     this.aiServerAdapter.invoke({
+      bodyOfKnowledgeID: '',
       operation: InvocationOperation.QUERY,
       message: chatData.question,
       aiPersonaID: guidanceVc.aiPersonaID,
