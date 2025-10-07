@@ -40,6 +40,7 @@ import { KnowledgeBaseModule } from '@domain/common/knowledge-base/knowledge.bas
 import { SpaceAboutModule } from '@domain/space/space.about/space.about.module';
 import { TemplateContentSpaceModule } from '@domain/template/template-content-space/template.content.space.module';
 import { MemoModule } from '@domain/common/memo';
+import { CalloutContributionModule } from '@domain/collaboration/callout-contribution/callout.contribution.module';
 
 @Module({
   imports: [
@@ -60,6 +61,7 @@ import { MemoModule } from '@domain/common/memo';
     PostModule,
     ProfileModule,
     CalloutModule,
+    CalloutContributionModule,
     CalendarModule,
     CalendarEventModule,
     RoomModule,

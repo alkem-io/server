@@ -67,6 +67,11 @@ export class WhiteboardService {
       whiteboardData.profile?.visuals,
       [VisualType.CARD]
     );
+    await this.profileService.addVisualsOnProfile(
+      whiteboard.profile,
+      whiteboardData.profile?.visuals,
+      [VisualType.BANNER]
+    );
     await this.profileService.addOrUpdateTagsetOnProfile(whiteboard.profile, {
       name: TagsetReservedName.DEFAULT,
       tags: [],
