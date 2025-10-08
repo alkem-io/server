@@ -5,8 +5,9 @@ import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import { Post } from '../post/post.entity';
 import { Callout } from '../callout/callout.entity';
 import { Link } from '../link/link.entity';
-import { UUID_LENGTH } from '@common/constants';
+import { ENUM_LENGTH, UUID_LENGTH } from '@common/constants';
 import { Memo } from '@domain/common/memo/memo.entity';
+import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 
 @Entity()
 export class CalloutContribution
@@ -15,6 +16,13 @@ export class CalloutContribution
 {
   @Column('char', { length: UUID_LENGTH, nullable: true })
   createdBy?: string;
+
+  @Column('varchar', {
+    length: ENUM_LENGTH,
+    nullable: false,
+    default: CalloutContributionType.POST,
+  })
+  type!: CalloutContributionType;
 
   @OneToOne(() => Whiteboard, {
     eager: false,
