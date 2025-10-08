@@ -37,7 +37,7 @@ export class IngestBodyOfKnowledgeResultHandler
     }
 
     this.logger.verbose?.(
-      `Invoking updatePersonaBoKLastUpdated for PeresonaService: ${event.personaId}`,
+      `Invoking updatePersonaBoKLastUpdated for Peresona: ${event.personaId}`,
       LogContext.AI_SERVER_EVENT_BUS
     );
 
