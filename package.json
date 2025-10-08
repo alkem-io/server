@@ -44,7 +44,11 @@
     "migration:validate": "./.scripts/migrations/run_validate_migration.sh",
     "circular-dependencies": "madge --circular dist",
     "db:recreate": "ts-node .scripts/tests/recreate-db.ts",
-    "db:reset": "npm run db:recreate && npm run migration:run"
+    "db:reset": "npm run db:recreate && npm run migration:run",
+    "schema:print": "ts-node -r tsconfig-paths/register src/tools/schema/print-schema.ts schema.graphql",
+    "schema:sort": "ts-node -r tsconfig-paths/register src/tools/schema/sort-sdl.ts schema.graphql",
+    "schema:diff": "ts-node -r tsconfig-paths/register src/tools/schema/diff-schema.ts --old tmp/prev.schema.graphql --new schema.graphql --out change-report.json --deprecations deprecations.json",
+    "schema:validate": "ts-node -r tsconfig-paths/register src/tools/schema/validate-artifacts.ts change-report.json deprecations.json"
   },
   "overrides": {
     "fs-capacitor": "6.2.0",

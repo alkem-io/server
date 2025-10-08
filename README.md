@@ -34,3 +34,26 @@ The key takeaway is that the Alkemio server is designed to be integrated, so tha
 - [Database definitions - Guidelines for creating TypeORM entity definitions](docs/database-definitions.md)
 
 For other questions / comments please feel free to reach out via the channels listed in the [Alkemio Repo](http://github.com/alkem-io/alkemio) or via [Alkemio organization](https://alkemio.org).
+
+## GraphQL Schema Contract Governance
+
+The GraphQL schema is treated as a stable contract. Every schema-affecting change is diffed against the committed canonical snapshot (`schema.graphql`) using an automated toolchain (Feature 002: Schema Contract Diffing & Enforcement).
+
+Key points:
+
+- Deterministic snapshot: `npm run schema:print` (+ optional `npm run schema:sort`) produces a canonical `schema.graphql`.
+- Change classification: Diffs produce `change-report.json` categorizing entries as ADDITIVE, DEPRECATED, DEPRECATION_GRACE, INVALID_DEPRECATION_FORMAT, BREAKING, PREMATURE_REMOVAL, INFO, or BASELINE.
+- Deprecation lifecycle: Deprecations must use the format `REMOVE_AFTER=YYYY-MM-DD | reason`. A 90‑day minimum window applies to removals (fields + enum values). Missing schedule initially yields a 24h `DEPRECATION_GRACE` warning.
+- Overrides: Intentional breaking changes require a CODEOWNER GitHub review containing the phrase `BREAKING-APPROVED`. Approved entries show `overrideApplied` and pass the gate.
+- CI gate: Unapproved BREAKING, PREMATURE_REMOVAL, or INVALID_DEPRECATION_FORMAT changes fail the `schema-contract` workflow.
+- Performance budget: Large schema diff executes in <5s (enforced by perf test).
+
+Developer workflow summary:
+
+1. Update code.
+2. Regenerate snapshot (`npm run schema:print && npm run schema:sort`).
+3. Fetch prior snapshot (from base branch) and run diff (`npm run schema:diff`).
+4. Review classifications; if intentional breaking, secure CODEOWNER approval with phrase.
+5. Commit updated `schema.graphql` only.
+
+See `specs/002-schema-contract-diffing/quickstart.md` for full instructions, troubleshooting, and classification glossary.

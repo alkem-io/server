@@ -1,0 +1,187 @@
+# Quickstart: GraphQL Schema Contract Diffing & Enforcement
+
+Feature: 002-schema-contract-diffing
+Status: Active (implementation merged on feature branch)
+Audience: Contributors & CI Maintainers
+
+## Goal
+
+Provide a concise workflow to generate a schema snapshot, run a diff against the last committed snapshot, and interpret classification results before pushing a PR.
+
+## Prerequisites
+
+- Node.js environment with project dependencies installed.
+- Access to base branch containing latest accepted snapshot (develop).
+- Git working tree clean or intentional staged changes only.
+
+## Workflow Steps
+
+### 1. Generate Current Candidate Schema Snapshot
+
+The printer boots the NestJS GraphQL module and emits a deterministic SDL, then (optionally) enforces canonical ordering.
+
+```
+npm run schema:print
+npm run schema:sort   # only needed if printer order drift suspected; harmless otherwise
+```
+
+Result: `schema.graphql` created/overwritten.
+
+### 2. Retrieve Previous Snapshot
+
+```
+# If snapshot committed at ./schema.graphql on base branch
+git show origin/develop:schema.graphql > tmp/prev.schema.graphql || echo "" > tmp/prev.schema.graphql
+```
+
+If file empty ⇒ baseline creation scenario.
+
+### 3. Run Diff Tool
+
+Ensure previous snapshot prepared first (Step 2).
+
+```
+npm run schema:diff
+```
+
+Outputs (generated in repo root by default):
+
+- `change-report.json`: classified changes with counts & override markers
+- `deprecations.json`: active + scheduled deprecations registry (excludes grace-only entries)
+
+### 4. Interpret Classification
+
+| Situation                                  | Action                                                                                             |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| BREAKING entries present                   | Refactor OR supply valid CODEOWNER review containing `BREAKING-APPROVED` (see Override Simulation) |
+| PREMATURE_REMOVAL present                  | Restore removed enum value(s) until lifecycle satisfied                                            |
+| INVALID_DEPRECATION_FORMAT present         | Fix annotation reason string to match `REMOVE_AFTER=YYYY-MM-DD                                     | reason`                                |
+| DEPRECATION_GRACE present                  | Newly added deprecation missing REMOVE_AFTER; add `REMOVE_AFTER=YYYY-MM-DD                         | reason` within 24h to avoid escalation |
+| Only ADDITIVE / DEPRECATED / INFO          | Safe to proceed                                                                                    |
+| INFO entries only for widening nullability | Widening considered non-breaking (interim); verify no client impact                                |
+| BASELINE (no prior snapshot)               | Commit new snapshot                                                                                |
+
+### 5. Local Verification / Contract Validation
+
+Run the provided validation script (Ajv under the hood):
+
+```
+npm run schema:validate
+```
+
+This validates both artifacts against their JSON Schemas. (Advanced) To validate individually with Ajv CLI:
+
+```
+npx ajv validate -s specs/002-schema-contract-diffing/contracts/change-report.schema.json -d change-report.json
+npx ajv validate -s specs/002-schema-contract-diffing/contracts/deprecation-registry.schema.json -d deprecations.json
+```
+
+### 6. Commit Artifacts
+
+Commit updated `schema.graphql` plus any tooling changes. Do **NOT** commit `change-report.json` or `deprecations.json`; CI regenerates them deterministically. (Temporary inclusion for discussion is acceptable but should be dropped before merge.)
+
+```
+git add schema.graphql
+git commit -m "chore(schema): update snapshot after field additions"
+```
+
+### 7. Open Pull Request
+
+- Include summary counts from `change-report.json` in PR description.
+- If intentional breaking change, describe rationale and wait for CODEOWNER approval containing `BREAKING-APPROVED`.
+- CI (`schema-contract.yml`) will:
+  1.  Re-generate & sort schema
+  2.  Re-run diff & validation
+  3.  Post/update a sticky PR comment summarizing counts
+  4.  Fail if unapproved BREAKING / PREMATURE_REMOVAL / INVALID_DEPRECATION_FORMAT.
+
+## Example PR Description Snippet
+
+```
+Schema Diff Summary:
+- Additive: 3
+- Deprecated: 1 (field Foo.bar REMOVE_AFTER=2026-01-10)
+- Breaking: 0
+- Premature Removals: 0
+- Invalid Deprecations: 0
+```
+
+## Troubleshooting
+
+| Issue                               | Cause                                                      | Fix                                                         |
+| ----------------------------------- | ---------------------------------------------------------- | ----------------------------------------------------------- | ---------------------------------- |
+| All changes flagged due to ordering | Non-deterministic print                                    | Run sort normalization script                               |
+| Enum removal blocked                | 90-day window incomplete                                   | Revert removal or adjust timeline (can't shorten)           |
+| Override ignored                    | Missing env-provided reviews or reviewer not in CODEOWNERS | Provide SCHEMA_OVERRIDE_REVIEWS_JSON / ensure owner present |
+| Invalid deprecation format          | Missing REMOVE_AFTER token                                 | Update directive reason                                     |
+| Deprecation grace warning           | Newly added deprecation missing REMOVE_AFTER (<24h)        | Amend reason to include `REMOVE_AFTER=YYYY-MM-DD            | explanation` before graceExpiresAt |
+
+## Classification Glossary
+
+| Classification             | Meaning                                                                 | Gate Effect                        |
+| -------------------------- | ----------------------------------------------------------------------- | ---------------------------------- |
+| ADDITIVE                   | New type/field/enum value (non-breaking)                                | Allowed                            |
+| DEPRECATED                 | Properly scheduled deprecation (has REMOVE_AFTER)                       | Allowed                            |
+| DEPRECATION_GRACE          | Newly deprecated without schedule (<24h window)                         | Allowed (warning)                  |
+| INVALID_DEPRECATION_FORMAT | Deprecation reason missing or malformed schedule after grace            | Fails gate                         |
+| BREAKING                   | Removal / type change / incompatible scalar jsonType change             | Fails gate unless override applied |
+| PREMATURE_REMOVAL          | Attempted removal before REMOVE_AFTER date or enum lifecycle window     | Fails gate                         |
+| INFO                       | Benign metadata changes (description, non-jsonType scalar detail, etc.) | Allowed                            |
+| BASELINE                   | Initial snapshot creation (no prior)                                    | Allowed                            |
+
+`overrideApplied: true` on a BREAKING entry indicates governance approval (phrase + CODEOWNER review) — gate treats it as informational.
+
+## Security & Compliance Notes
+
+- No production data accessed by tool.
+- Only Git snapshot & PR metadata read.
+- Approval phrase acts as explicit governance marker (auditable).
+
+---
+
+Prepared by: Spec automation agent (updated post-implementation)
+
+## Override Simulation (FR-003)
+
+Locally you can simulate an approved override without calling GitHub API:
+
+1. Ensure a `CODEOWNERS` file exists (or point `SCHEMA_OVERRIDE_CODEOWNERS_PATH`). Example:
+
+```
+* @alice @org/team
+```
+
+2. Export review JSON (single or multiple):
+
+```
+export SCHEMA_OVERRIDE_REVIEWS_JSON='[{"reviewer":"alice","body":"Looks good BREAKING-APPROVED","state":"APPROVED"}]'
+```
+
+3. Run the diff:
+
+```
+npm run schema:diff
+```
+
+4. Inspect `change-report.json`: `overrideApplied` should be true and breaking entries will have `"override": true`.
+
+Environment Variables:
+
+- `SCHEMA_OVERRIDE_CODEOWNERS_PATH` (optional path to CODEOWNERS)
+- `SCHEMA_OVERRIDE_REVIEWS_JSON` (inline JSON array of reviews)
+- `SCHEMA_OVERRIDE_REVIEWS_FILE` (alternative file path with JSON array)
+
+Limitations:
+
+- Team slug expansion not implemented (treats `org/team` as literal owner token).
+- GitHub API fetch not integrated yet; CI must populate reviews via script step.
+
+## Grace Period (FR-014)
+
+When a field or enum value is first deprecated without supplying a full reason string containing `REMOVE_AFTER=YYYY-MM-DD | ...`, the system:
+
+- Emits a warning (classification: `DEPRECATION_GRACE`).
+- Adds `grace: true` and `graceExpiresAt` fields to the corresponding change entry in `change-report.json`.
+- Does NOT add the element to `deprecations.json` yet (pending valid schedule).
+
+If the removal schedule isn't added before `graceExpiresAt`, the next diff run will classify it as `INVALID_DEPRECATION_FORMAT` (failing the gate). Always follow up within 24h to formalize the removal timeline.

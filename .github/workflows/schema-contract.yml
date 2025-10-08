@@ -1,0 +1,75 @@
+name: Schema Contract
+
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'specs/002-schema-contract-diffing/**'
+      - '.github/workflows/schema-contract.yml'
+      - 'package.json'
+      - 'yarn.lock'
+      - 'pnpm-lock.yaml'
+
+jobs:
+  diff-and-validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Generate schema snapshot
+        run: npm run schema:print && npm run schema:sort
+
+      - name: Load previous baseline (if exists)
+        run: |
+          if [ -f schema-baseline.graphql ]; then cp schema-baseline.graphql tmp/prev.schema.graphql; fi
+          mkdir -p tmp
+
+      - name: Run diff
+        run: npm run schema:diff || true
+
+      - name: Validate artifacts
+        run: npm run schema:validate || true
+
+      - name: Summarize & gate
+        id: gate
+        run: |
+          node -r ts-node/register .github/workflows/scripts/schema-gate.ts change-report.json > gate-summary.txt
+          echo 'summary<<EOF' >> $GITHUB_OUTPUT
+          cat gate-summary.txt >> $GITHUB_OUTPUT
+          echo 'EOF' >> $GITHUB_OUTPUT
+          cat gate-summary.txt
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: schema-artifacts
+          path: |
+            change-report.json
+            deprecations.json
+            schema.graphql
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: schema-contract
+          message: |
+            ### GraphQL Schema Contract Report
+            ${{ steps.gate.outputs.summary }}
+
+      - name: Enforce gate
+        run: |
+          node -r ts-node/register .github/workflows/scripts/schema-gate.ts change-report.json --fail
