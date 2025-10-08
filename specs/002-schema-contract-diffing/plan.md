@@ -19,6 +19,8 @@
 
 Automate generation, storage, and comparison of a canonical GraphQL schema snapshot to classify changes (ADDITIVE / DEPRECATED / BREAKING); block unapproved breaking changes and formalize a deprecation lifecycle with reporting.
 
+Addendum (2025-10-08): Introduce a lightweight `SchemaBootstrapModule` that assembles only GraphQL-relevant modules with stubbed infra providers so schema generation in CI does not require Redis/MySQL/RabbitMQ/Elasticsearch. Parity tests will ensure identical SDL output vs full `AppModule`.
+
 ## Technical Context
 
 **Language/Version**: TypeScript (NestJS GraphQL)
@@ -29,6 +31,7 @@ Automate generation, storage, and comparison of a canonical GraphQL schema snaps
 **Project Type**: Single backend service
 **Performance Goals**: Diff execution ≤ 5s per run on typical schema size [ASSUMPTION]
 **Constraints**: Must not require running full database migrations just to emit schema (use existing build context)
+**Additional Constraint (Lightweight Bootstrap)**: New lightweight module MUST avoid establishing any network connections; if a module requires infra, provide an in-memory stub.
 **Scale/Scope**: Single schema; multi-module contributions
 
 **Unknowns / NEEDS CLARIFICATION**: (All previously open points resolved in spec Clarifications; retained here for historical trace)
@@ -90,9 +93,181 @@ specs/002-schema-contract-diffing/
 
 /contract-tests/
   schema.contract.spec.ts            # snapshot vs generated comparison
+  schema.parity.spec.ts              # compares AppModule vs SchemaBootstrapModule SDL
+
+src/schema-bootstrap/
+  module.schema-bootstrap.ts         # Lightweight GraphQL-only assembly
+  stubs/                             # No-op providers for cache/db/mq/search
 ```
 
 **Structure Decision**: Extend existing backend with a scripts folder + contract test folder; minimal intrusion.
+
+## Implementation Artifacts (Post-Plan Update 2025-10-08)
+
+A lightweight developer-facing overview now lives at `src/schema-contract/README.md` (added after initial planning). It consolidates:
+
+- Subsystem purpose & module breakdown (classify, diff, deprecation, governance, snapshot, model)
+- Governance override order of operations
+- Deprecation lifecycle rules & REMOVE_AFTER semantics
+- Granular coverage gate rationale (scoped thresholds vs legacy code)
+- Performance test categories (full-schema vs large isolated schema)
+- Extension guidance & future enhancements
+
+This plan references that README as the canonical quickstart / day-2 operations guide. Architectural intent and governance rationale remain here; operational details and commands can evolve in the README without rewriting historical planning context.
+
+## Architecture Overview (ASCII Diagrams)
+
+### 1. Classification & Reporting Flow
+
+```
+┌────────────────┐      ┌──────────────────────┐
+│ Baseline SDL   │      │ Current Generated SDL│
+└───────┬────────┘      └──────────┬───────────┘
+      │ hash (sha256)                     │
+      v                                   v
+┌────────────────┐                    ┌───────────────┐
+│ Baseline Hash  │                    │ Current AST    │
+└────────┬───────┘                    └──────┬─────────┘
+      │                                   │
+      │                 ┌─────────────────▼────────────────┐
+      │                 │   Diff Engines (types/enums/...)  │
+      │                 └───────────────┬──────────────────┘
+      │                               Raw Change Entries
+      │                                   │
+      │                        ┌──────────▼──────────┐
+      │                        │ Governance Overrides │ (CODEOWNERS + reviews)
+      │                        └──────────┬──────────┘
+      │                                   │ annotated entries
+      │                        ┌──────────▼──────────┐
+      │                        │ Deprecation Checks  │ (REMOVE_AFTER validation)
+      │                        └──────────┬──────────┘
+      │                                   │ classified entries
+      │                        ┌──────────▼───────────┐
+      └──────────────────────▶ │ Final Change Report   │
+                       └──────────────────────┘
+```
+
+Key Guarantees:
+
+- Deterministic ordering & hashing ensures stable baselines.
+- Governance applied before lifecycle validation so approved removals are contextualized.
+- Deprecation stage can reclassify potential breaking removals into policy-compliant transitions.
+
+### 2. Governance Override Evaluation Sequence
+
+```
+Raw Change
+  │
+  ▼
+Extract Element Path
+  │
+  ▼
+Match CODEOWNERS Patterns
+  │  (expands to responsible owners)
+  ▼
+Collect PR Reviews
+  │
+  ├─► Validate Reviewer ∈ Owners
+  │
+  └─► Scan Review Body for token `BREAKING-APPROVED`
+         │
+         ▼
+    Set override flags (approvedBreaking=true)
+         │
+         ▼
+    Annotate Change Entry (governance metadata)
+```
+
+Decision Rules:
+
+- Token ignored if author not in resolved owner set.
+- Multiple tokens collapse to single flag; no additive effect.
+- Absence of matching owner review keeps change in pending/blocked state if BREAKING.
+
+### 3. Deprecation Removal Decision Tree
+
+```
+           ┌──────────────┐
+           │ Field Removed│
+           └───────┬──────┘
+                │Yes
+                v
+           Has REMOVE_AFTER? ── No ──► INVALID BREAKING (policy violation)
+                │Yes
+                v
+          Current Date ≥ REMOVE_AFTER? ── No ──► EARLY REMOVAL (invalid)
+                │Yes
+                v
+      Override Approved? (if BREAKING semantics) ── No ──► BLOCKED BREAKING
+                │Yes
+                v
+            VALID BREAKING (allowed)
+```
+
+Additional Paths:
+
+- If not removed & annotated: tracked in registry; warning classification until removal window reached.
+- Past REMOVE_AFTER but not removed: emits overdue notification classification.
+
+### 4. Coverage Gate Strategy (Conceptual Matrix)
+
+```
+Module       Lines  Funcs  Branches  Rationale
+-----------  -----  -----  --------  -----------------------------
+classify     High   High   High      Orchestrator core logic
+diff         High   High   High      Critical change semantics
+governance   High   High   Medium+   Pattern/review parsing
+deprecation  High   High   Moderate  Date/edge cases iterative
+snapshot     High   High   Low*      I/O error paths gated later
+model        100%   100%   100%      Simple type defs
+```
+
+\*Low branch threshold intentionally accepted due to limited conditional complexity (file existence guards) – future work will add synthetic error-path tests to raise it.
+
+## Diagram Sources (PlantUML)
+
+Corresponding editable PlantUML sources have been added under `specs/002-schema-contract-diffing/diagrams/`:
+
+| Concept                         | File                             |
+| ------------------------------- | -------------------------------- |
+| Classification & Reporting Flow | `classification-flow.puml`       |
+| Governance Overrides Sequence   | `governance-overrides.puml`      |
+| Deprecation Decision Tree       | `deprecation-decision-tree.puml` |
+| Coverage Gate Matrix            | `coverage-matrix.puml`           |
+
+### Rendering Instructions
+
+Local (requires Java + PlantUML jar or docker):
+
+Option 1 (Docker):
+
+```
+docker run --rm -v $(pwd)/specs/002-schema-contract-diffing/diagrams:/diagrams plantuml/plantuml -tpng /diagrams/*.puml
+```
+
+Option 2 (CLI with jar):
+
+```
+plantuml -tpng specs/002-schema-contract-diffing/diagrams/*.puml
+```
+
+Outputs (`.png`) will sit alongside the `.puml` files and can be attached to PRs or embedded in downstream docs. Keep ASCII versions in this plan for diff readability in Git.
+
+Change Policy:
+
+1. Update ASCII + `.puml` together to avoid drift.
+2. For purely cosmetic diagram changes, no README update required.
+3. Any semantic pipeline or rule change must update README + plan rationale sections.
+
+## README / Plan Synchronization Policy
+
+To prevent documentation drift:
+
+1. Governance / lifecycle rule changes MUST update both this plan (rationale) and the README (practical guidance).
+2. Coverage threshold adjustments: update README (summary) + commit rationale delta here.
+3. New diff dimension (e.g., interfaces) requires: data-model update, diagram extension (Classification Flow), README Extension section example.
+
+Audit Hook (manual for now): During PR review, reviewer checks that any changes under `src/schema-contract/` touching rules also modify either this plan or README.
 
 ## Phase 0: Outline & Research
 
@@ -129,8 +304,28 @@ Design Considerations:
 - Determinism: Sorting type definitions & AST printing normalization.
 - Hashing: SHA256 of canonical schema text to detect meaningful changes.
 - Classification Rules Table (to include in data-model).
+- Lightweight bootstrap parity: enforce identical type system without external infra.
 
-Re-evaluated Constitution Check (Predictive): All gates expected PASS once override workflow & annotation format decided.
+Re-evaluated Constitution Check (Predictive): All gates expected PASS once override workflow & annotation format decided. Lightweight bootstrap strengthens Principle 6 (faster deterministic contract tests) and reduces external coupling.
+
+## Phase 1.5: Lightweight Schema Bootstrap (New)
+
+Goals:
+
+1. Implement `SchemaBootstrapModule` importing only modules that declare GraphQL schema elements.
+2. Provide stub providers: cache (Map-based), TypeORM DataSource mock (returns minimal metadata APIs), messaging/search no-ops.
+3. Env flag `SCHEMA_BOOTSTRAP_LIGHT=1` toggles usage in `print-schema.ts`.
+4. Add SDL parity test comparing `AppModule` vs `SchemaBootstrapModule` (expect exact string equality); failing diff breaks build.
+
+Success Metrics:
+
+- Cold bootstrap < 2s in CI environment.
+- No connection attempts (assert absence of common ECONNREFUSED patterns in logs during test).
+- Zero schema diff.
+
+Fallback Plan:
+
+- If a module cannot be cleanly stubbed, isolate its GraphQL types into a new `*-graphql.module.ts` imported by both full and lightweight assemblies.
 
 ## Phase 2: Task Planning Approach (Preview)
 
@@ -147,6 +342,22 @@ Out of scope for /plan; will implement via tasks.md after /tasks command.
 | Violation  | Why Needed | Simpler Alternative Rejected Because |
 | ---------- | ---------- | ------------------------------------ |
 | (none yet) |            |                                      |
+
+## Risk Register (Extended)
+
+| Risk                                          | Impact | Mitigation                                                                    |
+| --------------------------------------------- | ------ | ----------------------------------------------------------------------------- |
+| Inconsistent SDL ordering causing noisy diffs | Medium | Deterministic sorter                                                          |
+| Override misuse (phrase copied by non-owner)  | High   | Verify reviewer is CODEOWNER                                                  |
+| Enum sinceDate approximation inaccurate       | Low    | Accept approximation; refine later                                            |
+| Performance regression on large schemas       | Medium | Perf test; profile bottlenecks                                                |
+| Missing scalar jsonType metadata initially    | Low    | Add directive injection step (deferred)                                       |
+| Lightweight module drifts from full schema    | Medium | Parity test enforcing zero diff                                               |
+| Hidden side-effect in required module         | Medium | Refactor into side-effect vs schema export submodules                         |
+| Stubs accidentally used in production         | Low    | Env gating & distinct import path                                             |
+| Future schema growth inflates diff time       | Low    | Current perf test (~10–20ms for 260 types) leaves ample headroom (<5s budget) |
+| Override phrase spoof attempt                 | Low    | CODEOWNERS reviewer validation + explicit reviewer token check                |
+| Coverage regression below 90%                 | Medium | Jest coverageThreshold gate added (T051)                                      |
 
 ## Progress Tracking
 
@@ -172,6 +383,28 @@ Detailed live mapping of FR-001..FR-019 to implementation status is maintained i
 - <5% of schema-changing PRs require override.
 - Diff step adds <10% to CI duration (baseline).
 - Complete deprecation registry accuracy (no orphaned deprecated fields) = 100%.
+
+## Snapshot & Artifact Path Policy (Added for T005)
+
+Authoritative committed snapshot:
+
+- Path: `schema.graphql` at repository root (future relocation to `contracts/` considered but deferred for discoverability).
+- Must be committed with any schema-affecting PR after running the diff script.
+- Deterministic generation required; any non-functional reordering constitutes a failing pre-commit check (to be enforced via future lint hook, outside this feature scope).
+
+Ephemeral artifacts (NOT committed):
+
+- `change-report.json` (diff classification) stored under `tmp/` or CI workspace and uploaded as workflow artifact only.
+- `deprecations.json` / `deprecation-registry.json` generated and uploaded (legacy `deprecations.schema.json` retained as backward-compatible schema reference; new pipeline prefers `deprecation-registry.schema.json`).
+
+Backward Compatibility Note:
+
+- Both `deprecation-registry.schema.json` and legacy `deprecations.schema.json` schemas are present; generation script will produce only the new format name, while tests will accept legacy input if encountered (migration grace period).
+
+Governance:
+
+- A PR introducing a modified snapshot without corresponding `change-report.json` CI artifact is non-compliant.
+- BREAKING classification requires override phrase validation before merge; snapshot update must reflect the approved breaking change once validated.
 
 ## Out of Scope
 

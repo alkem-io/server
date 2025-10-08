@@ -1,8 +1,8 @@
 # Feature Specification: GraphQL Schema Contract Diffing & Enforcement
 
-**Feature Branch**: `002-schema-contract-diffing`  
-**Created**: 2025-10-07  
-**Status**: Draft  
+**Feature Branch**: `002-schema-contract-diffing`
+**Created**: 2025-10-07
+**Status**: Draft
 **Input**: User description: "Introduce automated schema snapshot generation and breaking change detection to enforce contract stability per constitution principle 3."
 
 ## Execution Flow (main)
@@ -44,7 +44,9 @@ As a platform maintainer, I want automated detection of breaking GraphQL schema 
 
 - Snapshot file missing (first run) → treat as baseline creation.
 - Field deprecation annotation missing removal date → validation warning.
-- Custom scalar change → classify as breaking unless whitelisted. [NEEDS CLARIFICATION: whitelist policy]
+- Custom scalar validation change:
+  - Relaxation (broadens accepted inputs without narrowing prior accepted set) → ADDITIVE (non-breaking) classification.
+  - Tightening (rejects inputs previously accepted) → BREAKING classification.
 - Deprecation reason string malformed (missing REMOVE_AFTER= prefix) → validation error classification = INVALID_DEPRECATION_FORMAT.
 - Custom scalar description wording change without altering name or serialized JSON type → NON_BREAKING (documented informational note).
 - Custom scalar serialization JSON type change (e.g., string→number) → BREAKING.
@@ -72,6 +74,42 @@ As a platform maintainer, I want automated detection of breaking GraphQL schema 
 - **FR-017**: Custom scalar implementation or description text changes MUST be classified NON_BREAKING provided: (a) scalar name unchanged, (b) serialized JSON type category unchanged (string|number|boolean|object|array), (c) no new validation rejection path added.
 - **FR-018**: A change to the serialized JSON type category of a custom scalar MUST be classified BREAKING.
 - **FR-019**: Change report MUST include for each custom scalar: `jsonTypePrevious`, `jsonTypeCurrent`, `behaviorChangeClassification` (NON_BREAKING|BREAKING) plus `reason`.
+- **FR-019a**: Custom scalar validation relaxations MUST be classified ADDITIVE; validation tightenings (removing previously valid inputs) MUST be classified BREAKING. The diff engine MUST verify relaxation vs tightening by set difference heuristics (implemented via representative sample tests or explicit developer annotation fallback if automatic detection is infeasible).
+- **FR-020**: A dedicated lightweight `SchemaBootstrapModule` MUST exist that imports only the minimal Nest modules required to construct the GraphQL schema (domain GraphQL types & scalars) and explicitly excludes external infrastructure integrations (Redis cache store, TypeORM DB connection, RabbitMQ, Elasticsearch, external HTTP integrations) so that schema generation can run in CI without provisioning those services.
+- **FR-021**: The schema printing script MUST use `SchemaBootstrapModule` instead of the full `AppModule` when an environment variable `SCHEMA_BOOTSTRAP_LIGHT=1` is set; defaulting to `AppModule` otherwise for parity in local dev.
+- **FR-022**: The lightweight bootstrap MUST complete within < 2s cold start in CI (target measured after implementation) and MUST NOT attempt network connections to excluded services (verified by absence of connection error logs & by mocking env to unreachable hosts in a contract test).
+
+### Non-Goals (Lightweight Bootstrap)
+
+- Running migrations or initializing full persistence layers.
+- Starting web sockets, subscriptions transports, or background schedulers.
+- Instantiating modules whose only purpose is runtime side-effects (e.g., ingestion pipelines) when their exported GraphQL types are not required for schema construction. If a domain module currently couples side-effects with type definitions, refactoring tasks (see tasks.md) will isolate the type exports.
+
+### Design Addition: Lightweight Schema Bootstrap
+
+To reduce CI complexity (currently requiring Redis/MySQL/RabbitMQ just to emit SDL) we introduce `SchemaBootstrapModule`.
+
+Key principles:
+
+1. Pure schema assembly: Limit imports to modules that declare GraphQL object types, inputs, enums, interfaces, unions, custom scalars, or directives.
+2. No external side-effects: Replace infrastructural providers (cache, db, message bus) with in-memory or no-op stubs where required by dependent modules.
+3. Conditional activation: Controlled by `SCHEMA_BOOTSTRAP_LIGHT` env flag to avoid impacting existing runtime behavior.
+4. Stable public contract: Resulting schema MUST be byte-for-byte identical to full app schema except for omissions strictly derived from excluded modules; any omission constitutes a test failure unless explicitly approved and documented in `coverage.md`.
+
+Implementation outline (summary – detailed tasks in plan & tasks docs):
+
+- Introduce `src/schema-bootstrap/module.schema-bootstrap.ts` exporting `SchemaBootstrapModule`.
+- Extract GraphQL-only submodules from `AppModule` where needed (e.g., create `*GraphQLExportsModule` variants) to avoid importing heavy provider logic.
+- Provide stub providers (e.g., `Cache` token, `DataSource` mock) returning inert objects sufficient for module wiring but never performing I/O.
+- Adapt `print-schema.ts` to look for `SCHEMA_BOOTSTRAP_LIGHT` and bootstrap the chosen module.
+- Add a contract test verifying equivalence of type system between full and light modules (except for an allowlist described in documentation if necessary).
+
+Risks & Mitigations:
+
+- Risk: Hidden side-effect initialization inside a required domain module → Mitigation: Introduce explicit `GraphQLExportsModule` pattern factoring side-effects into a sibling module not imported by `SchemaBootstrapModule`.
+- Risk: Divergence in future schema evolution (forgotten to update light module) → Mitigation: Add test comparing printed SDL from both modules (Delta must be empty) gating PRs.
+
+Open Question (tracked): Should we auto-generate `SchemaBootstrapModule` imports from a metadata tag? (Deferred – manual curation initially.)
 
 ### Key Entities
 
@@ -114,3 +152,7 @@ As a platform maintainer, I want automated detection of breaking GraphQL schema 
 - Q: What enum deprecation lifecycle should we enforce before a value can be removed? → A: Time-based 90-day minimum grace period (Option B)
 - Q: What annotation format should we standardize for field/enum deprecations to encode reason and removal timeline? → A: Dual fields in standard reason `REMOVE_AFTER=YYYY-MM-DD | reason` (Option D)
 - Q: How should internal custom scalar implementation/detail changes be classified to avoid false BREAKING flags? → A: Treat all non-name, non-JSON-type changes as NON-BREAKING (Option A)
+
+### Session 2025-10-08
+
+- Q: Custom scalar whitelist / validation change policy? → A: Validation relaxations ADDITIVE; tightenings BREAKING (Option C)

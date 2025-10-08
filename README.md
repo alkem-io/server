@@ -57,3 +57,38 @@ Developer workflow summary:
 5. Commit updated `schema.graphql` only.
 
 See `specs/002-schema-contract-diffing/quickstart.md` for full instructions, troubleshooting, and classification glossary.
+
+### CLI Quick Reference (Schema Contract Tooling)
+
+Core scripts (all TypeScript runners use ts-node + path mapping):
+
+| Intent               | Command                   | Notes                                                                                                    |
+| -------------------- | ------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Print current schema | `npm run schema:print`    | Generates `schema.graphql` (lightweight bootstrap under env `SCHEMA_BOOTSTRAP_LIGHT=1`)                  |
+| Canonical sort       | `npm run schema:sort`     | Stable lexicographic ordering (idempotent)                                                               |
+| Diff vs previous     | `npm run schema:diff`     | Requires `tmp/prev.schema.graphql` (empty => baseline) writes `change-report.json` & `deprecations.json` |
+| Validate artifacts   | `npm run schema:validate` | Ajv validation against JSON Schemas                                                                      |
+
+Governance environment variables:
+
+| Variable                          | Purpose                                                                          |
+| --------------------------------- | -------------------------------------------------------------------------------- |
+| `SCHEMA_BOOTSTRAP_LIGHT`          | When `1`, uses lightweight module for faster printing (parity enforced by tests) |
+| `SCHEMA_OVERRIDE_CODEOWNERS_PATH` | Alternate path to `CODEOWNERS` file                                              |
+| `SCHEMA_OVERRIDE_REVIEWS_JSON`    | Inline JSON array of review objects (`[{reviewer, body, state}]`)                |
+| `SCHEMA_OVERRIDE_REVIEWS_FILE`    | Path to file containing JSON reviews array                                       |
+
+Override approval phrase: `BREAKING-APPROVED` (must appear in APPROVED review body by a CODEOWNER reviewer). Applies to BREAKING entries only; sets `overrideApplied=true` and per-entry `override=true` so gate treats them as informational.
+
+Exit codes (schema gate):
+
+| Code | Meaning                    | Blocking Condition                                       |
+| ---- | -------------------------- | -------------------------------------------------------- |
+| 0    | Success                    | No unapproved blocking classifications                   |
+| 1    | BREAKING                   | One or more BREAKING entries without override            |
+| 2    | PREMATURE_REMOVAL          | Removal attempted before lifecycle conditions met        |
+| 3    | INVALID_DEPRECATION_FORMAT | Malformed or missing removal schedule after grace period |
+
+Performance budgets: diff <5s on synthetic 250+ type schema; cold bootstrap <2s (enforced by automated tests).
+
+For deeper glossary, lifecycle rules, simulation of overrides, troubleshooting, see the Quickstart.

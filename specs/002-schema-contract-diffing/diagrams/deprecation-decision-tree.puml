@@ -1,0 +1,29 @@
+@startuml DeprecationDecisionTree
+skinparam shadowing false
+skinparam defaultFontName Courier
+skinparam ArrowColor #555555
+skinparam DecisionBorderColor #999999
+skinparam DecisionBackgroundColor #F9F9F9
+skinparam RectangleBackgroundColor #FFFFFF
+
+start
+:Field Removed?;
+if (Removed?) then (yes)
+  if (Has REMOVE_AFTER?) then (yes)
+  if (Now >= REMOVE_AFTER date?) then (yes)
+      if (Override Approved?) then (yes)
+        :VALID BREAKING;
+      else (no)
+        :BLOCKED BREAKING;
+      endif
+    else (no)
+      :EARLY REMOVAL\n(invalid);
+    endif
+  else (no)
+    :INVALID BREAKING\n(no lifecycle metadata);
+  endif
+else (no)
+  :Track Deprecated Field\n(in registry);
+endif
+stop
+@enduml

@@ -108,28 +108,52 @@ Schema Diff Summary:
 
 ## Troubleshooting
 
-| Issue                               | Cause                                                      | Fix                                                         |
-| ----------------------------------- | ---------------------------------------------------------- | ----------------------------------------------------------- | ---------------------------------- |
-| All changes flagged due to ordering | Non-deterministic print                                    | Run sort normalization script                               |
-| Enum removal blocked                | 90-day window incomplete                                   | Revert removal or adjust timeline (can't shorten)           |
-| Override ignored                    | Missing env-provided reviews or reviewer not in CODEOWNERS | Provide SCHEMA_OVERRIDE_REVIEWS_JSON / ensure owner present |
-| Invalid deprecation format          | Missing REMOVE_AFTER token                                 | Update directive reason                                     |
-| Deprecation grace warning           | Newly added deprecation missing REMOVE_AFTER (<24h)        | Amend reason to include `REMOVE_AFTER=YYYY-MM-DD            | explanation` before graceExpiresAt |
+| Issue                               | Cause                                                        | Fix                                                                                                                         |
+| ----------------------------------- | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | ---------- |
+| All changes flagged due to ordering | Non-deterministic print (rare drift)                         | Run `npm run schema:sort` then re-run diff                                                                                  |
+| Enum removal blocked                | 90-day window incomplete OR removeAfter date not reached     | Revert enum value; wait until both removeAfter passed AND >=90 days since deprecation                                       |
+| Override ignored                    | Review JSON missing / reviewer not CODEOWNER / phrase absent | Ensure reviewer listed in CODEOWNERS and body contains `BREAKING-APPROVED`; export SCHEMA_OVERRIDE_REVIEWS_JSON before diff |
+| Invalid deprecation format          | Reason string missing `REMOVE_AFTER=YYYY-MM-DD               | ` prefix                                                                                                                    | Amend directive reason with full format `REMOVE_AFTER=YYYY-MM-DD | rationale` |
+| Deprecation grace warning           | Newly deprecated element missing schedule (<24h)             | Add schedule before graceExpiresAt to avoid escalation                                                                      |
+| Premature removal                   | Attempted removal before removeAfter or <90 days elapsed     | Restore element until lifecycle satisfied                                                                                   |
+| Unexpected BREAKING on type change  | Nullable ↔ non-null change or scalar jsonType change        | Re-evaluate change necessity or apply override approval                                                                     |
+| Gate exit code 1                    | Unapproved BREAKING entries present                          | Secure override or refactor change to non-breaking pattern                                                                  |
+| Gate exit code 2                    | PREMATURE_REMOVAL entries present                            | Re-add prematurely removed items; wait lifecycle window                                                                     |
+| Gate exit code 3                    | INVALID_DEPRECATION_FORMAT entries present                   | Fix reason format & re-run diff                                                                                             |
+
+### Debugging Parity Failures
+
+If `schema.parity.spec.ts` fails:
+
+1. Capture both emitted SDLs (printed in test output snippet).
+2. Look for ordering-only differences: run `npm run schema:sort` and re-run tests.
+3. Identify missing type in lightweight bootstrap: import its module (or extract its GraphQL-only submodule) into `SchemaBootstrapModule`.
+4. Avoid adding heavy infra modules; instead create or extend a stub provider under `schema-bootstrap/stubs`.
+
+### Override Simulation Tips
+
+If overrides not applying locally, echo the parsed reviews to confirm ingestion:
+
+```
+echo $SCHEMA_OVERRIDE_REVIEWS_JSON | jq '.'
+```
+
+Ensure the JSON array objects include fields: reviewer, body (with phrase), state=APPROVED.
 
 ## Classification Glossary
 
-| Classification             | Meaning                                                                 | Gate Effect                        |
-| -------------------------- | ----------------------------------------------------------------------- | ---------------------------------- |
-| ADDITIVE                   | New type/field/enum value (non-breaking)                                | Allowed                            |
-| DEPRECATED                 | Properly scheduled deprecation (has REMOVE_AFTER)                       | Allowed                            |
-| DEPRECATION_GRACE          | Newly deprecated without schedule (<24h window)                         | Allowed (warning)                  |
-| INVALID_DEPRECATION_FORMAT | Deprecation reason missing or malformed schedule after grace            | Fails gate                         |
-| BREAKING                   | Removal / type change / incompatible scalar jsonType change             | Fails gate unless override applied |
-| PREMATURE_REMOVAL          | Attempted removal before REMOVE_AFTER date or enum lifecycle window     | Fails gate                         |
-| INFO                       | Benign metadata changes (description, non-jsonType scalar detail, etc.) | Allowed                            |
-| BASELINE                   | Initial snapshot creation (no prior)                                    | Allowed                            |
+| Classification             | Meaning                                                                       | Gate Effect                                                             |
+| -------------------------- | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ----------------- |
+| ADDITIVE                   | New type/field/enum value (non-breaking)                                      | Allowed                                                                 |
+| DEPRECATED                 | Properly scheduled deprecation (has REMOVE_AFTER)                             | Allowed                                                                 |
+| DEPRECATION_GRACE          | Newly deprecated without schedule (<24h window). Add `REMOVE_AFTER=YYYY-MM-DD | reason` within grace to avoid escalation to INVALID_DEPRECATION_FORMAT. | Allowed (warning) |
+| INVALID_DEPRECATION_FORMAT | Deprecation reason missing or malformed schedule after grace                  | Fails gate                                                              |
+| BREAKING                   | Removal / type change / incompatible scalar jsonType change                   | Fails gate unless override applied                                      |
+| PREMATURE_REMOVAL          | Attempted removal before REMOVE_AFTER date or enum lifecycle window           | Fails gate                                                              |
+| INFO                       | Benign metadata changes (description, non-jsonType scalar detail, etc.)       | Allowed                                                                 |
+| BASELINE                   | Initial snapshot creation (no prior)                                          | Allowed                                                                 |
 
-`overrideApplied: true` on a BREAKING entry indicates governance approval (phrase + CODEOWNER review) — gate treats it as informational.
+`overrideApplied: true` on a BREAKING entry indicates governance approval (phrase + CODEOWNER review) — gate treats it as informational. Per-entry `override: true` is also set for explicit traceability.
 
 ## Security & Compliance Notes
 

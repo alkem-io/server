@@ -1,0 +1,25 @@
+@startuml GovernanceOverrides
+skinparam shadowing false
+skinparam defaultFontName Courier
+skinparam ArrowColor #555555
+skinparam RectangleBackgroundColor #F9F9F9
+skinparam RectangleBorderColor #999999
+
+start
+:Raw Change Entry;
+:Extract Element Path;
+:Match CODEOWNERS Patterns;
+:Collect PR Reviews;
+if (Reviewer in Owners?) then (yes)
+  :Scan Reviews for TOKEN\n`BREAKING-APPROVED`;
+  if (Token Present?) then (yes)
+    :Set approvedBreaking = true;
+  else (no)
+    :No override set;
+  endif
+else (no)
+  :Ignore tokens (not owner);
+endif
+:Annotate Change Entry\n(governance metadata);
+stop
+@enduml

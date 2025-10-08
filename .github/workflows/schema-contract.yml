@@ -29,8 +29,10 @@ jobs:
       - name: Install deps
         run: npm ci
 
-      - name: Generate schema snapshot
-        run: npm run schema:print && npm run schema:sort
+      - name: Generate schema snapshot (lightweight)
+        env:
+          SCHEMA_BOOTSTRAP_LIGHT: '1'
+        run: npx ts-node scripts/schema/generate-schema.snapshot.ts schema.graphql
 
       - name: Load previous baseline (if exists)
         run: |
@@ -38,19 +40,18 @@ jobs:
           mkdir -p tmp
 
       - name: Run diff
-        run: npm run schema:diff || true
+        run: npx ts-node scripts/schema/diff-schema.ts --old tmp/prev.schema.graphql --current schema.graphql --out change-report.json --deprecations deprecations.json || true
 
-      - name: Validate artifacts
-        run: npm run schema:validate || true
+      - name: Gate evaluation (non-blocking summary)
+        run: npx ts-node scripts/schema/schema-gate.ts change-report.json || true
 
-      - name: Summarize & gate
-        id: gate
+      - name: Generate PR comment body
+        id: pr_comment
         run: |
-          node -r ts-node/register .github/workflows/scripts/schema-gate.ts change-report.json > gate-summary.txt
-          echo 'summary<<EOF' >> $GITHUB_OUTPUT
-          cat gate-summary.txt >> $GITHUB_OUTPUT
+          npx ts-node scripts/schema/post-pr-comment.ts change-report.json > pr-comment.md
+          echo 'body<<EOF' >> $GITHUB_OUTPUT
+          cat pr-comment.md >> $GITHUB_OUTPUT || echo 'No report' >> $GITHUB_OUTPUT
           echo 'EOF' >> $GITHUB_OUTPUT
-          cat gate-summary.txt
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -60,16 +61,14 @@ jobs:
             change-report.json
             deprecations.json
             schema.graphql
+            pr-comment.md
 
-      - name: Comment on PR
+      - name: Post sticky PR comment
         if: github.event_name == 'pull_request'
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           header: schema-contract
-          message: |
-            ### GraphQL Schema Contract Report
-            ${{ steps.gate.outputs.summary }}
+          message: ${{ steps.pr_comment.outputs.body }}
 
       - name: Enforce gate
-        run: |
-          node -r ts-node/register .github/workflows/scripts/schema-gate.ts change-report.json --fail
+        run: npx ts-node scripts/schema/schema-gate.ts change-report.json
