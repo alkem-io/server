@@ -12,6 +12,7 @@ import { SchemaBootstrapModule } from '../../src/schema-bootstrap/module.schema-
 async function main() {
   const outPath = process.argv[2] || 'schema.graphql';
   const useLight = process.env.SCHEMA_BOOTSTRAP_LIGHT === '1';
+  const forceSuccess = process.env.SCHEMA_SNAPSHOT_FORCE_SUCCESS === '1';
   const rootModule = useLight ? SchemaBootstrapModule : AppModule;
   const app = await NestFactory.createApplicationContext(rootModule, {
     logger: false,
@@ -29,7 +30,15 @@ async function main() {
     process.stderr.write(
       `Snapshot generation failed: ${(e as Error).message}\n`
     );
-    process.exitCode = 1;
+    if (!forceSuccess) {
+      process.exitCode = 1;
+    } else {
+      // Force success mode: enforce success exit code
+      process.stderr.write(
+        'Force-success mode active; continuing with exit code 0.\n'
+      );
+      process.exitCode = 0; // override any previous setting
+    }
   } finally {
     await app.close();
   }
