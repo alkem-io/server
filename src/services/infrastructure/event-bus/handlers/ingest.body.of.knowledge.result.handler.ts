@@ -22,7 +22,7 @@ export class IngestBodyOfKnowledgeResultHandler
 
   async handle(event: IngestBodyOfKnowledgeResult) {
     this.logger.verbose?.(
-      `IngestSpaceResultHandler invoked. Event data: PersonaServiceId: ${event.personaId}; Result: ${event.result}`,
+      `IngestSpaceResultHandler invoked. Event data: PersonaId: ${event.personaId}; Result: ${event.result}`,
       LogContext.AI_SERVER_EVENT_BUS
     );
 

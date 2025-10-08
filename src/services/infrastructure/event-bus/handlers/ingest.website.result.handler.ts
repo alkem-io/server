@@ -23,13 +23,13 @@ export class IngestWebsiteResultHandler
     const personaId = original.personaId;
     if (response.result === IngestionResult.FAILURE) {
       this.logger.verbose?.(
-        `IngestWebsiteResultHandler invoked. Event data: PersonaServiceId: ${personaId}; Result: failure`,
+        `IngestWebsiteResultHandler invoked. Event data: PersonaId: ${personaId}; Result: failure`,
         LogContext.AI_SERVER_EVENT_BUS
       );
       return;
     }
     this.logger.verbose?.(
-      `IngestWebsiteResultHandler invoked. Event data: PersonaServiceId: ${personaId}; Result: success`,
+      `IngestWebsiteResultHandler invoked. Event data: PersonaId: ${personaId}; Result: success`,
       LogContext.AI_SERVER_EVENT_BUS
     );
 
@@ -38,7 +38,7 @@ export class IngestWebsiteResultHandler
       return;
     }
     this.logger.verbose?.(
-      `Invoking updatePersonaBoKLastUpdated for PeresonaService: ${personaId}`,
+      `Invoking updatePersonaBoKLastUpdated for Peresona: ${personaId}`,
       LogContext.AI_SERVER_EVENT_BUS
     );
 
