@@ -32,7 +32,7 @@ jobs:
       - name: Generate schema snapshot (lightweight)
         env:
           SCHEMA_BOOTSTRAP_LIGHT: '1'
-        run: npx ts-node scripts/schema/generate-schema.snapshot.ts schema.graphql
+        run: npx ts-node -r tsconfig-paths/register scripts/schema/generate-schema.snapshot.ts schema.graphql
 
       - name: Load previous baseline (if exists)
         run: |
