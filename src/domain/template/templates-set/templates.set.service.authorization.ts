@@ -41,7 +41,11 @@ export class TemplatesSetAuthorizationService {
         const templateAuthorizations =
           await this.templateAuthorizationService.applyAuthorizationPolicy(
             template,
-            parentAuthorization
+            // Ensure templates inherit from the TemplatesSet authorization, not the original parent.
+            // Previously this passed parentAuthorization directly which caused templates to miss
+            // the credential rules applied to the TemplatesSet, resulting in missing READ access
+            // (e.g. for Callout Template contributionDefaults - issue #8804).
+            templatesSet.authorization
           );
         updatedAuthorizations.push(...templateAuthorizations);
       }
