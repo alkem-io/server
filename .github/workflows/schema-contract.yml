@@ -78,7 +78,28 @@ jobs:
             echo "Fallback baseline derived from origin/$BASELINE:schema.graphql"
           else
             echo "WARNING: No baseline schema found on $BASELINE; this run initializes baseline (no diff)."
+            # Mark initialization run so later steps can annotate the PR comment.
+            echo "SCHEMA_INIT_RUN=1" >> $GITHUB_ENV
+            # Create an explicit placeholder previous schema file so diff step has a path (empty file triggers fallback logic in diff script).
+            echo "# empty-baseline-initialization" > tmp/prev.schema.graphql
           fi
+
+      - name: Baseline diagnostics
+        run: |
+          echo "== Baseline Diagnostics =="
+          if [ -f tmp/prev.schema.graphql ]; then
+            echo "prev.schema.graphql exists. Size:" $(wc -c < tmp/prev.schema.graphql) "bytes"
+            echo "Previous schema MD5:" $(md5sum tmp/prev.schema.graphql | awk '{print $1}')
+          else
+            echo "prev.schema.graphql MISSING"
+          fi
+          echo "Current schema MD5:" $(md5sum schema.graphql | awk '{print $1}')
+          echo "Checking for contributionsCount2 in current schema:"; grep -q 'contributionsCount2' schema.graphql && echo "Found" || echo "Not found"
+          if [ -f tmp/prev.schema.graphql ]; then
+            echo "Checking for contributionsCount2 in previous schema:"; grep -q 'contributionsCount2' tmp/prev.schema.graphql && echo "Found" || echo "Not found"
+          fi
+          echo "First 5 lines of previous schema (if any):"; head -n 5 tmp/prev.schema.graphql || true
+          echo "== End Diagnostics =="
 
       - name: Run diff
         run: npx ts-node scripts/schema/diff-schema.ts --old tmp/prev.schema.graphql --current schema.graphql --out change-report.json --deprecations deprecations.json || true
@@ -90,6 +111,10 @@ jobs:
         id: pr_comment
         run: |
           npx ts-node scripts/schema/post-pr-comment.ts change-report.json > pr-comment.md
+          if [ "$SCHEMA_INIT_RUN" = "1" ]; then
+            echo "" >> pr-comment.md
+            echo "> ℹ️ No baseline schema was found for branch '${{ steps.baseline_ref.outputs.baseline }}'. This run is treated as an INITIALIZATION run; no additive/breaking differences are listed. Commit a baseline file (schema-baseline.graphql) to that branch (or apply a schema-base:<branch> label) to enable diffs on subsequent PRs." >> pr-comment.md
+          fi
           echo 'body<<EOF' >> $GITHUB_OUTPUT
           cat pr-comment.md >> $GITHUB_OUTPUT || echo 'No report' >> $GITHUB_OUTPUT
           echo 'EOF' >> $GITHUB_OUTPUT
