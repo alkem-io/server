@@ -81,6 +81,18 @@ export class CalloutResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
+  @ResolveField('contributionsCount', () => CalloutContributionsCountOutput, {
+    nullable: false,
+    description: 'The Contributions that have been made to this Callout.',
+  })
+  async contributionsCount2(
+    @Parent() callout: Callout
+  ): Promise<CalloutContributionsCountOutput> {
+    return await this.calloutService.getContributionsCount(callout);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('comments', () => IRoom, {
     nullable: true,
     description: 'The comments for this Callout.',
