@@ -47,9 +47,8 @@ export class PlatformAdminService {
     const IDs = args?.IDs;
     return this.spaceService.getAllSpaces({
       where: {
-        visibility: !!visibilities ? In(visibilities) : undefined,
-        id: !!IDs ? In(IDs) : undefined,
-        level: SpaceLevel.L0,
+        visibility: visibilities?.length ? In(visibilities) : undefined,
+        id: IDs?.length ? In(IDs) : undefined,
       },
       order: { createdDate: sort },
     });
