@@ -19,6 +19,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # need full metadata for label-based baseline detection
 
       - name: Use Node
         uses: actions/setup-node@v4
@@ -35,20 +37,47 @@ jobs:
           SCHEMA_SNAPSHOT_FORCE_SUCCESS: '1'
         run: npx ts-node -r tsconfig-paths/register scripts/schema/generate-schema.snapshot.ts schema.graphql
 
-      - name: Retrieve baseline from base branch (if available)
+      - name: Determine baseline branch
+        id: baseline_ref
+        run: |
+          # Priority order:
+          # 1. Explicit env BASELINE_BRANCH (can be set via workflow_dispatch or repository env)
+          # 2. PR label schema-base:<branch>
+          # 3. GITHUB_BASE_REF
+          BASELINE="${BASELINE_BRANCH}"
+          if [ -z "$BASELINE" ]; then
+            echo "Scanning PR labels for schema-base:* override..."
+            labels=$(curl -s -H "Authorization: Bearer ${{ github.token }}" \
+              -H 'Accept: application/vnd.github+json' \
+              "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels" | jq -r '.[].name') || true
+            for l in $labels; do
+              case "$l" in
+                schema-base:*) BASELINE="${l#schema-base:}"; echo "Found label override: $l"; break;;
+              esac
+            done
+          fi
+          if [ -z "$BASELINE" ]; then
+            BASELINE="${GITHUB_BASE_REF}"
+            echo "Defaulting baseline to GITHUB_BASE_REF=$BASELINE"
+          else
+            echo "Using custom baseline branch: $BASELINE"
+          fi
+          echo "baseline=$BASELINE" >> $GITHUB_OUTPUT
+
+      - name: Retrieve baseline schema (if available)
         run: |
           mkdir -p tmp
-          echo "Base ref: ${GITHUB_BASE_REF}"
-          git fetch origin "${GITHUB_BASE_REF}" --depth=1 || echo "Fetch base ref failed (continuing)."
-          if git show "origin/${GITHUB_BASE_REF}:schema-baseline.graphql" >/dev/null 2>&1; then
-            git show "origin/${GITHUB_BASE_REF}:schema-baseline.graphql" > tmp/prev.schema.graphql
-            echo "Baseline schema obtained from origin/${GITHUB_BASE_REF}."
-          elif git show "origin/${GITHUB_BASE_REF}:schema.graphql" >/dev/null 2>&1; then
-            # Fallback: if baseline file not versioned yet, try prior schema snapshot if committed policy changes later allow it.
-            git show "origin/${GITHUB_BASE_REF}:schema.graphql" > tmp/prev.schema.graphql
-            echo "Fallback baseline derived from schema.graphql on base branch."
+          BASELINE="${{ steps.baseline_ref.outputs.baseline }}"
+          echo "Baseline branch resolved to: $BASELINE"
+          git fetch origin "$BASELINE" --depth=1 || echo "Fetch baseline branch failed (continuing)."
+          if git show "origin/$BASELINE:schema-baseline.graphql" >/dev/null 2>&1; then
+            git show "origin/$BASELINE:schema-baseline.graphql" > tmp/prev.schema.graphql
+            echo "Baseline schema obtained from origin/$BASELINE:schema-baseline.graphql"
+          elif git show "origin/$BASELINE:schema.graphql" >/dev/null 2>&1; then
+            git show "origin/$BASELINE:schema.graphql" > tmp/prev.schema.graphql
+            echo "Fallback baseline derived from origin/$BASELINE:schema.graphql"
           else
-            echo "No baseline schema found on base branch; treating this run as baseline (no diff)."
+            echo "WARNING: No baseline schema found on $BASELINE; this run initializes baseline (no diff)."
           fi
 
       - name: Run diff
