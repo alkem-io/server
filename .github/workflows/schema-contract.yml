@@ -35,14 +35,20 @@ jobs:
           SCHEMA_SNAPSHOT_FORCE_SUCCESS: '1'
         run: npx ts-node -r tsconfig-paths/register scripts/schema/generate-schema.snapshot.ts schema.graphql
 
-      - name: Load previous baseline (if exists)
+      - name: Retrieve baseline from base branch (if available)
         run: |
           mkdir -p tmp
-          if [ -f schema-baseline.graphql ]; then
-            echo "Found schema-baseline.graphql; copying to tmp/prev.schema.graphql"
-            cp schema-baseline.graphql tmp/prev.schema.graphql
+          echo "Base ref: ${GITHUB_BASE_REF}"
+          git fetch origin "${GITHUB_BASE_REF}" --depth=1 || echo "Fetch base ref failed (continuing)."
+          if git show "origin/${GITHUB_BASE_REF}:schema-baseline.graphql" >/dev/null 2>&1; then
+            git show "origin/${GITHUB_BASE_REF}:schema-baseline.graphql" > tmp/prev.schema.graphql
+            echo "Baseline schema obtained from origin/${GITHUB_BASE_REF}."
+          elif git show "origin/${GITHUB_BASE_REF}:schema.graphql" >/dev/null 2>&1; then
+            # Fallback: if baseline file not versioned yet, try prior schema snapshot if committed policy changes later allow it.
+            git show "origin/${GITHUB_BASE_REF}:schema.graphql" > tmp/prev.schema.graphql
+            echo "Fallback baseline derived from schema.graphql on base branch."
           else
-            echo "No schema-baseline.graphql present; this run will be treated as baseline."
+            echo "No baseline schema found on base branch; treating this run as baseline (no diff)."
           fi
 
       - name: Run diff
