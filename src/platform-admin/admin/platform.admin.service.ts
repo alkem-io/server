@@ -21,7 +21,6 @@ import { LibraryService } from '@library/library/library.service';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager, In } from 'typeorm';
-import { SpaceLevel } from '@common/enums/space.level';
 
 @Injectable()
 export class PlatformAdminService {
