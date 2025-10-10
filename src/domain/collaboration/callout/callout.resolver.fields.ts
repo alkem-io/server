@@ -81,9 +81,10 @@ export class CalloutResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('contributionsCount', () => CalloutContributionsCountOutput, {
+  @ResolveField('contributionsCount2', () => CalloutContributionsCountOutput, {
     nullable: false,
-    description: 'The Contributions that have been made to this Callout.',
+    description:
+      'Experimental duplicate of contributionsCount for contract testing.',
   })
   async contributionsCount2(
     @Parent() callout: Callout
