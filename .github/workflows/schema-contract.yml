@@ -37,8 +37,13 @@ jobs:
 
       - name: Load previous baseline (if exists)
         run: |
-          if [ -f schema-baseline.graphql ]; then cp schema-baseline.graphql tmp/prev.schema.graphql; fi
           mkdir -p tmp
+          if [ -f schema-baseline.graphql ]; then
+            echo "Found schema-baseline.graphql; copying to tmp/prev.schema.graphql"
+            cp schema-baseline.graphql tmp/prev.schema.graphql
+          else
+            echo "No schema-baseline.graphql present; this run will be treated as baseline."
+          fi
 
       - name: Run diff
         run: npx ts-node scripts/schema/diff-schema.ts --old tmp/prev.schema.graphql --current schema.graphql --out change-report.json --deprecations deprecations.json || true
