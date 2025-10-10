@@ -79,18 +79,17 @@ export class AiServerService {
   ) {}
 
   public async updatePersonaBoKLastUpdated(
-    personaServiceId: string,
+    personaId: string,
     lastUpdated: Date | null
   ) {
-    const persona =
-      await this.aiPersonaService.getAiPersonaOrFail(personaServiceId);
+    const persona = await this.aiPersonaService.getAiPersonaOrFail(personaId);
 
     persona.bodyOfKnowledgeLastUpdated = lastUpdated;
 
     await this.aiPersonaService.save(persona);
 
     this.logger.verbose?.(
-      `AI Persona service ${personaServiceId} bodyOfKnowledgeLastUpdated set to ${lastUpdated}`,
+      `AI Persona service ${personaId} bodyOfKnowledgeLastUpdated set to ${lastUpdated}`,
       LogContext.AI_SERVER
     );
 
@@ -104,7 +103,7 @@ export class AiServerService {
 
     if (virtualContributor) {
       this.logger.verbose?.(
-        `VC for Persona service ${personaServiceId} loaded. Publishing to VirtualContributorUpdated subscription.`,
+        `VC for Persona service ${personaId} loaded. Publishing to VirtualContributorUpdated subscription.`,
         LogContext.AI_SERVER
       );
 
@@ -113,7 +112,7 @@ export class AiServerService {
       );
     } else {
       this.logger.verbose?.(
-        `VC for Persona service ${personaServiceId} not found.`,
+        `VC for Persona service ${personaId} not found.`,
         LogContext.AI_SERVER
       );
     }
