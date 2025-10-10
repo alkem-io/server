@@ -35,7 +35,29 @@ jobs:
         env:
           SCHEMA_BOOTSTRAP_LIGHT: '1'
           SCHEMA_SNAPSHOT_FORCE_SUCCESS: '1'
-        run: npx ts-node -r tsconfig-paths/register scripts/schema/generate-schema.snapshot.ts schema.graphql
+          SCHEMA_SNAPSHOT_DEBUG: '1'
+        run: |
+          set -o pipefail
+          npx ts-node -r tsconfig-paths/register scripts/schema/generate-schema.snapshot.ts schema.graphql 2>&1 | tee snapshot.log
+
+      - name: Verify snapshot output
+        run: |
+          if [ ! -f schema.graphql ]; then
+            echo "ERROR: schema.graphql not produced" >&2
+            echo "--- snapshot.log (tail) ---" >&2
+            tail -n 200 snapshot.log || true
+            exit 1
+          fi
+          size=$(wc -c < schema.graphql)
+            if [ "$size" -lt 40 ]; then
+            echo "WARNING: schema.graphql extremely small ($size bytes); may be placeholder." >&2
+          fi
+          echo "Snapshot size: $size bytes"
+          echo "Snapshot MD5: $(md5sum schema.graphql | awk '{print $1}')"
+          head -n 5 schema.graphql
+          echo "SNAPSHOT_DIAG_MD5=$(md5sum schema.graphql | awk '{print $1}')" >> $GITHUB_ENV
+          echo "SNAPSHOT_DIAG_SIZE=$size" >> $GITHUB_ENV
+          echo "SNAPSHOT_DIAG_HEAD=$(head -n 1 schema.graphql | sed 's/[^A-Za-z0-9_:#-]/_/g')" >> $GITHUB_ENV
 
       - name: Determine baseline branch
         id: baseline_ref
@@ -115,6 +137,23 @@ jobs:
             echo "" >> pr-comment.md
             echo "> ℹ️ No baseline schema was found for branch '${{ steps.baseline_ref.outputs.baseline }}'. This run is treated as an INITIALIZATION run; no additive/breaking differences are listed. Commit a baseline file (schema-baseline.graphql) to that branch (or apply a schema-base:<branch> label) to enable diffs on subsequent PRs." >> pr-comment.md
           fi
+          echo "" >> pr-comment.md
+          echo "---" >> pr-comment.md
+          echo "Baseline branch: ${{ steps.baseline_ref.outputs.baseline }}" >> pr-comment.md
+          if [ -n "$SNAPSHOT_DIAG_MD5" ]; then
+            echo "Current schema MD5: $SNAPSHOT_DIAG_MD5 (size $SNAPSHOT_DIAG_SIZE)" >> pr-comment.md
+          fi
+          if [ -f tmp/prev.schema.graphql ]; then
+            echo "Previous schema MD5: $(md5sum tmp/prev.schema.graphql | awk '{print $1}')" >> pr-comment.md
+          fi
+          if grep -q 'contributionsCount2' schema.graphql 2>/dev/null; then
+            echo "Field contributionsCount2 present in current schema." >> pr-comment.md
+          fi
+          if grep -q 'contributionsCount2' tmp/prev.schema.graphql 2>/dev/null; then
+            echo "Field contributionsCount2 present in previous schema." >> pr-comment.md
+          else
+            echo "Field contributionsCount2 NOT present in previous schema." >> pr-comment.md
+          fi
           echo 'body<<EOF' >> $GITHUB_OUTPUT
           cat pr-comment.md >> $GITHUB_OUTPUT || echo 'No report' >> $GITHUB_OUTPUT
           echo 'EOF' >> $GITHUB_OUTPUT
@@ -127,6 +166,7 @@ jobs:
             change-report.json
             deprecations.json
             schema.graphql
+            snapshot.log
             pr-comment.md
 
       - name: Post sticky PR comment
