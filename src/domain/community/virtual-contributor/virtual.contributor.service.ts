@@ -447,15 +447,10 @@ export class VirtualContributorService {
       return Promise.resolve(false);
     }
 
-    if (!virtualContributor.bodyOfKnowledgeID) {
-      throw new ValidationException(
-        `Virtual Contributor Body of Knowledge ID missing: ${virtualContributor.id}`,
-        LogContext.VIRTUAL_CONTRIBUTOR
-      );
-    }
-
     return this.aiServerAdapter.refreshBodyOfKnowledge(
-      virtualContributor.bodyOfKnowledgeID,
+      // Guidance engine doens't have BoK ID for now, so fallback to empty string
+      // next layer knows what to do
+      virtualContributor.bodyOfKnowledgeID ?? '',
       virtualContributor.bodyOfKnowledgeType,
       virtualContributor.aiPersonaID
     );

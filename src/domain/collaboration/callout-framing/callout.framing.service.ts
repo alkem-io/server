@@ -147,11 +147,6 @@ export class CalloutFramingService {
       storageAggregator,
       userID
     );
-    await this.profileService.addVisualsOnProfile(
-      calloutFraming.whiteboard.profile,
-      whiteboardData.profile?.visuals,
-      [VisualType.BANNER]
-    );
   }
 
   private async createNewMemoInCalloutFraming(

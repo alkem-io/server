@@ -40,9 +40,8 @@ export class AiServerAdapter {
     await this.aiServerService.ensureContextIsIngested(spaceID);
   }
 
-  async getPersonaEngine(personaServiceId: string): Promise<AiPersonaEngine> {
-    const aiPersona =
-      await this.aiServerService.getAiPersonaOrFail(personaServiceId);
+  async getPersonaEngine(personaId: string): Promise<AiPersonaEngine> {
+    const aiPersona = await this.aiServerService.getAiPersonaOrFail(personaId);
     return aiPersona.engine;
   }
 
@@ -50,8 +49,8 @@ export class AiServerAdapter {
     return this.aiServerService.getAiPersonaOrFail(personaId);
   }
 
-  async createAPersona(personaServiceData: CreateAiPersonaInput) {
-    return this.aiServerService.createAiPersona(personaServiceData);
+  async createAPersona(personaData: CreateAiPersonaInput) {
+    return this.aiServerService.createAiPersona(personaData);
   }
 
   async updateAiPersona(updateData: UpdateAiPersonaInput) {
@@ -59,11 +58,11 @@ export class AiServerAdapter {
   }
 
   async applyAuthorizationOnAiPersona(
-    personaServiceID: string,
+    personaID: string,
     parentAuthorization?: IAuthorizationPolicy
   ): Promise<IAuthorizationPolicy[]> {
     return await this.aiServerService.resetAuthorizationPolicyOnAiPersona(
-      personaServiceID,
+      personaID,
       parentAuthorization
     );
   }

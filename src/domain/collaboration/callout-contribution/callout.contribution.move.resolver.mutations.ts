@@ -8,6 +8,7 @@ import { ICalloutContribution } from './callout.contribution.interface';
 import { CalloutContributionMoveService } from './callout.contribution.move.service';
 import { MoveCalloutContributionInput } from './dto/callout.contribution.dto.move';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { DeleteContributionInput } from './dto/callout.contribution.dto.delete';
 
 @InstrumentResolver()
 @Resolver()
@@ -47,11 +48,11 @@ export class CalloutContributionMoveResolverMutations {
   })
   public async deleteContribution(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('contributionID') contributionID: string
+    @Args('deleteData') deleteData: DeleteContributionInput
   ): Promise<ICalloutContribution> {
     const contribution =
       await this.calloutContributionService.getCalloutContributionOrFail(
-        contributionID
+        deleteData.ID
       );
 
     this.authorizationService.grantAccessOrFail(
