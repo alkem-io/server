@@ -1,6 +1,6 @@
 {
   "name": "alkemio-server",
-  "version": "0.120.2",
+  "version": "0.121.0",
   "description": "Alkemio server, responsible for managing the shared Alkemio platform",
   "author": "Alkemio Foundation",
   "private": false,
@@ -86,7 +86,7 @@
     "@tiptap/y-tiptap": "^3.0.0",
     "ajv": "^8.17.1",
     "cache-manager-redis-store": "^2.0.0",
-    "chromadb": "^1.8.1",
+    "chromadb": "1.8.1",
     "cids": "^1.1.9",
     "class-transformer": "^0.4.0",
     "class-validator": "0.14.0",

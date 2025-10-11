@@ -448,6 +448,8 @@ export class VirtualContributorService {
     }
 
     return this.aiServerAdapter.refreshBodyOfKnowledge(
+      // Guidance engine doens't have BoK ID for now, so fallback to empty string
+      // next layer knows what to do
       virtualContributor.bodyOfKnowledgeID ?? '',
       virtualContributor.bodyOfKnowledgeType,
       virtualContributor.aiPersonaID
