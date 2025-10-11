@@ -72,11 +72,13 @@ export class CommunicationResolverMutations {
       );
     }
 
-    return await this.communicationAdapter.sendMessageToUser({
+    const message = await this.communicationAdapter.sendMessageToUser({
       senderCommunicationsID: agentInfo.communicationID,
       message: messageData.message,
       receiverCommunicationsID: receivingUser.communicationID,
     });
+    // TODO: decide what should be the api
+    return message.id;
   }
 
   @Mutation(() => Boolean, {

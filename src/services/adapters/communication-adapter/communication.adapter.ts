@@ -177,6 +177,47 @@ export class CommunicationAdapter {
     }
   }
 
+  public async sendMessageToUser(
+    sendMessageUserData: CommunicationSendMessageUserInput
+  ): Promise<IMessage> {
+    const eventType = MatrixAdapterEventType.USER_SEND_DIRECT_MESSAGE;
+    const inputPayload: UserSendDirectMessagePayload = {
+      triggeredBy: '',
+      message: sendMessageUserData.message,
+      receiverID: sendMessageUserData.receiverCommunicationsID,
+      senderID: sendMessageUserData.senderCommunicationsID,
+    };
+    const eventID = this.logInputPayload(eventType, inputPayload);
+
+    const response = this.matrixAdapterClient.send(
+      { cmd: eventType },
+      inputPayload
+    );
+
+    try {
+      const responseData =
+        await firstValueFrom<RoomMessageSendResponsePayload>(response);
+      this.logResponsePayload(eventType, responseData, eventID);
+      const message = responseData.message;
+      return {
+        ...message,
+        senderType: 'user',
+        reactions: message.reactions.map(reaction => {
+          return {
+            ...reaction,
+            senderType: 'user',
+          };
+        }),
+      };
+    } catch (err: any) {
+      this.logInteractionError(eventType, err, eventID);
+      throw new MatrixEntityNotFoundException(
+        `Failed to send message to user: ${err}`,
+        LogContext.COMMUNICATION
+      );
+    }
+  }
+
   async addReaction(
     sendMessageData: CommunicationAddReactionToMessageInput
   ): Promise<IMessageReaction> {
@@ -334,37 +375,6 @@ export class CommunicationAdapter {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
         'Failed to delete message from room',
-        LogContext.COMMUNICATION
-      );
-    }
-  }
-
-  public async sendMessageToUser(
-    sendMessageUserData: CommunicationSendMessageUserInput
-  ): Promise<string> {
-    const eventType = MatrixAdapterEventType.USER_SEND_DIRECT_MESSAGE;
-    const inputPayload: UserSendDirectMessagePayload = {
-      triggeredBy: '',
-      message: sendMessageUserData.message,
-      receiverID: sendMessageUserData.receiverCommunicationsID,
-      senderID: sendMessageUserData.senderCommunicationsID,
-    };
-    const eventID = this.logInputPayload(eventType, inputPayload);
-
-    const response = this.matrixAdapterClient.send(
-      { cmd: eventType },
-      inputPayload
-    );
-
-    try {
-      const responseData =
-        await firstValueFrom<RoomMessageSendResponsePayload>(response);
-      this.logResponsePayload(eventType, responseData, eventID);
-      return responseData.message.id;
-    } catch (err: any) {
-      this.logInteractionError(eventType, err, eventID);
-      throw new MatrixEntityNotFoundException(
-        `Failed to send message to user: ${err}`,
         LogContext.COMMUNICATION
       );
     }
