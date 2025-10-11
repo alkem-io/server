@@ -11,7 +11,6 @@ import { FormatNotSupportedException } from '@common/exceptions/format.not.suppo
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
-import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
 import { RoomService } from '@domain/communication/room/room.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import {
@@ -26,7 +25,7 @@ import { CommunicationAdapter } from '@services/adapters/communication-adapter/c
 import { Cache, CachingConfig } from 'cache-manager';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
-import { DirectRoomResult } from './dto/user.dto.communication.room.direct.result';
+import { DirectRoomResult } from '../../communication/communication/dto/user.dto.communication.room.direct.result';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { IProfile } from '@domain/common/profile/profile.interface';
@@ -779,23 +778,7 @@ export class UserService {
     return room;
   }
 
-  private tryRegisterUserCommunication(
-    user: IUser
-  ): Promise<string | undefined> {
-    return this.communicationAdapter.tryRegisterNewUser(user.email);
-  }
-
-  async getCommunityRooms(user: IUser): Promise<CommunicationRoomResult[]> {
-    const communityRooms = await this.communicationAdapter.getCommunityRooms(
-      user.communicationID
-    );
-
-    await this.roomLookupService.populateRoomsMessageSenders(communityRooms);
-
-    return communityRooms;
-  }
-
-  async getDirectRooms(user: IUser): Promise<DirectRoomResult[]> {
+  public async getDirectRooms(user: IUser): Promise<DirectRoomResult[]> {
     const directRooms = await this.communicationAdapter.userGetDirectRooms(
       user.communicationID
     );

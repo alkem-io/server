@@ -64,7 +64,7 @@ export class ChatGuidanceService {
     const guidanceVc =
       await this.platformService.getGuidanceVirtualContributorOrFail();
 
-    const message = await this.communicationAdapter.sendMessage({
+    const message = await this.communicationAdapter.sendMessageToRoom({
       roomID: room.externalRoomID,
       senderCommunicationsID: agentInfo.communicationID,
       message: chatData.question,

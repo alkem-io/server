@@ -107,6 +107,9 @@ export type AlkemioConfig = {
     discussions: {
       enabled: boolean;
     };
+    direct_message_rooms: {
+      enabled: boolean;
+    };
   };
   storage: {
     enabled: boolean;

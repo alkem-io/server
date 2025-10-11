@@ -200,7 +200,7 @@ export class RoomLookupService {
       await this.identityResolverService.getUserIDByCommunicationsID(
         communicationUserID
       );
-    const message = await this.communicationAdapter.sendMessage({
+    const message = await this.communicationAdapter.sendMessageToRoom({
       senderCommunicationsID: communicationUserID,
       message: messageData.message,
       roomID: room.externalRoomID,
@@ -232,7 +232,7 @@ export class RoomLookupService {
         : await this.identityResolverService.getUserIDByCommunicationsID(
             communicationUserID
           );
-    const message = await this.communicationAdapter.sendMessageReply(
+    const message = await this.communicationAdapter.sendRoomMessageReply(
       {
         senderCommunicationsID: communicationUserID,
         message: messageData.message,

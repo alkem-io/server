@@ -2,7 +2,7 @@ import { firstValueFrom, TimeoutError, Observable } from 'rxjs';
 import { catchError, retry, timeout } from 'rxjs/operators';
 import { LogContext } from '@common/enums';
 import { MatrixEntityNotFoundException } from '@common/exceptions';
-import { DirectRoomResult } from '@domain/community/user/dto/user.dto.communication.room.direct.result';
+import { DirectRoomResult } from '@domain/communication/communication/dto/user.dto.communication.room.direct.result';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -67,6 +67,7 @@ export class CommunicationAdapter {
   private readonly enabled = false;
   private readonly timeout: number;
   private readonly retries: number;
+  private directMessageRoomsEnabled: boolean;
 
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -78,9 +79,11 @@ export class CommunicationAdapter {
     this.enabled = communications?.enabled;
     this.timeout = +communications?.matrix?.connection_timeout * 1000;
     this.retries = +communications?.matrix?.connection_retries;
+    this.directMessageRoomsEnabled =
+      communications?.direct_message_rooms?.enabled;
   }
 
-  async sendMessage(
+  async sendMessageToRoom(
     sendMessageData: CommunicationSendMessageInput
   ): Promise<IMessage> {
     const eventType = MatrixAdapterEventType.ROOM_MESSAGE_SEND;
@@ -126,7 +129,7 @@ export class CommunicationAdapter {
     }
   }
 
-  async sendMessageReply(
+  async sendRoomMessageReply(
     sendMessageData: CommunicationSendMessageReplyInput,
     senderType: 'user' | 'virtualContributor'
   ): Promise<IMessage> {
@@ -336,7 +339,7 @@ export class CommunicationAdapter {
     }
   }
 
-  async sendMessageToUser(
+  public async sendMessageToUser(
     sendMessageUserData: CommunicationSendMessageUserInput
   ): Promise<string> {
     const eventType = MatrixAdapterEventType.USER_SEND_DIRECT_MESSAGE;
