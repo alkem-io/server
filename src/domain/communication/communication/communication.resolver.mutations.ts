@@ -125,6 +125,25 @@ export class CommunicationResolverMutations {
       );
     }
 
+    // To test out the logic
+    if (messageData.receiverIds.length === 1) {
+      if (this.communicationAdapter.directMessageRoomsEnabled) {
+        this.logger.verbose?.(
+          `Sending direct message to user via Matrix ${messageData.receiverIds[0]}`,
+          LogContext.COMMUNICATION
+        );
+        // Send direct message if only one receiver
+        const receiver = await this.userService.getUserOrFail(
+          messageData.receiverIds[0]
+        );
+        await this.communicationAdapter.sendMessageToUser({
+          senderCommunicationsID: agentInfo.communicationID,
+          message: messageData.message,
+          receiverCommunicationsID: receiver.communicationID,
+        });
+      }
+    }
+
     return true;
   }
 

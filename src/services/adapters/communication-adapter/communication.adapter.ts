@@ -67,7 +67,7 @@ export class CommunicationAdapter {
   private readonly enabled = false;
   private readonly timeout: number;
   private readonly retries: number;
-  private directMessageRoomsEnabled: boolean;
+  public directMessageRoomsEnabled: boolean;
 
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
