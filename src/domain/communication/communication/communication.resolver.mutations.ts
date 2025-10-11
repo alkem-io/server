@@ -7,7 +7,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AuthorizationPrivilege } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { NotificationInputUserMessage } from '@services/adapters/notification-adapter/dto/user/notification.dto.input.user.message';
-import { CommunicationSendMessageToUserInput } from './dto/communication.dto.send.message.user';
+import { CommunicationSendMessageToUsersInput } from './dto/communication.dto.send.message.users';
 import { NotificationInputOrganizationMessage } from '@services/adapters/notification-adapter/dto/organization/notification.input.organization.message';
 import { CommunicationSendMessageToOrganizationInput } from './dto/communication.dto.send.message.organization';
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
@@ -21,7 +21,7 @@ import { UserService } from '@domain/community/user/user.service';
 import { MessagingNotEnabledException } from '@common/exceptions/messaging.not.enabled.exception';
 import { LogContext } from '@common/enums/logging.context';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
-import { UserSendMessageInput } from '@domain/communication/communication/dto/user.dto.communication.message.send';
+import { UserSendMessageInput } from '@domain/communication/communication/dto/communication.dto.send.direct.message.user';
 
 @InstrumentResolver()
 @Resolver()
@@ -41,7 +41,7 @@ export class CommunicationResolverMutations {
     description:
       'Sends a message on the specified User`s behalf and returns the room id',
   })
-  async messageUser(
+  async sendMessageToUserDirect(
     @Args('messageData') messageData: UserSendMessageInput,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<string> {
@@ -82,11 +82,11 @@ export class CommunicationResolverMutations {
   }
 
   @Mutation(() => Boolean, {
-    description: 'Send message to a User.',
+    description: 'Send message to multiple Users.',
   })
-  async sendMessageToUser(
+  async sendMessageToUsers(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('messageData') messageData: CommunicationSendMessageToUserInput
+    @Args('messageData') messageData: CommunicationSendMessageToUsersInput
   ): Promise<boolean> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,

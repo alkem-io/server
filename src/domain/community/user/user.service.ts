@@ -25,7 +25,7 @@ import { CommunicationAdapter } from '@services/adapters/communication-adapter/c
 import { Cache, CachingConfig } from 'cache-manager';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
-import { DirectRoomResult } from '../../communication/communication/dto/user.dto.communication.room.direct.result';
+import { DirectRoomResult } from '../../communication/communication/dto/communication.dto.send.direct.message.user.result';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { IProfile } from '@domain/common/profile/profile.interface';

@@ -2,7 +2,7 @@ import { firstValueFrom, TimeoutError, Observable } from 'rxjs';
 import { catchError, retry, timeout } from 'rxjs/operators';
 import { LogContext } from '@common/enums';
 import { MatrixEntityNotFoundException } from '@common/exceptions';
-import { DirectRoomResult } from '@domain/communication/communication/dto/user.dto.communication.room.direct.result';
+import { DirectRoomResult } from '@domain/communication/communication/dto/communication.dto.send.direct.message.user.result';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
