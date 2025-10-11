@@ -160,7 +160,7 @@ export class AiPersonaService {
       description: invocationInput.description,
       externalConfig: this.decryptExternalConfig(aiPersona.externalConfig),
       resultHandler: invocationInput.resultHandler,
-      personaServiceID: invocationInput.aiPersonaID,
+      personaID: invocationInput.aiPersonaID,
       language: invocationInput.language,
     };
 

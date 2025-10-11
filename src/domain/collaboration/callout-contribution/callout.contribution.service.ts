@@ -63,6 +63,10 @@ export class CalloutContributionService {
     contributionSettings: ICalloutSettingsContribution,
     userID: string
   ): Promise<ICalloutContribution> {
+    this.validateContributionType(
+      calloutContributionData,
+      contributionSettings
+    );
     const contribution: ICalloutContribution = CalloutContribution.create(
       calloutContributionData
     );
@@ -76,10 +80,6 @@ export class CalloutContributionService {
     const { post, whiteboard, link } = calloutContributionData;
 
     if (whiteboard) {
-      this.validateContributionType(
-        contributionSettings,
-        CalloutContributionType.WHITEBOARD
-      );
       contribution.whiteboard = await this.whiteboardService.createWhiteboard(
         whiteboard,
         storageAggregator,
@@ -88,11 +88,6 @@ export class CalloutContributionService {
     }
 
     if (post) {
-      this.validateContributionType(
-        contributionSettings,
-        CalloutContributionType.POST
-      );
-
       contribution.post = await this.postService.createPost(
         post,
         storageAggregator,
@@ -101,11 +96,6 @@ export class CalloutContributionService {
     }
 
     if (link) {
-      this.validateContributionType(
-        contributionSettings,
-        CalloutContributionType.LINK
-      );
-
       contribution.link = await this.linkService.createLink(
         link,
         storageAggregator
@@ -116,12 +106,52 @@ export class CalloutContributionService {
   }
 
   private validateContributionType(
-    contributionSettings: ICalloutSettingsContribution,
-    contributionType: CalloutContributionType
+    calloutContributionData: CreateCalloutContributionInput,
+    contributionSettings: ICalloutSettingsContribution
   ) {
-    if (!contributionSettings.allowedTypes?.includes(contributionType)) {
+    if (
+      !contributionSettings.allowedTypes?.includes(calloutContributionData.type)
+    ) {
       throw new ValidationException(
-        `Attemtped to create a contribution of type '${contributionType}', which is not in the allowed types: ${contributionSettings.allowedTypes}`,
+        `Attempted to create a contribution of type '${calloutContributionData.type}', which is not in the allowed types: ${contributionSettings.allowedTypes}`,
+        LogContext.COLLABORATION
+      );
+    }
+
+    // Map contribution types to their corresponding data fields
+    const contributionTypeFields: Record<
+      CalloutContributionType,
+      keyof CreateCalloutContributionInput
+    > = {
+      [CalloutContributionType.POST]: 'post',
+      [CalloutContributionType.LINK]: 'link',
+      [CalloutContributionType.WHITEBOARD]: 'whiteboard',
+      [CalloutContributionType.MEMO]: 'memo',
+    };
+
+    const declaredType = calloutContributionData.type;
+    const requiredField = contributionTypeFields[declaredType];
+
+    // Check if the required field for the declared type is present
+    if (!calloutContributionData[requiredField]) {
+      throw new ValidationException(
+        `CalloutContribution type is "${declaredType}" but no ${requiredField} data was provided`,
+        LogContext.COLLABORATION
+      );
+    }
+
+    // Check that no other contribution type fields are present
+    const otherFields = Object.entries(contributionTypeFields)
+      .filter(([type]) => type !== declaredType)
+      .map(([, field]) => field);
+
+    const conflictingFields = otherFields.filter(
+      field => calloutContributionData[field] !== undefined
+    );
+
+    if (conflictingFields.length > 0) {
+      throw new ValidationException(
+        `CalloutContribution type is "${declaredType}" but conflicting data was provided: ${conflictingFields.join(', ')}. Only ${requiredField} data should be present.`,
         LogContext.COLLABORATION
       );
     }

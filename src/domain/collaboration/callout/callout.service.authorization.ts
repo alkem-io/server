@@ -161,10 +161,11 @@ export class CalloutAuthorizationService {
     callout: ICallout,
     parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IAuthorizationPolicy | undefined> {
-    if (
-      !parentAuthorization ||
-      callout.settings.visibility !== CalloutVisibility.DRAFT
-    ) {
+    // If there is no parent authorization, or the Callout is a Template, or the Callout is not in DRAFT visibility
+    // then return the parent unchanged. Templates should always be readable when surfaced (issue #8804).
+    if (!parentAuthorization) return parentAuthorization;
+    if (callout.isTemplate) return parentAuthorization;
+    if (callout.settings.visibility !== CalloutVisibility.DRAFT) {
       return parentAuthorization;
     }
 
