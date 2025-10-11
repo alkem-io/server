@@ -1,4 +1,6 @@
+import { EventBus } from '@nestjs/cqrs';
+
 export const EventBusStubProvider = {
-  provide: 'EVENT_BUS',
+  provide: EventBus,
   useValue: { publish: () => undefined, subscribe: () => undefined },
 };
