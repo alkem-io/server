@@ -112,7 +112,7 @@ export class NotificationRecipientsService {
         privilegeRequired,
         eventData
       );
-    const inAppRecipientsWithEntityPrivilege =
+    const inAppRecipientsWithPrivilege =
       await this.filterRecipientsWithPrivileges(
         inAppRecipientsWithNotificationEnabled,
         privilegeRequired,
@@ -124,24 +124,7 @@ export class NotificationRecipientsService {
       LogContext.NOTIFICATIONS
     );
     this.logger.verbose?.(
-      `[${eventData.eventType}] - 4b. ...and for in-app, of those ${inAppRecipientsWithEntityPrivilege.length} have the required privilege (${privilegeRequired || 'none'})`,
-      LogContext.NOTIFICATIONS
-    );
-    // Filter by whether they have the InApp privilege on platform level
-    const authorizationPolicyForInApp =
-      await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
-    const inAppRecipientsWithPrivilege =
-      inAppRecipientsWithEntityPrivilege.filter(recipient =>
-        this.authorizationService.isAccessGrantedForCredentials(
-          recipient.agent.credentials || [],
-          [],
-          authorizationPolicyForInApp,
-          AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_IN_APP
-        )
-      );
-
-    this.logger.verbose?.(
-      `[${eventData.eventType}] - 4bb. ...and for in-app, of those ${inAppRecipientsWithPrivilege.length} are eligible for in-app notifications`,
+      `[${eventData.eventType}] - 4b. ...and for in-app, of those ${inAppRecipientsWithPrivilege.length} have the required privilege (${privilegeRequired || 'none'})`,
       LogContext.NOTIFICATIONS
     );
 
