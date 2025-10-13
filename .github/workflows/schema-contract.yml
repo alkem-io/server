@@ -108,28 +108,19 @@ jobs:
             echo "# empty-baseline-initialization" > tmp/prev.schema.graphql
           fi
 
-      - name: Baseline diagnostics
-        run: |
-          echo "== Baseline Diagnostics =="
-          if [ -f tmp/prev.schema.graphql ]; then
-            echo "prev.schema.graphql exists. Size:" $(wc -c < tmp/prev.schema.graphql) "bytes"
-            echo "Previous schema MD5:" $(md5sum tmp/prev.schema.graphql | awk '{print $1}')
-          else
-            echo "prev.schema.graphql MISSING"
-          fi
-          echo "Current schema MD5:" $(md5sum schema.graphql | awk '{print $1}')
-          echo "Checking for contributionsCount2 in current schema:"; grep -q 'contributionsCount2' schema.graphql && echo "Found" || echo "Not found"
-          if [ -f tmp/prev.schema.graphql ]; then
-            echo "Checking for contributionsCount2 in previous schema:"; grep -q 'contributionsCount2' tmp/prev.schema.graphql && echo "Found" || echo "Not found"
-          fi
-          echo "First 5 lines of previous schema (if any):"; head -n 5 tmp/prev.schema.graphql || true
-          echo "== End Diagnostics =="
-
       - name: Run diff
         run: npx ts-node scripts/schema/diff-schema.ts --old tmp/prev.schema.graphql --current schema.graphql --out change-report.json --deprecations deprecations.json || true
 
       - name: Gate evaluation (non-blocking summary)
         run: npx ts-node scripts/schema/schema-gate.ts change-report.json || true
+
+      - name: Prepare schema artifacts
+        run: |
+          mkdir -p tmp
+          cp schema.graphql tmp/current.schema.graphql
+          if [ -f tmp/prev.schema.graphql ]; then
+            cp tmp/prev.schema.graphql tmp/previous.schema.graphql
+          fi
 
       - name: Generate PR comment body
         id: pr_comment
@@ -148,14 +139,6 @@ jobs:
           if [ -f tmp/prev.schema.graphql ]; then
             echo "Previous schema MD5: $(md5sum tmp/prev.schema.graphql | awk '{print $1}')" >> pr-comment.md
           fi
-          if grep -q 'contributionsCount2' schema.graphql 2>/dev/null; then
-            echo "Field contributionsCount2 present in current schema." >> pr-comment.md
-          fi
-          if grep -q 'contributionsCount2' tmp/prev.schema.graphql 2>/dev/null; then
-            echo "Field contributionsCount2 present in previous schema." >> pr-comment.md
-          else
-            echo "Field contributionsCount2 NOT present in previous schema." >> pr-comment.md
-          fi
           echo 'body<<EOF' >> $GITHUB_OUTPUT
           cat pr-comment.md >> $GITHUB_OUTPUT || echo 'No report' >> $GITHUB_OUTPUT
           echo 'EOF' >> $GITHUB_OUTPUT
@@ -170,6 +153,8 @@ jobs:
             schema.graphql
             snapshot.log
             pr-comment.md
+            tmp/current.schema.graphql
+            tmp/previous.schema.graphql
 
       - name: Post sticky PR comment
         if: github.event_name == 'pull_request'
