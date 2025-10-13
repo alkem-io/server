@@ -16,6 +16,10 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+    env:
+      # Always run schema generation with the lightweight bootstrap inside CI builds.
+      # See specs/002-schema-contract-diffing/spec.md (FR-021).
+      SCHEMA_BOOTSTRAP_LIGHT: '1'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -33,7 +37,6 @@ jobs:
 
       - name: Generate schema snapshot (lightweight)
         env:
-          SCHEMA_BOOTSTRAP_LIGHT: '1'
           SCHEMA_SNAPSHOT_FORCE_SUCCESS: '1'
           SCHEMA_SNAPSHOT_DEBUG: '1'
         run: |
