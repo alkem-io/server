@@ -2,10 +2,7 @@ import { IInAppNotificationPayload } from '@platform/in-app-notification-payload
 import { Field, ObjectType } from '@nestjs/graphql';
 import { NotificationEventPayload } from '@common/enums/notification.event.payload';
 
-@ObjectType('InAppNotificationPayloadSpace', {
-  implements: () => IInAppNotificationPayload,
-})
-export abstract class InAppNotificationPayloadSpace
+export abstract class InAppNotificationPayloadSpaceBase
   implements IInAppNotificationPayload
 {
   @Field(() => NotificationEventPayload, {

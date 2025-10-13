@@ -3,7 +3,7 @@ import { Field, InterfaceType } from '@nestjs/graphql';
 import { AlkemioErrorStatus } from '@common/enums/alkemio.error.status';
 import { BaseException } from '@common/exceptions/base.exception';
 import { NotificationEventPayload } from '@common/enums/notification.event.payload';
-import { InAppNotificationPayloadSpace } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.base';
+import { InAppNotificationPayloadSpace } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space';
 import { InAppNotificationPayloadOrganizationMessageDirect } from '@platform/in-app-notification-payload/dto/organization/notification.in.app.payload.organization.message.direct';
 import { InAppNotificationPayloadOrganizationMessageRoom } from '@platform/in-app-notification-payload/dto/organization/notification.in.app.payload.organization.message.room';
 import { InAppNotificationPayloadSpaceCommunityApplication } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.application';

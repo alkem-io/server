@@ -1,5 +1,5 @@
 import { Resolver, ResolveField, Parent } from '@nestjs/graphql';
-import { InAppNotificationPayloadSpace } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.base';
+import { InAppNotificationPayloadSpace } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space';
 import { ISpace } from '@domain/space/space/space.interface';
 import { Loader } from '@core/dataloader/decorators';
 import { SpaceLoaderCreator } from '@core/dataloader/creators';
