@@ -7373,6 +7373,8 @@ type User implements Contributor {
   phone: String
   """The Profile for this User."""
   profile: Profile!
+  """The Profile 2 for this User."""
+  profile2: Profile!
   """The settings for this User."""
   settings: UserSettings!
   """The StorageAggregator for managing storage buckets in use by this User"""
