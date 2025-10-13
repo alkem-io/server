@@ -41,7 +41,6 @@ jobs:
         run: |
           set -o pipefail
           npx ts-node -r tsconfig-paths/register scripts/schema/generate-schema.snapshot.ts schema.graphql 2>&1 | tee snapshot.log
-          cat ./snapshot.log
 
       - name: Verify snapshot output
         run: |
