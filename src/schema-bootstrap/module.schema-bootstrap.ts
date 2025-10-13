@@ -42,7 +42,6 @@ import { LookupByNameModule } from '@services/api/lookup-by-name';
 import { MeModule } from '@services/api/me';
 import { TaskGraphqlModule } from '@domain/task/task.module';
 import { ActivityFeedModule } from '@domain/activity-feed';
-import { EventBusModule } from '@services/infrastructure/event-bus/event.bus.module';
 import { WhiteboardIntegrationModule } from '@services/whiteboard-integration/whiteboard.integration.module';
 import { FileIntegrationModule } from '@services/file-integration';
 import { CollaborativeDocumentIntegrationModule } from '@services/collaborative-document-integration';
@@ -74,6 +73,7 @@ import {
 import { EventBusStubProvider } from './stubs/event-bus.stub';
 import { SearchStubProvider } from './stubs/search.stub';
 import { MicroservicesStubProviders } from './stubs/microservices.stub';
+import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EncryptionService } from '@hedger/nestjs-encryption';
 
@@ -86,6 +86,47 @@ const STUB_PROVIDERS = [
   EventBusStubProvider,
   SearchStubProvider,
   ...MicroservicesStubProviders,
+  {
+    provide: AmqpConnection,
+    useValue: {
+      init: async () => undefined,
+      connect: async () => undefined,
+      createSubscriber: () => () => undefined,
+      createRpc: () => ({
+        dispose: async () => undefined,
+      }),
+      createChannel: async () => ({
+        addSetup: async () => undefined,
+        removeSetup: async () => undefined,
+        ack: () => undefined,
+        nack: () => undefined,
+        sendToQueue: () => true,
+        publish: () => true,
+        on: () => undefined,
+        close: async () => undefined,
+      }),
+      channel: {
+        addSetup: async () => undefined,
+      },
+      managedConnection: {
+        on: () => undefined,
+        addListener: () => undefined,
+        removeListener: () => undefined,
+        close: async () => undefined,
+      },
+      channelManager: {
+        addSetup: async () => undefined,
+      },
+      setDefaultRpcTimeout: () => undefined,
+      request: async () => undefined,
+      publish: () => undefined,
+      sendToQueue: () => undefined,
+      initChannel: async () => undefined,
+      getChannelRef: () => ({
+        addSetup: async () => undefined,
+      }),
+    },
+  },
   {
     provide: WINSTON_MODULE_NEST_PROVIDER,
     useValue: {
@@ -155,7 +196,6 @@ class SchemaBootstrapStubModule {}
     AdminGeoLocationModule,
     LicensingWingbackSubscriptionModule,
     WingbackManagerModule,
-    EventBusModule,
     GeoLocationModule,
     ContributionReporterModule,
     InnovationHubModule,

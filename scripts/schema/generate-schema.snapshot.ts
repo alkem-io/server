@@ -6,7 +6,60 @@ import { GraphQLSchemaHost } from '@nestjs/graphql';
 import { printSchema } from 'graphql';
 import { writeFileSync } from 'fs';
 import { parse, print } from 'graphql';
+import amqplib from 'amqplib';
+import * as amqpConnectionManager from 'amqp-connection-manager';
 // NOTE: Intentionally defer importing application modules until after global handlers are registered.
+
+function patchAmqpForBootstrap() {
+  const createStubChannel = () => ({
+    assertExchange: async () => undefined,
+    deleteExchange: async () => undefined,
+    bindQueue: async () => undefined,
+    unbindQueue: async () => undefined,
+    consume: async () => ({ consumerTag: 'bootstrap-consumer' }),
+    cancel: async () => undefined,
+    ack: () => undefined,
+    nack: () => undefined,
+    prefetch: async () => undefined,
+    publish: () => true,
+    sendToQueue: () => true,
+    addSetup: async () => undefined,
+    removeSetup: async () => undefined,
+    on: () => undefined,
+    close: async () => undefined,
+  });
+
+  const stubConnection = {
+    createChannel: async () => createStubChannel(),
+    createConfirmChannel: async () => createStubChannel(),
+    close: async () => undefined,
+    on: () => undefined,
+  };
+
+  const patchConnect = (target: any) => {
+    if (!target) return;
+    if (typeof target.connect === 'function') {
+      target.connect = () => ({
+        on: () => undefined,
+        close: async () => undefined,
+        createChannel: () => ({
+          ...createStubChannel(),
+          addSetup: async (handler: any) => {
+            if (typeof handler === 'function') {
+              await handler(createStubChannel());
+            }
+          },
+        }),
+      });
+    }
+  };
+
+  (amqplib as any).connect = async () => stubConnection;
+  patchConnect(amqpConnectionManager);
+  if ((amqpConnectionManager as any).default) {
+    patchConnect((amqpConnectionManager as any).default);
+  }
+}
 
 // Global handlers first so they catch early async rejections.
 process.on('unhandledRejection', reason => {
@@ -28,6 +81,9 @@ async function main() {
     : ['error', 'warn'];
 
   // Dynamically import modules only after the global handlers and setup complete.
+  if (useLight) {
+    patchAmqpForBootstrap();
+  }
   const { AppModule } = await import('../../src/app.module');
   const { SchemaBootstrapModule } = await import(
     '../../src/schema-bootstrap/module.schema-bootstrap'
