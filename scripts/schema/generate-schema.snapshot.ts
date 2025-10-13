@@ -23,6 +23,9 @@ async function main() {
   const useLight = process.env.SCHEMA_BOOTSTRAP_LIGHT === '1';
   const debug = process.env.SCHEMA_SNAPSHOT_DEBUG === '1';
   const realExit = process.exit.bind(process);
+  const loggerLevels: ('log' | 'error' | 'warn' | 'debug' | 'verbose')[] = debug
+    ? ['log', 'error', 'warn', 'debug', 'verbose']
+    : ['error', 'warn'];
 
   // Dynamically import modules only after the global handlers and setup complete.
   const { AppModule } = await import('../../src/app.module');
@@ -32,9 +35,13 @@ async function main() {
   const rootModule = useLight ? SchemaBootstrapModule : AppModule;
   let app: any | undefined;
   try {
-    process.stderr.write('[debug] Creating application context...\n');
+    process.stderr.write(
+      `[debug] Creating application context with logger levels: ${loggerLevels.join(
+        ', '
+      )}\n`
+    );
     app = await NestFactory.createApplicationContext(rootModule, {
-      logger: false,
+      logger: loggerLevels,
     });
     process.stderr.write('[debug] Application context created.\n');
     const gqlHost = app.get(GraphQLSchemaHost, { strict: false });
