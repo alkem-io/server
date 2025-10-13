@@ -58,6 +58,21 @@ export class UserResolverFields {
     return loader.load(user.id);
   }
 
+  @ResolveField('profile2', () => IProfile, {
+    nullable: false,
+    description: 'The Profile 2 for this User.',
+  })
+  async profile2(
+    @Parent() user: User,
+    @Loader(ProfileLoaderCreator, {
+      parentClassRef: User,
+      checkResultPrivilege: AuthorizationPrivilege.READ,
+    })
+    loader: ILoader<IProfile>
+  ): Promise<IProfile> {
+    return loader.load(user.id);
+  }
+
   @ResolveField('agent', () => IAgent, {
     nullable: false,
     description: 'The Agent representing this User.',
