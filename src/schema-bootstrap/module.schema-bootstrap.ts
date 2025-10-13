@@ -73,6 +73,7 @@ import {
 } from './stubs/db.stub';
 import { EventBusStubProvider } from './stubs/event-bus.stub';
 import { SearchStubProvider } from './stubs/search.stub';
+import { MicroservicesStubProviders } from './stubs/microservices.stub';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EncryptionService } from '@hedger/nestjs-encryption';
 
@@ -84,6 +85,7 @@ const STUB_PROVIDERS = [
   DefaultEntityManagerStubProvider,
   EventBusStubProvider,
   SearchStubProvider,
+  ...MicroservicesStubProviders,
   {
     provide: WINSTON_MODULE_NEST_PROVIDER,
     useValue: {
