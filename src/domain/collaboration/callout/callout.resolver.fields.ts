@@ -81,19 +81,6 @@ export class CalloutResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('contributionsCount3', () => CalloutContributionsCountOutput, {
-    nullable: false,
-    description:
-      'Experimental duplicate of contributionsCount for contract testing.',
-  })
-  async contributionsCount3(
-    @Parent() callout: Callout
-  ): Promise<CalloutContributionsCountOutput> {
-    return await this.calloutService.getContributionsCount(callout);
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
   @ResolveField('comments', () => IRoom, {
     nullable: true,
     description: 'The comments for this Callout.',
