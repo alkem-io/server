@@ -23,6 +23,7 @@ export interface ClassificationCount {
   prematureRemoval: number;
   invalidDeprecation: number;
   info: number;
+  baseline: number;
 }
 
 export type JsonTypeCategory =

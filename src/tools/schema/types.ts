@@ -37,6 +37,7 @@ export interface ClassificationCount {
   invalidDeprecation: number;
   deprecationGrace?: number; // optional to avoid breaking older consumers
   info: number;
+  baseline: number;
 }
 
 export interface EnumLifecycleEvaluation {
