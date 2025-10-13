@@ -30,6 +30,7 @@ async function main() {
   const outPath = process.argv[2] || 'schema.graphql';
   const useLight = process.env.SCHEMA_BOOTSTRAP_LIGHT === '1';
   const forceSuccess = process.env.SCHEMA_SNAPSHOT_FORCE_SUCCESS === '1';
+  const debug = process.env.SCHEMA_SNAPSHOT_DEBUG === '1';
   let wroteSnapshot = false; // track whether we successfully wrote the intended snapshot
   if (forceSuccess) {
     process.stderr.write(
@@ -37,8 +38,8 @@ async function main() {
     );
   }
   // Monkey patch process.exit early if force-success enabled
+  const realExit = process.exit.bind(process);
   if (forceSuccess) {
-    const realExit = process.exit.bind(process);
     (process as any).__realExit = realExit;
     (process as any).exit = (code?: number) => {
       process.stderr.write(
@@ -46,6 +47,9 @@ async function main() {
       );
       return realExit(0);
     };
+  } else {
+    // Capture real exit for diagnostics / final forced termination
+    (process as any).__realExit = realExit;
   }
 
   // Dynamically import modules AFTER exit interception so any premature exits are neutralized.
@@ -109,6 +113,51 @@ async function main() {
           `[debug] Error during app.close(): ${(closeErr as Error).message}\n`
         );
       }
+    }
+
+    // Diagnostics for potential hang: list active handles/requests AFTER app.close
+    if (debug) {
+      try {
+        const handles = (process as any)._getActiveHandles?.() || [];
+        const requests = (process as any)._getActiveRequests?.() || [];
+        process.stderr.write(
+          `[debug] Active handles after close: ${handles.length}, requests: ${requests.length}\n`
+        );
+        handles.forEach((h: any, i: number) => {
+          const ctor = h && h.constructor ? h.constructor.name : typeof h;
+          // Best-effort classification
+          let info = '';
+          if (ctor === 'Timeout') {
+            info = `refed=${(h as any)._repeat ? 'interval' : 'timeout'}`;
+          }
+          if (ctor === 'Socket') {
+            info = `writable=${(h as any).writable} readable=${(h as any).readable}`;
+          }
+          process.stderr.write(`[debug] Handle[${i}] ${ctor} ${info}\n`);
+        });
+        if (handles.length > 0) {
+          process.stderr.write('[debug] Forcing real exit to avoid CI hang.\n');
+        }
+      } catch (diagErr) {
+        process.stderr.write(
+          '[debug] Failed active handle diagnostics: ' +
+            (diagErr as Error).message +
+            '\n'
+        );
+      }
+    }
+
+    // Always force a real exit to avoid lingering event-loop preventing process termination.
+    try {
+      const finalExit = (process as any).__realExit || realExit;
+      // Use nextTick to allow any buffered I/O to flush.
+      process.nextTick(() => finalExit(process.exitCode || 0));
+    } catch (exitErr) {
+      process.stderr.write(
+        '[debug] Failed to force real exit: ' +
+          (exitErr as Error).message +
+          '\n'
+      );
     }
   }
 }

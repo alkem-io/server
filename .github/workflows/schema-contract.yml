@@ -19,6 +19,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # need full metadata for label-based baseline detection
 
       - name: Use Node
         uses: actions/setup-node@v4
@@ -33,17 +35,93 @@ jobs:
         env:
           SCHEMA_BOOTSTRAP_LIGHT: '1'
           SCHEMA_SNAPSHOT_FORCE_SUCCESS: '1'
-        run: npx ts-node -r tsconfig-paths/register scripts/schema/generate-schema.snapshot.ts schema.graphql
+          SCHEMA_SNAPSHOT_DEBUG: '1'
+        run: |
+          set -o pipefail
+          npx ts-node -r tsconfig-paths/register scripts/schema/generate-schema.snapshot.ts schema.graphql 2>&1 | tee snapshot.log
 
-      - name: Load previous baseline (if exists)
+      - name: Verify snapshot output
+        run: |
+          if [ ! -f schema.graphql ]; then
+            echo "ERROR: schema.graphql not produced" >&2
+            echo "--- snapshot.log (tail) ---" >&2
+            tail -n 200 snapshot.log || true
+            exit 1
+          fi
+          size=$(wc -c < schema.graphql)
+            if [ "$size" -lt 40 ]; then
+            echo "WARNING: schema.graphql extremely small ($size bytes); may be placeholder." >&2
+          fi
+          echo "Snapshot size: $size bytes"
+          echo "Snapshot MD5: $(md5sum schema.graphql | awk '{print $1}')"
+          head -n 5 schema.graphql
+          echo "SNAPSHOT_DIAG_MD5=$(md5sum schema.graphql | awk '{print $1}')" >> $GITHUB_ENV
+          echo "SNAPSHOT_DIAG_SIZE=$size" >> $GITHUB_ENV
+          echo "SNAPSHOT_DIAG_HEAD=$(head -n 1 schema.graphql | sed 's/[^A-Za-z0-9_:#-]/_/g')" >> $GITHUB_ENV
+
+      - name: Determine baseline branch
+        id: baseline_ref
+        run: |
+          # Priority order:
+          # 1. Explicit env BASELINE_BRANCH (can be set via workflow_dispatch or repository env)
+          # 2. PR label schema-base:<branch>
+          # 3. GITHUB_BASE_REF
+          BASELINE="${BASELINE_BRANCH}"
+          if [ -z "$BASELINE" ]; then
+            echo "Scanning PR labels for schema-base:* override..."
+            labels=$(curl -s -H "Authorization: Bearer ${{ github.token }}" \
+              -H 'Accept: application/vnd.github+json' \
+              "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels" | jq -r '.[].name') || true
+            for l in $labels; do
+              case "$l" in
+                schema-base:*) BASELINE="${l#schema-base:}"; echo "Found label override: $l"; break;;
+              esac
+            done
+          fi
+          if [ -z "$BASELINE" ]; then
+            BASELINE="${GITHUB_BASE_REF}"
+            echo "Defaulting baseline to GITHUB_BASE_REF=$BASELINE"
+          else
+            echo "Using custom baseline branch: $BASELINE"
+          fi
+          echo "baseline=$BASELINE" >> $GITHUB_OUTPUT
+
+      - name: Retrieve baseline schema (if available)
         run: |
           mkdir -p tmp
-          if [ -f schema-baseline.graphql ]; then
-            echo "Found schema-baseline.graphql; copying to tmp/prev.schema.graphql"
-            cp schema-baseline.graphql tmp/prev.schema.graphql
+          BASELINE="${{ steps.baseline_ref.outputs.baseline }}"
+          echo "Baseline branch resolved to: $BASELINE"
+          git fetch origin "$BASELINE" --depth=1 || echo "Fetch baseline branch failed (continuing)."
+          if git show "origin/$BASELINE:schema-baseline.graphql" >/dev/null 2>&1; then
+            git show "origin/$BASELINE:schema-baseline.graphql" > tmp/prev.schema.graphql
+            echo "Baseline schema obtained from origin/$BASELINE:schema-baseline.graphql"
+          elif git show "origin/$BASELINE:schema.graphql" >/dev/null 2>&1; then
+            git show "origin/$BASELINE:schema.graphql" > tmp/prev.schema.graphql
+            echo "Fallback baseline derived from origin/$BASELINE:schema.graphql"
           else
-            echo "No schema-baseline.graphql present; this run will be treated as baseline."
+            echo "WARNING: No baseline schema found on $BASELINE; this run initializes baseline (no diff)."
+            # Mark initialization run so later steps can annotate the PR comment.
+            echo "SCHEMA_INIT_RUN=1" >> $GITHUB_ENV
+            # Create an explicit placeholder previous schema file so diff step has a path (empty file triggers fallback logic in diff script).
+            echo "# empty-baseline-initialization" > tmp/prev.schema.graphql
           fi
+
+      - name: Baseline diagnostics
+        run: |
+          echo "== Baseline Diagnostics =="
+          if [ -f tmp/prev.schema.graphql ]; then
+            echo "prev.schema.graphql exists. Size:" $(wc -c < tmp/prev.schema.graphql) "bytes"
+            echo "Previous schema MD5:" $(md5sum tmp/prev.schema.graphql | awk '{print $1}')
+          else
+            echo "prev.schema.graphql MISSING"
+          fi
+          echo "Current schema MD5:" $(md5sum schema.graphql | awk '{print $1}')
+          echo "Checking for contributionsCount2 in current schema:"; grep -q 'contributionsCount2' schema.graphql && echo "Found" || echo "Not found"
+          if [ -f tmp/prev.schema.graphql ]; then
+            echo "Checking for contributionsCount2 in previous schema:"; grep -q 'contributionsCount2' tmp/prev.schema.graphql && echo "Found" || echo "Not found"
+          fi
+          echo "First 5 lines of previous schema (if any):"; head -n 5 tmp/prev.schema.graphql || true
+          echo "== End Diagnostics =="
 
       - name: Run diff
         run: npx ts-node scripts/schema/diff-schema.ts --old tmp/prev.schema.graphql --current schema.graphql --out change-report.json --deprecations deprecations.json || true
@@ -55,6 +133,27 @@ jobs:
         id: pr_comment
         run: |
           npx ts-node scripts/schema/post-pr-comment.ts change-report.json > pr-comment.md
+          if [ "$SCHEMA_INIT_RUN" = "1" ]; then
+            echo "" >> pr-comment.md
+            echo "> ℹ️ No baseline schema was found for branch '${{ steps.baseline_ref.outputs.baseline }}'. This run is treated as an INITIALIZATION run; no additive/breaking differences are listed. Commit a baseline file (schema-baseline.graphql) to that branch (or apply a schema-base:<branch> label) to enable diffs on subsequent PRs." >> pr-comment.md
+          fi
+          echo "" >> pr-comment.md
+          echo "---" >> pr-comment.md
+          echo "Baseline branch: ${{ steps.baseline_ref.outputs.baseline }}" >> pr-comment.md
+          if [ -n "$SNAPSHOT_DIAG_MD5" ]; then
+            echo "Current schema MD5: $SNAPSHOT_DIAG_MD5 (size $SNAPSHOT_DIAG_SIZE)" >> pr-comment.md
+          fi
+          if [ -f tmp/prev.schema.graphql ]; then
+            echo "Previous schema MD5: $(md5sum tmp/prev.schema.graphql | awk '{print $1}')" >> pr-comment.md
+          fi
+          if grep -q 'contributionsCount2' schema.graphql 2>/dev/null; then
+            echo "Field contributionsCount2 present in current schema." >> pr-comment.md
+          fi
+          if grep -q 'contributionsCount2' tmp/prev.schema.graphql 2>/dev/null; then
+            echo "Field contributionsCount2 present in previous schema." >> pr-comment.md
+          else
+            echo "Field contributionsCount2 NOT present in previous schema." >> pr-comment.md
+          fi
           echo 'body<<EOF' >> $GITHUB_OUTPUT
           cat pr-comment.md >> $GITHUB_OUTPUT || echo 'No report' >> $GITHUB_OUTPUT
           echo 'EOF' >> $GITHUB_OUTPUT
@@ -67,6 +166,7 @@ jobs:
             change-report.json
             deprecations.json
             schema.graphql
+            snapshot.log
             pr-comment.md
 
       - name: Post sticky PR comment
