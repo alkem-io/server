@@ -10,7 +10,6 @@ import { NotificationRecipientResult } from '@services/api/notification-recipien
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { NotificationAdapter } from './notification.adapter';
 import { NotificationEventPayload } from '@common/enums/notification.event.payload';
-import { InAppNotificationPayloadUser } from '@platform/in-app-notification-payload/dto/user/notification.in.app.payload.user.base';
 import { InAppNotificationPayloadUserMessageDirect } from '@platform/in-app-notification-payload/dto/user/notification.in.app.payload.user.message.direct';
 import { LogContext } from '@common/enums/logging.context';
 import { InAppNotificationPayloadUserMessageRoom } from '@platform/in-app-notification-payload/dto/user/notification.in.app.payload.user.message.room';
@@ -23,6 +22,7 @@ import { NotificationInputCommunityInvitation } from './dto/space/notification.d
 import { NotificationInputCommunityNewMember } from './dto/space/notification.dto.input.space.community.new.member';
 import { InAppNotificationPayloadSpaceCommunityContributor } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.contributor';
 import { MessageDetailsService } from '@domain/communication/message.details/message.details.service';
+import { InAppNotificationPayloadUser } from '@platform/in-app-notification-payload/dto/user/notification.in.app.payload.user';
 
 @Injectable()
 export class NotificationUserAdapter {

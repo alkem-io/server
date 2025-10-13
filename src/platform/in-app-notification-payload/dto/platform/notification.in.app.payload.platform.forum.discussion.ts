@@ -1,12 +1,12 @@
 import { IInAppNotificationPayload } from '@platform/in-app-notification-payload/in.app.notification.payload.interface';
 import { ObjectType } from '@nestjs/graphql';
-import { InAppNotificationPayloadPlatform } from './notification.in.app.payload.platform.base';
+import { InAppNotificationPayloadPlatformBase } from './notification.in.app.payload.platform.base';
 import { NotificationEventPayload } from '@common/enums/notification.event.payload';
 
 @ObjectType('InAppNotificationPayloadPlatformForumDiscussion', {
   implements: () => IInAppNotificationPayload,
 })
-export abstract class InAppNotificationPayloadPlatformForumDiscussion extends InAppNotificationPayloadPlatform {
+export abstract class InAppNotificationPayloadPlatformForumDiscussion extends InAppNotificationPayloadPlatformBase {
   discussion?: {
     id: string;
     displayName: string;
