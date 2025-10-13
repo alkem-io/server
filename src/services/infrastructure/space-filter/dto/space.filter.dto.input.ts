@@ -8,5 +8,5 @@ export class SpaceFilterInput {
     description:
       'Return Spaces with a Visibility matching one of the provided types.',
   })
-  visibilities!: SpaceVisibility[];
+  visibilities?: SpaceVisibility[];
 }
