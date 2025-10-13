@@ -157,6 +157,7 @@ class SchemaBootstrapStubModule {}
 
 @Module({
   imports: [
+    SchemaBootstrapStubModule,
     ConfigModule.forRoot({
       envFilePath: ['.env'],
       isGlobal: true,
@@ -224,7 +225,6 @@ class SchemaBootstrapStubModule {}
     WingbackWebhookModule,
     AuthResetSubscriberModule,
     SearchModule,
-    SchemaBootstrapStubModule,
   ],
 })
 export class SchemaBootstrapModule {}
