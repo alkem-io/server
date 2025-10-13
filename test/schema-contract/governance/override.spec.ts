@@ -22,6 +22,7 @@ describe('applyOverrides governance', () => {
       prematureRemoval: 0,
       invalidDeprecation: 0,
       info: 0,
+      baseline: 0,
     },
     entries: entries.map(e => ({
       id: e.id || 'id-' + Math.random().toString(36).slice(2),

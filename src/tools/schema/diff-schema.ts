@@ -76,6 +76,7 @@ function emptyCounts(): ClassificationCount {
     invalidDeprecation: 0,
     deprecationGrace: 0,
     info: 0,
+    baseline: 0,
   };
 }
 

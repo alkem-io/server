@@ -91,4 +91,13 @@ Exit codes (schema gate):
 
 Performance budgets: diff <5s on synthetic 250+ type schema; cold bootstrap <2s (enforced by automated tests).
 
+## Schema gate runner flags
+
+The CI runner script `.github/workflows/scripts/schema-gate.ts` accepts a small CLI:
+
+- `--path=<file>` (or positional `<file>`): path to the change report JSON (defaults to `change-report.json`).
+- `--fail` / `--no-fail`: boolean toggle to make the script exit non-zero on detected violations.
+
+Per-entry overrides are honored via the `override` boolean on change entries. `INVALID_DEPRECATION_FORMAT` entries are treated as warnings (non-blocking) by default; this behavior can be changed if desired in the script.
+
 For deeper glossary, lifecycle rules, simulation of overrides, troubleshooting, see the Quickstart.

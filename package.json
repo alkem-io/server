@@ -33,7 +33,7 @@
     "test:cov": "jest --coverage --config ./test/config/jest.config.js",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:ci": "jest --forceExit --config ./test/config/jest.config.ci.js && cat ./coverage-ci/lcov.info",
-    "test:ci:no:coverage": "jest --forceExit --config ./test/config/jest.config.ci.js",
+    "test:ci:no:coverage": "jest --forceExit --config ./test/config/jest.config.ci.nocov.js",
     "typeorm": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js --dataSource src/config/migration.create.config.ts",
     "typeorm-no-entities": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js --dataSource src/config/migration.config.ts",
     "migration:create": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:create",

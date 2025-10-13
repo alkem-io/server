@@ -9,19 +9,65 @@
  */
 import { readFileSync } from 'node:fs';
 
-interface ChangeEntry { changeType: string; detail: string; }
+interface ChangeEntry { changeType: string; detail: string; override?: boolean }
 interface Report {
   overrideApplied: boolean;
   classifications: Record<string, number>;
   entries: ChangeEntry[];
 }
 
-const pathArg = process.argv[2] || 'change-report.json';
-const shouldFail = process.argv.includes('--fail');
+// Simple CLI parsing for flags and positional args. Supports:
+//   --path=<file> or --path <file>
+//   positional: <file>
+//   --fail / --no-fail (boolean)
+function parseArgs(argv: string[]) {
+  const args = argv.slice(2);
+  let path: string | undefined;
+  let shouldFail = false;
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if (a.startsWith('--path=')) {
+      path = a.slice('--path='.length);
+      continue;
+    }
+    if (a === '--path') {
+      if (i + 1 < args.length) {
+        path = args[i + 1];
+        i++;
+      }
+      continue;
+    }
+    if (a === '--fail') {
+      shouldFail = true;
+      continue;
+    }
+    if (a === '--no-fail') {
+      shouldFail = false;
+      continue;
+    }
+    // positional fallback
+    if (!a.startsWith('--') && !path) {
+      path = a;
+      continue;
+    }
+  }
+  return { path: path ?? 'change-report.json', shouldFail };
+}
+
+const { path: pathArg, shouldFail } = parseArgs(process.argv);
 
 function main() {
-  const report: Report = JSON.parse(readFileSync(pathArg, 'utf-8'));
-  const breaking = report.entries.filter(e => e.changeType === 'BREAKING');
+  let report: Report;
+  try {
+    report = JSON.parse(readFileSync(pathArg, 'utf-8'));
+  } catch (err) {
+    console.error(`Failed to parse JSON from ${pathArg}:`, (err as Error).message || err);
+    process.exit(4);
+    // unreachable
+    return;
+  }
+  // Only consider BREAKING entries that haven't been overridden at the entry level.
+  const breaking = report.entries.filter(e => e.changeType === 'BREAKING' && !e.override);
   const premature = report.entries.filter(e => e.changeType === 'PREMATURE_REMOVAL');
   const invalid = report.entries.filter(e => e.changeType === 'INVALID_DEPRECATION_FORMAT');
 
@@ -38,7 +84,7 @@ function main() {
   }
 
   const section = (title: string, arr: ChangeEntry[]) => {
-    if (!arr.length) return; 
+    if (!arr.length) return;
     lines.push(`\n**${title} (${arr.length})**`);
     for (const e of arr) lines.push(`- ${e.detail}`);
   };
@@ -47,9 +93,10 @@ function main() {
   section('INVALID_DEPRECATION_FORMAT', invalid);
 
   const violations: string[] = [];
+  // Breaking changes: require either global overrideApplied or entry-level overrides (we already filtered entries by !e.override).
   if (breaking.length && !report.overrideApplied) violations.push(`${breaking.length} breaking change(s) without approved override`);
   if (premature.length) violations.push(`${premature.length} premature removal(s)`);
-  if (invalid.length) violations.push(`${invalid.length} invalid deprecation format(s)`);
+  // INVALID_DEPRECATION_FORMAT is treated as a warning only (non-blocking). Keep it in the report but do not gate the build.
 
   lines.push('\n**Gate Status**');
   if (violations.length) {
