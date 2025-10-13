@@ -37,7 +37,6 @@ jobs:
 
       - name: Generate schema snapshot (lightweight)
         env:
-          SCHEMA_SNAPSHOT_FORCE_SUCCESS: '1'
           SCHEMA_SNAPSHOT_DEBUG: '1'
         run: |
           set -o pipefail
