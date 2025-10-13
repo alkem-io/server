@@ -88,8 +88,6 @@ export const CREDENTIAL_RULE_PLATFORM_CREATE_INNOVATION_PACK =
   'credentialRuleTypes-platformCreateInnovationPack';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_GUIDANCE =
   'credentialRuleTypes-platformAccessGuidance';
-export const CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_IN_APP_NOTIFICATIONS =
-  'credentialRuleTypes-platformAccessInAppNotifications';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_DASHBOARD =
   'credentialRuleTypes-platformAccessDashboard';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_FILE_UPLOAD_ANY_USER =
