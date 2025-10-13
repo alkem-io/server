@@ -20,7 +20,7 @@ export class InAppNotificationPayloadUserMessageRoomResolverFields {
 
   @ResolveField(() => IUser, {
     nullable: true,
-    description: 'The User for the message.',
+    description: 'The User receiver of the message.',
   })
   public async user(
     @Loader(UserLoaderCreator, { resolveToNull: true })

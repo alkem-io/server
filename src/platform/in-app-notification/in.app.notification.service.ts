@@ -13,6 +13,7 @@ import {
   PaginatedInAppNotifications,
   getPaginationResults,
 } from '@core/pagination';
+import { NotificationEventPayload } from '@common/enums/notification.event.payload';
 
 @Injectable()
 export class InAppNotificationService {
@@ -24,6 +25,8 @@ export class InAppNotificationService {
   public createInAppNotification(
     inAppData: CreateInAppNotificationInput
   ): InAppNotification {
+    const coreEntityIds = this.extractCoreEntityIds(inAppData.payload);
+
     return this.inAppNotificationRepo.create({
       type: inAppData.type,
       category: inAppData.category,
@@ -32,7 +35,96 @@ export class InAppNotificationService {
       receiverID: inAppData.receiverID,
       state: NotificationEventInAppState.UNREAD,
       payload: inAppData.payload,
+      // Populate core entity FKs for cascade deletion
+      spaceID: coreEntityIds.spaceID,
+      organizationID: coreEntityIds.organizationID,
+      userID: coreEntityIds.userID,
+      applicationID: coreEntityIds.applicationID,
+      invitationID: coreEntityIds.invitationID,
+      calloutID: coreEntityIds.calloutID,
+      contributionID: coreEntityIds.contributionID,
     });
+  }
+
+  /**
+   * Extracts core entity IDs from the notification payload for FK population.
+   * Only core entities (whose deletion should cascade delete the notification) are extracted.
+   * Secondary entities remain in the JSON payload only.
+   */
+  private extractCoreEntityIds(payload: any): {
+    spaceID?: string;
+    organizationID?: string;
+    userID?: string;
+    applicationID?: string;
+    invitationID?: string;
+    calloutID?: string;
+    contributionID?: string;
+  } {
+    const result: any = {};
+
+    switch (payload.type) {
+      // Space notifications - space is core
+      case NotificationEventPayload.SPACE:
+      case NotificationEventPayload.SPACE_COMMUNITY_CONTRIBUTOR:
+      case NotificationEventPayload.SPACE_COMMUNICATION_MESSAGE_DIRECT:
+      case NotificationEventPayload.SPACE_COMMUNICATION_UPDATE:
+        result.spaceID = payload.spaceID;
+        break;
+
+      case NotificationEventPayload.SPACE_COMMUNITY_APPLICATION:
+        result.spaceID = payload.spaceID;
+        result.applicationID = payload.applicationID;
+        break;
+
+      case NotificationEventPayload.SPACE_COMMUNITY_INVITATION:
+      case NotificationEventPayload.SPACE_COMMUNITY_INVITATION_USER_PLATFORM:
+        result.spaceID = payload.spaceID;
+        result.invitationID = payload.invitationID;
+        break;
+
+      case NotificationEventPayload.SPACE_COLLABORATION_CALLOUT:
+        result.spaceID = payload.spaceID;
+        result.calloutID = payload.calloutID;
+        break;
+
+      case NotificationEventPayload.SPACE_COLLABORATION_CALLOUT_COMMENT:
+      case NotificationEventPayload.SPACE_COLLABORATION_CALLOUT_POST_COMMENT:
+        result.spaceID = payload.spaceID;
+        result.calloutID = payload.calloutID;
+        result.contributionID = payload.contributionID;
+        break;
+
+      // Organization notifications - organization is core
+      case NotificationEventPayload.ORGANIZATION_MESSAGE_DIRECT:
+      case NotificationEventPayload.ORGANIZATION_MESSAGE_ROOM:
+        result.organizationID = payload.organizationID;
+        break;
+
+      // User notifications - user is core
+      case NotificationEventPayload.USER:
+      case NotificationEventPayload.USER_MESSAGE_DIRECT:
+      case NotificationEventPayload.USER_MESSAGE_ROOM:
+        result.userID = payload.userID;
+        break;
+
+      // Platform notifications - no core entity FKs (data stored in JSON)
+      case NotificationEventPayload.PLATFORM_FORUM_DISCUSSION:
+      case NotificationEventPayload.PLATFORM_USER_PROFILE_REMOVED:
+      case NotificationEventPayload.PLATFORM_GLOBAL_ROLE_CHANGE:
+        // No FKs needed - these are platform-level or contain embedded data
+        break;
+
+      // Virtual Contributor notifications
+      case NotificationEventPayload.VIRTUAL_CONTRIBUTOR:
+        // TODO: Add VC FK when entity structure is confirmed
+        break;
+
+      default:
+        // Unknown payload type - no FKs populated
+        break;
+    }
+
+    return result;
   }
 
   public saveInAppNotifications(
