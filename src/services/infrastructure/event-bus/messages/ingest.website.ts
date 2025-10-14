@@ -14,6 +14,6 @@ export class IngestWebsite implements IEvent {
     public readonly baseUrl: string,
     public readonly type: VirtualContributorBodyOfKnowledgeType,
     public readonly purpose: IngestionPurpose,
-    public readonly personaServiceId?: string
+    public readonly personaId?: string
   ) {}
 }

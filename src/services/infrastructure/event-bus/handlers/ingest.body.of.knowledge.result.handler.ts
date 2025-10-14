@@ -22,12 +22,12 @@ export class IngestBodyOfKnowledgeResultHandler
 
   async handle(event: IngestBodyOfKnowledgeResult) {
     this.logger.verbose?.(
-      `IngestSpaceResultHandler invoked. Event data: PersonaServiceId: ${event.personaServiceId}; Result: ${event.result}`,
+      `IngestSpaceResultHandler invoked. Event data: PersonaId: ${event.personaId}; Result: ${event.result}`,
       LogContext.AI_SERVER_EVENT_BUS
     );
 
     if (
-      !event.personaServiceId ||
+      !event.personaId ||
       !event.timestamp ||
       event.purpose === IngestionPurpose.CONTEXT
     ) {
@@ -37,21 +37,18 @@ export class IngestBodyOfKnowledgeResultHandler
     }
 
     this.logger.verbose?.(
-      `Invoking updatePersonaBoKLastUpdated for PeresonaService: ${event.personaServiceId}`,
+      `Invoking updatePersonaBoKLastUpdated for Peresona: ${event.personaId}`,
       LogContext.AI_SERVER_EVENT_BUS
     );
 
     if (event.result === IngestionResult.SUCCESS) {
       this.aiServerService.updatePersonaBoKLastUpdated(
-        event.personaServiceId,
+        event.personaId,
         new Date(event.timestamp)
       );
     } else {
       if (event.error?.code === ErrorCode.VECTOR_INSERT) {
-        this.aiServerService.updatePersonaBoKLastUpdated(
-          event.personaServiceId,
-          null
-        );
+        this.aiServerService.updatePersonaBoKLastUpdated(event.personaId, null);
       }
     }
   }
