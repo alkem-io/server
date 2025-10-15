@@ -14,9 +14,7 @@ export abstract class InAppNotificationPayloadVirtualContributor
   })
   type!: NotificationEventPayload.VIRTUAL_CONTRIBUTOR;
 
-  @Field(() => String, { nullable: false })
   virtualContributorID!: string;
 
-  @Field(() => ISpace, { nullable: true })
-  space!: ISpace | null;
+  space!: ISpace;
 }
