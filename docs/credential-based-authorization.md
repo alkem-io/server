@@ -80,6 +80,75 @@ In essence, you can think of the authorization process as two questions:
 1.  **Can you see it?** (Visibility / `READ_ABOUT`)
 2.  **What can you do with it?** (Privileges / `READ`, `UPDATE`, `DELETE`, etc.)
 
+## Roles, RoleSets, and Communities
+
+While visibility and policies define the "what" and "where" of authorization, the "who" is determined by Roles, RoleSets, and Communities. These components work together to assign credentials to users, which are the ultimate key to unlocking privileges.
+
+- **Community**: Every Space has an associated Community, which is essentially the group of users related to that space.
+- **RoleSet**: Each Community has a RoleSet, which defines the possible roles users can have within that community (e.g., Admin, Member, Lead).
+- **Role Assignment**: When a user is added to a Community, they are assigned a specific role from the RoleSet.
+- **Credential Granting**: Being assigned a role grants the user a corresponding `AuthorizationCredential`. For example, a user with the `ADMIN` role in a space's community receives the `SPACE_ADMIN` credential for that specific space.
+
+This relationship is the bridge between a user's identity and their permissions. The authorization policies don't check for users directly; they check for the credentials that users hold.
+
+### The Two-Phase Authorization Process
+
+You are correct to point out that the process is not a single, linear flow. It operates in two distinct phases: **Policy Configuration** (a "write-time" operation) and **Access Evaluation** (a "run-time" operation).
+
+#### 1. Policy Configuration Flow
+
+This flow occurs when an entity is created or its authorization-related settings are modified. It's the process of defining and saving the rules for an entity _before_ any access requests are made. The `applyAuthorizationPolicy` method is the heart of this flow.
+
+1.  An event triggers an authorization update (e.g., creating a space, changing a space's privacy).
+2.  The relevant `*.service.authorization.ts` calls `applyAuthorizationPolicy`.
+3.  The service determines the correct parent policy, inherits its rules, and appends new, entity-specific rules.
+4.  The final, complete `AuthorizationPolicy` is saved to the database, associated with the entity.
+
+This process pre-calculates and stores the rules. It answers the question: **"What are the rules for this entity?"**
+
+```mermaid
+graph TD
+    subgraph "Configuration-Time"
+        Trigger["Trigger (e.g., Space created)"] --> ApplyPolicy["applyAuthorizationPolicy()"];
+        ApplyPolicy --> Inherit["Inherit from Parent Policy"];
+        Inherit --> AppendRules["Append Local Rules"];
+        AppendRules --> SavePolicy["Save AuthorizationPolicy to DB"];
+    end
+```
+
+#### 2. Access Evaluation Flow (Runtime)
+
+This flow occurs every time a user attempts to perform an action that requires authorization. It's a fast, read-only check against the pre-configured policies.
+
+1.  A **User** with an assigned **Role** (e.g., "Admin") holds a set of **Credentials** (e.g., `SPACE_ADMIN`).
+2.  The user attempts an action (e.g., `updateSpace`).
+3.  The system's authorization guard retrieves the `AuthorizationPolicy` for the target space from the database.
+4.  The guard uses the `AuthorizationService` to check if the user's credentials grant the required privilege (`UPDATE`) according to the rules in the retrieved policy.
+5.  Access is either granted or denied.
+
+This process answers the question: **"Does this user's set of credentials satisfy the rules for this entity?"**
+
+```mermaid
+graph TD
+    subgraph "Runtime Access Check"
+        UserWithRole["User (with Role)"] -- "holds" --> Credentials;
+
+        subgraph "Action Request"
+            direction LR
+            Action["Attempts Action (e.g., update)"] --> RequiredPrivilege[Requires Privilege: UPDATE];
+        end
+
+        subgraph "Policy Check"
+            direction LR
+            PolicyDB[("AuthorizationPolicy from DB")] --> Check["Check: Credentials grant Privilege?"];
+        end
+
+        Credentials --> Check;
+        RequiredPrivilege --> Check;
+        Check --> Result{Access Granted/Denied};
+    end
+```
+
 ## Space Authorization
 
 The `SpaceAuthorizationService` is a key part of the system, handling the complex authorization logic for Spaces. The authorization rules for a Space depend on its level (`L0`, `L1`, `L2`), visibility (`PUBLIC`, `PRIVATE`), and privacy mode.
