@@ -250,7 +250,7 @@ A `User` is the root of a tree containing its `Profile`, `Agent`, `UserSettings`
 
 ```mermaid
 graph TD
-    subgraph "User Tree (Complete)"
+    subgraph "User Tree (Simplified)"
         User --> Profile;
         User --> Agent;
         User --> UserSettings;
@@ -258,13 +258,15 @@ graph TD
     end
 ```
 
+Note: Profile internally expands to Visuals, References, Tagsets, and a Storage bucket → Documents → Tagset (see `authorization-forest.md` Profile Detail).
+
 #### Organization Tree
 
 An `Organization` is the root of a tree containing its `Profile`, `Agent`, `StorageAggregator`, `RoleSet`, `UserGroups`, and `OrganizationVerification`.
 
 ```mermaid
 graph TD
-    subgraph "Organization Tree (Complete)"
+    subgraph "Organization Tree (Simplified)"
         Organization --> OrgProfile[Profile];
         Organization --> OrgAgent[Agent];
         Organization --> OrgStorage[StorageAggregator];
@@ -274,39 +276,48 @@ graph TD
     end
 ```
 
+Note: `UserGroup` further cascades to Membership entries; Profile expands as in User tree.
+
 #### Account & Space Tree (Recursive)
 
-An `Account` is the root of a complex tree. The `Space` entity within this tree is itself the root of a recursive sub-tree, containing its own children. The diagram below illustrates this complete, recursive hierarchy.
+An `Account` is the root of a complex tree. The `Space` entity within this tree is itself the starting point of a recursive sub-tree. Below is a correctness‑focused, still simplified view:
 
 ```mermaid
 graph TD
-    subgraph "Account Tree (Recursive)"
-        Account --> AccountAgent[Agent];
-        Account --> License;
-        Account --> AccountStorage[StorageAggregator];
-        Account --> VirtualContributor;
-        Account --> InnovationPack;
-        Account --> InnovationHub;
-        Account --> Space;
+    subgraph "Account Tree (Simplified Recursive)"
+        Account --> AccountAgent[Agent]
+        Account --> License
+        Account --> AccountStorage[StorageAggregator]
+        Account --> VirtualContributor
+        Account --> InnovationPack
+        Account --> InnovationHub
+        Account --> Space
 
         subgraph "Space Sub-Tree"
-            Space --> SpaceAgent[Agent];
-            Space --> SpaceStorage[StorageAggregator];
-            Space --> SpaceLicense[License];
-            Space --> TemplatesManager;
-            Space --> SpaceAbout;
-            Space --> Collaboration;
-            Space --> SubSpace[Space];
-            Space --> Community;
+            Space --> SpaceAgent[Agent]
+            Space --> SpaceStorage[StorageAggregator]
+            Space --> SpaceLicense[License]
+            Space --> TemplatesManager
+            Space --> SpaceAbout
+            Space --> Collaboration
+            Space --> SubSpace[Space]
+            Space --> Community
         end
 
         subgraph "Community Sub-Tree"
-            Community --> Communication;
-            Community --> CommunityUserGroup[UserGroup];
-            Community --> CommunityRoleSet[RoleSet];
+            Community --> Communication
+            Community --> CommunityUserGroup[UserGroup]
+            Community --> CommunityRoleSet[RoleSet]
         end
     end
 ```
+
+Notes:
+
+- Collaboration internally expands to CalloutsSet → Callout → (CalloutContribution, Post, CalloutFraming) plus InnovationFlow(+State), Timeline → Calendar → CalendarEvent, Link, Whiteboard, Memo, License.
+- Spaces recurse (L1/L2) with same pattern; TemplatesManager only at L0.
+- Storage chains (Aggregator → Bucket → Document → Tagset) and Profile internals omitted here.
+- CalendarEvent is the renamed Event service (shown here abstractly at the Calendar layer).
 
 #### Licensing Framework Branch (Under Platform)
 
@@ -314,8 +325,31 @@ The `LicensingFramework` authorization policy inherits from Platform (not a root
 
 ```mermaid
 graph TD
-    LicensingFramework --> LicensePolicy;
+    LicensingFramework --> LicensePolicy
 ```
+
+LicensePolicy is a leaf (no further cascades).
+
+#### Virtual Contributor Branch (Under Account)
+
+```mermaid
+graph TD
+    VirtualContributor --> VCProfile[Profile]
+    VirtualContributor --> VCAgent[Agent]
+    VirtualContributor --> VCKnowledgeBase[KnowledgeBase]
+    VirtualContributor --> VCAiPersona[AiPersona]
+```
+
+KnowledgeBase further expands into its own CalloutsSet + Profile branches (see forest doc).
+
+#### AiServer Root Micro-Tree
+
+```mermaid
+graph TD
+    AiServer --> AiPersona
+```
+
+AiServer is an independent root performing a root-style reset and cascading to AiPersona instances.
 
 ### 3. The Complete Forest (Roots Overview)
 
