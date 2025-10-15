@@ -173,19 +173,45 @@ Each `Account` is the root of a tree that contains `Spaces`. The authorization f
 
 This creates a structure where public spaces form a clear hierarchy under the account, while private spaces are effectively roots of their own smaller trees within the account's domain.
 
+### Mixed-Privacy Inheritance Scenarios
+
+The inheritance logic becomes more nuanced when public and private spaces are nested. The key principles are:
+
+- A **public** subspace **always inherits** its authorization policy from its parent.
+- A **private** subspace **never inherits** from its parent; it always starts with a fresh, restrictive baseline policy.
+
+This leads to two important scenarios:
+
+1.  **Public Subspace in a Private Space**: If a public subspace is created within a private space, it inherits the restrictive policies of its private parent. This means the subspace is only "public" to the members of the parent private space. It is not visible to users outside the parent space.
+2.  **Private Subspace in a Public Space**: If a private subspace is created within a public space, it does _not_ inherit the open policies of its public parent. Instead, it gets its own baseline private policy, making it a secure, isolated area within the otherwise public space.
+
+The following diagram illustrates these complex inheritance flows:
+
 ```mermaid
 graph TD
-    subgraph "Account Tree"
+    subgraph "Mixed-Privacy Account Tree"
         Account --> SL0P["Space L0 (Public)"];
         SL0P --> SL1P["Space L1 (Public)"];
-        SL1P --> SL2P["Space L2 (Public)"];
+        SL1P --> SL1Pr["Space L1 (Private)"];
 
-        Account --> SL0Pr["Space L0 (Private)"];
-        SL0Pr -- "contains" --> SL1Pr["Space L1 (Private)"];
+        Account --> SL0PrA["Space L0 (Private)"];
+        SL0PrA --> SL1PA["Space L1 (Public)"];
 
-        SL2P --> Community;
-        SL2P --> Collaboration;
-        SL2P --> Storage;
+        subgraph "Inheritance Legend"
+            direction LR
+            Inherits([Inherits Policy])
+            Resets([Resets to Private Baseline])
+        end
+
+        linkStyle 0 stroke:green,stroke-width:2px;
+        linkStyle 1 stroke:green,stroke-width:2px;
+        linkStyle 3 stroke:green,stroke-width:2px;
+
+        linkStyle 2 stroke:red,stroke-width:2px;
+
+        SL1P -- "inherits" --> SL0P;
+        SL1Pr -- "resets" --> SL0P;
+        SL1PA -- "inherits" --> SL0PrA;
     end
 ```
 
