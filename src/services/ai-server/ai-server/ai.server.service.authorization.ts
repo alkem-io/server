@@ -40,6 +40,13 @@ export class AiServerAuthorizationService {
     aiServer.authorization = this.authorizationPolicyService.reset(
       aiServer.authorization
     );
+
+    //toDo shouldn't this inherit the root platform authorization? e.g.
+    // aiServer.authorization =
+    //   this.platformAuthorizationService.inheritRootAuthorizationPolicy(
+    //     aiServer.authorization
+    //   );
+
     aiServer.authorization = await this.appendCredentialRules(
       aiServer.authorization
     );
