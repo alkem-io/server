@@ -49,14 +49,30 @@ graph TD
 
 ### 3. User Tree
 
-Typical structure from `UserAuthorizationService` (pattern inferred):
+From `UserAuthorizationService.applyAuthorizationPolicy` and cascades into Profile and Storage:
 
 ```mermaid
 graph TD
 	User((User R)) --> UserProfile((Profile E))
-	User --> UserAgent((Agent L))
-	User --> UserSettings((UserSettings L))
-	User --> UserStorageAggregator((StorageAggregator L))
+	User((User R)) --> UserAgent((Agent L))
+	User((User R)) --> UserSettings((UserSettings L))
+	User((User R)) --> UserStorageAggregator((StorageAggregator E))
+	UserStorageAggregator --> UserStorageBucket((StorageBucket E))
+	UserStorageBucket --> UserDocument((Document E))
+	UserDocument --> UserTagset((Tagset L))
+	%% Profile internal children (see Profile Detail)
+```
+
+#### 3.a Profile Detail (applies everywhere Profile appears)
+
+```mermaid
+graph TD
+	Profile((Profile E)) --> ProfileVisuals((Visual L))
+	Profile --> ProfileReferences((Reference L))
+	Profile --> ProfileTagsets((Tagset L))
+	Profile --> ProfileStorageBucket((StorageBucket E))
+	ProfileStorageBucket --> ProfileDocument((Document E))
+	ProfileDocument --> ProfileDocTagset((Tagset L))
 ```
 
 ### 4. Organization Tree
@@ -99,13 +115,13 @@ graph TD
 		SpaceCollaboration --> CalloutsSet((CalloutsSet E))
 		CalloutsSet --> Callout((Callout E))
 		Callout --> CalloutFraming((CalloutFraming L))
-		Callout --> CalloutContribution((CalloutContribution L))
-		Callout --> Post((Post L))
+		Callout --> CalloutContribution((CalloutContribution E))
+		Callout --> Post((Post E))
 		SpaceCollaboration --> InnovationFlow((InnovationFlow E))
 		InnovationFlow --> InnovationFlowState((InnovationFlowState L))
 		SpaceCollaboration --> Timeline((Timeline E))
-		Timeline --> Calendar((Calendar L))
-		Timeline --> Event((Event L))
+		Timeline --> Calendar((Calendar E))
+		Calendar --> Event((Event E))
 		SpaceCollaboration --> Link((Link L))
 		SpaceCollaboration --> Whiteboard((Whiteboard L))
 		SpaceCollaboration --> Memo((Memo L))
@@ -130,6 +146,42 @@ Recursion specifics:
 - Only L0 attaches TemplatesManager (verified: guard in `SpaceAuthorizationService`).
 - Profile nodes are classified as Edge (E) because `ProfileAuthorizationService.applyAuthorizationPolicy` inherits parent authorization and then invokes child apply logic for references, tagsets, visuals, and the storage bucket.
 
+### 5.a Virtual Contributor & AI Branches
+
+From `VirtualContributorAuthorizationService` and downstream services:
+
+```mermaid
+graph TD
+	Account((Account R)) --> AccountVirtualContributors((VirtualContributors E))
+	AccountVirtualContributors --> VC((VirtualContributor E))
+	VC --> VCProfile((Profile E))
+	VC --> VCAgent((Agent L))
+	VC --> VCKnowledgeBase((KnowledgeBase E))
+	VC --> VCAiPersona((AiPersona L))
+	%% KnowledgeBase branch expanded below
+```
+
+AI Server global branch (independent root-like reset pattern):
+
+```mermaid
+graph TD
+	AiServer((AiServer R)) --> AiPersona((AiPersona L))
+```
+
+### 5.b Knowledge Base Detail
+
+From `KnowledgeBaseAuthorizationService`:
+
+```mermaid
+graph TD
+	KnowledgeBase((KnowledgeBase E)) --> KbCalloutsSet((CalloutsSet E))
+	KbCalloutsSet --> KbCallout((Callout E))
+	KbCallout --> KbCalloutContribution((CalloutContribution E))
+	KbCallout --> KbCalloutPost((Post E))
+	KbCallout --> KbCalloutFraming((CalloutFraming L))
+	KnowledgeBase --> KbProfile((Profile E))
+```
+
 ### 6. Collaboration Detail (Expanded)
 
 From `CollaborationAuthorizationService` and its children:
@@ -139,13 +191,13 @@ graph TD
 	Collaboration((Collaboration E)) --> CalloutsSet((CalloutsSet E))
 	CalloutsSet --> Callout((Callout E))
 	Callout --> CalloutFraming((CalloutFraming L))
-	Callout --> CalloutContribution((CalloutContribution L))
-	Callout --> Post((Post L))
+	Callout --> CalloutContribution((CalloutContribution E))
+	Callout --> Post((Post E))
 	Collaboration --> InnovationFlow((InnovationFlow E))
 	InnovationFlow --> InnovationFlowState((InnovationFlowState L))
 	Collaboration --> Timeline((Timeline E))
-	Timeline --> Calendar((Calendar L))
-	Timeline --> Event((Event L))
+	Timeline --> Calendar((Calendar E))
+	Calendar --> Event((Event E))
 	Collaboration --> Link((Link L))
 	Collaboration --> Whiteboard((Whiteboard L))
 	Collaboration --> Memo((Memo L))
@@ -172,6 +224,7 @@ graph TD
 	UserRoot((User R))
 	OrganizationRoot((Organization R))
 	AccountRoot((Account R))
+	AiServerRoot((AiServer R))
 ```
 
 ### 9. Gaps & Assumptions
@@ -194,34 +247,58 @@ Automate generation via AST analysis:
 
 ### 11. Classification Summary
 
-| Service                                      | Classification | Rationale                                                                             |
-| -------------------------------------------- | -------------- | ------------------------------------------------------------------------------------- |
-| PlatformAuthorizationService                 | R              | Calls `inheritRootAuthorizationPolicy`, no parent passed in                           |
-| UserAuthorizationService                     | R              | Root inheritance, no parentAuthorization param                                        |
-| OrganizationAuthorizationService             | R              | Root inheritance, no parentAuthorization param                                        |
-| AccountAuthorizationService                  | R              | Root inheritance, no parentAuthorization param                                        |
-| LicensingFrameworkAuthorizationService       | E              | Receives parent authorization from Platform; calls child LicensePolicy                |
-| LicensePolicyAuthorizationService            | L              | Inherits parent, no further children (per code pattern)                               |
-| SpaceAuthorizationService                    | E              | Takes optional parent, inherits, invokes child services + subspaces                   |
-| CollaborationAuthorizationService            | E              | Inherits and invokes callouts, innovation flow, timeline, license                     |
-| CalloutsSetAuthorizationService              | E              | Inherits and iterates callouts                                                        |
-| CalloutAuthorizationService                  | E              | (Assumed) Inherits and invokes framing/contribution/posts                             |
-| CalloutContributionAuthorizationService      | L              | (Assumed) No further apply calls                                                      |
-| PostAuthorizationService                     | L              | Leaf content entity                                                                   |
-| InnovationFlowAuthorizationService           | E              | Inherits then calls state/profile policies                                            |
-| InnovationFlowStateAuthorizationService      | L              | Terminal state leaf                                                                   |
-| TimelineAuthorizationService                 | E              | Inherits then calls calendar/event                                                    |
-| CalendarAuthorizationService                 | L              | Leaf (no further calls)                                                               |
-| EventAuthorizationService                    | L              | Leaf                                                                                  |
-| StorageAggregatorAuthorizationService        | E              | Inherits, calls bucket                                                                |
-| StorageBucketAuthorizationService            | E              | Inherits, iterates documents                                                          |
-| DocumentAuthorizationService                 | E              | Inherits parent, extends tagset authorization (child: tagset)                         |
-| ProfileAuthorizationService                  | E              | Inherits and invokes child apply calls (references, tagsets, visuals, storage bucket) |
-| VisualAuthorizationService                   | L              | Leaf (no children)                                                                    |
-| RoleSetAuthorizationService                  | L              | Inherits, no further apply calls                                                      |
-| UserGroupAuthorizationService                | E              | Inherits and calls profile                                                            |
-| OrganizationVerificationAuthorizationService | L              | Inherits, no children                                                                 |
-| AgentAuthorizationService                    | L              | Inherits, no children                                                                 |
-| LicenseAuthorizationService                  | L              | Inherits, no children                                                                 |
+| Service                                      | Classification | Rationale                                                                                                                            |
+| -------------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| AccountAuthorizationService                  | R              | Root inheritance, no parentAuthorization param                                                                                       |
+| AgentAuthorizationService                    | L              | Inherits; no children                                                                                                                |
+| AiPersonaAuthorizationService                | L              | Resets then inherits; no children                                                                                                    |
+| AiServerAuthorizationService                 | R              | Acts as independent root: resets policy and seeds credential rules before cascading to AiPersonas                                    |
+| ApplicationAuthorizationService              | L              | Inherits; no children                                                                                                                |
+| CalendarAuthorizationService                 | E              | Inherits; cascades to Event child                                                                                                    |
+| CalloutAuthorizationService                  | E              | Inherits (filtered parent); invokes contributions, framing, comments (room)                                                          |
+| CalloutContributionAuthorizationService      | E              | Inherits; cascades to Post / Whiteboard / Link children                                                                              |
+| CalloutsSetAuthorizationService              | E              | Inherits and iterates callouts                                                                                                       |
+| ClassificationAuthorizationService           | E              | Inherits; cascades to Tagsets                                                                                                        |
+| CollaborationAuthorizationService            | E              | Inherits; invokes CalloutsSet (then Callout chain), InnovationFlow(+State), Timeline(+Calendar→Event), Link/Whiteboard/Memo, License |
+| CommunicationAuthorizationService            | E              | Inherits; cascades to Room                                                                                                           |
+| CommunityGuidelinesAuthorizationService      | E              | Resets then inherits; cascades to Profile                                                                                            |
+| DocumentAuthorizationService                 | E              | Inherits; applies to tagset (child)                                                                                                  |
+| CalendarEventAuthorizationService            | E              | Inherits; cascades to Comments Room + Profile                                                                                        |
+| InnovationFlowAuthorizationService           | E              | Inherits; invokes profile + states                                                                                                   |
+| InnovationFlowStateAuthorizationService      | L              | Inherits; no children                                                                                                                |
+| InnovationHubAuthorizationService            | E              | Inherits (with cloned parent + public read); cascades to Profile                                                                     |
+| InnovationPackAuthorizationService           | E              | Resets then inherits; cascades to Profile + TemplatesSet                                                                             |
+| InvitationAuthorizationService               | L              | Inherits; no children (extends own credential rules only)                                                                            |
+| KnowledgeBaseAuthorizationService            | E              | Inherits; cascades to CalloutsSet + Profile                                                                                          |
+| LicenseAuthorizationService                  | L              | Inherits; no children                                                                                                                |
+| LicensePolicyAuthorizationService            | L              | Inherits parent, no further children (per code pattern)                                                                              |
+| LicensingFrameworkAuthorizationService       | E              | Receives parent authorization from Platform; calls child LicensePolicy                                                               |
+| LibraryAuthorizationService                  | L              | Resets then inherits; no child apply calls                                                                                           |
+| LinkAuthorizationService                     | E              | Inherits; cascades to Profile                                                                                                        |
+| MemoAuthorizationService                     | E              | Inherits; cascades to Profile                                                                                                        |
+| OrganizationAuthorizationService             | R              | Root inheritance, no parentAuthorization param                                                                                       |
+| OrganizationVerificationAuthorizationService | L              | Resets & appends rules only; no parent inherit, no children                                                                          |
+| PlatformAuthorizationService                 | R              | Calls `inheritRootAuthorizationPolicy`, no parent passed in                                                                          |
+| PlatformInvitationAuthorizationService       | L              | Inherits; no children                                                                                                                |
+| PostAuthorizationService                     | E              | Inherits; cascades to Comments Room + Profile children                                                                               |
+| ProfileAuthorizationService                  | E              | Inherits; invokes references, tagsets, visuals, storage bucket                                                                       |
+| RoleSetAuthorizationService                  | E              | Inherits; invokes applications, invitations, platform invitations, license                                                           |
+| RoomAuthorizationService                     | L              | Inherits; no child apply calls                                                                                                       |
+| SpaceAboutAuthorizationService               | E              | Inherits; cascades to Profile + CommunityGuidelines                                                                                  |
+| SpaceAuthorizationService                    | E              | Takes optional parent, inherits, invokes child services + subspaces                                                                  |
+| StorageAggregatorAuthorizationService        | E              | Inherits; invokes StorageBucket                                                                                                      |
+| StorageBucketAuthorizationService            | E              | Inherits; iterates Documents                                                                                                         |
+| TemplateAuthorizationService                 | E              | Inherits; cascades to Profile and type-specific child (Guidelines / Callout / Whiteboard / ContentSpace)                             |
+| TemplateContentSpaceAuthorizationService     | E              | Inherits; cascades to Collaboration, About, recursive Subspaces                                                                      |
+| TemplateDefaultAuthorizationService          | L              | Inherits; no children                                                                                                                |
+| TemplatesManagerAuthorizationService         | E              | Inherits; invokes TemplateDefaults and TemplatesSet                                                                                  |
+| TemplatesSetAuthorizationService             | E              | Inherits; iterates Templates (child TemplateAuthorizationService)                                                                    |
+| TimelineAuthorizationService                 | E              | Inherits; invokes Calendar                                                                                                           |
+| UserAuthorizationService                     | R              | Root inheritance, no parentAuthorization param                                                                                       |
+| UserGroupAuthorizationService                | E              | Inherits; invokes Profile                                                                                                            |
+| UserSettingsAuthorizationService             | L              | Inherits; no children                                                                                                                |
+| VirtualContributorAuthorizationService       | E              | Resets + root clone; cascades to Profile, Agent, AiPersona, KnowledgeBase                                                            |
+| VisualAuthorizationService                   | L              | Inherits; no children                                                                                                                |
+| WhiteboardAuthorizationService               | E              | Inherits; cascades to Profile                                                                                                        |
 
 Last updated: 2025-10-15.
