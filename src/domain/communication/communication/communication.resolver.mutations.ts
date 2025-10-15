@@ -136,6 +136,12 @@ export class CommunicationResolverMutations {
         const receiver = await this.userService.getUserOrFail(
           messageData.receiverIds[0]
         );
+        if (receiver.id === agentInfo.userID) {
+          this.logger.warn(
+            `skipping sending to oneself: ${agentInfo.userID}`,
+            LogContext.COMMUNICATION
+          );
+        }
         await this.communicationAdapter.sendMessageToUser({
           senderCommunicationsID: agentInfo.communicationID,
           message: messageData.message,
