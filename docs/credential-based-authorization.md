@@ -115,3 +115,84 @@ graph TD
 ```
 
 This structure allows for fine-grained control over permissions while maintaining a clear and inheritable hierarchy.
+
+## The Authorization Forest
+
+In mathematical graph theory, a **forest** is a collection of disjoint trees. Our authorization system can be modeled as a forest, where each tree represents a distinct hierarchy of entities. The root of each tree is a top-level entity that does not inherit its authorization policy from any other entity within the system (though it may have a baseline or root policy).
+
+The primary trees in our authorization forest are:
+
+1.  **The Platform Tree**: The absolute root of the main hierarchy.
+2.  **Account Trees**: Each account and its associated spaces form a tree.
+3.  **Licensing Trees**: Licensing frameworks and their policies form their own trees.
+
+### 1. The Platform Tree
+
+The Platform tree is the main hierarchy, with the `Platform` entity at its root. The `Platform`'s authorization policy serves as the ultimate source of truth for many other entities.
+
+```mermaid
+graph TD
+    subgraph "Platform Tree"
+        Platform --> Library;
+        Platform --> TM["Templates Manager"];
+        Platform --> RS["Role Set"];
+        Platform --> LF["Licensing Framework"];
+
+        LF --> LP["License Policy"];
+        Library --> IP["Innovation Pack"];
+        TM --> TS["Templates Set"];
+        TS --> Template;
+    end
+```
+
+### 2. Account and Space Trees
+
+Each `Account` is the root of a tree that contains `Spaces`. The authorization flows from the account down to its spaces and their sub-entities.
+
+- **Public Spaces**: Inherit from their parent (either the Account or a parent Space).
+- **Private Spaces**: Start with a baseline authorization policy and do not inherit from their parent.
+
+This creates a structure where public spaces form a clear hierarchy under the account, while private spaces are effectively roots of their own smaller trees within the account's domain.
+
+```mermaid
+graph TD
+    subgraph "Account Tree"
+        Account --> SL0P["Space L0 (Public)"];
+        SL0P --> SL1P["Space L1 (Public)"];
+        SL1P --> SL2P["Space L2 (Public)"];
+
+        Account --> SL0Pr["Space L0 (Private)"];
+        SL0Pr -- "contains" --> SL1Pr["Space L1 (Private)"];
+
+        SL2P --> Community;
+        SL2P --> Collaboration;
+        SL2P --> Storage;
+    end
+```
+
+### 3. The Complete Forest
+
+Combining these trees gives us a forest that represents the entire authorization landscape. Each tree is distinct, but they are all managed by the same `AuthorizationPolicyService`.
+
+```mermaid
+graph TD
+    subgraph "Authorization Forest"
+        subgraph "Platform Tree"
+            Platform;
+        end
+
+        subgraph "Account Tree 1"
+            Account1[Account];
+        end
+
+        subgraph "Account Tree 2"
+            Account2[Account];
+        end
+
+        subgraph "Licensing Tree"
+            LicensingFramework["Licensing Framework"];
+        end
+    end
+```
+
+This model of a forest of hierarchies allows for both global policy enforcement (from the Platform tree) and domain-specific rules (within each Account or Licensing tree), providing a flexible and powerful authorization system.
