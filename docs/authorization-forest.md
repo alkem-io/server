@@ -28,7 +28,7 @@ Derived from `PlatformAuthorizationService.applyAuthorizationPolicy`.
 
 ```mermaid
 graph TD
-	Platform((Platform R)) --> Library((Library E))
+	Platform((Platform R)) --> Library((Library L))
 	Platform --> TemplatesManager((TemplatesManager E))
 	Platform --> PlatformRoleSet((Platform RoleSet L))
 	Platform --> Forum((Forum E))
@@ -82,7 +82,7 @@ graph TD
 	Organization((Organization R)) --> OrgProfile((Profile E))
 	Organization --> OrgAgent((Agent L))
 	Organization --> OrgStorage((StorageAggregator E))
-	Organization --> OrgRoleSet((RoleSet L))
+	Organization --> OrgRoleSet((RoleSet E))
 	Organization --> OrgUserGroups((UserGroup E))
 	OrgUserGroups --> OrgUserGroupMembership((Membership L))
 	Organization --> OrganizationVerification((OrganizationVerification L))
@@ -108,7 +108,7 @@ graph TD
 	subgraph SpacesRecursive[Space Sub-Trees]
 		SpaceL0((Space L0 E)) --> SpaceAgent((Agent L))
 		SpaceL0 --> SpaceCommunity((Community E))
-		SpaceCommunity --> CommunityRoleSet((RoleSet L))
+		SpaceCommunity --> CommunityRoleSet((RoleSet E))
 		SpaceCommunity --> CommunityUserGroups((UserGroup E))
 		SpaceCommunity --> CommunityGuidelines((CommunityGuidelines L))
 		SpaceL0 --> SpaceCollaboration((Collaboration E))
@@ -122,9 +122,9 @@ graph TD
 		SpaceCollaboration --> Timeline((Timeline E))
 		Timeline --> Calendar((Calendar E))
 		Calendar --> Event((Event E))
-		SpaceCollaboration --> Link((Link L))
-		SpaceCollaboration --> Whiteboard((Whiteboard L))
-		SpaceCollaboration --> Memo((Memo L))
+		SpaceCollaboration --> Link((Link E))
+		SpaceCollaboration --> Whiteboard((Whiteboard E))
+		SpaceCollaboration --> Memo((Memo E))
 		SpaceL0 --> SpaceAbout((About E))
 		SpaceAbout --> SpaceProfile((Profile E))
 		SpaceL0 --> SpaceStorage((StorageAggregator E))
@@ -152,8 +152,7 @@ From `VirtualContributorAuthorizationService` and downstream services:
 
 ```mermaid
 graph TD
-	Account((Account R)) --> AccountVirtualContributors((VirtualContributors E))
-	AccountVirtualContributors --> VC((VirtualContributor E))
+	Account((Account R)) --> VC((VirtualContributor E))
 	VC --> VCProfile((Profile E))
 	VC --> VCAgent((Agent L))
 	VC --> VCKnowledgeBase((KnowledgeBase E))
@@ -198,9 +197,9 @@ graph TD
 	Collaboration --> Timeline((Timeline E))
 	Timeline --> Calendar((Calendar E))
 	Calendar --> Event((Event E))
-	Collaboration --> Link((Link L))
-	Collaboration --> Whiteboard((Whiteboard L))
-	Collaboration --> Memo((Memo L))
+	Collaboration --> Link((Link E))
+	Collaboration --> Whiteboard((Whiteboard E))
+	Collaboration --> Memo((Memo E))
 	Collaboration --> License((License L))
 ```
 

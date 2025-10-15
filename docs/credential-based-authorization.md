@@ -206,7 +206,7 @@ This structure allows for fine-grained control over permissions while maintainin
 
 ## The Authorization Forest: A Deterministic View
 
-**Any entity whose authorization service calls `inheritRootAuthorizationPolicy` after a reset is the root of a tree in the authorization forest.**
+**Any entity whose authorization service calls `inheritRootAuthorizationPolicy` (after a reset, with no parent passed in) is the root of a tree in the authorization forest.**
 
 Based on this deterministic rule, the true roots (explicit root services) are:
 
@@ -214,6 +214,7 @@ Based on this deterministic rule, the true roots (explicit root services) are:
 2.  **User** (`UserAuthorizationService`)
 3.  **Organization** (`OrganizationAuthorizationService`)
 4.  **Account** (`AccountAuthorizationService`)
+5.  **AiServer** (`AiServerAuthorizationService`) – promoted to root after analysis showed it performs a root-style reset + credential seeding independent of the other roots.
 
 The **Licensing Framework is NOT a root**: its authorization (`LicensingFrameworkAuthorizationService`) always inherits from the Platform's policy (it is invoked from `PlatformAuthorizationService.applyAuthorizationPolicy`). It therefore belongs to the Platform tree.
 
@@ -223,16 +224,21 @@ For a full, always-up-to-date structural view (including collaboration & storage
 
 ### 1. The Platform Tree
 
-The Platform is the ultimate root. Its authorization service calls `inheritRootAuthorizationPolicy` and its policy is inherited by top-level platform entities like the Library and top-level Template Managers.
+The Platform is the ultimate root. Its authorization service calls `inheritRootAuthorizationPolicy` and its policy is inherited by top-level platform entities such as the Library, Templates Manager, Forum, Licensing Framework, global RoleSet, and Platform-level Storage.
 
 ```mermaid
 graph TD
-    subgraph "Platform Tree"
-        Platform --> Library;
-        Platform --> TM["Templates Manager"];
-        Platform --> LicensingFramework["Licensing Framework"];
+    subgraph "Platform Tree (Simplified)"
+        Platform((Platform)) --> Library((Library))
+        Platform --> TemplatesManager[Templates Manager]
+        Platform --> Forum[Forum]
+        Platform --> PlatformRoleSet[RoleSet]
+        Platform --> StorageAggregator_Platform[StorageAggregator]
+        Platform --> LicensingFramework[Licensing Framework]
     end
 ```
+
+For deeper branch expansion (e.g., Licensing Framework → License Policy, Storage → Buckets → Documents), see `authorization-forest.md`.
 
 ### 2. The Authorization Trees (Complete Hierarchies)
 
@@ -311,19 +317,29 @@ graph TD
     LicensingFramework --> LicensePolicy;
 ```
 
-### 3. The Complete Forest
+### 3. The Complete Forest (Roots Overview)
 
-The complete authorization landscape is a forest composed of these distinct, deterministically-defined trees.
+The complete authorization landscape is a forest composed of these distinct, deterministically-defined trees. (Edges/Leaves omitted here for brevity.)
 
 ```mermaid
 graph TD
     subgraph "Authorization Forest Roots"
-        PlatformRoot[Platform Root];
-        UserRoot[User Root];
-        OrganizationRoot[Organization Root];
-        AccountRoot[Account Root];
+        PlatformRoot[Platform Root]
+        UserRoot[User Root]
+        OrganizationRoot[Organization Root]
+        AccountRoot[Account Root]
+        AiServerRoot[AiServer Root]
     end
-    PlatformRoot --> LicensingFrameworkBranch[Licensing Framework];
 ```
 
-This model, based on your insight, provides a more accurate and robust understanding of the authorization system's structure.
+Licensing Framework is an Edge under Platform (not a root). AiServer stands alone as its own root cascading to AiPersonas.
+
+### 4. Classification Alignment
+
+The diagrams in this document are synchronized with the authoritative `authorization-forest.md`, which classifies every authorization service deterministically:
+
+- (R) Root: Calls `inheritRootAuthorizationPolicy`, no parent passed.
+- (E) Edge: Inherits parent (`inheritParentAuthorization`) and invokes at least one child `applyAuthorizationPolicy`.
+- (L) Leaf: Inherits parent and invokes no further child `applyAuthorizationPolicy`.
+
+For the exhaustive per-service classification table and expanded sub‑trees (Collaboration, Knowledge Base, Profile internals, Calendar → Event, Storage chains, Virtual Contributor & AI), refer to `authorization-forest.md`.
