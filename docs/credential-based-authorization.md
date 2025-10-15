@@ -208,15 +208,18 @@ This structure allows for fine-grained control over permissions while maintainin
 
 **Any entity whose authorization service calls `inheritRootAuthorizationPolicy` after a reset is the root of a tree in the authorization forest.**
 
-Based on this deterministic rule, the true roots are:
+Based on this deterministic rule, the true roots (explicit root services) are:
 
-1.  **Platform**: The global root for platform-wide entities.
-2.  **User**: Each user is the root of a personal tree.
-3.  **Organization**: Each organization is the root of its own tree.
-4.  **Account**: Each account is the root of a tree governing its spaces.
-5.  **Licensing Framework**: Each framework is the root of a licensing tree.
+1.  **Platform** (`PlatformAuthorizationService`)
+2.  **User** (`UserAuthorizationService`)
+3.  **Organization** (`OrganizationAuthorizationService`)
+4.  **Account** (`AccountAuthorizationService`)
 
-A **Space is never a root**. A public space inherits from its parent (another space or an account). A private space's policy is also rooted in its parent **Account**, not the global platform root, even though it doesn't inherit rules from its immediate parent space.
+The **Licensing Framework is NOT a root**: its authorization (`LicensingFrameworkAuthorizationService`) always inherits from the Platform's policy (it is invoked from `PlatformAuthorizationService.applyAuthorizationPolicy`). It therefore belongs to the Platform tree.
+
+A **Space is never a root**. A public space inherits from its parent (another space or an account). A private space's policy is still rooted in its parent **Account**, not the global platform root, even though it may rebuild baseline rules.
+
+For a full, always-up-to-date structural view (including collaboration & storage expansions), see: `authorization-forest.md`.
 
 ### 1. The Platform Tree
 
@@ -227,6 +230,7 @@ graph TD
     subgraph "Platform Tree"
         Platform --> Library;
         Platform --> TM["Templates Manager"];
+        Platform --> LicensingFramework["Licensing Framework"];
     end
 ```
 
@@ -264,34 +268,47 @@ graph TD
     end
 ```
 
-#### Account & Space Tree
+#### Account & Space Tree (Recursive)
 
-An `Account` is the root of a complex tree that governs all `Spaces` created within it. It also manages its own `Agent`, `License`, `StorageAggregator`, and various innovation-related entities. The `Space` itself is the root of a sub-tree.
+An `Account` is the root of a complex tree. The `Space` entity within this tree is itself the root of a recursive sub-tree, containing its own children. The diagram below illustrates this complete, recursive hierarchy.
 
 ```mermaid
 graph TD
-    subgraph "Account Tree (Complete)"
+    subgraph "Account Tree (Recursive)"
         Account --> AccountAgent[Agent];
         Account --> License;
         Account --> AccountStorage[StorageAggregator];
         Account --> VirtualContributor;
         Account --> InnovationPack;
         Account --> InnovationHub;
-        Account --> L0["Space L0"];
-        L0 --> L1["Space L1"];
-        L1 --> L2["Space L2"];
+        Account --> Space;
+
+        subgraph "Space Sub-Tree"
+            Space --> SpaceAgent[Agent];
+            Space --> SpaceStorage[StorageAggregator];
+            Space --> SpaceLicense[License];
+            Space --> TemplatesManager;
+            Space --> SpaceAbout;
+            Space --> Collaboration;
+            Space --> SubSpace[Space];
+            Space --> Community;
+        end
+
+        subgraph "Community Sub-Tree"
+            Community --> Communication;
+            Community --> CommunityUserGroup[UserGroup];
+            Community --> CommunityRoleSet[RoleSet];
+        end
     end
 ```
 
-#### Licensing Framework Tree
+#### Licensing Framework Branch (Under Platform)
 
-A `LicensingFramework` is the root of a simple tree containing its `LicensePolicy`.
+The `LicensingFramework` authorization policy inherits from Platform (not a root). Its local subtree:
 
 ```mermaid
 graph TD
-    subgraph "Licensing Framework Tree (Complete)"
-        LicensingFramework --> LicensePolicy;
-    end
+    LicensingFramework --> LicensePolicy;
 ```
 
 ### 3. The Complete Forest
@@ -300,27 +317,13 @@ The complete authorization landscape is a forest composed of these distinct, det
 
 ```mermaid
 graph TD
-    subgraph "The True Authorization Forest"
-        subgraph "Platform Tree"
-            Platform;
-        end
-
-        subgraph "User Trees"
-            User[User];
-        end
-
-        subgraph "Organization Trees"
-            Org1[Organization];
-        end
-
-        subgraph "Account Trees"
-            Account1[Account];
-        end
-
-        subgraph "Licensing Tree"
-            LicensingFramework["Licensing Framework"];
-        end
+    subgraph "Authorization Forest Roots"
+        PlatformRoot[Platform Root];
+        UserRoot[User Root];
+        OrganizationRoot[Organization Root];
+        AccountRoot[Account Root];
     end
+    PlatformRoot --> LicensingFrameworkBranch[Licensing Framework];
 ```
 
 This model, based on your insight, provides a more accurate and robust understanding of the authorization system's structure.
