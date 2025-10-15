@@ -61,6 +61,25 @@ sequenceDiagram
     EntityAuthorizationService-->>Requester: updatedPolicies
 ```
 
+## Visibility: The First Layer of Authorization
+
+Before any privileges (`READ`, `UPDATE`, etc.) are checked, the system first determines if an entity is **visible** to the requesting agent. Visibility is the foundational layer of authorization. If an agent cannot "see" an entity, they cannot perform any actions on it, regardless of other permissions they might have.
+
+This is primarily handled by methods like `getCredentialsWithVisibilityOfSpace` in the `SpaceAuthorizationService`.
+
+### How Visibility Works
+
+1.  **Determine Required Credentials**: The service calculates the set of credentials required to see a specific entity. For a `Space`, this depends on its level, privacy mode, and its parent's properties. For example, to see a private space, an agent typically needs a `SPACE_MEMBER` credential for that space.
+2.  **Grant `READ_ABOUT` Privilege**: The credentials gathered in the previous step are then used to create an authorization rule that grants the `READ_ABOUT` privilege. This privilege allows an agent to see the existence of the entity and its basic, non-sensitive information.
+3.  **Filter Queries**: This visibility check is crucial for filtering lists of entities. When a user requests a list of spaces, the system only returns the spaces for which the user has at least `READ_ABOUT` privilege.
+
+The `SpaceVisibility` enum (`ACTIVE`, `DEMO`, `ARCHIVED`) and `SpacePrivacyMode` (`PUBLIC`, `PRIVATE`) are key inputs into this process, dictating how the credential rules for visibility are constructed. For instance, a `PUBLIC` space's visibility rules will be much broader than a `PRIVATE` space's.
+
+In essence, you can think of the authorization process as two questions:
+
+1.  **Can you see it?** (Visibility / `READ_ABOUT`)
+2.  **What can you do with it?** (Privileges / `READ`, `UPDATE`, `DELETE`, etc.)
+
 ## Space Authorization
 
 The `SpaceAuthorizationService` is a key part of the system, handling the complex authorization logic for Spaces. The authorization rules for a Space depend on its level (`L0`, `L1`, `L2`), visibility (`PUBLIC`, `PRIVATE`), and privacy mode.
