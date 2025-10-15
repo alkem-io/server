@@ -204,103 +204,117 @@ graph TD
 
 This structure allows for fine-grained control over permissions while maintaining a clear and inheritable hierarchy.
 
-## The Authorization Forest
+## The Authorization Forest: A Deterministic View
 
-In mathematical graph theory, a **forest** is a collection of disjoint trees. Our authorization system can be modeled as a forest, where each tree represents a distinct hierarchy of entities. The root of each tree is a top-level entity that does not inherit its authorization policy from any other entity within the system (though it may have a baseline or root policy).
+**Any entity whose authorization service calls `inheritRootAuthorizationPolicy` after a reset is the root of a tree in the authorization forest.**
 
-The primary trees in our authorization forest are:
+Based on this deterministic rule, the true roots are:
 
-1.  **The Platform Tree**: The absolute root of the main hierarchy.
-2.  **Account Trees**: Each account and its associated spaces form a tree.
-3.  **Licensing Trees**: Licensing frameworks and their policies form their own trees.
+1.  **Platform**: The global root for platform-wide entities.
+2.  **User**: Each user is the root of a personal tree.
+3.  **Organization**: Each organization is the root of its own tree.
+4.  **Account**: Each account is the root of a tree governing its spaces.
+5.  **Licensing Framework**: Each framework is the root of a licensing tree.
+
+A **Space is never a root**. A public space inherits from its parent (another space or an account). A private space's policy is also rooted in its parent **Account**, not the global platform root, even though it doesn't inherit rules from its immediate parent space.
 
 ### 1. The Platform Tree
 
-The Platform tree is the main hierarchy, with the `Platform` entity at its root. The `Platform`'s authorization policy serves as the ultimate source of truth for many other entities.
+The Platform is the ultimate root. Its authorization service calls `inheritRootAuthorizationPolicy` and its policy is inherited by top-level platform entities like the Library and top-level Template Managers.
 
 ```mermaid
 graph TD
     subgraph "Platform Tree"
         Platform --> Library;
         Platform --> TM["Templates Manager"];
-        Platform --> RS["Role Set"];
-        Platform --> LF["Licensing Framework"];
-
-        LF --> LP["License Policy"];
-        Library --> IP["Innovation Pack"];
-        TM --> TS["Templates Set"];
-        TS --> Template;
     end
 ```
 
-### 2. Account and Space Trees
+### 2. The Authorization Trees (Complete Hierarchies)
 
-Each `Account` is the root of a tree that contains `Spaces`. The authorization flows from the account down to its spaces and their sub-entities.
+The following diagrams show the complete, explicit hierarchies for each authorization tree root. The structure is determined by which child services have their `applyAuthorizationPolicy` method called by the parent service.
 
-- **Public Spaces**: Inherit from their parent (either the Account or a parent Space).
-- **Private Spaces**: Start with a baseline authorization policy and do not inherit from their parent.
+#### User Tree
 
-This creates a structure where public spaces form a clear hierarchy under the account, while private spaces are effectively roots of their own smaller trees within the account's domain.
-
-### Mixed-Privacy Inheritance Scenarios
-
-The inheritance logic becomes more nuanced when public and private spaces are nested. The key principles are:
-
-- A **public** subspace **always inherits** its authorization policy from its parent.
-- A **private** subspace **never inherits** from its parent; it always starts with a fresh, restrictive baseline policy.
-
-This leads to two important scenarios:
-
-1.  **Public Subspace in a Private Space**: If a public subspace is created within a private space, it inherits the restrictive policies of its private parent. This means the subspace is only "public" to the members of the parent private space. It is not visible to users outside the parent space.
-2.  **Private Subspace in a Public Space**: If a private subspace is created within a public space, it does _not_ inherit the open policies of its public parent. Instead, it gets its own baseline private policy, making it a secure, isolated area within the otherwise public space.
-
-The following diagram illustrates these complex inheritance flows:
+A `User` is the root of a tree containing its `Profile`, `Agent`, `UserSettings`, and `StorageAggregator`.
 
 ```mermaid
 graph TD
-    subgraph "Mixed-Privacy Account Tree"
-        Account --> SL0P["Space L0 (Public)"];
-        SL0P --> SL1P["Space L1 (Public)"];
-        SL1P --> SL1Pr["Space L1 (Private)"];
+    subgraph "User Tree (Complete)"
+        User --> Profile;
+        User --> Agent;
+        User --> UserSettings;
+        User --> StorageAggregator;
+    end
+```
 
-        Account --> SL0PrA["Space L0 (Private)"];
-        SL0PrA --> SL1PA["Space L1 (Public)"];
+#### Organization Tree
 
-        subgraph "Inheritance Legend"
-            direction LR
-            Inherits([Inherits Policy])
-            Resets([Resets to Private Baseline])
-        end
+An `Organization` is the root of a tree containing its `Profile`, `Agent`, `StorageAggregator`, `RoleSet`, `UserGroups`, and `OrganizationVerification`.
 
-        linkStyle 0 stroke:green,stroke-width:2px;
-        linkStyle 1 stroke:green,stroke-width:2px;
-        linkStyle 3 stroke:green,stroke-width:2px;
+```mermaid
+graph TD
+    subgraph "Organization Tree (Complete)"
+        Organization --> OrgProfile[Profile];
+        Organization --> OrgAgent[Agent];
+        Organization --> OrgStorage[StorageAggregator];
+        Organization --> RoleSet;
+        Organization --> UserGroup;
+        Organization --> OrganizationVerification;
+    end
+```
 
-        linkStyle 2 stroke:red,stroke-width:2px;
+#### Account & Space Tree
 
-        SL1P -- "inherits" --> SL0P;
-        SL1Pr -- "resets" --> SL0P;
-        SL1PA -- "inherits" --> SL0PrA;
+An `Account` is the root of a complex tree that governs all `Spaces` created within it. It also manages its own `Agent`, `License`, `StorageAggregator`, and various innovation-related entities. The `Space` itself is the root of a sub-tree.
+
+```mermaid
+graph TD
+    subgraph "Account Tree (Complete)"
+        Account --> AccountAgent[Agent];
+        Account --> License;
+        Account --> AccountStorage[StorageAggregator];
+        Account --> VirtualContributor;
+        Account --> InnovationPack;
+        Account --> InnovationHub;
+        Account --> L0["Space L0"];
+        L0 --> L1["Space L1"];
+        L1 --> L2["Space L2"];
+    end
+```
+
+#### Licensing Framework Tree
+
+A `LicensingFramework` is the root of a simple tree containing its `LicensePolicy`.
+
+```mermaid
+graph TD
+    subgraph "Licensing Framework Tree (Complete)"
+        LicensingFramework --> LicensePolicy;
     end
 ```
 
 ### 3. The Complete Forest
 
-Combining these trees gives us a forest that represents the entire authorization landscape. Each tree is distinct, but they are all managed by the same `AuthorizationPolicyService`.
+The complete authorization landscape is a forest composed of these distinct, deterministically-defined trees.
 
 ```mermaid
 graph TD
-    subgraph "Authorization Forest"
+    subgraph "The True Authorization Forest"
         subgraph "Platform Tree"
             Platform;
         end
 
-        subgraph "Account Tree 1"
-            Account1[Account];
+        subgraph "User Trees"
+            User[User];
         end
 
-        subgraph "Account Tree 2"
-            Account2[Account];
+        subgraph "Organization Trees"
+            Org1[Organization];
+        end
+
+        subgraph "Account Trees"
+            Account1[Account];
         end
 
         subgraph "Licensing Tree"
@@ -309,4 +323,4 @@ graph TD
     end
 ```
 
-This model of a forest of hierarchies allows for both global policy enforcement (from the Platform tree) and domain-specific rules (within each Account or Licensing tree), providing a flexible and powerful authorization system.
+This model, based on your insight, provides a more accurate and robust understanding of the authorization system's structure.
