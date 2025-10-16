@@ -11,7 +11,9 @@ import { ISpace } from '@domain/space/space/space.interface';
 
 @Resolver(() => InAppNotificationPayloadVirtualContributor)
 export class InAppNotificationPayloadVirtualContributorFieldsResolver {
-  @ResolveField(() => IVirtualContributor, { nullable: true })
+  @ResolveField(() => IVirtualContributor, {
+    nullable: false,
+  })
   async contributor(
     @Parent() payload: InAppNotificationPayloadVirtualContributor,
     @Loader(ContributorLoaderCreator, { resolveToNull: true })
@@ -21,14 +23,14 @@ export class InAppNotificationPayloadVirtualContributorFieldsResolver {
   }
 
   @ResolveField(() => ISpace, {
-    nullable: true,
+    nullable: false,
     description: 'The Space related to the notification',
   })
   async space(
     @Parent() payload: InAppNotificationPayloadVirtualContributor,
-    @Loader(SpaceLoaderCreator, { resolveToNull: true })
-    loader: ILoader<ISpace | null>
-  ): Promise<ISpace | null> {
+    @Loader(SpaceLoaderCreator)
+    loader: ILoader<ISpace>
+  ): Promise<ISpace> {
     return loader.load(payload.space.id);
   }
 }

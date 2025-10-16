@@ -9,7 +9,7 @@ import { InAppNotificationPayloadOrganizationMessageDirect } from '@platform/in-
 @Resolver(() => InAppNotificationPayloadOrganizationMessageDirect)
 export class InAppNotificationPayloadOrganizationMessageDirectResolverFields {
   @ResolveField(() => IContributor, {
-    nullable: false,
+    nullable: true,
     description: 'The organization.',
   })
   public async organization(

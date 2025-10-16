@@ -21,39 +21,39 @@ export class InAppNotificationPayloadSpaceCollaborationCalloutCommentResolverFie
   ) {}
 
   @ResolveField(() => ISpace, {
-    nullable: true,
+    nullable: false,
     description: 'The Space where the comment was made.',
   })
   public async space(
     @Parent()
     payload: InAppNotificationPayloadSpaceCollaborationCalloutComment,
-    @Loader(SpaceLoaderCreator, { resolveToNull: true })
+    @Loader(SpaceLoaderCreator)
     loader: ILoader<ISpace | null>
   ): Promise<ISpace | null> {
     return loader.load(payload.spaceID);
   }
 
   @ResolveField(() => ICallout, {
-    nullable: true,
+    nullable: false,
     description: 'The Callout that was published.',
   })
   public callout(
     @Parent()
     payload: InAppNotificationPayloadSpaceCollaborationCalloutComment,
-    @Loader(CalloutLoaderCreator, { resolveToNull: true })
-    loader: ILoader<ICallout | null>
-  ): Promise<ICallout | null> {
+    @Loader(CalloutLoaderCreator)
+    loader: ILoader<ICallout>
+  ): Promise<ICallout> {
     return loader.load(payload.calloutID);
   }
 
   @ResolveField(() => MessageDetails, {
-    nullable: true,
+    nullable: false,
     description: 'The details of the message.',
   })
   public async messageDetails(
     @Parent()
     payload: InAppNotificationPayloadSpaceCollaborationCalloutComment
-  ): Promise<MessageDetails | null> {
+  ): Promise<MessageDetails> {
     try {
       return await this.messageDetailsService.getMessageDetails(
         payload.roomID,
@@ -70,7 +70,7 @@ export class InAppNotificationPayloadSpaceCollaborationCalloutCommentResolverFie
         (error as Error)?.stack,
         LogContext.IN_APP_NOTIFICATION
       );
-      return null;
+      throw error;
     }
   }
 }

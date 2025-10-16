@@ -6,6 +6,6 @@ import { NotificationEventPayload } from '@common/enums/notification.event.paylo
   implements: () => IInAppNotificationPayload,
 })
 export abstract class InAppNotificationPayloadSpaceCommunicationUpdate extends InAppNotificationPayloadSpaceBase {
-  update?: string;
+  update!: string;
   declare type: NotificationEventPayload.SPACE_COMMUNICATION_UPDATE;
 }

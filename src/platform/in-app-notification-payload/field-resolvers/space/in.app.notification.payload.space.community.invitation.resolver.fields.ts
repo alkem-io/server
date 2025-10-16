@@ -8,14 +8,14 @@ import { InAppNotificationPayloadSpaceCommunityInvitation } from '@platform/in-a
 @Resolver(() => InAppNotificationPayloadSpaceCommunityInvitation)
 export class InAppNotificationPayloadSpaceCommunityInvitationResolverFields {
   @ResolveField(() => ISpace, {
-    nullable: true,
+    nullable: false,
     description: 'The Space that the invitation is for.',
   })
   public async space(
     @Parent() payload: InAppNotificationPayloadSpaceCommunityInvitation,
-    @Loader(SpaceLoaderCreator, { resolveToNull: true })
-    loader: ILoader<ISpace | null>
-  ): Promise<ISpace | null> {
+    @Loader(SpaceLoaderCreator)
+    loader: ILoader<ISpace>
+  ): Promise<ISpace> {
     return loader.load(payload.spaceID);
   }
 }

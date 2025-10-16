@@ -8,15 +8,15 @@ import { ILoader } from '@core/dataloader/loader.interface';
 @Resolver(() => InAppNotificationPayloadSpace)
 export class InAppNotificationPayloadSpaceResolverFields {
   @ResolveField(() => ISpace, {
-    nullable: true,
+    nullable: false,
     description: 'The space details.',
   })
   public async space(
     @Parent()
     payload: InAppNotificationPayloadSpace,
-    @Loader(SpaceLoaderCreator, { resolveToNull: true })
-    loader: ILoader<ISpace | null>
-  ): Promise<ISpace | null> {
+    @Loader(SpaceLoaderCreator)
+    loader: ILoader<ISpace>
+  ): Promise<ISpace> {
     return loader.load(payload.spaceID);
   }
 }
