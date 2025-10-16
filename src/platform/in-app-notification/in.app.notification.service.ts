@@ -309,8 +309,7 @@ export class InAppNotificationService {
 
       // FKs: userID
       case NotificationEvent.PLATFORM_ADMIN_GLOBAL_ROLE_CHANGED:
-        // result.userID = payload.userID;
-        // todo - maybe we would like to keep this notification - "{{triggeredByName}} has assigned {{role}} to {{userName}}"
+        // we want to keep this notification for audit/historical reasons
         break;
 
       // FKs: spaceID
@@ -327,8 +326,7 @@ export class InAppNotificationService {
         result.organizationID = payload.organizationID;
         break;
       case NotificationEvent.ORGANIZATION_MESSAGE_SENDER:
-        // result.organizationID = payload.organizationID;
-        // todo - maybe we would like to keep this notification - "You sent a message to {{organizationName}}"
+        // we want to keep this notification for audit/historical reasons
         break;
 
       // FKs: organizationID
@@ -429,11 +427,11 @@ export class InAppNotificationService {
         result.userID = payload.userID;
         break;
       case NotificationEvent.USER_MESSAGE_SENDER:
-        // result.userID = payload.userID;
-        // todo - maybe we would like to keep this notification - You sent a DM to {{receiverName}}
+        // we want to keep this notification for audit/historical reasons
         break;
 
       // FKs: userID, messageID, roomID
+      case NotificationEvent.USER_MENTIONED:
       case NotificationEvent.USER_COMMENT_REPLY:
         result.userID = payload.userID;
         result.messageID = payload.messageID;

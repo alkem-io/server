@@ -46,17 +46,19 @@ export class NotificationEntityTracking1760357366405 implements MigrationInterfa
             WHERE JSON_EXTRACT(payload, '$.spaceID') IS NOT NULL
             AND spaceID IS NULL
         `);
+        // skip ORGANIZATION_MESSAGE_SENDER
         await queryRunner.query(`
             UPDATE in_app_notification
             SET organizationID = JSON_UNQUOTE(JSON_EXTRACT(payload, '$.organizationID'))
             WHERE JSON_EXTRACT(payload, '$.organizationID') IS NOT NULL
-            AND organizationID IS NULL
+            AND organizationID IS NULL AND type != 'ORGANIZATION_MESSAGE_SENDER'
         `);
+        // skip USER_MESSAGE_SENDER and PLATFORM_ADMIN_GLOBAL_ROLE_CHANGED
         await queryRunner.query(`
             UPDATE in_app_notification
             SET userID = JSON_UNQUOTE(JSON_EXTRACT(payload, '$.userID'))
             WHERE JSON_EXTRACT(payload, '$.userID') IS NOT NULL
-            AND userID IS NULL
+            AND userID IS NULL AND type != 'USER_MESSAGE_SENDER' AND type != 'PLATFORM_ADMIN_GLOBAL_ROLE_CHANGED'
         `);
         await queryRunner.query(`
             UPDATE in_app_notification
