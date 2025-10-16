@@ -89,7 +89,7 @@ export class RoomResolverMutations {
 
     switch (room.type) {
       case RoomType.POST: {
-        const { post, callout } =
+        const { post, callout, contribution } =
           await this.roomResolverService.getCalloutWithPostContributionForRoom(
             messageData.roomID
           );
@@ -104,6 +104,7 @@ export class RoomResolverMutations {
         this.roomServiceEvents.processNotificationPostContributionComment(
           callout,
           post,
+          contribution,
           room,
           message,
           agentInfo

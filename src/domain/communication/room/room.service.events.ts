@@ -21,6 +21,7 @@ import { NotificationPlatformAdapter } from '@services/adapters/notification-ada
 import { NotificationUserAdapter } from '@services/adapters/notification-adapter/notification.user.adapter';
 import { NotificationInputCollaborationCalloutPostContributionComment } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.post.contribution.comment';
 import { NotificationInputCollaborationCalloutComment } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.comment';
+import { ICalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.interface';
 
 @Injectable()
 export class RoomServiceEvents {
@@ -72,6 +73,7 @@ export class RoomServiceEvents {
   public async processNotificationPostContributionComment(
     callout: ICallout,
     post: IPost,
+    contribution: ICalloutContribution,
     room: IRoom,
     message: IMessage,
     agentInfo: AgentInfo
@@ -82,6 +84,7 @@ export class RoomServiceEvents {
         triggeredBy: agentInfo.userID,
         post,
         callout,
+        contribution,
         room,
         commentSent: message,
       };

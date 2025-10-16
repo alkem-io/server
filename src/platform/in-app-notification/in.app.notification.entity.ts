@@ -106,9 +106,10 @@ export class InAppNotification
   @Column('char', {
     length: UUID_LENGTH,
     nullable: true,
-    comment: 'FK to Post - cascade deletes notification when Post is deleted',
+    comment:
+      'FK to Callout Contribution - cascade deletes notification when Callout Contribution is deleted',
   })
-  contributionPostID?: string;
+  contributionID?: string;
 
   @Column('char', {
     length: UUID_LENGTH,

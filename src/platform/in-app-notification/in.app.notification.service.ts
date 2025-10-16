@@ -49,7 +49,7 @@ export class InAppNotificationService {
       applicationID: coreEntityIds.applicationID,
       invitationID: coreEntityIds.invitationID,
       calloutID: coreEntityIds.calloutID,
-      contributionPostID: coreEntityIds.contributionID,
+      contributionID: coreEntityIds.contributionID,
       roomID: coreEntityIds.roomID,
       // not a FK but still used for deletion
       messageID: coreEntityIds.messageID,
@@ -287,32 +287,26 @@ export class InAppNotificationService {
       // PLATFORM NOTIFICATIONS
       // ========================================
 
-      // FKs: roomID
       case NotificationEvent.PLATFORM_FORUM_DISCUSSION_CREATED:
         result.roomID = payload.roomID;
         break;
 
-      // FKs: messageID, roomID
       case NotificationEvent.PLATFORM_FORUM_DISCUSSION_COMMENT:
         result.messageID = payload.messageID;
         result.roomID = payload.roomID;
         break;
 
-      // FKs: none
       case NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_REMOVED:
         break;
 
-      // FKs: userID
       case NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_CREATED:
         result.userID = payload.userID;
         break;
 
-      // FKs: userID
       case NotificationEvent.PLATFORM_ADMIN_GLOBAL_ROLE_CHANGED:
         // we want to keep this notification for audit/historical reasons
         break;
 
-      // FKs: spaceID
       case NotificationEvent.PLATFORM_ADMIN_SPACE_CREATED:
         result.spaceID = payload.spaceID;
         break;
@@ -321,7 +315,6 @@ export class InAppNotificationService {
       // ORGANIZATION NOTIFICATIONS
       // ========================================
 
-      // FKs: organizationID
       case NotificationEvent.ORGANIZATION_ADMIN_MESSAGE:
         result.organizationID = payload.organizationID;
         break;
@@ -329,7 +322,6 @@ export class InAppNotificationService {
         // we want to keep this notification for audit/historical reasons
         break;
 
-      // FKs: organizationID
       case NotificationEvent.ORGANIZATION_ADMIN_MENTIONED:
         result.organizationID = payload.organizationID;
         break;
@@ -338,48 +330,40 @@ export class InAppNotificationService {
       // SPACE NOTIFICATIONS
       // ========================================
 
-      // FKs: spaceID, applicationID
       case NotificationEvent.SPACE_ADMIN_COMMUNITY_APPLICATION:
         result.spaceID = payload.spaceID;
         result.applicationID = payload.applicationID;
         break;
 
-      // FKs: spaceID
       case NotificationEvent.SPACE_ADMIN_COMMUNITY_NEW_MEMBER:
         result.spaceID = payload.spaceID;
         break;
 
-      // FKs: spaceID, calloutID, contributionID
       case NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION:
         result.spaceID = payload.spaceID;
         result.calloutID = payload.calloutID;
         result.contributionID = payload.contributionID;
         break;
 
-      // FKs: spaceID
       case NotificationEvent.SPACE_LEAD_COMMUNICATION_MESSAGE:
         result.spaceID = payload.spaceID;
         break;
 
-      // FKs: spaceID
       case NotificationEvent.SPACE_COMMUNICATION_UPDATE:
         result.spaceID = payload.spaceID;
         break;
 
-      // FKs: spaceID, calloutID
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED:
         result.spaceID = payload.spaceID;
         result.calloutID = payload.calloutID;
         break;
 
-      // FKs: spaceID, calloutID, contributionID
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION:
         result.spaceID = payload.spaceID;
         result.calloutID = payload.calloutID;
         result.contributionID = payload.contributionID;
         break;
 
-      // FKs: spaceID, calloutID, contributionID, messageID, roomID
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_COMMENT:
         result.spaceID = payload.spaceID;
         result.calloutID = payload.calloutID;
@@ -387,7 +371,6 @@ export class InAppNotificationService {
         result.roomID = payload.roomID;
         break;
 
-      // FKs: spaceID, calloutID, contributionID, messageID, roomID
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_POST_CONTRIBUTION_COMMENT:
         result.spaceID = payload.spaceID;
         result.calloutID = payload.calloutID;
@@ -396,7 +379,6 @@ export class InAppNotificationService {
         result.roomID = payload.roomID;
         break;
 
-      // FKs: spaceID, invitationID
       case NotificationEvent.SPACE_COMMUNITY_INVITATION_USER_PLATFORM:
         result.spaceID = payload.spaceID;
         result.invitationID = payload.invitationID;
@@ -406,23 +388,20 @@ export class InAppNotificationService {
       // USER NOTIFICATIONS
       // ========================================
 
-      // FKs: userID
       case NotificationEvent.USER_SIGN_UP_WELCOME:
         result.userID = payload.userID;
         break;
 
-      // FKs: spaceID, invitationID
       case NotificationEvent.USER_SPACE_COMMUNITY_INVITATION:
         result.spaceID = payload.spaceID;
         result.invitationID = payload.invitationID;
         break;
 
-      // FKs: spaceID
       case NotificationEvent.USER_SPACE_COMMUNITY_JOINED:
         result.spaceID = payload.spaceID;
+        result.userID = payload.contributorID;
         break;
 
-      // FKs: userID
       case NotificationEvent.USER_MESSAGE:
         result.userID = payload.userID;
         break;
@@ -430,7 +409,6 @@ export class InAppNotificationService {
         // we want to keep this notification for audit/historical reasons
         break;
 
-      // FKs: userID, messageID, roomID
       case NotificationEvent.USER_MENTIONED:
       case NotificationEvent.USER_COMMENT_REPLY:
         result.userID = payload.userID;
@@ -442,10 +420,8 @@ export class InAppNotificationService {
       // VIRTUAL CONTRIBUTOR NOTIFICATIONS
       // ========================================
 
-      // FKs: spaceID, contributionID
       case NotificationEvent.VIRTUAL_CONTRIBUTOR_ADMIN_SPACE_COMMUNITY_INVITATION:
         result.spaceID = payload.spaceID;
-        result.contributionID = payload.contributionID;
         break;
 
       default:

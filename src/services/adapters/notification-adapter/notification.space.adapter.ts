@@ -247,7 +247,7 @@ export class NotificationSpaceAdapter {
         {
           type: NotificationEventPayload.SPACE_COLLABORATION_CALLOUT_POST_COMMENT,
           spaceID: space.id,
-          contributionID: eventData.post.id,
+          contributionID: eventData.contribution.id,
           calloutID: eventData.callout.id,
           messageID: eventData.commentSent.id,
           roomID: eventData.room.id,
