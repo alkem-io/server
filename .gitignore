@@ -52,6 +52,10 @@ subscriptions.log
 # Optional npm cache directory
 .npm
 
+# Optional pnpm cache directory
+.pnpm-debug.log*
+.pnpm-store/
+
 # Optional eslint cache
 .eslintcache
 

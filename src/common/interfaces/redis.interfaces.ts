@@ -1,5 +1,5 @@
 import { Cache, Store } from 'cache-manager';
-import Redis from 'redis';
+import { RedisClientType } from 'redis';
 
 export interface RedisCache extends Cache {
   store: RedisStore;
@@ -7,6 +7,6 @@ export interface RedisCache extends Cache {
 
 export interface RedisStore extends Store {
   name: 'redis';
-  getClient: () => Redis.RedisClient;
+  getClient: () => RedisClientType;
   isCacheableValue: (value: any) => boolean;
 }
