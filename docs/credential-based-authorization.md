@@ -350,6 +350,11 @@ graph TD
 ```
 
 AiServer is an independent root performing a root-style reset and cascading to AiPersona instances.
+NB! AiServer is quite distinctive from the Platform, as it does not inherit privileges from the platform root policies. That is intentional, as we have two distinctive subsystems inside the system:
+
+- AI Server
+- Collaboration Platform
+  Those may be split in the future (TBD!) and are two distinctive concepts inside Alkemio.
 
 ### 3. The Complete Forest (Roots Overview)
 
