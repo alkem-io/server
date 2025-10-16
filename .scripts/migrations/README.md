@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - Create `.env` file in the `migrations` folder. Copy the .env.sample and fill in the missing values
-- The `mariadb` container needs to be running from `quickstart-servies`, or started with `pnpm run start:services`
+- The `mariadb` container needs to be running from `quickstart-services`, or started with `pnpm run start:services`
 
 ## The following scripts are added
 
