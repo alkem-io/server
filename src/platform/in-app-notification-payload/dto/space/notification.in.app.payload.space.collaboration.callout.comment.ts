@@ -8,7 +8,7 @@ import { NotificationEventPayload } from '@common/enums/notification.event.paylo
 })
 export abstract class InAppNotificationPayloadSpaceCollaborationCalloutComment extends InAppNotificationPayloadSpaceBase {
   calloutID!: string;
-  contributionID!: string;
+  contributionID!: string; // in case of a comment on a callout, this is the triggeredBy
   messageID!: string;
   roomID!: string;
   declare type: NotificationEventPayload.SPACE_COLLABORATION_CALLOUT_COMMENT;

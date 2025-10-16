@@ -34,9 +34,10 @@ export class NotificationEntityTracking1760357366405 implements MigrationInterfa
         await queryRunner.query(`ALTER TABLE \`in_app_notification\` ADD \`applicationID\` char(36) NULL COMMENT 'FK to Application - cascade deletes notification when application is deleted'`);
         await queryRunner.query(`ALTER TABLE \`in_app_notification\` ADD \`invitationID\` char(36) NULL COMMENT 'FK to Invitation - cascade deletes notification when invitation is deleted'`);
         await queryRunner.query(`ALTER TABLE \`in_app_notification\` ADD \`calloutID\` char(36) NULL COMMENT 'FK to Callout - cascade deletes notification when callout is deleted'`);
-        await queryRunner.query(`ALTER TABLE \`in_app_notification\` ADD \`contributionID\` char(36) NULL COMMENT 'FK to CalloutContribution - cascade deletes notification when contribution is deleted'`);
+        // ideally it has to be a Callout Contribution; however this points to Posts only right now; to be adjusted when the payload can cover Contributions rather than Posts
+        await queryRunner.query(`ALTER TABLE \`in_app_notification\` ADD \`contributionPostID\` char(36) NULL COMMENT 'FK to Post - cascade deletes notification when Post is deleted'`);
         await queryRunner.query(`ALTER TABLE \`in_app_notification\` ADD \`roomID\` char(36) NULL COMMENT 'FK to Room - cascade deletes notification when the room is deleted'`);
-        await queryRunner.query(`ALTER TABLE \`in_app_notification\` ADD \`messageID\` char(36) NULL COMMENT 'Not actual FK - used to manually delete notification when the message is deleted'`);
+        await queryRunner.query(`ALTER TABLE \`in_app_notification\` ADD \`messageID\` char(44) NULL COMMENT 'Not actual FK - used to manually delete notification when the message is deleted'`);
 
         // ==================== STEP 2: Backfill FK columns from JSON payload ====================
         await queryRunner.query(`
@@ -77,14 +78,20 @@ export class NotificationEntityTracking1760357366405 implements MigrationInterfa
         `);
         await queryRunner.query(`
             UPDATE in_app_notification
-            SET contributionID = JSON_UNQUOTE(JSON_EXTRACT(payload, '$.contributionID'))
+            SET contributionPostID = JSON_UNQUOTE(JSON_EXTRACT(payload, '$.contributionID'))
             WHERE JSON_EXTRACT(payload, '$.contributionID') IS NOT NULL
-            AND contributionID IS NULL
+            AND contributionPostID IS NULL
         `);
         await queryRunner.query(`
             UPDATE in_app_notification
             SET roomID = JSON_UNQUOTE(JSON_EXTRACT(payload, '$.roomID'))
             WHERE JSON_EXTRACT(payload, '$.roomID') IS NOT NULL
+            AND roomID IS NULL
+        `);
+        await queryRunner.query(`
+            UPDATE in_app_notification
+            SET messageID = JSON_UNQUOTE(JSON_EXTRACT(payload, '$.messageID'))
+            WHERE JSON_EXTRACT(payload, '$.messageID') IS NOT NULL
             AND roomID IS NULL
         `);
         // ==================== STEP 3: Clean up orphaned notifications ====================
@@ -93,6 +100,11 @@ export class NotificationEntityTracking1760357366405 implements MigrationInterfa
             DELETE in_app_notification FROM in_app_notification
             LEFT JOIN user AS receiver ON in_app_notification.receiverID = receiver.id
             WHERE in_app_notification.receiverID IS NOT NULL AND receiver.id IS NULL
+        `);
+        await queryRunner.query(`
+            DELETE in_app_notification FROM in_app_notification
+            LEFT JOIN space ON in_app_notification.spaceID = space.id
+            WHERE in_app_notification.spaceID IS NOT NULL AND space.id IS NULL
         `);
         await queryRunner.query(`
             DELETE in_app_notification FROM in_app_notification
@@ -121,8 +133,8 @@ export class NotificationEntityTracking1760357366405 implements MigrationInterfa
         `);
         await queryRunner.query(`
             DELETE in_app_notification FROM in_app_notification
-            LEFT JOIN callout_contribution ON in_app_notification.contributionID = callout_contribution.id
-            WHERE in_app_notification.contributionID IS NOT NULL AND callout_contribution.id IS NULL
+            LEFT JOIN post ON in_app_notification.contributionPostID = post.id
+            WHERE in_app_notification.contributionPostID IS NOT NULL AND post.id IS NULL
         `);
         await queryRunner.query(`
             DELETE in_app_notification FROM in_app_notification
@@ -134,9 +146,11 @@ export class NotificationEntityTracking1760357366405 implements MigrationInterfa
         await queryRunner.query(`ALTER TABLE \`in_app_notification\` ADD CONSTRAINT \`FK_60085ab32808bc5f628fe3ca587\` FOREIGN KEY (\`spaceID\`) REFERENCES \`space\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE \`in_app_notification\` ADD CONSTRAINT \`FK_3a71f82d91a3809bd652cd80f1f\` FOREIGN KEY (\`organizationID\`) REFERENCES \`organization\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE \`in_app_notification\` ADD CONSTRAINT \`FK_d298041d567d984ed6c0667c814\` FOREIGN KEY (\`userID\`) REFERENCES \`user\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE \`in_app_notification\` ADD CONSTRAINT \`FK_a84dd5170304562dbd58b37521e\` FOREIGN KEY (\`receiverID\`) REFERENCES \`user\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE \`in_app_notification\` ADD CONSTRAINT \`FK_b8fe43c84d0f765bba5f6bd054d\` FOREIGN KEY (\`invitationID\`) REFERENCES \`invitation\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE \`in_app_notification\` ADD CONSTRAINT \`FK_b2f1dc00232220031a6921da1b9\` FOREIGN KEY (\`applicationID\`) REFERENCES \`application\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE \`in_app_notification\` ADD CONSTRAINT \`FK_75c3fa6ba71954e8586bfdbe725\` FOREIGN KEY (\`calloutID\`) REFERENCES \`callout\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE \`in_app_notification\` ADD CONSTRAINT \`FK_6df3d947b625cf6bd2ed856f632\` FOREIGN KEY (\`contributionID\`) REFERENCES \`callout_contribution\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`);
+        // ideally it has to be a Callout Contribution; however this points to Posts only right now; to be adjusted when the payload can cover Contributions rather than Posts
+        await queryRunner.query(`ALTER TABLE \`in_app_notification\` ADD CONSTRAINT \`FK_6df3d947b625cf6bd2ed856f632\` FOREIGN KEY (\`contributionPostID\`) REFERENCES \`post\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE \`in_app_notification\` ADD CONSTRAINT \`FK_in_app_to_room_id\` FOREIGN KEY (\`roomID\`) REFERENCES \`room\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`);
     }
 
@@ -154,7 +168,7 @@ export class NotificationEntityTracking1760357366405 implements MigrationInterfa
         // Drop all columns
         await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP COLUMN \`messageID\``);
         await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP COLUMN \`roomID\``);
-        await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP COLUMN \`contributionID\``);
+        await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP COLUMN \`contributionPostID\``);
         await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP COLUMN \`calloutID\``);
         await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP COLUMN \`invitationID\``);
         await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP COLUMN \`applicationID\``);

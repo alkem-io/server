@@ -20,7 +20,7 @@ export class InAppNotificationPayloadVirtualContributorFieldsResolver {
     return loader.load(payload.virtualContributorID);
   }
 
-  @ResolveField(() => IVirtualContributor, {
+  @ResolveField(() => ISpace, {
     nullable: true,
     description: 'The Space related to the notification',
   })

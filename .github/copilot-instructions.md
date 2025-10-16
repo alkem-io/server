@@ -11,7 +11,7 @@
 - Node.js, Nestjs, TypeORM
 
 ## Coding Standards
-- After you are done with all the changes run `npx eslint <your-file>` and `npx tsc --noEmit <your-file>` to verify if the changes you have made are valid syntax-wise.
+- When you have finished give a very short summary of what you did. Do not go into deep details.
 
 ## UI guidelines
 
