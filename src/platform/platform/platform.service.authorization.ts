@@ -13,7 +13,6 @@ import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authoriz
 import {
   CREDENTIAL_RULE_PLATFORM_CREATE_ORGANIZATION,
   CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_GUIDANCE,
-  CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_IN_APP_NOTIFICATIONS,
   CREDENTIAL_RULE_TYPES_PLATFORM_ADMINS,
   CREDENTIAL_RULE_TYPES_PLATFORM_AUTH_RESET,
   CREDENTIAL_RULE_TYPES_PLATFORM_FILE_UPLOAD_ANY_USER,
@@ -149,9 +148,6 @@ export class PlatformAuthorizationService {
     authorization: IAuthorizationPolicy
   ): Promise<IAuthorizationPolicy> {
     const credentialRules = this.createPlatformCredentialRules();
-    const credentialRuleInAppNotifications =
-      await this.createCredentialRuleInAppNotifications();
-    credentialRules.push(credentialRuleInAppNotifications);
 
     const credentialRuleInteractiveGuidance =
       await this.createCredentialRuleInteractiveGuidance();
@@ -204,23 +200,6 @@ export class PlatformAuthorizationService {
         [AuthorizationPrivilege.ACCESS_INTERACTIVE_GUIDANCE],
         [userChatGuidanceAccessCredential],
         CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_GUIDANCE
-      );
-    userChatGuidanceAccessPrivilegeRule.cascade = false;
-
-    return userChatGuidanceAccessPrivilegeRule;
-  }
-
-  private async createCredentialRuleInAppNotifications(): Promise<IAuthorizationPolicyRuleCredential> {
-    const userChatGuidanceAccessInAppNotifications = {
-      type: AuthorizationCredential.BETA_TESTER,
-      resourceID: '',
-    };
-
-    const userChatGuidanceAccessPrivilegeRule =
-      this.authorizationPolicyService.createCredentialRule(
-        [AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_IN_APP],
-        [userChatGuidanceAccessInAppNotifications],
-        CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_IN_APP_NOTIFICATIONS
       );
     userChatGuidanceAccessPrivilegeRule.cascade = false;
 

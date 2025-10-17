@@ -50,8 +50,6 @@ export enum AuthorizationPrivilege {
   RECEIVE_NOTIFICATIONS_ORGANIZATION_ADMIN = 'receive-notifications-organization-admin',
   RECEIVE_NOTIFICATIONS_SPACE_ADMIN = 'receive-notifications-space-admin',
   RECEIVE_NOTIFICATIONS_SPACE_LEAD = 'receive-notifications-space-lead',
-  // Temporary privileges for in-app notifications until rolled out platform wide
-  RECEIVE_NOTIFICATIONS_IN_APP = 'receive-notifications-in-app',
   TRANSFER_RESOURCE_OFFER = 'transfer-resource-offer',
   TRANSFER_RESOURCE_ACCEPT = 'transfer-resource-accept',
   ACCOUNT_LICENSE_MANAGE = 'account-license-manage',

@@ -97,6 +97,7 @@ export class LicensingFrameworkAuthorizationService {
           AuthorizationPrivilege.READ,
           AuthorizationPrivilege.UPDATE,
           AuthorizationPrivilege.DELETE,
+          AuthorizationPrivilege.GRANT,
         ],
         [
           AuthorizationCredential.GLOBAL_LICENSE_MANAGER,

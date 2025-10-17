@@ -7,7 +7,7 @@ export class IngestBodyOfKnowledgeResult implements IEvent {
     public readonly bodyOfKnowledgeId: string,
     public readonly type: VirtualContributorBodyOfKnowledgeType,
     public readonly purpose: IngestionPurpose,
-    public readonly personaServiceId: string,
+    public readonly personaId: string,
     public readonly timestamp: number,
     public result: IngestionResult,
     public error?: IngestError
