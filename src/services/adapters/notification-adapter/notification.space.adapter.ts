@@ -369,6 +369,7 @@ export class NotificationSpaceAdapter {
           type: NotificationEventPayload.SPACE_COMMUNITY_CONTRIBUTOR,
           spaceID: space.id,
           contributorID: eventData.contributorID,
+          contributorType: eventData.contributorType,
         };
 
       await this.notificationInAppAdapter.sendInAppNotifications(

@@ -16,6 +16,22 @@ import {
   PaginatedInAppNotifications,
   getPaginationResults,
 } from '@core/pagination';
+import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
+
+type InAppNotificationCoreEntityIds = {
+  spaceID?: string;
+  organizationID?: string;
+  userID?: string;
+  applicationID?: string;
+  invitationID?: string;
+  calloutID?: string;
+  contributionID?: string;
+  roomID?: string;
+  messageID?: string;
+  contributorOrganizationID?: string;
+  contributorUserID?: string;
+  contributorVcID?: string;
+};
 
 @Injectable()
 export class InAppNotificationService {
@@ -53,6 +69,9 @@ export class InAppNotificationService {
       roomID: coreEntityIds.roomID,
       // not a FK but still used for deletion
       messageID: coreEntityIds.messageID,
+      contributorOrganizationID: coreEntityIds.contributorOrganizationID,
+      contributorUserID: coreEntityIds.contributorUserID,
+      contributorVcID: coreEntityIds.contributorVcID,
     });
   }
 
@@ -269,18 +288,8 @@ export class InAppNotificationService {
   private extractCoreEntityIds(
     eventType: NotificationEvent,
     payload: any
-  ): {
-    spaceID?: string;
-    organizationID?: string;
-    userID?: string;
-    applicationID?: string;
-    invitationID?: string;
-    calloutID?: string;
-    contributionID?: string;
-    roomID?: string;
-    messageID?: string;
-  } {
-    const result: any = {};
+  ): InAppNotificationCoreEntityIds {
+    const result: InAppNotificationCoreEntityIds = {};
 
     switch (eventType) {
       // ========================================
@@ -337,6 +346,19 @@ export class InAppNotificationService {
 
       case NotificationEvent.SPACE_ADMIN_COMMUNITY_NEW_MEMBER:
         result.spaceID = payload.spaceID;
+        // contributor FKs
+        result.contributorOrganizationID =
+          payload.contributorType === RoleSetContributorType.ORGANIZATION
+            ? payload.contributorID
+            : undefined;
+        result.contributorUserID =
+          payload.contributorType === RoleSetContributorType.USER
+            ? payload.contributorID
+            : undefined;
+        result.contributorVcID =
+          payload.contributorType === RoleSetContributorType.VIRTUAL
+            ? payload.contributorID
+            : undefined;
         break;
 
       case NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION:
@@ -422,6 +444,7 @@ export class InAppNotificationService {
 
       case NotificationEvent.VIRTUAL_CONTRIBUTOR_ADMIN_SPACE_COMMUNITY_INVITATION:
         result.spaceID = payload.spaceID;
+        result.contributorVcID = payload.contributorID;
         break;
 
       default:

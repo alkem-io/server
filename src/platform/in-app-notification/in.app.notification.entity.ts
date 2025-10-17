@@ -125,4 +125,25 @@ export class InAppNotification
       'External message ID (e.g., Matrix message ID) - stored as string, not a FK',
   })
   messageID?: string;
+
+  @Column('char', {
+    length: UUID_LENGTH,
+    nullable: true,
+    comment: 'FK to Organization - set for contributor notifications',
+  })
+  contributorOrganizationID?: string;
+
+  @Column('char', {
+    length: UUID_LENGTH,
+    nullable: true,
+    comment: 'FK to User - set for contributor notifications',
+  })
+  contributorUserID?: string;
+
+  @Column('char', {
+    length: UUID_LENGTH,
+    nullable: true,
+    comment: 'FK to VC - set for contributor notifications',
+  })
+  contributorVcID?: string;
 }
