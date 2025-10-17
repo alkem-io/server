@@ -32,12 +32,14 @@
             "first": {
               "title": "First Name",
               "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "pattern": ".*\\S.*"
             },
             "last": {
               "title": "Last Name",
               "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "pattern": ".*\\S.*"
             }
           },
           "required": ["first", "last"],
