@@ -215,45 +215,44 @@ export class NotificationEntityTracking1760357366405 implements MigrationInterfa
       await queryRunner.query(`ALTER TABLE \`in_app_notification\` ADD CONSTRAINT \`FK_60085ab32808bc5f628fe3ca587\` FOREIGN KEY (\`spaceID\`) REFERENCES \`space\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`);
       await queryRunner.query(`ALTER TABLE \`in_app_notification\` ADD CONSTRAINT \`FK_3a71f82d91a3809bd652cd80f1f\` FOREIGN KEY (\`organizationID\`) REFERENCES \`organization\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`);
       await queryRunner.query(`ALTER TABLE \`in_app_notification\` ADD CONSTRAINT \`FK_d298041d567d984ed6c0667c814\` FOREIGN KEY (\`userID\`) REFERENCES \`user\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`);
-      await queryRunner.query(`ALTER TABLE \`in_app_notification\` ADD CONSTRAINT \`FK_b8fe43c84d0f765bba5f6bd054d\` FOREIGN KEY (\`invitationID\`) REFERENCES \`invitation\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`);
-      await queryRunner.query(`ALTER TABLE \`in_app_notification\` ADD CONSTRAINT \`FK_b2f1dc00232220031a6921da1b9\` FOREIGN KEY (\`applicationID\`) REFERENCES \`application\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`);
+      await queryRunner.query(`ALTER TABLE \`in_app_notification\` ADD CONSTRAINT \`FK_b8fe43c84d0f765bba5f6bd054d\` FOREIGN KEY (\`applicationID\`) REFERENCES \`application\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`);
+      await queryRunner.query(`ALTER TABLE \`in_app_notification\` ADD CONSTRAINT \`FK_b2f1dc00232220031a6921da1b9\` FOREIGN KEY (\`invitationID\`) REFERENCES \`invitation\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`);
       await queryRunner.query(`ALTER TABLE \`in_app_notification\` ADD CONSTRAINT \`FK_75c3fa6ba71954e8586bfdbe725\` FOREIGN KEY (\`calloutID\`) REFERENCES \`callout\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`);
-      // ideally it has to be a Callout Contribution; however this points to Posts only right now; to be adjusted when the payload can cover Contributions rather than Posts
       await queryRunner.query(`ALTER TABLE \`in_app_notification\` ADD CONSTRAINT \`FK_6df3d947b625cf6bd2ed856f632\` FOREIGN KEY (\`contributionID\`) REFERENCES \`callout_contribution\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`);
-      await queryRunner.query(`ALTER TABLE \`in_app_notification\` ADD CONSTRAINT \`FK_in_app_to_room_id\` FOREIGN KEY (\`roomID\`) REFERENCES \`room\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`);
-      // Add FKs for contributorOrganizationID and contributorUserID
-      await queryRunner.query(`ALTER TABLE \`in_app_notification\` ADD CONSTRAINT \`FK_contributor_organization_id\` FOREIGN KEY (\`contributorOrganizationID\`) REFERENCES \`organization\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`);
-      await queryRunner.query(`ALTER TABLE \`in_app_notification\` ADD CONSTRAINT \`FK_contributor_user_id\` FOREIGN KEY (\`contributorUserID\`) REFERENCES \`user\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`);
-      await queryRunner.query(`ALTER TABLE \`in_app_notification\` ADD CONSTRAINT \`FK_contributor_vc_id\` FOREIGN KEY (\`contributorVcID\`) REFERENCES \`virtual_contributor\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`);
+      await queryRunner.query(`ALTER TABLE \`in_app_notification\` ADD CONSTRAINT \`FK_439dd686c1912533c380b783f0b\` FOREIGN KEY (\`roomID\`) REFERENCES \`room\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`);
+      // No FK for messageID as messages are stored externally ...
+      await queryRunner.query(`ALTER TABLE \`in_app_notification\` ADD CONSTRAINT \`FK_618449b41643adab8598b80e1b2\` FOREIGN KEY (\`contributorOrganizationID\`) REFERENCES \`organization\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`);
+      await queryRunner.query(`ALTER TABLE \`in_app_notification\` ADD CONSTRAINT \`FK_e4b8c5447b138bd2ce749274ae3\` FOREIGN KEY (\`contributorUserID\`) REFERENCES \`user\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`);
+      await queryRunner.query(`ALTER TABLE \`in_app_notification\` ADD CONSTRAINT \`FK_c9c5d92154e4300bad54b7bbcc7\` FOREIGN KEY (\`contributorVcID\`) REFERENCES \`virtual_contributor\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`);
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
         // Drop all FK constraints
-        await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP FOREIGN KEY \`FK_contributor_vc_id\``);
-        await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP FOREIGN KEY \`FK_contributor_user_id\``);
-        await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP FOREIGN KEY \`FK_contributor_organization_id\``);
-        await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP FOREIGN KEY \`FK_in_app_to_room_id\``);
-        await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP FOREIGN KEY \`FK_6df3d947b625cf6bd2ed856f632\``);
-        await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP FOREIGN KEY \`FK_75c3fa6ba71954e8586bfdbe725\``);
-        await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP FOREIGN KEY \`FK_b2f1dc00232220031a6921da1b9\``);
-        await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP FOREIGN KEY \`FK_b8fe43c84d0f765bba5f6bd054d\``);
-        await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP FOREIGN KEY \`FK_d298041d567d984ed6c0667c814\``);
-        await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP FOREIGN KEY \`FK_3a71f82d91a3809bd652cd80f1f\``);
-        await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP FOREIGN KEY \`FK_60085ab32808bc5f628fe3ca587\``);
-        await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP FOREIGN KEY \`FK_a84dd5170304562dbd58b37521e\``);
-        // Drop all columns
-        await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP COLUMN \`messageID\``);
-        await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP COLUMN \`roomID\``);
-        await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP COLUMN \`contributionID\``);
-        await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP COLUMN \`calloutID\``);
-        await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP COLUMN \`invitationID\``);
-        await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP COLUMN \`applicationID\``);
-        await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP COLUMN \`userID\``);
-        await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP COLUMN \`organizationID\``);
-        await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP COLUMN \`spaceID\``);
-        await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP COLUMN \`contributorVcID\``);
-        await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP COLUMN \`contributorUserID\``);
-        await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP COLUMN \`contributorOrganizationID\``);
+      await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP FOREIGN KEY \`FK_c9c5d92154e4300bad54b7bbcc7\``);
+      await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP FOREIGN KEY \`FK_e4b8c5447b138bd2ce749274ae3\``);
+      await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP FOREIGN KEY \`FK_618449b41643adab8598b80e1b2\``);
+      await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP FOREIGN KEY \`FK_439dd686c1912533c380b783f0b\``);
+      await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP FOREIGN KEY \`FK_6df3d947b625cf6bd2ed856f632\``);
+      await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP FOREIGN KEY \`FK_75c3fa6ba71954e8586bfdbe725\``);
+      await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP FOREIGN KEY \`FK_b2f1dc00232220031a6921da1b9\``);
+      await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP FOREIGN KEY \`FK_b8fe43c84d0f765bba5f6bd054d\``);
+      await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP FOREIGN KEY \`FK_d298041d567d984ed6c0667c814\``);
+      await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP FOREIGN KEY \`FK_3a71f82d91a3809bd652cd80f1f\``);
+      await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP FOREIGN KEY \`FK_60085ab32808bc5f628fe3ca587\``);
+      await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP FOREIGN KEY \`FK_a84dd5170304562dbd58b37521e\``);
+      // Drop all columns
+      await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP COLUMN \`contributorVcID\``);
+      await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP COLUMN \`contributorUserID\``);
+      await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP COLUMN \`contributorOrganizationID\``);
+      await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP COLUMN \`messageID\``);
+      await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP COLUMN \`roomID\``);
+      await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP COLUMN \`contributionID\``);
+      await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP COLUMN \`calloutID\``);
+      await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP COLUMN \`invitationID\``);
+      await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP COLUMN \`applicationID\``);
+      await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP COLUMN \`userID\``);
+      await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP COLUMN \`organizationID\``);
+      await queryRunner.query(`ALTER TABLE \`in_app_notification\` DROP COLUMN \`spaceID\``);
     }
 
 }
