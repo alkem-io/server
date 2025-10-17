@@ -456,6 +456,21 @@ export class VirtualContributorService {
     );
   }
 
+  public async refreshAllBodiesOfKnowledge(agentInfo: AgentInfo) {
+    const virtualContributors = await this.getVirtualContributors();
+    for (const vc of virtualContributors) {
+      try {
+        await this.refreshBodyOfKnowledge(vc, agentInfo);
+      } catch (err) {
+        this.logger.error(
+          `Failed to refresh body of knowledge for VC ${vc.id}: ${err}`,
+          LogContext.VIRTUAL_CONTRIBUTOR
+        );
+      }
+    }
+    return true;
+  }
+
   // TODO: move to store
   async getVirtualContributors(
     args: ContributorQueryArgs = {}

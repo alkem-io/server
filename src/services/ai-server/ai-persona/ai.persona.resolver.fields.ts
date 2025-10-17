@@ -22,7 +22,7 @@ export class AiPersonaResolverFields {
   constructor(
     private authorizationService: AuthorizationService,
     private aiPersonaServiceService: AiPersonaService
-  ) {}
+  ) { }
 
   @ResolveField('promptGraph', () => PromptGraph, {
     nullable: true,
@@ -48,8 +48,24 @@ export class AiPersonaResolverFields {
       return aiPersona.promptGraph;
     }
 
-    if (aiPersona.engine === AiPersonaEngine.EXPERT) {
-      return graphJson;
+    if (
+      [AiPersonaEngine.EXPERT, AiPersonaEngine.LIBRA_FLOW].includes(
+        aiPersona.engine
+      )
+    ) {
+      // Clone the imported JSON to avoid mutating the module cache
+      const formattedGraph: any = JSON.parse(JSON.stringify(graphJson));
+
+      // If any node.prompt is stored as an array of lines, join them into a single string
+      if (formattedGraph && Array.isArray(formattedGraph.nodes)) {
+        formattedGraph.nodes.forEach((node: any) => {
+          if (node && Array.isArray(node.prompt)) {
+            node.prompt = node.prompt.join('\n');
+          }
+        });
+      }
+
+      return formattedGraph;
     }
 
     return null;

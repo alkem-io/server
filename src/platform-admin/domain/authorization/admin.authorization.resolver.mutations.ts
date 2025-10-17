@@ -28,6 +28,7 @@ import { InjectEntityManager } from '@nestjs/typeorm';
 import { SpaceService } from '@domain/space/space/space.service';
 import { Space } from '@domain/space/space/space.entity';
 import { SpaceLevel } from '@common/enums/space.level';
+import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 
 @InstrumentResolver()
 @Resolver()
@@ -43,7 +44,7 @@ export class AdminAuthorizationResolverMutations {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private authResetService: AuthResetService,
-    private aiPersonaService: AiPersonaService,
+    private virutualContributorService: VirtualContributorService,
     @InjectEntityManager('default')
     private entityManager: EntityManager,
     private spaceService: SpaceService
@@ -243,7 +244,9 @@ export class AdminAuthorizationResolverMutations {
       `reset authorization on platform: ${agentInfo.email}`
     );
 
-    return this.aiPersonaService.refreshAllBodiesOfKnowledge();
+    return this.virutualContributorService.refreshAllBodiesOfKnowledge(
+      agentInfo
+    );
   }
 
   private async notifyPlatformGlobalRoleChange(

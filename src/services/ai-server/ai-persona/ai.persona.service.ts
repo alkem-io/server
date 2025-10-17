@@ -34,7 +34,7 @@ export class AiPersonaService {
     private readonly crypto: EncryptionService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
-  ) {}
+  ) { }
 
   async createAiPersona(
     aiPersonaData: CreateAiPersonaInput,
@@ -168,7 +168,17 @@ export class AiPersonaService {
       input.engine === AiPersonaEngine.EXPERT &&
       !invocationInput.promptGraph
     ) {
-      input.promptGraph = graphJson;
+      // Deep-clone the imported graphJson so we don't mutate the module-level object
+      const processedGraph: any = JSON.parse(JSON.stringify(graphJson));
+
+      // For each node, if prompt is an array, concatenate it into a single string with new lines
+      processedGraph.nodes?.forEach((node: any) => {
+        if (Array.isArray(node.prompt)) {
+          node.prompt = node.prompt.join('\n');
+        }
+      });
+
+      input.promptGraph = processedGraph;
     }
 
     return this.aiPersonaEngineAdapter.invoke(input);
@@ -217,23 +227,5 @@ export class AiPersonaService {
       result.assistantId = this.crypto.decrypt(config.assistantId);
     }
     return result;
-  }
-
-  public async refreshAllBodiesOfKnowledge(): Promise<boolean> {
-    // Get all AI Personas and refresh their bodies of knowledge
-    const aiPersonas = await this.aiPersonaRepository.find();
-
-    for (const aiPersona of aiPersonas) {
-      this.logger.verbose?.(
-        `Refreshing body of knowledge for AI Persona ${aiPersona.id}`,
-        LogContext.AI_PERSONA
-      );
-      // TODO: Implement actual refresh logic
-      // For now, just update the lastUpdated timestamp
-      // aiPersona.bodyOfKnowledgeLastUpdated = new Date();
-      await this.aiPersonaRepository.save(aiPersona);
-    }
-
-    return true;
   }
 }
