@@ -1,4 +1,4 @@
-import { Brackets, Repository, In, UpdateResult } from 'typeorm';
+import { Brackets, Repository, In, Not, UpdateResult } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InAppNotification } from '@platform/in-app-notification/in.app.notification.entity';
@@ -228,7 +228,11 @@ export class InAppNotificationService {
     state: NotificationEventInAppState
   ): Promise<UpdateResult> {
     return this.inAppNotificationRepo.update(
-      { id: In(notificationIds), receiverID: userId },
+      {
+        id: In(notificationIds),
+        receiverID: userId,
+        state: Not(NotificationEventInAppState.ARCHIVED),
+      },
       { state }
     );
   }
@@ -237,6 +241,12 @@ export class InAppNotificationService {
     userId: string,
     state: NotificationEventInAppState
   ): Promise<UpdateResult> {
-    return this.inAppNotificationRepo.update({ receiverID: userId }, { state });
+    return this.inAppNotificationRepo.update(
+      {
+        receiverID: userId,
+        state: Not(NotificationEventInAppState.ARCHIVED),
+      },
+      { state }
+    );
   }
 }
