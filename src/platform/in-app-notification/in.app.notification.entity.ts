@@ -107,43 +107,47 @@ export class InAppNotification
     length: UUID_LENGTH,
     nullable: true,
     comment:
-      'FK to Callout Contribution - cascade deletes notification when Callout Contribution is deleted',
+      'FK to Callout Contribution - cascade deletes notification when Contribution is deleted',
   })
   contributionID?: string;
 
   @Column('char', {
     length: UUID_LENGTH,
     nullable: true,
-    comment: 'FK to Room - cascade deletes notification when room is deleted',
+    comment:
+      'FK to Room - cascade deletes notification when the room is deleted',
   })
   roomID?: string;
 
-  @Column('varchar', {
+  @Column('char', {
     length: 44,
     nullable: true,
     comment:
-      'External message ID (e.g., Matrix message ID) - stored as string, not a FK',
+      'Not actual FK - used to manually delete notification when the message is deleted',
   })
   messageID?: string;
 
   @Column('char', {
     length: UUID_LENGTH,
     nullable: true,
-    comment: 'FK to Organization - set for contributor notifications',
+    comment:
+      'FK to Organization - cascade deletes notification when organization contributor is deleted',
   })
   contributorOrganizationID?: string;
 
   @Column('char', {
     length: UUID_LENGTH,
     nullable: true,
-    comment: 'FK to User - set for contributor notifications',
+    comment:
+      'FK to User - cascade deletes notification when user contributor is deleted',
   })
   contributorUserID?: string;
 
   @Column('char', {
     length: UUID_LENGTH,
     nullable: true,
-    comment: 'FK to VC - set for contributor notifications',
+    comment:
+      'FK to VC - cascade deletes notification when VC contributor is deleted',
   })
   contributorVcID?: string;
 }
