@@ -60,7 +60,7 @@ export class NotificationEntityTracking1760357366405 implements MigrationInterfa
       const result: { notificationID: string; userID: string | null; orgID: string | null; vcID: string | null; }[] = await queryRunner.query(`
           SELECT in_app_notification.id as notificationID, user.id as userID, organization.id as orgID, virtual_contributor.id as vcID FROM in_app_notification
           LEFT JOIN user ON user.id = JSON_UNQUOTE(in_app_notification.payload->'$.contributorID')
-          LEFT JOIN organization ON organization.id = in_app_notification.payload->'$.contributorID'
+          LEFT JOIN organization ON organization.id = JSON_UNQUOTE(in_app_notification.payload->'$.contributorID')
           LEFT JOIN virtual_contributor ON virtual_contributor.id = JSON_UNQUOTE(in_app_notification.payload->'$.contributorID')
           WHERE JSON_UNQUOTE(payload->'$.type') = 'SPACE_COMMUNITY_CONTRIBUTOR';
       `);
