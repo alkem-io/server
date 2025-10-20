@@ -1,25 +1,19 @@
 // Schema diff tool type definitions (Feature 002)
 // NOTE: Scaffolding only; implementations deferred per tasks.md
 
-// Import and re-export shared ClassificationCount interface
+// Import and re-export shared types from schema-contract model
 import type { ClassificationCount } from '../../schema-contract/model/shared-types';
+import { ElementType, ChangeType } from '../../schema-contract/model/types';
 export type { ClassificationCount };
+export { ElementType, ChangeType };
 
-export type ChangeClassification =
-  | 'ADDITIVE'
-  | 'DEPRECATED'
-  | 'BREAKING'
-  | 'PREMATURE_REMOVAL'
-  | 'INVALID_DEPRECATION_FORMAT'
-  | 'DEPRECATION_GRACE'
-  | 'INFO'
-  | 'BASELINE';
+export type ChangeClassification = ChangeType;
 
 export interface ChangeEntry {
   id: string; // UUID placeholder
   element: string; // Fully qualified path
-  elementType: 'TYPE' | 'FIELD' | 'ENUM_VALUE' | 'SCALAR';
-  changeType: ChangeClassification;
+  elementType: ElementType;
+  changeType: ChangeType;
   detail: string;
   previous?: unknown;
   current?: unknown;
@@ -66,7 +60,7 @@ export interface ChangeReport {
 
 export interface DeprecationEntry {
   element: string;
-  elementType: 'FIELD' | 'ENUM_VALUE';
+  elementType: ElementType.FIELD | ElementType.ENUM_VALUE;
   sinceDate: string;
   removeAfter: string;
   humanReason: string;

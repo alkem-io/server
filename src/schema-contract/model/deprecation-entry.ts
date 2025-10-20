@@ -10,4 +10,5 @@ export interface DeprecationEntry {
   formatValid: boolean;
   retired: boolean;
   retirementDate?: string; // YYYY-MM-DD
+  firstCommit?: string; // git commit hash where deprecation first introduced (FR-005)
 }

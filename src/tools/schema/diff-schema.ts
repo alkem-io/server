@@ -17,12 +17,7 @@
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { execSync } from 'node:child_process';
-import { randomUUID, createHash } from 'node:crypto';
 import {
-  parse,
-  DocumentNode,
-  ObjectTypeDefinitionNode,
-  EnumTypeDefinitionNode,
   ScalarTypeDefinitionNode,
   FieldDefinitionNode,
   TypeNode,
@@ -31,11 +26,21 @@ import {
 import {
   ChangeReport,
   ChangeEntry,
-  ClassificationCount,
   DeprecationEntry,
+  ElementType,
+  ChangeType,
 } from './types';
 import { performOverrideEvaluation } from './override';
 import { parseDeprecationReason } from './deprecation-parser';
+import {
+  sha256,
+  emptyCounts,
+  baselineReport,
+  IndexedSchema,
+  indexSDL,
+  DiffContext,
+  pushEntry,
+} from '../../schema-contract/diff/diff-core';
 
 interface Args {
   oldPath: string | null;
@@ -61,50 +66,6 @@ function parseArgs(): Args {
     outPath: args.out || 'change-report.json',
     deprecationsPath: args.deprecations,
   };
-}
-
-function sha256(content: string): string {
-  return createHash('sha256').update(content, 'utf8').digest('hex');
-}
-
-function emptyCounts(): ClassificationCount {
-  return {
-    additive: 0,
-    deprecated: 0,
-    breaking: 0,
-    prematureRemoval: 0,
-    invalidDeprecation: 0,
-    deprecationGrace: 0,
-    info: 0,
-    baseline: 0,
-  };
-}
-
-function baselineReport(sdl: string): ChangeReport {
-  return {
-    snapshotId: sha256(sdl),
-    baseSnapshotId: null,
-    generatedAt: new Date().toISOString(),
-    classifications: emptyCounts(),
-    entries: [
-      {
-        id: randomUUID(),
-        element: 'SCHEMA',
-        elementType: 'TYPE',
-        changeType: 'BASELINE',
-        detail: 'Initial baseline snapshot created',
-      },
-    ],
-    overrideApplied: false,
-  };
-}
-
-interface IndexedSchema {
-  doc: DocumentNode;
-  types: Record<string, ObjectTypeDefinitionNode>;
-  enums: Record<string, EnumTypeDefinitionNode>;
-  scalars: Record<string, ScalarTypeDefinitionNode>;
-  rawSDL: string;
 }
 
 // ---- Scalar JSON Type Inference Helpers (FR-017..FR-019) ----
@@ -136,29 +97,6 @@ function extractScalarJsonType(s: ScalarTypeDefinitionNode): string {
     return 'number';
   if (name.includes('boolean') || name === 'bool') return 'boolean';
   return 'unknown';
-}
-
-function indexSDL(sdl: string): IndexedSchema {
-  const doc = parse(sdl, { noLocation: true });
-  const types: Record<string, ObjectTypeDefinitionNode> = {};
-  const enums: Record<string, EnumTypeDefinitionNode> = {};
-  const scalars: Record<string, ScalarTypeDefinitionNode> = {};
-  for (const def of doc.definitions) {
-    switch (def.kind) {
-      case 'ObjectTypeDefinition':
-        if (def.name?.value) types[def.name.value] = def;
-        break;
-      case 'EnumTypeDefinition':
-        if (def.name?.value) enums[def.name.value] = def;
-        break;
-      case 'ScalarTypeDefinition':
-        if (def.name?.value) scalars[def.name.value] = def;
-        break;
-      default:
-        break;
-    }
-  }
-  return { doc, types, enums, scalars, rawSDL: sdl };
 }
 
 function getDeprecationDirective(node: {
@@ -196,45 +134,6 @@ function isNonNull(node: TypeNode): boolean {
 
 // (helper unwrapNonNull removed – not yet needed for current diff logic)
 
-interface DiffContext {
-  entries: ChangeEntry[];
-  counts: ClassificationCount;
-  deprecations: DeprecationEntry[];
-  previousDeprecations: Map<string, DeprecationEntry>;
-  headCommit?: string;
-}
-
-function pushEntry(ctx: DiffContext, entry: Omit<ChangeEntry, 'id'>) {
-  ctx.entries.push({ id: randomUUID(), ...entry });
-  switch (entry.changeType) {
-    case 'ADDITIVE':
-      ctx.counts.additive++;
-      break;
-    case 'DEPRECATED':
-      ctx.counts.deprecated++;
-      break;
-    case 'BREAKING':
-      ctx.counts.breaking++;
-      break;
-    case 'PREMATURE_REMOVAL':
-      ctx.counts.prematureRemoval++;
-      break;
-    case 'INVALID_DEPRECATION_FORMAT':
-      ctx.counts.invalidDeprecation++;
-      break;
-    case 'DEPRECATION_GRACE':
-      if (typeof ctx.counts.deprecationGrace === 'number') {
-        ctx.counts.deprecationGrace++;
-      }
-      break;
-    case 'INFO':
-      ctx.counts.info++;
-      break;
-    default:
-      break;
-  }
-}
-
 function diffTypes(
   oldIdx: IndexedSchema,
   newIdx: IndexedSchema,
@@ -249,8 +148,8 @@ function diffTypes(
     if (!o && n) {
       pushEntry(ctx, {
         element: name,
-        elementType: 'TYPE',
-        changeType: 'ADDITIVE',
+        elementType: ElementType.TYPE,
+        changeType: ChangeType.ADDITIVE,
         detail: `Type added: ${name}`,
       });
       continue;
@@ -258,8 +157,8 @@ function diffTypes(
     if (o && !n) {
       pushEntry(ctx, {
         element: name,
-        elementType: 'TYPE',
-        changeType: 'BREAKING',
+        elementType: ElementType.TYPE,
+        changeType: ChangeType.BREAKING,
         detail: `Type removed: ${name}`,
       });
       continue;
@@ -286,8 +185,8 @@ function diffTypes(
         if (!of && nf) {
           pushEntry(ctx, {
             element: `${name}.${fname}`,
-            elementType: 'FIELD',
-            changeType: 'ADDITIVE',
+            elementType: ElementType.FIELD,
+            changeType: ChangeType.ADDITIVE,
             detail: `Field added: ${name}.${fname} : ${printTypeNode(nf.type)}`,
           });
           continue;
@@ -299,8 +198,8 @@ function diffTypes(
           if (!dep) {
             pushEntry(ctx, {
               element: key,
-              elementType: 'FIELD',
-              changeType: 'BREAKING',
+              elementType: ElementType.FIELD,
+              changeType: ChangeType.BREAKING,
               detail: `Field removed without prior deprecation: ${key}`,
             });
             continue;
@@ -309,8 +208,8 @@ function diffTypes(
           if (!parsed.formatValid || !parsed.removeAfter) {
             pushEntry(ctx, {
               element: key,
-              elementType: 'FIELD',
-              changeType: 'BREAKING',
+              elementType: ElementType.FIELD,
+              changeType: ChangeType.BREAKING,
               detail: `Field removed but deprecation reason invalid: ${key}`,
               deprecationFormatValid: false,
             });
@@ -324,8 +223,8 @@ function diffTypes(
             // Missing historical entry; treat as breaking because lifecycle cannot be proven
             pushEntry(ctx, {
               element: key,
-              elementType: 'FIELD',
-              changeType: 'BREAKING',
+              elementType: ElementType.FIELD,
+              changeType: ChangeType.BREAKING,
               detail: `Field removed but no recorded sinceDate in registry: ${key}`,
             });
             continue;
@@ -339,8 +238,8 @@ function diffTypes(
           if (windowMet && minDaysMet) {
             pushEntry(ctx, {
               element: key,
-              elementType: 'FIELD',
-              changeType: 'INFO',
+              elementType: ElementType.FIELD,
+              changeType: ChangeType.INFO,
               detail: `Field retired after deprecation window: ${key}`,
               deprecationFormatValid: true,
               removeAfter: parsed.removeAfter,
@@ -348,7 +247,7 @@ function diffTypes(
             });
             ctx.deprecations.push({
               element: key,
-              elementType: 'FIELD',
+              elementType: ElementType.FIELD,
               sinceDate,
               removeAfter: parsed.removeAfter,
               humanReason: parsed.humanReason || '',
@@ -360,8 +259,10 @@ function diffTypes(
           } else {
             pushEntry(ctx, {
               element: key,
-              elementType: 'FIELD',
-              changeType: windowMet ? 'BREAKING' : 'PREMATURE_REMOVAL',
+              elementType: ElementType.FIELD,
+              changeType: windowMet
+                ? ChangeType.BREAKING
+                : ChangeType.PREMATURE_REMOVAL,
               detail: windowMet
                 ? `Field removed but 90-day window not satisfied (elapsed ${daysElapsed}): ${key}`
                 : `Field removal premature (before ${parsed.removeAfter}): ${key}`,
@@ -387,15 +288,15 @@ function diffTypes(
             );
             let changeType: ChangeEntry['changeType'];
             if (parsed.formatValid) {
-              changeType = 'DEPRECATED';
+              changeType = ChangeType.DEPRECATED;
             } else if (parsed.warnings.length > 0) {
-              changeType = 'DEPRECATION_GRACE';
+              changeType = ChangeType.DEPRECATION_GRACE;
             } else {
-              changeType = 'INVALID_DEPRECATION_FORMAT';
+              changeType = ChangeType.INVALID_DEPRECATION_FORMAT;
             }
             pushEntry(ctx, {
               element: `${name}.${fname}`,
-              elementType: 'FIELD',
+              elementType: ElementType.FIELD,
               changeType,
               detail: parsed.formatValid
                 ? `Field deprecated with removal target ${parsed.removeAfter}`
@@ -404,9 +305,9 @@ function diffTypes(
                   : `Invalid deprecation reason format on field ${name}.${fname}`,
               deprecationFormatValid: parsed.formatValid,
               removeAfter: parsed.removeAfter,
-              grace: changeType === 'DEPRECATION_GRACE',
+              grace: changeType === ChangeType.DEPRECATION_GRACE,
               graceExpiresAt:
-                changeType === 'DEPRECATION_GRACE'
+                changeType === ChangeType.DEPRECATION_GRACE
                   ? new Date(
                       introducedAt.getTime() + 24 * 3600 * 1000
                     ).toISOString()
@@ -430,10 +331,10 @@ function diffTypes(
               if (deltaDays < 90) {
                 // Mark change entry invalid instead (retroactively adjust)
                 ctx.entries = ctx.entries.map(e =>
-                  e.element === key && e.changeType === 'DEPRECATED'
+                  e.element === key && e.changeType === ChangeType.DEPRECATED
                     ? {
                         ...e,
-                        changeType: 'INVALID_DEPRECATION_FORMAT',
+                        changeType: ChangeType.INVALID_DEPRECATION_FORMAT,
                         detail: `Removal window <90 days (${deltaDays}) for ${key}`,
                       }
                     : e
@@ -441,7 +342,7 @@ function diffTypes(
               } else {
                 ctx.deprecations.push({
                   element: key,
-                  elementType: 'FIELD',
+                  elementType: ElementType.FIELD,
                   sinceDate,
                   removeAfter: parsed.removeAfter,
                   humanReason: parsed.humanReason || '',
@@ -458,18 +359,18 @@ function diffTypes(
             // Widening (non-nullable -> nullable) is potentially additive for clients tolerant of nulls, classify as INFO for now.
             const oldNonNull = isNonNull(of.type);
             const newNonNull = isNonNull(nf.type);
-            let changeType: ChangeEntry['changeType'] = 'BREAKING';
+            let changeType: ChangeEntry['changeType'] = ChangeType.BREAKING;
             if (oldNonNull && !newNonNull) {
-              changeType = 'INFO'; // widening
+              changeType = ChangeType.INFO; // widening
             } else if (!oldNonNull && newNonNull) {
-              changeType = 'BREAKING'; // narrowing
+              changeType = ChangeType.BREAKING; // narrowing
             } else if (oldNonNull === newNonNull) {
               // Same nullability but different named/list type -> BREAKING
-              changeType = 'BREAKING';
+              changeType = ChangeType.BREAKING;
             }
             pushEntry(ctx, {
               element: `${name}.${fname}`,
-              elementType: 'FIELD',
+              elementType: ElementType.FIELD,
               changeType,
               detail: `Field type changed: ${oldTypeStr} -> ${newTypeStr}`,
             });
@@ -481,8 +382,8 @@ function diffTypes(
           if (oldDesc !== newDesc) {
             pushEntry(ctx, {
               element: `${name}.${fname}`,
-              elementType: 'FIELD',
-              changeType: 'INFO',
+              elementType: ElementType.FIELD,
+              changeType: ChangeType.INFO,
               detail: `Description changed for ${name}.${fname}`,
             });
           }
@@ -507,8 +408,8 @@ function diffEnums(
     if (!o && n) {
       pushEntry(ctx, {
         element: name,
-        elementType: 'TYPE',
-        changeType: 'ADDITIVE',
+        elementType: ElementType.TYPE,
+        changeType: ChangeType.ADDITIVE,
         detail: `Enum added: ${name}`,
       });
       continue;
@@ -516,8 +417,8 @@ function diffEnums(
     if (o && !n) {
       pushEntry(ctx, {
         element: name,
-        elementType: 'TYPE',
-        changeType: 'BREAKING',
+        elementType: ElementType.TYPE,
+        changeType: ChangeType.BREAKING,
         detail: `Enum removed: ${name}`,
       });
       continue;
@@ -529,8 +430,8 @@ function diffEnums(
         if (!oldVals.has(v)) {
           pushEntry(ctx, {
             element: `${name}.${v}`,
-            elementType: 'ENUM_VALUE',
-            changeType: 'ADDITIVE',
+            elementType: ElementType.ENUM_VALUE,
+            changeType: ChangeType.ADDITIVE,
             detail: `Enum value added: ${v}`,
           });
         } else {
@@ -549,15 +450,15 @@ function diffEnums(
               );
               let changeType: ChangeEntry['changeType'];
               if (parsed.formatValid) {
-                changeType = 'DEPRECATED';
+                changeType = ChangeType.DEPRECATED;
               } else if (parsed.warnings.length > 0) {
-                changeType = 'DEPRECATION_GRACE';
+                changeType = ChangeType.DEPRECATION_GRACE;
               } else {
-                changeType = 'INVALID_DEPRECATION_FORMAT';
+                changeType = ChangeType.INVALID_DEPRECATION_FORMAT;
               }
               pushEntry(ctx, {
                 element: `${name}.${v}`,
-                elementType: 'ENUM_VALUE',
+                elementType: ElementType.ENUM_VALUE,
                 changeType,
                 detail: parsed.formatValid
                   ? `Enum value deprecated with removal target ${parsed.removeAfter}`
@@ -566,9 +467,9 @@ function diffEnums(
                     : `Invalid deprecation reason format on enum value ${name}.${v}`,
                 deprecationFormatValid: parsed.formatValid,
                 removeAfter: parsed.removeAfter,
-                grace: changeType === 'DEPRECATION_GRACE',
+                grace: changeType === ChangeType.DEPRECATION_GRACE,
                 graceExpiresAt:
-                  changeType === 'DEPRECATION_GRACE'
+                  changeType === ChangeType.DEPRECATION_GRACE
                     ? new Date(
                         introducedAt.getTime() + 24 * 3600 * 1000
                       ).toISOString()
@@ -590,10 +491,10 @@ function diffEnums(
                 );
                 if (deltaDays < 90) {
                   ctx.entries = ctx.entries.map(e =>
-                    e.element === key && e.changeType === 'DEPRECATED'
+                    e.element === key && e.changeType === ChangeType.DEPRECATED
                       ? {
                           ...e,
-                          changeType: 'INVALID_DEPRECATION_FORMAT',
+                          changeType: ChangeType.INVALID_DEPRECATION_FORMAT,
                           detail: `Removal window <90 days (${deltaDays}) for ${key}`,
                         }
                       : e
@@ -601,7 +502,7 @@ function diffEnums(
                 } else {
                   ctx.deprecations.push({
                     element: key,
-                    elementType: 'ENUM_VALUE',
+                    elementType: ElementType.ENUM_VALUE,
                     sinceDate,
                     removeAfter: parsed.removeAfter,
                     humanReason: parsed.humanReason || '',
@@ -623,8 +524,8 @@ function diffEnums(
           if (!dep) {
             pushEntry(ctx, {
               element: `${name}.${v}`,
-              elementType: 'ENUM_VALUE',
-              changeType: 'BREAKING',
+              elementType: ElementType.ENUM_VALUE,
+              changeType: ChangeType.BREAKING,
               detail: `Enum value removed without prior deprecation: ${v}`,
             });
           } else {
@@ -632,8 +533,8 @@ function diffEnums(
             if (!parsed.formatValid) {
               pushEntry(ctx, {
                 element: `${name}.${v}`,
-                elementType: 'ENUM_VALUE',
-                changeType: 'BREAKING',
+                elementType: ElementType.ENUM_VALUE,
+                changeType: ChangeType.BREAKING,
                 detail: `Enum value removed but prior deprecation format invalid: ${v}`,
                 deprecationFormatValid: false,
               });
@@ -648,8 +549,8 @@ function diffEnums(
               if (!sinceDate) {
                 pushEntry(ctx, {
                   element: key,
-                  elementType: 'ENUM_VALUE',
-                  changeType: 'BREAKING',
+                  elementType: ElementType.ENUM_VALUE,
+                  changeType: ChangeType.BREAKING,
                   detail: `Enum value removed but no recorded sinceDate in registry: ${v}`,
                   deprecationFormatValid: true,
                   removeAfter: parsed.removeAfter,
@@ -665,8 +566,8 @@ function diffEnums(
                 if (windowMet && minDaysMet) {
                   pushEntry(ctx, {
                     element: key,
-                    elementType: 'ENUM_VALUE',
-                    changeType: 'INFO',
+                    elementType: ElementType.ENUM_VALUE,
+                    changeType: ChangeType.INFO,
                     detail: `Enum value retired after deprecation window: ${v}`,
                     deprecationFormatValid: true,
                     removeAfter: parsed.removeAfter,
@@ -674,7 +575,7 @@ function diffEnums(
                   });
                   ctx.deprecations.push({
                     element: key,
-                    elementType: 'ENUM_VALUE',
+                    elementType: ElementType.ENUM_VALUE,
                     sinceDate,
                     removeAfter: parsed.removeAfter!,
                     humanReason: parsed.humanReason || '',
@@ -686,8 +587,10 @@ function diffEnums(
                 } else {
                   pushEntry(ctx, {
                     element: key,
-                    elementType: 'ENUM_VALUE',
-                    changeType: windowMet ? 'BREAKING' : 'PREMATURE_REMOVAL',
+                    elementType: ElementType.ENUM_VALUE,
+                    changeType: windowMet
+                      ? ChangeType.BREAKING
+                      : ChangeType.PREMATURE_REMOVAL,
                     detail: windowMet
                       ? `Enum value removed but 90-day window not satisfied (elapsed ${daysElapsed}): ${v}`
                       : `Enum value removal premature (before ${parsed.removeAfter}): ${v}`,
@@ -722,8 +625,8 @@ function diffScalars(
       const currType = extractScalarJsonType(n);
       pushEntry(ctx, {
         element: name,
-        elementType: 'SCALAR',
-        changeType: 'ADDITIVE',
+        elementType: ElementType.SCALAR,
+        changeType: ChangeType.ADDITIVE,
         detail: `Scalar added: ${name}`,
         current: { jsonType: currType },
       });
@@ -739,8 +642,8 @@ function diffScalars(
       const prevType = extractScalarJsonType(o);
       pushEntry(ctx, {
         element: name,
-        elementType: 'SCALAR',
-        changeType: 'BREAKING',
+        elementType: ElementType.SCALAR,
+        changeType: ChangeType.BREAKING,
         detail: `Scalar removed: ${name}`,
         previous: { jsonType: prevType },
       });
@@ -761,8 +664,8 @@ function diffScalars(
       if (prevType !== currType) {
         pushEntry(ctx, {
           element: name,
-          elementType: 'SCALAR',
-          changeType: 'BREAKING',
+          elementType: ElementType.SCALAR,
+          changeType: ChangeType.BREAKING,
           detail: `Scalar JSON type category changed: ${name} ${prevType}->${currType}`,
           previous: { jsonType: prevType },
           current: { jsonType: currType },
@@ -778,8 +681,8 @@ function diffScalars(
         if (oldDesc !== newDesc) {
           pushEntry(ctx, {
             element: name,
-            elementType: 'SCALAR',
-            changeType: 'INFO',
+            elementType: ElementType.SCALAR,
+            changeType: ChangeType.INFO,
             detail: `Scalar description changed: ${name}`,
           });
         }
@@ -829,7 +732,7 @@ function buildReport(
       ];
       // Mark each breaking entry with override flag
       report.entries = report.entries.map(e =>
-        e.changeType === 'BREAKING' ? { ...e, override: true } : e
+        e.changeType === ChangeType.BREAKING ? { ...e, override: true } : e
       );
     } else {
       report.notes = [

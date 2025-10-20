@@ -13,7 +13,11 @@ export interface ChangeEntry {
   deprecationFormatValid?: boolean;
   removeAfter?: string; // YYYY-MM-DD
   sinceDate?: string; // YYYY-MM-DD
+  firstCommit?: string; // git commit hash where deprecation first introduced (FR-005)
   override?: boolean;
+  // FR-014 grace period support
+  grace?: boolean; // true if within 24h grace for missing REMOVE_AFTER
+  graceExpiresAt?: string; // ISO timestamp when grace ends
 }
 
 export interface EnumLifecycleEvaluation {

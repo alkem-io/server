@@ -74,7 +74,7 @@ export interface DiffContext {
   deprecations: DeprecationEntry[];
   previousDeprecations: Map<string, DeprecationEntry>;
   headCommit?: string;
-  scalarEvaluations?: any[]; // refined later
+  scalarEvaluations?: any[];
 }
 
 export function createDiffContext(
@@ -109,6 +109,11 @@ export function pushEntry(ctx: DiffContext, entry: Omit<ChangeEntry, 'id'>) {
       break;
     case ChangeType.INVALID_DEPRECATION_FORMAT:
       ctx.counts.invalidDeprecation++;
+      break;
+    case ChangeType.DEPRECATION_GRACE:
+      if (typeof ctx.counts.deprecationGrace === 'number') {
+        ctx.counts.deprecationGrace++;
+      }
       break;
     case ChangeType.INFO:
       ctx.counts.info++;
