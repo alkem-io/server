@@ -27,14 +27,15 @@ async function main() {
     ? ['log', 'error', 'warn', 'debug', 'verbose']
     : ['error', 'warn'];
 
-  // Dynamically import modules only after the global handlers and setup complete.
-  const { AppModule } = await import('../../src/app.module');
-  const { SchemaBootstrapModule } = await import(
-    '../../src/schema-bootstrap/module.schema-bootstrap'
-  );
-  const rootModule = useLight ? SchemaBootstrapModule : AppModule;
   let app: any | undefined;
   try {
+    // Dynamically import modules only after the global handlers and setup complete.
+    const { AppModule } = await import('../../src/app.module');
+    const { SchemaBootstrapModule } = await import(
+      '../../src/schema-bootstrap/module.schema-bootstrap'
+    );
+    const rootModule = useLight ? SchemaBootstrapModule : AppModule;
+
     process.stderr.write(
       `[debug] Creating application context with logger levels: ${loggerLevels.join(
         ', '
