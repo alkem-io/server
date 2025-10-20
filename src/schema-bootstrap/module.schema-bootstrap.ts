@@ -137,6 +137,8 @@ const STUB_PROVIDERS = [
       verbose: () => undefined,
     },
   },
+  // WARNING: Passthrough stub for schema emission only.
+  // Never use SchemaBootstrapModule in any context that handles sensitive data.
   {
     provide: EncryptionService,
     useValue: {
