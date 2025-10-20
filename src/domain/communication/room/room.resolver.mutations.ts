@@ -487,9 +487,7 @@ export class RoomResolverMutations {
       agentInfo.communicationID,
       messageData
     );
-    await this.inAppNotificationService.deleteAllByMessageId(
-      messageData.messageID
-    );
+    await this.inAppNotificationService.deleteAllByMessageId(messageID);
     await this.roomServiceEvents.processActivityMessageRemoved(
       messageID,
       agentInfo

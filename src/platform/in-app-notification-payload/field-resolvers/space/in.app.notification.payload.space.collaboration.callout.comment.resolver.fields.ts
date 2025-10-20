@@ -28,8 +28,8 @@ export class InAppNotificationPayloadSpaceCollaborationCalloutCommentResolverFie
     @Parent()
     payload: InAppNotificationPayloadSpaceCollaborationCalloutComment,
     @Loader(SpaceLoaderCreator)
-    loader: ILoader<ISpace | null>
-  ): Promise<ISpace | null> {
+    loader: ILoader<ISpace>
+  ): Promise<ISpace> {
     return loader.load(payload.spaceID);
   }
 

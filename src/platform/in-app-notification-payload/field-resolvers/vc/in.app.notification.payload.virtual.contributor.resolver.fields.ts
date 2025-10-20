@@ -16,9 +16,9 @@ export class InAppNotificationPayloadVirtualContributorFieldsResolver {
   })
   async contributor(
     @Parent() payload: InAppNotificationPayloadVirtualContributor,
-    @Loader(ContributorLoaderCreator, { resolveToNull: true })
-    loader: ILoader<IVirtualContributor | null>
-  ): Promise<IVirtualContributor | null> {
+    @Loader(ContributorLoaderCreator)
+    loader: ILoader<IVirtualContributor>
+  ): Promise<IVirtualContributor> {
     return loader.load(payload.virtualContributorID);
   }
 

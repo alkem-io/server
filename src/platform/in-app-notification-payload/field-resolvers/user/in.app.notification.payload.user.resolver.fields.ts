@@ -6,7 +6,7 @@ import { Resolver, ResolveField, Parent } from '@nestjs/graphql';
 import { InAppNotificationPayloadUser } from '../../dto/user/notification.in.app.payload.user';
 
 @Resolver(() => InAppNotificationPayloadUser)
-export class InAppNotificationPayloadUserMessageDirectResolverFields {
+export class InAppNotificationPayloadUserResolverFields {
   @ResolveField(() => IUser, {
     nullable: false,
   })

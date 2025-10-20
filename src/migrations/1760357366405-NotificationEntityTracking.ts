@@ -45,7 +45,7 @@ export class NotificationEntityTracking1760357366405 implements MigrationInterfa
       const data: { id: string; contributionParentID: string; }[] = await queryRunner.query(`
           SELECT in_app_notification.id, callout_contribution.id as contributionParentID from in_app_notification
           LEFT JOIN callout_contribution ON callout_contribution.postId = JSON_UNQUOTE(in_app_notification.payload->'$.contributionID')
-          WHERE payload->'$.type' = 'SPACE_COLLABORATION_CALLOUT_POST_COMMENT';
+          WHERE payload->'$.type' = 'SPACE_COLLABORATION_CALLOUT_POST_COMMENT' AND contributionParentID IS NOT NULL;
       `);
       for (const { id, contributionParentID } of data) {
         // payload.contributionID to be the ACTUAL contributionID instead of the postID
@@ -145,7 +145,7 @@ export class NotificationEntityTracking1760357366405 implements MigrationInterfa
           UPDATE in_app_notification
           SET messageID = JSON_UNQUOTE(JSON_EXTRACT(payload, '$.messageID'))
           WHERE JSON_EXTRACT(payload, '$.messageID') IS NOT NULL
-          AND roomID IS NULL
+          AND messageID IS NULL
       `);
       // ==================== STEP 3: Clean up orphaned notifications ====================
       // Delete notifications where referenced entities no longer exist (including invalid receiverID)
