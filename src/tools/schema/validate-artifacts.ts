@@ -1,4 +1,4 @@
-#!/usr/bin/env ts-node
+#!/usr/bin/env npx ts-node
 // Validates change-report.json and deprecations.json against JSON Schemas
 import { readFileSync } from 'node:fs';
 import Ajv from 'ajv';
