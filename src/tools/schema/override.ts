@@ -133,24 +133,24 @@ export async function performOverrideEvaluationAsync(): Promise<OverrideEvaluati
 // Backwards compatible sync wrapper used by CLI code paths. It will attempt env reviews first;
 // if network fetch is needed it performs a short timed wait on the async function (<=3s) but
 // test code should prefer performOverrideEvaluationAsync for determinism.
+// Synchronous-only evaluation used by CLI and other sync callers.
+// Important: this function will NOT perform any network fetches. It only
+// consumes reviews provided via environment variables (`SCHEMA_OVERRIDE_REVIEWS_JSON`
+// or `SCHEMA_OVERRIDE_REVIEWS_FILE`). If you need to fetch reviews from the
+// network (e.g. GitHub API), call `performOverrideEvaluationAsync()` instead.
 export function performOverrideEvaluation(): OverrideEvaluation {
-  let result: OverrideEvaluation | undefined;
-  let settled = false;
-  performOverrideEvaluationAsync().then(r => {
-    result = r;
-    settled = true;
-  });
-  const start = Date.now();
-  while (!settled && Date.now() - start < 3000) {
-    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 25);
-  }
-  return (
-    result || {
-      applied: false,
-      owners: parseCodeOwners(
-        process.env.SCHEMA_OVERRIDE_CODEOWNERS_PATH || 'CODEOWNERS'
-      ),
-      details: ['Timeout waiting for async override evaluation'],
-    }
+  const owners = parseCodeOwners(
+    process.env.SCHEMA_OVERRIDE_CODEOWNERS_PATH || 'CODEOWNERS'
   );
+  const reviews = loadReviewsFromEnv();
+  if (!reviews.length) {
+    return {
+      applied: false,
+      owners,
+      details: [
+        'No reviews provided via environment. Use performOverrideEvaluationAsync() to fetch reviews from network when needed',
+      ],
+    };
+  }
+  return evaluateOverride(owners, reviews);
 }

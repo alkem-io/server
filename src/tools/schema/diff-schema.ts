@@ -30,7 +30,7 @@ import {
   ElementType,
   ChangeType,
 } from './types';
-import { performOverrideEvaluation } from './override';
+import { performOverrideEvaluationAsync } from './override';
 import { parseDeprecationReason } from './deprecation-parser';
 import {
   sha256,
@@ -699,11 +699,11 @@ function diffScalars(
   if (scalarEvaluations.length) ctx.scalarEvaluations = scalarEvaluations;
 }
 
-function buildReport(
+async function buildReport(
   oldSDL: string,
   newSDL: string,
   ctx: DiffContext
-): ChangeReport {
+): Promise<ChangeReport> {
   const oldIdx = indexSDL(oldSDL);
   const newIdx = indexSDL(newSDL);
   diffTypes(oldIdx, newIdx, ctx);
@@ -721,7 +721,8 @@ function buildReport(
     report.scalarEvaluations = ctx.scalarEvaluations;
   }
   if (ctx.counts.breaking > 0) {
-    const override = performOverrideEvaluation();
+    // Use async override evaluation when network fetch fallback may be needed.
+    const override = await performOverrideEvaluationAsync();
     if (override.applied) {
       report.overrideApplied = true;
       report.overrideReviewer = override.reviewer;
@@ -744,7 +745,7 @@ function buildReport(
   return report;
 }
 
-function main() {
+async function main() {
   const args = parseArgs();
   const newSDL = readFileSync(args.newPath, 'utf-8');
   if (!args.oldPath) {
@@ -794,7 +795,7 @@ function main() {
     previousDeprecations,
     headCommit,
   };
-  const report = buildReport(oldSDL, newSDL, diffCtx);
+  const report = await buildReport(oldSDL, newSDL, diffCtx);
   writeFileSync(args.outPath, JSON.stringify(report, null, 2));
   if (args.deprecationsPath) {
     writeFileSync(

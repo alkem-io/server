@@ -1,5 +1,3 @@
-// Remove the `@ts-nocheck` at the top of the file
-
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { GraphQLSchemaHost } from '@nestjs/graphql';
@@ -32,45 +30,6 @@ async function captureSchema(
     logger: false,
   });
   try {
-    // …
-import 'reflect-metadata';
-import { NestFactory } from '@nestjs/core';
-import { GraphQLSchemaHost } from '@nestjs/graphql';
-import { printSchema, parse, print, buildSchema } from 'graphql';
-import { existsSync, mkdtempSync, unlinkSync, writeFileSync } from 'fs';
-import { join } from 'path';
-import { tmpdir } from 'os';
-import { AppModule } from '@src/app.module';
-import { SchemaBootstrapModule } from '@src/schema-bootstrap/module.schema-bootstrap';
-
-/**
- * @param {import('graphql').GraphQLSchema} schema
- */
-function normalizeSDL(schema) {
-  const rawSDL = printSchema(schema);
-  const parsed = parse(rawSDL, { noLocation: true });
-  return print(parsed).trim();
-}
-
-/**
- * @param {string} sdl
- */
-function countTypes(sdl) {
-  const schema = buildSchema(sdl);
-  return Object.keys(schema.getTypeMap()).filter(name => !name.startsWith('__'))
-    .length;
-}
-
-/**
- * @param {Parameters<typeof NestFactory.createApplicationContext>[0]} moduleRef
- * @returns {Promise<{sdl: string; durationMs: number; typeCount: number}>}
- */
-async function captureSchema(moduleRef) {
-  const startedAt = Date.now();
-  const app = await NestFactory.createApplicationContext(moduleRef, {
-    logger: false,
-  });
-  try {
     const host = app.get(GraphQLSchemaHost, { strict: false });
     if (!host?.schema) {
       throw new Error('GraphQL schema is not available');
@@ -87,8 +46,7 @@ async function captureSchema(moduleRef) {
 }
 
 describe('Schema bootstrap parity', () => {
-  /** @type {(() => void) | undefined} */
-  let cleanupTlsFile;
+  let cleanupTlsFile: (() => void) | undefined;
 
   beforeAll(() => {
     if (!process.env.WINGBACK_TLS_CERT_PATH) {
@@ -102,7 +60,7 @@ describe('Schema bootstrap parity', () => {
         }
       };
     } else if (!existsSync(process.env.WINGBACK_TLS_CERT_PATH)) {
-      const tlsPath = process.env.WINGBACK_TLS_CERT_PATH;
+      const tlsPath = process.env.WINGBACK_TLS_CERT_PATH as string;
       writeFileSync(tlsPath, '');
       cleanupTlsFile = () => {
         if (existsSync(tlsPath)) {
