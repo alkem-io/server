@@ -19,8 +19,10 @@
 /src/services/external/elasticsearch/ @hero101
 /src/services/external/elasticsearch/** @hero101
 /src/domain/**/contribution* @hero101
-/src/**/reporter* @hero101
-/src/**/reporting* @hero101
+/src/**/*reporter/ @hero101
+/src/**/*reporter/** @hero101
+/src/**/*reporting/ @hero101
+/src/**/*reporting/** @hero101
 
 # Pagination ownership
 # Patterns matching pagination utilities, paginators, and pagination docs
