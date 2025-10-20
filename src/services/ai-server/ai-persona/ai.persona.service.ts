@@ -34,7 +34,7 @@ export class AiPersonaService {
     private readonly crypto: EncryptionService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
-  ) { }
+  ) {}
 
   async createAiPersona(
     aiPersonaData: CreateAiPersonaInput,
@@ -169,7 +169,7 @@ export class AiPersonaService {
       !invocationInput.promptGraph
     ) {
       // Deep-clone the imported graphJson so we don't mutate the module-level object
-      const processedGraph: any = JSON.parse(JSON.stringify(graphJson));
+      const processedGraph = JSON.parse(JSON.stringify(graphJson));
 
       // For each node, if prompt is an array, concatenate it into a single string with new lines
       processedGraph.nodes?.forEach((node: any) => {

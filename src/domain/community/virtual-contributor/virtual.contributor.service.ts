@@ -346,7 +346,8 @@ export class VirtualContributorService {
         });
       } catch {
         this.logger.error(
-          `Failed to delete external AI Persona ${virtualContributor.aiPersonaID} for VC ${virtualContributorID}`,
+          'Failed to delete external AI Persona.',
+          { aiPersonaID: virtualContributor.aiPersonaID, virtualContributorID },
           LogContext.AI_PERSONA
         );
       }
@@ -461,9 +462,10 @@ export class VirtualContributorService {
     for (const vc of virtualContributors) {
       try {
         await this.refreshBodyOfKnowledge(vc, agentInfo);
-      } catch (err) {
+      } catch (error) {
         this.logger.error(
-          `Failed to refresh body of knowledge for VC ${vc.id}: ${err}`,
+          'Failed to refresh body of knowledge for VC.',
+          { virtualContributorID: vc.id, error },
           LogContext.VIRTUAL_CONTRIBUTOR
         );
       }

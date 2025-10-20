@@ -22,7 +22,7 @@ export class AiPersonaResolverFields {
   constructor(
     private authorizationService: AuthorizationService,
     private aiPersonaServiceService: AiPersonaService
-  ) { }
+  ) {}
 
   @ResolveField('promptGraph', () => PromptGraph, {
     nullable: true,
@@ -54,7 +54,7 @@ export class AiPersonaResolverFields {
       )
     ) {
       // Clone the imported JSON to avoid mutating the module cache
-      const formattedGraph: any = JSON.parse(JSON.stringify(graphJson));
+      const formattedGraph = JSON.parse(JSON.stringify(graphJson));
 
       // If any node.prompt is stored as an array of lines, join them into a single string
       if (formattedGraph && Array.isArray(formattedGraph.nodes)) {
