@@ -1,4 +1,38 @@
-// @ts-nocheck
+// Remove the `@ts-nocheck` at the top of the file
+
+import 'reflect-metadata';
+import { NestFactory } from '@nestjs/core';
+import { GraphQLSchemaHost } from '@nestjs/graphql';
+import { printSchema, parse, print, buildSchema, GraphQLSchema } from 'graphql';
+import { existsSync, mkdtempSync, unlinkSync, writeFileSync } from 'fs';
+import { join } from 'path';
+import { tmpdir } from 'os';
+import { AppModule } from '@src/app.module';
+import { SchemaBootstrapModule } from '@src/schema-bootstrap/module.schema-bootstrap';
+import { Type } from '@nestjs/common';
+
+function normalizeSDL(schema: GraphQLSchema): string {
+  const rawSDL = printSchema(schema);
+  const parsed = parse(rawSDL, { noLocation: true });
+  return print(parsed).trim();
+}
+
+function countTypes(sdl: string): number {
+  const schema = buildSchema(sdl);
+  return Object.keys(schema.getTypeMap())
+    .filter(name => !name.startsWith('__'))
+    .length;
+}
+
+async function captureSchema(
+  moduleRef: Type<any>
+): Promise<{ sdl: string; durationMs: number; typeCount: number }> {
+  const startedAt = Date.now();
+  const app = await NestFactory.createApplicationContext(moduleRef, {
+    logger: false,
+  });
+  try {
+    // …
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { GraphQLSchemaHost } from '@nestjs/graphql';
