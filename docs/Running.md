@@ -7,7 +7,7 @@ To simplify setting up the Server development environment, a pre-configured dock
 ## Prerequisites:
 
 - Docker and docker-compose installed on x86 architecture\* (so not an ARM-based architecture like Raspberry pi or MacBook with M1 processor)
-- Make sure you're using npm @8.5.5. node v20.9.0 is recommended (but it should work with v < 21)
+- Make sure you're using pnpm @9.0.0 or later. node v20.9.0 is recommended (but it should work with v < 21)
 
 \* If you are not on an x86 architecture:
 
@@ -19,19 +19,19 @@ To simplify setting up the Server development environment, a pre-configured dock
 1. Start the services alkemio server is dependent on:
 
 ```bash
-npm run start:services
+pnpm run start:services
 ```
 
 2. Run the migrations
 
 ```bash
-npm run migration:run
+pnpm run migration:run
 ```
 
 3. Start alkemio-server
 
 ```bash
-npm start
+pnpm start
 ```
 
 4. Validate that the server is running by visiting the [graphql endpoint](http://localhost:3000/graphql).
@@ -64,7 +64,7 @@ It will use the SYNAPSE_XXX from env.docker, create a configuration in /var/lib/
 If you want to run a debug version of kratos, run:
 
 ```bash
-npm run start:services:kratos:debug
+pnpm run start:services:kratos:debug
 ```
 
 If you want to run a debug version of any AI service (Engine), do the following:
@@ -73,7 +73,7 @@ If you want to run a debug version of any AI service (Engine), do the following:
 2. Run the following command:
 
 ```bash
-npm run start:services:ai:debug
+pnpm run start:services:ai:debug
 ```
 
 Note: You may need multiple repositories cloned in order for this command to run. You can search the word `build` in `quickstart-services-ai-debug` and check which contexts are being built. If you need only one service to be built, comment the rest of the services which build the Dockerfile from relative path to the Alkemio Server.
