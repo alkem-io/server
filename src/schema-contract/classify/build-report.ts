@@ -23,10 +23,10 @@ export function buildChangeReport(
     classifications: ctx.counts,
     entries: ctx.entries,
     overrideApplied: false,
-  } as any;
+  };
 
   if (ctx.scalarEvaluations?.length)
-    (report as any).scalarEvaluations = ctx.scalarEvaluations;
+    report.scalarEvaluations = ctx.scalarEvaluations;
 
   return report;
 }
