@@ -94,7 +94,7 @@ bash $SCRIPT_PATH postgres $ENV
 if [[ "$RESTART_SERVICES" == "true" ]]; then
     echo "Restarting services..."
     # Start services
-    npm run start:services &
+    pnpm run start:services &
 
     # Wait for alkemio_dev_mysql container to be up
     while true; do
@@ -111,7 +111,7 @@ if [[ "$RESTART_SERVICES" == "true" ]]; then
     done
 
     # Once the container is running, start the application
-    npm start
+    pnpm start
 else
     echo "Skipping service restart as per user request."
 fi
