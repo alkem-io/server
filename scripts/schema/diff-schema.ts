@@ -56,8 +56,10 @@ function main() {
       try {
         const raw = JSON.parse(readFileSync(prevDeprecations, 'utf-8'));
         previousDepEntries = raw.entries || [];
-      } catch {
-        /* ignore */
+      } catch (err) {
+        process.stderr.write(
+          `[warn] Failed to load previous deprecations from ${prevDeprecations}: ${(err as Error).message}\n`
+        );
       }
     }
     const ctx = createDiffContext(previousDepEntries);
