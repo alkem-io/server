@@ -160,8 +160,6 @@ const STUB_PROVIDERS = [
 })
 class SchemaBootstrapStubModule {}
 
-// NOTE: If any imported module attempts real connections, we will override its providers with stubs in a later task.
-
 @Module({
   imports: [
     SchemaBootstrapStubModule,
