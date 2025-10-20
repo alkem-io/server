@@ -425,7 +425,7 @@ platform:
   privacy: ${PLATFORM_PRIVACY}:https://alkemio.org/privacy/
 
   # Security policy for the platform
-  security: ${PLATFORM_SECURITY}:https://alkemio.org/security/
+  security: ${PLATFORM_SECURITY}:https://welcome.alkem.io/security/
 
   # Link for support requests
   support: ${PLATFORM_SUPPORT}:https://welcome.alkem.io/contact/
@@ -434,7 +434,7 @@ platform:
   forumreleases: ${PLATFORM_FORUM_RELEASES}:https://alkem.io/forum/releases/latest
 
   # Feedback form for the platform
-  feedback: ${PLATFORM_FEEDBACK}:https://alkemio.org/contact/
+  feedback: ${PLATFORM_FEEDBACK}:https:///welcome.alkem.io/contact/
 
   # About the platform
   about: ${PLATFORM_ABOUT}:https://alkemio.org/about/
@@ -470,13 +470,13 @@ platform:
   releases: ${PLATFORM_RELEASES}:https://alkemio.org/releases
 
   # Help Dialog - Help
-  help: ${PLATFORM_HELP}:https://alkemio.org/help/
+  help: ${PLATFORM_HELP}:https://welcome.alkem.io/contact/
 
   # Help Dialog - Community Forum
   community: ${PLATFORM_COMMUNITY}:https://alkemio.org/support/
 
   # Help Dialog - blog
-  newuser: ${PLATFORM_NEWUSER}:https://alkemio.org/help/
+  newuser: ${PLATFORM_NEWUSER}:https://welcome.alkem.io/contact/
 
   # Help Dialog - tips
   tips: ${PLATFORM_TIPS}:https://alkemio.org/post/
