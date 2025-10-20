@@ -53,6 +53,8 @@ export interface ChangeReport {
   entries: ChangeEntry[];
   overrideApplied: boolean;
   overrideReviewer?: string;
+  errorFallback?: boolean;
+  errorMessage?: string;
   enumLifecycleEvaluations?: EnumLifecycleEvaluation[];
   scalarEvaluations?: ScalarChangeEvaluation[];
   notes?: string[];

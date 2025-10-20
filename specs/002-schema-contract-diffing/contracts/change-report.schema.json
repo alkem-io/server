@@ -16,6 +16,8 @@
     "baseSnapshotId": { "type": ["string", "null"] },
     "generatedAt": { "type": "string", "format": "date-time" },
     "overrideApplied": { "type": "boolean" },
+    "errorFallback": { "type": "boolean" },
+    "errorMessage": { "type": "string" },
     "overrideReviewer": { "type": "string" },
     "notes": { "type": "array", "items": { "type": "string" } },
     "classifications": {

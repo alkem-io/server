@@ -19,6 +19,8 @@ interface ChangeReportLike {
   overrideApplied: boolean;
   entries: ChangeEntry[];
   classifications?: Record<string, number>;
+  errorFallback?: boolean;
+  errorMessage?: string;
 }
 
 function main() {
@@ -32,6 +34,13 @@ function main() {
       `Failed to read report '${file}': ${(e as Error).message}\n`
     );
     process.exit(4);
+  }
+  // If the diff tool emitted a fallback error marker, fail fast and show the
+  // provided message so CI logs include the underlying problem.
+  if (report && report.errorFallback) {
+    const msg = report.errorMessage || 'Schema diff tool reported an error fallback';
+    process.stderr.write(`ERROR FALLBACK from change-report: ${msg}\n`);
+    process.exit(1);
   }
   if (!report || !Array.isArray(report.entries)) {
     process.stderr.write('Malformed change report: missing entries array\n');

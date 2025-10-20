@@ -14,6 +14,12 @@ interface Report {
   overrideApplied: boolean;
   classifications: Record<string, number>;
   entries: ChangeEntry[];
+  // Optional fallback error produced by the diff tool when it cannot produce
+  // a valid change report (e.g. baseline generation failure). When present
+  // and true, gate scripts MUST fail the CI run and surface the accompanying
+  // errorMessage to logs.
+  errorFallback?: boolean;
+  errorMessage?: string;
 }
 
 // Simple CLI parsing for flags and positional args. Supports:
@@ -65,6 +71,15 @@ function main() {
     process.exit(4);
     // unreachable
     return;
+  }
+  // If the diff tool signalled an error fallback, surface the message and fail
+  // immediately. This indicates the report is not trustworthy (e.g. baseline
+  // write failed) and CI should not proceed as if the report were valid.
+  if (report && report.errorFallback) {
+    const msg = report.errorMessage || 'Schema diff tool reported a fallback error';
+    console.error(`ERROR FALLBACK from change-report: ${msg}`);
+    // Ensure non-zero exit to fail CI
+    process.exit(1);
   }
   // Only consider BREAKING entries that haven't been overridden at the entry level.
   const breaking = report.entries.filter(e => e.changeType === 'BREAKING' && !e.override);

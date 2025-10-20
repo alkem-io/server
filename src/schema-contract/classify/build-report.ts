@@ -1,4 +1,5 @@
 import { ChangeReport, ElementType, ChangeType } from '../model';
+import { randomUUID } from 'node:crypto';
 import { indexSDL, DiffContext, sha256 } from '../diff/diff-core';
 import { diffTypes } from '../diff/diff-types';
 import { diffEnums } from '../diff/diff-enum';
@@ -42,10 +43,11 @@ export function buildBaselineReport(newSDL: string): ChangeReport {
       prematureRemoval: 0,
       invalidDeprecation: 0,
       info: 0,
+      baseline: 1,
     },
     entries: [
       {
-        id: crypto.randomUUID(),
+        id: randomUUID(),
         element: 'SCHEMA',
         elementType: ElementType.TYPE,
         changeType: ChangeType.BASELINE,
@@ -53,5 +55,5 @@ export function buildBaselineReport(newSDL: string): ChangeReport {
       },
     ],
     overrideApplied: false,
-  } as any;
+  };
 }
