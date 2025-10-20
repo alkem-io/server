@@ -45,7 +45,7 @@ export class NotificationEntityTracking1760357366405 implements MigrationInterfa
       const data: { id: string; contributionParentID: string; }[] = await queryRunner.query(`
           SELECT in_app_notification.id, callout_contribution.id as contributionParentID from in_app_notification
           LEFT JOIN callout_contribution ON callout_contribution.postId = JSON_UNQUOTE(in_app_notification.payload->'$.contributionID')
-          WHERE payload->'$.type' = 'SPACE_COLLABORATION_CALLOUT_POST_COMMENT' AND contributionParentID IS NOT NULL;
+          WHERE JSON_UNQUOTE(payload->'$.type') = 'SPACE_COLLABORATION_CALLOUT_POST_COMMENT' AND contributionParentID IS NOT NULL;
       `);
       for (const { id, contributionParentID } of data) {
         // payload.contributionID to be the ACTUAL contributionID instead of the postID
@@ -59,10 +59,10 @@ export class NotificationEntityTracking1760357366405 implements MigrationInterfa
       // populate the contributor FKs
       const result: { notificationID: string; userID: string | null; orgID: string | null; vcID: string | null; }[] = await queryRunner.query(`
           SELECT in_app_notification.id as notificationID, user.id as userID, organization.id as orgID, virtual_contributor.id as vcID FROM in_app_notification
-          LEFT JOIN user ON user.id = in_app_notification.payload->'$.contributorID'
+          LEFT JOIN user ON user.id = JSON_UNQUOTE(in_app_notification.payload->'$.contributorID')
           LEFT JOIN organization ON organization.id = in_app_notification.payload->'$.contributorID'
-          LEFT JOIN virtual_contributor ON virtual_contributor.id = in_app_notification.payload->'$.contributorID'
-          WHERE payload->'$.type' = 'SPACE_COMMUNITY_CONTRIBUTOR';
+          LEFT JOIN virtual_contributor ON virtual_contributor.id = JSON_UNQUOTE(in_app_notification.payload->'$.contributorID')
+          WHERE JSON_UNQUOTE(payload->'$.type') = 'SPACE_COMMUNITY_CONTRIBUTOR';
       `);
       // populate the correct contributorID in the table and contributorType in payload
       for (const { notificationID, userID, orgID, vcID } of result) {
