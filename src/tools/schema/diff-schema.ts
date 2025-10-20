@@ -734,7 +734,7 @@ async function buildReport(
   if (ctx.scalarEvaluations) {
     report.scalarEvaluations = ctx.scalarEvaluations;
   }
-  if (ctx.counts.breaking > 0) {
+  if (ctx.counts.breaking > 0 || ctx.counts.prematureRemoval > 0) {
     // Use async override evaluation when network fetch fallback may be needed.
     const override = await performOverrideEvaluationAsync();
     if (override.applied) {
@@ -744,14 +744,17 @@ async function buildReport(
         ...(report.notes || []),
         `Override applied by ${override.reviewer}: ${override.reason}`,
       ];
-      // Mark each breaking entry with override flag
-      report.entries = report.entries.map(e =>
-        e.changeType === ChangeType.BREAKING ? { ...e, override: true } : e
+      // Mark each relevant entry with override flag
+      report.entries = report.entries.map(entry =>
+        entry.changeType === ChangeType.BREAKING ||
+        entry.changeType === ChangeType.PREMATURE_REMOVAL
+          ? { ...entry, override: true }
+          : entry
       );
     } else {
       report.notes = [
         ...(report.notes || []),
-        'No valid override for breaking changes',
+        'No valid override for breaking or premature removal changes',
         ...(override.details || []),
       ];
     }
