@@ -39,7 +39,6 @@ The `NotificationRecipientsService` determines recipients through:
 1. **Credential Criteria**: Identifies potential recipients based on their roles/credentials
 2. **Notification Settings**: Filters users based on their email/in-app preferences for the specific event
 3. **Authorization Check**: Verifies users have required privileges to receive the notification
-4. **Platform Privileges**: For in-app notifications, checks `RECEIVE_NOTIFICATIONS_IN_APP` privilege
 
 ### 3. Notification Dispatch
 
@@ -340,7 +339,6 @@ The notification system implements a multi-stage filtering process:
 1. **Initial Candidate Selection**: Based on credential criteria (roles/permissions)
 2. **Settings Filter**: Users must have notifications enabled for the specific event type
 3. **Authorization Check**: Users must have required privileges for the specific entity
-4. **Platform Privilege Check**: For in-app notifications, users need `RECEIVE_NOTIFICATIONS_IN_APP` privilege
 
 ### Example Flow for Space Callout Published
 
@@ -364,10 +362,6 @@ emailRecipients = candidates.filter(
 privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS;
 authPolicy = await getSpaceAuthorizationPolicy(spaceID);
 // Filter users based on privilege
-
-// 4. For in-app: check platform privilege
-platformPolicy = await getPlatformAuthorizationPolicy();
-// Filter users with RECEIVE_NOTIFICATIONS_IN_APP privilege
 ```
 
 ## Best Practices

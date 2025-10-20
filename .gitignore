@@ -52,6 +52,10 @@ subscriptions.log
 # Optional npm cache directory
 .npm
 
+# Optional pnpm cache directory
+.pnpm-debug.log*
+.pnpm-store/
+
 # Optional eslint cache
 .eslintcache
 
@@ -60,6 +64,5 @@ subscriptions.log
 
 # Ignores all scripts and files downloaded by the scripts and local build files
 .scripts/
-.build/
 .storage/
 .build/synapse/homeserver.yaml

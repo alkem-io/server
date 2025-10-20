@@ -5,12 +5,14 @@ node_js:
 env:
   matrix:
     - NODE_OPTIONS="--max-old-space-size=4196"
+
 cache:
   directories:
     - node_modules
-install:
-  - npm install
+    - ~/.pnpm-store
 before_install:
-  - npm i -g npm@10.5.0
+  - npm install -g pnpm@10.17.1
+install:
+  - pnpm install
 script:
-  - npm run test:ci:no:coverage
+  - pnpm run test:ci:no:coverage

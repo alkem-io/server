@@ -40,6 +40,7 @@ export class AiServerAuthorizationService {
     aiServer.authorization = this.authorizationPolicyService.reset(
       aiServer.authorization
     );
+
     aiServer.authorization = await this.appendCredentialRules(
       aiServer.authorization
     );
