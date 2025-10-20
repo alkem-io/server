@@ -77,7 +77,7 @@ export function evaluateOverride(
   const ownerSet = new Set(owners.map(o => o.toLowerCase()));
   for (const r of reviews) {
     const reviewer = r.reviewer?.toLowerCase();
-    const phrase = (r.body || '').includes(APPROVAL_PHRASE);
+    const phrase = (r.body || '').toUpperCase().includes(APPROVAL_PHRASE);
     const isOwner = reviewer && ownerSet.has(reviewer);
     const approved = !r.state || r.state === 'APPROVED';
     details.push(
