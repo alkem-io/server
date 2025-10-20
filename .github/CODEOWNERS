@@ -33,11 +33,16 @@
 
 # Domain model entities, GraphQL interfaces and abstractions
 # Ownership for domain entities and GraphQL interface definitions/abstractions
-/src/domain/**/entities/ @techsmyth
-/src/domain/**/entity*/ @techsmyth
+/src/domain/**/entity/ @techsmyth
+/src/domain/**/entity/** @techsmyth
 /src/common/interfaces/ @techsmyth
-/src/**/interfaces/ @techsmyth
-/src/**/graphql*/ @techsmyth
+/src/common/interfaces/** @techsmyth
+/src/domain/**/interfaces/ @techsmyth
+/src/domain/**/interfaces/** @techsmyth
+/src/config/graphql/ @techsmyth
+/src/config/graphql/** @techsmyth
+/src/types/graphql/ @techsmyth
+/src/types/graphql/** @techsmyth
 
 # Migrations ownership
 # All migration files should be owned by @valentinyanakiev
