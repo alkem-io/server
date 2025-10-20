@@ -79,7 +79,7 @@ const JSON_TYPE_CATEGORIES = new Set([
 ]);
 
 function extractScalarJsonType(s: ScalarTypeDefinitionNode): string {
-  const dirs: readonly DirectiveNode[] | undefined = (s as any).directives;
+  const dirs: readonly DirectiveNode[] | undefined = s.directives;
   if (dirs) {
     for (const d of dirs) {
       if (d.name?.value === 'scalarMeta') {
@@ -696,8 +696,7 @@ function diffScalars(
       }
     }
   }
-  if (scalarEvaluations.length)
-    (ctx as any).scalarEvaluations = scalarEvaluations;
+  if (scalarEvaluations.length) ctx.scalarEvaluations = scalarEvaluations;
 }
 
 function buildReport(
@@ -718,8 +717,8 @@ function buildReport(
     entries: ctx.entries,
     overrideApplied: false,
   };
-  if ((ctx as any).scalarEvaluations) {
-    (report as any).scalarEvaluations = (ctx as any).scalarEvaluations;
+  if (ctx.scalarEvaluations) {
+    report.scalarEvaluations = ctx.scalarEvaluations;
   }
   if (ctx.counts.breaking > 0) {
     const override = performOverrideEvaluation();
