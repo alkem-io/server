@@ -38,10 +38,6 @@ jobs:
           cache: 'pnpm'
           cache-dependency-path: pnpm-lock.yaml
 
-      # - name: Setup pnpm
-      #   run: |
-      #     corepack prepare pnpm@10.17.1 --activate
-
       - name: Install deps
         run: pnpm install --frozen-lockfile
 
@@ -114,8 +110,8 @@ jobs:
             echo "WARNING: No baseline schema found on $BASELINE; this run initializes baseline (no diff)."
             # Mark initialization run so later steps can annotate the PR comment.
             echo "SCHEMA_INIT_RUN=1" >> $GITHUB_ENV
-            # Create an explicit placeholder previous schema file so diff step has a path (empty file triggers fallback logic in diff script).
-            echo "# empty-baseline-initialization" > tmp/prev.schema.graphql
+            # Create an explicit placeholder previous schema file so diff step has a path. Empty file is treated as zero-def schema.
+            : > tmp/prev.schema.graphql
           fi
 
       - name: Run diff
