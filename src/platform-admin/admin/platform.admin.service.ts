@@ -21,6 +21,7 @@ import { LibraryService } from '@library/library/library.service';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager, In } from 'typeorm';
+import { SpaceLevel } from '@common/enums/space.level';
 
 @Injectable()
 export class PlatformAdminService {
@@ -48,6 +49,7 @@ export class PlatformAdminService {
       where: {
         visibility: visibilities?.length ? In(visibilities) : undefined,
         id: IDs?.length ? In(IDs) : undefined,
+        level: SpaceLevel.L0,        
       },
       order: { createdDate: sort },
     });
