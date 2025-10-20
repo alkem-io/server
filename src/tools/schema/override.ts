@@ -49,8 +49,15 @@ export function parseCodeOwners(path = 'CODEOWNERS'): string[] {
   for (const line of raw.split(/\r?\n/)) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith('#')) continue;
+    // Strip inline comments so words after '#' are not treated as owners
+    let content = trimmed;
+    const hashIndex = content.indexOf('#');
+    if (hashIndex !== -1) {
+      content = content.substring(0, hashIndex).trim();
+    }
+    if (!content) continue;
     // Format: pattern owner1 owner2
-    const parts = trimmed.split(/\s+/).slice(1); // skip pattern
+    const parts = content.split(/\s+/).slice(1); // skip pattern
     for (const p of parts) {
       if (!p) continue;
       // Strip leading @ if present
