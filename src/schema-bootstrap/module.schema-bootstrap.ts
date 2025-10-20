@@ -102,6 +102,7 @@ const STUB_PROVIDERS = [
         removeSetup: async () => undefined,
         ack: () => undefined,
         nack: () => undefined,
+        // channel-level helpers — return values are not used here
         sendToQueue: () => true,
         publish: () => true,
         on: () => undefined,
@@ -121,8 +122,10 @@ const STUB_PROVIDERS = [
       },
       setDefaultRpcTimeout: () => undefined,
       request: async () => undefined,
-      publish: () => undefined,
-      sendToQueue: () => undefined,
+      // AmqpConnection top-level methods should mirror @golevelup/nestjs-rabbitmq
+      // which return boolean to indicate publish/send success synchronously.
+      publish: () => true,
+      sendToQueue: () => true,
       initChannel: async () => undefined,
       getChannelRef: () => ({
         addSetup: async () => undefined,
