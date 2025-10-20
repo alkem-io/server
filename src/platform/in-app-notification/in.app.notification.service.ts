@@ -222,31 +222,22 @@ export class InAppNotificationService {
     return updatedNotification.state;
   }
 
-  async bulkUpdateNotificationState(
-    notificationIds: string[],
+  async bulkUpdateNotificationStateByTypes(
     userId: string,
-    state: NotificationEventInAppState
+    state: NotificationEventInAppState,
+    filter?: NotificationEventsFilterInput
   ): Promise<UpdateResult> {
-    return this.inAppNotificationRepo.update(
-      {
-        id: In(notificationIds),
-        receiverID: userId,
-        state: Not(NotificationEventInAppState.ARCHIVED),
-      },
-      { state }
-    );
-  }
+    const where: any = {
+      receiverID: userId,
+      state: Not(NotificationEventInAppState.ARCHIVED),
+    };
 
-  async markAllNotificationsAsState(
-    userId: string,
-    state: NotificationEventInAppState
-  ): Promise<UpdateResult> {
-    return this.inAppNotificationRepo.update(
-      {
-        receiverID: userId,
-        state: Not(NotificationEventInAppState.ARCHIVED),
-      },
-      { state }
-    );
+    // If filter is provided with specific types, only update those types
+    // If no filter is provided, update all notifications
+    if (filter?.types && filter.types.length > 0) {
+      where.type = In(filter.types);
+    }
+
+    return this.inAppNotificationRepo.update(where, { state });
   }
 }
