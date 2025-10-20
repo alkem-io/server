@@ -10,13 +10,28 @@ export interface ReviewRecord {
   state?: string; // APPROVED etc
 }
 
+function isValidReviewArray(v: unknown): v is ReviewRecord[] {
+  if (!Array.isArray(v)) return false;
+  return v.every(item => {
+    if (!item || typeof item !== 'object') return false;
+    const it: any = item as any;
+    if (typeof it.reviewer !== 'string') return false;
+    if (typeof it.body !== 'string') return false;
+    if (it.state !== undefined && typeof it.state !== 'string') return false;
+    return true;
+  });
+}
+
 export function loadReviews(): ReviewRecord[] {
   // Priority: inline JSON, file path, else empty
   const inline = process.env.SCHEMA_OVERRIDE_REVIEWS_JSON;
   if (inline) {
     try {
       const parsed = JSON.parse(inline);
-      if (Array.isArray(parsed)) return parsed as ReviewRecord[];
+      if (isValidReviewArray(parsed)) return parsed;
+      // parsed value not in expected shape
+      // eslint-disable-next-line no-console
+      console.warn('SCHEMA_OVERRIDE_REVIEWS_JSON ignored: invalid structure');
     } catch {
       // ignore
     }
@@ -26,7 +41,11 @@ export function loadReviews(): ReviewRecord[] {
     try {
       const raw = readFileSync(file, 'utf-8');
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) return parsed as ReviewRecord[];
+      if (isValidReviewArray(parsed)) return parsed;
+      // eslint-disable-next-line no-console
+      console.warn(
+        `SCHEMA_OVERRIDE_REVIEWS_FILE ${file} ignored: invalid structure`
+      );
     } catch {
       // ignore
     }
