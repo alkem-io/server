@@ -73,6 +73,7 @@ import {
 import { EventBusStubProvider } from './stubs/event-bus.stub';
 import { SearchStubProvider } from './stubs/search.stub';
 import { MicroservicesStubProviders } from './stubs/microservices.stub';
+import { EventBusProviderStubs } from './stubs/event-bus-providers.stub';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EncryptionService } from '@hedger/nestjs-encryption';
@@ -86,6 +87,7 @@ const STUB_PROVIDERS = [
   EventBusStubProvider,
   SearchStubProvider,
   ...MicroservicesStubProviders,
+  ...EventBusProviderStubs,
   {
     provide: AmqpConnection,
     useValue: {
