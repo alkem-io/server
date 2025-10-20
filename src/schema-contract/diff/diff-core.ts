@@ -62,6 +62,7 @@ export function emptyCounts(): ClassificationCount {
     breaking: 0,
     prematureRemoval: 0,
     invalidDeprecation: 0,
+    deprecationGrace: 0,
     info: 0,
     baseline: 0,
   };

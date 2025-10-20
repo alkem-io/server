@@ -1,6 +1,10 @@
 // Schema diff tool type definitions (Feature 002)
 // NOTE: Scaffolding only; implementations deferred per tasks.md
 
+// Import and re-export shared ClassificationCount interface
+import type { ClassificationCount } from '../../schema-contract/model/shared-types';
+export type { ClassificationCount };
+
 export type ChangeClassification =
   | 'ADDITIVE'
   | 'DEPRECATED'
@@ -27,17 +31,6 @@ export interface ChangeEntry {
   // FR-014 grace period support
   grace?: boolean; // true if within 24h grace for missing REMOVE_AFTER
   graceExpiresAt?: string; // ISO timestamp when grace ends
-}
-
-export interface ClassificationCount {
-  additive: number;
-  deprecated: number;
-  breaking: number;
-  prematureRemoval: number;
-  invalidDeprecation: number;
-  deprecationGrace?: number; // optional to avoid breaking older consumers
-  info: number;
-  baseline: number;
 }
 
 export interface EnumLifecycleEvaluation {

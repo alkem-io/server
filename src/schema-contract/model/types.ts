@@ -9,6 +9,7 @@ export enum ElementType {
 export enum ChangeType {
   ADDITIVE = 'ADDITIVE',
   DEPRECATED = 'DEPRECATED',
+  DEPRECATION_GRACE = 'DEPRECATION_GRACE',
   BREAKING = 'BREAKING',
   PREMATURE_REMOVAL = 'PREMATURE_REMOVAL',
   INVALID_DEPRECATION_FORMAT = 'INVALID_DEPRECATION_FORMAT',
@@ -16,15 +17,8 @@ export enum ChangeType {
   BASELINE = 'BASELINE',
 }
 
-export interface ClassificationCount {
-  additive: number;
-  deprecated: number;
-  breaking: number;
-  prematureRemoval: number;
-  invalidDeprecation: number;
-  info: number;
-  baseline: number;
-}
+// Re-export shared ClassificationCount interface
+export { ClassificationCount } from './shared-types';
 
 export type JsonTypeCategory =
   | 'string'
