@@ -1,10 +1,6 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { SchemaSnapshot } from '../model';
-import { createHash } from 'crypto';
-
-function sha256(content: string): string {
-  return createHash('sha256').update(content, 'utf8').digest('hex');
-}
+import { sha256 } from '../diff/diff-core';
 
 /**
  * Loads the committed snapshot file (schema.graphql by default) if present.
