@@ -243,6 +243,9 @@ importers:
       '@types/amqplib':
         specifier: ^0.10.5
         version: 0.10.7
+      '@types/body-parser':
+        specifier: ^1.19.6
+        version: 1.19.6
       '@types/cache-manager':
         specifier: ^4.0.6
         version: 4.0.6
@@ -270,6 +273,9 @@ importers:
       '@types/node':
         specifier: ^20.14.10
         version: 20.19.17
+      '@types/passport':
+        specifier: ^1.0.17
+        version: 1.0.17
       '@types/passport-jwt':
         specifier: ^4.0.1
         version: 4.0.1
