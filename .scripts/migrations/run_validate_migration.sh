@@ -13,7 +13,7 @@ bash "$BASE_DIR/create_snapshot.sh" "backup.sql"
 bash "$BASE_DIR/restore_snapshot.sh" "db/reference_schema.sql"
 
 # Run the migration and wait for completion
-npm run migration:run
+pnpm run migration:run
 
 # Check the exit status of the command
 if [[ $? -eq 0 ]]; then

@@ -19,13 +19,13 @@ Assuming you have a suitable database server and authentication provider availab
 - Install dependencies
 
 ```bash
-npm install
+pnpm install
 ```
 
 - Start the server
 
 ```bash
-npm start
+pnpm start
 ```
 
 There should now be a [running Alkemio server](http://localhost:4000/graphql)!

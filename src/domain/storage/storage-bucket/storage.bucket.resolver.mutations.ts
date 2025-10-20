@@ -12,6 +12,7 @@ import { IStorageBucket } from './storage.bucket.interface';
 import { DeleteStorageBuckeetInput as DeleteStorageBucketInput } from './dto/storage.bucket.dto.delete';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { ReadStream } from 'fs';
 
 @InstrumentResolver()
 @Resolver()
@@ -51,7 +52,7 @@ export class StorageBucketResolverMutations {
 
     let document = await this.storageBucketService.uploadFileAsDocument(
       storageBucket.id,
-      readStream,
+      readStream as unknown as ReadStream,
       filename,
       mimetype,
       agentInfo.userID,

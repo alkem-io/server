@@ -23,7 +23,7 @@ export async function subscriptionFactory(
     .then(
       conn =>
         new AMQPPubSub({
-          connection: conn,
+          connection: conn as any,
           exchange: {
             // RabbitMQ subscriptions exchange name
             name: exchangeName,

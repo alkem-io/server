@@ -14,7 +14,7 @@ import amqplib from 'amqplib';
 @Module({
   imports: [
     CqrsModule,
-    RabbitMQModule.forRootAsync(RabbitMQModule, {
+    RabbitMQModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: async (configService: ConfigService<AlkemioConfig, true>) => {
@@ -43,7 +43,7 @@ import amqplib from 'amqplib';
         try {
           // assert the exchange exists with the right type
           await channel.assertExchange(eventBusConfig.exchange, exchangeType);
-        } catch (err) {
+        } catch {
           // if not, delete and assert it again
           // the configuration below will handle the oruting etc.
           channel = await connection.createChannel();

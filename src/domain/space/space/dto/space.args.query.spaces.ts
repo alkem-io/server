@@ -8,5 +8,5 @@ export class SpacesQueryArgs extends IDsQueryArgs {
     nullable: true,
     description: 'Return Spaces matching the provided filter.',
   })
-  filter!: SpaceFilterInput;
+  filter?: SpaceFilterInput;
 }
