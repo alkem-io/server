@@ -763,10 +763,57 @@ async function buildReport(
 }
 
 async function main() {
-  const args = parseArgs();
-  const newSDL = readFileSync(args.newPath, 'utf-8');
-  if (!args.oldPath) {
-    const report = baselineReport(newSDL);
+  try {
+    const args = parseArgs();
+    const newSDL = readFileSync(args.newPath, 'utf-8');
+    if (!args.oldPath) {
+      const report = baselineReport(newSDL);
+      writeFileSync(args.outPath, JSON.stringify(report, null, 2));
+      if (args.deprecationsPath) {
+        writeFileSync(
+          args.deprecationsPath,
+          JSON.stringify(
+            {
+              generatedAt: new Date().toISOString(),
+              entries: [],
+            },
+            null,
+            2
+          )
+        );
+      }
+      process.stdout.write(`Baseline change report written to ${args.outPath}\n`);
+      return;
+    }
+    const oldSDL = readFileSync(args.oldPath, 'utf-8');
+    // Attempt to load previous deprecations registry (for sinceDate & firstCommit reuse)
+    const previousDeprecations: Map<string, DeprecationEntry> = new Map();
+    if (args.deprecationsPath && existsSync(args.deprecationsPath)) {
+      try {
+        const rawPrev = JSON.parse(readFileSync(args.deprecationsPath, 'utf-8'));
+        if (rawPrev && Array.isArray(rawPrev.entries)) {
+          for (const d of rawPrev.entries) {
+            previousDeprecations.set(d.element, d);
+          }
+        }
+      } catch {
+        // ignore corrupted file
+      }
+    }
+    let headCommit: string | undefined;
+    try {
+      headCommit = execSync('git rev-parse --short HEAD').toString().trim();
+    } catch {
+      // not a git repo / fallback
+    }
+    const diffCtx: DiffContext = {
+      entries: [],
+      counts: emptyCounts(),
+      deprecations: [],
+      previousDeprecations,
+      headCommit,
+    };
+    const report = await buildReport(oldSDL, newSDL, diffCtx);
     writeFileSync(args.outPath, JSON.stringify(report, null, 2));
     if (args.deprecationsPath) {
       writeFileSync(
@@ -774,60 +821,18 @@ async function main() {
         JSON.stringify(
           {
             generatedAt: new Date().toISOString(),
-            entries: [],
+            entries: diffCtx.deprecations,
           },
           null,
           2
         )
       );
     }
-    process.stdout.write(`Baseline change report written to ${args.outPath}\n`);
-    return;
+    process.stdout.write(`Change report scaffold written to ${args.outPath}\n`);
+  } catch (error) {
+    process.stderr.write(`Error: ${error instanceof Error ? error.message : String(error)}\n`);
+    process.exit(1);
   }
-  const oldSDL = readFileSync(args.oldPath, 'utf-8');
-  // Attempt to load previous deprecations registry (for sinceDate & firstCommit reuse)
-  const previousDeprecations: Map<string, DeprecationEntry> = new Map();
-  if (args.deprecationsPath && existsSync(args.deprecationsPath)) {
-    try {
-      const rawPrev = JSON.parse(readFileSync(args.deprecationsPath, 'utf-8'));
-      if (rawPrev && Array.isArray(rawPrev.entries)) {
-        for (const d of rawPrev.entries) {
-          previousDeprecations.set(d.element, d);
-        }
-      }
-    } catch {
-      // ignore corrupted file
-    }
-  }
-  let headCommit: string | undefined;
-  try {
-    headCommit = execSync('git rev-parse --short HEAD').toString().trim();
-  } catch {
-    // not a git repo / fallback
-  }
-  const diffCtx: DiffContext = {
-    entries: [],
-    counts: emptyCounts(),
-    deprecations: [],
-    previousDeprecations,
-    headCommit,
-  };
-  const report = await buildReport(oldSDL, newSDL, diffCtx);
-  writeFileSync(args.outPath, JSON.stringify(report, null, 2));
-  if (args.deprecationsPath) {
-    writeFileSync(
-      args.deprecationsPath,
-      JSON.stringify(
-        {
-          generatedAt: new Date().toISOString(),
-          entries: diffCtx.deprecations,
-        },
-        null,
-        2
-      )
-    );
-  }
-  process.stdout.write(`Change report scaffold written to ${args.outPath}\n`);
 }
 
 main();
