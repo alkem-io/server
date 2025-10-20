@@ -11,25 +11,25 @@ Database synchronization is switched off and migrations are applied manually (or
 Generate new migration with name 'migration_name' after schema change:
 
 ```bash
-npm run migration:generate -n [migration_name]
+pnpm run migration:generate -n [migration_name]
 ```
 
 To apply migrations:
 
 ```bash
-npm run migration:run
+pnpm run migration:run
 ```
 
 To revert migrations:
 
 ```bash
-npm run migration:revert
+pnpm run migration:revert
 ```
 
 To show status of migrations and see which migrations are pending and which migrations have been applied:
 
 ```bash
-npm run migration:show
+pnpm run migration:show
 ```
 
 **NB! Running untested migrations automatically may result in a data loss!**
