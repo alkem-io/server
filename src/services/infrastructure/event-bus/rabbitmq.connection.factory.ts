@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import amqplib from 'amqplib';
+import { Channel, ChannelModel, connect as amqpConnect } from 'amqplib';
 
 /**
  * Factory for creating RabbitMQ connections.
@@ -17,7 +17,7 @@ export class RabbitMQConnectionFactory {
     exchangeType: string
   ): Promise<void> {
     const connection = await this.connect(uri);
-    let channel = await connection.createChannel();
+    let channel: Channel = await connection.createChannel();
 
     // Important: errors are emitted to the channel and the channel is closed
     channel.on('error', () => {});
@@ -40,7 +40,7 @@ export class RabbitMQConnectionFactory {
    * Creates a connection to RabbitMQ.
    * Can be overridden in tests to return a mock connection.
    */
-  async connect(uri: string): Promise<amqplib.Connection> {
-    return amqplib.connect(uri);
+  async connect(uri: string): Promise<ChannelModel> {
+    return amqpConnect(uri);
   }
 }

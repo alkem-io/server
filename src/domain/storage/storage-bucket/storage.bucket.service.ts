@@ -21,7 +21,7 @@ import {
   MimeFileType,
 } from '@common/enums/mime.file.type';
 import { CreateDocumentInput } from '../document/dto/document.dto.create';
-import { ReadStream } from 'fs';
+import { Readable } from 'stream';
 import { ValidationException } from '@common/exceptions';
 import { streamToBuffer } from '@common/utils';
 import { CreateStorageBucketInput } from './dto/storage.bucket.dto.create';
@@ -137,7 +137,7 @@ export class StorageBucketService {
   }
   public async uploadFileAsDocument(
     storageBucketId: string,
-    readStream: ReadStream,
+    readStream: Readable,
     filename: string,
     mimeType: string,
     userID: string,
@@ -215,7 +215,7 @@ export class StorageBucketService {
     uri: string,
     entityId: string,
     storageBucket: IStorageBucket,
-    readStream: ReadStream,
+    readStream: Readable,
     filename: string,
     mimetype: string,
     userID: string

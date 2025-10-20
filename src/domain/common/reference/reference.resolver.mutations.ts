@@ -13,7 +13,6 @@ import { LogContext } from '@common/enums/logging.context';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { StorageBucketUploadFileOnReferenceInput } from '@domain/storage/storage-bucket/dto/storage.bucket.dto.upload.file.on.reference';
 import { FileUpload, GraphQLUpload } from 'graphql-upload';
-import { ReadStream } from 'fs';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
@@ -122,7 +121,7 @@ export class ReferenceResolverMutations {
       reference.uri,
       reference.id,
       storageBucket,
-      readStream as unknown as ReadStream,
+      readStream,
       filename,
       mimetype,
       agentInfo.userID

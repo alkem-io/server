@@ -1,4 +1,4 @@
-import { Node } from '@tiptap/core';
+import { CommandProps, Node } from '@tiptap/core';
 
 // We need to declare it explicitly since the iframe option is still in experimental phase.
 declare module '@tiptap/core' {
@@ -60,7 +60,7 @@ export const Iframe = Node.create<IframeOptions>({
     return [{ tag: 'iframe' }];
   },
 
-  renderHTML({ HTMLAttributes }) {
+  renderHTML({ HTMLAttributes }: { HTMLAttributes: Record<string, any> }) {
     return ['div', this.options.HTMLAttributes, ['iframe', HTMLAttributes]];
   },
 
@@ -68,7 +68,7 @@ export const Iframe = Node.create<IframeOptions>({
     return {
       setIframe:
         (options: { src: string }) =>
-        ({ tr, dispatch }) => {
+        ({ tr, dispatch }: CommandProps) => {
           const { selection } = tr;
           const node = this.type.create(options);
 

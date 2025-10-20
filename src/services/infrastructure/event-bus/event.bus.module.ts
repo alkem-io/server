@@ -16,7 +16,7 @@ import { RabbitMQConnectionModule } from './rabbitmq.connection.module';
   imports: [
     CqrsModule,
     RabbitMQConnectionModule,
-    RabbitMQModule.forRootAsync(RabbitMQModule, {
+    RabbitMQModule.forRootAsync({
       imports: [ConfigModule, RabbitMQConnectionModule],
       inject: [ConfigService, RabbitMQConnectionFactory],
       useFactory: async (
