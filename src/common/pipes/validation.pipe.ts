@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
 import { PipeTransform, Injectable, ArgumentMetadata } from '@nestjs/common';
-import { plainToClass } from 'class-transformer';
+import { plainToInstance } from 'class-transformer';
 import { Handler } from '@core/validation/handlers/base/handler.interface';
 import { BaseHandler } from '@core/validation/handlers/base/base.handler';
 
@@ -10,7 +10,7 @@ export class ValidationPipe implements PipeTransform<any> {
     if (!metatype || !this.toValidate(metatype)) {
       return value;
     }
-    const object = plainToClass(metatype, value);
+    const object = plainToInstance(metatype, value);
     const baseHandler = new BaseHandler();
     await this.validate(baseHandler, object, metatype);
 
