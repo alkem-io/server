@@ -30,17 +30,24 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+          run_install: false
 
       - name: Install deps
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Generate schema snapshot (lightweight)
         env:
           SCHEMA_SNAPSHOT_DEBUG: '1'
         run: |
           set -o pipefail
-          npx ts-node -r tsconfig-paths/register scripts/schema/generate-schema.snapshot.ts schema.graphql 2>&1 | tee snapshot.log
+          pnpm exec ts-node -r tsconfig-paths/register scripts/schema/generate-schema.snapshot.ts schema.graphql 2>&1 | tee snapshot.log
 
       - name: Verify snapshot output
         run: |
@@ -109,10 +116,10 @@ jobs:
           fi
 
       - name: Run diff
-        run: npx ts-node scripts/schema/diff-schema.ts --old tmp/prev.schema.graphql --current schema.graphql --out change-report.json --deprecations deprecations.json || true
+        run: pnpm exec ts-node scripts/schema/diff-schema.ts --old tmp/prev.schema.graphql --current schema.graphql --out change-report.json --deprecations deprecations.json || true
 
       - name: Gate evaluation (non-blocking summary)
-        run: npx ts-node scripts/schema/schema-gate.ts change-report.json || true
+        run: pnpm exec ts-node scripts/schema/schema-gate.ts change-report.json || true
 
       - name: Prepare schema artifacts
         run: |
@@ -125,7 +132,7 @@ jobs:
       - name: Generate PR comment body
         id: pr_comment
         run: |
-          npx ts-node scripts/schema/post-pr-comment.ts change-report.json > pr-comment.md
+          pnpm exec ts-node scripts/schema/post-pr-comment.ts change-report.json > pr-comment.md
           if [ "$SCHEMA_INIT_RUN" = "1" ]; then
             echo "" >> pr-comment.md
             echo "> ℹ️ No baseline schema was found for branch '${{ steps.baseline_ref.outputs.baseline }}'. This run is treated as an INITIALIZATION run; no additive/breaking differences are listed. Commit a baseline file (schema-baseline.graphql) to that branch (or apply a schema-base:<branch> label) to enable diffs on subsequent PRs." >> pr-comment.md
@@ -164,4 +171,4 @@ jobs:
           message: ${{ steps.pr_comment.outputs.body }}
 
       - name: Enforce gate
-        run: npx ts-node scripts/schema/schema-gate.ts change-report.json
+        run: pnpm exec ts-node scripts/schema/schema-gate.ts change-report.json
