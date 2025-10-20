@@ -26,6 +26,26 @@ describe('diffEnums lifecycle', () => {
     return `${name} @deprecated(reason: "REMOVE_AFTER=${removeAfter} | ${reason}")`;
   };
 
+  function formatDate(date: Date): string {
+    return date.toISOString().slice(0, 10);
+  }
+
+  function startOfDayUTC(date: Date): Date {
+    return new Date(
+      Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
+    );
+  }
+
+  function addDaysUTC(date: Date, amount: number): Date {
+    const copy = new Date(date.getTime());
+    copy.setUTCDate(copy.getUTCDate() + amount);
+    return copy;
+  }
+
+  const today = startOfDayUTC(new Date());
+  const daysFromNow = (days: number) => formatDate(addDaysUTC(today, days));
+  const daysAgo = (days: number) => formatDate(addDaysUTC(today, -days));
+
   it('detects added enum value as ADDITIVE', () => {
     const oldIdx = indexSDL(baseEnum(['A']));
     const newIdx = indexSDL(baseEnum(['A', 'B']));
@@ -76,14 +96,16 @@ describe('diffEnums lifecycle', () => {
 
   it('premature removal before removeAfter date', () => {
     // Value B previously deprecated with removeAfter in future
+    const sinceDate = daysAgo(60);
+    const removeAfter = daysFromNow(30);
     const previousDeprecations = [
       {
         element: 'Status.B',
-        sinceDate: '2025-08-01',
-        removeAfter: '2025-12-31',
+        sinceDate,
+        removeAfter,
       } as any,
     ];
-    const oldIdx = indexSDL(baseEnum(['A', deprecatedVal('B', '2025-12-31')]));
+    const oldIdx = indexSDL(baseEnum(['A', deprecatedVal('B', removeAfter)]));
     const newIdx = indexSDL(baseEnum(['A']));
     const ctx = createDiffContext(previousDeprecations);
     diffEnums(oldIdx, newIdx, ctx);
@@ -92,14 +114,16 @@ describe('diffEnums lifecycle', () => {
   });
 
   it('breaking removal after removeAfter but before 90-day window', () => {
+    const sinceDate = daysAgo(60);
+    const removeAfter = daysAgo(10);
     const previousDeprecations = [
       {
         element: 'Status.B',
-        sinceDate: '2025-09-15', // <90 days elapsed
-        removeAfter: '2025-10-01', // removeAfter passed
+        sinceDate, // <90 days elapsed
+        removeAfter, // removeAfter passed
       } as any,
     ];
-    const oldIdx = indexSDL(baseEnum(['A', deprecatedVal('B', '2025-10-01')]));
+    const oldIdx = indexSDL(baseEnum(['A', deprecatedVal('B', removeAfter)]));
     const newIdx = indexSDL(baseEnum(['A']));
     const ctx = createDiffContext(previousDeprecations);
     diffEnums(oldIdx, newIdx, ctx);
@@ -108,14 +132,16 @@ describe('diffEnums lifecycle', () => {
   });
 
   it('info removal after removeAfter and >=90 days', () => {
+    const sinceDate = daysAgo(120);
+    const removeAfter = daysAgo(10);
     const previousDeprecations = [
       {
         element: 'Status.B',
-        sinceDate: '2025-06-01', // >90 days
-        removeAfter: '2025-08-01', // past
+        sinceDate, // >90 days
+        removeAfter, // past
       } as any,
     ];
-    const oldIdx = indexSDL(baseEnum(['A', deprecatedVal('B', '2025-08-01')]));
+    const oldIdx = indexSDL(baseEnum(['A', deprecatedVal('B', removeAfter)]));
     const newIdx = indexSDL(baseEnum(['A']));
     const ctx = createDiffContext(previousDeprecations);
     diffEnums(oldIdx, newIdx, ctx);
