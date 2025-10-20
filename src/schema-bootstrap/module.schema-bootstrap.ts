@@ -144,8 +144,8 @@ const STUB_PROVIDERS = [
   {
     provide: EncryptionService,
     useValue: {
-      encrypt: async (value: string) => value,
-      decrypt: async (value: string) => value,
+      encrypt: (value: string) => value,
+      decrypt: (value: string) => value,
     },
   },
 ];
