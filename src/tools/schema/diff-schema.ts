@@ -84,7 +84,21 @@ function extractScalarJsonType(s: ScalarTypeDefinitionNode): string {
     for (const d of dirs) {
       if (d.name?.value === 'scalarMeta') {
         const arg = d.arguments?.find((a: any) => a.name?.value === 'jsonType');
-        const v = arg && (arg.value as any).value;
+        let v: string | undefined;
+        if (arg && arg.value) {
+          // Only read .value for AST node kinds that actually contain a string-like value.
+          // Common string-bearing kinds: 'StringValue' and sometimes 'EnumValue'.
+          if (
+            arg.value.kind === 'StringValue' ||
+            arg.value.kind === 'EnumValue'
+          ) {
+            v = (arg.value as any).value;
+          } else {
+            // Non-string kinds (e.g. BooleanValue, IntValue) are ignored to avoid
+            // silently returning undefined when callers expect a string.
+            v = undefined;
+          }
+        }
         if (typeof v === 'string' && JSON_TYPE_CATEGORIES.has(v)) return v;
       }
     }
