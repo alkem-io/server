@@ -1,11 +1,9 @@
 import { loadBaselineSnapshot } from '@src/schema-contract/snapshot/load-baseline';
 import { writeFileSync, unlinkSync, existsSync, mkdirSync } from 'node:fs';
 import { createHash } from 'crypto';
+import { sha256 } from '../../../src/schema-contract/diff/diff-core';
 import { join } from 'node:path';
 
-function sha256(content: string) {
-  return createHash('sha256').update(content, 'utf8').digest('hex');
-}
 
 describe('schema-contract: loadBaselineSnapshot', () => {
   const tmpDir = 'tmp';
