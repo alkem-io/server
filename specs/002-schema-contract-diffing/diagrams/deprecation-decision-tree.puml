@@ -10,20 +10,38 @@ start
 :Field Removed?;
 if (Removed?) then (yes)
   if (Has REMOVE_AFTER?) then (yes)
-  if (Now >= REMOVE_AFTER date?) then (yes)
-      if (Override Approved?) then (yes)
-        :VALID BREAKING;
+    if (REMOVE_AFTER format valid?) then (yes)
+      if (REMOVE_AFTER - deprecation_date >= 90 days?) then (yes)
+        if (Now >= REMOVE_AFTER date?) then (yes)
+          if (Override Approved?) then (yes)
+            :BREAKING\n{ overrideApplied: true };
+          else (no)
+            :BREAKING\nGate: FAIL;
+          endif
+        else (no)
+          :PREMATURE_REMOVAL\n(invalid);
+        endif
       else (no)
-        :BLOCKED BREAKING;
+        :INVALID_DEPRECATION_FORMAT\n(REMOVE_AFTER window < 90 days);
       endif
     else (no)
-      :EARLY REMOVAL\n(invalid);
+      :INVALID_DEPRECATION_FORMAT\n(invalid REMOVE_AFTER format);
     endif
   else (no)
-    :INVALID BREAKING\n(no lifecycle metadata);
+    :INVALID_DEPRECATION_FORMAT\n(no lifecycle metadata);
   endif
 else (no)
-  :Track Deprecated Field\n(in registry);
+  if (Has REMOVE_AFTER?) then (yes)
+    :DEPRECATED;
+    note right: Field is marked deprecated and\nwill be eligible for removal per REMOVE_AFTER
+  else (no)
+    if (Now within 24h of deprecation?) then (yes)
+      :DEPRECATION_GRACE;
+      note right: Temporary grace period (<=24h)\nbefore normal DEPRECATED state
+    else (no)
+      :DEPRECATED;
+    endif
+  endif
 endif
 stop
 @enduml
