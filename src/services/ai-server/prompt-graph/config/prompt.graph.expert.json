@@ -24,7 +24,7 @@
         "   - Generate a clarifying question asking for more specific information",
         "",
         "3. If the last message is already clear but cannot be answered from the conversation:",
-        "   - Leave the message as is",
+        "   - Use it directly as the rephrased question for further processing",
         "   - Generate a clarifying question if additional context would help",
         "",
         "Conversation:",
@@ -38,7 +38,7 @@
             "name": "rephrased_question",
             "type": "string",
             "optional": true,
-            "description": "The rephrased question to make it more clear and concise."
+            "description": "The rephrased question to make it more clear and concise or the original question if it is already clear."
           },
           {
             "name": "context_answer",
@@ -78,9 +78,8 @@
       "system": false,
       "input_variables": [
         "display_name",
-        "knowledge_docs",
+        "combined_knowledge_docs",
         "rephrased_question",
-        "messages",
         "description"
       ],
       "prompt": [
@@ -99,7 +98,7 @@
         "Refer to the documents as 'knowledge base' and as a whole.",
         "If asked which specific source you used, answer by saying you used your knowledge base and NEVER quote a source identifier.",
         "+++",
-        "{knowledge_docs}",
+        "{combined_knowledge_docs}",
         "+++",
         "",
         "Your response should contain the following data points formatted as per the format instructions below",
@@ -181,7 +180,6 @@
       "system": false,
       "input_variables": [
         "rephrased_question",
-        "messages",
         "context_answer",
         "knowledge_answer",
         "context_question"
@@ -290,6 +288,12 @@
         "type": "object",
         "optional": true,
         "description": "List of knowledge documents"
+      },
+      {
+        "name": "combined_knowledge_docs",
+        "type": "string",
+        "optional": true,
+        "description": "Combined knowledge documents as a single string with source ids."
       },
       {
         "name": "context_answer",
