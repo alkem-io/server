@@ -13,10 +13,10 @@ import graphJson from '../prompt-graph/config/prompt.graph.expert.json';
 import { PromptGraph } from '../prompt-graph/dto/prompt.graph.dto';
 
 const EXTERNALY_CONFIGURABLE_ENGINES = [
-  AiPersonaEngine.LIBRA_FLOW,
   AiPersonaEngine.GENERIC_OPENAI,
   AiPersonaEngine.LIBRA_FLOW,
 ];
+
 @Resolver(() => IAiPersona)
 export class AiPersonaResolverFields {
   constructor(
