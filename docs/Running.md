@@ -16,7 +16,7 @@ To simplify setting up the Server development environment, a pre-configured dock
 
 ## Steps:
 
-1. Start the services alkemio server is dependent on:
+1. Start the services alkemio server is dependent on (PostgreSQL, MySQL, Ory Kratos, Ory Hydra, Matrix Synapse, RabbitMQ, etc.):
 
 ```bash
 pnpm run start:services
@@ -35,25 +35,25 @@ pnpm start
 ```
 
 4. Validate that the server is running by visiting the [graphql endpoint](http://localhost:3000/graphql).
+5. Optional: verify the OIDC stack
+  - Hydra discovery endpoint: `curl http://localhost:3000/.well-known/openid-configuration`
+  - Synapse OIDC callback health: check `docker logs alkemio_dev_synapse | grep oidc-hydra`
 
 ## Notes
 
 - The docker compose script puts the server listening on port 4001 - to avoid conflict with the default port that is used by local development.
 - The server will be almost empty after initially being created. To populate the Server with some sample data please use the [Alkemio Populator](http://github.com/alkem-io/Populator) tool which allows easy population from a local file. Please remember to specify the correct port to connect to!
 - Once you set up the services and run the migrations, two alkemio users will be created. Find them in table `users`. You will need to register them in order to set up passwords once you run the web client. If you wish, configure the user needed for notifications via SERVICE_ACCOUNT_USERNAME & SERVICE_ACCOUNT_PASSWORD env variables in .env.docker. The profiles need to be Global Community Admin - you can find this out yourself: Do you see an administration menu item in your Alkemio profiles?
-- To start the Matrix Synapse service, run the following from the repository root:
-
-```bash
-sudo bash ./.scripts/bootstrap_synapse.sh
-```
-
 - If you are using Windows you must go to docker settings -> resources -> file sharing and add the paths to .build and .scripts dirs.
+- The Synapse ↔ Hydra client credentials are read from `.env.docker` (`SYNAPSE_OIDC_CLIENT_ID` and `SYNAPSE_OIDC_CLIENT_SECRET`). Make sure these values exist before running the services.
 - Finally, ports available on localhost:
   - 4000 (alkemio server),
   - 3306 (MySQL database)
   - 8888 (traefik dashboard)
   - 3000 (alkemio client)
   - 8008 (synapse server)
+  - 4444 (hydra public)
+  - 4445 (hydra admin)
   - 4436 (mailslurper UI)
   - 4437 (mailslurper API)
   - 5672 (rabbitMQ amqp)

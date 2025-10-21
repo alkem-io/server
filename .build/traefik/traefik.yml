@@ -1,10 +1,11 @@
-# API and dashboard configuration
 api:
-  dashboard: true
   insecure: true
+  dashboard: true
 
-log:
-  level: DEBUG
+providers:
+  file:
+    filename: /etc/traefik/http.yml
+    watch: true
 
 entryPoints:
   web:
@@ -31,11 +32,8 @@ entryPoints:
     address: ':15672'
   redis:
     address: ':6379'
+  hydra-public:
+    address: ':4444'
+  hydra-admin:
+    address: ':4445'
 
-providers:
-  file:
-    filename: /etc/traefik/http.yml
-    watch: true
-
-accessLog:
-  filePath: '/etc/traefik/access.log'

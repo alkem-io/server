@@ -5,6 +5,7 @@ import { APP_FILTER, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { GraphQLModule } from '@nestjs/graphql';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
+import { ScheduleModule } from '@nestjs/schedule';
 import { CloseCode } from 'graphql-ws';
 import { ValidationPipe } from '@common/pipes/validation.pipe';
 import configuration from '@config/configuration';
@@ -36,6 +37,7 @@ import {
   WebsocketContext,
 } from '@src/types';
 import { RegistrationModule } from '@services/api/registration/registration.module';
+import { OidcModule } from '@services/api/oidc/oidc.module';
 import { RolesModule } from '@services/api/roles/roles.module';
 import * as redisStore from 'cache-manager-redis-store';
 import { ConversionModule } from '@services/api/conversion/conversion.module';
@@ -49,6 +51,7 @@ import { ContributionReporterModule } from '@services/external/elasticsearch/con
 import { DataLoaderInterceptor } from '@core/dataloader/interceptors';
 import { InnovationHubInterceptor } from '@common/interceptors';
 import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.module';
+import { SessionSyncModule } from '@services/session-sync/session-sync.module';
 import { SsiCredentialFlowController } from '@services/api-rest/ssi-credential-flow/ssi.credential.flow.controller';
 import { SsiCredentialFlowModule } from '@services/api-rest/ssi-credential-flow/ssi.credential.flow.module';
 import { StorageAccessModule } from '@services/api-rest/storage-access/storage.access.module';
@@ -117,6 +120,7 @@ import { InAppNotificationAdminModule } from './platform-admin/in-app-notificati
       isGlobal: true,
       load: [configuration],
     }),
+    ScheduleModule.forRoot(),
     CacheModule.registerAsync({
       isGlobal: true,
       imports: [ConfigModule],
@@ -285,6 +289,8 @@ import { InAppNotificationAdminModule } from './platform-admin/in-app-notificati
     MessageReactionModule,
     NotificationRecipientsModule,
     RegistrationModule,
+    OidcModule,
+    SessionSyncModule,
     ConversionModule,
     LibraryModule,
     PlatformModule,

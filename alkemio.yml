@@ -5,10 +5,6 @@
 # should have the same indentation.
 #
 # [1] https://docs.ansible.com/ansible/latest/reference_appendices/YAMLSyntax.html
-#
-# For most of the configuration values there is a default supplied, this is after the ":".
-# To overwrite the default value, set environment variable with the name as is shown before the ":".
-
 ## hosting ##
 # The hosting configuration for the Alkemio Server
 hosting:
@@ -211,6 +207,24 @@ identity:
         session_cookie_name: ${KRATOS_SESSION_COOKIE_NAME}:ory_kratos_session
         session_extend_enabled: ${KRATOS_SESSION_EXTEND_ENABLED}:true
 
+      # Ory Hydra OIDC Provider Integration
+      # Enables OIDC flows for Matrix Synapse and other OIDC clients
+      # Reuses: hosting.endpoint_cluster, hosting.path_api_public_rest, and kratos_public_base_url from ory section above
+      oidc:
+        # Hydra Admin API URL (used by server to interact with Hydra Admin API)
+        hydra_admin_url: ${HYDRA_ADMIN_URL}:http://localhost:3000/hydra
+        session_sync:
+          enabled: ${SESSION_SYNC_ENABLED}:true
+          interval_ms: ${SESSION_SYNC_INTERVAL_MS}:300000
+          kratos_database:
+            database: ${KRATOS_DB_DATABASE}:kratos
+          synapse_database:
+            host: ${SYNAPSE_DB_HOST}:postgres
+            port: ${SYNAPSE_DB_PORT}:5432
+            username: ${SYNAPSE_DB_USERNAME}:synapse
+            password: ${SYNAPSE_DB_PASSWORD}:synapse
+            database: ${SYNAPSE_DB_DATABASE}:synapse
+
 ## monitoring ##
 # This section defines settings used for DevOps - monitoring providers, endpoints, logging configuration.
 monitoring:
@@ -282,6 +296,16 @@ communications:
   matrix:
     connection_retries: ${COMMUNICATIONS_MATRIX_CONNECTION_RETRIES}:5
     connection_timeout: ${COMMUNICATIONS_MATRIX_CONNECTION_TIMEOUT}:30
+    admin_api:
+      url: ${SYNAPSE_ADMIN_URL}:http://localhost:8008
+      token: ${SYNAPSE_ADMIN_TOKEN}
+    database:
+      host: ${SYNAPSE_DB_HOST}:localhost
+      port: ${SYNAPSE_DB_PORT}:5432
+      username: ${SYNAPSE_DB_USERNAME}:synapse
+      password: ${SYNAPSE_DB_PASSWORD}:synapse
+      database: ${SYNAPSE_DB_DATABASE}:synapse
+      ssl: ${SYNAPSE_DB_SSL}:false
   discussions:
     enabled: ${COMMUNICATIONS_DISCUSSIONS_ENABLED}:true
   direct_message_rooms:
