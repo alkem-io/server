@@ -1,0 +1,59 @@
+%% Whiteboard Image Document Conversion Sequence Diagram
+%% Derived from spec FR-001..FR-020 and clarifications (Session 2025-10-04)
+
+sequenceDiagram
+    autonumber
+    participant U as Web Client (User)
+    participant GQL as GraphQL API (Mutation Resolver)
+    participant BL as Conversion Domain Logic
+    participant COL as Whiteboard Collaboration Service
+    participant EXT as External Conversion Service
+    participant NOT as Notification System
+
+    Note over U,GQL: User invokes convertWhiteboardDocumentImage(whiteboardId, documentId)
+    U->>GQL: Mutation request {whiteboardId, documentId}
+    GQL->>BL: validateAccessAndInputs(whiteboardId, documentId)
+    BL-->>GQL: OK / ValidationError
+    alt Validation error
+        GQL-->>U: { status: REJECTED, errors:[...] }
+    else Valid
+        BL->>BL: checkDuplicateInProgress(user, whiteboard)
+        alt Duplicate active
+            GQL-->>U: { status: REJECTED, error: DUPLICATE_IN_PROGRESS }
+        else No duplicate
+            BL->>BL: createConversionJob(correlationId)
+            BL->>EXT: RPC request (correlationId, imageURL, format=Excalidraw)
+            par Submit Ack Path
+                GQL-->>U: { status: QUEUED, conversionId, submissionLatency }
+            and Background Processing
+                EXT-->>BL: RPC response (resultURL | error)
+                alt RPC error/timeout
+                    BL->>BL: markJobFailed(errorCode)
+                    BL->>NOT: dispatchNotification(failed)
+                else RPC success
+                    BL->>EXT: HTTP GET resultURL (Excalidraw JSON)
+                    EXT-->>BL: Excalidraw JSON
+                    BL->>BL: validateExcalidrawJSON(schemaSubset)
+                    alt Validation fails
+                        BL->>BL: markJobFailed(INVALID_RESULT)
+                        BL->>NOT: dispatchNotification(failed)
+                    else Valid JSON
+                        BL->>BL: determineSessionState(whiteboard)
+                        alt Active collaboration session exists
+                            BL->>COL: injectElements(conversionId, elements)
+                        else No active session
+                            BL->>COL: openSession(whiteboardId)
+                            COL-->>BL: sessionOpened
+                            BL->>COL: injectElements(conversionId, elements)
+                        end
+                        BL->>BL: markJobCompleted(success)
+                        BL->>NOT: dispatchNotification(success)
+                    end
+                end
+            end
+        end
+    end
+    Note over U,COL: If client has whiteboard open, realtime update shows new content.
+    Note over U,NOT: User receives in-app/email notification on completion.
+
+    %% Metrics captured: submissionLatency, totalCompletionLatency, notificationLatency, failuresByCode
