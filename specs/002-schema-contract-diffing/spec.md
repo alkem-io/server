@@ -42,7 +42,7 @@ As a platform maintainer, I want automated detection of breaking GraphQL schema 
 8. **Given** a newly added deprecation without a `REMOVE_AFTER=` schedule and introduced <24h ago, **When** CI evaluates it, **Then** it is classified as DEPRECATION_GRACE and the gate passes with a warning.
 9. **Given** a newly added deprecation without a valid schedule and introduced ≥24h ago, **When** CI evaluates it, **Then** it is classified as INVALID_DEPRECATION_FORMAT and the gate fails.
 10. **Given** the first run with no prior snapshot, **When** CI executes diff, **Then** it produces a BASELINE classification entry and passes.
-11. **Given** a premature removal classification accompanied by a valid CODEOWNER override phrase, **When** CI evaluates, **Then** the gate passes and marks only those removal entries with `override: true`.
+11. **Given** a premature removal classification accompanied by a valid CODEOWNER override phrase, **When** CI evaluates, **Then** the gate passes and marks only those removal entries with `override: true` and sets `overrideApplied=true` at report level.
 12. **Given** a scalar whose JSON type category changes (string→number), **When** diff runs, **Then** it emits a BREAKING entry and scalar evaluation with `behaviorChangeClassification=BREAKING`.
 13. **Given** a scalar whose description changes but JSON type category is stable, **When** diff runs, **Then** it emits an INFO entry and scalar evaluation with `behaviorChangeClassification=NON_BREAKING`.
 14. **Given** a large synthetic schema (≥180 object types) with moderate churn, **When** diff runs in CI, **Then** it completes <5s and performance test passes.
@@ -92,7 +92,7 @@ As a platform maintainer, I want automated detection of breaking GraphQL schema 
 - **FR-021**: The schema printing script MUST use `SchemaBootstrapModule` instead of the full `AppModule` when an environment variable `SCHEMA_BOOTSTRAP_LIGHT=1` is set; defaulting to `AppModule` otherwise for parity in local dev.
 - **FR-022**: The lightweight bootstrap MUST complete within < 2s cold start in CI (target measured after implementation) and MUST NOT attempt network connections to excluded services (verified by absence of connection error logs & by mocking env to unreachable hosts in a contract test).
 - **FR-023**: Generated artifacts `change-report.json` and `deprecations.json` MUST validate against committed JSON Schemas (`change-report.schema.json`, `deprecations.schema.json`) and CI MUST fail on validation errors.
-- **FR-024**: When an override is applied, each BREAKING or PREMATURE_REMOVAL entry MUST include `override: true` while other entries remain unchanged.
+- **FR-024**: When an override is applied, each BREAKING or PREMATURE_REMOVAL entry MUST include `override: true` while other entries remain unchanged; the presence of at least one overridden entry MUST set report-level `overrideApplied=true`.
 - **FR-025**: First-run (no prior snapshot) MUST emit a BASELINE classification entry and set `classifications.baseline=1` with other counts 0.
 - **FR-026**: Diff engine MUST complete against a synthetic large schema (<5s wall time) and emit performance metrics logged in test output.
 - **FR-027**: Scalar evaluation MUST record `jsonTypeCurrent='unknown'` when inference fails and classify behavior NON_BREAKING unless removal/type change occurs.
@@ -140,6 +140,7 @@ Open Question (tracked): Should we auto-generate `SchemaBootstrapModule` imports
 - **ScalarChangeEvaluation**: Per-scalar previous/current JSON type category + behavior classification.
 - **DeprecationsRegistry Artifact (`deprecations.json`)**: Array of `DeprecationEntry` plus retirement status & timestamp.
 - **ClassificationCount**: Includes keys additive, deprecated, breaking, prematureRemoval, invalidDeprecation, deprecationGrace, info, baseline.
+  - All keys MUST be present even if zero; `baseline=1` only on first snapshot.
 
 ### Classification Taxonomy (Expanded)
 
