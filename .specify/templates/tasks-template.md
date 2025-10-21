@@ -120,7 +120,6 @@ _Applied during main() execution_
    - Each entity → model creation task [P]
    - Relationships → service layer tasks
 3. **From User Stories**:
-
    - Each story → integration test [P]
    - Quickstart scenarios → validation tasks
 

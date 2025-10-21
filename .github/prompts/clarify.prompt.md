@@ -15,7 +15,6 @@ Note: This clarification workflow is expected to run (and be completed) BEFORE i
 Execution steps:
 
 1. Run `.specify/scripts/bash/check-prerequisites.sh --json --paths-only` from repo root **once** (combined `--json --paths-only` mode / `-Json -PathsOnly`). Parse minimal JSON payload fields:
-
    - `FEATURE_DIR`
    - `FEATURE_SPEC`
    - (Optionally capture `IMPL_PLAN`, `TASKS` for future chained flows.)
@@ -24,26 +23,22 @@ Execution steps:
 2. Load the current spec file. Perform a structured ambiguity & coverage scan using this taxonomy. For each category, mark status: Clear / Partial / Missing. Produce an internal coverage map used for prioritization (do not output raw map unless no questions will be asked).
 
    Functional Scope & Behavior:
-
    - Core user goals & success criteria
    - Explicit out-of-scope declarations
    - User roles / personas differentiation
 
    Domain & Data Model:
-
    - Entities, attributes, relationships
    - Identity & uniqueness rules
    - Lifecycle/state transitions
    - Data volume / scale assumptions
 
    Interaction & UX Flow:
-
    - Critical user journeys / sequences
    - Error/empty/loading states
    - Accessibility or localization notes
 
    Non-Functional Quality Attributes:
-
    - Performance (latency, throughput targets)
    - Scalability (horizontal/vertical, limits)
    - Reliability & availability (uptime, recovery expectations)
@@ -52,44 +47,36 @@ Execution steps:
    - Compliance / regulatory constraints (if any)
 
    Integration & External Dependencies:
-
    - External services/APIs and failure modes
    - Data import/export formats
    - Protocol/versioning assumptions
 
    Edge Cases & Failure Handling:
-
    - Negative scenarios
    - Rate limiting / throttling
    - Conflict resolution (e.g., concurrent edits)
 
    Constraints & Tradeoffs:
-
    - Technical constraints (language, storage, hosting)
    - Explicit tradeoffs or rejected alternatives
 
    Terminology & Consistency:
-
    - Canonical glossary terms
    - Avoided synonyms / deprecated terms
 
    Completion Signals:
-
    - Acceptance criteria testability
    - Measurable Definition of Done style indicators
 
    Misc / Placeholders:
-
    - TODO markers / unresolved decisions
    - Ambiguous adjectives ("robust", "intuitive") lacking quantification
 
    For each category with Partial or Missing status, add a candidate question opportunity unless:
-
    - Clarification would not materially change implementation or validation strategy
    - Information is better deferred to planning phase (note internally)
 
 3. Generate (internally) a prioritized queue of candidate clarification questions (maximum 5). Do NOT output them all at once. Apply these constraints:
-
    - Maximum of 5 total questions across the whole session.
    - Each question must be answerable with EITHER:
      - A short multiple‑choice selection (2–5 distinct, mutually exclusive options), OR
@@ -101,7 +88,6 @@ Execution steps:
    - If more than 5 categories remain unresolved, select the top 5 by (Impact \* Uncertainty) heuristic.
 
 4. Sequential questioning loop (interactive):
-
    - Present EXACTLY ONE question at a time.
    - For multiple‑choice questions render options as a Markdown table:
 
@@ -125,7 +111,6 @@ Execution steps:
    - If no valid questions exist at start, immediately report no critical ambiguities.
 
 5. Integration after EACH accepted answer (incremental update approach):
-
    - Maintain in-memory representation of the spec (loaded once at start) plus the raw file contents.
    - For the first integrated answer in this session:
      - Ensure a `## Clarifications` section exists (create it just after the highest-level contextual/overview section per the spec template if missing).
@@ -144,7 +129,6 @@ Execution steps:
    - Keep each inserted clarification minimal and testable (avoid narrative drift).
 
 6. Validation (performed after EACH write plus final pass):
-
    - Clarifications session contains exactly one bullet per accepted answer (no duplicates).
    - Total asked (accepted) questions ≤ 5.
    - Updated sections contain no lingering vague placeholders the new answer was meant to resolve.

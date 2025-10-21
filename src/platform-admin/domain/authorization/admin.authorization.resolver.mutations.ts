@@ -1,4 +1,3 @@
-import { Inject } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
@@ -13,7 +12,6 @@ import { RevokeAuthorizationCredentialInput } from './dto/authorization.dto.cred
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { GLOBAL_POLICY_AUTHORIZATION_GRANT_GLOBAL_ADMIN } from '@common/constants/authorization/global.policy.constants';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AuthResetService } from '@services/auth-reset/publisher/auth-reset.service';
 import { IOrganization } from '@domain/community/organization';
 import { GrantOrganizationAuthorizationCredentialInput } from './dto/authorization.dto.credential.grant.organization';
@@ -40,7 +38,6 @@ export class AdminAuthorizationResolverMutations {
     private notificationPlatformAdapter: NotificationPlatformAdapter,
     private authorizationService: AuthorizationService,
     private adminAuthorizationService: AdminAuthorizationService,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private authResetService: AuthResetService,
     private virtualContributorService: VirtualContributorService,
     @InjectEntityManager('default')

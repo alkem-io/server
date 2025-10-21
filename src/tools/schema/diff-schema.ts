@@ -782,7 +782,9 @@ async function main() {
           )
         );
       }
-      process.stdout.write(`Baseline change report written to ${args.outPath}\n`);
+      process.stdout.write(
+        `Baseline change report written to ${args.outPath}\n`
+      );
       return;
     }
     const oldSDL = readFileSync(args.oldPath, 'utf-8');
@@ -790,7 +792,9 @@ async function main() {
     const previousDeprecations: Map<string, DeprecationEntry> = new Map();
     if (args.deprecationsPath && existsSync(args.deprecationsPath)) {
       try {
-        const rawPrev = JSON.parse(readFileSync(args.deprecationsPath, 'utf-8'));
+        const rawPrev = JSON.parse(
+          readFileSync(args.deprecationsPath, 'utf-8')
+        );
         if (rawPrev && Array.isArray(rawPrev.entries)) {
           for (const d of rawPrev.entries) {
             previousDeprecations.set(d.element, d);
@@ -830,7 +834,9 @@ async function main() {
     }
     process.stdout.write(`Change report scaffold written to ${args.outPath}\n`);
   } catch (error) {
-    process.stderr.write(`Error: ${error instanceof Error ? error.message : String(error)}\n`);
+    process.stderr.write(
+      `Error: ${error instanceof Error ? error.message : String(error)}\n`
+    );
     process.exit(1);
   }
 }

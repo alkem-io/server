@@ -45,10 +45,10 @@ Content type: UTF-8 JSON
 
 Schema
 {
-"job_id": "UUID", // required, producer-generated unique ID
+"job*id": "UUID", // required, producer-generated unique ID
 "image_url": "https://…", // required, http(s) URL; https recommended
 "headers": { "Header-Name": "value" }, // optional, string:string map (merged with server-side IMAGE_FETCH_HEADERS_JSON)
-"options": { /_ reserved for future _/ }, // optional, arbitrary JSON object; currently not required
+"options": { /* reserved for future \_/ }, // optional, arbitrary JSON object; currently not required
 "submitted_ts": "2025-10-03T10:15:30Z" // optional; server will set if absent
 }
 

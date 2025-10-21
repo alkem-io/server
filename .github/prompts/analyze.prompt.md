@@ -17,21 +17,18 @@ Constitution Authority: The project constitution (`.specify/memory/constitution.
 Execution steps:
 
 1. Run `.specify/scripts/bash/check-prerequisites.sh --json --require-tasks --include-tasks` once from repo root and parse JSON for FEATURE_DIR and AVAILABLE_DOCS. Derive absolute paths:
-
    - SPEC = FEATURE_DIR/spec.md
    - PLAN = FEATURE_DIR/plan.md
    - TASKS = FEATURE_DIR/tasks.md
      Abort with an error message if any required file is missing (instruct the user to run missing prerequisite command).
 
 2. Load artifacts:
-
    - Parse spec.md sections: Overview/Context, Functional Requirements, Non-Functional Requirements, User Stories, Edge Cases (if present).
    - Parse plan.md: Architecture/stack choices, Data Model references, Phases, Technical constraints.
    - Parse tasks.md: Task IDs, descriptions, phase grouping, parallel markers [P], referenced file paths.
    - Load constitution `.specify/memory/constitution.md` for principle validation.
 
 3. Build internal semantic models:
-
    - Requirements inventory: Each functional + non-functional requirement with a stable key (derive slug based on imperative phrase; e.g., "User can upload file" -> `user-can-upload-file`).
    - User story/action inventory.
    - Task coverage mapping: Map each task to one or more requirements or stories (inference by keyword / explicit reference patterns like IDs or key phrases).
@@ -39,7 +36,6 @@ Execution steps:
 
 4. Detection passes:
    A. Duplication detection:
-
    - Identify near-duplicate requirements. Mark lower-quality phrasing for consolidation.
      B. Ambiguity detection:
    - Flag vague adjectives (fast, scalable, secure, intuitive, robust) lacking measurable criteria.
@@ -62,7 +58,6 @@ Execution steps:
    - Conflicting requirements (e.g., one requires to use Next.js while other says to use Vue as the framework).
 
 5. Severity assignment heuristic:
-
    - CRITICAL: Violates constitution MUST, missing core spec artifact, or requirement with zero coverage that blocks baseline functionality.
    - HIGH: Duplicate or conflicting requirement, ambiguous security/performance attribute, untestable acceptance criterion.
    - MEDIUM: Terminology drift, missing non-functional task coverage, underspecified edge case.
@@ -79,7 +74,6 @@ Execution steps:
    (Add one row per finding; generate stable IDs prefixed by category initial.)
 
    Additional subsections:
-
    - Coverage Summary Table:
      | Requirement Key | Has Task? | Task IDs | Notes |
    - Constitution Alignment Issues (if any)
@@ -93,7 +87,6 @@ Execution steps:
      - Critical Issues Count
 
 7. At end of report, output a concise Next Actions block:
-
    - If CRITICAL issues exist: Recommend resolving before `/implement`.
    - If only LOW/MEDIUM: User may proceed, but provide improvement suggestions.
    - Provide explicit command suggestions: e.g., "Run /specify with refinement", "Run /plan to adjust architecture", "Manually edit tasks.md to add coverage for 'performance-metrics'".
