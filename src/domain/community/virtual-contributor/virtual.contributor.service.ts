@@ -1,6 +1,6 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
 import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
@@ -67,7 +67,7 @@ export class VirtualContributorService {
     @InjectRepository(VirtualContributor)
     private virtualContributorRepository: Repository<VirtualContributor>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService
+    private readonly logger: WinstonLogger
   ) {}
 
   public async createVirtualContributor(
@@ -344,10 +344,14 @@ export class VirtualContributorService {
         await this.aiPersonaService.deleteAiPersona({
           ID: virtualContributor.aiPersonaID,
         });
-      } catch {
+      } catch (error: any) {
         this.logger.error(
-          'Failed to delete external AI Persona.',
-          { aiPersonaID: virtualContributor.aiPersonaID, virtualContributorID },
+          {
+            message: 'Failed to delete external AI Persona.',
+            aiPersonaID: virtualContributor.aiPersonaID,
+            virtualContributorID,
+          },
+          error?.stack,
           LogContext.AI_PERSONA
         );
       }
@@ -462,10 +466,13 @@ export class VirtualContributorService {
     for (const vc of virtualContributors) {
       try {
         await this.refreshBodyOfKnowledge(vc, agentInfo);
-      } catch (error) {
+      } catch (error: any) {
         this.logger.error(
-          'Failed to refresh body of knowledge for VC.',
-          { virtualContributorID: vc.id, error },
+          {
+            message: 'Failed to refresh body of knowledge for VC.',
+            virtualContributorID: vc.id,
+          },
+          error?.stack,
           LogContext.VIRTUAL_CONTRIBUTOR
         );
       }
