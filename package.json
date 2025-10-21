@@ -134,7 +134,9 @@
     "winston": "^3.13.1",
     "xstate": "^5.18.2",
     "yaml": "^2.4.5",
-    "yjs": "^13.6.27"
+    "yjs": "^13.6.27",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "4.2.0"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.4.2",
@@ -170,7 +172,6 @@
     "rimraf": "^6.0.1",
     "supertest": "^7.0.0",
     "ts-jest": "^29.2.2",
-    "ts-node": "^10.9.2",
     "typescript": "5.3.3"
   },
   "_moduleAliases": {
