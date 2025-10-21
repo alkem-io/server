@@ -46,7 +46,7 @@ Aggregates detected differences between previous and current snapshot.
 | generatedAt | string (ISO) | yes | Time diff produced |
 | classifications | ClassificationCount | yes | Counts by category |
 | entries | ChangeEntry[] | yes | Detailed element changes |
-| overrideApplied | boolean | yes | True if BREAKING override phrase validated |
+| overrideApplied | boolean | yes | True if BREAKING or PREMATURE_REMOVAL override phrase validated |
 | overrideReviewer | string | no | CODEOWNER username if override applied |
 | enumLifecycleEvaluations | EnumLifecycleEvaluation[] | no | Detailed evaluation objects |
 | scalarEvaluations | ScalarChangeEvaluation[] | no | Scalar-focused evaluations |
@@ -61,6 +61,8 @@ Aggregates detected differences between previous and current snapshot.
 | prematureRemoval | integer | yes | PREMATURE_REMOVAL count |
 | invalidDeprecation | integer | yes | INVALID_DEPRECATION_FORMAT count |
 | info | integer | yes | Description-only changes |
+| deprecationGrace | integer | yes | DEPRECATION_GRACE warning entries |
+| baseline | integer | yes | BASELINE pseudo entry count (0 or 1) |
 
 ### 5. ChangeEntry
 
@@ -68,14 +70,16 @@ Aggregates detected differences between previous and current snapshot.
 | id | string | yes | Unique internal id (e.g., UUID) |
 | element | string | yes | Fully qualified element path |
 | elementType | enum(TYPE|FIELD|ENUM_VALUE|SCALAR) | yes | Nature of element |
-| changeType | enum(ADDITIVE|DEPRECATED|BREAKING|PREMATURE_REMOVAL|INVALID_DEPRECATION_FORMAT|INFO|BASELINE) | yes | Classification |
+| changeType | enum(ADDITIVE|DEPRECATED|DEPRECATION_GRACE|INVALID_DEPRECATION_FORMAT|BREAKING|PREMATURE_REMOVAL|INFO|BASELINE) | yes | Classification taxonomy |
 | detail | string | yes | Human-readable description |
 | previous | any | no | Prior representation snippet |
 | current | any | no | Current representation snippet |
 | deprecationFormatValid | boolean | no | For deprecated elements (FR-016) |
 | removeAfter | string (date) | no | Parsed removal date if present |
 | sinceDate | string (date) | no | First deprecation appearance date |
-| override | boolean | no | True if override covers this breaking change |
+| override | boolean | no | True if override covers this BREAKING or PREMATURE_REMOVAL change |
+| grace | boolean | no | True if classification is DEPRECATION_GRACE |
+| graceExpiresAt | string (ISO) | no | Timestamp end of grace window |
 
 ### 6. EnumLifecycleEvaluation
 
@@ -107,8 +111,8 @@ Represents active (still present) deprecations and recently retired elements.
 | removeAfter | string (date) | yes | Parsed date from annotation |
 | humanReason | string | yes | Text after separator |
 | formatValid | boolean | yes | Parsed & validated |
-| retired | boolean | yes | True if element removed in current snapshot and allowed |
-| retirementDate | string (date) | no | Date removed (if retired) |
+| retired | boolean | yes | True if element removed after lifecycle conditions satisfied |
+| retirementDate | string (date) | no | Date removed (YYYY-MM-DD) |
 
 ## Relationships
 
@@ -119,7 +123,7 @@ Represents active (still present) deprecations and recently retired elements.
 ## Constraints
 
 - `removeAfter` must be >= (sinceDate + 90 days) for enum values (enforced in classification).
-- Baseline snapshot (no prior): ChangeReport.entries may include only BASELINE pseudo entry or be empty; counts zero.
+- Baseline snapshot (no prior): ChangeReport.entries includes a BASELINE entry; `classifications.baseline=1`; other counts zero.
 - All ISO dates truncated to YYYY-MM-DD for comparisons.
 
 ## Future Extensions (Deferred)
@@ -136,7 +140,15 @@ Represents active (still present) deprecations and recently retired elements.
 - FR-004/FR-015: ChangeEntry.removeAfter / sinceDate / deprecationFormatValid
 - FR-011/FR-012: EnumLifecycleEvaluation fields
 - FR-013–FR-016: DeprecationEntry.formatValid, removeAfter, humanReason
-- FR-017–FR-019: ScalarChangeEvaluation jsonType\* + classification
+  FR-017–FR-019: ScalarChangeEvaluation jsonType\* + classification (unknown inference permitted)
+  FR-023: JSON Schema validation of artifacts (schema:validate)
+  FR-024: Per-entry override flag for BREAKING & PREMATURE_REMOVAL
+  FR-025: Baseline classification & baseline count field
+  FR-026: Performance budget (diff & bootstrap) – non-field constraint
+  FR-027: Unknown scalar jsonType category `unknown`
+  FR-028: Grace metadata fields (`grace`, `graceExpiresAt`)
+  FR-029: Retirement metadata (`retired`, `retirementDate`)
+  FR-030: ClassificationCount.baseline key
 
 ---
 
