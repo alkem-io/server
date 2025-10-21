@@ -30,10 +30,11 @@ ENV NODE_ENV=$ENV_ARG
 ENV GRAPHQL_ENDPOINT_PORT=$GRAPHQL_ENDPOINT_PORT_ARG
 ENV NODE_OPTIONS=--max-old-space-size=2048
 
-# Copy only production node_modules to slim image
+# Install dependencies (including ts-node now required at runtime for migrations)
 COPY package*.json pnpm-lock.yaml ./
 RUN npm i -g pnpm@10.17.1 \
-	&& pnpm install --prod --frozen-lockfile \
+	&& pnpm install --frozen-lockfile \
+	&& pnpm prune --prod \
 	&& pnpm store prune
 
 # Copy build artifacts & config
