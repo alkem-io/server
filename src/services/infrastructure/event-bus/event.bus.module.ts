@@ -8,16 +8,21 @@ import { HandleMessages } from './messages';
 import { AlkemioConfig } from '@src/types';
 import { Handlers } from './handlers';
 import { AiServerModule } from '@services/ai-server/ai-server/ai.server.module';
-import amqplib from 'amqplib';
+import { RabbitMQConnectionFactory } from './rabbitmq.connection.factory';
+import { RabbitMQConnectionModule } from './rabbitmq.connection.module';
 
 @Global()
 @Module({
   imports: [
     CqrsModule,
+    RabbitMQConnectionModule,
     RabbitMQModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: async (configService: ConfigService<AlkemioConfig, true>) => {
+      imports: [ConfigModule, RabbitMQConnectionModule],
+      inject: [ConfigService, RabbitMQConnectionFactory],
+      useFactory: async (
+        configService: ConfigService<AlkemioConfig, true>,
+        connectionFactory: RabbitMQConnectionFactory
+      ) => {
         const rbmqConfig = configService.get(
           'microservices.rabbitmq.connection',
           { infer: true }
@@ -31,27 +36,12 @@ import amqplib from 'amqplib';
         const exchangeType = 'direct';
         const uri = `amqp://${rbmqConfig.user}:${rbmqConfig.password}@${rbmqConfig.host}:${rbmqConfig.port}`;
 
-        // with some recent changes the type fo the EventBus was changed from `fanout` to `direct` with routing keys
-        // this snippet below makes sure the exchange is recreated with the proper type;
-        // otherwise the app won't boot
-        const connection = await amqplib.connect(uri);
-        let channel = await connection.createChannel();
-        // this is important - regardless of try/catch or err callbacks below the error
-        // is emitted to the channel and the channel is closed;
-        // we could log the error here but for some reason injecting the logger service is not working well :/
-        channel.on('error', () => {});
-        try {
-          // assert the exchange exists with the right type
-          await channel.assertExchange(eventBusConfig.exchange, exchangeType);
-        } catch {
-          // if not, delete and assert it again
-          // the configuration below will handle the oruting etc.
-          channel = await connection.createChannel();
-          await channel.deleteExchange(eventBusConfig.exchange);
-          await channel.assertExchange(eventBusConfig.exchange, exchangeType);
-        } finally {
-          await channel.close();
-        }
+        // Ensure the exchange is recreated with the proper type if needed
+        await connectionFactory.ensureExchange(
+          uri,
+          eventBusConfig.exchange,
+          exchangeType
+        );
 
         return {
           uri,

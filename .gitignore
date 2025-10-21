@@ -66,3 +66,11 @@ subscriptions.log
 .scripts/
 .storage/
 .build/synapse/homeserver.yaml
+
+# Schema contract temp artifacts (do not commit)
+tmp/
+tmp-change-report.json
+tmp-deprecations.json
+change-report.json
+deprecations.json
+tmp/prev.schema.graphql
