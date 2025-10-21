@@ -6,6 +6,9 @@ export class PromptGraphDefinitionNode {
   @Field(() => String, { nullable: false })
   name!: string;
 
+  @Field(() => Boolean, { nullable: false })
+  system!: boolean;
+
   @Field(() => [String], { nullable: true })
   input_variables?: string[];
 
