@@ -13,10 +13,10 @@ import graphJson from '../prompt-graph/config/prompt.graph.expert.json';
 import { PromptGraph } from '../prompt-graph/dto/prompt.graph.dto';
 
 const EXTERNALY_CONFIGURABLE_ENGINES = [
-  AiPersonaEngine.LIBRA_FLOW,
   AiPersonaEngine.GENERIC_OPENAI,
   AiPersonaEngine.LIBRA_FLOW,
 ];
+
 @Resolver(() => IAiPersona)
 export class AiPersonaResolverFields {
   constructor(
@@ -48,8 +48,24 @@ export class AiPersonaResolverFields {
       return aiPersona.promptGraph;
     }
 
-    if (aiPersona.engine === AiPersonaEngine.EXPERT) {
-      return graphJson;
+    if (
+      [AiPersonaEngine.EXPERT, AiPersonaEngine.LIBRA_FLOW].includes(
+        aiPersona.engine
+      )
+    ) {
+      // Clone the imported JSON to avoid mutating the module cache
+      const formattedGraph = JSON.parse(JSON.stringify(graphJson));
+
+      // If any node.prompt is stored as an array of lines, join them into a single string
+      if (formattedGraph && Array.isArray(formattedGraph.nodes)) {
+        formattedGraph.nodes.forEach((node: any) => {
+          if (node && Array.isArray(node.prompt)) {
+            node.prompt = node.prompt.join('\n');
+          }
+        });
+      }
+
+      return formattedGraph;
     }
 
     return null;
