@@ -1,42 +1,48 @@
-FROM node:20.15.1-alpine
-
-
-# Create app directory
+###############
+# Builder stage
+###############
+FROM node:20.15.1-alpine AS builder
 WORKDIR /usr/src/app
 
-# Define graphql server port
 ARG GRAPHQL_ENDPOINT_PORT_ARG=4000
 ARG ENV_ARG=production
 
-# Install pnpm globally
+# Install pnpm (locked version to align with repo)
 RUN npm i -g pnpm@10.17.1
 
-# Install app dependencies
-# A wildcard is used to ensure both package.json AND pnpm-lock.yaml are copied
-# where available (pnpm@9+)
 COPY package*.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
 
-RUN pnpm install
-
-# If you are building your code for production
-# RUN pnpm install --prod
-
-# Bundle app source & config files for TypeORM & TypeScript
-COPY ./src ./src
-COPY ./tsconfig.json .
-COPY ./tsconfig.build.json .
-COPY ./alkemio.yml .
+COPY tsconfig.json tsconfig.build.json alkemio.yml ./
+COPY src ./src
 
 RUN pnpm run build
 
-## Add the wait script to the image
+###############
+# Runtime stage
+###############
+FROM node:20.15.1-alpine AS runtime
+WORKDIR /usr/src/app
+
+ARG GRAPHQL_ENDPOINT_PORT_ARG=4000
+ARG ENV_ARG=production
+ENV NODE_ENV=$ENV_ARG
+ENV GRAPHQL_ENDPOINT_PORT=$GRAPHQL_ENDPOINT_PORT_ARG
+ENV NODE_OPTIONS=--max-old-space-size=2048
+
+# Copy only production node_modules to slim image
+COPY package*.json pnpm-lock.yaml ./
+RUN npm i -g pnpm@10.17.1 \
+	&& pnpm install --prod --frozen-lockfile \
+	&& pnpm store prune
+
+# Copy build artifacts & config
+COPY --from=builder /usr/src/app/dist ./dist
+COPY --from=builder /usr/src/app/alkemio.yml ./alkemio.yml
+
+# Add wait script (kept last to leverage layer cache for app code changes)
 ADD https://github.com/ufoscout/docker-compose-wait/releases/download/2.7.3/wait /wait
 RUN chmod +x /wait
 
-ENV GRAPHQL_ENDPOINT_PORT=${GRAPHQL_ENDPOINT_PORT_ARG}
-ENV NODE_ENV=${ENV_ARG}
-
 EXPOSE ${GRAPHQL_ENDPOINT_PORT_ARG}
-ENV NODE_OPTIONS=--max-old-space-size=2048
-# Use node directly for production start to avoid passing NODE_OPTIONS as an argument string
-CMD ["node", "dist/src/main.js"]
+CMD ["node", "dist/main.js"]
