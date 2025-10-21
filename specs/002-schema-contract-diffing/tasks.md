@@ -120,9 +120,17 @@ T071 Audit existing artifact generation to ensure `deprecations.json` includes `
 T072 [P] Add metrics logging hook to performance test capturing diff duration & classification counts summary to support KPI tracking (non-blocking). Deps: T049,T062
 T073 Final reconciliation: run all schema-contract tests; confirm coverage thresholds met with new additions; update coverage report if needed. Deps: T058-T072
 
+## Phase 11: Refinements (FR-024 clarification & invariants)
+
+T074 [P] Update change-report.schema.json to explicitly require presence (can be zero) of keys: `baseline`, `deprecationGrace` within `classifications` object (or document allowance if using patternProperties). Deps: T058
+T075 [P] Add contract test asserting report-level `overrideApplied=true` only when ≥1 ChangeEntry.override=true for BREAKING/PREMATURE_REMOVAL. Path: /home/valentin/work/repos/alkemio/server/contract-tests/override-applied.contract.spec.ts. Deps: T045,T048,T059
+T076 [P] Add classification count invariant test ensuring all taxonomy keys present even when zero (simulate no deprecationGrace scenario). Path: /home/valentin/work/repos/alkemio/server/test/schema-contract/integration/classification-counts.spec.ts. Deps: T012,T061
+T077 [P] Add integration test for mixed overrides: one BREAKING overridden, one PREMATURE_REMOVAL not overridden → expect gate fail and overrideApplied=true. Path: /home/valentin/work/repos/alkemio/server/test/schema-contract/integration/mixed-override-fail.spec.ts. Deps: T069
+T078 Final FR-024 refinement documentation sync: update spec.md & data-model.md references if schema changes from T074 require note (already updated; verify). Deps: T074-T077
+
 ## Completion Criteria Update
 
-Feature now considered DONE when: T001–T057 + T058–T073 complete; new FR-023..FR-030 mapped and passing; override logic covers PREMATURE_REMOVAL; grace expiry timestamp present; baseline count included; retirement metadata validated; performance & artifact validations stable.
+Feature now considered DONE when: T001–T057 + T058–T073 + T074–T078 complete; new FR-023..FR-030 mapped and passing; FR-024 clarified (report-level overrideApplied semantics covered); override logic covers PREMATURE_REMOVAL; grace expiry timestamp present; baseline count included; retirement metadata validated; classification invariants enforced; performance & artifact validations stable.
 
 ---
 
