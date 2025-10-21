@@ -62,8 +62,8 @@ export class MeResolverFields {
   ): Promise<number> {
     if (!agentInfo.userID) {
       throw new ValidationException(
-        'Unable to retrieve invitations as no userID provided.',
-        LogContext.COMMUNITY
+        'Unable to retrieve unread notifications count; no userID provided.',
+        LogContext.IN_APP_NOTIFICATION
       );
     }
     // Always return the total unread count, regardless of any filtering on notifications
