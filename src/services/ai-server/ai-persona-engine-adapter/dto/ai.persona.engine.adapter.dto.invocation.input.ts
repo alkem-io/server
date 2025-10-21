@@ -35,7 +35,7 @@ export interface AiPersonaEngineAdapterInvocationInput
   externalConfig: IExternalConfig;
   externalMetadata: ExternalMetadata;
   resultHandler: ResultHandler;
-  personaServiceID: string;
+  personaID: string;
   language?: string;
   promptGraph?: PromptGraph;
 }
