@@ -101,6 +101,29 @@ T055 [X] Risk register update in plan.md reflecting bootstrap parity outcomes. D
 T056 [X] Final FR coverage reconciliation /home/valentin/work/repos/alkemio/server/specs/002-schema-contract-diffing/coverage.md (map tasks→FR). Deps: T050,T051 (Rewrote coverage.md with normalized FR→Artifacts→Tests→Tasks table.)
 T057 [X] Add troubleshooting section for common gate failures to quickstart.md. Deps: T054 (Expanded table + parity debugging & override simulation tips.)
 
+## Phase 10: Spec Additions Propagation (FR-023..FR-030)
+
+T058 [P] Add JSON Schema validation gating enhancement for new taxonomy values (DEPRECATION_GRACE, BASELINE count) ensuring `change-report.schema.json` enumerates all values. Deps: T002,T006
+T059 [P] Extend override application logic to include PREMATURE_REMOVAL entries per FR-003; mark each overridden entry with `override: true`. Deps: T028
+T060 [P] Implement grace expiry timestamp (`graceExpiresAt`) on DEPRECATION_GRACE entries in diff engine; add unit test. Deps: T022,T042
+T061 [P] Ensure baseline classification count (`baseline`) added to ClassificationCount and test coverage asserts presence even when zero. Deps: T012,T046
+T062 [P] Performance test enhancement: assert diff runtime <5s explicitly (already present) plus log entry count; update test if missing. Deps: T049
+T063 [P] Add scalar unknown inference test asserting `jsonTypeCurrent='unknown'` when heuristic cannot classify and classification NON_BREAKING (extend existing scalar tests). Deps: T044
+T064 [P] Add retirement metadata test verifying `retired=true` and `retirementDate` set for removals after ≥90 days + past removeAfter (INFO classification). Deps: T020,T043
+T065 [P] Update CI gate script to treat PREMATURE_REMOVAL overrides equivalently to BREAKING; adjust exit code conditions accordingly. Deps: T029,T059
+T066 [P] Update coverage-fr-mapping.md adding rows FR-023..FR-030 referencing artifacts/tests; mark statuses. Deps: T056,T058-T065
+T067 [P] Quickstart & README glossary expansion for new fields (`override` per-entry, `graceExpiresAt`, `baseline` count). Deps: T053,T060,T061
+T068 [P] Add contract test for JSON Schema validation including DEPRECATION_GRACE and BASELINE entries (extend change-report.contract.spec.ts). Deps: T006,T058
+T069 [P] Add integration test scenario: PREMATURE_REMOVAL with override present passes gate and marks only relevant entries. Deps: T048,T059
+T070 [P] Update plan.md and coverage.md to reflect new FR numbers and taxonomy; remove any outdated notes referencing earlier override scope. Deps: T056,T058
+T071 Audit existing artifact generation to ensure `deprecations.json` includes `retired` and `retirementDate` fields; add missing implementation or mark verified. Deps: T024,T064
+T072 [P] Add metrics logging hook to performance test capturing diff duration & classification counts summary to support KPI tracking (non-blocking). Deps: T049,T062
+T073 Final reconciliation: run all schema-contract tests; confirm coverage thresholds met with new additions; update coverage report if needed. Deps: T058-T072
+
+## Completion Criteria Update
+
+Feature now considered DONE when: T001–T057 + T058–T073 complete; new FR-023..FR-030 mapped and passing; override logic covers PREMATURE_REMOVAL; grace expiry timestamp present; baseline count included; retirement metadata validated; performance & artifact validations stable.
+
 ---
 
 ## Dependencies Summary

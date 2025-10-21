@@ -1,34 +1,50 @@
 # Implementation Plan: GraphQL Schema Contract Diffing & Enforcement
 
 **Branch**: `002-schema-contract-diffing` | **Date**: 2025-10-07 | **Spec**: `./spec.md`
-**Input**: Feature specification from `/specs/002-schema-contract-diffing/spec.md`
+Automate generation, storage, and comparison of a canonical GraphQL schema snapshot to classify changes using a comprehensive taxonomy (ADDITIVE / DEPRECATED / DEPRECATION_GRACE / INVALID_DEPRECATION_FORMAT / BREAKING / PREMATURE_REMOVAL / INFO / BASELINE); block unapproved BREAKING or PREMATURE_REMOVAL changes and formalize a deprecation lifecycle with reporting & retirement metadata.
 
-## Execution Flow (/plan command scope)
+Override mechanism → CODEOWNER review phrase `BREAKING-APPROVED` (applies to BREAKING & PREMATURE_REMOVAL entries; per-entry `override: true`).
 
-```
+Enum deprecation lifecycle → 90-day minimum window + REMOVE_AFTER date; valid retirement emits INFO + `retired=true` & `retirementDate` in registry.
+
 1. Load feature spec from Input path
-2. Fill Technical Context (list unknowns & assumptions)
-3. Constitution Check (principles 3,6, governance enforcement) initial pass
-4. Phase 0 scope (research unknown policies)
-5. Phase 1 design outline (contracts, data model for snapshot & diff artifacts)
-6. Re-evaluate Constitution Check (predict compliance)
-7. STOP (ready for /tasks)
-```
+   Scalar internal change classification → Non-name, non-JSON-type changes NON_BREAKING (INFO entry for description only). Unknown inference defaults to `jsonType=unknown` NON_BREAKING.
+2. Constitution Check (principles 3,6, governance enforcement) initial pass
+   Annotation format → `REMOVE_AFTER=YYYY-MM-DD | reason` with 24h grace (`DEPRECATION_GRACE` + `graceExpiresAt`) before escalation to INVALID_DEPRECATION_FORMAT.
+3. Phase 1 design outline (contracts, data model for snapshot & diff artifacts)
+   Governance override path | UNKNOWN | PASS (defined) | CODEOWNER + phrase approval workflow (BREAKING & PREMATURE_REMOVAL supported) |
+4. STOP (ready for /tasks)
+   Deprecation lifecycle tracking | PARTIAL | PASS (policy locked) | Enum lifecycle + annotation format + retirement metadata decided |
 
-## Summary
+- Classification Rules Table (extended taxonomy) to include in data-model & spec.
 
 Automate generation, storage, and comparison of a canonical GraphQL schema snapshot to classify changes (ADDITIVE / DEPRECATED / BREAKING); block unapproved breaking changes and formalize a deprecation lifecycle with reporting.
 
-Addendum (2025-10-08): Introduce a lightweight `SchemaBootstrapModule` that assembles only GraphQL-relevant modules with stubbed infra providers so schema generation in CI does not require Redis/MySQL/RabbitMQ/Elasticsearch. Parity tests will ensure identical SDL output vs full `AppModule`.
+- <5% of schema-changing PRs require override (sum of BREAKING + PREMATURE_REMOVAL overrides).
 
 ## Technical Context
 
-**Language/Version**: TypeScript (NestJS GraphQL)
-**Primary Dependencies**: `@nestjs/graphql`, `graphql` (existing); (Decision: self-authored diff per research.md; external diff lib deferred)
-**Storage**: Git-tracked snapshot file (`schema.graphql`) + optional JSON change report artifact
-**Testing**: Jest (contract tests referencing snapshot)
-**Target Platform**: Linux server CI environment
-**Project Type**: Single backend service
+- `change-report.json` (diff classification) stored under `tmp/` or CI workspace and uploaded as workflow artifact only; contains per-entry `override`, optional `graceExpiresAt`, and scalar evaluations.
+- `deprecations.json` / `deprecation-registry.json` generated and uploaded (legacy `deprecations.schema.json` retained as backward-compatible schema reference; new pipeline prefers `deprecation-registry.schema.json`) including `retired` + `retirementDate` for elements past lifecycle window & removed.
+  **Storage**: Git-tracked snapshot file (`schema.graphql`) + optional JSON change report artifact
+  **Testing**: Jest (contract tests referencing snapshot)
+  **Target Platform**: Linux server CI environment
+- BREAKING or PREMATURE_REMOVAL classifications require override phrase validation before merge; snapshot update must reflect the approved change once validated and entries will be marked `override: true`.
+
+## Extended Functional Requirements (FR-023 .. FR-030)
+
+| FR     | Summary                                                                                    |
+| ------ | ------------------------------------------------------------------------------------------ |
+| FR-023 | JSON Schema validation MUST pass for `change-report.json` & `deprecations.json` (CI gate). |
+| FR-024 | Per-entry override flag set for each BREAKING or PREMATURE_REMOVAL entry when approved.    |
+| FR-025 | Baseline scenario emits BASELINE entry & sets classifications.baseline=1.                  |
+| FR-026 | Synthetic large diff completes <5s (performance budget).                                   |
+| FR-027 | Unknown scalar jsonType inference falls back to `unknown` NON_BREAKING evaluation.         |
+| FR-028 | Grace period classification DEPRECATION_GRACE (<24h unscheduled) with `graceExpiresAt`.    |
+| FR-029 | Retirement metadata captured (`retired=true`, `retirementDate`) for compliant removals.    |
+| FR-030 | ClassificationCount includes `baseline` key always (0 unless baseline).                    |
+
+Tracking: coverage-fr-mapping.md extended with implementation & test artifacts for these FRs.
 **Performance Goals**: Diff execution ≤ 5s per run on typical schema size [ASSUMPTION]
 **Constraints**: Must not require running full database migrations just to emit schema (use existing build context)
 **Additional Constraint (Lightweight Bootstrap)**: New lightweight module MUST avoid establishing any network connections; if a module requires infra, provide an in-memory stub.

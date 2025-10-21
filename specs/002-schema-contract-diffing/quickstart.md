@@ -46,20 +46,20 @@ npm run schema:diff
 
 Outputs (generated in repo root by default):
 
-- `change-report.json`: classified changes with counts & override markers
-- `deprecations.json`: active + scheduled deprecations registry (excludes grace-only entries)
+- `change-report.json`: classified changes with counts (includes `baseline`), per-entry override markers (`override: true`), grace metadata (`grace`, `graceExpiresAt`), scalar evaluations.
+- `deprecations.json`: active + scheduled deprecations registry (excludes grace-only entries) including retirement metadata when applicable (`retired`, `retirementDate`).
 
 ### 4. Interpret Classification
 
-| Situation                                  | Action                                                                                             |
-| ------------------------------------------ | -------------------------------------------------------------------------------------------------- | -------------------------------------- |
-| BREAKING entries present                   | Refactor OR supply valid CODEOWNER review containing `BREAKING-APPROVED` (see Override Simulation) |
-| PREMATURE_REMOVAL present                  | Restore removed enum value(s) until lifecycle satisfied                                            |
-| INVALID_DEPRECATION_FORMAT present         | Fix annotation reason string to match `REMOVE_AFTER=YYYY-MM-DD                                     | reason`                                |
-| DEPRECATION_GRACE present                  | Newly added deprecation missing REMOVE_AFTER; add `REMOVE_AFTER=YYYY-MM-DD                         | reason` within 24h to avoid escalation |
-| Only ADDITIVE / DEPRECATED / INFO          | Safe to proceed                                                                                    |
-| INFO entries only for widening nullability | Widening considered non-breaking (interim); verify no client impact                                |
-| BASELINE (no prior snapshot)               | Commit new snapshot                                                                                |
+| Situation                                  | Action                                                                                                               |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| BREAKING entries present                   | Refactor OR supply valid CODEOWNER review containing `BREAKING-APPROVED` (override sets per-entry `override: true`). |
+| PREMATURE_REMOVAL present                  | Restore removed enum value(s) until lifecycle satisfied OR secure override if intentionally early.                   |
+| INVALID_DEPRECATION_FORMAT present         | Fix annotation reason string to match `REMOVE_AFTER=YYYY-MM-DD                                                       | reason` (post-grace).          |
+| DEPRECATION_GRACE present                  | Newly added deprecation missing schedule; add `REMOVE_AFTER=YYYY-MM-DD                                               | reason`before`graceExpiresAt`. |
+| Only ADDITIVE / DEPRECATED / INFO          | Safe to proceed.                                                                                                     |
+| INFO entries only for widening nullability | Widening considered non-breaking; verify no client impact.                                                           |
+| BASELINE (no prior snapshot)               | Commit new snapshot.                                                                                                 |
 
 ### 5. Local Verification / Contract Validation
 
@@ -153,7 +153,7 @@ Ensure the JSON array objects include fields: reviewer, body (with phrase), stat
 | INFO                       | Benign metadata changes (description, non-jsonType scalar detail, etc.)       | Allowed                                                                 |
 | BASELINE                   | Initial snapshot creation (no prior)                                          | Allowed                                                                 |
 
-`overrideApplied: true` on a BREAKING entry indicates governance approval (phrase + CODEOWNER review) — gate treats it as informational. Per-entry `override: true` is also set for explicit traceability.
+`overrideApplied: true` on the report indicates governance approval (phrase + CODEOWNER review). Each BREAKING or PREMATURE_REMOVAL entry approved will also include `"override": true`.
 
 ## Security & Compliance Notes
 
@@ -187,7 +187,30 @@ export SCHEMA_OVERRIDE_REVIEWS_JSON='[{"reviewer":"alice","body":"Looks good BRE
 npm run schema:diff
 ```
 
-4. Inspect `change-report.json`: `overrideApplied` should be true and breaking entries will have `"override": true`.
+4. Inspect `change-report.json`: `overrideApplied` should be true and BREAKING & PREMATURE_REMOVAL entries will have `"override": true`.
+
+## Performance Verification (FR-026)
+
+Run large synthetic diff performance test (<5s budget):
+
+```
+npm run test -- test/schema-contract/perf/large-schema.spec.ts
+```
+
+Expected: elapsed time logged (<5000ms). If over budget, profile diff engine (types/enums/scalars traversal) & consider caching.
+
+## Retirement Metadata (FR-029)
+
+When a deprecated element is removed after both conditions are satisfied (current date >= REMOVE_AFTER AND ≥90 days since `sinceDate`):
+
+- Change entry classified as INFO.
+- Corresponding registry entry sets `retired: true` & `retirementDate` (YYYY-MM-DD).
+
+Verify via diff scenario or enum lifecycle test (`enum-lifecycle.spec.ts`).
+
+## Unknown Scalar Inference (FR-027)
+
+If scalar JSON type cannot be inferred (no directive, no naming heuristic match), entry appears with `current.jsonType: "unknown"` and scalar evaluation classification NON_BREAKING. Add explicit directive later to refine classification if needed.
 
 Environment Variables:
 
