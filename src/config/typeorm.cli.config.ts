@@ -17,7 +17,6 @@ export const typeormCliConfig: MysqlConnectionOptions = {
   synchronize: false,
   logger: 'advanced-console',
   logging: process.env.ENABLE_ORM_LOGGING === 'true',
-  // Use paths relative to root for ts-node execution; dist usage will rely on compiled JS paths replaced by build output
   entities: [
     join('src', 'domain', '**', '*.entity.{ts,js}'),
     join('src', 'library', '**', '*.entity.{ts,js}'),
