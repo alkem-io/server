@@ -48,6 +48,8 @@ async function main() {
     const gqlHost = app.get(GraphQLSchemaHost, { strict: false });
     if (!gqlHost?.schema) throw new Error('GraphQL schema not available');
     const rawSDL = printSchema(gqlHost.schema);
+    // Deterministic ordering comes from GraphQLModule.forRoot({ sortSchema: true }); this parse+print step only
+    // performs formatting/whitespace normalization (e.g., removes location info and trims).
     const parsed = parse(rawSDL, { noLocation: true });
     const normalized = print(parsed).trim() + '\n';
     writeFileSync(outPath, normalized, 'utf-8');
