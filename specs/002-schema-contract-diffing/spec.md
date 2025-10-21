@@ -39,6 +39,14 @@ As a platform maintainer, I want automated detection of breaking GraphQL schema 
 5. **Given** a PR containing intentional breaking changes with required codeowner approval phrase, **When** CI runs, **Then** build emits a WARNING classification and allows merge only if the approval review contains the phrase `BREAKING-APPROVED` from an authorized CODEOWNER.
 6. **Given** an enum value marked deprecated fewer than 90 days ago, **When** a PR attempts to remove it, **Then** CI fails with classification = PREMATURE_REMOVAL.
 7. **Given** an enum value deprecated ≥90 days with a past removal date, **When** it is removed, **Then** CI passes and logs a retirement entry in the deprecation report.
+8. **Given** a newly added deprecation without a `REMOVE_AFTER=` schedule and introduced <24h ago, **When** CI evaluates it, **Then** it is classified as DEPRECATION_GRACE and the gate passes with a warning.
+9. **Given** a newly added deprecation without a valid schedule and introduced ≥24h ago, **When** CI evaluates it, **Then** it is classified as INVALID_DEPRECATION_FORMAT and the gate fails.
+10. **Given** the first run with no prior snapshot, **When** CI executes diff, **Then** it produces a BASELINE classification entry and passes.
+11. **Given** a premature removal classification accompanied by a valid CODEOWNER override phrase, **When** CI evaluates, **Then** the gate passes and marks only those removal entries with `override: true`.
+12. **Given** a scalar whose JSON type category changes (string→number), **When** diff runs, **Then** it emits a BREAKING entry and scalar evaluation with `behaviorChangeClassification=BREAKING`.
+13. **Given** a scalar whose description changes but JSON type category is stable, **When** diff runs, **Then** it emits an INFO entry and scalar evaluation with `behaviorChangeClassification=NON_BREAKING`.
+14. **Given** a large synthetic schema (≥180 object types) with moderate churn, **When** diff runs in CI, **Then** it completes <5s and performance test passes.
+15. **Given** generated artifacts `change-report.json` and `deprecations.json`, **When** validation runs, **Then** correctly structured documents pass JSON Schema validation and malformed ones (e.g., missing required fields) fail.
 
 ### Edge Cases
 
@@ -50,14 +58,19 @@ As a platform maintainer, I want automated detection of breaking GraphQL schema 
 - Deprecation reason string malformed (missing REMOVE_AFTER= prefix) → validation error classification = INVALID_DEPRECATION_FORMAT.
 - Custom scalar description wording change without altering name or serialized JSON type → NON_BREAKING (documented informational note).
 - Custom scalar serialization JSON type change (e.g., string→number) → BREAKING.
+- Removal after `removeAfter` date but before 90-day minimum window elapsed → BREAKING (lifecycle metadata incomplete).
+- Removal after `removeAfter` date and ≥90 days window elapsed → INFO retirement entry (not BREAKING).
+- Unknown scalar JSON type (heuristic cannot infer) → reported as `jsonType=unknown`, evaluation classification NON_BREAKING unless removed or changed later.
+- Override applies to BREAKING and PREMATURE_REMOVAL entries only; other classifications remain unaffected.
+- Classification counts always include `baseline` key (0 unless BASELINE scenario).
 
 ## Requirements _(mandatory)_
 
 ### Functional Requirements
 
 - **FR-001**: System MUST generate a deterministic `schema.graphql` snapshot on each schema-affecting PR.
-- **FR-002**: System MUST compare current build schema to last committed snapshot and classify changes as ADDITIVE / DEPRECATED / BREAKING.
-- **FR-003**: A PR introducing BREAKING changes MUST fail CI unless a CODEOWNER review includes the exact approval phrase `BREAKING-APPROVED` (case sensitive) in the review body; CI MUST verify reviewer is in CODEOWNERS set.
+- **FR-002**: System MUST compare current build schema to last committed snapshot and classify changes among the full taxonomy: ADDITIVE | DEPRECATED | DEPRECATION_GRACE | INVALID_DEPRECATION_FORMAT | BREAKING | PREMATURE_REMOVAL | INFO | BASELINE.
+- **FR-003**: A PR introducing BREAKING or PREMATURE_REMOVAL classifications MUST fail CI unless a CODEOWNER review includes the exact approval phrase `BREAKING-APPROVED` (case sensitive) in the review body; CI MUST verify reviewer is in CODEOWNERS set and mark overridden entries with `override: true`.
 - **FR-004**: Removed fields MUST have been previously marked with `@deprecated` and an associated removal date not in the future.
 - **FR-005**: Deprecation report MUST list: field name, first deprecation commit reference, planned removal date.
 - **FR-006**: Change report MUST be attached as build artifact or comment.
@@ -74,10 +87,18 @@ As a platform maintainer, I want automated detection of breaking GraphQL schema 
 - **FR-017**: Custom scalar implementation or description text changes MUST be classified NON_BREAKING provided: (a) scalar name unchanged, (b) serialized JSON type category unchanged (string|number|boolean|object|array), (c) no new validation rejection path added.
 - **FR-018**: A change to the serialized JSON type category of a custom scalar MUST be classified BREAKING.
 - **FR-019**: Change report MUST include for each custom scalar: `jsonTypePrevious`, `jsonTypeCurrent`, `behaviorChangeClassification` (NON_BREAKING|BREAKING) plus `reason`.
-- **FR-019a**: Custom scalar validation relaxations MUST be classified ADDITIVE; validation tightenings (removing previously valid inputs) MUST be classified BREAKING. The diff engine MUST verify relaxation vs tightening by set difference heuristics (implemented via representative sample tests or explicit developer annotation fallback if automatic detection is infeasible).
+- **FR-019a**: Custom scalar validation relaxations MUST be classified NON_BREAKING; validation tightenings (removing previously valid inputs) MUST be classified BREAKING. The diff engine MUST verify relaxation vs tightening by set difference heuristics (implemented via representative sample tests or explicit developer annotation fallback if automatic detection is infeasible).
 - **FR-020**: A dedicated lightweight `SchemaBootstrapModule` MUST exist that imports only the minimal Nest modules required to construct the GraphQL schema (domain GraphQL types & scalars) and explicitly excludes external infrastructure integrations (Redis cache store, TypeORM DB connection, RabbitMQ, Elasticsearch, external HTTP integrations) so that schema generation can run in CI without provisioning those services.
 - **FR-021**: The schema printing script MUST use `SchemaBootstrapModule` instead of the full `AppModule` when an environment variable `SCHEMA_BOOTSTRAP_LIGHT=1` is set; defaulting to `AppModule` otherwise for parity in local dev.
 - **FR-022**: The lightweight bootstrap MUST complete within < 2s cold start in CI (target measured after implementation) and MUST NOT attempt network connections to excluded services (verified by absence of connection error logs & by mocking env to unreachable hosts in a contract test).
+- **FR-023**: Generated artifacts `change-report.json` and `deprecations.json` MUST validate against committed JSON Schemas (`change-report.schema.json`, `deprecations.schema.json`) and CI MUST fail on validation errors.
+- **FR-024**: When an override is applied, each BREAKING or PREMATURE_REMOVAL entry MUST include `override: true` while other entries remain unchanged.
+- **FR-025**: First-run (no prior snapshot) MUST emit a BASELINE classification entry and set `classifications.baseline=1` with other counts 0.
+- **FR-026**: Diff engine MUST complete against a synthetic large schema (<5s wall time) and emit performance metrics logged in test output.
+- **FR-027**: Scalar evaluation MUST record `jsonTypeCurrent='unknown'` when inference fails and classify behavior NON_BREAKING unless removal/type change occurs.
+- **FR-028**: Newly introduced deprecations lacking `REMOVE_AFTER` within a 24h grace MUST be classified DEPRECATION_GRACE (non-blocking) and include `graceExpiresAt` timestamp in the entry.
+- **FR-029**: Deprecations registry entries MUST include `retired=true` and `retirementDate` when an element is removed after a valid window (≥90 days & past removeAfter).
+- **FR-030**: Classification counts MUST include a `baseline` property (integer) even when zero.
 
 ### Non-Goals (Lightweight Bootstrap)
 
@@ -116,6 +137,22 @@ Open Question (tracked): Should we auto-generate `SchemaBootstrapModule` imports
 - **SchemaSnapshot**: Stored canonical SDL text + hash + timestamp.
 - **ChangeReport**: Aggregates diff categories and impacted elements.
 - **DeprecationEntry**: Field/type deprecation metadata (name, sinceDate, removalDate).
+- **ScalarChangeEvaluation**: Per-scalar previous/current JSON type category + behavior classification.
+- **DeprecationsRegistry Artifact (`deprecations.json`)**: Array of `DeprecationEntry` plus retirement status & timestamp.
+- **ClassificationCount**: Includes keys additive, deprecated, breaking, prematureRemoval, invalidDeprecation, deprecationGrace, info, baseline.
+
+### Classification Taxonomy (Expanded)
+
+| Classification             | Gate Behavior          | Override Eligible | Notes                                                              |
+| -------------------------- | ---------------------- | ----------------- | ------------------------------------------------------------------ |
+| ADDITIVE                   | Pass                   | No                | Safe expansion of contract                                         |
+| DEPRECATED                 | Pass                   | No                | Properly scheduled deprecation introduced                          |
+| DEPRECATION_GRACE          | Pass (Warn)            | No                | <24h missing schedule; must add `REMOVE_AFTER` before grace expiry |
+| INVALID_DEPRECATION_FORMAT | Fail                   | No                | Schedule missing/invalid after grace period                        |
+| BREAKING                   | Fail (unless override) | Yes               | Incompatible removal or type narrowing / scalar jsonType shift     |
+| PREMATURE_REMOVAL          | Fail (unless override) | Yes               | Attempt before ≥90d & removeAfter date reached                     |
+| INFO                       | Pass                   | No                | Benign descriptive or lifecycle retirement entry                   |
+| BASELINE                   | Pass                   | No                | First snapshot initialization                                      |
 
 ## Review & Acceptance Checklist
 
