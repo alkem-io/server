@@ -31,13 +31,19 @@
           "properties": {
             "first": {
               "title": "First Name",
-              "type": "string"
+              "type": "string",
+              "minLength": 1,
+              "pattern": ".*\\S.*"
             },
             "last": {
               "title": "Last Name",
-              "type": "string"
+              "type": "string",
+              "minLength": 1,
+              "pattern": ".*\\S.*"
             }
-          }
+          },
+          "required": ["first", "last"],
+          "additionalProperties": false
         },
         "accepted_terms": {
           "title": "TERMS_MESSAGE",
@@ -48,7 +54,7 @@
           "type": "string"
         }
       },
-      "required": ["email", "accepted_terms"],
+      "required": ["email", "accepted_terms", "name"],
       "additionalProperties": false
     }
   }

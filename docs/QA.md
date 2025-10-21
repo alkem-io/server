@@ -6,9 +6,9 @@ Initial version of integration tests is in place. To run them, look at the prere
 - Running `MySQL sql server`
 - Running `Alkemio/Server` service.
 - `LOGGING_CONSOLE_ENABLED=false` can be used to disable logging the exceptions (exceptions are quite verbose and will pollute the test results log).
-- In order to run the unit, integration and end-to-end, navigate to the `/Server` repository, and execute the following command: `npm run test:[TEST_TYPE]` where TEST_TYPE is `e2e` for end-to-end, `it` for
+- In order to run the unit, integration and end-to-end, navigate to the `/Server` repository, and execute the following command: `pnpm run test:[TEST_TYPE]` where TEST_TYPE is `e2e` for end-to-end, `it` for
   integration tests and `ut` for unit tests
-  - To run specific suite: `npm run-script test:[TEST_TYPE] jest --config ./test folder>/<test suite file>` (i.e. `./test/user.e2e-spec.ts`)
+  - To run specific suite: `pnpm run test:[TEST_TYPE] jest --config ./test folder>/<test suite file>` (i.e. `./test/user.e2e-spec.ts`)
 - The results of the test, will be displayed at the end of the execution.
 
 Automation test structure
@@ -46,10 +46,10 @@ Test types
 
 Run tests:
 
-    - run all tests: `npm run-script test:nightly`
-    - run all tests from particular area: `npm run-script test:it ./test/functional/integration/challenge/`
-    - run all tests for a test file: `npm run-script test:it ./test/functional/integration/challenge/query-challenge-data.it-spec.ts`
-    - run e2e tests with coverage: `npm run test:e2e-cov`
+    - run all tests: `pnpm run test:nightly`
+    - run all tests from particular area: `pnpm run test:it ./test/functional/integration/challenge/`
+    - run all tests for a test file: `pnpm run test:it ./test/functional/integration/challenge/query-challenge-data.it-spec.ts`
+    - run e2e tests with coverage: `pnpm run test:e2e-cov`
 
 To debug tests in VS Code
 
@@ -59,7 +59,7 @@ To debug tests in VS Code
 To run only one test from a test file
 
 - Set the keyword _.only_ after `test` or `describe` (i.e. `test.only('should remove a challenge', async () => {})`)
-- Run the command for this particular test file: `npm run-script test:it ./test/functional/integration/challenge/query-challenge-data.it-spec.ts`
+- Run the command for this particular test file: `pnpm run test:it ./test/functional/integration/challenge/query-challenge-data.it-spec.ts`
 
 ## Update user password secret for Travis CI
 

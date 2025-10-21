@@ -11,7 +11,6 @@ export const validateSearchParameters = (
     maxSearchResults: number;
   }
 ) => {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { maxSearchResults } = validationOptions;
   const { tagsetNames, terms, filters = [] } = searchData;
   if (terms.length > SEARCH_TERM_LIMIT) {
