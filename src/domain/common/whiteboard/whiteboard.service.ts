@@ -149,6 +149,18 @@ export class WhiteboardService {
     if (updateWhiteboardData.contentUpdatePolicy) {
       whiteboard.contentUpdatePolicy = updateWhiteboardData.contentUpdatePolicy;
     }
+
+    if (updateWhiteboardData.previewSettings) {
+      if (updateWhiteboardData.previewSettings.mode !== undefined) {
+        whiteboard.previewSettings.mode =
+          updateWhiteboardData.previewSettings.mode;
+      }
+      if (updateWhiteboardData.previewSettings.coordinates !== undefined) {
+        whiteboard.previewSettings.coordinates =
+          updateWhiteboardData.previewSettings.coordinates;
+      }
+    }
+
     whiteboard = await this.save(whiteboard);
 
     return whiteboard;
