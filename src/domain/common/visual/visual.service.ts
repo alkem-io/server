@@ -15,7 +15,7 @@ import { Visual } from './visual.entity';
 import { IVisual } from './visual.interface';
 import { DeleteVisualInput } from './dto/visual.dto.delete';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
-import { ReadStream } from 'fs';
+import { Readable } from 'stream';
 import { IDocument } from '@domain/storage/document/document.interface';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
@@ -82,7 +82,7 @@ export class VisualService {
   async uploadImageOnVisual(
     visual: IVisual,
     storageBucket: IStorageBucket,
-    readStream: ReadStream,
+    readStream: Readable,
     fileName: string,
     mimetype: string,
     userID: string

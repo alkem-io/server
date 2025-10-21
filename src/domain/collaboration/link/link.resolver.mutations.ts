@@ -8,7 +8,6 @@ import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { StorageBucketUploadFileOnLinkInput } from '@domain/storage/storage-bucket/dto/storage.bucket.dto.upload.file.on.link';
-import { ReadStream } from 'fs';
 import { FileUpload, GraphQLUpload } from 'graphql-upload';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
@@ -113,7 +112,7 @@ export class LinkResolverMutations {
       link.uri,
       link.id,
       storageBucket,
-      readStream as unknown as ReadStream,
+      readStream,
       filename,
       mimetype,
       agentInfo.userID

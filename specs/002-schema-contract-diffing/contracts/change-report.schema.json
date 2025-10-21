@@ -1,0 +1,123 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://alkem.io/specs/002/change-report.schema.json",
+  "title": "GraphQL Schema Change Report",
+  "type": "object",
+  "required": [
+    "snapshotId",
+    "baseSnapshotId",
+    "generatedAt",
+    "classifications",
+    "entries",
+    "overrideApplied"
+  ],
+  "properties": {
+    "snapshotId": { "type": "string", "minLength": 1 },
+    "baseSnapshotId": { "type": ["string", "null"] },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "overrideApplied": { "type": "boolean" },
+    "errorFallback": { "type": "boolean" },
+    "errorMessage": { "type": "string" },
+    "overrideReviewer": { "type": "string" },
+    "notes": { "type": "array", "items": { "type": "string" } },
+    "classifications": {
+      "type": "object",
+      "description": "Counts by classification key (dynamic set).",
+      "minProperties": 1,
+      "additionalProperties": { "type": "integer", "minimum": 0 }
+    },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "element", "elementType", "changeType", "detail"],
+        "properties": {
+          "id": { "type": "string" },
+          "element": { "type": "string" },
+          "elementType": { "enum": ["TYPE", "FIELD", "ENUM_VALUE", "SCALAR"] },
+          "changeType": {
+            "enum": [
+              "ADDITIVE",
+              "DEPRECATED",
+              "BREAKING",
+              "PREMATURE_REMOVAL",
+              "INVALID_DEPRECATION_FORMAT",
+              "INFO",
+              "BASELINE"
+            ]
+          },
+          "detail": { "type": "string" },
+          "previous": {},
+          "current": {},
+          "deprecationFormatValid": { "type": "boolean" },
+          "removeAfter": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "sinceDate": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "override": { "type": "boolean" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "enumLifecycleEvaluations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "enumValue",
+          "sinceDate",
+          "removeAfter",
+          "daysBetween",
+          "removalAttempted",
+          "allowedToRemove",
+          "classification"
+        ],
+        "properties": {
+          "enumValue": { "type": "string" },
+          "sinceDate": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "removeAfter": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "daysBetween": { "type": "integer", "minimum": 0 },
+          "removalAttempted": { "type": "boolean" },
+          "allowedToRemove": { "type": "boolean" },
+          "classification": {
+            "enum": ["BREAKING", "PREMATURE_REMOVAL", "ALLOWED"]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "scalarEvaluations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "scalarName",
+          "jsonTypeCurrent",
+          "behaviorChangeClassification",
+          "reason"
+        ],
+        "properties": {
+          "scalarName": { "type": "string" },
+          "jsonTypePrevious": { "type": "string" },
+          "jsonTypeCurrent": { "type": "string" },
+          "behaviorChangeClassification": {
+            "enum": ["NON_BREAKING", "BREAKING"]
+          },
+          "reason": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
