@@ -37,4 +37,6 @@ ENV GRAPHQL_ENDPOINT_PORT=${GRAPHQL_ENDPOINT_PORT_ARG}
 ENV NODE_ENV=${ENV_ARG}
 
 EXPOSE ${GRAPHQL_ENDPOINT_PORT_ARG}
-CMD ["/bin/sh", "-c", "pnpm run start:prod NODE_OPTIONS=--max-old-space-size=2048"]
+ENV NODE_OPTIONS=--max-old-space-size=2048
+# Use node directly for production start to avoid passing NODE_OPTIONS as an argument string
+CMD ["node", "dist/src/main.js"]
