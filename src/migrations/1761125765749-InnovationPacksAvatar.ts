@@ -1,7 +1,28 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
-import { DEFAULT_VISUAL_CONSTRAINTS } from '@domain/common/visual/visual.constraints';
-import { VisualType } from '@common/enums/visual.type';
+
+enum VisualType {
+  AVATAR = 'avatar',
+}
+
+const VISUAL_ALLOWED_TYPES = [
+  'image/png',
+  'image/jpeg',
+  'image/jpg',
+  'image/svg+xml',
+  'image/webp',
+] as const;
+
+const DEFAULT_VISUAL_CONSTRAINTS = {
+  [VisualType.AVATAR]: {
+    minWidth: 190,
+    maxWidth: 410,
+    minHeight: 190,
+    maxHeight: 410,
+    aspectRatio: 1,
+    allowedTypes: VISUAL_ALLOWED_TYPES,
+  },
+};
 
 export class InnovationPacksAvatar1761125765749 implements MigrationInterface {
   name = 'InnovationPacksAvatar1761125765749';
@@ -78,11 +99,11 @@ export class InnovationPacksAvatar1761125765749 implements MigrationInterface {
   public async down(queryRunner: QueryRunner): Promise<void> {
     // Remove avatar visuals added by this migration
     // could potentially delete avatar visuals added by users later!
-    await queryRunner.query(`
-      DELETE \`visual\` FROM \`visual\`
-      JOIN \`profile\` ON \`visual\`.\`profileId\` = \`profile\`.\`id\`
-      JOIN \`innovation_pack\` ON \`innovation_pack\`.\`profileId\` = \`profile\`.\`id\`
-      WHERE \`visual\`.\`name\` = 'avatar'
-    `);
+    // await queryRunner.query(`
+    //   DELETE \`visual\` FROM \`visual\`
+    //   JOIN \`profile\` ON \`visual\`.\`profileId\` = \`profile\`.\`id\`
+    //   JOIN \`innovation_pack\` ON \`innovation_pack\`.\`profileId\` = \`profile\`.\`id\`
+    //   WHERE \`visual\`.\`name\` = 'avatar'
+    // `);
   }
 }
