@@ -79,7 +79,7 @@ export class InnovationPackService {
     await this.profileService.addVisualsOnProfile(
       innovationPack.profile,
       innovationPackData.profileData.visuals,
-      [VisualType.CARD]
+      [VisualType.AVATAR, VisualType.CARD]
     );
 
     innovationPack.listedInStore = true;
