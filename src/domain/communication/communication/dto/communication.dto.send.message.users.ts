@@ -5,7 +5,7 @@ import { Field, InputType } from '@nestjs/graphql';
 import { MaxLength } from 'class-validator';
 
 @InputType()
-export class CommunicationSendMessageToUserInput {
+export class CommunicationSendMessageToUsersInput {
   @Field(() => [UUID], {
     nullable: false,
     description: 'All Users the message is being sent to',

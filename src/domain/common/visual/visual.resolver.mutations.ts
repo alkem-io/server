@@ -15,7 +15,6 @@ import { DocumentService } from '@domain/storage/document/document.service';
 import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { InstrumentResolver } from '@src/apm/decorators';
-import { ReadStream } from 'fs';
 
 @InstrumentResolver()
 @Resolver()
@@ -94,7 +93,7 @@ export class VisualResolverMutations {
     const visualDocument = await this.visualService.uploadImageOnVisual(
       visual,
       storageBucket,
-      readStream as unknown as ReadStream,
+      readStream,
       filename,
       mimetype,
       agentInfo.userID
