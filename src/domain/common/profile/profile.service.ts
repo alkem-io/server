@@ -237,6 +237,9 @@ export class ProfileService {
         case VisualType.BANNER:
           visual = this.visualService.createVisualBanner();
           break;
+        case VisualType.WHITEBOARD_PREVIEW:
+          visual = this.visualService.createVisualWhiteboardPreview();
+          break;
         case VisualType.CARD:
           visual = this.visualService.createVisualCard();
           break;

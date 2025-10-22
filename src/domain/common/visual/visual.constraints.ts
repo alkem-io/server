@@ -26,6 +26,14 @@ export const DEFAULT_VISUAL_CONSTRAINTS = {
     aspectRatio: 6,
     allowedTypes: VISUAL_ALLOWED_TYPES,
   },
+  [VisualType.WHITEBOARD_PREVIEW]: {
+    minWidth: 385,
+    maxWidth: 1535,
+    minHeight: 154,
+    maxHeight: 614,
+    aspectRatio: 2.5,
+    allowedTypes: VISUAL_ALLOWED_TYPES,
+  },
   [VisualType.CARD]: {
     minWidth: 307,
     maxWidth: 410,
