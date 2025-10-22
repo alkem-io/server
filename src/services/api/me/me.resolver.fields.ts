@@ -55,21 +55,20 @@ export class MeResolverFields {
 
   @ResolveField('notificationsUnreadCount', () => Number, {
     description:
-      'The number of unread notifications for the current authenticated user.',
+      'The total number of unread notifications for the current authenticated user across all notification types.',
   })
   public async notificationsUnreadCount(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('filter', { nullable: true }) filter?: NotificationEventsFilterInput
+    @CurrentUser() agentInfo: AgentInfo
   ): Promise<number> {
     if (!agentInfo.userID) {
       throw new ValidationException(
-        'Unable to retrieve invitations as no userID provided.',
-        LogContext.COMMUNITY
+        'Unable to retrieve unread notifications count; no userID provided.',
+        LogContext.IN_APP_NOTIFICATION
       );
     }
+    // Always return the total unread count, regardless of any filtering on notifications
     return await this.inAppNotificationService.getRawNotificationsUnreadCount(
-      agentInfo.userID,
-      filter
+      agentInfo.userID
     );
   }
 
