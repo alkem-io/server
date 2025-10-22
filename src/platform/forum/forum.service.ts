@@ -106,8 +106,8 @@ export class ForumService {
 
     // Trigger a room membership request for the current user that is not awaited
     const room = await this.discussionService.getComments(discussion.id);
-    await this.communicationAdapter.addUserToRoom(
-      room.externalRoomID,
+    await this.communicationAdapter.userAddToRooms(
+      [room.externalRoomID],
       userForumID
     );
 
@@ -200,10 +200,7 @@ export class ForumService {
 
   async addUserToForums(forum: IForum, forumUserID: string): Promise<boolean> {
     const forumRoomIDs = await this.getRoomsUsed(forum);
-    await this.communicationAdapter.grantUserAccessToRooms(
-      forumRoomIDs,
-      forumUserID
-    );
+    await this.communicationAdapter.userAddToRooms(forumRoomIDs, forumUserID);
 
     return true;
   }
