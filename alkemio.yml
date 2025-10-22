@@ -422,10 +422,10 @@ platform:
   terms: ${PLATFORM_TERMS}:https://welcome.alkem.io/legal/#tc
 
   # Privacy policy for the platform
-  privacy: ${PLATFORM_PRIVACY}:https://alkemio.org/privacy/
+  privacy: ${PLATFORM_PRIVACY}:https://welcome.alkem.io/privacy/
 
   # Security policy for the platform
-  security: ${PLATFORM_SECURITY}:https://alkemio.org/security/
+  security: ${PLATFORM_SECURITY}:https://welcome.alkem.io/security/
 
   # Link for support requests
   support: ${PLATFORM_SUPPORT}:https://welcome.alkem.io/contact/
@@ -434,10 +434,10 @@ platform:
   forumreleases: ${PLATFORM_FORUM_RELEASES}:https://alkem.io/forum/releases/latest
 
   # Feedback form for the platform
-  feedback: ${PLATFORM_FEEDBACK}:https://alkemio.org/contact/
+  feedback: ${PLATFORM_FEEDBACK}:https://welcome.alkem.io/contact/
 
   # About the platform
-  about: ${PLATFORM_ABOUT}:https://alkemio.org/about/
+  about: ${PLATFORM_ABOUT}:https://welcome.alkem.io
 
   # landing
   landing: ${PLATFORM_LANDING}:https://welcome.alkem.io/
@@ -446,13 +446,13 @@ platform:
   blog: ${PLATFORM_BLOG}:https://welcome.alkem.io/blog/
 
   # Home page - Impact
-  impact: ${PLATFORM_IMPACT}:https://alkemio.org/manifesto
+  impact: ${PLATFORM_IMPACT}:https://alkemio.org
 
   # Collaboration tools
-  inspiration: ${PLATFORM_INSPIRATION}:https://alkemio.org/help/collaboration-tools/
+  inspiration: ${PLATFORM_INSPIRATION}:https://welcome.alkem.io/resources/#blogs/
 
   # Innovation library
-  innovationLibrary: ${PLATFORM_INNOVATIONLIBRARY}:https://alkem.io/docs/features/templates
+  innovationLibrary: ${PLATFORM_INNOVATIONLIBRARY}:https://alkem.io/docs/features/templates/
 
   # Home page - Foundation
   foundation: ${PLATFORM_FOUNDATION}:https://alkemio.org/
@@ -470,20 +470,20 @@ platform:
   releases: ${PLATFORM_RELEASES}:https://alkemio.org/releases
 
   # Help Dialog - Help
-  help: ${PLATFORM_HELP}:https://alkemio.org/help/
+  help: ${PLATFORM_HELP}:https://welcome.alkem.io/docs/
 
   # Help Dialog - Community Forum
-  community: ${PLATFORM_COMMUNITY}:https://alkemio.org/support/
+  community: ${PLATFORM_COMMUNITY}:https://alkem.io/forum/
 
   # Help Dialog - blog
-  newuser: ${PLATFORM_NEWUSER}:https://alkemio.org/help/
+  newuser: ${PLATFORM_NEWUSER}:https://welcome.alkem.io/contact/
 
   # Help Dialog - tips
-  tips: ${PLATFORM_TIPS}:https://alkemio.org/post/
+  tips: ${PLATFORM_TIPS}:https://welcome.alkem.io/contact/
 
   # Acceptable Usage Policy
   aup:
-    ${PLATFORM_AUP}:https://www.alkemio.org/legal/hub/#aup
+    ${PLATFORM_AUP}:https://welcome.alkem.io/legal/#aup
 
     # Documentation site path, endpoint is endpoint_cluster + documentation_path
   documentation_path: ${PLATFORM_DOCUMENTATION_PATH}:/documentation

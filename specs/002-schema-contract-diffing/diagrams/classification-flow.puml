@@ -1,0 +1,37 @@
+@startuml ClassificationFlow
+skinparam shadowing false
+skinparam defaultFontName Courier
+skinparam ArrowColor #555555
+skinparam RectangleFontColor #222222
+skinparam RectangleBackgroundColor #F9F9F9
+skinparam RectangleBorderColor #999999
+
+rectangle "Baseline SDL\n(schema.graphql)" as baseline
+rectangle "Current Generated SDL" as current
+rectangle "AST Parse" as parse
+rectangle "Diff Engines\n(types / enums / scalars)" as diff
+rectangle "Governance Overrides\n(CODEOWNERS + reviews)" as gov
+rectangle "Deprecation Checks\n(REMOVE_AFTER validation)" as depr
+rectangle "Final Change Report" as report
+
+baseline -down-> parse : hash + parse
+current -down-> parse
+parse -down-> diff
+
+' Orchestration pipeline
+
+diff -down-> gov
+ gov -down-> depr
+ depr -down-> report
+
+note right of gov
+ Apply overrides before
+ lifecycle decisions.
+end note
+
+note right of depr
+ Reclassify removals
+ based on date + approval.
+end note
+
+@enduml
