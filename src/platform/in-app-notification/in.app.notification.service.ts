@@ -1,4 +1,4 @@
-import { Brackets, Repository, In, Not, UpdateResult } from 'typeorm';
+import { Brackets, Repository, In, Not, UpdateResult, FindOptionsWhere } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InAppNotification } from '@platform/in-app-notification/in.app.notification.entity';
@@ -227,7 +227,7 @@ export class InAppNotificationService {
     state: NotificationEventInAppState,
     filter?: NotificationEventsFilterInput
   ): Promise<UpdateResult> {
-    const where: any = {
+    const where: FindOptionsWhere<InAppNotification> = {
       receiverID: userId,
       state: Not(NotificationEventInAppState.ARCHIVED),
     };
