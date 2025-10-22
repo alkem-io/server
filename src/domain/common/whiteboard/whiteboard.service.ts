@@ -26,6 +26,7 @@ import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type
 import { LicenseService } from '../license/license.service';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { WhiteboardPreviewMode } from '@common/enums/whiteboard.preview.mode';
 
 @Injectable()
 export class WhiteboardService {
@@ -71,6 +72,11 @@ export class WhiteboardService {
       name: TagsetReservedName.DEFAULT,
       tags: [],
     });
+
+    whiteboard.previewSettings = {
+      mode: WhiteboardPreviewMode.AUTO,
+      coordinates: null,
+    };
 
     return whiteboard;
   }

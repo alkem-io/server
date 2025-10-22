@@ -16,17 +16,12 @@ import { ENUM_LENGTH, UUID_LENGTH } from '@common/constants';
 import { CalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.entity';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { IWhiteboardPreviewSettings } from './whiteboard.preview.settings.interface';
-import { WhiteboardPreviewMode } from '@common/enums/whiteboard.preview.mode';
 
 @Entity()
 export class Whiteboard extends NameableEntity implements IWhiteboard {
   constructor(content?: string) {
     super();
     this.content = content || '';
-    this.previewSettings = {
-      mode: WhiteboardPreviewMode.AUTO,
-      coordinates: null,
-    };
   }
 
   @BeforeInsert()

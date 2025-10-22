@@ -11,7 +11,7 @@ export class WhiteboardsPreviewSettings1760960016267
     );
     await queryRunner.query(
       `UPDATE \`whiteboard\` SET \`previewSettings\` =
-        '{"mode":"auto","coordinates":null}' WHERE \`previewSettings\` IS NULL`
+        '{"mode":"auto","coordinates":null}'`
     );
   }
 
