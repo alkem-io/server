@@ -1,0 +1,39 @@
+// T013: ChangeEntry & related evaluation interfaces
+import { ChangeType, ElementType, JsonTypeCategory } from './types';
+
+export interface ChangeEntry {
+  id: string;
+  element: string; // fully qualified path
+  elementType: ElementType;
+  changeType: ChangeType;
+  detail: string;
+  // Using any to permit snapshot AST fragment storage without tight coupling
+  previous?: any;
+  current?: any;
+  deprecationFormatValid?: boolean;
+  removeAfter?: string; // YYYY-MM-DD
+  sinceDate?: string; // YYYY-MM-DD
+  firstCommit?: string; // git commit hash where deprecation first introduced (FR-005)
+  override?: boolean;
+  // FR-014 grace period support
+  grace?: boolean; // true if within 24h grace for missing REMOVE_AFTER
+  graceExpiresAt?: string; // ISO timestamp when grace ends
+}
+
+export interface EnumLifecycleEvaluation {
+  enumValue: string; // TypeName.ENUM_VALUE
+  sinceDate: string; // YYYY-MM-DD
+  removeAfter: string; // YYYY-MM-DD
+  daysBetween: number;
+  removalAttempted: boolean;
+  allowedToRemove: boolean;
+  classification: 'BREAKING' | 'PREMATURE_REMOVAL' | 'ALLOWED';
+}
+
+export interface ScalarChangeEvaluation {
+  scalarName: string;
+  jsonTypePrevious?: JsonTypeCategory;
+  jsonTypeCurrent: JsonTypeCategory;
+  behaviorChangeClassification: 'NON_BREAKING' | 'BREAKING';
+  reason: string;
+}

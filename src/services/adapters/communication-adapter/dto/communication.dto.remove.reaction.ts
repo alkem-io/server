@@ -1,4 +1,4 @@
-export class CommunicationRemoveRectionToMessageInput {
+export class CommunicationRemoveReactionToMessageInput {
   senderCommunicationsID!: string;
 
   roomID!: string;

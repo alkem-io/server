@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://alkem.io/specs/002/deprecation-registry.schema.json",
+  "title": "GraphQL Deprecation Registry",
+  "type": "object",
+  "required": ["generatedAt", "entries"],
+  "properties": {
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "element",
+          "elementType",
+          "sinceDate",
+          "removeAfter",
+          "humanReason",
+          "formatValid",
+          "retired"
+        ],
+        "properties": {
+          "element": { "type": "string" },
+          "elementType": { "enum": ["FIELD", "ENUM_VALUE"] },
+          "sinceDate": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "removeAfter": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "humanReason": { "type": "string" },
+          "formatValid": { "type": "boolean" },
+          "retired": { "type": "boolean" },
+          "retirementDate": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

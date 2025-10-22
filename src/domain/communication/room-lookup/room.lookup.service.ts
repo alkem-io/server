@@ -192,15 +192,15 @@ export class RoomLookupService {
     messageData: RoomSendMessageInput
   ): Promise<IMessage> {
     // Ensure the user is a member of room and group so can send
-    await this.communicationAdapter.addUserToRoom(
-      room.externalRoomID,
+    await this.communicationAdapter.userAddToRooms(
+      [room.externalRoomID],
       communicationUserID
     );
     const alkemioUserID =
       await this.identityResolverService.getUserIDByCommunicationsID(
         communicationUserID
       );
-    const message = await this.communicationAdapter.sendMessage({
+    const message = await this.communicationAdapter.sendMessageToRoom({
       senderCommunicationsID: communicationUserID,
       message: messageData.message,
       roomID: room.externalRoomID,
@@ -219,8 +219,8 @@ export class RoomLookupService {
     senderType: 'user' | 'virtualContributor'
   ): Promise<IMessage> {
     // Ensure the user is a member of room and group so can send
-    await this.communicationAdapter.addUserToRoom(
-      room.externalRoomID,
+    await this.communicationAdapter.userAddToRooms(
+      [room.externalRoomID],
       communicationUserID
     );
 
@@ -232,7 +232,7 @@ export class RoomLookupService {
         : await this.identityResolverService.getUserIDByCommunicationsID(
             communicationUserID
           );
-    const message = await this.communicationAdapter.sendMessageReply(
+    const message = await this.communicationAdapter.sendRoomMessageReply(
       {
         senderCommunicationsID: communicationUserID,
         message: messageData.message,

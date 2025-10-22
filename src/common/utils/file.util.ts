@@ -1,6 +1,6 @@
-import { ReadStream } from 'fs';
+import { Readable } from 'stream';
 
-export async function streamToBuffer(stream: ReadStream): Promise<Buffer> {
+export async function streamToBuffer(stream: Readable): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const data: any[] = [];
 

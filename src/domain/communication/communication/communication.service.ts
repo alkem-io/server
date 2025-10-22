@@ -109,7 +109,7 @@ export class CommunicationService {
       return true;
     }
     const communicationRoomIDs = await this.getRoomsUsed(communication);
-    await this.communicationAdapter.grantUserAccessToRooms(
+    await this.communicationAdapter.userAddToRooms(
       communicationRoomIDs,
       contributorCommunicationID
     );
