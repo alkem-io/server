@@ -103,6 +103,7 @@ Events are categorized by their target audience:
 - `USER_SPACE_COMMUNITY_INVITATION` - Direct space community invitations
 - `USER_SPACE_COMMUNITY_JOINED` - When user joins a space community
 - `USER_SPACE_COMMUNITY_APPLICATION` - User's own community applications
+- `USER_SPACE_COMMUNITY_APPLICATION_DECLINED` - When user's space community application is declined
 - `USER_SIGN_UP_WELCOME` - Welcome message for new users
 - `USER_MENTIONED` - When user is mentioned
 - `USER_MESSAGE` - Direct messages to users
@@ -112,6 +113,7 @@ Events are categorized by their target audience:
 ### Virtual Contributor Notifications
 
 - `VIRTUAL_CONTRIBUTOR_ADMIN_SPACE_COMMUNITY_INVITATION` - Space invitations for virtual contributors
+- `VIRTUAL_CONTRIBUTOR_ADMIN_SPACE_COMMUNITY_INVITATION_DECLINED` - When a virtual contributor invitation to a space is declined (notification sent to the user who sent the invitation)
 
 ## Adding a New Notification Event
 

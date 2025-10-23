@@ -243,6 +243,7 @@ export class NotificationRecipientsService {
           .spaceCommunityInvitationReceived;
       case NotificationEvent.USER_SPACE_COMMUNITY_JOINED:
       case NotificationEvent.USER_SPACE_COMMUNITY_APPLICATION_DECLINED:
+      case NotificationEvent.VIRTUAL_CONTRIBUTOR_ADMIN_SPACE_COMMUNITY_INVITATION_DECLINED:
         return notificationSettings.user.membership.spaceCommunityJoined;
       case NotificationEvent.USER_COMMENT_REPLY:
         return notificationSettings.user.commentReply;
@@ -391,6 +392,11 @@ export class NotificationRecipientsService {
           await this.getVirtualContributorCriteria(virtualContributorID);
         break;
       }
+      case NotificationEvent.VIRTUAL_CONTRIBUTOR_ADMIN_SPACE_COMMUNITY_INVITATION_DECLINED: {
+        // Notify the user who sent the invitation (triggeredBy)
+        credentialCriteria = this.getUserSelfCriteria(userID);
+        break;
+      }
       default: {
         throw new NotificationEventException(
           `Unrecognized event encountered for privilege check: ${eventType}`,
@@ -472,7 +478,8 @@ export class NotificationRecipientsService {
       case NotificationEvent.USER_COMMENT_REPLY:
       case NotificationEvent.USER_SPACE_COMMUNITY_JOINED:
       case NotificationEvent.USER_SPACE_COMMUNITY_INVITATION:
-      case NotificationEvent.USER_SPACE_COMMUNITY_APPLICATION_DECLINED: {
+      case NotificationEvent.USER_SPACE_COMMUNITY_APPLICATION_DECLINED:
+      case NotificationEvent.VIRTUAL_CONTRIBUTOR_ADMIN_SPACE_COMMUNITY_INVITATION_DECLINED: {
         // get the User authorization policy
         // Use userID if provided, otherwise fall back to entityID for backward compatibility
         const targetUserID = userID || entityID;
@@ -493,6 +500,7 @@ export class NotificationRecipientsService {
       }
 
       case NotificationEvent.VIRTUAL_CONTRIBUTOR_ADMIN_SPACE_COMMUNITY_INVITATION: {
+        // get the Virtual Contributor authorization policy
         if (!virtualContributorID) {
           throw new ValidationException(
             'Virtual Contributor ID is required for space community invitation notifications',

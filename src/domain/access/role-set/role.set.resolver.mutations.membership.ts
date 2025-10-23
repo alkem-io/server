@@ -62,6 +62,7 @@ import { NotificationInputCommunityApplication } from '@services/adapters/notifi
 import { NotificationInputCommunityInvitation } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.invitation';
 import { NotificationInputCommunityInvitationVirtualContributor } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.invitation.vc';
 import { NotificationInputUserSpaceCommunityApplicationDeclined } from '@services/adapters/notification-adapter/dto/user/notification.dto.input.user.space.community.application.declined';
+import { NotificationInputVirtualContributorSpaceCommunityInvitationDeclined } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.invitation.vc.declined';
 import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
 import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
 import { NotificationVirtualContributorAdapter } from '@services/adapters/notification-adapter/notification.virtual.contributor.adapter';
@@ -615,6 +616,37 @@ export class RoleSetResolverMutationsMembership {
         invitation.lifecycle,
         this.roleSetServiceLifecycleInvitation.getInvitationMachine()
       );
+
+      // Send notification if invitation was declined/rejected for Virtual Contributor
+      if (invitationState === InvitationLifecycleState.REJECTED) {
+        const isVirtualContributor =
+          invitedContributor instanceof VirtualContributor;
+
+        if (isVirtualContributor) {
+          const community =
+            await this.communityResolverService.getCommunityForRoleSet(
+              invitation.roleSet.id
+            );
+          const space =
+            await this.communityResolverService.getSpaceForCommunityOrFail(
+              community.id
+            );
+
+          const notificationInput: NotificationInputVirtualContributorSpaceCommunityInvitationDeclined =
+            {
+              triggeredBy: agentInfo.userID, // Who declined the invitation
+              invitationCreatedBy: invitation.createdBy, // Who sent the invitation (recipient)
+              virtualContributorID: invitedContributor.id,
+              spaceID: space.id,
+            };
+
+          await this.notificationVirtualContributorAdapter.spaceCommunityInvitationVirtualContributorDeclined(
+            notificationInput,
+            space
+          );
+        }
+      }
+
       const isMember = invitationState === InvitationLifecycleState.ACCEPTED;
       await this.roleSetCacheService.deleteOpenInvitationFromCache(
         invitedContributor.id,
