@@ -1,7 +1,44 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
-import { DEFAULT_VISUAL_CONSTRAINTS } from '@domain/common/visual/visual.constraints';
 import { VisualType } from '@common/enums/visual.type';
+
+const VisualType_BANNER = 'banner';
+const VisualType_WHITEBOARD_PREVIEW = 'whiteboardPreview';
+const VisualType_CARD = 'card';
+
+const VISUAL_ALLOWED_TYPES = [
+  'image/png',
+  'image/jpeg',
+  'image/jpg',
+  'image/svg+xml',
+  'image/webp',
+] as const;
+
+const cardConstraints = {
+  minWidth: 307,
+  maxWidth: 410,
+  minHeight: 192,
+  maxHeight: 256,
+  aspectRatio: 1.6,
+  allowedTypes: VISUAL_ALLOWED_TYPES,
+};
+const whiteboardPreviewConstraints = {
+  minWidth: 500,
+  maxWidth: 1800,
+  minHeight: 200,
+  maxHeight: 720,
+  aspectRatio: 2.5,
+  allowedTypes: VISUAL_ALLOWED_TYPES,
+};
+
+const bannerConstraints = {
+  minWidth: 384,
+  maxWidth: 1536,
+  minHeight: 64,
+  maxHeight: 256,
+  aspectRatio: 6,
+  allowedTypes: VISUAL_ALLOWED_TYPES,
+};
 
 export class WhiteboardBannerVisuals1760960016268
   implements MigrationInterface
@@ -11,8 +48,6 @@ export class WhiteboardBannerVisuals1760960016268
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Step 1: Update all banner visuals that belong to whiteboards
     // Change name from 'banner' to 'whiteboardPreview' and update constraints
-    const whiteboardPreviewConstraints =
-      DEFAULT_VISUAL_CONSTRAINTS[VisualType.WHITEBOARD_PREVIEW];
 
     await queryRunner.query(
       `
@@ -26,16 +61,17 @@ export class WhiteboardBannerVisuals1760960016268
         v.maxHeight = ?,
         v.aspectRatio = ?,
         v.allowedTypes = ?
-      WHERE v.name = 'banner'
+      WHERE v.name = ?
       `,
       [
-        VisualType.WHITEBOARD_PREVIEW,
+        VisualType_WHITEBOARD_PREVIEW,
         whiteboardPreviewConstraints.minWidth,
         whiteboardPreviewConstraints.maxWidth,
         whiteboardPreviewConstraints.minHeight,
         whiteboardPreviewConstraints.maxHeight,
         whiteboardPreviewConstraints.aspectRatio,
         whiteboardPreviewConstraints.allowedTypes.join(','),
+        VisualType_BANNER,
       ]
     );
 
@@ -47,11 +83,10 @@ export class WhiteboardBannerVisuals1760960016268
       INNER JOIN whiteboard w ON v.profileId = w.profileId
       WHERE v.name NOT IN (?, ?)
       `,
-      [VisualType.CARD, VisualType.WHITEBOARD_PREVIEW]
+      [VisualType_CARD, VisualType_WHITEBOARD_PREVIEW]
     );
 
     // Step 3: Ensure all card visuals have correct constraints
-    const cardConstraints = DEFAULT_VISUAL_CONSTRAINTS[VisualType.CARD];
     await queryRunner.query(
       `
       UPDATE visual v
@@ -72,7 +107,7 @@ export class WhiteboardBannerVisuals1760960016268
         cardConstraints.maxHeight,
         cardConstraints.aspectRatio,
         cardConstraints.allowedTypes.join(','),
-        VisualType.CARD,
+        VisualType_CARD,
       ]
     );
 
@@ -97,7 +132,7 @@ export class WhiteboardBannerVisuals1760960016268
         whiteboardPreviewConstraints.maxHeight,
         whiteboardPreviewConstraints.aspectRatio,
         whiteboardPreviewConstraints.allowedTypes.join(','),
-        VisualType.WHITEBOARD_PREVIEW,
+        VisualType_WHITEBOARD_PREVIEW,
       ]
     );
 
@@ -112,7 +147,7 @@ export class WhiteboardBannerVisuals1760960016268
         AND v.name = ?
       )
       `,
-      [VisualType.CARD]
+      [VisualType_CARD]
     );
 
     // Step 6: Create missing card visuals
@@ -140,7 +175,7 @@ export class WhiteboardBannerVisuals1760960016268
         `,
         [
           randomUUID(),
-          VisualType.CARD,
+          VisualType_CARD,
           cardConstraints.minWidth,
           cardConstraints.maxWidth,
           cardConstraints.minHeight,
@@ -164,7 +199,7 @@ export class WhiteboardBannerVisuals1760960016268
         AND v.name = ?
       )
       `,
-      [VisualType.WHITEBOARD_PREVIEW]
+      [VisualType_WHITEBOARD_PREVIEW]
     );
 
     // Step 8: Create missing whiteboardPreview visuals
@@ -192,7 +227,7 @@ export class WhiteboardBannerVisuals1760960016268
         `,
         [
           randomUUID(),
-          VisualType.WHITEBOARD_PREVIEW,
+          VisualType_WHITEBOARD_PREVIEW,
           whiteboardPreviewConstraints.minWidth,
           whiteboardPreviewConstraints.maxWidth,
           whiteboardPreviewConstraints.minHeight,
@@ -221,7 +256,6 @@ export class WhiteboardBannerVisuals1760960016268
   public async down(queryRunner: QueryRunner): Promise<void> {
     // Revert whiteboardPreview visuals that belong to whiteboards back to banner
     // Note: visuals inserted in up() intentionally remain in place; rollback is not fully reversible.
-    const bannerConstraints = DEFAULT_VISUAL_CONSTRAINTS[VisualType.BANNER];
 
     await queryRunner.query(
       `
@@ -238,14 +272,14 @@ export class WhiteboardBannerVisuals1760960016268
       WHERE v.name = ?
       `,
       [
-        VisualType.BANNER,
+        VisualType_BANNER,
         bannerConstraints.minWidth,
         bannerConstraints.maxWidth,
         bannerConstraints.minHeight,
         bannerConstraints.maxHeight,
         bannerConstraints.aspectRatio,
         bannerConstraints.allowedTypes.join(','),
-        VisualType.WHITEBOARD_PREVIEW,
+        VisualType_WHITEBOARD_PREVIEW,
       ]
     );
   }

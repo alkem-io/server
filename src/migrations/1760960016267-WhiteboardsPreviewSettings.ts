@@ -1,5 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
+const WhiteboardPreviewMode_AUTO = 'auto';
 export class WhiteboardsPreviewSettings1760960016267
   implements MigrationInterface
 {
@@ -11,7 +12,7 @@ export class WhiteboardsPreviewSettings1760960016267
     );
     await queryRunner.query(
       `UPDATE \`whiteboard\` SET \`previewSettings\` =
-        '{"mode":"auto","coordinates":null}'`
+        '{"mode":"${WhiteboardPreviewMode_AUTO}","coordinates":null}'`
     );
   }
 
