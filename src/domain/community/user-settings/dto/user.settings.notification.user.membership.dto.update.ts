@@ -15,7 +15,8 @@ export class UpdateUserSettingsNotificationUserMembershipInput {
 
   @Field(() => NotificationSettingInput, {
     nullable: true,
-    description: 'Receive a notification when I join a new community',
+    description:
+      'Receive a notification when I join a new community or when my application is declined',
   })
   @ValidateNested()
   @Type(() => NotificationSettingInput)

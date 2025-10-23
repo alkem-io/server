@@ -242,6 +242,7 @@ export class NotificationRecipientsService {
         return notificationSettings.user.membership
           .spaceCommunityInvitationReceived;
       case NotificationEvent.USER_SPACE_COMMUNITY_JOINED:
+      case NotificationEvent.USER_SPACE_COMMUNITY_APPLICATION_DECLINED:
         return notificationSettings.user.membership.spaceCommunityJoined;
       case NotificationEvent.USER_COMMENT_REPLY:
         return notificationSettings.user.commentReply;
@@ -371,7 +372,8 @@ export class NotificationRecipientsService {
       case NotificationEvent.USER_MESSAGE:
       case NotificationEvent.USER_MESSAGE_SENDER:
       case NotificationEvent.ORGANIZATION_MESSAGE_SENDER:
-      case NotificationEvent.PLATFORM_FORUM_DISCUSSION_COMMENT: {
+      case NotificationEvent.PLATFORM_FORUM_DISCUSSION_COMMENT:
+      case NotificationEvent.USER_SPACE_COMMUNITY_APPLICATION_DECLINED: {
         // For mentions, no privilege check is needed - mentions are direct notifications to specific users
         credentialCriteria = this.getUserSelfCriteria(userID);
         break;
@@ -469,7 +471,8 @@ export class NotificationRecipientsService {
       case NotificationEvent.PLATFORM_FORUM_DISCUSSION_COMMENT:
       case NotificationEvent.USER_COMMENT_REPLY:
       case NotificationEvent.USER_SPACE_COMMUNITY_JOINED:
-      case NotificationEvent.USER_SPACE_COMMUNITY_INVITATION: {
+      case NotificationEvent.USER_SPACE_COMMUNITY_INVITATION:
+      case NotificationEvent.USER_SPACE_COMMUNITY_APPLICATION_DECLINED: {
         // get the User authorization policy
         // Use userID if provided, otherwise fall back to entityID for backward compatibility
         const targetUserID = userID || entityID;

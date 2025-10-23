@@ -481,6 +481,28 @@ export class NotificationExternalAdapter {
     };
   }
 
+  async buildUserSpaceCommunityApplicationDeclinedPayload(
+    eventType: NotificationEvent,
+    triggeredBy: string,
+    recipients: IUser[],
+    userID: string,
+    space: ISpace
+  ): Promise<NotificationEventPayloadSpaceCommunityApplication> {
+    const spacePayload = await this.buildSpacePayload(
+      eventType,
+      triggeredBy,
+      recipients,
+      space
+    );
+    const applicantPayload = await this.getContributorPayloadOrFail(userID);
+    const payload: NotificationEventPayloadSpaceCommunityApplication = {
+      applicant: applicantPayload,
+      ...spacePayload,
+    };
+
+    return payload;
+  }
+
   async buildPlatformGlobalRoleChangedNotificationPayload(
     eventType: NotificationEvent,
     triggeredBy: string,
