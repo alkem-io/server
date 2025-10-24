@@ -10,6 +10,7 @@ export const MockNotificationsPayloadBuilder: ValueProvider<
     buildUserMessageSentNotificationPayload: jest.fn(),
     buildSpaceCommunityApplicationCreatedNotificationPayload: jest.fn(),
     buildUserSpaceCommunityApplicationDeclinedPayload: jest.fn(),
+    buildVirtualContributorSpaceCommunityInvitationDeclinedPayload: jest.fn(),
     buildNotificationPayloadUserSpaceCommunityInvitation: jest.fn(),
     buildSpaceCollaborationCreatedPayload: jest.fn(),
     buildSpaceCollaborationCalloutPostContributionCommentPayload: jest.fn(),
