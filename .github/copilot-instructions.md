@@ -1,3 +1,9 @@
+# General Instructions
+
+If this repository contains a `.specify/` folder, it follows **Specification-Driven Development (SDD)** using **GitHub’s Spec Kit**, delimited by the +++ text block below.
+
++++
+
 ## GitHub Copilot Project Context: Specification-Driven Development (Spec Kit)
 
 This repository follows Specification-Driven Development using GitHub's Spec Kit. Spec-driven development is a collaborative workflow where a detailed written specification is created, reviewed, and approved by product, design, and engineering to serve as the single source of truth before implementation begins.
@@ -10,6 +16,7 @@ Location: `.specify/` in the repository root. Key files:
 - `memory/constitution.md` – MANDATORY Governing principles (quality gates, Definition of Done, performance, accessibility, governance).
 - `templates/plan-template.md` – Implementation plan structure & gate logic.
 - `templates/spec-template.md` – Feature specification structure & validation rules.
+- `templates/checklist-template.md` – Generate quality checklists & validate requirement completeness, clarity, and consistency.
 - `templates/tasks-template.md` – Task breakdown structure & generation rules.
 - `templates/agent-file-template.md` – Pattern for maintaining this agent instructions file.
 
@@ -36,18 +43,50 @@ specs/NNN-sample-feature/
 2. `/specify` → `spec.md` (WHAT & WHY only)
 3. `/clarify` (resolve `[NEEDS CLARIFICATION]` markers)
 4. `/plan` → `plan.md` + Phase 0/1 docs (except `tasks.md`)
-5. `/tasks` → `tasks.md`
-6. `/analyze` → cross-artifact consistency
-7. `/implement` → execute tasks (respect `[P]` parallel markers)
+5. `/checklist` → generate quality checklists to validate requirements completeness, clarity, and consistency
+6. `/tasks` → `tasks.md`
+7. `/analyze` → cross-artifact consistency
+8. `/implement` → execute tasks (respect `[P]` parallel markers)
 
 ### Ad-hoc requests
 
-You can help the user with requests outside the canonical workflow, but it is ESSENTIAL that the above principles are adhered to, so any new features or changes are documented in the appropriate specification files and follow the established workflow, before changing the code. Ensure that conde chnages and learnings from the conversation on the current feature are brought back into the specs where relevant. Bug fixes, debugging, non-product related requests, etc. are acceptable, as long as they are not in conflict with the specification-driven development process.
+Copilot may assist with ad-hoc requests (debugging, refactoring, non-feature work) if they **don’t violate the SDD workflow**.
+All new features or product changes MUST be reflected in `.specify/` artifacts and follow the canonical flow.
+Ensure learnings and code changes are fed back into relevant specs.
+
++++
 
 ### Tooling Guidance
 
-- Prefer interacting with the MCP server tools whenever they can accomplish the task; fall back to direct terminal commands only when no MCP capability exists or it is insufficient for the request.
+- Always prefer **MCP server tools** when possible.
+- Fall back to direct terminal or console commands only if no MCP capability exists or is insufficient.
+- For Git operations, **all commits must be signed**.
 
-### Git
+---
 
-- Commits must be signed.
+### MCP Server Usage
+
+#### Prioritization Logic
+
+Use the most specific MCP server before any generic one.
+
+**Priority Order:**
+
+1. Domain-specific MCP servers (`github`, `context7`, `fetch`)
+2. Generic web search MCP servers (`tavily`, `brave`)
+
+#### Selection Rules
+
+- Requests involving `https://github.com/alkem-io/` → use **GitHub MCP**.
+- Use **Context7 MCP** for factually correct or verified information before falling back to search MCPs.
+- Use **Tavily** or **Brave** only when developer documentation is unavailable elsewhere.
+
+#### Feedback Loops
+
+- Prefer MCP servers supporting **feedback and validation** (e.g., GitHub comments, Context7 evaluation).
+- Use them to cross-check and refine responses before completion.
+
+#### Examples
+
+- “List open PRs in alkem-io/server” → **GitHub MCP**
+- "How do I use the useSWR hook with TypeScript in a Next.js application, specifically for data fetching with client-side caching and revalidation, according to the latest SWR documentation?" → Context7 MCP, fallback to Tavily
