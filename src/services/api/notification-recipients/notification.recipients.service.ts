@@ -390,7 +390,7 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_ADMIN_VIRTUAL_CONTRIBUTOR_COMMUNITY_INVITATION_DECLINED: {
         // Notify the space admin who sent the VC invitation
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
-        credentialCriteria = this.getSpaceAdminCredentialCriteria(spaceID);
+        credentialCriteria = this.getUserSelfCriteria(userID);
         break;
       }
       case NotificationEvent.VIRTUAL_CONTRIBUTOR_ADMIN_SPACE_COMMUNITY_INVITATION: {

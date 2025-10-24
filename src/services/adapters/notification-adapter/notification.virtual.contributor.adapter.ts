@@ -35,7 +35,6 @@ export class NotificationVirtualContributorAdapter {
     const recipients = await this.getNotificationRecipientsVirtualContributor(
       event,
       eventData,
-      undefined, // No specific user recipient for VC invitation - goes to VC admins
       eventData.invitedContributorID
     );
 
@@ -76,14 +75,13 @@ export class NotificationVirtualContributorAdapter {
   private async getNotificationRecipientsVirtualContributor(
     event: NotificationEvent,
     eventData: NotificationInputBase,
-    userID: string | undefined,
     virtualContributorID: string
   ): Promise<NotificationRecipientResult> {
     return this.notificationAdapter.getNotificationRecipients(
       event,
       eventData,
       undefined,
-      userID,
+      undefined,
       undefined,
       virtualContributorID
     );

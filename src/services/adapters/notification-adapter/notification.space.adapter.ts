@@ -392,7 +392,8 @@ export class NotificationSpaceAdapter {
     const recipients = await this.getNotificationRecipientsSpace(
       event,
       eventData,
-      space.id
+      space.id,
+      eventData.invitationCreatedBy
     );
 
     if (recipients.emailRecipients.length > 0) {
