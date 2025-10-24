@@ -1,6 +1,5 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
-import { VisualType } from '@common/enums/visual.type';
 
 const VisualType_BANNER = 'banner';
 const VisualType_WHITEBOARD_PREVIEW = 'whiteboardPreview';

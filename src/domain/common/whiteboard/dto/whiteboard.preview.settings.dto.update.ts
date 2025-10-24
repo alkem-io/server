@@ -1,33 +1,7 @@
 import { WhiteboardPreviewMode } from '@common/enums/whiteboard.preview.mode';
 import { Field, InputType } from '@nestjs/graphql';
 import { IsOptional } from 'class-validator';
-
-@InputType()
-export class UpdateWhiteboardPreviewCoordinatesInput {
-  @Field(() => Number, {
-    nullable: false,
-    description: 'The x coordinate.',
-  })
-  x!: number;
-
-  @Field(() => Number, {
-    nullable: false,
-    description: 'The y coordinate.',
-  })
-  y!: number;
-
-  @Field(() => Number, {
-    nullable: false,
-    description: 'The height.',
-  })
-  height!: number;
-
-  @Field(() => Number, {
-    nullable: false,
-    description: 'The width.',
-  })
-  width!: number;
-}
+import { UpdateWhiteboardPreviewCoordinatesInput } from './whiteboard.preview.settings.coordinates.dto.update';
 
 @InputType()
 export class UpdateWhiteboardPreviewSettingsInput {
