@@ -83,7 +83,8 @@ export class CollaborationAuthorizationService {
         await this.appendCredentialRulesForContributors(
           collaboration.authorization,
           roleSet,
-          spaceSettings
+          spaceSettings,
+          platformRolesAccess
         );
     }
     collaboration.authorization.credentialRules.push(
@@ -154,7 +155,8 @@ export class CollaborationAuthorizationService {
         await this.appendCredentialRulesForContributors(
           clonedAuthorization,
           roleSet,
-          spaceSettings
+          spaceSettings,
+          platformRolesAccess
         );
       const timelineAuthorizations =
         await this.timelineAuthorizationService.applyAuthorizationPolicy(
@@ -176,7 +178,8 @@ export class CollaborationAuthorizationService {
 
   private async getContributorCredentials(
     roleSet: IRoleSet,
-    spaceSettings: ISpaceSettings
+    spaceSettings: ISpaceSettings,
+    platformRolesAccess: IPlatformRolesAccess
   ): Promise<ICredentialDefinition[]> {
     // add challenge members
     let contributorCriterias = await this.roleSetService.getCredentialsForRole(
@@ -196,6 +199,15 @@ export class CollaborationAuthorizationService {
       type: AuthorizationCredential.GLOBAL_ADMIN,
       resourceID: '',
     });
+
+    // Add platform roles that have UPDATE access (including GLOBAL_SUPPORT if allowPlatformSupportAsAdmin is set)
+    const platformRolesContributorCriterias =
+      this.platformRolesAccessService.getCredentialsForRolesWithAccess(
+        platformRolesAccess.roles,
+        [AuthorizationPrivilege.UPDATE]
+      );
+    contributorCriterias.push(...platformRolesContributorCriterias);
+
     return contributorCriterias;
   }
 
@@ -252,7 +264,8 @@ export class CollaborationAuthorizationService {
   public async appendCredentialRulesForContributors(
     authorization: IAuthorizationPolicy | undefined,
     policy: IRoleSet,
-    spaceSettings: ISpaceSettings
+    spaceSettings: ISpaceSettings,
+    platformRolesAccess: IPlatformRolesAccess
   ): Promise<IAuthorizationPolicy> {
     if (!authorization)
       throw new EntityNotInitializedException(
@@ -267,7 +280,8 @@ export class CollaborationAuthorizationService {
     // Who is able to contribute
     const contributors = await this.getContributorCredentials(
       policy,
-      spaceSettings
+      spaceSettings,
+      platformRolesAccess
     );
     const contributorsRule =
       this.authorizationPolicyService.createCredentialRule(
