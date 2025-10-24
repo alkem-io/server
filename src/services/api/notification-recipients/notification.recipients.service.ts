@@ -243,7 +243,6 @@ export class NotificationRecipientsService {
           .spaceCommunityInvitationReceived;
       case NotificationEvent.USER_SPACE_COMMUNITY_JOINED:
       case NotificationEvent.USER_SPACE_COMMUNITY_APPLICATION_DECLINED:
-      case NotificationEvent.VIRTUAL_CONTRIBUTOR_ADMIN_SPACE_COMMUNITY_INVITATION_DECLINED:
         return notificationSettings.user.membership.spaceCommunityJoined;
       case NotificationEvent.USER_COMMENT_REPLY:
         return notificationSettings.user.commentReply;
@@ -274,6 +273,8 @@ export class NotificationRecipientsService {
         return notificationSettings.space.collaborationCalloutComment;
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED:
         return notificationSettings.space.collaborationCalloutPublished;
+      case NotificationEvent.SPACE_ADMIN_VIRTUAL_CONTRIBUTOR_COMMUNITY_INVITATION_DECLINED:
+        return notificationSettings.space.admin.communityNewMember;
       case NotificationEvent.VIRTUAL_CONTRIBUTOR_ADMIN_SPACE_COMMUNITY_INVITATION:
         return notificationSettings.virtualContributor
           .adminSpaceCommunityInvitation;
@@ -386,15 +387,16 @@ export class NotificationRecipientsService {
         credentialCriteria = this.getUserSelfCriteria(userID);
         break;
       }
+      case NotificationEvent.SPACE_ADMIN_VIRTUAL_CONTRIBUTOR_COMMUNITY_INVITATION_DECLINED: {
+        // Notify the space admin who sent the VC invitation
+        privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
+        credentialCriteria = this.getSpaceAdminCredentialCriteria(spaceID);
+        break;
+      }
       case NotificationEvent.VIRTUAL_CONTRIBUTOR_ADMIN_SPACE_COMMUNITY_INVITATION: {
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS;
         credentialCriteria =
           await this.getVirtualContributorCriteria(virtualContributorID);
-        break;
-      }
-      case NotificationEvent.VIRTUAL_CONTRIBUTOR_ADMIN_SPACE_COMMUNITY_INVITATION_DECLINED: {
-        // Notify the user who sent the invitation (triggeredBy)
-        credentialCriteria = this.getUserSelfCriteria(userID);
         break;
       }
       default: {
@@ -448,6 +450,7 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_ADMIN_COMMUNITY_APPLICATION:
       case NotificationEvent.SPACE_ADMIN_COMMUNITY_NEW_MEMBER:
       case NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION:
+      case NotificationEvent.SPACE_ADMIN_VIRTUAL_CONTRIBUTOR_COMMUNITY_INVITATION_DECLINED:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_POST_CONTRIBUTION_COMMENT:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_COMMENT:
@@ -478,8 +481,7 @@ export class NotificationRecipientsService {
       case NotificationEvent.USER_COMMENT_REPLY:
       case NotificationEvent.USER_SPACE_COMMUNITY_JOINED:
       case NotificationEvent.USER_SPACE_COMMUNITY_INVITATION:
-      case NotificationEvent.USER_SPACE_COMMUNITY_APPLICATION_DECLINED:
-      case NotificationEvent.VIRTUAL_CONTRIBUTOR_ADMIN_SPACE_COMMUNITY_INVITATION_DECLINED: {
+      case NotificationEvent.USER_SPACE_COMMUNITY_APPLICATION_DECLINED: {
         // get the User authorization policy
         // Use userID if provided, otherwise fall back to entityID for backward compatibility
         const targetUserID = userID || entityID;

@@ -640,7 +640,7 @@ export class RoleSetResolverMutationsMembership {
               spaceID: space.id,
             };
 
-          await this.notificationVirtualContributorAdapter.spaceCommunityInvitationVirtualContributorDeclined(
+          await this.notificationAdapterSpace.spaceAdminVirtualContributorInvitationDeclined(
             notificationInput,
             space
           );

@@ -10,7 +10,6 @@ import { CommunityResolverService } from '@services/infrastructure/entity-resolv
 import { NotificationAdapter } from './notification.adapter';
 import { NotificationEventPayload } from '@common/enums/notification.event.payload';
 import { NotificationInputCommunityInvitationVirtualContributor } from './dto/space/notification.dto.input.space.community.invitation.vc';
-import { NotificationInputVirtualContributorSpaceCommunityInvitationDeclined } from './dto/space/notification.dto.input.space.community.invitation.vc.declined';
 import { InAppNotificationPayloadVirtualContributor } from '@platform/in-app-notification-payload/dto/virtual-contributor/notification.in.app.payload.virtual.contributor';
 
 @Injectable()
@@ -66,57 +65,6 @@ export class NotificationVirtualContributorAdapter {
 
       await this.notificationInAppAdapter.sendInAppNotifications(
         NotificationEvent.VIRTUAL_CONTRIBUTOR_ADMIN_SPACE_COMMUNITY_INVITATION,
-        NotificationEventCategory.VIRTUAL_CONTRIBUTOR,
-        eventData.triggeredBy,
-        inAppReceiverIDs,
-        inAppPayload
-      );
-    }
-  }
-
-  public async spaceCommunityInvitationVirtualContributorDeclined(
-    eventData: NotificationInputVirtualContributorSpaceCommunityInvitationDeclined,
-    space: any
-  ): Promise<void> {
-    const event =
-      NotificationEvent.VIRTUAL_CONTRIBUTOR_ADMIN_SPACE_COMMUNITY_INVITATION_DECLINED;
-
-    const recipients = await this.getNotificationRecipientsVirtualContributor(
-      event,
-      eventData,
-      eventData.invitationCreatedBy, // Pass the userID (who sent the invitation)
-      eventData.virtualContributorID
-    );
-
-    if (recipients.emailRecipients.length > 0) {
-      const payload =
-        await this.notificationExternalAdapter.buildVirtualContributorSpaceCommunityInvitationDeclinedPayload(
-          event,
-          eventData.triggeredBy,
-          recipients.emailRecipients,
-          eventData.virtualContributorID,
-          space
-        );
-
-      this.notificationExternalAdapter.sendExternalNotifications(
-        event,
-        payload
-      );
-    }
-
-    // Send in-app notifications
-    const inAppReceiverIDs = recipients.inAppRecipients.map(
-      recipient => recipient.id
-    );
-    if (inAppReceiverIDs.length > 0) {
-      const inAppPayload: InAppNotificationPayloadVirtualContributor = {
-        type: NotificationEventPayload.VIRTUAL_CONTRIBUTOR,
-        virtualContributorID: eventData.virtualContributorID,
-        space,
-      };
-
-      await this.notificationInAppAdapter.sendInAppNotifications(
-        NotificationEvent.VIRTUAL_CONTRIBUTOR_ADMIN_SPACE_COMMUNITY_INVITATION_DECLINED,
         NotificationEventCategory.VIRTUAL_CONTRIBUTOR,
         eventData.triggeredBy,
         inAppReceiverIDs,

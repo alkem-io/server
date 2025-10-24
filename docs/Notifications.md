@@ -90,6 +90,7 @@ Events are categorized by their target audience:
 - `SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION` - Admin notification for callout contributions
 - `SPACE_LEAD_COMMUNICATION_MESSAGE` - Communication messages to space leads
 - `SPACE_ADMIN_COMMUNITY_NEW_MEMBER` - Admin notification for new community members
+- `SPACE_ADMIN_VIRTUAL_CONTRIBUTOR_COMMUNITY_INVITATION_DECLINED` - Admin notification when a virtual contributor invitation is declined
 - `SPACE_COMMUNITY_INVITATION_USER_PLATFORM` - Platform-level space invitations
 - `SPACE_COMMUNICATION_UPDATE` - General space communication updates
 - `SPACE_COLLABORATION_CALLOUT_PUBLISHED` - When callouts are published
@@ -113,7 +114,6 @@ Events are categorized by their target audience:
 ### Virtual Contributor Notifications
 
 - `VIRTUAL_CONTRIBUTOR_ADMIN_SPACE_COMMUNITY_INVITATION` - Space invitations for virtual contributors
-- `VIRTUAL_CONTRIBUTOR_ADMIN_SPACE_COMMUNITY_INVITATION_DECLINED` - When a virtual contributor invitation to a space is declined (notification sent to the user who sent the invitation)
 
 ## Adding a New Notification Event
 
