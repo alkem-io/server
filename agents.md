@@ -38,13 +38,11 @@ Implements constitution & agents.md. Does not introduce new governance.
 | /stabilize | Hardening & docs               | Added docs / tuning                                        | Performance & quality goals met                                    |
 | /done      | Close out & measure            | Outcome evidence                                           | Metrics recorded; lessons captured (optional)                      |
 
-## Minimal Per-Feature Files
+## SDD Scaffolding Reference (Intentionally External)
 
-Required early:
+Detailed spec folder scaffolding (file list, optional artifacts, templates) is defined in `copilot-instructions` and the `.specify/templates/` directory.
 
-- `specs/NNN-slug/spec.md`
-- `specs/NNN-slug/plan.md` (may start nearly empty—populate before significant coding)
-  Optional / add only when needed (pain-driven): `tasks.md`, `data-model.md`, `contracts/`, `quickstart.md`, `decisions.md`.
+This file purposefully does NOT enumerate every optional file (e.g., `tasks.md`, `data-model.md`, `contracts/`, `quickstart.md`, `decisions.md`) to avoid duplication and drift. If scaffolding expectations change, update the templates—not this governance layer. Only the governance classification (below) remains here.
 
 ## Change Classification & Path Selection
 
@@ -55,14 +53,6 @@ Choose the lightest responsible path. Escalate when uncertainty, scope, or risk 
 | Full SDD                   | Net‑new capability, external contract change (GraphQL/events), cross-domain, multi-sprint, > ~400 touched LOC, or high ambiguity | `spec.md` then `plan.md` before bulk coding                                            | New aggregate, migration with behavioral risk, security/privacy surface | More than 1 unresolved open question after /spec or unclear exit criteria |
 | Agentic Flow (Lightweight) | Medium enhancement/refactor with SOME unknowns; multi-file but no new external contract; ≤ ~400 LOC                              | Inline mini-plan (PR description or `plan.md` stub: Goal, Scope, Risks, Exit Criteria) | Internal API adaptation, moderate logic consolidation                   | New contract emerges, risk widens, logic churn > planned                  |
 | Manual Direct Fix          | Trivial, fully understood, ≤ ~40 LOC, no architectural or contract impact                                                        | None (optional PR note)                                                                | Typo, guard clause, log tweak, constant change                          | A second unplanned file edit needed OR hidden side-effect appears         |
-
-### Escalation Heuristics (Promote one level if ≥2 apply)
-
-- New or deprecated public contract (schema type, event name, REST route)
-- Introduces persistence schema changes affecting more than one service or domain
-- Requires coordinated rollout (feature flag, data backfill, staged deploy)
-- Security / compliance / privacy implication
-- Success metric hard to express in one measurable sentence
 
 ### Lightweight Agentic Flow Template (Inline)
 
@@ -126,14 +116,7 @@ This section should be present in `spec.md` until cleared. Remove only when answ
 
 Reviewers ask on PRs: “Is implementation still aligned with `plan.md` phases?” If not → micro update to `plan.md` in same PR.
 
-## Future (Deferred Until Needed)
-
-Introductions intentionally postponed:
-
-- Automated checklist generation
-- CI phase gating & schema diff enforcement
-- Formal decision log / ADR directory
-- Metrics dashboard for spec lifecycle
+<!-- Future scaffolding & automation items intentionally omitted to keep this lean. See templates / copilot-instructions for evolutions. -->
 
 ## Quick Reference Summary
 
