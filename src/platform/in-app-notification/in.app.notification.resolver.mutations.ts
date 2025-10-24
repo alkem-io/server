@@ -1,5 +1,4 @@
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { UpdateResult } from 'typeorm';
 import { NotificationEventInAppState } from '@common/enums/notification.event.in.app.state';
 import { CurrentUser } from '@common/decorators';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
@@ -9,6 +8,7 @@ import { UpdateNotificationStateInput } from './dto/in.app.notification.state.up
 import { InstrumentResolver } from '@src/apm/decorators';
 import { InAppNotificationService } from './in.app.notification.service';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
+import { NotificationEventsFilterInput } from '@services/api/me/dto/me.notification.event.filter.dto.input';
 
 @InstrumentResolver()
 @Resolver()
@@ -57,55 +57,56 @@ export class InAppNotificationResolverMutations {
 
   @Mutation(() => Boolean, {
     description:
-      'Mark multiple notifications as read. If no IDs are provided, marks all user notifications as read.',
+      'Mark notifications as read. If no filter is provided, marks all user notifications as read. If filter with types is provided, marks only those notification types as read.',
   })
   async markNotificationsAsRead(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('notificationIds', { type: () => [String] }) notificationIds: string[]
+    @Args('filter', {
+      type: () => NotificationEventsFilterInput,
+      nullable: true,
+    })
+    filter?: NotificationEventsFilterInput
   ): Promise<boolean> {
     return this.updateNotificationStates(
       agentInfo,
-      notificationIds,
-      NotificationEventInAppState.READ
+      NotificationEventInAppState.READ,
+      filter
     );
   }
 
   @Mutation(() => Boolean, {
     description:
-      'Mark multiple notifications as unread. If no IDs are provided, marks all user notifications as unread.',
+      'Mark notifications as unread. If no filter is provided, marks all user notifications as unread. If filter with types is provided, marks only those notification types as unread.',
   })
   async markNotificationsAsUnread(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('notificationIds', { type: () => [String] }) notificationIds: string[]
+    @Args('filter', {
+      type: () => NotificationEventsFilterInput,
+      nullable: true,
+    })
+    filter?: NotificationEventsFilterInput
   ): Promise<boolean> {
     return this.updateNotificationStates(
       agentInfo,
-      notificationIds,
-      NotificationEventInAppState.UNREAD
+      NotificationEventInAppState.UNREAD,
+      filter
     );
   }
 
   private async updateNotificationStates(
     agentInfo: AgentInfo,
-    notificationIds: string[],
-    state: NotificationEventInAppState
+    state: NotificationEventInAppState,
+    filter?: NotificationEventsFilterInput
   ): Promise<boolean> {
-    let result: UpdateResult;
-
-    if (notificationIds.length === 0) {
-      // If no specific IDs provided, mark all user's notifications with the given state
-      result = await this.inAppNotificationService.markAllNotificationsAsState(
+    // Update notifications based on the filter
+    // If no filter provided, updates all notifications
+    // If filter with types provided, updates only those notification types
+    const result =
+      await this.inAppNotificationService.bulkUpdateNotificationStateByTypes(
         agentInfo.userID,
-        state
+        state,
+        filter
       );
-    } else {
-      // Mark specific notifications
-      result = await this.inAppNotificationService.bulkUpdateNotificationState(
-        notificationIds,
-        agentInfo.userID,
-        state
-      );
-    }
 
     // Update counter for the user if any notifications were affected
     if ((result?.affected ?? 0) > 0) {

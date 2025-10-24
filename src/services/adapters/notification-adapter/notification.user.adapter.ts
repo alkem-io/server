@@ -21,6 +21,8 @@ import { InAppNotificationPayloadSpaceCommunityInvitation } from '@platform/in-a
 import { NotificationInputCommunityInvitation } from './dto/space/notification.dto.input.space.community.invitation';
 import { NotificationInputCommunityNewMember } from './dto/space/notification.dto.input.space.community.new.member';
 import { InAppNotificationPayloadSpaceCommunityContributor } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.contributor';
+import { InAppNotificationPayloadSpaceCommunityApplicationDeclined } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.application.declined';
+import { NotificationInputUserSpaceCommunityApplicationDeclined } from './dto/user/notification.dto.input.user.space.community.application.declined';
 import { MessageDetailsService } from '@domain/communication/message.details/message.details.service';
 import { InAppNotificationPayloadUser } from '@platform/in-app-notification-payload/dto/user/notification.in.app.payload.user';
 
@@ -319,6 +321,55 @@ export class NotificationUserAdapter {
         'Error while building comment reply notification payload',
         LogContext.NOTIFICATIONS,
         { error: error?.message }
+      );
+    }
+  }
+
+  public async userSpaceCommunityApplicationDeclined(
+    eventData: NotificationInputUserSpaceCommunityApplicationDeclined,
+    space: ISpace
+  ): Promise<void> {
+    const event = NotificationEvent.USER_SPACE_COMMUNITY_APPLICATION_DECLINED;
+
+    const recipients = await this.getNotificationRecipientsUser(
+      event,
+      eventData,
+      eventData.userID
+    );
+
+    if (recipients.emailRecipients.length > 0) {
+      const payload =
+        await this.notificationExternalAdapter.buildUserSpaceCommunityApplicationDeclinedPayload(
+          event,
+          eventData.triggeredBy,
+          recipients.emailRecipients,
+          eventData.userID,
+          space
+        );
+
+      this.notificationExternalAdapter.sendExternalNotifications(
+        event,
+        payload
+      );
+    }
+
+    // Send in-app notifications
+    const inAppReceiverIDs = recipients.inAppRecipients.map(
+      recipient => recipient.id
+    );
+    if (inAppReceiverIDs.length > 0) {
+      const inAppPayload: InAppNotificationPayloadSpaceCommunityApplicationDeclined =
+        {
+          type: NotificationEventPayload.SPACE,
+          spaceID: eventData.spaceID,
+        };
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        NotificationEvent.USER_SPACE_COMMUNITY_APPLICATION_DECLINED,
+        NotificationEventCategory.SPACE_MEMBER,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
+        inAppPayload
       );
     }
   }

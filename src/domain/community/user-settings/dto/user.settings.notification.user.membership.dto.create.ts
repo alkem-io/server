@@ -13,7 +13,8 @@ export class CreateUserSettingsNotificationUserMembershipInput {
 
   @Field(() => CreateUserSettingsNotificationChannelsInput, {
     nullable: false,
-    description: 'Receive a notification when I join a new community',
+    description:
+      'Receive a notification when I join a new community or when my application is declined',
   })
   @IsBoolean()
   spaceCommunityJoined!: CreateUserSettingsNotificationChannelsInput;

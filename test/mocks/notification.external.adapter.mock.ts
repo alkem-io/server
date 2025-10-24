@@ -7,7 +7,10 @@ export const MockNotificationsPayloadBuilder: ValueProvider<
 > = {
   provide: NotificationExternalAdapter,
   useValue: {
+    buildUserMessageSentNotificationPayload: jest.fn(),
     buildSpaceCommunityApplicationCreatedNotificationPayload: jest.fn(),
+    buildUserSpaceCommunityApplicationDeclinedPayload: jest.fn(),
+    buildNotificationPayloadUserSpaceCommunityInvitation: jest.fn(),
     buildSpaceCollaborationCreatedPayload: jest.fn(),
     buildSpaceCollaborationCalloutPostContributionCommentPayload: jest.fn(),
     buildPlatformForumDiscussionCreatedNotificationPayload: jest.fn(),

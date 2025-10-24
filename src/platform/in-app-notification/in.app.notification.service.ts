@@ -1,5 +1,5 @@
 import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
-import { Brackets, Repository, In, Not, UpdateResult } from 'typeorm';
+import { Brackets, Repository, In, Not, UpdateResult, FindOptionsWhere } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Inject } from '@nestjs/common/decorators';
@@ -254,32 +254,31 @@ export class InAppNotificationService {
     return updatedNotification.state;
   }
 
-  async bulkUpdateNotificationState(
-    notificationIds: string[],
+  async bulkUpdateNotificationStateByTypes(
     userId: string,
-    state: NotificationEventInAppState
+    state: NotificationEventInAppState,
+    filter?: NotificationEventsFilterInput
   ): Promise<UpdateResult> {
-    return this.inAppNotificationRepo.update(
-      {
-        id: In(notificationIds),
-        receiverID: userId,
-        state: Not(NotificationEventInAppState.ARCHIVED),
-      },
-      { state }
-    );
+    const where: FindOptionsWhere<InAppNotification> = {
+      receiverID: userId,
+      state: Not(NotificationEventInAppState.ARCHIVED),
+    };
+
+    // If filter is provided with specific types, only update those types
+    // If no filter is provided, update all notifications
+    if (filter?.types && filter.types.length > 0) {
+      where.type = In(filter.types);
+    }
+
+    return this.inAppNotificationRepo.update(where, { state });
   }
 
-  async markAllNotificationsAsState(
-    userId: string,
-    state: NotificationEventInAppState
-  ): Promise<UpdateResult> {
-    return this.inAppNotificationRepo.update(
-      {
-        receiverID: userId,
-        state: Not(NotificationEventInAppState.ARCHIVED),
-      },
-      { state }
-    );
+  public saveInAppNotifications(
+    entities: InAppNotification[]
+  ): Promise<InAppNotification[]> {
+    return this.inAppNotificationRepo.save(entities, {
+      chunk: 100,
+    });
   }
 
   public async deleteAllByMessageId(messageID: string): Promise<void> {
@@ -464,13 +463,5 @@ export class InAppNotificationService {
     }
 
     return result;
-  }
-
-  public saveInAppNotifications(
-    entities: InAppNotification[]
-  ): Promise<InAppNotification[]> {
-    return this.inAppNotificationRepo.save(entities, {
-      chunk: 100,
-    });
   }
 }
