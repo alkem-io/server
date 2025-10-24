@@ -17,21 +17,7 @@ import {
   getPaginationResults,
 } from '@core/pagination';
 import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
-
-type InAppNotificationCoreEntityIds = {
-  spaceID?: string;
-  organizationID?: string;
-  userID?: string;
-  applicationID?: string;
-  invitationID?: string;
-  calloutID?: string;
-  contributionID?: string;
-  roomID?: string;
-  messageID?: string;
-  contributorOrganizationID?: string;
-  contributorUserID?: string;
-  contributorVcID?: string;
-};
+import { InAppNotificationCoreEntityIds } from './in.app.notification.core.entity.ids';
 
 @Injectable()
 export class InAppNotificationService {
