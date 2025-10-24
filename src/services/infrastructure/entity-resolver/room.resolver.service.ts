@@ -127,6 +127,8 @@ export class RoomResolverService {
         LogContext.COLLABORATION
       );
     }
+    // First contribution since we are selecting all contributions, with a certain roomID.
+    // Since we have Room->Post->Contribution->Callout we can safely assume Room is indirectly OneToOne related to Contribution through Post
     const postContribution = callout.contributions[0].post;
     return {
       post: postContribution,
