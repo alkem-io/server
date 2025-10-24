@@ -19,15 +19,6 @@ Canonical header to insert (verbatim) at top of lower layers when edited next:
 Implements constitution & agents.md. Does not introduce new governance.
 ```
 
-## Roles & Responsibilities
-
-| Role         | Primary Focus                                                  | Key Deliverables                            | Guardrails                                         |
-| ------------ | -------------------------------------------------------------- | ------------------------------------------- | -------------------------------------------------- |
-| Author       | Clarify problem & outcomes                                     | `spec.md`, high-level `plan.md`             | Avoid premature solution detail in /spec phase     |
-| Reviewer     | Challenge clarity, scope, risks                                | Review comments, approvals                  | Escalate if outcomes unmeasurable                  |
-| AI Assistant | Structural suggestions, ambiguity detection, mechanical checks | Draft scaffolds, highlight missing sections | Must not invent governance or silently relax gates |
-| Maintainer   | Steward governance & principles                                | Approvals on amendments                     | Reject scope creep without spec update             |
-
 ## Workflow Phases (Abbreviated)
 
 | Phase      | Purpose                        | Required Artifacts (Minimal)                               | Exit Criteria                                                      |
@@ -54,16 +45,6 @@ Choose the lightest responsible path. Escalate when uncertainty, scope, or risk 
 | Agentic Flow (Lightweight) | Medium enhancement/refactor with SOME unknowns; multi-file but no new external contract; ≤ ~400 LOC                              | Inline mini-plan (PR description or `plan.md` stub: Goal, Scope, Risks, Exit Criteria) | Internal API adaptation, moderate logic consolidation                   | New contract emerges, risk widens, logic churn > planned                  |
 | Manual Direct Fix          | Trivial, fully understood, ≤ ~40 LOC, no architectural or contract impact                                                        | None (optional PR note)                                                                | Typo, guard clause, log tweak, constant change                          | A second unplanned file edit needed OR hidden side-effect appears         |
 
-### Lightweight Agentic Flow Template (Inline)
-
-```
-Goal: <single outcome>
-Scope: <in / out>
-Risks: <top 2>
-Exit Criteria: <measurable condition>
-Notes: <assumptions / flags>
-```
-
 ### Decision Rationale
 
 Avoids “spec theater” for trivial work while preventing silent architectural drift on impactful changes; keeps cognitive load low and clarifies promotion triggers.
@@ -71,21 +52,6 @@ Avoids “spec theater” for trivial work while preventing silent architectural
 ### Fallback Rule
 
 If mid-implementation you discover a qualitatively new domain concept or external dependency assumption—pause, capture it, promote the path, and realign before continuing.
-
-## AI Assistant Boundaries
-
-Allowed:
-
-- Generate initial folder & file scaffolds.
-- Suggest clarifying questions or missing constraints.
-- Flag drift between plan and implementation.
-- Provide contract diff reminders.
-
-Disallowed:
-
-- Adding detailed implementation design inside `spec.md` pre-/plan.
-- Approving its own suggested governance changes.
-- Creating new principle-level rules (must propose amendment instead).
 
 ## Conflict & Escalation Process
 
@@ -95,35 +61,92 @@ Disallowed:
 4. If ambiguity is in principles → open PR amending constitution (label: `governance`).
 5. Record rationale in amend PR description (no separate decisions log required yet).
 
-## Amendment Process (Lightweight)
-
-- Open PR with: Context, Proposed Change, Impact, Alternatives.
-- Tag maintainers.
-- Soft review window: 24h (can merge earlier if unanimous & low risk).
-- After merge: propagate wording changes to lower layers.
-
 ## Branch & Referencing Conventions (Lean)
 
 - Branch: `feat/NNN-slug` (or `fix/…`, `refactor/…` when non-feature).
 - Commits tied to feature MAY append `[NNN]` at end for traceability.
 - PR template includes: Spec ID, Phase, Summary, Risk Changes (Yes/No).
 
-## Open Questions (Empty Section Policy)
+## Feature Completion Diff & PR Augmentation (/done Transition)
 
-This section should be present in `spec.md` until cleared. Remove only when answers are captured or deferred consciously in `plan.md`.
+When a feature transitions to `/done`, augment (or create if not yet opened) the PR description with an authoritative, tool-generated diff summary using the GitHub MCP server. This provides an immutable narrative of what changed relative to the base branch (default: `develop`).
 
-## Drift Detection (Manual for Now)
+### Purpose
 
-Reviewers ask on PRs: “Is implementation still aligned with `plan.md` phases?” If not → micro update to `plan.md` in same PR.
+Creates a lightweight, standardized closure artifact without introducing a new file. Ensures reviewers and future maintainers can rapidly understand domain impact, contract changes, and residual risk.
 
-<!-- Future scaffolding & automation items intentionally omitted to keep this lean. See templates / copilot-instructions for evolutions. -->
+### Trigger
+
+- Phase label (or PR description) updated to `Phase: Done` OR final checklist/exit criteria met.
+
+### Required Actions (Automatable via MCP)
+
+1. Compute compared base: default `develop` (override only if feature branched from a stabilized release branch).
+2. List changed files grouped by category: `domain/`, `services/`, `schema`, `migrations`, `platform`, `tests`.
+3. Summarize semantic changes:
+   - New / modified GraphQL schema elements (types, fields, directives)
+   - Added / changed events (name, payload shape deltas)
+   - Persistent model changes (new tables, columns, indexes)
+4. Extract risk deltas: note any mitigations added/dropped vs original `plan.md`.
+5. Map implemented tasks (if tasks list existed) → mark any skipped / deferred.
+6. Capture outcome metrics (if measurable yet) or explicitly state: `Metrics pending`.
+7. Update PR description section (idempotent replacement guarded by start/end markers).
+
+### PR Description Injection Template
+
+Markers allow safe regeneration.
+
+```
+<!-- FEATURE-DIFF:BEGIN -->
+### Feature Diff Summary (Spec NNN)
+Base Branch: develop
+
+#### File Impact
+| Category | Files Changed | Notable Notes |
+|----------|---------------|---------------|
+| domain   | 3             | e.g. new aggregate `ProfileEngagement` |
+| schema   | 1             | added field user.engagementScore |
+| tests    | 7             | coverage for new scoring logic |
+
+#### Contract Deltas
+GraphQL: +1 type, +1 field, 0 removals
+Events: added `profile.engagement.calculated`
+Migrations: 1 new table `engagement_metrics`
+
+#### Risk & Mitigations Update
+- Removed risk: inaccurate scoring under high load (bench validated p95 < 120ms)
+- Remaining risk: backfill job latency (tracked separately)
+
+#### Tasks Coverage
+Implemented: 7 / 7 (100%). Deferred: 0. Dropped: 0.
+
+#### Outcomes vs Target
+Initial Goal: surface engagement metric in user detail query.
+Current Metric Readiness: metrics pending (will be collected after 1 week production exposure).
+
+### Regeneration Rules
+- Always fully replace content between markers.
+- If no contract changes: include line `No external contract deltas.`
+- If tasks absent: omit the Tasks Coverage section entirely.
+
+### AI / MCP Constraints
+- Must not invent metrics; if unavailable, state explicitly.
+- If diff exceeds practical summary length, collapse file list to counts + top 5 most significant changes with rationale.
+
+### Escalation
+If a late diff reveals an untracked external contract change → retroactively create / update spec & plan; do **not** skip—this guards against governance drift.
+
+### Rationale
+Keeps closure lightweight (no new files) while ensuring consistent historical trace without bloating repository artifacts.
 
 ## Quick Reference Summary
 
 ```
+
 constitution > agents.md > copilot-instructions > scripts
 Lower layers implement; they never create policy.
 Only add artifacts when a recurring pain justifies them.
+
 ```
 
 ## Change Log
@@ -135,3 +158,4 @@ Only add artifacts when a recurring pain justifies them.
 ---
 
 End of agents.md
+```
