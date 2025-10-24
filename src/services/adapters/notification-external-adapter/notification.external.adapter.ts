@@ -52,6 +52,7 @@ import { NotificationInputCollaborationCalloutContributionCreated } from '../not
 import { NotificationInputCollaborationCalloutComment } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.comment';
 import { NotificationInputCollaborationCalloutPostContributionComment } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.post.contribution.comment';
 import { MessageDetails } from '@domain/communication/message.details/message.details.interface';
+import { getContributorType } from '@domain/community/contributor/get.contributor.type';
 
 interface CalloutContributionPayload {
   id: string;
@@ -844,8 +845,7 @@ export class NotificationExternalAdapter {
       );
     }
 
-    const contributorType =
-      this.contributorLookupService.getContributorType(contributor);
+    const contributorType = getContributorType(contributor);
 
     const contributorURL =
       this.urlGeneratorService.createUrlForContributor(contributor);
