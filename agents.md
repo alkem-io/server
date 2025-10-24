@@ -46,6 +46,42 @@ Required early:
 - `specs/NNN-slug/plan.md` (may start nearly empty—populate before significant coding)
   Optional / add only when needed (pain-driven): `tasks.md`, `data-model.md`, `contracts/`, `quickstart.md`, `decisions.md`.
 
+## Change Classification & Path Selection
+
+Choose the lightest responsible path. Escalate when uncertainty, scope, or risk increases.
+
+| Path                       | When to Use                                                                                                                      | Required Artifacts                                                                     | Typical Triggers                                                        | Escalate If                                                               |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Full SDD                   | Net‑new capability, external contract change (GraphQL/events), cross-domain, multi-sprint, > ~400 touched LOC, or high ambiguity | `spec.md` then `plan.md` before bulk coding                                            | New aggregate, migration with behavioral risk, security/privacy surface | More than 1 unresolved open question after /spec or unclear exit criteria |
+| Agentic Flow (Lightweight) | Medium enhancement/refactor with SOME unknowns; multi-file but no new external contract; ≤ ~400 LOC                              | Inline mini-plan (PR description or `plan.md` stub: Goal, Scope, Risks, Exit Criteria) | Internal API adaptation, moderate logic consolidation                   | New contract emerges, risk widens, logic churn > planned                  |
+| Manual Direct Fix          | Trivial, fully understood, ≤ ~40 LOC, no architectural or contract impact                                                        | None (optional PR note)                                                                | Typo, guard clause, log tweak, constant change                          | A second unplanned file edit needed OR hidden side-effect appears         |
+
+### Escalation Heuristics (Promote one level if ≥2 apply)
+
+- New or deprecated public contract (schema type, event name, REST route)
+- Introduces persistence schema changes affecting more than one service or domain
+- Requires coordinated rollout (feature flag, data backfill, staged deploy)
+- Security / compliance / privacy implication
+- Success metric hard to express in one measurable sentence
+
+### Lightweight Agentic Flow Template (Inline)
+
+```
+Goal: <single outcome>
+Scope: <in / out>
+Risks: <top 2>
+Exit Criteria: <measurable condition>
+Notes: <assumptions / flags>
+```
+
+### Decision Rationale
+
+Avoids “spec theater” for trivial work while preventing silent architectural drift on impactful changes; keeps cognitive load low and clarifies promotion triggers.
+
+### Fallback Rule
+
+If mid-implementation you discover a qualitatively new domain concept or external dependency assumption—pause, capture it, promote the path, and realign before continuing.
+
 ## AI Assistant Boundaries
 
 Allowed:
