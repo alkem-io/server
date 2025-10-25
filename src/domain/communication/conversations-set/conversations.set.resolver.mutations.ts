@@ -14,6 +14,8 @@ import { InstrumentResolver } from '@src/apm/decorators';
 import { ConversationsSetService } from './conversations.set.service';
 import { ForbiddenException } from '@common/exceptions/forbidden.exception';
 import { LogContext } from '@common/enums/logging.context';
+import { IConversationsSet } from './conversations.set.interface';
+import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
 
 @InstrumentResolver()
 @Resolver()
@@ -40,13 +42,18 @@ export class ConversationsSetResolverMutations {
         conversationData.conversationsSetID
       );
 
-    this.authorizationService.grantAccessOrFail(
+    return this.createConversation(
       agentInfo,
-      conversationsSet.authorization,
-      AuthorizationPrivilege.CREATE_CALLOUT,
-      `create conversation on conversations Set: ${conversationsSet.id}`
+      conversationsSet,
+      conversationData
     );
+  }
 
+  private async createConversation(
+    agentInfo: AgentInfo,
+    conversationsSet: IConversationsSet,
+    conversationData: CreateConversationOnConversationsSetInput
+  ): Promise<IConversation> {
     // Check that the room is being created by one of the participating users
     if (!conversationData.userIDs.includes(agentInfo.userID)) {
       throw new ForbiddenException(
@@ -55,6 +62,12 @@ export class ConversationsSetResolverMutations {
       );
     }
 
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      conversationsSet.authorization,
+      AuthorizationPrivilege.CREATE, // TODO: tie this one down more
+      `create conversation on conversations Set: ${conversationsSet.id}`
+    );
     const conversation =
       await this.conversationsSetService.createConversationOnConversationsSet(
         conversationData
@@ -72,6 +85,30 @@ export class ConversationsSetResolverMutations {
 
     return await this.conversationService.getConversationOrFail(
       conversation.id
+    );
+  }
+
+  @Mutation(() => IConversation, {
+    nullable: true,
+    description: 'Create a guidance chat room.',
+  })
+  async createChatGuidanceConversation(
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<IConversation | undefined> {
+    const conversationsSet =
+      await this.conversationsSetService.getPlatformConversationsSetOrFail();
+
+    const conversationData: CreateConversationOnConversationsSetInput = {
+      conversationsSetID: conversationsSet.id,
+      userIDs: [agentInfo.userID],
+      type: CommunicationConversationType.USER_AGENT,
+      virtualContributorID: conversationsSet.guidanceVirtualContributor!.id,
+    };
+
+    return await this.createConversation(
+      agentInfo,
+      conversationsSet,
+      conversationData
     );
   }
 }

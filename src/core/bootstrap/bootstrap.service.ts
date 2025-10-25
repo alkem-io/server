@@ -52,9 +52,9 @@ import { bootstrapTemplateSpaceContentCalloutsVcKnowledgeBase } from './platform
 import { PlatformTemplatesService } from '@platform/platform-templates/platform.templates.service';
 import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
 import { AdminAuthorizationService } from '@src/platform-admin/domain/authorization/admin.authorization.service';
-import { AiPersonaService } from '@services/ai-server/ai-persona';
 import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 import { VirtualContributorInteractionMode } from '@common/enums/virtual.contributor.interaction.mode';
+import { ConversationsSetService } from '@domain/communication/conversations-set/conversations.set.service';
 
 @Injectable()
 export class BootstrapService {
@@ -81,7 +81,6 @@ export class BootstrapService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private aiServer: AiServerService,
-    private aiPersonaService: AiPersonaService,
     private aiServerAuthorizationService: AiServerAuthorizationService,
     private templatesSetService: TemplatesSetService,
     private templateDefaultService: TemplateDefaultService,
@@ -89,7 +88,8 @@ export class BootstrapService {
     private accountLicenseService: AccountLicenseService,
     private licenseService: LicenseService,
     private licensingFrameworkService: LicensingFrameworkService,
-    private licensePlanService: LicensePlanService
+    private licensePlanService: LicensePlanService,
+    private conversationsSetService: ConversationsSetService
   ) {}
 
   async bootstrap() {
@@ -481,10 +481,15 @@ export class BootstrapService {
 
   private async ensureGuidanceChat() {
     const platform = await this.platformService.getPlatformOrFail({
-      relations: { guidanceVirtualContributor: true },
+      relations: {
+        conversationsSet: {
+          guidanceVirtualContributor: true,
+        },
+      },
     });
+    const conversationsSet = platform.conversationsSet;
 
-    if (!platform.guidanceVirtualContributor?.id) {
+    if (!conversationsSet.guidanceVirtualContributor?.id) {
       // Get admin account:
       const hostOrganization =
         await this.organizationLookupService.getOrganizationByNameIdOrFail(
@@ -518,8 +523,8 @@ export class BootstrapService {
         },
       });
 
-      platform.guidanceVirtualContributor = vc;
-      await this.platformService.savePlatform(platform);
+      conversationsSet.guidanceVirtualContributor = vc;
+      await this.conversationsSetService.save(conversationsSet);
     }
   }
 }
