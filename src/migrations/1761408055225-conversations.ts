@@ -150,6 +150,11 @@ export class Conversations1761408055225 implements MigrationInterface {
       );
     }
 
+    // Finally update all rooms whose type is guidance to be of type conversation
+    await queryRunner.query(
+      `UPDATE \`room\` SET \`type\` = 'conversation' WHERE \`type\` = 'guidance'`
+    );
+
     return conversationsSetID;
   }
 
