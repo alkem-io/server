@@ -77,7 +77,8 @@ services:
     container_name: alkemio_dev_kratos
     image: oryd/kratos:v1.3.1
     depends_on:
-      - kratos-migrate
+      kratos-migrate:
+        condition: service_completed_successfully
     ports:
       - 4433
       - 4434
@@ -97,7 +98,8 @@ services:
     container_name: alkemio_dev_hydra_migrate
     image: oryd/hydra:v2.2.0
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     environment:
       - DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/hydra?sslmode=disable&max_conns=20&max_idle_conns=4
     command: migrate sql -e --yes
@@ -109,7 +111,8 @@ services:
     container_name: alkemio_dev_hydra
     image: oryd/hydra:v2.2.0
     depends_on:
-      - hydra-migrate
+      hydra-migrate:
+        condition: service_completed_successfully
     ports:
       - 4444
       - 4445
@@ -139,6 +142,8 @@ services:
       - HYDRA_ADMIN_URL=http://hydra:4445
       - SYNAPSE_OIDC_CLIENT_ID=${SYNAPSE_OIDC_CLIENT_ID}
       - SYNAPSE_OIDC_CLIENT_SECRET=${SYNAPSE_OIDC_CLIENT_SECRET}
+      - SYNAPSE_ADMIN_URL=${SYNAPSE_ADMIN_URL}
+      - SYNAPSE_PUBLIC_URL=${SYNAPSE_PUBLIC_URL}
     networks:
       - alkemio_dev_net
     restart: on-failure
@@ -146,16 +151,16 @@ services:
     command:
       - |
         echo "Waiting for Hydra to be ready..."
-        until curl -sf http://hydra:4445/health/ready > /dev/null 2>&1; do
+        until curl -sf $$HYDRA_ADMIN_URL/health/ready > /dev/null 2>&1; do
           echo "Hydra not ready yet, waiting..."
           sleep 2
         done
         echo "Hydra is ready, checking if client exists..."
 
         # Check if client already exists
-        if curl -sf http://hydra:4445/admin/clients/$$SYNAPSE_OIDC_CLIENT_ID > /dev/null 2>&1; then
+        if curl -sf $$HYDRA_ADMIN_URL/admin/clients/$$SYNAPSE_OIDC_CLIENT_ID > /dev/null 2>&1; then
           echo "Client $$SYNAPSE_OIDC_CLIENT_ID already exists, updating it..."
-          curl -X PUT http://hydra:4445/admin/clients/$$SYNAPSE_OIDC_CLIENT_ID \
+          curl -X PUT $$HYDRA_ADMIN_URL/admin/clients/$$SYNAPSE_OIDC_CLIENT_ID \
             -H "Content-Type: application/json" \
             -d "{
               \"client_id\": \"$$SYNAPSE_OIDC_CLIENT_ID\",
@@ -163,7 +168,7 @@ services:
               \"client_secret\": \"$$SYNAPSE_OIDC_CLIENT_SECRET\",
               \"grant_types\": [\"authorization_code\", \"refresh_token\"],
               \"response_types\": [\"code\"],
-              \"redirect_uris\": [\"http://localhost:8008/_synapse/client/oidc/callback\"],
+              \"redirect_uris\": [\"$$SYNAPSE_PUBLIC_URL/_synapse/client/oidc/callback\"],
               \"scope\": \"openid profile email\",
               \"token_endpoint_auth_method\": \"client_secret_basic\"
             }"
@@ -172,7 +177,7 @@ services:
         fi
 
         echo "Registering Synapse OAuth2 client..."
-        curl -X POST http://hydra:4445/admin/clients \
+        curl -X POST $$HYDRA_ADMIN_URL/admin/clients \
           -H "Content-Type: application/json" \
           -d "{
             \"client_id\": \"$$SYNAPSE_OIDC_CLIENT_ID\",
@@ -180,7 +185,7 @@ services:
             \"client_secret\": \"$$SYNAPSE_OIDC_CLIENT_SECRET\",
             \"grant_types\": [\"authorization_code\", \"refresh_token\"],
             \"response_types\": [\"code\"],
-            \"redirect_uris\": [\"http://localhost:8008/_synapse/client/oidc/callback\"],
+            \"redirect_uris\": [\"$$SYNAPSE_PUBLIC_URL/_synapse/client/oidc/callback\"],
             \"scope\": \"openid profile email\",
             \"token_endpoint_auth_method\": \"client_secret_basic\"
           }"
@@ -268,6 +273,13 @@ services:
     volumes:
       - alkemio_dev_postgres:/var/lib/postgresql/data
       - ./.build/postgres/init-multiple-databases.sh:/docker-entrypoint-initdb.d/init-multiple-databases.sh
+    healthcheck:
+      test: >
+        bash -c "databases=\"$$POSTGRES_DB,$$POSTGRES_MULTIPLE_DATABASES\"; for db in $$(echo \"$$databases\" | tr ',' ' '); do [ -z \"$$db\" ] && continue; pg_isready -U \"$$POSTGRES_USER\" -d \"$$db\" -h localhost || exit 1; done"
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
 
   synapse-admin:
     container_name: alkemio_dev_synapse_admin
@@ -339,6 +351,8 @@ services:
       - WAIT_HOSTS_TIMEOUT=300
       - WAIT_SLEEP_INTERVAL=30
       - WAIT_HOST_CONNECT_TIMEOUT=30
+      - EMAIL_FROM
+      - EMAIL_FROM_NAME
     restart: always
     networks:
       - alkemio_dev_net

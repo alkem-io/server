@@ -224,6 +224,27 @@ describe('OidcController', () => {
         redirect_to: 'http://localhost/consent?consent_challenge=xyz789',
       });
 
+      (global as any).fetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          identity: {
+            id: 'identity-123',
+            traits: {
+              email: 'user@example.com',
+              name: { first: 'Test', last: 'User' },
+            },
+            verifiable_addresses: [
+              {
+                value: 'user@example.com',
+                via: 'email',
+                verified: true,
+              },
+            ],
+          },
+        }),
+      });
+
       const mockRequest = {
         cookies: { ory_kratos_session: 'valid-session-token' },
       };

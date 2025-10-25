@@ -37,3 +37,5 @@ entryPoints:
   hydra-admin:
     address: ':4445'
 
+accessLog:
+  filePath: '/etc/traefik/access.log'

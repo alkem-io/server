@@ -1,4 +1,11 @@
-import { Brackets, Repository, In, Not, UpdateResult, FindOptionsWhere } from 'typeorm';
+import {
+  Brackets,
+  Repository,
+  In,
+  Not,
+  UpdateResult,
+  FindOptionsWhere,
+} from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InAppNotification } from '@platform/in-app-notification/in.app.notification.entity';
