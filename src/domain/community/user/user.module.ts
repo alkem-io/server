@@ -12,7 +12,6 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { UserAuthorizationService } from './user.service.authorization';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
-import { RoomModule } from '@domain/communication/room/room.module';
 import { MicroservicesModule } from '@core/microservices/microservices.module';
 import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/platform.authorization.policy.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
@@ -42,7 +41,6 @@ import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/a
     AuthorizationPolicyModule,
     AuthorizationModule,
     EntityResolverModule,
-    RoomModule,
     RoomLookupModule,
     MicroservicesModule,
     PlatformAuthorizationPolicyModule,

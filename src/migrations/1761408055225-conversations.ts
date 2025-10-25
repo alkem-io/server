@@ -51,15 +51,68 @@ export class Conversations1761408055225 implements MigrationInterface {
     );
 
     // Create conversations set for platform
-    const [platform]: { id: string }[] = await queryRunner.query(
-      `SELECT id FROM \`platform\` LIMIT 1`
+    const [platform]: {
+      id: string;
+      guidanceVirtualContributorId: string;
+    }[] = await queryRunner.query(
+      `SELECT id, guidanceVirtualContributorId FROM \`platform\` LIMIT 1`
     );
     if (platform) {
       const conversationsSetID = await this.createConversationsSet(queryRunner);
       await queryRunner.query(
         `UPDATE \`platform\` SET conversationsSetId = '${conversationsSetID}' WHERE id = '${platform.id}'`
       );
+
+      // Migrate guidance rooms to conversations
+      if (platform.guidanceVirtualContributorId) {
+        const users: {
+          id: string;
+          guidanceRoomId: string;
+        }[] = await queryRunner.query(
+          `SELECT id, guidanceRoomId FROM \`user\` WHERE guidanceRoomId IS NOT NULL`
+        );
+
+        for (const user of users) {
+          await this.createGuidanceConversation(
+            queryRunner,
+            conversationsSetID,
+            user.id,
+            platform.guidanceVirtualContributorId,
+            user.guidanceRoomId
+          );
+        }
+      }
+
+      // Drop the guidance room relationship from user
+      await queryRunner.query(
+        `ALTER TABLE \`user\` DROP FOREIGN KEY \`FK_67c9d8c51a7033bbe9355f76095\``
+      );
+      await queryRunner.query(
+        `DROP INDEX \`REL_67c9d8c51a7033bbe9355f7609\` ON \`user\``
+      );
+      await queryRunner.query(
+        `ALTER TABLE \`user\` DROP COLUMN \`guidanceRoomId\``
+      );
     }
+  }
+
+  private async createGuidanceConversation(
+    queryRunner: QueryRunner,
+    conversationsSetID: string,
+    userID: string,
+    virtualContributorID: string,
+    roomID: string
+  ): Promise<void> {
+    const conversationID = randomUUID();
+    const conversationAuthID = await this.createAuthorizationPolicy(
+      queryRunner,
+      'communication-conversation'
+    );
+
+    await queryRunner.query(
+      `INSERT INTO conversation (id, version, type, userIDs, virtualContributorID, authorizationId, conversationsSetId, roomId)
+       VALUES ('${conversationID}', 1, 'user-agent', '["${userID}"]', '${virtualContributorID}', '${conversationAuthID}', '${conversationsSetID}', '${roomID}')`
+    );
   }
 
   private async createConversationsSet(
@@ -90,6 +143,18 @@ export class Conversations1761408055225 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
+    // Restore the guidance room relationship to user
+    await queryRunner.query(
+      `ALTER TABLE \`user\` ADD \`guidanceRoomId\` char(36) NULL`
+    );
+    await queryRunner.query(
+      `CREATE UNIQUE INDEX \`REL_67c9d8c51a7033bbe9355f7609\` ON \`user\` (\`guidanceRoomId\`)`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`user\` ADD CONSTRAINT \`FK_67c9d8c51a7033bbe9355f76095\` FOREIGN KEY (\`guidanceRoomId\`) REFERENCES \`room\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
+
+    // Drop the platform and conversation foreign keys and tables
     await queryRunner.query(
       `ALTER TABLE \`platform\` DROP FOREIGN KEY \`FK_dc8bdff7728d61097c8560ae7a9\``
     );
