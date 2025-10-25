@@ -27,6 +27,7 @@ import { NotificationInputCollaborationCalloutComment } from './dto/space/notifi
 import { NotificationInputCollaborationCalloutPostContributionComment } from './dto/space/notification.dto.input.space.collaboration.callout.post.contribution.comment';
 import { InAppNotificationPayloadSpaceCollaborationCalloutPostComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout.post.comment';
 import { InAppNotificationPayloadSpaceCollaborationCalloutComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout.comment';
+import { NotificationInputVirtualContributorSpaceCommunityInvitationDeclined } from './dto/space/notification.dto.input.space.community.invitation.vc.declined';
 @Injectable()
 export class NotificationSpaceAdapter {
   constructor(
@@ -377,6 +378,57 @@ export class NotificationSpaceAdapter {
         eventData.triggeredBy,
         adminInAppReceiverIDs,
         adminInAppPayload
+      );
+    }
+  }
+
+  public async spaceAdminVirtualContributorInvitationDeclined(
+    eventData: NotificationInputVirtualContributorSpaceCommunityInvitationDeclined,
+    space: any
+  ): Promise<void> {
+    const event =
+      NotificationEvent.SPACE_ADMIN_VIRTUAL_CONTRIBUTOR_COMMUNITY_INVITATION_DECLINED;
+
+    const recipients = await this.getNotificationRecipientsSpace(
+      event,
+      eventData,
+      space.id,
+      eventData.invitationCreatedBy
+    );
+
+    if (recipients.emailRecipients.length > 0) {
+      const payload =
+        await this.notificationExternalAdapter.buildVirtualContributorSpaceCommunityInvitationDeclinedPayload(
+          event,
+          eventData.triggeredBy,
+          recipients.emailRecipients,
+          eventData.virtualContributorID,
+          space
+        );
+
+      this.notificationExternalAdapter.sendExternalNotifications(
+        event,
+        payload
+      );
+    }
+
+    // Send in-app notifications
+    const inAppReceiverIDs = recipients.inAppRecipients.map(
+      recipient => recipient.id
+    );
+    if (inAppReceiverIDs.length > 0) {
+      const inAppPayload: InAppNotificationPayloadSpaceCommunityContributor = {
+        type: NotificationEventPayload.SPACE_COMMUNITY_CONTRIBUTOR,
+        spaceID: space.id,
+        contributorID: eventData.virtualContributorID,
+      };
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        NotificationEvent.SPACE_ADMIN_VIRTUAL_CONTRIBUTOR_COMMUNITY_INVITATION_DECLINED,
+        NotificationEventCategory.SPACE_ADMIN,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
+        inAppPayload
       );
     }
   }

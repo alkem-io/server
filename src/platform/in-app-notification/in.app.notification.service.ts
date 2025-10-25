@@ -1,4 +1,11 @@
-import { Brackets, Repository, In, Not, UpdateResult } from 'typeorm';
+import {
+  Brackets,
+  Repository,
+  In,
+  Not,
+  UpdateResult,
+  FindOptionsWhere,
+} from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InAppNotification } from '@platform/in-app-notification/in.app.notification.entity';
@@ -222,31 +229,22 @@ export class InAppNotificationService {
     return updatedNotification.state;
   }
 
-  async bulkUpdateNotificationState(
-    notificationIds: string[],
+  async bulkUpdateNotificationStateByTypes(
     userId: string,
-    state: NotificationEventInAppState
+    state: NotificationEventInAppState,
+    filter?: NotificationEventsFilterInput
   ): Promise<UpdateResult> {
-    return this.inAppNotificationRepo.update(
-      {
-        id: In(notificationIds),
-        receiverID: userId,
-        state: Not(NotificationEventInAppState.ARCHIVED),
-      },
-      { state }
-    );
-  }
+    const where: FindOptionsWhere<InAppNotification> = {
+      receiverID: userId,
+      state: Not(NotificationEventInAppState.ARCHIVED),
+    };
 
-  async markAllNotificationsAsState(
-    userId: string,
-    state: NotificationEventInAppState
-  ): Promise<UpdateResult> {
-    return this.inAppNotificationRepo.update(
-      {
-        receiverID: userId,
-        state: Not(NotificationEventInAppState.ARCHIVED),
-      },
-      { state }
-    );
+    // If filter is provided with specific types, only update those types
+    // If no filter is provided, update all notifications
+    if (filter?.types && filter.types.length > 0) {
+      where.type = In(filter.types);
+    }
+
+    return this.inAppNotificationRepo.update(where, { state });
   }
 }
