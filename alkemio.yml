@@ -218,12 +218,6 @@ identity:
           interval_ms: ${SESSION_SYNC_INTERVAL_MS}:300000
           kratos_database:
             database: ${KRATOS_DB_DATABASE}:kratos
-          synapse_database:
-            host: ${SYNAPSE_DB_HOST}:postgres
-            port: ${SYNAPSE_DB_PORT}:5432
-            username: ${SYNAPSE_DB_USERNAME}:synapse
-            password: ${SYNAPSE_DB_PASSWORD}:synapse
-            database: ${SYNAPSE_DB_DATABASE}:synapse
 
 ## monitoring ##
 # This section defines settings used for DevOps - monitoring providers, endpoints, logging configuration.
@@ -299,6 +293,7 @@ communications:
     admin_api:
       url: ${SYNAPSE_ADMIN_URL}:http://localhost:8008
       token: ${SYNAPSE_ADMIN_TOKEN}
+    oidc_provider_id: ${SYNAPSE_OIDC_PROVIDER_ID}:oidc-oidc-hydra
     database:
       host: ${SYNAPSE_DB_HOST}:localhost
       port: ${SYNAPSE_DB_PORT}:5432
