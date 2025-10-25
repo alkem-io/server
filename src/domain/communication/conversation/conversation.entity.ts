@@ -1,11 +1,19 @@
-import { Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import { IConversation } from './conversation.interface';
 import { Room } from '@domain/communication/room/room.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
 import { ConversationsSet } from '../conversations-set/conversations.set.entity';
+import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
+import { ENUM_LENGTH } from '@common/constants/entity.field.length.constants';
 
 @Entity()
 export class Conversation extends AuthorizableEntity implements IConversation {
+  @Column('varchar', { length: ENUM_LENGTH, nullable: false })
+  type!: CommunicationConversationType;
+
+  @Column('json', { nullable: false })
+  userIDs!: string[];
+
   @ManyToOne(
     () => ConversationsSet,
     conversationsSet => conversationsSet.conversations,

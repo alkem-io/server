@@ -17,6 +17,7 @@ import { UserLookupService } from '@domain/community/user-lookup/user.lookup.ser
 import { CreateConversationInput } from './dto/conversation.dto.create';
 import { Conversation } from './conversation.entity';
 import { IConversation } from './conversation.interface';
+import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
 
 @Injectable()
 export class ConversationService {
@@ -35,7 +36,9 @@ export class ConversationService {
   ): Promise<IConversation> {
     this.validateCreateConversationData(conversationData);
 
-    const conversation: IConversation = Conversation.create(conversationData);
+    const conversation: IConversation = Conversation.create();
+    conversation.type = conversationData.type;
+    conversation.userIDs = conversationData.userIDs;
     conversation.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.COMMUNICATION_CONVERSATION
     );
@@ -43,7 +46,7 @@ export class ConversationService {
     // Create the room
     conversation.room = await this.roomService.createRoom(
       `conversation-${conversationData.userIDs.join('-')}`,
-      RoomType.CALLOUT
+      RoomType.CONVERSATION
     );
 
     return conversation;
@@ -52,13 +55,31 @@ export class ConversationService {
   private validateCreateConversationData(
     conversationData: CreateConversationInput
   ) {
-    // TODO: make this smarter by having a conversation type to distinguish between different kinds of conversations i.e. user to user, user to agent
-    if (conversationData.userIDs.length !== 2) {
-      throw new ValidationException(
-        'A conversation must be created between exactly two users',
-        LogContext.COLLABORATION
-      );
+    // Validate based on conversation type
+    switch (conversationData.type) {
+      case CommunicationConversationType.USER_USER:
+        if (conversationData.userIDs.length !== 2) {
+          throw new ValidationException(
+            'A user-to-user conversation must be created between exactly two users',
+            LogContext.COLLABORATION
+          );
+        }
+        break;
+      case CommunicationConversationType.USER_AGENT:
+        if (conversationData.userIDs.length !== 1) {
+          throw new ValidationException(
+            'A user-to-agent conversation must be created with exactly one user',
+            LogContext.COLLABORATION
+          );
+        }
+        break;
+      default:
+        throw new ValidationException(
+          `Unsupported conversation type: ${conversationData.type}`,
+          LogContext.COLLABORATION
+        );
     }
+
     // check the user IDs are valid
     conversationData.userIDs.forEach(async userID => {
       await this.userLookupService.getUserOrFail(userID);

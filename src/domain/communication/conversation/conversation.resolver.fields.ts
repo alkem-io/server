@@ -8,13 +8,16 @@ import { GraphqlGuard } from '@core/authorization';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { ConversationService } from './conversation.service';
 import { IConversation } from './conversation.interface';
+import { IUser } from '@domain/community/user/user.interface';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 
 @Resolver(() => IConversation)
 export class ConversationResolverFields {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private conversationService: ConversationService
+    private conversationService: ConversationService,
+    private userLookupService: UserLookupService
   ) {}
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -27,5 +30,20 @@ export class ConversationResolverFields {
     @Parent() conversation: IConversation
   ): Promise<IRoom | undefined> {
     return await this.conversationService.getRoom(conversation.id);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('users', () => [IUser], {
+    nullable: false,
+    description: 'The users participating in this Conversation.',
+  })
+  async users(@Parent() conversation: IConversation): Promise<IUser[]> {
+    const users = await Promise.all(
+      conversation.userIDs.map(userID =>
+        this.userLookupService.getUserOrFail(userID)
+      )
+    );
+    return users;
   }
 }
