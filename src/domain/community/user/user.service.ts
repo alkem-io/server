@@ -11,7 +11,6 @@ import { FormatNotSupportedException } from '@common/exceptions/format.not.suppo
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
-import { RoomService } from '@domain/communication/room/room.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import {
   CreateUserInput,
@@ -57,7 +56,6 @@ import { UserSettingsService } from '../user-settings/user.settings.service';
 import { UpdateUserSettingsEntityInput } from '../user-settings/dto/user.settings.dto.update';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { AccountHostService } from '@domain/space/account.host/account.host.service';
-import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup.service';
 import { UserLookupService } from '../user-lookup/user.lookup.service';
 import { AgentInfoCacheService } from '@core/authentication.agent.info/agent.info.cache.service';
 import { VisualType } from '@common/enums/visual.type';
@@ -72,8 +70,6 @@ export class UserService {
   constructor(
     private profileService: ProfileService,
     private communicationAdapter: CommunicationAdapter,
-    private roomService: RoomService,
-    private roomLookupService: RoomLookupService,
     private namingService: NamingService,
     private agentService: AgentService,
     private agentInfoCacheService: AgentInfoCacheService,

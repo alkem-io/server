@@ -23,7 +23,6 @@ import { AccountHostModule } from '@domain/space/account.host/account.host.modul
 import { KratosModule } from '@services/infrastructure/kratos/kratos.module';
 import { UserSettingsModule } from '../user-settings/user.settings.module';
 import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
-import { RoomLookupModule } from '@domain/communication/room-lookup/room.lookup.module';
 import { UserLookupModule } from '../user-lookup/user.lookup.module';
 import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/agent.info.module';
 
@@ -41,7 +40,6 @@ import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/a
     AuthorizationPolicyModule,
     AuthorizationModule,
     EntityResolverModule,
-    RoomLookupModule,
     MicroservicesModule,
     PlatformAuthorizationPolicyModule,
     StorageAggregatorModule,

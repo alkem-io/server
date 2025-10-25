@@ -9,6 +9,8 @@ import { ConversationService } from './conversation.service';
 import { ConversationAuthorizationService } from './conversation.service.authorization';
 import { ConversationResolverFields } from './conversation.resolver.fields';
 import { VirtualContributorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
+import { AiServerAdapterModule } from '@services/adapters/ai-server-adapter/ai.server.adapter.module';
+import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
 
 @Module({
   imports: [
@@ -17,6 +19,8 @@ import { VirtualContributorLookupModule } from '@domain/community/virtual-contri
     RoomModule,
     UserLookupModule,
     VirtualContributorLookupModule,
+    AiServerAdapterModule,
+    CommunicationAdapterModule,
     TypeOrmModule.forFeature([Conversation]),
   ],
   providers: [
