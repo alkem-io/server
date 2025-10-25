@@ -625,7 +625,7 @@ export class CommunicationAdapter {
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
-        `Failed to get direct rooms for User: ${err}`,
+        `Failed to get direct rooms for User: ${err.message ?? err}`,
         LogContext.COMMUNICATION
       );
     }
