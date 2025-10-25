@@ -11,6 +11,7 @@ import { ConversationResolverFields } from './conversation.resolver.fields';
 import { VirtualContributorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
 import { AiServerAdapterModule } from '@services/adapters/ai-server-adapter/ai.server.adapter.module';
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
+import { ConversationResolverMutations } from './conversation.resolver.mutations';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { CommunicationAdapterModule } from '@services/adapters/communication-ada
     ConversationService,
     ConversationAuthorizationService,
     ConversationResolverFields,
+    ConversationResolverMutations,
   ],
   exports: [ConversationService, ConversationAuthorizationService],
 })
