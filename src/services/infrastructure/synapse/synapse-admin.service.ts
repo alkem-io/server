@@ -60,7 +60,9 @@ export class SynapseAdminService implements OnModuleDestroy {
     try {
       const matrixUserId = await this.getMatrixUserId(email);
       if (!matrixUserId) {
-        this.logger.debug(`No Synapse user found for email ${email}`);
+        this.logger.debug(
+          `No Synapse user found for email ${this.redactEmail(email)}`
+        );
         return 0;
       }
 
@@ -161,5 +163,18 @@ export class SynapseAdminService implements OnModuleDestroy {
 
   private trimTrailingSlash(value: string): string {
     return value.endsWith('/') ? value.slice(0, -1) : value;
+  }
+
+  private redactEmail(email: string): string {
+    const [user, domain] = email.split('@');
+    if (!domain) {
+      return '***';
+    }
+
+    if (user.length <= 2) {
+      return `${'*'.repeat(user.length)}@${domain}`;
+    }
+
+    return `${user[0]}***${user.slice(-1)}@${domain}`;
   }
 }
