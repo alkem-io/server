@@ -76,6 +76,9 @@ export class OidcController {
 
       return response.redirect(acceptResponse.redirect_to);
     } catch (error: any) {
+      if (error?.response?.status === 404 || error?.response?.status === 410) {
+        throw new BadRequestException('Invalid logout challenge');
+      }
       this.logger.error?.(
         `Error processing logout challenge: ${error.message} - challengeId: ${logout_challenge}, status: ${error.response?.status}, timestamp: ${timestamp}`,
         error.stack,
@@ -104,6 +107,8 @@ export class OidcController {
     email: string;
     given_name: string;
     family_name: string;
+    emailVerified: boolean;
+    identityId: string;
   } | null> {
     if (!cookie) {
       this.logger.warn?.('No Kratos session cookie provided', LogContext.OIDC);
@@ -156,13 +161,27 @@ export class OidcController {
         LogContext.OIDC
       );
 
-      const userInfo = {
+      const verifiableAddresses = identity.verifiable_addresses as
+        | Array<{ value?: string; via?: string; verified?: boolean }>
+        | undefined;
+
+      const emailAddress = verifiableAddresses?.find(address => {
+        if (!address) {
+          return false;
+        }
+        if (address.value && traits?.email) {
+          return address.value === traits.email;
+        }
+        return address.via === 'email';
+      });
+
+      return {
         email: traits.email,
         given_name: traits.name?.first || 'User',
         family_name: traits.name?.last || '',
+        emailVerified: !!emailAddress?.verified,
+        identityId: identity.id,
       };
-
-      return userInfo;
     } catch (error: any) {
       this.logger.warn?.(
         `Failed to fetch user info from Kratos session: ${error.message}`,
@@ -262,19 +281,44 @@ export class OidcController {
 
       const userInfo = await this.getUserInfoFromKratosSession(kratosSession);
 
-      // Use extracted user info if available, otherwise use placeholder
-      const subject = userInfo?.email || 'user@example.com';
-      const context = userInfo
-        ? {
-            email: userInfo.email,
-            given_name: userInfo.given_name,
-            family_name: userInfo.family_name,
-          }
-        : {
-            email: subject,
-            given_name: 'User',
-            family_name: 'Name',
-          };
+      if (!userInfo?.email) {
+        this.logger.warn?.(
+          `Kratos session missing user email - challengeId: ${login_challenge}, timestamp: ${timestamp}`,
+          LogContext.OIDC
+        );
+
+        const returnTo = `${this.joinUrl(
+          this.joinUrl(
+            this.oidcConfig.getWebBaseUrl(),
+            this.oidcConfig.getApiPublicBasePath()
+          ),
+          '/oidc/login'
+        )}?login_challenge=${encodeURIComponent(login_challenge)}`;
+
+        const kratosLoginUrl = `${this.joinUrl(
+          this.joinUrl(
+            this.oidcConfig.getWebBaseUrl(),
+            this.oidcConfig.getKratosPublicBasePath()
+          ),
+          '/self-service/login/browser'
+        )}?return_to=${encodeURIComponent(returnTo)}`;
+
+        this.logger.debug?.(
+          `Redirecting back to Kratos login to refresh session - challengeId: ${login_challenge}, kratosLoginUrl: ${kratosLoginUrl}, timestamp: ${timestamp}`,
+          LogContext.OIDC
+        );
+
+        return response.redirect(kratosLoginUrl);
+      }
+
+      const subject = userInfo.email;
+      const context = {
+        email: userInfo.email,
+        given_name: userInfo.given_name,
+        family_name: userInfo.family_name,
+        email_verified: userInfo.emailVerified,
+        kratos_identity_id: userInfo.identityId,
+      };
 
       const acceptResponse = await this.oidcService.acceptLoginRequest(
         login_challenge,
@@ -339,6 +383,11 @@ export class OidcController {
       const email = context?.email || consentChallenge.subject;
       const givenName = context?.given_name || 'User';
       const familyName = context?.family_name || '';
+      const emailVerifiedFromContext = context?.email_verified;
+      const emailVerified =
+        typeof emailVerifiedFromContext === 'boolean'
+          ? emailVerifiedFromContext
+          : undefined;
 
       this.logger.debug?.(
         `Extracted user info for consent - challengeId: ${consent_challenge}, userId: ${email}, given_name: ${givenName}, timestamp: ${timestamp}`,
@@ -354,10 +403,12 @@ export class OidcController {
           remember_for: 3600,
           session: {
             id_token: {
-              email: email,
-              email_verified: true,
+              email,
               given_name: givenName,
               family_name: familyName,
+              ...(emailVerified !== undefined
+                ? { email_verified: emailVerified }
+                : {}),
             },
             access_token: {
               email: email,

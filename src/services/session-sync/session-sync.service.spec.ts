@@ -13,13 +13,6 @@ describe('SessionSyncService', () => {
     kratos_database: {
       database: 'kratos',
     },
-    synapse_database: {
-      host: 'postgres',
-      port: 5432,
-      username: 'synapse',
-      password: 'synapse',
-      database: 'synapse',
-    },
   } as AlkemioConfig['identity']['authentication']['providers']['oidc']['session_sync'];
 
   const configService = {

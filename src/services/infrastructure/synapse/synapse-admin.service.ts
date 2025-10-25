@@ -13,7 +13,7 @@ export class SynapseAdminService implements OnModuleDestroy {
   private readonly adminBaseUrl: string;
   private readonly adminToken?: string;
   private readonly databasePool: Pool;
-  private readonly authProvider = 'oidc-oidc-hydra';
+  private readonly authProvider: string;
 
   constructor(
     private readonly configService: ConfigService<AlkemioConfig, true>,
@@ -26,6 +26,8 @@ export class SynapseAdminService implements OnModuleDestroy {
     if (!matrixConfig?.admin_api?.url) {
       throw new Error('communications.matrix.admin_api.url is not configured');
     }
+
+    this.authProvider = matrixConfig.oidc_provider_id || 'oidc-oidc-hydra';
 
     this.adminBaseUrl = this.trimTrailingSlash(matrixConfig.admin_api.url);
     this.adminToken = matrixConfig.admin_api.token;
@@ -58,7 +60,9 @@ export class SynapseAdminService implements OnModuleDestroy {
     try {
       const matrixUserId = await this.getMatrixUserId(email);
       if (!matrixUserId) {
-        this.logger.debug(`No Synapse user found for email ${email}`);
+        this.logger.debug(
+          `No Synapse user found for email ${this.redactEmail(email)}`
+        );
         return 0;
       }
 
@@ -159,5 +163,18 @@ export class SynapseAdminService implements OnModuleDestroy {
 
   private trimTrailingSlash(value: string): string {
     return value.endsWith('/') ? value.slice(0, -1) : value;
+  }
+
+  private redactEmail(email: string): string {
+    const [user, domain] = email.split('@');
+    if (!domain) {
+      return '***';
+    }
+
+    if (user.length <= 2) {
+      return `${'*'.repeat(user.length)}@${domain}`;
+    }
+
+    return `${user[0]}***${user.slice(-1)}@${domain}`;
   }
 }
