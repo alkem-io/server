@@ -2,9 +2,15 @@ import { Injectable } from '@nestjs/common';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ConversationService } from './conversation.service';
-import { LogContext } from '@common/enums';
+import {
+  AuthorizationCredential,
+  AuthorizationPrivilege,
+  LogContext,
+} from '@common/enums';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 
 @Injectable()
 export class ConversationAuthorizationService {
@@ -42,6 +48,15 @@ export class ConversationAuthorizationService {
         parentAuthorization
       );
 
+    // Add in logic to allow the users to send messages in the conversation
+    conversation.authorization.credentialRules.push(
+      this.createCredentialRuleContributors(conversation.userIDs)
+    );
+
+    updatedAuthorizations.push(conversation.authorization);
+
+    // Cascade to the room
+
     let roomAuthorization =
       this.roomAuthorizationService.applyAuthorizationPolicy(
         conversation.room,
@@ -58,5 +73,24 @@ export class ConversationAuthorizationService {
     updatedAuthorizations.push(roomAuthorization);
 
     return updatedAuthorizations;
+  }
+
+  private createCredentialRuleContributors(
+    userIDs: string[]
+  ): IAuthorizationPolicyRuleCredential {
+    const contributorCriterias: ICredentialDefinition[] = userIDs.map(
+      userID => ({
+        type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+        resourceID: userID,
+      })
+    );
+    const contributorsRule =
+      this.authorizationPolicyService.createCredentialRule(
+        [AuthorizationPrivilege.CONTRIBUTE],
+        contributorCriterias,
+        'Communication Conversation Contributors'
+      );
+    contributorsRule.cascade = true;
+    return contributorsRule;
   }
 }

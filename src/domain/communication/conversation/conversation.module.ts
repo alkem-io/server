@@ -8,6 +8,7 @@ import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.modu
 import { ConversationService } from './conversation.service';
 import { ConversationAuthorizationService } from './conversation.service.authorization';
 import { ConversationResolverFields } from './conversation.resolver.fields';
+import { VirtualContributorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { ConversationResolverFields } from './conversation.resolver.fields';
     AuthorizationModule,
     RoomModule,
     UserLookupModule,
+    VirtualContributorLookupModule,
     TypeOrmModule.forFeature([Conversation]),
   ],
   providers: [

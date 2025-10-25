@@ -39,6 +39,7 @@ export class ConversationService {
     const conversation: IConversation = Conversation.create();
     conversation.type = conversationData.type;
     conversation.userIDs = conversationData.userIDs;
+    conversation.virtualContributorID = conversationData.virtualContributorID;
     conversation.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.COMMUNICATION_CONVERSATION
     );
@@ -64,11 +65,23 @@ export class ConversationService {
             LogContext.COLLABORATION
           );
         }
+        if (conversationData.virtualContributorID) {
+          throw new ValidationException(
+            'A user-to-user conversation cannot have a virtualContributorID',
+            LogContext.COLLABORATION
+          );
+        }
         break;
       case CommunicationConversationType.USER_AGENT:
         if (conversationData.userIDs.length !== 1) {
           throw new ValidationException(
             'A user-to-agent conversation must be created with exactly one user',
+            LogContext.COLLABORATION
+          );
+        }
+        if (!conversationData.virtualContributorID) {
+          throw new ValidationException(
+            'A user-to-agent conversation must have a virtualContributorID',
             LogContext.COLLABORATION
           );
         }

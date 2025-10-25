@@ -12,6 +12,9 @@ export abstract class IConversation extends IAuthorizable {
   @Field(() => [String], { nullable: false })
   userIDs!: string[];
 
+  @Field(() => String, { nullable: true })
+  virtualContributorID?: string;
+
   room?: IRoom;
   conversationsSet?: IConversationsSet;
 }

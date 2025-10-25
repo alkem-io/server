@@ -10,6 +10,8 @@ import { ConversationService } from './conversation.service';
 import { IConversation } from './conversation.interface';
 import { IUser } from '@domain/community/user/user.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 
 @Resolver(() => IConversation)
 export class ConversationResolverFields {
@@ -17,7 +19,8 @@ export class ConversationResolverFields {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private conversationService: ConversationService,
-    private userLookupService: UserLookupService
+    private userLookupService: UserLookupService,
+    private virtualContributorLookupService: VirtualContributorLookupService
   ) {}
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -45,5 +48,23 @@ export class ConversationResolverFields {
       )
     );
     return users;
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('virtualContributor', () => IVirtualContributor, {
+    nullable: true,
+    description:
+      'The virtual contributor participating in this Conversation (only for USER_AGENT conversations).',
+  })
+  async virtualContributor(
+    @Parent() conversation: IConversation
+  ): Promise<IVirtualContributor | null> {
+    if (!conversation.virtualContributorID) {
+      return null;
+    }
+    return await this.virtualContributorLookupService.getVirtualContributorOrFail(
+      conversation.virtualContributorID
+    );
   }
 }

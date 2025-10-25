@@ -10,4 +10,7 @@ export class CreateConversationInput {
 
   @Field(() => CommunicationConversationType, { nullable: false })
   type!: CommunicationConversationType;
+
+  @Field(() => UUID, { nullable: true })
+  virtualContributorID?: string;
 }
