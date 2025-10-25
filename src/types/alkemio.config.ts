@@ -77,13 +77,6 @@ export type AlkemioConfig = {
               username?: string;
               password?: string;
             };
-            synapse_database: {
-              host: string;
-              port: number;
-              username: string;
-              password: string;
-              database: string;
-            };
           };
         };
       };
