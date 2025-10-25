@@ -76,6 +76,9 @@ export class OidcController {
 
       return response.redirect(acceptResponse.redirect_to);
     } catch (error: any) {
+      if (error?.response?.status === 404 || error?.response?.status === 410) {
+        throw new BadRequestException('Invalid logout challenge');
+      }
       this.logger.error?.(
         `Error processing logout challenge: ${error.message} - challengeId: ${logout_challenge}, status: ${error.response?.status}, timestamp: ${timestamp}`,
         error.stack,
