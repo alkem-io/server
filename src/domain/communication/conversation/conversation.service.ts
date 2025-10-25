@@ -18,6 +18,7 @@ import { CreateConversationInput } from './dto/conversation.dto.create';
 import { Conversation } from './conversation.entity';
 import { IConversation } from './conversation.interface';
 import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
+import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 
 @Injectable()
 export class ConversationService {
@@ -25,6 +26,7 @@ export class ConversationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private roomService: RoomService,
     private userLookupService: UserLookupService,
+    private virtualContributorLookupService: VirtualContributorLookupService,
     @InjectRepository(Conversation)
     private conversationRepository: Repository<Conversation>
   ) {}
@@ -34,7 +36,7 @@ export class ConversationService {
   public async createConversation(
     conversationData: CreateConversationInput
   ): Promise<IConversation> {
-    this.validateCreateConversationData(conversationData);
+    await this.validateCreateConversationData(conversationData);
 
     const conversation: IConversation = Conversation.create();
     conversation.type = conversationData.type;
@@ -53,43 +55,82 @@ export class ConversationService {
     return conversation;
   }
 
-  private validateCreateConversationData(
+  private async validateCreateConversationData(
     conversationData: CreateConversationInput
   ) {
     // Validate based on conversation type
     switch (conversationData.type) {
-      case CommunicationConversationType.USER_USER:
+      case CommunicationConversationType.USER_USER: {
         if (conversationData.userIDs.length !== 2) {
           throw new ValidationException(
             'A user-to-user conversation must be created between exactly two users',
-            LogContext.COLLABORATION
+            LogContext.COMMUNICATION_CONVERSATION
           );
         }
         if (conversationData.virtualContributorID) {
           throw new ValidationException(
             'A user-to-user conversation cannot have a virtualContributorID',
-            LogContext.COLLABORATION
+            LogContext.COMMUNICATION_CONVERSATION
+          );
+        }
+        // Check that there is not already a conversation between these users
+        const userIDsJson = JSON.stringify(conversationData.userIDs.sort());
+        const existingConversations = await this.conversationRepository
+          .createQueryBuilder('conversation')
+          .where('conversation.type = :type', { type: conversationData.type })
+          .andWhere('conversation.userIDs = :userIDs', { userIDs: userIDsJson })
+          .getMany();
+        if (existingConversations.length > 0) {
+          throw new ValidationException(
+            'A conversation between these users already exists',
+            LogContext.COMMUNICATION_CONVERSATION
           );
         }
         break;
-      case CommunicationConversationType.USER_AGENT:
+      }
+      case CommunicationConversationType.USER_AGENT: {
         if (conversationData.userIDs.length !== 1) {
           throw new ValidationException(
             'A user-to-agent conversation must be created with exactly one user',
-            LogContext.COLLABORATION
+            LogContext.COMMUNICATION_CONVERSATION
           );
         }
         if (!conversationData.virtualContributorID) {
           throw new ValidationException(
             'A user-to-agent conversation must have a virtualContributorID',
-            LogContext.COLLABORATION
+            LogContext.COMMUNICATION_CONVERSATION
           );
         }
+        // Check the virtual contributor ID is valid
+        await this.virtualContributorLookupService.getVirtualContributorByNameIdOrFail(
+          conversationData.virtualContributorID
+        );
+        // Check that there is not already a conversation between user and virtual contributor
+        const userIDsJson = JSON.stringify(conversationData.userIDs.sort());
+        const existingConversations = await this.conversationRepository
+          .createQueryBuilder('conversation')
+          .where('conversation.type = :type', { type: conversationData.type })
+          .andWhere('conversation.userIDs = :userIDs', { userIDs: userIDsJson })
+          .andWhere(
+            'conversation.virtualContributorID = :virtualContributorID',
+            {
+              virtualContributorID: conversationData.virtualContributorID,
+            }
+          )
+          .getMany();
+        if (existingConversations.length > 0) {
+          throw new ValidationException(
+            'A conversation between this user and agent already exists',
+            LogContext.COMMUNICATION_CONVERSATION
+          );
+        }
+
         break;
+      }
       default:
         throw new ValidationException(
           `Unsupported conversation type: ${conversationData.type}`,
-          LogContext.COLLABORATION
+          LogContext.COMMUNICATION_CONVERSATION
         );
     }
 

@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class Conversations1761408055225 implements MigrationInterface {
@@ -48,6 +49,44 @@ export class Conversations1761408055225 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`platform\` ADD CONSTRAINT \`FK_dc8bdff7728d61097c8560ae7a9\` FOREIGN KEY (\`conversationsSetId\`) REFERENCES \`conversations_set\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
+
+    // Create conversations set for platform
+    const [platform]: { id: string }[] = await queryRunner.query(
+      `SELECT id FROM \`platform\` LIMIT 1`
+    );
+    if (platform) {
+      const conversationsSetID = await this.createConversationsSet(queryRunner);
+      await queryRunner.query(
+        `UPDATE \`platform\` SET conversationsSetId = '${conversationsSetID}' WHERE id = '${platform.id}'`
+      );
+    }
+  }
+
+  private async createConversationsSet(
+    queryRunner: QueryRunner
+  ): Promise<string> {
+    const conversationsSetID = randomUUID();
+    const conversationsSetAuthID = await this.createAuthorizationPolicy(
+      queryRunner,
+      'communication-conversations-set'
+    );
+    await queryRunner.query(
+      `INSERT INTO conversations_set (id, version, authorizationId) VALUES
+        ('${conversationsSetID}', 1, '${conversationsSetAuthID}')`
+    );
+    return conversationsSetID;
+  }
+
+  private async createAuthorizationPolicy(
+    queryRunner: QueryRunner,
+    policyType: string
+  ): Promise<string> {
+    const authID = randomUUID();
+    await queryRunner.query(
+      `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, privilegeRules, type) VALUES
+        ('${authID}', 1, '[]', '[]', '[]', '${policyType}')`
+    );
+    return authID;
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
