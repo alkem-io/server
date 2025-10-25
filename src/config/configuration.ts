@@ -28,9 +28,9 @@ function resolveConfigFilePath() {
     process.env.ALKEMIO_CONFIG_PATH,
     join(process.cwd(), YAML_CONFIG_FILENAME),
     join(__dirname, '../../', YAML_CONFIG_FILENAME),
-  ].filter((path): path is string => !!path);
+  ].filter(Boolean) as string[];
 
-  const matchedPath = candidatePaths.find((path) => existsSync(path));
+  const matchedPath = candidatePaths.find(path => existsSync(path));
 
   if (!matchedPath) {
     throw new Error(

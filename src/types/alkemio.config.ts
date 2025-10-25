@@ -128,6 +128,7 @@ export type AlkemioConfig = {
         url: string;
         token?: string;
       };
+      oidc_provider_id: string;
       database: {
         host: string;
         port: number;

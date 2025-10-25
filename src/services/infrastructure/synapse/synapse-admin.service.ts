@@ -13,7 +13,7 @@ export class SynapseAdminService implements OnModuleDestroy {
   private readonly adminBaseUrl: string;
   private readonly adminToken?: string;
   private readonly databasePool: Pool;
-  private readonly authProvider = 'oidc-oidc-hydra';
+  private readonly authProvider: string;
 
   constructor(
     private readonly configService: ConfigService<AlkemioConfig, true>,
@@ -26,6 +26,8 @@ export class SynapseAdminService implements OnModuleDestroy {
     if (!matrixConfig?.admin_api?.url) {
       throw new Error('communications.matrix.admin_api.url is not configured');
     }
+
+    this.authProvider = matrixConfig.oidc_provider_id || 'oidc-oidc-hydra';
 
     this.adminBaseUrl = this.trimTrailingSlash(matrixConfig.admin_api.url);
     this.adminToken = matrixConfig.admin_api.token;

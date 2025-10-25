@@ -299,6 +299,7 @@ communications:
     admin_api:
       url: ${SYNAPSE_ADMIN_URL}:http://localhost:8008
       token: ${SYNAPSE_ADMIN_TOKEN}
+    oidc_provider_id: ${SYNAPSE_OIDC_PROVIDER_ID}:oidc-oidc-hydra
     database:
       host: ${SYNAPSE_DB_HOST}:localhost
       port: ${SYNAPSE_DB_PORT}:5432
