@@ -23,6 +23,7 @@ import { ITemplatesManager } from '@domain/template/templates-manager/templates.
 import { ILicensingFramework } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.interface';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { IRoleSet } from '@domain/access/role-set';
+import { IConversationsSet } from '@domain/communication/conversations-set/conversations.set.interface';
 
 @Injectable()
 export class PlatformService {
@@ -134,7 +135,7 @@ export class PlatformService {
     return storageAggregator;
   }
 
-  async getGuidanceVirtualContributorOrFail(): Promise<IVirtualContributor> {
+  public async getGuidanceVirtualContributorOrFail(): Promise<IVirtualContributor> {
     const platform = await this.getPlatformOrFail({
       relations: {
         guidanceVirtualContributor: true,
@@ -186,6 +187,24 @@ export class PlatformService {
     }
 
     return roleSet;
+  }
+
+  async getConversationsSetOrFail(): Promise<IConversationsSet | never> {
+    const platform = await this.getPlatformOrFail({
+      relations: {
+        conversationsSet: true,
+      },
+    });
+    const conversationsSet = platform.conversationsSet;
+
+    if (!conversationsSet) {
+      throw new EntityNotFoundException(
+        'Unable to find ConversationsSet for Platform',
+        LogContext.PLATFORM
+      );
+    }
+
+    return conversationsSet;
   }
 
   getAuthorizationPolicy(platform: IPlatform): IAuthorizationPolicy {

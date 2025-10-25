@@ -14,6 +14,7 @@ import { ITemplatesManager } from '@domain/template/templates-manager/templates.
 import { ILicensingFramework } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.interface';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
+import { IConversationsSet } from '@domain/communication/conversations-set/conversations.set.interface';
 
 @Resolver(() => IPlatform)
 export class PlatformResolverFields {
@@ -38,6 +39,14 @@ export class PlatformResolverFields {
   })
   async roleSet(): Promise<IRoleSet> {
     return this.platformService.getRoleSetOrFail();
+  }
+
+  @ResolveField('conversationsSet', () => IConversationsSet, {
+    nullable: false,
+    description: 'The ConversationsSet for this Platform.',
+  })
+  async conversationsSet(): Promise<IConversationsSet> {
+    return this.platformService.getConversationsSetOrFail();
   }
 
   @ResolveField('library', () => ILibrary, {

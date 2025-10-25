@@ -8,7 +8,6 @@ import {
   ENUM_LENGTH,
   UUID_LENGTH,
 } from '@common/constants/entity.field.length.constants';
-import { IAgent } from '@domain/agent/agent/agent.interface';
 
 @Entity()
 export class Conversation extends AuthorizableEntity implements IConversation {
@@ -19,9 +18,7 @@ export class Conversation extends AuthorizableEntity implements IConversation {
   userIDs!: string[];
 
   @Column('char', { length: UUID_LENGTH, nullable: true })
-  agentID?: string;
-
-  agent?: IAgent;
+  virtualContributorID?: string;
 
   @ManyToOne(
     () => ConversationsSet,

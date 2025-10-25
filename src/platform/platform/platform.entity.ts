@@ -9,6 +9,7 @@ import { LicensingFramework } from '@platform/licensing/credential-based/licensi
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { RoleSet } from '@domain/access/role-set/role.set.entity';
 import { IPlatformSettings } from '@platform/platform-settings/platform.settings.interface';
+import { ConversationsSet } from '@domain/communication/conversations-set/conversations.set.entity';
 
 @Entity()
 export class Platform extends AuthorizableEntity implements IPlatform {
@@ -70,4 +71,12 @@ export class Platform extends AuthorizableEntity implements IPlatform {
   })
   @JoinColumn()
   roleSet!: RoleSet;
+
+  @OneToOne(() => ConversationsSet, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  conversationsSet!: ConversationsSet;
 }
