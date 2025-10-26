@@ -26,6 +26,7 @@ import { TemplatesManagerModule } from '@domain/template/templates-manager/templ
 import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/agent.info.module';
 import { AdminAuthorizationModule } from '@src/platform-admin/domain/authorization/admin.authorization.module';
 import { AiPersonaModule } from '@services/ai-server/ai-persona';
+import { AuthEvaluationModule } from '@services/external/auth-evaluation';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { AiPersonaModule } from '@services/ai-server/ai-persona';
     TemplateDefaultModule,
     LicensingFrameworkModule,
     LicensePlanModule,
+    AuthEvaluationModule,
   ],
   providers: [BootstrapService],
   exports: [BootstrapService],
