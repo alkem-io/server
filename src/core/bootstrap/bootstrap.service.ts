@@ -92,18 +92,10 @@ export class BootstrapService {
     private accountLicenseService: AccountLicenseService,
     private licenseService: LicenseService,
     private licensingFrameworkService: LicensingFrameworkService,
-    private licensePlanService: LicensePlanService,
-    @Inject(AUTH_EVALUATION_PUBLISHER) private client: ClientProxy
+    private licensePlanService: LicensePlanService
   ) {}
 
   async bootstrap() {
-    await this.client.connect();
-    const result$ = this.client.send('auth.evaluate', {
-      agentID: '123',
-      authorizationID: '456',
-      privilege: 'read',
-    });
-    this.logger.verbose?.(await firstValueFrom(result$));
     // this.ingestService.ingest(); // todo remove later
     try {
       this.logger.verbose?.('Bootstrapping...', LogContext.BOOTSTRAP);

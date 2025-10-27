@@ -21,6 +21,11 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { SpaceLicenseService } from './space.service.license';
 import { LicenseService } from '@domain/common/license/license.service';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { AuthEvaluationService } from '@services/external/auth-evaluation';
+import { InjectEntityManager } from '@nestjs/typeorm';
+import { EntityManager } from 'typeorm';
+import { User } from '@domain/community/user/user.entity';
+import { Space } from '@domain/space/space/space.entity';
 
 @InstrumentResolver()
 @Resolver()
@@ -35,8 +40,47 @@ export class SpaceResolverMutations {
     @Inject(SUBSCRIPTION_SUBSPACE_CREATED)
     private subspaceCreatedSubscription: PubSubEngine,
     private spaceLicenseService: SpaceLicenseService,
-    private licenseService: LicenseService
+    private licenseService: LicenseService,
+    private authEvaluationService: AuthEvaluationService,
+    @InjectEntityManager()
+    private entityManager: EntityManager
   ) {}
+
+  @Mutation(() => String)
+  async sendAuthRequest() {
+    // const users = (
+    //   await this.entityManager.find(User, {
+    //     relations: { agent: true },
+    //   })
+    // ).slice(0, -1);
+    // const spaces = (
+    //   await this.entityManager.find(Space, {
+    //     where: { level: 0 },
+    //   })
+    // ).slice(0, -1);
+    //
+    // console.log(spaces.length * users.length);
+    //
+    // let counter = 0;
+    // for (const space of spaces) {
+    //   for (const user of users) {
+    //     await this.authEvaluationService.evaluate({
+    //       agentId: user.agent.id!,
+    //       authorizationPolicyId: space!.authorization!.id,
+    //       privilege: 'read',
+    //     });
+    //
+    //     console.log(`${++counter}/${spaces.length * users.length}`);
+    //   }
+    // }
+    // return 'done';
+    const result = await this.authEvaluationService.evaluate({
+      agentId: '19a5537a-2fa0-423b-881e-12d0897cdace',
+      authorizationPolicyId: '974dd15a-7b5f-4a1c-9bf9-313c17e27344',
+      privilege: 'read',
+    });
+    return JSON.stringify(result, null, 2);
+  }
 
   @Mutation(() => ISpace, {
     description: 'Updates the Space.',
@@ -52,12 +96,20 @@ export class SpaceResolverMutations {
         },
       },
     });
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      space.authorization,
-      AuthorizationPrivilege.UPDATE,
-      `update Space: ${space.id}`
-    );
+    const sentAt = performance.now();
+    try {
+      await this.authorizationService.grantAccessOrFail(
+        agentInfo,
+        space.authorization,
+        AuthorizationPrivilege.UPDATE,
+        `update Space: ${space.id}`
+      );
+    } catch {
+      // ...
+    }
+    const receivedAt = performance.now();
+    const latency = receivedAt - sentAt;
+    console.log(latency.toFixed(3), 'ms to authorize updateSpace mutation');
 
     const updatedSpace = await this.spaceService.update(spaceData);
 
