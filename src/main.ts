@@ -106,17 +106,6 @@ const bootstrap = async () => {
     amqpEndpoint,
     MessagingQueue.COLLABORATION_DOCUMENT_SERVICE
   );
-  app.connectMicroservice<NatsOptions>({
-    transport: Transport.NATS,
-    options: {
-      servers: ['nats://localhost:4222'],
-      // queue: 'alkemio-auth-evaluate',
-      reconnect: true,
-      maxReconnectAttempts: 10,
-      reconnectTimeWait: 5000,
-      verbose: process.env.NODE_ENV !== 'production',
-    },
-  });
   await app.startAllMicroservices();
 };
 

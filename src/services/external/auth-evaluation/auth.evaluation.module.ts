@@ -1,7 +1,11 @@
 import { Module } from '@nestjs/common';
-import { ClientProxyFactory, Transport } from '@nestjs/microservices';
+import {
+  ClientProxyFactory,
+  Transport,
+  NatsOptions,
+} from '@nestjs/microservices';
 import { AUTH_EVALUATION_PUBLISHER } from './injection.token';
-import { AuthEvaluationController } from './auth.evaluation.controller';
+import { AuthEvaluationService } from './auth.evaluation.service';
 
 @Module({
   providers: [
@@ -11,14 +15,15 @@ import { AuthEvaluationController } from './auth.evaluation.controller';
         return ClientProxyFactory.create({
           transport: Transport.NATS,
           options: {
-            url: 'nats://localhost:4222',
-            // queue: 'alkemio-auth-evaluate',
+            servers: ['nats://localhost:4222'],
+            waitOnFirstConnect: false,
+            queue: 'alkemio-auth-evaluation',
           },
-        });
+        } as NatsOptions);
       },
     },
+    AuthEvaluationService,
   ],
-  controllers: [AuthEvaluationController],
-  exports: [AUTH_EVALUATION_PUBLISHER],
+  exports: [AUTH_EVALUATION_PUBLISHER, AuthEvaluationService],
 })
 export class AuthEvaluationModule {}
