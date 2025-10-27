@@ -49,4 +49,11 @@ export class CreateUserSettingsNotificationSpaceInput {
   })
   @IsBoolean()
   collaborationCalloutPublished!: CreateUserSettingsNotificationChannelsInput;
+
+  @Field(() => CreateUserSettingsNotificationChannelsInput, {
+    nullable: false,
+    description: 'Receive a notification when a calendar event is created',
+  })
+  @IsBoolean()
+  communityCalendarEvents!: CreateUserSettingsNotificationChannelsInput;
 }

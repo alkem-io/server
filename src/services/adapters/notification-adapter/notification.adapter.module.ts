@@ -13,6 +13,7 @@ import { NotificationUserAdapter } from './notification.user.adapter';
 import { NotificationOrganizationAdapter } from './notification.organization.adapter';
 import { NotificationVirtualContributorAdapter } from './notification.virtual.contributor.adapter';
 import { MessageDetailsModule } from '@domain/communication/message.details/message.details.module';
+import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { MessageDetailsModule } from '@domain/communication/message.details/mess
     NotificationRecipientsModule,
     NotificationExternalAdapterModule,
     NotificationInAppAdapterModule,
+    SpaceLookupModule,
   ],
   providers: [
     NotificationAdapter,

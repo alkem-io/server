@@ -52,6 +52,7 @@ import { NotificationInputCollaborationCalloutContributionCreated } from '../not
 import { NotificationInputCollaborationCalloutComment } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.comment';
 import { NotificationInputCollaborationCalloutPostContributionComment } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.post.contribution.comment';
 import { MessageDetails } from '@domain/communication/message.details/message.details.interface';
+import { ICalendarEvent } from '@domain/timeline/event/event.interface';
 
 interface CalloutContributionPayload {
   id: string;
@@ -480,6 +481,52 @@ export class NotificationExternalAdapter {
       message: lastMessage?.message,
       ...spacePayload,
     };
+
+    return payload;
+  }
+
+  /**
+   * Builds the payload for calendar event created notifications.
+   *
+   * The payload includes calendar event details (title, type, createdBy) that will be available
+   * once the @alkemio/notifications-lib is updated to support an optional calendarEvent field
+   * in NotificationEventPayloadSpace.
+   *
+   * This allows the email template in the notifications service to format messages as:
+   * Subject: New [event type] scheduled in [(sub)space name]
+   * Body: Hi [recipient name], [creator name] scheduled a new [event type] in the [(sub)space name] calendar: [event title].
+   *
+   * The in-app notification payload also includes these fields for the client/UI.
+   */
+  async buildSpaceCommunityCalendarEventCreatedPayload(
+    eventType: NotificationEvent,
+    triggeredBy: string,
+    recipients: IUser[],
+    space: ISpace,
+    calendarEvent: ICalendarEvent
+  ): Promise<NotificationEventPayloadSpace> {
+    const spacePayload = await this.buildSpacePayload(
+      eventType,
+      triggeredBy,
+      recipients,
+      space
+    );
+
+    // Load the user who created the calendar event
+    const createdByUser = await this.getUserPayloadOrFail(
+      calendarEvent.createdBy
+    );
+
+    // Add calendar event details - will be properly typed once notifications-lib is updated
+    const payload: NotificationEventPayloadSpace = {
+      ...spacePayload,
+      calendarEvent: {
+        id: calendarEvent.id,
+        title: calendarEvent.profile.displayName,
+        type: calendarEvent.type,
+        createdBy: createdByUser,
+      },
+    } as any; // Using 'as any' temporarily until notifications-lib is updated
 
     return payload;
   }
