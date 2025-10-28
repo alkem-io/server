@@ -55,6 +55,8 @@ import { AdminAuthorizationService } from '@src/platform-admin/domain/authorizat
 import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 import { VirtualContributorInteractionMode } from '@common/enums/virtual.contributor.interaction.mode';
 import { ConversationsSetService } from '@domain/communication/conversations-set/conversations.set.service';
+import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors/platform.well.known.virtual.contributors.service';
+import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
 
 @Injectable()
 export class BootstrapService {
@@ -89,7 +91,8 @@ export class BootstrapService {
     private licenseService: LicenseService,
     private licensingFrameworkService: LicensingFrameworkService,
     private licensePlanService: LicensePlanService,
-    private conversationsSetService: ConversationsSetService
+    private conversationsSetService: ConversationsSetService,
+    private platformWellKnownVirtualContributorsService: PlatformWellKnownVirtualContributorsService
   ) {}
 
   async bootstrap() {
@@ -480,16 +483,13 @@ export class BootstrapService {
   }
 
   private async ensureGuidanceChat() {
-    const platform = await this.platformService.getPlatformOrFail({
-      relations: {
-        conversationsSet: {
-          guidanceVirtualContributor: true,
-        },
-      },
-    });
-    const conversationsSet = platform.conversationsSet;
+    // Check if the CHAT_GUIDANCE well-known VC is configured
+    const wellKnownVCId =
+      await this.platformWellKnownVirtualContributorsService.getVirtualContributorID(
+        VirtualContributorWellKnown.CHAT_GUIDANCE
+      );
 
-    if (!conversationsSet.guidanceVirtualContributor?.id) {
+    if (!wellKnownVCId) {
       // Get admin account:
       const hostOrganization =
         await this.organizationLookupService.getOrganizationByNameIdOrFail(
@@ -523,8 +523,11 @@ export class BootstrapService {
         },
       });
 
-      conversationsSet.guidanceVirtualContributor = vc;
-      await this.conversationsSetService.save(conversationsSet);
+      // Register the VC as the CHAT_GUIDANCE well-known VC
+      await this.platformWellKnownVirtualContributorsService.setMapping(
+        VirtualContributorWellKnown.CHAT_GUIDANCE,
+        vc.id
+      );
     }
   }
 }

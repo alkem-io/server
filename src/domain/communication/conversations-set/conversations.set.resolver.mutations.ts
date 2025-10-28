@@ -16,6 +16,7 @@ import { ForbiddenException } from '@common/exceptions/forbidden.exception';
 import { LogContext } from '@common/enums/logging.context';
 import { IConversationsSet } from './conversations.set.interface';
 import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
+import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
 
 @InstrumentResolver()
 @Resolver()
@@ -102,7 +103,7 @@ export class ConversationsSetResolverMutations {
       conversationsSetID: conversationsSet.id,
       userIDs: [agentInfo.userID],
       type: CommunicationConversationType.USER_VC,
-      virtualContributorID: conversationsSet.guidanceVirtualContributor!.id,
+      wellKnownVirtualContributor: VirtualContributorWellKnown.CHAT_GUIDANCE,
     };
 
     return await this.createConversation(

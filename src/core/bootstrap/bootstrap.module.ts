@@ -27,6 +27,7 @@ import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/a
 import { AdminAuthorizationModule } from '@src/platform-admin/domain/authorization/admin.authorization.module';
 import { AiPersonaModule } from '@services/ai-server/ai-persona';
 import { ConversationsSetModule } from '@domain/communication/conversations-set/conversations.set.module';
+import { PlatformWellKnownVirtualContributorsModule } from '@platform/platform.well.known.virtual.contributors/platform.well.known.virtual.contributors.module';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { ConversationsSetModule } from '@domain/communication/conversations-set/
     LicensingFrameworkModule,
     LicensePlanModule,
     ConversationsSetModule,
+    PlatformWellKnownVirtualContributorsModule,
   ],
   providers: [BootstrapService],
   exports: [BootstrapService],
