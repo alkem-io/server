@@ -7,10 +7,14 @@ import { CurrentUser } from '@common/decorators';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { ValidationException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 
 @Resolver(() => MeConversationsResult)
 export class MeConversationsResolverFields {
-  constructor(private conversationsSetService: ConversationsSetService) {}
+  constructor(
+    private conversationsSetService: ConversationsSetService,
+    private userLookupService: UserLookupService
+  ) {}
 
   @ResolveField(() => [IConversation], {
     nullable: false,
@@ -27,9 +31,20 @@ export class MeConversationsResolverFields {
         LogContext.COMMUNICATION
       );
     }
+    const user = await this.userLookupService.getUserOrFail(agentInfo.userID, {
+      relations: {
+        conversationsSet: true,
+      },
+    });
+    if (!user.conversationsSet) {
+      throw new ValidationException(
+        `User(${agentInfo.userID}) does not have a conversations set.`,
+        LogContext.COMMUNICATION
+      );
+    }
 
-    return await this.conversationsSetService.getConversationsUsersForUser(
-      agentInfo.userID
+    return await this.conversationsSetService.getUserConversations(
+      user.conversationsSet.id
     );
   }
 
@@ -48,9 +63,20 @@ export class MeConversationsResolverFields {
         LogContext.COMMUNICATION
       );
     }
+    const user = await this.userLookupService.getUserOrFail(agentInfo.userID, {
+      relations: {
+        conversationsSet: true,
+      },
+    });
+    if (!user.conversationsSet) {
+      throw new ValidationException(
+        `User(${agentInfo.userID}) does not have a conversations set.`,
+        LogContext.COMMUNICATION
+      );
+    }
 
-    return await this.conversationsSetService.getConversationsVirtualContributorsForUser(
-      agentInfo.userID
+    return await this.conversationsSetService.getVcConversations(
+      user.conversationsSet.id
     );
   }
 

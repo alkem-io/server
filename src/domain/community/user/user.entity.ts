@@ -16,6 +16,7 @@ import {
   UUID_LENGTH,
 } from '@common/constants';
 import { UserSettings } from '../user-settings/user.settings.entity';
+import { ConversationsSet } from '@domain/communication/conversations-set/conversations.set.entity';
 
 @Entity()
 export class User extends ContributorBase implements IUser {
@@ -74,4 +75,12 @@ export class User extends ContributorBase implements IUser {
   })
   @JoinColumn()
   storageAggregator?: StorageAggregator;
+
+  @OneToOne(() => ConversationsSet, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  conversationsSet?: ConversationsSet;
 }

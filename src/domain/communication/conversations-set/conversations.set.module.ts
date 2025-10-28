@@ -9,12 +9,14 @@ import { ConversationsSetResolverMutations } from './conversations.set.resolver.
 import { ConversationsSetResolverFields } from './conversations.set.resolver.fields';
 import { ConversationsSetService } from './conversations.set.service';
 import { PlatformWellKnownVirtualContributorsModule } from '@platform/platform.well.known.virtual.contributors';
+import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 
 @Module({
   imports: [
     AuthorizationPolicyModule,
     AuthorizationModule,
     ConversationModule,
+    UserLookupModule,
     PlatformWellKnownVirtualContributorsModule,
     TypeOrmModule.forFeature([ConversationsSet]),
   ],

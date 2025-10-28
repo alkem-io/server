@@ -10,8 +10,8 @@ export abstract class IConversation extends IAuthorizable {
   @Field(() => CommunicationConversationType, { nullable: false })
   type!: CommunicationConversationType;
 
-  @Field(() => [String], { nullable: false })
-  userIDs!: string[];
+  @Field(() => String, { nullable: true })
+  userID?: string;
 
   @Field(() => String, { nullable: true })
   virtualContributorID?: string;

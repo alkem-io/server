@@ -26,7 +26,6 @@ import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup
 import { UserLookupModule } from '../user-lookup/user.lookup.module';
 import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/agent.info.module';
 import { ConversationsSetModule } from '@domain/communication/conversations-set/conversations.set.module';
-import { PlatformModule } from '@platform/platform/platform.module';
 
 @Module({
   imports: [
@@ -50,7 +49,6 @@ import { PlatformModule } from '@platform/platform/platform.module';
     KratosModule,
     ContributorModule,
     ConversationsSetModule,
-    PlatformModule,
     TypeOrmModule.forFeature([User]),
   ],
   providers: [

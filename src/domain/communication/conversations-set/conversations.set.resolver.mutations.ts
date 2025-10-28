@@ -9,12 +9,12 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ConversationAuthorizationService } from '../conversation/conversation.service.authorization';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ConversationService } from '../conversation/conversation.service';
-import { CreateConversationOnConversationsSetInput } from './dto/conversations.set.dto.create.conversation';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { ConversationsSetService } from './conversations.set.service';
 import { ForbiddenException } from '@common/exceptions/forbidden.exception';
 import { LogContext } from '@common/enums/logging.context';
-import { IConversationsSet } from './conversations.set.interface';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { CreateConversationInput } from '../conversation/dto/conversation.dto.create';
 
 @InstrumentResolver()
 @Resolver()
@@ -24,6 +24,7 @@ export class ConversationsSetResolverMutations {
     private authorizationPolicyService: AuthorizationPolicyService,
     private conversationsSetService: ConversationsSetService,
     private conversationAuthorizationService: ConversationAuthorizationService,
+    private userLookupService: UserLookupService,
     private conversationService: ConversationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -34,30 +35,22 @@ export class ConversationsSetResolverMutations {
   async createConversationOnConversationsSet(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('conversationData')
-    conversationData: CreateConversationOnConversationsSetInput
+    conversationData: CreateConversationInput
   ): Promise<IConversation> {
-    const conversationsSet =
-      await this.conversationsSetService.getConversationsSetOrFail(
-        conversationData.conversationsSetID
-      );
-
-    return this.createConversation(
-      agentInfo,
-      conversationsSet,
-      conversationData
+    // Get the conversations set for the current user
+    const userWithConversationsSet = await this.userLookupService.getUserOrFail(
+      agentInfo.userID!,
+      {
+        relations: {
+          conversationsSet: true,
+        },
+      }
     );
-  }
-
-  private async createConversation(
-    agentInfo: AgentInfo,
-    conversationsSet: IConversationsSet,
-    conversationData: CreateConversationOnConversationsSetInput
-  ): Promise<IConversation> {
-    // Check that the room is being created by one of the participating users
-    if (!conversationData.userIDs.includes(agentInfo.userID)) {
+    const conversationsSet = userWithConversationsSet.conversationsSet;
+    if (!conversationsSet) {
       throw new ForbiddenException(
-        `User ${agentInfo.userID} is not allowed to create a conversation for someone else`,
-        LogContext.COLLABORATION
+        `User(${agentInfo.userID}) does not have a conversations set.`,
+        LogContext.COMMUNICATION
       );
     }
 
@@ -69,7 +62,8 @@ export class ConversationsSetResolverMutations {
     );
     const conversation =
       await this.conversationsSetService.createConversationOnConversationsSet(
-        conversationData
+        conversationData,
+        conversationsSet.id
       );
 
     // conversation needs to be saved to apply the authorization policy
@@ -78,6 +72,7 @@ export class ConversationsSetResolverMutations {
     const authorizations =
       await this.conversationAuthorizationService.applyAuthorizationPolicy(
         conversation.id,
+        agentInfo.userID!,
         conversationsSet.authorization
       );
     await this.authorizationPolicyService.saveAll(authorizations);

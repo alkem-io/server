@@ -11,12 +11,12 @@ import { ConversationsSet } from './conversations.set.entity';
 import { IConversationsSet } from './conversations.set.interface';
 import { ConversationService } from '../conversation/conversation.service';
 import { IConversation } from '../conversation/conversation.interface';
-import { CreateConversationOnConversationsSetInput } from './dto/conversations.set.dto.create.conversation';
 import { ConfigService } from '@nestjs/config';
 import { AlkemioConfig } from '@src/types/alkemio.config';
 import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
 import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
 import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
+import { CreateConversationInput } from '../conversation/dto/conversation.dto.create';
 
 @Injectable()
 export class ConversationsSetService {
@@ -41,20 +41,6 @@ export class ConversationsSetService {
       throw new EntityNotFoundException(
         `ConversationsSet with id(${conversationsSetID}) not found!`,
         LogContext.TEMPLATES
-      );
-    return conversationsSet;
-  }
-
-  async getPlatformConversationsSetOrFail(
-    options?: FindOneOptions<ConversationsSet>
-  ): Promise<IConversationsSet | never> {
-    const conversationsSet = await ConversationsSet.findOne({
-      ...options,
-    });
-    if (!conversationsSet)
-      throw new EntityNotFoundException(
-        'ConversationsSet for Platform not found!',
-        LogContext.COMMUNICATION_CONVERSATION
       );
     return conversationsSet;
   }
@@ -117,11 +103,11 @@ export class ConversationsSetService {
   }
 
   public async createConversationOnConversationsSet(
-    conversationData: CreateConversationOnConversationsSetInput
+    conversationData: CreateConversationInput,
+    conversationsSetID: string
   ): Promise<IConversation> {
-    const collaborationID = conversationData.conversationsSetID;
     const conversationsSet = await this.getConversationsSetOrFail(
-      collaborationID,
+      conversationsSetID,
       {
         relations: {
           conversations: true,
@@ -143,49 +129,20 @@ export class ConversationsSetService {
     return await this.conversationsSetRepository.save(conversationsSet);
   }
 
-  async getVirtualContributionConversationForUser(
-    userID: string,
-    virtualContributorID: string
-  ): Promise<IConversation | undefined> {
-    const userConversations = await this.getConversationsForUser(userID);
-    const conversationWithVc = userConversations.find(conversation => {
-      return (
-        conversation.virtualContributorID === virtualContributorID &&
-        conversation.userIDs.includes(userID)
-      );
-    });
-
-    return conversationWithVc;
-  }
-
-  public async getConversationsForUser(
-    userID: string
+  public async getUserConversations(
+    conversationsSetID: string
   ): Promise<IConversation[]> {
-    // TODO: horribly inefficient, needs a proper query
-    const conversationsSet = await this.getPlatformConversationsSetOrFail({
-      relations: { conversations: true },
-    });
-    const allConversations = conversationsSet.conversations;
-    const userConversations = allConversations.filter(conversation =>
-      conversation.userIDs.includes(userID)
-    );
-    return userConversations;
-  }
-
-  public async getConversationsUsersForUser(
-    userID: string
-  ): Promise<IConversation[]> {
-    const userConversations = await this.getConversationsForUser(userID);
+    const userConversations = await this.getConversations(conversationsSetID);
     return userConversations.filter(
       conversation =>
         conversation.type === CommunicationConversationType.USER_USER
     );
   }
 
-  public async getConversationsVirtualContributorsForUser(
-    userID: string
+  public async getVcConversations(
+    conversationsSetID: string
   ): Promise<IConversation[]> {
-    const userConversations = await this.getConversationsForUser(userID);
+    const userConversations = await this.getConversations(conversationsSetID);
     return userConversations.filter(
       conversation =>
         conversation.type === CommunicationConversationType.USER_VC
@@ -193,7 +150,7 @@ export class ConversationsSetService {
   }
 
   public async getConversationWithWellKnownVC(
-    userID: string,
+    conversationsSetID: string,
     wellKnownVC: VirtualContributorWellKnown
   ): Promise<IConversation | undefined> {
     // Get the VC ID from the mappings service
@@ -207,7 +164,7 @@ export class ConversationsSetService {
     }
 
     // Find the conversation between the user and this VC
-    const userConversations = await this.getConversationsForUser(userID);
+    const userConversations = await this.getConversations(conversationsSetID);
     return userConversations.find(
       conversation =>
         conversation.virtualContributorID === virtualContributorID &&

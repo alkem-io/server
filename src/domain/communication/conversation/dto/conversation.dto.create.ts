@@ -6,8 +6,8 @@ import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.w
 @InputType()
 @ObjectType('CreateConversationData')
 export class CreateConversationInput {
-  @Field(() => [UUID], { nullable: false })
-  userIDs!: string[];
+  @Field(() => UUID, { nullable: false })
+  userID!: string;
 
   @Field(() => CommunicationConversationType, { nullable: false })
   type!: CommunicationConversationType;
@@ -17,4 +17,6 @@ export class CreateConversationInput {
 
   @Field(() => VirtualContributorWellKnown, { nullable: true })
   wellKnownVirtualContributor?: VirtualContributorWellKnown;
+
+  currentUserID!: string;
 }

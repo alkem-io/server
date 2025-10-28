@@ -37,17 +37,18 @@ export class ConversationResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('users', () => [IUser], {
-    nullable: false,
-    description: 'The users participating in this Conversation.',
+  @ResolveField('user', () => IUser || null, {
+    nullable: true,
+    description: 'The user participating in this Conversation.',
   })
-  async users(@Parent() conversation: IConversation): Promise<IUser[]> {
-    const users = await Promise.all(
-      conversation.userIDs.map(userID =>
-        this.userLookupService.getUserOrFail(userID)
-      )
+  async user(@Parent() conversation: IConversation): Promise<IUser | null> {
+    if (!conversation.userID) {
+      return null;
+    }
+    const user = await this.userLookupService.getUserOrFail(
+      conversation.userID
     );
-    return users;
+    return user;
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

@@ -8,7 +8,6 @@ import { TemplatesManager } from '@domain/template/templates-manager/templates.m
 import { LicensingFramework } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.entity';
 import { RoleSet } from '@domain/access/role-set/role.set.entity';
 import { IPlatformSettings } from '@platform/platform-settings/platform.settings.interface';
-import { ConversationsSet } from '@domain/communication/conversations-set/conversations.set.entity';
 import { IPlatformWellKnownVirtualContributors } from '@platform/platform.well.known.virtual.contributors/platform.well.known.virtual.contributors.interface';
 
 @Entity()
@@ -66,12 +65,4 @@ export class Platform extends AuthorizableEntity implements IPlatform {
   })
   @JoinColumn()
   roleSet!: RoleSet;
-
-  @OneToOne(() => ConversationsSet, {
-    eager: false,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
-  conversationsSet!: ConversationsSet;
 }

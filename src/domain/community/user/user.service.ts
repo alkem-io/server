@@ -63,7 +63,6 @@ import { InstrumentService } from '@src/apm/decorators';
 import { CreateUserSettingsInput } from '../user-settings/dto/user.settings.dto.create';
 import { ConversationsSetService } from '@domain/communication/conversations-set/conversations.set.service';
 import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
-import { PlatformService } from '@platform/platform/platform.service';
 import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
 
 @InstrumentService()
@@ -86,7 +85,6 @@ export class UserService {
     private contributorService: ContributorService,
     private kratosService: KratosService,
     private conversationsSetService: ConversationsSetService,
-    private platformService: PlatformService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -230,15 +228,29 @@ export class UserService {
     userID: string
   ): Promise<void> {
     try {
-      const conversationsSet =
-        await this.platformService.getConversationsSetOrFail();
-
-      await this.conversationsSetService.createConversationOnConversationsSet({
-        conversationsSetID: conversationsSet.id,
-        type: CommunicationConversationType.USER_VC,
-        userIDs: [userID],
-        wellKnownVirtualContributor: VirtualContributorWellKnown.CHAT_GUIDANCE,
+      const user = await this.getUserOrFail(userID, {
+        relations: {
+          conversationsSet: true,
+        },
       });
+      const userConversationsSet = user.conversationsSet;
+      if (!userConversationsSet) {
+        throw new ValidationException(
+          `User(${userID}) does not have a conversations set.`,
+          LogContext.COMMUNICATION_CONVERSATION
+        );
+      }
+
+      await this.conversationsSetService.createConversationOnConversationsSet(
+        {
+          type: CommunicationConversationType.USER_VC,
+          userID: userID,
+          wellKnownVirtualContributor:
+            VirtualContributorWellKnown.CHAT_GUIDANCE,
+          currentUserID: userID,
+        },
+        userConversationsSet.id
+      );
 
       this.logger.verbose?.(
         `Created guidance conversation for user: ${userID}`,

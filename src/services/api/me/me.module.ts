@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { ApplicationModule } from '@domain/access/application/application.module';
 import { InvitationModule } from '@domain/access/invitation/invitation.module';
-import { UserModule } from '@domain/community/user/user.module';
 import { MeService } from './me.service';
 import { MeResolverQueries } from './me.resolver.queries';
 import { MeResolverFields } from './me.resolver.fields';
@@ -15,13 +14,14 @@ import { ContributorModule } from '@domain/community/contributor/contributor.mod
 import { InAppNotificationModule } from '@platform/in-app-notification/in.app.notification.module';
 import { ConversationsSetModule } from '@domain/communication/conversations-set/conversations.set.module';
 import { MeConversationsResolverFields } from './me.conversations.resolver.fields';
+import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 
 @Module({
   imports: [
     AuthorizationModule,
     ApplicationModule,
     InvitationModule,
-    UserModule,
+    UserLookupModule,
     ContributorModule,
     SpaceModule,
     RolesModule,

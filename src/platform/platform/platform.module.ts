@@ -20,7 +20,6 @@ import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { PlatformLicenseService } from './platform.service.license';
 import { PlatformSettingsModule } from '@platform/platform-settings/platform.settings.module';
 import { LicenseEntitlementModule } from '@domain/common/license-entitlement/license.entitlement.module';
-import { ConversationsSetModule } from '@domain/communication/conversations-set/conversations.set.module';
 import { PlatformWellKnownVirtualContributorsModule } from '@platform/platform.well.known.virtual.contributors';
 
 @Module({
@@ -38,7 +37,6 @@ import { PlatformWellKnownVirtualContributorsModule } from '@platform/platform.w
     LicensingFrameworkModule,
     TemplatesManagerModule,
     RoleSetModule,
-    ConversationsSetModule,
     PlatformWellKnownVirtualContributorsModule,
     TypeOrmModule.forFeature([Platform]),
   ],

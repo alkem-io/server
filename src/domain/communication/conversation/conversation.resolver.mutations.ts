@@ -89,6 +89,7 @@ export class ConversationResolverMutations {
     const authorizations =
       await this.conversationAuthorizationService.applyAuthorizationPolicy(
         conversation.id,
+        agentInfo.userID!,
         conversation.authorization
       );
     await this.authorizationPolicyService.saveAll(authorizations);

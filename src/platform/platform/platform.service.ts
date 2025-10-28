@@ -22,7 +22,6 @@ import { Discussion } from '@platform/forum-discussion/discussion.entity';
 import { ITemplatesManager } from '@domain/template/templates-manager/templates.manager.interface';
 import { ILicensingFramework } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.interface';
 import { IRoleSet } from '@domain/access/role-set';
-import { IConversationsSet } from '@domain/communication/conversations-set/conversations.set.interface';
 
 @Injectable()
 export class PlatformService {
@@ -170,24 +169,6 @@ export class PlatformService {
     }
 
     return roleSet;
-  }
-
-  async getConversationsSetOrFail(): Promise<IConversationsSet | never> {
-    const platform = await this.getPlatformOrFail({
-      relations: {
-        conversationsSet: true,
-      },
-    });
-    const conversationsSet = platform.conversationsSet;
-
-    if (!conversationsSet) {
-      throw new EntityNotFoundException(
-        'Unable to find ConversationsSet for Platform',
-        LogContext.PLATFORM
-      );
-    }
-
-    return conversationsSet;
   }
 
   getAuthorizationPolicy(platform: IPlatform): IAuthorizationPolicy {

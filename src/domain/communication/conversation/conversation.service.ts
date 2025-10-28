@@ -51,7 +51,7 @@ export class ConversationService {
 
     const conversation: IConversation = Conversation.create();
     conversation.type = conversationData.type;
-    conversation.userIDs = conversationData.userIDs;
+    conversation.userID = conversationData.userID;
     conversation.virtualContributorID = conversationData.virtualContributorID;
     conversation.wellKnownVirtualContributor =
       conversationData.wellKnownVirtualContributor;
@@ -62,38 +62,55 @@ export class ConversationService {
     // Only create the room immediately if we have a concrete virtualContributorID
     // For well-known VCs, room creation is deferred until the first message
     if (!conversationData.wellKnownVirtualContributor) {
-      conversation.room = await this.createConversationRoom(conversation);
+      conversation.room = await this.createConversationRoom(
+        conversation,
+        conversationData.currentUserID
+      );
     }
 
     return await this.conversationRepository.save(conversation as Conversation);
   }
+
   private async createConversationRoom(
-    conversation: IConversation
+    conversation: IConversation,
+    currentUserID: string
   ): Promise<IRoom> {
     // Create the room
     const room = await this.roomService.createRoom(
-      `conversation-${conversation.userIDs.join('-')}`,
+      `conversation-${conversation.userID}`,
       RoomType.CONVERSATION
     );
 
-    // Ensure the users (and virtual contributor if applicable) are added to the room
-    for (const userID of conversation.userIDs) {
-      const user = await this.userLookupService.getUserOrFail(userID);
-      await this.communicationAdapter.userAddToRooms(
-        [room.externalRoomID],
-        user.communicationID
-      );
-    }
+    // Add the user to the room
+    const user = await this.userLookupService.getUserOrFail(currentUserID);
+    await this.communicationAdapter.userAddToRooms(
+      [room.externalRoomID],
+      user.communicationID
+    );
 
-    if (conversation.type === CommunicationConversationType.USER_VC) {
-      const virtualContributor =
-        await this.virtualContributorLookupService.getVirtualContributorByNameIdOrFail(
-          conversation.virtualContributorID!
+    // Add the other participant based on conversation type
+    switch (conversation.type) {
+      case CommunicationConversationType.USER_VC: {
+        const virtualContributor =
+          await this.virtualContributorLookupService.getVirtualContributorByNameIdOrFail(
+            conversation.virtualContributorID!
+          );
+        await this.communicationAdapter.userAddToRooms(
+          [room.externalRoomID],
+          virtualContributor.communicationID
         );
-      await this.communicationAdapter.userAddToRooms(
-        [room.externalRoomID],
-        virtualContributor.communicationID
-      );
+      }
+      case CommunicationConversationType.USER_USER: {
+        const otherUser = await this.userLookupService.getUserOrFail(
+          conversation.userID!
+        );
+        await this.communicationAdapter.userAddToRooms(
+          [room.externalRoomID],
+          otherUser.communicationID
+        );
+
+        break;
+      }
     }
     return room;
   }
@@ -104,9 +121,10 @@ export class ConversationService {
     // Validate based on conversation type
     switch (conversationData.type) {
       case CommunicationConversationType.USER_USER: {
-        if (conversationData.userIDs.length !== 2) {
+        // USER_USER conversations must have a userID specified
+        if (!conversationData.userID) {
           throw new ValidationException(
-            'A user-to-user conversation must be created between exactly two users',
+            'A user-to-user conversation must have a userID specified',
             LogContext.COMMUNICATION_CONVERSATION
           );
         }
@@ -116,12 +134,22 @@ export class ConversationService {
             LogContext.COMMUNICATION_CONVERSATION
           );
         }
-        // Check that there is not already a conversation between these users
-        const userIDsJson = JSON.stringify(conversationData.userIDs.sort());
+        if (conversationData.wellKnownVirtualContributor) {
+          throw new ValidationException(
+            'A user-to-user conversation cannot have a wellKnownVirtualContributor',
+            LogContext.COMMUNICATION_CONVERSATION
+          );
+        }
+
+        // Check that there is not already a conversation between the two users
         const existingConversations = await this.conversationRepository
           .createQueryBuilder('conversation')
-          .where('conversation.type = :type', { type: conversationData.type })
-          .andWhere('conversation.userIDs = :userIDs', { userIDs: userIDsJson })
+          .where('conversation.type = :type', {
+            type: conversationData.type,
+          })
+          .andWhere('conversation.userID = :userID', {
+            userID: conversationData.userID,
+          })
           .getMany();
         if (existingConversations.length > 0) {
           throw new ValidationException(
@@ -132,9 +160,10 @@ export class ConversationService {
         break;
       }
       case CommunicationConversationType.USER_VC: {
-        if (conversationData.userIDs.length !== 1) {
+        // USER_VC conversations must have a userID specified
+        if (!conversationData.userID) {
           throw new ValidationException(
-            'A user-to-agent conversation must be created with exactly one user',
+            'A user-to-agent conversation must have a userID specified',
             LogContext.COMMUNICATION_CONVERSATION
           );
         }
@@ -165,12 +194,11 @@ export class ConversationService {
         }
 
         // Check that there is not already a conversation between user and virtual contributor
-        const userIDsJson = JSON.stringify(conversationData.userIDs.sort());
         const queryBuilder = this.conversationRepository
           .createQueryBuilder('conversation')
           .where('conversation.type = :type', { type: conversationData.type })
-          .andWhere('conversation.userIDs = :userIDs', {
-            userIDs: userIDsJson,
+          .andWhere('conversation.userID = :userID', {
+            userID: conversationData.userID,
           });
 
         if (conversationData.virtualContributorID) {
@@ -209,10 +237,8 @@ export class ConversationService {
         );
     }
 
-    // check the user IDs are valid
-    conversationData.userIDs.forEach(async userID => {
-      await this.userLookupService.getUserOrFail(userID);
-    });
+    // Validate the user ID exists
+    await this.userLookupService.getUserOrFail(conversationData.userID);
   }
 
   public async getConversationOrFail(
@@ -292,7 +318,7 @@ export class ConversationService {
     chatData: ConversationVcAskQuestionInput,
     agentInfo: AgentInfo
   ): Promise<ConversationVcAskQuestionResult> {
-    const guidanceConversation = await this.getConversationOrFail(
+    let guidanceConversation = await this.getConversationOrFail(
       chatData.conversationID,
       {
         relations: { room: true },
@@ -321,18 +347,20 @@ export class ConversationService {
       guidanceConversation.virtualContributorID = vcId;
 
       // Create the room now
-      guidanceConversation.room =
-        await this.createConversationRoom(guidanceConversation);
+      guidanceConversation.room = await this.createConversationRoom(
+        guidanceConversation,
+        agentInfo.userID!
+      );
 
       // Save the updated conversation
-      await this.conversationRepository.save(
+      guidanceConversation = await this.conversationRepository.save(
         guidanceConversation as Conversation
       );
     }
 
     if (!guidanceConversation.room) {
       throw new ValidationException(
-        'Conversation has no associated room',
+        `Conversation has no associated room: ${guidanceConversation.id}`,
         LogContext.COMMUNICATION_CONVERSATION
       );
     }
@@ -385,7 +413,7 @@ export class ConversationService {
         LogContext.COMMUNICATION_CONVERSATION
       );
     }
-    if (conversation.userIDs[0] !== agentInfo.userID) {
+    if (conversation.userID !== agentInfo.userID) {
       throw new ValidationException(
         'User can only reset their own conversations',
         LogContext.COMMUNICATION_CONVERSATION
@@ -397,7 +425,10 @@ export class ConversationService {
     }
 
     // create a new room
-    conversation.room = await this.createConversationRoom(conversation);
+    conversation.room = await this.createConversationRoom(
+      conversation,
+      agentInfo.userID!
+    );
     return await this.save(conversation);
   }
 }

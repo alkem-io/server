@@ -13,7 +13,6 @@ import { IForum } from '@platform/forum';
 import { ITemplatesManager } from '@domain/template/templates-manager/templates.manager.interface';
 import { ILicensingFramework } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.interface';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
-import { IConversationsSet } from '@domain/communication/conversations-set/conversations.set.interface';
 import { IPlatformWellKnownVirtualContributors } from '@platform/platform.well.known.virtual.contributors';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
@@ -48,14 +47,6 @@ export class PlatformResolverFields {
   })
   async roleSet(): Promise<IRoleSet> {
     return this.platformService.getRoleSetOrFail();
-  }
-
-  @ResolveField('conversationsSet', () => IConversationsSet, {
-    nullable: false,
-    description: 'The ConversationsSet for this Platform.',
-  })
-  async conversationsSet(): Promise<IConversationsSet> {
-    return this.platformService.getConversationsSetOrFail();
   }
 
   @ResolveField('library', () => ILibrary, {

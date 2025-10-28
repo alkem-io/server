@@ -11,6 +11,7 @@ import { EntityNotInitializedException } from '@common/exceptions';
 import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
 
 @Injectable()
 export class ConversationAuthorizationService {
@@ -22,6 +23,7 @@ export class ConversationAuthorizationService {
 
   public async applyAuthorizationPolicy(
     conversationID: string,
+    conversationHostID: string,
     parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IAuthorizationPolicy[]> {
     const conversation = await this.conversationService.getConversationOrFail(
@@ -48,10 +50,23 @@ export class ConversationAuthorizationService {
         parentAuthorization
       );
 
-    // Add in logic to allow the users to send messages in the conversation
+    // Allow the host user to contribute to the conversation
     conversation.authorization.credentialRules.push(
-      this.createCredentialRuleContributors(conversation.userIDs)
+      this.createCredentialRuleContributors([conversationHostID])
     );
+
+    // Add in logic to allow the users to send messages in the conversation
+    if (conversation.type === CommunicationConversationType.USER_USER) {
+      if (!conversation.userID) {
+        throw new EntityNotInitializedException(
+          `conversation: Missing userID for USER_USER conversation: ${conversation.id}`,
+          LogContext.COMMUNICATION
+        );
+      }
+      conversation.authorization.credentialRules.push(
+        this.createCredentialRuleContributors([conversation.userID])
+      );
+    }
 
     updatedAuthorizations.push(conversation.authorization);
 

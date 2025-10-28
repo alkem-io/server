@@ -15,6 +15,7 @@ export class ConversationsSetAuthorizationService {
 
   async applyAuthorizationPolicy(
     conversationsSetInput: IConversationsSet,
+    hostUserID: string,
     parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IAuthorizationPolicy[]> {
     const conversationsSet =
@@ -43,6 +44,7 @@ export class ConversationsSetAuthorizationService {
         const conversationAuthorizations =
           await this.conversationAuthorizationService.applyAuthorizationPolicy(
             conversation.id,
+            hostUserID,
             parentAuthorization
           );
         updatedAuthorizations.push(...conversationAuthorizations);
