@@ -27,16 +27,16 @@ export class Conversations1761408055225 implements MigrationInterface {
                                                                      UNIQUE INDEX \`REL_57e3ee47af26b479a67e7f94da\` (\`authorizationId\`),
                                                                      PRIMARY KEY (\`id\`)) ENGINE=InnoDB`);
     await queryRunner.query(
-      `ALTER TABLE \`platform\` ADD \`conversationsSetId\` char(36) NULL`
+      `ALTER TABLE \`user\` ADD \`conversationsSetId\` char(36) NULL`
     );
     await queryRunner.query(
       `ALTER TABLE \`platform\` ADD \`wellKnownVirtualContributors\` json NOT NULL`
     );
     await queryRunner.query(
-      `ALTER TABLE \`platform\` ADD UNIQUE INDEX \`IDX_dc8bdff7728d61097c8560ae7a\` (\`conversationsSetId\`)`
+      `ALTER TABLE \`user\` ADD UNIQUE INDEX \`IDX_user_conversationsSetId\` (\`conversationsSetId\`)`
     );
     await queryRunner.query(
-      `CREATE UNIQUE INDEX \`REL_dc8bdff7728d61097c8560ae7a\` ON \`platform\` (\`conversationsSetId\`)`
+      `CREATE UNIQUE INDEX \`REL_user_conversationsSetId\` ON \`user\` (\`conversationsSetId\`)`
     );
     await queryRunner.query(
       `ALTER TABLE \`conversation\` ADD CONSTRAINT \`FK_a6cdd15ca94945e57a3abbf64d1\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
@@ -51,53 +51,49 @@ export class Conversations1761408055225 implements MigrationInterface {
       `ALTER TABLE \`conversations_set\` ADD CONSTRAINT \`FK_57e3ee47af26b479a67e7f94da0\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
     await queryRunner.query(
-      `ALTER TABLE \`platform\` ADD CONSTRAINT \`FK_dc8bdff7728d61097c8560ae7a9\` FOREIGN KEY (\`conversationsSetId\`) REFERENCES \`conversations_set\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+      `ALTER TABLE \`user\` ADD CONSTRAINT \`FK_user_conversationsSetId\` FOREIGN KEY (\`conversationsSetId\`) REFERENCES \`conversations_set\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
 
-    // Create conversations set for platform
+    // Get the guidance virtual contributor from platform if it exists
     const [platform]: {
       id: string;
-    }[] = await queryRunner.query(`SELECT id FROM \`platform\` LIMIT 1`);
+      guidanceVirtualContributorId: string | null;
+    }[] = await queryRunner.query(
+      `SELECT id, guidanceVirtualContributorId FROM \`platform\` LIMIT 1`
+    );
 
     if (platform) {
-      // Get the guidance virtual contributor from platform if it exists
-      const [platformVC]: {
-        guidanceVirtualContributorId: string | null;
-      }[] = await queryRunner.query(
-        `SELECT guidanceVirtualContributorId FROM \`platform\` WHERE id = '${platform.id}'`
-      );
-
       // Initialize wellKnownVirtualContributors JSON field
-      const wellKnownVC = platformVC?.guidanceVirtualContributorId
-        ? { CHAT_GUIDANCE: platformVC.guidanceVirtualContributorId }
+      const wellKnownVC = platform.guidanceVirtualContributorId
+        ? { CHAT_GUIDANCE: platform.guidanceVirtualContributorId }
         : {};
 
       await queryRunner.query(
         `UPDATE \`platform\` SET wellKnownVirtualContributors = '${JSON.stringify(wellKnownVC)}' WHERE id = '${platform.id}'`
       );
 
-      const conversationsSetID = await this.createConversationsSet(queryRunner);
-      await queryRunner.query(
-        `UPDATE \`platform\` SET conversationsSetId = '${conversationsSetID}' WHERE id = '${platform.id}'`
-      );
+      // Create conversations set for each user
+      const allUsers: {
+        id: string;
+        guidanceRoomId: string | null;
+      }[] = await queryRunner.query(`SELECT id, guidanceRoomId FROM \`user\``);
 
-      // Migrate guidance rooms to conversations for ALL users
-      if (platformVC?.guidanceVirtualContributorId) {
-        const allUsers: {
-          id: string;
-          guidanceRoomId: string | null;
-        }[] = await queryRunner.query(
-          `SELECT id, guidanceRoomId FROM \`user\``
+      for (const user of allUsers) {
+        const conversationsSetID =
+          await this.createConversationsSet(queryRunner);
+        await queryRunner.query(
+          `UPDATE \`user\` SET conversationsSetId = '${conversationsSetID}' WHERE id = '${user.id}'`
         );
 
-        for (const user of allUsers) {
-          // If user has an existing guidance room, migrate with the room
+        // Migrate guidance room to conversation if it exists
+        if (platform.guidanceVirtualContributorId) {
           if (user.guidanceRoomId) {
+            // If user has an existing guidance room, migrate with the room
             await this.createGuidanceConversation(
               queryRunner,
               conversationsSetID,
               user.id,
-              platformVC.guidanceVirtualContributorId,
+              platform.guidanceVirtualContributorId,
               user.guidanceRoomId
             );
           } else {
@@ -228,9 +224,9 @@ export class Conversations1761408055225 implements MigrationInterface {
       `ALTER TABLE \`user\` ADD CONSTRAINT \`FK_67c9d8c51a7033bbe9355f76095\` FOREIGN KEY (\`guidanceRoomId\`) REFERENCES \`room\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
 
-    // Drop the platform and conversation foreign keys and tables
+    // Drop the user and conversation foreign keys and tables
     await queryRunner.query(
-      `ALTER TABLE \`platform\` DROP FOREIGN KEY \`FK_dc8bdff7728d61097c8560ae7a9\``
+      `ALTER TABLE \`user\` DROP FOREIGN KEY \`FK_user_conversationsSetId\``
     );
     await queryRunner.query(
       `ALTER TABLE \`conversations_set\` DROP FOREIGN KEY \`FK_57e3ee47af26b479a67e7f94da0\``
@@ -245,16 +241,16 @@ export class Conversations1761408055225 implements MigrationInterface {
       `ALTER TABLE \`conversation\` DROP FOREIGN KEY \`FK_a6cdd15ca94945e57a3abbf64d1\``
     );
     await queryRunner.query(
-      `DROP INDEX \`REL_dc8bdff7728d61097c8560ae7a\` ON \`platform\``
+      `DROP INDEX \`REL_user_conversationsSetId\` ON \`user\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`platform\` DROP INDEX \`IDX_dc8bdff7728d61097c8560ae7a\``
+      `ALTER TABLE \`user\` DROP INDEX \`IDX_user_conversationsSetId\``
     );
     await queryRunner.query(
       `ALTER TABLE \`platform\` DROP COLUMN \`wellKnownVirtualContributors\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`platform\` DROP COLUMN \`conversationsSetId\``
+      `ALTER TABLE \`user\` DROP COLUMN \`conversationsSetId\``
     );
     await queryRunner.query(
       `DROP INDEX \`REL_57e3ee47af26b479a67e7f94da\` ON \`conversations_set\``

@@ -6,7 +6,6 @@ import { ConversationModule } from '../conversation/conversation.module';
 import { ConversationsSet } from './conversations.set.entity';
 import { ConversationsSetAuthorizationService } from './conversations.set.service.authorization';
 import { ConversationsSetResolverMutations } from './conversations.set.resolver.mutations';
-import { ConversationsSetResolverFields } from './conversations.set.resolver.fields';
 import { ConversationsSetService } from './conversations.set.service';
 import { PlatformWellKnownVirtualContributorsModule } from '@platform/platform.well.known.virtual.contributors';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
@@ -24,13 +23,11 @@ import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.modu
     ConversationsSetService,
     ConversationsSetAuthorizationService,
     ConversationsSetResolverMutations,
-    ConversationsSetResolverFields,
   ],
   exports: [
     ConversationsSetService,
     ConversationsSetAuthorizationService,
     ConversationsSetResolverMutations,
-    ConversationsSetResolverFields,
   ],
 })
 export class ConversationsSetModule {}
