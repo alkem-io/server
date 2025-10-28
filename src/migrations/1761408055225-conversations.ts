@@ -81,23 +81,33 @@ export class Conversations1761408055225 implements MigrationInterface {
         `UPDATE \`platform\` SET conversationsSetId = '${conversationsSetID}' WHERE id = '${platform.id}'`
       );
 
-      // Migrate guidance rooms to conversations
+      // Migrate guidance rooms to conversations for ALL users
       if (platformVC?.guidanceVirtualContributorId) {
-        const users: {
+        const allUsers: {
           id: string;
-          guidanceRoomId: string;
+          guidanceRoomId: string | null;
         }[] = await queryRunner.query(
-          `SELECT id, guidanceRoomId FROM \`user\` WHERE guidanceRoomId IS NOT NULL`
+          `SELECT id, guidanceRoomId FROM \`user\``
         );
 
-        for (const user of users) {
-          await this.createGuidanceConversation(
-            queryRunner,
-            conversationsSetID,
-            user.id,
-            platformVC.guidanceVirtualContributorId,
-            user.guidanceRoomId
-          );
+        for (const user of allUsers) {
+          // If user has an existing guidance room, migrate with the room
+          if (user.guidanceRoomId) {
+            await this.createGuidanceConversation(
+              queryRunner,
+              conversationsSetID,
+              user.id,
+              platformVC.guidanceVirtualContributorId,
+              user.guidanceRoomId
+            );
+          } else {
+            // If no guidance room, create conversation with wellKnownVirtualContributor
+            await this.createGuidanceConversationWithWellKnownVC(
+              queryRunner,
+              conversationsSetID,
+              user.id
+            );
+          }
         }
       }
 
@@ -141,6 +151,23 @@ export class Conversations1761408055225 implements MigrationInterface {
     await queryRunner.query(
       `INSERT INTO conversation (id, version, type, userIDs, virtualContributorID, authorizationId, conversationsSetId, roomId)
        VALUES ('${conversationID}', 1, 'user-vc', '["${userID}"]', '${virtualContributorID}', '${conversationAuthID}', '${conversationsSetID}', '${roomID}')`
+    );
+  }
+
+  private async createGuidanceConversationWithWellKnownVC(
+    queryRunner: QueryRunner,
+    conversationsSetID: string,
+    userID: string
+  ): Promise<void> {
+    const conversationID = randomUUID();
+    const conversationAuthID = await this.createAuthorizationPolicy(
+      queryRunner,
+      'communication-conversation'
+    );
+
+    await queryRunner.query(
+      `INSERT INTO conversation (id, version, type, userIDs, wellKnownVirtualContributor, authorizationId, conversationsSetId)
+       VALUES ('${conversationID}', 1, 'user-vc', '["${userID}"]', 'CHAT_GUIDANCE', '${conversationAuthID}', '${conversationsSetID}')`
     );
   }
 
