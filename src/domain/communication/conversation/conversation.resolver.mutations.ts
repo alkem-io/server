@@ -17,6 +17,7 @@ import { ConversationVcAskQuestionResult } from './dto/conversation.vc.dto.ask.q
 import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
 import { ValidationException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
+import { ConversationVcResetInput } from './dto/conversation.vc.dto.reset.input';
 
 @InstrumentResolver()
 @Resolver()
@@ -36,10 +37,10 @@ export class ConversationResolverMutations {
   })
   async askVcQuestion(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('chatData') chatData: ConversationVcAskQuestionInput
+    @Args('input') input: ConversationVcAskQuestionInput
   ): Promise<ConversationVcAskQuestionResult> {
     const conversation = await this.conversationService.getConversationOrFail(
-      chatData.conversationID
+      input.conversationID
     );
     if (conversation.type !== CommunicationConversationType.USER_VC) {
       throw new ValidationException(
@@ -54,7 +55,7 @@ export class ConversationResolverMutations {
       `conversation VC ask question: ${agentInfo.email}`
     );
 
-    return this.conversationService.askQuestion(chatData, agentInfo);
+    return this.conversationService.askQuestion(input, agentInfo);
   }
 
   @Mutation(() => IConversation, {
@@ -62,10 +63,10 @@ export class ConversationResolverMutations {
   })
   async resetConversationVc(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('chatData') chatData: ConversationVcAskQuestionInput
+    @Args('input') input: ConversationVcResetInput
   ): Promise<IConversation> {
     let conversation = await this.conversationService.getConversationOrFail(
-      chatData.conversationID
+      input.conversationID
     );
     if (conversation.type !== CommunicationConversationType.USER_VC) {
       throw new ValidationException(
