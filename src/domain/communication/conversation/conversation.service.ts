@@ -23,9 +23,9 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { InvocationResultAction } from '@services/ai-server/ai-persona/dto';
-import { ConversationAgentAskQuestionInput } from './dto/conversation.agent.dto.ask.question.input';
+import { ConversationVcAskQuestionInput } from './dto/conversation.vc.dto.ask.question.input';
 import { InvocationOperation } from '@common/enums/ai.persona.invocation.operation';
-import { ConversationAgentAskQuestionResult } from './dto/conversation.agent.dto.ask.question.result';
+import { ConversationVcAskQuestionResult } from './dto/conversation.vc.dto.ask.question.result';
 
 @Injectable()
 export class ConversationService {
@@ -77,7 +77,7 @@ export class ConversationService {
       );
     }
 
-    if (conversation.type === CommunicationConversationType.USER_AGENT) {
+    if (conversation.type === CommunicationConversationType.USER_VC) {
       const virtualContributor =
         await this.virtualContributorLookupService.getVirtualContributorByNameIdOrFail(
           conversation.virtualContributorID!
@@ -123,7 +123,7 @@ export class ConversationService {
         }
         break;
       }
-      case CommunicationConversationType.USER_AGENT: {
+      case CommunicationConversationType.USER_VC: {
         if (conversationData.userIDs.length !== 1) {
           throw new ValidationException(
             'A user-to-agent conversation must be created with exactly one user',
@@ -249,9 +249,9 @@ export class ConversationService {
    * }
    */
   public async askQuestion(
-    chatData: ConversationAgentAskQuestionInput,
+    chatData: ConversationVcAskQuestionInput,
     agentInfo: AgentInfo
-  ): Promise<ConversationAgentAskQuestionResult> {
+  ): Promise<ConversationVcAskQuestionResult> {
     const guidanceConversation = await this.getConversationOrFail(
       chatData.conversationID,
       {
@@ -307,7 +307,7 @@ export class ConversationService {
     const conversation = await this.getConversationOrFail(conversationID, {
       relations: { room: true },
     });
-    if (conversation.type !== CommunicationConversationType.USER_AGENT) {
+    if (conversation.type !== CommunicationConversationType.USER_VC) {
       throw new ValidationException(
         'Can only reset USER_AGENT conversations',
         LogContext.COMMUNICATION_CONVERSATION

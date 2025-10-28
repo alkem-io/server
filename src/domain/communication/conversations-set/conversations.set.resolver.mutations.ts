@@ -101,7 +101,7 @@ export class ConversationsSetResolverMutations {
     const conversationData: CreateConversationOnConversationsSetInput = {
       conversationsSetID: conversationsSet.id,
       userIDs: [agentInfo.userID],
-      type: CommunicationConversationType.USER_AGENT,
+      type: CommunicationConversationType.USER_VC,
       virtualContributorID: conversationsSet.guidanceVirtualContributor!.id,
     };
 

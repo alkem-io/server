@@ -12,6 +12,7 @@ import { VirtualContributorLookupModule } from '@domain/community/virtual-contri
 import { AiServerAdapterModule } from '@services/adapters/ai-server-adapter/ai.server.adapter.module';
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
 import { ConversationResolverMutations } from './conversation.resolver.mutations';
+import { GuidanceReporterModule } from '@services/external/elasticsearch/guidance-reporter';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { ConversationResolverMutations } from './conversation.resolver.mutations
     VirtualContributorLookupModule,
     AiServerAdapterModule,
     CommunicationAdapterModule,
+    GuidanceReporterModule,
     TypeOrmModule.forFeature([Conversation]),
   ],
   providers: [

@@ -10,10 +10,13 @@ import { ConversationAuthorizationService } from './conversation.service.authori
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ConversationService } from './conversation.service';
 import { InstrumentResolver } from '@src/apm/decorators';
-import { ConversationAgentAnswerRelevanceInput } from './dto/conversation.agent.dto.relevance.update';
-import { ConversationAgentAskQuestionInput } from './dto/conversation.agent.dto.ask.question.input';
+import { ConversationVcAnswerRelevanceInput } from './dto/conversation.vc.dto.relevance.update';
+import { ConversationVcAskQuestionInput } from './dto/conversation.vc.dto.ask.question.input';
 import { GuidanceReporterService } from '@services/external/elasticsearch/guidance-reporter/guidance.reporter.service';
-import { ConversationAgentAskQuestionResult } from './dto/conversation.agent.dto.ask.question.result';
+import { ConversationVcAskQuestionResult } from './dto/conversation.vc.dto.ask.question.result';
+import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
+import { ValidationException } from '@common/exceptions';
+import { LogContext } from '@common/enums';
 
 @InstrumentResolver()
 @Resolver()
@@ -27,22 +30,28 @@ export class ConversationResolverMutations {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  @Mutation(() => ConversationAgentAskQuestionResult, {
+  @Mutation(() => ConversationVcAskQuestionResult, {
     nullable: false,
     description: 'Ask the chat engine for guidance.',
   })
-  async askChatGuidanceQuestion(
+  async askVcQuestion(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('chatData') chatData: ConversationAgentAskQuestionInput
-  ): Promise<ConversationAgentAskQuestionResult> {
+    @Args('chatData') chatData: ConversationVcAskQuestionInput
+  ): Promise<ConversationVcAskQuestionResult> {
     const conversation = await this.conversationService.getConversationOrFail(
       chatData.conversationID
     );
+    if (conversation.type !== CommunicationConversationType.USER_VC) {
+      throw new ValidationException(
+        `Conversation is not a USER_VC type: ${conversation.id}`,
+        LogContext.COMMUNICATION_CONVERSATION
+      );
+    }
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       conversation.authorization,
       AuthorizationPrivilege.UPDATE,
-      `Access interactive guidance: ${agentInfo.email}`
+      `conversation VC ask question: ${agentInfo.email}`
     );
 
     return this.conversationService.askQuestion(chatData, agentInfo);
@@ -51,18 +60,24 @@ export class ConversationResolverMutations {
   @Mutation(() => IConversation, {
     description: 'Resets the interaction with the chat engine.',
   })
-  async resetChatGuidance(
+  async resetConversationVc(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('chatData') chatData: ConversationAgentAskQuestionInput
+    @Args('chatData') chatData: ConversationVcAskQuestionInput
   ): Promise<IConversation> {
     let conversation = await this.conversationService.getConversationOrFail(
       chatData.conversationID
     );
+    if (conversation.type !== CommunicationConversationType.USER_VC) {
+      throw new ValidationException(
+        `Conversation is not a USER_VC type: ${conversation.id}`,
+        LogContext.COMMUNICATION_CONVERSATION
+      );
+    }
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       conversation.authorization,
       AuthorizationPrivilege.UPDATE,
-      `Access interactive guidance: ${agentInfo.email}`
+      `conversation VC reset: ${agentInfo.email}`
     );
     conversation =
       await this.conversationService.resetUserConversationWithAgent(
@@ -85,9 +100,37 @@ export class ConversationResolverMutations {
   @Mutation(() => Boolean, {
     description: 'User vote if a specific answer is relevant.',
   })
-  public updateAnswerRelevance(
-    @Args('input') { id, relevant }: ConversationAgentAnswerRelevanceInput
+  public async feedbackOnVcAnswerRelevance(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('input')
+    { id, relevant, conversationID }: ConversationVcAnswerRelevanceInput
   ): Promise<boolean> {
-    return this.guidanceReporterService.updateAnswerRelevance(id, relevant);
+    const conversation =
+      await this.conversationService.getConversationOrFail(conversationID);
+    if (conversation.type !== CommunicationConversationType.USER_VC) {
+      throw new ValidationException(
+        `Conversation is not a USER_VC type: ${conversation.id}`,
+        LogContext.COMMUNICATION_CONVERSATION
+      );
+    }
+    if (!conversation.virtualContributorID) {
+      throw new ValidationException(
+        `Conversation does not have a virtual contributor: ${conversation.id}`,
+        LogContext.COMMUNICATION_CONVERSATION
+      );
+    }
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      conversation.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `conversation VC reset: ${agentInfo.email}`
+    );
+
+    return this.guidanceReporterService.updateAnswerRelevance(
+      conversation.virtualContributorID,
+      id,
+      relevant
+    );
   }
 }

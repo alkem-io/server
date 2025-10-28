@@ -13,7 +13,7 @@ export type LanguageType =
   | 'UA';
 
 @InputType()
-export class ConversationAgentAskQuestionInput {
+export class ConversationVcAskQuestionInput {
   @Field(() => UUID, {
     nullable: false,
     description: 'The ID of the conversation.',
