@@ -1,92 +1,85 @@
-# General Instructions
+<!-- Implements constitution & agents.md. Does not introduce new governance. -->
 
-If this repository contains a `.specify/` folder, it follows **Specification-Driven Development (SDD)** using **GitHub’s Spec Kit**, delimited by the +++ text block below.
+# Copilot Onboarding Guide
 
-+++
+## Repository Snapshot
 
-## GitHub Copilot Project Context: Specification-Driven Development (Spec Kit)
+- Purpose: NestJS GraphQL server for the Alkemio collaboration platform; exposes `http://localhost:4000/graphql` and orchestrates domain + integration services.
+- Stack: TypeScript, Node 20 LTS (Volta pins 20.15.1), pnpm 10.17.1 via Corepack, NestJS, TypeORM (MySQL), Apollo Server, RabbitMQ queues, Elastic APM, Ory Kratos/Oathkeeper for auth.
+- Scale: ~3k TypeScript files; key roots include `src/`, `test/`, `docs/`, `.specify/`, `scripts/`, `specs/00x-*`, `quickstart-*.yml`, `Dockerfile`, `package.json`, `pnpm-lock.yaml`.
+- Docs: `docs/Developing.md`, `docs/Running.md`, `docs/QA.md`, `docs/DataManagement.md`, `docs/Design.md` hold authoritative setup, architecture, QA, and migration guidance.
 
-This repository follows Specification-Driven Development using GitHub's Spec Kit. Spec-driven development is a collaborative workflow where a detailed written specification is created, reviewed, and approved by product, design, and engineering to serve as the single source of truth before implementation begins.
-Copilot MUST align assistance with the specification workflow and constitutional governance defined under `.specify/`.
+## Governance & Workflow
 
-### Core Artifacts (Authoritative Sources)
+- Specification-Driven Development is mandatory for feature work. Read `.specify/memory/constitution.md` first; it defines quality gates, module boundaries, and testing expectations.
+- Artifacts live under `specs/<NNN-slug>/` (plan, spec, checklist, tasks). Follow the canonical progression: `/spec` → `/clarify` → `/plan` → `/checklist` → `/tasks` → `/implement` → `/stabilize` → `/done`.
+- Classify work per `agents.md`: Manual Fix (≤40 LOC, trivial), Agentic Flow (medium scoped refactors, supply mini-plan), Full SDD (net-new capabilities or schema/migration impact).
+- All schema changes require regenerating `schema.graphql`, running `pnpm run schema:diff`, and addressing the schema contract gate.
 
-Location: `.specify/` in the repository root. Key files:
+## Environment & Toolchain
 
-- `memory/constitution.md` – MANDATORY Governing principles (quality gates, Definition of Done, performance, accessibility, governance).
-- `templates/plan-template.md` – Implementation plan structure & gate logic.
-- `templates/spec-template.md` – Feature specification structure & validation rules.
-- `templates/checklist-template.md` – Generate quality checklists & validate requirement completeness, clarity, and consistency.
-- `templates/tasks-template.md` – Task breakdown structure & generation rules.
-- `templates/agent-file-template.md` – Pattern for maintaining this agent instructions file.
+- Prerequisites: Node ≥20.9 (Volta config helps), pnpm ≥10.17.1 (`corepack enable && corepack prepare pnpm@10.17.1 --activate`), Docker + Compose, MySQL 8 (with `mysql_native_password`), RabbitMQ, Redis, Ory Kratos/Oathkeeper stack. `.env.docker` feeds compose stacks; local `.env` variables are required for TypeORM CLI.
+- Optional but recommended: jq (used in docs for auth flows), mysql client, mkcert for TLS dev.
+- Module resolution uses `tsconfig.json` path aliases (e.g. `@domain/*`, `@services/*`). ESLint is configured via `eslint.config.js` with flat config, Prettier integration, and production-stricter `@typescript-eslint/no-unused-vars`.
 
-Treat future `memory/*.md` additions as long-lived organizational knowledge.
+## Bootstrap, Build & Run
 
-### Expected Feature Documentation Layout
+- Install dependencies (verified 2025-10-27):
+  - `pnpm install` (0.6s when cache warm; respects `pnpm-lock.yaml`). Always run after pulling.
+- Build artifacts:
+  - `pnpm build` (passes; outputs to `dist/` and copies `alkemio.yml`).
+- Local runtime without containers requires MySQL, RabbitMQ, Redis, Elastic, Kratos already up. Typical flow:
+  1. `pnpm run start:services` to spin dependencies from `quickstart-services.yml` via Docker (maps server to port 4001; clients still at 3000).
+  2. `pnpm run migration:run` once services are healthy to prime schema.
+  3. `pnpm start` (or `pnpm start:dev` for hot reload) launches the API on port configured in `config/hosting`. GraphQL Playground available at `/graphiql`.
+  4. Stop compose via `docker compose -f quickstart-services.yml down` when finished.
+- Specialized stacks:
+  - `pnpm run start:services:ssi` adds wallet manager.
+  - `pnpm run start:services:kratos:debug` and `pnpm run start:services:ai(:debug)` tailor Kratos/AI debugging.
+  - Synapse (Matrix) bootstrap script: `sudo bash ./.scripts/bootstrap_synapse.sh`.
 
-Features live under `specs/NNN-sample-feature/` (replace with numbered slug; create `specs/` if absent):
+## Quality Gates & Validation
 
-```
-specs/NNN-sample-feature/
-    spec.md
-    plan.md
-    research.md
-    data-model.md
-    quickstart.md
-    contracts/
-    tasks.md
-```
+- Lint (fails unless addressed): `pnpm lint` runs `tsc --noEmit` + ESLint. As of 2025-10-27 it exits non-zero due to a Prettier import formatting error in `src/platform/in-app-notification/in.app.notification.service.ts` and multiple unused-parameter warnings. Fix by formatting (Prettier expects multiline import) and renaming unused arguments to `_`. Use `pnpm lint:fix` after manual clean-up.
+- Tests: `pnpm test:ci` (Jest CI config) succeeds headlessly without services and takes ~2–3 minutes; script prints `coverage-ci/lcov.info` to stdout—redirect output if noise is an issue (`pnpm test:ci > /tmp/jest.log`). Targeted suites: `pnpm run test:ut`, `pnpm run test:it path/to/spec`, `pnpm run test:e2e`. Integration/e2e require dependencies plus seeded data; start compose stack first.
+- Schema contract: regenerate and diff before committing schema-impacting work:
+  1. `pnpm run schema:print`
+  2. `pnpm run schema:sort`
+  3. `pnpm run schema:diff` (requires `tmp/prev.schema.graphql`; fetch from base branch if absent).
+  4. Inspect `change-report.json` (`BREAKING` entries need CODEOWNER review comment with `BREAKING-APPROVED`).
+  5. Optional validation: `pnpm run schema:validate`.
+- Database migrations: `pnpm run migration:generate -n <Name>` (requires DSN env vars), `pnpm run migration:run`, `pnpm run migration:revert`. Validation harness `.scripts/migrations/run_validate_migration.sh` snapshots DB, applies migration, exports CSVs, compares to reference, then restores backup.
+- Other tooling: `pnpm run migration:validate` (shell script), `pnpm run circular-dependencies` (requires built `dist`), `pnpm format` for Prettier.
 
-### Canonical Workflow
+## Layout & Key Paths
 
-1. `/constitution` (done) → `constitution.md`
-2. `/specify` → `spec.md` (WHAT & WHY only)
-3. `/clarify` (resolve `[NEEDS CLARIFICATION]` markers)
-4. `/plan` → `plan.md` + Phase 0/1 docs (except `tasks.md`)
-5. `/checklist` → generate quality checklists to validate requirements completeness, clarity, and consistency
-6. `/tasks` → `tasks.md`
-7. `/analyze` → cross-artifact consistency
-8. `/implement` → execute tasks (respect `[P]` parallel markers)
+- Entry point: `src/main.ts` bootstraps Nest `AppModule`, configures GraphQL uploads, RabbitMQ microservices, Helmet, cookie parser, and `/graphiql` UI.
+- `src/` structure:
+  - `domain/*`: aggregates, repositories, domain services (business rules live here per constitution).
+  - `services/api-*`: GraphQL + REST resolvers/controllers bridging domain.
+  - `services/adapters`, `services/infrastructure`: external integration layers (e.g. SSI, file storage, Rabbit workers).
+  - `common/`, `core/`, `config/`, `library/`: cross-cutting utilities, bootstrap, configuration modules.
+  - `platform/` & `platform-admin/`: platform-scoped modules and admin operations.
+- Tests in `test/` mirror production code (`functional/e2e`, `functional/integration`, `unit`, `config/jest.*`).
+- Specs & plans reside in `specs/00x-*`. Update or create spec artifacts before product changes.
+- Compose files: `quickstart-services*.yml`, `quickstart-wallet-manager.yml` orchestrate dependencies. Docker settings assume `.env.docker` for credentials.
+- Config & tooling: `nest-cli.json`, `tsconfig*.json`, `eslint.config.js`, `alkemio.yml`, `scripts/schema/*.ts`, `.scripts/tests/*.ts`, `.scripts/migrations/*.sh`.
 
-### Ad-hoc requests
+## CI & Release Signals
 
-Copilot may assist with ad-hoc requests (debugging, refactoring, non-feature work) if they **don’t violate the SDD workflow**.
-All new features or product changes MUST be reflected in `.specify/` artifacts and follow the canonical flow.
-Ensure learnings and code changes are fed back into relevant specs.
+- GitHub Actions:
+  - `schema-contract.yml` runs pnpm install, generates schema snapshot (light bootstrap), diffs vs baseline, posts sticky PR comment, and fails on unapproved BREAKING/PREMATURE_REMOVAL issues.
+  - `build-release-docker-hub.yml` builds and publishes Docker images (Node 20 + pnpm caches).
+  - `build-deploy-k8s-*.yml` target dev/sandbox/test Hetzner clusters after container build.
+  - `trigger-e2e-tests.yml` dispatches downstream full-stack tests.
+- Legacy Travis badge remains in README; GitHub Actions are the authoritative CI. Expect schema gate + build workflows to run on PRs touching `src/**`, schema artifacts, or package manifests.
 
-+++
+## Operational Tips
 
-### Tooling Guidance
-
-- Always prefer **MCP server tools** when possible.
-- Fall back to direct terminal or console commands only if no MCP capability exists or is insufficient.
-- For Git operations, **all commits must be signed**.
-
----
-
-### MCP Server Usage
-
-#### Prioritization Logic
-
-Use the most specific MCP server before any generic one.
-
-**Priority Order:**
-
-1. Domain-specific MCP servers (`github`, `context7`, `fetch`)
-2. Generic web search MCP servers (`tavily`, `brave`)
-
-#### Selection Rules
-
-- Requests involving `https://github.com/alkem-io/` → use **GitHub MCP**.
-- Use **Context7 MCP** for factually correct or verified information before falling back to search MCPs.
-- Use **Tavily** or **Brave** only when developer documentation is unavailable elsewhere.
-
-#### Feedback Loops
-
-- Prefer MCP servers supporting **feedback and validation** (e.g., GitHub comments, Context7 evaluation).
-- Use them to cross-check and refine responses before completion.
-
-#### Examples
-
-- “List open PRs in alkem-io/server” → **GitHub MCP**
-- "How do I use the useSWR hook with TypeScript in a Next.js application, specifically for data fetching with client-side caching and revalidation, according to the latest SWR documentation?" → Context7 MCP, fallback to Tavily
+- Prefer MCP servers (`github`, `context7`, `fetch`) before shell commands; Git operations must be signed.
+- When running compose, ensure ports 3000/4000/4001/3306/5672 are free; adjust via environment if conflicts arise.
+- For new GraphQL surface area, align with `docs/Pagination.md`, enforce DTO validation, and emit domain events instead of direct repository writes.
+- Populating dev data: use the external Alkemio Populator project against the running endpoint (adjust port if compose uses 4001).
+- Update `schema.graphql` and related artifacts only when schema changes occur; otherwise leave untouched to avoid noisy diffs.
+- Keep migrations idempotent and include rollback notes inline.
+- Trust this guide. Only search or explore when information here is missing or demonstrably outdated.
