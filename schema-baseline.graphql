@@ -1,8 +1,872 @@
-type APM {
-  """Endpoint where events are sent."""
-  endpoint: String!
-  """Flag indicating if real user monitoring is enabled."""
-  rumEnabled: Boolean!
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+"""A decentralized identifier (DID) as per the W3C standard."""
+scalar DID
+
+"""An Emoji."""
+scalar Emoji
+
+"""
+The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
+"""
+scalar JSON
+
+"""
+A representation of a Lifecycle Definition, based on XState. It is serialized JSON.
+"""
+scalar LifecycleDefinition
+
+"""A decentralized identifier (DID) as per the W3C standard."""
+scalar Markdown
+
+"""An identifier that originates from the underlying messaging platform."""
+scalar MessageID
+
+"""
+A human readable identifier, 3 <= length <= 28. Used for URL paths in clients. Characters allowed: a-z,A-Z,0-9.
+"""
+scalar NameID
+
+"""Cursor used for paginating search results."""
+scalar SearchCursor
+
+"""The `Upload` scalar type represents a file upload."""
+scalar Upload
+
+"""A uuid identifier. Length 36 characters."""
+scalar UUID
+
+"""Content of a Whiteboard, as JSON."""
+scalar WhiteboardContent
+
+enum AccountType {
+  ORGANIZATION
+  USER
+}
+
+enum ActivityEventType {
+  CALENDAR_EVENT_CREATED
+  CALLOUT_LINK_CREATED
+  CALLOUT_POST_COMMENT
+  CALLOUT_POST_CREATED
+  CALLOUT_PUBLISHED
+  CALLOUT_WHITEBOARD_CONTENT_MODIFIED
+  CALLOUT_WHITEBOARD_CREATED
+  DISCUSSION_COMMENT
+  MEMBER_JOINED
+  SUBSPACE_CREATED
+  UPDATE_SENT
+}
+
+enum ActivityFeedRoles {
+  ADMIN
+  LEAD
+  MEMBER
+}
+
+enum AgentType {
+  ACCOUNT
+  ORGANIZATION
+  SPACE
+  USER
+  VIRTUAL_CONTRIBUTOR
+}
+
+enum AiPersonaEngine {
+  COMMUNITY_MANAGER
+  EXPERT
+  GENERIC_OPENAI
+  GUIDANCE
+  LIBRA_FLOW
+  OPENAI_ASSISTANT
+}
+
+enum AuthenticationType {
+  EMAIL
+  GITHUB
+  LINKEDIN
+  MICROSOFT
+  UNKNOWN
+}
+
+enum AuthorizationCredential {
+  ACCOUNT_ADMIN
+  BETA_TESTER
+  GLOBAL_ADMIN
+  GLOBAL_ANONYMOUS
+  GLOBAL_COMMUNITY_READ
+  GLOBAL_LICENSE_MANAGER
+  GLOBAL_PLATFORM_MANAGER
+  GLOBAL_REGISTERED
+  GLOBAL_SPACES_READER
+  GLOBAL_SUPPORT
+  GLOBAL_SUPPORT_MANAGER
+  ORGANIZATION_ADMIN
+  ORGANIZATION_ASSOCIATE
+  ORGANIZATION_OWNER
+  SPACE_ADMIN
+  SPACE_LEAD
+  SPACE_MEMBER
+  SPACE_MEMBER_INVITEE
+  SPACE_SUBSPACE_ADMIN
+  USER_GROUP_MEMBER
+  USER_SELF_MANAGEMENT
+  VC_CAMPAIGN
+}
+
+enum AuthorizationPolicyType {
+  ACCOUNT
+  AGENT
+  AI_PERSONA
+  AI_SERVER
+  APPLICATION
+  CALENDAR
+  CALENDAR_EVENT
+  CALLOUT
+  CALLOUT_CONTRIBUTION
+  CALLOUT_FRAMING
+  CALLOUTS_SET
+  CLASSIFICATION
+  COLLABORATION
+  COMMUNICATION
+  COMMUNITY
+  COMMUNITY_GUIDELINES
+  DISCUSSION
+  DOCUMENT
+  FORUM
+  IN_MEMORY
+  INNOVATION_FLOW
+  INNOVATION_FLOW_STATE
+  INNOVATION_HUB
+  INNOVATION_PACK
+  INVITATION
+  KNOWLEDGE_BASE
+  LIBRARY
+  LICENSE
+  LICENSE_POLICY
+  LICENSING
+  LINK
+  MEMO
+  ORGANIZATION
+  ORGANIZATION_VERIFICATION
+  PLATFORM
+  POST
+  PROFILE
+  REFERENCE
+  ROLE_SET
+  ROOM
+  SPACE
+  SPACE_ABOUT
+  STORAGE_AGGREGATOR
+  STORAGE_BUCKET
+  TAGSET
+  TEMPLATE
+  TEMPLATE_CONTENT_SPACE
+  TEMPLATE_DEFAULT
+  TEMPLATES_MANAGER
+  TEMPLATES_SET
+  TIMELINE
+  UNKNOWN
+  USER
+  USER_GROUP
+  USER_SETTINGS
+  VIRTUAL_CONTRIBUTOR
+  VISUAL
+  WHITEBOARD
+}
+
+enum AuthorizationPrivilege {
+  ACCESS_INTERACTIVE_GUIDANCE
+  ACCOUNT_LICENSE_MANAGE
+  AUTHORIZATION_RESET
+  COMMUNITY_ASSIGN_VC_FROM_ACCOUNT
+  CONTRIBUTE
+  CREATE
+  CREATE_CALLOUT
+  CREATE_DISCUSSION
+  CREATE_INNOVATION_HUB
+  CREATE_INNOVATION_PACK
+  CREATE_MESSAGE
+  CREATE_MESSAGE_REACTION
+  CREATE_MESSAGE_REPLY
+  CREATE_ORGANIZATION
+  CREATE_POST
+  CREATE_SPACE
+  CREATE_SUBSPACE
+  CREATE_VIRTUAL_CONTRIBUTOR
+  CREATE_WHITEBOARD
+  DELETE
+  FILE_DELETE
+  FILE_UPLOAD
+  GRANT
+  GRANT_GLOBAL_ADMINS
+  LICENSE_RESET
+  MOVE_CONTRIBUTION
+  MOVE_POST
+  PLATFORM_ADMIN
+  PLATFORM_SETTINGS_ADMIN
+  READ
+  READ_ABOUT
+  READ_LICENSE
+  READ_USER_PII
+  READ_USER_SETTINGS
+  READ_USERS
+  RECEIVE_NOTIFICATIONS
+  RECEIVE_NOTIFICATIONS_ADMIN
+  RECEIVE_NOTIFICATIONS_ORGANIZATION_ADMIN
+  RECEIVE_NOTIFICATIONS_SPACE_ADMIN
+  RECEIVE_NOTIFICATIONS_SPACE_LEAD
+  ROLESET_ENTRY_ROLE_APPLY
+  ROLESET_ENTRY_ROLE_ASSIGN
+  ROLESET_ENTRY_ROLE_ASSIGN_ORGANIZATION
+  ROLESET_ENTRY_ROLE_INVITE
+  ROLESET_ENTRY_ROLE_INVITE_ACCEPT
+  ROLESET_ENTRY_ROLE_JOIN
+  TRANSFER_RESOURCE_ACCEPT
+  TRANSFER_RESOURCE_OFFER
+  UPDATE
+  UPDATE_CALLOUT_PUBLISHER
+  UPDATE_CONTENT
+  UPDATE_INNOVATION_FLOW
+}
+
+enum CalendarEventType {
+  DEADLINE
+  EVENT
+  MEETING
+  MILESTONE
+  OTHER
+  TRAINING
+}
+
+enum CalloutAllowedContributors {
+  ADMINS
+  MEMBERS
+  NONE
+}
+
+enum CalloutContributionType {
+  LINK
+  MEMO
+  POST
+  WHITEBOARD
+}
+
+enum CalloutFramingType {
+  LINK
+  MEMO
+  NONE
+  WHITEBOARD
+}
+
+enum CalloutsSetType {
+  COLLABORATION
+  KNOWLEDGE_BASE
+}
+
+enum CalloutVisibility {
+  DRAFT
+  PUBLISHED
+}
+
+enum CommunityMembershipPolicy {
+  APPLICATIONS
+  INVITATIONS
+  OPEN
+}
+
+enum CommunityMembershipStatus {
+  APPLICATION_PENDING
+  INVITATION_PENDING
+  MEMBER
+  NOT_MEMBER
+}
+
+enum ContentUpdatePolicy {
+  ADMINS
+  CONTRIBUTORS
+  OWNER
+}
+
+enum CredentialType {
+  ACCOUNT_ADMIN
+  ACCOUNT_LICENSE_PLUS
+  BETA_TESTER
+  GLOBAL_ADMIN
+  GLOBAL_ANONYMOUS
+  GLOBAL_COMMUNITY_READ
+  GLOBAL_LICENSE_MANAGER
+  GLOBAL_PLATFORM_MANAGER
+  GLOBAL_REGISTERED
+  GLOBAL_SPACES_READER
+  GLOBAL_SUPPORT
+  GLOBAL_SUPPORT_MANAGER
+  ORGANIZATION_ADMIN
+  ORGANIZATION_ASSOCIATE
+  ORGANIZATION_OWNER
+  SPACE_ADMIN
+  SPACE_FEATURE_MEMO_MULTI_USER
+  SPACE_FEATURE_SAVE_AS_TEMPLATE
+  SPACE_FEATURE_VIRTUAL_CONTRIBUTORS
+  SPACE_FEATURE_WHITEBOARD_MULTI_USER
+  SPACE_LEAD
+  SPACE_LICENSE_ENTERPRISE
+  SPACE_LICENSE_FREE
+  SPACE_LICENSE_PLUS
+  SPACE_LICENSE_PREMIUM
+  SPACE_MEMBER
+  SPACE_MEMBER_INVITEE
+  SPACE_SUBSPACE_ADMIN
+  USER_GROUP_MEMBER
+  USER_SELF_MANAGEMENT
+  VC_CAMPAIGN
+}
+
+enum DiscussionsOrderBy {
+  DISCUSSIONS_CREATEDATE_ASC
+  DISCUSSIONS_CREATEDATE_DESC
+}
+
+enum ForumDiscussionCategory {
+  CHALLENGE_CENTRIC
+  COMMUNITY_BUILDING
+  HELP
+  OTHER
+  PLATFORM_FUNCTIONALITIES
+  RELEASES
+}
+
+enum ForumDiscussionPrivacy {
+  AUTHENTICATED
+  AUTHOR
+  PUBLIC
+}
+
+"""Filter for identity verification status"""
+enum IdentityVerificationStatusFilter {
+  ALL
+  UNVERIFIED
+  VERIFIED
+}
+
+enum InnovationHubType {
+  LIST
+  VISIBILITY
+}
+
+enum InnovationPacksOrderBy {
+  NUMBER_OF_TEMPLATES_ASC
+  NUMBER_OF_TEMPLATES_DESC
+  RANDOM
+}
+
+enum LicenseEntitlementDataType {
+  FLAG
+  LIMIT
+}
+
+enum LicenseEntitlementType {
+  ACCOUNT_INNOVATION_HUB
+  ACCOUNT_INNOVATION_PACK
+  ACCOUNT_SPACE_FREE
+  ACCOUNT_SPACE_PLUS
+  ACCOUNT_SPACE_PREMIUM
+  ACCOUNT_VIRTUAL_CONTRIBUTOR
+  SPACE_FLAG_MEMO_MULTI_USER
+  SPACE_FLAG_SAVE_AS_TEMPLATE
+  SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS
+  SPACE_FLAG_WHITEBOARD_MULTI_USER
+  SPACE_FREE
+  SPACE_PLUS
+  SPACE_PREMIUM
+}
+
+enum LicenseType {
+  ACCOUNT
+  COLLABORATION
+  ROLESET
+  SPACE
+  TEMPLATE_CONTENT_SPACE
+  WHITEBOARD
+}
+
+enum LicensingCredentialBasedCredentialType {
+  ACCOUNT_LICENSE_PLUS
+  SPACE_FEATURE_MEMO_MULTI_USER
+  SPACE_FEATURE_SAVE_AS_TEMPLATE
+  SPACE_FEATURE_VIRTUAL_CONTRIBUTORS
+  SPACE_FEATURE_WHITEBOARD_MULTI_USER
+  SPACE_LICENSE_ENTERPRISE
+  SPACE_LICENSE_FREE
+  SPACE_LICENSE_PLUS
+  SPACE_LICENSE_PREMIUM
+}
+
+enum LicensingCredentialBasedPlanType {
+  ACCOUNT_FEATURE_FLAG
+  ACCOUNT_PLAN
+  SPACE_FEATURE_FLAG
+  SPACE_PLAN
+}
+
+enum MimeType {
+  AVIF
+  BMP
+  DOC
+  DOCX
+  GIF
+  JPEG
+  JPG
+  ODP
+  ODS
+  ODT
+  PDF
+  PNG
+  POTM
+  POTX
+  PPSM
+  PPSX
+  PPT
+  PPTM
+  PPTX
+  SVG
+  WEBP
+  XLS
+  XLSX
+  XPNG
+}
+
+enum MutationType {
+  CREATE
+  DELETE
+  UPDATE
+}
+
+enum NotificationEvent {
+  ORGANIZATION_ADMIN_MENTIONED
+  ORGANIZATION_ADMIN_MESSAGE
+  ORGANIZATION_MESSAGE_SENDER
+  PLATFORM_ADMIN_GLOBAL_ROLE_CHANGED
+  PLATFORM_ADMIN_SPACE_CREATED
+  PLATFORM_ADMIN_USER_PROFILE_CREATED
+  PLATFORM_ADMIN_USER_PROFILE_REMOVED
+  PLATFORM_FORUM_DISCUSSION_COMMENT
+  PLATFORM_FORUM_DISCUSSION_CREATED
+  SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION
+  SPACE_ADMIN_COMMUNITY_APPLICATION
+  SPACE_ADMIN_COMMUNITY_NEW_MEMBER
+  SPACE_ADMIN_VIRTUAL_CONTRIBUTOR_COMMUNITY_INVITATION_DECLINED
+  SPACE_COLLABORATION_CALLOUT_COMMENT
+  SPACE_COLLABORATION_CALLOUT_CONTRIBUTION
+  SPACE_COLLABORATION_CALLOUT_POST_CONTRIBUTION_COMMENT
+  SPACE_COLLABORATION_CALLOUT_PUBLISHED
+  SPACE_COMMUNICATION_UPDATE
+  SPACE_COMMUNITY_INVITATION_USER_PLATFORM
+  SPACE_LEAD_COMMUNICATION_MESSAGE
+  USER_COMMENT_REPLY
+  USER_MENTIONED
+  USER_MESSAGE
+  USER_MESSAGE_SENDER
+  USER_SIGN_UP_WELCOME
+  USER_SPACE_COMMUNITY_APPLICATION_DECLINED
+  USER_SPACE_COMMUNITY_INVITATION
+  USER_SPACE_COMMUNITY_JOINED
+  VIRTUAL_CONTRIBUTOR_ADMIN_SPACE_COMMUNITY_INVITATION
+}
+
+"""A categorization of notification type."""
+enum NotificationEventCategory {
+  ORGANIZATION
+  PLATFORM
+  SPACE_ADMIN
+  SPACE_MEMBER
+  USER
+  VIRTUAL_CONTRIBUTOR
+}
+
+enum NotificationEventInAppState {
+  ARCHIVED
+  READ
+  UNREAD
+}
+
+enum NotificationEventPayload {
+  ORGANIZATION_MESSAGE_DIRECT
+  ORGANIZATION_MESSAGE_ROOM
+  PLATFORM_FORUM_DISCUSSION
+  PLATFORM_FORUM_DISCUSSION_COMMENT
+  PLATFORM_GLOBAL_ROLE_CHANGE
+  PLATFORM_USER_PROFILE_REMOVED
+  SPACE
+  SPACE_COLLABORATION_CALLOUT
+  SPACE_COLLABORATION_CALLOUT_COMMENT
+  SPACE_COLLABORATION_CALLOUT_POST_COMMENT
+  SPACE_COMMUNICATION_MESSAGE_DIRECT
+  SPACE_COMMUNICATION_UPDATE
+  SPACE_COMMUNITY_APPLICATION
+  SPACE_COMMUNITY_CONTRIBUTOR
+  SPACE_COMMUNITY_INVITATION
+  SPACE_COMMUNITY_INVITATION_USER_PLATFORM
+  USER
+  USER_MESSAGE_DIRECT
+  USER_MESSAGE_ROOM
+  VIRTUAL_CONTRIBUTOR
+}
+
+enum OpenAIModel {
+  BABBAGE_002
+  DALL_E_2
+  DALL_E_3
+  DAVINCI_002
+  GPT_3_5_TURBO
+  GPT_4
+  GPT_4_5_PREVIEW
+  GPT_4_TURBO
+  GPT_4O
+  GPT_4O_AUDIO_PREVIEW
+  GPT_4O_MINI
+  GPT_4O_MINI_AUDIO_PREVIEW
+  GPT_4O_MINI_REALTIME_PREVIEW
+  GPT_4O_REALTIME_PREVIEW
+  O1
+  O1_MINI
+  O3_MINI
+  OMNI_MODERATION_LATEST
+  TEXT_EMBEDDING_3_LARGE
+  TEXT_EMBEDDING_3_SMALL
+  TEXT_EMBEDDING_ADA_002
+  TEXT_MODERATION_LATEST
+  TTS_1
+  TTS_1_HD
+  WHISPER_1
+}
+
+enum OrganizationVerificationEnum {
+  NOT_VERIFIED
+  VERIFIED_MANUAL_ATTESTATION
+}
+
+enum PlatformFeatureFlagName {
+  COMMUNICATIONS
+  COMMUNICATIONS_DISCUSSIONS
+  GUIDENCE_ENGINE
+  LANDING_PAGE
+  MEMO
+  NOTIFICATIONS
+  SSI
+  SUBSCRIPTIONS
+  WHITEBOARDS
+}
+
+enum ProfileType {
+  CALENDAR_EVENT
+  CALLOUT_FRAMING
+  COMMUNITY_GUIDELINES
+  CONTRIBUTION_LINK
+  DISCUSSION
+  INNOVATION_FLOW
+  INNOVATION_HUB
+  INNOVATION_PACK
+  KNOWLEDGE_BASE
+  MEMO
+  ORGANIZATION
+  POST
+  SPACE_ABOUT
+  TEMPLATE
+  USER
+  USER_GROUP
+  VIRTUAL_CONTRIBUTOR
+  VIRTUAL_PERSONA
+  WHITEBOARD
+}
+
+enum RoleName {
+  ADMIN
+  ANONYMOUS
+  ASSOCIATE
+  GLOBAL_ADMIN
+  GLOBAL_COMMUNITY_READER
+  GLOBAL_LICENSE_MANAGER
+  GLOBAL_PLATFORM_MANAGER
+  GLOBAL_SPACES_READER
+  GLOBAL_SUPPORT
+  GLOBAL_SUPPORT_MANAGER
+  LEAD
+  MEMBER
+  OWNER
+  PLATFORM_BETA_TESTER
+  PLATFORM_VC_CAMPAIGN
+  REGISTERED
+}
+
+enum RoleSetContributorType {
+  ORGANIZATION
+  USER
+  VIRTUAL
+}
+
+enum RoleSetInvitationResultType {
+  ALREADY_INVITED_TO_PLATFORM_AND_ROLE_SET
+  ALREADY_INVITED_TO_ROLE_SET
+  INVITATION_TO_PARENT_NOT_AUTHORIZED
+  INVITED_TO_PLATFORM_AND_ROLE_SET
+  INVITED_TO_ROLE_SET
+}
+
+enum RoleSetRoleImplicit {
+  ACCOUNT_ADMIN
+  SUBSPACE_ADMIN
+}
+
+enum RoleSetType {
+  ORGANIZATION
+  PLATFORM
+  SPACE
+}
+
+"""
+The category in which to search. A category may include a couple of entity types, e.g. "responses" include posts, whiteboard, etc.
+"""
+enum SearchCategory {
+  COLLABORATION_TOOLS
+  CONTRIBUTORS
+  RESPONSES
+  SPACES
+}
+
+"""The different types of available search results."""
+enum SearchResultType {
+  CALLOUT
+  MEMO
+  ORGANIZATION
+  POST
+  SPACE
+  SUBSPACE
+  USER
+  WHITEBOARD
+}
+
+enum SearchVisibility {
+  ACCOUNT
+  HIDDEN
+  PUBLIC
+}
+
+enum SpaceLevel {
+  L0
+  L1
+  L2
+}
+
+enum SpacePrivacyMode {
+  PRIVATE
+  PUBLIC
+}
+
+enum SpaceVisibility {
+  ACTIVE
+  ARCHIVED
+  DEMO
+}
+
+enum StorageAggregatorType {
+  ACCOUNT
+  ORGANIZATION
+  PLATFORM
+  SPACE
+  USER
+}
+
+enum TagsetReservedName {
+  CAPABILITIES
+  DEFAULT
+  FLOW_STATE
+  KEYWORDS
+  SKILLS
+}
+
+enum TagsetType {
+  FREEFORM
+  SELECT_MANY
+  SELECT_ONE
+}
+
+"""The current status of the task"""
+enum TaskStatus {
+  COMPLETED
+  ERRORED
+  IN_PROGRESS
+}
+
+enum TemplateDefaultType {
+  PLATFORM_SPACE
+  PLATFORM_SPACE_TUTORIALS
+  PLATFORM_SUBSPACE
+  PLATFORM_SUBSPACE_KNOWLEDGE
+  SPACE_SUBSPACE
+}
+
+enum TemplateType {
+  CALLOUT
+  COMMUNITY_GUIDELINES
+  POST
+  SPACE
+  WHITEBOARD
+}
+
+enum UrlType {
+  ADMIN
+  CALLOUT
+  CALLOUTS_SET
+  CONTRIBUTION_POST
+  CONTRIBUTION_WHITEBOARD
+  CONTRIBUTORS_EXPLORER
+  DISCUSSION
+  DOCUMENTATION
+  ERROR
+  FLOW
+  FORUM
+  HOME
+  INNOVATION_HUB
+  INNOVATION_LIBRARY
+  INNOVATION_PACKS
+  LOGIN
+  LOGOUT
+  NOT_AUTHORIZED
+  ORGANIZATION
+  RECOVERY
+  REGISTRATION
+  REQUIRED
+  RESTRICTED
+  SIGN_UP
+  SPACE
+  SPACE_EXPLORER
+  UNKNOWN
+  USER
+  VERIFY
+  VIRTUAL_CONTRIBUTOR
+}
+
+enum VirtualContributorBodyOfKnowledgeType {
+  ALKEMIO_KNOWLEDGE_BASE
+  ALKEMIO_SPACE
+  NONE
+  OTHER
+  WEBSITE
+}
+
+enum VirtualContributorDataAccessMode {
+  NONE
+  SPACE_PROFILE
+  SPACE_PROFILE_AND_CONTENTS
+}
+
+enum VirtualContributorInteractionMode {
+  DISCUSSION_TAGGING
+}
+
+enum VirtualContributorModelCardEntry {
+  SPACE_CAPABILITIES
+  SPACE_DATA_ACCESS
+  SPACE_ROLE_REQUIRED
+}
+
+enum VirtualContributorModelCardEntryFlagName {
+  SPACE_CAPABILITY_COMMUNITY_MANAGEMENT
+  SPACE_CAPABILITY_CREATE_CONTENT
+  SPACE_CAPABILITY_TAGGING
+  SPACE_DATA_ACCESS_ABOUT
+  SPACE_DATA_ACCESS_CONTENT
+  SPACE_DATA_ACCESS_SUBSPACES
+  SPACE_ROLE_ADMIN
+  SPACE_ROLE_MEMBER
+}
+
+enum VirtualContributorStatus {
+  INITIALIZING
+  READY
+}
+
+enum VisualType {
+  AVATAR
+  BANNER
+  BANNER_WIDE
+  CARD
+  WHITEBOARD_PREVIEW
+}
+
+enum WhiteboardPreviewMode {
+  AUTO
+  CUSTOM
+  FIXED
+}
+
+interface ActivityLogEntry {
+  """
+  Indicates if this Activity happened on a child Collaboration. Child results can be included via the "includeChild" parameter.
+  """
+  child: Boolean!
+  """
+  The id of the Collaboration entity within which the Activity was generated.
+  """
+  collaborationID: UUID!
+  """The timestamp for the Activity."""
+  createdDate: DateTime!
+  """The text details for this Activity."""
+  description: String!
+  id: UUID!
+  """The display name of the parent"""
+  parentDisplayName: String!
+  """The Space where the activity happened"""
+  space: Space
+  """The user that triggered this Activity."""
+  triggeredBy: User!
+  """The event type for this Activity."""
+  type: ActivityEventType!
+}
+
+interface Contributor {
+  """The Agent for the Contributor."""
+  agent: Agent!
+  """The authorization rules for the Contributor"""
+  authorization: Authorization
+  """The date at which the entity was created."""
+  createdDate: DateTime!
+  """The ID of the Contributor"""
+  id: UUID!
+  """A name identifier of the Contributor, unique within a given scope."""
+  nameID: NameID!
+  """The profile for the Contributor."""
+  profile: Profile!
+  """The date at which the entity was last updated."""
+  updatedDate: DateTime!
+}
+
+interface Groupable {
+  """The groups contained by this entity."""
+  groups: [UserGroup!]
+}
+
+"""An in-app notification payload. To not be queried directly"""
+interface InAppNotificationPayload {
+  """The payload type."""
+  type: NotificationEventPayload!
+}
+
+interface SearchResult {
+  """
+  The identifier of the search result. Does not represent the entity in Alkemio.
+  """
+  id: UUID!
+  """The score for this search result; more matches means a higher score."""
+  score: Float!
+  """The terms that were matched for this result"""
+  terms: [String!]!
+  """The type of returned result for this search."""
+  type: SearchResultType!
 }
 
 type Account {
@@ -42,13 +906,6 @@ type Account {
   virtualContributors: [VirtualContributor!]!
 }
 
-input AccountAuthorizationResetInput {
-  """
-  The identifier of the Account whose Authorization Policy should be reset.
-  """
-  accountID: UUID!
-}
-
 type AccountLicensePlan {
   """The number of Innovation Packs allowed."""
   innovationPacks: Int!
@@ -64,13 +921,6 @@ type AccountLicensePlan {
   virtualContributor: Int!
 }
 
-input AccountLicenseResetInput {
-  """
-  The identifier of the Account whose License and Entitlements should be reset.
-  """
-  accountID: UUID!
-}
-
 type AccountSubscription {
   """The expiry date of this subscription, null if it does never expire."""
   expires: DateTime
@@ -78,107 +928,15 @@ type AccountSubscription {
   name: LicensingCredentialBasedCredentialType!
 }
 
-enum AccountType {
-  ORGANIZATION
-  USER
-}
-
-input ActivityCreatedSubscriptionInput {
-  """The collaboration on which to subscribe for new activity"""
-  collaborationID: UUID!
-  """Include activities happened on child Collaborations."""
-  includeChild: Boolean
-  """
-  Which activity types to include in the results. Returns all by default.
-  """
-  types: [ActivityEventType!]
-}
-
 type ActivityCreatedSubscriptionResult {
   """The newly created activity"""
   activity: ActivityLogEntry!
-}
-
-enum ActivityEventType {
-  CALENDAR_EVENT_CREATED
-  CALLOUT_LINK_CREATED
-  CALLOUT_POST_COMMENT
-  CALLOUT_POST_CREATED
-  CALLOUT_PUBLISHED
-  CALLOUT_WHITEBOARD_CONTENT_MODIFIED
-  CALLOUT_WHITEBOARD_CREATED
-  DISCUSSION_COMMENT
-  MEMBER_JOINED
-  SUBSPACE_CREATED
-  UPDATE_SENT
 }
 
 type ActivityFeed {
   activityFeed: [ActivityLogEntry!]!
   pageInfo: PageInfo!
   total: Float!
-}
-
-input ActivityFeedGroupedQueryArgs {
-  """What events to exclude."""
-  excludeTypes: [ActivityEventType!]
-  """Number of activities to return."""
-  limit: Float
-  """
-  Returns only events that the current user triggered; Includes all by default.
-  """
-  myActivity: Boolean
-  """Activity from which Spaces to include; Includes all by default."""
-  roles: [ActivityFeedRoles!]
-  """Activity from which Spaces to include; Includes all by default."""
-  spaceIds: [UUID!]
-  """What events to include; Includes all by default."""
-  types: [ActivityEventType!]
-}
-
-input ActivityFeedQueryArgs {
-  """What events to exclude."""
-  excludeTypes: [ActivityEventType!]
-  """
-  Returns only events that the current user triggered; Includes all by default.
-  """
-  myActivity: Boolean
-  """Activity from which Spaces to include; Includes all by default."""
-  roles: [ActivityFeedRoles!]
-  """Activity from which Spaces to include; Includes all by default."""
-  spaceIds: [UUID!]
-  """What events to include; Includes all by default."""
-  types: [ActivityEventType!]
-}
-
-enum ActivityFeedRoles {
-  ADMIN
-  LEAD
-  MEMBER
-}
-
-interface ActivityLogEntry {
-  """
-  Indicates if this Activity happened on a child Collaboration. Child results can be included via the "includeChild" parameter.
-  """
-  child: Boolean!
-  """
-  The id of the Collaboration entity within which the Activity was generated.
-  """
-  collaborationID: UUID!
-  """The timestamp for the Activity."""
-  createdDate: DateTime!
-  """The text details for this Activity."""
-  description: String!
-  id: UUID!
-  """The display name of the parent"""
-  parentDisplayName: String!
-  """The Space where the activity happened"""
-  space: Space
-  """The user that triggered this Activity."""
-  triggeredBy: User!
-  """The event type for this Activity."""
-  type: ActivityEventType!
 }
 
 type ActivityLogEntryCalendarEventCreated implements ActivityLogEntry {
@@ -487,19 +1245,6 @@ type ActivityLogEntryUpdateSent implements ActivityLogEntry {
   updates: Room!
 }
 
-input ActivityLogInput {
-  """Display the activityLog results for the specified Collaboration."""
-  collaborationID: UUID!
-  """Include entries happened on child Collaborations."""
-  includeChild: Boolean
-  """The number of ActivityLog entries to return; if omitted return all."""
-  limit: Float
-  """
-  Which activity types to include in the results. Returns all by default.
-  """
-  types: [ActivityEventType!]
-}
-
 type Agent {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -541,14 +1286,6 @@ type AgentBeginVerifiedCredentialRequestOutput {
   qrCodeImg: String!
 }
 
-enum AgentType {
-  ACCOUNT
-  ORGANIZATION
-  SPACE
-  USER
-  VIRTUAL_CONTRIBUTOR
-}
-
 type AiPersona {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -570,15 +1307,6 @@ type AiPersona {
   updatedDate: DateTime!
 }
 
-enum AiPersonaEngine {
-  COMMUNITY_MANAGER
-  EXPERT
-  GENERIC_OPENAI
-  GUIDANCE
-  LIBRA_FLOW
-  OPENAI_ASSISTANT
-}
-
 type AiServer {
   """A particular AiPersona"""
   aiPersona(ID: UUID!): AiPersona!
@@ -594,6 +1322,13 @@ type AiServer {
   id: UUID!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
+}
+
+type APM {
+  """Endpoint where events are sent."""
+  endpoint: String!
+  """Flag indicating if real user monitoring is enabled."""
+  rumEnabled: Boolean!
 }
 
 type Application {
@@ -618,62 +1353,6 @@ type Application {
   updatedDate: DateTime!
 }
 
-input ApplicationEventInput {
-  applicationID: UUID!
-  eventName: String!
-}
-
-input ApplyForEntryRoleOnRoleSetInput {
-  questions: [CreateNVPInput!]!
-  roleSetID: UUID!
-}
-
-input AssignLicensePlanToAccount {
-  """The ID of the Account to assign the LicensePlan to."""
-  accountID: UUID!
-  """The ID of the LicensePlan to assign."""
-  licensePlanID: UUID!
-  """The ID of the Licensing to use."""
-  licensingID: UUID
-}
-
-input AssignLicensePlanToSpace {
-  """The ID of the LicensePlan to assign."""
-  licensePlanID: UUID!
-  """The ID of the Licensing to use."""
-  licensingID: UUID
-  """The ID of the Space to assign the LicensePlan to."""
-  spaceID: UUID!
-}
-
-input AssignPlatformRoleInput {
-  contributorID: UUID!
-  role: RoleName!
-}
-
-input AssignRoleOnRoleSetToOrganizationInput {
-  contributorID: UUID!
-  role: RoleName!
-  roleSetID: UUID!
-}
-
-input AssignRoleOnRoleSetToUserInput {
-  contributorID: UUID!
-  role: RoleName!
-  roleSetID: UUID!
-}
-
-input AssignRoleOnRoleSetToVirtualContributorInput {
-  contributorID: UUID!
-  role: RoleName!
-  roleSetID: UUID!
-}
-
-input AssignUserGroupMemberInput {
-  groupID: UUID!
-  userID: UUID!
-}
-
 type AuthenticationConfig {
   """Alkemio Authentication Providers Config."""
   providers: [AuthenticationProviderConfig!]!
@@ -690,16 +1369,6 @@ type AuthenticationProviderConfig {
   label: String!
   """Name of the authentication provider."""
   name: String!
-}
-
-union AuthenticationProviderConfigUnion = OryConfig
-
-enum AuthenticationType {
-  EMAIL
-  GITHUB
-  LINKEDIN
-  MICROSOFT
-  UNKNOWN
 }
 
 type Authorization {
@@ -733,31 +1402,6 @@ type Authorization {
   verifiedCredentialRules: [AuthorizationPolicyRuleVerifiedCredential!]
 }
 
-enum AuthorizationCredential {
-  ACCOUNT_ADMIN
-  BETA_TESTER
-  GLOBAL_ADMIN
-  GLOBAL_ANONYMOUS
-  GLOBAL_COMMUNITY_READ
-  GLOBAL_LICENSE_MANAGER
-  GLOBAL_PLATFORM_MANAGER
-  GLOBAL_REGISTERED
-  GLOBAL_SPACES_READER
-  GLOBAL_SUPPORT
-  GLOBAL_SUPPORT_MANAGER
-  ORGANIZATION_ADMIN
-  ORGANIZATION_ASSOCIATE
-  ORGANIZATION_OWNER
-  SPACE_ADMIN
-  SPACE_LEAD
-  SPACE_MEMBER
-  SPACE_MEMBER_INVITEE
-  SPACE_SUBSPACE_ADMIN
-  USER_GROUP_MEMBER
-  USER_SELF_MANAGEMENT
-  VC_CAMPAIGN
-}
-
 type AuthorizationPolicyRuleCredential {
   cascade: Boolean!
   criterias: [CredentialDefinition!]!
@@ -775,123 +1419,6 @@ type AuthorizationPolicyRuleVerifiedCredential {
   claimRule: String!
   credentialName: String!
   grantedPrivileges: [AuthorizationPrivilege!]!
-}
-
-enum AuthorizationPolicyType {
-  ACCOUNT
-  AGENT
-  AI_PERSONA
-  AI_SERVER
-  APPLICATION
-  CALENDAR
-  CALENDAR_EVENT
-  CALLOUT
-  CALLOUTS_SET
-  CALLOUT_CONTRIBUTION
-  CALLOUT_FRAMING
-  CLASSIFICATION
-  COLLABORATION
-  COMMUNICATION
-  COMMUNITY
-  COMMUNITY_GUIDELINES
-  DISCUSSION
-  DOCUMENT
-  FORUM
-  INNOVATION_FLOW
-  INNOVATION_FLOW_STATE
-  INNOVATION_HUB
-  INNOVATION_PACK
-  INVITATION
-  IN_MEMORY
-  KNOWLEDGE_BASE
-  LIBRARY
-  LICENSE
-  LICENSE_POLICY
-  LICENSING
-  LINK
-  MEMO
-  ORGANIZATION
-  ORGANIZATION_VERIFICATION
-  PLATFORM
-  POST
-  PROFILE
-  REFERENCE
-  ROLE_SET
-  ROOM
-  SPACE
-  SPACE_ABOUT
-  STORAGE_AGGREGATOR
-  STORAGE_BUCKET
-  TAGSET
-  TEMPLATE
-  TEMPLATES_MANAGER
-  TEMPLATES_SET
-  TEMPLATE_CONTENT_SPACE
-  TEMPLATE_DEFAULT
-  TIMELINE
-  UNKNOWN
-  USER
-  USER_GROUP
-  USER_SETTINGS
-  VIRTUAL_CONTRIBUTOR
-  VISUAL
-  WHITEBOARD
-}
-
-enum AuthorizationPrivilege {
-  ACCESS_INTERACTIVE_GUIDANCE
-  ACCOUNT_LICENSE_MANAGE
-  AUTHORIZATION_RESET
-  COMMUNITY_ASSIGN_VC_FROM_ACCOUNT
-  CONTRIBUTE
-  CREATE
-  CREATE_CALLOUT
-  CREATE_DISCUSSION
-  CREATE_INNOVATION_HUB
-  CREATE_INNOVATION_PACK
-  CREATE_MESSAGE
-  CREATE_MESSAGE_REACTION
-  CREATE_MESSAGE_REPLY
-  CREATE_ORGANIZATION
-  CREATE_POST
-  CREATE_SPACE
-  CREATE_SUBSPACE
-  CREATE_VIRTUAL_CONTRIBUTOR
-  CREATE_WHITEBOARD
-  DELETE
-  FILE_DELETE
-  FILE_UPLOAD
-  GRANT
-  GRANT_GLOBAL_ADMINS
-  LICENSE_RESET
-  MOVE_CONTRIBUTION
-  MOVE_POST
-  PLATFORM_ADMIN
-  PLATFORM_SETTINGS_ADMIN
-  READ
-  READ_ABOUT
-  READ_LICENSE
-  READ_USERS
-  READ_USER_PII
-  READ_USER_SETTINGS
-  RECEIVE_NOTIFICATIONS
-  RECEIVE_NOTIFICATIONS_ADMIN
-  RECEIVE_NOTIFICATIONS_IN_APP
-  RECEIVE_NOTIFICATIONS_ORGANIZATION_ADMIN
-  RECEIVE_NOTIFICATIONS_SPACE_ADMIN
-  RECEIVE_NOTIFICATIONS_SPACE_LEAD
-  ROLESET_ENTRY_ROLE_APPLY
-  ROLESET_ENTRY_ROLE_ASSIGN
-  ROLESET_ENTRY_ROLE_ASSIGN_ORGANIZATION
-  ROLESET_ENTRY_ROLE_INVITE
-  ROLESET_ENTRY_ROLE_INVITE_ACCEPT
-  ROLESET_ENTRY_ROLE_JOIN
-  TRANSFER_RESOURCE_ACCEPT
-  TRANSFER_RESOURCE_OFFER
-  UPDATE
-  UPDATE_CALLOUT_PUBLISHER
-  UPDATE_CONTENT
-  UPDATE_INNOVATION_FLOW
 }
 
 type Calendar {
@@ -949,15 +1476,6 @@ type CalendarEvent {
   wholeDay: Boolean!
 }
 
-enum CalendarEventType {
-  DEADLINE
-  EVENT
-  MEETING
-  MILESTONE
-  OTHER
-  TRAINING
-}
-
 type Callout {
   """
   The activity for this Callout. The number of Contributions if the callout allows contributions, or the number of comments if it does not.
@@ -1012,12 +1530,6 @@ type Callout {
   updatedDate: DateTime!
 }
 
-enum CalloutAllowedContributors {
-  ADMINS
-  MEMBERS
-  NONE
-}
-
 type CalloutContribution {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -1054,13 +1566,6 @@ type CalloutContributionDefaults {
   whiteboardContent: WhiteboardContent
 }
 
-enum CalloutContributionType {
-  LINK
-  MEMO
-  POST
-  WHITEBOARD
-}
-
 type CalloutContributionsCountOutput {
   """The number of contributions of type Link in this callout"""
   link: Float!
@@ -1093,13 +1598,6 @@ type CalloutFraming {
   updatedDate: DateTime!
   """The Whiteboard for framing the associated Callout."""
   whiteboard: Whiteboard
-}
-
-enum CalloutFramingType {
-  LINK
-  MEMO
-  NONE
-  WHITEBOARD
 }
 
 type CalloutPostCreated {
@@ -1140,20 +1638,15 @@ type CalloutSettingsFraming {
   commentsEnabled: Boolean!
 }
 
-enum CalloutVisibility {
-  DRAFT
-  PUBLISHED
-}
-
 type CalloutsSet {
   """The authorization rules for the entity"""
   authorization: Authorization
   """The list of Callouts for this CalloutsSet object."""
   callouts(
-    """The IDs of the callouts to return"""
-    IDs: [UUID!]
     """Return only Callouts matching the specified filter."""
     classificationTagsets: [TagsetArgs!]
+    """The IDs of the callouts to return"""
+    IDs: [UUID!]
     """The number of Callouts to return; if omitted return all Callouts."""
     limit: Float
     """
@@ -1179,25 +1672,6 @@ type CalloutsSet {
   type: CalloutsSetType!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
-}
-
-enum CalloutsSetType {
-  COLLABORATION
-  KNOWLEDGE_BASE
-}
-
-input ChatGuidanceAnswerRelevanceInput {
-  """The answer id."""
-  id: String!
-  """Is the answer relevant or not."""
-  relevant: Boolean!
-}
-
-input ChatGuidanceInput {
-  """The language of the answer."""
-  language: String
-  """The question that is being asked."""
-  question: String!
 }
 
 type Classification {
@@ -1249,14 +1723,6 @@ type Communication {
   updates: Room!
 }
 
-input CommunicationAdminEnsureAccessInput {
-  communityID: UUID!
-}
-
-input CommunicationAdminMembershipInput {
-  communityID: UUID!
-}
-
 type CommunicationAdminMembershipResult {
   """Display name of the result"""
   displayName: String!
@@ -1269,10 +1735,6 @@ type CommunicationAdminMembershipResult {
 type CommunicationAdminOrphanedUsageResult {
   """Rooms in the Communication platform that are not used"""
   rooms: [CommunicationAdminRoomResult!]!
-}
-
-input CommunicationAdminRemoveOrphanedRoomInput {
-  roomID: String!
 }
 
 type CommunicationAdminRoomMembershipResult {
@@ -1299,42 +1761,6 @@ type CommunicationAdminRoomResult {
   id: String!
   """The members of the orphaned room"""
   members: [String!]!
-}
-
-input CommunicationAdminUpdateRoomStateInput {
-  isPublic: Boolean!
-  isWorldVisible: Boolean!
-  roomID: String!
-}
-
-type CommunicationRoom {
-  """The display name of the room"""
-  displayName: String!
-  """The identifier of the room"""
-  id: String!
-  """The messages that have been sent to the Room."""
-  messages: [Message!]!
-}
-
-input CommunicationSendMessageToCommunityLeadsInput {
-  """The Community the message is being sent to"""
-  communityId: UUID!
-  """The message being sent"""
-  message: String!
-}
-
-input CommunicationSendMessageToOrganizationInput {
-  """The message being sent"""
-  message: String!
-  """The Organization the message is being sent to"""
-  organizationId: UUID!
-}
-
-input CommunicationSendMessageToUserInput {
-  """The message being sent"""
-  message: String!
-  """All Users the message is being sent to"""
-  receiverIds: [UUID!]!
 }
 
 type Community implements Groupable {
@@ -1437,12 +1863,6 @@ type CommunityInvitationResult {
   spacePendingMembershipInfo: SpacePendingMembershipInfo!
 }
 
-enum CommunityMembershipPolicy {
-  APPLICATIONS
-  INVITATIONS
-  OPEN
-}
-
 type CommunityMembershipResult {
   """The child community memberships"""
   childMemberships: [CommunityMembershipResult!]!
@@ -1450,13 +1870,6 @@ type CommunityMembershipResult {
   id: UUID!
   """The space for the membership is for"""
   space: Space!
-}
-
-enum CommunityMembershipStatus {
-  APPLICATION_PENDING
-  INVITATION_PENDING
-  MEMBER
-  NOT_MEMBER
 }
 
 type Config {
@@ -1476,41 +1889,6 @@ type Config {
   sentry: Sentry!
   """Configuration for storage providers, e.g. file"""
   storage: StorageConfig!
-}
-
-enum ContentUpdatePolicy {
-  ADMINS
-  CONTRIBUTORS
-  OWNER
-}
-
-input ContributionsFilterInput {
-  """The IDs of the Contributions to return. If omitted return all."""
-  IDs: [UUID!]
-  """The contributions types to return. If omitted return all."""
-  types: [CalloutContributionType!]
-}
-
-interface Contributor {
-  """The Agent for the Contributor."""
-  agent: Agent!
-  """The authorization rules for the Contributor"""
-  authorization: Authorization
-  """The date at which the entity was created."""
-  createdDate: DateTime!
-  """The ID of the Contributor"""
-  id: UUID!
-  """A name identifier of the Contributor, unique within a given scope."""
-  nameID: NameID!
-  """The profile for the Contributor."""
-  profile: Profile!
-  """The date at which the entity was last updated."""
-  updatedDate: DateTime!
-}
-
-input ContributorFilterInput {
-  """Return contributors with credentials in the provided list"""
-  credentials: [AuthorizationCredential!]
 }
 
 type ContributorRolePolicy {
@@ -1544,59 +1922,6 @@ type ContributorRoles {
   spaces: [RolesResultSpace!]!
 }
 
-input ConversionVcSpaceToVcKnowledgeBaseInput {
-  """The Virtual Contributor to be converted."""
-  virtualContributorID: UUID!
-}
-
-input ConvertSpaceL1ToSpaceL0Input {
-  """The Space L1 to be promoted to be a new Space L0. """
-  spaceL1ID: UUID!
-}
-
-input ConvertSpaceL1ToSpaceL2Input {
-  """
-  The Space L1 to be the parent of the Space L1 when it is moved to be L2. 
-  """
-  parentSpaceL1ID: UUID!
-  """
-  The Space L1 to be moved to be a child of another Space L. Both the L1 Space and the parent Space must be in the same L0 Space. 
-  """
-  spaceL1ID: UUID!
-}
-
-input ConvertSpaceL2ToSpaceL1Input {
-  """The Space L2 to be promoted. """
-  spaceL2ID: UUID!
-}
-
-input CreateAiPersonaInput {
-  engine: AiPersonaEngine = EXPERT
-  externalConfig: ExternalConfigInput
-  prompt: [String!] = []
-}
-
-input CreateCalendarEventOnCalendarInput {
-  calendarID: UUID!
-  """The length of the event in days."""
-  durationDays: Float
-  """The length of the event in minutes."""
-  durationMinutes: Float!
-  """Flag to indicate if this event is for multiple days."""
-  multipleDays: Boolean!
-  """A readable identifier, unique within the containing scope."""
-  nameID: NameID
-  profileData: CreateProfileInput!
-  """The start date for the event."""
-  startDate: DateTime!
-  tags: [String!]
-  type: CalendarEventType!
-  """Is the event visible on the parent calendar."""
-  visibleOnParentCalendar: Boolean!
-  """Flag to indicate if this event is for a whole day."""
-  wholeDay: Boolean!
-}
-
 type CreateCalloutContributionData {
   link: CreateLinkData
   memo: CreateMemoData
@@ -1613,24 +1938,6 @@ type CreateCalloutContributionDefaultsData {
   """The default description to use for new Post contributions."""
   postDescription: Markdown
   whiteboardContent: WhiteboardContent
-}
-
-input CreateCalloutContributionDefaultsInput {
-  """The default title to use for new contributions."""
-  defaultDisplayName: String
-  """The default description to use for new Post contributions."""
-  postDescription: Markdown
-  whiteboardContent: WhiteboardContent
-}
-
-input CreateCalloutContributionInput {
-  link: CreateLinkInput
-  memo: CreateMemoInput
-  post: CreatePostInput
-  """The sort order to assign to this Contribution."""
-  sortOrder: Float
-  type: CalloutContributionType!
-  whiteboard: CreateWhiteboardInput
 }
 
 type CreateCalloutData {
@@ -1662,67 +1969,7 @@ type CreateCalloutFramingData {
   whiteboard: CreateWhiteboardData
 }
 
-input CreateCalloutFramingInput {
-  link: CreateLinkInput
-  memo: CreateMemoInput
-  profile: CreateProfileInput!
-  tags: [String!]
-  """
-  The type of additional content attached to the framing of the callout. Defaults to None.
-  """
-  type: CalloutFramingType
-  whiteboard: CreateWhiteboardInput
-}
-
-input CreateCalloutInput {
-  classification: CreateClassificationInput
-  contributionDefaults: CreateCalloutContributionDefaultsInput
-  """Contributions to be created with this Callout."""
-  contributions: [CreateCalloutContributionInput!]
-  framing: CreateCalloutFramingInput!
-  """A readable identifier, unique within the containing scope."""
-  nameID: NameID
-  """
-  Send notification if this flag is true and visibility is PUBLISHED. Defaults to false.
-  """
-  sendNotification: Boolean
-  settings: CreateCalloutSettingsInput
-  """The sort order to assign to this Callout."""
-  sortOrder: Float
-}
-
-input CreateCalloutOnCalloutsSetInput {
-  calloutsSetID: UUID!
-  classification: CreateClassificationInput
-  contributionDefaults: CreateCalloutContributionDefaultsInput
-  """Contributions to be created with this Callout."""
-  contributions: [CreateCalloutContributionInput!]
-  framing: CreateCalloutFramingInput!
-  """A readable identifier, unique within the containing scope."""
-  nameID: NameID
-  """
-  Send notification if this flag is true and visibility is PUBLISHED. Defaults to false.
-  """
-  sendNotification: Boolean
-  settings: CreateCalloutSettingsInput
-  """The sort order to assign to this Callout."""
-  sortOrder: Float
-}
-
 type CreateCalloutSettingsContributionData {
-  """Allowed Contribution types."""
-  allowedTypes: [CalloutContributionType!]
-  """Indicate who can add more contributions to the callout."""
-  canAddContributions: CalloutAllowedContributors
-  """Can comment to contributions callout."""
-  commentsEnabled: Boolean
-  """
-  Can add contributions to the Callout. Allowed Contribution types is going to be readOnly, so this field can be used to enable or disable the contribution temporarily instead of setting allowedTypes to None.
-  """
-  enabled: Boolean
-}
-
-input CreateCalloutSettingsContributionInput {
   """Allowed Contribution types."""
   allowedTypes: [CalloutContributionType!]
   """Indicate who can add more contributions to the callout."""
@@ -1747,34 +1994,13 @@ type CreateCalloutSettingsFramingData {
   commentsEnabled: Boolean
 }
 
-input CreateCalloutSettingsFramingInput {
-  """Can comment to callout framing."""
-  commentsEnabled: Boolean
-}
-
-input CreateCalloutSettingsInput {
-  contribution: CreateCalloutSettingsContributionInput
-  framing: CreateCalloutSettingsFramingInput
-  """Visibility of the Callout. Defaults to PUBLISHED."""
-  visibility: CalloutVisibility
-}
-
 type CreateCalloutsSetData {
   """The Callouts to add to this Collaboration."""
   calloutsData: [CreateCalloutData!]
 }
 
-input CreateCalloutsSetInput {
-  """The Callouts to add to this Collaboration."""
-  calloutsData: [CreateCalloutInput!]
-}
-
 type CreateClassificationData {
   tagsets: [CreateTagsetData!]!
-}
-
-input CreateClassificationInput {
-  tagsets: [CreateTagsetInput!]!
 }
 
 type CreateCollaborationData {
@@ -1784,51 +2010,13 @@ type CreateCollaborationData {
   innovationFlowData: CreateInnovationFlowData
 }
 
-input CreateCollaborationInput {
-  """The CalloutsSet to use for this Collaboration."""
-  calloutsSetData: CreateCalloutsSetInput!
-  """The InnovationFlow Template to use for this Collaboration."""
-  innovationFlowData: CreateInnovationFlowInput
-}
-
-input CreateCollaborationOnSpaceInput {
-  """Add callouts from the template to the Collaboration; defaults to true."""
-  addCallouts: Boolean = true
-  """Add tutorial callouts to the Collaboration; defaults to false."""
-  addTutorialCallouts: Boolean = false
-  """The CalloutsSet to use for this Collaboration."""
-  calloutsSetData: CreateCalloutsSetInput!
-  """The InnovationFlow Template to use for this Collaboration."""
-  innovationFlowData: CreateInnovationFlowInput
-}
-
 type CreateCommunityGuidelinesData {
   profile: CreateProfileData!
-}
-
-input CreateCommunityGuidelinesInput {
-  profile: CreateProfileInput!
-}
-
-input CreateContributionOnCalloutInput {
-  calloutID: UUID!
-  link: CreateLinkInput
-  memo: CreateMemoInput
-  post: CreatePostInput
-  """The sort order to assign to this Contribution."""
-  sortOrder: Float
-  type: CalloutContributionType!
-  whiteboard: CreateWhiteboardInput
 }
 
 type CreateInnovationFlowData {
   profile: CreateProfileData!
   states: [CreateInnovationFlowStateData!]!
-}
-
-input CreateInnovationFlowInput {
-  profile: CreateProfileInput!
-  states: [CreateInnovationFlowStateInput!]!
 }
 
 type CreateInnovationFlowStateData {
@@ -1843,96 +2031,9 @@ type CreateInnovationFlowStateData {
   sortOrder: Float
 }
 
-input CreateInnovationFlowStateInput {
-  """The explanation text to clarify the State."""
-  description: Markdown
-  """The display name for the State"""
-  displayName: String!
-  settings: CreateInnovationFlowStateSettingsInput
-  """
-  The sort order for the State; if not specified, it will be set to the next highest order.
-  """
-  sortOrder: Float
-}
-
 type CreateInnovationFlowStateSettingsData {
   """The flag to set."""
   allowNewCallouts: Boolean!
-}
-
-input CreateInnovationFlowStateSettingsInput {
-  """The flag to set."""
-  allowNewCallouts: Boolean!
-}
-
-input CreateInnovationHubOnAccountInput {
-  """The Account where the InnovationHub is to be created."""
-  accountID: UUID!
-  """A readable identifier, unique within the containing scope."""
-  nameID: NameID
-  profileData: CreateProfileInput!
-  """
-  A list of Spaces to include in this Innovation Hub. Only valid when type 'list' is used.
-  """
-  spaceListFilter: [UUID!]
-  """
-  Spaces with which visibility this Innovation Hub will display. Only valid when type 'visibility' is used.
-  """
-  spaceVisibilityFilter: SpaceVisibility
-  """The subdomain to associate the Innovation Hub with."""
-  subdomain: String!
-  """The type of Innovation Hub."""
-  type: InnovationHubType!
-}
-
-input CreateInnovationPackOnAccountInput {
-  """The Account where the InnovationPack is to be created."""
-  accountID: UUID!
-  """A readable identifier, unique within the containing scope."""
-  nameID: NameID
-  profileData: CreateProfileInput!
-  tags: [String!]
-}
-
-input CreateKnowledgeBaseInput {
-  """The CalloutsSet to use for this KnowledgeBase."""
-  calloutsSetData: CreateCalloutsSetInput
-  """The Profile to use for this KnowledgeBase."""
-  profile: CreateProfileInput!
-}
-
-input CreateLicensePlanOnLicensingFrameworkInput {
-  """Assign this plan to all new Organization accounts"""
-  assignToNewOrganizationAccounts: Boolean!
-  """Assign this plan to all new User accounts"""
-  assignToNewUserAccounts: Boolean!
-  """Is this plan enabled?"""
-  enabled: Boolean!
-  """Is this plan free?"""
-  isFree: Boolean!
-  """The credential to represent this plan"""
-  licenseCredential: LicensingCredentialBasedCredentialType!
-  licensingFrameworkID: UUID!
-  """The name of the License Plan"""
-  name: String!
-  """The price per month of this plan."""
-  pricePerMonth: Float
-  """Does this plan require contact support"""
-  requiresContactSupport: Boolean!
-  """Does this plan require a payment method?"""
-  requiresPaymentMethod: Boolean!
-  """The sorting order for this Plan."""
-  sortOrder: Float!
-  """Is there a trial period enabled"""
-  trialEnabled: Boolean!
-  """The type of this License Plan."""
-  type: LicensingCredentialBasedPlanType!
-}
-
-input CreateLicensePolicyCredentialRuleInput {
-  credentialType: LicensingCredentialBasedCredentialType!
-  grantedEntitlements: [LicensingGrantedEntitlementInput!]!
-  name: String!
 }
 
 type CreateLinkData {
@@ -1940,21 +2041,7 @@ type CreateLinkData {
   uri: String
 }
 
-input CreateLinkInput {
-  profile: CreateProfileInput!
-  uri: String
-}
-
 type CreateLocationData {
-  addressLine1: String
-  addressLine2: String
-  city: String
-  country: String
-  postalCode: String
-  stateOrProvince: String
-}
-
-input CreateLocationInput {
   addressLine1: String
   addressLine2: String
   city: String
@@ -1968,35 +2055,7 @@ type CreateMemoData {
   profile: CreateProfileData
 }
 
-input CreateMemoInput {
-  markdown: Markdown
-  profile: CreateProfileInput
-}
-
-input CreateNVPInput {
-  name: String!
-  sortOrder: Float!
-  value: String!
-}
-
-input CreateOrganizationInput {
-  contactEmail: String
-  domain: String
-  legalEntityName: String
-  """A readable identifier, unique within the containing scope."""
-  nameID: NameID
-  profileData: CreateProfileInput!
-  website: String
-}
-
 type CreatePostData {
-  tags: [String!]
-}
-
-input CreatePostInput {
-  """A readable identifier, unique within the containing scope."""
-  nameID: NameID
-  profileData: CreateProfileInput!
   tags: [String!]
 }
 
@@ -2014,125 +2073,10 @@ type CreateProfileData {
   visuals: [CreateVisualOnProfileData!]
 }
 
-input CreateProfileInput {
-  description: Markdown
-  """The display name for the entity."""
-  displayName: String!
-  location: CreateLocationInput
-  referencesData: [CreateReferenceInput!]
-  """A memorable short description for this entity."""
-  tagline: String
-  tags: [String!]
-  tagsets: [CreateTagsetInput!]
-  """The visuals URLs"""
-  visuals: [CreateVisualOnProfileInput!]
-}
-
 type CreateReferenceData {
   description: String
   name: String!
   uri: String
-}
-
-input CreateReferenceInput {
-  description: String
-  name: String!
-  uri: String
-}
-
-input CreateReferenceOnProfileInput {
-  description: String
-  name: String!
-  profileID: UUID!
-  uri: String
-}
-
-input CreateSpaceAboutInput {
-  """The CommunityGuidelines for the Space"""
-  guidelines: CreateCommunityGuidelinesInput
-  profileData: CreateProfileInput!
-  who: Markdown
-  why: Markdown
-}
-
-input CreateSpaceOnAccountInput {
-  about: CreateSpaceAboutInput!
-  """The Account where the Space is to be created."""
-  accountID: UUID!
-  collaborationData: CreateCollaborationOnSpaceInput!
-  """The license plan the user wishes to use when creating the space."""
-  licensePlanID: UUID
-  """A readable identifier, unique within the containing scope."""
-  nameID: NameID
-  settings: CreateSpaceSettingsInput
-  """The Template to use for instantiating the Collaboration."""
-  spaceTemplateID: UUID
-}
-
-input CreateSpaceSettingsCollaborationInput {
-  """
-  Flag to control if events from Subspaces are visible on this Space calendar as well.
-  """
-  allowEventsFromSubspaces: Boolean!
-  """Flag to control if members can create callouts."""
-  allowMembersToCreateCallouts: Boolean!
-  """Flag to control if members can create subspaces."""
-  allowMembersToCreateSubspaces: Boolean!
-  """Flag to control if members can create video calls in this Space."""
-  allowMembersToVideoCall: Boolean!
-  """
-  Flag to control if ability to contribute is inherited from parent Space.
-  """
-  inheritMembershipRights: Boolean!
-}
-
-input CreateSpaceSettingsInput {
-  """"""
-  collaboration: CreateSpaceSettingsCollaborationInput
-  """"""
-  membership: CreateSpaceSettingsMembershipInput
-  """"""
-  privacy: CreateSpaceSettingsPrivacyInput
-}
-
-input CreateSpaceSettingsMembershipInput {
-  """Flag to control if Subspace admins can invite for this Space."""
-  allowSubspaceAdminsToInviteMembers: Boolean!
-  """The membership policy in usage for this Space"""
-  policy: CommunityMembershipPolicy!
-  """The organizations that are trusted to Join as members for this Space"""
-  trustedOrganizations: [UUID!]!
-}
-
-input CreateSpaceSettingsPrivacyInput {
-  """Flag to control if Platform Support has admin rights."""
-  allowPlatformSupportAsAdmin: Boolean
-  """"""
-  mode: SpacePrivacyMode
-}
-
-input CreateStateOnInnovationFlowInput {
-  """The explanation text to clarify the State."""
-  description: Markdown
-  """The display name for the State"""
-  displayName: String!
-  innovationFlowID: UUID!
-  settings: CreateInnovationFlowStateSettingsInput
-  """
-  The sort order for the State; if not specified, it will be set to the next highest order.
-  """
-  sortOrder: Float
-}
-
-input CreateSubspaceInput {
-  about: CreateSpaceAboutInput!
-  collaborationData: CreateCollaborationOnSpaceInput!
-  """A readable identifier, unique within the containing scope."""
-  nameID: NameID
-  settings: CreateSpaceSettingsInput
-  spaceID: UUID!
-  """The Template to use for instantiating the Collaboration."""
-  spaceTemplateID: UUID
 }
 
 type CreateTagsetData {
@@ -2141,115 +2085,7 @@ type CreateTagsetData {
   type: TagsetType
 }
 
-input CreateTagsetInput {
-  name: String!
-  tags: [String!]
-  type: TagsetType
-}
-
-input CreateTagsetOnProfileInput {
-  name: String!
-  profileID: UUID
-  tags: [String!]
-  type: TagsetType
-}
-
-input CreateTemplateContentSpaceInput {
-  about: CreateSpaceAboutInput!
-  collaborationData: CreateCollaborationInput!
-  level: SpaceLevel!
-  """Create the settings for the Space."""
-  settings: CreateSpaceSettingsInput!
-  subspaces: [CreateTemplateContentSpaceInput!]
-}
-
-input CreateTemplateFromContentSpaceOnTemplatesSetInput {
-  """The ID of the ContentSpace to use as for the Template."""
-  contentSpaceID: UUID!
-  """A readable identifier, unique within the containing scope."""
-  nameID: NameID
-  profileData: CreateProfileInput!
-  tags: [String!]
-  templatesSetID: UUID!
-}
-
-input CreateTemplateFromSpaceOnTemplatesSetInput {
-  """A readable identifier, unique within the containing scope."""
-  nameID: NameID
-  profileData: CreateProfileInput!
-  """Whether to reproduce the hierarchy or just the space."""
-  recursive: Boolean
-  """The ID of the Space to use as the content for the Template."""
-  spaceID: UUID!
-  tags: [String!]
-  templatesSetID: UUID!
-}
-
-input CreateTemplateOnTemplatesSetInput {
-  """The Callout to associate with this template."""
-  calloutData: CreateCalloutInput
-  """The Community guidelines to associate with this template."""
-  communityGuidelinesData: CreateCommunityGuidelinesInput
-  """The Template Content for a Space to associate with this template."""
-  contentSpaceData: CreateTemplateContentSpaceInput
-  """A readable identifier, unique within the containing scope."""
-  nameID: NameID
-  """Post Template: The default description to be pre-filled."""
-  postDefaultDescription: Markdown
-  profileData: CreateProfileInput!
-  tags: [String!]
-  templatesSetID: UUID!
-  """The type of the Template to be created."""
-  type: TemplateType!
-  """The Whiteboard to associate with this template."""
-  whiteboard: CreateWhiteboardInput
-}
-
-input CreateUserGroupInput {
-  parentID: UUID!
-  profile: CreateProfileInput!
-}
-
-input CreateUserInput {
-  accountUpn: String
-  email: String!
-  firstName: String
-  lastName: String
-  """A readable identifier, unique within the containing scope."""
-  nameID: NameID
-  phone: String
-  profileData: CreateProfileInput!
-}
-
-input CreateVirtualContributorOnAccountInput {
-  """The Account where the VirtualContributor is to be created."""
-  accountID: UUID!
-  """The AI Persona to use for this Virtual Contributor."""
-  aiPersona: CreateAiPersonaInput!
-  """Description of the body of knowledge for this VC."""
-  bodyOfKnowledgeDescription: String
-  """The ID of the body of knowledge (if any) to use."""
-  bodyOfKnowledgeID: String
-  bodyOfKnowledgeType: VirtualContributorBodyOfKnowledgeType = ALKEMIO_SPACE
-  dataAccessMode: VirtualContributorDataAccessMode = SPACE_PROFILE_AND_CONTENTS
-  interactionModes: [VirtualContributorInteractionMode!] = [DISCUSSION_TAGGING]
-  """The KnowledgeBase to use for this Collaboration."""
-  knowledgeBaseData: CreateKnowledgeBaseInput
-  """A readable identifier, unique within the containing scope."""
-  nameID: NameID
-  profileData: CreateProfileInput!
-}
-
 type CreateVisualOnProfileData {
-  """The type of visual."""
-  name: VisualType!
-  """
-  The URI of the image. Needs to be a url inside Alkemio already uploaded to a StorageBucket. It will be then copied to the Profile holding this Visual.
-  """
-  uri: String!
-}
-
-input CreateVisualOnProfileInput {
   """The type of visual."""
   name: VisualType!
   """
@@ -2263,13 +2099,6 @@ type CreateWhiteboardData {
   """A readable identifier, unique within the containing scope."""
   nameID: NameID
   profile: CreateProfileData
-}
-
-input CreateWhiteboardInput {
-  content: WhiteboardContent
-  """A readable identifier, unique within the containing scope."""
-  nameID: NameID
-  profile: CreateProfileInput
 }
 
 type Credential {
@@ -2309,154 +2138,6 @@ type CredentialMetadataOutput {
   types: [String!]!
   """System recognized unique type for the credential"""
   uniqueType: String!
-}
-
-enum CredentialType {
-  ACCOUNT_ADMIN
-  ACCOUNT_LICENSE_PLUS
-  BETA_TESTER
-  GLOBAL_ADMIN
-  GLOBAL_ANONYMOUS
-  GLOBAL_COMMUNITY_READ
-  GLOBAL_LICENSE_MANAGER
-  GLOBAL_PLATFORM_MANAGER
-  GLOBAL_REGISTERED
-  GLOBAL_SPACES_READER
-  GLOBAL_SUPPORT
-  GLOBAL_SUPPORT_MANAGER
-  ORGANIZATION_ADMIN
-  ORGANIZATION_ASSOCIATE
-  ORGANIZATION_OWNER
-  SPACE_ADMIN
-  SPACE_FEATURE_MEMO_MULTI_USER
-  SPACE_FEATURE_SAVE_AS_TEMPLATE
-  SPACE_FEATURE_VIRTUAL_CONTRIBUTORS
-  SPACE_FEATURE_WHITEBOARD_MULTI_USER
-  SPACE_LEAD
-  SPACE_LICENSE_ENTERPRISE
-  SPACE_LICENSE_FREE
-  SPACE_LICENSE_PLUS
-  SPACE_LICENSE_PREMIUM
-  SPACE_MEMBER
-  SPACE_MEMBER_INVITEE
-  SPACE_SUBSPACE_ADMIN
-  USER_GROUP_MEMBER
-  USER_SELF_MANAGEMENT
-  VC_CAMPAIGN
-}
-
-"""A decentralized identifier (DID) as per the W3C standard."""
-scalar DID
-
-"""
-A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
-"""
-scalar DateTime
-
-input DeleteAiPersonaInput {
-  ID: UUID!
-}
-
-input DeleteApplicationInput {
-  ID: UUID!
-}
-
-input DeleteCalendarEventInput {
-  ID: UUID!
-}
-
-input DeleteCalloutInput {
-  ID: UUID!
-}
-
-input DeleteContributionInput {
-  ID: UUID!
-}
-
-input DeleteDiscussionInput {
-  ID: UUID!
-}
-
-input DeleteDocumentInput {
-  ID: UUID!
-}
-
-input DeleteInnovationHubInput {
-  ID: UUID!
-}
-
-input DeleteInnovationPackInput {
-  ID: UUID!
-}
-
-input DeleteInvitationInput {
-  ID: UUID!
-}
-
-input DeleteLicensePlanInput {
-  ID: UUID!
-}
-
-input DeleteLicensePolicyCredentialRuleInput {
-  ID: UUID!
-}
-
-input DeleteLinkInput {
-  ID: UUID!
-}
-
-input DeleteMemoInput {
-  ID: UUID!
-}
-
-input DeleteOrganizationInput {
-  ID: UUID!
-}
-
-input DeletePlatformInvitationInput {
-  ID: UUID!
-}
-
-input DeletePostInput {
-  ID: UUID!
-}
-
-input DeleteReferenceInput {
-  ID: UUID!
-}
-
-input DeleteSpaceInput {
-  ID: UUID!
-}
-
-input DeleteStateOnInnovationFlowInput {
-  ID: UUID!
-  innovationFlowID: UUID!
-}
-
-input DeleteStorageBuckeetInput {
-  ID: UUID!
-}
-
-input DeleteTemplateInput {
-  ID: UUID!
-}
-
-input DeleteUserGroupInput {
-  ID: UUID!
-}
-
-input DeleteUserInput {
-  ID: UUID!
-  deleteIdentity: Boolean = true
-}
-
-input DeleteVirtualContributorInput {
-  ID: UUID!
-}
-
-input DeleteWhiteboardInput {
-  ID: UUID!
 }
 
 type DirectRoom {
@@ -2510,20 +2191,6 @@ type DiscussionDetails {
   url: String!
 }
 
-input DiscussionsInput {
-  """
-  The number of Discussion entries to return; if omitted return all Discussions.
-  """
-  limit: Float
-  """The sort order of the Discussions to return."""
-  orderBy: DiscussionsOrderBy
-}
-
-enum DiscussionsOrderBy {
-  DISCUSSIONS_CREATEDATE_ASC
-  DISCUSSIONS_CREATEDATE_DESC
-}
-
 type Document {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -2551,16 +2218,6 @@ type Document {
   url: String!
 }
 
-"""An Emoji."""
-scalar Emoji
-
-input ExploreSpacesInput {
-  """Take into account only the activity in the past X days."""
-  daysOld: Float = 30
-  """Amount of Spaces returned."""
-  limit: Float = 30
-}
-
 type ExternalConfig {
   """The API key for the external LLM provider."""
   apiKey: String
@@ -2568,15 +2225,6 @@ type ExternalConfig {
   assistantId: String
   """The OpenAI model to use for the service"""
   model: OpenAIModel!
-}
-
-input ExternalConfigInput {
-  """The API key for the external LLM provider."""
-  apiKey: String
-  """The assistant ID backing the service in OpenAI`s assistant API"""
-  assistantId: String
-  """The OpenAI model to use for the service"""
-  model: OpenAIModel! = O1
 }
 
 type FileStorageConfig {
@@ -2631,32 +2279,6 @@ type Forum {
   updatedDate: DateTime!
 }
 
-input ForumCreateDiscussionInput {
-  """The category for the Discussion"""
-  category: ForumDiscussionCategory!
-  """
-  The identifier for the Forum entity the Discussion is being created on.
-  """
-  forumID: UUID!
-  profile: CreateProfileInput!
-  tags: [String!]
-}
-
-enum ForumDiscussionCategory {
-  CHALLENGE_CENTRIC
-  COMMUNITY_BUILDING
-  HELP
-  OTHER
-  PLATFORM_FUNCTIONALITIES
-  RELEASES
-}
-
-enum ForumDiscussionPrivacy {
-  AUTHENTICATED
-  AUTHOR
-  PUBLIC
-}
-
 type Geo {
   """Is the geo functionality enabled."""
   enabled: Boolean!
@@ -2673,56 +2295,6 @@ type GeoLocation {
   The Longitude for this Location, derived from (City, Country) if those are set.
   """
   longitude: Float
-}
-
-input GrantAuthorizationCredentialInput {
-  """The resource to which this credential is tied."""
-  resourceID: UUID
-  type: AuthorizationCredential!
-  """The user to whom the credential is being granted."""
-  userID: UUID!
-}
-
-input GrantOrganizationAuthorizationCredentialInput {
-  """The Organization to whom the credential is being granted."""
-  organizationID: UUID!
-  """The resource to which this credential is tied."""
-  resourceID: UUID
-  type: AuthorizationCredential!
-}
-
-interface Groupable {
-  """The groups contained by this entity."""
-  groups: [UserGroup!]
-}
-
-type ISearchCategoryResult {
-  """
-  Provide this with your next search query to fetch the next set of results.
-  """
-  cursor: SearchCursor
-  """The ranked search results for this category, sorted by relevance"""
-  results: [SearchResult!]!
-  """The total number of search results. Not implemented yet."""
-  total: Float!
-}
-
-type ISearchResults {
-  """The search results for Callouts."""
-  calloutResults: ISearchCategoryResult!
-  """The search results for contributions (Posts, Whiteboards etc)."""
-  contributionResults: ISearchCategoryResult!
-  """The search results for contributors (Users, Organizations)."""
-  contributorResults: ISearchCategoryResult!
-  """The search results for Spaces / Subspaces."""
-  spaceResults: ISearchCategoryResult!
-}
-
-"""Filter for identity verification status"""
-enum IdentityVerificationStatusFilter {
-  ALL
-  UNVERIFIED
-  VERIFIED
 }
 
 type InAppNotification {
@@ -2746,12 +2318,6 @@ type InAppNotification {
   type: NotificationEvent!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
-}
-
-"""An in-app notification payload. To not be queried directly"""
-interface InAppNotificationPayload {
-  """The payload type."""
-  type: NotificationEventPayload!
 }
 
 type InAppNotificationPayloadOrganization implements InAppNotificationPayload {
@@ -3012,11 +2578,6 @@ type InnovationHub {
   updatedDate: DateTime!
 }
 
-enum InnovationHubType {
-  LIST
-  VISIBILITY
-}
-
 type InnovationPack {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -3040,23 +2601,6 @@ type InnovationPack {
   templatesSet: TemplatesSet
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
-}
-
-input InnovationPacksInput {
-  """
-  The number of Discussion entries to return; if omitted return all InnovationPacks.
-  """
-  limit: Float
-  """
-  The sort order of the InnovationPacks to return. Defaults to number of templates Descending.
-  """
-  orderBy: InnovationPacksOrderBy
-}
-
-enum InnovationPacksOrderBy {
-  NUMBER_OF_TEMPLATES_ASC
-  NUMBER_OF_TEMPLATES_DESC
-  RANDOM
 }
 
 type InputCreatorQueryResults {
@@ -3103,29 +2647,26 @@ type Invitation {
   welcomeMessage: String
 }
 
-input InvitationEventInput {
-  eventName: String!
-  invitationID: UUID!
+type ISearchCategoryResult {
+  """
+  Provide this with your next search query to fetch the next set of results.
+  """
+  cursor: SearchCursor
+  """The ranked search results for this category, sorted by relevance"""
+  results: [SearchResult!]!
+  """The total number of search results. Not implemented yet."""
+  total: Float!
 }
 
-input InviteForEntryRoleOnRoleSetInput {
-  """Additional roles to assign in addition to the entry Role."""
-  extraRoles: [RoleName!]!
-  """The identifiers for the contributors being invited."""
-  invitedContributorIDs: [UUID!]!
-  invitedUserEmails: [String!]!
-  roleSetID: UUID!
-  """The welcome message to send"""
-  welcomeMessage: String
-}
-
-"""
-The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
-"""
-scalar JSON
-
-input JoinAsEntryRoleOnRoleSetInput {
-  roleSetID: UUID!
+type ISearchResults {
+  """The search results for Callouts."""
+  calloutResults: ISearchCategoryResult!
+  """The search results for contributions (Posts, Whiteboards etc)."""
+  contributionResults: ISearchCategoryResult!
+  """The search results for contributors (Users, Organizations)."""
+  contributorResults: ISearchCategoryResult!
+  """The search results for Spaces / Subspaces."""
+  spaceResults: ISearchCategoryResult!
 }
 
 type KnowledgeBase {
@@ -3191,13 +2732,6 @@ type Library {
   virtualContributors: [VirtualContributor!]!
 }
 
-input LibraryTemplatesFilterInput {
-  """
-  Return Templates within the Library matching the specified Template Types.
-  """
-  types: [TemplateType!]
-}
-
 type License {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -3236,27 +2770,6 @@ type LicenseEntitlement {
   updatedDate: DateTime!
   """The amount of the spcified entitlement used."""
   usage: Float!
-}
-
-enum LicenseEntitlementDataType {
-  FLAG
-  LIMIT
-}
-
-enum LicenseEntitlementType {
-  ACCOUNT_INNOVATION_HUB
-  ACCOUNT_INNOVATION_PACK
-  ACCOUNT_SPACE_FREE
-  ACCOUNT_SPACE_PLUS
-  ACCOUNT_SPACE_PREMIUM
-  ACCOUNT_VIRTUAL_CONTRIBUTOR
-  SPACE_FLAG_MEMO_MULTI_USER
-  SPACE_FLAG_SAVE_AS_TEMPLATE
-  SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS
-  SPACE_FLAG_WHITEBOARD_MULTI_USER
-  SPACE_FREE
-  SPACE_PLUS
-  SPACE_PREMIUM
 }
 
 type LicensePlan {
@@ -3305,15 +2818,6 @@ type LicensePolicy {
   updatedDate: DateTime!
 }
 
-enum LicenseType {
-  ACCOUNT
-  COLLABORATION
-  ROLESET
-  SPACE
-  TEMPLATE_CONTENT_SPACE
-  WHITEBOARD
-}
-
 type Licensing {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -3329,25 +2833,6 @@ type Licensing {
   updatedDate: DateTime!
 }
 
-enum LicensingCredentialBasedCredentialType {
-  ACCOUNT_LICENSE_PLUS
-  SPACE_FEATURE_MEMO_MULTI_USER
-  SPACE_FEATURE_SAVE_AS_TEMPLATE
-  SPACE_FEATURE_VIRTUAL_CONTRIBUTORS
-  SPACE_FEATURE_WHITEBOARD_MULTI_USER
-  SPACE_LICENSE_ENTERPRISE
-  SPACE_LICENSE_FREE
-  SPACE_LICENSE_PLUS
-  SPACE_LICENSE_PREMIUM
-}
-
-enum LicensingCredentialBasedPlanType {
-  ACCOUNT_FEATURE_FLAG
-  ACCOUNT_PLAN
-  SPACE_FEATURE_FLAG
-  SPACE_PLAN
-}
-
 type LicensingCredentialBasedPolicyCredentialRule {
   credentialType: LicensingCredentialBasedCredentialType!
   grantedEntitlements: [LicensingGrantedEntitlement!]!
@@ -3361,12 +2846,6 @@ type LicensingGrantedEntitlement {
   type: LicenseEntitlementType!
 }
 
-input LicensingGrantedEntitlementInput {
-  limit: Float!
-  """The entitlement that is granted."""
-  type: LicenseEntitlementType!
-}
-
 type Lifecycle {
   """The date at which the entity was created."""
   createdDate: DateTime!
@@ -3375,11 +2854,6 @@ type Lifecycle {
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
 }
-
-"""
-A representation of a Lifecycle Definition, based on XState. It is serialized JSON.
-"""
-scalar LifecycleDefinition
 
 type Link {
   """The authorization rules for the entity"""
@@ -3575,8 +3049,32 @@ type LookupQueryResults {
   whiteboard(ID: UUID!): Whiteboard
 }
 
-"""A decentralized identifier (DID) as per the W3C standard."""
-scalar Markdown
+type Memo {
+  """The authorization rules for the entity"""
+  authorization: Authorization
+  """
+  The last saved binary stateV2 of the Yjs document, used to collaborate on the Memo, represented in base64.
+  """
+  content: String
+  """The policy governing who can update the Memo content."""
+  contentUpdatePolicy: ContentUpdatePolicy!
+  """The user that created this Memo"""
+  createdBy: User
+  """The date at which the entity was created."""
+  createdDate: DateTime!
+  """The ID of the entity"""
+  id: UUID!
+  """Whether the Memo is multi-user enabled on Space level."""
+  isMultiUser: Boolean!
+  """The last saved content of the Memo, represented in Markdown."""
+  markdown: Markdown
+  """A name identifier of the entity, unique within a given scope."""
+  nameID: NameID!
+  """The Profile for this Memo."""
+  profile: Profile!
+  """The date at which the entity was last updated."""
+  updatedDate: DateTime!
+}
 
 type MeQueryResults {
   """The community applications current authenticated user can act on."""
@@ -3615,8 +3113,10 @@ type MeQueryResults {
     """Amount of items before the cursor"""
     last: Int
   ): PaginatedInAppNotifications!
-  """The number of unread notifications for the current authenticated user."""
-  notificationsUnreadCount(filter: NotificationEventsFilterInput): Float!
+  """
+  The total number of unread notifications for the current authenticated user across all notification types.
+  """
+  notificationsUnreadCount: Float!
   """The Spaces the current user is a member of as a flat list."""
   spaceMembershipsFlat: [CommunityMembershipResult!]!
   """The hierarchy of the Spaces the current user is a member."""
@@ -3628,33 +3128,6 @@ type MeQueryResults {
   The current authenticated User;  null if not yet registered on the platform
   """
   user: User
-}
-
-type Memo {
-  """The authorization rules for the entity"""
-  authorization: Authorization
-  """
-  The last saved binary stateV2 of the Yjs document, used to collaborate on the Memo, represented in base64.
-  """
-  content: String
-  """The policy governing who can update the Memo content."""
-  contentUpdatePolicy: ContentUpdatePolicy!
-  """The user that created this Memo"""
-  createdBy: User
-  """The date at which the entity was created."""
-  createdDate: DateTime!
-  """The ID of the entity"""
-  id: UUID!
-  """Whether the Memo is multi-user enabled on Space level."""
-  isMultiUser: Boolean!
-  """The last saved content of the Memo, represented in Markdown."""
-  markdown: Markdown
-  """A name identifier of the entity, unique within a given scope."""
-  nameID: NameID!
-  """The Profile for this Memo."""
-  profile: Profile!
-  """The date at which the entity was last updated."""
-  updatedDate: DateTime!
 }
 
 """A message that was sent in a chat room"""
@@ -3697,9 +3170,6 @@ type MessageDetails {
   room: Room!
 }
 
-"""An identifier that originates from the underlying messaging platform."""
-scalar MessageID
-
 """
 Details about the parent entity that is using the room the message was sent in.
 """
@@ -3720,33 +3190,6 @@ type Metadata {
 type MigrateEmbeddings {
   """Result from the mutation execution."""
   success: Boolean!
-}
-
-enum MimeType {
-  AVIF
-  BMP
-  DOC
-  DOCX
-  GIF
-  JPEG
-  JPG
-  ODP
-  ODS
-  ODT
-  PDF
-  PNG
-  POTM
-  POTX
-  PPSM
-  PPSX
-  PPT
-  PPTM
-  PPTX
-  SVG
-  WEBP
-  XLS
-  XLSX
-  XPNG
 }
 
 type ModelCardAiEngineResult {
@@ -3782,13 +3225,6 @@ type ModelCardSpaceUsageResult {
   flags: [VirtualContributorModelCardFlag!]!
   """The Model Card Entry type."""
   modelCardEntry: VirtualContributorModelCardEntry!
-}
-
-input MoveCalloutContributionInput {
-  """ID of the Callout to move the Contribution to."""
-  calloutID: UUID!
-  """ID of the Contribution to move."""
-  contributionID: UUID!
 }
 
 type Mutation {
@@ -4013,15 +3449,13 @@ type Mutation {
   """Reset the License with Entitlements on the specified Account."""
   licenseResetOnAccount(resetData: AccountLicenseResetInput!): Account!
   """
-  Mark multiple notifications as read. If no IDs are provided, marks all user notifications as read.
+  Mark notifications as read. If no filter is provided, marks all user notifications as read. If filter with types is provided, marks only those notification types as read.
   """
-  markNotificationsAsRead(notificationIds: [String!]!): Boolean!
+  markNotificationsAsRead(filter: NotificationEventsFilterInput): Boolean!
   """
-  Mark multiple notifications as unread. If no IDs are provided, marks all user notifications as unread.
+  Mark notifications as unread. If no filter is provided, marks all user notifications as unread. If filter with types is provided, marks only those notification types as unread.
   """
-  markNotificationsAsUnread(notificationIds: [String!]!): Boolean!
-  """Sends a message on the specified User`s behalf and returns the room id"""
-  messageUser(messageData: UserSendMessageInput!): String!
+  markNotificationsAsUnread(filter: NotificationEventsFilterInput): Boolean!
   """Moves the specified Contribution to another Callout."""
   moveContributionToCallout(moveContributionData: MoveCalloutContributionInput!): CalloutContribution!
   """Refresh the Bodies of Knowledge on All VCs"""
@@ -4068,8 +3502,10 @@ type Mutation {
   sendMessageToOrganization(messageData: CommunicationSendMessageToOrganizationInput!): Boolean!
   """Sends an comment message. Returns the id of the new Update message."""
   sendMessageToRoom(messageData: RoomSendMessageInput!): Message!
-  """Send message to a User."""
-  sendMessageToUser(messageData: CommunicationSendMessageToUserInput!): Boolean!
+  """Sends a message on the specified User`s behalf and returns the room id"""
+  sendMessageToUserDirect(messageData: UserSendMessageInput!): String!
+  """Send message to multiple Users."""
+  sendMessageToUsers(messageData: CommunicationSendMessageToUsersInput!): Boolean!
   """
   Transfer the specified Callout from its current CalloutsSet to the target CalloutsSet. Note: this is experimental, and only for GlobalAdmins. The user that executes the transfer becomes the creator of the Callout.
   """
@@ -4096,12 +3532,12 @@ type Mutation {
   Update the information describing the publishing of the specified Callout.
   """
   updateCalloutPublishInfo(calloutData: UpdateCalloutPublishInfoInput!): Callout!
-  """Update the visibility of the specified Callout."""
-  updateCalloutVisibility(calloutData: UpdateCalloutVisibilityInput!): Callout!
   """
   Update the sortOrder field of the supplied Callouts to increase as per the order that they are provided in.
   """
   updateCalloutsSortOrder(sortOrderData: UpdateCalloutsSortOrderInput!): [Callout!]!
+  """Update the visibility of the specified Callout."""
+  updateCalloutVisibility(calloutData: UpdateCalloutVisibilityInput!): Callout!
   """Updates a Tagset on a Classification."""
   updateClassificationTagset(updateData: UpdateClassificationSelectTagsetValueInput!): Tagset!
   """
@@ -4200,105 +3636,9 @@ type Mutation {
   uploadImageOnVisual(file: Upload!, uploadData: VisualUploadImageInput!): Visual!
 }
 
-enum MutationType {
-  CREATE
-  DELETE
-  UPDATE
-}
-
 type MySpaceResults {
   latestActivity: ActivityLogEntry
   space: Space!
-}
-
-type NVP {
-  """The date at which the entity was created."""
-  createdDate: DateTime!
-  """The ID of the entity"""
-  id: UUID!
-  name: String!
-  """The date at which the entity was last updated."""
-  updatedDate: DateTime!
-  value: String!
-}
-
-"""
-A human readable identifier, 3 <= length <= 28. Used for URL paths in clients. Characters allowed: a-z,A-Z,0-9.
-"""
-scalar NameID
-
-enum NotificationEvent {
-  ORGANIZATION_ADMIN_MENTIONED
-  ORGANIZATION_ADMIN_MESSAGE
-  ORGANIZATION_MESSAGE_SENDER
-  PLATFORM_ADMIN_GLOBAL_ROLE_CHANGED
-  PLATFORM_ADMIN_SPACE_CREATED
-  PLATFORM_ADMIN_USER_PROFILE_CREATED
-  PLATFORM_ADMIN_USER_PROFILE_REMOVED
-  PLATFORM_FORUM_DISCUSSION_COMMENT
-  PLATFORM_FORUM_DISCUSSION_CREATED
-  SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION
-  SPACE_ADMIN_COMMUNITY_APPLICATION
-  SPACE_ADMIN_COMMUNITY_NEW_MEMBER
-  SPACE_COLLABORATION_CALLOUT_COMMENT
-  SPACE_COLLABORATION_CALLOUT_CONTRIBUTION
-  SPACE_COLLABORATION_CALLOUT_POST_CONTRIBUTION_COMMENT
-  SPACE_COLLABORATION_CALLOUT_PUBLISHED
-  SPACE_COMMUNICATION_UPDATE
-  SPACE_COMMUNITY_INVITATION_USER_PLATFORM
-  SPACE_LEAD_COMMUNICATION_MESSAGE
-  USER_COMMENT_REPLY
-  USER_MENTIONED
-  USER_MESSAGE
-  USER_MESSAGE_SENDER
-  USER_SIGN_UP_WELCOME
-  USER_SPACE_COMMUNITY_INVITATION
-  USER_SPACE_COMMUNITY_JOINED
-  VIRTUAL_CONTRIBUTOR_ADMIN_SPACE_COMMUNITY_INVITATION
-}
-
-"""A categorization of notification type."""
-enum NotificationEventCategory {
-  ORGANIZATION
-  PLATFORM
-  SPACE_ADMIN
-  SPACE_MEMBER
-  USER
-  VIRTUAL_CONTRIBUTOR
-}
-
-enum NotificationEventInAppState {
-  ARCHIVED
-  READ
-  UNREAD
-}
-
-enum NotificationEventPayload {
-  ORGANIZATION_MESSAGE_DIRECT
-  ORGANIZATION_MESSAGE_ROOM
-  PLATFORM_FORUM_DISCUSSION
-  PLATFORM_FORUM_DISCUSSION_COMMENT
-  PLATFORM_GLOBAL_ROLE_CHANGE
-  PLATFORM_USER_PROFILE_REMOVED
-  SPACE
-  SPACE_COLLABORATION_CALLOUT
-  SPACE_COLLABORATION_CALLOUT_COMMENT
-  SPACE_COLLABORATION_CALLOUT_POST_COMMENT
-  SPACE_COMMUNICATION_MESSAGE_DIRECT
-  SPACE_COMMUNICATION_UPDATE
-  SPACE_COMMUNITY_APPLICATION
-  SPACE_COMMUNITY_CONTRIBUTOR
-  SPACE_COMMUNITY_INVITATION
-  SPACE_COMMUNITY_INVITATION_USER_PLATFORM
-  USER
-  USER_MESSAGE_DIRECT
-  USER_MESSAGE_ROOM
-  VIRTUAL_CONTRIBUTOR
-}
-
-input NotificationEventsFilterInput {
-  """Return Notifications with a type matching one of the provided types."""
-  types: [NotificationEvent!]
 }
 
 type NotificationRecipientResult {
@@ -4310,56 +3650,15 @@ type NotificationRecipientResult {
   triggeredBy: User
 }
 
-input NotificationRecipientsInput {
-  """The type of notification setting to look up recipients for."""
-  eventType: NotificationEvent!
-  """The ID of the Organization to use to determine recipients."""
-  organizationID: UUID
-  """The ID of the space to retrieve the recipients for."""
-  spaceID: UUID
-  """The ID of the User that triggered the event."""
-  triggeredBy: UUID
-  """
-  The ID of the specific user recipient for user-related notifications (e.g., invitations, mentions).
-  """
-  userID: UUID
-  """The ID of the Virtual Contributor to use to determine recipients."""
-  virtualContributorID: UUID
-}
-
-input NotificationSettingInput {
-  """Enable email notifications for this setting"""
-  email: Boolean
-  """Enable in-app notifications for this setting"""
-  inApp: Boolean
-}
-
-enum OpenAIModel {
-  BABBAGE_002
-  DALL_E_2
-  DALL_E_3
-  DAVINCI_002
-  GPT_3_5_TURBO
-  GPT_4
-  GPT_4O
-  GPT_4O_AUDIO_PREVIEW
-  GPT_4O_MINI
-  GPT_4O_MINI_AUDIO_PREVIEW
-  GPT_4O_MINI_REALTIME_PREVIEW
-  GPT_4O_REALTIME_PREVIEW
-  GPT_4_5_PREVIEW
-  GPT_4_TURBO
-  O1
-  O1_MINI
-  O3_MINI
-  OMNI_MODERATION_LATEST
-  TEXT_EMBEDDING_3_LARGE
-  TEXT_EMBEDDING_3_SMALL
-  TEXT_EMBEDDING_ADA_002
-  TEXT_MODERATION_LATEST
-  TTS_1
-  TTS_1_HD
-  WHISPER_1
+type NVP {
+  """The date at which the entity was created."""
+  createdDate: DateTime!
+  """The ID of the entity"""
+  id: UUID!
+  name: String!
+  """The date at which the entity was last updated."""
+  updatedDate: DateTime!
+  value: String!
 }
 
 type Organization implements Contributor & Groupable {
@@ -4404,21 +3703,6 @@ type Organization implements Contributor & Groupable {
   website: String
 }
 
-input OrganizationAuthorizationResetInput {
-  """
-  The identifier of the Organization whose Authorization Policy should be reset.
-  """
-  organizationID: UUID!
-}
-
-input OrganizationFilterInput {
-  contactEmail: String
-  displayName: String
-  domain: String
-  nameID: String
-  website: String
-}
-
 type OrganizationSettings {
   """The membership settings for this Organization."""
   membership: OrganizationSettingsMembership!
@@ -4440,6 +3724,11 @@ type OrganizationSettingsPrivacy {
   contributionRolesPubliclyVisible: Boolean!
 }
 
+type OrganizationsInRolesResponse {
+  organizations: [Organization!]!
+  role: RoleName!
+}
+
 type OrganizationVerification {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -4458,21 +3747,6 @@ type OrganizationVerification {
   status: OrganizationVerificationEnum!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
-}
-
-enum OrganizationVerificationEnum {
-  NOT_VERIFIED
-  VERIFIED_MANUAL_ATTESTATION
-}
-
-input OrganizationVerificationEventInput {
-  eventName: String!
-  organizationVerificationID: UUID!
-}
-
-type OrganizationsInRolesResponse {
-  organizations: [Organization!]!
-  role: RoleName!
 }
 
 type OryConfig {
@@ -4624,10 +3898,10 @@ type PlatformAdminQueryResults {
   Retrieve all Spaces on the Platform. This is only available to Platform Admins.
   """
   spaces(
-    """The IDs of the entities to return"""
-    IDs: [UUID!]
     """Return Spaces matching the provided filter."""
     filter: SpaceFilterInput
+    """The IDs of the entities to return"""
+    IDs: [UUID!]
   ): [Space!]!
   """
   Retrieve all Users on the Platform. This is only available to Platform Admins.
@@ -4665,18 +3939,6 @@ type PlatformFeatureFlag {
   enabled: Boolean!
   """The name of the feature flag"""
   name: PlatformFeatureFlagName!
-}
-
-enum PlatformFeatureFlagName {
-  COMMUNICATIONS
-  COMMUNICATIONS_DISCUSSIONS
-  GUIDENCE_ENGINE
-  LANDING_PAGE
-  MEMO
-  NOTIFICATIONS
-  SSI
-  SUBSCRIPTIONS
-  WHITEBOARDS
 }
 
 type PlatformIntegrationSettings {
@@ -4840,28 +4102,6 @@ type ProfileCredentialVerified {
   vc: String!
 }
 
-enum ProfileType {
-  CALENDAR_EVENT
-  CALLOUT_FRAMING
-  COMMUNITY_GUIDELINES
-  CONTRIBUTION_LINK
-  DISCUSSION
-  INNOVATION_FLOW
-  INNOVATION_HUB
-  INNOVATION_PACK
-  KNOWLEDGE_BASE
-  MEMO
-  ORGANIZATION
-  POST
-  SPACE_ABOUT
-  TEMPLATE
-  USER
-  USER_GROUP
-  VIRTUAL_CONTRIBUTOR
-  VIRTUAL_PERSONA
-  WHITEBOARD
-}
-
 type PromptGraph {
   edges: [PromptGraphEdge!]
   end: String
@@ -4877,21 +4117,8 @@ type PromptGraphDataPoint {
   type: String
 }
 
-input PromptGraphDataPointInput {
-  description: String
-  name: String!
-  optional: Boolean
-  type: String
-}
-
 type PromptGraphDataStruct {
   properties: [PromptGraphDataPoint!]
-  title: String
-  type: String
-}
-
-input PromptGraphDataStructInput {
-  properties: [PromptGraphDataPointInput!]
   title: String
   type: String
 }
@@ -4927,6 +4154,7 @@ type PromptGraphDefinitionNode {
   name: String!
   output: PromptGraphDefinitionDataStruct
   prompt: String
+  system: Boolean!
 }
 
 type PromptGraphEdge {
@@ -4934,31 +4162,12 @@ type PromptGraphEdge {
   to: String
 }
 
-input PromptGraphEdgeInput {
-  from: String
-  to: String
-}
-
-input PromptGraphInput {
-  edges: [PromptGraphEdgeInput!]
-  end: String
-  nodes: [PromptGraphNodeInput!]
-  start: String
-  state: PromptGraphDataStructInput
-}
-
 type PromptGraphNode {
   input_variables: [String!]
   name: String!
   output: PromptGraphDataStruct
   prompt: String
-}
-
-input PromptGraphNodeInput {
-  input_variables: [String!]
-  name: String!
-  output: PromptGraphDataStructInput
-  prompt: String
+  system: Boolean!
 }
 
 type PruneInAppNotificationAdminResult {
@@ -5060,10 +4269,10 @@ type Query {
   The Spaces on this platform; If accessed through an Innovation Hub will return ONLY the Spaces defined in it.
   """
   spaces(
-    """The IDs of the entities to return"""
-    IDs: [UUID!]
     """Return Spaces matching the provided filter."""
     filter: SpaceFilterInput
+    """The IDs of the entities to return"""
+    IDs: [UUID!]
   ): [Space!]!
   """The Spaces on this platform"""
   spacesPaginated(
@@ -5087,10 +4296,10 @@ type Query {
   user(ID: UUID!): User!
   """The users who have profiles on this platform"""
   users(
-    """Retrieve the specified users by ID."""
-    IDs: [UUID!]
     """Filtering criteria for returning results."""
     filter: ContributorFilterInput
+    """Retrieve the specified users by ID."""
+    IDs: [UUID!]
     """The number of contributors to return; if omitted return all Entities."""
     limit: Float
     """
@@ -5171,11 +4380,6 @@ type Reference {
   uri: String!
 }
 
-input RefreshVirtualContributorBodyOfKnowledgeInput {
-  """The ID of the Virtual Contributor to update."""
-  virtualContributorID: UUID!
-}
-
 type RelayPaginatedSpace {
   """About this space."""
   about: SpaceAbout!
@@ -5249,73 +4453,6 @@ type RelayPaginatedSpacePageInfo {
   startCursor: String
 }
 
-input RemoveCommunityGuidelinesContentInput {
-  """ID of the CommunityGuidelines that will be emptied"""
-  communityGuidelinesID: UUID!
-}
-
-input RemovePlatformRoleInput {
-  contributorID: UUID!
-  role: RoleName!
-}
-
-input RemoveRoleOnRoleSetFromOrganizationInput {
-  contributorID: UUID!
-  role: RoleName!
-  roleSetID: UUID!
-}
-
-input RemoveRoleOnRoleSetFromUserInput {
-  contributorID: UUID!
-  role: RoleName!
-  roleSetID: UUID!
-}
-
-input RemoveRoleOnRoleSetFromVirtualContributorInput {
-  contributorID: UUID!
-  role: RoleName!
-  roleSetID: UUID!
-}
-
-input RemoveUserGroupMemberInput {
-  groupID: UUID!
-  userID: UUID!
-}
-
-input RevokeAuthorizationCredentialInput {
-  """The resource to which access is being removed."""
-  resourceID: String!
-  type: AuthorizationCredential!
-  """The user from whom the credential is being removed."""
-  userID: UUID!
-}
-
-input RevokeLicensePlanFromAccount {
-  """The ID of the Account to assign the LicensePlan to."""
-  accountID: UUID!
-  """The ID of the LicensePlan to assign."""
-  licensePlanID: UUID!
-  """The ID of the Licensing to use."""
-  licensingID: UUID
-}
-
-input RevokeLicensePlanFromSpace {
-  """The ID of the LicensePlan to assign."""
-  licensePlanID: UUID!
-  """The ID of the Licensing to use."""
-  licensingID: UUID
-  """The ID of the Space to assign the LicensePlan to."""
-  spaceID: UUID!
-}
-
-input RevokeOrganizationAuthorizationCredentialInput {
-  """The Organization from whom the credential is being removed."""
-  organizationID: UUID!
-  """The resource to which access is being removed."""
-  resourceID: UUID
-  type: AuthorizationCredential!
-}
-
 type Role {
   """The date at which the entity was created."""
   createdDate: DateTime!
@@ -5343,25 +4480,6 @@ type Role {
   userPolicy: ContributorRolePolicy!
   """The role policy that applies for VirtualContributors in this Role."""
   virtualContributorPolicy: ContributorRolePolicy!
-}
-
-enum RoleName {
-  ADMIN
-  ANONYMOUS
-  ASSOCIATE
-  GLOBAL_ADMIN
-  GLOBAL_COMMUNITY_READER
-  GLOBAL_LICENSE_MANAGER
-  GLOBAL_PLATFORM_MANAGER
-  GLOBAL_SPACES_READER
-  GLOBAL_SUPPORT
-  GLOBAL_SUPPORT_MANAGER
-  LEAD
-  MEMBER
-  OWNER
-  PLATFORM_BETA_TESTER
-  PLATFORM_VC_CAMPAIGN
-  REGISTERED
 }
 
 type RoleSet {
@@ -5483,42 +4601,10 @@ type RoleSet {
   virtualContributorsInRoles(roles: [RoleName!]!): [VirtualContributorsInRolesResponse!]!
 }
 
-enum RoleSetContributorType {
-  ORGANIZATION
-  USER
-  VIRTUAL
-}
-
 type RoleSetInvitationResult {
   invitation: Invitation
   platformInvitation: PlatformInvitation
   type: RoleSetInvitationResultType!
-}
-
-enum RoleSetInvitationResultType {
-  ALREADY_INVITED_TO_PLATFORM_AND_ROLE_SET
-  ALREADY_INVITED_TO_ROLE_SET
-  INVITATION_TO_PARENT_NOT_AUTHORIZED
-  INVITED_TO_PLATFORM_AND_ROLE_SET
-  INVITED_TO_ROLE_SET
-}
-
-enum RoleSetRoleImplicit {
-  ACCOUNT_ADMIN
-  SUBSPACE_ADMIN
-}
-
-enum RoleSetType {
-  ORGANIZATION
-  PLATFORM
-  SPACE
-}
-
-input RolesOrganizationInput {
-  """Return membership in Spaces matching the provided filter."""
-  filter: SpaceFilterInput
-  """The ID of the organization to retrieve the roles of."""
-  organizationID: UUID!
 }
 
 type RolesResult {
@@ -5579,18 +4665,6 @@ type RolesResultSpace {
   visibility: SpaceVisibility!
 }
 
-input RolesUserInput {
-  """Return membership in Spaces matching the provided filter."""
-  filter: SpaceFilterInput
-  """The ID of the user to retrieve the roles of."""
-  userID: UUID!
-}
-
-input RolesVirtualContributorInput {
-  """The ID or nameID of the VC to retrieve the roles of."""
-  virtualContributorID: UUID!
-}
-
 type Room {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -5606,15 +4680,6 @@ type Room {
   updatedDate: DateTime!
   """Virtual Contributor Interactions in this Room."""
   vcInteractions: [VcInteraction!]!
-}
-
-input RoomAddReactionToMessageInput {
-  """The reaction to the message."""
-  emoji: Emoji!
-  """The message id that is being reacted to"""
-  messageID: MessageID!
-  """The Room to remove a message from."""
-  roomID: UUID!
 }
 
 """The event happened in the subscribed room"""
@@ -5645,90 +4710,6 @@ type RoomMessageReactionEventSubscriptionResult {
   messageID: String
   """The type of event."""
   type: MutationType!
-}
-
-input RoomRemoveMessageInput {
-  """The message id that should be removed"""
-  messageID: MessageID!
-  """The Room to remove a message from."""
-  roomID: UUID!
-}
-
-input RoomRemoveReactionToMessageInput {
-  """The reaction that is being removed"""
-  reactionID: MessageID!
-  """The Room to remove a message from."""
-  roomID: UUID!
-}
-
-input RoomSendMessageInput {
-  """The message being sent"""
-  message: String!
-  """The Room the message is being sent to"""
-  roomID: UUID!
-}
-
-input RoomSendMessageReplyInput {
-  """The message being sent"""
-  message: String!
-  """The Room the message is being sent to"""
-  roomID: UUID!
-  """The message starting the thread being replied to"""
-  threadID: MessageID!
-}
-
-"""
-The category in which to search. A category may include a couple of entity types, e.g. "responses" include posts, whiteboard, etc.
-"""
-enum SearchCategory {
-  COLLABORATION_TOOLS
-  CONTRIBUTORS
-  RESPONSES
-  SPACES
-}
-
-"""Cursor used for paginating search results."""
-scalar SearchCursor
-
-input SearchFilterInput {
-  """Include this category in the search results."""
-  category: SearchCategory!
-  """
-  The cursor after which we want results (offset) - pass this from your previous search to request additional results. Useful for paginating results.
-  """
-  cursor: SearchCursor
-  """
-  How many results per category to return. Useful for paginating results.
-  """
-  size: Float = 4
-  """Which types to include. Defaults to all in the category."""
-  types: [SearchResultType!]
-}
-
-input SearchInput {
-  """Return results that satisfy these conditions."""
-  filters: [SearchFilterInput!]
-  """
-  Restrict the search to only the specified Space. Default is all Spaces.
-  """
-  searchInSpaceFilter: UUID
-  """Expand the search to includes Tagsets with the provided names. Max 2."""
-  tagsetNames: [String!]
-  """The terms to be searched for within this Space. Max 5."""
-  terms: [String!]!
-}
-
-interface SearchResult {
-  """
-  The identifier of the search result. Does not represent the entity in Alkemio.
-  """
-  id: UUID!
-  """The score for this search result; more matches means a higher score."""
-  score: Float!
-  """The terms that were matched for this result"""
-  terms: [String!]!
-  """The type of returned result for this search."""
-  type: SearchResultType!
 }
 
 type SearchResultCallout implements SearchResult {
@@ -5799,18 +4780,6 @@ type SearchResultSpace implements SearchResult {
   type: SearchResultType!
 }
 
-"""The different types of available search results."""
-enum SearchResultType {
-  CALLOUT
-  MEMO
-  ORGANIZATION
-  POST
-  SPACE
-  SUBSPACE
-  USER
-  WHITEBOARD
-}
-
 type SearchResultUser implements SearchResult {
   """
   The identifier of the search result. Does not represent the entity in Alkemio.
@@ -5824,12 +4793,6 @@ type SearchResultUser implements SearchResult {
   type: SearchResultType!
   """The User that was found."""
   user: User!
-}
-
-enum SearchVisibility {
-  ACCOUNT
-  HIDDEN
-  PUBLIC
 }
 
 type Sentry {
@@ -5954,17 +4917,6 @@ type SpaceAboutMembership {
   roleSetID: UUID!
 }
 
-input SpaceFilterInput {
-  """Return Spaces with a Visibility matching one of the provided types."""
-  visibilities: [SpaceVisibility!]
-}
-
-enum SpaceLevel {
-  L0
-  L1
-  L2
-}
-
 type SpacePendingMembershipInfo {
   """About the Space"""
   about: SpaceAbout!
@@ -5974,11 +4926,6 @@ type SpacePendingMembershipInfo {
   id: UUID!
   """The Level of the Space"""
   level: SpaceLevel!
-}
-
-enum SpacePrivacyMode {
-  PRIVATE
-  PUBLIC
 }
 
 type SpaceSettings {
@@ -6030,12 +4977,6 @@ type SpaceSubscription {
   name: LicensingCredentialBasedCredentialType!
 }
 
-enum SpaceVisibility {
-  ACTIVE
-  ARCHIVED
-  DEMO
-}
-
 type StorageAggregator {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -6075,14 +5016,6 @@ type StorageAggregatorParent {
   level: SpaceLevel
   """The URL that can be used to access the parent entity."""
   url: String!
-}
-
-enum StorageAggregatorType {
-  ACCOUNT
-  ORGANIZATION
-  PLATFORM
-  SPACE
-  USER
 }
 
 type StorageBucket {
@@ -6125,22 +5058,6 @@ type StorageBucketParent {
   type: ProfileType!
   """The URL that can be used to access the parent entity."""
   url: String!
-}
-
-input StorageBucketUploadFileInput {
-  storageBucketId: String!
-  """
-  Is this a temporary Document that will be moved later to another StorageBucket.
-  """
-  temporaryLocation: Boolean
-}
-
-input StorageBucketUploadFileOnLinkInput {
-  linkID: String!
-}
-
-input StorageBucketUploadFileOnReferenceInput {
-  referenceID: String!
 }
 
 type StorageConfig {
@@ -6210,23 +5127,6 @@ type Tagset {
   updatedDate: DateTime!
 }
 
-input TagsetArgs {
-  """
-  Return only Callouts that match one of the tagsets and any of the tags in them.
-  """
-  name: TagsetReservedName!
-  """A list of tags to include."""
-  tags: [String!]
-}
-
-enum TagsetReservedName {
-  CAPABILITIES
-  DEFAULT
-  FLOW_STATE
-  KEYWORDS
-  SKILLS
-}
-
 type TagsetTemplate {
   allowedValues: [String!]!
   """The date at which the entity was created."""
@@ -6239,12 +5139,6 @@ type TagsetTemplate {
   type: TagsetType!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
-}
-
-enum TagsetType {
-  FREEFORM
-  SELECT_MANY
-  SELECT_ONE
 }
 
 type Task {
@@ -6270,13 +5164,6 @@ type Task {
   status: TaskStatus!
   """TBD"""
   type: String
-}
-
-"""The current status of the task"""
-enum TaskStatus {
-  COMPLETED
-  ERRORED
-  IN_PROGRESS
 }
 
 type Template {
@@ -6346,27 +5233,11 @@ type TemplateDefault {
   updatedDate: DateTime!
 }
 
-enum TemplateDefaultType {
-  PLATFORM_SPACE
-  PLATFORM_SPACE_TUTORIALS
-  PLATFORM_SUBSPACE
-  PLATFORM_SUBSPACE_KNOWLEDGE
-  SPACE_SUBSPACE
-}
-
 type TemplateResult {
   """The InnovationPack where this Template is being returned from."""
   innovationPack: InnovationPack!
   """The Template that is being returned."""
   template: Template!
-}
-
-enum TemplateType {
-  CALLOUT
-  COMMUNITY_GUIDELINES
-  POST
-  SPACE
-  WHITEBOARD
 }
 
 type TemplatesManager {
@@ -6432,6 +5303,1707 @@ type Timeline {
   updatedDate: DateTime!
 }
 
+type UrlResolverQueryResultCalendar {
+  calendarEventId: UUID
+  id: UUID!
+}
+
+type UrlResolverQueryResultCalloutsSet {
+  calloutId: UUID
+  contributionId: UUID
+  id: UUID!
+  postId: UUID
+  type: UrlType!
+  whiteboardId: UUID
+}
+
+type UrlResolverQueryResultCollaboration {
+  calloutsSet: UrlResolverQueryResultCalloutsSet!
+  id: UUID!
+}
+
+type UrlResolverQueryResultInnovationPack {
+  id: UUID!
+  templatesSet: UrlResolverQueryResultTemplatesSet!
+}
+
+type UrlResolverQueryResults {
+  discussionId: UUID
+  innovationHubId: UUID
+  innovationPack: UrlResolverQueryResultInnovationPack
+  organizationId: UUID
+  space: UrlResolverQueryResultSpace
+  type: UrlType!
+  userId: UUID
+  virtualContributor: UrlResolverQueryResultVirtualContributor
+}
+
+type UrlResolverQueryResultSpace {
+  calendar: UrlResolverQueryResultCalendar
+  collaboration: UrlResolverQueryResultCollaboration!
+  id: UUID!
+  level: SpaceLevel!
+  levelZeroSpaceID: UUID!
+  parentSpaces: [UUID!]!
+  templatesSet: UrlResolverQueryResultTemplatesSet
+}
+
+type UrlResolverQueryResultTemplatesSet {
+  id: UUID!
+  templateId: UUID
+}
+
+type UrlResolverQueryResultVirtualContributor {
+  calloutsSet: UrlResolverQueryResultCalloutsSet!
+  id: UUID!
+}
+
+type User implements Contributor {
+  """The account hosted by this User."""
+  account: Account
+  """
+  The unique personal identifier (upn) for the account associated with this user profile
+  """
+  accountUpn: String!
+  """The Agent representing this User."""
+  agent: Agent!
+  """Details about the authentication used for this User."""
+  authentication: UserAuthenticationResult
+  """The authorization rules for the Contributor"""
+  authorization: Authorization
+  """The date at which the entity was created."""
+  createdDate: DateTime!
+  """The direct rooms this user is a member of"""
+  directRooms: [DirectRoom!]
+  """The email address for this User."""
+  email: String!
+  firstName: String!
+  """Guidance Chat Room for this user"""
+  guidanceRoom: Room
+  """The ID of the Contributor"""
+  id: UUID!
+  """Can a message be sent to this User."""
+  isContactable: Boolean!
+  lastName: String!
+  """A name identifier of the Contributor, unique within a given scope."""
+  nameID: NameID!
+  """The phone number for this User."""
+  phone: String
+  """The Profile for this User."""
+  profile: Profile!
+  """The settings for this User."""
+  settings: UserSettings!
+  """The StorageAggregator for managing storage buckets in use by this User"""
+  storageAggregator: StorageAggregator
+  """The date at which the entity was last updated."""
+  updatedDate: DateTime!
+}
+
+type UserAuthenticationResult {
+  """When the Kratos Account for the user last logged in"""
+  authenticatedAt: DateTime
+  """When the Kratos Account for the user was created"""
+  createdAt: DateTime
+  """
+  The Authentication Methods used for this User. One of email, linkedin, microsoft, github or unknown
+  """
+  methods: [AuthenticationType!]!
+}
+
+type UserGroup {
+  """The authorization rules for the entity"""
+  authorization: Authorization
+  """The date at which the entity was created."""
+  createdDate: DateTime!
+  """The ID of the entity"""
+  id: UUID!
+  """The Users that are members of this User Group."""
+  members: [User!]
+  """Containing entity for this UserGroup."""
+  parent: Groupable
+  """The profile for the user group"""
+  profile: Profile
+  """The date at which the entity was last updated."""
+  updatedDate: DateTime!
+}
+
+type UserSettings {
+  """The authorization rules for the entity"""
+  authorization: Authorization
+  """The communication settings for this User."""
+  communication: UserSettingsCommunication!
+  """The date at which the entity was created."""
+  createdDate: DateTime!
+  """The ID of the entity"""
+  id: UUID!
+  """The notification settings for this User."""
+  notification: UserSettingsNotification!
+  """The privacy settings for this User"""
+  privacy: UserSettingsPrivacy!
+  """The date at which the entity was last updated."""
+  updatedDate: DateTime!
+}
+
+type UserSettingsCommunication {
+  """Allow Users to send messages to this User."""
+  allowOtherUsersToSendMessages: Boolean!
+}
+
+type UserSettingsNotification {
+  """The notifications settings for Organization events for this User"""
+  organization: UserSettingsNotificationOrganization!
+  """The notifications settings for Platform events for this User"""
+  platform: UserSettingsNotificationPlatform!
+  """The notifications settings for Space events for this User"""
+  space: UserSettingsNotificationSpace!
+  """The notifications settings for User events for this User"""
+  user: UserSettingsNotificationUser!
+  """
+  The notifications settings for Virtual Contributor events for this User
+  """
+  virtualContributor: UserSettingsNotificationVirtualContributor!
+}
+
+type UserSettingsNotificationChannels {
+  """Receive notifications by email."""
+  email: Boolean!
+  """Receive notifications by inApp."""
+  inApp: Boolean!
+}
+
+type UserSettingsNotificationOrganization {
+  """
+  Receive a notification when the organization you are admin of is mentioned
+  """
+  adminMentioned: UserSettingsNotificationChannels!
+  """
+  Receive notification when the organization you are admin of is messaged
+  """
+  adminMessageReceived: UserSettingsNotificationChannels!
+}
+
+type UserSettingsNotificationPlatform {
+  """The notifications settings for Platform Admin events for this User"""
+  admin: UserSettingsNotificationPlatformAdmin!
+  """
+  Receive a notification when a new comment is added to a Discussion I created in the Forum
+  """
+  forumDiscussionComment: UserSettingsNotificationChannels!
+  """Receive a notification when a new Discussion is created in the Forum"""
+  forumDiscussionCreated: UserSettingsNotificationChannels!
+}
+
+type UserSettingsNotificationPlatformAdmin {
+  """Receive a notification when a new L0 Space is created"""
+  spaceCreated: UserSettingsNotificationChannels!
+  """Receive a notification when a user global role is assigned or removed."""
+  userGlobalRoleChanged: UserSettingsNotificationChannels!
+  """Receive notification when a new user signs up"""
+  userProfileCreated: UserSettingsNotificationChannels!
+  """Receive a notification when a user profile is removed"""
+  userProfileRemoved: UserSettingsNotificationChannels!
+}
+
+type UserSettingsNotificationSpace {
+  """The notifications settings for Space Admin events for this User"""
+  admin: UserSettingsNotificationSpaceAdmin!
+  """Receive a notification when a comment is made on a Callout"""
+  collaborationCalloutComment: UserSettingsNotificationChannels!
+  """Receive a notification when a contribution is created"""
+  collaborationCalloutContributionCreated: UserSettingsNotificationChannels!
+  """
+  Receive a notification when a comment is created on a Post contribution
+  """
+  collaborationCalloutPostContributionComment: UserSettingsNotificationChannels!
+  """Receive a notification when a callout is published"""
+  collaborationCalloutPublished: UserSettingsNotificationChannels!
+  """Receive a notification for community updates"""
+  communicationUpdates: UserSettingsNotificationChannels!
+}
+
+type UserSettingsNotificationSpaceAdmin {
+  """Receive a notification when a contribution is created (admin)"""
+  collaborationCalloutContributionCreated: UserSettingsNotificationChannels!
+  """Receive a notification when a message is sent to a Space I lead"""
+  communicationMessageReceived: UserSettingsNotificationChannels!
+  """Receive a notification when an application is received"""
+  communityApplicationReceived: UserSettingsNotificationChannels!
+  """Receive a notification when a new member joins the community (admin)"""
+  communityNewMember: UserSettingsNotificationChannels!
+}
+
+type UserSettingsNotificationUser {
+  """Receive a notification when someone replies to a comment I made."""
+  commentReply: UserSettingsNotificationChannels!
+  """The notifications settings for membership events for this User"""
+  membership: UserSettingsNotificationUserMembership!
+  """Receive a notification you are mentioned"""
+  mentioned: UserSettingsNotificationChannels!
+  """Receive notification when I receive a direct message."""
+  messageReceived: UserSettingsNotificationChannels!
+}
+
+type UserSettingsNotificationUserMembership {
+  """Receive a notification when I am invited to join a Space community"""
+  spaceCommunityInvitationReceived: UserSettingsNotificationChannels!
+  """
+  Receive a notification when I join a Space or when my application is declined
+  """
+  spaceCommunityJoined: UserSettingsNotificationChannels!
+}
+
+type UserSettingsNotificationVirtualContributor {
+  """
+  Receive notification when a Virtual Contributor receives an invitation to join a Space.
+  """
+  adminSpaceCommunityInvitation: UserSettingsNotificationChannels!
+}
+
+type UserSettingsPrivacy {
+  """
+  Allow contribution roles (communication, lead etc) in Spaces to be visible.
+  """
+  contributionRolesPubliclyVisible: Boolean!
+}
+
+type UsersInRolesResponse {
+  role: RoleName!
+  users: [User!]!
+}
+
+type VcInteraction {
+  """The date at which the entity was created."""
+  createdDate: DateTime!
+  """The ID of the entity"""
+  id: UUID!
+  room: Room!
+  threadID: String!
+  """The date at which the entity was last updated."""
+  updatedDate: DateTime!
+  virtualContributorID: UUID!
+}
+
+type VerifiedCredential {
+  """The time at which the credential is no longer valid"""
+  claims: [VerifiedCredentialClaim!]!
+  """JSON for the context in the credential"""
+  context: JSON!
+  """The time at which the credential is no longer valid"""
+  expires: String!
+  """The time at which the credential was issued"""
+  issued: String!
+  """The party issuing the VC"""
+  issuer: String!
+  """The name of the VC"""
+  name: String!
+  """The type of VC"""
+  type: String!
+}
+
+type VerifiedCredentialClaim {
+  """The name of the claim"""
+  name: JSON!
+  """The value for the claim"""
+  value: JSON!
+}
+
+type VirtualContributor implements Contributor {
+  """The Account of the Virtual Contributor."""
+  account: Account
+  """The Agent representing this User."""
+  agent: Agent!
+  """The AI persona associated with this Virtual Contributor."""
+  aiPersona: AiPersona
+  """The authorization rules for the Contributor"""
+  authorization: Authorization
+  """Description of the body of knowledge for this VC."""
+  bodyOfKnowledgeDescription: Markdown
+  """The ID of the body of knowledge used by this Virtual Contributor."""
+  bodyOfKnowledgeID: UUID
+  """The type of body of knowledge used by this Virtual Contributor."""
+  bodyOfKnowledgeType: VirtualContributorBodyOfKnowledgeType!
+  """The date at which the entity was created."""
+  createdDate: DateTime!
+  """
+  The data access mode defining what data this Virtual Contributor can access.
+  """
+  dataAccessMode: VirtualContributorDataAccessMode!
+  """The engine powering this Virtual Contributor"""
+  engine: AiPersonaEngine!
+  """The ID of the Contributor"""
+  id: UUID!
+  """Interaction modes supported by this Virtual Contributor."""
+  interactionModes: VirtualContributorInteractionMode!
+  """
+  The Knowledge Base linked to this Virtual Contributor as body of knowledge.
+  """
+  knowledgeBase: KnowledgeBase!
+  """The Space linked to this Virtual Contributor as body of knowledge."""
+  knowledgeSpace: Space
+  """Flag to control if this VC is listed in the platform store."""
+  listedInStore: Boolean!
+  """The model card information about this Virtual Contributor"""
+  modelCard: VirtualContributorModelCard!
+  """A name identifier of the Contributor, unique within a given scope."""
+  nameID: NameID!
+  """The profile for this Virtual."""
+  profile: Profile!
+  """Prompt graph definition for this Virtual Contributor."""
+  promptGraphDefinition: PromptGraphDefinition
+  """The Virtual Contributor provider."""
+  provider: Contributor!
+  """Visibility of the VC in searches."""
+  searchVisibility: SearchVisibility!
+  """The settings of this Virtual Contributor."""
+  settings: VirtualContributorSettings!
+  """The status of the virtual contributor"""
+  status: VirtualContributorStatus!
+  """The date at which the entity was last updated."""
+  updatedDate: DateTime!
+}
+
+type VirtualContributorModelCard {
+  """The model card information about the AI Engine behind the AI Persona."""
+  aiEngine: ModelCardAiEngineResult
+  """The model card information about the monitoring that is done on usage."""
+  monitoring: ModelCardMonitoringResult
+  """
+  The Model Card details related to usage of the Ai Persona within a Space.
+  """
+  spaceUsage: [ModelCardSpaceUsageResult!]
+}
+
+type VirtualContributorModelCardFlag {
+  """Is this model card entry flag enabled?"""
+  enabled: Boolean!
+  """The name of the Model Card Entry flag"""
+  name: VirtualContributorModelCardEntryFlagName!
+}
+
+type VirtualContributorSettings {
+  """The privacy settings for this VirtualContributor"""
+  privacy: VirtualContributorSettingsPrivacy!
+}
+
+type VirtualContributorSettingsPrivacy {
+  """Are the contents of the knowledge base publicly visible."""
+  knowledgeBaseContentVisible: Boolean!
+}
+
+type VirtualContributorsInRolesResponse {
+  role: RoleName!
+  virtualContributors: [VirtualContributor!]!
+}
+
+"""The result from a Virtual Contributor update"""
+type VirtualContributorUpdatedSubscriptionResult {
+  """The Virtual Contributor that was updated"""
+  virtualContributor: VirtualContributor!
+}
+
+type Visual {
+  allowedTypes: [String!]!
+  alternativeText: String
+  """Post ratio width / height."""
+  aspectRatio: Float!
+  """The authorization rules for the entity"""
+  authorization: Authorization
+  """The date at which the entity was created."""
+  createdDate: DateTime!
+  """The ID of the entity"""
+  id: UUID!
+  """Maximum height resolution."""
+  maxHeight: Float!
+  """Maximum width resolution."""
+  maxWidth: Float!
+  """Minimum height resolution."""
+  minHeight: Float!
+  """Minimum width resolution."""
+  minWidth: Float!
+  name: String!
+  """The date at which the entity was last updated."""
+  updatedDate: DateTime!
+  uri: String!
+}
+
+type VisualConstraints {
+  """Allowed file types."""
+  allowedTypes: [String!]!
+  """Dimensions ratio width / height."""
+  aspectRatio: Float!
+  """Maximum height resolution."""
+  maxHeight: Float!
+  """Maximum width resolution."""
+  maxWidth: Float!
+  """Minimum height resolution."""
+  minHeight: Float!
+  """Minimum width resolution."""
+  minWidth: Float!
+}
+
+type Whiteboard {
+  """The authorization rules for the entity"""
+  authorization: Authorization
+  """The visual content of the Whiteboard."""
+  content: WhiteboardContent!
+  """The policy governing who can update the Whiteboard content."""
+  contentUpdatePolicy: ContentUpdatePolicy!
+  """The user that created this Whiteboard"""
+  createdBy: User
+  """The date at which the entity was created."""
+  createdDate: DateTime!
+  """The ID of the entity"""
+  id: UUID!
+  """Whether the Whiteboard is multi-user enabled on Space level."""
+  isMultiUser: Boolean!
+  """A name identifier of the entity, unique within a given scope."""
+  nameID: NameID!
+  """The preview settings for the Whiteboard."""
+  previewSettings: WhiteboardPreviewSettings!
+  """The Profile for this Whiteboard."""
+  profile: Profile!
+  """The date at which the entity was last updated."""
+  updatedDate: DateTime!
+}
+
+type WhiteboardPreviewCoordinates {
+  """The height."""
+  height: Float!
+  """The width."""
+  width: Float!
+  """The x coordinate."""
+  x: Float!
+  """The y coordinate."""
+  y: Float!
+}
+
+type WhiteboardPreviewSettings {
+  """The coordinates for the preview."""
+  coordinates: WhiteboardPreviewCoordinates
+  "The preview mode.\n      AUTO: Generate Whiteboard preview automatically when closing the dialog\n      CUSTOM: Generate Whiteboard preview based on user-defined coordinates when closing the dialog\n      FIXED: Use a fixed Whiteboard preview that does not change when closing the dialog\n    "
+  mode: WhiteboardPreviewMode!
+}
+
+input AccountAuthorizationResetInput {
+  """
+  The identifier of the Account whose Authorization Policy should be reset.
+  """
+  accountID: UUID!
+}
+
+input AccountLicenseResetInput {
+  """
+  The identifier of the Account whose License and Entitlements should be reset.
+  """
+  accountID: UUID!
+}
+
+input ActivityCreatedSubscriptionInput {
+  """The collaboration on which to subscribe for new activity"""
+  collaborationID: UUID!
+  """Include activities happened on child Collaborations."""
+  includeChild: Boolean
+  """
+  Which activity types to include in the results. Returns all by default.
+  """
+  types: [ActivityEventType!]
+}
+
+input ActivityFeedGroupedQueryArgs {
+  """What events to exclude."""
+  excludeTypes: [ActivityEventType!]
+  """Number of activities to return."""
+  limit: Float
+  """
+  Returns only events that the current user triggered; Includes all by default.
+  """
+  myActivity: Boolean
+  """Activity from which Spaces to include; Includes all by default."""
+  roles: [ActivityFeedRoles!]
+  """Activity from which Spaces to include; Includes all by default."""
+  spaceIds: [UUID!]
+  """What events to include; Includes all by default."""
+  types: [ActivityEventType!]
+}
+
+input ActivityFeedQueryArgs {
+  """What events to exclude."""
+  excludeTypes: [ActivityEventType!]
+  """
+  Returns only events that the current user triggered; Includes all by default.
+  """
+  myActivity: Boolean
+  """Activity from which Spaces to include; Includes all by default."""
+  roles: [ActivityFeedRoles!]
+  """Activity from which Spaces to include; Includes all by default."""
+  spaceIds: [UUID!]
+  """What events to include; Includes all by default."""
+  types: [ActivityEventType!]
+}
+
+input ActivityLogInput {
+  """Display the activityLog results for the specified Collaboration."""
+  collaborationID: UUID!
+  """Include entries happened on child Collaborations."""
+  includeChild: Boolean
+  """The number of ActivityLog entries to return; if omitted return all."""
+  limit: Float
+  """
+  Which activity types to include in the results. Returns all by default.
+  """
+  types: [ActivityEventType!]
+}
+
+input ApplicationEventInput {
+  applicationID: UUID!
+  eventName: String!
+}
+
+input ApplyForEntryRoleOnRoleSetInput {
+  questions: [CreateNVPInput!]!
+  roleSetID: UUID!
+}
+
+input AssignLicensePlanToAccount {
+  """The ID of the Account to assign the LicensePlan to."""
+  accountID: UUID!
+  """The ID of the LicensePlan to assign."""
+  licensePlanID: UUID!
+  """The ID of the Licensing to use."""
+  licensingID: UUID
+}
+
+input AssignLicensePlanToSpace {
+  """The ID of the LicensePlan to assign."""
+  licensePlanID: UUID!
+  """The ID of the Licensing to use."""
+  licensingID: UUID
+  """The ID of the Space to assign the LicensePlan to."""
+  spaceID: UUID!
+}
+
+input AssignPlatformRoleInput {
+  contributorID: UUID!
+  role: RoleName!
+}
+
+input AssignRoleOnRoleSetToOrganizationInput {
+  contributorID: UUID!
+  role: RoleName!
+  roleSetID: UUID!
+}
+
+input AssignRoleOnRoleSetToUserInput {
+  contributorID: UUID!
+  role: RoleName!
+  roleSetID: UUID!
+}
+
+input AssignRoleOnRoleSetToVirtualContributorInput {
+  contributorID: UUID!
+  role: RoleName!
+  roleSetID: UUID!
+}
+
+input AssignUserGroupMemberInput {
+  groupID: UUID!
+  userID: UUID!
+}
+
+input ChatGuidanceAnswerRelevanceInput {
+  """The answer id."""
+  id: String!
+  """Is the answer relevant or not."""
+  relevant: Boolean!
+}
+
+input ChatGuidanceInput {
+  """The language of the answer."""
+  language: String
+  """The question that is being asked."""
+  question: String!
+}
+
+input CommunicationAdminEnsureAccessInput {
+  communityID: UUID!
+}
+
+input CommunicationAdminMembershipInput {
+  communityID: UUID!
+}
+
+input CommunicationAdminRemoveOrphanedRoomInput {
+  roomID: String!
+}
+
+input CommunicationAdminUpdateRoomStateInput {
+  isPublic: Boolean!
+  isWorldVisible: Boolean!
+  roomID: String!
+}
+
+input CommunicationSendMessageToCommunityLeadsInput {
+  """The Community the message is being sent to"""
+  communityId: UUID!
+  """The message being sent"""
+  message: String!
+}
+
+input CommunicationSendMessageToOrganizationInput {
+  """The message being sent"""
+  message: String!
+  """The Organization the message is being sent to"""
+  organizationId: UUID!
+}
+
+input CommunicationSendMessageToUsersInput {
+  """The message being sent"""
+  message: String!
+  """All Users the message is being sent to"""
+  receiverIds: [UUID!]!
+}
+
+input ContributionsFilterInput {
+  """The IDs of the Contributions to return. If omitted return all."""
+  IDs: [UUID!]
+  """The contributions types to return. If omitted return all."""
+  types: [CalloutContributionType!]
+}
+
+input ContributorFilterInput {
+  """Return contributors with credentials in the provided list"""
+  credentials: [AuthorizationCredential!]
+}
+
+input ConversionVcSpaceToVcKnowledgeBaseInput {
+  """The Virtual Contributor to be converted."""
+  virtualContributorID: UUID!
+}
+
+input ConvertSpaceL1ToSpaceL0Input {
+  """The Space L1 to be promoted to be a new Space L0. """
+  spaceL1ID: UUID!
+}
+
+input ConvertSpaceL1ToSpaceL2Input {
+  """
+  The Space L1 to be the parent of the Space L1 when it is moved to be L2.
+  """
+  parentSpaceL1ID: UUID!
+  """
+  The Space L1 to be moved to be a child of another Space L. Both the L1 Space and the parent Space must be in the same L0 Space.
+  """
+  spaceL1ID: UUID!
+}
+
+input ConvertSpaceL2ToSpaceL1Input {
+  """The Space L2 to be promoted. """
+  spaceL2ID: UUID!
+}
+
+input CreateAiPersonaInput {
+  engine: AiPersonaEngine = EXPERT
+  externalConfig: ExternalConfigInput
+  prompt: [String!] = []
+}
+
+input CreateCalendarEventOnCalendarInput {
+  calendarID: UUID!
+  """The length of the event in days."""
+  durationDays: Float
+  """The length of the event in minutes."""
+  durationMinutes: Float!
+  """Flag to indicate if this event is for multiple days."""
+  multipleDays: Boolean!
+  """A readable identifier, unique within the containing scope."""
+  nameID: NameID
+  profileData: CreateProfileInput!
+  """The start date for the event."""
+  startDate: DateTime!
+  tags: [String!]
+  type: CalendarEventType!
+  """Is the event visible on the parent calendar."""
+  visibleOnParentCalendar: Boolean!
+  """Flag to indicate if this event is for a whole day."""
+  wholeDay: Boolean!
+}
+
+input CreateCalloutContributionDefaultsInput {
+  """The default title to use for new contributions."""
+  defaultDisplayName: String
+  """The default description to use for new Post contributions."""
+  postDescription: Markdown
+  whiteboardContent: WhiteboardContent
+}
+
+input CreateCalloutContributionInput {
+  link: CreateLinkInput
+  memo: CreateMemoInput
+  post: CreatePostInput
+  """The sort order to assign to this Contribution."""
+  sortOrder: Float
+  type: CalloutContributionType!
+  whiteboard: CreateWhiteboardInput
+}
+
+input CreateCalloutFramingInput {
+  link: CreateLinkInput
+  memo: CreateMemoInput
+  profile: CreateProfileInput!
+  tags: [String!]
+  """
+  The type of additional content attached to the framing of the callout. Defaults to None.
+  """
+  type: CalloutFramingType
+  whiteboard: CreateWhiteboardInput
+}
+
+input CreateCalloutInput {
+  classification: CreateClassificationInput
+  contributionDefaults: CreateCalloutContributionDefaultsInput
+  """Contributions to be created with this Callout."""
+  contributions: [CreateCalloutContributionInput!]
+  framing: CreateCalloutFramingInput!
+  """A readable identifier, unique within the containing scope."""
+  nameID: NameID
+  """
+  Send notification if this flag is true and visibility is PUBLISHED. Defaults to false.
+  """
+  sendNotification: Boolean
+  settings: CreateCalloutSettingsInput
+  """The sort order to assign to this Callout."""
+  sortOrder: Float
+}
+
+input CreateCalloutOnCalloutsSetInput {
+  calloutsSetID: UUID!
+  classification: CreateClassificationInput
+  contributionDefaults: CreateCalloutContributionDefaultsInput
+  """Contributions to be created with this Callout."""
+  contributions: [CreateCalloutContributionInput!]
+  framing: CreateCalloutFramingInput!
+  """A readable identifier, unique within the containing scope."""
+  nameID: NameID
+  """
+  Send notification if this flag is true and visibility is PUBLISHED. Defaults to false.
+  """
+  sendNotification: Boolean
+  settings: CreateCalloutSettingsInput
+  """The sort order to assign to this Callout."""
+  sortOrder: Float
+}
+
+input CreateCalloutSettingsContributionInput {
+  """Allowed Contribution types."""
+  allowedTypes: [CalloutContributionType!]
+  """Indicate who can add more contributions to the callout."""
+  canAddContributions: CalloutAllowedContributors
+  """Can comment to contributions callout."""
+  commentsEnabled: Boolean
+  """
+  Can add contributions to the Callout. Allowed Contribution types is going to be readOnly, so this field can be used to enable or disable the contribution temporarily instead of setting allowedTypes to None.
+  """
+  enabled: Boolean
+}
+
+input CreateCalloutSettingsFramingInput {
+  """Can comment to callout framing."""
+  commentsEnabled: Boolean
+}
+
+input CreateCalloutSettingsInput {
+  contribution: CreateCalloutSettingsContributionInput
+  framing: CreateCalloutSettingsFramingInput
+  """Visibility of the Callout. Defaults to PUBLISHED."""
+  visibility: CalloutVisibility
+}
+
+input CreateCalloutsSetInput {
+  """The Callouts to add to this Collaboration."""
+  calloutsData: [CreateCalloutInput!]
+}
+
+input CreateClassificationInput {
+  tagsets: [CreateTagsetInput!]!
+}
+
+input CreateCollaborationInput {
+  """The CalloutsSet to use for this Collaboration."""
+  calloutsSetData: CreateCalloutsSetInput!
+  """The InnovationFlow Template to use for this Collaboration."""
+  innovationFlowData: CreateInnovationFlowInput
+}
+
+input CreateCollaborationOnSpaceInput {
+  """Add callouts from the template to the Collaboration; defaults to true."""
+  addCallouts: Boolean = true
+  """Add tutorial callouts to the Collaboration; defaults to false."""
+  addTutorialCallouts: Boolean = false
+  """The CalloutsSet to use for this Collaboration."""
+  calloutsSetData: CreateCalloutsSetInput!
+  """The InnovationFlow Template to use for this Collaboration."""
+  innovationFlowData: CreateInnovationFlowInput
+}
+
+input CreateCommunityGuidelinesInput {
+  profile: CreateProfileInput!
+}
+
+input CreateContributionOnCalloutInput {
+  calloutID: UUID!
+  link: CreateLinkInput
+  memo: CreateMemoInput
+  post: CreatePostInput
+  """The sort order to assign to this Contribution."""
+  sortOrder: Float
+  type: CalloutContributionType!
+  whiteboard: CreateWhiteboardInput
+}
+
+input CreateInnovationFlowInput {
+  profile: CreateProfileInput!
+  states: [CreateInnovationFlowStateInput!]!
+}
+
+input CreateInnovationFlowStateInput {
+  """The explanation text to clarify the State."""
+  description: Markdown
+  """The display name for the State"""
+  displayName: String!
+  settings: CreateInnovationFlowStateSettingsInput
+  """
+  The sort order for the State; if not specified, it will be set to the next highest order.
+  """
+  sortOrder: Float
+}
+
+input CreateInnovationFlowStateSettingsInput {
+  """The flag to set."""
+  allowNewCallouts: Boolean!
+}
+
+input CreateInnovationHubOnAccountInput {
+  """The Account where the InnovationHub is to be created."""
+  accountID: UUID!
+  """A readable identifier, unique within the containing scope."""
+  nameID: NameID
+  profileData: CreateProfileInput!
+  """
+  A list of Spaces to include in this Innovation Hub. Only valid when type 'list' is used.
+  """
+  spaceListFilter: [UUID!]
+  """
+  Spaces with which visibility this Innovation Hub will display. Only valid when type 'visibility' is used.
+  """
+  spaceVisibilityFilter: SpaceVisibility
+  """The subdomain to associate the Innovation Hub with."""
+  subdomain: String!
+  """The type of Innovation Hub."""
+  type: InnovationHubType!
+}
+
+input CreateInnovationPackOnAccountInput {
+  """The Account where the InnovationPack is to be created."""
+  accountID: UUID!
+  """A readable identifier, unique within the containing scope."""
+  nameID: NameID
+  profileData: CreateProfileInput!
+  tags: [String!]
+}
+
+input CreateKnowledgeBaseInput {
+  """The CalloutsSet to use for this KnowledgeBase."""
+  calloutsSetData: CreateCalloutsSetInput
+  """The Profile to use for this KnowledgeBase."""
+  profile: CreateProfileInput!
+}
+
+input CreateLicensePlanOnLicensingFrameworkInput {
+  """Assign this plan to all new Organization accounts"""
+  assignToNewOrganizationAccounts: Boolean!
+  """Assign this plan to all new User accounts"""
+  assignToNewUserAccounts: Boolean!
+  """Is this plan enabled?"""
+  enabled: Boolean!
+  """Is this plan free?"""
+  isFree: Boolean!
+  """The credential to represent this plan"""
+  licenseCredential: LicensingCredentialBasedCredentialType!
+  licensingFrameworkID: UUID!
+  """The name of the License Plan"""
+  name: String!
+  """The price per month of this plan."""
+  pricePerMonth: Float
+  """Does this plan require contact support"""
+  requiresContactSupport: Boolean!
+  """Does this plan require a payment method?"""
+  requiresPaymentMethod: Boolean!
+  """The sorting order for this Plan."""
+  sortOrder: Float!
+  """Is there a trial period enabled"""
+  trialEnabled: Boolean!
+  """The type of this License Plan."""
+  type: LicensingCredentialBasedPlanType!
+}
+
+input CreateLicensePolicyCredentialRuleInput {
+  credentialType: LicensingCredentialBasedCredentialType!
+  grantedEntitlements: [LicensingGrantedEntitlementInput!]!
+  name: String!
+}
+
+input CreateLinkInput {
+  profile: CreateProfileInput!
+  uri: String
+}
+
+input CreateLocationInput {
+  addressLine1: String
+  addressLine2: String
+  city: String
+  country: String
+  postalCode: String
+  stateOrProvince: String
+}
+
+input CreateMemoInput {
+  markdown: Markdown
+  profile: CreateProfileInput
+}
+
+input CreateNVPInput {
+  name: String!
+  sortOrder: Float!
+  value: String!
+}
+
+input CreateOrganizationInput {
+  contactEmail: String
+  domain: String
+  legalEntityName: String
+  """A readable identifier, unique within the containing scope."""
+  nameID: NameID
+  profileData: CreateProfileInput!
+  website: String
+}
+
+input CreatePostInput {
+  """A readable identifier, unique within the containing scope."""
+  nameID: NameID
+  profileData: CreateProfileInput!
+  tags: [String!]
+}
+
+input CreateProfileInput {
+  description: Markdown
+  """The display name for the entity."""
+  displayName: String!
+  location: CreateLocationInput
+  referencesData: [CreateReferenceInput!]
+  """A memorable short description for this entity."""
+  tagline: String
+  tags: [String!]
+  tagsets: [CreateTagsetInput!]
+  """The visuals URLs"""
+  visuals: [CreateVisualOnProfileInput!]
+}
+
+input CreateReferenceInput {
+  description: String
+  name: String!
+  uri: String
+}
+
+input CreateReferenceOnProfileInput {
+  description: String
+  name: String!
+  profileID: UUID!
+  uri: String
+}
+
+input CreateSpaceAboutInput {
+  """The CommunityGuidelines for the Space"""
+  guidelines: CreateCommunityGuidelinesInput
+  profileData: CreateProfileInput!
+  who: Markdown
+  why: Markdown
+}
+
+input CreateSpaceOnAccountInput {
+  about: CreateSpaceAboutInput!
+  """The Account where the Space is to be created."""
+  accountID: UUID!
+  collaborationData: CreateCollaborationOnSpaceInput!
+  """The license plan the user wishes to use when creating the space."""
+  licensePlanID: UUID
+  """A readable identifier, unique within the containing scope."""
+  nameID: NameID
+  settings: CreateSpaceSettingsInput
+  """The Template to use for instantiating the Collaboration."""
+  spaceTemplateID: UUID
+}
+
+input CreateSpaceSettingsCollaborationInput {
+  """
+  Flag to control if events from Subspaces are visible on this Space calendar as well.
+  """
+  allowEventsFromSubspaces: Boolean!
+  """Flag to control if members can create callouts."""
+  allowMembersToCreateCallouts: Boolean!
+  """Flag to control if members can create subspaces."""
+  allowMembersToCreateSubspaces: Boolean!
+  """Flag to control if members can create video calls in this Space."""
+  allowMembersToVideoCall: Boolean!
+  """
+  Flag to control if ability to contribute is inherited from parent Space.
+  """
+  inheritMembershipRights: Boolean!
+}
+
+input CreateSpaceSettingsInput {
+  """"""
+  collaboration: CreateSpaceSettingsCollaborationInput
+  """"""
+  membership: CreateSpaceSettingsMembershipInput
+  """"""
+  privacy: CreateSpaceSettingsPrivacyInput
+}
+
+input CreateSpaceSettingsMembershipInput {
+  """Flag to control if Subspace admins can invite for this Space."""
+  allowSubspaceAdminsToInviteMembers: Boolean!
+  """The membership policy in usage for this Space"""
+  policy: CommunityMembershipPolicy!
+  """The organizations that are trusted to Join as members for this Space"""
+  trustedOrganizations: [UUID!]!
+}
+
+input CreateSpaceSettingsPrivacyInput {
+  """Flag to control if Platform Support has admin rights."""
+  allowPlatformSupportAsAdmin: Boolean
+  """"""
+  mode: SpacePrivacyMode
+}
+
+input CreateStateOnInnovationFlowInput {
+  """The explanation text to clarify the State."""
+  description: Markdown
+  """The display name for the State"""
+  displayName: String!
+  innovationFlowID: UUID!
+  settings: CreateInnovationFlowStateSettingsInput
+  """
+  The sort order for the State; if not specified, it will be set to the next highest order.
+  """
+  sortOrder: Float
+}
+
+input CreateSubspaceInput {
+  about: CreateSpaceAboutInput!
+  collaborationData: CreateCollaborationOnSpaceInput!
+  """A readable identifier, unique within the containing scope."""
+  nameID: NameID
+  settings: CreateSpaceSettingsInput
+  spaceID: UUID!
+  """The Template to use for instantiating the Collaboration."""
+  spaceTemplateID: UUID
+}
+
+input CreateTagsetInput {
+  name: String!
+  tags: [String!]
+  type: TagsetType
+}
+
+input CreateTagsetOnProfileInput {
+  name: String!
+  profileID: UUID
+  tags: [String!]
+  type: TagsetType
+}
+
+input CreateTemplateContentSpaceInput {
+  about: CreateSpaceAboutInput!
+  collaborationData: CreateCollaborationInput!
+  level: SpaceLevel!
+  """Create the settings for the Space."""
+  settings: CreateSpaceSettingsInput!
+  subspaces: [CreateTemplateContentSpaceInput!]
+}
+
+input CreateTemplateFromContentSpaceOnTemplatesSetInput {
+  """The ID of the ContentSpace to use as for the Template."""
+  contentSpaceID: UUID!
+  """A readable identifier, unique within the containing scope."""
+  nameID: NameID
+  profileData: CreateProfileInput!
+  tags: [String!]
+  templatesSetID: UUID!
+}
+
+input CreateTemplateFromSpaceOnTemplatesSetInput {
+  """A readable identifier, unique within the containing scope."""
+  nameID: NameID
+  profileData: CreateProfileInput!
+  """Whether to reproduce the hierarchy or just the space."""
+  recursive: Boolean
+  """The ID of the Space to use as the content for the Template."""
+  spaceID: UUID!
+  tags: [String!]
+  templatesSetID: UUID!
+}
+
+input CreateTemplateOnTemplatesSetInput {
+  """The Callout to associate with this template."""
+  calloutData: CreateCalloutInput
+  """The Community guidelines to associate with this template."""
+  communityGuidelinesData: CreateCommunityGuidelinesInput
+  """The Template Content for a Space to associate with this template."""
+  contentSpaceData: CreateTemplateContentSpaceInput
+  """A readable identifier, unique within the containing scope."""
+  nameID: NameID
+  """Post Template: The default description to be pre-filled."""
+  postDefaultDescription: Markdown
+  profileData: CreateProfileInput!
+  tags: [String!]
+  templatesSetID: UUID!
+  """The type of the Template to be created."""
+  type: TemplateType!
+  """The Whiteboard to associate with this template."""
+  whiteboard: CreateWhiteboardInput
+}
+
+input CreateUserGroupInput {
+  parentID: UUID!
+  profile: CreateProfileInput!
+}
+
+input CreateUserInput {
+  accountUpn: String
+  email: String!
+  firstName: String
+  lastName: String
+  """A readable identifier, unique within the containing scope."""
+  nameID: NameID
+  phone: String
+  profileData: CreateProfileInput!
+}
+
+input CreateVirtualContributorOnAccountInput {
+  """The Account where the VirtualContributor is to be created."""
+  accountID: UUID!
+  """The AI Persona to use for this Virtual Contributor."""
+  aiPersona: CreateAiPersonaInput!
+  """Description of the body of knowledge for this VC."""
+  bodyOfKnowledgeDescription: String
+  """The ID of the body of knowledge (if any) to use."""
+  bodyOfKnowledgeID: String
+  bodyOfKnowledgeType: VirtualContributorBodyOfKnowledgeType = ALKEMIO_SPACE
+  dataAccessMode: VirtualContributorDataAccessMode = SPACE_PROFILE_AND_CONTENTS
+  interactionModes: [VirtualContributorInteractionMode!] = [DISCUSSION_TAGGING]
+  """The KnowledgeBase to use for this Collaboration."""
+  knowledgeBaseData: CreateKnowledgeBaseInput
+  """A readable identifier, unique within the containing scope."""
+  nameID: NameID
+  profileData: CreateProfileInput!
+}
+
+input CreateVisualOnProfileInput {
+  """The type of visual."""
+  name: VisualType!
+  """
+  The URI of the image. Needs to be a url inside Alkemio already uploaded to a StorageBucket. It will be then copied to the Profile holding this Visual.
+  """
+  uri: String!
+}
+
+input CreateWhiteboardInput {
+  content: WhiteboardContent
+  """A readable identifier, unique within the containing scope."""
+  nameID: NameID
+  profile: CreateProfileInput
+}
+
+input DeleteAiPersonaInput {
+  ID: UUID!
+}
+
+input DeleteApplicationInput {
+  ID: UUID!
+}
+
+input DeleteCalendarEventInput {
+  ID: UUID!
+}
+
+input DeleteCalloutInput {
+  ID: UUID!
+}
+
+input DeleteContributionInput {
+  ID: UUID!
+}
+
+input DeleteDiscussionInput {
+  ID: UUID!
+}
+
+input DeleteDocumentInput {
+  ID: UUID!
+}
+
+input DeleteInnovationHubInput {
+  ID: UUID!
+}
+
+input DeleteInnovationPackInput {
+  ID: UUID!
+}
+
+input DeleteInvitationInput {
+  ID: UUID!
+}
+
+input DeleteLicensePlanInput {
+  ID: UUID!
+}
+
+input DeleteLicensePolicyCredentialRuleInput {
+  ID: UUID!
+}
+
+input DeleteLinkInput {
+  ID: UUID!
+}
+
+input DeleteMemoInput {
+  ID: UUID!
+}
+
+input DeleteOrganizationInput {
+  ID: UUID!
+}
+
+input DeletePlatformInvitationInput {
+  ID: UUID!
+}
+
+input DeletePostInput {
+  ID: UUID!
+}
+
+input DeleteReferenceInput {
+  ID: UUID!
+}
+
+input DeleteSpaceInput {
+  ID: UUID!
+}
+
+input DeleteStateOnInnovationFlowInput {
+  ID: UUID!
+  innovationFlowID: UUID!
+}
+
+input DeleteStorageBuckeetInput {
+  ID: UUID!
+}
+
+input DeleteTemplateInput {
+  ID: UUID!
+}
+
+input DeleteUserGroupInput {
+  ID: UUID!
+}
+
+input DeleteUserInput {
+  deleteIdentity: Boolean = true
+  ID: UUID!
+}
+
+input DeleteVirtualContributorInput {
+  ID: UUID!
+}
+
+input DeleteWhiteboardInput {
+  ID: UUID!
+}
+
+input DiscussionsInput {
+  """
+  The number of Discussion entries to return; if omitted return all Discussions.
+  """
+  limit: Float
+  """The sort order of the Discussions to return."""
+  orderBy: DiscussionsOrderBy
+}
+
+input ExploreSpacesInput {
+  """Take into account only the activity in the past X days."""
+  daysOld: Float = 30
+  """Amount of Spaces returned."""
+  limit: Float = 30
+}
+
+input ExternalConfigInput {
+  """The API key for the external LLM provider."""
+  apiKey: String
+  """The assistant ID backing the service in OpenAI`s assistant API"""
+  assistantId: String
+  """The OpenAI model to use for the service"""
+  model: OpenAIModel! = O1
+}
+
+input ForumCreateDiscussionInput {
+  """The category for the Discussion"""
+  category: ForumDiscussionCategory!
+  """
+  The identifier for the Forum entity the Discussion is being created on.
+  """
+  forumID: UUID!
+  profile: CreateProfileInput!
+  tags: [String!]
+}
+
+input GrantAuthorizationCredentialInput {
+  """The resource to which this credential is tied."""
+  resourceID: UUID
+  type: AuthorizationCredential!
+  """The user to whom the credential is being granted."""
+  userID: UUID!
+}
+
+input GrantOrganizationAuthorizationCredentialInput {
+  """The Organization to whom the credential is being granted."""
+  organizationID: UUID!
+  """The resource to which this credential is tied."""
+  resourceID: UUID
+  type: AuthorizationCredential!
+}
+
+input InnovationPacksInput {
+  """
+  The number of Discussion entries to return; if omitted return all InnovationPacks.
+  """
+  limit: Float
+  """
+  The sort order of the InnovationPacks to return. Defaults to number of templates Descending.
+  """
+  orderBy: InnovationPacksOrderBy
+}
+
+input InvitationEventInput {
+  eventName: String!
+  invitationID: UUID!
+}
+
+input InviteForEntryRoleOnRoleSetInput {
+  """Additional roles to assign in addition to the entry Role."""
+  extraRoles: [RoleName!]!
+  """The identifiers for the contributors being invited."""
+  invitedContributorIDs: [UUID!]!
+  invitedUserEmails: [String!]!
+  roleSetID: UUID!
+  """The welcome message to send"""
+  welcomeMessage: String
+}
+
+input JoinAsEntryRoleOnRoleSetInput {
+  roleSetID: UUID!
+}
+
+input LibraryTemplatesFilterInput {
+  """
+  Return Templates within the Library matching the specified Template Types.
+  """
+  types: [TemplateType!]
+}
+
+input LicensingGrantedEntitlementInput {
+  limit: Float!
+  """The entitlement that is granted."""
+  type: LicenseEntitlementType!
+}
+
+input MoveCalloutContributionInput {
+  """ID of the Callout to move the Contribution to."""
+  calloutID: UUID!
+  """ID of the Contribution to move."""
+  contributionID: UUID!
+}
+
+input NotificationEventsFilterInput {
+  """Return Notifications with a type matching one of the provided types."""
+  types: [NotificationEvent!]
+}
+
+input NotificationRecipientsInput {
+  """The type of notification setting to look up recipients for."""
+  eventType: NotificationEvent!
+  """The ID of the Organization to use to determine recipients."""
+  organizationID: UUID
+  """The ID of the space to retrieve the recipients for."""
+  spaceID: UUID
+  """The ID of the User that triggered the event."""
+  triggeredBy: UUID
+  """
+  The ID of the specific user recipient for user-related notifications (e.g., invitations, mentions).
+  """
+  userID: UUID
+  """The ID of the Virtual Contributor to use to determine recipients."""
+  virtualContributorID: UUID
+}
+
+input NotificationSettingInput {
+  """Enable email notifications for this setting"""
+  email: Boolean
+  """Enable in-app notifications for this setting"""
+  inApp: Boolean
+}
+
+input OrganizationAuthorizationResetInput {
+  """
+  The identifier of the Organization whose Authorization Policy should be reset.
+  """
+  organizationID: UUID!
+}
+
+input OrganizationFilterInput {
+  contactEmail: String
+  displayName: String
+  domain: String
+  nameID: String
+  website: String
+}
+
+input OrganizationVerificationEventInput {
+  eventName: String!
+  organizationVerificationID: UUID!
+}
+
+input PromptGraphDataPointInput {
+  description: String
+  name: String!
+  optional: Boolean
+  type: String
+}
+
+input PromptGraphDataStructInput {
+  properties: [PromptGraphDataPointInput!]
+  title: String
+  type: String
+}
+
+input PromptGraphEdgeInput {
+  from: String
+  to: String
+}
+
+input PromptGraphInput {
+  edges: [PromptGraphEdgeInput!]
+  end: String
+  nodes: [PromptGraphNodeInput!]
+  start: String
+  state: PromptGraphDataStructInput
+}
+
+input PromptGraphNodeInput {
+  input_variables: [String!]
+  name: String!
+  output: PromptGraphDataStructInput
+  prompt: String
+  system: Boolean!
+}
+
+input RefreshVirtualContributorBodyOfKnowledgeInput {
+  """The ID of the Virtual Contributor to update."""
+  virtualContributorID: UUID!
+}
+
+input RemoveCommunityGuidelinesContentInput {
+  """ID of the CommunityGuidelines that will be emptied"""
+  communityGuidelinesID: UUID!
+}
+
+input RemovePlatformRoleInput {
+  contributorID: UUID!
+  role: RoleName!
+}
+
+input RemoveRoleOnRoleSetFromOrganizationInput {
+  contributorID: UUID!
+  role: RoleName!
+  roleSetID: UUID!
+}
+
+input RemoveRoleOnRoleSetFromUserInput {
+  contributorID: UUID!
+  role: RoleName!
+  roleSetID: UUID!
+}
+
+input RemoveRoleOnRoleSetFromVirtualContributorInput {
+  contributorID: UUID!
+  role: RoleName!
+  roleSetID: UUID!
+}
+
+input RemoveUserGroupMemberInput {
+  groupID: UUID!
+  userID: UUID!
+}
+
+input RevokeAuthorizationCredentialInput {
+  """The resource to which access is being removed."""
+  resourceID: String!
+  type: AuthorizationCredential!
+  """The user from whom the credential is being removed."""
+  userID: UUID!
+}
+
+input RevokeLicensePlanFromAccount {
+  """The ID of the Account to assign the LicensePlan to."""
+  accountID: UUID!
+  """The ID of the LicensePlan to assign."""
+  licensePlanID: UUID!
+  """The ID of the Licensing to use."""
+  licensingID: UUID
+}
+
+input RevokeLicensePlanFromSpace {
+  """The ID of the LicensePlan to assign."""
+  licensePlanID: UUID!
+  """The ID of the Licensing to use."""
+  licensingID: UUID
+  """The ID of the Space to assign the LicensePlan to."""
+  spaceID: UUID!
+}
+
+input RevokeOrganizationAuthorizationCredentialInput {
+  """The Organization from whom the credential is being removed."""
+  organizationID: UUID!
+  """The resource to which access is being removed."""
+  resourceID: UUID
+  type: AuthorizationCredential!
+}
+
+input RolesOrganizationInput {
+  """Return membership in Spaces matching the provided filter."""
+  filter: SpaceFilterInput
+  """The ID of the organization to retrieve the roles of."""
+  organizationID: UUID!
+}
+
+input RolesUserInput {
+  """Return membership in Spaces matching the provided filter."""
+  filter: SpaceFilterInput
+  """The ID of the user to retrieve the roles of."""
+  userID: UUID!
+}
+
+input RolesVirtualContributorInput {
+  """The ID or nameID of the VC to retrieve the roles of."""
+  virtualContributorID: UUID!
+}
+
+input RoomAddReactionToMessageInput {
+  """The reaction to the message."""
+  emoji: Emoji!
+  """The message id that is being reacted to"""
+  messageID: MessageID!
+  """The Room to remove a message from."""
+  roomID: UUID!
+}
+
+input RoomRemoveMessageInput {
+  """The message id that should be removed"""
+  messageID: MessageID!
+  """The Room to remove a message from."""
+  roomID: UUID!
+}
+
+input RoomRemoveReactionToMessageInput {
+  """The reaction that is being removed"""
+  reactionID: MessageID!
+  """The Room to remove a message from."""
+  roomID: UUID!
+}
+
+input RoomSendMessageInput {
+  """The message being sent"""
+  message: String!
+  """The Room the message is being sent to"""
+  roomID: UUID!
+}
+
+input RoomSendMessageReplyInput {
+  """The message being sent"""
+  message: String!
+  """The Room the message is being sent to"""
+  roomID: UUID!
+  """The message starting the thread being replied to"""
+  threadID: MessageID!
+}
+
+input SearchFilterInput {
+  """Include this category in the search results."""
+  category: SearchCategory!
+  """
+  The cursor after which we want results (offset) - pass this from your previous search to request additional results. Useful for paginating results.
+  """
+  cursor: SearchCursor
+  """
+  How many results per category to return. Useful for paginating results.
+  """
+  size: Float = 4
+  """Which types to include. Defaults to all in the category."""
+  types: [SearchResultType!]
+}
+
+input SearchInput {
+  """Return results that satisfy these conditions."""
+  filters: [SearchFilterInput!]
+  """
+  Restrict the search to only the specified Space. Default is all Spaces.
+  """
+  searchInSpaceFilter: UUID
+  """Expand the search to includes Tagsets with the provided names. Max 2."""
+  tagsetNames: [String!]
+  """The terms to be searched for within this Space. Max 5."""
+  terms: [String!]!
+}
+
+input SpaceFilterInput {
+  """Return Spaces with a Visibility matching one of the provided types."""
+  visibilities: [SpaceVisibility!]
+}
+
+input StorageBucketUploadFileInput {
+  storageBucketId: String!
+  """
+  Is this a temporary Document that will be moved later to another StorageBucket.
+  """
+  temporaryLocation: Boolean
+}
+
+input StorageBucketUploadFileOnLinkInput {
+  linkID: String!
+}
+
+input StorageBucketUploadFileOnReferenceInput {
+  referenceID: String!
+}
+
+input TagsetArgs {
+  """
+  Return only Callouts that match one of the tagsets and any of the tags in them.
+  """
+  name: TagsetReservedName!
+  """A list of tags to include."""
+  tags: [String!]
+}
+
 input TransferAccountInnovationHubInput {
   """The Innovation Hub to be transferred."""
   innovationHubID: UUID!
@@ -6467,13 +7039,10 @@ input TransferCalloutInput {
   targetCalloutsSetID: UUID!
 }
 
-"""A uuid identifier. Length 36 characters."""
-scalar UUID
-
 input UpdateAiPersonaInput {
-  ID: UUID!
   engine: AiPersonaEngine
   externalConfig: ExternalConfigInput
+  ID: UUID!
   prompt: [String!]
 }
 
@@ -6500,11 +7069,11 @@ input UpdateBaselineLicensePlanOnAccount {
 }
 
 input UpdateCalendarEventInput {
-  ID: UUID!
   """The length of the event in days."""
   durationDays: Float
   """The length of the event in minutes."""
   durationMinutes: Float!
+  ID: UUID!
   """Flag to indicate if this event is for multiple days."""
   multipleDays: Boolean!
   """
@@ -6532,12 +7101,12 @@ input UpdateCalloutContributionDefaultsInput {
 }
 
 input UpdateCalloutEntityInput {
-  ID: UUID!
   classification: UpdateClassificationInput
   contributionDefaults: UpdateCalloutContributionDefaultsInput
   framing: UpdateCalloutFramingInput
   """Set Group for this Callout."""
   groupName: String
+  ID: UUID!
   """
   A display identifier, unique within the containing scope. Note: updating the nameID will affect URL on the client.
   """
@@ -6591,6 +7160,12 @@ input UpdateCalloutSettingsInput {
   visibility: CalloutVisibility
 }
 
+input UpdateCalloutsSortOrderInput {
+  """The IDs of the callouts to update the sort order on"""
+  calloutIDs: [UUID!]!
+  calloutsSetID: UUID!
+}
+
 input UpdateCalloutVisibilityInput {
   """The identifier for the Callout whose visibility is to be updated."""
   calloutID: String!
@@ -6598,12 +7173,6 @@ input UpdateCalloutVisibilityInput {
   sendNotification: Boolean = true
   """Visibility of the Callout."""
   visibility: CalloutVisibility!
-}
-
-input UpdateCalloutsSortOrderInput {
-  """The IDs of the callouts to update the sort order on"""
-  calloutIDs: [UUID!]!
-  calloutsSetID: UUID!
 }
 
 input UpdateClassificationInput {
@@ -6641,9 +7210,9 @@ input UpdateContributionCalloutsSortOrderInput {
 }
 
 input UpdateDiscussionInput {
-  ID: UUID!
   """The category for the Discussion"""
   category: ForumDiscussionCategory
+  ID: UUID!
   """
   A display identifier, unique within the containing scope. Note: updating the nameID will affect URL on the client.
   """
@@ -6653,9 +7222,9 @@ input UpdateDiscussionInput {
 }
 
 input UpdateDocumentInput {
-  ID: UUID!
   """The display name for the Document."""
   displayName: String!
+  ID: UUID!
   tagset: UpdateTagsetInput
 }
 
@@ -6760,13 +7329,13 @@ input UpdateKnowledgeBaseInput {
 }
 
 input UpdateLicensePlanInput {
-  ID: UUID!
   """Assign this plan to all new Organization accounts"""
   assignToNewOrganizationAccounts: Boolean
   """Assign this plan to all new User accounts"""
   assignToNewUserAccounts: Boolean
   """Is this plan enabled?"""
   enabled: Boolean
+  ID: UUID!
   """Is this plan free?"""
   isFree: Boolean
   """The credential to represent this plan"""
@@ -6784,9 +7353,9 @@ input UpdateLicensePlanInput {
 }
 
 input UpdateLicensePolicyCredentialRuleInput {
-  ID: UUID!
   credentialType: LicensingCredentialBasedCredentialType!
   grantedEntitlements: [LicensingGrantedEntitlementInput!]!
+  ID: UUID!
   name: String
 }
 
@@ -6807,8 +7376,8 @@ input UpdateLocationInput {
 }
 
 input UpdateMemoEntityInput {
-  ID: UUID!
   contentUpdatePolicy: ContentUpdatePolicy
+  ID: UUID!
   """The Profile of this entity."""
   profile: UpdateProfileInput
 }
@@ -6821,9 +7390,9 @@ input UpdateNotificationStateInput {
 }
 
 input UpdateOrganizationInput {
-  ID: UUID!
   contactEmail: String
   domain: String
+  ID: UUID!
   legalEntityName: String
   """
   A display identifier, unique within the containing scope. Note: updating the nameID will affect URL on the client.
@@ -6913,8 +7482,8 @@ input UpdateProfileInput {
 }
 
 input UpdateReferenceInput {
-  ID: UUID!
   description: String
+  ID: UUID!
   name: String
   uri: String
 }
@@ -6927,9 +7496,9 @@ input UpdateSpaceAboutInput {
 }
 
 input UpdateSpaceInput {
-  ID: UUID!
   """Update the Space About information."""
   about: UpdateSpaceAboutInput
+  ID: UUID!
 }
 
 input UpdateSpacePlatformSettingsInput {
@@ -6997,9 +7566,9 @@ input UpdateTagsetInput {
 }
 
 input UpdateTemplateContentSpaceInput {
-  ID: UUID!
   """Update the TemplateContentSpace About information."""
   about: UpdateSpaceAboutInput
+  ID: UUID!
   """Update the settings for the Space."""
   settings: UpdateSpaceSettingsEntityInput!
 }
@@ -7039,9 +7608,9 @@ input UpdateUserGroupInput {
 }
 
 input UpdateUserInput {
-  ID: UUID!
   accountUpn: String
   firstName: String
+  ID: UUID!
   lastName: String
   """
   A display identifier, unique within the containing scope. Note: updating the nameID will affect URL on the client.
@@ -7173,7 +7742,9 @@ input UpdateUserSettingsNotificationUserInput {
 input UpdateUserSettingsNotificationUserMembershipInput {
   """Receive a notification for community invitation"""
   spaceCommunityInvitationReceived: NotificationSettingInput
-  """Receive a notification when I join a new community"""
+  """
+  Receive a notification when I join a new community or when my application is declined
+  """
   spaceCommunityJoined: NotificationSettingInput
 }
 
@@ -7192,10 +7763,10 @@ input UpdateUserSettingsPrivacyInput {
 }
 
 input UpdateVirtualContributorInput {
-  ID: UUID!
   bodyOfKnowledgeDescription: String
   bodyOfKnowledgeType: VirtualContributorBodyOfKnowledgeType
   dataAccessMode: VirtualContributorDataAccessMode
+  ID: UUID!
   interactionModes: [VirtualContributorInteractionMode!]
   """The KnowledgeBase to use for this Collaboration."""
   knowledgeBaseData: UpdateKnowledgeBaseInput
@@ -7237,161 +7808,34 @@ input UpdateVisualInput {
 }
 
 input UpdateWhiteboardEntityInput {
-  ID: UUID!
   contentUpdatePolicy: ContentUpdatePolicy
+  ID: UUID!
   """
   A display identifier, unique within the containing scope. Note: updating the nameID will affect URL on the client.
   """
   nameID: NameID
+  """The preview settings for the Whiteboard."""
+  previewSettings: UpdateWhiteboardPreviewSettingsInput
   """The Profile of this entity."""
   profile: UpdateProfileInput
 }
 
-"""The `Upload` scalar type represents a file upload."""
-scalar Upload
-
-type UrlResolverQueryResultCalendar {
-  calendarEventId: UUID
-  id: UUID!
+input UpdateWhiteboardPreviewCoordinatesInput {
+  """The height."""
+  height: Float!
+  """The width."""
+  width: Float!
+  """The x coordinate."""
+  x: Float!
+  """The y coordinate."""
+  y: Float!
 }
 
-type UrlResolverQueryResultCalloutsSet {
-  calloutId: UUID
-  contributionId: UUID
-  id: UUID!
-  postId: UUID
-  type: UrlType!
-  whiteboardId: UUID
-}
-
-type UrlResolverQueryResultCollaboration {
-  calloutsSet: UrlResolverQueryResultCalloutsSet!
-  id: UUID!
-}
-
-type UrlResolverQueryResultInnovationPack {
-  id: UUID!
-  templatesSet: UrlResolverQueryResultTemplatesSet!
-}
-
-type UrlResolverQueryResultSpace {
-  calendar: UrlResolverQueryResultCalendar
-  collaboration: UrlResolverQueryResultCollaboration!
-  id: UUID!
-  level: SpaceLevel!
-  levelZeroSpaceID: UUID!
-  parentSpaces: [UUID!]!
-  templatesSet: UrlResolverQueryResultTemplatesSet
-}
-
-type UrlResolverQueryResultTemplatesSet {
-  id: UUID!
-  templateId: UUID
-}
-
-type UrlResolverQueryResultVirtualContributor {
-  calloutsSet: UrlResolverQueryResultCalloutsSet!
-  id: UUID!
-}
-
-type UrlResolverQueryResults {
-  discussionId: UUID
-  innovationHubId: UUID
-  innovationPack: UrlResolverQueryResultInnovationPack
-  organizationId: UUID
-  space: UrlResolverQueryResultSpace
-  type: UrlType!
-  userId: UUID
-  virtualContributor: UrlResolverQueryResultVirtualContributor
-}
-
-enum UrlType {
-  ADMIN
-  CALLOUT
-  CALLOUTS_SET
-  CONTRIBUTION_POST
-  CONTRIBUTION_WHITEBOARD
-  CONTRIBUTORS_EXPLORER
-  DISCUSSION
-  DOCUMENTATION
-  ERROR
-  FLOW
-  FORUM
-  HOME
-  INNOVATION_HUB
-  INNOVATION_LIBRARY
-  INNOVATION_PACKS
-  LOGIN
-  LOGOUT
-  NOT_AUTHORIZED
-  ORGANIZATION
-  RECOVERY
-  REGISTRATION
-  REQUIRED
-  RESTRICTED
-  SIGN_UP
-  SPACE
-  SPACE_EXPLORER
-  UNKNOWN
-  USER
-  VERIFY
-  VIRTUAL_CONTRIBUTOR
-}
-
-type User implements Contributor {
-  """The account hosted by this User."""
-  account: Account
-  """
-  The unique personal identifier (upn) for the account associated with this user profile
-  """
-  accountUpn: String!
-  """The Agent representing this User."""
-  agent: Agent!
-  """Details about the authentication used for this User."""
-  authentication: UserAuthenticationResult
-  """The authorization rules for the Contributor"""
-  authorization: Authorization
-  """The Community rooms this user is a member of"""
-  communityRooms: [CommunicationRoom!]
-  """The date at which the entity was created."""
-  createdDate: DateTime!
-  """The direct rooms this user is a member of"""
-  directRooms: [DirectRoom!]
-  """The email address for this User."""
-  email: String!
-  firstName: String!
-  """Guidance Chat Room for this user"""
-  guidanceRoom: Room
-  """The ID of the Contributor"""
-  id: UUID!
-  """Can a message be sent to this User."""
-  isContactable: Boolean!
-  lastName: String!
-  """A name identifier of the Contributor, unique within a given scope."""
-  nameID: NameID!
-  """The phone number for this User."""
-  phone: String
-  """The Profile for this User."""
-  profile: Profile!
-  """The Profile 2 for this User."""
-  profile2: Profile!
-  """The settings for this User."""
-  settings: UserSettings!
-  """The StorageAggregator for managing storage buckets in use by this User"""
-  storageAggregator: StorageAggregator
-  """The date at which the entity was last updated."""
-  updatedDate: DateTime!
-}
-
-type UserAuthenticationResult {
-  """When the Kratos Account for the user last logged in"""
-  authenticatedAt: DateTime
-  """When the Kratos Account for the user was created"""
-  createdAt: DateTime
-  """
-  The Authentication Methods used for this User. One of email, linkedin, microsoft, github or unknown
-  """
-  methods: [AuthenticationType!]!
+input UpdateWhiteboardPreviewSettingsInput {
+  """The coordinates for the preview."""
+  coordinates: UpdateWhiteboardPreviewCoordinatesInput
+  "The preview mode.\n      AUTO: Generate Whiteboard preview automatically when closing the dialog\n      CUSTOM: Generate Whiteboard preview based on user-defined coordinates when closing the dialog\n      FIXED: Use a fixed Whiteboard preview that does not change when closing the dialog\n    "
+  mode: WhiteboardPreviewMode
 }
 
 input UserAuthorizationResetInput {
@@ -7406,170 +7850,11 @@ input UserFilterInput {
   lastName: String
 }
 
-type UserGroup {
-  """The authorization rules for the entity"""
-  authorization: Authorization
-  """The date at which the entity was created."""
-  createdDate: DateTime!
-  """The ID of the entity"""
-  id: UUID!
-  """The Users that are members of this User Group."""
-  members: [User!]
-  """Containing entity for this UserGroup."""
-  parent: Groupable
-  """The profile for the user group"""
-  profile: Profile
-  """The date at which the entity was last updated."""
-  updatedDate: DateTime!
-}
-
 input UserSendMessageInput {
   """The message being sent"""
   message: String!
   """The user a message is being sent to"""
   receivingUserID: String!
-}
-
-type UserSettings {
-  """The authorization rules for the entity"""
-  authorization: Authorization
-  """The communication settings for this User."""
-  communication: UserSettingsCommunication!
-  """The date at which the entity was created."""
-  createdDate: DateTime!
-  """The ID of the entity"""
-  id: UUID!
-  """The notification settings for this User."""
-  notification: UserSettingsNotification!
-  """The privacy settings for this User"""
-  privacy: UserSettingsPrivacy!
-  """The date at which the entity was last updated."""
-  updatedDate: DateTime!
-}
-
-type UserSettingsCommunication {
-  """Allow Users to send messages to this User."""
-  allowOtherUsersToSendMessages: Boolean!
-}
-
-type UserSettingsNotification {
-  """The notifications settings for Organization events for this User"""
-  organization: UserSettingsNotificationOrganization!
-  """The notifications settings for Platform events for this User"""
-  platform: UserSettingsNotificationPlatform!
-  """The notifications settings for Space events for this User"""
-  space: UserSettingsNotificationSpace!
-  """The notifications settings for User events for this User"""
-  user: UserSettingsNotificationUser!
-  """
-  The notifications settings for Virtual Contributor events for this User
-  """
-  virtualContributor: UserSettingsNotificationVirtualContributor!
-}
-
-type UserSettingsNotificationChannels {
-  """Receive notifications by email."""
-  email: Boolean!
-  """Receive notifications by inApp."""
-  inApp: Boolean!
-}
-
-type UserSettingsNotificationOrganization {
-  """
-  Receive a notification when the organization you are admin of is mentioned
-  """
-  adminMentioned: UserSettingsNotificationChannels!
-  """
-  Receive notification when the organization you are admin of is messaged
-  """
-  adminMessageReceived: UserSettingsNotificationChannels!
-}
-
-type UserSettingsNotificationPlatform {
-  """The notifications settings for Platform Admin events for this User"""
-  admin: UserSettingsNotificationPlatformAdmin!
-  """
-  Receive a notification when a new comment is added to a Discussion I created in the Forum
-  """
-  forumDiscussionComment: UserSettingsNotificationChannels!
-  """Receive a notification when a new Discussion is created in the Forum"""
-  forumDiscussionCreated: UserSettingsNotificationChannels!
-}
-
-type UserSettingsNotificationPlatformAdmin {
-  """Receive a notification when a new L0 Space is created"""
-  spaceCreated: UserSettingsNotificationChannels!
-  """Receive a notification when a user global role is assigned or removed."""
-  userGlobalRoleChanged: UserSettingsNotificationChannels!
-  """Receive notification when a new user signs up"""
-  userProfileCreated: UserSettingsNotificationChannels!
-  """Receive a notification when a user profile is removed"""
-  userProfileRemoved: UserSettingsNotificationChannels!
-}
-
-type UserSettingsNotificationSpace {
-  """The notifications settings for Space Admin events for this User"""
-  admin: UserSettingsNotificationSpaceAdmin!
-  """Receive a notification when a comment is made on a Callout"""
-  collaborationCalloutComment: UserSettingsNotificationChannels!
-  """Receive a notification when a contribution is created"""
-  collaborationCalloutContributionCreated: UserSettingsNotificationChannels!
-  """
-  Receive a notification when a comment is created on a Post contribution
-  """
-  collaborationCalloutPostContributionComment: UserSettingsNotificationChannels!
-  """Receive a notification when a callout is published"""
-  collaborationCalloutPublished: UserSettingsNotificationChannels!
-  """Receive a notification for community updates"""
-  communicationUpdates: UserSettingsNotificationChannels!
-}
-
-type UserSettingsNotificationSpaceAdmin {
-  """Receive a notification when a contribution is created (admin)"""
-  collaborationCalloutContributionCreated: UserSettingsNotificationChannels!
-  """Receive a notification when a message is sent to a Space I lead"""
-  communicationMessageReceived: UserSettingsNotificationChannels!
-  """Receive a notification when an application is received"""
-  communityApplicationReceived: UserSettingsNotificationChannels!
-  """Receive a notification when a new member joins the community (admin)"""
-  communityNewMember: UserSettingsNotificationChannels!
-}
-
-type UserSettingsNotificationUser {
-  """Receive a notification when someone replies to a comment I made."""
-  commentReply: UserSettingsNotificationChannels!
-  """The notifications settings for membership events for this User"""
-  membership: UserSettingsNotificationUserMembership!
-  """Receive a notification you are mentioned"""
-  mentioned: UserSettingsNotificationChannels!
-  """Receive notification when I receive a direct message."""
-  messageReceived: UserSettingsNotificationChannels!
-}
-
-type UserSettingsNotificationUserMembership {
-  """Receive a notification when I am invited to join a Space community"""
-  spaceCommunityInvitationReceived: UserSettingsNotificationChannels!
-  """Receive a notification when I join a Space"""
-  spaceCommunityJoined: UserSettingsNotificationChannels!
-}
-
-type UserSettingsNotificationVirtualContributor {
-  """
-  Receive notification when a Virtual Contributor receives an invitation to join a Space.
-  """
-  adminSpaceCommunityInvitation: UserSettingsNotificationChannels!
-}
-
-type UserSettingsPrivacy {
-  """
-  Allow contribution roles (communication, lead etc) in Spaces to be visible.
-  """
-  contributionRolesPubliclyVisible: Boolean!
-}
-
-type UsersInRolesResponse {
-  role: RoleName!
-  users: [User!]!
 }
 
 input UsersWithAuthorizationCredentialInput {
@@ -7579,250 +7864,9 @@ input UsersWithAuthorizationCredentialInput {
   type: AuthorizationCredential!
 }
 
-type VcInteraction {
-  """The date at which the entity was created."""
-  createdDate: DateTime!
-  """The ID of the entity"""
-  id: UUID!
-  room: Room!
-  threadID: String!
-  """The date at which the entity was last updated."""
-  updatedDate: DateTime!
-  virtualContributorID: UUID!
-}
-
-type VerifiedCredential {
-  """The time at which the credential is no longer valid"""
-  claims: [VerifiedCredentialClaim!]!
-  """JSON for the context in the credential"""
-  context: JSON!
-  """The time at which the credential is no longer valid"""
-  expires: String!
-  """The time at which the credential was issued"""
-  issued: String!
-  """The party issuing the VC"""
-  issuer: String!
-  """The name of the VC"""
-  name: String!
-  """The type of VC"""
-  type: String!
-}
-
-type VerifiedCredentialClaim {
-  """The name of the claim"""
-  name: JSON!
-  """The value for the claim"""
-  value: JSON!
-}
-
-type VirtualContributor implements Contributor {
-  """The Account of the Virtual Contributor."""
-  account: Account
-  """The Agent representing this User."""
-  agent: Agent!
-  """The AI persona associated with this Virtual Contributor."""
-  aiPersona: AiPersona
-  """The authorization rules for the Contributor"""
-  authorization: Authorization
-  """Description of the body of knowledge for this VC."""
-  bodyOfKnowledgeDescription: Markdown
-  """The ID of the body of knowledge used by this Virtual Contributor."""
-  bodyOfKnowledgeID: UUID
-  """The type of body of knowledge used by this Virtual Contributor."""
-  bodyOfKnowledgeType: VirtualContributorBodyOfKnowledgeType!
-  """The date at which the entity was created."""
-  createdDate: DateTime!
-  """
-  The data access mode defining what data this Virtual Contributor can access.
-  """
-  dataAccessMode: VirtualContributorDataAccessMode!
-  """The engine powering this Virtual Contributor"""
-  engine: AiPersonaEngine!
-  """The ID of the Contributor"""
-  id: UUID!
-  """Interaction modes supported by this Virtual Contributor."""
-  interactionModes: VirtualContributorInteractionMode!
-  """
-  The Knowledge Base linked to this Virtual Contributor as body of knowledge.
-  """
-  knowledgeBase: KnowledgeBase!
-  """The Space linked to this Virtual Contributor as body of knowledge."""
-  knowledgeSpace: Space
-  """Flag to control if this VC is listed in the platform store."""
-  listedInStore: Boolean!
-  """The model card information about this Virtual Contributor"""
-  modelCard: VirtualContributorModelCard!
-  """A name identifier of the Contributor, unique within a given scope."""
-  nameID: NameID!
-  """The profile for this Virtual."""
-  profile: Profile!
-  """Prompt graph definition for this Virtual Contributor."""
-  promptGraphDefinition: PromptGraphDefinition
-  """The Virtual Contributor provider."""
-  provider: Contributor!
-  """Visibility of the VC in searches."""
-  searchVisibility: SearchVisibility!
-  """The settings of this Virtual Contributor."""
-  settings: VirtualContributorSettings!
-  """The status of the virtual contributor"""
-  status: VirtualContributorStatus!
-  """The date at which the entity was last updated."""
-  updatedDate: DateTime!
-}
-
-enum VirtualContributorBodyOfKnowledgeType {
-  ALKEMIO_KNOWLEDGE_BASE
-  ALKEMIO_SPACE
-  NONE
-  OTHER
-  WEBSITE
-}
-
-enum VirtualContributorDataAccessMode {
-  NONE
-  SPACE_PROFILE
-  SPACE_PROFILE_AND_CONTENTS
-}
-
-enum VirtualContributorInteractionMode {
-  DISCUSSION_TAGGING
-}
-
-type VirtualContributorModelCard {
-  """The model card information about the AI Engine behind the AI Persona."""
-  aiEngine: ModelCardAiEngineResult
-  """The model card information about the monitoring that is done on usage."""
-  monitoring: ModelCardMonitoringResult
-  """
-  The Model Card details related to usage of the Ai Persona within a Space.
-  """
-  spaceUsage: [ModelCardSpaceUsageResult!]
-}
-
-enum VirtualContributorModelCardEntry {
-  SPACE_CAPABILITIES
-  SPACE_DATA_ACCESS
-  SPACE_ROLE_REQUIRED
-}
-
-enum VirtualContributorModelCardEntryFlagName {
-  SPACE_CAPABILITY_COMMUNITY_MANAGEMENT
-  SPACE_CAPABILITY_CREATE_CONTENT
-  SPACE_CAPABILITY_TAGGING
-  SPACE_DATA_ACCESS_ABOUT
-  SPACE_DATA_ACCESS_CONTENT
-  SPACE_DATA_ACCESS_SUBSPACES
-  SPACE_ROLE_ADMIN
-  SPACE_ROLE_MEMBER
-}
-
-type VirtualContributorModelCardFlag {
-  """Is this model card entry flag enabled?"""
-  enabled: Boolean!
-  """The name of the Model Card Entry flag"""
-  name: VirtualContributorModelCardEntryFlagName!
-}
-
-type VirtualContributorSettings {
-  """The privacy settings for this VirtualContributor"""
-  privacy: VirtualContributorSettingsPrivacy!
-}
-
-type VirtualContributorSettingsPrivacy {
-  """Are the contents of the knowledge base publicly visible."""
-  knowledgeBaseContentVisible: Boolean!
-}
-
-enum VirtualContributorStatus {
-  INITIALIZING
-  READY
-}
-
-"""The result from a Virtual Contributor update"""
-type VirtualContributorUpdatedSubscriptionResult {
-  """The Virtual Contributor that was updated"""
-  virtualContributor: VirtualContributor!
-}
-
-type VirtualContributorsInRolesResponse {
-  role: RoleName!
-  virtualContributors: [VirtualContributor!]!
-}
-
-type Visual {
-  allowedTypes: [String!]!
-  alternativeText: String
-  """Post ratio width / height."""
-  aspectRatio: Float!
-  """The authorization rules for the entity"""
-  authorization: Authorization
-  """The date at which the entity was created."""
-  createdDate: DateTime!
-  """The ID of the entity"""
-  id: UUID!
-  """Maximum height resolution."""
-  maxHeight: Float!
-  """Maximum width resolution."""
-  maxWidth: Float!
-  """Minimum height resolution."""
-  minHeight: Float!
-  """Minimum width resolution."""
-  minWidth: Float!
-  name: String!
-  """The date at which the entity was last updated."""
-  updatedDate: DateTime!
-  uri: String!
-}
-
-type VisualConstraints {
-  """Allowed file types."""
-  allowedTypes: [String!]!
-  """Dimensions ratio width / height."""
-  aspectRatio: Float!
-  """Maximum height resolution."""
-  maxHeight: Float!
-  """Maximum width resolution."""
-  maxWidth: Float!
-  """Minimum height resolution."""
-  minHeight: Float!
-  """Minimum width resolution."""
-  minWidth: Float!
-}
-
-enum VisualType {
-  AVATAR
-  BANNER
-  BANNER_WIDE
-  CARD
-}
-
 input VisualUploadImageInput {
   alternativeText: String
   visualID: String!
 }
 
-type Whiteboard {
-  """The authorization rules for the entity"""
-  authorization: Authorization
-  """The visual content of the Whiteboard."""
-  content: WhiteboardContent!
-  """The policy governing who can update the Whiteboard content."""
-  contentUpdatePolicy: ContentUpdatePolicy!
-  """The user that created this Whiteboard"""
-  createdBy: User
-  """The date at which the entity was created."""
-  createdDate: DateTime!
-  """The ID of the entity"""
-  id: UUID!
-  """Whether the Whiteboard is multi-user enabled on Space level."""
-  isMultiUser: Boolean!
-  """A name identifier of the entity, unique within a given scope."""
-  nameID: NameID!
-  """The Profile for this Whiteboard."""
-  profile: Profile!
-  """The date at which the entity was last updated."""
-  updatedDate: DateTime!
-}
-
-"""Content of a Whiteboard, as JSON."""
-scalar WhiteboardContent
+union AuthenticationProviderConfigUnion = OryConfig
