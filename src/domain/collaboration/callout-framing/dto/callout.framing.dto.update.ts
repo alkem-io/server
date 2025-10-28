@@ -6,6 +6,7 @@ import { WhiteboardContent } from '@domain/common/scalars/scalar.whiteboard.cont
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { UpdateLinkInput } from '@domain/collaboration/link/dto';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
+import { UpdateWhiteboardPreviewSettingsInput } from '@domain/common/whiteboard/types';
 
 @InputType()
 export class UpdateCalloutFramingInput {
@@ -32,6 +33,13 @@ export class UpdateCalloutFramingInput {
   })
   @IsOptional()
   whiteboardContent?: string;
+
+  @Field(() => UpdateWhiteboardPreviewSettingsInput, {
+    nullable: true,
+    description: 'The new preview settings for the Whiteboard.',
+  })
+  @IsOptional()
+  previewSettings?: UpdateWhiteboardPreviewSettingsInput;
 
   @Field(() => UpdateLinkInput, { nullable: true })
   @IsOptional()

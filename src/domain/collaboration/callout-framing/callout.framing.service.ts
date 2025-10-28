@@ -249,6 +249,7 @@ export class CalloutFramingService {
                 displayName: 'Callout Framing Whiteboard',
               },
               content: calloutFramingData.whiteboardContent,
+              previewSettings: calloutFramingData.previewSettings,
             },
             storageAggregator,
             userID
