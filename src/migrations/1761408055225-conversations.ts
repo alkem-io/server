@@ -23,12 +23,13 @@ export class Conversations1761408055225 implements MigrationInterface {
                                                                      \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
                                                                      \`version\` int NOT NULL,
                                                                      \`authorizationId\` char(36) NULL,
-                                                                     \`guidanceVirtualContributorId\` char(36) NULL,
                                                                      UNIQUE INDEX \`REL_57e3ee47af26b479a67e7f94da\` (\`authorizationId\`),
-                                                                     UNIQUE INDEX \`REL_guidance_vc_conversations_set\` (\`guidanceVirtualContributorId\`),
                                                                      PRIMARY KEY (\`id\`)) ENGINE=InnoDB`);
     await queryRunner.query(
       `ALTER TABLE \`platform\` ADD \`conversationsSetId\` char(36) NULL`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`platform\` ADD \`wellKnownVirtualContributors\` json NOT NULL`
     );
     await queryRunner.query(
       `ALTER TABLE \`platform\` ADD UNIQUE INDEX \`IDX_dc8bdff7728d61097c8560ae7a\` (\`conversationsSetId\`)`
@@ -49,9 +50,6 @@ export class Conversations1761408055225 implements MigrationInterface {
       `ALTER TABLE \`conversations_set\` ADD CONSTRAINT \`FK_57e3ee47af26b479a67e7f94da0\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
     await queryRunner.query(
-      `ALTER TABLE \`conversations_set\` ADD CONSTRAINT \`FK_guidance_vc_conversations_set\` FOREIGN KEY (\`guidanceVirtualContributorId\`) REFERENCES \`virtual_contributor\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-    );
-    await queryRunner.query(
       `ALTER TABLE \`platform\` ADD CONSTRAINT \`FK_dc8bdff7728d61097c8560ae7a9\` FOREIGN KEY (\`conversationsSetId\`) REFERENCES \`conversations_set\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
 
@@ -68,10 +66,16 @@ export class Conversations1761408055225 implements MigrationInterface {
         `SELECT guidanceVirtualContributorId FROM \`platform\` WHERE id = '${platform.id}'`
       );
 
-      const conversationsSetID = await this.createConversationsSet(
-        queryRunner,
-        platformVC?.guidanceVirtualContributorId || null
+      // Initialize wellKnownVirtualContributors JSON field
+      const wellKnownVC = platformVC?.guidanceVirtualContributorId
+        ? { CHAT_GUIDANCE: platformVC.guidanceVirtualContributorId }
+        : {};
+
+      await queryRunner.query(
+        `UPDATE \`platform\` SET wellKnownVirtualContributors = '${JSON.stringify(wellKnownVC)}' WHERE id = '${platform.id}'`
       );
+
+      const conversationsSetID = await this.createConversationsSet(queryRunner);
       await queryRunner.query(
         `UPDATE \`platform\` SET conversationsSetId = '${conversationsSetID}' WHERE id = '${platform.id}'`
       );
@@ -95,6 +99,17 @@ export class Conversations1761408055225 implements MigrationInterface {
           );
         }
       }
+
+      // Drop the guidance virtual contributor relationship from platform
+      await queryRunner.query(
+        `ALTER TABLE \`platform\` DROP FOREIGN KEY \`FK_8e78677ceea32e003ff23d463dd\``
+      );
+      await queryRunner.query(
+        `DROP INDEX \`REL_8e78677ceea32e003ff23d463d\` ON \`platform\``
+      );
+      await queryRunner.query(
+        `ALTER TABLE \`platform\` DROP COLUMN \`guidanceVirtualContributorId\``
+      );
 
       // Drop the guidance room relationship from user
       await queryRunner.query(
@@ -124,13 +139,12 @@ export class Conversations1761408055225 implements MigrationInterface {
 
     await queryRunner.query(
       `INSERT INTO conversation (id, version, type, userIDs, virtualContributorID, authorizationId, conversationsSetId, roomId)
-       VALUES ('${conversationID}', 1, 'user-agent', '["${userID}"]', '${virtualContributorID}', '${conversationAuthID}', '${conversationsSetID}', '${roomID}')`
+       VALUES ('${conversationID}', 1, 'user-vc', '["${userID}"]', '${virtualContributorID}', '${conversationAuthID}', '${conversationsSetID}', '${roomID}')`
     );
   }
 
   private async createConversationsSet(
-    queryRunner: QueryRunner,
-    guidanceVirtualContributorId: string | null
+    queryRunner: QueryRunner
   ): Promise<string> {
     const conversationsSetID = randomUUID();
     const conversationsSetAuthID = await this.createAuthorizationPolicy(
@@ -138,17 +152,10 @@ export class Conversations1761408055225 implements MigrationInterface {
       'communication-conversations-set'
     );
 
-    if (guidanceVirtualContributorId) {
-      await queryRunner.query(
-        `INSERT INTO conversations_set (id, version, authorizationId, guidanceVirtualContributorId) VALUES
-          ('${conversationsSetID}', 1, '${conversationsSetAuthID}', '${guidanceVirtualContributorId}')`
-      );
-    } else {
-      await queryRunner.query(
-        `INSERT INTO conversations_set (id, version, authorizationId) VALUES
-          ('${conversationsSetID}', 1, '${conversationsSetAuthID}')`
-      );
-    }
+    await queryRunner.query(
+      `INSERT INTO conversations_set (id, version, authorizationId) VALUES
+        ('${conversationsSetID}', 1, '${conversationsSetAuthID}')`
+    );
 
     // Finally update all rooms whose type is guidance to be of type conversation
     await queryRunner.query(
@@ -171,6 +178,17 @@ export class Conversations1761408055225 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
+    // Restore the guidance virtual contributor relationship to platform
+    await queryRunner.query(
+      `ALTER TABLE \`platform\` ADD \`guidanceVirtualContributorId\` char(36) NULL`
+    );
+    await queryRunner.query(
+      `CREATE UNIQUE INDEX \`REL_8e78677ceea32e003ff23d463d\` ON \`platform\` (\`guidanceVirtualContributorId\`)`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`platform\` ADD CONSTRAINT \`FK_8e78677ceea32e003ff23d463dd\` FOREIGN KEY (\`guidanceVirtualContributorId\`) REFERENCES \`virtual_contributor\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
+
     // Restore the guidance room relationship to user
     await queryRunner.query(
       `ALTER TABLE \`user\` ADD \`guidanceRoomId\` char(36) NULL`
@@ -185,9 +203,6 @@ export class Conversations1761408055225 implements MigrationInterface {
     // Drop the platform and conversation foreign keys and tables
     await queryRunner.query(
       `ALTER TABLE \`platform\` DROP FOREIGN KEY \`FK_dc8bdff7728d61097c8560ae7a9\``
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`conversations_set\` DROP FOREIGN KEY \`FK_guidance_vc_conversations_set\``
     );
     await queryRunner.query(
       `ALTER TABLE \`conversations_set\` DROP FOREIGN KEY \`FK_57e3ee47af26b479a67e7f94da0\``
@@ -208,10 +223,10 @@ export class Conversations1761408055225 implements MigrationInterface {
       `ALTER TABLE \`platform\` DROP INDEX \`IDX_dc8bdff7728d61097c8560ae7a\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`platform\` DROP COLUMN \`conversationsSetId\``
+      `ALTER TABLE \`platform\` DROP COLUMN \`wellKnownVirtualContributors\``
     );
     await queryRunner.query(
-      `DROP INDEX \`REL_guidance_vc_conversations_set\` ON \`conversations_set\``
+      `ALTER TABLE \`platform\` DROP COLUMN \`conversationsSetId\``
     );
     await queryRunner.query(
       `DROP INDEX \`REL_57e3ee47af26b479a67e7f94da\` ON \`conversations_set\``
