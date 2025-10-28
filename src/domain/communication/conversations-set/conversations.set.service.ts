@@ -16,6 +16,7 @@ import { ConfigService } from '@nestjs/config';
 import { AlkemioConfig } from '@src/types/alkemio.config';
 import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
 import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
+import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
 
 @Injectable()
 export class ConversationsSetService {
@@ -24,7 +25,8 @@ export class ConversationsSetService {
     private authorizationPolicyService: AuthorizationPolicyService,
     @InjectRepository(ConversationsSet)
     private conversationsSetRepository: Repository<ConversationsSet>,
-    private conversationService: ConversationService
+    private conversationService: ConversationService,
+    private platformWellKnownVirtualContributorsService: PlatformWellKnownVirtualContributorsService
   ) {}
 
   async getConversationsSetOrFail(
@@ -194,18 +196,12 @@ export class ConversationsSetService {
     userID: string,
     wellKnownVC: VirtualContributorWellKnown
   ): Promise<IConversation | undefined> {
-    // Get the mapping of well-known VCs to their IDs from the platform conversations set
-    const conversationsSet = await this.getPlatformConversationsSetOrFail({
-      relations: { guidanceVirtualContributor: true },
-    });
+    // Get the VC ID from the mappings service
+    const virtualContributorID =
+      await this.platformWellKnownVirtualContributorsService.getVirtualContributorID(
+        wellKnownVC
+      );
 
-    // Map well-known enum to actual VC ID
-    const vcIdMap: Record<VirtualContributorWellKnown, string | undefined> = {
-      [VirtualContributorWellKnown.GUIDANCE]:
-        conversationsSet.guidanceVirtualContributor?.id,
-    };
-
-    const virtualContributorID = vcIdMap[wellKnownVC];
     if (!virtualContributorID) {
       return undefined;
     }

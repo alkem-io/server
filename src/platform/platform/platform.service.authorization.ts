@@ -29,6 +29,7 @@ import { LicensingFrameworkAuthorizationService } from '@platform/licensing/cred
 import { RoleSetAuthorizationService } from '@domain/access/role-set/role.set.service.authorization';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { RoleSetType } from '@common/enums/role.set.type';
+import { ConversationsSetAuthorizationService } from '@domain/communication/conversations-set/conversations.set.service.authorization';
 
 @Injectable()
 export class PlatformAuthorizationService {
@@ -41,6 +42,7 @@ export class PlatformAuthorizationService {
     private libraryAuthorizationService: LibraryAuthorizationService,
     private licensingFrameworkAuthorizationService: LicensingFrameworkAuthorizationService,
     private templatesManagerAuthorizationService: TemplatesManagerAuthorizationService,
+    private conversationsSetAuthorizationService: ConversationsSetAuthorizationService,
     private roleSetAuthorizationService: RoleSetAuthorizationService
   ) {}
 
@@ -54,6 +56,7 @@ export class PlatformAuthorizationService {
         licensingFramework: true,
         templatesManager: true,
         roleSet: true,
+        conversationsSet: true,
       },
     });
 
@@ -64,6 +67,7 @@ export class PlatformAuthorizationService {
       !platform.storageAggregator ||
       !platform.licensingFramework ||
       !platform.templatesManager ||
+      !platform.conversationsSet ||
       !platform.roleSet
     )
       throw new RelationshipNotFoundException(
@@ -114,6 +118,13 @@ export class PlatformAuthorizationService {
         platform.authorization
       );
     updatedAuthorizations.push(...forumUpdatedAuthorizations);
+
+    const conversationsSetAuthorizations =
+      await this.conversationsSetAuthorizationService.applyAuthorizationPolicy(
+        platform.conversationsSet,
+        platform.authorization
+      );
+    updatedAuthorizations.push(...conversationsSetAuthorizations);
 
     let platformStorageAuth =
       this.authorizationPolicyService.cloneAuthorizationPolicy(

@@ -9,11 +9,15 @@ import { LicensingFramework } from '@platform/licensing/credential-based/licensi
 import { RoleSet } from '@domain/access/role-set/role.set.entity';
 import { IPlatformSettings } from '@platform/platform-settings/platform.settings.interface';
 import { ConversationsSet } from '@domain/communication/conversations-set/conversations.set.entity';
+import { IPlatformWellKnownVirtualContributors } from '@platform/platform.well.known.virtual.contributors/platform.well.known.virtual.contributors.interface';
 
 @Entity()
 export class Platform extends AuthorizableEntity implements IPlatform {
   @Column('json', { nullable: false })
   settings!: IPlatformSettings;
+
+  @Column('json', { nullable: false })
+  wellKnownVirtualContributors!: IPlatformWellKnownVirtualContributors;
 
   @OneToOne(() => Forum, {
     eager: false,

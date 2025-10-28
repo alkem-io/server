@@ -10,6 +10,7 @@ import { ILicensingFramework } from '@platform/licensing/credential-based/licens
 import { IMetadata } from '@platform/metadata/metadata.interface';
 import { IPlatformSettings } from '@platform/platform-settings/platform.settings.interface';
 import { IConversationsSet } from '@domain/communication/conversations-set/conversations.set.interface';
+import { IPlatformWellKnownVirtualContributors } from '@platform/platform.well.known.virtual.contributors/platform.well.known.virtual.contributors.interface';
 
 @ObjectType('Platform')
 export abstract class IPlatform extends IAuthorizable {
@@ -28,4 +29,11 @@ export abstract class IPlatform extends IAuthorizable {
     description: 'The settings of the Platform.',
   })
   settings!: IPlatformSettings;
+
+  @Field(() => IPlatformWellKnownVirtualContributors, {
+    nullable: false,
+    description:
+      'The mappings of well-known Virtual Contributors to their UUIDs.',
+  })
+  wellKnownVirtualContributors!: IPlatformWellKnownVirtualContributors;
 }
