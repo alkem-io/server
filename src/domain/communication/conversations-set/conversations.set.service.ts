@@ -14,6 +14,7 @@ import { IConversation } from '../conversation/conversation.interface';
 import { CreateConversationOnConversationsSetInput } from './dto/conversations.set.dto.create.conversation';
 import { ConfigService } from '@nestjs/config';
 import { AlkemioConfig } from '@src/types/alkemio.config';
+import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
 
 @Injectable()
 export class ConversationsSetService {
@@ -166,6 +167,26 @@ export class ConversationsSetService {
       conversation.userIDs.includes(userID)
     );
     return userConversations;
+  }
+
+  public async getConversationsUsersForUser(
+    userID: string
+  ): Promise<IConversation[]> {
+    const userConversations = await this.getConversationsForUser(userID);
+    return userConversations.filter(
+      conversation =>
+        conversation.type === CommunicationConversationType.USER_USER
+    );
+  }
+
+  public async getConversationsVirtualContributorsForUser(
+    userID: string
+  ): Promise<IConversation[]> {
+    const userConversations = await this.getConversationsForUser(userID);
+    return userConversations.filter(
+      conversation =>
+        conversation.type === CommunicationConversationType.USER_VC
+    );
   }
 
   public isGuidanceEngineEnabled(): boolean {

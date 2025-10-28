@@ -13,6 +13,7 @@ import { ActivityModule } from '@platform/activity/activity.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { ContributorModule } from '@domain/community/contributor/contributor.module';
 import { InAppNotificationModule } from '@platform/in-app-notification/in.app.notification.module';
+import { ConversationsSetModule } from '@domain/communication/conversations-set/conversations.set.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { InAppNotificationModule } from '@platform/in-app-notification/in.app.no
     ActivityModule,
     EntityResolverModule,
     InAppNotificationModule,
+    ConversationsSetModule,
   ],
   providers: [MeService, MeResolverQueries, MeResolverFields],
   exports: [MeService],

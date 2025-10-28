@@ -20,13 +20,16 @@ import { NotificationEventsFilterInput } from './dto/me.notification.event.filte
 import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
 import { PaginatedInAppNotifications } from '@core/pagination/paginated.in-app-notification';
 import { PaginationArgs } from '@core/pagination';
+import { MeConversationsResult } from './dto/me.conversations.result';
+import { ConversationsSetService } from '@domain/communication/conversations-set/conversations.set.service';
 
 @Resolver(() => MeQueryResults)
 export class MeResolverFields {
   constructor(
     private meService: MeService,
     private userService: UserService,
-    private inAppNotificationService: InAppNotificationService
+    private inAppNotificationService: InAppNotificationService,
+    private conversationsSetService: ConversationsSetService
   ) {}
 
   @ResolveField('notifications', () => PaginatedInAppNotifications, {
@@ -218,5 +221,34 @@ export class MeResolverFields {
     limit: number
   ): Promise<MySpaceResults[]> {
     return this.meService.getMySpaces(agentInfo, limit);
+  }
+
+  @ResolveField(() => MeConversationsResult, {
+    description: 'The conversations the current authenticated user is part of.',
+    nullable: false,
+  })
+  public async conversations(
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<MeConversationsResult> {
+    if (!agentInfo.userID) {
+      throw new ValidationException(
+        'Unable to retrieve conversations as no userID provided.',
+        LogContext.COMMUNICATION
+      );
+    }
+
+    const conversationsUsers =
+      await this.conversationsSetService.getConversationsUsersForUser(
+        agentInfo.userID
+      );
+    const conversationsVirtualContributors =
+      await this.conversationsSetService.getConversationsVirtualContributorsForUser(
+        agentInfo.userID
+      );
+
+    return {
+      users: conversationsUsers,
+      virtualContributors: conversationsVirtualContributors,
+    };
   }
 }
