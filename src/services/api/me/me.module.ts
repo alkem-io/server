@@ -14,6 +14,7 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
 import { ContributorModule } from '@domain/community/contributor/contributor.module';
 import { InAppNotificationModule } from '@platform/in-app-notification/in.app.notification.module';
 import { ConversationsSetModule } from '@domain/communication/conversations-set/conversations.set.module';
+import { MeConversationsResolverFields } from './me.conversations.resolver.fields';
 
 @Module({
   imports: [
@@ -30,7 +31,12 @@ import { ConversationsSetModule } from '@domain/communication/conversations-set/
     InAppNotificationModule,
     ConversationsSetModule,
   ],
-  providers: [MeService, MeResolverQueries, MeResolverFields],
+  providers: [
+    MeService,
+    MeResolverQueries,
+    MeResolverFields,
+    MeConversationsResolverFields,
+  ],
   exports: [MeService],
 })
 export class MeModule {}

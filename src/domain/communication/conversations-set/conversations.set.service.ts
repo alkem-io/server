@@ -15,6 +15,7 @@ import { CreateConversationOnConversationsSetInput } from './dto/conversations.s
 import { ConfigService } from '@nestjs/config';
 import { AlkemioConfig } from '@src/types/alkemio.config';
 import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
+import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
 
 @Injectable()
 export class ConversationsSetService {
@@ -185,6 +186,35 @@ export class ConversationsSetService {
     const userConversations = await this.getConversationsForUser(userID);
     return userConversations.filter(
       conversation =>
+        conversation.type === CommunicationConversationType.USER_VC
+    );
+  }
+
+  public async getConversationWithWellKnownVC(
+    userID: string,
+    wellKnownVC: VirtualContributorWellKnown
+  ): Promise<IConversation | undefined> {
+    // Get the mapping of well-known VCs to their IDs from the platform conversations set
+    const conversationsSet = await this.getPlatformConversationsSetOrFail({
+      relations: { guidanceVirtualContributor: true },
+    });
+
+    // Map well-known enum to actual VC ID
+    const vcIdMap: Record<VirtualContributorWellKnown, string | undefined> = {
+      [VirtualContributorWellKnown.GUIDANCE]:
+        conversationsSet.guidanceVirtualContributor?.id,
+    };
+
+    const virtualContributorID = vcIdMap[wellKnownVC];
+    if (!virtualContributorID) {
+      return undefined;
+    }
+
+    // Find the conversation between the user and this VC
+    const userConversations = await this.getConversationsForUser(userID);
+    return userConversations.find(
+      conversation =>
+        conversation.virtualContributorID === virtualContributorID &&
         conversation.type === CommunicationConversationType.USER_VC
     );
   }

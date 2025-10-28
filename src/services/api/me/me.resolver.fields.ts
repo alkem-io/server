@@ -237,18 +237,7 @@ export class MeResolverFields {
       );
     }
 
-    const conversationsUsers =
-      await this.conversationsSetService.getConversationsUsersForUser(
-        agentInfo.userID
-      );
-    const conversationsVirtualContributors =
-      await this.conversationsSetService.getConversationsVirtualContributorsForUser(
-        agentInfo.userID
-      );
-
-    return {
-      users: conversationsUsers,
-      virtualContributors: conversationsVirtualContributors,
-    };
+    // Return an empty object - the fields will be resolved by MeConversationsResolverFields
+    return {} as MeConversationsResult;
   }
 }
