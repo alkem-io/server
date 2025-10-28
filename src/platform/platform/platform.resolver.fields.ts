@@ -14,13 +14,21 @@ import { ITemplatesManager } from '@domain/template/templates-manager/templates.
 import { ILicensingFramework } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.interface';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { IConversationsSet } from '@domain/communication/conversations-set/conversations.set.interface';
+import { IPlatformWellKnownVirtualContributors } from '@platform/platform.well.known.virtual.contributors';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
+import { CurrentUser } from '@common/decorators';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AuthorizationPrivilege } from '@common/enums';
 
 @Resolver(() => IPlatform)
 export class PlatformResolverFields {
   constructor(
     private platformService: PlatformService,
     private configService: KonfigService,
-    private metadataService: MetadataService
+    private metadataService: MetadataService,
+    private authorizationService: AuthorizationService,
+    private platformAuthorizationService: PlatformAuthorizationPolicyService
   ) {}
 
   @ResolveField('authorization', () => IAuthorizationPolicy, {
@@ -120,5 +128,27 @@ export class PlatformResolverFields {
   })
   async templatesManager(): Promise<ITemplatesManager> {
     return await this.platformService.getTemplatesManagerOrFail();
+  }
+
+  @ResolveField(
+    'wellKnownVirtualContributors',
+    () => IPlatformWellKnownVirtualContributors,
+    {
+      nullable: false,
+      description: 'The well-known Virtual Contributors on the Platform.',
+    }
+  )
+  async wellKnownVirtualContributors(
+    @Parent() platform: IPlatform,
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<IPlatformWellKnownVirtualContributors> {
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
+      AuthorizationPrivilege.READ,
+      `get Platform well-known Virtual Contributors: ${agentInfo.email}`
+    );
+
+    return platform.wellKnownVirtualContributors;
   }
 }

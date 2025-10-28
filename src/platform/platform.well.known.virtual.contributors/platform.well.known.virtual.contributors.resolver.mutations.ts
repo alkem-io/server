@@ -1,4 +1,4 @@
-import { Resolver, Mutation, Args, Query } from '@nestjs/graphql';
+import { Resolver, Mutation, Args } from '@nestjs/graphql';
 import { CurrentUser } from '@common/decorators';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -38,21 +38,5 @@ export class PlatformWellKnownVirtualContributorsResolverMutations {
       mappingData.wellKnown,
       mappingData.virtualContributorID
     );
-  }
-
-  @Query(() => IPlatformWellKnownVirtualContributors, {
-    description: 'Get all well-known Virtual Contributor mappings.',
-  })
-  async platformWellKnownVirtualContributors(
-    @CurrentUser() agentInfo: AgentInfo
-  ): Promise<IPlatformWellKnownVirtualContributors> {
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.READ,
-      `get Platform well-known Virtual Contributors: ${agentInfo.email}`
-    );
-
-    return await this.platformWellKnownVirtualContributorsService.getMappings();
   }
 }
