@@ -77,3 +77,13 @@ pnpm run start:services:ai:debug
 ```
 
 Note: You may need multiple repositories cloned in order for this command to run. You can search the word `build` in `quickstart-services-ai-debug` and check which contexts are being built. If you need only one service to be built, comment the rest of the services which build the Dockerfile from relative path to the Alkemio Server.
+
+## Schema baseline automation prerequisites
+
+- The post-merge workflow `.github/workflows/schema-baseline.yml` regenerates `schema-baseline.graphql` on every push to `develop` and requires a dedicated signing identity.
+- Configure the following GitHub Action secrets (repository or environment scoped) before enabling the workflow:
+  - `SCHEMA_BASELINE_GPG_PRIVATE_KEY`: ASCII-armored private key for the automation identity.
+  - `SCHEMA_BASELINE_GPG_PASSPHRASE`: Passphrase for the key (set to an empty string when the key is unprotected).
+  - `SCHEMA_BASELINE_GPG_KEY_ID`: Fingerprint uploaded to GitHub so commits appear as verified.
+- Grant the automation key push access to `develop` and verify the public key is registered with the bot account that owns the commits.
+- After updating secrets, trigger the workflow manually (`workflow_dispatch`) to confirm the baseline commit path succeeds before relying on automatic runs.
