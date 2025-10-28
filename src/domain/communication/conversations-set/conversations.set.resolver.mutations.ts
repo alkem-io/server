@@ -15,8 +15,6 @@ import { ConversationsSetService } from './conversations.set.service';
 import { ForbiddenException } from '@common/exceptions/forbidden.exception';
 import { LogContext } from '@common/enums/logging.context';
 import { IConversationsSet } from './conversations.set.interface';
-import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
-import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
 
 @InstrumentResolver()
 @Resolver()
@@ -86,30 +84,6 @@ export class ConversationsSetResolverMutations {
 
     return await this.conversationService.getConversationOrFail(
       conversation.id
-    );
-  }
-
-  @Mutation(() => IConversation, {
-    nullable: true,
-    description: 'Create a guidance chat room.',
-  })
-  async createChatGuidanceConversation(
-    @CurrentUser() agentInfo: AgentInfo
-  ): Promise<IConversation | undefined> {
-    const conversationsSet =
-      await this.conversationsSetService.getPlatformConversationsSetOrFail();
-
-    const conversationData: CreateConversationOnConversationsSetInput = {
-      conversationsSetID: conversationsSet.id,
-      userIDs: [agentInfo.userID],
-      type: CommunicationConversationType.USER_VC,
-      wellKnownVirtualContributor: VirtualContributorWellKnown.CHAT_GUIDANCE,
-    };
-
-    return await this.createConversation(
-      agentInfo,
-      conversationsSet,
-      conversationData
     );
   }
 }

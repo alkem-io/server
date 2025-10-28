@@ -25,6 +25,8 @@ import { UserSettingsModule } from '../user-settings/user.settings.module';
 import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
 import { UserLookupModule } from '../user-lookup/user.lookup.module';
 import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/agent.info.module';
+import { ConversationsSetModule } from '@domain/communication/conversations-set/conversations.set.module';
+import { PlatformModule } from '@platform/platform/platform.module';
 
 @Module({
   imports: [
@@ -47,6 +49,8 @@ import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/a
     DocumentModule,
     KratosModule,
     ContributorModule,
+    ConversationsSetModule,
+    PlatformModule,
     TypeOrmModule.forFeature([User]),
   ],
   providers: [

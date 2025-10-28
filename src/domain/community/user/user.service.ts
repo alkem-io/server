@@ -61,6 +61,10 @@ import { AgentInfoCacheService } from '@core/authentication.agent.info/agent.inf
 import { VisualType } from '@common/enums/visual.type';
 import { InstrumentService } from '@src/apm/decorators';
 import { CreateUserSettingsInput } from '../user-settings/dto/user.settings.dto.create';
+import { ConversationsSetService } from '@domain/communication/conversations-set/conversations.set.service';
+import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
+import { PlatformService } from '@platform/platform/platform.service';
+import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
 
 @InstrumentService()
 @Injectable()
@@ -81,6 +85,8 @@ export class UserService {
     private userSettingsService: UserSettingsService,
     private contributorService: ContributorService,
     private kratosService: KratosService,
+    private conversationsSetService: ConversationsSetService,
+    private platformService: PlatformService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -214,7 +220,38 @@ export class UserService {
 
     await this.setUserCache(user);
 
+    // Create a guidance conversation with the well-known chat guidance VC
+    await this.createGuidanceConversationForUser(user.id);
+
     return user;
+  }
+
+  private async createGuidanceConversationForUser(
+    userID: string
+  ): Promise<void> {
+    try {
+      const conversationsSet =
+        await this.platformService.getConversationsSetOrFail();
+
+      await this.conversationsSetService.createConversationOnConversationsSet({
+        conversationsSetID: conversationsSet.id,
+        type: CommunicationConversationType.USER_VC,
+        userIDs: [userID],
+        wellKnownVirtualContributor: VirtualContributorWellKnown.CHAT_GUIDANCE,
+      });
+
+      this.logger.verbose?.(
+        `Created guidance conversation for user: ${userID}`,
+        LogContext.COMMUNITY
+      );
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to create guidance conversation for user ${userID}: ${error}`,
+        error?.stack,
+        LogContext.COMMUNITY
+      );
+      // Don't throw - user creation should succeed even if conversation creation fails
+    }
   }
 
   private getDefaultUserSettings(): CreateUserSettingsInput {
