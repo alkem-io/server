@@ -20,6 +20,8 @@ import { PlatformAuthorizationPolicyService } from '@platform/authorization/plat
 import { CurrentUser } from '@common/decorators';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPrivilege } from '@common/enums';
+import { PlatformWellKnownVirtualContributorMapping } from '@platform/platform.well.known.virtual.contributors/dto/platform.well.known.virtual.contributor.dto.mapping';
+import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
 
 @Resolver(() => IPlatform)
 export class PlatformResolverFields {
@@ -149,6 +151,16 @@ export class PlatformResolverFields {
       `get Platform well-known Virtual Contributors: ${agentInfo.email}`
     );
 
-    return platform.wellKnownVirtualContributors;
+    // Convert from JSON storage format to DTO array format
+    const mappingsRecord = platform.wellKnownVirtualContributors as any;
+    const mappingsArray: PlatformWellKnownVirtualContributorMapping[] =
+      Object.entries(mappingsRecord || {}).map(
+        ([wellKnown, virtualContributorID]) => ({
+          wellKnown: wellKnown as VirtualContributorWellKnown,
+          virtualContributorID: virtualContributorID as string,
+        })
+      );
+
+    return { mappings: mappingsArray };
   }
 }

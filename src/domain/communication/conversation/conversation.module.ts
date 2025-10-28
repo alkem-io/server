@@ -13,6 +13,7 @@ import { AiServerAdapterModule } from '@services/adapters/ai-server-adapter/ai.s
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
 import { ConversationResolverMutations } from './conversation.resolver.mutations';
 import { GuidanceReporterModule } from '@services/external/elasticsearch/guidance-reporter';
+import { PlatformWellKnownVirtualContributorsModule } from '@platform/platform.well.known.virtual.contributors';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { GuidanceReporterModule } from '@services/external/elasticsearch/guidanc
     AiServerAdapterModule,
     CommunicationAdapterModule,
     GuidanceReporterModule,
+    PlatformWellKnownVirtualContributorsModule,
     TypeOrmModule.forFeature([Conversation]),
   ],
   providers: [

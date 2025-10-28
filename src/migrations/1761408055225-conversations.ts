@@ -12,6 +12,7 @@ export class Conversations1761408055225 implements MigrationInterface {
                                                                 \`type\` varchar(128) NOT NULL,
                                                                 \`userIDs\` json NOT NULL,
                                                                 \`virtualContributorID\` char(36) NULL,
+                                                                \`wellKnownVirtualContributor\` varchar(128) NULL,
                                                                 \`authorizationId\` char(36) NULL,
                                                                 \`conversationsSetId\` char(36) NULL,
                                                                 \`roomId\` char(36) NULL,

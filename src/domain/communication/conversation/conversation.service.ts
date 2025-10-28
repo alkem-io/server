@@ -26,6 +26,7 @@ import { InvocationResultAction } from '@services/ai-server/ai-persona/dto';
 import { ConversationVcAskQuestionInput } from './dto/conversation.vc.dto.ask.question.input';
 import { InvocationOperation } from '@common/enums/ai.persona.invocation.operation';
 import { ConversationVcAskQuestionResult } from './dto/conversation.vc.dto.ask.question.result';
+import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
 
 @Injectable()
 export class ConversationService {
@@ -36,6 +37,7 @@ export class ConversationService {
     private roomService: RoomService,
     private userLookupService: UserLookupService,
     private virtualContributorLookupService: VirtualContributorLookupService,
+    private platformWellKnownVirtualContributorsService: PlatformWellKnownVirtualContributorsService,
     @InjectRepository(Conversation)
     private conversationRepository: Repository<Conversation>
   ) {}
@@ -51,11 +53,17 @@ export class ConversationService {
     conversation.type = conversationData.type;
     conversation.userIDs = conversationData.userIDs;
     conversation.virtualContributorID = conversationData.virtualContributorID;
+    conversation.wellKnownVirtualContributor =
+      conversationData.wellKnownVirtualContributor;
     conversation.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.COMMUNICATION_CONVERSATION
     );
 
-    conversation.room = await this.createConversationRoom(conversation);
+    // Only create the room immediately if we have a concrete virtualContributorID
+    // For well-known VCs, room creation is deferred until the first message
+    if (!conversationData.wellKnownVirtualContributor) {
+      conversation.room = await this.createConversationRoom(conversation);
+    }
 
     return await this.conversationRepository.save(conversation as Conversation);
   }
@@ -130,29 +138,61 @@ export class ConversationService {
             LogContext.COMMUNICATION_CONVERSATION
           );
         }
-        if (!conversationData.virtualContributorID) {
+
+        // Must have either virtualContributorID or wellKnownVirtualContributor, but not both
+        const hasVcId = !!conversationData.virtualContributorID;
+        const hasWellKnown = !!conversationData.wellKnownVirtualContributor;
+
+        if (!hasVcId && !hasWellKnown) {
           throw new ValidationException(
-            'A user-to-agent conversation must have a virtualContributorID',
+            'A user-to-agent conversation must have either a virtualContributorID or wellKnownVirtualContributor',
             LogContext.COMMUNICATION_CONVERSATION
           );
         }
-        // Check the virtual contributor ID is valid
-        await this.virtualContributorLookupService.getVirtualContributorByNameIdOrFail(
-          conversationData.virtualContributorID
-        );
+
+        if (hasVcId && hasWellKnown) {
+          throw new ValidationException(
+            'A user-to-agent conversation cannot have both virtualContributorID and wellKnownVirtualContributor',
+            LogContext.COMMUNICATION_CONVERSATION
+          );
+        }
+
+        // If using a concrete VC ID, validate it exists
+        if (conversationData.virtualContributorID) {
+          await this.virtualContributorLookupService.getVirtualContributorByNameIdOrFail(
+            conversationData.virtualContributorID
+          );
+        }
+
         // Check that there is not already a conversation between user and virtual contributor
         const userIDsJson = JSON.stringify(conversationData.userIDs.sort());
-        const existingConversations = await this.conversationRepository
+        const queryBuilder = this.conversationRepository
           .createQueryBuilder('conversation')
           .where('conversation.type = :type', { type: conversationData.type })
-          .andWhere('conversation.userIDs = :userIDs', { userIDs: userIDsJson })
-          .andWhere(
+          .andWhere('conversation.userIDs = :userIDs', {
+            userIDs: userIDsJson,
+          });
+
+        if (conversationData.virtualContributorID) {
+          queryBuilder.andWhere(
             'conversation.virtualContributorID = :virtualContributorID',
             {
               virtualContributorID: conversationData.virtualContributorID,
             }
-          )
-          .getMany();
+          );
+        }
+
+        if (conversationData.wellKnownVirtualContributor) {
+          queryBuilder.andWhere(
+            'conversation.wellKnownVirtualContributor = :wellKnownVirtualContributor',
+            {
+              wellKnownVirtualContributor:
+                conversationData.wellKnownVirtualContributor,
+            }
+          );
+        }
+
+        const existingConversations = await queryBuilder.getMany();
         if (existingConversations.length > 0) {
           throw new ValidationException(
             'A conversation between this user and agent already exists',
@@ -258,6 +298,38 @@ export class ConversationService {
         relations: { room: true },
       }
     );
+
+    // If the conversation has a well-known VC but no room yet, initialize it now
+    if (
+      !guidanceConversation.room &&
+      guidanceConversation.wellKnownVirtualContributor
+    ) {
+      // Resolve the well-known VC to a UUID
+      const vcId =
+        await this.platformWellKnownVirtualContributorsService.getVirtualContributorID(
+          guidanceConversation.wellKnownVirtualContributor
+        );
+
+      if (!vcId) {
+        throw new ValidationException(
+          `Well-known virtual contributor ${guidanceConversation.wellKnownVirtualContributor} is not configured`,
+          LogContext.COMMUNICATION_CONVERSATION
+        );
+      }
+
+      // Set the resolved VC ID
+      guidanceConversation.virtualContributorID = vcId;
+
+      // Create the room now
+      guidanceConversation.room =
+        await this.createConversationRoom(guidanceConversation);
+
+      // Save the updated conversation
+      await this.conversationRepository.save(
+        guidanceConversation as Conversation
+      );
+    }
+
     if (!guidanceConversation.room) {
       throw new ValidationException(
         'Conversation has no associated room',

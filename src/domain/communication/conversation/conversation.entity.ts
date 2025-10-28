@@ -8,6 +8,7 @@ import {
   ENUM_LENGTH,
   UUID_LENGTH,
 } from '@common/constants/entity.field.length.constants';
+import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
 
 @Entity()
 export class Conversation extends AuthorizableEntity implements IConversation {
@@ -19,6 +20,9 @@ export class Conversation extends AuthorizableEntity implements IConversation {
 
   @Column('char', { length: UUID_LENGTH, nullable: true })
   virtualContributorID?: string;
+
+  @Column('varchar', { length: ENUM_LENGTH, nullable: true })
+  wellKnownVirtualContributor?: VirtualContributorWellKnown;
 
   @ManyToOne(
     () => ConversationsSet,

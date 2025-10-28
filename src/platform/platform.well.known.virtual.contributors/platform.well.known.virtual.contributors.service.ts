@@ -3,9 +3,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Platform } from '@platform/platform/platform.entity';
 import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
-import { IPlatformWellKnownVirtualContributors } from './platform.well.known.virtual.contributors.interface';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
+
+// Internal storage type - Record for JSON storage
+type WellKnownVCMappingsRecord = Record<
+  VirtualContributorWellKnown,
+  string | undefined
+>;
 
 @Injectable()
 export class PlatformWellKnownVirtualContributorsService {
@@ -14,7 +19,7 @@ export class PlatformWellKnownVirtualContributorsService {
     private platformRepository: Repository<Platform>
   ) {}
 
-  async getMappings(): Promise<IPlatformWellKnownVirtualContributors> {
+  async getMappings(): Promise<WellKnownVCMappingsRecord> {
     const platform = await this.platformRepository.findOne({
       where: {},
     });
@@ -26,13 +31,13 @@ export class PlatformWellKnownVirtualContributorsService {
       );
     }
 
-    return platform.wellKnownVirtualContributors || {};
+    return (platform.wellKnownVirtualContributors as any) || {};
   }
 
   async setMapping(
     wellKnown: VirtualContributorWellKnown,
     virtualContributorID: string
-  ): Promise<IPlatformWellKnownVirtualContributors> {
+  ): Promise<WellKnownVCMappingsRecord> {
     const platform = await this.platformRepository.findOne({
       where: {},
     });
@@ -45,16 +50,17 @@ export class PlatformWellKnownVirtualContributorsService {
     }
 
     // Initialize if needed
-    if (!platform.wellKnownVirtualContributors) {
-      platform.wellKnownVirtualContributors = {};
-    }
+    const mappings = ((platform.wellKnownVirtualContributors as any) ||
+      {}) as WellKnownVCMappingsRecord;
 
     // Set the mapping
-    platform.wellKnownVirtualContributors[wellKnown] = virtualContributorID;
+    mappings[wellKnown] = virtualContributorID;
+
+    platform.wellKnownVirtualContributors = mappings as any;
 
     await this.platformRepository.save(platform);
 
-    return platform.wellKnownVirtualContributors;
+    return mappings;
   }
 
   async getVirtualContributorID(

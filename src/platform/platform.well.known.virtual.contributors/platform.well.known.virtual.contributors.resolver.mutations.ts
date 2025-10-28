@@ -8,6 +8,8 @@ import { PlatformWellKnownVirtualContributorsService } from './platform.well.kno
 import { IPlatformWellKnownVirtualContributors } from './platform.well.known.virtual.contributors.interface';
 import { SetPlatformWellKnownVirtualContributorInput } from './dto/platform.well.known.virtual.contributor.dto.set';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { PlatformWellKnownVirtualContributorMapping } from './dto/platform.well.known.virtual.contributor.dto.mapping';
+import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
 
 @InstrumentResolver()
 @Resolver()
@@ -34,9 +36,21 @@ export class PlatformWellKnownVirtualContributorsResolverMutations {
       `set Platform well-known Virtual Contributor: ${agentInfo.email}`
     );
 
-    return await this.platformWellKnownVirtualContributorsService.setMapping(
-      mappingData.wellKnown,
-      mappingData.virtualContributorID
-    );
+    const mappingsRecord =
+      await this.platformWellKnownVirtualContributorsService.setMapping(
+        mappingData.wellKnown,
+        mappingData.virtualContributorID
+      );
+
+    // Convert from Record format to DTO array format
+    const mappingsArray: PlatformWellKnownVirtualContributorMapping[] =
+      Object.entries(mappingsRecord || {}).map(
+        ([wellKnown, virtualContributorID]) => ({
+          wellKnown: wellKnown as VirtualContributorWellKnown,
+          virtualContributorID: virtualContributorID as string,
+        })
+      );
+
+    return { mappings: mappingsArray };
   }
 }
