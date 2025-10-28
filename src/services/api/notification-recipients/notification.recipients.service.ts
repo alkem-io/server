@@ -342,10 +342,6 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_ADMIN_COMMUNITY_APPLICATION: {
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
         credentialCriteria = this.getSpaceAdminCredentialCriteria(spaceID);
-        credentialCriteria.push({
-          type: AuthorizationCredential.GLOBAL_ADMIN,
-          resourceID: '',
-        });
         break;
       }
       case NotificationEvent.SPACE_LEAD_COMMUNICATION_MESSAGE: {
