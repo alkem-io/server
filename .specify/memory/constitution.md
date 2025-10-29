@@ -1,3 +1,5 @@
+<!-- Implements constitution & agents.md. Does not introduce new governance. -->
+
 <!--
 Sync Impact Report
 Version change: 0.0.0 → 1.0.0 (initial full definition)
@@ -12,6 +14,8 @@ Deferred TODOs: None
 -->
 
 # Alkemio Server Engineering Constitution
+
+See also [`agents.md`](../../agents.md) and [`copilot-instructions.md`](../../.github/copilot-instructions.md) for operational guidance derived from this document.
 
 ## Core Principles
 

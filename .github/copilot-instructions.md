@@ -7,13 +7,13 @@
 - Purpose: NestJS GraphQL server for the Alkemio collaboration platform; exposes `http://localhost:3000/graphql` and orchestrates domain + integration services.
 - Stack: TypeScript, Node 20 LTS (Volta pins 20.15.1), pnpm 10.17.1 via Corepack, NestJS, TypeORM (MySQL), Apollo Server, RabbitMQ queues, Elastic APM, Ory Kratos/Oathkeeper for auth.
 - Scale: ~3k TypeScript files; key roots include `src/`, `test/`, `docs/`, `.specify/`, `scripts/`, `specs/00x-*`, `quickstart-*.yml`, `Dockerfile`, `package.json`, `pnpm-lock.yaml`.
-- Docs: `docs/Developing.md`, `docs/Running.md`, `docs/QA.md`, `docs/DataManagement.md`, `docs/Design.md` hold authoritative setup, architecture, QA, and migration guidance.
+- Docs: `docs/Developing.md`, `docs/Running.md`, `docs/QA.md`, `docs/DataManagement.md`, `docs/Design.md` hold authoritative setup, architecture, QA, and migration guidance. Authorization flows and decision trees live in `docs/authorization-forest.md` and credential semantics in `docs/credential-based-authorization.md`.
 
 ## Governance & Workflow
 
-- Specification-Driven Development is mandatory for feature work. Read `.specify/memory/constitution.md` first; it defines quality gates, module boundaries, and testing expectations.
+- Specification-Driven Development is mandatory for feature work. Read `[.specify/memory/constitution.md](../.specify/memory/constitution.md)` first; it defines quality gates, module boundaries, and testing expectations.
 - Artifacts live under `specs/<NNN-slug>/` (plan, spec, checklist, tasks). Follow the canonical progression: `/spec` → `/clarify` → `/plan` → `/checklist` → `/tasks` → `/implement` → `/stabilize` → `/done`.
-- Classify work per `agents.md`: Manual Fix (≤40 LOC, trivial), Agentic Flow (medium scoped refactors, supply mini-plan), Full SDD (net-new capabilities or schema/migration impact).
+- Classify work per [`agents.md`](../agents.md): default to the Agentic path for scoped changes (≤ ~400 LOC with known outcomes) and escalate to Full SDD when contracts, migrations, or high ambiguity enter the picture.
 - All schema changes require regenerating `schema.graphql`, running `pnpm run schema:diff`, and addressing the schema contract gate.
 
 ## Environment & Toolchain

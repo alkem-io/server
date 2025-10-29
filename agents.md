@@ -1,3 +1,5 @@
+<!-- Implements constitution & agents.md. Does not introduce new governance. -->
+
 # agents.md v1.0 (Lean Governance Layer)
 
 ## Purpose
@@ -5,13 +7,13 @@
 Operational handbook translating the enduring principles in the **constitution** into day-to-day collaboration between human contributors and AI assistants.
 Keeps process lightweight while enabling traceability, consistency, and adaptive governance.
 
-See: [`./.specify/memory/constitution.md`](./.specify/memory/constitution.md)
+See: [`.specify/memory/constitution.md`](.specify/memory/constitution.md)
 
 ---
 
 ## Operational Summary
 
-- Follow hierarchy: **constitution → agents.md → copilot-instructions → templates/scripts**
+- Follow hierarchy: **[constitution](.specify/memory/constitution.md) → agents.md → [copilot-instructions](.github/copilot-instructions.md) → templates/scripts**
 - Choose the _lightest responsible path_ (`Agentic → Full SDD`)
 - Tools and AI assistants **implement** policy — they never define it
 - Schema baseline automation pushes signed updates to `schema-baseline.graphql` after merges to `develop`; treat workflow failures as blocking until resolved and avoid manual commits unless coordinated with owners.
