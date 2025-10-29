@@ -12,7 +12,7 @@ See: [`./.specify/memory/constitution.md`](./.specify/memory/constitution.md)
 ## Operational Summary
 
 - Follow hierarchy: **constitution → agents.md → copilot-instructions → templates/scripts**
-- Choose the _lightest responsible path_ (`Manual → Agentic → Full SDD`)
+- Choose the _lightest responsible path_ (`Agentic → Full SDD`)
 - Tools and AI assistants **implement** policy — they never define it
 - Schema baseline automation pushes signed updates to `schema-baseline.graphql` after merges to `develop`; treat workflow failures as blocking until resolved and avoid manual commits unless coordinated with owners.
 - Mid-way discoveries of new domains or dependencies → **promote the path** before continuing
@@ -61,16 +61,15 @@ Implements constitution & agents.md. Does not introduce new governance.
 
 ## Change Classification & Path Selection
 
-Choose the lightest responsible path; escalate as uncertainty or risk increases.
+Choose the lightest responsible path; escalate as uncertainty or risk increases. All coding work, including small fixes, runs through the Agentic path unless the scope demands Full SDD.
 
-| Path             | When to Use                                                         | Required Artifacts                                                         | Typical Triggers                                   | Escalate If                                          |
-| ---------------- | ------------------------------------------------------------------- | -------------------------------------------------------------------------- | -------------------------------------------------- | ---------------------------------------------------- |
-| **Full SDD**     | Net-new capability, external contract, multi-sprint, high ambiguity | `spec.md`, `plan.md` before coding                                         | New aggregate, migration, security/privacy surface | >1 unresolved open question or unclear exit criteria |
-| **Agentic Flow** | Medium enhancement or refactor; some unknowns; ≤ ~400 LOC           | Inline mini-plan (PR or `plan.md` stub: Goal, Scope, Risks, Exit Criteria) | Internal API change, logic consolidation           | Contract emerges, risk widens, churn > plan          |
-| **Manual Fix**   | Trivial, fully understood, ≤ ~40 LOC, no contract impact            | None (optional PR note)                                                    | Typo, guard clause, constant tweak                 | Second unplanned file edit or hidden side-effect     |
+| Path             | When to Use                                                                    | Required Artifacts                                                         | Typical Triggers                                                           | Escalate If                                          |
+| ---------------- | ------------------------------------------------------------------------------ | -------------------------------------------------------------------------- | -------------------------------------------------------------------------- | ---------------------------------------------------- |
+| **Agentic Flow** | Any scoped change up to ~400 LOC with known outcomes (including trivial fixes) | Inline mini-plan (PR or `plan.md` stub: Goal, Scope, Risks, Exit Criteria) | Typo or guard clause corrections, internal API shifts, logic consolidation | Contract emerges, risk widens, churn > plan          |
+| **Full SDD**     | Net-new capability, external contract, multi-sprint, high ambiguity            | `spec.md`, `plan.md` before coding                                         | New aggregate, migration, security/privacy surface                         | >1 unresolved open question or unclear exit criteria |
 
 **Decision Rationale:**
-Prevents “spec theater” for trivial work while stopping silent architectural drift.
+Keeps small changes disciplined via Agentic mini-plans while preventing silent architectural drift on larger efforts.
 
 **Fallback Rule:**
 If you discover a new domain concept or dependency assumption mid-way, **pause → capture → promote** the path before continuing.
