@@ -57,11 +57,48 @@ function updateFailureContext(message: string) {
   appendFileSync(envFile, `BASELINE_FAILURE_CONTEXT=${message}${EOL}`);
 }
 
+function resolveReportPath(argv: string[]): string {
+  let candidate: string | undefined;
+
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+
+    if (arg === '--report' || arg === '-r') {
+      const next = argv[i + 1];
+      if (!next || next.startsWith('-')) {
+        console.error('Missing value for --report option.');
+        updateFailureContext(
+          '`--report` flag was provided without a file path.'
+        );
+        process.exit(1);
+      }
+      candidate = next;
+      break;
+    }
+
+    if (arg.startsWith('--report=')) {
+      const value = arg.split('=', 2)[1];
+      if (!value) {
+        console.error('Missing value for --report option.');
+        updateFailureContext(
+          '`--report` flag was provided without a file path.'
+        );
+        process.exit(1);
+      }
+      candidate = value;
+      break;
+    }
+
+    if (!arg.startsWith('-') && !candidate) {
+      candidate = arg;
+    }
+  }
+
+  return resolve(process.cwd(), candidate || 'change-report.json');
+}
+
 function main() {
-  const reportPath = resolve(
-    process.cwd(),
-    process.argv[2] || 'change-report.json'
-  );
+  const reportPath = resolveReportPath(process.argv.slice(2));
   if (!existsSync(reportPath)) {
     console.error(`No change report found at ${reportPath}`);
     updateFailureContext(
