@@ -7,6 +7,7 @@ reviews:
   collapse_walkthrough: false
   path_filters:
     - "!**/.github/workflows/*"
+    - "!**/.github/prompts/*"      # Exclude Prompt files
     - "!**/node_modules/**"  # Exclude dependencies
     - "!**/dist/**"          # Exclude build files
     - "!**/specify/**"       # Exclude Speckit files

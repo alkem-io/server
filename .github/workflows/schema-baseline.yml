@@ -116,15 +116,15 @@ jobs:
         id: import_gpg
         uses: crazy-max/ghaction-import-gpg@v6
         with:
-          gpg_private_key: ${{ secrets.SCHEMA_BASELINE_GPG_PRIVATE_KEY }}
-          passphrase: ${{ secrets.SCHEMA_BASELINE_GPG_PASSPHRASE }}
+          gpg_private_key: ${{ secrets.ALKEMIO_INFRASTRUCTURE_BOT_GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.ALKEMIO_INFRASTRUCTURE_BOT_GPG_PASSPHRASE }}
           trust_level: 5
 
       - name: Commit and push updated baseline
         if: steps.publish.outputs.baseline_changed == 'true'
         env:
           GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
-          FALLBACK_GPG_KEY_ID: ${{ secrets.SCHEMA_BASELINE_GPG_KEY_ID }}
+          FALLBACK_GPG_KEY_ID: ${{ secrets.ALKEMIO_INFRASTRUCTURE_BOT_GPG_KEY_ID }}
         run: |
           set -Eeuo pipefail
           trap '{
@@ -132,8 +132,8 @@ jobs:
             echo "BASELINE_FAILURE_PHASE=signing" >> "$GITHUB_ENV";
           }' ERR
 
-          git config user.name "Alkemio Schema Baseline Bot"
-          git config user.email "schemas@alkem.io"
+          git config user.name "Alkemio Infrastructure Bot"
+          git config user.email "infrastructure@alkem.io"
           git config commit.gpgsign true
 
           if [ -n "${GPG_FINGERPRINT:-}" ]; then
@@ -141,7 +141,7 @@ jobs:
           elif [ -n "${FALLBACK_GPG_KEY_ID:-}" ]; then
             git config user.signingkey "$FALLBACK_GPG_KEY_ID"
           else
-            echo "::error::No GPG fingerprint available; set SCHEMA_BASELINE_GPG_KEY_ID." >&2
+            echo "::error::No GPG fingerprint available; set ALKEMIO_INFRASTRUCTURE_BOT_GPG_KEY_ID." >&2
             exit 1
           fi
 

@@ -38,9 +38,9 @@ The helper mirrors the job summary that maintainers will see after each workflow
 
 1. Export the ASCII-armored private key and passphrase for the shared automation key.
 2. Configure repository secrets:
-   - `SCHEMA_BASELINE_GPG_PRIVATE_KEY`: armored private key contents
-   - `SCHEMA_BASELINE_GPG_PASSPHRASE`: passphrase (if set)
-   - `SCHEMA_BASELINE_GPG_KEY_ID`: key fingerprint (optional but recommended)
+   - `ALKEMIO_INFRASTRUCTURE_BOT_GPG_PRIVATE_KEY`: armored private key contents
+   - `ALKEMIO_INFRASTRUCTURE_BOT_GPG_PASSPHRASE`: passphrase (if set)
+   - `ALKEMIO_INFRASTRUCTURE_BOT_GPG_KEY_ID`: key fingerprint (optional but recommended)
 3. Ensure the public key is uploaded to GitHub so commits appear as “Verified”.
 
 Locally, you can test signing with:
