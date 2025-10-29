@@ -22,8 +22,8 @@ description: 'Task list for schema baseline automation workflow'
 
 **Purpose**: Establish the baseline workflow file and trigger scaffold.
 
-- [ ] T001 Create `.github/workflows/schema-baseline.yml` with `name`, `on: push` to `develop`, and concurrency group placeholder `schema-baseline-develop`.
-- [ ] T002 Define the initial job shell (runner, env placeholders for signing secrets) inside `.github/workflows/schema-baseline.yml`.
+- [x] T001 Create `.github/workflows/schema-baseline.yml` with `name`, `on: push` to `develop`, and concurrency group placeholder `schema-baseline-develop`.
+- [x] T002 Define the initial job shell (runner, env placeholders for signing secrets) inside `.github/workflows/schema-baseline.yml`.
 
 ---
 
@@ -31,9 +31,9 @@ description: 'Task list for schema baseline automation workflow'
 
 **Purpose**: Core workflow plumbing required before any user story steps execute.
 
-- [ ] T003 Add checkout step with full history fetch in `.github/workflows/schema-baseline.yml` using `actions/checkout@v4`.
-- [ ] T004 Add Node 20 setup and pnpm 10.17.1 bootstrap steps in `.github/workflows/schema-baseline.yml` via `actions/setup-node@v4` and `corepack` commands.
-- [ ] T005 Add dependency installation step (`pnpm install --frozen-lockfile`) to `.github/workflows/schema-baseline.yml`.
+- [x] T003 Add checkout step with full history fetch in `.github/workflows/schema-baseline.yml` using `actions/checkout@v4`.
+- [x] T004 Add Node 20 setup and pnpm 10.17.1 bootstrap steps in `.github/workflows/schema-baseline.yml` via `actions/setup-node@v4` and `corepack` commands.
+- [x] T005 Add dependency installation step (`pnpm install --frozen-lockfile`) to `.github/workflows/schema-baseline.yml`.
 
 **Checkpoint**: Workflow can bootstrap repository dependencies on merge events.
 
@@ -47,12 +47,12 @@ description: 'Task list for schema baseline automation workflow'
 
 ### Implementation for User Story 1
 
-- [ ] T006 [US1] Add step calling `scripts/schema/generate-schema.snapshot.ts` to emit `schema.graphql` with diagnostics in `.github/workflows/schema-baseline.yml`.
-- [ ] T007 [US1] Add step to fetch previous baseline (`origin/develop:schema-baseline.graphql`) into `tmp/prev.schema.graphql` inside `.github/workflows/schema-baseline.yml`.
-- [ ] T008 [US1] Invoke `scripts/schema/diff-schema.ts` to produce `change-report.json` and detect schema differences inside `.github/workflows/schema-baseline.yml`.
-- [ ] T009 [US1] Add conditional shell block copying `schema.graphql` to `schema-baseline.graphql`, staging the file only when diffs exist, within `.github/workflows/schema-baseline.yml`.
-- [ ] T010 [US1] Configure `crazy-max/ghaction-import-gpg@v6` step to import signing key and trust settings in `.github/workflows/schema-baseline.yml`.
-- [ ] T011 [US1] Add signed commit push step with `git pull --ff-only` guard to update `develop` only when baseline changed inside `.github/workflows/schema-baseline.yml`.
+- [x] T006 [US1] Add step calling `scripts/schema/generate-schema.snapshot.ts` to emit `schema.graphql` with diagnostics in `.github/workflows/schema-baseline.yml`.
+- [x] T007 [US1] Add step to fetch previous baseline (`origin/develop:schema-baseline.graphql`) into `tmp/prev.schema.graphql` inside `.github/workflows/schema-baseline.yml`.
+- [x] T008 [US1] Invoke `scripts/schema/diff-schema.ts` to produce `change-report.json` and detect schema differences inside `.github/workflows/schema-baseline.yml`.
+- [x] T009 [US1] Add conditional shell block copying `schema.graphql` to `schema-baseline.graphql`, staging the file only when diffs exist, within `.github/workflows/schema-baseline.yml`.
+- [x] T010 [US1] Configure `crazy-max/ghaction-import-gpg@v6` step to import signing key and trust settings in `.github/workflows/schema-baseline.yml`.
+- [x] T011 [US1] Add signed commit push step with `git pull --ff-only` guard to update `develop` only when baseline changed inside `.github/workflows/schema-baseline.yml`.
 
 **Checkpoint**: Baseline file remains synchronized with `develop` after merges.
 
@@ -66,9 +66,9 @@ description: 'Task list for schema baseline automation workflow'
 
 ### Implementation for User Story 2
 
-- [ ] T012 [P] [US2] Implement diff summary helper in `scripts/schema/publish-baseline.ts` to transform `change-report.json` into markdown and exit codes.
-- [ ] T013 [US2] Wire `scripts/schema/publish-baseline.ts` into `.github/workflows/schema-baseline.yml` to append markdown to the GitHub Actions job summary and set outputs.
-- [ ] T014 [US2] Add artifact upload step for `change-report.json`, `schema.graphql`, and `tmp/prev.schema.graphql` in `.github/workflows/schema-baseline.yml`.
+- [x] T012 [P] [US2] Implement diff summary helper in `scripts/schema/publish-baseline.ts` to transform `change-report.json` into markdown and exit codes.
+- [x] T013 [US2] Wire `scripts/schema/publish-baseline.ts` into `.github/workflows/schema-baseline.yml` to append markdown to the GitHub Actions job summary and set outputs.
+- [x] T014 [US2] Add artifact upload step for `change-report.json`, `schema.graphql`, and `tmp/prev.schema.graphql` in `.github/workflows/schema-baseline.yml`.
 
 **Checkpoint**: Maintainers can inspect diffs quickly without cloning artifacts manually.
 
@@ -82,8 +82,8 @@ description: 'Task list for schema baseline automation workflow'
 
 ### Implementation for User Story 3
 
-- [ ] T015 [US3] Add `actions/github-script@v7` failure handler that posts a commit comment tagging CODEOWNERS with the run URL inside `.github/workflows/schema-baseline.yml`.
-- [ ] T016 [US3] Capture signing/push failure details into the workflow summary (including exit codes and remediation hints) within `.github/workflows/schema-baseline.yml` and ensure the job fails explicitly.
+- [x] T015 [US3] Add `actions/github-script@v7` failure handler that posts a commit comment tagging CODEOWNERS with the run URL inside `.github/workflows/schema-baseline.yml`.
+- [x] T016 [US3] Capture signing/push failure details into the workflow summary (including exit codes and remediation hints) within `.github/workflows/schema-baseline.yml` and ensure the job fails explicitly.
 
 **Checkpoint**: Failures generate actionable, timely notifications for maintainers.
 
@@ -93,8 +93,8 @@ description: 'Task list for schema baseline automation workflow'
 
 **Purpose**: Documentation and quality improvements spanning all stories.
 
-- [ ] T017 Document signing secret requirements and manual rerun instructions in `docs/Running.md`.
-- [ ] T018 Add schema baseline workflow troubleshooting steps to `docs/Developing.md` (linking quickstart guidance).
+- [x] T017 Document signing secret requirements and manual rerun instructions in `docs/Running.md`.
+- [x] T018 Add schema baseline workflow troubleshooting steps to `docs/Developing.md` (linking quickstart guidance).
 
 ---
 
