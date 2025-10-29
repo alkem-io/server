@@ -7,8 +7,7 @@ import { Inject, LoggerService } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UserService } from './user.service';
-import { DirectRoomResult } from './dto/user.dto.communication.room.direct.result';
-import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
+import { DirectRoomResult } from '../../communication/communication/dto/communication.dto.send.direct.message.user.result';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
@@ -80,16 +79,6 @@ export class UserResolverFields {
     loader: ILoader<IAuthorizationPolicy>
   ) {
     return loader.load(user.id);
-  }
-
-  @ResolveField('communityRooms', () => [CommunicationRoomResult], {
-    nullable: true,
-    description: 'The Community rooms this user is a member of',
-  })
-  async communityRooms(
-    @Parent() user: User
-  ): Promise<CommunicationRoomResult[]> {
-    return await this.userService.getCommunityRooms(user);
   }
 
   @ResolveField('directRooms', () => [DirectRoomResult], {

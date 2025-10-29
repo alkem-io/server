@@ -158,6 +158,33 @@ export class NotificationExternalAdapter {
     return result;
   }
 
+  async buildVirtualContributorSpaceCommunityInvitationDeclinedPayload(
+    eventType: NotificationEvent,
+    triggeredBy: string,
+    recipients: IUser[],
+    virtualContributorID: string,
+    space: ISpace
+  ): Promise<NotificationEventPayloadSpaceCommunityInvitationVirtualContributor> {
+    const spacePayload = await this.buildSpacePayload(
+      eventType,
+      triggeredBy,
+      recipients,
+      space
+    );
+
+    const virtualContributorPayload: ContributorPayload =
+      await this.getContributorPayloadOrFail(virtualContributorID);
+
+    // For declined invitations, we don't need the host payload, so we can reuse the virtual contributor as both
+    const result: NotificationEventPayloadSpaceCommunityInvitationVirtualContributor =
+      {
+        host: virtualContributorPayload, // Using VC as placeholder
+        invitee: virtualContributorPayload,
+        ...spacePayload,
+      };
+    return result;
+  }
+
   async buildSpaceCommunityExternalInvitationCreatedNotificationPayload(
     eventType: NotificationEvent,
     triggeredBy: string,
@@ -479,6 +506,28 @@ export class NotificationExternalAdapter {
       created: Date.now(),
       ...spacePayload,
     };
+  }
+
+  async buildUserSpaceCommunityApplicationDeclinedPayload(
+    eventType: NotificationEvent,
+    triggeredBy: string,
+    recipients: IUser[],
+    userID: string,
+    space: ISpace
+  ): Promise<NotificationEventPayloadSpaceCommunityApplication> {
+    const spacePayload = await this.buildSpacePayload(
+      eventType,
+      triggeredBy,
+      recipients,
+      space
+    );
+    const applicantPayload = await this.getContributorPayloadOrFail(userID);
+    const payload: NotificationEventPayloadSpaceCommunityApplication = {
+      applicant: applicantPayload,
+      ...spacePayload,
+    };
+
+    return payload;
   }
 
   async buildPlatformGlobalRoleChangedNotificationPayload(
