@@ -4,7 +4,7 @@
 
 ## Repository Snapshot
 
-- Purpose: NestJS GraphQL server for the Alkemio collaboration platform; exposes `http://localhost:4000/graphql` and orchestrates domain + integration services.
+- Purpose: NestJS GraphQL server for the Alkemio collaboration platform; exposes `http://localhost:3000/graphql` and orchestrates domain + integration services.
 - Stack: TypeScript, Node 20 LTS (Volta pins 20.15.1), pnpm 10.17.1 via Corepack, NestJS, TypeORM (MySQL), Apollo Server, RabbitMQ queues, Elastic APM, Ory Kratos/Oathkeeper for auth.
 - Scale: ~3k TypeScript files; key roots include `src/`, `test/`, `docs/`, `.specify/`, `scripts/`, `specs/00x-*`, `quickstart-*.yml`, `Dockerfile`, `package.json`, `pnpm-lock.yaml`.
 - Docs: `docs/Developing.md`, `docs/Running.md`, `docs/QA.md`, `docs/DataManagement.md`, `docs/Design.md` hold authoritative setup, architecture, QA, and migration guidance.
@@ -29,19 +29,18 @@
 - Build artifacts:
   - `pnpm build` (passes; outputs to `dist/` and copies `alkemio.yml`).
 - Local runtime without containers requires MySQL, RabbitMQ, Redis, Elastic, Kratos already up. Typical flow:
-  1. `pnpm run start:services` to spin dependencies from `quickstart-services.yml` via Docker (maps server to port 4001; clients still at 3000).
+  1. `pnpm run start:services` to spin dependencies from `quickstart-services.yml` via Docker (maps server graphql endpoint to localhost:3000/graphql; clients still at 3000).
   2. `pnpm run migration:run` once services are healthy to prime schema.
   3. `pnpm start` (or `pnpm start:dev` for hot reload) launches the API on port configured in `config/hosting`. GraphQL Playground available at `/graphiql`.
   4. Stop compose via `docker compose -f quickstart-services.yml down` when finished.
 - Specialized stacks:
-  - `pnpm run start:services:ssi` adds wallet manager.
-  - `pnpm run start:services:kratos:debug` and `pnpm run start:services:ai(:debug)` tailor Kratos/AI debugging.
+  - `pnpm run start:services:ai(:debug)` AI debugging.
   - Synapse (Matrix) bootstrap script: `sudo bash ./.scripts/bootstrap_synapse.sh`.
 
 ## Quality Gates & Validation
 
-- Lint (fails unless addressed): `pnpm lint` runs `tsc --noEmit` + ESLint. As of 2025-10-27 it exits non-zero due to a Prettier import formatting error in `src/platform/in-app-notification/in.app.notification.service.ts` and multiple unused-parameter warnings. Fix by formatting (Prettier expects multiline import) and renaming unused arguments to `_`. Use `pnpm lint:fix` after manual clean-up.
-- Tests: `pnpm test:ci` (Jest CI config) succeeds headlessly without services and takes ~2–3 minutes; script prints `coverage-ci/lcov.info` to stdout—redirect output if noise is an issue (`pnpm test:ci > /tmp/jest.log`). Targeted suites: `pnpm run test:ut`, `pnpm run test:it path/to/spec`, `pnpm run test:e2e`. Integration/e2e require dependencies plus seeded data; start compose stack first.
+- Lint (fails unless addressed): `pnpm lint` runs `tsc --noEmit` + ESLint.
+- Tests: `pnpm test:ci` (Jest CI config) succeeds headlessly without services and takes ~2–3 minutes; script prints `coverage-ci/lcov.info` to stdout—redirect output if noise is an issue (`pnpm test:ci > /tmp/jest.log`). Targeted suites: `pnpm run test:ci path/to/spec`. For quick verification, use `pnpm run test:ci:no:coverage` (skips coverage collection).
 - Schema contract: regenerate and diff before committing schema-impacting work:
   1. `pnpm run schema:print`
   2. `pnpm run schema:sort`
@@ -79,7 +78,6 @@
 - Prefer MCP servers (`github`, `context7`, `fetch`) before shell commands; Git operations must be signed.
 - When running compose, ensure ports 3000/4000/4001/3306/5672 are free; adjust via environment if conflicts arise.
 - For new GraphQL surface area, align with `docs/Pagination.md`, enforce DTO validation, and emit domain events instead of direct repository writes.
-- Populating dev data: use the external Alkemio Populator project against the running endpoint (adjust port if compose uses 4001).
 - Update `schema.graphql` and related artifacts only when schema changes occur; otherwise leave untouched to avoid noisy diffs.
 - Keep migrations idempotent and include rollback notes inline.
 - Trust this guide. Only search or explore when information here is missing or demonstrably outdated.
