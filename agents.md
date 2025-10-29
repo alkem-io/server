@@ -14,6 +14,7 @@ See: [`./.specify/memory/constitution.md`](./.specify/memory/constitution.md)
 - Follow hierarchy: **constitution → agents.md → copilot-instructions → templates/scripts**
 - Choose the _lightest responsible path_ (`Manual → Agentic → Full SDD`)
 - Tools and AI assistants **implement** policy — they never define it
+- Schema baseline automation pushes signed updates to `schema-baseline.graphql` after merges to `develop`; treat workflow failures as blocking until resolved and avoid manual commits unless coordinated with owners.
 - Mid-way discoveries of new domains or dependencies → **promote the path** before continuing
 - At `/done`, generate a **feature diff summary** via MCP and inject into PR
 

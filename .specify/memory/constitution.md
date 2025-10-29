@@ -63,7 +63,7 @@ Prefer the simplest viable implementation that satisfies domain constraints. Arc
    - `src/platform/*` & `src/platform-admin/*`: platform-scoped modules
    - `src/common/*`: cross-cutting (auth, logging, config, exceptions)
    - `src/library/*`: isolated reusable utilities (no Nest DI reliance)
-2. GraphQL schema generation MUST be deterministic and committed when changed.
+2. GraphQL schema generation MUST be deterministic and committed when changed. The committed `schema-baseline.graphql` artifact is maintained by the post-merge `schema-baseline` automation; manual edits require documented rationale and a follow-up automation run.
 3. Migrations MUST be idempotent and tested on a snapshot before prod promotion.
 4. Feature flags & licensing decisions centralize in dedicated services—not scattered conditionals.
 5. Storage aggregators & external service clients implement narrow interfaces consumed by domain services.
