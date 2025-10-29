@@ -9,6 +9,7 @@ reviews:
     - "!**/.github/workflows/*"
     - "!**/node_modules/**"  # Exclude dependencies
     - "!**/dist/**"          # Exclude build files
+    - "!**/specify/**"       # Exclude Speckit files
   path_instructions:
     - path: "specs/**/spec.md"
       instructions: |
