@@ -39,14 +39,14 @@ specs/NNN-sample-feature/
 
 ### Canonical Workflow
 
-1. `/constitution` (done) → `constitution.md`
-2. `/specify` → `spec.md` (WHAT & WHY only)
-3. `/clarify` (resolve `[NEEDS CLARIFICATION]` markers)
-4. `/plan` → `plan.md` + Phase 0/1 docs (except `tasks.md`)
-5. `/checklist` → generate quality checklists to validate requirements completeness, clarity, and consistency
-6. `/tasks` → `tasks.md`
-7. `/analyze` → cross-artifact consistency
-8. `/implement` → execute tasks (respect `[P]` parallel markers)
+1. `/speckit.constitution` (done) → `constitution.md`
+2. `/speckit.specify` → `spec.md` (WHAT & WHY only)
+3. `/speckit.clarify` (resolve `[NEEDS CLARIFICATION]` markers)
+4. `/speckit.plan` → `plan.md` + Phase 0/1 docs (except `tasks.md`)
+5. `/speckit.checklist` → generate quality checklists to validate requirements completeness, clarity, and consistency
+6. `/speckit.tasks` → `tasks.md`
+7. `/speckit.analyze` → cross-artifact consistency
+8. `/speckit.implement` → execute tasks (respect `[P]` parallel markers)
 
 ### Ad-hoc requests
 
