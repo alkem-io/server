@@ -2,6 +2,15 @@
 
 # Domain Module Scaffold
 
+## Rule References
+
+- [`src/domain/agents.md`](./agents.md) _(this file)_ applies after considering the global guidance below.
+- [`agents.md`](../../agents.md) defines the operational workflow for contributors.
+- [`.specify/memory/constitution.md`](../../.specify/memory/constitution.md) encodes the foundational engineering principles.
+- [`.github/copilot-instructions.md`](../../.github/copilot-instructions.md) captures Copilot execution rules specific to this repository.
+
+When rules conflict, honor them in this order (highest authority first): constitution → root `agents.md` → repository `copilot-instructions` → this document. Treat this file as the domain-specific extension that assumes upstream guidance has already been satisfied.
+
 This guide captures how we organize files inside `src/domain`. It highlights the core artifact types that appear in each module and why they are separated. Use it when shaping new domain capabilities or extending existing ones.
 
 ## Module Layout
@@ -34,10 +43,10 @@ The example above is representative: other modules follow the same pattern even 
 - `*.entity.ts` files declare TypeORM entities and embed domain invariants that must persist to storage.
 - Some modules introduce helpers such as `sort.*.ts` or dedicated aggregate factories alongside entities; keep them co-located so tests and consumers stay close to the data shape they exercise.
 
-### Interfaces & Contracts
+### Interfaces & GraphQL Shapes
 
-- `*.interface.ts` files define TypeScript contracts for domain objects or collaboration points with other modules. They shield resolvers and services from storage-specific concerns and help coordinate changes across modules.
-- When an interface underpins a DTO or resolver response, expose it via the module barrel (`index.ts`) so API layers can depend on the contract without reaching into implementation files.
+- `*.interface.ts` files declare the GraphQL object types that the module exposes. They are code-first schemas decorated for Nest GraphQL so the API contract stays close to the domain entities.
+- Entities (`*.entity.ts`) capture persistence concerns; interfaces translate those entities into the public GraphQL shape, trimming or reshaping fields where required. Re-export the interfaces through the module barrel (`index.ts`) so resolvers and other layers can reference the GraphQL types without touching entity implementations.
 
 ### Services
 
