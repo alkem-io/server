@@ -114,22 +114,36 @@ export class NotificationSpaceAdapter {
     const recipients = await this.getNotificationRecipientsSpace(
       event,
       eventData,
-      space.id,
-      eventData.triggeredBy // Exclude the creator
+      space.id
     );
 
-    const payload =
-      await this.notificationExternalAdapter.buildSpaceCommunityCalendarEventCreatedPayload(
+    // Exclude the creator from both email and in-app recipients
+    const creatorID = eventData.calendarEvent.createdBy;
+    const emailRecipientsExcludingCreator = recipients.emailRecipients.filter(
+      recipient => recipient.id !== creatorID
+    );
+    const inAppRecipientsExcludingCreator = recipients.inAppRecipients.filter(
+      recipient => recipient.id !== creatorID
+    );
+
+    // Send email notifications
+    if (emailRecipientsExcludingCreator.length > 0) {
+      const payload =
+        await this.notificationExternalAdapter.buildSpaceCommunityCalendarEventCreatedPayload(
+          event,
+          eventData.triggeredBy,
+          emailRecipientsExcludingCreator,
+          space,
+          eventData.calendarEvent
+        );
+      this.notificationExternalAdapter.sendExternalNotifications(
         event,
-        eventData.triggeredBy,
-        recipients.emailRecipients,
-        space,
-        eventData.calendarEvent
+        payload
       );
-    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
+    }
 
     // Send in-app notifications
-    const inAppReceiverIDs = recipients.inAppRecipients.map(
+    const inAppReceiverIDs = inAppRecipientsExcludingCreator.map(
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length > 0) {

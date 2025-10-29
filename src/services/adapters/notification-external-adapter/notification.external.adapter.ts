@@ -488,7 +488,7 @@ export class NotificationExternalAdapter {
   /**
    * Builds the payload for calendar event created notifications.
    *
-   * The payload includes calendar event details (title, type, createdBy) that will be available
+   * The payload includes calendar event details (title, type, createdBy, url) that will be available
    * once the @alkemio/notifications-lib is updated to support an optional calendarEvent field
    * in NotificationEventPayloadSpace.
    *
@@ -517,6 +517,10 @@ export class NotificationExternalAdapter {
       calendarEvent.createdBy
     );
 
+    // Generate URL for the calendar event
+    const calendarEventUrl =
+      await this.urlGeneratorService.getCalendarEventUrlPath(calendarEvent.id);
+
     // Add calendar event details - will be properly typed once notifications-lib is updated
     const payload: NotificationEventPayloadSpace = {
       ...spacePayload,
@@ -525,6 +529,7 @@ export class NotificationExternalAdapter {
         title: calendarEvent.profile.displayName,
         type: calendarEvent.type,
         createdBy: createdByUser,
+        url: calendarEventUrl,
       },
     } as any; // Using 'as any' temporarily until notifications-lib is updated
 
