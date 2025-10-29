@@ -10,7 +10,7 @@ export class Conversations1761408055225 implements MigrationInterface {
                                                                 \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
                                                                 \`version\` int NOT NULL,
                                                                 \`type\` varchar(128) NOT NULL,
-                                                                \`userIDs\` json NOT NULL,
+                                                                \`userID\` char(36) NULL,
                                                                 \`virtualContributorID\` char(36) NULL,
                                                                 \`wellKnownVirtualContributor\` varchar(128) NULL,
                                                                 \`authorizationId\` char(36) NULL,
@@ -79,6 +79,7 @@ export class Conversations1761408055225 implements MigrationInterface {
       }[] = await queryRunner.query(`SELECT id, guidanceRoomId FROM \`user\``);
 
       for (const user of allUsers) {
+        console.log(`Migrating conversations for user ${user.id}`);
         const conversationsSetID =
           await this.createConversationsSet(queryRunner);
         await queryRunner.query(
@@ -86,26 +87,33 @@ export class Conversations1761408055225 implements MigrationInterface {
         );
 
         // Migrate guidance room to conversation if it exists
-        if (platform.guidanceVirtualContributorId) {
-          if (user.guidanceRoomId) {
-            // If user has an existing guidance room, migrate with the room
-            await this.createGuidanceConversation(
-              queryRunner,
-              conversationsSetID,
-              user.id,
-              platform.guidanceVirtualContributorId,
-              user.guidanceRoomId
-            );
-          } else {
-            // If no guidance room, create conversation with wellKnownVirtualContributor
-            await this.createGuidanceConversationWithWellKnownVC(
-              queryRunner,
-              conversationsSetID,
-              user.id
-            );
-          }
+        if (
+          platform.guidanceVirtualContributorId &&
+          platform.guidanceVirtualContributorId.length > 0 &&
+          user.guidanceRoomId
+        ) {
+          // If user has an existing guidance room, migrate with the room
+          await this.createGuidanceConversation(
+            queryRunner,
+            conversationsSetID,
+            user.id,
+            platform.guidanceVirtualContributorId,
+            user.guidanceRoomId
+          );
+        } else {
+          // If no guidance room, create conversation with wellKnownVirtualContributor
+          await this.createGuidanceConversationWithWellKnownVC(
+            queryRunner,
+            conversationsSetID,
+            user.id
+          );
         }
       }
+
+      // Finally update all rooms whose type is guidance to be of type conversation
+      await queryRunner.query(
+        `UPDATE \`room\` SET \`type\` = 'conversation' WHERE \`type\` = 'guidance'`
+      );
 
       // Drop the guidance virtual contributor relationship from platform
       await queryRunner.query(
@@ -145,8 +153,8 @@ export class Conversations1761408055225 implements MigrationInterface {
     );
 
     await queryRunner.query(
-      `INSERT INTO conversation (id, version, type, userIDs, virtualContributorID, authorizationId, conversationsSetId, roomId)
-       VALUES ('${conversationID}', 1, 'user-vc', '["${userID}"]', '${virtualContributorID}', '${conversationAuthID}', '${conversationsSetID}', '${roomID}')`
+      `INSERT INTO conversation (id, version, type, userID, virtualContributorID, authorizationId, conversationsSetId, roomId)
+       VALUES ('${conversationID}', 1, 'user-vc', '${userID}', '${virtualContributorID}', '${conversationAuthID}', '${conversationsSetID}', '${roomID}')`
     );
   }
 
@@ -162,8 +170,8 @@ export class Conversations1761408055225 implements MigrationInterface {
     );
 
     await queryRunner.query(
-      `INSERT INTO conversation (id, version, type, userIDs, wellKnownVirtualContributor, authorizationId, conversationsSetId)
-       VALUES ('${conversationID}', 1, 'user-vc', '["${userID}"]', 'CHAT_GUIDANCE', '${conversationAuthID}', '${conversationsSetID}')`
+      `INSERT INTO conversation (id, version, type, userID, wellKnownVirtualContributor, authorizationId, conversationsSetId)
+       VALUES ('${conversationID}', 1, 'user-vc', '${userID}', 'CHAT_GUIDANCE', '${conversationAuthID}', '${conversationsSetID}')`
     );
   }
 
@@ -179,11 +187,6 @@ export class Conversations1761408055225 implements MigrationInterface {
     await queryRunner.query(
       `INSERT INTO conversations_set (id, version, authorizationId) VALUES
         ('${conversationsSetID}', 1, '${conversationsSetAuthID}')`
-    );
-
-    // Finally update all rooms whose type is guidance to be of type conversation
-    await queryRunner.query(
-      `UPDATE \`room\` SET \`type\` = 'conversation' WHERE \`type\` = 'guidance'`
     );
 
     return conversationsSetID;
