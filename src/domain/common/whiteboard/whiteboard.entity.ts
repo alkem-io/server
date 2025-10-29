@@ -15,6 +15,7 @@ import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
 import { ENUM_LENGTH, UUID_LENGTH } from '@common/constants';
 import { CalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.entity';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
+import { IWhiteboardPreviewSettings } from './whiteboard.preview.settings.interface';
 
 @Entity()
 export class Whiteboard extends NameableEntity implements IWhiteboard {
@@ -62,6 +63,9 @@ export class Whiteboard extends NameableEntity implements IWhiteboard {
     nullable: false,
   })
   contentUpdatePolicy!: ContentUpdatePolicy;
+
+  @Column('json', { nullable: false })
+  previewSettings!: IWhiteboardPreviewSettings;
 
   @OneToOne(() => CalloutFraming, framing => framing.whiteboard, {
     nullable: true,

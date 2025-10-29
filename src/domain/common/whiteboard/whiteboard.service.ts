@@ -26,6 +26,7 @@ import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type
 import { LicenseService } from '../license/license.service';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { WhiteboardPreviewMode } from '@common/enums/whiteboard.preview.mode';
 
 @Injectable()
 export class WhiteboardService {
@@ -65,17 +66,17 @@ export class WhiteboardService {
     await this.profileService.addVisualsOnProfile(
       whiteboard.profile,
       whiteboardData.profile?.visuals,
-      [VisualType.CARD]
-    );
-    await this.profileService.addVisualsOnProfile(
-      whiteboard.profile,
-      whiteboardData.profile?.visuals,
-      [VisualType.BANNER]
+      [VisualType.CARD, VisualType.WHITEBOARD_PREVIEW]
     );
     await this.profileService.addOrUpdateTagsetOnProfile(whiteboard.profile, {
       name: TagsetReservedName.DEFAULT,
       tags: [],
     });
+
+    whiteboard.previewSettings = {
+      mode: WhiteboardPreviewMode.AUTO,
+      coordinates: null,
+    };
 
     return whiteboard;
   }
@@ -149,6 +150,18 @@ export class WhiteboardService {
     if (updateWhiteboardData.contentUpdatePolicy) {
       whiteboard.contentUpdatePolicy = updateWhiteboardData.contentUpdatePolicy;
     }
+
+    if (updateWhiteboardData.previewSettings) {
+      if (updateWhiteboardData.previewSettings.mode !== undefined) {
+        whiteboard.previewSettings.mode =
+          updateWhiteboardData.previewSettings.mode;
+      }
+      if (updateWhiteboardData.previewSettings.coordinates !== undefined) {
+        whiteboard.previewSettings.coordinates =
+          updateWhiteboardData.previewSettings.coordinates;
+      }
+    }
+
     whiteboard = await this.save(whiteboard);
 
     return whiteboard;

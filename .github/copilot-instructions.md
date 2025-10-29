@@ -77,10 +77,39 @@
 
 ## Operational Tips
 
-- Prefer MCP servers (`github`, `context7`, `fetch`) before shell commands; Git operations must be signed.
+- Always prefer **MCP server tools** when possible.
+  - Fall back to direct terminal or console commands only if no MCP capability exists or is insufficient.
+  - Use the most specific MCP server before any generic one.
+    - Priority order:
+      1. Domain-specific MCP servers (`github`, `context7`, `fetch`)
+      2. Generic web search MCP servers (`tavily`, `brave`)
+    - Selection rules:
+      - Requests involving `https://github.com/alkem-io/` → use **GitHub MCP**.
+      - Use **Context7 MCP** for factually correct or verified information before falling back to search MCPs.
+      - Use **Tavily** or **Brave** only when developer documentation is unavailable elsewhere.
+    - Examples:
+      - “List open PRs in alkem-io/server” → **GitHub MCP**
+      - "How do I use the useSWR hook with TypeScript in a Next.js application, specifically for data fetching with client-side caching and revalidation, according to the latest SWR documentation?" → Context7 MCP, fallback to Tavily
+- Feedback Loops:
+  - Prefer MCP servers supporting **feedback and validation** (e.g., GitHub comments, Context7 evaluation).
+  - Use them to cross-check and refine responses before completion.
+- For Git operations, **all commits must be signed**.
 - When running compose, ensure ports 3000/4000/4001/3306/5672 are free; adjust via environment if conflicts arise.
 - For new GraphQL surface area, align with `docs/Pagination.md`, enforce DTO validation, and emit domain events instead of direct repository writes.
 - Update `schema.graphql` and related artifacts only when schema changes occur; otherwise leave untouched to avoid noisy diffs.
 - Let `schema-baseline.yml` manage `schema-baseline.graphql`; if automation is down, coordinate with CODEOWNERS before pushing manual updates.
 - Keep migrations idempotent and include rollback notes inline.
 - Trust this guide. Only search or explore when information here is missing or demonstrably outdated.
+
+- Always prefer **MCP server tools** when possible.
+- Fall back to direct terminal or console commands only if no MCP capability exists or is insufficient.
+- For Git operations, **all commits must be signed**.
+
+## Active Technologies
+
+- TypeScript 5.3 (ts-node) executed on Node 20.x via GitHub Actions + pnpm 10.17.1, `actions/checkout@v4`, `actions/setup-node@v4`, `crazy-max/ghaction-import-gpg@v6`, `actions/github-script@v7`, repository schema scripts (`generate-schema.snapshot.ts`, `diff-schema.ts`) (012-generate-schema-baseline)
+- N/A – workflow operates on repository working tree only (012-generate-schema-baseline)
+
+## Recent Changes
+
+- 012-generate-schema-baseline: Added TypeScript 5.3 (ts-node) executed on Node 20.x via GitHub Actions + pnpm 10.17.1, `actions/checkout@v4`, `actions/setup-node@v4`, `crazy-max/ghaction-import-gpg@v6`, `actions/github-script@v7`, repository schema scripts (`generate-schema.snapshot.ts`, `diff-schema.ts`)

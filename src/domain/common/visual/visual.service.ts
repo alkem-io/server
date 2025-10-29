@@ -196,6 +196,16 @@ export class VisualService {
     );
   }
 
+  public createVisualWhiteboardPreview(uri?: string): IVisual {
+    return this.createVisual(
+      {
+        name: VisualType.WHITEBOARD_PREVIEW,
+        ...DEFAULT_VISUAL_CONSTRAINTS[VisualType.WHITEBOARD_PREVIEW],
+      },
+      uri
+    );
+  }
+
   public createVisualCard(uri?: string): IVisual {
     return this.createVisual(
       {

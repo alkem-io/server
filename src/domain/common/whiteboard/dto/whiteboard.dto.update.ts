@@ -4,6 +4,7 @@ import { NameID } from '@domain/common/scalars/scalar.nameid';
 import { Field, InputType } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
 import { IsOptional, ValidateNested } from 'class-validator';
+import { UpdateWhiteboardPreviewSettingsInput } from './whiteboard.preview.settings.dto.update';
 
 @InputType()
 export class UpdateWhiteboardInput {
@@ -26,6 +27,15 @@ export class UpdateWhiteboardInput {
   @ValidateNested()
   @Type(() => UpdateProfileInput)
   profile?: UpdateProfileInput;
+
+  @Field(() => UpdateWhiteboardPreviewSettingsInput, {
+    nullable: true,
+    description: 'The preview settings for the Whiteboard.',
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => UpdateWhiteboardPreviewSettingsInput)
+  previewSettings?: UpdateWhiteboardPreviewSettingsInput;
 
   // Don't update whiteboard's content from here.
   // Whiteboards are now updated through the whiteboard-collaboration-service
