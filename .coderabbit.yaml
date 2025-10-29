@@ -69,8 +69,6 @@ reviews:
       instructions: "Review Docker Compose configurations for environment setup, ensuring proper service configuration, network setup, and environment variables handling."
     - path: "alkemio.yml"
       instructions: "Check the service topology, message broker settings, and GraphQL endpoints align with microservice deployment expectations."
-    - path: "dist/alkemio.yml"
-      instructions: "Because this is the generated deployment constitution, ensure changes remain intentional and consistent with `alkemio.yml`."
     - path: "**/*.graphql"
       instructions: "Review schema files for backwards compatibility, authorization metadata, and alignment with contract tests."
     - path: "docs/**/*.md"
