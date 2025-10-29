@@ -49,7 +49,7 @@ sudo bash ./.scripts/bootstrap_synapse.sh
 
 - If you are using Windows you must go to docker settings -> resources -> file sharing and add the paths to .build and .scripts dirs.
 - Finally, ports available on localhost:
-  - 4000 (alkemio server),
+  - 3000/graphql (alkemio server),
   - 3306 (MySQL database)
   - 8888 (traefik dashboard)
   - 3000 (alkemio client)
