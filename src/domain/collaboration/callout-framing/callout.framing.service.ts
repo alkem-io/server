@@ -240,6 +240,14 @@ export class CalloutFramingService {
               calloutFraming.whiteboard.id,
               calloutFramingData.whiteboardContent
             );
+          if (calloutFramingData.whiteboardPreviewSettings) {
+            await this.whiteboardService.updateWhiteboard(
+              calloutFraming.whiteboard,
+              {
+                previewSettings: calloutFramingData.whiteboardPreviewSettings,
+              }
+            );
+          }
         } else {
           // if there is content and no whiteboard, we create a new one
           await this.createNewWhiteboardInCalloutFraming(
@@ -249,7 +257,7 @@ export class CalloutFramingService {
                 displayName: 'Callout Framing Whiteboard',
               },
               content: calloutFramingData.whiteboardContent,
-              previewSettings: calloutFramingData.previewSettings,
+              previewSettings: calloutFramingData.whiteboardPreviewSettings,
             },
             storageAggregator,
             userID

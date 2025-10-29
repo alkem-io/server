@@ -39,7 +39,7 @@ export class UpdateCalloutFramingInput {
     description: 'The new preview settings for the Whiteboard.',
   })
   @IsOptional()
-  previewSettings?: UpdateWhiteboardPreviewSettingsInput;
+  whiteboardPreviewSettings?: UpdateWhiteboardPreviewSettingsInput;
 
   @Field(() => UpdateLinkInput, { nullable: true })
   @IsOptional()
