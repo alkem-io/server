@@ -3,8 +3,7 @@ import {
   EntityNotFoundException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { Inject, Injectable } from '@nestjs/common';
 import {
   BaseEventPayload,
   ContributorPayload,
@@ -24,6 +23,7 @@ import {
   NotificationEventPayloadSpaceCommunityInvitation,
   NotificationEventPayloadSpaceCommunityInvitationPlatform,
   NotificationEventPayloadSpaceCommunityInvitationVirtualContributor,
+  NotificationEventPayloadSpaceCalendarEvent,
   NotificationEventPayloadUserMessageDirect,
   NotificationEventPayloadUserMessageRoom,
   NotificationEventPayloadUserMessageRoomReply,
@@ -68,8 +68,6 @@ export class NotificationExternalAdapter {
   constructor(
     private contributorLookupService: ContributorLookupService,
     private userLookupService: UserLookupService,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService,
     private configService: ConfigService<AlkemioConfig, true>,
     private urlGeneratorService: UrlGeneratorService,
     @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
@@ -504,7 +502,7 @@ export class NotificationExternalAdapter {
     recipients: IUser[],
     space: ISpace,
     calendarEvent: ICalendarEvent
-  ): Promise<NotificationEventPayloadSpace> {
+  ): Promise<NotificationEventPayloadSpaceCalendarEvent> {
     const spacePayload = await this.buildSpacePayload(
       eventType,
       triggeredBy,
@@ -522,7 +520,7 @@ export class NotificationExternalAdapter {
       await this.urlGeneratorService.getCalendarEventUrlPath(calendarEvent.id);
 
     // Add calendar event details - will be properly typed once notifications-lib is updated
-    const payload: NotificationEventPayloadSpace = {
+    return {
       ...spacePayload,
       calendarEvent: {
         id: calendarEvent.id,
@@ -531,9 +529,7 @@ export class NotificationExternalAdapter {
         createdBy: createdByUser,
         url: calendarEventUrl,
       },
-    } as any; // Using 'as any' temporarily until notifications-lib is updated
-
-    return payload;
+    };
   }
 
   async buildPlatformSpaceCreatedPayload(
@@ -972,19 +968,6 @@ export class NotificationExternalAdapter {
       profile: {
         displayName: user.profile.displayName,
         url: this.urlGeneratorService.createUrlForUserNameID(user.nameID),
-      },
-      type: RoleSetContributorType.USER,
-    };
-  }
-
-  private createContributorPayloadFromContributor(
-    contributor: IContributor
-  ): ContributorPayload {
-    return {
-      id: contributor.id,
-      profile: {
-        displayName: contributor.profile.displayName,
-        url: this.urlGeneratorService.createUrlForContributor(contributor),
       },
       type: RoleSetContributorType.USER,
     };
