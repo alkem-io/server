@@ -263,14 +263,7 @@ export class ActivityFeedService {
         );
         readableCollaborationIds.push(collaboration.id);
       } catch {
-        this.logger?.verbose?.(
-          {
-            message: 'User is not able to read collaboration',
-            userID: agentInfo.userID,
-            collaborationID: collaboration.id,
-          },
-          LogContext.ACTIVITY_FEED
-        );
+        // User is not able to read collaboration - this is not uncommon
       }
 
       try {
