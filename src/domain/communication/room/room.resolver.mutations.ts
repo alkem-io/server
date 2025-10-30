@@ -91,7 +91,7 @@ export class RoomResolverMutations {
             messageData.roomID
           );
 
-        this.roomMentionsService.processNotificationMentions(
+        await this.roomMentionsService.processNotificationMentions(
           mentions,
           room,
           message,
@@ -125,7 +125,7 @@ export class RoomResolverMutations {
         break;
       }
       case RoomType.CALENDAR_EVENT:
-        this.roomMentionsService.processNotificationMentions(
+        await this.roomMentionsService.processNotificationMentions(
           mentions,
           room,
           message,
@@ -138,7 +138,7 @@ export class RoomResolverMutations {
           await this.roomResolverService.getDiscussionForRoom(
             messageData.roomID
           );
-        this.roomMentionsService.processNotificationMentions(
+        await this.roomMentionsService.processNotificationMentions(
           mentions,
           room,
           message,
@@ -169,7 +169,7 @@ export class RoomResolverMutations {
         );
 
         // Mentions notifications should be sent regardless of callout visibility per client-web#5557
-        this.roomMentionsService.processNotificationMentions(
+        await this.roomMentionsService.processNotificationMentions(
           mentions,
           room,
           message,
@@ -405,7 +405,7 @@ export class RoomResolverMutations {
             agentInfo,
             messageOwnerId
           );
-          this.roomMentionsService.processNotificationMentions(
+          await this.roomMentionsService.processNotificationMentions(
             mentions,
             room,
             reply,
