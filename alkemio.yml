@@ -207,12 +207,7 @@ identity:
         session_cookie_name: ${KRATOS_SESSION_COOKIE_NAME}:ory_kratos_session
         session_extend_enabled: ${KRATOS_SESSION_EXTEND_ENABLED}:true
 
-      # Ory Hydra OIDC Provider Integration
-      # Enables OIDC flows for Matrix Synapse and other OIDC clients
-      # Reuses: hosting.endpoint_cluster, hosting.path_api_public_rest, and kratos_public_base_url from ory section above
-      oidc:
-        # Hydra Admin API URL (used by server to interact with Hydra Admin API)
-        hydra_admin_url: ${HYDRA_ADMIN_URL}:http://localhost:3000/hydra
+        # Kratos session synchronization configuration supporting Matrix Synapse
         session_sync:
           enabled: ${SESSION_SYNC_ENABLED}:true
           interval_ms: ${SESSION_SYNC_INTERVAL_MS}:300000

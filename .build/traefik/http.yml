@@ -35,6 +35,11 @@ http:
         servers:
           - url: 'http://hydra:4445/'
 
+    oidc-service:
+      loadBalancer:
+        servers:
+          - url: 'http://oidc-service:8080/'
+
     kratos-public:
       loadBalancer:
         servers:
@@ -134,6 +139,11 @@ http:
           - /hydra
         forceSlash: false
 
+    rewrite-api-public-oidc:
+      replacePathRegex:
+        regex: '^/api/public/rest/oidc/(.*)'
+        replacement: '/v1/oidc/$1'
+
   routers:
     hydra-public:
       rule: 'PathPrefix(`/.well-known/`) || PathPrefix(`/oauth2/`)'
@@ -186,6 +196,15 @@ http:
         - strip-api-public-prefix
       entryPoints:
         - 'web'
+
+    api-public-oidc:
+      rule: 'PathPrefix(`/api/public/rest/oidc`)'
+      service: 'oidc-service'
+      middlewares:
+        - rewrite-api-public-oidc
+      entryPoints:
+        - 'web'
+      priority: 120
 
     api-private-graphql:
       rule: 'PathPrefix(`/api/private/graphql`)'
