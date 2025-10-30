@@ -80,6 +80,25 @@ export class AiPersonaService {
         ...aiPersonaData.externalConfig,
       });
     }
+    if (aiPersonaData.promptGraph !== undefined) {
+      aiPersona.promptGraph = aiPersona.promptGraph || {};
+      const promptGraphData = aiPersonaData.promptGraph;
+      if (promptGraphData.nodes !== undefined) {
+        aiPersona.promptGraph.nodes = promptGraphData.nodes;
+      }
+      if (promptGraphData.edges !== undefined) {
+        aiPersona.promptGraph.edges = promptGraphData.edges;
+      }
+      if (promptGraphData.start !== undefined) {
+        aiPersona.promptGraph.start = promptGraphData.start;
+      }
+      if (promptGraphData.end !== undefined) {
+        aiPersona.promptGraph.end = promptGraphData.end;
+      }
+      if (promptGraphData.state !== undefined) {
+        aiPersona.promptGraph.state = promptGraphData.state;
+      }
+    }
 
     await this.aiPersonaRepository.save(aiPersona);
 
