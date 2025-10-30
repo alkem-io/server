@@ -29,7 +29,7 @@ The `synapse` client credentials are sourced from `.env.docker` (`SYNAPSE_OIDC_C
 
 ## Synapse OIDC authentication
 
-Matrix Synapse authenticates against the Alkemio Hydra provider by using the `synapse` client described above. The complete homeserver configuration is templated into `build/synapse/homeserver.yaml` during `pnpm run start:services`, and then mounted into the running container volume. Any change to the OIDC section in that file requires a regeneration of the volume (stop the container, remove the `synapse-data` volume, restart the stack).
+Matrix Synapse authenticates against the Alkemio Hydra provider by using the `synapse` client described above. The complete homeserver configuration is templated into `.build/synapse/homeserver.yaml` during `pnpm run start:services`, and then mounted into the running container volume. Any change to the OIDC section in that file requires a regeneration of the volume (stop the container, remove the `synapse-data` volume, restart the stack).
 
 To confirm Synapse is exchanging tokens with Hydra, inspect the Synapse logs after login:
 
