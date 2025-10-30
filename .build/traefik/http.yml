@@ -136,9 +136,8 @@ http:
     strip-hydra-admin-prefix:
       stripPrefix:
         prefixes:
-          - /hydra
+          - /hydra/admin
         forceSlash: false
-
     rewrite-api-public-oidc:
       replacePathRegex:
         regex: '^/api/public/rest/oidc/(.*)'
