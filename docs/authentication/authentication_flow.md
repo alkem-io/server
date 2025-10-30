@@ -25,7 +25,7 @@ The docker-compose quickstart registers two internal clients:
 - `alkemio-public` for the platform UI and other public consumers
 - `synapse` for the Matrix homeserver bridge
 
-The `synapse` client credentials are sourced from `.env.docker` (`SYNAPSE_OIDC_CLIENT_ID` and `SYNAPSE_OIDC_CLIENT_SECRET`). Other clients can be declared in `build/ory/hydra/clients/hydra-clients.yaml` and will be provisioned automatically by the bootstrap container.
+The `synapse` client credentials are sourced from `.env.docker` (`SYNAPSE_OIDC_CLIENT_ID` and `SYNAPSE_OIDC_CLIENT_SECRET`). Other clients can be declared in `.build/ory/hydra/clients/hydra-clients.yaml` and will be provisioned automatically by the bootstrap container.
 
 ## Synapse OIDC authentication
 
