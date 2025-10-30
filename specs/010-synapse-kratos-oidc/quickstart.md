@@ -30,7 +30,7 @@ This guide provides step-by-step instructions for deploying Synapse Matrix homes
 Create environment variables for secrets. These will be used by Docker Compose services:
 
 ```bash
-cd /Users/antst/work/alkemio/server
+cd .
 
 # Generate Hydra system secret (32-byte hex)
 echo "HYDRA_SYSTEM_SECRET=$(openssl rand -hex 32)" >> .env.docker
