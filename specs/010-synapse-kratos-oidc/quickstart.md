@@ -143,6 +143,8 @@ Add Hydra services to `quickstart-services.yml`:
 
 **Location**: `/Users/antst/work/alkemio/server/quickstart-services.yml`
 
+Set `HYDRA_PUBLIC_URL` in `.env.docker` (for example `http://localhost:3000`, without a trailing slash) so Hydra self URLs match the Traefik proxy exposed by the compose stack. The snippet below references that value for all public-facing endpoints.
+
 ```yaml
 services:
   # ... existing services ...
@@ -179,10 +181,11 @@ services:
     environment:
       - DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/hydra?sslmode=disable
       - SECRETS_SYSTEM=${HYDRA_SYSTEM_SECRET}
-      - URLS_SELF_ISSUER=http://localhost/
-      - URLS_LOGIN=http://localhost/api/public/rest/oidc/login
-      - URLS_CONSENT=http://localhost/api/public/rest/oidc/consent
-      - URLS_SELF_PUBLIC=http://hydra:4444/
+      - HYDRA_PUBLIC_URL=${HYDRA_PUBLIC_URL}
+      - URLS_SELF_ISSUER=${HYDRA_PUBLIC_URL}/
+      - URLS_LOGIN=${HYDRA_PUBLIC_URL}/api/public/rest/oidc/login
+      - URLS_CONSENT=${HYDRA_PUBLIC_URL}/api/public/rest/oidc/consent
+      - URLS_SELF_PUBLIC=${HYDRA_PUBLIC_URL}/
       - URLS_SELF_ADMIN=http://hydra:4445/
       - SERVE_PUBLIC_CORS_ENABLED=true
       - SERVE_ADMIN_CORS_ENABLED=true

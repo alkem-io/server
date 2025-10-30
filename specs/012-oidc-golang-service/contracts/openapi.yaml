@@ -123,9 +123,10 @@ components:
           description: Hydra challenge identifier tied to the failure.
         missingTraits:
           type: array
-          description: Traits that caused a 400 validation failure.
+          description: Traits that caused a 400 validation failure (maximum 10 entries).
           items:
             type: string
+          maxItems: 10
         timestamp:
           type: string
           format: date-time
