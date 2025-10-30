@@ -10,7 +10,6 @@ import { RoomRemoveMessageInput } from './dto/room.dto.remove.message';
 import { MessageID } from '@domain/common/scalars';
 import { IMessage } from '../message/message.interface';
 import { RoomAuthorizationService } from './room.service.authorization';
-import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { RoomType } from '@common/enums/room.type';
 import { RoomRemoveReactionToMessageInput } from './dto/room.dto.remove.message.reaction';
 import { RoomAddReactionToMessageInput } from './dto/room.dto.add.reaction.to.message';
@@ -39,7 +38,6 @@ export class RoomResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
     private roomService: RoomService,
-    private namingService: NamingService,
     private roomResolverService: RoomResolverService,
     private roomAuthorizationService: RoomAuthorizationService,
     private roomServiceEvents: RoomServiceEvents,
@@ -100,7 +98,7 @@ export class RoomResolverMutations {
           agentInfo
         );
 
-        this.roomServiceEvents.processNotificationPostContributionComment(
+        await this.roomServiceEvents.processNotificationPostContributionComment(
           callout,
           post,
           room,
@@ -146,19 +144,19 @@ export class RoomResolverMutations {
           message,
           agentInfo
         );
-        this.roomServiceEvents.processNotificationForumDiscussionComment(
+        await this.roomServiceEvents.processNotificationForumDiscussionComment(
           discussionForum,
           message,
           agentInfo
         );
         break;
       case RoomType.UPDATES:
-        this.roomServiceEvents.processNotificationUpdateSent(
+        await this.roomServiceEvents.processNotificationUpdateSent(
           room,
           message,
           agentInfo
         );
-        this.roomServiceEvents.processActivityUpdateSent(
+        await this.roomServiceEvents.processActivityUpdateSent(
           room,
           message,
           agentInfo
@@ -192,13 +190,13 @@ export class RoomResolverMutations {
           callout.settings.visibility === CalloutVisibility.PUBLISHED &&
           callout.calloutsSet?.type === CalloutsSetType.COLLABORATION
         ) {
-          this.roomServiceEvents.processActivityCalloutCommentCreated(
+          await this.roomServiceEvents.processActivityCalloutCommentCreated(
             callout,
             message,
             agentInfo
           );
 
-          this.roomServiceEvents.processNotificationCalloutComment(
+          await this.roomServiceEvents.processNotificationCalloutComment(
             callout,
             room,
             message,
@@ -276,13 +274,13 @@ export class RoomResolverMutations {
             messageData.roomID
           );
 
-        this.roomServiceEvents.processNotificationCommentReply(
+        await this.roomServiceEvents.processNotificationCommentReply(
           room,
           reply,
           agentInfo,
           messageOwnerId
         );
-        this.roomServiceEvents.processActivityPostComment(
+        await this.roomServiceEvents.processActivityPostComment(
           post,
           room,
           reply,
@@ -334,7 +332,7 @@ export class RoomResolverMutations {
         break;
       }
       case RoomType.CALENDAR_EVENT:
-        this.roomServiceEvents.processNotificationCommentReply(
+        await this.roomServiceEvents.processNotificationCommentReply(
           room,
           reply,
           agentInfo,
@@ -343,7 +341,7 @@ export class RoomResolverMutations {
 
         break;
       case RoomType.DISCUSSION_FORUM:
-        this.roomServiceEvents.processNotificationCommentReply(
+        await this.roomServiceEvents.processNotificationCommentReply(
           room,
           reply,
           agentInfo,
@@ -401,7 +399,7 @@ export class RoomResolverMutations {
             agentInfo
           );
 
-          this.roomServiceEvents.processNotificationCommentReply(
+          await this.roomServiceEvents.processNotificationCommentReply(
             room,
             reply,
             agentInfo,
