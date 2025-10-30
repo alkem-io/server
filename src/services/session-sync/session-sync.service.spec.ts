@@ -13,11 +13,11 @@ describe('SessionSyncService', () => {
     kratos_database: {
       database: 'kratos',
     },
-  } as AlkemioConfig['identity']['authentication']['providers']['oidc']['session_sync'];
+  } as AlkemioConfig['identity']['authentication']['providers']['ory']['session_sync'];
 
   const configService = {
     get: jest.fn().mockImplementation((key: string) => {
-      if (key === 'identity.authentication.providers.oidc.session_sync') {
+      if (key === 'identity.authentication.providers.ory.session_sync') {
         return sessionSyncConfig;
       }
       return undefined;

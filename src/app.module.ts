@@ -37,7 +37,6 @@ import {
   WebsocketContext,
 } from '@src/types';
 import { RegistrationModule } from '@services/api/registration/registration.module';
-import { OidcModule } from '@services/api/oidc/oidc.module';
 import { RolesModule } from '@services/api/roles/roles.module';
 import * as redisStore from 'cache-manager-redis-store';
 import { ConversionModule } from '@services/api/conversion/conversion.module';
@@ -288,8 +287,7 @@ import { InAppNotificationAdminModule } from './platform-admin/in-app-notificati
     MessageModule,
     MessageReactionModule,
     NotificationRecipientsModule,
-    RegistrationModule,
-    OidcModule,
+  RegistrationModule,
     SessionSyncModule,
     ConversionModule,
     LibraryModule,

@@ -151,13 +151,13 @@ export class SessionSyncService implements OnModuleInit, OnModuleDestroy {
 
   private getSessionSyncConfig(): KratosSessionSyncConfig {
     const config = this.configService.get(
-      'identity.authentication.providers.oidc.session_sync',
+      'identity.authentication.providers.ory.session_sync',
       { infer: true }
     );
 
     if (!config) {
       throw new Error(
-        'identity.authentication.providers.oidc.session_sync is not configured'
+        'identity.authentication.providers.ory.session_sync is not configured'
       );
     }
 

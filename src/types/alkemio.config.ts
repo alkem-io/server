@@ -64,9 +64,6 @@ export type AlkemioConfig = {
           };
           session_cookie_name: string;
           session_extend_enabled: boolean;
-        };
-        oidc: {
-          hydra_admin_url: string;
           session_sync: {
             enabled: boolean;
             interval_ms: number;

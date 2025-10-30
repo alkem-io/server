@@ -10,7 +10,7 @@ import { AlkemioConfig } from '@src/types';
 import { createPool, Pool, PoolOptions, RowDataPacket } from 'mysql2/promise';
 
 export type KratosSessionSyncConfig =
-  AlkemioConfig['identity']['authentication']['providers']['oidc']['session_sync'];
+  AlkemioConfig['identity']['authentication']['providers']['ory']['session_sync'];
 
 export type KratosExpiredSession = {
   id: string;
@@ -87,13 +87,13 @@ export class KratosSessionRepository implements OnModuleDestroy {
 
   private getSessionSyncConfig(): KratosSessionSyncConfig {
     const config = this.configService.get(
-      'identity.authentication.providers.oidc.session_sync',
+      'identity.authentication.providers.ory.session_sync',
       { infer: true }
     );
 
     if (!config) {
       throw new Error(
-        'identity.authentication.providers.oidc.session_sync is not configured'
+        'identity.authentication.providers.ory.session_sync is not configured'
       );
     }
 
