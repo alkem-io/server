@@ -631,7 +631,13 @@ services:
       - LANGCHAIN_PROJECT=virtual-contributor-engine-generic
       - HISTORY_LENGTH=20
       - VECTOR_DB_CREDENTIALS
-      - VECTOR_DB_HOST=localhost
+      - VECTOR_DB_HOST
+      - VECTOR_DB_PORT
+      - AZURE_OPENAI_API_KEY
+      - AZURE_OPENAI_ENDPOINT
+      - OPENAI_API_VERSION
+      - AZURE_MISTRAL_API_KEY
+      - AZURE_MISTRAL_ENDPOINT
 
   virtual_contributor_engine_openai_assistant:
     container_name: alkemio_dev_virtual_contributor_engine_openai_assistant
