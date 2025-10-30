@@ -101,10 +101,6 @@
 - Keep migrations idempotent and include rollback notes inline.
 - Trust this guide. Only search or explore when information here is missing or demonstrably outdated.
 
-- Always prefer **MCP server tools** when possible.
-- Fall back to direct terminal or console commands only if no MCP capability exists or is insufficient.
-- For Git operations, **all commits must be signed**.
-
 ## Active Technologies
 
 - TypeScript 5.3 (ts-node) executed on Node 20.x via GitHub Actions + pnpm 10.17.1, `actions/checkout@v4`, `actions/setup-node@v4`, `crazy-max/ghaction-import-gpg@v6`, `actions/github-script@v7`, repository schema scripts (`generate-schema.snapshot.ts`, `diff-schema.ts`) (012-generate-schema-baseline)
