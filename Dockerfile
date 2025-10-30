@@ -1,39 +1,33 @@
+###############
+# Single-stage build (includes sources & dev tooling for migrations)
+###############
 FROM node:20.15.1-alpine
-
-
-# Create app directory
 WORKDIR /usr/src/app
 
-# Define graphql server port
 ARG GRAPHQL_ENDPOINT_PORT_ARG=4000
 ARG ENV_ARG=production
+ENV NODE_ENV=$ENV_ARG
+ENV GRAPHQL_ENDPOINT_PORT=$GRAPHQL_ENDPOINT_PORT_ARG
+ENV NODE_OPTIONS=--max-old-space-size=2048
 
-# Install app dependencies
-# A wildcard is used to ensure both package.json AND package-lock.json are copied
-# where available (npm@5+)
-COPY package*.json ./
+# Install pnpm (locked version to align with repo)
+RUN npm i -g pnpm@10.17.1
 
-RUN npm i -g npm@10.1.0
-RUN npm install -g rimraf
-RUN npm install
+# Dependencies (full set so ts-node & dev scripts work)
+COPY package*.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
 
-# If you are building your code for production
-# RUN npm ci --only=production
+# Copy sources & build
+COPY tsconfig.json tsconfig.build.json alkemio.yml ./
+COPY src ./src
+RUN pnpm run build
 
-# Bundle app source & config files for TypeORM & TypeScript
-COPY ./src ./src
-COPY ./tsconfig.json .
-COPY ./tsconfig.build.json .
-COPY ./alkemio.yml .
+# Optional pruning: remove dev deps after build if you want (commented out)
+# RUN pnpm prune --prod
 
-RUN npm run build
-
-## Add the wait script to the image
+# Wait script for orchestrated startup
 ADD https://github.com/ufoscout/docker-compose-wait/releases/download/2.7.3/wait /wait
 RUN chmod +x /wait
 
-ENV GRAPHQL_ENDPOINT_PORT=${GRAPHQL_ENDPOINT_PORT_ARG}
-ENV NODE_ENV=${ENV_ARG}
-
 EXPOSE ${GRAPHQL_ENDPOINT_PORT_ARG}
-CMD ["/bin/sh", "-c", "npm run start:prod NODE_OPTIONS=--max-old-space-size=2048"]
+CMD ["node", "dist/main.js"]

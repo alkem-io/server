@@ -5,6 +5,7 @@ import { LogContext } from './logging.context';
 export enum VisualType {
   AVATAR = 'avatar',
   BANNER = 'banner',
+  WHITEBOARD_PREVIEW = 'whiteboardPreview',
   CARD = 'card',
   BANNER_WIDE = 'bannerWide',
 }

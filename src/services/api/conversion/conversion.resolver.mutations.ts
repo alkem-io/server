@@ -26,7 +26,7 @@ import { IVirtualContributor } from '@domain/community/virtual-contributor/virtu
 import { ConversionVcSpaceToVcKnowledgeBaseInput } from './dto/conversion.dto.vc.space.to.vc.kb';
 import { CalloutTransferService } from '@domain/collaboration/callout-transfer/callout.transfer.service';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
-import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
+import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { ConvertSpaceL1ToSpaceL2Input } from './dto/convert.dto.space.l1.to.space.l2.input';
 
@@ -174,15 +174,13 @@ export class ConversionResolverMutations {
             knowledgeBase: {
               calloutsSet: true,
             },
-            aiPersona: true,
           },
         }
       );
     if (
       !virtualContributor.knowledgeBase ||
       !virtualContributor.knowledgeBase.calloutsSet ||
-      !virtualContributor.account ||
-      !virtualContributor.aiPersona
+      !virtualContributor.account
     ) {
       throw new RelationshipNotFoundException(
         `Missing entities on Virtual Contributor when converting to KnowledgeBase: ${virtualContributor.id}`,
@@ -190,26 +188,15 @@ export class ConversionResolverMutations {
       );
     }
 
-    const aiPersona =
-      await this.virtualContributorService.getAiPersonaOrFail(
-        virtualContributor
-      );
+    const vcType = virtualContributor.bodyOfKnowledgeType;
 
-    const vcType =
-      await this.aiServerAdapter.getPersonaServiceBodyOfKnowledgeType(
-        aiPersona.aiPersonaServiceID
-      );
-
-    if (vcType !== AiPersonaBodyOfKnowledgeType.ALKEMIO_SPACE) {
+    if (vcType !== VirtualContributorBodyOfKnowledgeType.ALKEMIO_SPACE) {
       throw new ValidationException(
         `Virtual Contributor is not of type Space: ${virtualContributor.id}`,
         LogContext.CONVERSION
       );
     }
-    const spaceID =
-      await this.aiServerAdapter.getPersonaServiceBodyOfKnowledgeID(
-        aiPersona.aiPersonaServiceID
-      );
+    const spaceID = virtualContributor.bodyOfKnowledgeID;
     if (!spaceID) {
       throw new ValidationException(
         `Virtual Contributor does not have a body of knowledge: ${virtualContributor.id}`,
@@ -265,13 +252,6 @@ export class ConversionResolverMutations {
         agentInfo
       );
     }
-
-    // Update the information on the AI Persona Service
-    await this.aiServerAdapter.updateAiPersonaService({
-      ID: virtualContributor.aiPersona.aiPersonaServiceID,
-      bodyOfKnowledgeType: AiPersonaBodyOfKnowledgeType.ALKEMIO_KNOWLEDGE_BASE,
-      bodyOfKnowledgeID: virtualContributor.knowledgeBase.id,
-    });
 
     // Reset the authorization policy for the callout
     const authorizations =

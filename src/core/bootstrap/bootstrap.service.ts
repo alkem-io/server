@@ -40,10 +40,8 @@ import { LicenseService } from '@domain/common/license/license.service';
 import { AccountLicenseService } from '@domain/space/account/account.service.license';
 import { LicensePlanService } from '@platform/licensing/credential-based/license-plan/license.plan.service';
 import { LicensingFrameworkService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service';
-import { AiPersonaServiceService } from '@services/ai-server/ai-persona-service/ai.persona.service.service';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
-import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
-import { AiPersonaDataAccessMode } from '@common/enums/ai.persona.data.access.mode';
+import { VirtualContributorDataAccessMode } from '@common/enums/virtual.contributor.data.access.mode';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { CreateTemplateContentSpaceInput } from '@domain/template/template-content-space/dto/template.content.space.dto.create';
@@ -54,6 +52,9 @@ import { bootstrapTemplateSpaceContentCalloutsVcKnowledgeBase } from './platform
 import { PlatformTemplatesService } from '@platform/platform-templates/platform.templates.service';
 import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
 import { AdminAuthorizationService } from '@src/platform-admin/domain/authorization/admin.authorization.service';
+import { AiPersonaService } from '@services/ai-server/ai-persona';
+import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
+import { VirtualContributorInteractionMode } from '@common/enums/virtual.contributor.interaction.mode';
 
 @Injectable()
 export class BootstrapService {
@@ -80,7 +81,7 @@ export class BootstrapService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private aiServer: AiServerService,
-    private aiPersonaServiceService: AiPersonaServiceService,
+    private aiPersonaService: AiPersonaService,
     private aiServerAuthorizationService: AiServerAuthorizationService,
     private templatesSetService: TemplatesSetService,
     private templateDefaultService: TemplateDefaultService,
@@ -483,17 +484,8 @@ export class BootstrapService {
     const platform = await this.platformService.getPlatformOrFail({
       relations: { guidanceVirtualContributor: true },
     });
-    if (!platform.guidanceVirtualContributor?.id) {
-      const aiPersonaService =
-        await this.aiPersonaServiceService.createAiPersonaService({
-          bodyOfKnowledgeID: '',
-          bodyOfKnowledgeType: AiPersonaBodyOfKnowledgeType.NONE,
-          engine: AiPersonaEngine.GUIDANCE,
-          dataAccessMode: AiPersonaDataAccessMode.NONE,
-          prompt: [],
-          externalConfig: undefined,
-        });
 
+    if (!platform.guidanceVirtualContributor?.id) {
       // Get admin account:
       const hostOrganization =
         await this.organizationLookupService.getOrganizationByNameIdOrFail(
@@ -506,12 +498,19 @@ export class BootstrapService {
       const vc = await this.accountService.createVirtualContributorOnAccount({
         accountID: account.id,
         aiPersona: {
-          aiPersonaServiceID: aiPersonaService.id,
+          engine: AiPersonaEngine.GUIDANCE,
+          prompt: [],
+          externalConfig: undefined,
         },
         profileData: {
           displayName: 'Guidance',
           description: 'Guidance Virtual Contributor',
         },
+        dataAccessMode: VirtualContributorDataAccessMode.NONE,
+        bodyOfKnowledgeType: VirtualContributorBodyOfKnowledgeType.WEBSITE,
+        interactionModes: [
+          VirtualContributorInteractionMode.DISCUSSION_TAGGING,
+        ],
         knowledgeBaseData: {
           profile: {
             displayName: 'Knowledge Base for Virtual Contributor',

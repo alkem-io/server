@@ -107,6 +107,9 @@ export type AlkemioConfig = {
     discussions: {
       enabled: boolean;
     };
+    direct_message_rooms: {
+      enabled: boolean;
+    };
   };
   storage: {
     enabled: boolean;
@@ -184,13 +187,14 @@ export type AlkemioConfig = {
         ca_cert_path: string | 'none';
         rejectUnauthorized: boolean;
       };
-      policies: {
-        space_name_enrich_policy: string;
-      };
     };
   };
   notifications: {
     enabled: boolean;
+    in_app: {
+      max_notifications_per_user: number;
+      max_retention_period_days: number;
+    };
   };
   collaboration: {
     membership: {

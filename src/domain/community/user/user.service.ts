@@ -11,7 +11,6 @@ import { FormatNotSupportedException } from '@common/exceptions/format.not.suppo
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
-import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
 import { RoomService } from '@domain/communication/room/room.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import {
@@ -26,7 +25,7 @@ import { CommunicationAdapter } from '@services/adapters/communication-adapter/c
 import { Cache, CachingConfig } from 'cache-manager';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
-import { DirectRoomResult } from './dto/user.dto.communication.room.direct.result';
+import { DirectRoomResult } from '../../communication/communication/dto/communication.dto.send.direct.message.user.result';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { IProfile } from '@domain/common/profile/profile.interface';
@@ -240,13 +239,13 @@ export class UserService {
           adminMentioned: { email: true, inApp: true },
         },
         platform: {
-          forumDiscussionCreated: { email: false, inApp: false },
+          forumDiscussionCreated: { email: true, inApp: false },
           forumDiscussionComment: { email: true, inApp: true },
           admin: {
-            userProfileCreated: { email: true, inApp: true },
-            userProfileRemoved: { email: true, inApp: true },
-            spaceCreated: { email: true, inApp: true },
-            userGlobalRoleChanged: { email: true, inApp: true },
+            userProfileCreated: { email: false, inApp: false },
+            userProfileRemoved: { email: false, inApp: false },
+            spaceCreated: { email: false, inApp: false },
+            userGlobalRoleChanged: { email: false, inApp: false },
           },
         },
         space: {
@@ -255,26 +254,27 @@ export class UserService {
             communityNewMember: { email: true, inApp: true },
             communicationMessageReceived: { email: true, inApp: true },
             collaborationCalloutContributionCreated: {
-              email: true,
+              email: false,
               inApp: true,
             },
           },
           communicationUpdates: { email: true, inApp: true },
-          collaborationCalloutContributionCreated: { email: true, inApp: true },
-          collaborationCalloutPostContributionComment: {
-            email: true,
+          collaborationCalloutContributionCreated: {
+            email: false,
             inApp: true,
           },
-          collaborationCalloutComment: { email: true, inApp: true },
+          collaborationCalloutPostContributionComment: {
+            email: false,
+            inApp: true,
+          },
+          collaborationCalloutComment: { email: false, inApp: true },
           collaborationCalloutPublished: { email: true, inApp: true },
         },
         user: {
           mentioned: { email: true, inApp: true },
-          commentReply: { email: true, inApp: true },
+          commentReply: { email: false, inApp: true },
           messageReceived: { email: true, inApp: true },
-          copyOfMessageSent: { email: true, inApp: true },
           membership: {
-            spaceCommunityApplicationSubmitted: { email: true, inApp: true },
             spaceCommunityInvitationReceived: { email: true, inApp: true },
             spaceCommunityJoined: { email: true, inApp: true },
           },
@@ -778,24 +778,8 @@ export class UserService {
     return room;
   }
 
-  private tryRegisterUserCommunication(
-    user: IUser
-  ): Promise<string | undefined> {
-    return this.communicationAdapter.tryRegisterNewUser(user.email);
-  }
-
-  async getCommunityRooms(user: IUser): Promise<CommunicationRoomResult[]> {
-    const communityRooms = await this.communicationAdapter.getCommunityRooms(
-      user.communicationID
-    );
-
-    await this.roomLookupService.populateRoomsMessageSenders(communityRooms);
-
-    return communityRooms;
-  }
-
-  async getDirectRooms(user: IUser): Promise<DirectRoomResult[]> {
-    const directRooms = await this.communicationAdapter.getDirectRooms(
+  public async getDirectRooms(user: IUser): Promise<DirectRoomResult[]> {
+    const directRooms = await this.communicationAdapter.userGetDirectRooms(
       user.communicationID
     );
 

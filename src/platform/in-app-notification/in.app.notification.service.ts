@@ -1,4 +1,11 @@
-import { Repository, In, UpdateResult } from 'typeorm';
+import {
+  Brackets,
+  Repository,
+  In,
+  Not,
+  UpdateResult,
+  FindOptionsWhere,
+} from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InAppNotification } from '@platform/in-app-notification/in.app.notification.entity';
@@ -99,7 +106,10 @@ export class InAppNotificationService {
   ): Promise<PaginatedInAppNotifications> {
     const queryBuilder = this.inAppNotificationRepo
       .createQueryBuilder('notification')
-      .where('notification.receiverID = :receiverID', { receiverID });
+      .where('notification.receiverID = :receiverID', { receiverID })
+      .andWhere('notification.state <> :archivedState', {
+        archivedState: NotificationEventInAppState.ARCHIVED,
+      });
 
     if (filter?.types && filter.types.length > 0) {
       queryBuilder.andWhere('notification.type IN (:...types)', {
@@ -141,11 +151,19 @@ export class InAppNotificationService {
       });
       if (afterNotification) {
         queryBuilder.andWhere(
-          'notification.triggeredAt < :afterTriggeredAt OR (notification.triggeredAt = :afterTriggeredAt AND notification.id < :afterId)',
-          {
-            afterTriggeredAt: afterNotification.triggeredAt,
-            afterId: afterNotification.id,
-          }
+          new Brackets(qb =>
+            qb
+              .where('notification.triggeredAt < :afterTriggeredAt', {
+                afterTriggeredAt: afterNotification.triggeredAt,
+              })
+              .orWhere(
+                '(notification.triggeredAt = :afterTriggeredAt AND notification.id < :afterId)',
+                {
+                  afterTriggeredAt: afterNotification.triggeredAt,
+                  afterId: afterNotification.id,
+                }
+              )
+          )
         );
       }
     }
@@ -157,11 +175,19 @@ export class InAppNotificationService {
       });
       if (beforeNotification) {
         queryBuilder.andWhere(
-          'notification.triggeredAt > :beforeTriggeredAt OR (notification.triggeredAt = :beforeTriggeredAt AND notification.id > :beforeId)',
-          {
-            beforeTriggeredAt: beforeNotification.triggeredAt,
-            beforeId: beforeNotification.id,
-          }
+          new Brackets(qb =>
+            qb
+              .where('notification.triggeredAt > :beforeTriggeredAt', {
+                beforeTriggeredAt: beforeNotification.triggeredAt,
+              })
+              .orWhere(
+                '(notification.triggeredAt = :beforeTriggeredAt AND notification.id > :beforeId)',
+                {
+                  beforeTriggeredAt: beforeNotification.triggeredAt,
+                  beforeId: beforeNotification.id,
+                }
+              )
+          )
         );
       }
     }
@@ -193,29 +219,32 @@ export class InAppNotificationService {
   ): Promise<NotificationEventInAppState> {
     const notification = await this.getRawNotificationOrFail(ID);
 
-    const updatedNotification = await this.inAppNotificationRepo.save({
-      ...notification,
-      state,
-    });
+    notification.state = state;
+
+    // Persist the existing entity instance to prevent TypeORM from treating it as a
+    // new record (which could happen when spreading into a plain object).
+    const updatedNotification =
+      await this.inAppNotificationRepo.save(notification);
 
     return updatedNotification.state;
   }
 
-  async bulkUpdateNotificationState(
-    notificationIds: string[],
+  async bulkUpdateNotificationStateByTypes(
     userId: string,
-    state: NotificationEventInAppState
+    state: NotificationEventInAppState,
+    filter?: NotificationEventsFilterInput
   ): Promise<UpdateResult> {
-    return this.inAppNotificationRepo.update(
-      { id: In(notificationIds), receiverID: userId },
-      { state }
-    );
-  }
+    const where: FindOptionsWhere<InAppNotification> = {
+      receiverID: userId,
+      state: Not(NotificationEventInAppState.ARCHIVED),
+    };
 
-  async markAllNotificationsAsState(
-    userId: string,
-    state: NotificationEventInAppState
-  ): Promise<UpdateResult> {
-    return this.inAppNotificationRepo.update({ receiverID: userId }, { state });
+    // If filter is provided with specific types, only update those types
+    // If no filter is provided, update all notifications
+    if (filter?.types && filter.types.length > 0) {
+      where.type = In(filter.types);
+    }
+
+    return this.inAppNotificationRepo.update(where, { state });
   }
 }

@@ -19,13 +19,13 @@ Assuming you have a suitable database server and authentication provider availab
 - Install dependencies
 
 ```bash
-npm install
+pnpm install
 ```
 
 - Start the server
 
 ```bash
-npm start
+pnpm start
 ```
 
 There should now be a [running Alkemio server](http://localhost:4000/graphql)!
@@ -46,6 +46,14 @@ The configuration for the Ory can be found in `./build/ory`.
 The verification and recovery flows templates can be edited in `./build/ory/kratos/courier-templates`. More information how to customize them [here](https://www.ory.sh/kratos/docs/concepts/email-sms/#sender-address-and-template-customization). They are using [golang templates](https://golang.org/pkg/text/template/) format.
 
 The registration and the recovery flows include sending emails to the registered users. For development purposes the fake smtp server `Mailslurper` is used. Can be accessed on http://localhost:4436/ (if the docker compose method has been used to setup the development environment).
+
+## Schema baseline workflow troubleshooting
+
+- The `Schema Baseline` GitHub Action writes a summary with diff counts and links to artifacts after every `develop` push; inspect the job summary first when a baseline commit is missing.
+- If the run fails before publishing a commit, check the appended summary section for the `BASELINE_FAILURE_CONTEXT` note and download the `schema-baseline-<run>` artifact bundle for `schema.graphql`, `tmp/prev.schema.graphql`, and `change-report.json`.
+- Signing issues typically surface during the "Commit and push updated baseline" step. Confirm the `ALKEMIO_INFRASTRUCTURE_BOT_GPG_*` secrets match the key uploaded to the automation bot and that the key is marked as trusted in GitHub.
+- To regenerate locally, follow `specs/012-generate-schema-baseline/quickstart.md` and push the resulting `schema-baseline.graphql` if automation is blocked.
+- Owners automatically receive a commit comment on failure; if the automation remains red after remediation, re-run the job from the Actions UI with `workflow_dispatch` to verify the fix.
 
 ## File uploads
 

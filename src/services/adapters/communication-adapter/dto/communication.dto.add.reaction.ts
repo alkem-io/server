@@ -1,4 +1,4 @@
-export class CommunicationAddRectionToMessageInput {
+export class CommunicationAddReactionToMessageInput {
   senderCommunicationsID!: string;
 
   emoji!: string;

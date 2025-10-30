@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { ChatGuidanceInput } from './dto/chat.guidance.dto.input';
 import { AlkemioConfig } from '@src/types';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
-import { InvocationResultAction } from '@services/ai-server/ai-persona-service/dto';
+import { InvocationResultAction } from '@services/ai-server/ai-persona/dto';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { RoomService } from '@domain/communication/room/room.service';
@@ -29,12 +29,12 @@ export class ChatGuidanceService {
       await this.platformService.getGuidanceVirtualContributorOrFail();
     const room = await this.userService.createGuidanceRoom(agentInfo.userID);
 
-    await this.communicationAdapter.addUserToRoom(
-      room.externalRoomID,
+    await this.communicationAdapter.userAddToRooms(
+      [room.externalRoomID],
       agentInfo.communicationID
     );
-    await this.communicationAdapter.addUserToRoom(
-      room.externalRoomID,
+    await this.communicationAdapter.userAddToRooms(
+      [room.externalRoomID],
       guidanceVc.communicationID
     );
     return room;
@@ -64,16 +64,17 @@ export class ChatGuidanceService {
     const guidanceVc =
       await this.platformService.getGuidanceVirtualContributorOrFail();
 
-    const message = await this.communicationAdapter.sendMessage({
+    const message = await this.communicationAdapter.sendMessageToRoom({
       roomID: room.externalRoomID,
       senderCommunicationsID: agentInfo.communicationID,
       message: chatData.question,
     });
 
     this.aiServerAdapter.invoke({
+      bodyOfKnowledgeID: '',
       operation: InvocationOperation.QUERY,
       message: chatData.question,
-      aiPersonaServiceID: guidanceVc.aiPersona.aiPersonaServiceID,
+      aiPersonaID: guidanceVc.aiPersonaID,
       userID: agentInfo.userID,
       displayName: 'Guidance',
       language: chatData.language,

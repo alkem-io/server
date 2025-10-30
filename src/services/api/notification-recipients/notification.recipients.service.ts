@@ -112,7 +112,7 @@ export class NotificationRecipientsService {
         privilegeRequired,
         eventData
       );
-    const inAppRecipientsWithEntityPrivilege =
+    const inAppRecipientsWithPrivilege =
       await this.filterRecipientsWithPrivileges(
         inAppRecipientsWithNotificationEnabled,
         privilegeRequired,
@@ -124,24 +124,7 @@ export class NotificationRecipientsService {
       LogContext.NOTIFICATIONS
     );
     this.logger.verbose?.(
-      `[${eventData.eventType}] - 4b. ...and for in-app, of those ${inAppRecipientsWithEntityPrivilege.length} have the required privilege (${privilegeRequired || 'none'})`,
-      LogContext.NOTIFICATIONS
-    );
-    // Filter by whether they have the InApp privilege on platform level
-    const authorizationPolicyForInApp =
-      await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
-    const inAppRecipientsWithPrivilege =
-      inAppRecipientsWithEntityPrivilege.filter(recipient =>
-        this.authorizationService.isAccessGrantedForCredentials(
-          recipient.agent.credentials || [],
-          [],
-          authorizationPolicyForInApp,
-          AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_IN_APP
-        )
-      );
-
-    this.logger.verbose?.(
-      `[${eventData.eventType}] - 4bb. ...and for in-app, of those ${inAppRecipientsWithPrivilege.length} are eligible for in-app notifications`,
+      `[${eventData.eventType}] - 4b. ...and for in-app, of those ${inAppRecipientsWithPrivilege.length} have the required privilege (${privilegeRequired || 'none'})`,
       LogContext.NOTIFICATIONS
     );
 
@@ -255,13 +238,11 @@ export class NotificationRecipientsService {
         return notificationSettings.organization.adminMessageReceived;
       case NotificationEvent.ORGANIZATION_ADMIN_MENTIONED:
         return notificationSettings.organization.adminMentioned;
-      case NotificationEvent.USER_SPACE_COMMUNITY_APPLICATION:
-        return notificationSettings.user.membership
-          .spaceCommunityApplicationSubmitted;
       case NotificationEvent.USER_SPACE_COMMUNITY_INVITATION:
         return notificationSettings.user.membership
           .spaceCommunityInvitationReceived;
       case NotificationEvent.USER_SPACE_COMMUNITY_JOINED:
+      case NotificationEvent.USER_SPACE_COMMUNITY_APPLICATION_DECLINED:
         return notificationSettings.user.membership.spaceCommunityJoined;
       case NotificationEvent.USER_COMMENT_REPLY:
         return notificationSettings.user.commentReply;
@@ -271,8 +252,6 @@ export class NotificationRecipientsService {
         return notificationSettings.user.messageReceived;
       case NotificationEvent.USER_MESSAGE_SENDER:
       case NotificationEvent.ORGANIZATION_MESSAGE_SENDER:
-      case NotificationEvent.SPACE_COMMUNICATION_MESSAGE_SENDER:
-        return notificationSettings.user.copyOfMessageSent;
       case NotificationEvent.SPACE_ADMIN_COMMUNITY_APPLICATION:
         return notificationSettings.space.admin.communityApplicationReceived;
       case NotificationEvent.SPACE_LEAD_COMMUNICATION_MESSAGE:
@@ -294,6 +273,8 @@ export class NotificationRecipientsService {
         return notificationSettings.space.collaborationCalloutComment;
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED:
         return notificationSettings.space.collaborationCalloutPublished;
+      case NotificationEvent.SPACE_ADMIN_VIRTUAL_CONTRIBUTOR_COMMUNITY_INVITATION_DECLINED:
+        return notificationSettings.space.admin.communityNewMember;
       case NotificationEvent.VIRTUAL_CONTRIBUTOR_ADMIN_SPACE_COMMUNITY_INVITATION:
         return notificationSettings.virtualContributor
           .adminSpaceCommunityInvitation;
@@ -361,10 +342,6 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_ADMIN_COMMUNITY_APPLICATION: {
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
         credentialCriteria = this.getSpaceAdminCredentialCriteria(spaceID);
-        credentialCriteria.push({
-          type: AuthorizationCredential.GLOBAL_ADMIN,
-          resourceID: '',
-        });
         break;
       }
       case NotificationEvent.SPACE_LEAD_COMMUNICATION_MESSAGE: {
@@ -393,17 +370,22 @@ export class NotificationRecipientsService {
       case NotificationEvent.USER_MESSAGE:
       case NotificationEvent.USER_MESSAGE_SENDER:
       case NotificationEvent.ORGANIZATION_MESSAGE_SENDER:
-      case NotificationEvent.SPACE_COMMUNICATION_MESSAGE_SENDER:
-      case NotificationEvent.PLATFORM_FORUM_DISCUSSION_COMMENT: {
+      case NotificationEvent.PLATFORM_FORUM_DISCUSSION_COMMENT:
+      case NotificationEvent.USER_SPACE_COMMUNITY_APPLICATION_DECLINED: {
         // For mentions, no privilege check is needed - mentions are direct notifications to specific users
         credentialCriteria = this.getUserSelfCriteria(userID);
         break;
       }
-      case NotificationEvent.USER_SPACE_COMMUNITY_APPLICATION:
       case NotificationEvent.USER_SPACE_COMMUNITY_JOINED:
       case NotificationEvent.SPACE_COMMUNITY_INVITATION_USER_PLATFORM:
       case NotificationEvent.USER_SPACE_COMMUNITY_INVITATION: {
         // For direct user invitations, no privilege check is needed - just check if the user exists and has notifications enabled
+        credentialCriteria = this.getUserSelfCriteria(userID);
+        break;
+      }
+      case NotificationEvent.SPACE_ADMIN_VIRTUAL_CONTRIBUTOR_COMMUNITY_INVITATION_DECLINED: {
+        // Notify the space admin who sent the VC invitation
+        privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
         credentialCriteria = this.getUserSelfCriteria(userID);
         break;
       }
@@ -464,6 +446,7 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_ADMIN_COMMUNITY_APPLICATION:
       case NotificationEvent.SPACE_ADMIN_COMMUNITY_NEW_MEMBER:
       case NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION:
+      case NotificationEvent.SPACE_ADMIN_VIRTUAL_CONTRIBUTOR_COMMUNITY_INVITATION_DECLINED:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_POST_CONTRIBUTION_COMMENT:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_COMMENT:
@@ -490,12 +473,11 @@ export class NotificationRecipientsService {
       case NotificationEvent.USER_MESSAGE:
       case NotificationEvent.USER_MESSAGE_SENDER:
       case NotificationEvent.ORGANIZATION_MESSAGE_SENDER:
-      case NotificationEvent.SPACE_COMMUNICATION_MESSAGE_SENDER:
       case NotificationEvent.PLATFORM_FORUM_DISCUSSION_COMMENT:
       case NotificationEvent.USER_COMMENT_REPLY:
       case NotificationEvent.USER_SPACE_COMMUNITY_JOINED:
-      case NotificationEvent.USER_SPACE_COMMUNITY_APPLICATION:
-      case NotificationEvent.USER_SPACE_COMMUNITY_INVITATION: {
+      case NotificationEvent.USER_SPACE_COMMUNITY_INVITATION:
+      case NotificationEvent.USER_SPACE_COMMUNITY_APPLICATION_DECLINED: {
         // get the User authorization policy
         // Use userID if provided, otherwise fall back to entityID for backward compatibility
         const targetUserID = userID || entityID;
@@ -516,6 +498,7 @@ export class NotificationRecipientsService {
       }
 
       case NotificationEvent.VIRTUAL_CONTRIBUTOR_ADMIN_SPACE_COMMUNITY_INVITATION: {
+        // get the Virtual Contributor authorization policy
         if (!virtualContributorID) {
           throw new ValidationException(
             'Virtual Contributor ID is required for space community invitation notifications',

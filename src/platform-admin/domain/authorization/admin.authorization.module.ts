@@ -9,10 +9,10 @@ import { AdminAuthorizationService } from './admin.authorization.service';
 import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/platform.authorization.policy.module';
 import { AuthResetModule } from '@services/auth-reset/publisher/auth-reset.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
-import { AiPersonaModule } from '@domain/community/ai-persona/ai.persona.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { OrganizationLookupModule } from '@domain/community/organization-lookup/organization.lookup.module';
 import { SpaceModule } from '@domain/space/space/space.module';
+import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 
 @Module({
   imports: [
@@ -25,8 +25,8 @@ import { SpaceModule } from '@domain/space/space/space.module';
     PlatformAuthorizationPolicyModule,
     NotificationAdapterModule,
     AuthResetModule,
-    AiPersonaModule,
     SpaceModule,
+    VirtualContributorModule,
   ],
   providers: [
     AdminAuthorizationService,

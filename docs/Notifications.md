@@ -39,7 +39,6 @@ The `NotificationRecipientsService` determines recipients through:
 1. **Credential Criteria**: Identifies potential recipients based on their roles/credentials
 2. **Notification Settings**: Filters users based on their email/in-app preferences for the specific event
 3. **Authorization Check**: Verifies users have required privileges to receive the notification
-4. **Platform Privileges**: For in-app notifications, checks `RECEIVE_NOTIFICATIONS_IN_APP` privilege
 
 ### 3. Notification Dispatch
 
@@ -91,6 +90,7 @@ Events are categorized by their target audience:
 - `SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION` - Admin notification for callout contributions
 - `SPACE_LEAD_COMMUNICATION_MESSAGE` - Communication messages to space leads
 - `SPACE_ADMIN_COMMUNITY_NEW_MEMBER` - Admin notification for new community members
+- `SPACE_ADMIN_VIRTUAL_CONTRIBUTOR_COMMUNITY_INVITATION_DECLINED` - Admin notification when a virtual contributor invitation is declined
 - `SPACE_COMMUNITY_INVITATION_USER_PLATFORM` - Platform-level space invitations
 - `SPACE_COMMUNICATION_UPDATE` - General space communication updates
 - `SPACE_COLLABORATION_CALLOUT_PUBLISHED` - When callouts are published
@@ -104,6 +104,7 @@ Events are categorized by their target audience:
 - `USER_SPACE_COMMUNITY_INVITATION` - Direct space community invitations
 - `USER_SPACE_COMMUNITY_JOINED` - When user joins a space community
 - `USER_SPACE_COMMUNITY_APPLICATION` - User's own community applications
+- `USER_SPACE_COMMUNITY_APPLICATION_DECLINED` - When user's space community application is declined
 - `USER_SIGN_UP_WELCOME` - Welcome message for new users
 - `USER_MENTIONED` - When user is mentioned
 - `USER_MESSAGE` - Direct messages to users
@@ -340,7 +341,6 @@ The notification system implements a multi-stage filtering process:
 1. **Initial Candidate Selection**: Based on credential criteria (roles/permissions)
 2. **Settings Filter**: Users must have notifications enabled for the specific event type
 3. **Authorization Check**: Users must have required privileges for the specific entity
-4. **Platform Privilege Check**: For in-app notifications, users need `RECEIVE_NOTIFICATIONS_IN_APP` privilege
 
 ### Example Flow for Space Callout Published
 
@@ -364,10 +364,6 @@ emailRecipients = candidates.filter(
 privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS;
 authPolicy = await getSpaceAuthorizationPolicy(spaceID);
 // Filter users based on privilege
-
-// 4. For in-app: check platform privilege
-platformPolicy = await getPlatformAuthorizationPolicy();
-// Filter users with RECEIVE_NOTIFICATIONS_IN_APP privilege
 ```
 
 ## Best Practices

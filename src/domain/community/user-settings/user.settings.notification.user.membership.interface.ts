@@ -5,16 +5,10 @@ import { IUserSettingsNotificationChannels } from './user.settings.notification.
 export abstract class IUserSettingsNotificationUserMembership {
   @Field(() => IUserSettingsNotificationChannels, {
     nullable: false,
-    description: 'Receive a notification when I join a Space',
+    description:
+      'Receive a notification when I join a Space or when my application is declined',
   })
   spaceCommunityJoined!: IUserSettingsNotificationChannels;
-
-  @Field(() => IUserSettingsNotificationChannels, {
-    nullable: false,
-    description:
-      'Receive a notification when an application for a Space is submitted',
-  })
-  spaceCommunityApplicationSubmitted!: IUserSettingsNotificationChannels;
 
   @Field(() => IUserSettingsNotificationChannels, {
     nullable: false,

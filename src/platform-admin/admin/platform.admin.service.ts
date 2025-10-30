@@ -20,7 +20,8 @@ import { InnovationPacksInput } from '@library/library/dto/library.dto.innovatio
 import { LibraryService } from '@library/library/library.service';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { EntityManager } from 'typeorm';
+import { EntityManager, In } from 'typeorm';
+import { SpaceLevel } from '@common/enums/space.level';
 
 @Injectable()
 export class PlatformAdminService {
@@ -34,13 +35,24 @@ export class PlatformAdminService {
     private libraryService: LibraryService
   ) {}
 
-  public async getAllInnovationHubs(): Promise<IInnovationHub[]> {
-    const innovationHubs = await this.entityManager.find(InnovationHub, {});
-    return innovationHubs;
+  public getAllInnovationHubs(): Promise<IInnovationHub[]> {
+    return this.entityManager.find(InnovationHub);
   }
 
-  public async getAllSpaces(args: SpacesQueryArgs): Promise<ISpace[]> {
-    return this.spaceService.getSpacesSorted(args);
+  public getAllSpaces(
+    args: SpacesQueryArgs,
+    sort: 'ASC' | 'DESC' = 'DESC'
+  ): Promise<ISpace[]> {
+    const visibilities = args?.filter?.visibilities;
+    const IDs = args?.IDs;
+    return this.spaceService.getAllSpaces({
+      where: {
+        visibility: visibilities?.length ? In(visibilities) : undefined,
+        id: IDs?.length ? In(IDs) : undefined,
+        level: SpaceLevel.L0,
+      },
+      order: { createdDate: sort },
+    });
   }
 
   public async getAllInnovationPacks(

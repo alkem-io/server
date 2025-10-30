@@ -1,5 +1,8 @@
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { AgentType } from '@common/enums/agent.type';
+import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
+import { VirtualContributorDataAccessMode } from '@common/enums/virtual.contributor.data.access.mode';
+import { VirtualContributorInteractionMode } from '@common/enums/virtual.contributor.interaction.mode';
 
 export const virtualContributorData: {
   virtualContributor: IVirtualContributor;
@@ -8,6 +11,11 @@ export const virtualContributorData: {
     rowId: 1,
     id: '08a43f9f-58e7-4c65-bf38-be283a548b3b',
     nameID: 'bridgeuniandbusiness',
+    bodyOfKnowledgeType: VirtualContributorBodyOfKnowledgeType.ALKEMIO_SPACE,
+    aiPersonaID: 'ai-persona-08a43f9f-58e7-4c65-bf38-be283a548b3b',
+    bodyOfKnowledgeID: 'body-of-knowledge-08a43f9f-58e7-4c65-bf38-be283a548b3b',
+    dataAccessMode: VirtualContributorDataAccessMode.SPACE_PROFILE,
+    interactionModes: [VirtualContributorInteractionMode.DISCUSSION_TAGGING],
     agent: {
       type: AgentType.SPACE,
       // Add other required IAgent fields as needed for type safety
@@ -21,7 +29,6 @@ export const virtualContributorData: {
     },
     // Add other required IVirtualContributor fields as needed for type safety
     // e.g., aiPersona, knowledgeBase, searchVisibility, listedInStore, settings, etc.,
-    aiPersona: undefined as any, // Replace with a valid mock if required by tests
     knowledgeBase: undefined as any, // Replace with a valid mock if required by tests
     searchVisibility: undefined as any, // Replace with a valid SearchVisibility if required
     listedInStore: false, // Default value, update as needed

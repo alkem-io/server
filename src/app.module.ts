@@ -94,6 +94,7 @@ import { AdminGeoLocationModule } from '@src/platform-admin/services/geolocation
 import { AdminSearchIngestModule } from './platform-admin/services/search/admin.search.ingest.module';
 import { PlatformAdminModule } from './platform-admin/admin/platform.admin.module';
 import { NotificationRecipientsModule } from '@services/api/notification-recipients/notification.recipients.module';
+import { InAppNotificationAdminModule } from './platform-admin/in-app-notification/in.app.notification.admin.module';
 import { GuestTestResolver } from '@domain/test/guest.test.resolver';
 
 @Module({
@@ -290,6 +291,7 @@ import { GuestTestResolver } from '@domain/test/guest.test.resolver';
     PlatformModule,
     PlatformHubModule,
     PlatformAdminModule,
+    InAppNotificationAdminModule,
     ContributionMoveModule,
     GeoLocationModule,
     ContributionReporterModule,
