@@ -24,6 +24,7 @@ import {
   RoomMessageAddReactionResponsePayload,
   RoomMessageDeletePayload,
   RoomMessageDeleteResponsePayload,
+  RoomMessageDetailsPayload,
   RoomMessageReactionSenderPayload,
   RoomMessageReactionSenderResponsePayload,
   RoomMessageRemoveReactionPayload,
@@ -285,6 +286,49 @@ export class CommunicationAdapter {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
         `Failed to remove reaction from room: ${err?.message ?? err}`,
+        LogContext.COMMUNICATION
+      );
+    }
+  }
+
+  public async getRoomMessage(
+    roomID: string,
+    messageID: string
+  ): Promise<CommunicationRoomResult> {
+    const eventType = MatrixAdapterEventType.ROOM_MESSAGE_DETAILS;
+    // If not enabled just return an empty room
+    if (!this.enabled) {
+      return {
+        id: 'communications-not-enabled',
+        messages: [],
+        displayName: '',
+        members: [],
+      };
+    }
+
+    const inputPayload: RoomMessageDetailsPayload = {
+      triggeredBy: '',
+      roomID: roomID,
+      messageIDs: [messageID],
+    };
+    const eventID = this.logInputPayload(eventType, inputPayload);
+
+    const response = this.matrixAdapterClient.send(
+      { cmd: eventType },
+      inputPayload
+    );
+
+    try {
+      const responseData =
+        await firstValueFrom<RoomDetailsResponsePayload>(response);
+      this.logResponsePayload(eventType, responseData, eventID);
+      return this.convertRoomDetailsResponseToCommunicationRoomResult(
+        responseData
+      );
+    } catch (err: any) {
+      this.logInteractionError(eventType, err, eventID);
+      throw new MatrixEntityNotFoundException(
+        `Failed to obtain room message details: ${err?.message ?? err}`,
         LogContext.COMMUNICATION
       );
     }
@@ -810,7 +854,7 @@ export class CommunicationAdapter {
     const inputPayload: RoomUpdateStatePayload = {
       triggeredBy: '',
       roomID,
-      historyWorldVisibile: worldVisible,
+      historyWorldVisible: worldVisible,
       allowJoining: allowGuests,
     };
     const eventID = this.logInputPayload(eventType, inputPayload);
