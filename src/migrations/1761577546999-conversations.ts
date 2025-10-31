@@ -1,8 +1,8 @@
 import { randomUUID } from 'crypto';
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class Conversations1761408055225 implements MigrationInterface {
-  name = 'Conversations1761408055225';
+export class Conversations1761577546999 implements MigrationInterface {
+  name = 'Conversations1761577546999';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`CREATE TABLE \`conversation\` (\`id\` char(36) NOT NULL,
