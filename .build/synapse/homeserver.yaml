@@ -1,7 +1,7 @@
 # Synapse Homeserver Configuration
 # For more information, see: https://element-hq.github.io/synapse/latest/usage/configuration/config_documentation.html
 
-server_name: "localhost"
+server_name: "alkemio.matrix.host"
 # Public base URL - CRITICAL for SSO redirects
 # This tells Synapse what URL to use when generating redirect URLs
 public_baseurl: "http://localhost:8008"
@@ -260,7 +260,7 @@ session_lifetime: 48h
 # - Docker: Use a named volume (not bind mount) for /data
 # - The signing key will be auto-generated on first startup
 # - Ensure /data volume has proper backup and disaster recovery
-signing_key_path: "/data/signing.key"
+signing_key_path: "/data/alkemio.matrix.host.signing.key"
 
 trusted_key_servers:
   - server_name: "matrix.org"
