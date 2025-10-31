@@ -17,99 +17,60 @@ description: 'Task list for Guest Contributions Policy implementation'
 - **[Story]**: Which user story this task belongs to (e.g., US1, US2, US3)
 - Include exact file paths in descriptions
 
-## Phase 1: Setup (Shared Infrastructure)
+## Phase 1: Add Domain Model and Database Structure
 
-**Purpose**: Project initialization and basic structure - No setup needed for this additive change
+**Purpose**: Update domain interface, DTOs, and create database migration
 
-**Note**: This feature follows an existing pattern with established infrastructure already in place.
-
----
-
-## Phase 2: Foundational (Blocking Prerequisites)
-
-**Purpose**: Core domain model changes that MUST be complete before ANY user story can be implemented
-
-**⚠️ CRITICAL**: No user story work can begin until this phase is complete
+**Alignment**: Matches plan.md Task 1-4 (Interface Updates, DTO Updates, Migration)
 
 - [ ] T001 [P] Add allowGuestContributions field to ISpaceSettingsCollaboration interface in src/domain/space/space.settings/space.settings.collaboration.interface.ts
 - [ ] T002 [P] Add allowGuestContributions field to CreateSpaceSettingsCollaborationInput DTO in src/domain/space/space.settings/dto/space.settings.collaboration.dto.create.ts
 - [ ] T003 [P] Add allowGuestContributions field to UpdateSpaceSettingsCollaborationInput DTO in src/domain/space/space.settings/dto/space.settings.collaboration.dto.update.ts
 - [ ] T004 Create database migration following pattern from 1759156590119-addSettingAllowMembersToVideoCall.ts in src/migrations/
 
-**Checkpoint**: Domain foundation ready - user story implementation can now begin in parallel
+**Checkpoint**: Domain model and migration ready for template updates
 
 ---
 
-## Phase 3: User Story 1 - Space admins control guest access (Priority: P1) 🎯 MVP
+## Phase 2: Update Templates and Defaults
 
-**Goal**: Space admins can toggle the allowGuestContributions setting in space collaboration settings
+**Purpose**: Update space template defaults to include allowGuestContributions: false
 
-**Independent Test**: A space admin can access space settings, toggle the guest contributions policy, and verify the setting is saved correctly
+**Alignment**: Matches plan.md Task 5 (Update Template Defaults)
 
-### Implementation for User Story 1
+- [ ] T005 [P] Update space L0 template to include allowGuestContributions: false in src/core/bootstrap/platform-template-definitions/default-templates/bootstrap.template.space.content.space.l0.ts
+- [ ] T006 [P] Update subspace template to include allowGuestContributions: false in src/core/bootstrap/platform-template-definitions/default-templates/bootstrap.template.space.content.subspace.ts
+- [ ] T007 [P] Update knowledge base callouts template (if contains collaboration settings) in src/core/bootstrap/platform-template-definitions/default-templates/bootstrap.template.space.content.callouts.vc.knowledge.base.ts
+- [ ] T008 [P] Update tutorials callouts template (if contains collaboration settings) in src/core/bootstrap/platform-template-definitions/default-templates/bootstrap.template.space.content.callouts.space.l0.tutorials.ts
 
-- [ ] T005 [US1] Update all default space templates to include allowGuestContributions: false in src/core/bootstrap/platform-template-definitions/default-templates/bootstrap.template.space.content.community.ts
-- [ ] T006 [US1] Update additional space templates in src/core/bootstrap/platform-template-definitions/default-templates/bootstrap.template.space.content.innovation.ts
-- [ ] T007 [US1] Update knowledge space template in src/core/bootstrap/platform-template-definitions/default-templates/bootstrap.template.space.content.knowledge.ts
-- [ ] T008 [US1] Regenerate GraphQL schema by running pnpm run schema:print and pnpm run schema:sort
-
-**Checkpoint**: At this point, User Story 1 should be fully functional - space admins can control guest access
+**Checkpoint**: All templates updated with secure defaults
 
 ---
 
-## Phase 4: User Story 2 - Default security posture (Priority: P1)
+## Phase 3: Generate GraphQL Schema
 
-**Goal**: New spaces default to allowGuestContributions = false for security-first approach
+**Purpose**: Regenerate GraphQL schema to expose new field
 
-**Independent Test**: Create a new space and verify that guest contributions are disabled by default
+**Alignment**: Matches plan.md Task 6 (Generate Schema)
 
-### Implementation for User Story 2
+- [ ] T009 Regenerate GraphQL schema by running pnpm run schema:print and pnpm run schema:sort
 
-- [ ] T009 [US2] Verify migration sets default false for all existing spaces (covered by T004 migration)
-- [ ] T010 [US2] Verify template defaults ensure new spaces have allowGuestContributions: false (covered by T005-T007)
-
-**Checkpoint**: At this point, User Stories 1 AND 2 should both work - default security posture maintained
+**Checkpoint**: GraphQL schema updated and exposed
 
 ---
 
-## Phase 5: User Story 3 - Policy enforcement consistency (Priority: P2)
+## Phase 4: Validate Implementation
 
-**Goal**: Guest contributions policy is consistently enforced across all space activity types
+**Purpose**: Validate schema changes and verify migration correctness
 
-**Independent Test**: With guest contributions disabled, verify consistent policy enforcement across different space features
+**Alignment**: Matches plan.md Validation Steps
 
-### Implementation for User Story 3
+- [ ] T010 [P] Run pnpm run schema:diff to validate schema changes are non-breaking
+- [ ] T011 [P] Verify migration sets default false for all existing spaces
+- [ ] T012 [P] Verify template defaults ensure new spaces have allowGuestContributions: false
+- [ ] T013 Run final schema validation with pnpm run schema:validate
 
-- [ ] T011 [US3] Document policy enforcement points for future enforcement implementation in plan.md
-- [ ] T012 [US3] Add allowGuestContributions field validation to space settings service (if custom validation needed)
-
-**Checkpoint**: All core user stories should now be independently functional
-
----
-
-## Phase 6: User Story 4 - Migration and backward compatibility (Priority: P3)
-
-**Goal**: All existing spaces have guest contributions disabled when feature is introduced
-
-**Independent Test**: Verify that after migration, all existing spaces have guest contributions disabled
-
-### Implementation for User Story 4
-
-- [ ] T013 [US4] Validate migration script covers all existing spaces (covered by T004)
-- [ ] T014 [US4] Validate migration script covers all template content spaces (covered by T004)
-
-**Checkpoint**: All user stories should now be independently functional with full backward compatibility
-
----
-
-## Phase 7: Polish & Cross-Cutting Concerns
-
-**Purpose**: Final validation and schema updates
-
-- [ ] T015 [P] Run pnpm run schema:diff to validate schema changes are non-breaking
-- [ ] T016 [P] Update schema-baseline.graphql if schema:diff shows expected changes
-- [ ] T017 Validate all spaces have allowGuestContributions field after migration
-- [ ] T018 Run final schema validation with pnpm run schema:validate
+**Checkpoint**: Implementation validated and ready for deployment
 
 ---
 
@@ -117,90 +78,100 @@ description: 'Task list for Guest Contributions Policy implementation'
 
 ### Phase Dependencies
 
-- **Setup (Phase 1)**: No setup needed - using existing infrastructure
-- **Foundational (Phase 2)**: No dependencies - can start immediately, BLOCKS all user stories
-- **User Stories (Phase 3-6)**: All depend on Foundational phase completion
-  - User stories can proceed in parallel (if staffed)
-  - Or sequentially in priority order (P1 → P2 → P3)
-- **Polish (Phase 7)**: Depends on all desired user stories being complete
+- **Phase 1**: Domain model and migration - can start immediately
+- **Phase 2**: Template updates - depends on Phase 1 completion
+- **Phase 3**: Schema generation - depends on Phase 2 completion
+- **Phase 4**: Validation - depends on Phase 3 completion
 
-### User Story Dependencies
+### Task Dependencies Within Phases
 
-- **User Story 1 (P1)**: Can start after Foundational (Phase 2) - No dependencies on other stories
-- **User Story 2 (P1)**: Can start after Foundational (Phase 2) - Builds on User Story 1 templates
-- **User Story 3 (P2)**: Can start after Foundational (Phase 2) - Independent of other stories
-- **User Story 4 (P3)**: Can start after Foundational (Phase 2) - Independent of other stories
+**Phase 1 (Parallel):**
 
-### Within Each User Story
+- T001-T003 can run in parallel (different files)
+- T004 can run in parallel with T001-T003
 
-- Domain interface and DTOs before migration
-- Migration before template updates
-- Template updates before schema generation
-- Schema generation before validation
+**Phase 2 (Parallel):**
+
+- T005-T008 can all run in parallel (different template files)
+
+**Phase 3 (Sequential):**
+
+- T009 must run after Phase 2 completion
+
+**Phase 4 (Parallel):**
+
+- T010-T012 can run in parallel
+- T013 runs after T010-T012
 
 ### Parallel Opportunities
 
-- All Foundational tasks T001-T003 (interface and DTOs) marked [P] can run in parallel
-- Template updates T005-T007 can run in parallel within User Story 1
-- User Stories 3 and 4 can run in parallel after User Stories 1-2 complete
-- Schema validation tasks T015-T016 can run in parallel
+- **Phase 1**: All 4 tasks (T001-T004) can run simultaneously
+- **Phase 2**: All 4 template updates (T005-T008) can run simultaneously
+- **Phase 4**: Schema validation tasks (T010-T012) can run simultaneously
 
 ---
 
-## Parallel Example: Foundational Phase
+## Parallel Example: Phase Execution
 
 ```bash
-# Launch all domain model updates together:
-Task: "Add allowGuestContributions field to ISpaceSettingsCollaboration interface"
-Task: "Add allowGuestContributions field to CreateSpaceSettingsCollaborationInput DTO"
-Task: "Add allowGuestContributions field to UpdateSpaceSettingsCollaborationInput DTO"
+# Phase 1 - Launch all domain model updates and migration together:
+Task T001: "Add allowGuestContributions field to ISpaceSettingsCollaboration interface"
+Task T002: "Add allowGuestContributions field to CreateSpaceSettingsCollaborationInput DTO"
+Task T003: "Add allowGuestContributions field to UpdateSpaceSettingsCollaborationInput DTO"
+Task T004: "Create database migration"
 
-# Launch all template updates together (after migration):
-Task: "Update community space template"
-Task: "Update innovation space template"
-Task: "Update knowledge space template"
+# Phase 2 - Launch all template updates together (after Phase 1):
+Task T005: "Update space L0 template"
+Task T006: "Update subspace template"
+Task T007: "Update knowledge base callouts template"
+Task T008: "Update tutorials callouts template"
+
+# Phase 3 - Sequential schema generation (after Phase 2):
+Task T009: "Regenerate GraphQL schema"
+
+# Phase 4 - Launch validation tasks in parallel (after Phase 3):
+Task T010: "Run schema:diff validation"
+Task T011: "Verify migration defaults"
+Task T012: "Verify template defaults"
+# Then:
+Task T013: "Run final schema validation"
 ```
 
 ---
 
 ## Implementation Strategy
 
-### MVP First (User Stories 1-2 Only)
+### Direct Implementation (Follows plan.md exactly)
 
-1. Complete Phase 2: Foundational (domain model changes)
-2. Complete Phase 3: User Story 1 (admin control)
-3. Complete Phase 4: User Story 2 (default security)
-4. **STOP and VALIDATE**: Test space creation and settings toggle
-5. Deploy/demo if ready
+1. **Phase 1**: Add domain model and database structure
+   - Update interface and DTOs (T001-T003)
+   - Create migration (T004)
+2. **Phase 2**: Update templates and defaults
+   - Update all 4 template files (T005-T008)
+3. **Phase 3**: Generate GraphQL schema
+   - Regenerate schema artifacts (T009)
+4. **Phase 4**: Validate implementation
+   - Run validation checks (T010-T013)
 
-### Incremental Delivery
+**Total Estimated Effort**: 2-4 hours (as specified in plan.md)
 
-1. Complete Foundational → Domain model ready
-2. Add User Story 1-2 → Test admin control and defaults → Deploy/Demo (MVP!)
-3. Add User Story 3 → Test policy enforcement documentation → Deploy/Demo
-4. Add User Story 4 → Test migration validation → Deploy/Demo
-5. Each story adds value without breaking previous stories
+### Quality Gates
 
-### Parallel Team Strategy
-
-With multiple developers:
-
-1. Team completes Foundational together (T001-T004)
-2. Once Foundational is done:
-   - Developer A: User Stories 1-2 (template updates)
-   - Developer B: User Story 3 (enforcement documentation)
-   - Developer C: User Story 4 (migration validation)
-3. Stories complete and integrate independently
+- After Phase 1: Verify domain model compiles and migration is valid
+- After Phase 2: Verify templates have correct structure
+- After Phase 3: Verify schema is generated without errors
+- After Phase 4: Verify all validation checks pass
 
 ---
 
 ## Notes
 
-- [P] tasks = different files, no dependencies
-- [Story] label maps task to specific user story for traceability
-- Each user story should be independently completable and testable
+- [P] tasks = different files, no dependencies, can run in parallel
+- Task structure directly maps to plan.md implementation steps 1-6
 - Following allowMembersToVideoCall pattern exactly - no new architecture
 - Migration pattern proven and low-risk
 - Schema changes are additive only (non-breaking)
-- Commit after each task or logical group
-- Stop at any checkpoint to validate story independently
+- Template file paths verified against actual /src/core/bootstrap structure
+- Commit after each phase completion
+- 4 sequential phases aligned with plan.md phases
+- Total: 13 tasks across 4 phases (reduced from original 18 tasks)
