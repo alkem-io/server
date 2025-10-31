@@ -440,6 +440,7 @@ export class UserService {
         agent: true,
         storageAggregator: true,
         settings: true,
+        conversationsSet: true,
       },
     });
 
@@ -448,7 +449,8 @@ export class UserService {
       !user.storageAggregator ||
       !user.agent ||
       !user.authorization ||
-      !user.settings
+      !user.settings ||
+      !user.conversationsSet
     ) {
       throw new RelationshipNotFoundException(
         `User entity missing required child entities when deleting: ${userID}`,
@@ -478,6 +480,10 @@ export class UserService {
     await this.storageAggregatorService.delete(user.storageAggregator.id);
 
     await this.userSettingsService.deleteUserSettings(user.settings.id);
+
+    await this.conversationsSetService.deleteConversationsSet(
+      user.conversationsSet.id
+    );
 
     // TODO: Get all of the conversations for this user and delete them
 
