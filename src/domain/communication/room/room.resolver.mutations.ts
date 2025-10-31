@@ -206,6 +206,10 @@ export class RoomResolverMutations {
           );
         }
         break;
+      case RoomType.CONVERSATION:
+        // Conversation rooms don't require special event processing i.e. no mentions or other notifications as other
+        // contributors would not be able to see the messages
+        break;
       default:
       // ignore for now, later likely to be an exception
     }
@@ -232,7 +236,6 @@ export class RoomResolverMutations {
   @Mutation(() => IMessage, {
     description: 'Sends a reply to a message from the specified Room.',
   })
-  @Profiling.api
   async sendMessageReplyToRoom(
     @Args('messageData') messageData: RoomSendMessageReplyInput,
     @CurrentUser() agentInfo: AgentInfo
@@ -415,6 +418,11 @@ export class RoomResolverMutations {
           );
         }
         break;
+      case RoomType.CONVERSATION:
+        // Conversation rooms don't require special event processing for mentions or other notifications as other
+        // contributors would not be able to see the messages
+        // TODO: what notifications should there be on rooms / replies
+        break;
       default:
       // ignore for now, later likely to be an exception
     }
@@ -425,7 +433,6 @@ export class RoomResolverMutations {
   @Mutation(() => IMessageReaction, {
     description: 'Add a reaction to a message from the specified Room.',
   })
-  @Profiling.api
   async addReactionToMessageInRoom(
     @Args('reactionData') reactionData: RoomAddReactionToMessageInput,
     @CurrentUser() agentInfo: AgentInfo
