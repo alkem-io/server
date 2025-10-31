@@ -53,6 +53,10 @@ export const userSettingsData: { userSettings: IUserSettings } = {
           email: true,
           inApp: true,
         },
+        communityCalendarEvents: {
+          email: true,
+          inApp: true,
+        },
       },
       platform: {
         admin: {

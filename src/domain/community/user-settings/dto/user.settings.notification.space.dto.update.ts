@@ -54,4 +54,12 @@ export class UpdateUserSettingsNotificationSpaceInput {
   @ValidateNested()
   @Type(() => NotificationSettingInput)
   collaborationCalloutPublished?: NotificationSettingInput;
+
+  @Field(() => NotificationSettingInput, {
+    nullable: true,
+    description: 'Receive a notification when a calendar event is created',
+  })
+  @ValidateNested()
+  @Type(() => NotificationSettingInput)
+  communityCalendarEvents?: NotificationSettingInput;
 }
