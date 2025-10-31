@@ -72,10 +72,14 @@ export class CommunicationResolverMutations {
       );
     }
 
-    const message = await this.communicationAdapter.sendMessageToUser({
+    const roomID = await this.communicationAdapter.startDirectMessagingToUser({
       senderCommunicationsID: agentInfo.communicationID,
-      message: messageData.message,
       receiverCommunicationsID: receivingUser.communicationID,
+    });
+    const message = await this.communicationAdapter.sendMessageToRoom({
+      roomID,
+      message: messageData.message,
+      senderCommunicationsID: agentInfo.communicationID,
     });
     // TODO: decide what should be the api
     return message.id;
@@ -142,10 +146,15 @@ export class CommunicationResolverMutations {
             LogContext.COMMUNICATION
           );
         }
-        await this.communicationAdapter.sendMessageToUser({
-          senderCommunicationsID: agentInfo.communicationID,
+        const roomID =
+          await this.communicationAdapter.startDirectMessagingToUser({
+            senderCommunicationsID: agentInfo.communicationID,
+            receiverCommunicationsID: receiver.communicationID,
+          });
+        await this.communicationAdapter.sendMessageToRoom({
+          roomID,
           message: messageData.message,
-          receiverCommunicationsID: receiver.communicationID,
+          senderCommunicationsID: agentInfo.communicationID,
         });
       }
     }

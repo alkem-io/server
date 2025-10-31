@@ -7,7 +7,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CommunicationDeleteMessageInput } from './dto/communication.dto.message.delete';
-import { CommunicationSendMessageUserInput } from './dto/communication.dto.message.send.user';
+import { CommunicationStartDirectMessagingUserInput } from './dto/communication.dto.direct.messaging.start';
 import { IMessage } from '@domain/communication/message/message.interface';
 import { MATRIX_ADAPTER_SERVICE } from '@common/constants';
 import { ClientProxy } from '@nestjs/microservices';
@@ -41,7 +41,10 @@ import {
   UserRoomsDirectPayload,
   UserRoomsPayload,
   UserRoomsResponsePayload,
-  UserSendDirectMessagePayload,
+  UserStartDirectMessagingPayload,
+  UserStartDirectMessagingResponsePayload,
+  UserStopDirectMessagingPayload,
+  UserStopDirectMessagingResponsePayload,
 } from '@alkemio/matrix-adapter-lib';
 import { RoomDetailsPayload } from '@alkemio/matrix-adapter-lib';
 import { RoomDetailsResponsePayload } from '@alkemio/matrix-adapter-lib';
@@ -62,6 +65,7 @@ import { IMessageReaction } from '@domain/communication/message.reaction/message
 import { RoomResult } from '@alkemio/matrix-adapter-lib/dist/types/room';
 import { AlkemioConfig } from '@src/types';
 import { CommunicationRemoveReactionToMessageInput } from './dto/communication.dto.remove.reaction';
+import { CommunicationStopDirectMessagingUserInput } from './dto/communication.dto.direct.messaging.stop';
 
 @Injectable()
 export class CommunicationAdapter {
@@ -178,15 +182,14 @@ export class CommunicationAdapter {
     }
   }
 
-  public async sendMessageToUser(
-    sendMessageUserData: CommunicationSendMessageUserInput
-  ): Promise<IMessage> {
-    const eventType = MatrixAdapterEventType.USER_SEND_DIRECT_MESSAGE;
-    const inputPayload: UserSendDirectMessagePayload = {
+  public async startDirectMessagingToUser(
+    sendMessageUserData: CommunicationStartDirectMessagingUserInput
+  ): Promise<string> {
+    const eventType = MatrixAdapterEventType.USER_START_DIRECT_MESSAGING;
+    const inputPayload: UserStartDirectMessagingPayload = {
       triggeredBy: '',
-      message: sendMessageUserData.message,
       receiverID: sendMessageUserData.receiverCommunicationsID,
-      senderID: sendMessageUserData.senderCommunicationsID,
+      initiatingUserID: sendMessageUserData.senderCommunicationsID,
     };
     const eventID = this.logInputPayload(eventType, inputPayload);
 
@@ -197,19 +200,46 @@ export class CommunicationAdapter {
 
     try {
       const responseData =
-        await firstValueFrom<RoomMessageSendResponsePayload>(response);
+        await firstValueFrom<UserStartDirectMessagingResponsePayload>(response);
       this.logResponsePayload(eventType, responseData, eventID);
-      const message = responseData.message;
-      return {
-        ...message,
-        senderType: 'user',
-        reactions: message.reactions.map(reaction => {
-          return {
-            ...reaction,
-            senderType: 'user',
-          };
-        }),
-      };
+      if (responseData.success) {
+        return responseData.roomID;
+      } else {
+        throw new MatrixEntityNotFoundException(
+          `Failed to start direct messaging: ${sendMessageUserData.senderCommunicationsID}`,
+          LogContext.COMMUNICATION
+        );
+      }
+    } catch (err: any) {
+      this.logInteractionError(eventType, err, eventID);
+      throw new MatrixEntityNotFoundException(
+        `Failed to send message to user: ${err}`,
+        LogContext.COMMUNICATION
+      );
+    }
+  }
+
+  public async stopDirectMessagingToUser(
+    sendMessageUserData: CommunicationStopDirectMessagingUserInput
+  ): Promise<boolean> {
+    const eventType = MatrixAdapterEventType.USER_STOP_DIRECT_MESSAGING;
+    const inputPayload: UserStopDirectMessagingPayload = {
+      triggeredBy: '',
+      receiverID: sendMessageUserData.receiverCommunicationsID,
+      initiatingUserID: sendMessageUserData.senderCommunicationsID,
+    };
+    const eventID = this.logInputPayload(eventType, inputPayload);
+
+    const response = this.matrixAdapterClient.send(
+      { cmd: eventType },
+      inputPayload
+    );
+
+    try {
+      const responseData =
+        await firstValueFrom<UserStopDirectMessagingResponsePayload>(response);
+      this.logResponsePayload(eventType, responseData, eventID);
+      return responseData.success;
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
