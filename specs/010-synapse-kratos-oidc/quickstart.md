@@ -591,9 +591,9 @@ Based on FR-012 and NFR-002:
 
 ## Additional Resources
 
-- **Hydra Documentation**: https://www.ory.sh/docs/hydra/
-- **Kratos Documentation**: https://www.ory.sh/docs/kratos/
-- **Synapse OIDC Configuration**: https://matrix-org.github.io/synapse/latest/openid.html
+- **Hydra Documentation**: [https://www.ory.sh/docs/hydra/](https://www.ory.sh/docs/hydra/)
+- **Kratos Documentation**: [https://www.ory.sh/docs/kratos/](https://www.ory.sh/docs/kratos/)
+- **Synapse OIDC Configuration**: [https://matrix-org.github.io/synapse/latest/openid.html](https://matrix-org.github.io/synapse/latest/openid.html)
 - **Environment Variables Reference**: [environment-variables.md](./environment-variables.md)
 - **Retrospective Learnings**: [retrospective.md](./retrospective.md)
 - **US4 Account Linking Guide**: [../tests/US4-account-linking-summary.md](../tests/US4-account-linking-summary.md)
