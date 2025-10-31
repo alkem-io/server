@@ -187,17 +187,20 @@ export class AiPersonaService {
       input.engine === AiPersonaEngine.EXPERT &&
       !invocationInput.promptGraph
     ) {
-      // Deep-clone the imported graphJson so we don't mutate the module-level object
-      const processedGraph = JSON.parse(JSON.stringify(graphJson));
+      let invocationGraph = aiPersona.promptGraph;
+      if (!invocationGraph) {
+        // Deep-clone the imported graphJson so we don't mutate the module-level object
+        const processedGraph = JSON.parse(JSON.stringify(graphJson));
+        // For each node, if prompt is an array, concatenate it into a single string with new lines
+        processedGraph.nodes?.forEach((node: any) => {
+          if (Array.isArray(node.prompt)) {
+            node.prompt = node.prompt.join('\n');
+          }
+        });
+        invocationGraph = processedGraph;
+      }
 
-      // For each node, if prompt is an array, concatenate it into a single string with new lines
-      processedGraph.nodes?.forEach((node: any) => {
-        if (Array.isArray(node.prompt)) {
-          node.prompt = node.prompt.join('\n');
-        }
-      });
-
-      input.promptGraph = processedGraph;
+      input.promptGraph = invocationGraph;
     }
 
     return this.aiPersonaEngineAdapter.invoke(input);
