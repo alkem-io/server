@@ -311,6 +311,7 @@ export class UserService {
           },
           collaborationCalloutComment: { email: false, inApp: true },
           collaborationCalloutPublished: { email: true, inApp: true },
+          communityCalendarEvents: { email: true, inApp: true },
         },
         user: {
           mentioned: { email: true, inApp: true },
