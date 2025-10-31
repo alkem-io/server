@@ -1,9 +1,9 @@
 # Specification: User-Owned Conversations
 
-**Feature ID:** 012-user-owned-conversations
+**Feature ID:** 014-user-owned-conversations
 **Status:** Draft
 **Created:** 2025-10-28
-**Last Updated:** 2025-10-28
+**Last Updated:** 2025-10-31
 
 ## Overview
 
@@ -808,6 +808,341 @@ const existing = await this.findUserToUserConversation(
 - **Optimization:** Uses eager loading of conversations to minimize queries
 - **Trade-off:** Slight creation overhead vs. correct room sharing
 
+## Conversation Deletion Logic
+
+### Overview
+
+When a user deletes their conversation, the system must handle cleanup of the conversation entity, room entity, and Matrix room resources while respecting reciprocal conversations that may still be active.
+
+### Deletion Principles
+
+1. **User Ownership:** Users can only delete conversations within their own ConversationsSet
+2. **Selective Cleanup:** Room entities are always deleted; Matrix rooms are conditionally deleted
+3. **Matrix Participation:** User is removed from Matrix room regardless of whether the room is deleted
+4. **Reciprocal Preservation:** If the other user still has their conversation, the Matrix room persists
+
+### Implementation Flow
+
+#### Step-by-Step Deletion Process
+
+1. **Load Conversation:**
+   - Fetch conversation with `room` and `conversationsSet` relations
+   - Validate that room and authorization exist
+
+2. **Find Conversation Owner:**
+   - Query User table to find user who owns the conversationsSet
+   - This gives us the user's communicationID for Matrix operations
+
+3. **Remove User from Matrix Room:**
+   - Call `communicationAdapter.removeUserFromRooms()` with conversation owner's communicationID
+   - This happens regardless of whether Matrix room will be deleted
+   - Ensures user is removed from Matrix even if room stays active
+
+4. **Check for Reciprocal Conversation:**
+   - For USER_USER conversations, check if other user has their conversation
+   - Query other user's ConversationsSet for a conversation pointing back
+   - Set `shouldDeleteMatrixRoom = false` if reciprocal exists
+
+5. **Delete Room Entity:**
+   - Call `roomService.deleteRoom(room, shouldDeleteMatrixRoom)`
+   - Room entity is **always deleted** from database
+   - Matrix room is **only deleted** if `shouldDeleteMatrixRoom = true`
+
+6. **Clean Up Related Entities:**
+   - Delete authorization policy
+   - Remove conversation entity from database
+
+### Service Layer Implementation
+
+#### ConversationService.deleteConversation()
+
+```typescript
+public async deleteConversation(
+  conversationID: string
+): Promise<IConversation> {
+  // 1. Load conversation with relations
+  const conversation = await this.getConversationOrFail(conversationID, {
+    relations: { room: true, conversationsSet: true },
+  });
+
+  if (!conversation.room || !conversation.authorization) {
+    throw new EntityNotInitializedException(
+      `Unable to load conversation for deleting: ${conversation.id}`,
+      LogContext.COLLABORATION
+    );
+  }
+
+  if (!conversation.conversationsSet) {
+    throw new EntityNotInitializedException(
+      `Unable to load conversationsSet for deleting conversation: ${conversation.id}`,
+      LogContext.COLLABORATION
+    );
+  }
+
+  // 2. Find the user who owns this conversation
+  const conversationOwner = await this.entityManager.findOne(User, {
+    where: {
+      conversationsSet: { id: conversation.conversationsSet.id },
+    },
+  });
+
+  if (!conversationOwner) {
+    throw new EntityNotFoundException(
+      `Unable to find owner of conversation: ${conversationID}`,
+      LogContext.COLLABORATION
+    );
+  }
+
+  // 3. Remove the conversation owner from the Matrix room
+  await this.communicationAdapter.removeUserFromRooms(
+    [conversation.room.externalRoomID],
+    conversationOwner.communicationID
+  );
+
+  // 4. Check for reciprocal conversation (USER_USER only)
+  let shouldDeleteMatrixRoom = true;
+  if (
+    conversation.type === CommunicationConversationType.USER_USER &&
+    conversation.userID
+  ) {
+    const reciprocalExists = await this.hasReciprocalConversation(conversation);
+    if (reciprocalExists) {
+      shouldDeleteMatrixRoom = false;
+    }
+  }
+
+  // 5. Delete room entity (always) and optionally Matrix room
+  await this.roomService.deleteRoom(conversation.room, shouldDeleteMatrixRoom);
+
+  // 6. Clean up authorization and conversation entity
+  await this.authorizationPolicyService.delete(conversation.authorization);
+  const result = await this.conversationRepository.remove(
+    conversation as Conversation
+  );
+  result.id = conversationID;
+
+  return result;
+}
+```
+
+#### ConversationService.hasReciprocalConversation()
+
+```typescript
+private async hasReciprocalConversation(
+  conversation: IConversation
+): Promise<boolean> {
+  if (conversation.type !== CommunicationConversationType.USER_USER) {
+    return false;
+  }
+
+  if (!conversation.userID || !conversation.conversationsSet) {
+    return false;
+  }
+
+  // Find the user who owns this conversationsSet
+  const conversationOwner = await this.entityManager.findOne(User, {
+    where: {
+      conversationsSet: { id: conversation.conversationsSet.id },
+    },
+  });
+
+  if (!conversationOwner) {
+    return false;
+  }
+
+  // Check if the other user has a conversation back to the owner
+  const reciprocalConversation = await this.findUserToUserConversation(
+    conversation.userID,
+    conversationOwner.id
+  );
+
+  return reciprocalConversation !== null;
+}
+```
+
+#### RoomService.deleteRoom() (Updated)
+
+```typescript
+async deleteRoom(
+  roomInput: IRoom,
+  deleteExternalRoom: boolean = true
+): Promise<IRoom> {
+  const room = await this.getRoomOrFail(roomInput.id, {
+    relations: { vcInteractions: true },
+  });
+
+  // Clean up VC interactions
+  if (room.vcInteractions) {
+    for (const interaction of room.vcInteractions) {
+      await this.vcInteractionService.removeVcInteraction(interaction.id);
+    }
+  }
+
+  // Always delete room entity from database
+  const result = await this.roomRepository.remove(room as Room);
+
+  // Only delete from external Matrix server if flag is true
+  if (deleteExternalRoom) {
+    await this.communicationAdapter.removeRoom(room.externalRoomID);
+  }
+
+  return result;
+}
+```
+
+### Deletion Scenarios
+
+#### Scenario 1: User A Deletes, User B Still Has Conversation
+
+**Initial State:**
+
+- User A has conversation with User B (shares Matrix room R1)
+- User B has reciprocal conversation with User A (shares Matrix room R1)
+
+**User A Deletes Their Conversation:**
+
+1. User A removed from Matrix room R1
+2. Reciprocal check finds User B's conversation exists
+3. Room entity deleted from User A's conversation
+4. Matrix room R1 **preserved** (User B still needs it)
+5. User B can still see conversation and send messages
+
+**Result:**
+
+- User A: No conversation entity
+- User B: Conversation entity exists, room accessible
+- Matrix room R1: Still exists, only User B is member
+
+#### Scenario 2: User A Deletes, No Reciprocal Exists
+
+**Initial State:**
+
+- User A has conversation with User B (shares Matrix room R1)
+- User B **does not have** a reciprocal conversation (maybe deleted earlier)
+
+**User A Deletes Their Conversation:**
+
+1. User A removed from Matrix room R1
+2. Reciprocal check finds no conversation from User B
+3. Room entity deleted
+4. Matrix room R1 **deleted** (no users need it)
+
+**Result:**
+
+- User A: No conversation entity
+- User B: No conversation entity (if had one, deleted earlier)
+- Matrix room R1: Fully deleted from Matrix server
+
+#### Scenario 3: Both Users Delete (Sequential)
+
+**Initial State:**
+
+- User A has conversation with User B (shares Matrix room R1)
+- User B has reciprocal conversation with User A (shares Matrix room R1)
+
+**User A Deletes First:**
+
+1. User A removed from Matrix room R1
+2. Reciprocal exists → Matrix room preserved
+3. User A's conversation entity deleted
+
+**User B Deletes After:**
+
+1. User B removed from Matrix room R1
+2. No reciprocal exists (User A deleted theirs)
+3. Matrix room R1 **deleted** (no users need it)
+
+**Result:**
+
+- Complete cleanup of all resources
+
+### Authorization
+
+**Mutation:** `deleteConversation`
+
+**Authorization Check:**
+
+```typescript
+@Mutation(() => IConversation)
+@UseGuards(GraphqlGuard)
+async deleteConversation(
+  @CurrentUser() agentInfo: AgentInfo,
+  @Args('deleteData') deleteData: DeleteConversationInput
+): Promise<IConversation> {
+  const conversation = await this.conversationService.getConversationOrFail(
+    deleteData.ID,
+    { relations: { conversationsSet: true } }
+  );
+
+  // Find conversation owner
+  const conversationOwner = await this.entityManager.findOne(User, {
+    where: { conversationsSet: { id: conversation.conversationsSet.id } },
+  });
+
+  // Authorization: User can only delete their own conversations
+  if (conversationOwner?.id !== agentInfo.userID) {
+    throw new ForbiddenException(
+      'User can only delete conversations in their own conversations set'
+    );
+  }
+
+  this.authorizationService.grantAccessOrFail(
+    agentInfo,
+    conversation.authorization,
+    AuthorizationPrivilege.DELETE,
+    `delete conversation: ${conversation.id}`
+  );
+
+  return await this.conversationService.deleteConversation(deleteData.ID);
+}
+```
+
+### Edge Cases & Error Handling
+
+1. **Missing ConversationsSet:**
+   - Throw `EntityNotInitializedException`
+   - Prevent orphaned room deletion
+
+2. **Missing Conversation Owner:**
+   - Throw `EntityNotFoundException`
+   - Cannot proceed without owner's communicationID
+
+3. **Matrix Room Removal Failure:**
+   - Log error but continue with database cleanup
+   - Matrix room may need manual cleanup
+
+4. **Reciprocal Check Failure:**
+   - Default to preserving Matrix room (safer)
+   - Log warning for investigation
+
+5. **USER_VC Conversations:**
+   - No reciprocal check needed
+   - Always delete Matrix room
+
+### Testing Requirements
+
+1. **Unit Tests:**
+   - `hasReciprocalConversation` returns correct boolean
+   - Owner lookup via conversationsSet works
+   - Room deletion parameters correct
+
+2. **Integration Tests:**
+   - Delete with reciprocal → Matrix room preserved
+   - Delete without reciprocal → Matrix room deleted
+   - Both users delete → complete cleanup
+   - Authorization prevents cross-user deletion
+
+3. **Error Scenarios:**
+   - Missing conversationsSet
+   - Missing owner
+   - Matrix API failures
+
+### Performance Considerations
+
+- **Additional Queries:** 2 extra queries per deletion (owner lookup + reciprocal check)
+- **Matrix API Calls:** 1-2 calls (removeUser + conditionally removeRoom)
+- **Trade-off:** Slightly slower deletion vs. correct resource management
+
 ## Open Questions
 
 1. **Multi-User Conversations:** How should true multi-user conversations (group chats) be handled in the future?
@@ -829,7 +1164,8 @@ const existing = await this.findUserToUserConversation(
 
 ## Revision History
 
-| Date       | Version | Changes                                    | Author |
-| ---------- | ------- | ------------------------------------------ | ------ |
-| 2025-10-28 | 0.1     | Initial specification draft                | System |
-| 2025-10-31 | 0.2     | Added reciprocal conversation logic detail | System |
+| Date       | Version | Changes                                                 | Author |
+| ---------- | ------- | ------------------------------------------------------- | ------ |
+| 2025-10-28 | 0.1     | Initial specification draft                             | System |
+| 2025-10-31 | 0.2     | Added reciprocal conversation logic detail              | System |
+| 2025-10-31 | 0.3     | Added conversation deletion logic and renumbered to 014 | System |

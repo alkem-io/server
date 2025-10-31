@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, Repository } from 'typeorm';
+import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -19,6 +19,7 @@ import { Conversation } from './conversation.entity';
 import { IConversation } from './conversation.interface';
 import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { User } from '@domain/community/user/user.entity';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
@@ -39,7 +40,9 @@ export class ConversationService {
     private virtualContributorLookupService: VirtualContributorLookupService,
     private platformWellKnownVirtualContributorsService: PlatformWellKnownVirtualContributorsService,
     @InjectRepository(Conversation)
-    private conversationRepository: Repository<Conversation>
+    private conversationRepository: Repository<Conversation>,
+    @InjectEntityManager('default')
+    private entityManager: EntityManager
   ) {}
 
   // TODO: do we support uploading content in a conversation? If so will need to pass in a storage aggregator
@@ -193,34 +196,26 @@ export class ConversationService {
         }
 
         // Check that there is not already a conversation between user and virtual contributor
-        const queryBuilder = this.conversationRepository
-          .createQueryBuilder('conversation')
-          .where('conversation.type = :type', { type: conversationData.type })
-          .andWhere('conversation.userID = :userID', {
-            userID: conversationData.userID,
-          });
+        const whereConditions: any = {
+          type: conversationData.type,
+          userID: conversationData.userID,
+        };
 
         if (conversationData.virtualContributorID) {
-          queryBuilder.andWhere(
-            'conversation.virtualContributorID = :virtualContributorID',
-            {
-              virtualContributorID: conversationData.virtualContributorID,
-            }
-          );
+          whereConditions.virtualContributorID =
+            conversationData.virtualContributorID;
         }
 
         if (conversationData.wellKnownVirtualContributor) {
-          queryBuilder.andWhere(
-            'conversation.wellKnownVirtualContributor = :wellKnownVirtualContributor',
-            {
-              wellKnownVirtualContributor:
-                conversationData.wellKnownVirtualContributor,
-            }
-          );
+          whereConditions.wellKnownVirtualContributor =
+            conversationData.wellKnownVirtualContributor;
         }
 
-        const existingConversations = await queryBuilder.getMany();
-        if (existingConversations.length > 0) {
+        const existingConversation = await this.conversationRepository.findOne({
+          where: whereConditions,
+        });
+
+        if (existingConversation) {
           throw new ValidationException(
             'A conversation between this user and agent already exists',
             LogContext.COMMUNICATION_CONVERSATION
@@ -269,6 +264,7 @@ export class ConversationService {
     const conversation = await this.getConversationOrFail(conversationID, {
       relations: {
         room: true,
+        conversationsSet: true,
       },
     });
 
@@ -279,7 +275,51 @@ export class ConversationService {
       );
     }
 
-    await this.roomService.deleteRoom(conversation.room);
+    if (!conversation.conversationsSet) {
+      throw new EntityNotInitializedException(
+        `Unable to load conversationsSet for deleting conversation: ${conversation.id}`,
+        LogContext.COLLABORATION
+      );
+    }
+
+    // Find the user who owns this conversation
+    const conversationOwner = await this.entityManager.findOne(User, {
+      where: {
+        conversationsSet: {
+          id: conversation.conversationsSet.id,
+        },
+      },
+    });
+
+    if (!conversationOwner) {
+      throw new EntityNotFoundException(
+        `Unable to find owner of conversation: ${conversationID}`,
+        LogContext.COLLABORATION
+      );
+    }
+
+    // Remove the conversation owner from the Matrix room
+    await this.communicationAdapter.removeUserFromRooms(
+      [conversation.room.externalRoomID],
+      conversationOwner.communicationID
+    );
+
+    // For USER_USER conversations, check if a reciprocal conversation exists
+    // If it does, don't delete the Matrix room (other user still needs it)
+    let shouldDeleteRoom = true;
+    if (
+      conversation.type === CommunicationConversationType.USER_USER &&
+      conversation.userID
+    ) {
+      const reciprocalExists =
+        await this.hasReciprocalConversation(conversation);
+      if (reciprocalExists) {
+        shouldDeleteRoom = false;
+      }
+    }
+
+    // Delete the room entity, but only delete from Matrix if no reciprocal conversation exists
+    await this.roomService.deleteRoom(conversation.room, shouldDeleteRoom);
 
     await this.authorizationPolicyService.delete(conversation.authorization);
 
@@ -453,7 +493,10 @@ export class ConversationService {
     );
 
     if (!ownerUser.conversationsSet) {
-      return null;
+      throw new EntityNotInitializedException(
+        `User(${conversationsSetOwnerUserID}) does not have a conversations set.`,
+        LogContext.COMMUNICATION
+      );
     }
 
     // Find the conversation with the other user
@@ -464,5 +507,47 @@ export class ConversationService {
     );
 
     return conversation || null;
+  }
+
+  /**
+   * Checks if a reciprocal USER_USER conversation exists for the other user.
+   * This is used when deleting a conversation to determine if the Matrix room should be deleted.
+   *
+   * @param conversation The conversation being deleted
+   * @returns true if the other user has a corresponding conversation, false otherwise
+   */
+  private async hasReciprocalConversation(
+    conversation: IConversation
+  ): Promise<boolean> {
+    if (conversation.type !== CommunicationConversationType.USER_USER) {
+      return false;
+    }
+
+    if (!conversation.userID || !conversation.conversationsSet) {
+      return false;
+    }
+
+    // Find the user who owns this conversationsSet by querying for the user
+    // that has a conversationsSet with this ID
+    const entityManager = this.conversationRepository.manager;
+    const conversationOwner = await entityManager.findOne(User, {
+      where: {
+        conversationsSet: {
+          id: conversation.conversationsSet.id,
+        },
+      },
+    });
+
+    if (!conversationOwner) {
+      return false;
+    }
+
+    // Check if the other user (conversation.userID) has a conversation back to the owner
+    const reciprocalConversation = await this.findUserToUserConversation(
+      conversation.userID,
+      conversationOwner.id
+    );
+
+    return reciprocalConversation !== null;
   }
 }

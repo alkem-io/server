@@ -18,6 +18,7 @@ import { CommunicationConversationType } from '@common/enums/communication.conve
 import { ValidationException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { ConversationVcResetInput } from './dto/conversation.vc.dto.reset.input';
+import { DeleteConversationInput } from './dto/conversation.dto.delete';
 
 @InstrumentResolver()
 @Resolver()
@@ -134,5 +135,33 @@ export class ConversationResolverMutations {
       id,
       relevant
     );
+  }
+
+  @Mutation(() => IConversation, {
+    description:
+      'Deletes a Conversation. The Matrix room is only deleted if no reciprocal conversation exists.',
+  })
+  async deleteConversation(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('deleteData') deleteData: DeleteConversationInput
+  ): Promise<IConversation> {
+    const conversation = await this.conversationService.getConversationOrFail(
+      deleteData.ID,
+      {
+        relations: {
+          authorization: true,
+        },
+      }
+    );
+
+    // Authorization check - user must have delete permission on the conversation
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      conversation.authorization,
+      AuthorizationPrivilege.DELETE,
+      `delete conversation: ${conversation.id}`
+    );
+
+    return await this.conversationService.deleteConversation(conversation.id);
   }
 }

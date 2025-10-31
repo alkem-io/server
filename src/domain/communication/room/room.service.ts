@@ -56,7 +56,10 @@ export class RoomService {
     return room;
   }
 
-  async deleteRoom(roomInput: IRoom): Promise<IRoom> {
+  async deleteRoom(
+    roomInput: IRoom,
+    deleteExternalRoom: boolean = true
+  ): Promise<IRoom> {
     const room = await this.getRoomOrFail(roomInput.id, {
       relations: {
         vcInteractions: true,
@@ -72,7 +75,11 @@ export class RoomService {
       await this.vcInteractionService.removeVcInteraction(interaction.id);
     }
     const result = await this.roomRepository.remove(room as Room);
-    await this.communicationAdapter.removeRoom(room.externalRoomID);
+
+    // Only delete from external Matrix server if flag is true
+    if (deleteExternalRoom) {
+      await this.communicationAdapter.removeRoom(room.externalRoomID);
+    }
     result.id = room.id;
     return result;
   }
