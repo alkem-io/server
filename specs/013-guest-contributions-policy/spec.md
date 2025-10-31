@@ -5,6 +5,16 @@
 **Status**: Draft
 **Input**: User description: "add a policy setting in the space settings that allows admins to enable or disable guest contributions"
 
+## Clarifications
+
+### Session 2025-10-31
+
+- Q: What is the precise definition of a "guest" user for this policy? → A: Definition of guest not important now. This should be only about the scope: New setting added to space's collaboration settings to allow admins to toggle ON/OFF allowGuestContributions.
+- Q: What validation rules should apply when an admin changes the allowGuestContributions setting? → A: No validation rules
+- Q: How should existing spaces be migrated when introducing this new setting? → A: Set all existing spaces to false (disabled) - maintains secure posture
+- Q: What happens to existing guest interactions when the policy is disabled on a space? → A: Guests have no rights to interact with the whiteboards in the space anymore.
+- Q: Who has permission to modify the allowGuestContributions setting? → A: admins of the space. same as it is right now for all other collaboration settings. no change
+
 ## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Space admins control guest access (Priority: P1)
@@ -55,16 +65,33 @@ The guest contributions policy must be consistently enforced across all space ac
 
 ### User Story 4 - Migration and backward compatibility (Priority: P3)
 
-Existing spaces should have the guest contributions policy properly initialized to maintain current behavior while new spaces adopt the secure default. All are set to false (disabled)
+All existing spaces should have the guest contributions policy set to disabled when the feature is introduced, maintaining a consistent secure posture across the platform.
 
-**Why this priority**: Existing spaces shouldn't have their behavior unexpectedly changed, while new spaces should follow the new secure default pattern.
+**Why this priority**: Setting all existing spaces to disabled maintains security consistency and ensures the new policy starts from a known secure baseline.
 
-**Independent Test**: Verify that existing spaces maintain their current guest access behavior after the policy is introduced, and new spaces follow the new default.
+**Independent Test**: Verify that after migration, all existing spaces have guest contributions disabled, and new spaces follow the same default.
 
 **Acceptance Scenarios**:
 
-1. **Given** an existing space has allowed guest access, **When** the policy is introduced, **Then** the space maintains its current guest access level.
-2. **Given** the policy is newly introduced, **When** a migration runs, **Then** existing spaces receive appropriate policy settings without disrupting current behavior.
+1. **Given** the policy is introduced, **When** the migration runs, **Then** all existing spaces are set to allowGuestContributions = false.
+2. **Given** a migrated space, **When** an admin views the settings, **Then** they can see the guest contributions are disabled and can enable if desired.
+
+---
+
+## Edge Cases
+
+- **Policy Change Impact**: When guest contributions are disabled on a space, guests immediately lose rights to interact with whiteboards and other collaborative features in the space.
+- **Immediate Enforcement**: Policy changes take effect immediately without requiring guest users to re-authenticate or refresh their sessions.
+
+## Requirements _(mandatory)_
+
+### Functional Requirements
+
+- **FR-001**: System MUST add allowGuestContributions boolean field to SpaceSettingsCollaboration
+- **FR-002**: System MUST default allowGuestContributions to false for all new spaces
+- **FR-003**: Space admins MUST be able to toggle the allowGuestContributions setting (same authorization as other collaboration settings)
+- **FR-004**: System MUST enforce guest contribution restrictions immediately when policy is disabled
+- **FR-005**: System MUST prevent guest users from interacting with whiteboards when allowGuestContributions is false
 
 ## Domain Model Changes
 
@@ -95,7 +122,8 @@ The guest contributions policy will be added to the space settings structure `Sp
 ### Service Layer
 
 - Update `SpaceSettingsService` to handle guest policy updates
-- Add policy validation and enforcement logic
+- Add policy enforcement logic
+- No additional validation rules required for the setting change
 
 ## Migration Plan
 
