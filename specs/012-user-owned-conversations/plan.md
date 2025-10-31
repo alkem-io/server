@@ -262,14 +262,94 @@ userID!: string;  // Changed from userIDs: string[]
 
 **Methods to Update:**
 
-1. **createConversationOnConversationsSet()** - Lines ~119-138
+1. **createConversationOnConversationsSet()** - Lines ~119-138 ✅
 
    ```typescript
-   // Pass through single userID (already correct structure)
-   // No changes needed if DTO is updated
+   // Updated to handle reciprocal conversation logic
+   // Check for existing room before creating conversation
+   let existingRoom: IRoom | undefined;
+   if (conversationData.type === CommunicationConversationType.USER_USER) {
+     existingRoom = await this.findExistingRoomForUserConversation(
+       conversationData.currentUserID,
+       conversationData.userID
+     );
+   }
+
+   const conversation = await this.conversationService.createConversation(
+     conversationData,
+     existingRoom
+   );
+
+   // Only create reciprocal if no existing room found
+   if (
+     conversationData.type === CommunicationConversationType.USER_USER &&
+     !existingRoom
+   ) {
+     await this.createReciprocalUserConversation(
+       conversation,
+       conversationData
+     );
+   }
    ```
 
-2. **Add: getUserConversationsSet()**
+2. **Add: findExistingRoomForUserConversation()** ✅
+
+   ```typescript
+   private async findExistingRoomForUserConversation(
+     currentUserID: string,
+     otherUserID: string
+   ): Promise<IRoom | undefined> {
+     const existingConversation =
+       await this.conversationService.findUserToUserConversation(
+         otherUserID,
+         currentUserID
+       );
+     return existingConversation?.room;
+   }
+   ```
+
+3. **Add: createReciprocalUserConversation()** ✅
+
+   ```typescript
+   private async createReciprocalUserConversation(
+     originalConversation: IConversation,
+     originalConversationData: CreateConversationInput
+   ): Promise<void> {
+     const otherUser = await this.userLookupService.getUserOrFail(
+       originalConversation.userID!,
+       { relations: { conversationsSet: true } }
+     );
+
+     if (!otherUser.conversationsSet) {
+       this.logger.warn('Other user has no conversationsSet');
+       return;
+     }
+
+     // Check if reciprocal already exists
+     const existing = await this.conversationService.findUserToUserConversation(
+       originalConversation.userID!,
+       originalConversationData.currentUserID
+     );
+     if (existing) return;
+
+     // Create reciprocal with same room
+     const reciprocalData: CreateConversationInput = {
+       type: CommunicationConversationType.USER_USER,
+       userID: originalConversationData.currentUserID,
+       currentUserID: originalConversation.userID!,
+     };
+
+     const reciprocal = await this.conversationService.createConversation(
+       reciprocalData,
+       originalConversation.room
+     );
+
+     reciprocal.conversationsSet = otherUser.conversationsSet;
+     await this.conversationService.save(reciprocal);
+   }
+   ```
+
+4. **Add: getUserConversationsSet()**
    ```typescript
    async getUserConversationsSet(userID: string): Promise<IConversationsSet> {
      const user = await this.userService.getUserOrFail(userID, {
@@ -279,13 +359,91 @@ userID!: string;  // Changed from userIDs: string[]
    }
    ```
 
-**Estimated Lines:** ~50 lines of changes
+**Estimated Lines:** ~150 lines of changes
 
 **Tests:**
 
-- Get user's conversationsSet
-- Create conversation on user's conversationsSet
-- Query conversations for user
+- Get user's conversationsSet ✅
+- Create conversation on user's conversationsSet ✅
+- Reciprocal conversation created when first user initiates ✅
+- Existing room reused when second user initiates ✅
+- No duplicate conversations created ✅
+- Both users share same Matrix room ✅
+
+### 3.3 Update ConversationService (Reciprocal Logic)
+
+**File:** `/src/domain/communication/conversation/conversation.service.ts`
+
+**Methods to Update:**
+
+1. **createConversation()** - Updated signature ✅
+
+   ```typescript
+   public async createConversation(
+     conversationData: CreateConversationInput,
+     existingRoom?: IRoom // New optional parameter
+   ): Promise<IConversation> {
+     await this.validateCreateConversationData(conversationData);
+
+     const conversation: IConversation = Conversation.create();
+     // ... set fields ...
+
+     // Use existing room if provided, otherwise create new
+     if (existingRoom) {
+       conversation.room = existingRoom;
+     } else if (!conversationData.wellKnownVirtualContributor) {
+       conversation.room = await this.createConversationRoom(
+         conversation,
+         conversationData.currentUserID
+       );
+     }
+
+     return await this.conversationRepository.save(conversation);
+   }
+   ```
+
+2. **Add: findUserToUserConversation()** ✅
+
+   ```typescript
+   public async findUserToUserConversation(
+     conversationsSetOwnerUserID: string,
+     otherUserID: string
+   ): Promise<IConversation | null> {
+     const ownerUser = await this.userLookupService.getUserOrFail(
+       conversationsSetOwnerUserID,
+       { relations: { conversationsSet: { conversations: true } } }
+     );
+
+     if (!ownerUser.conversationsSet) return null;
+
+     return ownerUser.conversationsSet.conversations.find(
+       conv =>
+         conv.type === CommunicationConversationType.USER_USER &&
+         conv.userID === otherUserID
+     ) || null;
+   }
+   ```
+
+3. **Update: validateCreateConversationData()** ✅
+   ```typescript
+   // Updated duplicate check to be user-specific
+   const existingConversation = await this.findUserToUserConversation(
+     conversationData.currentUserID,
+     conversationData.userID
+   );
+   if (existingConversation) {
+     throw new ValidationException('Conversation already exists');
+   }
+   ```
+
+**Estimated Lines:** ~80 lines of changes
+
+**Tests:**
+
+- Create conversation with existing room ✅
+- Find existing USER_USER conversation ✅
+- Validation prevents duplicate in same ConversationsSet ✅
+- Validation allows reciprocal in different ConversationsSet ✅
 
 ### 3.4 Update UserService
 

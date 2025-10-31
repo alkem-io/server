@@ -45,7 +45,8 @@ export class ConversationService {
   // TODO: do we support uploading content in a conversation? If so will need to pass in a storage aggregator
 
   public async createConversation(
-    conversationData: CreateConversationInput
+    conversationData: CreateConversationInput,
+    existingRoom?: IRoom
   ): Promise<IConversation> {
     await this.validateCreateConversationData(conversationData);
 
@@ -59,9 +60,12 @@ export class ConversationService {
       AuthorizationPolicyType.COMMUNICATION_CONVERSATION
     );
 
-    // Only create the room immediately if we have a concrete virtualContributorID
-    // For well-known VCs, room creation is deferred until the first message
-    if (!conversationData.wellKnownVirtualContributor) {
+    // Use existing room if provided, otherwise create a new one
+    if (existingRoom) {
+      conversation.room = existingRoom;
+    } else if (!conversationData.wellKnownVirtualContributor) {
+      // Only create the room immediately if we have a concrete virtualContributorID
+      // For well-known VCs, room creation is deferred until the first message
       conversation.room = await this.createConversationRoom(
         conversation,
         conversationData.currentUserID
@@ -141,17 +145,12 @@ export class ConversationService {
           );
         }
 
-        // Check that there is not already a conversation between the two users
-        const existingConversations = await this.conversationRepository
-          .createQueryBuilder('conversation')
-          .where('conversation.type = :type', {
-            type: conversationData.type,
-          })
-          .andWhere('conversation.userID = :userID', {
-            userID: conversationData.userID,
-          })
-          .getMany();
-        if (existingConversations.length > 0) {
+        // Check that there is not already a conversation between the two users in the current user's conversations set
+        const existingConversation = await this.findUserToUserConversation(
+          conversationData.currentUserID,
+          conversationData.userID
+        );
+        if (existingConversation) {
           throw new ValidationException(
             'A conversation between these users already exists',
             LogContext.COMMUNICATION_CONVERSATION
@@ -430,5 +429,40 @@ export class ConversationService {
       agentInfo.userID!
     );
     return await this.save(conversation);
+  }
+
+  /**
+   * Finds an existing USER_USER conversation between two users.
+   * Note: Checks for a conversation in the conversationsSetOwnerUserID's conversation set
+   * where the userID field points to the otherUserID.
+   */
+  public async findUserToUserConversation(
+    conversationsSetOwnerUserID: string,
+    otherUserID: string
+  ): Promise<IConversation | null> {
+    // First get the owner user's conversations set
+    const ownerUser = await this.userLookupService.getUserOrFail(
+      conversationsSetOwnerUserID,
+      {
+        relations: {
+          conversationsSet: {
+            conversations: true,
+          },
+        },
+      }
+    );
+
+    if (!ownerUser.conversationsSet) {
+      return null;
+    }
+
+    // Find the conversation with the other user
+    const conversation = ownerUser.conversationsSet.conversations.find(
+      conv =>
+        conv.type === CommunicationConversationType.USER_USER &&
+        conv.userID === otherUserID
+    );
+
+    return conversation || null;
   }
 }

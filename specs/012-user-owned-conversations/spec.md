@@ -532,15 +532,289 @@ SELECT COUNT(*) FROM room;
 6. ✅ All tests passing
 7. ✅ No data loss
 8. ✅ Query performance improved or maintained
+9. ✅ Reciprocal conversations created correctly for USER_USER type
+10. ✅ Room sharing logic prevents duplicate rooms
+
+## Reciprocal Conversation Logic (USER_USER Type)
+
+### Overview
+
+When a user initiates a conversation with another user, the system must ensure both users have conversation entities in their respective ConversationsSet while sharing the same Matrix room to enable bidirectional messaging.
+
+### Architecture Decision: Room Sharing
+
+**Decision:** Rooms are **shared** across user conversation copies. Both users' conversation entities reference the same Room entity with the same `externalRoomID`.
+
+**Rationale:**
+
+- Messages sent by either user are visible to both
+- Single source of truth for conversation history
+- Efficient use of Matrix resources
+- Consistent with Matrix room model
+
+### Implementation Flow
+
+#### Case 1: First User Initiates Conversation
+
+**Scenario:** User A creates a conversation with User B, and User B has no existing conversation with User A.
+
+**Steps:**
+
+1. User A calls `createConversationOnConversationsSet` with `userID = User B`
+2. System checks if User B already has a conversation with User A via `findExistingRoomForUserConversation`
+3. No existing conversation found
+4. System creates:
+   - New Room with unique `externalRoomID`
+   - Conversation for User A (in User A's ConversationsSet)
+     - `userID = User B`
+     - `room = newRoom`
+   - Reciprocal Conversation for User B (in User B's ConversationsSet)
+     - `userID = User A`
+     - `room = newRoom` (same room)
+5. Both users added to Matrix room
+
+**Result:** Both users can see the conversation and exchange messages.
+
+#### Case 2: Second User Initiates Conversation
+
+**Scenario:** User B already has a conversation with User A (created by User A), and now User B tries to create a conversation with User A.
+
+**Steps:**
+
+1. User B calls `createConversationOnConversationsSet` with `userID = User A`
+2. System checks if User A already has a conversation with User B via `findExistingRoomForUserConversation`
+3. **Existing conversation found** in User A's ConversationsSet
+4. System extracts the existing Room from User A's conversation
+5. System creates:
+   - Conversation for User B (in User B's ConversationsSet)
+     - `userID = User A`
+     - `room = existingRoom` (reused)
+6. **No reciprocal conversation created** (User A already has one)
+
+**Result:** User B now sees the conversation, and both users share the same Matrix room.
+
+### Service Layer Implementation
+
+#### ConversationsSetService
+
+**Method: `createConversationOnConversationsSet`**
+
+```typescript
+public async createConversationOnConversationsSet(
+  conversationData: CreateConversationInput,
+  conversationsSetID: string
+): Promise<IConversation> {
+  // ... get conversationsSet ...
+
+  // For USER_USER conversations, check if other user already has a conversation
+  let existingRoom: IRoom | undefined;
+  if (conversationData.type === CommunicationConversationType.USER_USER) {
+    existingRoom = await this.findExistingRoomForUserConversation(
+      conversationData.currentUserID,
+      conversationData.userID
+    );
+  }
+
+  // Create conversation with existing room if found
+  const conversation = await this.conversationService.createConversation(
+    conversationData,
+    existingRoom
+  );
+  conversation.conversationsSet = conversationsSet;
+
+  // Only create reciprocal if no existing room (first user scenario)
+  if (
+    conversationData.type === CommunicationConversationType.USER_USER &&
+    !existingRoom
+  ) {
+    await this.createReciprocalUserConversation(conversation, conversationData);
+  }
+
+  return conversation;
+}
+```
+
+**Method: `findExistingRoomForUserConversation`**
+
+```typescript
+private async findExistingRoomForUserConversation(
+  currentUserID: string,
+  otherUserID: string
+): Promise<IRoom | undefined> {
+  // Check if otherUser has a conversation with currentUser
+  const existingConversation =
+    await this.conversationService.findUserToUserConversation(
+      otherUserID,
+      currentUserID
+    );
+
+  return existingConversation?.room;
+}
+```
+
+**Method: `createReciprocalUserConversation`**
+
+```typescript
+private async createReciprocalUserConversation(
+  originalConversation: IConversation,
+  originalConversationData: CreateConversationInput
+): Promise<void> {
+  const otherUser = await this.userLookupService.getUserOrFail(
+    originalConversation.userID!,
+    { relations: { conversationsSet: true } }
+  );
+
+  if (!otherUser.conversationsSet) {
+    this.logger.warn('Other user has no conversationsSet, skipping reciprocal');
+    return;
+  }
+
+  // Check if reciprocal already exists
+  const existing = await this.conversationService.findUserToUserConversation(
+    originalConversation.userID!,
+    originalConversationData.currentUserID
+  );
+
+  if (existing) return;
+
+  // Create reciprocal with swapped IDs and same room
+  const reciprocalData: CreateConversationInput = {
+    type: CommunicationConversationType.USER_USER,
+    userID: originalConversationData.currentUserID,
+    currentUserID: originalConversation.userID!,
+  };
+
+  const reciprocal = await this.conversationService.createConversation(
+    reciprocalData,
+    originalConversation.room // Same room
+  );
+
+  reciprocal.conversationsSet = otherUser.conversationsSet;
+  await this.conversationService.save(reciprocal);
+}
+```
+
+#### ConversationService
+
+**Method: `createConversation` (Updated Signature)**
+
+```typescript
+public async createConversation(
+  conversationData: CreateConversationInput,
+  existingRoom?: IRoom // Optional parameter
+): Promise<IConversation> {
+  await this.validateCreateConversationData(conversationData);
+
+  const conversation: IConversation = Conversation.create();
+  // ... set fields ...
+
+  // Use existing room if provided
+  if (existingRoom) {
+    conversation.room = existingRoom;
+  } else if (!conversationData.wellKnownVirtualContributor) {
+    conversation.room = await this.createConversationRoom(
+      conversation,
+      conversationData.currentUserID
+    );
+  }
+
+  return await this.conversationRepository.save(conversation);
+}
+```
+
+**Method: `findUserToUserConversation`**
+
+```typescript
+public async findUserToUserConversation(
+  conversationsSetOwnerUserID: string,
+  otherUserID: string
+): Promise<IConversation | null> {
+  const ownerUser = await this.userLookupService.getUserOrFail(
+    conversationsSetOwnerUserID,
+    { relations: { conversationsSet: { conversations: true } } }
+  );
+
+  if (!ownerUser.conversationsSet) return null;
+
+  return ownerUser.conversationsSet.conversations.find(
+    conv =>
+      conv.type === CommunicationConversationType.USER_USER &&
+      conv.userID === otherUserID
+  ) || null;
+}
+```
+
+### Validation Changes
+
+**Updated Duplicate Check:**
+
+The duplicate conversation validation now checks within a specific user's ConversationsSet rather than globally:
+
+```typescript
+// Before: Global check - would incorrectly flag reciprocal as duplicate
+const existing = await this.conversationRepository.find({
+  where: { userID: conversationData.userID },
+});
+
+// After: User-specific check
+const existing = await this.findUserToUserConversation(
+  conversationData.currentUserID,
+  conversationData.userID
+);
+```
+
+### Edge Cases & Error Handling
+
+1. **Other User Has No ConversationsSet:**
+   - Log warning
+   - Skip reciprocal creation
+   - First user's conversation still succeeds
+
+2. **Concurrent Creation:**
+   - Both users create conversation simultaneously
+   - Validation prevents duplicates
+   - One succeeds, other reuses room
+
+3. **Room Creation Failure:**
+   - Transaction ensures rollback
+   - No orphaned conversations
+
+4. **Reciprocal Creation Failure:**
+   - Logged but not thrown
+   - First user's conversation succeeds
+   - Can be retried later
+
+### Testing Requirements
+
+1. **Unit Tests:**
+   - `findExistingRoomForUserConversation` returns correct room
+   - `createReciprocalUserConversation` creates with same room
+   - Duplicate validation works per-user
+
+2. **Integration Tests:**
+   - User A → User B: Creates room + reciprocal
+   - User B → User A (after above): Reuses room, no reciprocal
+   - Both users can send messages
+   - Messages visible to both users
+
+3. **Error Scenarios:**
+   - Other user missing ConversationsSet
+   - Concurrent creation attempts
+   - Room creation failure
+
+### Performance Considerations
+
+- **Additional Query:** One extra lookup per USER_USER conversation creation to check for existing room
+- **Optimization:** Uses eager loading of conversations to minimize queries
+- **Trade-off:** Slight creation overhead vs. correct room sharing
 
 ## Open Questions
 
 1. **Multi-User Conversations:** How should true multi-user conversations (group chats) be handled in the future?
    - Proposed: Separate entity type or maintain multiple conversation entities per user
 
-2. **Room Sharing:** Should rooms be shared across user conversation copies or duplicated?
-   - Current: Shared (messages visible to all users in same room)
-   - Alternative: Duplicate rooms (separate message histories)
+2. ~~**Room Sharing:** Should rooms be shared across user conversation copies or duplicated?~~
+   - **RESOLVED:** Shared rooms with reciprocal conversation logic (documented above)
 
 3. **Backwards Compatibility:** Should we maintain a compatibility layer during transition?
    - Proposed: No, clean break with single deployment
@@ -551,9 +825,11 @@ SELECT COUNT(*) FROM room;
 - Current Platform Implementation: `/src/platform/platform/`
 - User Entity: `/src/domain/community/user/`
 - GraphQL Schema: `/src/schema-bootstrap/`
+- ConversationsSetService: `/src/domain/communication/conversations-set/conversations.set.service.ts`
 
 ## Revision History
 
-| Date       | Version | Changes                     | Author |
-| ---------- | ------- | --------------------------- | ------ |
-| 2025-10-28 | 0.1     | Initial specification draft | System |
+| Date       | Version | Changes                                    | Author |
+| ---------- | ------- | ------------------------------------------ | ------ |
+| 2025-10-28 | 0.1     | Initial specification draft                | System |
+| 2025-10-31 | 0.2     | Added reciprocal conversation logic detail | System |
