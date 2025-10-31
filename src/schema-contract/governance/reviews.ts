@@ -30,7 +30,7 @@ export function loadReviews(): ReviewRecord[] {
       const parsed = JSON.parse(inline);
       if (isValidReviewArray(parsed)) return parsed;
       // parsed value not in expected shape
-      // eslint-disable-next-line no-console
+
       console.warn('SCHEMA_OVERRIDE_REVIEWS_JSON ignored: invalid structure');
     } catch {
       // ignore
@@ -42,7 +42,7 @@ export function loadReviews(): ReviewRecord[] {
       const raw = readFileSync(file, 'utf-8');
       const parsed = JSON.parse(raw);
       if (isValidReviewArray(parsed)) return parsed;
-      // eslint-disable-next-line no-console
+
       console.warn(
         `SCHEMA_OVERRIDE_REVIEWS_FILE ${file} ignored: invalid structure`
       );
