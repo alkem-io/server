@@ -140,7 +140,7 @@ echo "✅ PostgreSQL init script created"
 
 Add Hydra services to `quickstart-services.yml`:
 
-**Location**: `/Users/antst/work/alkemio/server/quickstart-services.yml`
+**Location**: `quickstart-services.yml` in the repository root.
 
 Set `HYDRA_PUBLIC_URL` in `.env.docker` (for example `http://localhost:3000`, without a trailing slash) so Hydra self URLs match the Traefik proxy exposed by the compose stack. The snippet below references that value for all public-facing endpoints.
 
