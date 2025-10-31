@@ -20,6 +20,8 @@ import { CreateConversationInput } from '../conversation/dto/conversation.dto.cr
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IRoom } from '../room/room.interface';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class ConversationsSetService {
@@ -33,6 +35,18 @@ export class ConversationsSetService {
     private userLookupService: UserLookupService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
+
+  public async createConversationsSet(): Promise<IConversationsSet> {
+    const conversation: IConversationsSet = ConversationsSet.create();
+
+    conversation.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.COMMUNICATION_CONVERSATION
+    );
+
+    return await this.conversationsSetRepository.save(
+      conversation as ConversationsSet
+    );
+  }
 
   async getConversationsSetOrFail(
     conversationsSetID: string,

@@ -64,6 +64,7 @@ import { CreateUserSettingsInput } from '../user-settings/dto/user.settings.dto.
 import { ConversationsSetService } from '@domain/communication/conversations-set/conversations.set.service';
 import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
 import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
+import { IConversationsSet } from '@domain/communication/conversations-set/conversations.set.interface';
 
 @InstrumentService()
 @Injectable()
@@ -172,6 +173,9 @@ export class UserService {
     user.agent = await this.agentService.createAgent({
       type: AgentType.USER,
     });
+    const conversationsSet =
+      await this.conversationsSetService.createConversationsSet();
+    user.conversationsSet = conversationsSet;
 
     this.logger.verbose?.(
       `Created a new user with email: ${user.email}`,
@@ -219,28 +223,16 @@ export class UserService {
     await this.setUserCache(user);
 
     // Create a guidance conversation with the well-known chat guidance VC
-    await this.createGuidanceConversationForUser(user.id);
+    await this.createGuidanceConversation(conversationsSet, user.id);
 
     return user;
   }
 
-  private async createGuidanceConversationForUser(
+  private async createGuidanceConversation(
+    conversationSet: IConversationsSet,
     userID: string
   ): Promise<void> {
     try {
-      const user = await this.getUserOrFail(userID, {
-        relations: {
-          conversationsSet: true,
-        },
-      });
-      const userConversationsSet = user.conversationsSet;
-      if (!userConversationsSet) {
-        throw new ValidationException(
-          `User(${userID}) does not have a conversations set.`,
-          LogContext.COMMUNICATION_CONVERSATION
-        );
-      }
-
       await this.conversationsSetService.createConversationOnConversationsSet(
         {
           type: CommunicationConversationType.USER_VC,
@@ -249,7 +241,7 @@ export class UserService {
             VirtualContributorWellKnown.CHAT_GUIDANCE,
           currentUserID: userID,
         },
-        userConversationsSet.id
+        conversationSet.id
       );
 
       this.logger.verbose?.(

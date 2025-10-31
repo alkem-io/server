@@ -36,7 +36,7 @@ export class ConversationAuthorizationService {
       }
     );
 
-    if (!conversation.room || !conversation.authorization) {
+    if (!conversation.authorization) {
       throw new EntityNotInitializedException(
         `authorization: Unable to load conversation entities for auth reset: ${conversation.id}`,
         LogContext.COLLABORATION
@@ -70,22 +70,23 @@ export class ConversationAuthorizationService {
 
     updatedAuthorizations.push(conversation.authorization);
 
-    // Cascade to the room
-
-    let roomAuthorization =
-      this.roomAuthorizationService.applyAuthorizationPolicy(
-        conversation.room,
-        conversation.authorization
-      );
-    roomAuthorization =
-      this.roomAuthorizationService.allowContributorsToCreateMessages(
-        roomAuthorization
-      );
-    roomAuthorization =
-      this.roomAuthorizationService.allowContributorsToReplyReactToMessages(
-        roomAuthorization
-      );
-    updatedAuthorizations.push(roomAuthorization);
+    // Cascade to the room, if it exists
+    if (conversation.room) {
+      let roomAuthorization =
+        this.roomAuthorizationService.applyAuthorizationPolicy(
+          conversation.room,
+          conversation.authorization
+        );
+      roomAuthorization =
+        this.roomAuthorizationService.allowContributorsToCreateMessages(
+          roomAuthorization
+        );
+      roomAuthorization =
+        this.roomAuthorizationService.allowContributorsToReplyReactToMessages(
+          roomAuthorization
+        );
+      updatedAuthorizations.push(roomAuthorization);
+    }
 
     return updatedAuthorizations;
   }
