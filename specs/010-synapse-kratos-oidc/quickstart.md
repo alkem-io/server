@@ -55,7 +55,6 @@ echo "✅ Secrets generated in .env.docker"
 
 **What's NOT in .env.docker** (intentionally):
 - ❌ `HYDRA_DSN` - Composed in Hydra service definition from ${POSTGRES_USER}, ${POSTGRES_PASSWORD}
-- ❌ `HYDRA_PUBLIC_URL` - Constructed in-line in Hydra service environment
 - ❌ `ALKEMIO_WEB_BASE_URL` - Constructed in-line in Hydra service environment
 - ❌ `POSTGRES_HOST`, `POSTGRES_PORT` - Use Docker Compose defaults (`postgres`, `5432`), overridable in K8s
 
@@ -289,7 +288,7 @@ curl http://localhost:4434/admin/identities/{identity_id}
 
 # 2. Check Matrix active sessions for user
 # Find user's Matrix ID from Synapse database
-psql -U synapse_user -d synapse -c \
+psql -U $POSTGRES_USER -d synapse -c \
   "SELECT name, displayname FROM users WHERE name LIKE '@%:localhost';"
 
 # 3. Terminate Matrix sessions via Synapse Admin API
