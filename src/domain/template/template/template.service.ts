@@ -177,6 +177,7 @@ export class TemplateService {
             },
             nameID: randomUUID().slice(0, 8),
             content: templateData.whiteboard.content,
+            previewSettings: templateData.whiteboard.previewSettings,
           },
           storageAggregator
         );
