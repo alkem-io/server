@@ -14,6 +14,7 @@ import { StorageAggregatorResolverModule } from '@services/infrastructure/storag
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { UserModule } from '@domain/community/user/user.module';
 import { ConversationsSetModule } from '../conversations-set/conversations.set.module';
+import { ConversationModule } from '../conversation/conversation.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { ConversationsSetModule } from '../conversations-set/conversations.set.m
     StorageAggregatorResolverModule,
     PlatformAuthorizationPolicyModule,
     ConversationsSetModule,
+    ConversationModule,
     UserModule,
     TypeOrmModule.forFeature([Communication]),
   ],

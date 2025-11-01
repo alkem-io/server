@@ -159,7 +159,7 @@ export class CommunicationResolverMutations {
     }
 
     await this.communicationAdapter.sendMessageToRoom({
-      roomID: conversation.room!.externalRoomID,
+      roomID: conversation.room.externalRoomID,
       message: messageData.message,
       senderCommunicationsID: agentInfo.communicationID,
     });
