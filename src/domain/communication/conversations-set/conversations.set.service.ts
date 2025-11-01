@@ -144,21 +144,40 @@ export class ConversationsSetService {
       );
     }
 
-    // For USER_USER conversations, check if the other user already has a conversation with us
+    // Check if there is already an existing conversation of this type with the same target
     let existingConversation: IConversation | undefined;
+    const existingConversationsByType = existingConversations.filter(
+      conversation => conversation.type === conversationData.type
+    );
     switch (conversationData.type) {
       case CommunicationConversationType.USER_VC:
-        existingConversation = existingConversations.find(conversation => {
-          return (
-            conversation.virtualContributorID ===
-            conversationData.virtualContributorID
+        existingConversation = existingConversationsByType.find(
+          conversation => {
+            return (
+              conversation.virtualContributorID ===
+              conversationData.virtualContributorID
+            );
+          }
+        );
+        if (existingConversation) {
+          this.logger.verbose?.(
+            `Found existing USER_VC conversation (${existingConversation.id}) for VC (${conversationData.virtualContributorID})`,
+            LogContext.COMMUNICATION_CONVERSATION
           );
-        });
+        }
         break;
       case CommunicationConversationType.USER_USER:
-        existingConversation = existingConversations.find(conversation => {
-          return conversation.userID === conversationData.userID;
-        });
+        existingConversation = existingConversationsByType.find(
+          conversation => {
+            return conversation.userID === conversationData.userID;
+          }
+        );
+        if (existingConversation) {
+          this.logger.verbose?.(
+            `Found existing USER_USER conversation (${existingConversation.id}) for User (${conversationData.userID})`,
+            LogContext.COMMUNICATION_CONVERSATION
+          );
+        }
         break;
       default:
         throw new ValidationException(
@@ -170,12 +189,10 @@ export class ConversationsSetService {
       return existingConversation;
     }
 
-    // Create the conversation, passing the existing room if found
-    let conversation =
+    const conversation =
       await this.conversationService.createConversation(conversationData);
-    // this has the effect of adding the conversation to the conversations set
     conversation.conversationsSet = conversationsSet;
-    conversation = await this.conversationService.save(conversation);
+    await this.conversationService.save(conversation);
 
     // If no existing room was found, create a reciprocal conversation for the other user
     if (
@@ -188,7 +205,15 @@ export class ConversationsSetService {
       );
     }
 
-    return conversation;
+    return await this.conversationService.getConversationOrFail(
+      conversation.id,
+      {
+        relations: {
+          authorization: true,
+          room: true,
+        },
+      }
+    );
   }
 
   /**

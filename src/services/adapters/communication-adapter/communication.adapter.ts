@@ -91,6 +91,12 @@ export class CommunicationAdapter {
   async sendMessageToRoom(
     sendMessageData: CommunicationSendMessageInput
   ): Promise<IMessage> {
+    if (!sendMessageData.roomID || sendMessageData.roomID.length === 0) {
+      throw new MatrixEntityNotFoundException(
+        'Room ID is required to send a message',
+        LogContext.COMMUNICATION
+      );
+    }
     const eventType = MatrixAdapterEventType.ROOM_MESSAGE_SEND;
     const inputPayload: RoomMessageSendPayload = {
       triggeredBy: sendMessageData.senderCommunicationsID,

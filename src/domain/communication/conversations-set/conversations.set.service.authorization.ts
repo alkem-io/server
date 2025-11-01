@@ -4,13 +4,18 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy/author
 import { ConversationAuthorizationService } from '../conversation/conversation.service.authorization';
 import { IConversationsSet } from './conversations.set.interface';
 import { ConversationsSetService } from './conversations.set.service';
+import { ForbiddenException } from '@common/exceptions/forbidden.exception';
+import { LogContext } from '@common/enums/logging.context';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
 
 @Injectable()
 export class ConversationsSetAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private conversationsSetService: ConversationsSetService,
-    private conversationAuthorizationService: ConversationAuthorizationService
+    private conversationAuthorizationService: ConversationAuthorizationService,
+    private userLookupService: UserLookupService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -52,5 +57,57 @@ export class ConversationsSetAuthorizationService {
     }
 
     return updatedAuthorizations;
+  }
+
+  public async resetAuthorizationOnConversations(
+    hostUserID: string,
+    receiverUserID: string,
+    type: CommunicationConversationType
+  ) {
+    // Reset the authorization policies for the conversation
+    await this.resetConversationAuthorization(hostUserID, receiverUserID);
+    if (type === CommunicationConversationType.USER_USER) {
+      await this.resetConversationAuthorization(receiverUserID, hostUserID);
+    }
+  }
+
+  private async resetConversationAuthorization(
+    hostUserID: string,
+    receiverUserID: string
+  ) {
+    const hostUser = await this.userLookupService.getUserOrFail(hostUserID, {
+      relations: {
+        authorization: true,
+        conversationsSet: {
+          conversations: {
+            authorization: true,
+          },
+        },
+      },
+    });
+    if (!hostUser.conversationsSet) {
+      throw new ForbiddenException(
+        `Unable to access user(${hostUser.id}) as they do not have a conversations set.`,
+        LogContext.COMMUNICATION
+      );
+    }
+    const receivingUserConversation =
+      hostUser.conversationsSet.conversations.find(
+        conversation => conversation.userID === receiverUserID
+      );
+    if (!receivingUserConversation) {
+      throw new ForbiddenException(
+        `user(${hostUserID}) does not have a conversation with the sender(${receiverUserID}).`,
+        LogContext.COMMUNICATION
+      );
+    }
+    const receivingUserAuthorizations =
+      await this.conversationAuthorizationService.applyAuthorizationPolicy(
+        receivingUserConversation.id,
+        hostUserID,
+        hostUser.conversationsSet.authorization
+      );
+
+    await this.authorizationPolicyService.saveAll(receivingUserAuthorizations);
   }
 }

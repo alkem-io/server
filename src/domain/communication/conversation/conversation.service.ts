@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import {
@@ -29,6 +29,7 @@ import { ConversationVcAskQuestionResult } from './dto/conversation.vc.dto.ask.q
 import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
 import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
 import { RoomLookupService } from '../room-lookup/room.lookup.service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston/dist/winston.constants';
 
 @Injectable()
 export class ConversationService {
@@ -43,7 +44,8 @@ export class ConversationService {
     @InjectRepository(Conversation)
     private conversationRepository: Repository<Conversation>,
     @InjectEntityManager('default')
-    private entityManager: EntityManager
+    private entityManager: EntityManager,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   // TODO: do we support uploading content in a conversation? If so will need to pass in a storage aggregator
@@ -72,7 +74,7 @@ export class ConversationService {
       );
     }
 
-    return await this.conversationRepository.save(conversation as Conversation);
+    return conversation;
   }
 
   private async createConversationRoom(
@@ -243,7 +245,7 @@ export class ConversationService {
     ) {
       throw new EntityNotInitializedException(
         `Unable to load conversation for deleting: ${conversation.id}`,
-        LogContext.COLLABORATION
+        LogContext.COMMUNICATION_CONVERSATION
       );
     }
 
@@ -259,13 +261,17 @@ export class ConversationService {
     if (!conversationOwner) {
       throw new EntityNotFoundException(
         `Unable to find owner of conversation: ${conversationID}`,
-        LogContext.COLLABORATION
+        LogContext.COMMUNICATION_CONVERSATION
       );
     }
 
     // Delete the room entity
     const room = conversation.room;
     // For direct messaging rooms, provide sender/receiver IDs to handle Matrix cleanup
+    this.logger.verbose?.(
+      `Deleting conversation room (${room.id}) of type (${room.type})`,
+      LogContext.COMMUNICATION_CONVERSATION
+    );
     if (room.type === RoomType.CONVERSATION_DIRECT) {
       await this.roomService.deleteRoom({
         roomID: conversation.room.id,

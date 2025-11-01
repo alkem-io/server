@@ -144,7 +144,7 @@ export class RoomService {
         }
         this.logger.verbose?.(
           `Creating direct message room via Matrix for room: ${roomData.displayName}`,
-          LogContext.COMMUNICATION
+          LogContext.COMMUNICATION_CONVERSATION
         );
         const directMessagingData: CommunicationStartDirectMessagingUserInput =
           {

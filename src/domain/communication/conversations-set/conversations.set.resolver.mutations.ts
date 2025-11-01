@@ -6,8 +6,6 @@ import { IConversation } from '../conversation/conversation.interface';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { ConversationAuthorizationService } from '../conversation/conversation.service.authorization';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ConversationService } from '../conversation/conversation.service';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { ConversationsSetService } from './conversations.set.service';
@@ -17,15 +15,15 @@ import { UserLookupService } from '@domain/community/user-lookup/user.lookup.ser
 import { CreateConversationInput } from '../conversation/dto/conversation.dto.create';
 import { MessagingNotEnabledException } from '@common/exceptions/messaging.not.enabled.exception';
 import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
+import { ConversationsSetAuthorizationService } from './conversations.set.service.authorization';
 
 @InstrumentResolver()
 @Resolver()
 export class ConversationsSetResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
-    private authorizationPolicyService: AuthorizationPolicyService,
     private conversationsSetService: ConversationsSetService,
-    private conversationAuthorizationService: ConversationAuthorizationService,
+    private conversationsSetAuthorizationService: ConversationsSetAuthorizationService,
     private userLookupService: UserLookupService,
     private conversationService: ConversationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -81,13 +79,11 @@ export class ConversationsSetResolverMutations {
     // conversation needs to be saved to apply the authorization policy
     await this.conversationService.save(conversation);
 
-    const authorizations =
-      await this.conversationAuthorizationService.applyAuthorizationPolicy(
-        conversation.id,
-        agentInfo.userID!,
-        conversationsSet.authorization
-      );
-    await this.authorizationPolicyService.saveAll(authorizations);
+    await this.conversationsSetAuthorizationService.resetAuthorizationOnConversations(
+      agentInfo.userID!,
+      conversationData.userID,
+      conversationData.type
+    );
 
     return await this.conversationService.getConversationOrFail(
       conversation.id
