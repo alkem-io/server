@@ -21,7 +21,6 @@ import { UserService } from '@domain/community/user/user.service';
 import { MessagingNotEnabledException } from '@common/exceptions/messaging.not.enabled.exception';
 import { LogContext } from '@common/enums/logging.context';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
-import { UserSendMessageInput } from '@domain/communication/communication/dto/communication.dto.send.direct.message.user';
 
 @InstrumentResolver()
 @Resolver()
@@ -36,54 +35,6 @@ export class CommunicationResolverMutations {
     private userService: UserService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
-
-  @Mutation(() => String, {
-    description:
-      'Sends a message on the specified User`s behalf and returns the room id',
-  })
-  async sendMessageToUserDirect(
-    @Args('messageData') messageData: UserSendMessageInput,
-    @CurrentUser() agentInfo: AgentInfo
-  ): Promise<string> {
-    const receivingUser = await this.userService.getUserOrFail(
-      messageData.receivingUserID,
-      {
-        relations: {
-          settings: true,
-        },
-      }
-    );
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      receivingUser.authorization,
-      AuthorizationPrivilege.READ,
-      `user send message: ${receivingUser.id}`
-    );
-
-    // Check if the user is willing to receive messages
-    if (!receivingUser.settings.communication.allowOtherUsersToSendMessages) {
-      throw new MessagingNotEnabledException(
-        'User is not open to receiving messages',
-        LogContext.USER,
-        {
-          userId: receivingUser.id,
-          senderId: agentInfo.userID,
-        }
-      );
-    }
-
-    const roomID = await this.communicationAdapter.startDirectMessagingToUser({
-      senderCommunicationsID: agentInfo.communicationID,
-      receiverCommunicationsID: receivingUser.communicationID,
-    });
-    const message = await this.communicationAdapter.sendMessageToRoom({
-      roomID,
-      message: messageData.message,
-      senderCommunicationsID: agentInfo.communicationID,
-    });
-    // TODO: decide what should be the api
-    return message.id;
-  }
 
   @Mutation(() => Boolean, {
     description: 'Send message to multiple Users.',
