@@ -2,7 +2,7 @@ export class DeleteRoomInput {
   roomID!: string;
 
   // Needed for direct messaging rooms
-  senderID?: string;
+  senderCommunicationID?: string;
 
-  receiverID?: string;
+  receiverCommunicationID?: string;
 }

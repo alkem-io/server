@@ -79,14 +79,17 @@ export class RoomService {
 
     // Only delete from external Matrix server if flag is true
     if (room.type === RoomType.CONVERSATION_DIRECT) {
-      if (!deleteData.senderID || !deleteData.receiverID) {
+      if (
+        !deleteData.senderCommunicationID ||
+        !deleteData.receiverCommunicationID
+      ) {
         throw new Error(
           `Missing senderID or receiverID for direct messaging room deletion: ${room.id}`
         );
       }
       const deleteDirectData: CommunicationStopDirectMessagingUserInput = {
-        senderCommunicationsID: deleteData.senderID,
-        receiverCommunicationsID: deleteData.receiverID,
+        senderCommunicationsID: deleteData.senderCommunicationID,
+        receiverCommunicationsID: deleteData.receiverCommunicationID,
       };
       await this.communicationAdapter.stopDirectMessagingToUser(
         deleteDirectData
@@ -137,7 +140,10 @@ export class RoomService {
   ): Promise<string> {
     try {
       if (roomData.type === RoomType.CONVERSATION_DIRECT) {
-        if (!roomData.senderID || !roomData.receiverID) {
+        if (
+          !roomData.senderCommunicationID ||
+          !roomData.receiverCommunicationID
+        ) {
           throw new Error(
             `Missing senderID or receiverID for direct messaging room creation: ${roomData.displayName}`
           );
@@ -148,8 +154,8 @@ export class RoomService {
         );
         const directMessagingData: CommunicationStartDirectMessagingUserInput =
           {
-            senderCommunicationsID: roomData.senderID,
-            receiverCommunicationsID: roomData.receiverID,
+            senderCommunicationsID: roomData.senderCommunicationID,
+            receiverCommunicationsID: roomData.receiverCommunicationID,
           };
         return await this.communicationAdapter.startDirectMessagingToUser(
           directMessagingData
@@ -162,7 +168,7 @@ export class RoomService {
 
         return await this.communicationAdapter.createCommunityRoom(
           roomData.displayName,
-          roomData.senderID
+          roomData.senderCommunicationID
         );
       }
     } catch (error: any) {

@@ -67,27 +67,35 @@ export class ConversationService {
 
     // Create the room if it's a user-to-user conversation
     if (conversation.type === CommunicationConversationType.USER_USER) {
-      conversation.room = await this.createConversationRoom(
-        conversation,
-        conversationData.currentUserID,
-        RoomType.CONVERSATION_DIRECT
+      const sender = await this.userLookupService.getUserOrFail(
+        conversationData.currentUserID
       );
+      const receiver = await this.userLookupService.getUserOrFail(
+        conversation.userID
+      );
+      conversation.room = await this.roomService.createRoom({
+        displayName: `conversation-${conversationData.currentUserID}-${conversation.userID}`,
+        type: RoomType.CONVERSATION_DIRECT,
+        senderCommunicationID: sender.communicationID,
+        receiverCommunicationID: receiver.communicationID,
+      });
     }
 
     return conversation;
   }
 
-  private async createConversationRoom(
+  private async createConversationRoomUserToVc(
     conversation: IConversation,
     currentUserID: string,
     roomType: RoomType
   ): Promise<IRoom> {
     // Create the room
+    const sender = await this.userLookupService.getUserOrFail(currentUserID);
+
     const room = await this.roomService.createRoom({
-      displayName: `conversation-${conversation.userID}`,
+      displayName: `conversation-${currentUserID}-${conversation.virtualContributorID}`,
       type: roomType,
-      senderID: currentUserID,
-      receiverID: conversation.userID,
+      senderCommunicationID: sender.communicationID,
     });
     return room;
   }
@@ -275,8 +283,8 @@ export class ConversationService {
     if (room.type === RoomType.CONVERSATION_DIRECT) {
       await this.roomService.deleteRoom({
         roomID: conversation.room.id,
-        senderID: conversationOwner.communicationID,
-        receiverID: conversation.userID,
+        senderCommunicationID: conversationOwner.communicationID,
+        receiverCommunicationID: conversation.userID,
       });
     } else {
       // Just delete the room entity normally
@@ -411,7 +419,7 @@ export class ConversationService {
     conversation.virtualContributorID = vcId;
 
     // Create the room now
-    return await this.createConversationRoom(
+    return await this.createConversationRoomUserToVc(
       conversation,
       currentUserID,
       RoomType.CONVERSATION
@@ -446,7 +454,7 @@ export class ConversationService {
     }
 
     // create a new room
-    conversation.room = await this.createConversationRoom(
+    conversation.room = await this.createConversationRoomUserToVc(
       conversation,
       agentInfo.userID!,
       RoomType.CONVERSATION

@@ -44,7 +44,7 @@ export class CommunicationService {
 
     communication.updates = await this.roomService.createRoom({
       displayName: `${displayName}-Updates`,
-      senderID: undefined, // No sender for communication rooms
+      senderCommunicationID: undefined, // No sender for communication rooms
       type: RoomType.UPDATES,
     });
 

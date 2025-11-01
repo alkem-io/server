@@ -115,7 +115,7 @@ export class CalloutService {
     if (!callout.isTemplate && callout.settings.framing.commentsEnabled) {
       callout.comments = await this.roomService.createRoom({
         displayName: `callout-comments-${callout.nameID}`,
-        senderID: userID,
+        senderCommunicationID: userID,
         type: RoomType.CALLOUT,
       });
     }
