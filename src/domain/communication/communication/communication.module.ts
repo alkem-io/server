@@ -13,6 +13,7 @@ import { NotificationAdapterModule } from '@services/adapters/notification-adapt
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { UserModule } from '@domain/community/user/user.module';
+import { ConversationsSetModule } from '../conversations-set/conversations.set.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { UserModule } from '@domain/community/user/user.module';
     CommunicationAdapterModule,
     StorageAggregatorResolverModule,
     PlatformAuthorizationPolicyModule,
+    ConversationsSetModule,
     UserModule,
     TypeOrmModule.forFeature([Communication]),
   ],

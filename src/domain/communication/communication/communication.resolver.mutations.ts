@@ -21,6 +21,8 @@ import { UserService } from '@domain/community/user/user.service';
 import { MessagingNotEnabledException } from '@common/exceptions/messaging.not.enabled.exception';
 import { LogContext } from '@common/enums/logging.context';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
+import { ConversationsSetService } from '../conversations-set/conversations.set.service';
+import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
 
 @InstrumentResolver()
 @Resolver()
@@ -32,6 +34,7 @@ export class CommunicationResolverMutations {
     private notificationUserAdapter: NotificationUserAdapter,
     private notificationOrganizationAdapter: NotificationOrganizationAdapter,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
+    private conversationsSetService: ConversationsSetService,
     private userService: UserService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -89,7 +92,12 @@ export class CommunicationResolverMutations {
         );
         // Send direct message if only one receiver
         const receiver = await this.userService.getUserOrFail(
-          messageData.receiverIds[0]
+          messageData.receiverIds[0],
+          {
+            relations: {
+              conversationsSet: true,
+            },
+          }
         );
         if (receiver.id === agentInfo.userID) {
           this.logger.warn(
@@ -97,13 +105,18 @@ export class CommunicationResolverMutations {
             LogContext.COMMUNICATION
           );
         }
-        const roomID =
-          await this.communicationAdapter.startDirectMessagingToUser({
-            senderCommunicationsID: agentInfo.communicationID,
-            receiverCommunicationsID: receiver.communicationID,
-          });
+        const conversation =
+          await this.conversationsSetService.createConversationOnConversationsSet(
+            {
+              userID: receiver.id,
+              type: CommunicationConversationType.USER_USER,
+              currentUserID: agentInfo.userID!,
+            },
+            receiver.conversationsSet!.id
+          );
+
         await this.communicationAdapter.sendMessageToRoom({
-          roomID,
+          roomID: conversation.room!.externalRoomID,
           message: messageData.message,
           senderCommunicationsID: agentInfo.communicationID,
         });

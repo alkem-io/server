@@ -55,7 +55,6 @@ export class RoomResolverMutations {
     description:
       'Sends an comment message. Returns the id of the new Update message.',
   })
-  @Profiling.api
   async sendMessageToRoom(
     @Args('messageData') messageData: RoomSendMessageInput,
     @CurrentUser() agentInfo: AgentInfo
