@@ -53,10 +53,10 @@ export class PostService {
     post.authorization = new AuthorizationPolicy(AuthorizationPolicyType.POST);
     post.createdBy = userID;
 
-    post.comments = await this.roomService.createRoom(
-      `post-comments-${post.nameID}`,
-      RoomType.POST
-    );
+    post.comments = await this.roomService.createRoom({
+      displayName: `post-comments-${post.nameID}`,
+      type: RoomType.POST,
+    });
 
     return post;
   }
@@ -72,7 +72,9 @@ export class PostService {
       await this.profileService.deleteProfile(post.profile.id);
     }
     if (post.comments) {
-      await this.roomService.deleteRoom(post.comments);
+      await this.roomService.deleteRoom({
+        roomID: post.comments.id,
+      });
     }
 
     const result = await this.postRepository.remove(post as Post);

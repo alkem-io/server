@@ -83,10 +83,12 @@ export class ConversationService {
     currentUserID: string
   ): Promise<IRoom> {
     // Create the room
-    const room = await this.roomService.createRoom(
-      `conversation-${conversation.userID}`,
-      RoomType.CONVERSATION
-    );
+    const room = await this.roomService.createRoom({
+      displayName: `conversation-${conversation.userID}`,
+      type: RoomType.CONVERSATION,
+      senderID: currentUserID,
+      receiverID: conversation.userID,
+    });
 
     // Add the user to the room
     const user = await this.userLookupService.getUserOrFail(currentUserID);
@@ -306,20 +308,25 @@ export class ConversationService {
 
     // For USER_USER conversations, check if a reciprocal conversation exists
     // If it does, don't delete the Matrix room (other user still needs it)
-    let shouldDeleteRoom = true;
-    if (
-      conversation.type === CommunicationConversationType.USER_USER &&
-      conversation.userID
-    ) {
-      const reciprocalExists =
-        await this.hasReciprocalConversation(conversation);
-      if (reciprocalExists) {
-        shouldDeleteRoom = false;
-      }
-    }
+    const shouldDeleteRoom =
+      conversation.type !== CommunicationConversationType.USER_USER ||
+      !conversation.userID ||
+      !(await this.hasReciprocalConversation(conversation));
 
-    // Delete the room entity, but only delete from Matrix if no reciprocal conversation exists
-    await this.roomService.deleteRoom(conversation.room, shouldDeleteRoom);
+    // Delete the room entity
+    // For direct messaging rooms, provide sender/receiver IDs to handle Matrix cleanup
+    if (shouldDeleteRoom && conversation.userID) {
+      await this.roomService.deleteRoom({
+        roomID: conversation.room.id,
+        senderID: conversationOwner.communicationID,
+        receiverID: conversation.userID,
+      });
+    } else {
+      // Just delete the room entity without Matrix cleanup
+      await this.roomService.deleteRoom({
+        roomID: conversation.room.id,
+      });
+    }
 
     await this.authorizationPolicyService.delete(conversation.authorization);
 
@@ -460,7 +467,9 @@ export class ConversationService {
     }
 
     if (conversation.room) {
-      await this.roomService.deleteRoom(conversation.room);
+      await this.roomService.deleteRoom({
+        roomID: conversation.room.id,
+      });
     }
 
     // create a new room

@@ -18,6 +18,10 @@ import { RoomRemoveMessageInput } from './dto/room.dto.remove.message';
 import { VcInteractionService } from '../vc-interaction/vc.interaction.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { RoomLookupService } from '../room-lookup/room.lookup.service';
+import { CreateRoomInput } from './dto/room.dto.create';
+import { CommunicationStartDirectMessagingUserInput } from '@services/adapters/communication-adapter/dto/communication.dto.direct.messaging.start';
+import { CommunicationStopDirectMessagingUserInput } from '@services/adapters/communication-adapter/dto/communication.dto.direct.messaging.stop';
+import { DeleteRoomInput } from './dto/room.dto.delete';
 
 @Injectable()
 export class RoomService {
@@ -31,10 +35,10 @@ export class RoomService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createRoom(displayName: string, roomType: RoomType): Promise<IRoom> {
-    const room = new Room(displayName, roomType);
+  async createRoom(roomData: CreateRoomInput): Promise<IRoom> {
+    const room = new Room(roomData.displayName, roomData.type);
     room.authorization = new AuthorizationPolicy(AuthorizationPolicyType.ROOM);
-    room.externalRoomID = await this.initializeCommunicationRoom(room);
+    room.externalRoomID = await this.createExternalCommunicationRoom(roomData);
     room.messagesCount = 0;
     room.vcInteractions = [];
     return room;
@@ -56,18 +60,15 @@ export class RoomService {
     return room;
   }
 
-  async deleteRoom(
-    roomInput: IRoom,
-    deleteExternalRoom: boolean = true
-  ): Promise<IRoom> {
-    const room = await this.getRoomOrFail(roomInput.id, {
+  async deleteRoom(deleteData: DeleteRoomInput): Promise<IRoom> {
+    const room = await this.getRoomOrFail(deleteData.roomID, {
       relations: {
         vcInteractions: true,
       },
     });
     if (!room.vcInteractions) {
       throw new EntityNotFoundException(
-        `Not able to locate entities on Room for deletion: ${roomInput.id}`,
+        `Not able to locate entities on Room for deletion: ${deleteData.roomID}`,
         LogContext.COMMUNICATION
       );
     }
@@ -77,7 +78,20 @@ export class RoomService {
     const result = await this.roomRepository.remove(room as Room);
 
     // Only delete from external Matrix server if flag is true
-    if (deleteExternalRoom) {
+    if (room.type === RoomType.CONVERSATION_DIRECT) {
+      if (!deleteData.senderID || !deleteData.receiverID) {
+        throw new Error(
+          `Missing senderID or receiverID for direct messaging room deletion: ${room.id}`
+        );
+      }
+      const deleteDirectData: CommunicationStopDirectMessagingUserInput = {
+        senderCommunicationsID: deleteData.senderID,
+        receiverCommunicationsID: deleteData.receiverID,
+      };
+      await this.communicationAdapter.stopDirectMessagingToUser(
+        deleteDirectData
+      );
+    } else {
       await this.communicationAdapter.removeRoom(room.externalRoomID);
     }
     result.id = room.id;
@@ -118,25 +132,41 @@ export class RoomService {
     return messageData.messageID;
   }
 
-  async initializeCommunicationRoom(room: IRoom): Promise<string> {
-    if (room.externalRoomID && room.externalRoomID.length > 0) {
-      this.logger.warn?.(
-        `Roomable (${room.id}) already has a communication room: ${room.externalRoomID}`,
-        LogContext.COMMUNICATION
-      );
-      return room.externalRoomID;
-    }
+  private async createExternalCommunicationRoom(
+    roomData: CreateRoomInput
+  ): Promise<string> {
     try {
-      room.externalRoomID = await this.communicationAdapter.createCommunityRoom(
-        room.displayName,
-        {
-          roomableID: room.id,
+      if (roomData.type === RoomType.CONVERSATION_DIRECT) {
+        if (!roomData.senderID || !roomData.receiverID) {
+          throw new Error(
+            `Missing senderID or receiverID for direct messaging room creation: ${roomData.displayName}`
+          );
         }
-      );
-      return room.externalRoomID;
+        this.logger.verbose?.(
+          `Creating direct message room via Matrix for room: ${roomData.displayName}`,
+          LogContext.COMMUNICATION
+        );
+        const directMessagingData: CommunicationStartDirectMessagingUserInput =
+          {
+            senderCommunicationsID: roomData.senderID,
+            receiverCommunicationsID: roomData.receiverID,
+          };
+        return await this.communicationAdapter.startDirectMessagingToUser(
+          directMessagingData
+        );
+      } else {
+        this.logger.verbose?.(
+          `Creating group message room via Matrix for room: ${roomData.displayName}`,
+          LogContext.COMMUNICATION
+        );
+
+        return await this.communicationAdapter.createCommunityRoom(
+          roomData.displayName
+        );
+      }
     } catch (error: any) {
       this.logger.error(
-        `Unable to initialize roomable communication room (${room.displayName}): ${error}`,
+        `Unable to initialize roomable communication room (${roomData.displayName}): ${error}`,
         error?.stack,
         LogContext.COMMUNICATION
       );

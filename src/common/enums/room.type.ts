@@ -5,4 +5,5 @@ export enum RoomType {
   UPDATES = 'updates',
   CALLOUT = 'callout',
   CONVERSATION = 'conversation',
+  CONVERSATION_DIRECT = 'conversation_direct',
 }
