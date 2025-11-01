@@ -241,7 +241,8 @@ export class UserService {
             VirtualContributorWellKnown.CHAT_GUIDANCE,
           currentUserID: userID,
         },
-        conversationSet.id
+        conversationSet.id,
+        false
       );
 
       this.logger.verbose?.(

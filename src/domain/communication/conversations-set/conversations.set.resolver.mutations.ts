@@ -74,7 +74,8 @@ export class ConversationsSetResolverMutations {
     const conversation =
       await this.conversationsSetService.createConversationOnConversationsSet(
         conversationData,
-        conversationsSet.id
+        conversationsSet.id,
+        true
       );
 
     // conversation needs to be saved to apply the authorization policy

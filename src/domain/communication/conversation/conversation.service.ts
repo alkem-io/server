@@ -273,7 +273,7 @@ export class ConversationService {
         receiverID: conversation.userID,
       });
     } else {
-      // Just delete the room entity without Matrix cleanup
+      // Just delete the room entity normally
       await this.roomService.deleteRoom({
         roomID: conversation.room.id,
       });
@@ -453,7 +453,7 @@ export class ConversationService {
    * Note: Checks for a conversation in the conversationsSetOwnerUserID's conversation set
    * where the userID field points to the otherUserID.
    */
-  public async findUserToUserConversation(
+  private async findUserToUserConversation(
     conversationsSetOwnerUserID: string,
     otherUserID: string
   ): Promise<IConversation | null> {
@@ -478,53 +478,11 @@ export class ConversationService {
 
     // Find the conversation with the other user
     const conversation = ownerUser.conversationsSet.conversations.find(
-      conv =>
-        conv.type === CommunicationConversationType.USER_USER &&
-        conv.userID === otherUserID
+      conversation =>
+        conversation.type === CommunicationConversationType.USER_USER &&
+        conversation.userID === otherUserID
     );
 
     return conversation || null;
-  }
-
-  /**
-   * Checks if a reciprocal USER_USER conversation exists for the other user.
-   * This is used when deleting a conversation to determine if the Matrix room should be deleted.
-   *
-   * @param conversation The conversation being deleted
-   * @returns true if the other user has a corresponding conversation, false otherwise
-   */
-  private async hasReciprocalConversation(
-    conversation: IConversation
-  ): Promise<boolean> {
-    if (conversation.type !== CommunicationConversationType.USER_USER) {
-      return false;
-    }
-
-    if (!conversation.userID || !conversation.conversationsSet) {
-      return false;
-    }
-
-    // Find the user who owns this conversationsSet by querying for the user
-    // that has a conversationsSet with this ID
-    const entityManager = this.conversationRepository.manager;
-    const conversationOwner = await entityManager.findOne(User, {
-      where: {
-        conversationsSet: {
-          id: conversation.conversationsSet.id,
-        },
-      },
-    });
-
-    if (!conversationOwner) {
-      return false;
-    }
-
-    // Check if the other user (conversation.userID) has a conversation back to the owner
-    const reciprocalConversation = await this.findUserToUserConversation(
-      conversation.userID,
-      conversationOwner.id
-    );
-
-    return reciprocalConversation !== null;
   }
 }

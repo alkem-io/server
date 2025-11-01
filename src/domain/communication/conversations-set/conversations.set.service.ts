@@ -4,6 +4,8 @@ import { FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
+  RelationshipNotFoundException,
+  ValidationException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -19,7 +21,6 @@ import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.
 import { CreateConversationInput } from '../conversation/dto/conversation.dto.create';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { IRoom } from '../room/room.interface';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
@@ -123,7 +124,8 @@ export class ConversationsSetService {
 
   public async createConversationOnConversationsSet(
     conversationData: CreateConversationInput,
-    conversationsSetID: string
+    conversationsSetID: string,
+    userReciprocate: boolean
   ): Promise<IConversation> {
     const conversationsSet = await this.getConversationsSetOrFail(
       conversationsSetID,
@@ -134,25 +136,51 @@ export class ConversationsSetService {
       }
     );
 
-    // For USER_USER conversations, check if the other user already has a conversation with us
-    let existingRoom: IRoom | undefined;
-    if (conversationData.type === CommunicationConversationType.USER_USER) {
-      existingRoom = await this.findExistingRoomForUserConversation(
-        conversationData.currentUserID,
-        conversationData.userID
+    const existingConversations = conversationsSet.conversations;
+    if (!existingConversations) {
+      throw new EntityNotInitializedException(
+        `conversations: Unable to load conversations entities for conversation creation: ${conversationsSet.id}`,
+        LogContext.COMMUNICATION_CONVERSATION
       );
     }
 
+    // For USER_USER conversations, check if the other user already has a conversation with us
+    let existingConversation: IConversation | undefined;
+    switch (conversationData.type) {
+      case CommunicationConversationType.USER_VC:
+        existingConversation = existingConversations.find(conversation => {
+          return (
+            conversation.virtualContributorID ===
+            conversationData.virtualContributorID
+          );
+        });
+        break;
+      case CommunicationConversationType.USER_USER:
+        existingConversation = existingConversations.find(conversation => {
+          return conversation.userID === conversationData.userID;
+        });
+        break;
+      default:
+        throw new ValidationException(
+          `Unsupported conversation type for existence check: ${conversationData.type}`,
+          LogContext.COMMUNICATION_CONVERSATION
+        );
+    }
+    if (existingConversation) {
+      return existingConversation;
+    }
+
     // Create the conversation, passing the existing room if found
-    const conversation =
+    let conversation =
       await this.conversationService.createConversation(conversationData);
-    // this has the effect of adding the conversation to the collaboration
+    // this has the effect of adding the conversation to the conversations set
     conversation.conversationsSet = conversationsSet;
+    conversation = await this.conversationService.save(conversation);
 
     // If no existing room was found, create a reciprocal conversation for the other user
     if (
       conversationData.type === CommunicationConversationType.USER_USER &&
-      !existingRoom
+      userReciprocate
     ) {
       await this.createReciprocalUserConversation(
         conversation,
@@ -164,113 +192,42 @@ export class ConversationsSetService {
   }
 
   /**
-   * Finds the room from an existing conversation if the other user already has a conversation with the current user.
-   * This allows reusing the same Matrix room when the second user initiates a conversation.
-   */
-  private async findExistingRoomForUserConversation(
-    currentUserID: string,
-    otherUserID: string
-  ): Promise<IRoom | undefined> {
-    try {
-      // Check if the other user already has a conversation with the current user
-      const existingConversation =
-        await this.conversationService.findUserToUserConversation(
-          otherUserID,
-          currentUserID
-        );
-
-      if (existingConversation && existingConversation.room) {
-        this.logger.verbose?.(
-          `Found existing room for conversation between users ${currentUserID} and ${otherUserID}`,
-          LogContext.COMMUNICATION
-        );
-        return existingConversation.room;
-      }
-
-      return undefined;
-    } catch (error: any) {
-      this.logger.error(
-        `Error finding existing room: ${error.message}`,
-        error?.stack,
-        LogContext.COMMUNICATION
-      );
-      return undefined;
-    }
-  }
-
-  /**
    * Creates a reciprocal conversation for the other user in a USER_USER conversation.
    * Both conversations will share the same external room ID so messages are shared.
    */
   private async createReciprocalUserConversation(
     originalConversation: IConversation,
     originalConversationData: CreateConversationInput
-  ): Promise<void> {
-    try {
-      // Get the other user's conversations set
-      const otherUser = await this.userLookupService.getUserOrFail(
-        originalConversation.userID!,
-        {
-          relations: {
-            conversationsSet: true,
-          },
-        }
-      );
-
-      if (!otherUser.conversationsSet) {
-        this.logger.warn?.(
-          `Other user (${originalConversation.userID}) does not have a conversations set, skipping reciprocal conversation creation`,
-          LogContext.COMMUNICATION
-        );
-        return;
+  ): Promise<IConversation> {
+    // Get the other user's conversations set
+    const otherUser = await this.userLookupService.getUserOrFail(
+      originalConversation.userID!,
+      {
+        relations: {
+          conversationsSet: true,
+        },
       }
+    );
 
-      // Check if a conversation already exists for the other user
-      const existingReciprocalConversation =
-        await this.conversationService.findUserToUserConversation(
-          originalConversation.userID!,
-          originalConversationData.currentUserID
-        );
-
-      if (existingReciprocalConversation) {
-        this.logger.verbose?.(
-          `Reciprocal conversation already exists between users ${originalConversation.userID} and ${originalConversationData.currentUserID}`,
-          LogContext.COMMUNICATION
-        );
-        return;
-      }
-
-      // Create reciprocal conversation data - swap the userID and currentUserID
-      const reciprocalConversationData: CreateConversationInput = {
-        type: CommunicationConversationType.USER_USER,
-        userID: originalConversationData.currentUserID, // The original creator becomes the "other" user
-        currentUserID: originalConversation.userID!, // The original "other" user becomes the current user
-      };
-
-      // Create the reciprocal conversation, passing the room so both use the same Matrix room
-      const reciprocalConversation =
-        await this.conversationService.createConversation(
-          reciprocalConversationData
-        );
-
-      // Link it to the other user's conversations set
-      reciprocalConversation.conversationsSet = otherUser.conversationsSet;
-
-      // Save the reciprocal conversation
-      await this.conversationService.save(reciprocalConversation);
-
-      this.logger.verbose?.(
-        `Created reciprocal conversation for user ${originalConversation.userID} with user ${originalConversationData.currentUserID}`,
+    if (!otherUser.conversationsSet) {
+      throw new RelationshipNotFoundException(
+        `Other user (${originalConversation.userID}) does not have a conversations set, skipping reciprocal conversation creation`,
         LogContext.COMMUNICATION
       );
-    } catch (error: any) {
-      this.logger.error(
-        `Failed to create reciprocal conversation: ${error.message}`,
-        error?.stack,
-        LogContext.COMMUNICATION
-      );
-      // Don't throw - original conversation creation should succeed even if reciprocal fails
     }
+
+    // Create reciprocal conversation data - swap the userID and currentUserID
+    const reciprocalConversationData: CreateConversationInput = {
+      type: CommunicationConversationType.USER_USER,
+      userID: originalConversationData.currentUserID, // The original creator becomes the "other" user
+      currentUserID: originalConversation.userID!, // The original "other" user becomes the current user
+    };
+
+    return await this.createConversationOnConversationsSet(
+      reciprocalConversationData,
+      otherUser.conversationsSet.id,
+      false // Prevent infinite recursion
+    );
   }
 
   public async save(

@@ -112,7 +112,8 @@ export class CommunicationResolverMutations {
               type: CommunicationConversationType.USER_USER,
               currentUserID: agentInfo.userID!,
             },
-            receiver.conversationsSet!.id
+            receiver.conversationsSet!.id,
+            true
           );
 
         await this.communicationAdapter.sendMessageToRoom({
