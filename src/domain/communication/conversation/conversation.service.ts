@@ -281,10 +281,13 @@ export class ConversationService {
       LogContext.COMMUNICATION_CONVERSATION
     );
     if (room.type === RoomType.CONVERSATION_DIRECT) {
+      const receiver = await this.userLookupService.getUserOrFail(
+        conversation.userID!
+      );
       await this.roomService.deleteRoom({
         roomID: conversation.room.id,
         senderCommunicationID: conversationOwner.communicationID,
-        receiverCommunicationID: conversation.userID,
+        receiverCommunicationID: receiver.communicationID,
       });
     } else {
       // Just delete the room entity normally
