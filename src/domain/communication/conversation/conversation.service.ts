@@ -22,20 +22,21 @@ import { VirtualContributorLookupService } from '@domain/community/virtual-contr
 import { User } from '@domain/community/user/user.entity';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
-import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { InvocationResultAction } from '@services/ai-server/ai-persona/dto';
 import { ConversationVcAskQuestionInput } from './dto/conversation.vc.dto.ask.question.input';
 import { InvocationOperation } from '@common/enums/ai.persona.invocation.operation';
 import { ConversationVcAskQuestionResult } from './dto/conversation.vc.dto.ask.question.result';
 import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
+import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
+import { RoomLookupService } from '../room-lookup/room.lookup.service';
 
 @Injectable()
 export class ConversationService {
   constructor(
     private aiServerAdapter: AiServerAdapter,
-    private communicationAdapter: CommunicationAdapter,
     private authorizationPolicyService: AuthorizationPolicyService,
     private roomService: RoomService,
+    private roomLookupService: RoomLookupService,
     private userLookupService: UserLookupService,
     private virtualContributorLookupService: VirtualContributorLookupService,
     private platformWellKnownVirtualContributorsService: PlatformWellKnownVirtualContributorsService,
@@ -48,8 +49,7 @@ export class ConversationService {
   // TODO: do we support uploading content in a conversation? If so will need to pass in a storage aggregator
 
   public async createConversation(
-    conversationData: CreateConversationInput,
-    existingRoom?: IRoom
+    conversationData: CreateConversationInput
   ): Promise<IConversation> {
     await this.validateCreateConversationData(conversationData);
 
@@ -63,15 +63,12 @@ export class ConversationService {
       AuthorizationPolicyType.COMMUNICATION_CONVERSATION
     );
 
-    // Use existing room if provided, otherwise create a new one
-    if (existingRoom) {
-      conversation.room = existingRoom;
-    } else if (!conversationData.wellKnownVirtualContributor) {
-      // Only create the room immediately if we have a concrete virtualContributorID
-      // For well-known VCs, room creation is deferred until the first message
+    // Create the room if it's a user-to-user conversation
+    if (conversation.type === CommunicationConversationType.USER_USER) {
       conversation.room = await this.createConversationRoom(
         conversation,
-        conversationData.currentUserID
+        conversationData.currentUserID,
+        RoomType.CONVERSATION_DIRECT
       );
     }
 
@@ -80,47 +77,16 @@ export class ConversationService {
 
   private async createConversationRoom(
     conversation: IConversation,
-    currentUserID: string
+    currentUserID: string,
+    roomType: RoomType
   ): Promise<IRoom> {
     // Create the room
     const room = await this.roomService.createRoom({
       displayName: `conversation-${conversation.userID}`,
-      type: RoomType.CONVERSATION,
+      type: roomType,
       senderID: currentUserID,
       receiverID: conversation.userID,
     });
-
-    // Add the user to the room
-    const user = await this.userLookupService.getUserOrFail(currentUserID);
-    await this.communicationAdapter.userAddToRooms(
-      [room.externalRoomID],
-      user.communicationID
-    );
-
-    // Add the other participant based on conversation type
-    switch (conversation.type) {
-      case CommunicationConversationType.USER_VC: {
-        const virtualContributor =
-          await this.virtualContributorLookupService.getVirtualContributorByNameIdOrFail(
-            conversation.virtualContributorID!
-          );
-        await this.communicationAdapter.userAddToRooms(
-          [room.externalRoomID],
-          virtualContributor.communicationID
-        );
-      }
-      case CommunicationConversationType.USER_USER: {
-        const otherUser = await this.userLookupService.getUserOrFail(
-          conversation.userID!
-        );
-        await this.communicationAdapter.userAddToRooms(
-          [room.externalRoomID],
-          otherUser.communicationID
-        );
-
-        break;
-      }
-    }
     return room;
   }
 
@@ -270,16 +236,13 @@ export class ConversationService {
       },
     });
 
-    if (!conversation.room || !conversation.authorization) {
+    if (
+      !conversation.room ||
+      !conversation.authorization ||
+      !conversation.conversationsSet
+    ) {
       throw new EntityNotInitializedException(
         `Unable to load conversation for deleting: ${conversation.id}`,
-        LogContext.COLLABORATION
-      );
-    }
-
-    if (!conversation.conversationsSet) {
-      throw new EntityNotInitializedException(
-        `Unable to load conversationsSet for deleting conversation: ${conversation.id}`,
         LogContext.COLLABORATION
       );
     }
@@ -300,22 +263,10 @@ export class ConversationService {
       );
     }
 
-    // Remove the conversation owner from the Matrix room
-    await this.communicationAdapter.removeUserFromRooms(
-      [conversation.room.externalRoomID],
-      conversationOwner.communicationID
-    );
-
-    // For USER_USER conversations, check if a reciprocal conversation exists
-    // If it does, don't delete the Matrix room (other user still needs it)
-    const shouldDeleteRoom =
-      conversation.type !== CommunicationConversationType.USER_USER ||
-      !conversation.userID ||
-      !(await this.hasReciprocalConversation(conversation));
-
     // Delete the room entity
+    const room = conversation.room;
     // For direct messaging rooms, provide sender/receiver IDs to handle Matrix cleanup
-    if (shouldDeleteRoom && conversation.userID) {
+    if (room.type === RoomType.CONVERSATION_DIRECT) {
       await this.roomService.deleteRoom({
         roomID: conversation.room.id,
         senderID: conversationOwner.communicationID,
@@ -364,7 +315,7 @@ export class ConversationService {
     chatData: ConversationVcAskQuestionInput,
     agentInfo: AgentInfo
   ): Promise<ConversationVcAskQuestionResult> {
-    let guidanceConversation = await this.getConversationOrFail(
+    const guidanceConversation = await this.getConversationOrFail(
       chatData.conversationID,
       {
         relations: { room: true },
@@ -376,32 +327,15 @@ export class ConversationService {
       !guidanceConversation.room &&
       guidanceConversation.wellKnownVirtualContributor
     ) {
-      // Resolve the well-known VC to a UUID
-      const vcId =
-        await this.platformWellKnownVirtualContributorsService.getVirtualContributorID(
-          guidanceConversation.wellKnownVirtualContributor
+      guidanceConversation.room =
+        await this.createWellKnownVirtualContributorRoom(
+          guidanceConversation,
+          guidanceConversation.wellKnownVirtualContributor,
+          agentInfo.userID!
         );
-
-      if (!vcId) {
-        throw new ValidationException(
-          `Well-known virtual contributor ${guidanceConversation.wellKnownVirtualContributor} is not configured`,
-          LogContext.COMMUNICATION_CONVERSATION
-        );
-      }
-
-      // Set the resolved VC ID
-      guidanceConversation.virtualContributorID = vcId;
-
-      // Create the room now
-      guidanceConversation.room = await this.createConversationRoom(
-        guidanceConversation,
-        agentInfo.userID!
-      );
 
       // Save the updated conversation
-      guidanceConversation = await this.conversationRepository.save(
-        guidanceConversation as Conversation
-      );
+      await this.conversationRepository.save(guidanceConversation);
     }
 
     if (!guidanceConversation.room) {
@@ -411,11 +345,14 @@ export class ConversationService {
       );
     }
 
-    const message = await this.communicationAdapter.sendMessageToRoom({
-      roomID: guidanceConversation.room.externalRoomID,
-      senderCommunicationsID: agentInfo.communicationID,
-      message: chatData.question,
-    });
+    const message = await this.roomLookupService.sendMessage(
+      guidanceConversation.room,
+      agentInfo.communicationID,
+      {
+        message: chatData.question,
+        roomID: guidanceConversation.room.id,
+      }
+    );
 
     const guidanceVc =
       await this.virtualContributorLookupService.getVirtualContributorByNameIdOrFail(
@@ -446,6 +383,36 @@ export class ConversationService {
     };
   }
 
+  private async createWellKnownVirtualContributorRoom(
+    conversation: IConversation,
+    wellknownVc: VirtualContributorWellKnown,
+    currentUserID: string
+  ): Promise<IRoom> {
+    // Resolve the well-known VC to a UUID
+    const vcId =
+      await this.platformWellKnownVirtualContributorsService.getVirtualContributorID(
+        wellknownVc
+      );
+
+    if (!vcId) {
+      throw new ValidationException(
+        `Well-known virtual contributor ${wellknownVc} is not configured`,
+        LogContext.COMMUNICATION_CONVERSATION
+      );
+    }
+
+    // Set the resolved VC ID
+    conversation.virtualContributorID = vcId;
+
+    // Create the room now
+    return await this.createConversationRoom(
+      conversation,
+      currentUserID,
+      RoomType.CONVERSATION
+    );
+  }
+
+  // Resolve the well-known VC to a concrete VC
   public async resetUserConversationWithAgent(
     agentInfo: AgentInfo,
     conversationID: string
@@ -475,7 +442,8 @@ export class ConversationService {
     // create a new room
     conversation.room = await this.createConversationRoom(
       conversation,
-      agentInfo.userID!
+      agentInfo.userID!,
+      RoomType.CONVERSATION
     );
     return await this.save(conversation);
   }

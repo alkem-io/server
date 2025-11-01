@@ -538,6 +538,7 @@ export class CommunicationAdapter {
 
   async createCommunityRoom(
     name: string,
+    userID?: string,
     metadata?: Record<string, string>
   ): Promise<string> {
     // If not enabled just return an empty string
@@ -564,6 +565,10 @@ export class CommunicationAdapter {
         `Created community room:'${responseData.roomID}'`,
         LogContext.COMMUNICATION
       );
+      // add the user to the room
+      if (userID) {
+        await this.userAddToRooms([responseData.roomID], userID);
+      }
       return responseData.roomID;
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);

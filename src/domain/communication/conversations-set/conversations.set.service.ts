@@ -144,10 +144,8 @@ export class ConversationsSetService {
     }
 
     // Create the conversation, passing the existing room if found
-    const conversation = await this.conversationService.createConversation(
-      conversationData,
-      existingRoom
-    );
+    const conversation =
+      await this.conversationService.createConversation(conversationData);
     // this has the effect of adding the conversation to the collaboration
     conversation.conversationsSet = conversationsSet;
 
@@ -252,8 +250,7 @@ export class ConversationsSetService {
       // Create the reciprocal conversation, passing the room so both use the same Matrix room
       const reciprocalConversation =
         await this.conversationService.createConversation(
-          reciprocalConversationData,
-          originalConversation.room
+          reciprocalConversationData
         );
 
       // Link it to the other user's conversations set

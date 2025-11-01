@@ -161,7 +161,8 @@ export class RoomService {
         );
 
         return await this.communicationAdapter.createCommunityRoom(
-          roomData.displayName
+          roomData.displayName,
+          roomData.senderID
         );
       }
     } catch (error: any) {
