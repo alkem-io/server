@@ -94,7 +94,7 @@ import { AdminGeoLocationModule } from '@src/platform-admin/services/geolocation
 import { AdminSearchIngestModule } from './platform-admin/services/search/admin.search.ingest.module';
 import { PlatformAdminModule } from './platform-admin/admin/platform.admin.module';
 import { NotificationRecipientsModule } from '@services/api/notification-recipients/notification.recipients.module';
-import { GuestTestResolver } from '@domain/test/guest.test.resolver';
+import { InAppNotificationAdminModule } from './platform-admin/in-app-notification/in.app.notification.admin.module';
 
 @Module({
   imports: [
@@ -290,6 +290,7 @@ import { GuestTestResolver } from '@domain/test/guest.test.resolver';
     PlatformModule,
     PlatformHubModule,
     PlatformAdminModule,
+    InAppNotificationAdminModule,
     ContributionMoveModule,
     GeoLocationModule,
     ContributionReporterModule,
@@ -349,7 +350,6 @@ import { GuestTestResolver } from '@domain/test/guest.test.resolver';
       useClass: ValidationPipe,
     },
     APP_ID_PROVIDER,
-    GuestTestResolver,
   ],
 })
 export class AppModule {
