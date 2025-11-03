@@ -41,9 +41,9 @@ description: 'Task list for schema baseline automation workflow'
 
 ## Phase 3: User Story 1 - Baseline stays current after merges (Priority: P1) 🎯 MVP
 
-**Goal**: Automatically regenerate and commit `schema-baseline.graphql` whenever `develop` gains new changes.
+**Goal**: Automatically regenerate `schema-baseline.graphql` whenever `develop` gains new changes and publish the update through an automation-owned pull request.
 
-**Independent Test**: Merge a branch into `develop` and confirm the workflow signs and pushes an updated `schema-baseline.graphql` commit (or exits cleanly when no diff exists).
+**Independent Test**: Merge a branch into `develop` and confirm the workflow signs the baseline commit, pushes a `schema-baseline/<run-id>` branch, and opens (or refreshes) the pull request (or exits cleanly when no diff exists).
 
 ### Implementation for User Story 1
 
@@ -52,7 +52,7 @@ description: 'Task list for schema baseline automation workflow'
 - [x] T008 [US1] Invoke `scripts/schema/diff-schema.ts` to produce `change-report.json` and detect schema differences inside `.github/workflows/schema-baseline.yml`.
 - [x] T009 [US1] Add conditional shell block copying `schema.graphql` to `schema-baseline.graphql`, staging the file only when diffs exist, within `.github/workflows/schema-baseline.yml`.
 - [x] T010 [US1] Configure `crazy-max/ghaction-import-gpg@v6` step to import signing key and trust settings in `.github/workflows/schema-baseline.yml`.
-- [x] T011 [US1] Add signed commit push step with `git pull --ff-only` guard to update `develop` only when baseline changed inside `.github/workflows/schema-baseline.yml`.
+- [x] T011 [US1] Add signed commit step followed by branch push and PR wiring so baseline updates land on `schema-baseline/<run-id>` instead of directly on `develop` within `.github/workflows/schema-baseline.yml`.
 
 **Checkpoint**: Baseline file remains synchronized with `develop` after merges.
 
@@ -78,7 +78,7 @@ description: 'Task list for schema baseline automation workflow'
 
 **Goal**: Alert CODEOWNERS when baseline regeneration fails and surface diagnostic context.
 
-**Independent Test**: Force the workflow to fail (e.g., revoke signing key) and confirm a CODEOWNERS-tagged comment posts on the baseline commit with run logs.
+**Independent Test**: Force the workflow to fail (e.g., revoke signing key) and confirm a CODEOWNERS-tagged comment posts on the relevant baseline branch commit with run logs.
 
 ### Implementation for User Story 3
 
@@ -133,8 +133,8 @@ description: 'Task list for schema baseline automation workflow'
 ### MVP First (User Story 1 Only)
 
 1. Complete Phases 1 & 2 to establish the workflow skeleton.
-2. Deliver Phase 3 (US1) to achieve automatic baseline commits.
-3. Validate by merging to `develop` and confirming a signed baseline commit—this is the deployable MVP.
+2. Deliver Phase 3 (US1) to achieve automatic baseline PR publication.
+3. Validate by merging to `develop` and confirming a signed baseline pull request—this is the deployable MVP.
 
 ### Incremental Delivery
 

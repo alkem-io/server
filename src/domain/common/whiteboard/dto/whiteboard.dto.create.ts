@@ -4,6 +4,7 @@ import { WhiteboardContent } from '@domain/common/scalars/scalar.whiteboard.cont
 import { CreateProfileInput } from '@domain/common/profile/dto';
 import { Type } from 'class-transformer';
 import { NameID } from '@domain/common/scalars';
+import { CreateWhiteboardPreviewSettingsInput } from './whiteboard.preview.settings.dto.create';
 
 @InputType()
 @ObjectType('CreateWhiteboardData')
@@ -22,4 +23,13 @@ export class CreateWhiteboardInput {
   @Field(() => WhiteboardContent, { nullable: true })
   @IsOptional()
   content?: string;
+
+  @Field(() => CreateWhiteboardPreviewSettingsInput, {
+    nullable: true,
+    description: 'The preview settings for the whiteboard.',
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CreateWhiteboardPreviewSettingsInput)
+  previewSettings?: CreateWhiteboardPreviewSettingsInput;
 }
