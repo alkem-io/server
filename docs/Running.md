@@ -36,8 +36,9 @@ pnpm start
 
 4. Validate that the server is running by visiting the [graphql endpoint](http://localhost:3000/graphql).
 5. Optional: verify the OIDC stack
-  - Hydra discovery endpoint: `curl http://localhost:3000/.well-known/openid-configuration`
-  - Synapse OIDC callback health: check `docker logs alkemio_dev_synapse | grep oidc-hydra`
+
+- Hydra discovery endpoint: `curl http://localhost:3000/.well-known/openid-configuration`
+- Synapse OIDC callback health: check `docker logs alkemio_dev_synapse | grep oidc-hydra`
 
 ## Notes
 
@@ -80,10 +81,11 @@ Note: You may need multiple repositories cloned in order for this command to run
 
 ## Schema baseline automation prerequisites
 
-- The post-merge workflow `.github/workflows/schema-baseline.yml` regenerates `schema-baseline.graphql` on every push to `develop` and requires a dedicated signing identity.
+- The post-merge workflow `.github/workflows/schema-baseline.yml` regenerates `schema-baseline.graphql` on every push to `develop`, commits the snapshot, and opens a pull request from a temporary branch using the automation service account.
 - Configure the following GitHub Action secrets (repository or environment scoped) before enabling the workflow:
   - `ALKEMIO_INFRASTRUCTURE_BOT_GPG_PRIVATE_KEY`: ASCII-armored private key for the automation identity.
   - `ALKEMIO_INFRASTRUCTURE_BOT_GPG_PASSPHRASE`: Passphrase for the key (set to an empty string when the key is unprotected).
-  - `ALKEMIO_INFRASTRUCTURE_BOT_GPG_KEY_ID`: Fingerprint uploaded to GitHub so commits appear as verified.
-- Grant the automation key push access to `develop` and verify the public key is registered with the bot account that owns the commits.
-- After updating secrets, trigger the workflow manually (`workflow_dispatch`) to confirm the baseline commit path succeeds before relying on automatic runs.
+- - `ALKEMIO_INFRASTRUCTURE_BOT_GPG_KEY_ID`: Fingerprint uploaded to GitHub so commits appear as verified.
+- - `ALKEMIO_INFRASTRUCTURE_BOT_PUSH_TOKEN`: Classic PAT with at least `repo` scope issued for the automation account; used to push the baseline branch and create the PR (also satisfies CLA requirements).
+- Grant the automation key push access via the PAT and verify the public key is registered with the bot account that owns the commits.
+- After updating secrets, trigger the workflow manually (`workflow_dispatch`) to confirm the baseline branch/PR path succeeds before relying on automatic runs.
