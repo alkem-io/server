@@ -46,6 +46,10 @@ subscriptions.log
 .env.test
 .env.docker
 
+# Synapse signing keys (security sensitive)
+/.build/synapse/signing.key
+.build/synapse/*.signing.key
+
 # TypeScript cache
 *.tsbuildinfo
 

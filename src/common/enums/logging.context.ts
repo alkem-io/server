@@ -80,6 +80,7 @@ export enum LogContext {
   AI_SERVER_EVENT_BUS = 'ai-server-event-bus',
   SUBSCRIPTION_PUBLISH = 'subscription-publish',
   KRATOS = 'kratos',
+  OIDC = 'oidc',
   WINGBACK = 'wingback',
   WINGBACK_HOOKS = 'wingback-hooks',
   ELASTIC_SEARCH = 'elasticsearch',
