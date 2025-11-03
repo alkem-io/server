@@ -1,6 +1,7 @@
 volumes:
   alkemio_dev_mysql:
   alkemio_dev_postgres:
+  alkemio_dev_synapse:
   tmpvolume:
   chroma-data:
   rabbitmq_data:
@@ -76,7 +77,8 @@ services:
     container_name: alkemio_dev_kratos
     image: oryd/kratos:v1.3.1
     depends_on:
-      - kratos-migrate
+      kratos-migrate:
+        condition: service_completed_successfully
     ports:
       - 4433
       - 4434
@@ -91,6 +93,126 @@ services:
         source: ./.build/ory/kratos
         target: /etc/config/kratos
     command: serve -c /etc/config/kratos/kratos.yml --dev --watch-courier
+
+  hydra-migrate:
+    container_name: alkemio_dev_hydra_migrate
+    image: oryd/hydra:v2.2.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/hydra?sslmode=disable&max_conns=20&max_idle_conns=4
+    command: migrate sql -e --yes
+    networks:
+      - alkemio_dev_net
+    restart: on-failure
+
+  hydra:
+    container_name: alkemio_dev_hydra
+    image: oryd/hydra:v2.2.0
+    depends_on:
+      hydra-migrate:
+        condition: service_completed_successfully
+    ports:
+      - 4444
+      - 4445
+    environment:
+      - DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/hydra?sslmode=disable&max_conns=20&max_idle_conns=4&max_conn_lifetime=30m&max_conn_idle_time=5m
+      - SECRETS_SYSTEM=${HYDRA_SYSTEM_SECRET}
+      - URLS_SELF_PUBLIC=${HYDRA_PUBLIC_URL}/
+      - URLS_SELF_ISSUER=${HYDRA_PUBLIC_URL}/
+      - URLS_LOGIN=${HYDRA_PUBLIC_URL}/api/public/rest/oidc/login
+      - URLS_CONSENT=${HYDRA_PUBLIC_URL}/api/public/rest/oidc/consent
+      - URLS_SELF_ADMIN=http://hydra:4445/
+      - SERVE_PUBLIC_CORS_ENABLED=true
+      - SERVE_ADMIN_CORS_ENABLED=true
+      - OAUTH2_ALLOWED_TOP_LEVEL_CLAIMS=email,email_verified,given_name,family_name
+      - LOG_LEVEL=debug
+    command: serve all --dev
+    networks:
+      - alkemio_dev_net
+    restart: unless-stopped
+
+  hydra-client-setup:
+    container_name: alkemio_dev_hydra_client_setup
+    image: curlimages/curl:8.1.2
+    depends_on:
+      - hydra
+    environment:
+      - HYDRA_ADMIN_URL=http://hydra:4445
+      - SYNAPSE_OIDC_CLIENT_ID=${SYNAPSE_OIDC_CLIENT_ID}
+      - SYNAPSE_OIDC_CLIENT_SECRET=${SYNAPSE_OIDC_CLIENT_SECRET}
+      - SYNAPSE_ADMIN_URL=${SYNAPSE_ADMIN_URL}
+      - SYNAPSE_PUBLIC_URL=${SYNAPSE_PUBLIC_URL}
+    networks:
+      - alkemio_dev_net
+    restart: on-failure
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "Waiting for Hydra to be ready..."
+        until curl -sf $$HYDRA_ADMIN_URL/health/ready > /dev/null 2>&1; do
+          echo "Hydra not ready yet, waiting..."
+          sleep 2
+        done
+        echo "Hydra is ready, checking if client exists..."
+
+        # Check if client already exists
+        if curl -sf $$HYDRA_ADMIN_URL/admin/clients/$$SYNAPSE_OIDC_CLIENT_ID > /dev/null 2>&1; then
+          echo "Client $$SYNAPSE_OIDC_CLIENT_ID already exists, updating it..."
+          curl -X PUT $$HYDRA_ADMIN_URL/admin/clients/$$SYNAPSE_OIDC_CLIENT_ID \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"client_id\": \"$$SYNAPSE_OIDC_CLIENT_ID\",
+              \"client_name\": \"Synapse Matrix Server\",
+              \"client_secret\": \"$$SYNAPSE_OIDC_CLIENT_SECRET\",
+              \"grant_types\": [\"authorization_code\", \"refresh_token\"],
+              \"response_types\": [\"code\"],
+              \"redirect_uris\": [\"$$SYNAPSE_PUBLIC_URL/_synapse/client/oidc/callback\"],
+              \"scope\": \"openid profile email\",
+              \"token_endpoint_auth_method\": \"client_secret_basic\"
+            }"
+          echo "Client updated successfully"
+          exit 0
+        fi
+
+        echo "Registering Synapse OAuth2 client..."
+        curl -X POST $$HYDRA_ADMIN_URL/admin/clients \
+          -H "Content-Type: application/json" \
+          -d "{
+            \"client_id\": \"$$SYNAPSE_OIDC_CLIENT_ID\",
+            \"client_name\": \"Synapse Matrix Server\",
+            \"client_secret\": \"$$SYNAPSE_OIDC_CLIENT_SECRET\",
+            \"grant_types\": [\"authorization_code\", \"refresh_token\"],
+            \"response_types\": [\"code\"],
+            \"redirect_uris\": [\"$$SYNAPSE_PUBLIC_URL/_synapse/client/oidc/callback\"],
+            \"scope\": \"openid profile email\",
+            \"token_endpoint_auth_method\": \"client_secret_basic\"
+          }"
+
+        if [ $$? -eq 0 ]; then
+          echo "Successfully registered Synapse OAuth2 client"
+        else
+          echo "Failed to register client"
+          exit 1
+        fi
+
+  oidc-service:
+    container_name: alkemio_dev_oidc_service
+    image: docker.io/alkemio/oidc-service:v0.5.0
+    depends_on:
+      - hydra
+      - kratos
+    environment:
+      - OIDC_ALLOW_INSECURE_HTTP
+      - OIDC_HYDRA_ADMIN_URL
+      - OIDC_KRATOS_ADMIN_URL
+      - OIDC_KRATOS_PUBLIC_URL
+    networks:
+      - alkemio_dev_net
+    ports:
+      - 8085:8080
+    restart: unless-stopped
 
   oathkeeper:
     extra_hosts:
@@ -125,6 +247,8 @@ services:
       - alkemio_dev_net
 
   synapse:
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_synapse
     image: matrixdotorg/synapse:v1.132.0
     depends_on:
@@ -144,6 +268,10 @@ services:
       - type: bind
         source: ./.build/synapse
         target: /data
+      - type: volume
+        source: alkemio_dev_synapse
+        target: /data/keys
+        read_only: false
 
   postgres:
     container_name: alkemio_dev_postgres
@@ -152,14 +280,23 @@ services:
       - alkemio_dev_net
     environment:
       - POSTGRES_DB=synapse
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
       - POSTGRES_INITDB_ARGS=--encoding=UTF8 --lc-collate=C --lc-ctype=C
+      - POSTGRES_MULTIPLE_DATABASES
     restart: always
     ports:
       - 5432
     volumes:
       - alkemio_dev_postgres:/var/lib/postgresql/data
+      - ./.build/postgres/init-multiple-databases.sh:/docker-entrypoint-initdb.d/init-multiple-databases.sh
+    healthcheck:
+      test: >
+        bash -c "databases=\"$$POSTGRES_DB,$$POSTGRES_MULTIPLE_DATABASES\"; for db in $$(echo \"$$databases\" | tr ',' ' '); do [ -z \"$$db\" ] && continue; pg_isready -U \"$$POSTGRES_USER\" -d \"$$db\" -h localhost || exit 1; done"
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
 
   synapse-admin:
     container_name: alkemio_dev_synapse_admin
@@ -231,6 +368,8 @@ services:
       - WAIT_HOSTS_TIMEOUT=300
       - WAIT_SLEEP_INTERVAL=30
       - WAIT_HOST_CONNECT_TIMEOUT=30
+      - EMAIL_FROM
+      - EMAIL_FROM_NAME
     restart: always
     networks:
       - alkemio_dev_net
