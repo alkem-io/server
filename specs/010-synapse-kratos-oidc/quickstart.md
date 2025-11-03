@@ -48,12 +48,14 @@ echo "✅ Secrets generated in .env.docker"
 ```
 
 **Important Notes**:
+
 - **`.env.docker` contains ONLY shared secrets and simple configuration values** (following NFR-004)
 - **Service-specific URLs and DSNs are composed in `quickstart-services.yml`** using environment variable components (${POSTGRES_USER}, ${POSTGRES_PASSWORD}, etc.)
 - **This pattern enables deployment flexibility**: Default values work for Docker Compose; K8s deployments override via ConfigMap/Secrets
 - **Follows existing Kratos pattern**: See `quickstart-services.yml` line 66 for DSN composition example
 
 **What's NOT in .env.docker** (intentionally):
+
 - ❌ `HYDRA_DSN` - Composed in Hydra service definition from ${POSTGRES_USER}, ${POSTGRES_PASSWORD}
 - ❌ `ALKEMIO_WEB_BASE_URL` - Constructed in-line in Hydra service environment
 - ❌ `POSTGRES_HOST`, `POSTGRES_PORT` - Use Docker Compose defaults (`postgres`, `5432`), overridable in K8s
@@ -89,6 +91,7 @@ echo "✅ OIDC controller configuration added to .env.docker"
 ```
 
 **What these variables do**:
+
 - `OIDC_WEB_BASE_URL`: Public URL where users access the platform (used for constructing redirect URLs)
 - `OIDC_API_PUBLIC_BASE_PATH`: Path where OIDC controllers are mounted (e.g., `/api/public/rest/oidc/login`)
 - `OIDC_KRATOS_PUBLIC_BASE_PATH`: Path to Kratos public API through Traefik (for session validation)
@@ -152,7 +155,7 @@ services:
     # ... existing postgres configuration ...
     environment:
       # ... existing environment variables ...
-      - POSTGRES_MULTIPLE_DATABASES=${POSTGRES_MULTIPLE_DATABASES}
+      - POSTGRES_MULTIPLE_DATABASES
     volumes:
       # ... existing volumes ...
       - ./.build/postgres/init-multiple-databases.sh:/docker-entrypoint-initdb.d/init-multiple-databases.sh:ro
@@ -175,8 +178,8 @@ services:
     depends_on:
       - hydra-migrate
     ports:
-      - "4444:4444"  # Public API
-      - "4445:4445"  # Admin API
+      - '4444:4444' # Public API
+      - '4445:4445' # Admin API
     environment:
       - DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/hydra?sslmode=disable
       - SECRETS_SYSTEM=${HYDRA_SYSTEM_SECRET}
@@ -207,6 +210,7 @@ services:
 ```
 
 **Key Changes Explained**:
+
 - **DSN composition**: `postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/hydra?sslmode=disable` uses component variables (NFR-004 compliant)
 - **Default hostnames**: `postgres` and `localhost` work for Docker Compose; override for K8s via environment variables
 - **URL construction**: URLS_SELF_ISSUER, URLS_LOGIN, URLS_CONSENT are composed in-line (not from .env.docker)
@@ -228,17 +232,20 @@ This section documents common error scenarios, their symptoms, root causes, and 
 ### Scenario 1: Kratos Service Unavailable (FR-014)
 
 **Symptoms**:
+
 - Matrix users see error: "Authentication service temporarily unavailable. Please retry in 2-5 minutes."
 - HTTP 500 Internal Server Error when accessing `/api/public/rest/oidc/login`
 - Server logs show: `WARN [oidc] Kratos whoami failed - status: 502` or connection errors
 
 **Root Causes**:
+
 1. Kratos container stopped or crashed
 2. Network connectivity issues between alkemio-server and Kratos
 3. Kratos database connection failure
 4. Kratos service overloaded or unresponsive
 
 **Resolution Steps**:
+
 ```bash
 # 1. Check Kratos container status
 docker ps | grep kratos
@@ -260,6 +267,7 @@ docker compose -f quickstart-services.yml restart alkemio-server
 ```
 
 **Expected Behavior**:
+
 - Users see user-friendly error message (max 300 characters per FR-014)
 - Error includes retry guidance and estimated recovery time (2-5 minutes)
 - Existing Matrix sessions continue working (no session termination)
@@ -272,16 +280,19 @@ docker compose -f quickstart-services.yml restart alkemio-server
 ### Scenario 2: Account Deletion/Disable (FR-015)
 
 **Symptoms**:
+
 - User's Kratos account deleted or disabled via admin action
 - Active Matrix sessions for that user
 - User needs to be logged out from Matrix
 
 **Root Causes**:
+
 1. Admin deleted Kratos identity via Kratos Admin UI
 2. Account disabled due to policy violation
 3. Account migration or consolidation
 
 **Resolution Steps**:
+
 ```bash
 # 1. Verify Kratos identity state
 curl http://localhost:4434/admin/identities/{identity_id}
@@ -300,6 +311,7 @@ curl -X POST 'http://localhost:8008/_synapse/admin/v1/users/@user:localhost/logo
 ```
 
 **Expected Behavior** (with US3 implementation):
+
 - Matrix session terminates within 5 minutes of Kratos account deletion (FR-015)
 - User prompted to re-authenticate when attempting Matrix actions
 - Re-authentication fails if Kratos account deleted (shows "Account not found")
@@ -314,17 +326,20 @@ curl -X POST 'http://localhost:8008/_synapse/admin/v1/users/@user:localhost/logo
 ### Scenario 3: Token Refresh Failures
 
 **Symptoms**:
+
 - Matrix client shows "Token expired" or "Authentication failed"
 - User repeatedly prompted to log in
 - Server logs show: `ERROR [oidc] Token validation failed`
 
 **Root Causes**:
+
 1. Hydra refresh token expired (lifetime: 300s per NFR-002)
 2. Hydra service restarted, invalidating in-memory tokens
 3. Clock skew between services
 4. Database connection issues affecting token storage
 
 **Resolution Steps**:
+
 ```bash
 # 1. Check Hydra service status
 docker ps | grep hydra
@@ -344,6 +359,7 @@ docker exec alkemio_dev_synapse cat /data/homeserver.yaml | grep -A20 "oidc_prov
 ```
 
 **Expected Behavior**:
+
 - Token refresh attempts logged at DEBUG level
 - Failed refresh attempts return HTTP 401
 - User redirected to OIDC login flow
@@ -357,18 +373,21 @@ docker exec alkemio_dev_synapse cat /data/homeserver.yaml | grep -A20 "oidc_prov
 ### Scenario 4: Network Interruptions During OIDC Flow
 
 **Symptoms**:
+
 - OAuth2 authorization flow stalls mid-process
 - User stuck on redirect loop
 - Browser shows "Connection timed out" or "Bad Gateway"
 - Server logs show: `ERROR [oidc] Failed to fetch login challenge - challengeId: xyz, errorCode: HYDRA_GET_LOGIN_CHALLENGE_FAILED`
 
 **Root Causes**:
+
 1. Traefik proxy down or misconfigured
 2. DNS resolution failure for `hydra`, `kratos`, or `alkemio-server` Docker service names
 3. Network partition between Docker containers
 4. Firewall blocking OAuth2 callback URLs
 
 **Resolution Steps**:
+
 ```bash
 # 1. Check all OIDC services running
 docker compose -f quickstart-services.yml ps | grep -E "hydra|kratos|traefik|alkemio"
@@ -392,6 +411,7 @@ docker compose -f quickstart-services.yml restart hydra kratos alkemio-server tr
 ```
 
 **Expected Behavior**:
+
 - Network errors logged at ERROR level with stack traces
 - User sees "Authentication service temporarily unavailable" (FR-014)
 - OAuth2 challenges expire after timeout (default: 10 minutes)
@@ -404,17 +424,20 @@ docker compose -f quickstart-services.yml restart hydra kratos alkemio-server tr
 ### Scenario 5: Hydra Service Failures
 
 **Symptoms**:
+
 - OAuth2 authorization endpoint returns HTTP 500
 - Server logs show: `ERROR [oidc] Failed to fetch login challenge - challengeId: xyz, errorCode: HYDRA_GET_LOGIN_CHALLENGE_FAILED`
 - Hydra Admin API calls fail
 
 **Root Causes**:
+
 1. Hydra database (PostgreSQL) connection lost
 2. Hydra container out of memory
 3. Invalid OAuth2 client configuration
 4. Database migration not completed
 
 **Resolution Steps**:
+
 ```bash
 # 1. Check Hydra container health
 docker ps -a | grep hydra
@@ -440,6 +463,7 @@ docker compose -f quickstart-services.yml restart hydra
 ```
 
 **Expected Behavior**:
+
 - Hydra errors logged at ERROR level with HTTP status codes
 - alkemio-server catches Hydra API errors and returns user-friendly message
 - OAuth2 client registration idempotent via `hydra-client-setup` container
@@ -452,17 +476,20 @@ docker compose -f quickstart-services.yml restart hydra
 ### Scenario 6: Database Connection Errors
 
 **Symptoms**:
+
 - Multiple services showing database connection failures
 - Logs show: `FATAL: database "hydra" does not exist` or `connection refused`
 - Services stuck in restart loops
 
 **Root Causes**:
+
 1. PostgreSQL container stopped or crashed
 2. Database migration scripts not executed
 3. Incorrect database credentials in DSN
 4. Stale database connections after PostgreSQL restart
 
 **Resolution Steps**:
+
 ```bash
 # 1. Check PostgreSQL container status
 docker ps | grep postgres
@@ -491,6 +518,7 @@ docker compose -f quickstart-services.yml restart hydra kratos synapse
 ```
 
 **Expected Behavior**:
+
 - Database errors logged at ERROR level with connection details
 - Services automatically reconnect via connection pool retry logic
 - Migration containers exit with code 0 on success
@@ -505,11 +533,13 @@ docker compose -f quickstart-services.yml restart hydra kratos synapse
 ### Log Analysis Commands
 
 **View all OIDC logs**:
+
 ```bash
 tail -f /tmp/alkemio-server.log | grep -i "\[oidc\]"
 ```
 
 **Filter by severity**:
+
 ```bash
 # Errors only
 grep "ERROR \[oidc\]" /tmp/alkemio-server.log | tail -20
@@ -522,6 +552,7 @@ grep "DEBUG \[oidc\]" /tmp/alkemio-server.log | tail -50
 ```
 
 **Extract key metrics**:
+
 ```bash
 # Count errors by type
 grep "ERROR \[oidc\]" /tmp/alkemio-server.log | \
@@ -535,12 +566,14 @@ grep "\[oidc\]" /tmp/alkemio-server.log | tail -100 | \
 ### Required Log Fields (NFR-003)
 
 All OIDC logs include:
+
 - **challengeId**: OAuth2 challenge identifier
 - **userId/subject**: User email or identifier (where applicable)
 - **timestamp**: ISO 8601 format (e.g., `2025-10-22T00:52:24.330Z`)
 - **errorCode**: Error type for failures (e.g., `INVALID_CHALLENGE`, `HYDRA_ERROR`, `KRATOS_UNAVAILABLE`)
 
 **Log Severity Levels**:
+
 - **DEBUG**: OAuth2 flow details, session checks, Hydra API calls
 - **WARN**: Non-fatal issues (Kratos failures, missing session data)
 - **LOG/INFO**: Successful operations (login accepted, consent accepted)
