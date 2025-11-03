@@ -171,12 +171,12 @@ export class GraphqlGuard extends AuthGuard([
   }
 
   public createAnonymousAgentInfo(): AgentInfo {
-    const emptyAgentInfo = new AgentInfo();
+    const agentInfo = new AgentInfo();
     const anonymousCredential: ICredentialDefinition = {
       type: AuthorizationCredential.GLOBAL_ANONYMOUS,
       resourceID: '',
     };
-    emptyAgentInfo.credentials = [anonymousCredential];
-    return emptyAgentInfo;
+    agentInfo.credentials = [anonymousCredential];
+    return agentInfo;
   }
 }
