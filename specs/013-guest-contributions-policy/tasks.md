@@ -23,10 +23,10 @@ description: 'Task list for Guest Contributions Policy implementation'
 
 **Alignment**: Matches plan.md Task 1-4 (Interface Updates, DTO Updates, Migration)
 
-- [ ] T001 [P] Add allowGuestContributions field to ISpaceSettingsCollaboration interface in src/domain/space/space.settings/space.settings.collaboration.interface.ts
-- [ ] T002 [P] Add allowGuestContributions field to CreateSpaceSettingsCollaborationInput DTO in src/domain/space/space.settings/dto/space.settings.collaboration.dto.create.ts
-- [ ] T003 [P] Add allowGuestContributions field to UpdateSpaceSettingsCollaborationInput DTO in src/domain/space/space.settings/dto/space.settings.collaboration.dto.update.ts
-- [ ] T004 Create database migration following pattern from 1759156590119-addSettingAllowMembersToVideoCall.ts in src/migrations/
+- [x] T001 [P] Add allowGuestContributions field to ISpaceSettingsCollaboration interface in src/domain/space/space.settings/space.settings.collaboration.interface.ts
+- [x] T002 [P] Add allowGuestContributions field to CreateSpaceSettingsCollaborationInput DTO in src/domain/space/space.settings/dto/space.settings.collaboration.dto.create.ts
+- [x] T003 [P] Add allowGuestContributions field to UpdateSpaceSettingsCollaborationInput DTO in src/domain/space/space.settings/dto/space.settings.collaboration.dto.update.ts
+- [x] T004 Create database migration following pattern from 1759156590119-addSettingAllowMembersToVideoCall.ts in src/migrations/
 
 **Checkpoint**: Domain model and migration ready for template updates
 
@@ -38,10 +38,10 @@ description: 'Task list for Guest Contributions Policy implementation'
 
 **Alignment**: Matches plan.md Task 5 (Update Template Defaults)
 
-- [ ] T005 [P] Update space L0 template to include allowGuestContributions: false in src/core/bootstrap/platform-template-definitions/default-templates/bootstrap.template.space.content.space.l0.ts
-- [ ] T006 [P] Update subspace template to include allowGuestContributions: false in src/core/bootstrap/platform-template-definitions/default-templates/bootstrap.template.space.content.subspace.ts
-- [ ] T007 [P] Update knowledge base callouts template (if contains collaboration settings) in src/core/bootstrap/platform-template-definitions/default-templates/bootstrap.template.space.content.callouts.vc.knowledge.base.ts
-- [ ] T008 [P] Update tutorials callouts template (if contains collaboration settings) in src/core/bootstrap/platform-template-definitions/default-templates/bootstrap.template.space.content.callouts.space.l0.tutorials.ts
+- [x] T005 [P] Update space L0 template to include allowGuestContributions: false in src/core/bootstrap/platform-template-definitions/default-templates/bootstrap.template.space.content.space.l0.ts
+- [x] T006 [P] Update subspace template to include allowGuestContributions: false in src/core/bootstrap/platform-template-definitions/default-templates/bootstrap.template.space.content.subspace.ts
+- [x] T007 [P] Update knowledge base callouts template (if contains collaboration settings) in src/core/bootstrap/platform-template-definitions/default-templates/bootstrap.template.space.content.callouts.vc.knowledge.base.ts
+- [x] T008 [P] Update tutorials callouts template (if contains collaboration settings) in src/core/bootstrap/platform-template-definitions/default-templates/bootstrap.template.space.content.callouts.space.l0.tutorials.ts
 
 **Checkpoint**: All templates updated with secure defaults
 
@@ -53,7 +53,7 @@ description: 'Task list for Guest Contributions Policy implementation'
 
 **Alignment**: Matches plan.md Task 6 (Generate Schema)
 
-- [ ] T009 Regenerate GraphQL schema by running pnpm run schema:print and pnpm run schema:sort
+- [x] T009 Regenerate GraphQL schema by running pnpm run schema:print and pnpm run schema:sort
 
 **Checkpoint**: GraphQL schema updated and exposed
 
@@ -65,10 +65,10 @@ description: 'Task list for Guest Contributions Policy implementation'
 
 **Alignment**: Matches plan.md Validation Steps
 
-- [ ] T010 [P] Run pnpm run schema:diff to validate schema changes are non-breaking
-- [ ] T011 [P] Verify migration sets default false for all existing spaces
-- [ ] T012 [P] Verify template defaults ensure new spaces have allowGuestContributions: false
-- [ ] T013 Run final schema validation with pnpm run schema:validate
+- [x] T010 [P] Run pnpm run schema:diff to validate schema changes are non-breaking
+- [x] T011 [P] Verify migration sets default false for all existing spaces
+- [x] T012 [P] Verify template defaults ensure new spaces have allowGuestContributions: false
+- [x] T013 Run final schema validation with pnpm run schema:validate
 
 **Checkpoint**: Implementation validated and ready for deployment
 

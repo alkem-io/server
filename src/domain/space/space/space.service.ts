@@ -898,6 +898,7 @@ export class SpaceService {
             allowMembersToCreateSubspaces: true,
             inheritMembershipRights: true,
             allowMembersToVideoCall: false,
+            allowGuestContributions: false,
           },
           membership: {
             allowSubspaceAdminsToInviteMembers: true,
