@@ -95,7 +95,6 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
 import { PlatformAdminModule } from './platform-admin/admin/platform.admin.module';
 import { NotificationRecipientsModule } from '@services/api/notification-recipients/notification.recipients.module';
 import { InAppNotificationAdminModule } from './platform-admin/in-app-notification/in.app.notification.admin.module';
-import { GuestTestResolver } from '@domain/test/guest.test.resolver';
 
 @Module({
   imports: [
@@ -351,7 +350,6 @@ import { GuestTestResolver } from '@domain/test/guest.test.resolver';
       useClass: ValidationPipe,
     },
     APP_ID_PROVIDER,
-    GuestTestResolver,
   ],
 })
 export class AppModule {
