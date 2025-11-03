@@ -41,4 +41,10 @@ export abstract class IUserSettingsNotificationSpace {
       'Receive a notification when a comment is created on a Post contribution',
   })
   collaborationCalloutPostContributionComment!: IUserSettingsNotificationChannels;
+
+  @Field(() => IUserSettingsNotificationChannels, {
+    nullable: false,
+    description: 'Receive a notification when a calendar event is created',
+  })
+  communityCalendarEvents!: IUserSettingsNotificationChannels;
 }
