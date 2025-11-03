@@ -212,7 +212,7 @@ services:
     networks:
       - alkemio_dev_net
     ports:
-      - 8085:8080
+      - 8080:8080
     restart: unless-stopped
 
   oathkeeper:
