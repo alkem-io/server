@@ -116,6 +116,7 @@ export class CommunicationResolverMutations {
         `skipping sending to oneself: ${senderID}`,
         LogContext.COMMUNICATION
       );
+      return;
     }
     const sender = await this.userService.getUserOrFail(senderID, {
       relations: {

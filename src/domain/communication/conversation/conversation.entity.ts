@@ -15,7 +15,7 @@ export class Conversation extends AuthorizableEntity implements IConversation {
   @Column('varchar', { length: ENUM_LENGTH, nullable: false })
   type!: CommunicationConversationType;
 
-  @Column('char', { length: UUID_LENGTH, nullable: false })
+  @Column('char', { length: UUID_LENGTH, nullable: true })
   userID?: string;
 
   @Column('char', { length: UUID_LENGTH, nullable: true })

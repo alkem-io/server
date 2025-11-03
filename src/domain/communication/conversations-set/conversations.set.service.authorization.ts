@@ -28,6 +28,7 @@ export class ConversationsSetAuthorizationService {
         conversationsSetInput.id,
         {
           relations: {
+            authorization: true,
             conversations: true,
           },
         }
@@ -79,6 +80,7 @@ export class ConversationsSetAuthorizationService {
       relations: {
         authorization: true,
         conversationsSet: {
+          authorization: true,
           conversations: {
             authorization: true,
           },

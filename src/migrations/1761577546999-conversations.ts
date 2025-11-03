@@ -30,7 +30,13 @@ export class Conversations1761577546999 implements MigrationInterface {
       `ALTER TABLE \`user\` ADD \`conversationsSetId\` char(36) NULL`
     );
     await queryRunner.query(
-      `ALTER TABLE \`platform\` ADD \`wellKnownVirtualContributors\` json NOT NULL`
+      `ALTER TABLE \`platform\` ADD \`wellKnownVirtualContributors\` json NULL`
+    );
+    await queryRunner.query(
+      `UPDATE \`platform\` SET wellKnownVirtualContributors = JSON_OBJECT() WHERE wellKnownVirtualContributors IS NULL`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`platform\` MODIFY \`wellKnownVirtualContributors\` json NOT NULL`
     );
     await queryRunner.query(
       `ALTER TABLE \`user\` ADD UNIQUE INDEX \`IDX_user_conversationsSetId\` (\`conversationsSetId\`)`

@@ -16,6 +16,7 @@ import { CreateConversationInput } from '../conversation/dto/conversation.dto.cr
 import { MessagingNotEnabledException } from '@common/exceptions/messaging.not.enabled.exception';
 import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
 import { ConversationsSetAuthorizationService } from './conversations.set.service.authorization';
+import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 
 @InstrumentResolver()
 @Resolver()
@@ -108,6 +109,13 @@ export class ConversationsSetResolverMutations {
       AuthorizationPrivilege.READ,
       `user ${agentInfo.userID} starting conversation with: ${receivingUser.id}`
     );
+
+    if (!receivingUser.settings) {
+      throw new EntityNotInitializedException(
+        'User settings not initialized',
+        LogContext.COMMUNICATION_CONVERSATION
+      );
+    }
 
     // Check if the user is willing to receive messages
     if (!receivingUser.settings.communication.allowOtherUsersToSendMessages) {

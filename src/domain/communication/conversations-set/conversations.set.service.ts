@@ -153,10 +153,19 @@ export class ConversationsSetService {
       case CommunicationConversationType.USER_VC:
         existingConversation = existingConversationsByType.find(
           conversation => {
-            return (
-              conversation.virtualContributorID ===
-              conversationData.virtualContributorID
-            );
+            if (conversationData.virtualContributorID) {
+              return (
+                conversation.virtualContributorID ===
+                conversationData.virtualContributorID
+              );
+            }
+            if (conversationData.wellKnownVirtualContributor) {
+              return (
+                conversation.wellKnownVirtualContributor ===
+                conversationData.wellKnownVirtualContributor
+              );
+            }
+            return false;
           }
         );
         if (existingConversation) {
