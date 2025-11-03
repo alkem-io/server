@@ -125,6 +125,7 @@ jobs:
         env:
           GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
           FALLBACK_GPG_KEY_ID: ${{ secrets.ALKEMIO_INFRASTRUCTURE_BOT_GPG_KEY_ID }}
+          PUSH_TOKEN: ${{ secrets.ALKEMIO_INFRASTRUCTURE_BOT_PUSH_TOKEN }}
         run: |
           set -Eeuo pipefail
           trap '{
@@ -145,6 +146,11 @@ jobs:
             exit 1
           fi
 
+          if [ -z "${PUSH_TOKEN:-}" ]; then
+            echo "::error::Missing PAT; set secret ALKEMIO_INFRASTRUCTURE_BOT_PUSH_TOKEN." >&2
+            exit 1
+          fi
+
           git add schema-baseline.graphql
           if git diff --cached --quiet; then
             echo "No staged changes detected after baseline comparison."
@@ -154,7 +160,7 @@ jobs:
           git commit -m "chore: update schema baseline" -S
           echo "BASELINE_FAILURE_PHASE=push" >> "$GITHUB_ENV"
           git pull --ff-only origin develop
-          git push origin HEAD:develop
+          git push "https://x-access-token:${PUSH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:develop
           echo "BASELINE_FAILURE_CONTEXT=Baseline commit pushed successfully." >> "$GITHUB_ENV"
 
       - name: Upload baseline artifacts
