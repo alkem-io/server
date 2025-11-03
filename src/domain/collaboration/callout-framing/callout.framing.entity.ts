@@ -32,7 +32,7 @@ export class CalloutFraming
   @OneToOne(() => Callout, callout => callout.framing)
   callout?: Callout;
 
-  @OneToOne(() => Whiteboard, whiteboard => whiteboard.framing, {
+  @OneToOne(() => Whiteboard, {
     eager: false,
     cascade: true,
     onDelete: 'SET NULL',

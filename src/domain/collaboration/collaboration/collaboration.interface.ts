@@ -4,7 +4,6 @@ import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
 import { IInnovationFlow } from '../innovation-flow/innovation.flow.interface';
 import { ILicense } from '@domain/common/license/license.interface';
 import { ICalloutsSet } from '../callouts-set/callouts.set.interface';
-import { ISpace } from '@domain/space/space/space.interface';
 
 @ObjectType('Collaboration')
 export abstract class ICollaboration extends IAuthorizable {
@@ -21,6 +20,4 @@ export abstract class ICollaboration extends IAuthorizable {
     description: 'Whether this Collaboration is a Template or not.',
   })
   isTemplate!: boolean;
-
-  space?: ISpace;
 }
