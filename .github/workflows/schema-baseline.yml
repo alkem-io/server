@@ -159,6 +159,8 @@ jobs:
 
       - name: Push baseline branch
         if: env.BASELINE_PR_BRANCH != ''
+        env:
+          PUSH_TOKEN: ${{ secrets.ALKEMIO_INFRASTRUCTURE_BOT_PUSH_TOKEN }}
         run: |
           set -Eeuo pipefail
           trap '{
@@ -166,7 +168,12 @@ jobs:
             echo "BASELINE_FAILURE_PHASE=push" >> "$GITHUB_ENV";
           }' ERR
 
-          git push --force-with-lease origin "${BASELINE_PR_BRANCH}"
+          if [ -z "${PUSH_TOKEN:-}" ]; then
+            echo "::error::Missing PAT; set secret ALKEMIO_INFRASTRUCTURE_BOT_PUSH_TOKEN." >&2
+            exit 1
+          fi
+
+          git push --force-with-lease "https://x-access-token:${PUSH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "${BASELINE_PR_BRANCH}"
           echo "BASELINE_FAILURE_PHASE=pull-request" >> "$GITHUB_ENV"
           echo "BASELINE_FAILURE_CONTEXT=Baseline branch ${BASELINE_PR_BRANCH} pushed." >> "$GITHUB_ENV"
 
@@ -176,7 +183,7 @@ jobs:
         env:
           BASELINE_PR_BRANCH: ${{ env.BASELINE_PR_BRANCH }}
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.ALKEMIO_INFRASTRUCTURE_BOT_PUSH_TOKEN }}
           script: |
             const branch = process.env.BASELINE_PR_BRANCH;
             const title = 'chore: update schema baseline';
