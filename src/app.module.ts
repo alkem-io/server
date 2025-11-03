@@ -95,7 +95,7 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
 import { PlatformAdminModule } from './platform-admin/admin/platform.admin.module';
 import { NotificationRecipientsModule } from '@services/api/notification-recipients/notification.recipients.module';
 import { InAppNotificationAdminModule } from './platform-admin/in-app-notification/in.app.notification.admin.module';
-import { AuthEvaluationModule } from '@services/external/auth-evaluation';
+import { AuthRemoteEvaluationModule } from '@services/external/auth-remote-evaluation';
 
 @Module({
   imports: [
@@ -317,7 +317,7 @@ import { AuthEvaluationModule } from '@services/external/auth-evaluation';
     WingbackWebhookModule,
     CalloutTransferModule,
     SearchModule,
-    AuthEvaluationModule,
+    AuthRemoteEvaluationModule,
   ],
   controllers: [AppController, SsiCredentialFlowController],
   providers: [

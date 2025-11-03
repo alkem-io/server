@@ -36,7 +36,7 @@ import { UrlGeneratorModule } from '@services/infrastructure/url-generator/url.g
 import { TemplateContentSpaceModule } from '@domain/template/template-content-space/template.content.space.module';
 import { PlatformRolesAccessModule } from '@domain/access/platform-roles-access/platform.roles.access.module';
 import { SpacePlatformRolesAccessService } from './space.service.platform.roles.access';
-import { AuthEvaluationModule } from '@services/external/auth-evaluation';
+import { AuthRemoteEvaluationModule } from '@services/external/auth-remote-evaluation';
 
 @Module({
   imports: [
@@ -68,7 +68,7 @@ import { AuthEvaluationModule } from '@services/external/auth-evaluation';
     LicenseModule,
     UrlGeneratorModule,
     TypeOrmModule.forFeature([Space]),
-    AuthEvaluationModule,
+    AuthRemoteEvaluationModule,
   ],
   providers: [
     SpaceService,

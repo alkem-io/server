@@ -4,13 +4,13 @@ import {
   Transport,
   NatsOptions,
 } from '@nestjs/microservices';
-import { AUTH_EVALUATION_PUBLISHER } from './injection.token';
-import { AuthEvaluationService } from './auth.evaluation.service';
+import { AUTH_REMOTE_EVALUATION_CLIENT } from './injection.token';
+import { AuthRemoteEvaluationService } from './auth.remote.evaluation.service';
 
 @Module({
   providers: [
     {
-      provide: AUTH_EVALUATION_PUBLISHER,
+      provide: AUTH_REMOTE_EVALUATION_CLIENT,
       useFactory: () => {
         return ClientProxyFactory.create({
           transport: Transport.NATS,
@@ -22,8 +22,8 @@ import { AuthEvaluationService } from './auth.evaluation.service';
         } as NatsOptions);
       },
     },
-    AuthEvaluationService,
+    AuthRemoteEvaluationService,
   ],
-  exports: [AUTH_EVALUATION_PUBLISHER, AuthEvaluationService],
+  exports: [AUTH_REMOTE_EVALUATION_CLIENT, AuthRemoteEvaluationService],
 })
-export class AuthEvaluationModule {}
+export class AuthRemoteEvaluationModule {}

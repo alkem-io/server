@@ -10,7 +10,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { firstValueFrom, map, tap } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { measureLatency } from '@services/util';
-import { AUTH_EVALUATION_PUBLISHER } from './injection.token';
+import { AUTH_REMOTE_EVALUATION_CLIENT } from './injection.token';
 import { LogContext } from '@common/enums';
 
 export interface AuthEvaluationRequest {
@@ -25,9 +25,11 @@ export interface AuthEvaluationResponse {
 }
 
 @Injectable()
-export class AuthEvaluationService implements OnModuleInit, OnModuleDestroy {
+export class AuthRemoteEvaluationService
+  implements OnModuleInit, OnModuleDestroy
+{
   constructor(
-    @Inject(AUTH_EVALUATION_PUBLISHER) private client: ClientProxy,
+    @Inject(AUTH_REMOTE_EVALUATION_CLIENT) private client: ClientProxy,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
