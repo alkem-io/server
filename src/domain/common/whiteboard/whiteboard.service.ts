@@ -74,8 +74,8 @@ export class WhiteboardService {
     });
 
     whiteboard.previewSettings = {
-      mode: WhiteboardPreviewMode.AUTO,
-      coordinates: null,
+      mode: whiteboardData.previewSettings?.mode ?? WhiteboardPreviewMode.AUTO,
+      coordinates: whiteboardData.previewSettings?.coordinates ?? null,
     };
 
     return whiteboard;

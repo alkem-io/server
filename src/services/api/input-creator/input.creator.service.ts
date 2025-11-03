@@ -388,6 +388,7 @@ export class InputCreatorService {
       profile: this.buildCreateProfileInputFromProfile(whiteboard.profile),
       content: whiteboard.content,
       nameID: whiteboard.nameID,
+      previewSettings: whiteboard.previewSettings,
     };
   }
 

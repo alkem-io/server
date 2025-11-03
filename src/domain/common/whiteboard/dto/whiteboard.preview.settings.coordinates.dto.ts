@@ -1,7 +1,8 @@
-import { Field, InputType } from '@nestjs/graphql';
+import { Field, InputType, ObjectType } from '@nestjs/graphql';
 
 @InputType()
-export class UpdateWhiteboardPreviewCoordinatesInput {
+@ObjectType('WhiteboardPreviewCoordinatesData')
+export class WhiteboardPreviewCoordinatesInput {
   @Field(() => Number, {
     nullable: false,
     description: 'The x coordinate.',
