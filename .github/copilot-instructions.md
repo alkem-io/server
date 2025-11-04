@@ -47,7 +47,7 @@
   3. `pnpm run schema:diff` (requires `tmp/prev.schema.graphql`; fetch from base branch if absent).
   4. Inspect `change-report.json` (`BREAKING` entries need CODEOWNER review comment with `BREAKING-APPROVED`).
   5. Optional validation: `pnpm run schema:validate`.
-- Baseline automation: merges to `develop` trigger `schema-baseline.yml` to regenerate `schema-baseline.graphql`, publish a diff summary, and push a signed commit when changes exist. To preview the summary locally, run `pnpm exec ts-node scripts/schema/publish-baseline.ts --report change-report.json` after generating a diff.
+- Baseline automation: merges to `develop` trigger `schema-baseline.yml` to regenerate `schema-baseline.graphql`, publish a diff summary, and open a signed PR (branch `schema-baseline/<run-id>`) from the automation account when changes exist. To preview the summary locally, run `pnpm exec ts-node scripts/schema/publish-baseline.ts --report change-report.json` after generating a diff.
 - Database migrations: `pnpm run migration:generate -n <Name>` (requires DSN env vars), `pnpm run migration:run`, `pnpm run migration:revert`. Validation harness `.scripts/migrations/run_validate_migration.sh` snapshots DB, applies migration, exports CSVs, compares to reference, then restores backup.
 - Other tooling: `pnpm run migration:validate` (shell script), `pnpm run circular-dependencies` (requires built `dist`), `pnpm format` for Prettier.
 
@@ -69,7 +69,7 @@
 
 - GitHub Actions:
   - `schema-contract.yml` runs pnpm install, generates schema snapshot (light bootstrap), diffs vs baseline, posts sticky PR comment, and fails on unapproved BREAKING/PREMATURE_REMOVAL issues.
-  - `schema-baseline.yml` runs on merges to `develop`, regenerates the baseline snapshot, uploads diff artifacts, and auto-commits a signed `schema-baseline.graphql` update or notifies CODEOWNERS when it fails.
+  - `schema-baseline.yml` runs on merges to `develop`, regenerates the baseline snapshot, uploads diff artifacts, and raises a signed pull request with the refreshed `schema-baseline.graphql` when it detects changes (falling back to CODEOWNER notification on failure).
   - `build-release-docker-hub.yml` builds and publishes Docker images (Node 20 + pnpm caches).
   - `build-deploy-k8s-*.yml` target dev/sandbox/test Hetzner clusters after container build.
   - `trigger-e2e-tests.yml` dispatches downstream full-stack tests.

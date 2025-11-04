@@ -4903,6 +4903,7 @@ type PromptGraph {
 
 type PromptGraphDataPoint {
   description: String
+  items: PromptGraphDataStruct
   name: String!
   optional: Boolean
   type: String
@@ -4910,6 +4911,7 @@ type PromptGraphDataPoint {
 
 input PromptGraphDataPointInput {
   description: String
+  items: PromptGraphDataStructInput
   name: String!
   optional: Boolean
   type: String
@@ -6509,6 +6511,7 @@ input UpdateAiPersonaInput {
   engine: AiPersonaEngine
   externalConfig: ExternalConfigInput
   prompt: [String!]
+  promptGraph: PromptGraphInput
 }
 
 input UpdateApplicationFormOnRoleSetInput {

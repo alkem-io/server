@@ -65,7 +65,7 @@ The owning team must be alerted when generation fails so they can remediate quic
 - **FR-001**: The system MUST trigger schema baseline regeneration automatically after every successful merge into the `develop` branch.
 - **FR-002**: The system MUST produce a `schema-baseline.graphql` artifact that reflects the merged schema state.
 - **FR-003**: The system MUST compare the regenerated baseline to the version committed in the repository and surface any differences to maintainers.
-- **FR-004**: The system MUST auto-commit the regenerated baseline directly to the `develop` branch using a GPG-signed commit once differences are validated.
+- **FR-004**: The system MUST publish the regenerated baseline via a GPG-signed pull request targeting `develop` once differences are validated (include regenerated artifact and diff summary).
 - **FR-005**: The system MUST mark the automation run as failed and block silent completion when baseline generation or comparison cannot complete, providing diagnostics.
 - **FR-006**: The system MUST notify the owning team when the automation fails, including links to logs and the impacted commit.
 
@@ -94,4 +94,4 @@ The owning team must be alerted when generation fails so they can remediate quic
 
 ### Session 2025-10-28
 
-- Q: How should the regenerated baseline be delivered once differences are detected? → A: Auto-commit to `develop` with a GPG-signed commit.
+- Q: How should the regenerated baseline be delivered once differences are detected? → A: Open a GPG-signed pull request targeting `develop` from the automation account.

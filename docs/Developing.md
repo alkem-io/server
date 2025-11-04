@@ -52,9 +52,9 @@ The registration and the recovery flows include sending emails to the registered
 
 ## Schema baseline workflow troubleshooting
 
-- The `Schema Baseline` GitHub Action writes a summary with diff counts and links to artifacts after every `develop` push; inspect the job summary first when a baseline commit is missing.
+- The `Schema Baseline` GitHub Action writes a summary with diff counts and links to artifacts after every `develop` push; inspect the job summary first when a baseline pull request is missing.
 - If the run fails before publishing a commit, check the appended summary section for the `BASELINE_FAILURE_CONTEXT` note and download the `schema-baseline-<run>` artifact bundle for `schema.graphql`, `tmp/prev.schema.graphql`, and `change-report.json`.
-- Signing issues typically surface during the "Commit and push updated baseline" step. Confirm the `ALKEMIO_INFRASTRUCTURE_BOT_GPG_*` secrets match the key uploaded to the automation bot and that the key is marked as trusted in GitHub.
+- Signing issues typically surface during the "Commit baseline update" or branch push steps. Confirm the `ALKEMIO_INFRASTRUCTURE_BOT_GPG_*` secrets match the key uploaded to the automation bot and that the key is marked as trusted in GitHub. If the PR fails to open, confirm the `ALKEMIO_INFRASTRUCTURE_BOT_PUSH_TOKEN` secret still has `repo` scope and the bot account retains CLA privileges.
 - To regenerate locally, follow `specs/012-generate-schema-baseline/quickstart.md` and push the resulting `schema-baseline.graphql` if automation is blocked.
 - Owners automatically receive a commit comment on failure; if the automation remains red after remediation, re-run the job from the Actions UI with `workflow_dispatch` to verify the fix.
 
