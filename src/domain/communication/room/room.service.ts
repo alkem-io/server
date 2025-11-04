@@ -143,8 +143,8 @@ export class RoomService {
     reactionData: RoomAddReactionToMessageInput
   ): Promise<IMessageReaction> {
     // Ensure the user is a member of room and group so can send
-    await this.communicationAdapter.addUserToRoom(
-      room.externalRoomID,
+    await this.communicationAdapter.userAddToRooms(
+      [room.externalRoomID],
       communicationUserID
     );
 
@@ -169,8 +169,8 @@ export class RoomService {
     messageData: RoomRemoveReactionToMessageInput
   ): Promise<boolean> {
     // Ensure the user is a member of room and group so can send
-    await this.communicationAdapter.addUserToRoom(
-      room.externalRoomID,
+    await this.communicationAdapter.userAddToRooms(
+      [room.externalRoomID],
       communicationUserID
     );
 

@@ -49,7 +49,7 @@ export class PlatformAdminService {
       where: {
         visibility: visibilities?.length ? In(visibilities) : undefined,
         id: IDs?.length ? In(IDs) : undefined,
-        level: SpaceLevel.L0,        
+        level: SpaceLevel.L0,
       },
       order: { createdDate: sort },
     });

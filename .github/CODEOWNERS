@@ -1,0 +1,57 @@
+# CODEOWNERS for the alkem-io/server repository
+# Owners listed below will be requested for review on pull requests.
+
+# Set repository-wide owners
+* @valentinyanakiev @techsmyth
+
+# Authorization ownership
+# Files and modules related to authorization
+/src/core/authorization/ @techsmyth
+
+# Core and common ownership
+# Broad ownership for infrastructure-level code
+/src/core/ @valentinyanakiev
+/src/common/ @valentinyanakiev
+
+# Generic dataloaders, elasticsearch, reporting, contributions
+# Loaders and external/reporting infra
+/src/core/dataloader/ @hero101
+/src/services/external/elasticsearch/ @hero101
+/src/services/external/elasticsearch/** @hero101
+/src/domain/**/contribution* @hero101
+/src/**/*reporter/ @hero101
+/src/**/*reporter/** @hero101
+/src/**/*reporting/ @hero101
+/src/**/*reporting/** @hero101
+
+# Pagination ownership
+# Patterns matching pagination utilities, paginators, and pagination docs
+/src/**/pagination*/ @hero101
+/src/**/paginat*/ @hero101
+/src/**/paginator*/ @hero101
+/docs/**/pagination*/ @hero101
+
+# Domain model entities, GraphQL interfaces and abstractions
+# Ownership for domain entities and GraphQL interface definitions/abstractions
+/src/domain/**/entity/ @techsmyth
+/src/domain/**/entity/** @techsmyth
+/src/common/interfaces/ @techsmyth
+/src/common/interfaces/** @techsmyth
+/src/domain/**/interfaces/ @techsmyth
+/src/domain/**/interfaces/** @techsmyth
+/src/config/graphql/ @techsmyth
+/src/config/graphql/** @techsmyth
+/src/types/graphql/ @techsmyth
+/src/types/graphql/** @techsmyth
+
+# Migrations ownership
+# All migration files should be owned by @valentinyanakiev
+/migrations/ @valentinyanakiev
+/migrations/** @valentinyanakiev
+/src/migrations/ @valentinyanakiev
+/src/migrations/** @valentinyanakiev
+/src/**/migrations/ @valentinyanakiev
+/src/**/migrations/** @valentinyanakiev
+
+# If you need to assign owners to specific paths, add lines like:
+# /src/ @org/team

@@ -1,0 +1,24 @@
+@startuml CoverageMatrix
+skinparam defaultFontName Courier
+skinparam shadowing false
+
+title Coverage Gate Strategy
+
+rectangle "classify\nLines: High\nFuncs: High\nBranches: High\nOrchestrator core logic" as classify
+rectangle "diff\nLines: High\nFuncs: High\nBranches: High\nCritical semantics" as diff
+rectangle "governance\nLines: High\nFuncs: High\nBranches: Medium+\nPattern & review parsing" as governance
+rectangle "deprecation\nLines: High\nFuncs: High\nBranches: Moderate\nIterative date edge cases" as deprecation
+rectangle "snapshot\nLines: High\nFuncs: High\nBranches: Low*\nI/O guards only (future raise)" as snapshot
+rectangle "model\nLines: 100%\nFuncs: 100%\nBranches: 100%\nPure types" as model
+
+classify -[hidden]-> diff
+diff -[hidden]-> governance
+governance -[hidden]-> deprecation
+deprecation -[hidden]-> snapshot
+snapshot -[hidden]-> model
+
+note bottom
+* Low branches accepted initially; synthetic error-path tests planned.
+end note
+
+@enduml
