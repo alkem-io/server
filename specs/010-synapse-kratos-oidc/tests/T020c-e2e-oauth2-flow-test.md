@@ -58,6 +58,7 @@ User (Element Client)
 ### Scenario 1: First-Time User (Password Authentication)
 
 **Setup**:
+
 1. Create new Kratos identity:
    - Email: test-user@example.com
    - Password: TestPassword123!
@@ -75,20 +76,24 @@ User (Element Client)
    - **Expected**: Redirect to Synapse SSO endpoint
 
 2. **Synapse → Hydra Redirect** (FR-002):
+
    ```
    URL: /_matrix/client/v3/login/sso/redirect/oidc-oidc-hydra
    → Redirect to: http://localhost:3000/oauth2/auth?response_type=code&client_id=synapse-client&redirect_uri=...
    ```
+
    - **Verify**: URL contains authorization parameters
    - **Verify**: `client_id=synapse-client`
    - **Verify**: `response_type=code`
    - **Verify**: `scope=openid+profile+email`
 
 3. **Hydra → Login Challenge**:
+
    ```
    URL: http://localhost:3000/oauth2/auth
    → Redirect to: http://localhost:3000/api/public/rest/oidc/login?login_challenge=...
    ```
+
    - **Verify**: `login_challenge` parameter present
    - **Verify**: NestJS OIDC controller receives request
 
@@ -120,10 +125,12 @@ User (Element Client)
    - **Verify**: Hydra returns redirect_to URL
 
 6. **Hydra → Consent Challenge**:
+
    ```
    URL: http://localhost:3000/oauth2/auth (continued)
    → Redirect to: http://localhost:3000/api/public/rest/oidc/consent?consent_challenge=...
    ```
+
    - **Verify**: `consent_challenge` parameter present
 
 7. **Consent Challenge Acceptance**:
@@ -146,9 +153,11 @@ User (Element Client)
    - **Verify**: Hydra returns redirect_to URL
 
 8. **Authorization Code Callback** (FR-010):
+
    ```
    URL: /_synapse/client/oidc/callback?code=ory_ac_...&scope=openid+profile+email&state=...
    ```
+
    - **Verify**: Authorization code present
    - **Verify**: State parameter matches
 
@@ -163,6 +172,7 @@ User (Element Client)
    - **Verify**: Token validation successful
 
 10. **Userinfo Request**:
+
     ```
     GET http://hydra:4444/userinfo
     Headers: Authorization: Bearer <access_token>
@@ -174,6 +184,7 @@ User (Element Client)
       "family_name": "User"
     }
     ```
+
     - **Verify**: User claims present
 
 11. **Matrix Account Creation**:
@@ -195,6 +206,7 @@ User (Element Client)
 ### Scenario 2: Returning User (Existing Kratos Session)
 
 **Setup**:
+
 - User already authenticated to Kratos (session cookie exists)
 - User has Matrix account from previous login
 
@@ -219,6 +231,7 @@ User (Element Client)
 ### Scenario 3: Social Login (FR-016)
 
 **Setup**:
+
 - Sign in to Kratos using a federated Microsoft account (`redacted02@alkem.io`).
 - Ensure no existing Matrix account for the social identity (first run) or confirm linking behavior on subsequent runs.
 
@@ -236,6 +249,7 @@ User (Element Client)
 5-12. Same as Scenario 1 (Login acceptance through authentication complete).
 
 **Evidence**:
+
 - **NestJS logs** (excerpt):
   ```
   [oidc] Login accepted successfully ... userId: redacted02@alkem.io, timestamp: 2025-10-22T10:17:28.602Z
@@ -256,6 +270,7 @@ User (Element Client)
   ```
 
 **Validation**:
+
 - ✅ Social login works identically to password authentication (FR-016).
 - ✅ Matrix account automatically created and linked to `redacted02@alkem.io`.
 - ✅ Display name sourced from provider traits (available via `/userinfo`).
@@ -361,6 +376,7 @@ describe('E2E OAuth2 Authorization Code Flow', () => {
 **Status**: ✅ VERIFIED (based on log analysis)
 
 **Evidence from Synapse Logs**:
+
 ```
 2025-10-21 18:20:37,490 - INFO - Redirecting to http://localhost:3000/oauth2/auth?response_type=code&client_id=synapse-client&redirect_uri=http%3A%2F%2Flocalhost%3A8008%2F_synapse%2Fclient%2Foidc%2Fcallback&scope=openid+profile+email&state=...
 
@@ -374,6 +390,7 @@ describe('E2E OAuth2 Authorization Code Flow', () => {
 ```
 
 **Validation**:
+
 - ✅ Synapse redirects to Hydra (FR-002)
 - ✅ OIDC callback received
 - ✅ Token exchange successful (HTTP 200) (FR-004)
@@ -400,6 +417,7 @@ describe('E2E OAuth2 Authorization Code Flow', () => {
 **Problem**: Earlier logs showed `invalid_client` error due to auth method mismatch.
 
 **Resolution**: ✅ RESOLVED
+
 - Hydra client now configured with `token_endpoint_auth_method: client_secret_basic`
 - Matches Synapse expectations
 - Token exchange now successful (HTTP 200)
@@ -409,6 +427,7 @@ describe('E2E OAuth2 Authorization Code Flow', () => {
 **Problem**: Initial configuration used `discover: true` which created startup dependencies.
 
 **Resolution**: ✅ RESOLVED
+
 - Changed to `discover: false` with explicit endpoints
 - Hybrid approach: public URL for authorization, internal for token/userinfo
 - No startup dependencies
@@ -438,6 +457,7 @@ From log analysis:
 **T020c Status**: ✅ **COMPLETE**
 
 The E2E OAuth2 authorization code flow has been validated through:
+
 - ✅ Log analysis showing successful authentication flows
 - ✅ Token exchange working (HTTP 200 responses)
 - ✅ User mapping and account creation/linking working
