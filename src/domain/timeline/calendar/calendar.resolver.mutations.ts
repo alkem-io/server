@@ -10,6 +10,9 @@ import { CreateCalendarEventOnCalendarInput } from './dto/calendar.dto.create.ev
 import { CalendarEventService } from '../event/event.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
+import { TimelineResolverService } from '@services/infrastructure/entity-resolver/timeline.resolver.service';
+import { NotificationInputCommunityCalendarEventCreated } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.calendar.event.created';
 
 @InstrumentResolver()
 @Resolver()
@@ -19,7 +22,9 @@ export class CalendarResolverMutations {
     private authorizationPolicyService: AuthorizationPolicyService,
     private calendarService: CalendarService,
     private calendarEventService: CalendarEventService,
-    private calendarEventAuthorizationService: CalendarEventAuthorizationService
+    private calendarEventAuthorizationService: CalendarEventAuthorizationService,
+    private notificationSpaceAdapter: NotificationSpaceAdapter,
+    private timelineResolverService: TimelineResolverService
   ) {}
 
   @Mutation(() => ICalendarEvent, {
@@ -59,6 +64,24 @@ export class CalendarResolverMutations {
       calendarEvent,
       agentInfo
     );
+
+    // Send notification to community members
+    const spaceID = await this.timelineResolverService.getSpaceIdForCalendar(
+      calendar.id
+    );
+
+    if (spaceID) {
+      const notificationInput: NotificationInputCommunityCalendarEventCreated =
+        {
+          triggeredBy: agentInfo.userID,
+          calendarEvent: calendarEvent,
+        };
+
+      await this.notificationSpaceAdapter.spaceCommunityCalendarEventCreated(
+        notificationInput,
+        spaceID
+      );
+    }
 
     return await this.calendarEventService.getCalendarEventOrFail(
       calendarEvent.id

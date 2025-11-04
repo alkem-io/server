@@ -876,7 +876,6 @@ enum AuthorizationPrivilege {
   READ_USER_SETTINGS
   RECEIVE_NOTIFICATIONS
   RECEIVE_NOTIFICATIONS_ADMIN
-  RECEIVE_NOTIFICATIONS_IN_APP
   RECEIVE_NOTIFICATIONS_ORGANIZATION_ADMIN
   RECEIVE_NOTIFICATIONS_SPACE_ADMIN
   RECEIVE_NOTIFICATIONS_SPACE_LEAD
@@ -1307,15 +1306,6 @@ input CommunicationAdminUpdateRoomStateInput {
   roomID: String!
 }
 
-type CommunicationRoom {
-  """The display name of the room"""
-  displayName: String!
-  """The identifier of the room"""
-  id: String!
-  """The messages that have been sent to the Room."""
-  messages: [Message!]!
-}
-
 input CommunicationSendMessageToCommunityLeadsInput {
   """The Community the message is being sent to"""
   communityId: UUID!
@@ -1330,7 +1320,7 @@ input CommunicationSendMessageToOrganizationInput {
   organizationId: UUID!
 }
 
-input CommunicationSendMessageToUserInput {
+input CommunicationSendMessageToUsersInput {
   """The message being sent"""
   message: String!
   """All Users the message is being sent to"""
@@ -2262,6 +2252,8 @@ type CreateWhiteboardData {
   content: WhiteboardContent
   """A readable identifier, unique within the containing scope."""
   nameID: NameID
+  """The preview settings for the whiteboard."""
+  previewSettings: CreateWhiteboardPreviewSettingsData
   profile: CreateProfileData
 }
 
@@ -2269,7 +2261,23 @@ input CreateWhiteboardInput {
   content: WhiteboardContent
   """A readable identifier, unique within the containing scope."""
   nameID: NameID
+  """The preview settings for the whiteboard."""
+  previewSettings: CreateWhiteboardPreviewSettingsInput
   profile: CreateProfileInput
+}
+
+type CreateWhiteboardPreviewSettingsData {
+  """The coordinates for the preview."""
+  coordinates: WhiteboardPreviewCoordinatesData
+  "The preview mode.\n      AUTO: Generate Whiteboard preview automatically when closing the dialog\n      CUSTOM: Generate Whiteboard preview based on user-defined coordinates when closing the dialog\n      FIXED: Use a fixed Whiteboard preview that does not change when closing the dialog\n    "
+  mode: WhiteboardPreviewMode
+}
+
+input CreateWhiteboardPreviewSettingsInput {
+  """The coordinates for the preview."""
+  coordinates: WhiteboardPreviewCoordinatesInput
+  "The preview mode.\n      AUTO: Generate Whiteboard preview automatically when closing the dialog\n      CUSTOM: Generate Whiteboard preview based on user-defined coordinates when closing the dialog\n      FIXED: Use a fixed Whiteboard preview that does not change when closing the dialog\n    "
+  mode: WhiteboardPreviewMode
 }
 
 type Credential {
@@ -2884,6 +2892,23 @@ type InAppNotificationPayloadSpaceCommunicationUpdate implements InAppNotificati
 type InAppNotificationPayloadSpaceCommunityApplication implements InAppNotificationPayload {
   """The Application that the notification is related to."""
   application: Application
+  """The space details."""
+  space: Space
+  """The payload type."""
+  type: NotificationEventPayload!
+}
+
+type InAppNotificationPayloadSpaceCommunityCalendarEvent implements InAppNotificationPayload {
+  """The CalendarEvent that was created."""
+  calendarEvent: CalendarEvent
+  """ID of the calendar event."""
+  calendarEventID: UUID!
+  """Display title of the calendar event."""
+  calendarEventTitle: String!
+  """Type of the calendar event."""
+  calendarEventType: CalendarEventType!
+  """ID of the user who created the event."""
+  createdBy: UUID!
   """The space details."""
   space: Space
   """The payload type."""
@@ -3615,8 +3640,10 @@ type MeQueryResults {
     """Amount of items before the cursor"""
     last: Int
   ): PaginatedInAppNotifications!
-  """The number of unread notifications for the current authenticated user."""
-  notificationsUnreadCount(filter: NotificationEventsFilterInput): Float!
+  """
+  The total number of unread notifications for the current authenticated user across all notification types.
+  """
+  notificationsUnreadCount: Float!
   """The Spaces the current user is a member of as a flat list."""
   spaceMembershipsFlat: [CommunityMembershipResult!]!
   """The hierarchy of the Spaces the current user is a member."""
@@ -4013,15 +4040,13 @@ type Mutation {
   """Reset the License with Entitlements on the specified Account."""
   licenseResetOnAccount(resetData: AccountLicenseResetInput!): Account!
   """
-  Mark multiple notifications as read. If no IDs are provided, marks all user notifications as read.
+  Mark notifications as read. If no filter is provided, marks all user notifications as read. If filter with types is provided, marks only those notification types as read.
   """
-  markNotificationsAsRead(notificationIds: [String!]!): Boolean!
+  markNotificationsAsRead(filter: NotificationEventsFilterInput): Boolean!
   """
-  Mark multiple notifications as unread. If no IDs are provided, marks all user notifications as unread.
+  Mark notifications as unread. If no filter is provided, marks all user notifications as unread. If filter with types is provided, marks only those notification types as unread.
   """
-  markNotificationsAsUnread(notificationIds: [String!]!): Boolean!
-  """Sends a message on the specified User`s behalf and returns the room id"""
-  messageUser(messageData: UserSendMessageInput!): String!
+  markNotificationsAsUnread(filter: NotificationEventsFilterInput): Boolean!
   """Moves the specified Contribution to another Callout."""
   moveContributionToCallout(moveContributionData: MoveCalloutContributionInput!): CalloutContribution!
   """Refresh the Bodies of Knowledge on All VCs"""
@@ -4068,8 +4093,10 @@ type Mutation {
   sendMessageToOrganization(messageData: CommunicationSendMessageToOrganizationInput!): Boolean!
   """Sends an comment message. Returns the id of the new Update message."""
   sendMessageToRoom(messageData: RoomSendMessageInput!): Message!
-  """Send message to a User."""
-  sendMessageToUser(messageData: CommunicationSendMessageToUserInput!): Boolean!
+  """Sends a message on the specified User`s behalf and returns the room id"""
+  sendMessageToUserDirect(messageData: UserSendMessageInput!): String!
+  """Send message to multiple Users."""
+  sendMessageToUsers(messageData: CommunicationSendMessageToUsersInput!): Boolean!
   """
   Transfer the specified Callout from its current CalloutsSet to the target CalloutsSet. Note: this is experimental, and only for GlobalAdmins. The user that executes the transfer becomes the creator of the Callout.
   """
@@ -4240,11 +4267,13 @@ enum NotificationEvent {
   SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION
   SPACE_ADMIN_COMMUNITY_APPLICATION
   SPACE_ADMIN_COMMUNITY_NEW_MEMBER
+  SPACE_ADMIN_VIRTUAL_CONTRIBUTOR_COMMUNITY_INVITATION_DECLINED
   SPACE_COLLABORATION_CALLOUT_COMMENT
   SPACE_COLLABORATION_CALLOUT_CONTRIBUTION
   SPACE_COLLABORATION_CALLOUT_POST_CONTRIBUTION_COMMENT
   SPACE_COLLABORATION_CALLOUT_PUBLISHED
   SPACE_COMMUNICATION_UPDATE
+  SPACE_COMMUNITY_CALENDAR_EVENT_CREATED
   SPACE_COMMUNITY_INVITATION_USER_PLATFORM
   SPACE_LEAD_COMMUNICATION_MESSAGE
   USER_COMMENT_REPLY
@@ -4252,6 +4281,7 @@ enum NotificationEvent {
   USER_MESSAGE
   USER_MESSAGE_SENDER
   USER_SIGN_UP_WELCOME
+  USER_SPACE_COMMUNITY_APPLICATION_DECLINED
   USER_SPACE_COMMUNITY_INVITATION
   USER_SPACE_COMMUNITY_JOINED
   VIRTUAL_CONTRIBUTOR_ADMIN_SPACE_COMMUNITY_INVITATION
@@ -4287,6 +4317,7 @@ enum NotificationEventPayload {
   SPACE_COMMUNICATION_MESSAGE_DIRECT
   SPACE_COMMUNICATION_UPDATE
   SPACE_COMMUNITY_APPLICATION
+  SPACE_COMMUNITY_CALENDAR_EVENT
   SPACE_COMMUNITY_CONTRIBUTOR
   SPACE_COMMUNITY_INVITATION
   SPACE_COMMUNITY_INVITATION_USER_PLATFORM
@@ -4927,6 +4958,7 @@ type PromptGraphDefinitionNode {
   name: String!
   output: PromptGraphDefinitionDataStruct
   prompt: String
+  system: Boolean!
 }
 
 type PromptGraphEdge {
@@ -4952,6 +4984,7 @@ type PromptGraphNode {
   name: String!
   output: PromptGraphDataStruct
   prompt: String
+  system: Boolean!
 }
 
 input PromptGraphNodeInput {
@@ -4959,6 +4992,7 @@ input PromptGraphNodeInput {
   name: String!
   output: PromptGraphDataStructInput
   prompt: String
+  system: Boolean!
 }
 
 type PruneInAppNotificationAdminResult {
@@ -6557,6 +6591,8 @@ input UpdateCalloutFramingInput {
   type: CalloutFramingType
   """The new content to be used."""
   whiteboardContent: WhiteboardContent
+  """The new preview settings for the Whiteboard."""
+  whiteboardPreviewSettings: UpdateWhiteboardPreviewSettingsInput
 }
 
 input UpdateCalloutPublishInfoInput {
@@ -7157,6 +7193,8 @@ input UpdateUserSettingsNotificationSpaceInput {
   collaborationCalloutPublished: NotificationSettingInput
   """Receive a notification for community updates"""
   communicationUpdates: NotificationSettingInput
+  """Receive a notification when a calendar event is created"""
+  communityCalendarEvents: NotificationSettingInput
 }
 
 input UpdateUserSettingsNotificationUserInput {
@@ -7173,7 +7211,9 @@ input UpdateUserSettingsNotificationUserInput {
 input UpdateUserSettingsNotificationUserMembershipInput {
   """Receive a notification for community invitation"""
   spaceCommunityInvitationReceived: NotificationSettingInput
-  """Receive a notification when I join a new community"""
+  """
+  Receive a notification when I join a new community or when my application is declined
+  """
   spaceCommunityJoined: NotificationSettingInput
 }
 
@@ -7243,8 +7283,17 @@ input UpdateWhiteboardEntityInput {
   A display identifier, unique within the containing scope. Note: updating the nameID will affect URL on the client.
   """
   nameID: NameID
+  """The preview settings for the Whiteboard."""
+  previewSettings: UpdateWhiteboardPreviewSettingsInput
   """The Profile of this entity."""
   profile: UpdateProfileInput
+}
+
+input UpdateWhiteboardPreviewSettingsInput {
+  """The coordinates for the preview."""
+  coordinates: WhiteboardPreviewCoordinatesInput
+  "The preview mode.\n      AUTO: Generate Whiteboard preview automatically when closing the dialog\n      CUSTOM: Generate Whiteboard preview based on user-defined coordinates when closing the dialog\n      FIXED: Use a fixed Whiteboard preview that does not change when closing the dialog\n    "
+  mode: WhiteboardPreviewMode
 }
 
 """The `Upload` scalar type represents a file upload."""
@@ -7351,8 +7400,6 @@ type User implements Contributor {
   authentication: UserAuthenticationResult
   """The authorization rules for the Contributor"""
   authorization: Authorization
-  """The Community rooms this user is a member of"""
-  communityRooms: [CommunicationRoom!]
   """The date at which the entity was created."""
   createdDate: DateTime!
   """The direct rooms this user is a member of"""
@@ -7373,8 +7420,6 @@ type User implements Contributor {
   phone: String
   """The Profile for this User."""
   profile: Profile!
-  """The Profile 2 for this User."""
-  profile2: Profile!
   """The settings for this User."""
   settings: UserSettings!
   """The StorageAggregator for managing storage buckets in use by this User"""
@@ -7522,6 +7567,8 @@ type UserSettingsNotificationSpace {
   collaborationCalloutPublished: UserSettingsNotificationChannels!
   """Receive a notification for community updates"""
   communicationUpdates: UserSettingsNotificationChannels!
+  """Receive a notification when a calendar event is created"""
+  communityCalendarEvents: UserSettingsNotificationChannels!
 }
 
 type UserSettingsNotificationSpaceAdmin {
@@ -7549,7 +7596,9 @@ type UserSettingsNotificationUser {
 type UserSettingsNotificationUserMembership {
   """Receive a notification when I am invited to join a Space community"""
   spaceCommunityInvitationReceived: UserSettingsNotificationChannels!
-  """Receive a notification when I join a Space"""
+  """
+  Receive a notification when I join a Space or when my application is declined
+  """
   spaceCommunityJoined: UserSettingsNotificationChannels!
 }
 
@@ -7768,7 +7817,7 @@ type Visual {
   minHeight: Float!
   """Minimum width resolution."""
   minWidth: Float!
-  name: String!
+  name: VisualType!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
   uri: String!
@@ -7794,6 +7843,7 @@ enum VisualType {
   BANNER
   BANNER_WIDE
   CARD
+  WHITEBOARD_PREVIEW
 }
 
 input VisualUploadImageInput {
@@ -7818,6 +7868,8 @@ type Whiteboard {
   isMultiUser: Boolean!
   """A name identifier of the entity, unique within a given scope."""
   nameID: NameID!
+  """The preview settings for the Whiteboard."""
+  previewSettings: WhiteboardPreviewSettings!
   """The Profile for this Whiteboard."""
   profile: Profile!
   """The date at which the entity was last updated."""
@@ -7826,3 +7878,49 @@ type Whiteboard {
 
 """Content of a Whiteboard, as JSON."""
 scalar WhiteboardContent
+
+type WhiteboardPreviewCoordinates {
+  """The height."""
+  height: Float!
+  """The width."""
+  width: Float!
+  """The x coordinate."""
+  x: Float!
+  """The y coordinate."""
+  y: Float!
+}
+
+type WhiteboardPreviewCoordinatesData {
+  """The height."""
+  height: Float!
+  """The width."""
+  width: Float!
+  """The x coordinate."""
+  x: Float!
+  """The y coordinate."""
+  y: Float!
+}
+
+input WhiteboardPreviewCoordinatesInput {
+  """The height."""
+  height: Float!
+  """The width."""
+  width: Float!
+  """The x coordinate."""
+  x: Float!
+  """The y coordinate."""
+  y: Float!
+}
+
+enum WhiteboardPreviewMode {
+  AUTO
+  CUSTOM
+  FIXED
+}
+
+type WhiteboardPreviewSettings {
+  """The coordinates for the preview."""
+  coordinates: WhiteboardPreviewCoordinates
+  "The preview mode.\n      AUTO: Generate Whiteboard preview automatically when closing the dialog\n      CUSTOM: Generate Whiteboard preview based on user-defined coordinates when closing the dialog\n      FIXED: Use a fixed Whiteboard preview that does not change when closing the dialog\n    "
+  mode: WhiteboardPreviewMode!
+}
