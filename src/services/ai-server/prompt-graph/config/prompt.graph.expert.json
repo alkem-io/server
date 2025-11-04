@@ -64,6 +64,12 @@
             "type": "object",
             "optional": true,
             "description": "List of knowledge documents"
+          },
+          {
+            "name": "combined_knowledge_docs",
+            "type": "string",
+            "optional": true,
+            "description": "Combined knowledge documents as a single string with source ids. I.e. [source:0] Document text 1 \n[source:1] Document text 2 ..."
           }
         ]
       }
@@ -200,7 +206,7 @@
         "  - Fewer assumptions/speculation.",
         "  - Closer match to the user’s language and tone.",
         "6. Language: After selecting the content (either the chosen answer or the clarifying question), translate it to match the language of the User query. Preserve meaning; do not add information.",
-        "7. Output: Follow exactly the Output format instructions: {format_instructions}. Return only the requested fields.",
+        "",
         "Additional rules:",
         "",
         "- Prefer choosing an answer over asking for clarification unless both answers are clearly inadequate.",
@@ -299,7 +305,7 @@
         "name": "combined_knowledge_docs",
         "type": "string",
         "optional": true,
-        "description": "Combined knowledge documents as a single string with source ids."
+        "description": "Combined knowledge documents as a single string with source ids. I.e. [source:0] Document text 1 \n[source:1] Document text 2 ..."
       },
       {
         "name": "context_answer",

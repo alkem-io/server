@@ -1,4 +1,5 @@
 import { ObjectType, Field, InputType } from '@nestjs/graphql';
+import { PromptGraphDataStruct } from './prompt.graph.data.struct.dto';
 
 @InputType('PromptGraphDataPointInput')
 @ObjectType()
@@ -14,4 +15,7 @@ export class PromptGraphDataPoint {
 
   @Field(() => Boolean, { nullable: true })
   optional?: boolean;
+
+  @Field(() => PromptGraphDataStruct, { nullable: true })
+  items?: PromptGraphDataStruct;
 }
