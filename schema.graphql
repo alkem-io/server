@@ -5015,6 +5015,8 @@ type SpaceSettingsCollaboration {
   Flag to control if events from Subspaces are visible on this Space calendar as well.
   """
   allowEventsFromSubspaces: Boolean!
+  """Flag to control if guest users can contribute to this Space."""
+  allowGuestContributions: Boolean!
   """Flag to control if members can create callouts."""
   allowMembersToCreateCallouts: Boolean!
   """Flag to control if members can create subspaces."""
@@ -6435,6 +6437,8 @@ input CreateSpaceSettingsCollaborationInput {
   Flag to control if events from Subspaces are visible on this Space calendar as well.
   """
   allowEventsFromSubspaces: Boolean!
+  """Flag to control if guest users can contribute to this Space."""
+  allowGuestContributions: Boolean!
   """Flag to control if members can create callouts."""
   allowMembersToCreateCallouts: Boolean!
   """Flag to control if members can create subspaces."""
@@ -7624,6 +7628,8 @@ input UpdateSpaceSettingsCollaborationInput {
   Flag to control if events from Subspaces are visible on this Space calendar as well.
   """
   allowEventsFromSubspaces: Boolean!
+  """Flag to control if guest users can contribute to this Space."""
+  allowGuestContributions: Boolean!
   """Flag to control if members can create callouts."""
   allowMembersToCreateCallouts: Boolean!
   """Flag to control if members can create subspaces."""
