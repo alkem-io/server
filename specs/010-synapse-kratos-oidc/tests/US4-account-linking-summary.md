@@ -17,17 +17,20 @@ Successfully implemented and validated automatic account linking for existing Ma
 ## Implementation Overview
 
 ### Goal
+
 Link existing Matrix password accounts to Kratos OIDC identities, enabling seamless migration from password-based to OIDC authentication without data loss or service interruption.
 
 ### Approach
+
 Leveraged Synapse's native account linking capability based on **email matching**. When a user with an existing Matrix account authenticates via OIDC, Synapse automatically creates a link in the `user_external_ids` table.
 
 ### Configuration Requirement
+
 ```yaml
 # .build/synapse/homeserver.yaml
 oidc_providers:
   - idp_id: oidc-oidc-hydra
-    allow_existing_users: true  # ← Enables automatic account linking
+    allow_existing_users: true # ← Enables automatic account linking
 ```
 
 **Status**: ✅ Already configured (no changes needed)
@@ -37,7 +40,9 @@ oidc_providers:
 ## Completed Tasks
 
 ### T026: Create Test Matrix User ✅
+
 **Created**: `@testmigration:localhost`
+
 - Password: `TestPass123!`
 - Email: `testmigration@example.com`
 - Authentication: Traditional password-based
@@ -50,7 +55,9 @@ oidc_providers:
 ---
 
 ### T027: Create Matching Kratos Identity ✅
+
 **Created**: Kratos Identity ID `de61bd84-f04a-438d-bd63-46f9b2764183`
+
 - Email: `testmigration@example.com` (matches Matrix user)
 - Name: Test Migration
 - Schema: default
@@ -63,10 +70,12 @@ oidc_providers:
 ---
 
 ### T028: Test Account Linking ✅
+
 **Action**: User authenticated via OIDC using Kratos credentials
 **Result**: Automatic account linking successful
 
 **Database Evidence**:
+
 ```sql
 SELECT auth_provider, external_id, user_id
 FROM user_external_ids
@@ -77,6 +86,7 @@ WHERE user_id = '@testmigration:localhost';
 ```
 
 **Validation**:
+
 - ✅ External ID mapping created automatically
 - ✅ OIDC authentication granted access to existing account
 - ✅ No manual intervention required
@@ -85,19 +95,20 @@ WHERE user_id = '@testmigration:localhost';
 ---
 
 ### T029: Verify Data Preservation ✅
+
 **Scope**: Comprehensive validation that all user data remains intact after linking
 
 **Preserved Data Categories**:
 
-| Category | Status | Details |
-|----------|--------|---------|
-| User Profile | ✅ Intact | Admin status, displayname, email unchanged |
-| Password Hash | ✅ Preserved | Original password still valid |
-| OIDC Link | ✅ Created | External ID mapping established |
-| Devices | ✅ All preserved | 5 devices including E2EE signing keys |
-| Access Tokens | ✅ Valid | Active sessions continue working |
-| Account Status | ✅ Active | Not deactivated or deleted |
-| Creation Timestamp | ✅ Unchanged | Original account creation time preserved |
+| Category           | Status           | Details                                    |
+| ------------------ | ---------------- | ------------------------------------------ |
+| User Profile       | ✅ Intact        | Admin status, displayname, email unchanged |
+| Password Hash      | ✅ Preserved     | Original password still valid              |
+| OIDC Link          | ✅ Created       | External ID mapping established            |
+| Devices            | ✅ All preserved | 5 devices including E2EE signing keys      |
+| Access Tokens      | ✅ Valid         | Active sessions continue working           |
+| Account Status     | ✅ Active        | Not deactivated or deleted                 |
+| Creation Timestamp | ✅ Unchanged     | Original account creation time preserved   |
 
 **Critical Finding**: E2EE signing keys preserved (master, self-signing, user-signing) - users can decrypt historical messages.
 
@@ -106,9 +117,11 @@ WHERE user_id = '@testmigration:localhost';
 ---
 
 ### T029a: Test Dual Authentication ✅
+
 **Scope**: Verify both password AND OIDC authentication work post-linking
 
 **Test 1: Password Authentication**
+
 ```bash
 curl -X POST http://localhost:8008/_matrix/client/v3/login \
   -H "Content-Type: application/json" \
@@ -116,11 +129,13 @@ curl -X POST http://localhost:8008/_matrix/client/v3/login \
 ```
 
 **Result**: ✅ SUCCESS
+
 - Access token returned
 - New device created: `JRZFBYDVQW` ("Password Auth Test")
 - Token expiry: 172799987ms (~48 hours)
 
 **Test 2: OIDC Authentication**
+
 - Already tested in T028
 - ✅ OIDC login works
 - External ID mapping verified still present after password login
@@ -149,11 +164,11 @@ curl -X POST http://localhost:8008/_matrix/client/v3/login \
 
 **Table**: `user_external_ids` (PostgreSQL - Synapse database)
 
-| Column | Type | Description |
-|--------|------|-------------|
-| `auth_provider` | TEXT | OIDC provider ID ("oidc-oidc-hydra") |
-| `external_id` | TEXT | OIDC subject (email in our implementation) |
-| `user_id` | TEXT | Matrix User ID |
+| Column          | Type | Description                                |
+| --------------- | ---- | ------------------------------------------ |
+| `auth_provider` | TEXT | OIDC provider ID ("oidc-oidc-hydra")       |
+| `external_id`   | TEXT | OIDC subject (email in our implementation) |
+| `user_id`       | TEXT | Matrix User ID                             |
 
 **Linking Logic**: `(auth_provider, external_id)` → `user_id`
 
@@ -195,18 +210,22 @@ curl -X POST http://localhost:8008/_matrix/client/v3/login \
 ## Functional Requirements Validation
 
 ### FR-013: Account Linking ✅
+
 **Requirement**: Link existing Matrix accounts to OIDC identities based on email match
 
 **Validation**:
+
 - ✅ Email-based matching working
 - ✅ Automatic linking on first OIDC login
 - ✅ No manual intervention required
 - ✅ `user_external_ids` mapping created correctly
 
 ### FR-016: Transparent Social Login ✅
+
 **Requirement**: Social login users can link accounts same as password users
 
 **Validation**:
+
 - ✅ OIDC flow works regardless of Kratos authentication method
 - ✅ Email extraction from userinfo endpoint (works for all providers)
 - ⏸️ **Deferred**: Full social login testing (LinkedIn/Microsoft/GitHub) requires manual QA with configured providers
@@ -220,12 +239,14 @@ curl -X POST http://localhost:8008/_matrix/client/v3/login \
 ### Multi-Database Setup
 
 **MySQL** (`alkemio_dev_mysql`):
+
 - **Kratos database**: Identity management
   - Tables: identities, identity_credentials, sessions, etc.
   - DSN: `mysql://root:toor@mysql:3306/kratos`
 - **alkemio database**: Main application data
 
 **PostgreSQL** (`alkemio_dev_postgres`):
+
 - **Synapse database**: Matrix homeserver
   - Tables: users, user_external_ids, devices, rooms, events, etc.
   - DSN: `postgres://synapse:***@postgres:5432/synapse`
@@ -281,6 +302,7 @@ curl -X POST http://localhost:8008/_matrix/client/v3/login \
 #### Phase 1: Preparation (1-2 weeks)
 
 **1.1 Audit Matrix Users**
+
 ```sql
 -- Identify users without emails (cannot link)
 SELECT u.name
@@ -293,10 +315,12 @@ WHERE ut.address IS NULL
 **Action**: Add missing emails to `user_threepids` table or contact users
 
 **1.2 Create Kratos Identities**
+
 - Option A: Users self-register via Kratos UI
 - Option B: Bulk import via Kratos Admin API (requires user consent for auto-registration)
 
 **1.3 Communication**
+
 - Notify users of upcoming SSO migration
 - Provide documentation: "How to login with new SSO"
 - Set migration deadline (e.g., 90 days)
@@ -304,10 +328,12 @@ WHERE ut.address IS NULL
 #### Phase 2: Migration Execution (90-day grace period)
 
 **2.1 Enable Account Linking**
+
 - Already configured: `allow_existing_users: true` ✅
 - No additional setup needed
 
 **2.2 User-Initiated Linking**
+
 - Users login via OIDC → automatic linking occurs
 - Track progress via query:
   ```sql
@@ -317,6 +343,7 @@ WHERE ut.address IS NULL
   ```
 
 **2.3 Monitor Migration Progress**
+
 - Daily reports: % of users linked
 - Identify stragglers for targeted communication
 - Support desk ready for user issues
@@ -324,17 +351,20 @@ WHERE ut.address IS NULL
 #### Phase 3: Password Deprecation (Optional - After 90 days)
 
 **3.1 Grace Period Expiry**
+
 - Verify >95% users linked before proceeding
 - Final reminder to remaining users
 
 **3.2 Disable Password Authentication**
+
 ```yaml
 # homeserver.yaml
 password_config:
-  enabled: false  # Disable password login globally
+  enabled: false # Disable password login globally
 ```
 
 **3.3 Rollback Plan**
+
 - Keep password hashes in database (don't delete)
 - Can re-enable password auth if needed: `enabled: true`
 - External ID mappings remain intact
@@ -342,6 +372,7 @@ password_config:
 #### Phase 4: Cleanup (Optional - After 180 days)
 
 **4.1 Remove Password Hashes (IRREVERSIBLE)**
+
 ```sql
 -- Only if password auth permanently disabled
 UPDATE users SET password_hash = NULL;
@@ -354,16 +385,19 @@ UPDATE users SET password_hash = NULL;
 ## Edge Cases & Handling
 
 ### Case 1: Email Mismatch
+
 **Scenario**: Matrix user email ≠ Kratos identity email
 
 **Behavior**: No automatic link created (emails don't match)
 
 **Solutions**:
+
 1. Update Matrix user email to match Kratos
 2. Update Kratos identity email to match Matrix
 3. Manual admin intervention if needed
 
 ### Case 2: Matrix User Without Email
+
 **Scenario**: User in `users` table but no entry in `user_threepids`
 
 **Behavior**: Cannot link (no email to match)
@@ -371,6 +405,7 @@ UPDATE users SET password_hash = NULL;
 **Solution**: Add email to `user_threepids` before user attempts OIDC login
 
 ### Case 3: Multiple Matrix Users Claim Same Email
+
 **Scenario**: Two Matrix users with same email (rare - should not happen)
 
 **Behavior**: First user to login via OIDC gets the link, second fails
@@ -378,6 +413,7 @@ UPDATE users SET password_hash = NULL;
 **Prevention**: Enforce email uniqueness in `user_threepids` table
 
 ### Case 4: Already Linked User Attempts OIDC Login
+
 **Scenario**: User already linked, attempts second OIDC login
 
 **Behavior**: Reuses existing link, authentication succeeds
@@ -385,6 +421,7 @@ UPDATE users SET password_hash = NULL;
 **Database**: No duplicate entries created (unique constraint on `user_external_ids`)
 
 ### Case 5: Linked User Attempts Password Change
+
 **Scenario**: User changes password via Matrix client after OIDC linking
 
 **Behavior**: Password change succeeds, OIDC link unaffected
@@ -398,6 +435,7 @@ UPDATE users SET password_hash = NULL;
 ## Testing Summary
 
 ### Test Environment
+
 - **Synapse**: v1.132.0 (alkemio_dev_synapse)
 - **Hydra**: v2.2.0 (alkemio_dev_hydra)
 - **Kratos**: v1.3.1 (alkemio_dev_kratos)
@@ -406,6 +444,7 @@ UPDATE users SET password_hash = NULL;
 - **Client**: SchildiChat Desktop (macOS)
 
 ### Test User Details
+
 - **Matrix ID**: `@testmigration:localhost`
 - **Email**: `testmigration@example.com`
 - **Password**: `TestPass123!`
@@ -414,15 +453,15 @@ UPDATE users SET password_hash = NULL;
 
 ### Test Results Summary
 
-| Test | Status | Result |
-|------|--------|--------|
-| Account linking (OIDC login) | ✅ PASS | External ID mapping created |
-| Data preservation | ✅ PASS | All data intact (profile, devices, tokens) |
-| Password authentication | ✅ PASS | Login successful, new device created |
-| OIDC authentication | ✅ PASS | Login via Kratos successful |
-| Dual auth coexistence | ✅ PASS | Both methods work simultaneously |
-| E2EE key preservation | ✅ PASS | Signing keys intact |
-| Session continuity | ✅ PASS | No logout during linking |
+| Test                         | Status  | Result                                     |
+| ---------------------------- | ------- | ------------------------------------------ |
+| Account linking (OIDC login) | ✅ PASS | External ID mapping created                |
+| Data preservation            | ✅ PASS | All data intact (profile, devices, tokens) |
+| Password authentication      | ✅ PASS | Login successful, new device created       |
+| OIDC authentication          | ✅ PASS | Login via Kratos successful                |
+| Dual auth coexistence        | ✅ PASS | Both methods work simultaneously           |
+| E2EE key preservation        | ✅ PASS | Signing keys intact                        |
+| Session continuity           | ✅ PASS | No logout during linking                   |
 
 **Overall**: ✅ ALL TESTS PASSED
 
@@ -496,14 +535,14 @@ UPDATE users SET password_hash = NULL;
 
 ## Acceptance Criteria
 
-| Criterion | Status |
-|-----------|--------|
+| Criterion                                                 | Status  |
+| --------------------------------------------------------- | ------- |
 | Existing Matrix user with email can authenticate via OIDC | ✅ PASS |
-| Accounts automatically linked based on email match | ✅ PASS |
-| No data loss - all rooms, messages, contacts preserved | ✅ PASS |
-| Both password and OIDC authentication work post-linking | ✅ PASS |
-| E2EE signing keys preserved | ✅ PASS |
-| Sessions not interrupted during linking | ✅ PASS |
+| Accounts automatically linked based on email match        | ✅ PASS |
+| No data loss - all rooms, messages, contacts preserved    | ✅ PASS |
+| Both password and OIDC authentication work post-linking   | ✅ PASS |
+| E2EE signing keys preserved                               | ✅ PASS |
+| Sessions not interrupted during linking                   | ✅ PASS |
 
 **Status**: ✅ ALL ACCEPTANCE CRITERIA MET
 
@@ -514,6 +553,7 @@ UPDATE users SET password_hash = NULL;
 User Story 4 (Account Migration/Linking) successfully implemented and validated. The solution leverages Synapse's native account linking capability to provide seamless, non-destructive migration from password-based to OIDC authentication.
 
 **Key Achievements**:
+
 - ✅ Zero-downtime migration
 - ✅ Dual authentication support (password + OIDC)
 - ✅ Complete data preservation
