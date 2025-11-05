@@ -1,12 +1,5 @@
 import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
-import {
-  Brackets,
-  Repository,
-  In,
-  Not,
-  UpdateResult,
-  FindOptionsWhere,
-} from 'typeorm';
+import { Brackets, FindOptionsWhere, In, Not, Repository, UpdateResult } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Inject } from '@nestjs/common/decorators';
@@ -18,11 +11,7 @@ import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationEventsFilterInput } from '@services/api/me/dto/me.notification.event.filter.dto.input';
 import { CreateInAppNotificationInput } from './dto/in.app.notification.create';
 import { IInAppNotification } from './in.app.notification.interface';
-import {
-  PaginationArgs,
-  PaginatedInAppNotifications,
-  getPaginationResults,
-} from '@core/pagination';
+import { getPaginationResults, PaginatedInAppNotifications, PaginationArgs } from '@core/pagination';
 import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
 import { InAppNotificationCoreEntityIds } from './in.app.notification.core.entity.ids';
 
@@ -318,6 +307,7 @@ export class InAppNotificationService {
         // we want to keep this notification for audit/historical reasons
         break;
 
+      case NotificationEvent.USER_SPACE_COMMUNITY_APPLICATION_DECLINED: // it's using the same payload as platform admin space created
       case NotificationEvent.PLATFORM_ADMIN_SPACE_CREATED:
         result.spaceID = payload.spaceID;
         break;
@@ -369,12 +359,22 @@ export class InAppNotificationService {
         result.contributionID = payload.contributionID;
         break;
 
+      case NotificationEvent.SPACE_ADMIN_VIRTUAL_CONTRIBUTOR_COMMUNITY_INVITATION_DECLINED:
+        result.spaceID = payload.spaceID;
+        result.contributorVcID = payload.contributorID;
+        break;
+
       case NotificationEvent.SPACE_LEAD_COMMUNICATION_MESSAGE:
         result.spaceID = payload.spaceID;
         break;
 
       case NotificationEvent.SPACE_COMMUNICATION_UPDATE:
         result.spaceID = payload.spaceID;
+        break;
+
+      case NotificationEvent.SPACE_COMMUNITY_CALENDAR_EVENT_CREATED:
+        result.spaceID = payload.spaceID;
+        result.calendarEventID = payload.calendarEventID;
         break;
 
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED:

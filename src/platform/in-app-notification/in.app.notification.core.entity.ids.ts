@@ -8,6 +8,7 @@ export type InAppNotificationCoreEntityIds = {
   contributionID?: string;
   roomID?: string;
   messageID?: string;
+  calendarEventID?: string;
   contributorOrganizationID?: string;
   contributorUserID?: string;
   contributorVcID?: string;

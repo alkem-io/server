@@ -15,6 +15,7 @@ import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { Room } from '@domain/communication/room/room.entity';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
+import { CalendarEvent } from '@domain/timeline/event';
 
 @Entity('in_app_notification')
 export class InAppNotification
@@ -255,4 +256,20 @@ export class InAppNotification
   })
   @JoinColumn({ name: 'contributorVcID' })
   contributorVc?: VirtualContributor;
+
+  @Column('char', {
+    length: UUID_LENGTH,
+    nullable: true,
+    comment:
+      'FK to Calendar Event - cascade deletes notification when the calendar event is deleted',
+  })
+  calendarEventID?: string;
+
+  @ManyToOne(() => CalendarEvent, {
+    eager: false,
+    cascade: false,
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn({ name: 'calendarEventID' })
+  calendarEvent?: CalendarEvent;
 }
