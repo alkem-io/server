@@ -15,6 +15,7 @@ import { IPost } from '@domain/collaboration/post/post.interface';
 import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
+import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 
 @Injectable()
 export class RoomResolverService {
@@ -30,6 +31,7 @@ export class RoomResolverService {
   ): Promise<{
     roleSet: IRoleSet;
     platformRolesAccess: IPlatformRolesAccess;
+    spaceSettings: ISpaceSettings;
   }> {
     const space = await this.entityManager.findOne(Space, {
       where: {
@@ -45,7 +47,12 @@ export class RoomResolverService {
         },
       },
     });
-    if (!space || !space.community || !space.community.roleSet) {
+    if (
+      !space ||
+      !space.community ||
+      !space.community.roleSet ||
+      !space.settings
+    ) {
       throw new EntityNotInitializedException(
         `Unable to load all entities for roleSet + settings for collaboration ${calloutsSetID}`,
         LogContext.COMMUNITY
@@ -57,7 +64,7 @@ export class RoomResolverService {
       space.platformRolesAccess || {
         roles: [],
       };
-    return { roleSet, platformRolesAccess };
+    return { roleSet, platformRolesAccess, spaceSettings: space.settings };
   }
 
   async getRoleSetAndPlatformRolesWithAccessForCallout(
