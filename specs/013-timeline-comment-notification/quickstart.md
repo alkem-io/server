@@ -340,7 +340,7 @@ public async spaceCommunityCalendarEventComment(
 
 ---
 
-### Phase 8: Add External Email Payload Builder
+### Phase 7: Add External Email Payload Builder
 
 **File**: `src/services/adapters/notification-external-adapter/notification.external.adapter.ts`
 

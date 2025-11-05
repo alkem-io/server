@@ -185,11 +185,22 @@ Implemented notification system for calendar event comments, delivering both ema
 
 ### Schema Impact
 
-**Non-Breaking Additions Only**:
+**⚠️ Breaking Change Identified**:
 
-- New enum values in existing enums
-- New GraphQL ObjectType implementing existing interface
-- No field removals, type changes, or nullable-to-non-nullable conversions
+- **Removed Field**: `createdBy: UUID!` from `InAppNotificationPayloadSpaceCommunityCalendarEvent`
+  - **Reason**: Field was redundant as the creator information is available via the `calendarEvent` field resolver
+  - **Impact**: Clients directly querying `createdBy` on calendar event CREATED notifications will receive an error
+  - **Migration Path**:
+    - Update client queries to use `calendarEvent { createdBy }` instead of direct `createdBy` field
+    - The creator ID is still accessible through the resolved CalendarEvent entity
+    - No data loss - information remains available via nested field
+
+**Non-Breaking Additions**:
+
+- New enum value: `NotificationEvent.SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT`
+- New enum value: `NotificationEventPayload.SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT`
+- New GraphQL ObjectType: `InAppNotificationPayloadSpaceCommunityCalendarEventComment`
+- New field resolvers for comment notification payload
 
 ---
 
