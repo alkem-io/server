@@ -187,9 +187,6 @@ export class NotificationSpaceAdapter {
           type: NotificationEventPayload.SPACE_COMMUNITY_CALENDAR_EVENT,
           spaceID: space.id,
           calendarEventID: eventData.calendarEvent.id,
-          calendarEventTitle: eventData.calendarEvent.profile.displayName,
-          calendarEventType: eventData.calendarEvent.type,
-          createdBy: eventData.calendarEvent.createdBy,
         };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
