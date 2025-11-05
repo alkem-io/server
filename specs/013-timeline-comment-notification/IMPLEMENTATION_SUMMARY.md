@@ -9,9 +9,9 @@
 
 ## Overview
 
-Implemented comprehensive notification system for calendar event comments, delivering both email and in-app notifications to space community members when comments are posted to calendar event discussion rooms.
+Implemented notification system for calendar event comments, delivering both email and in-app notifications to calendar event creators when comments are posted to their calendar event discussion rooms.
 
-**Pattern**: Extends existing `SPACE_COMMUNITY_CALENDAR_EVENT_CREATED` notification pattern with dual-channel support.
+**Pattern**: Direct creator notification using `USER_SELF_MANAGEMENT` credential pattern.
 
 ---
 
@@ -166,21 +166,22 @@ Implemented comprehensive notification system for calendar event comments, deliv
 2. **Resolver Orchestration**: `CALENDAR_EVENT` case gets calendar event from room (with calendar relation)
 3. **Event Processing**: `processNotificationCalendarEventComment` called with calendar event context
 4. **Space Lookup**: Event processor obtains space ID via `timelineResolverService.getSpaceIdForCalendar(calendarEvent.calendar.id)`
-5. **Recipient Filtering**:
-   - Queries community members with `SPACE_MEMBER` credential
-   - Checks `READ` privilege on space authorization policy
+5. **Recipient Identification**:
+   - Extracts `createdBy` field from calendar event (event creator's user ID)
+   - **Early return if creator is also the commenter** (no self-notification)
+   - Queries specific user with `USER_SELF_MANAGEMENT` credential
    - Filters by user notification preferences
-   - **Excludes comment author** from both channels
 6. **Delivery**:
    - Email: External adapter builds payload with comment preview (200 chars)
    - In-app: Creates notification with full comment text and metadata
 
 ### Authorization & Filtering
 
-- **Credential**: `SPACE_MEMBER` (community membership required)
-- **Privilege**: `READ` on Space authorization policy
+- **Recipient**: Calendar event creator only (identified by `CalendarEvent.createdBy`)
+- **Credential**: `USER_SELF_MANAGEMENT` (specific user credential)
+- **Privilege**: None required (direct user notification)
 - **Preference**: `user.settings.notification.space.communityCalendarEvents` (reuses calendar event setting)
-- **Exclusion**: Comment author filtered from recipients in both email and in-app channels
+- **Exclusion**: Creator is excluded if they are also the commenter (early return in adapter)
 
 ### Schema Impact
 

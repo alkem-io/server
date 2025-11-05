@@ -90,40 +90,38 @@ Resolve all technical unknowns and clarifications identified in the Technical Co
 
 ### 4. Recipient Resolution Strategy
 
-**Question**: How should we resolve community members for a calendar event?
+**Question**: How should we resolve the calendar event creator for notifications?
 
 **Research Findings**:
 
-- Examined `CommunityResolverService` methods
-- Found `getCommunityFromCalendarEventOrFail` does not exist yet
-- Calendar events belong to a Space's Timeline → Calendar → CalendarEvent hierarchy
-- Space has direct Community relationship
-- `spaceCommunityCalendarEventCreated` method fetches Space directly by ID
+- Calendar events have `createdBy` field storing creator's user ID
+- `USER_SELF_MANAGEMENT` credential pattern used for direct user notifications
+- Examples: `USER_MENTIONED`, `USER_MESSAGE`, `USER_COMMENT_REPLY`
 
-**Decision**: Resolve Space from CalendarEvent, then get Community from Space
+**Decision**: Use `CalendarEvent.createdBy` to identify recipient, query with `USER_SELF_MANAGEMENT` credential
 
 **Implementation Approach**:
 
 ```typescript
-// In RoomServiceEvents
-1. Get CalendarEvent from Room (via RoomResolverService.getCalendarEventForRoom)
-2. Get Space from CalendarEvent (via CalendarEventService.getSubspace or timeline traversal)
-3. Pass Space ID to NotificationSpaceAdapter
-4. Adapter resolves Community via Space's community relationship
-5. NotificationRecipientsService filters by SPACE_MEMBER credential
+// In NotificationSpaceAdapter.spaceCommunityCalendarEventComment
+1. Extract creatorID from eventData.calendarEvent.createdBy
+2. Check if creatorID === commenterID (early return if same person)
+3. Pass creatorID as userID parameter to getNotificationRecipientsSpace
+4. NotificationRecipientsService uses getUserSelfCriteria(userID)
+5. Returns the creator user if they exist and have notifications enabled
 ```
 
 **Rationale**:
 
-- Leverages existing entity relationships
-- No new repository methods required
-- Follows established pattern from calendar event creation notification
-- Works for both root Spaces and sub-spaces
+- Leverages existing entity field (`createdBy`)
+- No community membership queries needed
+- Follows direct user notification pattern
+- Simple and efficient (single user lookup)
 
 **Alternatives Considered**:
 
-- Add new `getCommunityFromCalendarEventOrFail` method → Rejected: Unnecessary indirection
-- Direct CalendarEvent → Community relationship → Rejected: Violates existing entity model
+- Query all community members → Rejected: Too broad, not the requirement
+- Add new creator relationship → Rejected: `createdBy` field already exists
 
 ### 5. Notification Event Category
 
@@ -155,24 +153,23 @@ Resolve all technical unknowns and clarifications identified in the Technical Co
 
 **Research Findings**:
 
-- Examined `notification.recipients.service.ts` authorization patterns
-- Calendar event creation requires: `AuthorizationPrivilege.READ` on Space authorization policy
-- Community member credential: `AuthorizationCredential.SPACE_MEMBER`
-- Existing authorization hierarchy handles Space-level access control
+- Direct user notifications (mentions, messages) use `USER_SELF_MANAGEMENT` credential
+- No privilege check required for direct user notifications
+- User preferences are still respected for channel filtering
 
-**Decision**: Require `READ` privilege on Space authorization policy with `SPACE_MEMBER` credential
+**Decision**: Use `USER_SELF_MANAGEMENT` credential with no privilege requirement
 
 **Rationale**:
 
-- Users already with Space membership have implicit read access to calendar events
-- Follows existing calendar event authorization pattern
-- No additional privilege escalation needed
-- Authorization policy checks handled by `NotificationRecipientsService`
+- Calendar event creator is the sole recipient (direct notification)
+- No authorization policy check needed for notifying a specific user
+- Follows existing pattern for `USER_MENTIONED`, `USER_MESSAGE`, etc.
+- User preferences still control delivery (in-app/email)
 
 **Alternatives Considered**:
 
-- Require explicit CalendarEvent READ privilege → Rejected: Overly restrictive, adds complexity
-- No authorization check → Rejected: Security risk
+- Require READ privilege on Space → Rejected: Creator may have left the space but should still be notified
+- No credential check → Rejected: Need to validate user exists
 
 ### 7. Email Notification Payload
 

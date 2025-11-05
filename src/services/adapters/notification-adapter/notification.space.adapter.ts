@@ -180,28 +180,29 @@ export class NotificationSpaceAdapter {
       },
     });
 
+    // Get the calendar event creator's user ID
+    const creatorID = eventData.calendarEvent.createdBy;
+    const commenterID = eventData.triggeredBy;
+
+    // Only notify the creator if they are not the commenter
+    if (creatorID === commenterID) {
+      return;
+    }
+
     const recipients = await this.getNotificationRecipientsSpace(
       event,
       eventData,
-      space.id
-    );
-
-    // Exclude the commenter from both email and in-app recipients
-    const commenterID = eventData.triggeredBy;
-    const emailRecipientsExcludingCommenter = recipients.emailRecipients.filter(
-      recipient => recipient.id !== commenterID
-    );
-    const inAppRecipientsExcludingCommenter = recipients.inAppRecipients.filter(
-      recipient => recipient.id !== commenterID
+      space.id,
+      creatorID // Pass the creator's user ID
     );
 
     // Send email notifications
-    if (emailRecipientsExcludingCommenter.length > 0) {
+    if (recipients.emailRecipients.length > 0) {
       const payload =
         await this.notificationExternalAdapter.buildSpaceCommunityCalendarEventCommentPayload(
           event,
           eventData.triggeredBy,
-          emailRecipientsExcludingCommenter,
+          recipients.emailRecipients,
           space,
           eventData.calendarEvent,
           eventData.commentSent
@@ -213,7 +214,7 @@ export class NotificationSpaceAdapter {
     }
 
     // Send in-app notifications
-    const inAppReceiverIDs = inAppRecipientsExcludingCommenter.map(
+    const inAppReceiverIDs = recipients.inAppRecipients.map(
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length > 0) {
