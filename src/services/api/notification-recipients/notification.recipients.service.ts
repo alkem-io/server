@@ -274,6 +274,7 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED:
         return notificationSettings.space.collaborationCalloutPublished;
       case NotificationEvent.SPACE_COMMUNITY_CALENDAR_EVENT_CREATED:
+      case NotificationEvent.SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT:
         return notificationSettings.space.communityCalendarEvents;
       case NotificationEvent.SPACE_ADMIN_VIRTUAL_CONTRIBUTOR_COMMUNITY_INVITATION_DECLINED:
         return notificationSettings.space.admin.communityNewMember;
@@ -366,7 +367,8 @@ export class NotificationRecipientsService {
         credentialCriteria = this.getSpaceCredentialCriteria(spaceID);
         break;
       }
-      case NotificationEvent.SPACE_COMMUNITY_CALENDAR_EVENT_CREATED: {
+      case NotificationEvent.SPACE_COMMUNITY_CALENDAR_EVENT_CREATED:
+      case NotificationEvent.SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT: {
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS;
         credentialCriteria = this.getSpaceCredentialCriteria(spaceID);
         break;
@@ -459,7 +461,8 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_COMMENT:
       case NotificationEvent.SPACE_LEAD_COMMUNICATION_MESSAGE:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED:
-      case NotificationEvent.SPACE_COMMUNITY_CALENDAR_EVENT_CREATED: {
+      case NotificationEvent.SPACE_COMMUNITY_CALENDAR_EVENT_CREATED:
+      case NotificationEvent.SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT: {
         // get the space authorization policy
         if (!entityID) {
           throw new ValidationException(

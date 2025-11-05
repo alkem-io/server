@@ -30,6 +30,8 @@ import { InAppNotificationPayloadSpaceCollaborationCalloutComment } from '@platf
 import { NotificationInputVirtualContributorSpaceCommunityInvitationDeclined } from './dto/space/notification.dto.input.space.community.invitation.vc.declined';
 import { NotificationInputCommunityCalendarEventCreated } from './dto/space/notification.dto.input.space.community.calendar.event.created';
 import { InAppNotificationPayloadSpaceCommunityCalendarEvent } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.calendar.event';
+import { NotificationInputCommunityCalendarEventComment } from './dto/space/notification.dto.input.space.community.calendar.event.comment';
+import { InAppNotificationPayloadSpaceCommunityCalendarEventComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.calendar.event.comment';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 
 @Injectable()
@@ -159,6 +161,79 @@ export class NotificationSpaceAdapter {
 
       await this.notificationInAppAdapter.sendInAppNotifications(
         NotificationEvent.SPACE_COMMUNITY_CALENDAR_EVENT_CREATED,
+        NotificationEventCategory.SPACE_MEMBER,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
+        inAppPayload
+      );
+    }
+  }
+
+  public async spaceCommunityCalendarEventComment(
+    eventData: NotificationInputCommunityCalendarEventComment,
+    spaceID: string
+  ): Promise<void> {
+    const event = NotificationEvent.SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT;
+
+    const space = await this.spaceLookupService.getSpaceOrFail(spaceID, {
+      relations: {
+        about: {
+          profile: true,
+        },
+      },
+    });
+
+    const recipients = await this.getNotificationRecipientsSpace(
+      event,
+      eventData,
+      space.id
+    );
+
+    // Exclude the commenter from both email and in-app recipients
+    const commenterID = eventData.triggeredBy;
+    const emailRecipientsExcludingCommenter = recipients.emailRecipients.filter(
+      recipient => recipient.id !== commenterID
+    );
+    const inAppRecipientsExcludingCommenter = recipients.inAppRecipients.filter(
+      recipient => recipient.id !== commenterID
+    );
+
+    // Send email notifications
+    if (emailRecipientsExcludingCommenter.length > 0) {
+      const payload =
+        await this.notificationExternalAdapter.buildSpaceCommunityCalendarEventCommentPayload(
+          event,
+          eventData.triggeredBy,
+          emailRecipientsExcludingCommenter,
+          space,
+          eventData.calendarEvent,
+          eventData.commentSent
+        );
+      this.notificationExternalAdapter.sendExternalNotifications(
+        event,
+        payload
+      );
+    }
+
+    // Send in-app notifications
+    const inAppReceiverIDs = inAppRecipientsExcludingCommenter.map(
+      recipient => recipient.id
+    );
+    if (inAppReceiverIDs.length > 0) {
+      const commentPreview = eventData.commentSent.message.substring(0, 200);
+      const inAppPayload: InAppNotificationPayloadSpaceCommunityCalendarEventComment =
+        {
+          type: NotificationEventPayload.SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT,
+          spaceID: space.id,
+          calendarEventID: eventData.calendarEvent.id,
+          calendarEventTitle: eventData.calendarEvent.profile.displayName,
+          commentID: eventData.commentSent.id,
+          commentText: commentPreview,
+          commenterID: eventData.commentSent.sender,
+        };
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        NotificationEvent.SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT,
         NotificationEventCategory.SPACE_MEMBER,
         eventData.triggeredBy,
         inAppReceiverIDs,

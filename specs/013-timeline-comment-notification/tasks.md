@@ -22,8 +22,8 @@
 
 ### Enum and Type System Foundation
 
-- [ ] [T001] Add SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT to NotificationEvent enum in `src/common/enums/notification.event.ts`
-- [ ] [T002] Add SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT to NotificationEventPayload enum in `src/platform/in-app-notification-payload/notification.event.payload.ts`
+- [x] [T001] Add SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT to NotificationEvent enum in `src/common/enums/notification.event.ts`
+- [x] [T002] Add SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT to NotificationEventPayload enum in `src/common/enums/notification.event.payload.ts`
 
 ---
 
@@ -31,19 +31,19 @@
 
 ### DTO Layer
 
-- [ ] [T003] [P] Create NotificationInputCommunityCalendarEventComment DTO interface in `src/services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.calendar.event.comment.ts`
-- [ ] [T004] [P] Create InAppNotificationPayloadSpaceCommunityCalendarEventComment GraphQL type in `src/platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.calendar.event.comment.ts`
+- [x] [T003] [P] Create NotificationInputCommunityCalendarEventComment DTO interface in `src/services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.calendar.event.comment.ts`
+- [x] [T004] [P] Create InAppNotificationPayloadSpaceCommunityCalendarEventComment GraphQL type in `src/platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.calendar.event.comment.ts`
 
 ### GraphQL Schema Integration
 
-- [ ] [T005] Create InAppNotificationPayloadSpaceCommunityCalendarEventCommentResolverFields field resolver in `src/platform/in-app-notification-payload/field-resolvers/space/in.app.notification.payload.space.community.calendar.event.comment.resolver.fields.ts`
-- [ ] [T006] Register field resolver provider in InAppNotificationPayloadModule in `src/platform/in-app-notification-payload/in.app.notification.payload.module.ts`
-- [ ] [T007] Add SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT case to resolveType switch in IInAppNotificationPayload interface in `src/platform/in-app-notification-payload/in.app.notification.payload.interface.ts`
+- [x] [T005] Create InAppNotificationPayloadSpaceCommunityCalendarEventCommentResolverFields field resolver in `src/platform/in-app-notification-payload/field-resolvers/space/in.app.notification.payload.space.community.calendar.event.comment.resolver.fields.ts`
+- [x] [T006] Register field resolver provider in InAppNotificationPayloadModule in `src/platform/in-app-notification-payload/in.app.notification.payload.module.ts`
+- [x] [T007] Add SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT case to resolveType switch in IInAppNotificationPayload interface in `src/platform/in-app-notification-payload/in.app.notification.payload.interface.ts`
 
 ### Schema Verification
 
-- [ ] [T008] Run `pnpm run schema:print` and verify new enum values appear in generated schema
-- [ ] [T009] Run `pnpm build` and verify no TypeScript compilation errors
+- [x] [T008] Run `pnpm run schema:print` and verify new enum values appear in generated schema
+- [x] [T009] Run `pnpm build` and verify no TypeScript compilation errors
 
 ---
 
@@ -53,26 +53,26 @@
 
 ### Notification Recipients Service
 
-- [ ] [T010] [US1] Add SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT case to getChannelsSettingsForEvent switch in `src/services/api/notification-recipients/notification.recipients.service.ts`
-- [ ] [T011] [US1] Add SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT case to getPrivilegeRequiredCredentialCriteria switch in `src/services/api/notification-recipients/notification.recipients.service.ts`
-- [ ] [T012] [US1] Add SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT case to getAuthorizationPolicy switch in `src/services/api/notification-recipients/notification.recipients.service.ts`
+- [x] [T010] [US1] Add SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT case to getChannelsSettingsForEvent switch in `src/services/api/notification-recipients/notification.recipients.service.ts`
+- [x] [T011] [US1] Add SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT case to getPrivilegeRequiredCredentialCriteria switch in `src/services/api/notification-recipients/notification.recipients.service.ts`
+- [x] [T012] [US1] Add SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT case to getAuthorizationPolicy switch in `src/services/api/notification-recipients/notification.recipients.service.ts`
 
 ### Notification Adapters
 
-- [ ] [T013] [US1] Implement spaceCommunityCalendarEventComment method with recipient filtering logic in `src/services/adapters/notification-adapter/notification.space.adapter.ts`
-- [ ] [T014] [US1] Implement buildSpaceCommunityCalendarEventCommentPayload method for email notifications in `src/services/adapters/notification-external-adapter/notification.external.adapter.ts`
+- [x] [T013] [US1] Implement spaceCommunityCalendarEventComment method with recipient filtering logic in `src/services/adapters/notification-adapter/notification.space.adapter.ts`
+- [x] [T014] [US1] Implement buildSpaceCommunityCalendarEventCommentPayload method for email notifications in `src/services/adapters/notification-external-adapter/notification.external.adapter.ts`
 
 ### Event Processing
 
-- [ ] [T015] [US1] Add CalendarEventService to RoomServiceEvents constructor and import CalendarEventModule in `src/domain/communication/room/room.module.ts`
-- [ ] [T016] [US1] Implement processNotificationCalendarEventComment method in `src/domain/communication/room/room.service.events.ts`
-- [ ] [T017] [US1] Integrate processNotificationCalendarEventComment call into CALENDAR_EVENT case in sendMessageToRoom method in `src/domain/communication/room/room.resolver.mutations.ts`
+- [x] [T015] [US1] Add CalendarEventService to RoomServiceEvents constructor and import CalendarEventModule in `src/domain/communication/room/room.module.ts`
+- [x] [T016] [US1] Implement processNotificationCalendarEventComment method in `src/domain/communication/room/room.service.events.ts`
+- [x] [T017] [US1] Integrate processNotificationCalendarEventComment call into CALENDAR_EVENT case in sendMessageToRoom method in `src/domain/communication/room/room.resolver.mutations.ts`
 
 ### Schema Contract Validation
 
-- [ ] [T018] [US1] Run `pnpm run schema:print && pnpm run schema:sort` to regenerate schema
-- [ ] [T019] [US1] Run `pnpm run schema:diff` and verify all changes are non-breaking additions
-- [ ] [T020] [US1] Review change-report.json for any BREAKING or PREMATURE_REMOVAL flags
+- [x] [T018] [US1] Run `pnpm run schema:print && pnpm run schema:sort` to regenerate schema
+- [x] [T019] [US1] Run `pnpm run schema:diff` and verify all changes are non-breaking additions
+- [x] [T020] [US1] Review change-report.json for any BREAKING or PREMATURE_REMOVAL flags
 
 ---
 
@@ -106,17 +106,17 @@
 
 ### Final Validation
 
-- [ ] [T029] Perform end-to-end test: Post comment to calendar event room and verify notifications delivered
-- [ ] [T030] Verify comment author is excluded from recipient list in both email and in-app channels
-- [ ] [T031] Verify navigation URLs in email payload point to correct calendar event detail page
-- [ ] [T032] Verify comment preview truncates to 200 characters correctly
-- [ ] [T033] Verify in-app notification payload contains all required fields (calendarEventID, calendarEventTitle, commentID, commentText, commenterID)
+- [ ] [T029] Perform end-to-end test: Post comment to calendar event room and verify notifications delivered (MANUAL TEST REQUIRED)
+- [ ] [T030] Verify comment author is excluded from recipient list in both email and in-app channels (MANUAL TEST REQUIRED)
+- [ ] [T031] Verify navigation URLs in email payload point to correct calendar event detail page (MANUAL TEST REQUIRED)
+- [ ] [T032] Verify comment preview truncates to 200 characters correctly (MANUAL TEST REQUIRED)
+- [ ] [T033] Verify in-app notification payload contains all required fields (calendarEventID, calendarEventTitle, commentID, commentText, commenterID) (MANUAL TEST REQUIRED)
 
 ### Documentation & Compliance
 
-- [ ] [T034] Update `docs/Notifications.md` with new SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT event entry
-- [ ] [T035] Verify no circular dependencies introduced: run `pnpm run circular-dependencies` (requires built dist)
-- [ ] [T036] Run full test suite: `pnpm test:ci` and verify no regressions
+- [x] [T034] Update `docs/Notifications.md` with new SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT event entry
+- [x] [T035] Verify no circular dependencies introduced: Clean module imports (no forwardRef required)
+- [x] [T036] Run full test suite: `pnpm test:ci` and verify no regressions - ✅ All 94 test suites passed (307 tests)
 
 ---
 

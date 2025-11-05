@@ -464,6 +464,8 @@ enum NotificationEvent {
   SPACE_COLLABORATION_CALLOUT_POST_CONTRIBUTION_COMMENT
   SPACE_COLLABORATION_CALLOUT_PUBLISHED
   SPACE_COMMUNICATION_UPDATE
+  SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT
+  SPACE_COMMUNITY_CALENDAR_EVENT_CREATED
   SPACE_COMMUNITY_INVITATION_USER_PLATFORM
   SPACE_LEAD_COMMUNICATION_MESSAGE
   USER_COMMENT_REPLY
@@ -507,6 +509,8 @@ enum NotificationEventPayload {
   SPACE_COMMUNICATION_MESSAGE_DIRECT
   SPACE_COMMUNICATION_UPDATE
   SPACE_COMMUNITY_APPLICATION
+  SPACE_COMMUNITY_CALENDAR_EVENT
+  SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT
   SPACE_COMMUNITY_CONTRIBUTOR
   SPACE_COMMUNITY_INVITATION
   SPACE_COMMUNITY_INVITATION_USER_PLATFORM
@@ -2098,7 +2102,16 @@ type CreateWhiteboardData {
   content: WhiteboardContent
   """A readable identifier, unique within the containing scope."""
   nameID: NameID
+  """The preview settings for the whiteboard."""
+  previewSettings: CreateWhiteboardPreviewSettingsData
   profile: CreateProfileData
+}
+
+type CreateWhiteboardPreviewSettingsData {
+  """The coordinates for the preview."""
+  coordinates: WhiteboardPreviewCoordinatesData
+  "The preview mode.\n      AUTO: Generate Whiteboard preview automatically when closing the dialog\n      CUSTOM: Generate Whiteboard preview based on user-defined coordinates when closing the dialog\n      FIXED: Use a fixed Whiteboard preview that does not change when closing the dialog\n    "
+  mode: WhiteboardPreviewMode
 }
 
 type Credential {
@@ -2450,6 +2463,42 @@ type InAppNotificationPayloadSpaceCommunicationUpdate implements InAppNotificati
 type InAppNotificationPayloadSpaceCommunityApplication implements InAppNotificationPayload {
   """The Application that the notification is related to."""
   application: Application
+  """The space details."""
+  space: Space
+  """The payload type."""
+  type: NotificationEventPayload!
+}
+
+type InAppNotificationPayloadSpaceCommunityCalendarEvent implements InAppNotificationPayload {
+  """The CalendarEvent that was created."""
+  calendarEvent: CalendarEvent
+  """ID of the calendar event."""
+  calendarEventID: UUID!
+  """Display title of the calendar event."""
+  calendarEventTitle: String!
+  """Type of the calendar event."""
+  calendarEventType: CalendarEventType!
+  """ID of the user who created the event."""
+  createdBy: UUID!
+  """The space details."""
+  space: Space
+  """The payload type."""
+  type: NotificationEventPayload!
+}
+
+type InAppNotificationPayloadSpaceCommunityCalendarEventComment implements InAppNotificationPayload {
+  """The calendar event that was commented on."""
+  calendarEvent: CalendarEvent
+  """ID of the calendar event that was commented on."""
+  calendarEventID: UUID!
+  """Display title of the calendar event."""
+  calendarEventTitle: String!
+  """ID of the user who posted the comment."""
+  commenterID: UUID!
+  """ID of the comment message."""
+  commentID: UUID!
+  """Preview text of the comment (first 200 characters)."""
+  commentText: String!
   """The space details."""
   space: Space
   """The payload type."""
@@ -4112,6 +4161,7 @@ type PromptGraph {
 
 type PromptGraphDataPoint {
   description: String
+  items: PromptGraphDataStruct
   name: String!
   optional: Boolean
   type: String
@@ -5519,6 +5569,8 @@ type UserSettingsNotificationSpace {
   collaborationCalloutPublished: UserSettingsNotificationChannels!
   """Receive a notification for community updates"""
   communicationUpdates: UserSettingsNotificationChannels!
+  """Receive a notification when a calendar event is created"""
+  communityCalendarEvents: UserSettingsNotificationChannels!
 }
 
 type UserSettingsNotificationSpaceAdmin {
@@ -5720,7 +5772,7 @@ type Visual {
   minHeight: Float!
   """Minimum width resolution."""
   minWidth: Float!
-  name: String!
+  name: VisualType!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
   uri: String!
@@ -5767,6 +5819,17 @@ type Whiteboard {
 }
 
 type WhiteboardPreviewCoordinates {
+  """The height."""
+  height: Float!
+  """The width."""
+  width: Float!
+  """The x coordinate."""
+  x: Float!
+  """The y coordinate."""
+  y: Float!
+}
+
+type WhiteboardPreviewCoordinatesData {
   """The height."""
   height: Float!
   """The width."""
@@ -6521,7 +6584,16 @@ input CreateWhiteboardInput {
   content: WhiteboardContent
   """A readable identifier, unique within the containing scope."""
   nameID: NameID
+  """The preview settings for the whiteboard."""
+  previewSettings: CreateWhiteboardPreviewSettingsInput
   profile: CreateProfileInput
+}
+
+input CreateWhiteboardPreviewSettingsInput {
+  """The coordinates for the preview."""
+  coordinates: WhiteboardPreviewCoordinatesInput
+  "The preview mode.\n      AUTO: Generate Whiteboard preview automatically when closing the dialog\n      CUSTOM: Generate Whiteboard preview based on user-defined coordinates when closing the dialog\n      FIXED: Use a fixed Whiteboard preview that does not change when closing the dialog\n    "
+  mode: WhiteboardPreviewMode
 }
 
 input DeleteAiPersonaInput {
@@ -6784,6 +6856,7 @@ input OrganizationVerificationEventInput {
 
 input PromptGraphDataPointInput {
   description: String
+  items: PromptGraphDataStructInput
   name: String!
   optional: Boolean
   type: String
@@ -7044,6 +7117,7 @@ input UpdateAiPersonaInput {
   externalConfig: ExternalConfigInput
   ID: UUID!
   prompt: [String!]
+  promptGraph: PromptGraphInput
 }
 
 input UpdateApplicationFormOnRoleSetInput {
@@ -7126,6 +7200,8 @@ input UpdateCalloutFramingInput {
   type: CalloutFramingType
   """The new content to be used."""
   whiteboardContent: WhiteboardContent
+  """The new preview settings for the Whiteboard."""
+  whiteboardPreviewSettings: UpdateWhiteboardPreviewSettingsInput
 }
 
 input UpdateCalloutPublishInfoInput {
@@ -7726,6 +7802,8 @@ input UpdateUserSettingsNotificationSpaceInput {
   collaborationCalloutPublished: NotificationSettingInput
   """Receive a notification for community updates"""
   communicationUpdates: NotificationSettingInput
+  """Receive a notification when a calendar event is created"""
+  communityCalendarEvents: NotificationSettingInput
 }
 
 input UpdateUserSettingsNotificationUserInput {
@@ -7820,20 +7898,9 @@ input UpdateWhiteboardEntityInput {
   profile: UpdateProfileInput
 }
 
-input UpdateWhiteboardPreviewCoordinatesInput {
-  """The height."""
-  height: Float!
-  """The width."""
-  width: Float!
-  """The x coordinate."""
-  x: Float!
-  """The y coordinate."""
-  y: Float!
-}
-
 input UpdateWhiteboardPreviewSettingsInput {
   """The coordinates for the preview."""
-  coordinates: UpdateWhiteboardPreviewCoordinatesInput
+  coordinates: WhiteboardPreviewCoordinatesInput
   "The preview mode.\n      AUTO: Generate Whiteboard preview automatically when closing the dialog\n      CUSTOM: Generate Whiteboard preview based on user-defined coordinates when closing the dialog\n      FIXED: Use a fixed Whiteboard preview that does not change when closing the dialog\n    "
   mode: WhiteboardPreviewMode
 }
@@ -7867,6 +7934,17 @@ input UsersWithAuthorizationCredentialInput {
 input VisualUploadImageInput {
   alternativeText: String
   visualID: String!
+}
+
+input WhiteboardPreviewCoordinatesInput {
+  """The height."""
+  height: Float!
+  """The width."""
+  width: Float!
+  """The x coordinate."""
+  x: Float!
+  """The y coordinate."""
+  y: Float!
 }
 
 union AuthenticationProviderConfigUnion = OryConfig
