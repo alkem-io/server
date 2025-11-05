@@ -8,6 +8,8 @@
 
 This feature does NOT introduce new database tables or entities. It extends existing authorization behavior by adding a new privilege type and modifying how authorization rules are applied to whiteboards based on space settings.
 
+**Architecture Pattern**: Uses **authorization reset cascade** - when space settings change or admin roles are modified, `applyAuthorizationPolicy()` is called on the space, which cascades through Collaboration → CalloutsSet → Callout → CalloutContribution → Whiteboard. During this cascade, `WhiteboardAuthorizationService.appendPrivilegeRules()` conditionally appends PUBLIC_SHARE privilege rules based on `spaceSettings.collaboration.allowGuestContributions`.
+
 ## Entities (Existing - Extended)
 
 ### AuthorizationPrivilege (Enum Extension)
@@ -56,7 +58,7 @@ export enum AuthorizationPrivilege {
 
 - `allowGuestContributions: boolean` - Toggle for guest contribution policy (already exists from spec 013)
 
-**Purpose**: When toggled, triggers privilege grant/revoke operations on all whiteboards in the space
+**Purpose**: When toggled, `SpaceService.shouldUpdateAuthorizationPolicy()` returns true, triggering `SpaceAuthorizationService.applyAuthorizationPolicy()` cascade which rebuilds all authorization rules including PUBLIC_SHARE privileges
 
 ---
 
@@ -77,12 +79,12 @@ export enum AuthorizationPrivilege {
 
 **Runtime Modifications**:
 
-When `allowGuestContributions = true` for a space:
+When `allowGuestContributions = true` for a space, during authorization reset cascade:
 
 1. **For space admins**:
 
    ```typescript
-   // Privilege rule added to each whiteboard's authorization policy
+   // Privilege rule added to each whiteboard's authorization policy during appendPrivilegeRules()
    {
      grantedPrivileges: [AuthorizationPrivilege.PUBLIC_SHARE],
      sourcePrivilege: AuthorizationPrivilege.UPDATE,  // Inherited from parent space admin privilege
@@ -92,7 +94,7 @@ When `allowGuestContributions = true` for a space:
 
 2. **For whiteboard owner**:
    ```typescript
-   // Credential rule added to whiteboard's authorization policy
+   // Credential rule added to whiteboard's authorization policy during appendCredentialRules()
    {
      grantedPrivileges: [AuthorizationPrivilege.PUBLIC_SHARE],
      criterias: [
@@ -106,62 +108,68 @@ When `allowGuestContributions = true` for a space:
    }
    ```
 
+**When `allowGuestContributions = false`**: `appendPrivilegeRules()` skips adding PUBLIC_SHARE rules, effectively revoking them during the reset.
+
 ---
 
 ## Relationships
 
-### Space → Whiteboard (Indirect)
+### Space → Whiteboard (Indirect via Authorization Cascade)
 
 ```
-Space
-  └─ Collaboration
-      └─ Callout[]
-          └─ CalloutContribution[]
-              └─ Whiteboard
+Space.applyAuthorizationPolicy()
+  └─ Collaboration.applyAuthorizationPolicy(spaceSettings)
+      └─ CalloutsSet.applyAuthorizationPolicy(spaceSettings)
+          └─ Callout.applyAuthorizationPolicy()
+              └─ CalloutContribution.applyAuthorizationPolicy()
+                  └─ Whiteboard.applyAuthorizationPolicy(parentAuthorization)
+                      └─ appendPrivilegeRules() ← checks spaceSettings.allowGuestContributions
 ```
 
-**Query Path**: Used to find all whiteboards within a space when applying privilege updates
+**Authorization Flow**: Space settings propagate through the cascade; each service passes them down to children
 
 ---
 
-### Space → Community → RoleSet → User (Admin Discovery)
+### Space → Community → RoleSet → User (Admin Privileges)
 
 ```
 Space
   └─ Community
       └─ RoleSet
-          └─ ContributorRoles[] (where role = 'admin')
-              └─ User
+          └─ Admin privileges passed through authorization cascade
 ```
 
-**Query Path**: Used to identify all space admins who should receive PUBLIC_SHARE privilege
+**Authorization Flow**: Admin privileges are inherited during cascade; `appendPrivilegeRules()` maps UPDATE privilege to PUBLIC_SHARE for admins
 
 ---
 
 ## State Transitions
 
-### Privilege Lifecycle
+### Authorization Reset Lifecycle
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │ Setting: allowGuestContributions = FALSE (default)          │
-│ State: No PUBLIC_SHARE privileges granted                   │
+│ State: appendPrivilegeRules() skips PUBLIC_SHARE            │
 └─────────────────────────────────────────────────────────────┘
                               │
                               │ Admin toggles setting ON
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
-│ Setting: allowGuestContributions = TRUE                     │
-│ Action: Grant PUBLIC_SHARE to all space admins + owners     │
-│ State: Privileges active                                    │
+│ SpaceService.shouldUpdateAuthorizationPolicy() → true       │
+│ SpaceAuthorizationService.applyAuthorizationPolicy()        │
+│ Cascade to all whiteboards                                  │
+│ appendPrivilegeRules() adds PUBLIC_SHARE rules              │
 └─────────────────────────────────────────────────────────────┘
                               │
                               │ Admin toggles setting OFF
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
-│ Setting: allowGuestContributions = FALSE                    │
-│ Action: Revoke all PUBLIC_SHARE privileges                  │
-│ State: No PUBLIC_SHARE privileges granted                   │
+│ SpaceService.shouldUpdateAuthorizationPolicy() → true       │
+│ SpaceAuthorizationService.applyAuthorizationPolicy()        │
+│ Cascade to all whiteboards                                  │
+│ appendPrivilegeRules() skips PUBLIC_SHARE rules             │
+│ State: Privileges removed during reset                      │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -171,19 +179,21 @@ Space
 User granted admin role on Space
          │
          ▼
-Event: AdminRoleGranted { userId, spaceId }
+RoleSetResolverMutations.assignRoleToUser(ADMIN)
          │
          ▼
-Handler: GrantPublicShareToNewAdmin
+Trigger: SpaceAuthorizationService.applyAuthorizationPolicy(space.id)
          │
          ▼
-Query all whiteboards in space
+Cascade through Collaboration → CalloutsSet → Callout → Contribution → Whiteboard
          │
          ▼
-Apply PUBLIC_SHARE privilege rules to each whiteboard
+WhiteboardAuthorizationService.appendPrivilegeRules()
+  - Checks allowGuestContributions === true
+  - Maps UPDATE privilege to PUBLIC_SHARE for new admin
          │
          ▼
-User now has PUBLIC_SHARE on all whiteboards
+User now has PUBLIC_SHARE on all whiteboards (via privilege rule mapping)
 ```
 
 ### New Whiteboard Creation (in space with `allowGuestContributions = TRUE`)
@@ -195,12 +205,20 @@ Whiteboard created in Space
 WhiteboardService.createWhiteboard()
          │
          ▼
-Check: space.settings.collaboration.allowGuestContributions
+Parent authorization passed from CalloutContribution
          │
-         ├─ TRUE → Apply PUBLIC_SHARE rules (admin + owner)
+         ▼
+WhiteboardAuthorizationService.applyAuthorizationPolicy(parentAuth)
          │
-         └─ FALSE → Standard authorization (no PUBLIC_SHARE)
+         ▼
+appendCredentialRules() - adds owner PUBLIC_SHARE credential rule
+appendPrivilegeRules() - adds admin PUBLIC_SHARE privilege rule if allowGuestContributions
+         │
+         ▼
+Whiteboard created with PUBLIC_SHARE rules already applied
 ```
+
+**Note**: New whiteboards inherit parent authorization and get rules applied immediately during creation, without needing a separate privilege grant operation.
 
 ---
 
@@ -208,85 +226,65 @@ Check: space.settings.collaboration.allowGuestContributions
 
 ### Privilege Assignment Constraints
 
-| Rule                                                                              | Enforcement Point     | Error Handling                                |
-| --------------------------------------------------------------------------------- | --------------------- | --------------------------------------------- |
-| Only space admins (not subspace admins) receive PUBLIC_SHARE on space whiteboards | Authorization service | N/A - enforced by query scope                 |
-| Whiteboard owner receives PUBLIC_SHARE only on their own whiteboard               | Authorization service | N/A - enforced by `createdBy` match           |
-| Privileges applied atomically (all or none)                                       | Transaction boundary  | Rollback on partial failure                   |
-| Setting reversion on failure                                                      | Transaction boundary  | Rollback `allowGuestContributions` to `false` |
+| Rule                                                                              | Enforcement Point                            | Error Handling              |
+| --------------------------------------------------------------------------------- | -------------------------------------------- | --------------------------- |
+| Only space admins (not subspace admins) receive PUBLIC_SHARE on space whiteboards | SpaceSettings isolation during cascade       | N/A - enforced by design    |
+| Whiteboard owner receives PUBLIC_SHARE only on their own whiteboard               | appendCredentialRules() resourceID check     | N/A - enforced by logic     |
+| Privileges applied atomically (all or none)                                       | Transaction boundary in resolver             | Rollback entire cascade     |
+| Setting reversion on failure                                                      | Transaction rollback in updateSpaceSettings  | Revert setting change       |
+| Each space uses own settings (no inheritance)                                     | Each space passes its own spaceSettings down | N/A - no cross-space impact |
 
 ---
 
 ## Performance Considerations
 
-### Bulk Operations
+### Authorization Reset Cascade
 
 **Scenario**: Space with 1000 whiteboards, `allowGuestContributions` toggled ON
 
-**Query Optimization**:
+**Cascade Flow**:
 
-1. Fetch all whiteboards in one query:
+1. `SpaceAuthorizationService.applyAuthorizationPolicy(spaceId)` called once
+2. Cascades through entity hierarchy (Space → Collaboration → CalloutsSet → Callout → Contribution → Whiteboard)
+3. Each whiteboard's `applyAuthorizationPolicy()` called with parent authorization + space settings
+4. `appendPrivilegeRules()` adds PUBLIC_SHARE rules conditionally
 
-   ```typescript
-   SELECT id, createdBy, authorizationId
-   FROM whiteboard
-   WHERE /* space relationship filter */
-   ```
+**Optimization Strategy**:
 
-2. Fetch space admins in one query:
-
-   ```typescript
-   SELECT userId
-   FROM community_contributor_roles
-   WHERE communityId = ? AND role = 'admin'
-   ```
-
-3. Batch authorization policy updates:
-   ```typescript
-   await authorizationPolicyService.saveAll(updatedPolicies);
-   ```
+- Batch save all authorization policies: `authorizationPolicyService.saveAll(updatedPolicies)`
+- No explicit whiteboard queries needed - cascade traverses relationships
+- Space settings passed as parameter through cascade (no repeated DB lookups)
 
 **Expected Performance**: < 1 second for 1000 whiteboards (per SC-006)
+
+**Database Operations**:
+
+- 1 space authorization update
+- N whiteboard authorization updates (batched)
+- No explicit admin or whiteboard queries (leverages existing cascade)
 
 ---
 
 ## Migration Requirements
 
-### Migration: Add PUBLIC_SHARE Enum Value
+### No Database Migration Required
 
-**File**: `src/migrations/NNNNNNNNNN-addPublicSharePrivilege.ts`
+**Rationale**:
 
-**Purpose**: No database schema change required—enum is TypeScript-only. Migration validates that existing authorization policies don't contain PUBLIC_SHARE privilege (defensive check).
+- `AuthorizationPrivilege` is a **TypeScript compile-time enum only**
+- Not stored in database schema
+- Authorization policies use JSON columns with dynamic rule structures
+- No schema changes needed
 
-**Migration Logic**:
+**Validation Task (T002)**:
 
-```typescript
-public async up(queryRunner: QueryRunner): Promise<void> {
-  // Validation: Ensure no authorization policies already have 'public-share' in privilegeRules
-  const existing = await queryRunner.query(`
-    SELECT id FROM authorization_policy
-    WHERE JSON_SEARCH(privilegeRules, 'one', 'public-share') IS NOT NULL
-  `);
+Simply verify the enum compiles and builds successfully:
 
-  if (existing.length > 0) {
-    throw new Error('PUBLIC_SHARE privilege already exists in authorization policies');
-  }
-
-  // No schema changes needed
-}
-
-public async down(queryRunner: QueryRunner): Promise<void> {
-  // Remove any PUBLIC_SHARE privileges that may have been granted
-  await queryRunner.query(`
-    UPDATE authorization_policy
-    SET privilegeRules = JSON_REMOVE(
-      privilegeRules,
-      JSON_UNQUOTE(JSON_SEARCH(privilegeRules, 'all', 'public-share'))
-    )
-    WHERE JSON_SEARCH(privilegeRules, 'one', 'public-share') IS NOT NULL
-  `);
-}
+```bash
+pnpm build
 ```
+
+**No Migration File Needed**: The original migration concept has been removed from the implementation plan.
 
 ---
 
@@ -294,17 +292,22 @@ public async down(queryRunner: QueryRunner): Promise<void> {
 
 ### Consistency Guarantees
 
-1. **Transactional Integrity**: All privilege updates wrapped in database transaction
-2. **Eventual Consistency**: N/A - operations are synchronous
-3. **Idempotency**: `applyAuthorizationPolicy()` rebuilds rules from scratch; safe to call multiple times
+1. **Transactional Integrity**: Authorization cascade wrapped in transaction at resolver level (`SpaceResolverMutations.updateSpaceSettings`)
+2. **Eventual Consistency**: N/A - operations are synchronous via authorization reset cascade
+3. **Idempotency**: `applyAuthorizationPolicy()` rebuilds rules from scratch every time; safe to call repeatedly
 4. **Cascade Deletion**: When whiteboard deleted, authorization policy auto-deleted (existing FK constraint)
+5. **Settings Isolation**: Each space uses its own `spaceSettings` during cascade; no inheritance to subspaces
+6. **Reset Pattern Safety**: Privileges never explicitly granted/revoked - always rebuilt statically during reset
 
 ---
 
 ## Summary
 
-- **No new tables**: Extends existing `authorization_policy` JSON structure
-- **Enum extension**: Add `PUBLIC_SHARE` to `AuthorizationPrivilege`
-- **Runtime privilege modification**: Authorization rules computed based on `allowGuestContributions` setting
+- **No new tables**: Extends existing `authorization_policy` JSON structure via authorization reset cascade
+- **Enum extension**: Add `PUBLIC_SHARE` to `AuthorizationPrivilege` (TypeScript only, no DB change)
+- **Authorization reset pattern**: Rules rebuilt from scratch during `applyAuthorizationPolicy()` cascade
+- **Space settings propagation**: Settings flow through Collaboration → CalloutsSet → Callout → CalloutContribution → Whiteboard
+- **Conditional rule creation**: `appendPrivilegeRules()` checks `allowGuestContributions` and conditionally adds PUBLIC_SHARE
 - **Transactional safety**: Rollback on failure ensures consistency
-- **Performance**: Optimized for bulk operations (1000 whiteboards in < 1 second)
+- **Performance**: Leverages existing cascade infrastructure (1000 whiteboards in < 1 second)
+- **No migration file**: Enum is compile-time only; validation via build process
