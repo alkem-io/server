@@ -21,7 +21,7 @@ import { InAppNotificationPayloadSpaceCommunityInvitation } from '@platform/in-a
 import { NotificationInputCommunityInvitation } from './dto/space/notification.dto.input.space.community.invitation';
 import { NotificationInputCommunityNewMember } from './dto/space/notification.dto.input.space.community.new.member';
 import { InAppNotificationPayloadSpaceCommunityContributor } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.contributor';
-import { InAppNotificationPayloadSpaceCommunityApplicationDeclined } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.application.declined';
+import { InAppNotificationPayloadSpace } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space';
 import { NotificationInputUserSpaceCommunityApplicationDeclined } from './dto/user/notification.dto.input.user.space.community.application.declined';
 import { MessageDetailsService } from '@domain/communication/message.details/message.details.service';
 import { InAppNotificationPayloadUser } from '@platform/in-app-notification-payload/dto/user/notification.in.app.payload.user';
@@ -358,7 +358,7 @@ export class NotificationUserAdapter {
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length > 0) {
-      const inAppPayload: InAppNotificationPayloadSpaceCommunityApplicationDeclined =
+      const inAppPayload: InAppNotificationPayloadSpace =
         {
           type: NotificationEventPayload.SPACE,
           spaceID: eventData.spaceID,
