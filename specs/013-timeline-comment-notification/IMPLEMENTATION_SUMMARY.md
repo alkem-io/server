@@ -114,13 +114,6 @@ Implemented comprehensive notification system for calendar event comments, deliv
     - Generates calendar event URL
     - Creates payload with event, comment preview, sender info
 
-11. **`src/services/adapters/notification-external-adapter/notification.external.adapter.ts`**
-    - New `buildSpaceCommunityCalendarEventCommentPayload` method
-    - Builds base space payload
-    - Loads commenter user payload
-    - Generates calendar event URL
-    - Creates payload with event, comment preview, sender info
-
 #### Event Processing & Module Structure
 
 11. **`src/domain/communication/room/room.module.ts`**

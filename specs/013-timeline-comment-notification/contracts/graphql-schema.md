@@ -37,7 +37,7 @@ type InAppNotificationPayloadSpaceCommunityCalendarEventComment implements InApp
   """
   The Space where the calendar event exists
   """
-  spaceID: UUID!
+  space: Space
 
   """
   ID of the calendar event that was commented on
