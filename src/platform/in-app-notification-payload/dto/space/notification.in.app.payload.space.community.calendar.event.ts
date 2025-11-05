@@ -1,5 +1,5 @@
 import { IInAppNotificationPayload } from '@platform/in-app-notification-payload/in.app.notification.payload.interface';
-import { InAppNotificationPayloadSpace } from './notification.in.app.payload.space.base';
+import { InAppNotificationPayloadSpaceBase } from './notification.in.app.payload.space.base';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { CalendarEventType } from '@common/enums/calendar.event.type';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
@@ -7,7 +7,7 @@ import { UUID } from '@domain/common/scalars/scalar.uuid';
 @ObjectType('InAppNotificationPayloadSpaceCommunityCalendarEvent', {
   implements: () => IInAppNotificationPayload,
 })
-export abstract class InAppNotificationPayloadSpaceCommunityCalendarEvent extends InAppNotificationPayloadSpace {
+export abstract class InAppNotificationPayloadSpaceCommunityCalendarEvent extends InAppNotificationPayloadSpaceBase {
   @Field(() => UUID, {
     description: 'ID of the calendar event.',
   })

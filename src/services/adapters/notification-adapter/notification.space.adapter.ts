@@ -1,36 +1,71 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { NotificationInputBase } from './dto/notification.dto.input.base';
-import { NotificationInputPlatformInvitation } from './dto/space/notification.dto.input.space.community.invitation.platform';
+import {
+  NotificationInputPlatformInvitation,
+} from './dto/space/notification.dto.input.space.community.invitation.platform';
 import { NotificationExternalAdapter } from '../notification-external-adapter/notification.external.adapter';
 import { NotificationInAppAdapter } from '../notification-in-app-adapter/notification.in.app.adapter';
-import { InAppNotificationPayloadSpaceCommunicationUpdate } from '../../../platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.communication.update';
+import {
+  InAppNotificationPayloadSpaceCommunicationUpdate,
+} from '../../../platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.communication.update';
 import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { NotificationEvent } from '@common/enums/notification.event';
-import { NotificationRecipientResult } from '@services/api/notification-recipients/dto/notification.recipients.dto.result';
+import {
+  NotificationRecipientResult,
+} from '@services/api/notification-recipients/dto/notification.recipients.dto.result';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
-import { NotificationInputCalloutPublished } from './dto/space/notification.dto.input.space.collaboration.callout.published';
+import {
+  NotificationInputCalloutPublished,
+} from './dto/space/notification.dto.input.space.collaboration.callout.published';
 import { NotificationInputCommunityNewMember } from './dto/space/notification.dto.input.space.community.new.member';
 import { NotificationInputCommunityApplication } from './dto/space/notification.dto.input.space.community.application';
 import { NotificationInputUpdateSent } from './dto/space/notification.dto.input.space.communication.update.sent';
-import { NotificationInputCommunicationLeadsMessage } from './dto/space/notification.dto.input.space.communication.leads.message';
+import {
+  NotificationInputCommunicationLeadsMessage,
+} from './dto/space/notification.dto.input.space.communication.leads.message';
 import { NotificationAdapter } from './notification.adapter';
 import { IUser } from '@domain/community/user/user.interface';
-import { InAppNotificationPayloadSpaceCommunityApplication } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.application';
-import { InAppNotificationPayloadSpaceCommunityContributor } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.contributor';
-import { InAppNotificationPayloadSpaceCommunicationMessageDirect } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.communication.message.direct';
+import {
+  InAppNotificationPayloadSpaceCommunityApplication,
+} from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.application';
+import {
+  InAppNotificationPayloadSpaceCommunityContributor,
+} from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.contributor';
+import {
+  InAppNotificationPayloadSpaceCommunicationMessageDirect,
+} from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.communication.message.direct';
 import { NotificationEventPayload } from '@common/enums/notification.event.payload';
-import { InAppNotificationPayloadSpaceCollaborationCallout } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout';
+import {
+  InAppNotificationPayloadSpaceCollaborationCallout,
+} from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout';
 import { NotificationUserAdapter } from './notification.user.adapter';
-import { NotificationInputCollaborationCalloutContributionCreated } from './dto/space/notification.dto.input.space.collaboration.callout.contribution.created';
-import { NotificationInputCollaborationCalloutComment } from './dto/space/notification.dto.input.space.collaboration.callout.comment';
-import { NotificationInputCollaborationCalloutPostContributionComment } from './dto/space/notification.dto.input.space.collaboration.callout.post.contribution.comment';
-import { InAppNotificationPayloadSpaceCollaborationCalloutPostComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout.post.comment';
-import { InAppNotificationPayloadSpaceCollaborationCalloutComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout.comment';
-import { NotificationInputVirtualContributorSpaceCommunityInvitationDeclined } from './dto/space/notification.dto.input.space.community.invitation.vc.declined';
-import { NotificationInputCommunityCalendarEventCreated } from './dto/space/notification.dto.input.space.community.calendar.event.created';
-import { InAppNotificationPayloadSpaceCommunityCalendarEvent } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.calendar.event';
+import {
+  NotificationInputCollaborationCalloutContributionCreated,
+} from './dto/space/notification.dto.input.space.collaboration.callout.contribution.created';
+import {
+  NotificationInputCollaborationCalloutComment,
+} from './dto/space/notification.dto.input.space.collaboration.callout.comment';
+import {
+  NotificationInputCollaborationCalloutPostContributionComment,
+} from './dto/space/notification.dto.input.space.collaboration.callout.post.contribution.comment';
+import {
+  InAppNotificationPayloadSpaceCollaborationCalloutPostComment,
+} from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout.post.comment';
+import {
+  InAppNotificationPayloadSpaceCollaborationCalloutComment,
+} from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout.comment';
+import {
+  NotificationInputVirtualContributorSpaceCommunityInvitationDeclined,
+} from './dto/space/notification.dto.input.space.community.invitation.vc.declined';
+import {
+  NotificationInputCommunityCalendarEventCreated,
+} from './dto/space/notification.dto.input.space.community.calendar.event.created';
+import {
+  InAppNotificationPayloadSpaceCommunityCalendarEvent,
+} from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.calendar.event';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
+import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
 
 @Injectable()
 export class NotificationSpaceAdapter {
@@ -497,6 +532,7 @@ export class NotificationSpaceAdapter {
         type: NotificationEventPayload.SPACE_COMMUNITY_CONTRIBUTOR,
         spaceID: space.id,
         contributorID: eventData.virtualContributorID,
+        contributorType: RoleSetContributorType.VIRTUAL,
       };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
