@@ -5,6 +5,17 @@
 **Status**: Draft
 **Input**: User description: "Add the next steps of the functionality which was started with adding a new setting to a space's collaboration set of settings: allowGuestContributions. It enables spaces to allow or block guest contributions via a new allowGuestContributions setting in space configuration. When ON, the backend grants PUBLIC_SHARE privilege to all space admins and to owners of whiteboards within that space, automatically reflecting these privileges both on existing and newly created whiteboards. The privilege is per whiteboard inside this space or subspace only. There is no inheritance space > subspace of the settings, privileges, or anything. Per whiteboard only for its own creator and for the admins of the respective space or subspace. The client adapts the Share dialog: it performs authorization checks so only users with PUBLIC_SHARE on a whiteboard see the 'Guest access' toggle. When the setting is OFF, all guest contribution UI is hidden and all relevant privileges are revoked by the backend. This ensures permissions and UI stay consistent and correctly reflect the space's desired collaboration mode."
 
+## Clarifications
+
+### Session 2025-11-05
+
+- Q: What should happen if privilege assignment fails partway through (e.g., database error after granting to some admins but not all)? → A: Rollback all changes and return error - maintain consistent state across all users
+- Q: What events/metrics should be logged when privileges are granted or revoked? → A: Log privilege grants/revokes with user/whiteboard IDs + emit metrics on operation count/duration
+- Q: What is the expected maximum number of whiteboards per space for performance validation? → A: 1000 whiteboards per space
+- Q: Should privilege grant/revoke actions be audited for compliance tracking? → A: Yes, audit all privilege grant/revoke operations with triggering user/action
+- Q: Should the system track who/when triggered a privilege change for troubleshooting? → A: Track triggering event only (setting change/admin grant/whiteboard creation)
+- Q: If privilege granting fails when enabling allowGuestContributions, should the setting be reverted? → A: Yes, revert allowGuestContributions to false in space collaboration settings
+
 ## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Automatic privilege granting when guest contributions enabled (Priority: P1)
@@ -82,6 +93,7 @@ When a user is granted space admin privileges on a space that has allowGuestCont
 - **New whiteboard creation**: When a whiteboard is created in a space with allowGuestContributions enabled, the creator receives PUBLIC_SHARE privilege atomically with whiteboard creation.
 - **Authorization check performance**: Authorization checks for PUBLIC_SHARE privilege must complete within acceptable UI interaction timeframes to avoid blocking the Share dialog rendering.
 - **Concurrent setting changes**: If multiple admins toggle allowGuestContributions simultaneously, the last write wins and privilege state converges to match the final setting value.
+- **Partial failure handling**: If privilege assignment fails partway through (e.g., database error after granting to some users), the system MUST rollback all privilege changes AND revert the allowGuestContributions setting to false, then return an error to maintain consistent state across all users and settings.
 
 ## Requirements _(mandatory)_
 
@@ -93,9 +105,13 @@ When a user is granted space admin privileges on a space that has allowGuestCont
 - **FR-004**: System MUST automatically grant PUBLIC_SHARE privilege to the creator on their whiteboard and to all space admins on that whiteboard when a new whiteboard is created in a space with allowGuestContributions enabled.
 - **FR-005**: System MUST immediately revoke all PUBLIC_SHARE privileges on whiteboards within a space when allowGuestContributions is disabled for that space.
 - **FR-006**: System MUST automatically grant PUBLIC_SHARE privilege on all whiteboards in a space when a user is granted space admin privileges on a space with allowGuestContributions enabled.
-- **FR-007**: System MUST grant PUBLIC_SHARE privilege on a per-whiteboard basis only - no privilege inheritance across whiteboards or from space to subspace.
-- **FR-008**: System MUST scope PUBLIC_SHARE privileges to the space or subspace containing the whiteboard - subspace admins receive privileges only for whiteboards in their subspace, not parent spaces.
-- **FR-009**: System MUST handle privilege granting and revocation synchronously when allowGuestContributions setting is toggled to ensure immediate consistency.
+- **FR-007**: System MUST scope PUBLIC_SHARE privileges to the space or subspace containing the whiteboard - subspace admins receive privileges only for whiteboards in their subspace, not parent spaces.
+- **FR-008**: System MUST handle privilege granting and revocation synchronously when allowGuestContributions setting is toggled to ensure immediate consistency.
+- **FR-009**: System MUST rollback all privilege changes AND revert allowGuestContributions setting to false if privilege assignment fails partway through, maintaining consistent state across all users and settings.
+- **FR-010**: System MUST log all privilege grant and revoke operations with user ID, whiteboard ID, space ID, and timestamp for audit trail and troubleshooting.
+- **FR-011**: System MUST emit metrics tracking the count and duration of privilege assignment operations for operational monitoring.
+- **FR-012**: System MUST audit all privilege grant and revoke operations, recording the triggering user, triggering action (setting change, admin role grant, whiteboard creation), affected users, and timestamp for compliance tracking.
+- **FR-013**: System MUST track the triggering event type (setting change, admin role grant, or whiteboard creation) for each privilege assignment to support troubleshooting and operational analysis.
 
 ### Key Entities
 
@@ -114,6 +130,7 @@ When a user is granted space admin privileges on a space that has allowGuestCont
 - **SC-003**: When a user is granted space admin privileges on a space with allowGuestContributions enabled, they receive PUBLIC_SHARE privilege on all whiteboards in that space within 1 second.
 - **SC-004**: 100% consistency between allowGuestContributions setting state and PUBLIC_SHARE privilege existence across all whiteboards in a space.
 - **SC-005**: Zero privilege inheritance violations - PUBLIC_SHARE is only granted based on the specific space/subspace containing the whiteboard, not parent spaces.
+- **SC-006**: System maintains performance targets (1 second for privilege operations) for spaces containing up to 1000 whiteboards.
 
 ## Assumptions
 
