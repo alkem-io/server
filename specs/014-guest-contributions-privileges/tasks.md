@@ -20,8 +20,8 @@
 
 **Note**: No database migration required - AuthorizationPrivilege is a TypeScript compile-time enum only
 
-- [ ] T001 Add PUBLIC_SHARE enum value to AuthorizationPrivilege in src/common/enums/authorization.privilege.ts
-- [ ] T002 Validate enum addition compiles and builds successfully (run `pnpm build`)
+- [x] T001 Add PUBLIC_SHARE enum value to AuthorizationPrivilege in src/common/enums/authorization.privilege.ts
+- [x] T002 Validate enum addition compiles and builds successfully (run `pnpm build`)
 
 ---
 
@@ -33,9 +33,9 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 [P] Add getAdmins() method to CommunityService in src/domain/community/community/community.service.ts
-- [ ] T004 [P] Add Winston logger configuration for privilege operations in GuestContributionPrivilegeHandler module
-- [ ] T005 [P] Add Elastic APM span instrumentation for privilege operations in GuestContributionPrivilegeHandler module
+- [x] T003 [P] Add getAdmins() method to CommunityService in src/domain/community/community/community.service.ts
+- [x] T004 [P] Add Winston logger configuration for privilege operations in GuestContributionPrivilegeHandler module
+- [x] T005 [P] Add Elastic APM span instrumentation for privilege operations in GuestContributionPrivilegeHandler module
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -53,14 +53,14 @@
 
 **Core Change**: Extend `WhiteboardAuthorizationService.appendPrivilegeRules()` to conditionally append PUBLIC_SHARE privilege rules when `spaceSettings.collaboration.allowGuestContributions === true`
 
-- [ ] T006 [P] [US1] Add space settings parameter propagation through CalloutContribution authorization in src/domain/collaboration/callout-contribution/callout.contribution.service.authorization.ts
-- [ ] T007 [US1] Extend appendCredentialRules() in WhiteboardAuthorizationService to add owner PUBLIC_SHARE credential rule in src/domain/common/whiteboard/whiteboard.service.authorization.ts
-- [ ] T008 [US1] Extend appendPrivilegeRules() in WhiteboardAuthorizationService to conditionally add admin PUBLIC_SHARE privilege rule based on space settings in src/domain/common/whiteboard/whiteboard.service.authorization.ts
-- [ ] T009 [US1] Update applyAuthorizationPolicy() signature in WhiteboardAuthorizationService to accept space settings parameter in src/domain/common/whiteboard/whiteboard.service.authorization.ts
-- [ ] T010 [US1] Verify SpaceService.shouldUpdateAuthorizationPolicy() detects allowGuestContributions changes in src/domain/space/space/space.service.ts
-- [ ] T011 [US1] Add structured logging for PUBLIC_SHARE privilege assignment in appendPrivilegeRules() in src/domain/common/whiteboard/whiteboard.service.authorization.ts
-- [ ] T012 [US1] Add metrics emission for privilege rule creation count in src/domain/common/whiteboard/whiteboard.service.authorization.ts
-- [ ] T013 [US1] Add audit trail logging for space settings trigger in SpaceResolverMutations.updateSpaceSettings() in src/domain/space/space/space.resolver.mutations.ts
+- [x] T006 [P] [US1] Add space settings parameter propagation through CalloutContribution authorization in src/domain/collaboration/callout-contribution/callout.contribution.service.authorization.ts
+- [x] T007 [US1] Extend appendCredentialRules() in WhiteboardAuthorizationService to add owner PUBLIC_SHARE credential rule in src/domain/common/whiteboard/whiteboard.service.authorization.ts
+- [x] T008 [US1] Extend appendPrivilegeRules() in WhiteboardAuthorizationService to conditionally add admin PUBLIC_SHARE privilege rule based on space settings in src/domain/common/whiteboard/whiteboard.service.authorization.ts
+- [x] T009 [US1] Update applyAuthorizationPolicy() signature in WhiteboardAuthorizationService to accept space settings parameter in src/domain/common/whiteboard/whiteboard.service.authorization.ts
+- [x] T010 [US1] Verify SpaceService.shouldUpdateAuthorizationPolicy() detects allowGuestContributions changes in src/domain/space/space/space.service.ts
+- [x] T011 [US1] Add structured logging for PUBLIC_SHARE privilege assignment in appendPrivilegeRules() in src/domain/common/whiteboard/whiteboard.service.authorization.ts
+- [x] T012 [US1] Add metrics emission for privilege rule creation count in src/domain/common/whiteboard/whiteboard.service.authorization.ts
+- [x] T013 [US1] Add audit trail logging for space settings trigger in SpaceResolverMutations.updateSpaceSettings() in src/domain/space/space/space.resolver.mutations.ts
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - enabling allowGuestContributions triggers authorization reset which grants privileges to admins and owners
 
@@ -78,10 +78,10 @@
 
 **Core Change**: Extend conditional logic in `WhiteboardAuthorizationService.appendPrivilegeRules()` to NOT append PUBLIC_SHARE rules when `spaceSettings.collaboration.allowGuestContributions === false`
 
-- [ ] T014 [US2] Add conditional branch in appendPrivilegeRules() to skip PUBLIC_SHARE rules when allowGuestContributions is false in src/domain/common/whiteboard/whiteboard.service.authorization.ts
-- [ ] T015 [US2] Add structured logging for privilege revocation (skipped rule creation) in src/domain/common/whiteboard/whiteboard.service.authorization.ts
-- [ ] T016 [US2] Add metrics emission for revocation operations (authorization reset count) in src/domain/common/whiteboard/whiteboard.service.authorization.ts
-- [ ] T017 [US2] Verify shouldUpdateAuthorizationPolicy() correctly detects allowGuestContributions: true→false transition in src/domain/space/space/space.service.ts
+- [x] T014 [US2] Add conditional branch in appendPrivilegeRules() to skip PUBLIC_SHARE rules when allowGuestContributions is false in src/domain/common/whiteboard/whiteboard.service.authorization.ts
+- [x] T015 [US2] Add structured logging for privilege revocation (skipped rule creation) in src/domain/common/whiteboard/whiteboard.service.authorization.ts
+- [x] T016 [US2] Add metrics emission for revocation operations (authorization reset count) in src/domain/common/whiteboard/whiteboard.service.authorization.ts
+- [x] T017 [US2] Verify shouldUpdateAuthorizationPolicy() correctly detects allowGuestContributions: true→false transition in src/domain/space/space/space.service.ts
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently - toggle works bidirectionally through authorization reset
 
