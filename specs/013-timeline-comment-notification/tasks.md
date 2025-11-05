@@ -110,7 +110,7 @@
 - [ ] [T030] Verify comment author is excluded from recipient list in both email and in-app channels (MANUAL TEST REQUIRED)
 - [ ] [T031] Verify navigation URLs in email payload point to correct calendar event detail page (MANUAL TEST REQUIRED)
 - [ ] [T032] Verify comment preview truncates to 200 characters correctly (MANUAL TEST REQUIRED)
-- [ ] [T033] Verify in-app notification payload contains all required fields (calendarEventID, calendarEventTitle, commentID, commentText, commenterID) (MANUAL TEST REQUIRED)
+- [ ] [T033] Verify in-app notification payload contains all required fields (calendarEventID, commentText) (MANUAL TEST REQUIRED)
 
 ### Documentation & Compliance
 

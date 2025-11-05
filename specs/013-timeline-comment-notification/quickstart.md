@@ -81,24 +81,9 @@ export abstract class InAppNotificationPayloadSpaceCommunityCalendarEventComment
   calendarEventID!: string;
 
   @Field(() => String, {
-    description: 'Display title of the calendar event.',
-  })
-  calendarEventTitle!: string;
-
-  @Field(() => UUID, {
-    description: 'ID of the comment message.',
-  })
-  commentID!: string;
-
-  @Field(() => String, {
     description: 'Preview text of the comment (first 200 characters).',
   })
   commentText!: string;
-
-  @Field(() => UUID, {
-    description: 'ID of the user who posted the comment.',
-  })
-  commenterID!: string;
 }
 ```
 
@@ -337,9 +322,7 @@ public async spaceCommunityCalendarEventComment(
         spaceID: space.id,
         calendarEventID: eventData.calendarEvent.id,
         calendarEventTitle: eventData.calendarEvent.profile.displayName,
-        commentID: eventData.commentSent.id,
         commentText: commentPreview,
-        commenterID: eventData.commentSent.sender,
       };
 
     await this.notificationInAppAdapter.sendInAppNotifications(

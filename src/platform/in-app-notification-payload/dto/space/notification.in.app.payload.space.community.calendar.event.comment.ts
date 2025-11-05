@@ -13,22 +13,7 @@ export abstract class InAppNotificationPayloadSpaceCommunityCalendarEventComment
   calendarEventID!: string;
 
   @Field(() => String, {
-    description: 'Display title of the calendar event.',
-  })
-  calendarEventTitle!: string;
-
-  @Field(() => UUID, {
-    description: 'ID of the comment message.',
-  })
-  commentID!: string;
-
-  @Field(() => String, {
-    description: 'Preview text of the comment (first 200 characters).',
+    description: 'Preview text of the comment',
   })
   commentText!: string;
-
-  @Field(() => UUID, {
-    description: 'ID of the user who posted the comment.',
-  })
-  commenterID!: string;
 }

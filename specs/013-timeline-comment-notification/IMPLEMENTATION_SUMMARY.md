@@ -64,7 +64,7 @@ Implemented comprehensive notification system for calendar event comments, deliv
 
 2. **`src/platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.calendar.event.comment.ts`**
    - GraphQL ObjectType for in-app notification payload
-   - Fields: `calendarEventID`, `title`, `commentID`, `text`, `commenterID`
+   - Fields: `calendarEventID`, `commentText`
    - Implements `IInAppNotificationPayload` interface
 
 3. **`src/platform/in-app-notification-payload/field-resolvers/space/in.app.notification.payload.space.community.calendar.event.comment.resolver.fields.ts`**

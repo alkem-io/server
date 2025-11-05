@@ -72,10 +72,7 @@ Resolve all technical unknowns and clarifications identified in the Technical Co
   type: NotificationEventPayload.SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT,
   spaceID: string,           // Inherited from InAppNotificationPayloadSpace
   calendarEventID: string,   // ID of the calendar event
-  calendarEventTitle: string, // Display name for navigation
-  commentID: string,          // Message ID
   commentText: string,        // Preview of comment (first 200 chars)
-  commenterID: string         // User who posted the comment
 }
 ```
 

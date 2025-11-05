@@ -2474,12 +2474,6 @@ type InAppNotificationPayloadSpaceCommunityCalendarEvent implements InAppNotific
   calendarEvent: CalendarEvent
   """ID of the calendar event."""
   calendarEventID: UUID!
-  """Display title of the calendar event."""
-  calendarEventTitle: String!
-  """Type of the calendar event."""
-  calendarEventType: CalendarEventType!
-  """ID of the user who created the event."""
-  createdBy: UUID!
   """The space details."""
   space: Space
   """The payload type."""
@@ -2491,13 +2485,7 @@ type InAppNotificationPayloadSpaceCommunityCalendarEventComment implements InApp
   calendarEvent: CalendarEvent
   """ID of the calendar event that was commented on."""
   calendarEventID: UUID!
-  """Display title of the calendar event."""
-  calendarEventTitle: String!
-  """ID of the user who posted the comment."""
-  commenterID: UUID!
-  """ID of the comment message."""
-  commentID: UUID!
-  """Preview text of the comment (first 200 characters)."""
+  """Preview text of the comment"""
   commentText: String!
   """The space details."""
   space: Space

@@ -40,29 +40,9 @@ type InAppNotificationPayloadSpaceCommunityCalendarEventComment implements InApp
   space: Space
 
   """
-  ID of the calendar event that was commented on
-  """
-  calendarEventID: UUID!
-
-  """
-  Display title of the calendar event
-  """
-  calendarEventTitle: String!
-
-  """
-  ID of the comment message
-  """
-  commentID: UUID!
-
-  """
   Preview text of the comment (first 200 characters)
   """
   commentText: String!
-
-  """
-  ID of the user who posted the comment
-  """
-  commenterID: UUID!
 }
 ```
 
