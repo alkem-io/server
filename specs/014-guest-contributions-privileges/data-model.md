@@ -33,7 +33,6 @@ export enum AuthorizationPrivilege {
 
 - Space admins (on all whiteboards in their space when `allowGuestContributions = true`)
 - Whiteboard owners (on their own whiteboard when containing space has `allowGuestContributions = true`)
-- Global Support platform role holders (on whiteboards in level-zero spaces when both `allowGuestContributions = true` and `allowPlatformSupportAsAdmin = true`)
 
 ---
 
@@ -85,22 +84,15 @@ When `allowGuestContributions = true` for a space, during authorization reset ca
 1. **For space admins**:
 
    ```typescript
-   // Credential rule added to each whiteboard's authorization policy during appendCredentialRules()
+   // Privilege rule added to each whiteboard's authorization policy during appendPrivilegeRules()
    {
      grantedPrivileges: [AuthorizationPrivilege.PUBLIC_SHARE],
-     criterias: [
-       {
-         type: AuthorizationCredential.SPACE_ADMIN,
-         resourceID: space.id  // Directly binds the space admin credential to PUBLIC_SHARE
-       }
-     ],
-     cascade: true,
+     sourcePrivilege: AuthorizationPrivilege.UPDATE,  // Inherited from parent space admin privilege
      name: 'space-admin-public-share'
    }
    ```
 
 2. **For whiteboard owner**:
-
    ```typescript
    // Credential rule added to whiteboard's authorization policy during appendCredentialRules()
    {
@@ -115,10 +107,6 @@ When `allowGuestContributions = true` for a space, during authorization reset ca
      name: 'whiteboard-owner-public-share'
    }
    ```
-
-3. **For Global Support (optional)**:
-
-   When `allowPlatformSupportAsAdmin` is enabled on a level-zero space, existing platform-role credential rules already grant admin-equivalent privileges. Under this feature, the same rule now includes `PUBLIC_SHARE` alongside the other admin privileges so that Global Support inherits guest sharing control when the space explicitly opts in.
 
 **When `allowGuestContributions = false`**: `appendPrivilegeRules()` skips adding PUBLIC_SHARE rules, effectively revoking them during the reset.
 
@@ -151,7 +139,7 @@ Space
           └─ Admin privileges passed through authorization cascade
 ```
 
-**Authorization Flow**: Admin privileges are inherited during cascade; `appendCredentialRules()` assigns PUBLIC_SHARE directly to the space-admin credential without relying on UPDATE privilege remapping.
+**Authorization Flow**: Admin privileges are inherited during cascade; `appendPrivilegeRules()` maps UPDATE privilege to PUBLIC_SHARE for admins
 
 ---
 
@@ -187,9 +175,26 @@ Space
 
 ### New Admin Role Grant (when `allowGuestContributions = TRUE`)
 
-- Assigning an admin role issues the standard space-admin credential.
-- Because PUBLIC_SHARE is bound directly to that credential, new admins inherit PUBLIC_SHARE on all relevant whiteboards immediately.
-- No additional authorization reset is triggered solely by adding an admin; the initial setting toggle already ensured every whiteboard policy carries the `space-admin-public-share` rule.
+```
+User granted admin role on Space
+         │
+         ▼
+RoleSetResolverMutations.assignRoleToUser(ADMIN)
+         │
+         ▼
+Trigger: SpaceAuthorizationService.applyAuthorizationPolicy(space.id)
+         │
+         ▼
+Cascade through Collaboration → CalloutsSet → Callout → Contribution → Whiteboard
+         │
+         ▼
+WhiteboardAuthorizationService.appendPrivilegeRules()
+  - Checks allowGuestContributions === true
+  - Maps UPDATE privilege to PUBLIC_SHARE for new admin
+         │
+         ▼
+User now has PUBLIC_SHARE on all whiteboards (via privilege rule mapping)
+```
 
 ### New Whiteboard Creation (in space with `allowGuestContributions = TRUE`)
 

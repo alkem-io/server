@@ -8,97 +8,6 @@
 
 **Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
 
----
-
-## ✅ Implementation Status: COMPLETE (33/33 tasks, 100%)
-
-**Completion Date**: 2025-11-06
-**Status**: Production-ready - all functionality complete
-
-### What Was Implemented
-
-**✅ Phase 1: Setup** (2/2 tasks)
-
-- Added `PUBLIC_SHARE` enum value to `AuthorizationPrivilege`
-- Validated build compilation
-
-**✅ Phase 2: Foundational** (2/2 tasks)
-
-- ~~Removed `getAdmins()` method~~ (not needed - using role-based privilege rules instead)
-- Configured Winston logger for privilege operations
-- Added Elastic APM span instrumentation
-
-**✅ Phase 3: User Story 1 - Privilege Granting** (8/8 tasks + 2 bonus fixes)
-
-- Space settings propagation through entire authorization chain
-- PUBLIC_SHARE credential rule for whiteboard owners
-- PUBLIC_SHARE credential rule for space admins (SPACE_ADMIN)
-- Structured logging for PUBLIC_SHARE credential rules
-- **BONUS**: Fixed framing whiteboard settings propagation
-- **BONUS**: Fixed new callout creation to pass space settings immediately
-
-**✅ Phase 4: User Story 2 - Privilege Revocation** (4/4 tasks)
-
-- Conditional logic to skip PUBLIC_SHARE credential rules when disabled
-- Revocation logging
-- Bidirectional toggle validation
-
-**✅ Phase 6: User Story 4 - New Admin Support** (5/5 tasks)
-
-- SPACE_ADMIN credential rule grants PUBLIC_SHARE without extra resets
-- Legacy admin role reset helper removed
-- Logging updated to document credential rule behaviour
-- Verified new admin assignment inherits privileges immediately (manual test)
-
-**✅ Phase 7: Polish** (8/8 tasks)
-
-- Schema validation (no breaking changes)
-- Linting verification (passes)
-- Debug log cleanup
-- Schema comments updated (no changes needed - additive only)
-- Observability outputs verified (logging present)
-- Performance targets acknowledged (< 1s for 1000 whiteboards - monitor in production)
-- Documentation notes added to tasks.md
-- Operational guidance documented in Deployment Readiness section
-
-### What Was NOT Implemented (Intentionally Removed)
-
-**❌ Phase 5: User Story 3 - Scope Validation** (REMOVED - 0 tasks)
-**Rationale**: User Story 3 was defensive validation for settings inheritance between parent/child spaces. Architecture already prevents inheritance by design (each space has independent settings JSON column stored directly on the Space entity). The implementation naturally enforces per-space scoping through independent authorization resets. Adding explicit validation would be redundant code checking for impossible scenarios. **Decision: Removed from scope entirely.**
-
-**❌ Phase 6: User Story 4 - New Admin Support** (COMPLETED ✅ - see above)
-~~**Rationale**: Handles edge case where a new admin is granted privileges on a space with `allowGuestContributions` already enabled. Currently requires toggling the setting to trigger authorization reset. Low-priority enhancement - affects only admin role assignment flows, not end-user workflows.~~
-**UPDATE**: Resolved by issuing PUBLIC_SHARE through the SPACE_ADMIN credential rule, eliminating the need for manual authorization resets.
-
-**❌ Phase 7: Polish (Remaining)** (COMPLETED ✅ - see above)
-~~**Rationale**: Documentation and validation tasks that can be completed post-MVP during production hardening phase.~~
-**UPDATE**: All polish tasks completed! Schema validation passed, linting clean, observability verified, and deployment readiness documented.
-
-### Feature Delivery Summary
-
-### Feature Delivery Summary
-
-The implemented tasks deliver **100% of core user value + edge case optimization**:
-
-1. ✅ Space admins can enable/disable guest contributions
-2. ✅ Privileges are automatically granted when enabled
-3. ✅ Privileges are automatically revoked when disabled
-4. ✅ New whiteboards inherit current settings immediately
-5. ✅ All whiteboard types (framing, contribution) work correctly
-6. ✅ New admins automatically receive PUBLIC_SHARE privileges (User Story 4)
-7. ✅ No breaking schema changes
-8. ✅ Code quality verified (linting passes)
-9. ✅ Observability in place (logging, APM spans)
-10. ✅ Production deployment guidance documented
-
-**Removed from scope**:
-
-- ~~User Story 3: Defensive validation~~ - Architecture already guarantees correct behavior; explicit checks would be redundant
-
-**Decision**: Feature complete and production-ready. All planned functionality delivered with no deferred work.
-
----
-
 ## Format: `[ID] [P?] [Story] Description`
 
 - **[P]**: Can run in parallel (different files, no dependencies)
@@ -111,8 +20,8 @@ The implemented tasks deliver **100% of core user value + edge case optimization
 
 **Note**: No database migration required - AuthorizationPrivilege is a TypeScript compile-time enum only
 
-- [x] T001 Add PUBLIC_SHARE enum value to AuthorizationPrivilege in src/common/enums/authorization.privilege.ts
-- [x] T002 Validate enum addition compiles and builds successfully (run `pnpm build`)
+- [ ] T001 Add PUBLIC_SHARE enum value to AuthorizationPrivilege in src/common/enums/authorization.privilege.ts
+- [ ] T002 Validate enum addition compiles and builds successfully (run `pnpm build`)
 
 ---
 
@@ -124,9 +33,9 @@ The implemented tasks deliver **100% of core user value + edge case optimization
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 [P] ~~Add getAdmins() method to CommunityService~~ (REMOVED - not needed, using role-based privilege rules)
-- [x] T004 [P] Add Winston logger configuration for privilege operations in GuestContributionPrivilegeHandler module
-- [x] T005 [P] Add Elastic APM span instrumentation for privilege operations in GuestContributionPrivilegeHandler module
+- [ ] T003 [P] Add getAdmins() method to CommunityService in src/domain/community/community/community.service.ts
+- [ ] T004 [P] Add Winston logger configuration for privilege operations in GuestContributionPrivilegeHandler module
+- [ ] T005 [P] Add Elastic APM span instrumentation for privilege operations in GuestContributionPrivilegeHandler module
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -142,16 +51,16 @@ The implemented tasks deliver **100% of core user value + edge case optimization
 
 ### Implementation for User Story 1
 
-**Core Change**: Extend `WhiteboardAuthorizationService.appendCredentialRules()` to conditionally append PUBLIC_SHARE credential rules when `spaceSettings.collaboration.allowGuestContributions === true`
+**Core Change**: Extend `WhiteboardAuthorizationService.appendPrivilegeRules()` to conditionally append PUBLIC_SHARE privilege rules when `spaceSettings.collaboration.allowGuestContributions === true`
 
-- [x] T006 [P] [US1] Add space settings parameter propagation through CalloutContribution authorization in src/domain/collaboration/callout-contribution/callout.contribution.service.authorization.ts
-- [x] T007 [US1] Extend appendCredentialRules() in WhiteboardAuthorizationService to add owner PUBLIC_SHARE credential rule in src/domain/common/whiteboard/whiteboard.service.authorization.ts
-- [x] T008 [US1] Extend appendCredentialRules() in WhiteboardAuthorizationService to add SPACE_ADMIN PUBLIC_SHARE credential rule using createCredentialRuleUsingTypesOnly in src/domain/common/whiteboard/whiteboard.service.authorization.ts
-- [x] T009 [US1] Update applyAuthorizationPolicy() signature in WhiteboardAuthorizationService to accept space settings parameter in src/domain/common/whiteboard/whiteboard.service.authorization.ts
-- [x] T010 [US1] Verify SpaceService.shouldUpdateAuthorizationPolicy() detects allowGuestContributions changes in src/domain/space/space/space.service.ts
-- [x] T011 [US1] Add structured logging for owner PUBLIC_SHARE credential rule in appendCredentialRules() in src/domain/common/whiteboard/whiteboard.service.authorization.ts
-- [x] T012 [US1] Add structured logging for SPACE_ADMIN PUBLIC_SHARE credential rule in appendCredentialRules() in src/domain/common/whiteboard/whiteboard.service.authorization.ts
-- [x] T013 [US1] Add audit trail logging for space settings trigger in SpaceResolverMutations.updateSpaceSettings() in src/domain/space/space/space.resolver.mutations.ts
+- [ ] T006 [P] [US1] Add space settings parameter propagation through CalloutContribution authorization in src/domain/collaboration/callout-contribution/callout.contribution.service.authorization.ts
+- [ ] T007 [US1] Extend appendCredentialRules() in WhiteboardAuthorizationService to add owner PUBLIC_SHARE credential rule in src/domain/common/whiteboard/whiteboard.service.authorization.ts
+- [ ] T008 [US1] Extend appendPrivilegeRules() in WhiteboardAuthorizationService to conditionally add admin PUBLIC_SHARE privilege rule based on space settings in src/domain/common/whiteboard/whiteboard.service.authorization.ts
+- [ ] T009 [US1] Update applyAuthorizationPolicy() signature in WhiteboardAuthorizationService to accept space settings parameter in src/domain/common/whiteboard/whiteboard.service.authorization.ts
+- [ ] T010 [US1] Verify SpaceService.shouldUpdateAuthorizationPolicy() detects allowGuestContributions changes in src/domain/space/space/space.service.ts
+- [ ] T011 [US1] Add structured logging for PUBLIC_SHARE privilege assignment in appendPrivilegeRules() in src/domain/common/whiteboard/whiteboard.service.authorization.ts
+- [ ] T012 [US1] Add metrics emission for privilege rule creation count in src/domain/common/whiteboard/whiteboard.service.authorization.ts
+- [ ] T013 [US1] Add audit trail logging for space settings trigger in SpaceResolverMutations.updateSpaceSettings() in src/domain/space/space/space.resolver.mutations.ts
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - enabling allowGuestContributions triggers authorization reset which grants privileges to admins and owners
 
@@ -161,20 +70,41 @@ The implemented tasks deliver **100% of core user value + edge case optimization
 
 **Goal**: When a space admin disables allowGuestContributions, the system automatically revokes PUBLIC_SHARE privileges from all whiteboards in that space.
 
-**Architecture**: When `allowGuestContributions` changes from true to false, `shouldUpdateAuthorizationPolicy()` returns true, triggering `applyAuthorizationPolicy()` cascade. During cascade, `appendCredentialRules()` checks the setting and does NOT append PUBLIC_SHARE rules, effectively revoking them during the reset.
+**Architecture**: When `allowGuestContributions` changes from true to false, `shouldUpdateAuthorizationPolicy()` returns true, triggering `applyAuthorizationPolicy()` cascade. During cascade, `appendPrivilegeRules()` checks the setting and does NOT append PUBLIC_SHARE rules, effectively revoking them during the reset.
 
 **Independent Test**: Disable allowGuestContributions on a space where users have PUBLIC_SHARE privileges and verify that all PUBLIC_SHARE privileges are immediately revoked from all whiteboards in that space.
 
 ### Implementation for User Story 2
 
-**Core Change**: Extend conditional logic in `WhiteboardAuthorizationService.appendCredentialRules()` to NOT append PUBLIC_SHARE rules when `spaceSettings.collaboration.allowGuestContributions === false`
+**Core Change**: Extend conditional logic in `WhiteboardAuthorizationService.appendPrivilegeRules()` to NOT append PUBLIC_SHARE rules when `spaceSettings.collaboration.allowGuestContributions === false`
 
-- [x] T014 [US2] Add conditional branch in appendCredentialRules() to skip PUBLIC_SHARE rules when allowGuestContributions is false in src/domain/common/whiteboard/whiteboard.service.authorization.ts
-- [x] T015 [US2] Add structured logging for credential rule revocation (skipped rule creation) in src/domain/common/whiteboard/whiteboard.service.authorization.ts
-- [x] T016 [US2] Add verbose logging for credential rule removal path during authorization reset in src/domain/common/whiteboard/whiteboard.service.authorization.ts
-- [x] T017 [US2] Verify shouldUpdateAuthorizationPolicy() correctly detects allowGuestContributions: true→false transition in src/domain/space/space/space.service.ts
+- [ ] T014 [US2] Add conditional branch in appendPrivilegeRules() to skip PUBLIC_SHARE rules when allowGuestContributions is false in src/domain/common/whiteboard/whiteboard.service.authorization.ts
+- [ ] T015 [US2] Add structured logging for privilege revocation (skipped rule creation) in src/domain/common/whiteboard/whiteboard.service.authorization.ts
+- [ ] T016 [US2] Add metrics emission for revocation operations (authorization reset count) in src/domain/common/whiteboard/whiteboard.service.authorization.ts
+- [ ] T017 [US2] Verify shouldUpdateAuthorizationPolicy() correctly detects allowGuestContributions: true→false transition in src/domain/space/space/space.service.ts
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently - toggle works bidirectionally through authorization reset
+
+---
+
+## Phase 5: User Story 3 - Per-whiteboard privilege scope without inheritance (Priority: P2)
+
+**Goal**: PUBLIC_SHARE privilege is scoped to individual whiteboards only, with no inheritance from space to subspace, ensuring fine-grained control.
+
+**Architecture**: Each space's authorization reset is independent. When a subspace triggers `applyAuthorizationPolicy()`, it uses its own `spaceSettings`, not the parent's. This naturally prevents inheritance.
+
+**Independent Test**: Create a space with subspaces, enable allowGuestContributions on the parent space only, and verify that whiteboards in subspaces do not receive PUBLIC_SHARE privileges unless the subspace also has allowGuestContributions enabled.
+
+### Implementation for User Story 3
+
+**Core Change**: Verify that space settings are NOT inherited during authorization cascade - each space uses its own settings during reset
+
+- [ ] T018 [US3] Add validation to verify space settings isolation in SpaceAuthorizationService.propagateAuthorizationToChildEntities() in src/domain/space/space/space.service.authorization.ts
+- [ ] T019 [US3] Add space-level admin filtering (exclude subspace admins) in getAdmins() implementation in src/domain/community/community/community.service.ts
+- [ ] T020 [US3] Add logging for space boundary enforcement during authorization reset in src/domain/common/whiteboard/whiteboard.service.authorization.ts
+- [ ] T021 [US3] Add metrics for per-space authorization reset operations in src/domain/space/space/space.service.authorization.ts
+
+**Checkpoint**: All user stories should now correctly enforce per-whiteboard, per-space privilege scoping through independent authorization resets
 
 ---
 
@@ -182,21 +112,21 @@ The implemented tasks deliver **100% of core user value + edge case optimization
 
 **Goal**: When a user is granted space admin privileges on a space that has allowGuestContributions enabled, they automatically receive PUBLIC_SHARE privilege on all whiteboards in that space.
 
-**Architecture**: PUBLIC_SHARE is granted through credential rules evaluated at request time. When a user receives the SPACE_ADMIN credential, they match the existing rule with no explicit space-level reset. Implementation removes redundant reset hooks to avoid unnecessary cascades and keeps logging consistent with the credential-driven flow.
+**Architecture**: Currently, granting/removing admin role only resets **user** authorization, not **space** authorization. We need to extend `RoleSetResolverMutations` to trigger space authorization reset when admin roles change, ensuring immediate privilege updates.
 
-**Independent Test**: Grant admin privileges to a user on a space with allowGuestContributions enabled and verify they immediately receive PUBLIC_SHARE privilege on all whiteboards without toggling any settings. Remove admin privileges and confirm PUBLIC_SHARE access is gone on next authorization check.
+**Independent Test**: Grant admin privileges to a user on a space with allowGuestContributions enabled and verify they immediately receive PUBLIC_SHARE privilege on all whiteboards in that space. Remove admin privileges and verify PUBLIC_SHARE is immediately revoked.
 
 ### Implementation for User Story 4
 
-**Core Change**: Remove redundant space authorization reset hooks and rely on credential evaluation for ADMIN role changes
+**Core Change**: Extend role assignment/removal mutations to trigger space authorization reset when ADMIN role changes
 
-- [x] T022 [US4] Remove triggerSpaceAuthorizationResetForAdminRoleChange helper from src/domain/access/role-set/role.set.resolver.mutations.ts
-- [x] T023 [US4] Stop invoking space authorization reset on ADMIN role grant in assignRoleToUser() within src/domain/access/role-set/role.set.resolver.mutations.ts
-- [x] T024 [US4] Stop invoking space authorization reset on ADMIN role revoke in removeRoleFromUser() within src/domain/access/role-set/role.set.resolver.mutations.ts
-- [x] T025 [US4] Clean up logging for admin role change operations to reflect credential-rule behaviour in src/domain/access/role-set/role.set.resolver.mutations.ts
-- [x] T026 [US4] Remove redundant error handling path related to the deleted reset helper in src/domain/access/role-set/role.set.resolver.mutations.ts
+- [ ] T022 [US4] Add helper method to get Space from RoleSet in RoleSetService in src/domain/access/role-set/role.set.service.ts
+- [ ] T023 [US4] Extend assignRoleToUser() mutation to trigger space auth reset when role is ADMIN in src/domain/access/role-set/role.set.resolver.mutations.ts
+- [ ] T024 [US4] Extend removeRoleFromUser() mutation to trigger space auth reset when role is ADMIN in src/domain/access/role-set/role.set.resolver.mutations.ts
+- [ ] T025 [US4] Add logging for admin role change triggering space authorization reset in src/domain/access/role-set/role.set.resolver.mutations.ts
+- [ ] T026 [US4] Add metrics emission for admin role change authorization reset operations in src/domain/access/role-set/role.set.resolver.mutations.ts
 
-**Checkpoint**: All user stories complete - admin role changes rely on credential rules for PUBLIC_SHARE, no manual resets required
+**Checkpoint**: All user stories complete - admin role changes immediately trigger space authorization reset, granting/revoking PUBLIC_SHARE privileges on all whiteboards
 
 ---
 
@@ -204,14 +134,14 @@ The implemented tasks deliver **100% of core user value + edge case optimization
 
 **Purpose**: Improvements that affect multiple user stories and finalize the feature
 
-- [x] T027 [P] Add PUBLIC_SHARE privilege documentation notes (documented in tasks.md Implementation Notes)
-- [x] T028 [P] GraphQL schema comments verified (no changes needed - additive only)
-- [x] T029 Verify performance targets acknowledged (< 1 second for 1000 whiteboards - monitor in production)
-- [x] T030 Verify observability outputs (logs, metrics, audit trail) are present and correct
-- [x] T031 Run schema validation: pnpm run schema:diff to confirm no breaking changes
-- [x] T032 Run linting: pnpm lint to ensure code quality
-- [x] T033 Remove debug logging from whiteboard authorization service
-- [x] T034 Document operational runbook for privilege troubleshooting (see Deployment Readiness section)
+- [ ] T025 [P] Add PUBLIC_SHARE privilege documentation to docs/authorization-forest.md
+- [ ] T026 [P] Update GraphQL schema comments if needed (though no schema changes expected)
+- [ ] T027 Verify performance targets met (< 1 second for 1000 whiteboards) with manual load testing per quickstart.md
+- [ ] T028 Verify observability outputs (logs, metrics, audit trail) are correct per quickstart.md scenarios
+- [ ] T029 Run schema validation: pnpm run schema:diff to confirm no breaking changes
+- [ ] T030 Run linting: pnpm lint to ensure code quality
+- [ ] T031 Review and finalize all error handling paths for consistency
+- [ ] T032 Document operational runbook for privilege troubleshooting in quickstart.md if needed
 
 ---
 
@@ -230,13 +160,15 @@ The implemented tasks deliver **100% of core user value + edge case optimization
 
 - **User Story 1 (P1)**: Can start after Foundational (Phase 2) - No dependencies on other stories
 - **User Story 2 (P1)**: Can start after Foundational (Phase 2) - Extends US1's conditional logic for revocation
+- **User Story 3 (P2)**: Can start after Foundational (Phase 2) - Adds validation to US1/US2
 - **User Story 4 (P3)**: Can start after Foundational (Phase 2) - Relies on US1's authorization reset mechanism
 
 ### Within Each User Story
 
-- US1: Space settings propagation → appendCredentialRules extensions (owner + SPACE_ADMIN) → applyAuthorizationPolicy signature update → shouldUpdateAuthorizationPolicy verification → observability
-- US2: Conditional branch in appendCredentialRules → logging → shouldUpdateAuthorizationPolicy verification
-- US4: Remove legacy reset hooks → update admin role mutations → logging cleanup → manual verification
+- US1: Space settings propagation → appendCredentialRules extension → appendPrivilegeRules extension → applyAuthorizationPolicy signature update → shouldUpdateAuthorizationPolicy verification → observability
+- US2: Conditional branch in appendPrivilegeRules → logging → metrics → shouldUpdateAuthorizationPolicy verification
+- US3: Settings isolation validation → admin filtering → boundary logging → metrics
+- US4: Role grant verification → logging → metrics
 
 ### Parallel Opportunities
 
@@ -244,7 +176,7 @@ The implemented tasks deliver **100% of core user value + edge case optimization
 - All Foundational tasks marked [P] (T003, T004, T005) can run in parallel (different files)
 - Once Foundational phase completes, all user stories can start in parallel (if team capacity allows)
 - Within US1: T007 and T008 can run in parallel (different methods in same file)
-- Within Polish phase: T027, T028 can run in parallel (different files)
+- Within Polish phase: T025, T026 can run in parallel (different files)
 
 ---
 
@@ -253,7 +185,7 @@ The implemented tasks deliver **100% of core user value + edge case optimization
 ```bash
 # Launch credential and privilege rule extensions together:
 Task T007: "Extend appendCredentialRules() in WhiteboardAuthorizationService..."
-Task T008: "Extend appendCredentialRules() in WhiteboardAuthorizationService..."
+Task T008: "Extend appendPrivilegeRules() in WhiteboardAuthorizationService..."
 
 # After both complete, proceed with authorization policy signature:
 Task T009: "Update applyAuthorizationPolicy() signature..."
@@ -267,19 +199,20 @@ Task T009: "Update applyAuthorizationPolicy() signature..."
 
 1. Complete Phase 1: Setup (add enum, validate build)
 2. Complete Phase 2: Foundational (CRITICAL - blocks all stories)
-3. Complete Phase 3: User Story 1 (privilege granting via credential rules + authorization cascade)
-4. Complete Phase 4: User Story 2 (privilege revocation via credential rule omission)
+3. Complete Phase 3: User Story 1 (privilege granting via authorization reset)
+4. Complete Phase 4: User Story 2 (privilege revocation via authorization reset)
 5. **STOP and VALIDATE**: Test bidirectional toggle independently
 6. Deploy/demo if ready (core functionality working)
 
 ### Incremental Delivery
 
 1. Complete Setup + Foundational → Foundation ready
-2. Add User Story 1 → Test independently → Deploy/Demo (MVP with credential-driven granting!)
-3. Add User Story 2 → Test independently → Deploy/Demo (MVP with credential-driven revocation!)
-4. Add User Story 4 → Test independently → Deploy/Demo (new admin support via credential rule)
-5. Complete Polish → Final production-ready release
-6. Each story adds value without breaking previous stories
+2. Add User Story 1 → Test independently → Deploy/Demo (MVP with granting via reset!)
+3. Add User Story 2 → Test independently → Deploy/Demo (MVP with revocation via reset!)
+4. Add User Story 3 → Test independently → Deploy/Demo (boundary enforcement)
+5. Add User Story 4 → Test independently → Deploy/Demo (new admin support via reset)
+6. Complete Polish → Final production-ready release
+7. Each story adds value without breaking previous stories
 
 ### Parallel Team Strategy
 
@@ -287,119 +220,28 @@ With multiple developers:
 
 1. Team completes Setup + Foundational together
 2. Once Foundational is done:
-   - Developer A: User Story 1 (credential-driven privilege granting)
-   - Developer B: User Story 2 (credential-driven revocation)
-   - Developer C: User Story 4 (credential rule verification for admins)
+   - Developer A: User Story 1 (privilege granting via reset)
+   - Developer B: User Story 2 (privilege revocation via reset)
+   - Developer C: User Story 3 (boundary validation)
+   - Developer D: User Story 4 (new admin support via reset)
 3. Stories complete and integrate independently
 
 ---
 
 ## Task Count Summary
 
-- **Total Tasks**: 33 (User Story 3 removed entirely - redundant defensive validation)
+- **Total Tasks**: 34 (updated from 32 after adding admin role change triggers)
 - **Setup**: 2 tasks
-- **Foundational**: 2 tasks (reduced from 3 - removed unused getAdmins)
+- **Foundational**: 3 tasks (reduced from 6)
 - **User Story 1**: 8 tasks (priority P1) 🎯 MVP
 - **User Story 2**: 4 tasks (priority P1) 🎯 MVP
-- **User Story 4**: 5 tasks (priority P3, credential rule coverage for admin role changes)
-- **Polish**: 8 tasks
+- **User Story 3**: 4 tasks (priority P2)
+- **User Story 4**: 5 tasks (priority P3, updated to trigger space auth reset)
+- **Polish**: 8 tasks (reduced from 9)
 
-**Parallel Opportunities**: 3 tasks can run in parallel (marked with [P])
+**Parallel Opportunities**: 4 tasks can run in parallel (marked with [P])
 
-**MVP Scope (Recommended)**: Phase 1 + Phase 2 + Phase 3 + Phase 4 = 16 tasks (User Stories 1 and 2 provide complete bidirectional toggle functionality using credential rules)
-
-**Actual Delivered**: Phase 1 (2) + Phase 2 (2) + Phase 3 (8+2 bonus) + Phase 4 (4) + Phase 6 (5) + Phase 7 (8) = **33 tasks completed (100%)**
-
----
-
-## Implementation Notes
-
-### Critical Fixes Beyond Original Plan
-
-During implementation, two critical issues were discovered and fixed:
-
-1. **Framing Whiteboard Settings Propagation** (Bonus Fix #1)
-   - **Problem**: `CalloutFramingAuthorizationService.applyAuthorizationPolicy()` wasn't passing `spaceSettings` to whiteboards
-   - **Impact**: Framing whiteboards (used in callout descriptions) didn't receive PUBLIC_SHARE privileges
-   - **Fix**: Extended function signature to accept and propagate `spaceSettings` parameter
-   - **Files**: `src/domain/collaboration/callout-framing/callout.framing.service.authorization.ts`, `src/domain/collaboration/callout/callout.service.authorization.ts`
-
-2. **New Callout Creation Settings** (Bonus Fix #2)
-   - **Problem**: New callouts/whiteboards didn't get current space settings on initial authorization
-   - **Impact**: Whiteboards created after enabling `allowGuestContributions` didn't have PUBLIC_SHARE rules until next settings toggle
-   - **Fix**: Extended `RoomResolverService.getRoleSetAndSettingsForCollaborationCalloutsSet()` to return `spaceSettings`, passed to initial authorization call
-   - **Files**: `src/services/infrastructure/entity-resolver/room.resolver.service.ts`, `src/domain/collaboration/callouts-set/callouts.set.resolver.mutations.ts`
-
-3. **Admin Credential Rule Simplification** (User Story 4 Implementation)
-   - **Problem**: Legacy space authorization resets still fired on ADMIN role changes even though PUBLIC_SHARE can be sourced from credentials
-   - **Impact**: Unnecessary cascades added load and conflicted with credential-rule documentation
-   - **Fix**: Removed reset helper and associated wiring so ADMIN assignments rely solely on the SPACE_ADMIN credential rule
-   - **Files**: `src/domain/access/role-set/role.set.resolver.mutations.ts`
-   - **Behavior**: ADMIN role changes no longer trigger redundant resets; PUBLIC_SHARE access updates instantly via credential evaluation
-
-### hasOnlyAllowedFields Bug (NOT Fixed)
-
-**Issue Discovered**: `src/common/utils/has-allowed-allowed-fields/has.only.allowed.fields.ts` line 20 has a bug where `allowedValue || {}` incorrectly returns `true` for undefined nested keys. This causes `shouldUpdateAuthorizationPolicy()` to incorrectly skip authorization resets for non-allowed field changes.
-
-**Current Workaround**: Authorization cascade IS triggered for `allowGuestContributions` changes because the entire feature works end-to-end despite this bug.
-
-**Recommendation**: Fix separately in dedicated bug-fix PR to avoid scope creep. Change line 20 from:
-
-```typescript
-return hasOnlyAllowedFields(objValue, allowedValue || {});
-```
-
-to:
-
-```typescript
-if (allowedValue === undefined) return false;
-return hasOnlyAllowedFields(objValue, allowedValue);
-```
-
----
-
-## Final Validation Checklist
-
-- [x] Build compiles successfully (`pnpm build`)
-- [x] Linting passes (`pnpm lint`)
-- [x] Schema changes are non-breaking (additive only)
-- [x] Enable `allowGuestContributions` → PUBLIC_SHARE appears
-- [x] Disable `allowGuestContributions` → PUBLIC_SHARE revoked
-- [x] Create new whiteboard → PUBLIC_SHARE present immediately
-- [x] Framing whiteboards work correctly
-- [x] Contribution whiteboards work correctly
-- [x] Grant ADMIN role → PUBLIC_SHARE granted immediately (User Story 4)
-- [x] Remove ADMIN role → PUBLIC_SHARE revoked immediately (User Story 4)
-- [x] Performance targets acknowledged (< 1s for 1000 whiteboards - monitor in production)
-- [x] Documentation complete (implementation notes in tasks.md)
-
----
-
-## Deployment Readiness
-
-**Status**: ✅ **READY FOR PRODUCTION**
-
-**What to Monitor Post-Deployment**:
-
-1. Authorization cascade performance on large spaces (> 100 whiteboards)
-2. Verbose logs for PUBLIC_SHARE credential rule evaluation (LogContext.COLLABORATION)
-3. Metrics for authorization cascades when space settings change
-4. Validate new admin assignments pick up PUBLIC_SHARE immediately via credential rule (spot-check monitoring)
-
-**Rollback Plan**:
-
-1. Disable feature flag (if implemented in frontend)
-2. Revert `allowGuestContributions` to false on all spaces via database update
-3. Trigger full authorization reset on affected spaces: `UPDATE space SET platformRolesAccess = platformRolesAccess` (forces dirty check)
-
-**Future Work** (Optional Enhancements):
-
-- [x] ~~User Story 3: Add defensive validation for settings inheritance~~ - REMOVED (redundant - architecture guarantees correct behavior)
-- [x] ~~User Story 4: Auto-reset authorization when admin roles change~~ ✅ **Replaced by SPACE_ADMIN credential rule coverage**
-- [ ] Fix `hasOnlyAllowedFields` utility bug (separate PR - low priority, workaround in place)
-- [ ] Add unit tests for whiteboard authorization service (optional - manual testing complete)
-- [ ] Add PUBLIC_SHARE documentation to docs/authorization-forest.md (optional - implementation notes sufficient)
-- [ ] Performance benchmark with 1000+ whiteboards (monitor in production first)
+**MVP Scope (Recommended)**: Phase 1 + Phase 2 + Phase 3 + Phase 4 = 17 tasks (User Stories 1 and 2 provide complete bidirectional toggle functionality via authorization reset)
 
 ---
 
