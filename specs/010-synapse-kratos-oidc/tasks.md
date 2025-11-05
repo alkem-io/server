@@ -25,12 +25,14 @@ This document breaks down the implementation of Synapse-Kratos-Hydra OIDC authen
 5. **Bind Mount Configuration**: Changes to bind-mounted files (like `homeserver.yaml`) require `docker compose up -d --force-recreate --no-deps <service>` - simple `docker restart` doesn't reload files.
 
 **IMPORTANT - Implementation Approach**:
+
 - **All tasks execute in THIS repository** (alkemio/server)
 - **Tasks T017-T020**: Implement NestJS OIDC controllers in alkemio-server at `/api/public/rest/oidc/*` (NOT frontend code)
 - **Traefik routing**: Already configured via existing `api-public-rest` router in `.build/traefik/http.yml`
 - **TDD compliance**: Test tasks (T017-T019c) MUST complete before implementation task (T020)
 
 **Why NestJS OIDC Controllers in alkemio-server (Not Frontend)**:
+
 - ✅ Hydra Admin API (port 4445) must NOT be exposed to browsers (security)
 - ✅ Traefik already routes `/api/public/rest/*` → alkemio-server
 - ✅ Leverages existing NestJS patterns (controllers + services)
@@ -38,6 +40,7 @@ This document breaks down the implementation of Synapse-Kratos-Hydra OIDC authen
 - ✅ No new deployment complexity
 
 **Authentication Flow**:
+
 ```
 User clicks "Sign in with SSO" in Matrix client
   ↓
@@ -75,6 +78,7 @@ Synapse exchanges code for tokens → User authenticated in Matrix
 **Current Phase**: ✅ Phase 7 - Polish & Cross-Cutting Concerns Complete
 
 **Notes**:
+
 - T034 satisfied by T033c comprehensive error handling documentation
 - T035 marked out of scope (requires external Prometheus/Grafana infrastructure)
 - T033b deferred pending US3 session management implementation
@@ -82,6 +86,7 @@ Synapse exchanges code for tokens → User authenticated in Matrix
 ## Dependencies & Execution Strategy
 
 ### Story Completion Order
+
 1. **Setup** → **Foundational** (MUST complete before user stories)
 2. **User Story 1 (P1)** - MVP: Core SSO authentication
 3. **User Story 2 (P2)** & **User Story 4 (P2)** - Can run in parallel after US1
@@ -89,7 +94,9 @@ Synapse exchanges code for tokens → User authenticated in Matrix
 5. **Polish** - Cross-cutting improvements
 
 ### MVP Scope
+
 **Minimum Viable Product**: User Story 1 only (Core SSO Authentication)
+
 - Delivers immediate value: Users can authenticate to Matrix via Kratos
 - Independently testable
 - Foundation for all other stories
@@ -98,22 +105,27 @@ Synapse exchanges code for tokens → User authenticated in Matrix
 ### Parallel Execution Opportunities
 
 **Phase 1 (Setup)**:
+
 - T002, T003, T004 can run in parallel (different files)
 
 **Phase 2 (Foundational)**:
+
 - T006, T007 can run in parallel after T005
 - T009, T010 can run in parallel after T008
 
 **User Story 1 (TDD Test Phase)**:
+
 - T014, T015, T016 can run in parallel after T013
 - T017a, T018a can run in parallel (TDD tests for different utility files)
 - T019a, T020a can run in parallel (TDD tests for different API routes)
 
 **User Story 1 (Implementation Phase)**:
+
 - T017, T018 can run in parallel after respective test tasks pass
 - T019, T020 can run in parallel after respective test tasks pass
 
 **User Stories 2 & 4**:
+
 - Can execute completely in parallel (independent stories)
 
 ---
@@ -132,6 +144,7 @@ Synapse exchanges code for tokens → User authenticated in Matrix
 - [x] T004 [NFR-004] Verify environment variable pattern matches Kratos: After T005, confirm that Hydra service definition in quickstart-services.yml composes DSN from environment variable components (${POSTGRES_USER}, ${POSTGRES_PASSWORD}, postgres as host) just like Kratos does on line 66. Verify DSN format: `postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/hydra?sslmode=disable`. This ensures consistent configuration pattern for future K8s deployments.
 
 **Acceptance Criteria**:
+
 - [x] All required secrets generated securely (32-byte for Hydra, base64 for Synapse)
 - [x] Environment variables file created and excluded from git (.gitignore)
 - [x] PostgreSQL can create multiple databases on startup
@@ -148,7 +161,7 @@ Synapse exchanges code for tokens → User authenticated in Matrix
 ### Tasks
 
 - [x] T005 Add Ory Hydra services (hydra-migrate, hydra) to `quickstart-services.yml`
-- [x] T005a [C1] Verify Hydra environment variables: After T005, confirm all required HYDRA_* variables are present in quickstart-services.yml (DSN, SECRETS_SYSTEM, URLS_SELF_ISSUER, URLS_LOGIN, URLS_CONSENT) - validates FR-009
+- [x] T005a [C1] Verify Hydra environment variables: After T005, confirm all required HYDRA\_\* variables are present in quickstart-services.yml (DSN, SECRETS_SYSTEM, URLS_SELF_ISSUER, URLS_LOGIN, URLS_CONSENT) - validates FR-009
 - [x] T006 [P] Update PostgreSQL service in `quickstart-services.yml` to support multiple databases (POSTGRES_MULTIPLE_DATABASES env var)
 - [x] T007 [P] Add PostgreSQL init script volume mount in `quickstart-services.yml` postgres service
 - [x] T007a Add Hydra entryPoints to Traefik configuration in `.build/traefik/traefik.yml` (hydra-public: 4444, hydra-admin: 4445)
@@ -162,6 +175,7 @@ Synapse exchanges code for tokens → User authenticated in Matrix
   - **Implementation Note**: Automated via `hydra-client-setup` container in `quickstart-services.yml` that runs idempotent registration script (POST create or PUT update). Client configured with `token_endpoint_auth_method: client_secret_basic` to match Synapse expectations. Connection pool parameters added to Hydra DSN for database resilience (`max_conns=20&max_idle_conns=4&max_conn_lifetime=30m&max_conn_idle_time=5m`).
 
 **Acceptance Criteria**:
+
 - [x] Hydra service running and accessible on ports 4444 (public) and 4445 (admin)
 - [x] Hydra database successfully migrated in PostgreSQL
 - [x] Synapse OAuth2 client registered in Hydra with correct redirect URIs and `token_endpoint_auth_method: client_secret_basic`
@@ -172,6 +186,7 @@ Synapse exchanges code for tokens → User authenticated in Matrix
 - [x] Database connection pool resilience configured (prevents "invalid_client" errors on restarts)
 
 **Independent Test**:
+
 ```bash
 # Test Hydra OIDC discovery
 curl http://localhost:4444/.well-known/openid-configuration | jq
@@ -207,15 +222,17 @@ curl http://localhost:4445/admin/clients/synapse-client | jq
 - [x] T020 [US1] Implement alkemio-server (NestJS) OIDC controllers and service in `src/services/api/oidc/` to pass T017-T019b tests. **Implementation Breakdown**: (1) Create OidcModule with proper dependency injection, (2) Define DTOs with TypeScript strict types:
 
 **LoginChallengeDTO**:
+
 ```typescript
 {
-  challenge: string;      // OAuth2 challenge token from Hydra
-  skip: boolean;          // Whether login can be skipped (user already authenticated)
-  subject: string;        // User identifier from previous authentication
+  challenge: string; // OAuth2 challenge token from Hydra
+  skip: boolean; // Whether login can be skipped (user already authenticated)
+  subject: string; // User identifier from previous authentication
 }
 ```
 
 **ConsentChallengeDTO**:
+
 ```typescript
 {
   challenge: string;           // OAuth2 consent challenge token
@@ -225,15 +242,17 @@ curl http://localhost:4445/admin/clients/synapse-client | jq
 ```
 
 **HydraResponseDTO**:
+
 ```typescript
 {
-  redirect_to: string;    // URL to redirect user after challenge acceptance/rejection
+  redirect_to: string; // URL to redirect user after challenge acceptance/rejection
 }
 ```
 
 (3) Implement error handling middleware for OAuth2 errors with FR-014 user-friendly messages (example: "Authentication service temporarily unavailable. Please retry in 2-5 minutes. [Retry Button]"), (4) Register OidcModule in AppModule imports array. All components must follow NestJS architectural patterns (controller delegates to service, service handles Hydra Admin API calls).
 
 **IMPLEMENTATION STATUS**: ✅ COMPLETE
+
 - OidcModule created with proper dependency injection
 - All DTOs defined with strict TypeScript types
 - OidcController implemented (all methods tested and passing)
@@ -244,6 +263,7 @@ curl http://localhost:4445/admin/clients/synapse-client | jq
 - Module registered in AppModule
 
 **ENVIRONMENT VARIABLES**: All required variables added to `.env.docker`:
+
 - `OIDC_WEB_BASE_URL=http://localhost:3000`
 - `OIDC_API_PUBLIC_BASE_PATH=/api/public/rest`
 - `OIDC_KRATOS_PUBLIC_BASE_PATH=/ory/kratos/public`
@@ -253,10 +273,12 @@ curl http://localhost:4445/admin/clients/synapse-client | jq
 **DOCUMENTATION**: Comprehensive environment variables reference created at `specs/010-synapse-kratos-oidc/environment-variables.md`
 
 **AUDIT COMPLETE**: ✅ No hardcoded URLs found in production code (only in test files as expected)
+
 - [x] T020c [US1] [E2E] Validate complete OAuth2 authorization code flow: End-to-end integration test that validates FR-002 (Synapse redirect to Hydra), FR-004 (token validation), FR-010 (authorization code flow), and FR-016 (social login transparency). Test sequence: (1) Initiate auth request to Synapse OIDC endpoint, (2) Verify redirect to Hydra /oauth2/auth, (3) Simulate login/consent acceptance via NestJS OIDC controllers, (4) Verify redirect back to Synapse with authorization code, (5) Confirm Synapse exchanges code for access/ID tokens, (6) Validate token structure and claims (email, given_name, family_name). **STATUS**: E2E OAuth2 flow validated via log analysis and Microsoft social-login manual run (2025-10-22). All core requirements verified (FR-002, FR-004, FR-010, FR-016) with evidence captured in `tests/T020c-e2e-oauth2-flow-test.md`. Performance target met (< 0.1s actual vs 10s target).
 - [x] T021 [US1] Restart Synapse service and verify OIDC configuration loaded (check logs for oidc-hydra provider). **STATUS**: Synapse restarted successfully. OIDC configuration verified: idp_id="oidc-hydra", idp_name="Alkemio SSO". OIDC resource attached to path `/_synapse/client/oidc`. Configuration validation complete (FR-001).
 
 **Acceptance Criteria**:
+
 - [x] Synapse shows SSO login flow with "Alkemio SSO" option
 - [x] User clicking SSO is redirected through: Synapse → Hydra → NestJS Login Controller → Kratos
 - [x] After Kratos authentication, NestJS controller accepts Hydra challenge with user claims
@@ -266,6 +288,7 @@ curl http://localhost:4445/admin/clients/synapse-client | jq
 - [x] Integration tests use Hydra API mocks validated against official v2.2.0 documentation
 
 **Independent Test** (User Story 1):
+
 1. Create new Kratos identity via password at `http://localhost:4433`
 2. Navigate to Element Web at `http://localhost:3000`
 3. Click "Sign In" → "Single Sign-On"
@@ -278,6 +301,7 @@ curl http://localhost:4445/admin/clients/synapse-client | jq
 **Test Output**: Authentication flow completes in <10 seconds, user can send Matrix messages.
 
 **TDD Task Dependencies** (STRICT ORDERING):
+
 ```
 T017 (write unit tests) → T019c (verify RED phase)
 T018 (write unit tests) → T019c (verify RED phase)
@@ -314,6 +338,7 @@ T021 (Synapse restart) → T012a (log validation)
 - [x] T025a [FR-007] Test profile update propagation on re-authentication: Update user's display name (traits.name.first, traits.name.last) and email (traits.email) in Kratos identity, re-authenticate via OIDC, verify Matrix profile reflects the updated information (validates ongoing profile sync, not just first-login sync). **Scope validation**: Confirm only display_name and email are synchronized; other Matrix attributes (avatar_url, presence) should remain unchanged. **STATUS**: Profile update mechanism verified. Manual profile update confirmed working (display_name updated from "User Name" to "qqq qqq" for redacted01@gmail.com user). Synapse configured with `user_profile_method: "userinfo_endpoint"` ensures profile sync on re-authentication. Only display_name and email fields synchronized; avatar_url and other Matrix-specific attributes preserved per FR-007.
 
 **Acceptance Criteria**:
+
 - [x] New Kratos user authenticating for first time gets Matrix account automatically
 - [x] No manual provisioning steps required
 - [x] Matrix User ID correctly derived from email (localpart before @)
@@ -321,6 +346,7 @@ T021 (Synapse restart) → T012a (log validation)
 - [x] Profile updates in Kratos propagate to Matrix on re-authentication (display_name, email only)
 
 **Independent Test** (User Story 2):
+
 1. Create brand new Kratos identity: newuser@example.com
 2. Attempt Matrix login via OIDC
 3. Verify Matrix account created: @newuser:alkemio.matrix.host
@@ -352,15 +378,18 @@ T021 (Synapse restart) → T012a (log validation)
 - [x] T029a [US4] Verify dual authentication methods work post-linking (test both password AND OIDC login). **STATUS**: Dual authentication verified working. Password login tested via Matrix Client-Server API with credentials (testmigration/TestPass123!) - successful login returned access_token and created new device "Password Auth Test" (device_id: JRZFBYDVQW). OIDC external ID mapping still present after password login. Both authentication methods coexist and function correctly post-linking. User now has 6 devices total (original 5 + new password auth device).
 
 **Documentation**:
+
 - [x] **User Story 4 Documentation Complete** (2025-10-21): Comprehensive implementation summary created in `tests/US4-account-linking-summary.md`. Includes account linking mechanism, dual authentication architecture, database schema details, production migration strategy (gradual user-driven approach with 90-day grace period), edge cases, testing results, and lessons learned. All acceptance criteria met and validated.
 
 **Acceptance Criteria**:
+
 - [x] Existing Matrix user with email can authenticate via OIDC
 - [x] Accounts automatically linked based on email match
 - [x] No data loss - all rooms, messages, contacts preserved
 - [x] Both password and OIDC authentication methods work post-linking
 
 **Independent Test** (User Story 4):
+
 1. Create Matrix account manually: @testuser:alkemio.matrix.host (password auth)
 2. Join test room and send message
 3. Create Kratos identity: testuser@example.com (same email)
@@ -392,12 +421,14 @@ T021 (Synapse restart) → T012a (log validation)
 - [x] T031a [US3] [FR-014] Implement and test session synchronization. **STATUS**: Session synchronization implemented with KratosSessionRepository and SynapseAdminService coordination. Logout hook operational (OidcLogoutService) and cron-style interval service removes Matrix sessions for expired Kratos sessions. Automated unit tests added (`oidc-logout.service.spec.ts`, `session-sync.service.spec.ts`).
 
 **Acceptance Criteria**:
+
 - [x] Logging out from Kratos invalidates Matrix session
 - [x] Kratos session expiry triggers Matrix re-authentication
 - [x] Session timeout aligned with Kratos (48h)
 - [x] Re-authentication restores Matrix session without data loss
 
 **Independent Test** (User Story 3):
+
 1. Authenticate to Matrix via OIDC
 2. Note Matrix session established
 3. Log out from Kratos (via Kratos UI at `http://localhost:4433`)
@@ -485,6 +516,7 @@ T021 (Synapse restart) → T012a (log validation)
   - **Future Work**: Consider as separate infrastructure task when monitoring stack is implemented
 
 **Acceptance Criteria**:
+
 - [x] All authentication events logged with challenge IDs, user IDs, timestamps, and error codes (T033, T033d)
 - [x] Kratos service failure shows graceful error with retry capability (FR-014) (T033c Scenario 1)
 - [x] Deleted Kratos accounts trigger Matrix session termination within 5 minutes (FR-015) (T033c Scenario 2 - documented, implementation in US3)
@@ -497,8 +529,10 @@ T021 (Synapse restart) → T012a (log validation)
 ## Task Details & File Paths
 
 ### T001: Generate Secrets
+
 **File**: `.env.docker`
 **Command**:
+
 ```bash
 cd /Users/antst/work/alkemio/server
 HYDRA_SYSTEM_SECRET=$(openssl rand -hex 32)
@@ -510,8 +544,10 @@ echo "SYNAPSE_OIDC_CLIENT_SECRET=$SYNAPSE_OIDC_CLIENT_SECRET" >> .env.docker
 **Note**: HYDRA_DSN is NOT added to .env.docker per NFR-004 (no hardcoded connection strings). The DSN will be composed inline in the Hydra service definition in quickstart-services.yml using ${POSTGRES_USER} and ${POSTGRES_PASSWORD} environment variables, following the Kratos pattern.
 
 ### T002: PostgreSQL Init Script
+
 **File**: `.build/postgres/init-multiple-databases.sh`
 **Content**:
+
 ```bash
 #!/bin/bash
 set -e
@@ -530,80 +566,66 @@ fi
 ```
 
 ### T005: Add Hydra to Docker Compose
+
 **File**: `quickstart-services.yml`
 **Services to Add**:
+
 ```yaml
-  hydra-migrate:
-    container_name: alkemio_dev_hydra_migrate
-    image: oryd/hydra:v2.2.0
-    depends_on: [postgres]
-    environment:
-      - DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/hydra?sslmode=disable&max_conns=20&max_idle_conns=4
-    command: migrate sql -e --yes
-    networks: [alkemio_dev_net]
-    restart: on-failure
+hydra-migrate:
+  container_name: alkemio_dev_hydra_migrate
+  image: oryd/hydra:v2.2.0
+  depends_on: [postgres]
+  environment:
+    - DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/hydra?sslmode=disable&max_conns=20&max_idle_conns=4
+  command: migrate sql -e --yes
+  networks: [alkemio_dev_net]
+  restart: on-failure
 
-  hydra:
-    container_name: alkemio_dev_hydra
-    image: oryd/hydra:v2.2.0
-    depends_on: [hydra-migrate]
-    ports:
-      - 4444
-      - 4445
-    environment:
-      - DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/hydra?sslmode=disable&max_conns=20&max_idle_conns=4&max_conn_lifetime=30m&max_conn_idle_time=5m
-      - SECRETS_SYSTEM=${HYDRA_SYSTEM_SECRET}
-      - URLS_SELF_PUBLIC=${HYDRA_PUBLIC_URL}/
-      - URLS_SELF_ISSUER=${HYDRA_PUBLIC_URL}/
-      - URLS_LOGIN=${HYDRA_PUBLIC_URL}/api/public/rest/oidc/login
-      - URLS_CONSENT=${HYDRA_PUBLIC_URL}/api/public/rest/oidc/consent
-      - URLS_SELF_ADMIN=http://hydra:4445/
-      - SERVE_PUBLIC_CORS_ENABLED=true
-      - SERVE_ADMIN_CORS_ENABLED=true
-      - OAUTH2_ALLOWED_TOP_LEVEL_CLAIMS=email,email_verified,given_name,family_name
-      - LOG_LEVEL=debug
-    command: serve all --dev
-    networks: [alkemio_dev_net]
-    restart: unless-stopped
+hydra:
+  container_name: alkemio_dev_hydra
+  image: oryd/hydra:v2.2.0
+  depends_on: [hydra-migrate]
+  ports:
+    - 4444
+    - 4445
+  environment:
+    - DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/hydra?sslmode=disable&max_conns=20&max_idle_conns=4&max_conn_lifetime=30m&max_conn_idle_time=5m
+    - SECRETS_SYSTEM=${HYDRA_SYSTEM_SECRET}
+    - URLS_SELF_PUBLIC=${HYDRA_PUBLIC_URL}/
+    - URLS_SELF_ISSUER=${HYDRA_PUBLIC_URL}/
+    - URLS_LOGIN=${HYDRA_PUBLIC_URL}/api/public/rest/oidc/login
+    - URLS_CONSENT=${HYDRA_PUBLIC_URL}/api/public/rest/oidc/consent
+    - URLS_SELF_ADMIN=http://hydra:4445/
+    - SERVE_PUBLIC_CORS_ENABLED=true
+    - SERVE_ADMIN_CORS_ENABLED=true
+    - OAUTH2_ALLOWED_TOP_LEVEL_CLAIMS=email,email_verified,given_name,family_name
+    - LOG_LEVEL=debug
+  command: serve all --dev
+  networks: [alkemio_dev_net]
+  restart: unless-stopped
 
-  hydra-client-setup:
-    container_name: alkemio_dev_hydra_client_setup
-    image: curlimages/curl:8.1.2
-    depends_on: [hydra]
-    environment:
-      - HYDRA_ADMIN_URL=http://hydra:4445
-      - SYNAPSE_OIDC_CLIENT_ID=${SYNAPSE_OIDC_CLIENT_ID}
-      - SYNAPSE_OIDC_CLIENT_SECRET=${SYNAPSE_OIDC_CLIENT_SECRET}
-    networks: [alkemio_dev_net]
-    restart: on-failure
-    entrypoint: ["/bin/sh", "-c"]
-    command:
-      - |
-        echo "Waiting for Hydra to be ready..."
-        until curl -sf http://hydra:4445/health/ready > /dev/null 2>&1; do
-          sleep 2
-        done
+hydra-client-setup:
+  container_name: alkemio_dev_hydra_client_setup
+  image: curlimages/curl:8.1.2
+  depends_on: [hydra]
+  environment:
+    - HYDRA_ADMIN_URL=http://hydra:4445
+    - SYNAPSE_OIDC_CLIENT_ID=${SYNAPSE_OIDC_CLIENT_ID}
+    - SYNAPSE_OIDC_CLIENT_SECRET=${SYNAPSE_OIDC_CLIENT_SECRET}
+  networks: [alkemio_dev_net]
+  restart: on-failure
+  entrypoint: ['/bin/sh', '-c']
+  command:
+    - |
+      echo "Waiting for Hydra to be ready..."
+      until curl -sf http://hydra:4445/health/ready > /dev/null 2>&1; do
+        sleep 2
+      done
 
-        # Idempotent client registration (create or update)
-        if curl -sf http://hydra:4445/admin/clients/$$SYNAPSE_OIDC_CLIENT_ID > /dev/null 2>&1; then
-          echo "Client exists, updating..."
-          curl -X PUT http://hydra:4445/admin/clients/$$SYNAPSE_OIDC_CLIENT_ID \
-            -H "Content-Type: application/json" \
-            -d "{
-              \"client_id\": \"$$SYNAPSE_OIDC_CLIENT_ID\",
-              \"client_name\": \"Synapse Matrix Server\",
-              \"client_secret\": \"$$SYNAPSE_OIDC_CLIENT_SECRET\",
-              \"grant_types\": [\"authorization_code\", \"refresh_token\"],
-              \"response_types\": [\"code\"],
-              \"redirect_uris\": [\"http://localhost:8008/_synapse/client/oidc/callback\"],
-              \"scope\": \"openid profile email\",
-              \"token_endpoint_auth_method\": \"client_secret_basic\"
-            }"
-          exit 0
-        fi
-
-        echo "Registering new client..."
-        curl -X POST http://hydra:4445/admin/clients \
+      # Idempotent client registration (create or update)
+      if curl -sf http://hydra:4445/admin/clients/$$SYNAPSE_OIDC_CLIENT_ID > /dev/null 2>&1; then
+        echo "Client exists, updating..."
+        curl -X PUT http://hydra:4445/admin/clients/$$SYNAPSE_OIDC_CLIENT_ID \
           -H "Content-Type: application/json" \
           -d "{
             \"client_id\": \"$$SYNAPSE_OIDC_CLIENT_ID\",
@@ -615,17 +637,36 @@ fi
             \"scope\": \"openid profile email\",
             \"token_endpoint_auth_method\": \"client_secret_basic\"
           }"
+        exit 0
+      fi
+
+      echo "Registering new client..."
+      curl -X POST http://hydra:4445/admin/clients \
+        -H "Content-Type: application/json" \
+        -d "{
+          \"client_id\": \"$$SYNAPSE_OIDC_CLIENT_ID\",
+          \"client_name\": \"Synapse Matrix Server\",
+          \"client_secret\": \"$$SYNAPSE_OIDC_CLIENT_SECRET\",
+          \"grant_types\": [\"authorization_code\", \"refresh_token\"],
+          \"response_types\": [\"code\"],
+          \"redirect_uris\": [\"http://localhost:8008/_synapse/client/oidc/callback\"],
+          \"scope\": \"openid profile email\",
+          \"token_endpoint_auth_method\": \"client_secret_basic\"
+        }"
 ```
 
 **RETROSPECTIVE NOTES**:
+
 1. Connection pool parameters added to DSN for resilience: `max_conns=20&max_idle_conns=4&max_conn_lifetime=30m&max_conn_idle_time=5m`
 2. `hydra-client-setup` container automates Synapse OAuth2 client registration with idempotent create/update logic
 3. `token_endpoint_auth_method: client_secret_basic` explicitly set to match Synapse expectations (Hydra defaults to `client_secret_post`)
 
 ### T007a: Traefik Configuration for Hydra
+
 **File**: `.build/traefik/traefik.yml`
 **Location**: Add after existing `synapse-admin` entryPoint
 **Add to EntryPoints**:
+
 ```yaml
 entryPoints:
   web:
@@ -646,9 +687,11 @@ entryPoints:
 ---
 
 ### T007b: Traefik HTTP Configuration for Hydra
+
 **File**: `.build/traefik/http.yml`
 
 **Part 1 - Add Services** (add in `http.services` section):
+
 ```yaml
 http:
   services:
@@ -675,6 +718,7 @@ http:
 ```
 
 **Part 2 - Add Routers** (add in `http.routers` section):
+
 ```yaml
 http:
   routers:
@@ -703,12 +747,14 @@ http:
 ```
 
 **Rationale**:
+
 - **hydra-public** router catches OIDC discovery (`/.well-known/openid-configuration`) and OAuth2 endpoints (`/oauth2/auth`, `/oauth2/token`) on the main web entrypoint
 - **hydra-admin-internal** is accessible only via dedicated port 4445 for server-to-server communication
 - High priority (100) ensures Hydra routes are matched before the catch-all `alkemiowebroute`
 
 **ACTUAL IMPLEMENTATION (Retrospective Update)**:
 The final Traefik configuration uses a simpler approach:
+
 - `hydra-public` router forwards both `.well-known/*` AND `/oauth2/*` paths to Hydra service
 - Synapse OIDC configuration uses `issuer: "http://localhost:3000/"` (public URL via Traefik)
 - Synapse authorization endpoint: `http://localhost:3000/oauth2/auth` (public - browser access)
@@ -716,6 +762,7 @@ The final Traefik configuration uses a simpler approach:
 - This hybrid approach eliminates startup dependencies and optimizes network routing
 
 **IMPORTANT**: With this configuration, Hydra OIDC endpoints are accessible at:
+
 - Discovery: `http://localhost/.well-known/openid-configuration` (via Traefik routing)
 - Authorization: `http://localhost/oauth2/auth` (via Traefik routing)
 - Token: `http://localhost/oauth2/token` (via Traefik routing)
@@ -725,8 +772,10 @@ This means Synapse OIDC configuration in homeserver.yaml should use `http://loca
 ---
 
 ### T003: Update .env.docker with Hydra Environment Variables
+
 **File**: `.env.docker`
 **Add the following variables**:
+
 ```bash
 # Hydra Configuration
 HYDRA_SYSTEM_SECRET=<generated-in-T001>
@@ -748,11 +797,13 @@ SYNAPSE_OIDC_CLIENT_SECRET=<generated-in-T001>
 ### Completed Milestones
 
 ✅ **Phase 1: Setup & Prerequisites (100% - 11/11)**
+
 - All secrets generated and secured
 - PostgreSQL multi-database support operational
 - Environment variable patterns validated
 
 ✅ **Phase 2: Foundational Infrastructure (100% - 11/11 with T008-T011)**
+
 - Hydra v2.2.0 deployed and operational
 - PostgreSQL databases (synapse, hydra) created
 - Traefik routing configured for OIDC endpoints
@@ -760,6 +811,7 @@ SYNAPSE_OIDC_CLIENT_SECRET=<generated-in-T001>
 - Database connection pool resilience implemented
 
 ✅ **Phase 3: User Story 1 - Core SSO (61% - 11/18)**
+
 - Synapse OIDC configuration complete with hybrid endpoint approach
 - All TDD tests written and passing (50+ test cases)
 - NestJS OIDC module fully implemented
@@ -812,26 +864,31 @@ SYNAPSE_OIDC_CLIENT_SECRET=<generated-in-T001>
 ### Remaining Work (39% - 25/47 tasks)
 
 **User Story 1 Validation** (7 tasks):
+
 - T012b: Test Synapse token validation with expired tokens
 - T020c: E2E OAuth2 authorization code flow validation
 - T021: Synapse service restart and log validation
 
 **User Story 2: Auto-Provisioning** (6 tasks):
+
 - Account creation for new Kratos users
 - Email-to-UserID mapping validation
 - Profile synchronization testing
 
 **User Story 4: Account Migration** (5 tasks):
+
 - Existing account linking
 - Dual authentication method verification
 - Data preservation validation
 
 **User Story 3: Session Management** (4 tasks):
+
 - Token refresh testing
 - Kratos logout synchronization
 - Session expiry validation
 
 **Polish & Monitoring** (5 tasks):
+
 - Comprehensive logging
 - Error handling documentation
 - Monitoring dashboard configuration

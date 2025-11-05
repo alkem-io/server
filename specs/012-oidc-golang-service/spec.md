@@ -20,6 +20,7 @@ As a platform operator, I want the Matrix/Synapse OIDC login flow to be handled 
 ## Clarifications
 
 ### Session 2025-10-29
+
 - Q: When Hydra admin API is unreachable or returns 5xx during a challenge resolution, how should the service handle the error? → A: Fail immediately and return the current error semantics back to Synapse.
 - Q: Which Kratos endpoint should the service call to resolve identity traits needed for Hydra acceptance payloads? → A: Use Kratos Admin API `GET /admin/identities/{id}` with the Hydra subject identifier.
 - Q: How should the service respond when identity traits from Kratos required for mapping are missing or inconsistent? → A: Reject the challenge with a 400-equivalent error that explains which traits are missing.

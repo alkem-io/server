@@ -113,7 +113,7 @@ export class RoomMentionsService {
     }
   }
 
-  public processNotificationMentions(
+  public async processNotificationMentions(
     mentions: Mention[],
     room: IRoom,
     message: IMessage,
@@ -125,7 +125,7 @@ export class RoomMentionsService {
       mentions,
       messageID: message.id,
     };
-    this.entityMentions(entityMentionsNotificationInput);
+    await this.entityMentions(entityMentionsNotificationInput);
   }
 
   public async entityMentions(
@@ -139,7 +139,7 @@ export class RoomMentionsService {
           roomID: eventData.roomId,
           messageID: eventData.messageID,
         };
-        this.notificationUserAdapter.userMention(
+        await this.notificationUserAdapter.userMention(
           entityMentionNotificationInput
         );
       }

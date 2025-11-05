@@ -15,21 +15,27 @@ Implemented structured JSON logging for the OIDC authentication flow using Winst
 ## Files Modified
 
 ### 1. `src/common/enums/logging.context.ts`
+
 **Change**: Added new log context
+
 ```typescript
 OIDC = 'oidc',
 ```
+
 **Purpose**: Dedicated context for filtering OIDC-related logs in production log aggregation systems (Kibana/CloudWatch)
 
 ---
 
 ### 2. `src/services/api/oidc/oidc.controller.ts`
+
 **Changes**:
+
 - Replaced basic `Logger` with Winston `LoggerService` via `@Inject(WINSTON_MODULE_NEST_PROVIDER)`
 - Added structured logging to all endpoints with required fields
 - Implemented proper log levels (INFO, ERROR, DEBUG)
 
 **Login Endpoint** (`/oidc/login`):
+
 - **DEBUG**: Processing login challenge (includes challengeId, skip flag, timestamp)
 - **DEBUG**: Checking Kratos session cookie (includes challengeId, sessionPresent, timestamp)
 - **DEBUG**: Redirecting to Kratos login (includes challengeId, kratosLoginUrl, returnTo, timestamp)
@@ -38,12 +44,14 @@ OIDC = 'oidc',
 - **ERROR**: Error processing login challenge (includes challengeId, errorCode, status, timestamp, stack trace)
 
 **Consent Endpoint** (`/oidc/consent`):
+
 - **DEBUG**: Processing consent challenge (includes challengeId, skip, subject, requestedScope, timestamp)
 - **DEBUG**: Extracted user info for consent (includes challengeId, userId, given_name, timestamp)
 - **INFO**: Consent accepted successfully (includes challengeId, userId, scopes, timestamp)
 - **ERROR**: Error processing consent challenge (includes challengeId, errorCode, status, timestamp, stack trace)
 
 **getUserInfoFromKratosSession (Private Method)**:
+
 - **WARN**: No Kratos session cookie provided
 - **DEBUG**: Calling Kratos whoami (includes url)
 - **WARN**: Kratos whoami failed (includes status)
@@ -54,23 +62,29 @@ OIDC = 'oidc',
 ---
 
 ### 3. `src/services/api/oidc/oidc.service.ts`
+
 **Changes**:
+
 - Replaced basic `Logger` with Winston `LoggerService` via `@Inject(WINSTON_MODULE_NEST_PROVIDER)`
 - Added structured logging to all Hydra Admin API interactions
 
 **getLoginChallenge**:
+
 - **DEBUG**: Fetching login challenge from Hydra (includes challengeId)
 - **ERROR**: Failed to fetch login challenge (includes challengeId, errorCode: `HYDRA_GET_LOGIN_CHALLENGE_FAILED`)
 
 **acceptLoginRequest**:
+
 - **DEBUG**: Accepting login request in Hydra (includes challengeId, subject)
 - **ERROR**: Failed to accept login request (includes challengeId, errorCode: `HYDRA_ACCEPT_LOGIN_FAILED`)
 
 **getConsentChallenge**:
+
 - **DEBUG**: Fetching consent challenge from Hydra (includes challengeId)
 - **ERROR**: Failed to fetch consent challenge (includes challengeId, errorCode: `HYDRA_GET_CONSENT_CHALLENGE_FAILED`)
 
 **acceptConsentRequest**:
+
 - **DEBUG**: Accepting consent request in Hydra (includes challengeId, grantedScopes)
 - **ERROR**: Failed to accept consent request (includes challengeId, errorCode: `HYDRA_ACCEPT_CONSENT_FAILED`)
 
@@ -79,8 +93,10 @@ OIDC = 'oidc',
 ## Log Level Guidelines
 
 ### INFO (`.log` method)
+
 **Usage**: Successful authentication events
 **Examples**:
+
 - Login accepted successfully
 - Consent accepted successfully
 
@@ -89,8 +105,10 @@ OIDC = 'oidc',
 ---
 
 ### ERROR (`.error` method)
+
 **Usage**: Authentication failures
 **Examples**:
+
 - Error processing login challenge
 - Error processing consent challenge
 - Failed to accept login request
@@ -99,6 +117,7 @@ OIDC = 'oidc',
 **Fields**: challengeId, errorCode, status (HTTP status if available), timestamp, stack trace
 
 **Error Codes**:
+
 - `INVALID_CHALLENGE` - Challenge not found (404)
 - `INVALID_CONSENT_REQUEST` - Bad consent request (400)
 - `HYDRA_ERROR` - Generic Hydra communication error
@@ -110,8 +129,10 @@ OIDC = 'oidc',
 ---
 
 ### DEBUG (`.debug` method)
+
 **Usage**: OAuth2 challenge details and flow progression
 **Examples**:
+
 - Processing login challenge
 - Checking Kratos session cookie
 - Redirecting to Kratos login
@@ -126,8 +147,10 @@ OIDC = 'oidc',
 ---
 
 ### WARN (`.warn` method)
+
 **Usage**: Non-critical issues (recoverable failures)
 **Examples**:
+
 - No Kratos session cookie provided
 - Kratos whoami failed
 - No identity data in Kratos session
@@ -168,7 +191,9 @@ OIDC = 'oidc',
 ## Compliance Validation
 
 ### FR-012: Logging of Key Events
+
 ✅ **PASS** - All authentication events logged:
+
 - Login challenge processing
 - Consent challenge processing
 - User info retrieval from Kratos
@@ -176,7 +201,9 @@ OIDC = 'oidc',
 - Authentication failures with error details
 
 ### NFR-003: Observability
+
 ✅ **PASS** - JSON-structured logging with required fields:
+
 - `level`: INFO/ERROR/DEBUG/WARN
 - `timestamp`: ISO 8601 format
 - `challengeId`: OAuth2 challenge identifier
@@ -189,6 +216,7 @@ OIDC = 'oidc',
 ## Verification
 
 ### Log Output Example (Development)
+
 ```
 [Nest] 12345  - 01/31/2025, 2:23:45 PM   DEBUG [oidc] Processing login challenge
 {
@@ -199,8 +227,16 @@ OIDC = 'oidc',
 ```
 
 ### Log Output Example (Production - JSON)
+
 ```json
-{"level":"debug","message":"Processing login challenge","timestamp":"2025-01-31T14:23:45.123Z","context":"oidc","challengeId":"a1b2c3d4e5f6g7h8","skip":false}
+{
+  "level": "debug",
+  "message": "Processing login challenge",
+  "timestamp": "2025-01-31T14:23:45.123Z",
+  "context": "oidc",
+  "challengeId": "a1b2c3d4e5f6g7h8",
+  "skip": false
+}
 ```
 
 ---
@@ -216,12 +252,14 @@ OIDC = 'oidc',
 ## Testing Recommendations
 
 ### Manual Testing
+
 1. **Normal Flow**: Perform Matrix login, verify INFO logs for "Login accepted successfully" and "Consent accepted successfully"
 2. **Missing Challenge**: Call `/oidc/login` without query param, verify ERROR log with errorCode
 3. **Kratos Unavailable**: Stop Kratos, attempt login, verify ERROR logs for Kratos session fetch
 4. **Invalid Challenge**: Use expired/invalid challenge ID, verify ERROR log with errorCode: `INVALID_CHALLENGE`
 
 ### Log Grep Commands
+
 ```bash
 # Filter by context
 docker logs alkemio_dev_server 2>&1 | grep '"context":"oidc"'
