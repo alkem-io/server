@@ -50,7 +50,7 @@ export class ContributionReporterService {
         id: contribution.id,
         name: contribution.name,
         author: details.id,
-        space: contribution.id,
+        space: contribution.space,
       },
       details
     );

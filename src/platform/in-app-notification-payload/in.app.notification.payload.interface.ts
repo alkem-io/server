@@ -22,6 +22,7 @@ import { InAppNotificationPayloadPlatformGlobalRoleChange } from '@platform/in-a
 import { InAppNotificationPayloadSpaceCollaborationCalloutPostComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout.post.comment';
 import { InAppNotificationPayloadVirtualContributor } from '@platform/in-app-notification-payload/dto/virtual-contributor/notification.in.app.payload.virtual.contributor';
 import { InAppNotificationPayloadSpaceCollaborationCalloutComment } from './dto/space/notification.in.app.payload.space.collaboration.callout.comment';
+import { InAppNotificationPayloadSpaceCommunityCalendarEvent } from './dto/space/notification.in.app.payload.space.community.calendar.event';
 
 @InterfaceType('InAppNotificationPayload', {
   isAbstract: true,
@@ -63,6 +64,8 @@ import { InAppNotificationPayloadSpaceCollaborationCalloutComment } from './dto/
         return InAppNotificationPayloadSpaceCollaborationCalloutPostComment;
       case NotificationEventPayload.SPACE_COLLABORATION_CALLOUT_COMMENT:
         return InAppNotificationPayloadSpaceCollaborationCalloutComment;
+      case NotificationEventPayload.SPACE_COMMUNITY_CALENDAR_EVENT:
+        return InAppNotificationPayloadSpaceCommunityCalendarEvent;
 
       // User notifications
       case NotificationEventPayload.USER:

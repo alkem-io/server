@@ -3,6 +3,7 @@ import { Field, ObjectType } from '@nestjs/graphql';
 import { INameable } from '../entity/nameable-entity/nameable.interface';
 import { WhiteboardContent } from '../scalars/scalar.whiteboard.content';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
+import { IWhiteboardPreviewSettings } from './whiteboard.preview.settings.interface';
 
 @ObjectType('Whiteboard')
 export abstract class IWhiteboard extends INameable {
@@ -17,6 +18,12 @@ export abstract class IWhiteboard extends INameable {
     nullable: false,
   })
   contentUpdatePolicy!: ContentUpdatePolicy;
+
+  @Field(() => IWhiteboardPreviewSettings, {
+    description: 'The preview settings for the Whiteboard.',
+    nullable: false,
+  })
+  previewSettings!: IWhiteboardPreviewSettings;
 
   createdBy?: string;
 

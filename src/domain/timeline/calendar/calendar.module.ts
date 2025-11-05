@@ -14,6 +14,7 @@ import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activ
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 import { SpaceSettingsModule } from '@domain/space/space.settings/space.settings.module';
+import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { SpaceSettingsModule } from '@domain/space/space.settings/space.settings
     ActivityAdapterModule,
     StorageAggregatorResolverModule,
     SpaceSettingsModule,
+    NotificationAdapterModule,
     TypeOrmModule.forFeature([Calendar]),
   ],
   providers: [

@@ -1,5 +1,12 @@
 import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
-import { Brackets, Repository, In, Not, UpdateResult, FindOptionsWhere } from 'typeorm';
+import {
+  Brackets,
+  Repository,
+  In,
+  Not,
+  UpdateResult,
+  FindOptionsWhere,
+} from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Inject } from '@nestjs/common/decorators';

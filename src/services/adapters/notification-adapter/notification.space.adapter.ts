@@ -27,6 +27,11 @@ import { NotificationInputCollaborationCalloutComment } from './dto/space/notifi
 import { NotificationInputCollaborationCalloutPostContributionComment } from './dto/space/notification.dto.input.space.collaboration.callout.post.contribution.comment';
 import { InAppNotificationPayloadSpaceCollaborationCalloutPostComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout.post.comment';
 import { InAppNotificationPayloadSpaceCollaborationCalloutComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout.comment';
+import { NotificationInputVirtualContributorSpaceCommunityInvitationDeclined } from './dto/space/notification.dto.input.space.community.invitation.vc.declined';
+import { NotificationInputCommunityCalendarEventCreated } from './dto/space/notification.dto.input.space.community.calendar.event.created';
+import { InAppNotificationPayloadSpaceCommunityCalendarEvent } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.calendar.event';
+import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
+
 @Injectable()
 export class NotificationSpaceAdapter {
   constructor(
@@ -36,7 +41,8 @@ export class NotificationSpaceAdapter {
     private notificationInAppAdapter: NotificationInAppAdapter,
     private notificationAdapter: NotificationAdapter,
     private notificationUserAdapter: NotificationUserAdapter,
-    private communityResolverService: CommunityResolverService
+    private communityResolverService: CommunityResolverService,
+    private spaceLookupService: SpaceLookupService
   ) {}
 
   public async spaceCollaborationCalloutPublished(
@@ -83,6 +89,76 @@ export class NotificationSpaceAdapter {
 
       await this.notificationInAppAdapter.sendInAppNotifications(
         NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED,
+        NotificationEventCategory.SPACE_MEMBER,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
+        inAppPayload
+      );
+    }
+  }
+
+  public async spaceCommunityCalendarEventCreated(
+    eventData: NotificationInputCommunityCalendarEventCreated,
+    spaceID: string
+  ): Promise<void> {
+    const event = NotificationEvent.SPACE_COMMUNITY_CALENDAR_EVENT_CREATED;
+
+    const space = await this.spaceLookupService.getSpaceOrFail(spaceID, {
+      relations: {
+        about: {
+          profile: true,
+        },
+      },
+    });
+
+    const recipients = await this.getNotificationRecipientsSpace(
+      event,
+      eventData,
+      space.id
+    );
+
+    // Exclude the creator from both email and in-app recipients
+    const creatorID = eventData.calendarEvent.createdBy;
+    const emailRecipientsExcludingCreator = recipients.emailRecipients.filter(
+      recipient => recipient.id !== creatorID
+    );
+    const inAppRecipientsExcludingCreator = recipients.inAppRecipients.filter(
+      recipient => recipient.id !== creatorID
+    );
+
+    // Send email notifications
+    if (emailRecipientsExcludingCreator.length > 0) {
+      const payload =
+        await this.notificationExternalAdapter.buildSpaceCommunityCalendarEventCreatedPayload(
+          event,
+          eventData.triggeredBy,
+          emailRecipientsExcludingCreator,
+          space,
+          eventData.calendarEvent
+        );
+      this.notificationExternalAdapter.sendExternalNotifications(
+        event,
+        payload
+      );
+    }
+
+    // Send in-app notifications
+    const inAppReceiverIDs = inAppRecipientsExcludingCreator.map(
+      recipient => recipient.id
+    );
+    if (inAppReceiverIDs.length > 0) {
+      const inAppPayload: InAppNotificationPayloadSpaceCommunityCalendarEvent =
+        {
+          type: NotificationEventPayload.SPACE_COMMUNITY_CALENDAR_EVENT,
+          spaceID: space.id,
+          calendarEventID: eventData.calendarEvent.id,
+          calendarEventTitle: eventData.calendarEvent.profile.displayName,
+          calendarEventType: eventData.calendarEvent.type,
+          createdBy: eventData.calendarEvent.createdBy,
+        };
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        NotificationEvent.SPACE_COMMUNITY_CALENDAR_EVENT_CREATED,
         NotificationEventCategory.SPACE_MEMBER,
         eventData.triggeredBy,
         inAppReceiverIDs,
@@ -378,6 +454,57 @@ export class NotificationSpaceAdapter {
         eventData.triggeredBy,
         adminInAppReceiverIDs,
         adminInAppPayload
+      );
+    }
+  }
+
+  public async spaceAdminVirtualContributorInvitationDeclined(
+    eventData: NotificationInputVirtualContributorSpaceCommunityInvitationDeclined,
+    space: any
+  ): Promise<void> {
+    const event =
+      NotificationEvent.SPACE_ADMIN_VIRTUAL_CONTRIBUTOR_COMMUNITY_INVITATION_DECLINED;
+
+    const recipients = await this.getNotificationRecipientsSpace(
+      event,
+      eventData,
+      space.id,
+      eventData.invitationCreatedBy
+    );
+
+    if (recipients.emailRecipients.length > 0) {
+      const payload =
+        await this.notificationExternalAdapter.buildVirtualContributorSpaceCommunityInvitationDeclinedPayload(
+          event,
+          eventData.triggeredBy,
+          recipients.emailRecipients,
+          eventData.virtualContributorID,
+          space
+        );
+
+      this.notificationExternalAdapter.sendExternalNotifications(
+        event,
+        payload
+      );
+    }
+
+    // Send in-app notifications
+    const inAppReceiverIDs = recipients.inAppRecipients.map(
+      recipient => recipient.id
+    );
+    if (inAppReceiverIDs.length > 0) {
+      const inAppPayload: InAppNotificationPayloadSpaceCommunityContributor = {
+        type: NotificationEventPayload.SPACE_COMMUNITY_CONTRIBUTOR,
+        spaceID: space.id,
+        contributorID: eventData.virtualContributorID,
+      };
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        NotificationEvent.SPACE_ADMIN_VIRTUAL_CONTRIBUTOR_COMMUNITY_INVITATION_DECLINED,
+        NotificationEventCategory.SPACE_ADMIN,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
+        inAppPayload
       );
     }
   }

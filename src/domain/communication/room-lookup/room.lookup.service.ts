@@ -61,8 +61,9 @@ export class RoomLookupService {
       LogContext.COMMUNICATION
     );
     const room = await this.getRoomOrFail(roomID);
-    const roomResult = await this.communicationAdapter.getCommunityRoom(
-      room.externalRoomID
+    const roomResult = await this.communicationAdapter.getRoomMessage(
+      room.externalRoomID,
+      messageID
     );
     // First message in the thread provides the threadID, but it itself does not have the threadID set
     const message = roomResult.messages.find(m => m.id === messageID);

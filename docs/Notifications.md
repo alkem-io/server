@@ -90,12 +90,14 @@ Events are categorized by their target audience:
 - `SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION` - Admin notification for callout contributions
 - `SPACE_LEAD_COMMUNICATION_MESSAGE` - Communication messages to space leads
 - `SPACE_ADMIN_COMMUNITY_NEW_MEMBER` - Admin notification for new community members
+- `SPACE_ADMIN_VIRTUAL_CONTRIBUTOR_COMMUNITY_INVITATION_DECLINED` - Admin notification when a virtual contributor invitation is declined
 - `SPACE_COMMUNITY_INVITATION_USER_PLATFORM` - Platform-level space invitations
 - `SPACE_COMMUNICATION_UPDATE` - General space communication updates
 - `SPACE_COLLABORATION_CALLOUT_PUBLISHED` - When callouts are published
 - `SPACE_COLLABORATION_CALLOUT_COMMENT` - Comments on callouts
 - `SPACE_COLLABORATION_CALLOUT_CONTRIBUTION` - Contributions to callouts
 - `SPACE_COLLABORATION_CALLOUT_POST_CONTRIBUTION_COMMENT` - Comments on post contributions
+- `SPACE_COMMUNITY_CALENDAR_EVENT_CREATED` - When a calendar event is created in the space community
 - `SPACE_COMMUNICATION_MESSAGE_SENDER` - Copy of space message sent
 
 ### User Notifications
@@ -103,6 +105,7 @@ Events are categorized by their target audience:
 - `USER_SPACE_COMMUNITY_INVITATION` - Direct space community invitations
 - `USER_SPACE_COMMUNITY_JOINED` - When user joins a space community
 - `USER_SPACE_COMMUNITY_APPLICATION` - User's own community applications
+- `USER_SPACE_COMMUNITY_APPLICATION_DECLINED` - When user's space community application is declined
 - `USER_SIGN_UP_WELCOME` - Welcome message for new users
 - `USER_MENTIONED` - When user is mentioned
 - `USER_MESSAGE` - Direct messages to users

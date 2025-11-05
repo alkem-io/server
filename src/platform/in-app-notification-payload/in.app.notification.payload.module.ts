@@ -20,8 +20,11 @@ import {
   InAppNotificationPayloadUserMessageRoomResolverFields,
   InAppNotificationPayloadVirtualContributorFieldsResolver,
   InAppNotificationPayloadSpaceCollaborationCalloutCommentResolverFields,
+  InAppNotificationPayloadSpaceCommunityCalendarEventResolverFields,
 } from './field-resolvers';
 import { MessageDetailsModule } from '@domain/communication/message.details/message.details.module';
+import { CalendarEventLoaderCreator } from '@core/dataloader/creators/loader.creators/in-app-notification/calendar.event.loader.creator';
+
 @Module({
   imports: [AuthorizationModule, MessageDetailsModule],
   providers: [
@@ -36,6 +39,7 @@ import { MessageDetailsModule } from '@domain/communication/message.details/mess
     InAppNotificationPayloadSpaceCommunityApplicationResolverFields,
     InAppNotificationPayloadSpaceCommunityInvitationResolverFields,
     InAppNotificationPayloadSpaceCommunityInvitationPlatformResolverFields,
+    InAppNotificationPayloadSpaceCommunityCalendarEventResolverFields,
     InAppNotificationPayloadUserMessageRoomResolverFields,
     InAppNotificationPayloadUserMessageDirectResolverFields,
     InAppNotificationPayloadOrganizationMessageDirectResolverFields,
@@ -44,6 +48,7 @@ import { MessageDetailsModule } from '@domain/communication/message.details/mess
     InAppNotificationPayloadPlatformForumDiscussionResolverFields,
     InAppNotificationPayloadPlatformUserProfileRemovedResolverFields,
     OrganizationLoaderCreator,
+    CalendarEventLoaderCreator,
     InAppNotificationPayloadVirtualContributorFieldsResolver,
   ],
   exports: [],

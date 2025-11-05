@@ -1,0 +1,193 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://alkem.io/schemas/schema-baseline/change-report.schema.json",
+  "title": "Schema Baseline Change Report",
+  "type": "object",
+  "required": [
+    "snapshotId",
+    "baseSnapshotId",
+    "generatedAt",
+    "classifications",
+    "entries",
+    "overrideApplied"
+  ],
+  "properties": {
+    "snapshotId": {
+      "type": "string",
+      "description": "SHA-256 digest of the regenerated SDL"
+    },
+    "baseSnapshotId": {
+      "type": ["string", "null"],
+      "description": "SHA-256 digest of the previous baseline or null when initializing"
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 timestamp for when the report was generated"
+    },
+    "classifications": {
+      "$ref": "#/definitions/classificationCount"
+    },
+    "entries": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/changeEntry" }
+    },
+    "overrideApplied": {
+      "type": "boolean",
+      "description": "Indicates whether a reviewer override reconciled breaking changes"
+    },
+    "overrideReviewer": {
+      "type": "string",
+      "description": "Reviewer who applied the override when overrideApplied=true"
+    },
+    "errorFallback": {
+      "type": "boolean",
+      "description": "True when the diff pipeline failed and a fallback report was emitted"
+    },
+    "errorMessage": {
+      "type": "string",
+      "description": "Diagnostic message attached to a fallback report"
+    },
+    "enumLifecycleEvaluations": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/enumLifecycleEvaluation" }
+    },
+    "scalarEvaluations": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/scalarChangeEvaluation" }
+    },
+    "notes": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "definitions": {
+    "classificationCount": {
+      "type": "object",
+      "required": [
+        "additive",
+        "deprecated",
+        "breaking",
+        "prematureRemoval",
+        "invalidDeprecation",
+        "info"
+      ],
+      "properties": {
+        "additive": { "type": "integer", "minimum": 0 },
+        "deprecated": { "type": "integer", "minimum": 0 },
+        "breaking": { "type": "integer", "minimum": 0 },
+        "prematureRemoval": { "type": "integer", "minimum": 0 },
+        "invalidDeprecation": { "type": "integer", "minimum": 0 },
+        "info": { "type": "integer", "minimum": 0 },
+        "deprecationGrace": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Count of entries within the 24-hour deprecation grace period"
+        },
+        "baseline": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Baseline marker count; expected to be 1 for initialization runs"
+        }
+      }
+    },
+    "changeEntry": {
+      "type": "object",
+      "required": ["id", "element", "elementType", "changeType", "detail"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "element": { "type": "string" },
+        "elementType": {
+          "type": "string",
+          "enum": ["TYPE", "FIELD", "ENUM_VALUE", "SCALAR"]
+        },
+        "changeType": {
+          "type": "string",
+          "enum": [
+            "ADDITIVE",
+            "DEPRECATED",
+            "DEPRECATION_GRACE",
+            "BREAKING",
+            "PREMATURE_REMOVAL",
+            "INVALID_DEPRECATION_FORMAT",
+            "INFO",
+            "BASELINE"
+          ]
+        },
+        "detail": { "type": "string" },
+        "previous": {},
+        "current": {},
+        "deprecationFormatValid": { "type": "boolean" },
+        "removeAfter": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "sinceDate": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+        "firstCommit": { "type": "string" },
+        "override": { "type": "boolean" },
+        "grace": { "type": "boolean" },
+        "graceExpiresAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "enumLifecycleEvaluation": {
+      "type": "object",
+      "required": [
+        "enumValue",
+        "sinceDate",
+        "removeAfter",
+        "daysBetween",
+        "removalAttempted",
+        "allowedToRemove",
+        "classification"
+      ],
+      "properties": {
+        "enumValue": { "type": "string" },
+        "sinceDate": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+        "removeAfter": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "daysBetween": { "type": "integer" },
+        "removalAttempted": { "type": "boolean" },
+        "allowedToRemove": { "type": "boolean" },
+        "classification": {
+          "type": "string",
+          "enum": ["BREAKING", "PREMATURE_REMOVAL", "ALLOWED"]
+        }
+      }
+    },
+    "scalarChangeEvaluation": {
+      "type": "object",
+      "required": [
+        "scalarName",
+        "jsonTypeCurrent",
+        "behaviorChangeClassification",
+        "reason"
+      ],
+      "properties": {
+        "scalarName": { "type": "string" },
+        "jsonTypePrevious": {
+          "type": ["string", "null"],
+          "enum": [
+            "string",
+            "number",
+            "boolean",
+            "object",
+            "array",
+            "unknown",
+            null
+          ]
+        },
+        "jsonTypeCurrent": {
+          "type": "string",
+          "enum": ["string", "number", "boolean", "object", "array", "unknown"]
+        },
+        "behaviorChangeClassification": {
+          "type": "string",
+          "enum": ["NON_BREAKING", "BREAKING"]
+        },
+        "reason": { "type": "string" }
+      }
+    }
+  }
+}

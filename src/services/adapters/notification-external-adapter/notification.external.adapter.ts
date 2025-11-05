@@ -3,8 +3,7 @@ import {
   EntityNotFoundException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { Inject, Injectable } from '@nestjs/common';
 import {
   BaseEventPayload,
   ContributorPayload,
@@ -24,6 +23,7 @@ import {
   NotificationEventPayloadSpaceCommunityInvitation,
   NotificationEventPayloadSpaceCommunityInvitationPlatform,
   NotificationEventPayloadSpaceCommunityInvitationVirtualContributor,
+  NotificationEventPayloadSpaceCalendarEvent,
   NotificationEventPayloadUserMessageDirect,
   NotificationEventPayloadUserMessageRoom,
   NotificationEventPayloadUserMessageRoomReply,
@@ -52,6 +52,7 @@ import { NotificationInputCollaborationCalloutContributionCreated } from '../not
 import { NotificationInputCollaborationCalloutComment } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.comment';
 import { NotificationInputCollaborationCalloutPostContributionComment } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.post.contribution.comment';
 import { MessageDetails } from '@domain/communication/message.details/message.details.interface';
+import { ICalendarEvent } from '@domain/timeline/event/event.interface';
 import { getContributorType } from '@domain/community/contributor/get.contributor.type';
 
 interface CalloutContributionPayload {
@@ -68,8 +69,6 @@ export class NotificationExternalAdapter {
   constructor(
     private contributorLookupService: ContributorLookupService,
     private userLookupService: UserLookupService,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService,
     private configService: ConfigService<AlkemioConfig, true>,
     private urlGeneratorService: UrlGeneratorService,
     @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
@@ -154,6 +153,33 @@ export class NotificationExternalAdapter {
         host: hostPayload,
         invitee: virtualContributorPayload,
         welcomeMessage,
+        ...spacePayload,
+      };
+    return result;
+  }
+
+  async buildVirtualContributorSpaceCommunityInvitationDeclinedPayload(
+    eventType: NotificationEvent,
+    triggeredBy: string,
+    recipients: IUser[],
+    virtualContributorID: string,
+    space: ISpace
+  ): Promise<NotificationEventPayloadSpaceCommunityInvitationVirtualContributor> {
+    const spacePayload = await this.buildSpacePayload(
+      eventType,
+      triggeredBy,
+      recipients,
+      space
+    );
+
+    const virtualContributorPayload: ContributorPayload =
+      await this.getContributorPayloadOrFail(virtualContributorID);
+
+    // For declined invitations, we don't need the host payload, so we can reuse the virtual contributor as both
+    const result: NotificationEventPayloadSpaceCommunityInvitationVirtualContributor =
+      {
+        host: virtualContributorPayload, // Using VC as placeholder
+        invitee: virtualContributorPayload,
         ...spacePayload,
       };
     return result;
@@ -456,6 +482,55 @@ export class NotificationExternalAdapter {
     };
 
     return payload;
+  }
+
+  /**
+   * Builds the payload for calendar event created notifications.
+   *
+   * The payload includes calendar event details (title, type, createdBy, url) that will be available
+   * once the @alkemio/notifications-lib is updated to support an optional calendarEvent field
+   * in NotificationEventPayloadSpace.
+   *
+   * This allows the email template in the notifications service to format messages as:
+   * Subject: New [event type] scheduled in [(sub)space name]
+   * Body: Hi [recipient name], [creator name] scheduled a new [event type] in the [(sub)space name] calendar: [event title].
+   *
+   * The in-app notification payload also includes these fields for the client/UI.
+   */
+  async buildSpaceCommunityCalendarEventCreatedPayload(
+    eventType: NotificationEvent,
+    triggeredBy: string,
+    recipients: IUser[],
+    space: ISpace,
+    calendarEvent: ICalendarEvent
+  ): Promise<NotificationEventPayloadSpaceCalendarEvent> {
+    const spacePayload = await this.buildSpacePayload(
+      eventType,
+      triggeredBy,
+      recipients,
+      space
+    );
+
+    // Load the user who created the calendar event
+    const createdByUser = await this.getUserPayloadOrFail(
+      calendarEvent.createdBy
+    );
+
+    // Generate URL for the calendar event
+    const calendarEventUrl =
+      await this.urlGeneratorService.getCalendarEventUrlPath(calendarEvent.id);
+
+    // Add calendar event details - will be properly typed once notifications-lib is updated
+    return {
+      ...spacePayload,
+      calendarEvent: {
+        id: calendarEvent.id,
+        title: calendarEvent.profile.displayName,
+        type: calendarEvent.type,
+        createdBy: createdByUser,
+        url: calendarEventUrl,
+      },
+    };
   }
 
   async buildPlatformSpaceCreatedPayload(
@@ -893,19 +968,6 @@ export class NotificationExternalAdapter {
       profile: {
         displayName: user.profile.displayName,
         url: this.urlGeneratorService.createUrlForUserNameID(user.nameID),
-      },
-      type: RoleSetContributorType.USER,
-    };
-  }
-
-  private createContributorPayloadFromContributor(
-    contributor: IContributor
-  ): ContributorPayload {
-    return {
-      id: contributor.id,
-      profile: {
-        displayName: contributor.profile.displayName,
-        url: this.urlGeneratorService.createUrlForContributor(contributor),
       },
       type: RoleSetContributorType.USER,
     };

@@ -35,9 +35,9 @@ jobs:
 
       - name: Set up Kubeconfig for Hetzner k3s
         run: |
-          mkdir -p $HOME/.kube  # Ensure the .kube directory exists
-          echo "${{ secrets.KUBECONFIG_SECRET_HETZNER_SANDBOX }}" > $HOME/.kube/config
-          chmod 600 $HOME/.kube/config
+          mkdir -p "$HOME/.kube"  # Ensure the .kube directory exists
+          echo "${{ secrets.KUBECONFIG_SECRET_HETZNER_SANDBOX }}" > "$HOME/.kube/config"
+          chmod 600 "$HOME/.kube/config"
 
       - name: Create Image Pull Secret
         run: |
