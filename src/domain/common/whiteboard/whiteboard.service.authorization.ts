@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject, LoggerService } from '@nestjs/common';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
@@ -18,18 +18,27 @@ import { ProfileAuthorizationService } from '../profile/profile.service.authoriz
 import { IWhiteboard } from './whiteboard.interface';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { WhiteboardService } from './whiteboard.service';
+import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+
+const CREDENTIAL_RULE_WHITEBOARD_OWNER_PUBLIC_SHARE =
+  'whiteboard-owner-public-share';
+const POLICY_RULE_SPACE_ADMIN_PUBLIC_SHARE = 'space-admin-public-share';
 
 @Injectable()
 export class WhiteboardAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService,
-    private whiteboardService: WhiteboardService
+    private whiteboardService: WhiteboardService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {}
 
   async applyAuthorizationPolicy(
     whiteboardID: string,
-    parentAuthorization: IAuthorizationPolicy | undefined
+    parentAuthorization: IAuthorizationPolicy | undefined,
+    spaceSettings?: ISpaceSettings
   ): Promise<IAuthorizationPolicy[]> {
     const whiteboard = await this.whiteboardService.getWhiteboardOrFail(
       whiteboardID,
@@ -60,16 +69,29 @@ export class WhiteboardAuthorizationService {
       );
     }
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
+
+    // DEBUG: Log what settings we received
+    this.logger.verbose?.(
+      `[DEBUG] Whiteboard ${whiteboardID} authorization - spaceSettings received: ${JSON.stringify(
+        spaceSettings
+      )}`,
+      LogContext.COLLABORATION
+    );
+
     whiteboard.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         whiteboard.authorization,
         parentAuthorization
       );
 
-    whiteboard.authorization = this.appendCredentialRules(whiteboard);
+    whiteboard.authorization = this.appendCredentialRules(
+      whiteboard,
+      spaceSettings
+    );
     whiteboard.authorization = this.appendPrivilegeRules(
       whiteboard.authorization,
-      whiteboard
+      whiteboard,
+      spaceSettings
     );
     updatedAuthorizations.push(whiteboard.authorization);
 
@@ -83,7 +105,10 @@ export class WhiteboardAuthorizationService {
     return updatedAuthorizations;
   }
 
-  private appendCredentialRules(whiteboard: IWhiteboard): IAuthorizationPolicy {
+  private appendCredentialRules(
+    whiteboard: IWhiteboard,
+    spaceSettings?: ISpaceSettings
+  ): IAuthorizationPolicy {
     const authorization = whiteboard.authorization;
     if (!authorization)
       throw new EntityNotInitializedException(
@@ -110,6 +135,33 @@ export class WhiteboardAuthorizationService {
           CREDENTIAL_RULE_WHITEBOARD_CREATED_BY
         );
       newRules.push(manageWhiteboardCreatedByPolicy);
+
+      // T007: Add PUBLIC_SHARE credential rule for whiteboard owner when guest contributions enabled
+      if (spaceSettings?.collaboration?.allowGuestContributions) {
+        const ownerPublicSharePolicy =
+          this.authorizationPolicyService.createCredentialRule(
+            [AuthorizationPrivilege.PUBLIC_SHARE],
+            [
+              {
+                type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+                resourceID: whiteboard.createdBy,
+              },
+            ],
+            CREDENTIAL_RULE_WHITEBOARD_OWNER_PUBLIC_SHARE
+          );
+        ownerPublicSharePolicy.cascade = true;
+        newRules.push(ownerPublicSharePolicy);
+
+        // T011: Structured logging for owner PUBLIC_SHARE privilege assignment
+        this.logger.verbose?.(
+          'Granting PUBLIC_SHARE privilege to whiteboard owner',
+          {
+            whiteboardId: whiteboard.id,
+            userId: whiteboard.createdBy,
+            context: LogContext.COLLABORATION,
+          }
+        );
+      }
     }
 
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
@@ -120,9 +172,11 @@ export class WhiteboardAuthorizationService {
 
   private appendPrivilegeRules(
     authorization: IAuthorizationPolicy,
-    whiteboard: IWhiteboard
+    whiteboard: IWhiteboard,
+    spaceSettings?: ISpaceSettings
   ): IAuthorizationPolicy {
     const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
+    let publicShareRulesAdded = 0;
 
     switch (whiteboard.contentUpdatePolicy) {
       case ContentUpdatePolicy.OWNER:
@@ -147,6 +201,44 @@ export class WhiteboardAuthorizationService {
         privilegeRules.push(updateContentPrivilegeContributors);
         break;
       }
+    }
+
+    // T008 & T014: Add PUBLIC_SHARE privilege rule for space admins when guest contributions enabled
+    this.logger.verbose?.(
+      `[DEBUG] Whiteboard ${whiteboard.id} checking PUBLIC_SHARE condition - spaceSettings: ${JSON.stringify(
+        spaceSettings
+      )}, allowGuestContributions: ${spaceSettings?.collaboration?.allowGuestContributions}`,
+      LogContext.COLLABORATION
+    );
+
+    if (spaceSettings?.collaboration?.allowGuestContributions) {
+      const adminPublicSharePrivilege = new AuthorizationPolicyRulePrivilege(
+        [AuthorizationPrivilege.PUBLIC_SHARE],
+        AuthorizationPrivilege.UPDATE,
+        POLICY_RULE_SPACE_ADMIN_PUBLIC_SHARE
+      );
+      privilegeRules.push(adminPublicSharePrivilege);
+      publicShareRulesAdded++;
+
+      // T011: Structured logging for admin PUBLIC_SHARE privilege assignment
+      this.logger.verbose?.(
+        'Granting PUBLIC_SHARE privilege to space admins via UPDATE privilege mapping',
+        LogContext.COLLABORATION
+      );
+    } else if (spaceSettings?.collaboration !== undefined) {
+      // T015: Logging for privilege revocation (rules not added when allowGuestContributions = false)
+      this.logger.verbose?.(
+        `Skipping PUBLIC_SHARE privilege rules for whiteboard ${whiteboard.id} - guest contributions disabled`,
+        LogContext.COLLABORATION
+      );
+    }
+
+    // T012: Metrics emission for privilege rule creation
+    if (publicShareRulesAdded > 0) {
+      this.logger.verbose?.(
+        `Added ${publicShareRulesAdded} PUBLIC_SHARE privilege rule(s) for whiteboard ${whiteboard.id}`,
+        LogContext.COLLABORATION
+      );
     }
 
     return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(

@@ -22,6 +22,8 @@ import { CreateCommunityInput } from './dto/community.dto.create';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { IRoleSet } from '@domain/access/role-set';
+import { RoleName } from '@common/enums/role.name';
+import { IUser } from '@domain/community/user/user.interface';
 
 @Injectable()
 export class CommunityService {
@@ -231,5 +233,14 @@ export class CommunityService {
     return await this.communityResolverService.getLevelZeroSpaceIdForCommunity(
       community.id
     );
+  }
+
+  /**
+   * Get all users with admin role in this community's RoleSet
+   * Used for guest contribution privilege management
+   */
+  public async getAdmins(community: ICommunity): Promise<IUser[]> {
+    const roleSet = await this.getRoleSet(community);
+    return await this.roleSetService.getUsersWithRole(roleSet, RoleName.ADMIN);
   }
 }
