@@ -19,6 +19,13 @@ export const apmAgent = process.env.APM_ENDPOINT
       serverCaCertFile: CERTIFICATE_PATH,
       environment: process.env.ENVIRONMENT ?? 'local',
       /**
+       * Occasionally we are getting `APM Server transport error (ECONNRESET): socket hang up`
+       * setting the log level to trace temporary to get more information
+       *
+       * Related to: https://github.com/alkem-io/server/issues/5127
+       */
+      logLevel: (process.env.APM_LOG_LEVEL as any) ?? 'trace',
+      /**
        * Specify the sampling rate to use when deciding whether to trace a request.
        * This must be a value between 0.0 and 1.0, where 1.0 means 100% of requests are traced.
        * The value is rounded to four decimal places of precision (e.g. 0.0001, 0.3333) to ensure consistency and reasonable size
