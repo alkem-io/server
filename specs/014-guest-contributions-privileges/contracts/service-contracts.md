@@ -6,7 +6,9 @@
 
 ## Overview
 
-This feature does NOT expose new public GraphQL APIs. All contracts are internal service methods extending existing authorization and collaboration services.
+This feature does NOT expose new public GraphQL APIs. All contracts are internal service methods extending existing authorization services.
+
+**Architecture Pattern**: Uses **authorization reset cascade** - privileges are NOT explicitly granted/revoked but rather assigned statically during `applyAuthorizationPolicy()` cascade. When space settings change or admin roles are modified, the entire space authorization tree is rebuilt from scratch.
 
 ---
 
@@ -14,52 +16,143 @@ This feature does NOT expose new public GraphQL APIs. All contracts are internal
 
 ### WhiteboardAuthorizationService Extensions
 
-**Location**: `src/services/api/whiteboard/whiteboard.service.authorization.ts`
+**Location**: `src/domain/common/whiteboard/whiteboard.service.authorization.ts`
 
-#### Method: `applyGuestContributionPrivileges()`
+#### Method: `appendCredentialRules()` - EXTENDED
 
-**Purpose**: Apply PUBLIC_SHARE privilege rules when whiteboard is in a space with guest contributions enabled
+**Purpose**: Add PUBLIC_SHARE credential rule for whiteboard owner when space has guest contributions enabled
 
 **Signature**:
 
 ```typescript
 /**
- * Extends authorization policy with PUBLIC_SHARE privilege when
- * the containing space has allowGuestContributions = true.
+ * Extends authorization policy with credential-based rules.
+ * EXTENDED to add PUBLIC_SHARE credential rule for whiteboard owner
+ * when allowGuestContributions = true.
  *
- * Grants PUBLIC_SHARE to:
- * - All space admins (not subspace admins)
- * - Whiteboard owner (createdBy user)
- *
- * @param whiteboard - Whiteboard entity with loaded authorization policy
- * @param spaceId - ID of containing space (not subspace)
- * @param allowGuestContributions - Space setting value
- * @returns Updated whiteboard with modified authorization policy
- * @throws InternalServerErrorException if space admin lookup fails
+ * @param authorization - Authorization policy to extend
+ * @param whiteboard - Whiteboard entity with createdBy user ID
+ * @param spaceSettings - Space settings (optional, contains allowGuestContributions)
+ * @returns Authorization policy with added credential rules
  */
-async applyGuestContributionPrivileges(
+private appendCredentialRules(
+  authorization: IAuthorizationPolicy,
   whiteboard: IWhiteboard,
-  spaceId: string,
-  allowGuestContributions: boolean
+  spaceSettings?: ISpaceSettings
+): IAuthorizationPolicy;
+```
+
+**Behavior**:
+
+- Called during `applyAuthorizationPolicy()` cascade
+- If `spaceSettings?.collaboration.allowGuestContributions === true`:
+  - Add credential rule: `{ grantedPrivileges: [AuthorizationPrivilege.PUBLIC_SHARE], criterias: [{ type: AuthorizationCredential.USER_SELF_MANAGEMENT, resourceID: whiteboard.createdBy }], cascade: true, name: 'whiteboard-owner-public-share' }`
+- If `allowGuestContributions === false` or undefined: Skip PUBLIC_SHARE rule (no-op)
+- Return modified authorization policy (caller saves via `authorizationPolicyService.saveAll()`)
+
+**Transaction Scope**: Called within cascade; transaction managed at resolver level
+
+---
+
+#### Method: `appendPrivilegeRules()` - EXTENDED
+
+**Purpose**: Add PUBLIC_SHARE privilege rules for space admins when space has guest contributions enabled
+
+**Signature**:
+
+```typescript
+/**
+ * Extends authorization policy with privilege-based rules.
+ * EXTENDED to add PUBLIC_SHARE privilege rule for space admins
+ * when allowGuestContributions = true.
+ *
+ * @param authorization - Authorization policy to extend
+ * @param whiteboard - Whiteboard entity
+ * @param spaceSettings - Space settings (optional, contains allowGuestContributions)
+ * @returns Authorization policy with added privilege rules
+ */
+private appendPrivilegeRules(
+  authorization: IAuthorizationPolicy,
+  whiteboard: IWhiteboard,
+  spaceSettings?: ISpaceSettings
+): IAuthorizationPolicy;
+```
+
+**Behavior**:
+
+- Called during `applyAuthorizationPolicy()` cascade
+- If `spaceSettings?.collaboration.allowGuestContributions === true`:
+  - Add privilege rule: `{ grantedPrivileges: [AuthorizationPrivilege.PUBLIC_SHARE], sourcePrivilege: AuthorizationPrivilege.UPDATE, name: 'space-admin-public-share' }`
+  - This maps existing UPDATE privilege (held by space admins via parent authorization) to PUBLIC_SHARE
+- If `allowGuestContributions === false` or undefined: Skip PUBLIC_SHARE rule (no-op)
+- Return modified authorization policy (caller saves via `authorizationPolicyService.saveAll()`)
+
+**Transaction Scope**: Called within cascade; transaction managed at resolver level
+
+---
+
+#### Method: `applyAuthorizationPolicy()` - SIGNATURE UPDATED
+
+**Purpose**: Apply authorization policy to whiteboard (existing method, signature extended)
+
+**Signature**:
+
+```typescript
+/**
+ * Applies authorization policy to whiteboard.
+ * UPDATED to accept spaceSettings parameter for privilege rule computation.
+ *
+ * @param whiteboard - Whiteboard entity
+ * @param parentAuthorization - Parent authorization policy (from CalloutContribution)
+ * @param spaceSettings - Space settings (optional, propagated through cascade)
+ * @returns Updated whiteboard with authorization policy
+ */
+async applyAuthorizationPolicy(
+  whiteboard: IWhiteboard,
+  parentAuthorization?: IAuthorizationPolicy,
+  spaceSettings?: ISpaceSettings
 ): Promise<IWhiteboard>;
 ```
 
 **Behavior**:
 
-- If `allowGuestContributions = false`, returns whiteboard unchanged
-- If `allowGuestContributions = true`:
-  1. Query space admins via `communityService.getAdmins(spaceId)`
-  2. Add privilege rule for each admin: `{ grantedPrivileges: ['public-share'], sourcePrivilege: 'update', name: 'space-admin-public-share' }`
-  3. Add credential rule for owner: `{ grantedPrivileges: ['public-share'], resourceID: whiteboard.createdBy, type: 'user-self-management', name: 'whiteboard-owner-public-share' }`
-  4. Save authorization policy
-  5. Return updated whiteboard
+- Existing cascade logic remains unchanged
+- Passes `spaceSettings` to `appendCredentialRules()` and `appendPrivilegeRules()`
+- Rebuilds authorization from scratch (reset pattern)
 
-**Error Handling**:
+---
 
-- Throws `InternalServerErrorException` if space admin query fails
-- Throws `EntityNotFoundException` if whiteboard.authorization is null
+### CalloutContributionAuthorizationService Extensions
 
-**Transaction Scope**: Must be called within transaction boundary
+**Location**: `src/domain/collaboration/callout-contribution/callout.contribution.service.authorization.ts`
+
+#### Method: `applyAuthorizationPolicy()` - SIGNATURE UPDATED
+
+**Purpose**: Propagate space settings through cascade to Whiteboard
+
+**Signature**:
+
+```typescript
+/**
+ * Applies authorization policy to callout contribution.
+ * UPDATED to accept and propagate spaceSettings parameter.
+ *
+ * @param contribution - CalloutContribution entity
+ * @param parentAuthorization - Parent authorization policy (from Callout)
+ * @param spaceSettings - Space settings (optional, propagated to children)
+ * @returns Updated contribution with authorization policy
+ */
+async applyAuthorizationPolicy(
+  contribution: ICalloutContribution,
+  parentAuthorization?: IAuthorizationPolicy,
+  spaceSettings?: ISpaceSettings
+): Promise<ICalloutContribution>;
+```
+
+**Behavior**:
+
+- Existing cascade logic remains unchanged
+- Passes `spaceSettings` down to `whiteboardAuthService.applyAuthorizationPolicy()` when contribution contains whiteboard
 
 ---
 
@@ -67,182 +160,151 @@ async applyGuestContributionPrivileges(
 
 **Location**: `src/domain/space/space/space.service.ts`
 
-#### Method: `updateGuestContributionPrivileges()`
+#### Method: `shouldUpdateAuthorizationPolicy()` - EXISTING (VERIFICATION ONLY)
 
-**Purpose**: Bulk apply/revoke PUBLIC_SHARE privileges across all whiteboards when setting changes
+**Purpose**: Detect when authorization cascade should be triggered (already handles `allowGuestContributions` changes)
 
 **Signature**:
 
 ```typescript
 /**
- * Updates PUBLIC_SHARE privileges on all whiteboards when allowGuestContributions setting changes.
+ * Determines if authorization policy should be updated based on settings changes.
+ * ALREADY HANDLES allowGuestContributions changes.
  *
- * Operations:
- * - When enabled (false → true): Grant PUBLIC_SHARE to admins + owners on all whiteboards
- * - When disabled (true → false): Revoke all PUBLIC_SHARE privileges from all whiteboards
- *
- * @param spaceId - Space ID (not subspace)
- * @param allowGuestContributions - New setting value
- * @param entityManager - Transaction manager for atomic operation
- * @returns { updated: number; failed: string[] } - Count of updated whiteboards and failed IDs
- * @throws TransactionRollbackException if batch operation fails
+ * @param spaceId - Space ID
+ * @param newSettings - New space settings
+ * @returns true if authorization should be recalculated
  */
-async updateGuestContributionPrivileges(
+async shouldUpdateAuthorizationPolicy(
   spaceId: string,
-  allowGuestContributions: boolean,
-  entityManager: EntityManager
-): Promise<{ updated: number; failed: string[] }>;
+  newSettings: ISpaceSettings
+): Promise<boolean>;
 ```
 
 **Behavior**:
 
-- Query all whiteboards in space (via callout → contribution → whiteboard path)
-- For each whiteboard:
-  - If `allowGuestContributions = true`: Call `whiteboardAuthService.applyGuestContributionPrivileges()`
-  - If `allowGuestContributions = false`: Call `authorizationService.revokePrivilege(PUBLIC_SHARE)`
-- Batch save all authorization policies
-- Log success/failure count
-
-**Performance Constraints**:
-
-- Must complete within 1 second for 1000 whiteboards (SC-006)
-- Uses bulk query + batch save to minimize round trips
-
-**Error Handling**:
-
-- Partial failures tracked in `failed` array
-- If any whiteboard fails, entire transaction rolls back
-- Logs error details per whiteboard
-
-**Transaction Scope**: REQUIRED - must receive EntityManager from caller
+- Returns `true` when `allowGuestContributions` changes from previous value
+- Triggers `SpaceResolverMutations.updateSpaceSettings()` to call `applyAuthorizationPolicy()` cascade
+- No code changes needed (existing implementation already detects this setting change)
 
 ---
 
-### AuthorizationService Extensions
+### RoleSetResolverMutations Extensions
 
-**Location**: `src/domain/common/authorization-policy/authorization.policy.service.ts`
+**Location**: `src/domain/access/role-set/role.set.resolver.mutations.ts`
 
-#### Method: `revokePrivilege()`
+#### Method: `assignRoleToUser()` - EXTENDED
 
-**Purpose**: Remove specific privilege from authorization policy
+**Purpose**: Trigger space authorization reset when ADMIN role is assigned
 
-**Signature**:
+**New Behavior**:
 
-```typescript
-/**
- * Removes all rules granting specified privilege from an authorization policy.
- *
- * @param authorizationPolicy - Policy to modify
- * @param privilege - Privilege to revoke (e.g., PUBLIC_SHARE)
- * @returns Updated authorization policy
- */
-revokePrivilege(
-  authorizationPolicy: IAuthorizationPolicy,
-  privilege: AuthorizationPrivilege
-): IAuthorizationPolicy;
-```
-
-**Behavior**:
-
-- Filter `privilegeRules` to remove entries with `grantedPrivileges` containing target privilege
-- Filter `credentialRules` to remove entries with `grantedPrivileges` containing target privilege
-- Return modified policy (caller responsible for persistence)
-
-**Idempotency**: Safe to call multiple times; no-op if privilege not present
+- After assigning role, check if `role === CommunityRole.ADMIN`
+- If true, get parent Space from RoleSet and call `spaceAuthService.applyAuthorizationPolicy(space.id)`
+- This ensures new admin immediately receives PUBLIC_SHARE privileges on all whiteboards (if setting enabled)
 
 ---
 
-## Event Contracts
+#### Method: `removeRoleFromUser()` - EXTENDED
 
-### Event: `SpaceSettingsUpdated`
+**Purpose**: Trigger space authorization reset when ADMIN role is removed
 
-**Emitted By**: `SpaceService.updateSettings()`
+**New Behavior**:
 
-**Payload**:
-
-```typescript
-{
-  spaceId: string;
-  settings: {
-    collaboration: {
-      allowGuestContributions: boolean; // ← Trigger field
-    }
-  }
-  previousSettings: {
-    collaboration: {
-      allowGuestContributions: boolean;
-    }
-  }
-}
-```
-
-**Subscribers**:
-
-- `GuestContributionPrivilegeHandler` (new) - Applies/revokes PUBLIC_SHARE privileges
-
-**Trigger Condition**: `allowGuestContributions` value changed (uses dirty tracking)
+- After removing role, check if `role === CommunityRole.ADMIN`
+- If true, get parent Space from RoleSet and call `spaceAuthService.applyAuthorizationPolicy(space.id)`
+- This ensures removed admin immediately loses PUBLIC_SHARE privileges on all whiteboards
 
 ---
 
-### Event: `AdminRoleGranted`
+## Authorization Cascade Triggers
 
-**Emitted By**: `CommunityService.grantRole()`
+This feature does NOT use event-driven architecture. Instead, it leverages the existing **authorization reset cascade** pattern.
 
-**Payload**:
+### Trigger 1: Space Settings Change
 
-```typescript
-{
-  userId: string;
-  spaceId: string; // Community parent space ID
-  role: CommunityRole; // = 'admin'
-}
-```
+**Entry Point**: `SpaceResolverMutations.updateSpaceSettings()`
 
-**Subscribers**:
+**Flow**:
 
-- `GuestContributionPrivilegeHandler.onAdminRoleGranted()` - Grants PUBLIC_SHARE if setting enabled
+1. User updates `allowGuestContributions` setting via GraphQL mutation
+2. `SpaceService.shouldUpdateAuthorizationPolicy()` detects setting change
+3. Returns `true`, triggering `SpaceAuthorizationService.applyAuthorizationPolicy(space.id)`
+4. Cascade flows: Space → Collaboration → CalloutsSet → Callout → CalloutContribution → Whiteboard
+5. `WhiteboardAuthorizationService.appendPrivilegeRules()` checks `spaceSettings.allowGuestContributions`
+6. If `true`: Adds PUBLIC_SHARE rules; If `false`: Skips PUBLIC_SHARE rules (effectively revoking)
+7. All modified authorization policies saved via `authorizationPolicyService.saveAll()`
 
-**Trigger Condition**: Role = 'admin' AND space has `allowGuestContributions = true`
+**Transaction Boundary**: Entire mutation wrapped in resolver-level transaction
 
----
-
-### Event: `WhiteboardCreated`
-
-**Emitted By**: `WhiteboardService.createWhiteboard()`
-
-**Payload**:
-
-```typescript
-{
-  whiteboardId: string;
-  createdBy: string; // Owner user ID
-  spaceId: string; // Containing space ID
-}
-```
-
-**Subscribers**:
-
-- `WhiteboardAuthorizationService.onWhiteboardCreated()` - Applies guest contribution privileges if enabled
-
-**Trigger Condition**: Always fires; handler checks `allowGuestContributions` setting internally
+**Performance**: Cascade completes in < 1 second for 1000 whiteboards (leverages existing bulk save infrastructure)
 
 ---
 
-## Repository Contracts
+### Trigger 2: Admin Role Assignment
 
-### CommunityRepository Extensions
+**Entry Point**: `RoleSetResolverMutations.assignRoleToUser(role: ADMIN)`
 
-**Location**: `src/domain/community/community/community.repository.ts`
+**Flow**:
 
-#### Method: `getAdmins()`
+1. User granted ADMIN role on space community
+2. Resolver checks if assigned role is `ADMIN`
+3. If true, get parent Space from RoleSet
+4. Trigger `SpaceAuthorizationService.applyAuthorizationPolicy(space.id)`
+5. Cascade rebuilds authorization for entire space tree
+6. New admin's UPDATE privilege (inherited from space) maps to PUBLIC_SHARE via `appendPrivilegeRules()`
 
-**Purpose**: Retrieve all admin users for a space community
+**Transaction Boundary**: Role assignment + authorization reset in single transaction
+
+---
+
+### Trigger 3: Admin Role Removal
+
+**Entry Point**: `RoleSetResolverMutations.removeRoleFromUser(role: ADMIN)`
+
+**Flow**:
+
+1. User's ADMIN role removed from space community
+2. Resolver checks if removed role is `ADMIN`
+3. If true, get parent Space from RoleSet
+4. Trigger `SpaceAuthorizationService.applyAuthorizationPolicy(space.id)`
+5. Cascade rebuilds authorization; ex-admin no longer has UPDATE privilege to map to PUBLIC_SHARE
+
+**Transaction Boundary**: Role removal + authorization reset in single transaction
+
+---
+
+### Trigger 4: New Whiteboard Creation
+
+**Entry Point**: Whiteboard creation (any method)
+
+**Flow**:
+
+1. Whiteboard created in space with `allowGuestContributions = true`
+2. Parent authorization policy already contains space settings
+3. `WhiteboardAuthorizationService.applyAuthorizationPolicy()` called with inherited parent auth + settings
+4. `appendCredentialRules()` adds owner PUBLIC_SHARE rule
+5. `appendPrivilegeRules()` adds admin PUBLIC_SHARE rule
+6. Authorization saved with whiteboard creation
+
+**Transaction Boundary**: Whiteboard creation + authorization in single transaction
+
+---
+
+## CommunityService Extensions
+
+**Location**: `src/domain/community/community/community.service.ts`
+
+### Method: `getAdmins()` - NEW
+
+**Purpose**: Retrieve all admin user IDs for a space community
 
 **Signature**:
 
 ```typescript
 /**
  * Finds all users with 'admin' role in a space community.
+ * Used during authorization reset to determine who receives PUBLIC_SHARE privileges.
  *
  * @param communityId - Community ID (from space.communityId)
  * @returns Array of user IDs with admin role
@@ -250,49 +312,43 @@ revokePrivilege(
 async getAdmins(communityId: string): Promise<string[]>;
 ```
 
-**Query**:
+**Behavior**:
 
-```sql
-SELECT user_id
-FROM community_contributor_roles
-WHERE community_id = ? AND role = 'admin'
-```
+- Query `Community.roleSet` for users with role = 'admin'
+- Return array of user IDs
+- Called by `appendPrivilegeRules()` to map admin UPDATE privilege to PUBLIC_SHARE
+
+**Performance**: Indexed query on `communityId` + `role`
 
 ---
 
-### WhiteboardRepository Extensions
+## RoleSetService Extensions
 
-**Location**: `src/domain/common/whiteboard/whiteboard.repository.ts`
+**Location**: `src/domain/access/role-set/role.set.service.ts`
 
-#### Method: `findAllInSpace()`
+### Method: `getSpaceFromRoleSet()` - NEW
 
-**Purpose**: Retrieve all whiteboards within a space (including nested callouts)
+**Purpose**: Helper to get parent Space from RoleSet (needed for admin role change triggers)
 
 **Signature**:
 
 ```typescript
 /**
- * Finds all whiteboards in a space, loading authorization policies.
+ * Finds the parent Space for a RoleSet.
+ * Used when admin role changes to determine which space needs authorization reset.
  *
- * @param spaceId - Space ID (not subspace)
- * @returns Array of whiteboards with loaded authorization policies
+ * @param roleSetId - RoleSet ID
+ * @returns Parent Space entity
+ * @throws EntityNotFoundException if RoleSet has no parent Space
  */
-async findAllInSpace(spaceId: string): Promise<IWhiteboard[]>;
+async getSpaceFromRoleSet(roleSetId: string): Promise<ISpace>;
 ```
 
-**Query Path**:
+**Behavior**:
 
-```sql
-SELECT w.*
-FROM whiteboard w
-JOIN callout_contribution cc ON cc.whiteboard_id = w.id
-JOIN callout c ON c.id = cc.callout_id
-JOIN collaboration collab ON collab.id = c.collaboration_id
-JOIN space s ON s.collaboration_id = collab.id
-WHERE s.id = ?
-```
-
-**Relations Loaded**: `['authorization', 'authorization.privilegeRules', 'authorization.credentialRules']`
+- Query RoleSet → Community → Space relationship
+- Return Space entity
+- Called by `assignRoleToUser()` and `removeRoleFromUser()` when role is ADMIN
 
 ---
 
@@ -308,17 +364,31 @@ WHERE s.id = ?
 
 #### Rule: Space-Level Admins Only
 
-**Enforced By**: `CommunityRepository.getAdmins()`
+**Enforced By**: `CommunityService.getAdmins()`
 
 **Logic**: Query filters by community ID associated with space (not subspace communities)
+
+**Result**: Subspace admins do NOT receive PUBLIC_SHARE on parent space whiteboards
 
 ---
 
 #### Rule: Owner Match
 
-**Enforced By**: `WhiteboardAuthorizationService.applyGuestContributionPrivileges()`
+**Enforced By**: `WhiteboardAuthorizationService.appendCredentialRules()`
 
-**Logic**: `whiteboard.createdBy === userId` for owner privilege rule
+**Logic**: Credential rule matches `whiteboard.createdBy === userId`
+
+**Result**: Only whiteboard creator receives owner PUBLIC_SHARE privilege
+
+---
+
+#### Rule: Settings Isolation (No Inheritance)
+
+**Enforced By**: Authorization cascade architecture
+
+**Logic**: Each space uses its own `spaceSettings` during `applyAuthorizationPolicy()`; subspaces do NOT inherit parent settings
+
+**Result**: Parent space with `allowGuestContributions = true` does NOT affect subspace whiteboards unless subspace also has setting enabled
 
 ---
 
@@ -332,7 +402,7 @@ No new GraphQL error codes exposed. Internal errors use standard NestJS exceptio
 | ------------------------------ | -------------------------------------------- | ----------- |
 | `InternalServerErrorException` | Space admin lookup fails                     | 500         |
 | `EntityNotFoundException`      | Whiteboard or authorization policy not found | 404         |
-| `TransactionRollbackException` | Bulk privilege update fails                  | 500         |
+| `TransactionRollbackException` | Authorization cascade fails during mutation  | 500         |
 
 ---
 
@@ -344,29 +414,34 @@ No new GraphQL error codes exposed. Internal errors use standard NestJS exceptio
 
 **Scenarios**:
 
-1. Toggling `allowGuestContributions` ON grants PUBLIC_SHARE to admins
-2. Toggling `allowGuestContributions` OFF revokes PUBLIC_SHARE from all users
-3. New admin granted role in enabled space receives PUBLIC_SHARE on all whiteboards
-4. New whiteboard in enabled space automatically gets PUBLIC_SHARE rules
-5. Partial failure in bulk operation rolls back setting and privileges
+1. **Toggle ON**: Enabling `allowGuestContributions` triggers authorization cascade; verify admins + owners have PUBLIC_SHARE on all whiteboards
+2. **Toggle OFF**: Disabling `allowGuestContributions` triggers authorization cascade; verify PUBLIC_SHARE rules NOT present (omitted during reset)
+3. **New Admin**: Granting ADMIN role triggers space authorization reset; verify new admin receives PUBLIC_SHARE on all whiteboards (if setting enabled)
+4. **Remove Admin**: Removing ADMIN role triggers space authorization reset; verify ex-admin loses PUBLIC_SHARE on all whiteboards
+5. **New Whiteboard**: Creating whiteboard in enabled space automatically applies PUBLIC_SHARE rules during creation
+6. **Transaction Rollback**: If authorization cascade fails, verify setting change is reverted and authorization remains unchanged
+7. **Transaction Rollback**: If authorization cascade fails, verify setting change is reverted and authorization remains unchanged
 
 ---
 
 ### Unit Test Expectations
 
-**File**: `src/services/api/whiteboard/whiteboard.service.authorization.spec.ts`
+**File**: `src/domain/common/whiteboard/whiteboard.service.authorization.spec.ts`
 
 **Mocked Dependencies**:
 
 - `CommunityService.getAdmins()` → returns mock admin IDs
-- `AuthorizationPolicyService.save()` → returns saved policy
-- `EntityManager.transaction()` → invokes callback
+- `AuthorizationPolicyService.saveAll()` → returns saved policies
+- Parent authorization policy (mocked with UPDATE privilege for admins)
 
 **Test Cases**:
 
-- `applyGuestContributionPrivileges()` adds correct privilege rules
-- `applyGuestContributionPrivileges()` skips when setting disabled
-- `revokePrivilege()` removes PUBLIC_SHARE rules without affecting others
+- `appendCredentialRules()` adds owner PUBLIC_SHARE rule when `allowGuestContributions = true`
+- `appendCredentialRules()` skips PUBLIC_SHARE rule when `allowGuestContributions = false`
+- `appendPrivilegeRules()` adds admin PUBLIC_SHARE rule when `allowGuestContributions = true`
+- `appendPrivilegeRules()` skips PUBLIC_SHARE rule when `allowGuestContributions = false`
+- `applyAuthorizationPolicy()` passes `spaceSettings` to helper methods correctly
+- Settings isolation: Subspace settings do NOT affect parent/sibling whiteboards
 
 ---
 
@@ -374,19 +449,26 @@ No new GraphQL error codes exposed. Internal errors use standard NestJS exceptio
 
 ### Response Time Constraints
 
-| Operation                                | Target     | Measurement Point           |
-| ---------------------------------------- | ---------- | --------------------------- |
-| Bulk privilege update (1000 whiteboards) | < 1 second | End-to-end transaction time |
-| Single whiteboard privilege apply        | < 100ms    | Service method duration     |
+| Operation                                      | Target     | Measurement Point                     |
+| ---------------------------------------------- | ---------- | ------------------------------------- |
+| Authorization cascade (1000 whiteboards)       | < 1 second | End-to-end mutation time              |
+| Single whiteboard authorization reset          | < 100ms    | `applyAuthorizationPolicy()` duration |
+| Admin role change + cascade (1000 whiteboards) | < 1 second | End-to-end role assignment time       |
 
-**Monitoring**: Elastic APM traces with span name `whiteboard.applyGuestContributionPrivileges`
+**Monitoring**: Elastic APM traces with span names:
+
+- `space.applyAuthorizationPolicy` (cascade entry point)
+- `whiteboard.applyAuthorizationPolicy` (per-whiteboard)
+- `whiteboard.appendPrivilegeRules` (privilege computation)
 
 ---
 
 ## Summary
 
-- **No public API changes**: All contracts are internal service methods
-- **Event-driven architecture**: Setting changes and role grants trigger privilege updates
-- **Transactional safety**: Bulk operations wrapped in database transactions
-- **Repository extensions**: New query methods for space admins and whiteboards
-- **Testing expectations**: Integration + unit test coverage for all privilege update paths
+- **No public API changes**: All contracts are internal service methods extending existing authorization cascade
+- **Authorization reset pattern**: Privileges assigned statically during cascade; NOT explicitly granted/revoked
+- **Cascade triggers**: Space settings change, admin role assignment/removal, whiteboard creation
+- **Transactional safety**: Authorization cascade wrapped in resolver-level transaction
+- **Service extensions**: `appendCredentialRules()`, `appendPrivilegeRules()`, `applyAuthorizationPolicy()` signature updates
+- **Helper methods**: `CommunityService.getAdmins()`, `RoleSetService.getSpaceFromRoleSet()`
+- **Testing expectations**: Integration tests verify cascade triggers; unit tests verify conditional rule logic

@@ -10,11 +10,11 @@
 ### Session 2025-11-05
 
 - Q: What should happen if privilege assignment fails partway through (e.g., database error after granting to some admins but not all)? → A: Rollback all changes and return error - maintain consistent state across all users
-- Q: What events/metrics should be logged when privileges are granted or revoked? → A: Log privilege grants/revokes with user/whiteboard IDs + emit metrics on operation count/duration
+- Q: What events/metrics should be logged when privilege rules are added or omitted during authorization reset? → A: Log privilege rule modifications with user/whiteboard IDs + emit metrics on operation count/duration
 - Q: What is the expected maximum number of whiteboards per space for performance validation? → A: 1000 whiteboards per space
-- Q: Should privilege grant/revoke actions be audited for compliance tracking? → A: Yes, audit all privilege grant/revoke operations with triggering user/action
+- Q: Should privilege rule modifications be audited for compliance tracking? → A: Yes, audit all privilege rule changes with triggering user/action during authorization reset
 - Q: Should the system track who/when triggered a privilege change for troubleshooting? → A: Track triggering event only (setting change/admin grant/whiteboard creation)
-- Q: If privilege granting fails when enabling allowGuestContributions, should the setting be reverted? → A: Yes, revert allowGuestContributions to false in space collaboration settings
+- Q: If privilege assignment fails when enabling allowGuestContributions, should the setting be reverted? → A: Yes, revert allowGuestContributions to false in space collaboration settings
 
 ## User Scenarios & Testing _(mandatory)_
 
@@ -89,7 +89,7 @@ When a user is granted space admin privileges on a space that has allowGuestCont
 - **New space admin assignment**: When a user is newly granted space admin privileges on a space with allowGuestContributions enabled, they receive PUBLIC_SHARE privilege on all whiteboards synchronously with the admin role grant.
 - **Cross-boundary privilege scope**: A user who is an admin of both a parent space and a subspace only receives PUBLIC_SHARE for whiteboards in spaces where allowGuestContributions is enabled, not based on their role inheritance.
 - **Privilege timing**: When allowGuestContributions is toggled ON, privilege assignment happens synchronously and immediately reflects in authorization checks - no delay or eventual consistency.
-- **Privilege ownership**: PUBLIC_SHARE privilege is automatically granted/revoked by the system based on the allowGuestContributions setting and cannot be manually assigned or removed while the setting is enabled.
+- **Privilege ownership**: PUBLIC_SHARE privilege is automatically assigned during authorization reset based on the allowGuestContributions setting and user roles; cannot be manually assigned or removed while the setting is enabled. Admin role changes trigger space authorization reset to ensure immediate privilege updates.
 - **New whiteboard creation**: When a whiteboard is created in a space with allowGuestContributions enabled, the creator receives PUBLIC_SHARE privilege atomically with whiteboard creation.
 - **Authorization check performance**: Authorization checks for PUBLIC_SHARE privilege must complete within acceptable UI interaction timeframes to avoid blocking the Share dialog rendering.
 - **Concurrent setting changes**: If multiple admins toggle allowGuestContributions simultaneously, the last write wins and privilege state converges to match the final setting value.
@@ -104,13 +104,13 @@ When a user is granted space admin privileges on a space that has allowGuestCont
 - **FR-003**: System MUST grant PUBLIC_SHARE privilege on a per-whiteboard basis only - no privilege inheritance across whiteboards or from space to subspace.
 - **FR-004**: System MUST automatically grant PUBLIC_SHARE privilege to the creator on their whiteboard and to all space admins on that whiteboard when a new whiteboard is created in a space with allowGuestContributions enabled.
 - **FR-005**: System MUST immediately revoke all PUBLIC_SHARE privileges on whiteboards within a space when allowGuestContributions is disabled for that space.
-- **FR-006**: System MUST automatically grant PUBLIC_SHARE privilege on all whiteboards in a space when a user is granted space admin privileges on a space with allowGuestContributions enabled.
+- **FR-006**: System MUST automatically grant PUBLIC_SHARE privilege on all whiteboards in a space when a user is granted space admin privileges on a space with allowGuestContributions enabled (via authorization reset cascade triggered by admin role change).
 - **FR-007**: System MUST scope PUBLIC_SHARE privileges to the space or subspace containing the whiteboard - subspace admins receive privileges only for whiteboards in their subspace, not parent spaces.
-- **FR-008**: System MUST handle privilege granting and revocation synchronously when allowGuestContributions setting is toggled to ensure immediate consistency.
+- **FR-008**: System MUST handle privilege granting and revocation synchronously when allowGuestContributions setting is toggled to ensure immediate consistency (via authorization reset cascade; `applyAuthorizationPolicy()` is synchronous).
 - **FR-009**: System MUST rollback all privilege changes AND revert allowGuestContributions setting to false if privilege assignment fails partway through, maintaining consistent state across all users and settings.
-- **FR-010**: System MUST log all privilege grant and revoke operations with user ID, whiteboard ID, space ID, and timestamp for audit trail and troubleshooting.
+- **FR-010**: System MUST log all privilege rule modifications with user ID, whiteboard ID, space ID, and timestamp during authorization reset for audit trail and troubleshooting.
 - **FR-011**: System MUST emit metrics tracking the count and duration of privilege assignment operations for operational monitoring.
-- **FR-012**: System MUST audit all privilege grant and revoke operations, recording the triggering user, triggering action (setting change, admin role grant, whiteboard creation), affected users, and timestamp for compliance tracking.
+- **FR-012**: System MUST audit all privilege rule changes during authorization reset, recording the triggering user, triggering action (setting change, admin role grant, whiteboard creation), affected users, and timestamp for compliance tracking.
 - **FR-013**: System MUST track the triggering event type (setting change, admin role grant, or whiteboard creation) for each privilege assignment to support troubleshooting and operational analysis.
 
 ### Key Entities
@@ -139,12 +139,12 @@ When a user is granted space admin privileges on a space that has allowGuestCont
 - Whiteboard ownership is clearly tracked and can be queried efficiently.
 - Space and subspace admin roles are clearly defined and can be queried for privilege assignment.
 - Authorization checks are performant enough for privilege assignment operations.
-- The system emits or provides hooks for role assignment events (e.g., when a user becomes a space admin).
+- The authorization reset cascade is triggered when admin roles change on spaces with allowGuestContributions enabled.
 
 ## Dependencies
 
 - **Spec 013-guest-contributions-policy**: Provides the allowGuestContributions setting infrastructure that this feature extends.
 - **Authorization Service**: Must support per-resource privilege assignment and efficient authorization checks.
-- **Whiteboard Service**: Must emit events or provide hooks for privilege assignment on creation.
-- **Space Service**: Must emit events when allowGuestContributions setting changes to trigger privilege updates.
-- **Space Admin Management**: Must emit events when admin role is granted/revoked to trigger privilege updates.
+- **Whiteboard Service**: Whiteboard creation inherits parent authorization with settings propagated through cascade.
+- **Space Service**: Space settings changes trigger authorization cascade when allowGuestContributions is modified.
+- **Space Admin Management**: Admin role changes trigger space authorization reset to ensure immediate privilege updates.
