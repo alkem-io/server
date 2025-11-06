@@ -532,6 +532,42 @@ export class NotificationExternalAdapter {
     };
   }
 
+  async buildSpaceCommunityCalendarEventCommentPayload(
+    eventType: NotificationEvent,
+    triggeredBy: string,
+    recipients: IUser[],
+    space: ISpace,
+    calendarEvent: ICalendarEvent,
+    comment: IMessage
+  ): Promise<any> {
+    const spacePayload = await this.buildSpacePayload(
+      eventType,
+      triggeredBy,
+      recipients,
+      space
+    );
+
+    const commenter = await this.getUserPayloadOrFail(comment.sender);
+    const commentPreview = comment.message.substring(0, 200);
+
+    // Generate URL for the calendar event
+    const calendarEventUrl =
+      await this.urlGeneratorService.getCalendarEventUrlPath(calendarEvent.id);
+
+    return {
+      ...spacePayload,
+      calendarEvent: {
+        id: calendarEvent.id,
+        title: calendarEvent.profile.displayName,
+        url: calendarEventUrl,
+      },
+      comment: {
+        text: commentPreview,
+        sender: commenter,
+      },
+    };
+  }
+
   async buildPlatformSpaceCreatedPayload(
     eventType: NotificationEvent,
     triggeredBy: string,
