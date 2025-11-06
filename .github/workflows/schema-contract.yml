@@ -50,21 +50,25 @@ jobs:
         with:
           result-encoding: string
           script: |
-            const reviews = await github.paginate(
-              github.pulls.listReviews,
+            const pullNumber = context.payload?.pull_request?.number;
+            if (!pullNumber) {
+              core.info('No pull request number detected; returning empty reviews array');
+              return '[]';
+            }
+            const raw = await github.paginate(
+              github.rest.pulls.listReviews,
               {
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                pull_number: context.payload.pull_request.number,
+                pull_number: pullNumber,
                 per_page: 100,
-              },
-              response =>
-                response.data.map(r => ({
-                  reviewer: r.user?.login ?? '',
-                  body: r.body ?? '',
-                  state: r.state ?? '',
-                }))
+              }
             );
+            const reviews = raw.map(r => ({
+              reviewer: r.user?.login ?? '',
+              body: r.body ?? '',
+              state: r.state ?? '',
+            }));
             return JSON.stringify(reviews);
 
       - name: Generate schema snapshot (lightweight)
