@@ -54,6 +54,7 @@ export class InAppNotificationService {
       contributorOrganizationID: coreEntityIds.contributorOrganizationID,
       contributorUserID: coreEntityIds.contributorUserID,
       contributorVcID: coreEntityIds.contributorVcID,
+      calendarEventID: coreEntityIds.calendarEventID,
     });
   }
 
