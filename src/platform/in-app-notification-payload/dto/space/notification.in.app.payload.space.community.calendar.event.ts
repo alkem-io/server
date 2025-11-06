@@ -7,8 +7,5 @@ import { UUID } from '@domain/common/scalars/scalar.uuid';
   implements: () => IInAppNotificationPayload,
 })
 export abstract class InAppNotificationPayloadSpaceCommunityCalendarEvent extends InAppNotificationPayloadSpace {
-  @Field(() => UUID, {
-    description: 'ID of the calendar event.',
-  })
   calendarEventID!: string;
 }
