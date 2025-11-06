@@ -70,7 +70,7 @@ The PUBLIC_SHARE privilege is scoped to individual whiteboards only, with no inh
 
 ### User Story 4 - New space admin privilege assignment (Priority: P3)
 
-When a user is granted space admin privileges on a space that has allowGuestContributions enabled, they automatically receive PUBLIC_SHARE privilege on all whiteboards in that space, maintaining consistency with existing admin privileges.
+When a user is granted space admin privileges on a space that has allowGuestContributions enabled, they automatically receive PUBLIC_SHARE privilege on all whiteboards in that space because the credential rule for space admins is already embedded in every whiteboard authorization policy.
 
 **Why this priority**: Ensures that privilege state remains consistent regardless of when a user becomes a space admin - new admins should have the same capabilities as existing admins.
 
@@ -89,7 +89,7 @@ When a user is granted space admin privileges on a space that has allowGuestCont
 - **New space admin assignment**: When a user is newly granted space admin privileges on a space with allowGuestContributions enabled, they receive PUBLIC_SHARE privilege on all whiteboards synchronously with the admin role grant.
 - **Cross-boundary privilege scope**: A user who is an admin of both a parent space and a subspace only receives PUBLIC_SHARE for whiteboards in spaces where allowGuestContributions is enabled, not based on their role inheritance.
 - **Privilege timing**: When allowGuestContributions is toggled ON, privilege assignment happens synchronously and immediately reflects in authorization checks - no delay or eventual consistency.
-- **Privilege ownership**: PUBLIC_SHARE privilege is automatically assigned during authorization reset based on the allowGuestContributions setting and user roles; cannot be manually assigned or removed while the setting is enabled. Admin role changes trigger space authorization reset to ensure immediate privilege updates.
+- **Privilege ownership**: PUBLIC_SHARE privilege is automatically assigned during authorization reset based on the allowGuestContributions setting and user roles; cannot be manually assigned or removed while the setting is enabled. Because each whiteboard authorization policy always contains the space-admin credential rule, any newly assigned space admin inherits PUBLIC_SHARE immediately without forcing an additional authorization reset.
 - **New whiteboard creation**: When a whiteboard is created in a space with allowGuestContributions enabled, the creator receives PUBLIC_SHARE privilege atomically with whiteboard creation.
 - **Authorization check performance**: Authorization checks for PUBLIC_SHARE privilege must complete within acceptable UI interaction timeframes to avoid blocking the Share dialog rendering.
 - **Concurrent setting changes**: If multiple admins toggle allowGuestContributions simultaneously, the last write wins and privilege state converges to match the final setting value.
@@ -104,14 +104,14 @@ When a user is granted space admin privileges on a space that has allowGuestCont
 - **FR-003**: System MUST grant PUBLIC_SHARE privilege on a per-whiteboard basis only - no privilege inheritance across whiteboards or from space to subspace.
 - **FR-004**: System MUST automatically grant PUBLIC_SHARE privilege to the creator on their whiteboard and to all space admins on that whiteboard when a new whiteboard is created in a space with allowGuestContributions enabled.
 - **FR-005**: System MUST immediately revoke all PUBLIC_SHARE privileges on whiteboards within a space when allowGuestContributions is disabled for that space.
-- **FR-006**: System MUST automatically grant PUBLIC_SHARE privilege on all whiteboards in a space when a user is granted space admin privileges on a space with allowGuestContributions enabled (via authorization reset cascade triggered by admin role change).
+- **FR-006**: System MUST ensure that the space-admin credential always grants PUBLIC_SHARE on all whiteboards in spaces where allowGuestContributions is enabled so that newly granted space admins inherit the privilege immediately without requiring an additional authorization reset.
 - **FR-007**: System MUST scope PUBLIC_SHARE privileges to the space or subspace containing the whiteboard - subspace admins receive privileges only for whiteboards in their subspace, not parent spaces.
 - **FR-008**: System MUST handle privilege granting and revocation synchronously when allowGuestContributions setting is toggled to ensure immediate consistency (via authorization reset cascade; `applyAuthorizationPolicy()` is synchronous).
 - **FR-009**: System MUST rollback all privilege changes AND revert allowGuestContributions setting to false if privilege assignment fails partway through, maintaining consistent state across all users and settings.
 - **FR-010**: System MUST log all privilege rule modifications with user ID, whiteboard ID, space ID, and timestamp during authorization reset for audit trail and troubleshooting.
 - **FR-011**: System MUST emit metrics tracking the count and duration of privilege assignment operations for operational monitoring.
-- **FR-012**: System MUST audit all privilege rule changes during authorization reset, recording the triggering user, triggering action (setting change, admin role grant, whiteboard creation), affected users, and timestamp for compliance tracking.
-- **FR-013**: System MUST track the triggering event type (setting change, admin role grant, or whiteboard creation) for each privilege assignment to support troubleshooting and operational analysis.
+- **FR-012**: System MUST audit all privilege rule changes during authorization reset, recording the triggering user, triggering action (setting change or whiteboard creation), affected users, and timestamp for compliance tracking.
+- **FR-013**: System MUST track the triggering event type (setting change or whiteboard creation) for each privilege assignment to support troubleshooting and operational analysis.
 
 ### Key Entities
 
@@ -127,7 +127,7 @@ When a user is granted space admin privileges on a space that has allowGuestCont
 
 - **SC-001**: When allowGuestContributions is enabled, all space admins receive PUBLIC_SHARE privilege on all whiteboards in that space, and all whiteboard owners receive PUBLIC_SHARE on their own whiteboards, within 1 second.
 - **SC-002**: When allowGuestContributions is disabled, all PUBLIC_SHARE privileges are revoked within 1 second.
-- **SC-003**: When a user is granted space admin privileges on a space with allowGuestContributions enabled, they receive PUBLIC_SHARE privilege on all whiteboards in that space within 1 second.
+- **SC-003**: When a user is granted space admin privileges on a space with allowGuestContributions enabled, they receive PUBLIC_SHARE privilege on all whiteboards in that space immediately via the existing credential rule (observable in authorization checks within 1 second).
 - **SC-004**: 100% consistency between allowGuestContributions setting state and PUBLIC_SHARE privilege existence across all whiteboards in a space.
 - **SC-005**: Zero privilege inheritance violations - PUBLIC_SHARE is only granted based on the specific space/subspace containing the whiteboard, not parent spaces.
 - **SC-006**: System maintains performance targets (1 second for privilege operations) for spaces containing up to 1000 whiteboards.
@@ -139,7 +139,7 @@ When a user is granted space admin privileges on a space that has allowGuestCont
 - Whiteboard ownership is clearly tracked and can be queried efficiently.
 - Space and subspace admin roles are clearly defined and can be queried for privilege assignment.
 - Authorization checks are performant enough for privilege assignment operations.
-- The authorization reset cascade is triggered when admin roles change on spaces with allowGuestContributions enabled.
+- The authorization reset cascade is triggered by allowGuestContributions setting changes; embedded credential rules ensure newly added space admins inherit PUBLIC_SHARE without forcing an additional reset.
 
 ## Dependencies
 
@@ -147,4 +147,4 @@ When a user is granted space admin privileges on a space that has allowGuestCont
 - **Authorization Service**: Must support per-resource privilege assignment and efficient authorization checks.
 - **Whiteboard Service**: Whiteboard creation inherits parent authorization with settings propagated through cascade.
 - **Space Service**: Space settings changes trigger authorization cascade when allowGuestContributions is modified.
-- **Space Admin Management**: Admin role changes trigger space authorization reset to ensure immediate privilege updates.
+- **Space Admin Management**: Admin role changes issue space-admin credentials that whiteboard policies already recognize for PUBLIC_SHARE, eliminating the need for an extra authorization reset.

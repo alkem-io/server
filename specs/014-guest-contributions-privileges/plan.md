@@ -7,7 +7,7 @@
 
 ## Summary
 
-Extends the `allowGuestContributions` setting (from spec 013) with automatic PUBLIC_SHARE privilege management. When the setting is enabled on a space, the backend automatically grants PUBLIC_SHARE privilege to all space admins (on all whiteboards) and to whiteboard owners (on their own whiteboards). When disabled, all PUBLIC_SHARE privileges are revoked. The system enforces transactional integrity: if privilege assignment fails, both privileges and the setting are rolled back. New admins automatically receive privileges when granted admin role on spaces with the setting enabled.
+Extends the `allowGuestContributions` setting (from spec 013) with automatic PUBLIC_SHARE privilege management. When the setting is enabled on a space, the backend automatically grants PUBLIC_SHARE privilege to all space admins (on all whiteboards) and to whiteboard owners (on their own whiteboards). When disabled, all PUBLIC_SHARE privileges are revoked. The system enforces transactional integrity: if privilege assignment fails, both privileges and the setting are rolled back. Because each whiteboard policy embeds a credential rule for space admins, users promoted to space admin inherit PUBLIC_SHARE instantly without triggering an extra authorization reset.
 
 ## Technical Context
 
@@ -44,7 +44,7 @@ _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 ### Principle 4: Explicit Data & Event Flow
 
 - ✅ **PASS**: Setting changes trigger domain events → privilege assignment
-- ✅ **PASS**: Role grant events trigger privilege assignment
+- ✅ **PASS**: Space-admin credential always carries PUBLIC_SHARE so role grants inherit privilege without extra events
 - ✅ **PASS**: Whiteboard creation hooks privilege assignment
 - ✅ **PASS**: No direct repository calls from resolvers
 
@@ -113,7 +113,7 @@ src/
 │           └── space.settings.collaboration.interface.ts  # allowGuestContributions already exists
 ├── services/
 │   └── api/
-│       └── roles/                          # ← EXTEND: Hook admin role grants to trigger privilege updates
+│       └── roles/                          # Existing admin management (no new hooks required)
 │           └── roles.service.ts
 ├── common/
 │   └── enums/
@@ -138,7 +138,7 @@ All technical unknowns resolved through codebase analysis. Detailed technical de
 2. Existing authorization pattern via `applyAuthorizationPolicy()` in `WhiteboardAuthorizationService` can be extended
 3. Space admin discovery: query `Community.roleSet` with role filter = 'admin'
 4. TypeORM transaction support confirmed → use `EntityManager.transaction()` for rollback safety
-5. Event hooks via EventEmitter2 → subscribe to `SpaceSettingsUpdated` and `AdminRoleGranted`
+5. Event hooks via EventEmitter2 → subscribe to `SpaceSettingsUpdated` (setting changes) and `WhiteboardCreated`
 6. Observability: Winston structured logging + Elastic APM tracing already integrated
 7. Performance: Bulk operations via `repository.save([...])` support batch updates
 
@@ -186,7 +186,6 @@ All technical unknowns resolved through codebase analysis. Detailed technical de
 **Event Contracts**:
 
 - `SpaceSettingsUpdated` - Triggers privilege update handler
-- `AdminRoleGranted` - Triggers privilege grant for new admin
 - `WhiteboardCreated` - Triggers privilege application on creation
 
 **Repository Contracts**:
@@ -224,7 +223,7 @@ All technical unknowns resolved through codebase analysis. Detailed technical de
 
 1. **Enum Extension**: Add PUBLIC_SHARE to AuthorizationPrivilege
 2. **Service Extensions**: Implement privilege granting/revoking methods
-3. **Event Handlers**: Subscribe to setting changes and role grants
+3. **Event Handlers**: Subscribe to setting changes and whiteboard creation
 4. **Repository Extensions**: Add admin and whiteboard query methods
 5. **Transaction Wrappers**: Implement rollback logic
 6. **Migration**: Create validation migration
@@ -382,7 +381,7 @@ WHERE s.settings->>'$.collaboration.allowGuestContributions' = 'false'
 | Spec 013: Guest Contributions Policy | Feature   | ✅ Complete | Provides `allowGuestContributions` setting       |
 | `WhiteboardAuthorizationService`     | Service   | ✅ Exists   | Extend with `applyGuestContributionPrivileges()` |
 | `SpaceService`                       | Service   | ✅ Exists   | Hook setting changes                             |
-| `CommunityService`                   | Service   | ✅ Exists   | Hook admin role grants                           |
+| `CommunityService`                   | Service   | ✅ Exists   | Supplies admin credential data (no new hooks)    |
 | TypeORM Transaction Support          | Framework | ✅ Exists   | Rollback mechanism                               |
 | EventEmitter2                        | Library   | ✅ Exists   | Domain event emission                            |
 
@@ -479,7 +478,7 @@ Previous clarifications (now resolved):
 2. **Authorization Service Pattern**: Extend `WhiteboardAuthorizationService.applyAuthorizationPolicy()`
 3. **Space Admin Discovery**: Query `Community.roleSet` with role filter
 4. **Transaction Strategy**: Use TypeORM `EntityManager.transaction()` for atomic operations
-5. **Event Hooks**: Subscribe to `SpaceSettingsUpdated`, `AdminRoleGranted`, `WhiteboardCreated`
+5. **Event Hooks**: Subscribe to `SpaceSettingsUpdated` and `WhiteboardCreated`
 6. **Observability**: Winston structured logging + Elastic APM tracing
 7. **Performance Optimization**: Bulk queries + batch saves for 1000 whiteboard scale
 

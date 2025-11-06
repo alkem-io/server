@@ -23,7 +23,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 const CREDENTIAL_RULE_WHITEBOARD_OWNER_PUBLIC_SHARE =
   'whiteboard-owner-public-share';
-const POLICY_RULE_SPACE_ADMIN_PUBLIC_SHARE = 'space-admin-public-share';
+const CREDENTIAL_RULE_SPACE_ADMIN_PUBLIC_SHARE = 'space-admin-public-share';
 
 @Injectable()
 export class WhiteboardAuthorizationService {
@@ -82,8 +82,7 @@ export class WhiteboardAuthorizationService {
     );
     whiteboard.authorization = this.appendPrivilegeRules(
       whiteboard.authorization,
-      whiteboard,
-      spaceSettings
+      whiteboard
     );
     updatedAuthorizations.push(whiteboard.authorization);
 
@@ -156,6 +155,29 @@ export class WhiteboardAuthorizationService {
       }
     }
 
+    if (spaceSettings?.collaboration?.allowGuestContributions) {
+      const adminPublicSharePolicy =
+        this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+          [AuthorizationPrivilege.PUBLIC_SHARE],
+          [AuthorizationCredential.SPACE_ADMIN],
+          CREDENTIAL_RULE_SPACE_ADMIN_PUBLIC_SHARE
+        );
+      newRules.push(adminPublicSharePolicy);
+
+      this.logger.verbose?.(
+        'Granting PUBLIC_SHARE privilege to SPACE_ADMIN credential holders',
+        {
+          whiteboardId: whiteboard.id,
+          context: LogContext.COLLABORATION,
+        }
+      );
+    } else if (spaceSettings?.collaboration !== undefined) {
+      this.logger.verbose?.(
+        `Skipping SPACE_ADMIN PUBLIC_SHARE credential rule for whiteboard ${whiteboard.id} - guest contributions disabled`,
+        LogContext.COLLABORATION
+      );
+    }
+
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
       newRules
@@ -164,11 +186,9 @@ export class WhiteboardAuthorizationService {
 
   private appendPrivilegeRules(
     authorization: IAuthorizationPolicy,
-    whiteboard: IWhiteboard,
-    spaceSettings?: ISpaceSettings
+    whiteboard: IWhiteboard
   ): IAuthorizationPolicy {
     const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
-    let publicShareRulesAdded = 0;
 
     switch (whiteboard.contentUpdatePolicy) {
       case ContentUpdatePolicy.OWNER:
@@ -193,37 +213,6 @@ export class WhiteboardAuthorizationService {
         privilegeRules.push(updateContentPrivilegeContributors);
         break;
       }
-    }
-
-    // T008 & T014: Add PUBLIC_SHARE privilege rule for space admins when guest contributions enabled
-    if (spaceSettings?.collaboration?.allowGuestContributions) {
-      const adminPublicSharePrivilege = new AuthorizationPolicyRulePrivilege(
-        [AuthorizationPrivilege.PUBLIC_SHARE],
-        AuthorizationPrivilege.UPDATE,
-        POLICY_RULE_SPACE_ADMIN_PUBLIC_SHARE
-      );
-      privilegeRules.push(adminPublicSharePrivilege);
-      publicShareRulesAdded++;
-
-      // T011: Structured logging for admin PUBLIC_SHARE privilege assignment
-      this.logger.verbose?.(
-        'Granting PUBLIC_SHARE privilege to space admins via UPDATE privilege mapping',
-        LogContext.COLLABORATION
-      );
-    } else if (spaceSettings?.collaboration !== undefined) {
-      // T015: Logging for privilege revocation (rules not added when allowGuestContributions = false)
-      this.logger.verbose?.(
-        `Skipping PUBLIC_SHARE privilege rules for whiteboard ${whiteboard.id} - guest contributions disabled`,
-        LogContext.COLLABORATION
-      );
-    }
-
-    // T012: Metrics emission for privilege rule creation
-    if (publicShareRulesAdded > 0) {
-      this.logger.verbose?.(
-        `Added ${publicShareRulesAdded} PUBLIC_SHARE privilege rule(s) for whiteboard ${whiteboard.id}`,
-        LogContext.COLLABORATION
-      );
     }
 
     return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
