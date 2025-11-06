@@ -160,7 +160,7 @@ export class RoomResolverService {
       where: {
         comments: { id: commentsID },
       },
-      relations: { profile: true, comments: true },
+      relations: { profile: true, comments: true, calendar: true },
     });
     if (!result) {
       throw new EntityNotFoundException(

@@ -126,7 +126,12 @@ export class RoomResolverMutations {
 
         break;
       }
-      case RoomType.CALENDAR_EVENT:
+      case RoomType.CALENDAR_EVENT: {
+        const calendarEvent =
+          await this.roomResolverService.getCalendarEventForRoom(
+            messageData.roomID
+          );
+
         await this.roomMentionsService.processNotificationMentions(
           mentions,
           room,
@@ -134,7 +139,15 @@ export class RoomResolverMutations {
           agentInfo
         );
 
+        await this.roomServiceEvents.processNotificationCalendarEventComment(
+          calendarEvent,
+          room,
+          message,
+          agentInfo
+        );
+
         break;
+      }
       case RoomType.DISCUSSION_FORUM:
         const discussionForum =
           await this.roomResolverService.getDiscussionForRoom(

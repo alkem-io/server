@@ -21,6 +21,10 @@ import { NotificationPlatformAdapter } from '@services/adapters/notification-ada
 import { NotificationUserAdapter } from '@services/adapters/notification-adapter/notification.user.adapter';
 import { NotificationInputCollaborationCalloutPostContributionComment } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.post.contribution.comment';
 import { NotificationInputCollaborationCalloutComment } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.comment';
+import { NotificationInputCommunityCalendarEventComment } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.calendar.event.comment';
+import { ICalendarEvent } from '@domain/timeline/event/event.interface';
+import { LogContext } from '@common/enums/logging.context';
+import { TimelineResolverService } from '@services/infrastructure/entity-resolver/timeline.resolver.service';
 import { ICalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.interface';
 
 @Injectable()
@@ -32,6 +36,7 @@ export class RoomServiceEvents {
     private notificationPlatformAdapter: NotificationPlatformAdapter,
     private notificationUserAdapter: NotificationUserAdapter,
     private communityResolverService: CommunityResolverService,
+    private timelineResolverService: TimelineResolverService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -107,6 +112,47 @@ export class RoomServiceEvents {
       };
     this.notificationPlatformAdapter.platformForumDiscussionComment(
       forumDiscussionCommentNotificationInput
+    );
+  }
+
+  public async processNotificationCalendarEventComment(
+    calendarEvent: ICalendarEvent,
+    room: IRoom,
+    message: IMessage,
+    agentInfo: AgentInfo
+  ) {
+    // Get space ID from calendar event's calendar
+    if (!calendarEvent.calendar?.id) {
+      this.logger.warn?.(
+        `Calendar event ${calendarEvent.id} has no associated calendar - skipping notification`,
+        LogContext.NOTIFICATIONS
+      );
+      return;
+    }
+
+    const spaceID = await this.timelineResolverService.getSpaceIdForCalendar(
+      calendarEvent.calendar.id
+    );
+
+    if (!spaceID) {
+      this.logger.warn?.(
+        `Unable to determine space for calendar ${calendarEvent.calendar.id} - skipping notification`,
+        LogContext.NOTIFICATIONS
+      );
+      return;
+    }
+
+    // Send the notification
+    const notificationInput: NotificationInputCommunityCalendarEventComment = {
+      triggeredBy: agentInfo.userID,
+      calendarEvent,
+      comments: room,
+      commentSent: message,
+    };
+
+    await this.notificationSpaceAdapter.spaceCommunityCalendarEventComment(
+      notificationInput,
+      spaceID
     );
   }
 

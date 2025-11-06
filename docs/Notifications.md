@@ -98,6 +98,7 @@ Events are categorized by their target audience:
 - `SPACE_COLLABORATION_CALLOUT_CONTRIBUTION` - Contributions to callouts
 - `SPACE_COLLABORATION_CALLOUT_POST_CONTRIBUTION_COMMENT` - Comments on post contributions
 - `SPACE_COMMUNITY_CALENDAR_EVENT_CREATED` - When a calendar event is created in the space community
+- `SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT` - When a comment is posted to a calendar event room
 - `SPACE_COMMUNICATION_MESSAGE_SENDER` - Copy of space message sent
 
 ### User Notifications
