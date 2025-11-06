@@ -27,6 +27,8 @@ import { UserLookupService } from '@domain/community/user-lookup/user.lookup.ser
 import { RoleSetType } from '@common/enums/role.set.type';
 import { ValidationException } from '@common/exceptions';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { SpaceAuthorizationService } from '@domain/space/space/space.service.authorization';
 
 @InstrumentResolver()
 @Resolver()
@@ -40,6 +42,8 @@ export class RoleSetResolverMutations {
     private userAuthorizationService: UserAuthorizationService,
     private virtualContributorLookupService: VirtualContributorLookupService,
     private licenseService: LicenseService,
+    private communityResolverService: CommunityResolverService,
+    private spaceAuthorizationService: SpaceAuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -99,6 +103,14 @@ export class RoleSetResolverMutations {
           await this.userAuthorizationService.applyAuthorizationPolicy(user.id);
         await this.authorizationPolicyService.saveAll(authorizations);
 
+        // If ADMIN role was assigned and space has allowGuestContributions enabled,
+        // trigger space authorization reset to grant PUBLIC_SHARE privileges immediately
+        if (roleData.role === RoleName.ADMIN) {
+          await this.triggerSpaceAuthorizationResetForAdminRoleChange(
+            roleSet.id,
+            'grant'
+          );
+        }
         break;
       }
       case RoleSetType.ORGANIZATION: {
@@ -284,6 +296,14 @@ export class RoleSetResolverMutations {
           await this.userAuthorizationService.applyAuthorizationPolicy(user.id);
         await this.authorizationPolicyService.saveAll(authorizations);
 
+        // If ADMIN role was removed and space has allowGuestContributions enabled,
+        // trigger space authorization reset to revoke PUBLIC_SHARE privileges immediately
+        if (roleData.role === RoleName.ADMIN) {
+          await this.triggerSpaceAuthorizationResetForAdminRoleChange(
+            roleSet.id,
+            'revoke'
+          );
+        }
         break;
       }
       case RoleSetType.ORGANIZATION: {
@@ -358,6 +378,46 @@ export class RoleSetResolverMutations {
     return await this.virtualContributorLookupService.getVirtualContributorOrFail(
       roleData.contributorID
     );
+  }
+
+  /**
+   * Triggers space authorization reset when ADMIN role is granted or revoked.
+   * This ensures that PUBLIC_SHARE privileges are immediately updated on all
+   * whiteboards in spaces with allowGuestContributions enabled.
+   *
+   * User Story 4: New space admin privilege assignment
+   */
+  private async triggerSpaceAuthorizationResetForAdminRoleChange(
+    roleSetID: string,
+    operation: 'grant' | 'revoke'
+  ): Promise<void> {
+    try {
+      // Get the space associated with this roleSet
+      const space =
+        await this.communityResolverService.getSpaceForRoleSetOrFail(roleSetID);
+
+      this.logger.verbose?.(
+        `Admin role ${operation}: triggering space authorization reset for PUBLIC_SHARE privileges`,
+        LogContext.COLLABORATION
+      );
+
+      // Trigger space authorization reset cascade
+      const authorizations =
+        await this.spaceAuthorizationService.applyAuthorizationPolicy(space.id);
+      await this.authorizationPolicyService.saveAll(authorizations);
+
+      this.logger.verbose?.(
+        `Admin role ${operation}: space authorization reset completed`,
+        LogContext.COLLABORATION
+      );
+    } catch (error) {
+      // Log but don't fail - this is a nice-to-have optimization
+      // User can still manually trigger by toggling allowGuestContributions
+      this.logger.warn?.(
+        `Failed to trigger space authorization reset for admin role ${operation}: ${error}`,
+        LogContext.COLLABORATION
+      );
+    }
   }
 
   private validateRoleSetTypeOrFail(
