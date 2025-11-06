@@ -5,9 +5,12 @@ import { IPost } from '../post/post.interface';
 import { ILink } from '../link/link.interface';
 import { IMemo } from '@domain/common/memo/memo.interface';
 import { ICallout } from '../callout/callout.interface';
+import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 
 @ObjectType('CalloutContribution')
 export abstract class ICalloutContribution extends IAuthorizable {
+  type!: CalloutContributionType;
+
   link?: ILink;
 
   whiteboard?: IWhiteboard;

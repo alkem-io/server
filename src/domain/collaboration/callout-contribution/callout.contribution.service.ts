@@ -79,6 +79,7 @@ export class CalloutContributionService {
     );
     contribution.createdBy = userID;
     contribution.sortOrder = calloutContributionData.sortOrder ?? 0;
+    contribution.type = calloutContributionData.type;
 
     const { post, whiteboard, link, memo } = calloutContributionData;
 
@@ -343,6 +344,11 @@ export class CalloutContributionService {
               storageBucket: true,
             },
           },
+          memo: {
+            profile: {
+              storageBucket: true,
+            },
+          },
         },
       }
     );
@@ -366,6 +372,8 @@ export class CalloutContributionService {
       return contribution.link.profile;
     } else if (contribution.whiteboard) {
       return contribution.whiteboard.profile;
+    } else if (contribution.memo) {
+      return contribution.memo.profile;
     }
     return undefined;
   }

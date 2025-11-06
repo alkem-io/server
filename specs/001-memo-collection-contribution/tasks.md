@@ -166,10 +166,10 @@
 
 **Purpose**: Ensure memo contributions have proper nameID handling for URL generation and uniqueness
 
-- [ ] T052 Add nameID reservation logic in `src/domain/collaboration/callout/callout.service.ts` createContributionOnCallout method
-- [ ] T053 Create `setNameIdOnMemoData()` method following `setNameIdOnWhiteboardData()` pattern
-- [ ] T054 Call setNameIdOnMemoData before memo service creation in CalloutService
-- [ ] T055 Ensure nameID uniqueness within callout scope (reuse existing NamingService logic)
+- [x] T052 Add nameID reservation logic in `src/domain/collaboration/callout/callout.service.ts` createContributionOnCallout method
+- [x] T053 Create `setNameIdOnMemoData()` method following `setNameIdOnWhiteboardData()` pattern
+- [x] T054 Call setNameIdOnMemoData before memo service creation in CalloutService
+- [x] T055 Ensure nameID uniqueness within callout scope (reuse existing NamingService logic)
 - [ ] T056 Add test case: "should generate unique nameID for memo contribution"
 - [ ] T057 Add test case: "should reject duplicate nameID within same callout"
 
