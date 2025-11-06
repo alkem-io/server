@@ -10,27 +10,27 @@ import { CalendarEventLoaderCreator } from '@core/dataloader/creators/loader.cre
 @Resolver(() => InAppNotificationPayloadSpaceCommunityCalendarEvent)
 export class InAppNotificationPayloadSpaceCommunityCalendarEventResolverFields {
   @ResolveField(() => ISpace, {
-    nullable: true,
+    nullable: false,
     description: 'The Space where the calendar event was created.',
   })
   public space(
     @Parent()
     payload: InAppNotificationPayloadSpaceCommunityCalendarEvent,
-    @Loader(SpaceLoaderCreator, { resolveToNull: true })
-    loader: ILoader<ISpace | null>
+    @Loader(SpaceLoaderCreator)
+    loader: ILoader<ISpace>
   ) {
     return loader.load(payload.spaceID);
   }
 
   @ResolveField(() => ICalendarEvent, {
-    nullable: true,
+    nullable: false,
     description: 'The CalendarEvent that was created.',
   })
   public calendarEvent(
     @Parent()
     payload: InAppNotificationPayloadSpaceCommunityCalendarEvent,
-    @Loader(CalendarEventLoaderCreator, { resolveToNull: true })
-    loader: ILoader<ICalendarEvent | null>
+    @Loader(CalendarEventLoaderCreator)
+    loader: ILoader<ICalendarEvent>
   ) {
     return loader.load(payload.calendarEventID);
   }
