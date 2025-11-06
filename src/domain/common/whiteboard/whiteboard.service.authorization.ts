@@ -70,14 +70,6 @@ export class WhiteboardAuthorizationService {
     }
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
-    // DEBUG: Log what settings we received
-    this.logger.verbose?.(
-      `[DEBUG] Whiteboard ${whiteboardID} authorization - spaceSettings received: ${JSON.stringify(
-        spaceSettings
-      )}`,
-      LogContext.COLLABORATION
-    );
-
     whiteboard.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         whiteboard.authorization,
@@ -204,13 +196,6 @@ export class WhiteboardAuthorizationService {
     }
 
     // T008 & T014: Add PUBLIC_SHARE privilege rule for space admins when guest contributions enabled
-    this.logger.verbose?.(
-      `[DEBUG] Whiteboard ${whiteboard.id} checking PUBLIC_SHARE condition - spaceSettings: ${JSON.stringify(
-        spaceSettings
-      )}, allowGuestContributions: ${spaceSettings?.collaboration?.allowGuestContributions}`,
-      LogContext.COLLABORATION
-    );
-
     if (spaceSettings?.collaboration?.allowGuestContributions) {
       const adminPublicSharePrivilege = new AuthorizationPolicyRulePrivilege(
         [AuthorizationPrivilege.PUBLIC_SHARE],
