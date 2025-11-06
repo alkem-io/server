@@ -44,8 +44,7 @@ This document consolidates technical decisions and research findings for impleme
 **Integration Points**:
 
 1. **Setting change**: `SpaceResolverMutations.updateSpaceSettings()` → `applyAuthorizationPolicy()` cascade
-2. **Admin role change**: `RoleSetResolverMutations.assignRoleToUser(ADMIN)` → trigger space auth reset
-3. **Whiteboard creation**: Inherits parent authorization with settings already propagated
+2. **Whiteboard creation**: Inherits parent authorization with settings already propagated
 
 **Cascade Flow**:
 
@@ -150,58 +149,40 @@ if (shouldUpdateAuthorization) {
 
 ---
 
-### 5. Admin Role Change Triggers Space Authorization Reset
+### 5. Space Admin Credential Binding for PUBLIC_SHARE
 
-**Decision**: Extend `RoleSetResolverMutations.assignRoleToUser()` and `removeRoleFromUser()` to trigger space authorization reset when ADMIN role changes
+**Decision**: Embed a credential rule for `AuthorizationCredential.SPACE_ADMIN` inside every whiteboard authorization policy whenever `allowGuestContributions` is true, granting PUBLIC_SHARE directly to that credential.
 
 **Rationale**:
 
-- **Current behavior**: Role mutations only reset **user** authorization, not **space** authorization
-- **Requirement**: FR-010 states new admins should immediately receive PUBLIC_SHARE on all whiteboards
-- **Pattern alignment**: Triggering `applyAuthorizationPolicy(spaceId)` reuses existing cascade infrastructure
-- **Consistency**: Ensures privileges update immediately for admin role changes, just like settings changes
+- **Immediate inheritance**: Newly promoted space admins already possess the `SPACE_ADMIN` credential, so the existing whiteboard policies grant PUBLIC_SHARE without requiring an additional authorization reset.
+- **Reset parity**: The initial authorization reset performed when enabling guest contributions ensures every whiteboard policy includes the credential rule; no further cascades are necessary for subsequent role changes.
+- **Idempotence**: Rebuilding authorization policies keeps the credential rule in sync, and the rule remains harmless when the setting is false because it is simply omitted.
 
 **Implementation**:
 
 ```typescript
-// In RoleSetResolverMutations.assignRoleToUser()
-await this.roleSetService.assignUserToRole(
-  roleSet,
-  roleData.role,
-  roleData.contributorID,
-  agentInfo,
-  true
-);
-
-switch (roleSet.type) {
-  case RoleSetType.SPACE: {
-    if (roleData.role === RoleName.ADMIN) {
-      // Get space for this roleSet
-      const space = await this.spaceService.getSpaceForRoleSet(roleSet.id);
-
-      // Trigger authorization reset cascade
-      const spaceAuthorizations =
-        await this.spaceAuthorizationService.applyAuthorizationPolicy(space.id);
-      await this.authorizationPolicyService.saveAll(spaceAuthorizations);
-    }
-
-    // Also reset user authorization (existing behavior)
-    const user = await this.userLookupService.getUserOrFail(
-      roleData.contributorID
-    );
-    const authorizations =
-      await this.userAuthorizationService.applyAuthorizationPolicy(user.id);
-    await this.authorizationPolicyService.saveAll(authorizations);
-    break;
-  }
+// In WhiteboardAuthorizationService.appendCredentialRules()
+if (spaceSettings?.collaboration?.allowGuestContributions) {
+  authorization.credentialRules.push({
+    grantedPrivileges: [AuthorizationPrivilege.PUBLIC_SHARE],
+    criterias: [
+      {
+        type: AuthorizationCredential.SPACE_ADMIN,
+        resourceID: space.id,
+      },
+    ],
+    cascade: true,
+    name: 'space-admin-public-share',
+  });
 }
 ```
 
 **Alternatives Considered**:
 
-- Event-driven privilege grant → Rejected: Doesn't align with reset pattern; adds event infrastructure
-- Eventual consistency (privilege appears on next settings change) → Rejected: Violates user expectations; inconsistent with settings toggle behavior
-- Manual privilege assignment → Rejected: Duplicates logic already in `appendPrivilegeRules()`
+- Trigger additional authorization resets on role changes → Rejected: Unnecessary once the credential rule exists; adds load and complexity.
+- Explicit per-user privilege grants → Rejected: Duplicates logic, harder to keep consistent, and breaks reset pattern.
+- Delayed inheritance (wait for next setting toggle) → Rejected: Violates requirement for immediate capability parity for new admins.
 
 ---
 
@@ -303,19 +284,19 @@ await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
 ## Open Questions (Resolved)
 
-| Question                                    | Resolution                                                                                                           |
-| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| Does PUBLIC_SHARE privilege already exist?  | No—confirmed via grep search; must be added to enum                                                                  |
-| How are privileges granted/revoked?         | Via authorization reset cascade; rules rebuilt from scratch based on current state                                   |
-| What triggers privilege updates?            | Settings change (`shouldUpdateAuthorizationPolicy`), admin role change (explicit trigger), whiteboard creation       |
-| How to handle rollback?                     | TypeORM transactions at resolver level with automatic rollback on exception                                          |
-| Where to log audit trail?                   | Reuse existing logging patterns (`winston`, `LogContext.AUTHORIZATION`)                                              |
-| Do we need a migration?                     | No—`AuthorizationPrivilege` is TypeScript compile-time enum only; no database schema change                          |
-| How do settings propagate to whiteboards?   | Passed as parameter through authorization cascade: Collaboration → CalloutsSet → Callout → Contribution → Whiteboard |
-| Do subspaces inherit parent space settings? | No—each space uses its own settings during authorization reset; natural isolation                                    |
-| What happens when admin role is removed?    | Space authorization reset triggered; `appendPrivilegeRules()` no longer maps UPDATE → PUBLIC_SHARE for removed user  |
-| What happens when whiteboard is deleted?    | Authorization policy auto-deleted via FK cascade; no explicit revocation needed                                      |
-| How are new admins granted privileges?      | Extend `assignRoleToUser()` to trigger space auth reset when role is ADMIN                                           |
+| Question                                    | Resolution                                                                                                                       |
+| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Does PUBLIC_SHARE privilege already exist?  | No—confirmed via grep search; must be added to enum                                                                              |
+| How are privileges granted/revoked?         | Via authorization reset cascade; rules rebuilt from scratch based on current state                                               |
+| What triggers privilege updates?            | Settings change (`shouldUpdateAuthorizationPolicy`) and whiteboard creation (policies already contain the admin credential rule) |
+| How to handle rollback?                     | TypeORM transactions at resolver level with automatic rollback on exception                                                      |
+| Where to log audit trail?                   | Reuse existing logging patterns (`winston`, `LogContext.AUTHORIZATION`)                                                          |
+| Do we need a migration?                     | No—`AuthorizationPrivilege` is TypeScript compile-time enum only; no database schema change                                      |
+| How do settings propagate to whiteboards?   | Passed as parameter through authorization cascade: Collaboration → CalloutsSet → Callout → Contribution → Whiteboard             |
+| Do subspaces inherit parent space settings? | No—each space uses its own settings during authorization reset; natural isolation                                                |
+| What happens when admin role is removed?    | Removing the role revokes the `SPACE_ADMIN` credential, so existing credential rules stop matching without an extra reset        |
+| What happens when whiteboard is deleted?    | Authorization policy auto-deleted via FK cascade; no explicit revocation needed                                                  |
+| How are new admins granted privileges?      | Credential rule grants PUBLIC_SHARE automatically once the user holds the `SPACE_ADMIN` credential                               |
 
 ---
 
