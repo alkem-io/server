@@ -436,9 +436,6 @@ export class InAppNotificationService {
       case NotificationEvent.USER_MESSAGE:
         result.userID = payload.userID;
         break;
-      case NotificationEvent.USER_MESSAGE_SENDER:
-        // we want to keep this notification for audit/historical reasons
-        break;
 
       case NotificationEvent.USER_MENTIONED:
       case NotificationEvent.USER_COMMENT_REPLY:
