@@ -53,7 +53,7 @@ jobs:
             const pullNumber = context.payload?.pull_request?.number;
             if (!pullNumber) {
               core.info('No pull request number detected; returning empty reviews array');
-              return '[]';
+              return '';
             }
             const raw = await github.paginate(
               github.rest.pulls.listReviews,
@@ -69,7 +69,13 @@ jobs:
               body: r.body ?? '',
               state: r.state ?? '',
             }));
-            return JSON.stringify(reviews);
+            const fs = require('fs');
+            const path = require('path');
+            const file = path.join(process.cwd(), 'tmp', 'schema-override-reviews.json');
+            fs.mkdirSync(path.dirname(file), { recursive: true });
+            fs.writeFileSync(file, JSON.stringify(reviews));
+            core.info(`Wrote ${reviews.length} review(s) to ${file}`);
+            return file;
 
       - name: Generate schema snapshot (lightweight)
         env:
@@ -146,12 +152,12 @@ jobs:
 
       - name: Run diff
         env:
-          SCHEMA_OVERRIDE_REVIEWS_JSON: ${{ steps.collect_reviews.outputs.result || '[]' }}
+          SCHEMA_OVERRIDE_REVIEWS_FILE: ${{ steps.collect_reviews.outputs.result }}
         run: pnpm exec ts-node scripts/schema/diff-schema.ts --old tmp/prev.schema.graphql --current schema.graphql --out change-report.json --deprecations deprecations.json || true
 
       - name: Gate evaluation (non-blocking summary)
         env:
-          SCHEMA_OVERRIDE_REVIEWS_JSON: ${{ steps.collect_reviews.outputs.result || '[]' }}
+          SCHEMA_OVERRIDE_REVIEWS_FILE: ${{ steps.collect_reviews.outputs.result }}
         run: pnpm exec ts-node scripts/schema/schema-gate.ts change-report.json || true
 
       - name: Prepare schema artifacts
@@ -205,5 +211,5 @@ jobs:
 
       - name: Enforce gate
         env:
-          SCHEMA_OVERRIDE_REVIEWS_JSON: ${{ steps.collect_reviews.outputs.result || '[]' }}
+          SCHEMA_OVERRIDE_REVIEWS_FILE: ${{ steps.collect_reviews.outputs.result }}
         run: pnpm exec ts-node scripts/schema/schema-gate.ts change-report.json
