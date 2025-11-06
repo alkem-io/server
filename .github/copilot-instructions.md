@@ -103,6 +103,9 @@
 
 ## Active Technologies
 
+- TypeScript 5.3.3, Node.js 20.15.1 (Volta pinned) + NestJS 10.3.10, TypeORM 0.3.13, Apollo Server 4.10.4, GraphQL 16.9.0 (001-memo-collection-contribution)
+- MySQL 8 (mysql2 3.10.3 driver) with existing schema supporting memo contributions (001-memo-collection-contribution)
+
 - TypeScript 5.3 (ts-node) executed on Node 20.x via GitHub Actions + pnpm 10.17.1, `actions/checkout@v4`, `actions/setup-node@v4`, `crazy-max/ghaction-import-gpg@v6`, `actions/github-script@v7`, repository schema scripts (`generate-schema.snapshot.ts`, `diff-schema.ts`) (012-generate-schema-baseline)
 - N/A – workflow operates on repository working tree only (012-generate-schema-baseline)
 
