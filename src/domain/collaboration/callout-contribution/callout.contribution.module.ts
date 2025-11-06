@@ -10,6 +10,7 @@ import { WhiteboardModule } from '@domain/common/whiteboard/whiteboard.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { PostModule } from '../post/post.module';
 import { LinkModule } from '../link/link.module';
+import { MemoModule } from '@domain/common/memo/memo.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { PlatformRolesAccessModule } from '@domain/access/platform-roles-access/platform.roles.access.module';
@@ -22,6 +23,7 @@ import { PlatformRolesAccessModule } from '@domain/access/platform-roles-access/
     PostModule,
     NamingModule,
     LinkModule,
+    MemoModule,
     UserLookupModule,
     RoleSetModule,
     PlatformRolesAccessModule,

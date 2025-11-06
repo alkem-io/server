@@ -12,6 +12,8 @@ import { IWhiteboard } from '@domain/common/whiteboard/types';
 import { PostService } from '../post/post.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IPost } from '../post';
+import { MemoService } from '@domain/common/memo/memo.service';
+import { IMemo } from '@domain/common/memo/memo.interface';
 import { ICalloutSettingsContribution } from '../callout-settings/callout.settings.contribution.interface';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import {
@@ -32,6 +34,7 @@ export class CalloutContributionService {
     private postService: PostService,
     private whiteboardService: WhiteboardService,
     private linkService: LinkService,
+    private memoService: MemoService,
     @InjectRepository(CalloutContribution)
     private contributionRepository: Repository<CalloutContribution>
   ) {}
@@ -77,7 +80,7 @@ export class CalloutContributionService {
     contribution.createdBy = userID;
     contribution.sortOrder = calloutContributionData.sortOrder ?? 0;
 
-    const { post, whiteboard, link } = calloutContributionData;
+    const { post, whiteboard, link, memo } = calloutContributionData;
 
     if (whiteboard) {
       contribution.whiteboard = await this.whiteboardService.createWhiteboard(
@@ -99,6 +102,14 @@ export class CalloutContributionService {
       contribution.link = await this.linkService.createLink(
         link,
         storageAggregator
+      );
+    }
+
+    if (memo) {
+      contribution.memo = await this.memoService.createMemo(
+        memo,
+        storageAggregator,
+        userID
       );
     }
 
@@ -285,6 +296,23 @@ export class CalloutContributionService {
     }
 
     return calloutContribution.post;
+  }
+
+  public async getMemo(
+    calloutContributionInput: ICalloutContribution,
+    relations?: FindOptionsRelations<ICalloutContribution>
+  ): Promise<IMemo | null> {
+    const calloutContribution = await this.getCalloutContributionOrFail(
+      calloutContributionInput.id,
+      {
+        relations: { memo: true, ...relations },
+      }
+    );
+    if (!calloutContribution.memo) {
+      return null;
+    }
+
+    return calloutContribution.memo;
   }
 
   /**

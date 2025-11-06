@@ -5,6 +5,7 @@ import { Profiling } from '@common/decorators';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { CalloutContributionService } from './callout.contribution.service';
 import { IPost } from '../post/post.interface';
+import { IMemo } from '@domain/common/memo/memo.interface';
 import { IUser } from '@domain/community/user/user.interface';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { LoggerService } from '@nestjs/common';
@@ -57,6 +58,17 @@ export class CalloutContributionResolverFields {
     return await this.calloutContributionService.getPost(calloutContribution, {
       post: { comments: true },
     });
+  }
+
+  @ResolveField('memo', () => IMemo, {
+    nullable: true,
+    description: 'The Memo that was contributed.',
+  })
+  @Profiling.api
+  async memo(
+    @Parent() calloutContribution: ICalloutContribution
+  ): Promise<IMemo | null> {
+    return await this.calloutContributionService.getMemo(calloutContribution);
   }
 
   @ResolveField('createdBy', () => IUser, {

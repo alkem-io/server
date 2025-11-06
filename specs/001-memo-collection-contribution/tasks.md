@@ -27,9 +27,9 @@
 
 **Purpose**: Project initialization and dependency configuration
 
-- [ ] T001 Verify branch `001-memo-collection-contribution` is checked out and up-to-date
-- [ ] T002 Run `pnpm install` to ensure all dependencies are current
-- [ ] T003 Run `pnpm build` to verify baseline compiles successfully
+- [x] T001 Verify branch `001-memo-collection-contribution` is checked out and up-to-date
+- [x] T002 Run `pnpm install` to ensure all dependencies are current
+- [x] T003 Run `pnpm build` to verify baseline compiles successfully
 
 ---
 
@@ -39,10 +39,10 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 Import MemoModule in `src/domain/collaboration/callout-contribution/callout.contribution.module.ts`
-- [ ] T005 Inject MemoService in `src/domain/collaboration/callout-contribution/callout.contribution.service.ts` constructor
-- [ ] T006 Run `pnpm build` to verify module dependencies resolve without circular dependency errors
-- [ ] T007 Run `pnpm lint` to verify code style compliance
+- [x] T004 Import MemoModule in `src/domain/collaboration/callout-contribution/callout.contribution.module.ts`
+- [x] T005 Inject MemoService in `src/domain/collaboration/callout-contribution/callout.contribution.service.ts` constructor
+- [x] T006 Run `pnpm build` to verify module dependencies resolve without circular dependency errors
+- [x] T007 Run `pnpm lint` to verify code style compliance
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -58,10 +58,10 @@
 
 ### Implementation for User Story 4
 
-- [ ] T008 [US4] Verify `CalloutContributionType.MEMO` exists in `src/common/enums/callout.contribution.type.ts`
-- [ ] T009 [US4] Verify `CalloutSettingsContribution.allowedTypes` accepts MEMO enum value (no code changes expected)
-- [ ] T010 [US4] Test memo validation in `validateContributionType()` method in `src/domain/collaboration/callout-contribution/callout.contribution.service.ts` (~line 60)
-- [ ] T011 [US4] Run existing tests to verify validation logic: `pnpm run test:ci src/domain/collaboration/callout-contribution/`
+- [x] T008 [US4] Verify `CalloutContributionType.MEMO` exists in `src/common/enums/callout.contribution.type.ts`
+- [x] T009 [US4] Verify `CalloutSettingsContribution.allowedTypes` accepts MEMO enum value (no code changes expected)
+- [x] T010 [US4] Test memo validation in `validateContributionType()` method in `src/domain/collaboration/callout-contribution/callout.contribution.service.ts` (~line 60)
+- [x] T011 [US4] Run existing tests to verify validation logic: `pnpm run test:ci src/domain/collaboration/callout-contribution/`
 
 **Checkpoint**: At this point, User Story 4 should be complete (verification only, no code changes needed per research.md)
 
@@ -75,13 +75,13 @@
 
 ### Implementation for User Story 1
 
-- [ ] T012 [US1] Add memo creation logic in `createCalloutContribution()` method in `src/domain/collaboration/callout-contribution/callout.contribution.service.ts` (~line 85, after link creation block)
-- [ ] T013 [US1] Add memo destructuring to existing `const { post, whiteboard, link } = calloutContributionData;` line
-- [ ] T014 [US1] Implement memo creation conditional block following post/whiteboard/link pattern
-- [ ] T015 [US1] Call `this.memoService.createMemo()` with proper parameters (memo input, storageAggregator, userID)
-- [ ] T016 [US1] Assign returned IMemo to `contribution.memo` property
-- [ ] T017 [US1] Run `pnpm build` to verify compilation
-- [ ] T018 [US1] Run `pnpm lint` to verify code style
+- [x] T012 [US1] Add memo creation logic in `createCalloutContribution()` method in `src/domain/collaboration/callout-contribution/callout.contribution.service.ts` (~line 85, after link creation block)
+- [x] T013 [US1] Add memo destructuring to existing `const { post, whiteboard, link } = calloutContributionData;` line
+- [x] T014 [US1] Implement memo creation conditional block following post/whiteboard/link pattern
+- [x] T015 [US1] Call `this.memoService.createMemo()` with proper parameters (memo input, storageAggregator, userID)
+- [x] T016 [US1] Assign returned IMemo to `contribution.memo` property
+- [x] T017 [US1] Run `pnpm build` to verify compilation
+- [x] T018 [US1] Run `pnpm lint` to verify code style
 
 ### Integration Tests for User Story 1
 
@@ -103,15 +103,15 @@
 
 ### Implementation for User Story 2
 
-- [ ] T024 [P] [US2] Implement `getMemo()` method in `src/domain/collaboration/callout-contribution/callout.contribution.service.ts` following `getWhiteboard()` pattern
-- [ ] T025 [P] [US2] Use `getCalloutContributionOrFail()` with memo relation eager loading
-- [ ] T026 [P] [US2] Return `IMemo | null` based on contribution.memo existence
-- [ ] T027 [US2] Add memo resolver field in `src/domain/collaboration/callout-contribution/callout.contribution.resolver.fields.ts`
-- [ ] T028 [US2] Import `IMemo` interface from `@domain/common/memo/memo.interface`
-- [ ] T029 [US2] Add `@ResolveField('memo')` decorator with nullable return type
-- [ ] T030 [US2] Add `@Profiling.api` decorator for performance tracking
-- [ ] T031 [US2] Call `this.calloutContributionService.getMemo()` in resolver implementation
-- [ ] T032 [US2] Run `pnpm build` to verify GraphQL schema generation
+- [x] T024 [P] [US2] Implement `getMemo()` method in `src/domain/collaboration/callout-contribution/callout.contribution.service.ts` following `getWhiteboard()` pattern
+- [x] T025 [P] [US2] Use `getCalloutContributionOrFail()` with memo relation eager loading
+- [x] T026 [P] [US2] Return `IMemo | null` based on contribution.memo existence
+- [x] T027 [US2] Add memo resolver field in `src/domain/collaboration/callout-contribution/callout.contribution.resolver.fields.ts`
+- [x] T028 [US2] Import `IMemo` interface from `@domain/common/memo/memo.interface`
+- [x] T029 [US2] Add `@ResolveField('memo')` decorator with nullable return type
+- [x] T030 [US2] Add `@Profiling.api` decorator for performance tracking
+- [x] T031 [US2] Call `this.calloutContributionService.getMemo()` in resolver implementation
+- [x] T032 [US2] Run `pnpm build` to verify GraphQL schema generation
 - [ ] T033 [US2] Run `pnpm run schema:print && pnpm run schema:sort` to regenerate schema artifacts
 
 ### Integration Tests for User Story 2
@@ -134,10 +134,10 @@
 
 ### Implementation for User Story 3
 
-- [ ] T039 [US3] Verify memo update logic exists in `src/domain/common/memo/memo.service.ts` (updateMemo method)
-- [ ] T040 [US3] Verify memo deletion cascades properly via CalloutContribution entity relationship (onDelete: SET NULL)
-- [ ] T041 [US3] Test memo update through existing memo mutation resolvers (no contribution-specific logic needed)
-- [ ] T042 [US3] Test memo deletion through existing memo deletion resolvers
+- [x] T039 [US3] Verify memo update logic exists in `src/domain/common/memo/memo.service.ts` (updateMemo method)
+- [x] T040 [US3] Verify memo deletion cascades properly via CalloutContribution entity relationship (onDelete: SET NULL)
+- [x] T041 [US3] Test memo update through existing memo mutation resolvers (no contribution-specific logic needed)
+- [x] T042 [US3] Test memo deletion through existing memo deletion resolvers
 
 ### Integration Tests for User Story 3
 
