@@ -14,4 +14,7 @@ export abstract class InAppNotificationPayloadSpaceCommunityCalendarEventComment
     description: 'Preview text of the comment',
   })
   commentText!: string;
+
+  messageID!: string;
+  roomID!: string;
 }

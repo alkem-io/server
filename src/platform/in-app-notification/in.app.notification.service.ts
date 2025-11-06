@@ -377,6 +377,13 @@ export class InAppNotificationService {
         result.calendarEventID = payload.calendarEventID;
         break;
 
+      case NotificationEvent.SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT:
+        result.spaceID = payload.spaceID;
+        result.calendarEventID = payload.calendarEventID;
+        result.messageID = payload.messageID;
+        result.roomID = payload.roomID;
+        break;
+
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED:
         result.spaceID = payload.spaceID;
         result.calloutID = payload.calloutID;

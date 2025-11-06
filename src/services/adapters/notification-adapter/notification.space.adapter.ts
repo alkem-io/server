@@ -260,6 +260,8 @@ export class NotificationSpaceAdapter {
           spaceID: space.id,
           calendarEventID: eventData.calendarEvent.id,
           commentText: commentPreview,
+          roomID: eventData.comments.id,
+          messageID: eventData.commentSent.id,
         };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
