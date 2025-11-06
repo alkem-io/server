@@ -103,6 +103,9 @@
 
 ## Active Technologies
 
+- TypeScript 5.3, Node.js 20.15.1 (Volta-pinned), executed via ts-node + NestJS 10.x, TypeORM 0.3.x, Apollo Server 4.x, GraphQL 16.x, class-validator, class-transformer (013-timeline-comment-notification)
+- MySQL 8.0 with `mysql_native_password` authentication (013-timeline-comment-notification)
+
 - TypeScript 5.3.3, Node.js 20.15.1 (Volta pinned) + NestJS 10.3.10, TypeORM 0.3.13, Apollo Server 4.10.4, GraphQL 16.9.0 (001-memo-collection-contribution)
 - MySQL 8 (mysql2 3.10.3 driver) with existing schema supporting memo contributions (001-memo-collection-contribution)
 
