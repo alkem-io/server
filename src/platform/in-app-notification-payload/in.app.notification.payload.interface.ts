@@ -23,6 +23,7 @@ import { InAppNotificationPayloadSpaceCollaborationCalloutPostComment } from '@p
 import { InAppNotificationPayloadVirtualContributor } from '@platform/in-app-notification-payload/dto/virtual-contributor/notification.in.app.payload.virtual.contributor';
 import { InAppNotificationPayloadSpaceCollaborationCalloutComment } from './dto/space/notification.in.app.payload.space.collaboration.callout.comment';
 import { InAppNotificationPayloadSpaceCommunityCalendarEvent } from './dto/space/notification.in.app.payload.space.community.calendar.event';
+import { InAppNotificationPayloadSpaceCommunityCalendarEventComment } from './dto/space/notification.in.app.payload.space.community.calendar.event.comment';
 
 @InterfaceType('InAppNotificationPayload', {
   isAbstract: true,
@@ -66,6 +67,8 @@ import { InAppNotificationPayloadSpaceCommunityCalendarEvent } from './dto/space
         return InAppNotificationPayloadSpaceCollaborationCalloutComment;
       case NotificationEventPayload.SPACE_COMMUNITY_CALENDAR_EVENT:
         return InAppNotificationPayloadSpaceCommunityCalendarEvent;
+      case NotificationEventPayload.SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT:
+        return InAppNotificationPayloadSpaceCommunityCalendarEventComment;
 
       // User notifications
       case NotificationEventPayload.USER:
