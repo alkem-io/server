@@ -38,6 +38,8 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { TagsetTemplateSetService } from '@domain/common/tagset-template-set/tagset.template.set.service';
 import { ITagsetTemplateSet } from '@domain/common/tagset-template-set/tagset.template.set.interface';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
+import { ITagset } from '@domain/common/tagset';
+import { TagsetArgs } from '@domain/common/tagset/dto/tagset.args';
 
 @Injectable()
 export class CalloutsSetService {
@@ -434,6 +436,8 @@ export class CalloutsSetService {
     args: CalloutsSetArgsCallouts,
     agentInfo: AgentInfo
   ): Promise<ICallout[]> {
+    const queryTags: boolean = !!args.withTags?.length;
+
     const calloutsSetLoaded = await this.getCalloutsSetOrFail(calloutsSet.id, {
       relations: {
         callouts: {
@@ -441,6 +445,20 @@ export class CalloutsSetService {
           classification: {
             tagsets: true,
           },
+          ...(queryTags && {
+            framing: {
+              profile: {
+                tagsets: true,
+              },
+            },
+            contributions: {
+              post: {
+                profile: {
+                  tagsets: true,
+                },
+              },
+            },
+          }),
         },
       },
     });
@@ -470,6 +488,16 @@ export class CalloutsSetService {
         )
       ) {
         return false;
+      }
+
+      // Filter by tags
+      if (args.withTags?.length) {
+        const allCalloutTags = this.getCalloutTags(callout);
+
+        // if none of the provided tags are present in the callout, filter it out
+        if (!args.withTags.some(argTag => allCalloutTags.includes(argTag))) {
+          return false;
+        }
       }
 
       // Only process classificationTagsets with values specified
@@ -562,6 +590,82 @@ export class CalloutsSetService {
     return results.sort((a, b) => (a.sortOrder > b.sortOrder ? 1 : -1));
   }
 
+  public async getAllTags(
+    calloutsSetID: string,
+    classificationTagsets?: TagsetArgs[]
+  ): Promise<string[]> {
+    const calloutsSet = await this.getCalloutsSetOrFail(calloutsSetID, {
+      relations: {
+        callouts: {
+          framing: {
+            profile: {
+              tagsets: true,
+            },
+          },
+          classification: {
+            tagsets: true,
+          },
+          contributions: {
+            post: {
+              profile: {
+                tagsets: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const allTags = calloutsSet.callouts
+      .filter(this.filterCalloutsByClassificationTagsets(classificationTagsets))
+      .flatMap(callout => this.getCalloutTags(callout));
+
+    // return allTags sorted by frequency, then alphabetically
+    const tagFrequency: { [key: string]: number } = {};
+    for (const tag of allTags) {
+      tagFrequency[tag] = (tagFrequency[tag] || 0) + 1;
+    }
+    return Object.keys(tagFrequency).sort((a, b) => {
+      if (tagFrequency[b] === tagFrequency[a]) {
+        return a.localeCompare(b);
+      }
+      return tagFrequency[b] - tagFrequency[a];
+    });
+  }
+
+  private filterCalloutsByClassificationTagsets(
+    classificationTagsets: TagsetArgs[] = []
+  ): (callout: ICallout) => boolean {
+    // Only process classificationTagsets with values specified
+    const filteredClassificationTagsets = classificationTagsets.filter(
+      (tagset): tagset is TagsetArgs & { tags: string[] } =>
+        tagset.tags !== undefined && tagset.tags.length > 0
+    );
+
+    if (!filteredClassificationTagsets.length) {
+      // No filtering needed, return true for all the callouts
+      return () => true;
+    }
+
+    return (callout: ICallout) => {
+      if (!callout.classification?.tagsets?.length) {
+        return false;
+      }
+      // Return true if at least one of the provided tagsets matches
+      return callout.classification.tagsets.some(calloutTagset =>
+        filteredClassificationTagsets.some(
+          argTagset =>
+            argTagset.name === calloutTagset.name &&
+            argTagset.tags.some(argTag =>
+              calloutTagset.tags.some(
+                tag => tag.toLowerCase() === argTag.toLowerCase()
+              )
+            )
+        )
+      );
+    };
+  }
+
   /**
    * Move callouts that are not in valid groups or flowStates to the default group & first flowState
    * @param callouts
@@ -609,5 +713,28 @@ export class CalloutsSetService {
         }
       }
     }
+  }
+
+  private getCalloutTags(callout: ICallout): string[] {
+    const mapTagsets = (tagsets: (ITagset | undefined)[] = []) =>
+      tagsets.flatMap(tagset => tagset?.tags ?? []);
+
+    return [
+      // Framing tags
+      ...mapTagsets(callout.framing.profile.tagsets),
+      // Contribution tags
+      ...mapTagsets(
+        callout.contributions?.flatMap(contribution => [
+          ...(contribution.post?.profile.tagsets ?? []),
+          // Whiteboards and links don't have tags for now
+          // ...(contribution.whiteboard?.profile.tagsets ?? []),
+          // ...(contribution.link?.profile.tagsets ?? []),
+          // Memos still cannot be used as contributions
+          // ...(contribution.memo?.profile.tagsets ?? [])
+          // Do not forget to add them to the query in `getAllTags`
+          // and `getCalloutsFromCollaboration` if they become available
+        ])
+      ),
+    ];
   }
 }
