@@ -52,11 +52,11 @@ Outputs (generated in repo root by default):
 ### 4. Interpret Classification
 
 | Situation                                  | Action                                                                                                               |
-| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
 | BREAKING entries present                   | Refactor OR supply valid CODEOWNER review containing `BREAKING-APPROVED` (override sets per-entry `override: true`). |
 | PREMATURE_REMOVAL present                  | Restore removed enum value(s) until lifecycle satisfied OR secure override if intentionally early.                   |
-| INVALID_DEPRECATION_FORMAT present         | Fix annotation reason string to match `REMOVE_AFTER=YYYY-MM-DD                                                       | reason` (post-grace).          |
-| DEPRECATION_GRACE present                  | Newly added deprecation missing schedule; add `REMOVE_AFTER=YYYY-MM-DD                                               | reason`before`graceExpiresAt`. |
+| INVALID_DEPRECATION_FORMAT present         | Fix annotation reason string to match `REMOVE_AFTER=YYYY-MM-DD \| reason` (post-grace).                              |
+| DEPRECATION_GRACE present                  | Newly added deprecation missing schedule; add `REMOVE_AFTER=YYYY-MM-DD \| reason` before `graceExpiresAt`.           |
 | Only ADDITIVE / DEPRECATED / INFO          | Safe to proceed.                                                                                                     |
 | INFO entries only for widening nullability | Widening considered non-breaking; verify no client impact.                                                           |
 | BASELINE (no prior snapshot)               | Commit new snapshot.                                                                                                 |
@@ -109,11 +109,11 @@ Schema Diff Summary:
 ## Troubleshooting
 
 | Issue                               | Cause                                                        | Fix                                                                                                                                                                                                                    |
-| ----------------------------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | ---------- |
+| ----------------------------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | All changes flagged due to ordering | Non-deterministic print (rare drift)                         | Run `npm run schema:sort` then re-run diff                                                                                                                                                                             |
 | Enum removal blocked                | 90-day window incomplete OR removeAfter date not reached     | Revert enum value; wait until both removeAfter passed AND >=90 days since deprecation                                                                                                                                  |
 | Override ignored                    | Review JSON missing / reviewer not CODEOWNER / phrase absent | Ensure reviewer listed in CODEOWNERS and body contains `BREAKING-APPROVED`; in CI re-submit an approval after the latest push and re-run the job; for local simulation export SCHEMA_OVERRIDE_REVIEWS_JSON before diff |
-| Invalid deprecation format          | Reason string missing `REMOVE_AFTER=YYYY-MM-DD | reason` prefix                                                                                                                                                                                                               | Amend directive reason with full format `REMOVE_AFTER=YYYY-MM-DD | rationale` |
+| Invalid deprecation format          | Reason string missing `REMOVE_AFTER=YYYY-MM-DD` prefix       | Amend directive reason with full format `REMOVE_AFTER=YYYY-MM-DD \| rationale`                                                                                                                                         |
 | Deprecation grace warning           | Newly deprecated element missing schedule (<24h)             | Add schedule before graceExpiresAt to avoid escalation                                                                                                                                                                 |
 | Premature removal                   | Attempted removal before removeAfter or <90 days elapsed     | Restore element until lifecycle satisfied                                                                                                                                                                              |
 | Unexpected BREAKING on type change  | Nullable ↔ non-null change or scalar jsonType change        | Re-evaluate change necessity or apply override approval                                                                                                                                                                |
@@ -142,16 +142,16 @@ Ensure the JSON array objects include fields: reviewer, body (with phrase), stat
 
 ## Classification Glossary
 
-| Classification             | Meaning                                                                       | Gate Effect                                                             |
-| -------------------------- | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ----------------- |
-| ADDITIVE                   | New type/field/enum value (non-breaking)                                      | Allowed                                                                 |
-| DEPRECATED                 | Properly scheduled deprecation (has REMOVE_AFTER)                             | Allowed                                                                 |
-| DEPRECATION_GRACE          | Newly deprecated without schedule (<24h window). Add `REMOVE_AFTER=YYYY-MM-DD | reason` within grace to avoid escalation to INVALID_DEPRECATION_FORMAT. | Allowed (warning) |
-| INVALID_DEPRECATION_FORMAT | Deprecation reason missing or malformed schedule after grace                  | Fails gate                                                              |
-| BREAKING                   | Removal / type change / incompatible scalar jsonType change                   | Fails gate unless override applied                                      |
-| PREMATURE_REMOVAL          | Attempted removal before REMOVE_AFTER date or enum lifecycle window           | Fails gate                                                              |
-| INFO                       | Benign metadata changes (description, non-jsonType scalar detail, etc.)       | Allowed                                                                 |
-| BASELINE                   | Initial snapshot creation (no prior)                                          | Allowed                                                                 |
+| Classification             | Meaning                                                                          | Gate Effect                                                             |
+| -------------------------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ----------------- |
+| ADDITIVE                   | New type/field/enum value (non-breaking)                                         | Allowed                                                                 |
+| DEPRECATED                 | Properly scheduled deprecation (has REMOVE_AFTER)                                | Allowed                                                                 |
+| DEPRECATION_GRACE          | Newly deprecated without schedule (<24h window). Add `REMOVE_AFTER=YYYY-MM-DD \\ | reason` within grace to avoid escalation to INVALID_DEPRECATION_FORMAT. | Allowed (warning) |
+| INVALID_DEPRECATION_FORMAT | Deprecation reason missing or malformed schedule after grace                     | Fails gate                                                              |
+| BREAKING                   | Removal / type change / incompatible scalar jsonType change                      | Fails gate unless override applied                                      |
+| PREMATURE_REMOVAL          | Attempted removal before REMOVE_AFTER date or enum lifecycle window              | Fails gate                                                              |
+| INFO                       | Benign metadata changes (description, non-jsonType scalar detail, etc.)          | Allowed                                                                 |
+| BASELINE                   | Initial snapshot creation (no prior)                                             | Allowed                                                                 |
 
 `overrideApplied: true` on the report indicates governance approval (phrase + CODEOWNER review). Each BREAKING or PREMATURE_REMOVAL entry approved will also include `"override": true`.
 
