@@ -516,6 +516,9 @@ export class CommunityResolverService {
         about: {
           profile: true,
         },
+        platformRolesAccess: {
+          roles: true,
+        },
         community: {
           roleSet: true,
         },
