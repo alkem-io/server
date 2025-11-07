@@ -127,6 +127,11 @@ export class CalloutContributionMoveService {
         contribution?.whiteboard?.profile.id
       );
     }
+    if (contribution?.memo?.profile.id) {
+      await this.urlGeneratorCacheService.revokeUrlCache(
+        contribution?.memo?.profile.id
+      );
+    }
 
     return await this.calloutContributionRepository.save(contribution);
   }

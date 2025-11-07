@@ -294,7 +294,10 @@ export class NotificationExternalAdapter {
         ),
         displayName: contribution.memo.profile.displayName,
         description: contribution.memo.profile.description ?? '',
-        url: calloutURL, // no uri on link creation, use callout URL instead
+        url: await this.urlGeneratorService.getMemoUrlPath(
+          contribution.memo.id,
+          contribution.memo.nameID
+        ),
       };
     } else {
       throw new RelationshipNotFoundException(
