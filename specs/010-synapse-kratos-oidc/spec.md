@@ -8,6 +8,7 @@
 ## Architecture Overview
 
 **System Components**: This feature implements OIDC authentication using a multi-component architecture:
+
 - **Synapse** (Matrix homeserver) - OIDC Client
 - **Ory Hydra v2.2.0** (OAuth2/OIDC Server) - Provides OIDC protocol endpoints
 - **alkemio-server (NestJS)** - Custom REST controllers at `/api/public/rest/oidc/*` handle OAuth2 login/consent challenges
@@ -116,6 +117,7 @@ To guarantee deterministic mapping from Kratos identities to Matrix user IDs, th
 - Synapse handles collisions by appending a numeric suffix as per its standard behavior
 
 Examples:
+
 - `User@Example.com` → `@user:...`
 - `first.last@example.com` → `@first.last:...`
 - `user+tag@example.com` → `@user+tag:...`
@@ -133,6 +135,7 @@ These rules align with tests in T023b and ensure consistent, deterministic user 
 
 **Configurable Endpoints (NFR-004)**:
 The following service endpoints and connection parameters MUST be configurable via environment variables:
+
 - **Hydra issuer URL**: Public OIDC endpoint accessible by Synapse (e.g., `http://hydra:4444/` for Docker Compose, `https://auth.dev.alkem.io/` for K8s)
 - **Kratos public API**: Identity provider endpoint used by alkemio-server (configured via existing `AUTH_ORY_KRATOS_PUBLIC_BASE_URL_SERVER`)
 - **Synapse homeserver URL**: Matrix server endpoint for federation (e.g., `https://matrix.dev.alkem.io`)
@@ -140,6 +143,7 @@ The following service endpoints and connection parameters MUST be configurable v
 - **Alkemio-server base URL**: Login/consent endpoint base (e.g., `http://localhost:3000` for Docker Compose, `https://dev.alkem.io` for K8s)
 
 **"Hardcoded" Definition (NFR-004 Clarification)**:
+
 - **Hardcoded (prohibited)**: Literal URL strings in source code or configuration files without environment variable substitution (e.g., `DSN=postgres://user:pass@postgres:5432/hydra` directly in YAML)
 - **Properly Configured (required)**: Composed from environment variable components with overridable defaults (e.g., `DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST:-postgres}:${POSTGRES_PORT:-5432}/hydra` where defaults like `postgres` and `5432` work for Docker Compose but can be overridden for K8s via ConfigMap)
 
@@ -159,6 +163,7 @@ This quickstart is a developer-oriented deployment where the server and web clie
   - This allows the host-based alkemio-server to call Hydra Admin through `HYDRA_ADMIN_URL=http://localhost:3000/hydra`, which the controllers append with `/admin/...` to reach admin endpoints via Traefik.
 
 Security note (dev-only exception):
+
 - Exposing Hydra Admin under `/hydra/admin` on the `web` entrypoint is acceptable in this development setup to enable host→container communication without extra tunneling.
 - In production, Hydra Admin MUST NOT be exposed on the public web entrypoint. A separate feature will constrain admin access to private networks/entrypoints or service-to-service access only.
 
@@ -171,11 +176,13 @@ Security note (dev-only exception):
 This feature is developed and tested using `quickstart-services.yml` for local development. The environment variable pattern is designed to support future Kubernetes deployments without code changes.
 
 **Environment Variable Strategy**:
+
 - All service endpoints and database connections use environment variables (following the Kratos pattern)
 - Default values in `alkemio.yml` and service definitions work for Docker Compose
 - Future K8s deployments can override these variables via ConfigMap/Secrets without changing code
 
 **Example Pattern** (Docker Compose):
+
 ```yaml
 # quickstart-services.yml
 hydra:
@@ -188,6 +195,7 @@ hydra:
 
 **Future K8s Support** (no implementation required now):
 When deploying to Kubernetes, override environment variables:
+
 - `POSTGRES_HOST` → External database hostname
 - `HYDRA_PUBLIC_URL` → `https://auth.dev.alkem.io`
 - `ALKEMIO_WEB_BASE_URL` → `https://dev.alkem.io`

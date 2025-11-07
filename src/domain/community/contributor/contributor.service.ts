@@ -23,6 +23,7 @@ import { StorageBucketService } from '@domain/storage/storage-bucket/storage.buc
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { getContributorType } from './get.contributor.type';
 
 @Injectable()
 export class ContributorService {
@@ -176,16 +177,12 @@ export class ContributorService {
     return { contributor: contributor, agent: contributor.agent };
   }
 
-  public getContributorType(contributor: IContributor) {
-    return this.contributorLookupService.getContributorType(contributor);
-  }
-
   // A utility method to load fields that are known by the Contributor type if not already
   public async getContributorWithRelations(
     contributor: IContributor,
     options?: FindOneOptions<IContributor>
   ): Promise<IContributor> {
-    const type = this.getContributorType(contributor);
+    const type = getContributorType(contributor);
     let contributorWithRelations: IContributor | null = null;
     switch (type) {
       case RoleSetContributorType.USER:

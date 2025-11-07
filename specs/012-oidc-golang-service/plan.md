@@ -33,7 +33,7 @@
 
 ## Summary
 
- Separate the existing Synapse-facing OIDC controller into a dedicated Go 1.25 service hosted in a new repository (`alkem-io/oidc-service`). The service mediates Hydra login/consent challenges, retrieves identity traits from Kratos, and returns redirects identical to current behaviour while retiring the legacy NestJS controller. The design delivers a stateless container with zap-based structured logging, environment-driven configuration, GitHub Actions CI/CD (including release workflows that publish the container image), and readiness endpoints that continuously confirm Hydra/Kratos connectivity.
+Separate the existing Synapse-facing OIDC controller into a dedicated Go 1.25 service hosted in a new repository (`alkem-io/oidc-service`). The service mediates Hydra login/consent challenges, retrieves identity traits from Kratos, and returns redirects identical to current behaviour while retiring the legacy NestJS controller. The design delivers a stateless container with zap-based structured logging, environment-driven configuration, GitHub Actions CI/CD (including release workflows that publish the container image), and readiness endpoints that continuously confirm Hydra/Kratos connectivity.
 
 ## Technical Context
 
@@ -75,6 +75,7 @@ specs/[###-feature]/
 ```
 
 ios/ or android/
+
 ### Source Code (new repository `alkem-io/oidc-service`)
 
 ```

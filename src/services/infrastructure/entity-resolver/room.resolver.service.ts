@@ -15,6 +15,7 @@ import { IPost } from '@domain/collaboration/post/post.interface';
 import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
+import { ICalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.interface';
 
 @Injectable()
 export class RoomResolverService {
@@ -94,9 +95,11 @@ export class RoomResolverService {
     return { roleSet: roleSet, platformRolesAccess };
   }
 
-  async getCalloutWithPostContributionForRoom(
-    roomID: string
-  ): Promise<{ post: IPost; callout: ICallout }> {
+  async getCalloutWithPostContributionForRoom(roomID: string): Promise<{
+    post: IPost;
+    callout: ICallout;
+    contribution: ICalloutContribution;
+  }> {
     const callout = await this.entityManager.findOne(Callout, {
       where: {
         contributions: {
@@ -124,8 +127,14 @@ export class RoomResolverService {
         LogContext.COLLABORATION
       );
     }
+    // First contribution since we are selecting all contributions, with a certain roomID.
+    // Since we have Room->Post->Contribution->Callout we can safely assume Room is indirectly OneToOne related to Contribution through Post
     const postContribution = callout.contributions[0].post;
-    return { post: postContribution, callout };
+    return {
+      post: postContribution,
+      callout,
+      contribution: callout.contributions[0],
+    };
   }
 
   async getCalloutForRoom(commentsID: string): Promise<ICallout> {
@@ -151,7 +160,7 @@ export class RoomResolverService {
       where: {
         comments: { id: commentsID },
       },
-      relations: { profile: true, comments: true },
+      relations: { profile: true, comments: true, calendar: true },
     });
     if (!result) {
       throw new EntityNotFoundException(

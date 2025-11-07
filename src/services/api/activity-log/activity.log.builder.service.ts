@@ -29,6 +29,7 @@ import { Space } from '@domain/space/space/space.entity';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { LogContext } from '@common/enums/logging.context';
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
+import { getContributorType } from '@domain/community/contributor/get.contributor.type';
 
 export default class ActivityLogBuilderService implements IActivityLogBuilder {
   constructor(
@@ -69,7 +70,7 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
       );
 
     const contributorType =
-      this.contributorLookupService.getContributorType(contributorJoining);
+      getContributorType(contributorJoining);
     const activityMemberJoined: IActivityLogEntryMemberJoined = {
       ...this.activityLogEntryBase,
       community: community,
