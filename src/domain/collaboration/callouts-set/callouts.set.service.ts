@@ -592,11 +592,13 @@ export class CalloutsSetService {
 
   public async getAllTags(
     calloutsSetID: string,
+    agentInfo: AgentInfo,
     classificationTagsets?: TagsetArgs[]
   ): Promise<string[]> {
     const calloutsSet = await this.getCalloutsSetOrFail(calloutsSetID, {
       relations: {
         callouts: {
+          authorization: true,
           framing: {
             profile: {
               tagsets: true,
@@ -617,6 +619,14 @@ export class CalloutsSetService {
     });
 
     const allTags = calloutsSet.callouts
+      .filter(callout => {
+        // Check for READ privilege in every callout
+        return this.authorizationService.isAccessGranted(
+          agentInfo,
+          callout.authorization,
+          AuthorizationPrivilege.READ
+        );
+      })
       .filter(this.filterCalloutsByClassificationTagsets(classificationTagsets))
       .flatMap(callout => this.getCalloutTags(callout));
 

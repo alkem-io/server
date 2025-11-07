@@ -1665,11 +1665,22 @@ type CalloutsSet {
     The type of Contributions the callouts allow; if omitted return all Callouts will be returned.
     """
     withContributionTypes: [CalloutContributionType!]
+    """
+    Return only Callouts that have at least one of the specified tags either on their framing or in their contributions.
+    """
+    withTags: [String!]
   ): [Callout!]!
   """The date at which the entity was created."""
   createdDate: DateTime!
   """The ID of the entity"""
   id: UUID!
+  """
+  All the tags of the Callouts and its contributions in this CalloutsSet. Sorted by frequency, then alphabetically.
+  """
+  tags(
+    """Return only Callouts matching the specified filter."""
+    classificationTagsets: [TagsetArgs!]
+  ): [String!]!
   """The tagset templates on this CalloutsSet."""
   tagsetTemplates: [TagsetTemplate!]
   """The set of CalloutGroups in use in this CalloutsSet."""
@@ -2472,8 +2483,6 @@ type InAppNotificationPayloadSpaceCommunityApplication implements InAppNotificat
 type InAppNotificationPayloadSpaceCommunityCalendarEvent implements InAppNotificationPayload {
   """The CalendarEvent that was created."""
   calendarEvent: CalendarEvent
-  """ID of the calendar event."""
-  calendarEventID: UUID!
   """The space details."""
   space: Space
   """The payload type."""
@@ -2483,8 +2492,6 @@ type InAppNotificationPayloadSpaceCommunityCalendarEvent implements InAppNotific
 type InAppNotificationPayloadSpaceCommunityCalendarEventComment implements InAppNotificationPayload {
   """The calendar event that was commented on."""
   calendarEvent: CalendarEvent
-  """ID of the calendar event that was commented on."""
-  calendarEventID: UUID!
   """Preview text of the comment"""
   commentText: String!
   """The space details."""

@@ -57,10 +57,12 @@ export class CalloutsSetResolverFields {
   })
   async tags(
     @Parent() calloutsSet: ICalloutsSet,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args({ nullable: true }) args: CalloutsSetArgsTags
   ): Promise<string[]> {
     const tags = await this.calloutsSetService.getAllTags(
       calloutsSet.id,
+      agentInfo,
       args?.classificationTagsets
     );
     return tags;
