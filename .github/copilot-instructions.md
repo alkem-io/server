@@ -103,6 +103,9 @@
 
 ## Active Technologies
 
+- TypeScript 5.3, Node.js 20.15.1 (Volta-pinned), executed via ts-node + NestJS 10.x, TypeORM 0.3.x, Apollo Server 4.x, GraphQL 16.x, class-validator, class-transformer (013-timeline-comment-notification)
+- MySQL 8.0 with `mysql_native_password` authentication (013-timeline-comment-notification)
+
 - TypeScript 5.3 (ts-node) executed on Node 20.x via GitHub Actions + pnpm 10.17.1, `actions/checkout@v4`, `actions/setup-node@v4`, `crazy-max/ghaction-import-gpg@v6`, `actions/github-script@v7`, repository schema scripts (`generate-schema.snapshot.ts`, `diff-schema.ts`) (012-generate-schema-baseline)
 - N/A – workflow operates on repository working tree only (012-generate-schema-baseline)
 

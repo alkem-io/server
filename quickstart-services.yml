@@ -133,8 +133,8 @@ services:
       - SECRETS_SYSTEM=${HYDRA_SYSTEM_SECRET}
       - URLS_SELF_PUBLIC=${HYDRA_PUBLIC_URL}/
       - URLS_SELF_ISSUER=${HYDRA_PUBLIC_URL}/
-      - URLS_LOGIN=${HYDRA_PUBLIC_URL}/api/public/rest/oidc/login
-      - URLS_CONSENT=${HYDRA_PUBLIC_URL}/api/public/rest/oidc/consent
+      - URLS_LOGIN=${HYDRA_PUBLIC_URL}/oidc/login
+      - URLS_CONSENT=${HYDRA_PUBLIC_URL}/oidc/consent
       - URLS_SELF_ADMIN=http://hydra:4445/
       - SERVE_PUBLIC_CORS_ENABLED=true
       - SERVE_ADMIN_CORS_ENABLED=true
@@ -152,10 +152,10 @@ services:
       - hydra
     environment:
       - HYDRA_ADMIN_URL=http://hydra:4445
-      - SYNAPSE_OIDC_CLIENT_ID=${SYNAPSE_OIDC_CLIENT_ID}
-      - SYNAPSE_OIDC_CLIENT_SECRET=${SYNAPSE_OIDC_CLIENT_SECRET}
-      - SYNAPSE_ADMIN_URL=${SYNAPSE_ADMIN_URL}
-      - SYNAPSE_PUBLIC_URL=${SYNAPSE_PUBLIC_URL}
+      - SYNAPSE_OIDC_CLIENT_ID
+      - SYNAPSE_OIDC_CLIENT_SECRET
+      - SYNAPSE_ADMIN_URL
+      - SYNAPSE_PUBLIC_URL
     networks:
       - alkemio_dev_net
     restart: on-failure
@@ -211,20 +211,22 @@ services:
 
   oidc-service:
     container_name: alkemio_dev_oidc_service
-    image: docker.io/alkemio/oidc-service:v0.5.0
+    image: docker.io/alkemio/oidc-service:v0.6.0
     platform: linux/amd64
     depends_on:
       - hydra
       - kratos
     environment:
-      - OIDC_ALLOW_INSECURE_HTTP
+      - OIDC_ALLOW_INSECURE_HTTP=true
       - OIDC_HYDRA_ADMIN_URL
       - OIDC_KRATOS_ADMIN_URL
       - OIDC_KRATOS_PUBLIC_URL
+      - OIDC_KRATOS_BROWSER_URL=http://localhost:3000/ory/kratos/public
+      - OIDC_WEB_BASE_URL=http://localhost:3000
     networks:
       - alkemio_dev_net
     ports:
-      - 8085:8080
+      - 8080
     restart: unless-stopped
 
   oathkeeper:
@@ -354,7 +356,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_notifications
     hostname: notifications
-    image: alkemio/notifications:v0.26.0
+    image: alkemio/notifications:v0.27.0
     platform: linux/amd64
     depends_on:
       rabbitmq:

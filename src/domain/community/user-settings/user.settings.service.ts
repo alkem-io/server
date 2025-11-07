@@ -160,6 +160,10 @@ export class UserSettingsService {
         settings.notification.space.collaborationCalloutPublished,
         notificationSpaceData.collaborationCalloutPublished
       );
+      this.updateNotificationSetting(
+        settings.notification.space.communityCalendarEvents,
+        notificationSpaceData.communityCalendarEvents
+      );
     }
 
     const notificationUserData = updateData.notification?.user;

@@ -38,14 +38,14 @@ This quickstart demonstrates how to run the OIDC Service locally with the Synaps
    docker run --rm \
      --env-file .env.oidc \
    --name oidc-service \
-     -p 8085:8080 \
+     -p 8080:8080 \
    alkemio/oidc-service:latest
    ```
 
 5. **Verify readiness**
 
    ```sh
-   curl -sSf http://localhost:8085/health/ready | jq
+   curl -sSf http://localhost:8080/health/ready | jq
    ```
 
    A healthy response returns `{"status":"ready","hydra":"ok","kratos":"ok"}`.
@@ -53,7 +53,7 @@ This quickstart demonstrates how to run the OIDC Service locally with the Synaps
 6. **Exercise login flow**
 
    ```sh
-   curl -i "http://localhost:8085/v1/oidc/login?login_challenge=test"
+   curl -i "http://localhost:8080/v1/oidc/login?login_challenge=test"
    ```
 
    You should receive either a `302` redirect or a structured `400`/`404` error depending on Hydra state.
@@ -64,9 +64,9 @@ This quickstart demonstrates how to run the OIDC Service locally with the Synaps
     docker run --rm \
        --env-file .env.oidc \
        -e OIDC_MAINTENANCE_MODE=true \
-       -p 8085:8080 \
+       -p 8080:8080 \
        alkemio/oidc-service:latest
-   curl -i http://localhost:8085/v1/oidc/login?login_challenge=test
+   curl -i http://localhost:8080/v1/oidc/login?login_challenge=test
    ```
 
    Expect HTTP 503 with a JSON body describing maintenance.
@@ -74,7 +74,7 @@ This quickstart demonstrates how to run the OIDC Service locally with the Synaps
 8. **Collect metrics**
 
    ```sh
-   curl -s http://localhost:8085/metrics | grep oidc_challenge_latency_seconds
+   curl -s http://localhost:8080/metrics | grep oidc_challenge_latency_seconds
    ```
 
    Confirm that the metrics endpoint exposes latency histograms and counters required for observability dashboards.
