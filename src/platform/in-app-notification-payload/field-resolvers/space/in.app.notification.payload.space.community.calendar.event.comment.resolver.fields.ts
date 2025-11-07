@@ -10,20 +10,20 @@ import { SpaceLoaderCreator } from '@core/dataloader/creators/loader.creators/in
 @Resolver(() => InAppNotificationPayloadSpaceCommunityCalendarEventComment)
 export class InAppNotificationPayloadSpaceCommunityCalendarEventCommentResolverFields {
   @ResolveField(() => ISpace, {
-    nullable: true,
+    nullable: false,
     description: 'The space details.',
   })
   public space(
     @Parent()
     payload: InAppNotificationPayloadSpaceCommunityCalendarEventComment,
-    @Loader(SpaceLoaderCreator, { resolveToNull: true })
-    loader: ILoader<ISpace | null>
+    @Loader(SpaceLoaderCreator)
+    loader: ILoader<ISpace>
   ) {
     return loader.load(payload.spaceID);
   }
 
   @ResolveField('calendarEvent', () => ICalendarEvent, {
-    nullable: true,
+    nullable: false,
     description: 'The calendar event that was commented on.',
   })
   async calendarEvent(
@@ -31,11 +31,7 @@ export class InAppNotificationPayloadSpaceCommunityCalendarEventCommentResolverF
     payload: InAppNotificationPayloadSpaceCommunityCalendarEventComment,
     @Loader(CalendarEventLoaderCreator)
     loader: ILoader<ICalendarEvent>
-  ): Promise<ICalendarEvent | null> {
-    try {
-      return await loader.load(payload.calendarEventID);
-    } catch {
-      return null;
-    }
+  ): Promise<ICalendarEvent> {
+    return loader.load(payload.calendarEventID);
   }
 }

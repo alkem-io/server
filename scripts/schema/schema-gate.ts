@@ -10,13 +10,15 @@
 
 import { readFileSync } from 'fs';
 import path from 'path';
+import { applyOverrides } from '../../src/schema-contract/governance/apply-overrides';
+import { ChangeReport } from '../../src/schema-contract/model';
 
 interface ChangeEntry {
   changeType: string;
   override?: boolean;
 }
 interface ChangeReportLike {
-  overrideApplied: boolean;
+  overrideApplied?: boolean;
   entries: ChangeEntry[];
   classifications?: Record<string, number>;
   errorFallback?: boolean;
@@ -45,6 +47,29 @@ function main() {
   if (!report || !Array.isArray(report.entries)) {
     process.stderr.write('Malformed change report: missing entries array\n');
     process.exit(4);
+  }
+  const hasOverrideEnv = Boolean(
+    process.env.SCHEMA_OVERRIDE_REVIEWS_JSON ||
+      process.env.SCHEMA_OVERRIDE_REVIEWS_FILE
+  );
+  if (!report.overrideApplied && hasOverrideEnv) {
+    try {
+      const result = applyOverrides(report as unknown as ChangeReport);
+      if (result.applied) {
+        process.stdout.write(
+          `Override applied by ${result.reviewer} during gate evaluation\n`
+        );
+      } else if (result.details?.length) {
+        process.stdout.write(
+          `Override evaluation details: ${result.details.join('; ')}\n`
+        );
+      }
+    } catch (err) {
+      process.stderr.write(
+        `Override evaluation failed: ${(err as Error).message}\n`
+      );
+      process.exit(1);
+    }
   }
   const breaking = report.entries.filter(e => e.changeType === 'BREAKING');
   const premature = report.entries.filter(

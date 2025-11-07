@@ -33,6 +33,7 @@ import { InAppNotificationPayloadSpaceCommunityCalendarEvent } from '@platform/i
 import { NotificationInputCommunityCalendarEventComment } from './dto/space/notification.dto.input.space.community.calendar.event.comment';
 import { InAppNotificationPayloadSpaceCommunityCalendarEventComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.calendar.event.comment';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
+import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
 
 @Injectable()
 export class NotificationSpaceAdapter {
@@ -225,6 +226,8 @@ export class NotificationSpaceAdapter {
           spaceID: space.id,
           calendarEventID: eventData.calendarEvent.id,
           commentText: commentPreview,
+          roomID: eventData.comments.id,
+          messageID: eventData.commentSent.id,
         };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
@@ -393,7 +396,7 @@ export class NotificationSpaceAdapter {
         {
           type: NotificationEventPayload.SPACE_COLLABORATION_CALLOUT_POST_COMMENT,
           spaceID: space.id,
-          contributionID: eventData.post.id,
+          contributionID: eventData.contribution.id,
           calloutID: eventData.callout.id,
           messageID: eventData.commentSent.id,
           roomID: eventData.room.id,
@@ -515,6 +518,7 @@ export class NotificationSpaceAdapter {
           type: NotificationEventPayload.SPACE_COMMUNITY_CONTRIBUTOR,
           spaceID: space.id,
           contributorID: eventData.contributorID,
+          contributorType: eventData.contributorType,
         };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
@@ -566,6 +570,7 @@ export class NotificationSpaceAdapter {
         type: NotificationEventPayload.SPACE_COMMUNITY_CONTRIBUTOR,
         spaceID: space.id,
         contributorID: eventData.virtualContributorID,
+        contributorType: RoleSetContributorType.VIRTUAL,
       };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
@@ -758,7 +763,7 @@ export class NotificationSpaceAdapter {
       const inAppPayload: InAppNotificationPayloadSpaceCommunicationUpdate = {
         type: NotificationEventPayload.SPACE_COMMUNICATION_UPDATE,
         spaceID: space.id,
-        update: eventData.lastMessage?.message,
+        update: eventData.lastMessage.message,
       };
 
       await this.notificationInAppAdapter.sendInAppNotifications(

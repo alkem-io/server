@@ -8,14 +8,12 @@ import { InAppNotificationPayloadSpaceCommunicationMessageDirect } from '@platfo
 @Resolver(() => InAppNotificationPayloadSpaceCommunicationMessageDirect)
 export class InAppNotificationPayloadSpaceCommunicationMessageDirectResolverFields {
   @ResolveField(() => ISpace, {
-    nullable: true,
+    nullable: false,
     description: 'The Space where the message was sent.',
   })
   public space(
-    @Parent()
-    payload: InAppNotificationPayloadSpaceCommunicationMessageDirect,
-    @Loader(SpaceLoaderCreator, { resolveToNull: true })
-    loader: ILoader<ISpace | null>
+    @Parent() payload: InAppNotificationPayloadSpaceCommunicationMessageDirect,
+    @Loader(SpaceLoaderCreator) loader: ILoader<ISpace>
   ) {
     return loader.load(payload.spaceID);
   }
@@ -25,8 +23,7 @@ export class InAppNotificationPayloadSpaceCommunicationMessageDirectResolverFiel
     description: 'The message content.',
   })
   public message(
-    @Parent()
-    payload: InAppNotificationPayloadSpaceCommunicationMessageDirect
+    @Parent() payload: InAppNotificationPayloadSpaceCommunicationMessageDirect
   ): string {
     return payload.message;
   }
