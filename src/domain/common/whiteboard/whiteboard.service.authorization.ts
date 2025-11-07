@@ -20,6 +20,11 @@ import { RelationshipNotFoundException } from '@common/exceptions/relationship.n
 import { WhiteboardService } from './whiteboard.service';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { RoleName } from '@common/enums/role.name';
+import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { PlatformRolesAccessService } from '@domain/access/platform-roles-access/platform.roles.access.service';
 
 const CREDENTIAL_RULE_WHITEBOARD_OWNER_PUBLIC_SHARE =
   'whiteboard-owner-public-share';
@@ -31,6 +36,9 @@ export class WhiteboardAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService,
     private whiteboardService: WhiteboardService,
+    private roleSetService: RoleSetService,
+    private platformRolesAccessService: PlatformRolesAccessService,
+    private communityResolverService: CommunityResolverService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -76,7 +84,7 @@ export class WhiteboardAuthorizationService {
         parentAuthorization
       );
 
-    whiteboard.authorization = this.appendCredentialRules(
+    whiteboard.authorization = await this.appendCredentialRules(
       whiteboard,
       spaceSettings
     );
@@ -96,10 +104,10 @@ export class WhiteboardAuthorizationService {
     return updatedAuthorizations;
   }
 
-  private appendCredentialRules(
+  private async appendCredentialRules(
     whiteboard: IWhiteboard,
     spaceSettings?: ISpaceSettings
-  ): IAuthorizationPolicy {
+  ): Promise<IAuthorizationPolicy> {
     const authorization = whiteboard.authorization;
     if (!authorization)
       throw new EntityNotInitializedException(
@@ -156,24 +164,36 @@ export class WhiteboardAuthorizationService {
     }
 
     if (spaceSettings?.collaboration?.allowGuestContributions) {
-      const adminPublicSharePolicy =
-        this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-          [AuthorizationPrivilege.PUBLIC_SHARE],
-          [AuthorizationCredential.SPACE_ADMIN],
-          CREDENTIAL_RULE_SPACE_ADMIN_PUBLIC_SHARE
-        );
-      newRules.push(adminPublicSharePolicy);
+      const adminCredentialDefinitions =
+        await this.resolveAdminCredentialsWithParentsDefinitions(whiteboard.id);
 
-      this.logger.verbose?.(
-        'Granting PUBLIC_SHARE privilege to SPACE_ADMIN credential holders',
-        {
-          whiteboardId: whiteboard.id,
-          context: LogContext.COLLABORATION,
-        }
-      );
+      if (adminCredentialDefinitions.length > 0) {
+        const adminPublicSharePolicy =
+          this.authorizationPolicyService.createCredentialRule(
+            [AuthorizationPrivilege.PUBLIC_SHARE],
+            adminCredentialDefinitions,
+            CREDENTIAL_RULE_SPACE_ADMIN_PUBLIC_SHARE
+          );
+        adminPublicSharePolicy.cascade = true;
+        newRules.push(adminPublicSharePolicy);
+
+        this.logger.verbose?.(
+          'Granting PUBLIC_SHARE privilege to admin credential holders',
+          {
+            whiteboardId: whiteboard.id,
+            credentialCount: adminCredentialDefinitions.length,
+            context: LogContext.COLLABORATION,
+          }
+        );
+      } else {
+        this.logger.verbose?.(
+          `No admin credential holders resolved for whiteboard ${whiteboard.id}; skipping PUBLIC_SHARE admin rule`,
+          LogContext.COLLABORATION
+        );
+      }
     } else if (spaceSettings?.collaboration !== undefined) {
       this.logger.verbose?.(
-        `Skipping SPACE_ADMIN PUBLIC_SHARE credential rule for whiteboard ${whiteboard.id} - guest contributions disabled`,
+        `Skipping admin PUBLIC_SHARE credential rule for whiteboard ${whiteboard.id} - guest contributions disabled`,
         LogContext.COLLABORATION
       );
     }
@@ -182,6 +202,74 @@ export class WhiteboardAuthorizationService {
       authorization,
       newRules
     );
+  }
+
+  private async resolveAdminCredentialsWithParentsDefinitions(
+    whiteboardId: string
+  ): Promise<ICredentialDefinition[]> {
+    const credentialDefinitions: ICredentialDefinition[] = [];
+    try {
+      // whiteboard community
+      const community =
+        await this.communityResolverService.getCommunityFromWhiteboardOrFail(
+          whiteboardId
+        );
+
+      const whiteboardCommunityRoleSet = community.roleSet;
+
+      // space of whiteboard community
+      const space =
+        await this.communityResolverService.getSpaceForCommunityOrFail(
+          community.id
+        );
+
+      if (whiteboardCommunityRoleSet) {
+        // Get admin credentials for the whiteboard community and its parents
+        const spaceAdminCredentials =
+          await this.roleSetService.getCredentialsForRoleWithParents(
+            whiteboardCommunityRoleSet,
+            RoleName.ADMIN
+          );
+        credentialDefinitions.push(...spaceAdminCredentials);
+      } else {
+        credentialDefinitions.push({
+          type: AuthorizationCredential.SPACE_ADMIN,
+          resourceID: space.id,
+        });
+      }
+
+      if (!whiteboardCommunityRoleSet && space.community?.roleSet) {
+        // Get admin credentials for the space community and its parents
+        const fallbackAdminCredentials =
+          await this.roleSetService.getCredentialsForRoleWithParents(
+            space.community.roleSet,
+            RoleName.ADMIN
+          );
+        credentialDefinitions.push(...fallbackAdminCredentials);
+      }
+
+      // Add credentials of any platform roles that have admin access
+      if (space.platformRolesAccess?.roles?.length) {
+        credentialDefinitions.push(
+          ...this.platformRolesAccessService.getCredentialsForRolesWithAccess(
+            space.platformRolesAccess.roles,
+            [AuthorizationPrivilege.PLATFORM_ADMIN]
+          )
+        );
+      }
+
+      return credentialDefinitions;
+    } catch (error) {
+      this.logger.debug?.(
+        'Failed to resolve admin credential definitions for PUBLIC_SHARE',
+        {
+          whiteboardId,
+          error: error instanceof Error ? error.message : error,
+          context: LogContext.COLLABORATION,
+        }
+      );
+      return [];
+    }
   }
 
   private appendPrivilegeRules(
