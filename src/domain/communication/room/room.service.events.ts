@@ -25,6 +25,7 @@ import { NotificationInputCommunityCalendarEventComment } from '@services/adapte
 import { ICalendarEvent } from '@domain/timeline/event/event.interface';
 import { LogContext } from '@common/enums/logging.context';
 import { TimelineResolverService } from '@services/infrastructure/entity-resolver/timeline.resolver.service';
+import { ICalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.interface';
 
 @Injectable()
 export class RoomServiceEvents {
@@ -77,6 +78,7 @@ export class RoomServiceEvents {
   public async processNotificationPostContributionComment(
     callout: ICallout,
     post: IPost,
+    contribution: ICalloutContribution,
     room: IRoom,
     message: IMessage,
     agentInfo: AgentInfo
@@ -87,6 +89,7 @@ export class RoomServiceEvents {
         triggeredBy: agentInfo.userID,
         post,
         callout,
+        contribution,
         room,
         commentSent: message,
       };

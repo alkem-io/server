@@ -1,6 +1,6 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { CurrentUser } from '@src/common/decorators';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { RoomService } from './room.service';
@@ -31,6 +31,7 @@ import { RoomLookupService } from '../room-lookup/room.lookup.service';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
+import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
 
 @InstrumentResolver()
 @Resolver()
@@ -46,6 +47,7 @@ export class RoomResolverMutations {
     private subscriptionPublishService: SubscriptionPublishService,
     private virtualContributorMessageService: VirtualContributorMessageService,
     private virtualContributorLookupService: VirtualContributorLookupService,
+    private inAppNotificationService: InAppNotificationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -53,7 +55,6 @@ export class RoomResolverMutations {
     description:
       'Sends an comment message. Returns the id of the new Update message.',
   })
-  @Profiling.api
   async sendMessageToRoom(
     @Args('messageData') messageData: RoomSendMessageInput,
     @CurrentUser() agentInfo: AgentInfo
@@ -86,7 +87,7 @@ export class RoomResolverMutations {
 
     switch (room.type) {
       case RoomType.POST: {
-        const { post, callout } =
+        const { post, callout, contribution } =
           await this.roomResolverService.getCalloutWithPostContributionForRoom(
             messageData.roomID
           );
@@ -101,6 +102,7 @@ export class RoomResolverMutations {
         await this.roomServiceEvents.processNotificationPostContributionComment(
           callout,
           post,
+          contribution,
           room,
           message,
           agentInfo
@@ -243,7 +245,6 @@ export class RoomResolverMutations {
   @Mutation(() => IMessage, {
     description: 'Sends a reply to a message from the specified Room.',
   })
-  @Profiling.api
   async sendMessageReplyToRoom(
     @Args('messageData') messageData: RoomSendMessageReplyInput,
     @CurrentUser() agentInfo: AgentInfo
@@ -436,7 +437,6 @@ export class RoomResolverMutations {
   @Mutation(() => IMessageReaction, {
     description: 'Add a reaction to a message from the specified Room.',
   })
-  @Profiling.api
   async addReactionToMessageInRoom(
     @Args('reactionData') reactionData: RoomAddReactionToMessageInput,
     @CurrentUser() agentInfo: AgentInfo
@@ -473,7 +473,6 @@ export class RoomResolverMutations {
   @Mutation(() => MessageID, {
     description: 'Removes a message.',
   })
-  @Profiling.api
   async removeMessageOnRoom(
     @Args('messageData') messageData: RoomRemoveMessageInput,
     @CurrentUser() agentInfo: AgentInfo
@@ -499,6 +498,7 @@ export class RoomResolverMutations {
       agentInfo.communicationID,
       messageData
     );
+    await this.inAppNotificationService.deleteAllByMessageId(messageID);
     await this.roomServiceEvents.processActivityMessageRemoved(
       messageID,
       agentInfo
@@ -525,7 +525,6 @@ export class RoomResolverMutations {
   @Mutation(() => Boolean, {
     description: 'Remove a reaction on a message from the specified Room.',
   })
-  @Profiling.api
   async removeReactionToMessageInRoom(
     @Args('reactionData') reactionData: RoomRemoveReactionToMessageInput,
     @CurrentUser() agentInfo: AgentInfo

@@ -110,7 +110,6 @@ Events are categorized by their target audience:
 - `USER_SIGN_UP_WELCOME` - Welcome message for new users
 - `USER_MENTIONED` - When user is mentioned
 - `USER_MESSAGE` - Direct messages to users
-- `USER_MESSAGE_SENDER` - Copy of message sent by user
 - `USER_COMMENT_REPLY` - Replies to user's comments
 
 ### Virtual Contributor Notifications
