@@ -68,6 +68,7 @@ function main() {
       process.stderr.write(
         `Override evaluation failed: ${(err as Error).message}\n`
       );
+      process.exit(1);
     }
   }
   const breaking = report.entries.filter(e => e.changeType === 'BREAKING');
