@@ -1,7 +1,7 @@
 # Implementation Plan: Callouts Tag Cloud with Filtering
 
-**Branch**: `012-callouts-tag-cloud` | **Date**: 2025-11-06 | **Spec**: [spec.md](./spec.md)
-**Input**: Feature specification from `/specs/012-callouts-tag-cloud/spec.md`
+**Branch**: `client-7100` | **Date**: 2025-11-06 | **Spec**: [spec.md](./spec.md)
+**Input**: Feature specification from `/specs/014-callouts-tag-cloud/spec.md`
 **Status**: Retroactive (documenting implemented solution)
 
 **Note**: This plan documents the implementation approach taken for the tag cloud feature, written retroactively to capture the design decisions and technical strategy.
@@ -12,12 +12,12 @@ Implement tag aggregation and filtering capabilities on the CalloutsSet GraphQL 
 
 ## Technical Context
 
-**Language/Version**: TypeScript 5.3, Node.js 20.15.1 (Volta-pinned)  
-**Primary Dependencies**: NestJS 10.x, TypeORM 0.3.x, Apollo Server 4.x, GraphQL 16.x, class-validator, class-transformer  
-**Storage**: MySQL 8.0 with existing tagset infrastructure on profiles (callouts, contributions)  
-**Testing**: Jest with CI config, integration tests for cross-module interactions, unit tests for orchestration logic  
-**Target Platform**: Linux server (containerized), GraphQL API surface  
-**Project Type**: NestJS GraphQL API server (single backend project)  
+**Language/Version**: TypeScript 5.3, Node.js 20.15.1 (Volta-pinned)
+**Primary Dependencies**: NestJS 10.x, TypeORM 0.3.x, Apollo Server 4.x, GraphQL 16.x, class-validator, class-transformer
+**Storage**: MySQL 8.0 with existing tagset infrastructure on profiles (callouts, contributions)
+**Testing**: Jest with CI config, integration tests for cross-module interactions, unit tests for orchestration logic
+**Target Platform**: Linux server (containerized), GraphQL API surface
+**Project Type**: NestJS GraphQL API server (single backend project)
 **Performance Goals**:
 
 - Tag aggregation query <2s for typical CalloutsSet (<100 callouts)
@@ -119,8 +119,8 @@ _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
 ### Constitution Summary
 
-**Overall Status**: ✅ ALL GATES PASS  
-**Violations**: None  
+**Overall Status**: ✅ ALL GATES PASS
+**Violations**: None
 **Justifications Required**: None
 
 This feature fully complies with the Alkemio Server Engineering Constitution. All changes are additive, domain-centric, properly authorized, and follow established patterns.
@@ -130,7 +130,7 @@ This feature fully complies with the Alkemio Server Engineering Constitution. Al
 ### Documentation (this feature)
 
 ```text
-specs/012-callouts-tag-cloud/
+specs/014-callouts-tag-cloud/
 ├── spec.md                          # Feature specification (completed)
 ├── plan.md                          # This file - implementation plan
 ├── research.md                      # Phase 0 - technical decisions (to be created)
@@ -495,5 +495,5 @@ private filterCalloutsByClassificationTagsets(
 
 ---
 
-**Plan Status**: ✅ COMPLETE (Retroactive documentation)  
+**Plan Status**: ✅ COMPLETE (Retroactive documentation)
 **Next Step**: Generate Phase 0 research.md, Phase 1 artifacts, or proceed to implementation tasks

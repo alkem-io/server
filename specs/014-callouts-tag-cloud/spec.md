@@ -1,6 +1,6 @@
 # Feature Specification: Callouts Tag Cloud with Filtering
 
-**Feature Branch**: `012-callouts-tag-cloud`
+**Feature Branch**: `client-7100`
 **Created**: 2025-11-06
 **Status**: Retroactive (code implemented, spec written after)
 **Related Issue**: alkem-io/client-web#7100

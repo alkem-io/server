@@ -1,7 +1,7 @@
 # Phase 0 Research: Callouts Tag Cloud Technical Decisions
 
 **Feature**: Callouts Tag Cloud with Filtering
-**Branch**: 012-callouts-tag-cloud
+**Branch**: client-7100
 **Date**: 2025-11-06
 **Status**: Retroactive (documenting decisions made during implementation)
 
