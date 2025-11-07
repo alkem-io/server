@@ -58,6 +58,9 @@ Enabled memos as valid contribution types in collection callouts, following the 
 3. **Type Field Persistence** - Contribution counting fixed
 4. **Authorization Policy** - MemoAuthorizationService wired
 5. **URL Resolution** - Deep linking support added
+6. **NameID Uniqueness (Post-Implementation)** - Duplicate nameIDs prevented
+7. **Cascade Deletion (Post-Implementation)** - Memos properly deleted with callout
+8. **Lifecycle Integration (Post-Implementation)** - Move, transfer, activity & notifications support
 
 See [IMPLEMENTATION_LOG.md](./IMPLEMENTATION_LOG.md) for detailed issue tracking and solutions.
 
@@ -108,10 +111,10 @@ specs/001-memo-collection-contribution/
 
 | Metric                   | Value                     |
 | ------------------------ | ------------------------- |
-| Total Time               | ~9 hours                  |
-| Files Modified           | 9 files                   |
-| Lines Added/Modified     | ~200 LOC                  |
-| Critical Issues Resolved | 5 issues                  |
+| Total Time               | ~10 hours                 |
+| Files Modified           | 14 files                  |
+| Lines Added/Modified     | ~265 LOC                  |
+| Critical Issues Resolved | 8 issues                  |
 | User Stories Complete    | 4/4 (100%)                |
 | Constitution Gates       | All passed                |
 | Production Ready         | ✅ Yes (with limitations) |

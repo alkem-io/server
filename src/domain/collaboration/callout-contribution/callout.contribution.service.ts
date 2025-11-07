@@ -177,6 +177,7 @@ export class CalloutContributionService {
           post: true,
           whiteboard: true,
           link: true,
+          memo: true,
         },
       }
     );
@@ -190,6 +191,10 @@ export class CalloutContributionService {
 
     if (contribution.link) {
       await this.linkService.deleteLink(contribution.link.id);
+    }
+
+    if (contribution.memo) {
+      await this.memoService.deleteMemo(contribution.memo.id);
     }
 
     if (contribution.authorization) {

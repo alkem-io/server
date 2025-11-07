@@ -33,6 +33,8 @@ This document captures the actual implementation journey, including all fixes, d
 
 ## Critical Issues Discovered & Resolved
 
+**Total Issues**: 8
+
 ### Issue 1: Missing NameID Generation (Runtime Error)
 
 **Error**: `Field 'nameID' doesn't have a default value` - MySQL constraint violation during memo contribution creation
@@ -449,6 +451,7 @@ if (memoNameID) {
    - Extended getStorageBucketForContribution with memo relations
    - Extended getProfileFromContribution with memo handling
    - Explicitly set contribution.type field
+   - **Post-Release**: Added memo cascade deletion in delete() method (Issue #7)
 
 3. **`src/domain/collaboration/callout-contribution/callout.contribution.interface.ts`**
    - Added `type!: CalloutContributionType` field
@@ -469,24 +472,50 @@ if (memoNameID) {
    - Added memo relations to contribution query (relations + select)
    - Applied memo authorization policy in applyAuthorizationPolicy method
 
+7. **`src/services/infrastructure/naming/naming.service.ts`** ⚠️ **Post-Release Fix (Issue #6)**
+   - Added memo nameID collection in getReservedNameIDsInCalloutContributions
+   - Fixed duplicate nameID bug
+
 ### URL Resolver Files (3 files)
 
-7. **`src/common/enums/url.type.ts`**
+8. **`src/common/enums/url.type.ts`**
    - Added CONTRIBUTION_MEMO = 'memo' enum value
 
-8. **`src/services/api/url-resolver/dto/url.resolver.query.callouts.set.result.ts`**
+9. **`src/services/api/url-resolver/dto/url.resolver.query.callouts.set.result.ts`**
    - Added memoId?: string field
 
-9. **`src/services/api/url-resolver/url.resolver.service.ts`**
-   - Updated spaceInternalPathMatcherCollaboration regex
-   - Updated virtualContributorPathMatcher regex
-   - Added memoNameID parameter handling
-   - Added memo relations to contribution queries
-   - Implemented memo contribution query logic in populateCalloutsSetResult
+10. **`src/services/api/url-resolver/url.resolver.service.ts`**
 
-**Total Files Modified**: 9 files
-**Total Lines Added**: ~150 LOC
-**Total Lines Modified**: ~30 LOC
+- Updated spaceInternalPathMatcherCollaboration regex
+- Updated virtualContributorPathMatcher regex
+- Added memoNameID parameter handling
+- Added memo relations to contribution queries
+- Implemented memo contribution query logic in populateCalloutsSetResult
+
+### Lifecycle & Integration Files (4 files) ⚠️ **Post-Release Fixes (Issue #8)**
+
+11. **`src/domain/collaboration/callout-contribution/callout.contribution.move.service.ts`**
+
+- Added memo profile relations when loading contribution
+- Added MEMO type validation in target callout's allowed types
+
+12. **`src/domain/collaboration/callout-transfer/callout.transfer.service.ts`**
+
+- Added memo profile + storageBucket relations
+- Added storage bucket aggregator update for memo contributions
+
+13. **`src/domain/collaboration/callout/callout.resolver.mutations.ts`**
+
+- Added processActivityMemoCreated() call in contribution creation flow
+- Implemented processActivityMemoCreated() method for notifications
+
+14. **`src/services/adapters/notification-external-adapter/notification.external.adapter.ts`**
+
+- Added memo contribution payload building in buildSpaceCollaborationCreatedPayload()
+
+**Total Files Modified**: 14 files (10 initial + 4 post-release fixes)
+**Total Lines Added**: ~220 LOC
+**Total Lines Modified**: ~45 LOC
 
 ---
 
@@ -656,7 +685,7 @@ None identified. Implementation follows established patterns and constitution pr
 
 ## Conclusion
 
-The core implementation of memo contributions in collections is **complete and functional**. All critical runtime issues were discovered through iterative testing and resolved by following existing patterns in the codebase. The implementation maintains architectural consistency, follows domain-driven design principles, and meets all constitutional requirements.
+The core implementation of memo contributions in collections is **complete and functional**. All critical runtime issues (5 during initial implementation + 3 post-release) were discovered through iterative testing and resolved by following existing patterns in the codebase. The implementation maintains architectural consistency, follows domain-driven design principles, and meets all constitutional requirements.
 
 **Key Success Factors**:
 
@@ -665,11 +694,487 @@ The core implementation of memo contributions in collections is **complete and f
 - Explicit field assignment where TypeORM doesn't auto-populate
 - Complete authorization service wiring
 - URL resolver extension for deep linking support
+- Post-release comprehensive lifecycle integration fixes
 
 **Implementation Quality**: Production-ready with manual testing validation. Integration tests and schema validation deferred to future iterations.
 
+**Post-Release Discoveries**:
+
+- **Issue #6** (nameID uniqueness): NamingService didn't include memo nameIDs in uniqueness check
+- **Issue #7** (cascade deletion): CalloutContributionService didn't delete memos when callout deleted
+- **Issue #8** (lifecycle integration): Incomplete memo support in move, transfer, activity, and notification services
+
+All three post-release issues share a common root cause: **incomplete pattern replication across all contribution-handling services**. This pattern of "loaded but unused relations" appeared consistently—services loaded memo data but didn't process it.
+
+**Critical Recommendation**: Create a **Contribution Type Integration Checklist** (`docs/ContributionTypeChecklist.md`) covering:
+
+1. Core CRUD operations (create, read, update, delete)
+2. Support services (naming, URL resolution, authorization)
+3. Lifecycle operations (move, transfer, notifications)
+4. External integrations (activity logging, notifications service)
+
+Without this checklist, future contribution types (e.g., documents, files) will likely encounter similar gaps.
+
 ---
 
-**Document Version**: 1.0
-**Last Updated**: 2025-11-06
-**Authors**: Implementation team with AI assistance
+**Document Version**: 1.2
+**Last Updated**: 2025-11-07
+**Authors**: Implementation team with AI assistance---
+
+### Issue 6: NameID Uniqueness Not Enforced for Memos (Critical Bug - Post-Release)
+
+**Discovered**: 2025-11-07 (after initial implementation completion)
+
+**Error**: Duplicate nameIDs when creating multiple memo contributions with the same or default names, causing URL resolution conflicts
+
+**Root Cause**: The `getReservedNameIDsInCalloutContributions` method in NamingService loaded memo relations but didn't include memo nameIDs in the reserved list returned to the uniqueness checker.
+
+**Investigation**:
+
+- User reported ability to create multiple memos with same nameID
+- Traced to `naming.service.ts` line 163-189
+- Method loaded `memo: true` in relations (line 173)
+- But only checked `contribution.whiteboard` and `contribution.post` nameIDs (lines 180-187)
+- Missing: `contribution.memo` check
+
+**Code Before Fix**:
+
+```typescript
+// File: src/services/infrastructure/naming/naming.service.ts
+public async getReservedNameIDsInCalloutContributions(
+  calloutID: string
+): Promise<string[]> {
+  const callout = await this.entityManager.findOne(Callout, {
+    where: { id: calloutID },
+    relations: {
+      contributions: {
+        whiteboard: true,
+        post: true,
+        memo: true,  // ✅ Loaded but not used!
+      },
+    },
+    select: ['contributions'],
+  });
+  const contributions = callout?.contributions || [];
+  const reservedNameIDs: string[] = [];
+  for (const contribution of contributions) {
+    if (contribution.whiteboard) {
+      reservedNameIDs.push(contribution.whiteboard.nameID);
+    }
+    if (contribution.post) {
+      reservedNameIDs.push(contribution.post.nameID);
+    }
+    // ❌ Missing memo check!
+  }
+  return reservedNameIDs;
+}
+```
+
+**Solution Implemented**:
+
+```typescript
+// File: src/services/infrastructure/naming/naming.service.ts
+
+const contributions = callout?.contributions || [];
+const reservedNameIDs: string[] = [];
+for (const contribution of contributions) {
+  if (contribution.whiteboard) {
+    reservedNameIDs.push(contribution.whiteboard.nameID);
+  }
+  if (contribution.post) {
+    reservedNameIDs.push(contribution.post.nameID);
+  }
+  if (contribution.memo) {
+    // ✅ ADDED
+    reservedNameIDs.push(contribution.memo.nameID);
+  }
+}
+return reservedNameIDs;
+```
+
+**Files Modified**:
+
+- `src/services/infrastructure/naming/naming.service.ts` (lines 189-191 added)
+
+**Impact**:
+
+- **Before**: Multiple memos could have identical nameIDs causing URL conflicts
+- **After**: NamingService.createNameIdAvoidingReservedNameIDs properly enforces uniqueness
+- **Severity**: High - breaks URL resolution and deep linking
+- **Detection**: Post-release user testing (not caught in initial implementation)
+
+**Prevention**:
+
+- Pattern: When adding new contribution types, check ALL nameID-related services
+- Must update: NamingService.getReservedNameIDsInCalloutContributions
+- Integration test would have caught this (deferred due to no test infrastructure)
+
+**Lessons Learned**:
+
+- Loading a relation doesn't mean it's being used in the logic
+- NameID uniqueness checks must cover all contribution types
+- Post-release testing can reveal gaps in pattern application
+- Critical to review ALL services that iterate over contribution types
+
+---
+
+---
+
+### Issue 7: Memo Contributions Not Deleted with Parent Callout (Critical Bug - Post-Release)
+
+**Discovered**: 2025-11-07 (cascade deletion gap)
+
+**Error**: When deleting a callout, memo contributions were orphaned in the database instead of being properly cascade-deleted along with other contribution types (posts, whiteboards, links).
+
+**Root Cause**: The `CalloutContributionService.delete` method loaded relations for `post`, `whiteboard`, and `link` contributions and deleted them, but the `memo` relation was not included in either the relations loading or the deletion logic.
+
+**Investigation**:
+
+- User reported memos not being deleted when callout is deleted
+- Traced deletion flow: `CalloutService.deleteCallout` → loops through contributions → `CalloutContributionService.delete`
+- Found `delete` method at line 172 in `callout.contribution.service.ts`
+- Relations loaded: `post: true, whiteboard: true, link: true` (line 176-178)
+- Missing: `memo: true` in relations
+- Deletion checks: post, whiteboard, link (lines 183-193)
+- Missing: memo deletion check
+
+**Code Before Fix**:
+
+```typescript
+// File: src/domain/collaboration/callout-contribution/callout.contribution.service.ts
+
+async delete(contributionID: string): Promise<ICalloutContribution> {
+  const contribution = await this.getCalloutContributionOrFail(
+    contributionID,
+    {
+      relations: {
+        post: true,
+        whiteboard: true,
+        link: true,
+        // ❌ Missing memo: true
+      },
+    }
+  );
+
+  if (contribution.post) {
+    await this.postService.deletePost(contribution.post.id);
+  }
+
+  if (contribution.whiteboard) {
+    await this.whiteboardService.deleteWhiteboard(contribution.whiteboard.id);
+  }
+
+  if (contribution.link) {
+    await this.linkService.deleteLink(contribution.link.id);
+  }
+
+  // ❌ Missing memo deletion!
+
+  if (contribution.authorization) {
+    await this.authorizationPolicyService.delete(contribution.authorization);
+  }
+
+  const result = await this.contributionRepository.remove(
+    contribution as CalloutContribution
+  );
+  result.id = contributionID;
+  return result;
+}
+```
+
+**Solution Implemented**:
+
+```typescript
+// File: src/domain/collaboration/callout-contribution/callout.contribution.service.ts
+
+async delete(contributionID: string): Promise<ICalloutContribution> {
+  const contribution = await this.getCalloutContributionOrFail(
+    contributionID,
+    {
+      relations: {
+        post: true,
+        whiteboard: true,
+        link: true,
+        memo: true,  // ✅ ADDED
+      },
+    }
+  );
+
+  if (contribution.post) {
+    await this.postService.deletePost(contribution.post.id);
+  }
+
+  if (contribution.whiteboard) {
+    await this.whiteboardService.deleteWhiteboard(contribution.whiteboard.id);
+  }
+
+  if (contribution.link) {
+    await this.linkService.deleteLink(contribution.link.id);
+  }
+
+  if (contribution.memo) {  // ✅ ADDED
+    await this.memoService.deleteMemo(contribution.memo.id);
+  }
+
+  if (contribution.authorization) {
+    await this.authorizationPolicyService.delete(contribution.authorization);
+  }
+
+  const result = await this.contributionRepository.remove(
+    contribution as CalloutContribution
+  );
+  result.id = contributionID;
+  return result;
+}
+```
+
+**Files Modified**:
+
+- `src/domain/collaboration/callout-contribution/callout.contribution.service.ts` (lines 179 + 194-196 added)
+
+**Impact**:
+
+- **Before**: Deleting a callout left memo contributions orphaned in database (data leak + referential integrity issue)
+- **After**: Memos are properly cascade-deleted when their parent callout is deleted
+- **Severity**: High - causes database bloat and potential data integrity issues
+- **Detection**: Post-release manual testing of deletion flows
+
+**Deletion Flow Verification**:
+The `MemoService.deleteMemo` method properly handles:
+
+1. Loading memo with `authorization` and `profile` relations
+2. Deleting the profile via `profileService.deleteProfile`
+3. Deleting the authorization policy
+4. Removing the memo entity
+
+This ensures complete cleanup of all memo-related resources.
+
+**Prevention**:
+
+- **Pattern**: When adding new contribution types, ALL contribution lifecycle methods must be updated:
+  1. Creation methods (in `CalloutContributionService`)
+  2. Loading relations (in queries and deletions)
+  3. Deletion cascade logic (in `CalloutContributionService.delete`)
+  4. NameID uniqueness checks (in `NamingService`)
+  5. URL resolvers (in `ReferenceResolverService`)
+- **Checklist**: Create a contribution type integration checklist for future additions
+- **Testing**: Deletion flows should be part of integration test suite (deferred)
+
+**Lessons Learned**:
+
+- Cascade deletion is NOT automatic—must be explicitly handled for each relation
+- Loading a relation for read operations doesn't mean deletion logic exists
+- Service layer must mirror all contribution types in CRUD operations
+- Post-release testing of full lifecycle (create → read → update → delete) reveals pattern gaps
+- This is the **second post-release gap** found in the same service—highlights need for contribution type checklist
+
+**Related Issues**:
+
+- Issue #6: Similar pattern gap in `NamingService.getReservedNameIDsInCalloutContributions`
+- Both issues stem from incomplete contribution type integration across services
+
+---
+
+### Issue 8: Incomplete Memo Integration Across Contribution Lifecycle (Critical Bug - Post-Release)
+
+**Discovered**: 2025-11-07 (comprehensive pattern review after Issues #6 and #7)
+
+**Error**: After discovering Issues #6 (nameID uniqueness) and #7 (cascade deletion), a comprehensive review revealed additional missing memo integration points across the contribution lifecycle: contribution moving, callout transfer, and activity/notification processing.
+
+**Root Cause**: The memo contribution type was not fully integrated into all contribution-related services and workflows. While the core CRUD operations worked, several supporting features that handle contribution lifecycle events were missing memo support.
+
+**Missing Integration Points**:
+
+1. **Contribution Moving** (`CalloutContributionMoveService`)
+   - Missing `memo: { profile: true }` in relations when loading contribution
+   - Missing validation check for MEMO type in target callout's allowed types
+
+2. **Callout Transfer** (`CalloutTransferService`)
+   - Missing `memo: { profile: { storageBucket: true } }` in relations
+   - Missing storage bucket aggregator update for memo contributions
+
+3. **Activity/Notification Processing** (`CalloutResolverMutations`)
+   - Missing `processActivityMemoCreated()` call in contribution creation flow
+   - Missing notification trigger for memo contributions
+
+4. **External Notifications** (`NotificationExternalAdapter`)
+   - Missing memo contribution payload building in `buildSpaceCollaborationCreatedPayload()`
+
+**Investigation**:
+
+- After fixing Issues #6 and #7, conducted full grep search for post/whiteboard/link patterns
+- Found 4 additional services with incomplete memo integration
+- Each service had the same pattern: other contribution types handled, memo missing
+- All services loaded contributions with relations but excluded memo
+
+**Solutions Implemented**:
+
+**1. CalloutContributionMoveService** (lines 45-48, 99-110):
+
+```typescript
+// Added memo relation loading
+relations: {
+  callout: { calloutsSet: true },
+  post: { profile: true },
+  whiteboard: { profile: true },
+  memo: { profile: true },  // ✅ ADDED
+}
+
+// Added memo type validation
+if (
+  contribution.memo &&
+  !targetCallout.settings.contribution.allowedTypes.includes(
+    CalloutContributionType.MEMO
+  )
+) {
+  throw new NotSupportedException(
+    'The destination callout does not allow contributions of type MEMO.',
+    LogContext.COLLABORATION
+  );
+}
+```
+
+**2. CalloutTransferService** (lines 101-106, 137-140):
+
+```typescript
+// Added memo relation in contribution loading
+memo: {
+  profile: {
+    storageBucket: true,
+  },
+},
+
+// Added storage bucket update for memos
+await this.updateStorageBucketAggregator(
+  contribution.memo?.profile.storageBucket,
+  storageAggregator
+);
+```
+
+**3. CalloutResolverMutations** (lines 385-395, 514-532):
+
+```typescript
+// Added memo activity processing
+if (contributionData.memo && contribution.memo) {
+  if (callout.settings.visibility === CalloutVisibility.PUBLISHED) {
+    this.processActivityMemoCreated(
+      callout,
+      contribution,
+      agentInfo
+    );
+  }
+}
+
+// Added processActivityMemoCreated method
+private async processActivityMemoCreated(
+  callout: ICallout,
+  contribution: ICalloutContribution,
+  agentInfo: AgentInfo
+) {
+  const notificationInput: NotificationInputCollaborationCalloutContributionCreated = {
+    contribution: contribution,
+    callout: callout,
+    contributionType: CalloutContributionType.MEMO,
+    triggeredBy: agentInfo.userID,
+  };
+  await this.notificationAdapterSpace.spaceCollaborationCalloutContributionCreated(
+    notificationInput
+  );
+  // todo: implement memo activity
+}
+```
+
+**4. NotificationExternalAdapter** (lines 288-299):
+
+```typescript
+// Added memo contribution payload building
+} else if (contribution.memo) {
+  contributionPayload = {
+    id: contribution.memo.id,
+    type: CalloutContributionType.MEMO,
+    createdBy: await this.getContributorPayloadOrFail(
+      contribution.createdBy || ''
+    ),
+    displayName: contribution.memo.profile.displayName,
+    description: contribution.memo.profile.description ?? '',
+    url: calloutURL,
+  };
+}
+```
+
+**Files Modified**:
+
+- `src/domain/collaboration/callout-contribution/callout.contribution.move.service.ts` (2 locations: relations + validation)
+- `src/domain/collaboration/callout-transfer/callout.transfer.service.ts` (2 locations: relations + storage update)
+- `src/domain/collaboration/callout/callout.resolver.mutations.ts` (2 locations: activity call + new method)
+- `src/services/adapters/notification-external-adapter/notification.external.adapter.ts` (1 location: payload building)
+
+**Impact**:
+
+- **Before**:
+  - Moving memos between callouts could fail or produce incomplete results
+  - Transferring callouts with memos wouldn't update storage aggregators correctly
+  - Memo contributions didn't trigger activity logs or notifications
+  - External notification service couldn't format memo creation events
+
+- **After**:
+  - All contribution lifecycle operations support memos consistently
+  - Storage aggregators properly updated when callouts with memos are transferred
+  - Memo creation triggers proper notifications (activity logging still TODO)
+  - External notification service can format memo creation events
+
+- **Severity**: Medium-High - affects user experience but doesn't cause data loss
+
+**Prevention**:
+This issue highlights the critical need for a **Contribution Type Integration Checklist**. When adding a new contribution type, the following services MUST be updated:
+
+1. **Core CRUD**:
+   - `CalloutContributionService.createCalloutContribution` (creation)
+   - `CalloutContributionService.delete` (cascade deletion) ← Issue #7
+   - `CalloutContributionService.getXXX` methods (field resolvers)
+
+2. **Support Services**:
+   - `NamingService.getReservedNameIDsInCalloutContributions` (uniqueness) ← Issue #6
+   - `CalloutService.setNameIdOnXXXData` (nameID generation)
+   - `ReferenceResolverService` (URL resolution)
+
+3. **Lifecycle Operations**:
+   - `CalloutContributionMoveService.moveContributionToCallout` (moving) ← Issue #8
+   - `CalloutTransferService.transferCallout` (transfer) ← Issue #8
+   - `CalloutResolverMutations.createContributionOnCallout` (activity/notifications) ← Issue #8
+
+4. **External Integration**:
+   - `NotificationExternalAdapter.buildSpaceCollaborationCreatedPayload` (notifications) ← Issue #8
+   - Authorization services (policy application)
+
+**Lessons Learned**:
+
+- **Pattern: Loading relations ≠ using relations**
+  - Issues #6, #7, #8 all involved loaded but unused relations
+  - Must verify ALL code paths that iterate over contribution types
+
+- **Grep search is essential**
+  - Search for `contribution.post`, `contribution.whiteboard`, `contribution.link`
+  - Every match is a potential missing `contribution.memo` integration
+
+- **Integration checklist is mandatory**
+  - Without a checklist, gaps will persist
+  - Each new contribution type requires 10+ file updates across 4 categories
+  - Recommendation: Create `docs/ContributionTypeChecklist.md`
+
+**Related Issues**:
+
+- Issue #6: NameID uniqueness gap in `NamingService`
+- Issue #7: Cascade deletion gap in `CalloutContributionService`
+- All three issues stem from incomplete contribution type pattern replication
+
+**Testing Gap**:
+
+- Integration tests would have caught all three issues (#6, #7, #8)
+- Current testing: manual only, focused on happy path
+- Future: Create contribution lifecycle integration test suite covering:
+  - Create → Query → Update → Delete (Issue #7)
+  - NameID uniqueness across multiple contributions (Issue #6)
+  - Move between callouts (Issue #8)
+  - Transfer callouts with contributions (Issue #8)
+  - Activity logging and notifications (Issue #8)

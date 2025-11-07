@@ -42,6 +42,9 @@ export class CalloutContributionMoveService {
             whiteboard: {
               profile: true,
             },
+            memo: {
+              profile: true,
+            },
           },
         }
       )) as CalloutContribution;
@@ -90,6 +93,17 @@ export class CalloutContributionMoveService {
     ) {
       throw new NotSupportedException(
         'The destination callout does not allow contributions of type LINK.',
+        LogContext.COLLABORATION
+      );
+    }
+    if (
+      contribution.memo &&
+      !targetCallout.settings.contribution.allowedTypes.includes(
+        CalloutContributionType.MEMO
+      )
+    ) {
+      throw new NotSupportedException(
+        'The destination callout does not allow contributions of type MEMO.',
         LogContext.COLLABORATION
       );
     }
