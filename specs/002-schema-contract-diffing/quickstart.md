@@ -108,18 +108,18 @@ Schema Diff Summary:
 
 ## Troubleshooting
 
-| Issue                               | Cause                                                        | Fix                                                                                                                         |
-| ----------------------------------- | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | ---------- |
-| All changes flagged due to ordering | Non-deterministic print (rare drift)                         | Run `npm run schema:sort` then re-run diff                                                                                  |
-| Enum removal blocked                | 90-day window incomplete OR removeAfter date not reached     | Revert enum value; wait until both removeAfter passed AND >=90 days since deprecation                                       |
-| Override ignored                    | Review JSON missing / reviewer not CODEOWNER / phrase absent | Ensure reviewer listed in CODEOWNERS and body contains `BREAKING-APPROVED`; export SCHEMA_OVERRIDE_REVIEWS_JSON before diff |
-| Invalid deprecation format          | Reason string missing `REMOVE_AFTER=YYYY-MM-DD               | ` prefix                                                                                                                    | Amend directive reason with full format `REMOVE_AFTER=YYYY-MM-DD | rationale` |
-| Deprecation grace warning           | Newly deprecated element missing schedule (<24h)             | Add schedule before graceExpiresAt to avoid escalation                                                                      |
-| Premature removal                   | Attempted removal before removeAfter or <90 days elapsed     | Restore element until lifecycle satisfied                                                                                   |
-| Unexpected BREAKING on type change  | Nullable ↔ non-null change or scalar jsonType change        | Re-evaluate change necessity or apply override approval                                                                     |
-| Gate exit code 1                    | Unapproved BREAKING entries present                          | Secure override or refactor change to non-breaking pattern                                                                  |
-| Gate exit code 2                    | PREMATURE_REMOVAL entries present                            | Re-add prematurely removed items; wait lifecycle window                                                                     |
-| Gate exit code 3                    | INVALID_DEPRECATION_FORMAT entries present                   | Fix reason format & re-run diff                                                                                             |
+| Issue                               | Cause                                                        | Fix                                                                                                                                                                                                                    |
+| ----------------------------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | ---------- |
+| All changes flagged due to ordering | Non-deterministic print (rare drift)                         | Run `npm run schema:sort` then re-run diff                                                                                                                                                                             |
+| Enum removal blocked                | 90-day window incomplete OR removeAfter date not reached     | Revert enum value; wait until both removeAfter passed AND >=90 days since deprecation                                                                                                                                  |
+| Override ignored                    | Review JSON missing / reviewer not CODEOWNER / phrase absent | Ensure reviewer listed in CODEOWNERS and body contains `BREAKING-APPROVED`; in CI re-submit an approval after the latest push and re-run the job; for local simulation export SCHEMA_OVERRIDE_REVIEWS_JSON before diff |
+| Invalid deprecation format          | Reason string missing `REMOVE_AFTER=YYYY-MM-DD               | ` prefix                                                                                                                                                                                                               | Amend directive reason with full format `REMOVE_AFTER=YYYY-MM-DD | rationale` |
+| Deprecation grace warning           | Newly deprecated element missing schedule (<24h)             | Add schedule before graceExpiresAt to avoid escalation                                                                                                                                                                 |
+| Premature removal                   | Attempted removal before removeAfter or <90 days elapsed     | Restore element until lifecycle satisfied                                                                                                                                                                              |
+| Unexpected BREAKING on type change  | Nullable ↔ non-null change or scalar jsonType change        | Re-evaluate change necessity or apply override approval                                                                                                                                                                |
+| Gate exit code 1                    | Unapproved BREAKING entries present                          | Secure override or refactor change to non-breaking pattern                                                                                                                                                             |
+| Gate exit code 2                    | PREMATURE_REMOVAL entries present                            | Re-add prematurely removed items; wait lifecycle window                                                                                                                                                                |
+| Gate exit code 3                    | INVALID_DEPRECATION_FORMAT entries present                   | Fix reason format & re-run diff                                                                                                                                                                                        |
 
 ### Debugging Parity Failures
 
@@ -221,7 +221,7 @@ Environment Variables:
 Limitations:
 
 - Team slug expansion not implemented (treats `org/team` as literal owner token).
-- GitHub API fetch not integrated yet; CI must populate reviews via script step.
+- CI workflow populates reviews via the GitHub Script step, saving to `tmp/schema-override-reviews.json`; local runs still need to provide JSON manually if simulating overrides.
 
 ## Grace Period (FR-014)
 
