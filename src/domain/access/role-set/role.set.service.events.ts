@@ -16,6 +16,7 @@ import { RoleSetMembershipException } from '@common/exceptions/role.set.membersh
 import { LogContext } from '@common/enums';
 import { NotificationInputCommunityNewMember } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.new.member';
 import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
+import { getContributorType } from '@domain/community/contributor/get.contributor.type';
 
 @Injectable()
 export class RoleSetEventsService {
@@ -63,6 +64,7 @@ export class RoleSetEventsService {
     const notificationInput: NotificationInputCommunityNewMember = {
       contributorID: newContributor.id,
       triggeredBy: agentInfo.userID,
+      contributorType: getContributorType(newContributor),
       community,
     };
     await this.notificationAdapterSpace.spaceCommunityNewMember(

@@ -20,6 +20,8 @@ jobs:
       # Always run schema generation with the lightweight bootstrap inside CI builds.
       # See specs/002-schema-contract-diffing/spec.md (FR-021).
       SCHEMA_BOOTSTRAP_LIGHT: '1'
+      # Override evaluation reads CODEOWNERS from this path.
+      SCHEMA_OVERRIDE_CODEOWNERS_PATH: '.github/CODEOWNERS'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -40,6 +42,40 @@ jobs:
 
       - name: Install deps
         run: pnpm install --frozen-lockfile
+
+      - name: Collect schema override reviews
+        if: github.event_name == 'pull_request'
+        id: collect_reviews
+        uses: actions/github-script@v7
+        with:
+          result-encoding: string
+          script: |
+            const pullNumber = context.payload?.pull_request?.number;
+            if (!pullNumber) {
+              core.info('No pull request number detected; returning empty reviews array');
+              return '';
+            }
+            const raw = await github.paginate(
+              github.rest.pulls.listReviews,
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pullNumber,
+                per_page: 100,
+              }
+            );
+            const reviews = raw.map(r => ({
+              reviewer: r.user?.login ?? '',
+              body: r.body ?? '',
+              state: r.state ?? '',
+            }));
+            const fs = require('fs');
+            const path = require('path');
+            const file = path.join(process.cwd(), 'tmp', 'schema-override-reviews.json');
+            fs.mkdirSync(path.dirname(file), { recursive: true });
+            fs.writeFileSync(file, JSON.stringify(reviews));
+            core.info(`Wrote ${reviews.length} review(s) to ${file}`);
+            return file;
 
       - name: Generate schema snapshot (lightweight)
         env:
@@ -115,9 +151,13 @@ jobs:
           fi
 
       - name: Run diff
+        env:
+          SCHEMA_OVERRIDE_REVIEWS_FILE: ${{ steps.collect_reviews.outputs.result }}
         run: pnpm exec ts-node scripts/schema/diff-schema.ts --old tmp/prev.schema.graphql --current schema.graphql --out change-report.json --deprecations deprecations.json || true
 
       - name: Gate evaluation (non-blocking summary)
+        env:
+          SCHEMA_OVERRIDE_REVIEWS_FILE: ${{ steps.collect_reviews.outputs.result }}
         run: pnpm exec ts-node scripts/schema/schema-gate.ts change-report.json || true
 
       - name: Prepare schema artifacts
@@ -170,4 +210,6 @@ jobs:
           message: ${{ steps.pr_comment.outputs.body }}
 
       - name: Enforce gate
+        env:
+          SCHEMA_OVERRIDE_REVIEWS_FILE: ${{ steps.collect_reviews.outputs.result }}
         run: pnpm exec ts-node scripts/schema/schema-gate.ts change-report.json

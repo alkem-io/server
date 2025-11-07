@@ -149,6 +149,7 @@ export class AuthorizationService {
         }
       }
     }
+
     const verifiedCredentialRules: IAuthorizationPolicyRuleVerifiedCredential[] =
       authorization.verifiedCredentialRules;
     for (const rule of verifiedCredentialRules) {

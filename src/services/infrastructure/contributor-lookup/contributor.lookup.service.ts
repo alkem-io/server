@@ -103,18 +103,6 @@ export class ContributorLookupService {
     return virtualContributors;
   }
 
-  public getContributorType(contributor: IContributor) {
-    if (contributor instanceof User) return RoleSetContributorType.USER;
-    if (contributor instanceof Organization)
-      return RoleSetContributorType.ORGANIZATION;
-    if (contributor instanceof VirtualContributor)
-      return RoleSetContributorType.VIRTUAL;
-    throw new RelationshipNotFoundException(
-      `Unable to determine contributor type for ${contributor.id}`,
-      LogContext.COMMUNITY
-    );
-  }
-
   async contributorsWithCredentials(
     credentialCriteria: CredentialsSearchInput,
     limit?: number

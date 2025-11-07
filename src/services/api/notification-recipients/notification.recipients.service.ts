@@ -250,7 +250,6 @@ export class NotificationRecipientsService {
         return notificationSettings.user.mentioned;
       case NotificationEvent.USER_MESSAGE:
         return notificationSettings.user.messageReceived;
-      case NotificationEvent.USER_MESSAGE_SENDER:
       case NotificationEvent.ORGANIZATION_MESSAGE_SENDER:
       case NotificationEvent.SPACE_ADMIN_COMMUNITY_APPLICATION:
         return notificationSettings.space.admin.communityApplicationReceived;
@@ -381,7 +380,6 @@ export class NotificationRecipientsService {
       case NotificationEvent.USER_MENTIONED:
       case NotificationEvent.USER_COMMENT_REPLY:
       case NotificationEvent.USER_MESSAGE:
-      case NotificationEvent.USER_MESSAGE_SENDER:
       case NotificationEvent.ORGANIZATION_MESSAGE_SENDER:
       case NotificationEvent.PLATFORM_FORUM_DISCUSSION_COMMENT:
       case NotificationEvent.USER_SPACE_COMMUNITY_APPLICATION_DECLINED: {
@@ -486,7 +484,6 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT:
       case NotificationEvent.USER_SIGN_UP_WELCOME:
       case NotificationEvent.USER_MESSAGE:
-      case NotificationEvent.USER_MESSAGE_SENDER:
       case NotificationEvent.ORGANIZATION_MESSAGE_SENDER:
       case NotificationEvent.PLATFORM_FORUM_DISCUSSION_COMMENT:
       case NotificationEvent.USER_COMMENT_REPLY:
