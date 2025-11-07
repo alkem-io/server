@@ -54,10 +54,14 @@ function main() {
   );
   if (!report.overrideApplied && hasOverrideEnv) {
     try {
-  const result = applyOverrides(report as unknown as ChangeReport);
+      const result = applyOverrides(report as unknown as ChangeReport);
       if (result.applied) {
         process.stdout.write(
           `Override applied by ${result.reviewer} during gate evaluation\n`
+        );
+      } else if (result.details?.length) {
+        process.stdout.write(
+          `Override evaluation details: ${result.details.join('; ')}\n`
         );
       }
     } catch (err) {
