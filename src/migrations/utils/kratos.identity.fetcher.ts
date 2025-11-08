@@ -108,7 +108,8 @@ class FixtureIdentityFetcher implements MigrationKratosIdentityFetcher {
 			return [];
 		}
 
-		return clone(this.mapByEmail.get(email) ?? []);
+		const normalizedEmail = email.trim().toLowerCase();
+		return clone(this.mapByEmail.get(normalizedEmail) ?? []);
 	}
 }
 

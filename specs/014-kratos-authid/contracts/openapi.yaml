@@ -23,6 +23,7 @@ paths:
         intentionally omitted as part of the documented exception for this
         feature.
       operationId: postIdentityResolve
+      security: []
       parameters:
         - in: header
           name: X-Correlation-Id
@@ -183,6 +184,7 @@ components:
       required:
         - userId
         - created
+        - auditId
       properties:
         userId:
           type: string

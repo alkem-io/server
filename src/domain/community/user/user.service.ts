@@ -861,13 +861,15 @@ export type MigrationAssignAuthIdStatus =
   | 'assigned'
   | 'already-linked'
   | 'duplicate'
-  | 'missing-user';
+  | 'missing-user'
+  | 'conflict-existing-link';
 
 export interface MigrationAssignAuthIdResult {
   status: MigrationAssignAuthIdStatus;
   userId: string;
   authId: string;
   conflictUserId?: string;
+  existingAuthId?: string;
 }
 
 export interface MigrationAssignAuthIdHelper {
@@ -932,6 +934,19 @@ export const createMigrationAssignAuthIdHelper = (
           status: 'already-linked',
           userId,
           authId,
+        };
+      }
+
+      if (user.authId && user.authId !== authId) {
+        logger?.warn?.(
+          `Migration assignAuthId conflict – user ${userId} already linked to different authId ${user.authId}, refusing to overwrite with ${authId}`,
+          LogContext.COMMUNITY
+        );
+        return {
+          status: 'conflict-existing-link',
+          userId,
+          authId,
+          existingAuthId: user.authId,
         };
       }
 

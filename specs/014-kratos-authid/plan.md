@@ -47,51 +47,97 @@ specs/[###-feature]/
 ├── quickstart.md        # Phase 1 output (/speckit.plan command)
 ├── contracts/           # Phase 1 output (/speckit.plan command)
 └── tasks.md             # Phase 2 output (/speckit.tasks command - NOT created by /speckit.plan)
+## Project Structure
+
+### Documentation (this feature)
+
+```
+specs/014-kratos-authid/
+├── spec.md               (user stories, acceptance criteria)
+├── plan.md               (this file)
+├── tasks.md              (33 implementation tasks)
+├── data-model.md         (entity schemas, DTOs)
+├── research.md           (architectural decisions)
+├── quickstart.md         (deployment reference)
+└── contracts/
+    └── openapi.yaml      (REST API contract)
 ```
 
 ### Source Code (repository root)
 
-<!--
-  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
-  for this feature. Delete unused options and expand the chosen structure with
-  real paths (e.g., apps/admin, packages/something). The delivered plan must
-  not include Option labels.
--->
+**Structure Decision**: Extends existing NestJS modular architecture with new REST module under `services/api-rest/identity-resolution`, adds migration for User.authId column, and enriches domain/user services with identity linking logic.
 
 ```text
-# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
-src/
-├── models/
-├── services/
-└── lib/
-**Structure Decision**: [Document the selected structure and reference the real
 src/
 ├── domain/community/user/
-│   ├── user.entity.ts
-│   ├── user.service.ts
-│   ├── user.repository.ts
-│   └── __tests__/   (new unit specs for identity linkage rules)
+│   ├── user.entity.ts                (added authId column)
+│   ├── user.service.ts               (added createMigrationAssignAuthIdHelper)
+│   ├── user.service.spec.ts          (extended with authId tests)
+│   ├── user.interface.ts             (exposed authId property)
+│   └── index.ts                      (re-exports)
 ├── domain/community/user-lookup/
-│   └── user.lookup.service.ts
-├── services/api-rest/
-│   ├── identity-resolution/   (new module: controller, module, service, dto)
-│   └── existing modules…
+│   └── user.lookup.service.ts        (added getUserByAuthId method)
+├── services/api-rest/identity-resolution/
+│   ├── identity-resolution.module.ts
+│   ├── identity-resolution.controller.ts
+│   ├── identity-resolution.service.ts
+│   ├── identity-resolution.metrics.ts
+│   ├── dto/
+│   │   ├── identity-resolution.request.dto.ts
+│   │   ├── identity-resolution.response.dto.ts
+│   │   └── index.ts
+│   ├── __tests__/
+│   │   └── identity-resolution.service.spec.ts
+│   └── index.ts
+├── services/api/registration/
+│   └── registration.service.ts       (updated to pass authId)
 ├── services/infrastructure/kratos/
-│   └── kratos.client.ts (extend if additional calls required)
+│   └── kratos.service.ts             (added getIdentityById method)
+├── core/authentication.agent.info/
+│   ├── agent.info.ts                 (added authId field)
+│   ├── agent.info.metadata.ts        (added authId metadata)
+│   └── agent.info.service.ts         (updated constructor)
+├── core/authentication/
+│   └── authentication.service.ts     (populates authId in AgentInfo)
+├── core/bootstrap/
+│   └── bootstrap.service.ts          (added IdentityResolutionModule import)
 ├── common/exceptions/user/
-│   └── *.ts (extend with new exceptions if needed)
+│   ├── duplicate.authid.exception.ts (new)
+│   └── index.ts                      (re-export)
+├── common/exceptions/http/
+│   ├── conflict.http.exception.ts    (new)
+│   ├── service.unavailable.http.exception.ts (new)
+│   └── index.ts                      (re-exports)
+├── platform-admin/domain/user/
+│   ├── admin.users.resolver.queries.ts (new adminUserIdentity query)
+│   ├── admin.users.module.ts         (registered new resolver)
+│   └── dto/
+│       └── admin.user.identity.dto.ts (new)
 ├── migrations/
-│   └── 2025xxxx-add-user-authid.ts (TypeORM migration for column + backfill)
+│   ├── 1762700000000-userAuthIdBackfill.ts (migration)
+│   └── utils/
+│       └── kratos.identity.fetcher.ts (new)
+├── app.module.ts                     (registered IdentityResolutionModule)
 └── config/
-  └── *.ts (update if new config keys required)
+    └── (no changes)
 
-tests/
+test/
 ├── integration/
-│   └── identity-resolution.e2e-spec.ts (Nest testing module exercising REST endpoint)
+│   ├── identity-resolution/
+│   │   └── identity-resolution.e2e-spec.ts
+│   └── registration/
+│       └── registration.authid.e2e-spec.ts
 ├── migration/
-│   └── add-user-authid.migration.spec.ts (validates up/down on snapshot database)
-└── utils/
-  └── fixtures for Kratos identity responses
+│   └── add-user-authid.migration.spec.ts
+├── utils/
+│   ├── identity-resolution.app.factory.ts (new)
+│   ├── kratos.identity.mock.ts       (new)
+│   ├── migration.test.factory.ts     (new)
+│   └── index.ts                      (re-exports)
+└── data/
+    └── identity/
+        └── kratos.identity.sample.json (new)
+```
 
 ## Complexity Tracking
 

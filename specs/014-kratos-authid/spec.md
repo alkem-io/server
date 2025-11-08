@@ -3,7 +3,7 @@
 **Feature Branch**: `014-kratos-authid`
 **Created**: 2025-11-08
 **Status**: Draft
-**Input**: User description: "In alkemo database I want to add column authID to the \"users\" table. This column is for storing  IDs from Kratos identity of the user. On migration, this column has to be filled with identities IDs of existing users from Kratos. When new user created, his Kratos ID has to be stored in the column. We also need to add private rest endpoint, which, for provided Kratos ID, returns alkemio userID. If user with such Kratos ID is not present yet, this user must be added with use of informaton from Kratos. And when it comes to migrations, you have to follow current approach, whuch is based around typeORM. Analyze how migrations  works now."
+**Input**: User description: "In alkemo database I want to add column authID to the \"users\" table. This column is for storing  IDs from Kratos identity of the user. On migration, this column has to be filled with identities IDs of existing users from Kratos. When new user created, his Kratos ID has to be stored in the column. We also need to add private rest endpoint, which, for provided Kratos ID, returns alkemio userID. If user with such Kratos ID is not present yet, this user must be added with use of information from Kratos. And when it comes to migrations, you have to follow current approach, which is based around typeORM. Analyze how migrations  works now."
 
 ## Clarifications
 
