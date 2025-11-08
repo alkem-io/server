@@ -67,7 +67,7 @@ export class TemporaryStorageService {
         results.push(document);
       } catch {
         this.logger.warn(
-          `Identified document URL ${matchedURL} for document ${documentID}but could not load it`,
+          `Identified document URL ${matchedURL} for document ${documentID} but could not load it`,
           LogContext.DOCUMENT
         );
       }
