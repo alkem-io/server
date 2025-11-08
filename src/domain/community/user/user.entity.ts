@@ -36,6 +36,13 @@ export class User extends ContributorBase implements IUser {
   })
   accountUpn!: string;
 
+  @Column('char', {
+    length: UUID_LENGTH,
+    nullable: true,
+    unique: true,
+  })
+  authId?: string | null;
+
   @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: false })
   firstName!: string;
 

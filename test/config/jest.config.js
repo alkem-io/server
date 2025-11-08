@@ -21,7 +21,7 @@ module.exports = {
   moduleFileExtensions: ['js', 'json', 'ts'],
   rootDir: '../../',
   roots: ['<rootDir>/test', '<rootDir>/src'],
-  testMatch: ['**/?(*.)+(spec).ts'],
+  testMatch: ['**/?(*.)+(spec).ts', '**/?(*.)+(e2e-spec).ts'],
   transform: {
     '^.+\\.(t|j)s$': 'ts-jest',
   },
@@ -37,6 +37,7 @@ module.exports = {
     // Schema contract feature: include diffing, governance, deprecation & bootstrap modules
     '<rootDir>/src/schema-contract/**/*.ts',
     '<rootDir>/src/schema-bootstrap/**/*.ts',
+    '<rootDir>/src/migrations/**/*.ts',
   ],
   testTimeout: 90000,
   collectCoverage: true,

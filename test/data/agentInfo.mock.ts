@@ -21,6 +21,7 @@ export const agentInfoData: { agentInfo: AgentInfo } = {
     communicationID: '@admin=alkem.io:matrix.alkem.io',
     agentID: '66000b15-ae7f-448e-aade-3b4ae1fd4c33',
     avatarURL: '',
+    authId: 'admin-kratos-id',
     // expiry is optional and not set in the original mock
   },
 };

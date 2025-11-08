@@ -413,19 +413,20 @@ export class BootstrapService {
         `Unable to load fixed admin user for creating organization: ${adminUserEmail}`
       );
     }
-    return {
-      isAnonymous: false,
-      userID: adminUser.id,
-      email: adminUser.email,
-      emailVerified: true,
-      firstName: adminUser.firstName,
-      lastName: adminUser.lastName,
-      avatarURL: '',
-      credentials: adminUser.agent?.credentials || [],
-      agentID: adminUser.agent?.id,
-      verifiedCredentials: [],
-      communicationID: adminUser.communicationID,
-    };
+    const agentInfo = new AgentInfo();
+    agentInfo.isAnonymous = false;
+    agentInfo.userID = adminUser.id;
+    agentInfo.email = adminUser.email;
+    agentInfo.emailVerified = true;
+    agentInfo.firstName = adminUser.firstName;
+    agentInfo.lastName = adminUser.lastName;
+    agentInfo.avatarURL = '';
+    agentInfo.credentials = adminUser.agent?.credentials || [];
+    agentInfo.agentID = adminUser.agent?.id ?? '';
+    agentInfo.verifiedCredentials = [];
+    agentInfo.communicationID = adminUser.communicationID;
+    agentInfo.authId = adminUser.authId ?? '';
+    return agentInfo;
   }
 
   private async ensureSpaceSingleton(agentInfo: AgentInfo) {

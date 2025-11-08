@@ -1,0 +1,94 @@
+{
+  "existingUser": {
+    "id": "9f1a6f34-8b2c-47b7-b999-3e78a289d9d1",
+    "schema_id": "customer",
+    "schema_url": "https://kratos.local/schemas/customer.json",
+    "state": "active",
+    "state_changed_at": "2025-10-31T12:00:00.000Z",
+    "created_at": "2024-09-12T09:15:00.000Z",
+    "updated_at": "2025-10-31T12:00:00.000Z",
+    "traits": {
+      "email": "linked.user@example.com",
+      "name": {
+        "first": "Linked",
+        "last": "User"
+      },
+      "picture": "https://cdn.alkemio.test/avatars/linked-user.png"
+    },
+    "credentials": {
+      "password": {
+        "type": "password",
+        "identifiers": [
+          "linked.user@example.com"
+        ]
+      }
+    },
+    "recovery_addresses": [
+      {
+        "id": "5b9307dd-6678-4b2e-bf8f-8722ba864070",
+        "via": "email",
+        "value": "linked.user@example.com",
+        "created_at": "2024-09-12T09:15:00.000Z",
+        "updated_at": "2025-10-31T12:00:00.000Z"
+      }
+    ],
+    "verifiable_addresses": [
+      {
+        "id": "8193a3bf-f8be-4e5b-8733-ff7de904464a",
+        "via": "email",
+        "value": "linked.user@example.com",
+        "status": "completed",
+        "verified": true,
+        "verified_at": "2024-09-12T09:16:30.000Z",
+        "created_at": "2024-09-12T09:15:00.000Z",
+        "updated_at": "2024-09-12T09:16:30.000Z"
+      }
+    ]
+  },
+  "newUser": {
+    "id": "1d4c52e4-b8aa-4b38-8c0f-36a4e5a8f58f",
+    "schema_id": "customer",
+    "schema_url": "https://kratos.local/schemas/customer.json",
+    "state": "active",
+    "state_changed_at": "2025-10-31T12:05:00.000Z",
+    "created_at": "2025-10-31T12:00:00.000Z",
+    "updated_at": "2025-10-31T12:05:00.000Z",
+    "traits": {
+      "email": "new.identity@example.com",
+      "name": {
+        "first": "New",
+        "last": "Identity"
+      },
+      "picture": "https://cdn.alkemio.test/avatars/new-identity.png"
+    },
+    "credentials": {
+      "password": {
+        "type": "password",
+        "identifiers": [
+          "new.identity@example.com"
+        ]
+      }
+    },
+    "recovery_addresses": [
+      {
+        "id": "c660183e-2e3a-4420-9d02-06cfe2790d9f",
+        "via": "email",
+        "value": "new.identity@example.com",
+        "created_at": "2025-10-31T12:00:00.000Z",
+        "updated_at": "2025-10-31T12:05:00.000Z"
+      }
+    ],
+    "verifiable_addresses": [
+      {
+        "id": "2dd574b0-3d2e-4b61-b337-319b62624f59",
+        "via": "email",
+        "value": "new.identity@example.com",
+        "status": "sent",
+        "verified": false,
+        "verified_at": "",
+        "created_at": "2025-10-31T12:00:00.000Z",
+        "updated_at": "2025-10-31T12:05:00.000Z"
+      }
+    ]
+  }
+}

@@ -37,4 +37,7 @@ export class IUser extends IContributorBase implements IContributor {
   // Protected via field access for gdpr reasons
   email!: string;
   phone?: string;
+
+  // Internal Kratos identity linkage; intentionally not exposed via GraphQL schema
+  authId?: string | null;
 }

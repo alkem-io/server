@@ -21,7 +21,10 @@ import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { RoleName } from '@common/enums/role.name';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
-import { RelationshipNotFoundException } from '@common/exceptions';
+import {
+  RelationshipNotFoundException,
+  ValidationException,
+} from '@common/exceptions';
 
 export class RegistrationService {
   constructor(
@@ -42,6 +45,13 @@ export class RegistrationService {
     if (!agentInfo.emailVerified) {
       throw new UserNotVerifiedException(
         `User '${agentInfo.email}' not verified`,
+        LogContext.COMMUNITY
+      );
+    }
+
+    if (!agentInfo.authId?.trim()) {
+      throw new ValidationException(
+        'Agent authId is required to register a new user',
         LogContext.COMMUNITY
       );
     }

@@ -1,0 +1,13 @@
+# Research Findings
+
+- **Decision**: Reuse `UserService.createUserFromAgentInfo` (via `RegistrationService.registerNewUser`) when provisioning a user during identity resolution calls.
+  - **Rationale**: The existing flow (see `src/services/api/registration/registration.service.ts` and `src/domain/community/user/user.service.ts`) enforces email validation, prevents duplicate registrations, builds default profile data, creates authorization policies, storage aggregators, and triggers communication registration plus caching. Leveraging it prevents bypassing domain invariants and avoids duplicating side effects like avatar storage and notification defaults.
+  - **Alternatives considered**: Creating a lighter repository-level insert would be faster but risks missing required relations (profile, agent, settings) and violating Constitution Principle 1. Wrapping only repository calls would also skip existing logging and events.
+
+- **Decision**: Extend `KratosService` to fetch identities by ID and construct `AgentInfo` through `AuthenticationService.createAgentInfo` before invoking the domain service.
+  - **Rationale**: `AuthenticationService` already converts Ory identity traits into `AgentInfo`, enriches metadata, and caches results (`src/core/authentication/authentication.service.ts`). Adding a `getIdentityById` helper around `IdentityApi.getIdentity` keeps Kratos integration centralized and ensures downstream creation uses verified email/traits consistent with login. This also supports reuse of verification flags and avatar URLs.
+  - **Alternatives considered**: Manually mapping the identity payload inside the new REST endpoint duplicates logic, risks drift from authentication flows, and would require duplicating cache handling. Injecting Kratos admin SDK directly into the controller would break modular boundaries.
+
+- **Decision**: Implement the backfill using a TypeORM migration that follows the current CLI workflow (`pnpm run migration:generate`, `pnpm run migration:run`, `.scripts/migrations/run_validate_migration.sh`).
+  - **Rationale**: Existing migrations under `src/migrations` use `MigrationInterface` with `QueryRunner`, and repository scripts (`migration:run`, `migration:revert`, `migration:validate`) rely on `src/config/migration.config.ts`. Aligning with this approach satisfies Architecture Standard 3 and enables validation via the provided snapshot tooling.
+  - **Alternatives considered**: Running an ad-hoc script or using raw SQL outside TypeORM would bypass the standard validation pipeline and automated rollback tooling, increasing risk. Applying a schema change through manual SQL isn't acceptable because it would not update the migration history table.

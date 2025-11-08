@@ -15,6 +15,7 @@ import {
   Session,
 } from '@ory/kratos-client';
 import jwt_decode from 'jwt-decode';
+import { isAxiosError } from 'axios';
 import { KratosPayload } from '@services/infrastructure/kratos/types/kratos.payload';
 import { LogContext } from '@common/enums';
 import { AuthenticationType } from '@common/enums/authentication.type';
@@ -45,6 +46,10 @@ import { SessionInvalidReason } from './types/session.invalid.enum';
  */
 @Injectable()
 export class KratosService {
+  private static readonly IDENTITY_LOOKUP_TIMEOUT_MS = 5000;
+  private static readonly IDENTITY_LOOKUP_RETRY_ATTEMPTS = 3;
+  private static readonly IDENTITY_LOOKUP_RETRY_DELAY_MS = 250;
+
   private readonly kratosPublicUrlServer: string;
   private readonly adminPasswordIdentifier: string;
   private readonly adminPassword: string;
@@ -277,6 +282,65 @@ export class KratosService {
     return identity[0];
   }
 
+  public async getIdentityById(id: string): Promise<Identity | undefined> {
+    for (
+      let attempt = 1;
+      attempt <= KratosService.IDENTITY_LOOKUP_RETRY_ATTEMPTS;
+      attempt += 1
+    ) {
+      const abortController = new AbortController();
+      const timer = setTimeout(() => {
+        abortController.abort(
+          `Kratos identity lookup timed out after ${KratosService.IDENTITY_LOOKUP_TIMEOUT_MS}ms`
+        );
+      }, KratosService.IDENTITY_LOOKUP_TIMEOUT_MS);
+
+      try {
+        const { data } = await this.kratosIdentityClient.getIdentity(
+          { id },
+          { signal: abortController.signal }
+        );
+
+        this.logger.log(
+          `Resolved Kratos identity ${id} on attempt ${attempt}`,
+          LogContext.KRATOS
+        );
+        return data;
+      } catch (error) {
+        if (isAxiosError(error) && error.response?.status === 404) {
+          this.logger.log(`Kratos identity ${id} not found`, LogContext.KRATOS);
+          return undefined;
+        }
+
+        const message = (error as Error)?.message ?? 'unknown error';
+
+        if (isAxiosError(error) && error.code === 'ERR_CANCELED') {
+          this.logger.warn(
+            `Kratos identity lookup timed out for ${id} on attempt ${attempt}`,
+            LogContext.KRATOS
+          );
+        } else {
+          this.logger.warn(
+            `Kratos identity lookup failed for ${id} on attempt ${attempt}: ${message}`,
+            LogContext.KRATOS
+          );
+        }
+
+        if (attempt === KratosService.IDENTITY_LOOKUP_RETRY_ATTEMPTS) {
+          throw error instanceof Error
+            ? error
+            : new Error(`Kratos identity lookup failed for ${id}: ${message}`);
+        }
+
+        await this.delay(KratosService.IDENTITY_LOOKUP_RETRY_DELAY_MS);
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
+    return undefined;
+  }
+
   /**
    * Deletes an identity by email.
    *
@@ -411,6 +475,12 @@ export class KratosService {
       );
       throw error;
     }
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => {
+      setTimeout(resolve, ms);
+    });
   }
 
   /***

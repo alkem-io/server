@@ -1,0 +1,220 @@
+openapi: 3.1.0
+info:
+  title: Alkemio Identity Resolution API (Internal)
+  version: 0.1.0
+  description: >-
+    Private service-to-service endpoint that resolves an Alkemio user ID from a
+    supplied Kratos identity identifier. Provisions the user via the existing
+    onboarding flow when the identity has not yet been linked.
+servers:
+  - url: https://platform-internal.local
+    description: Internal ingress for service calls
+paths:
+  /rest/internal/identity/resolve:
+    post:
+      tags:
+        - identity-resolution
+      summary: Resolve or provision user by Kratos identity
+      description: >-
+        Returns the Alkemio user identifier for the provided Kratos identity. If
+        the identity is unknown, the service creates the user using the standard
+        registration pipeline and returns the new identifier. The endpoint is
+        deployed behind internal ingress, and per-request authentication is
+        intentionally omitted as part of the documented exception for this
+        feature.
+      operationId: postIdentityResolve
+      parameters:
+        - in: header
+          name: X-Correlation-Id
+          description: >-
+            Optional correlation identifier supplied by the caller. Must be a
+            UUIDv4. When omitted, the service generates a new correlation ID and
+            echoes it back in the response headers and body.
+          required: false
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IdentityResolutionRequest'
+      responses:
+        "200":
+          description: User was resolved or provisioned successfully.
+          headers:
+            X-Correlation-Id:
+              description: Correlation identifier applied to the request.
+              schema:
+                type: string
+                format: uuid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdentityResolutionResponse'
+              examples:
+                resolved:
+                  summary: Existing user resolved
+                  value:
+                    userId: 85735cdb-1a42-4e90-90a9-44fcb8b6cb0b
+                    created: false
+                    auditId: 74d6f9c4-3b24-42a6-b776-881ae16e6a58
+                provisioned:
+                  summary: New user provisioned
+                  value:
+                    userId: 2f92e5da-d0f3-4d39-8f51-0a2567120645
+                    created: true
+                    auditId: 6cb18f63-92bc-4c6d-8733-7f864a0ffde2
+        "400":
+          description: Validation failure (e.g., malformed identifier, missing traits).
+          headers:
+            X-Correlation-Id:
+              description: Correlation identifier applied to the request.
+              schema:
+                type: string
+                format: uuid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidInput:
+                  summary: Invalid request payload
+                  value:
+                    error: bad_user_input
+                    message: "body.kratosIdentityId must be a valid UUID"
+                    correlationId: 6ddf5ab6-2fe1-4c66-b786-ce6fde048da4
+                    retryable: false
+        "404":
+          description: Kratos identity not found.
+          headers:
+            X-Correlation-Id:
+              description: Correlation identifier applied to the request.
+              schema:
+                type: string
+                format: uuid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notFound:
+                  summary: Identity not present in Kratos
+                  value:
+                    error: identity_not_found
+                    message: Kratos identity not found.
+                    correlationId: 4a74f3f7-3e5a-47d6-9836-d541203bdb16
+                    retryable: false
+        "409":
+          description: Duplicate identity assignment detected for another user.
+          headers:
+            X-Correlation-Id:
+              description: Correlation identifier applied to the request.
+              schema:
+                type: string
+                format: uuid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                duplicate:
+                  summary: Identity already linked to a different user
+                  value:
+                    error: identity_duplicate
+                    message: Kratos identity already linked to another user.
+                    correlationId: d3fe0d44-9a25-4b53-9d9a-1d7242a7d946
+                    retryable: false
+        "422":
+          description: Kratos identity payload is missing required traits for provisioning.
+          headers:
+            X-Correlation-Id:
+              description: Correlation identifier applied to the request.
+              schema:
+                type: string
+                format: uuid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missingTraits:
+                  summary: Kratos identity missing required attributes
+                  value:
+                    error: identity_traits_missing
+                    message: Identity payload lacks required profile traits.
+                    correlationId: 0ece5d3a-ef8f-4a5a-b7f4-9962d3663a07
+                    retryable: false
+        "503":
+          description: Downstream dependency (Kratos or database) unavailable.
+          headers:
+            X-Correlation-Id:
+              description: Correlation identifier applied to the request.
+              schema:
+                type: string
+                format: uuid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                kratosUnavailable:
+                  summary: Kratos lookup failed
+                  value:
+                    error: kratos_unavailable
+                    message: Identity resolution unavailable. Please retry.
+                    correlationId: 6a1f8fcb-9bfb-4b7b-b810-c0e52bb347dd
+                    retryable: true
+components:
+  schemas:
+    IdentityResolutionRequest:
+      type: object
+      required:
+        - kratosIdentityId
+      properties:
+        kratosIdentityId:
+          type: string
+          description: Kratos identity UUID.
+          examples:
+            - 9f1a6f34-8b2c-47b7-b999-3e78a289d9d1
+    IdentityResolutionResponse:
+      type: object
+      required:
+        - userId
+        - created
+      properties:
+        userId:
+          type: string
+          format: uuid
+          description: Alkemio user identifier for the resolved or newly created account.
+        created:
+          type: boolean
+          description: Indicates whether the user record was provisioned during this call.
+        auditId:
+          type: string
+          format: uuid
+          description: Correlation identifier for tracing in logs/metrics.
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Stable machine-readable error code.
+          examples:
+            - identity_not_found
+            - identity_duplicate
+            - kratos_unavailable
+        message:
+          type: string
+          description: Human-readable error description.
+        correlationId:
+          type: string
+          format: uuid
+          description: Request correlation identifier.
+        retryable:
+          type: boolean
+          description: Indicates whether the caller can retry the request safely.

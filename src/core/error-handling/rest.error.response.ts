@@ -5,7 +5,7 @@ export interface RestErrorResponse {
   statusCode: number;
   timestamp: string;
   message: string;
-  code: AlkemioErrorStatus;
+  code: AlkemioErrorStatus | string;
   errorId: string;
   details?: ExceptionDetails;
   context?: LogContext;

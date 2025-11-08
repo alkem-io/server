@@ -9,7 +9,7 @@ export class BaseHttpException extends HttpException {
     public message: string,
     public statusCode: HttpStatus,
     public context: LogContext,
-    public code: AlkemioErrorStatus,
+    public code: AlkemioErrorStatus | string,
     public details?: ExceptionDetails,
     public errorId: string = randomUUID()
   ) {

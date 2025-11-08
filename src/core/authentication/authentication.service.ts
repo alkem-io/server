@@ -179,6 +179,7 @@ export class AuthenticationService {
     agentInfo.firstName = oryTraits.name.first;
     agentInfo.lastName = oryTraits.name.last;
     agentInfo.avatarURL = oryTraits.picture;
+    agentInfo.authId = oryIdentity.id ?? '';
     agentInfo.expiry = session?.expires_at
       ? new Date(session.expires_at).getTime()
       : undefined;

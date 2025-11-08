@@ -34,6 +34,26 @@ pnpm run migration:show
 
 **NB! Running untested migrations automatically may result in a data loss!**
 
+### Migration Audit & Validation
+
+For migrations that backfill or modify critical user data (e.g., `userAuthIdBackfill`), validation scripts capture audit artifacts:
+
+1. **Run validation script**: `.scripts/migrations/run_validate_migration.sh` snapshots the database, applies the migration, exports affected records to CSV, compares against reference data, and restores the backup.
+2. **Review audit table**: Check `user_authid_backfill_audit` for any unresolved identities after running the migration on staging or production.
+3. **Follow-up on failures**: For users in the audit table with `resolution_status = 'failed'`, investigate Kratos identity mismatches manually using the Kratos admin API or support tooling.
+4. **Cleanup audit data**: Retain the audit table for at least 90 days post-migration for investigation purposes, then archive or drop as per data retention policy.
+
+**Example**: After deploying the `userAuthIdBackfill` migration to production, run:
+
+```sql
+SELECT user_id, email, kratos_error, resolution_status, attempted_at
+FROM user_authid_backfill_audit
+WHERE resolution_status != 'success'
+ORDER BY attempted_at DESC;
+```
+
+Document any patterns (e.g., deleted Kratos identities, network timeouts) and escalate recurring issues to the platform team.
+
 ## MySQL Server
 
 The server used by Alkemio is MySql.

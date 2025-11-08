@@ -300,4 +300,19 @@ Automate generation via AST analysis:
 | VisualAuthorizationService                   | L              | Inherits; no children                                                                                                                |
 | WhiteboardAuthorizationService               | E              | Inherits; cascades to Profile                                                                                                        |
 
-Last updated: 2025-10-15.
+---
+
+### Administrative Access & Identity Resolution
+
+**Platform Admin Queries**:
+- The `adminUserIdentity` query (requires `PLATFORM_ADMIN` credential) exposes user identity details including `authId` for support investigations.
+- Authorization check: `this.authorizationService.grantAccessOrFail(agentInfo, authorization, AuthorizationPrivilege.PLATFORM_ADMIN, ...)`.
+- Logs access attempts with correlation IDs for audit trails.
+
+**Identity Resolution REST Endpoint**:
+- `POST /rest/internal/identity/resolve` operates **without JWT bearer authentication** (network-isolated internal service).
+- Authorization: Implicitly restricted by network policy; no GraphQL authorization tree involvement.
+- Logging: Structured logs include `correlationId`, `kratosIdentityId`, resolution outcome (`created`, `userId`), and error contexts.
+- Use case: Kratos identity → Alkemio user mapping for session establishment and user provisioning flows.
+
+Last updated: 2025-11-08.

@@ -97,6 +97,7 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
 import { PlatformAdminModule } from './platform-admin/admin/platform.admin.module';
 import { NotificationRecipientsModule } from '@services/api/notification-recipients/notification.recipients.module';
 import { InAppNotificationAdminModule } from './platform-admin/in-app-notification/in.app.notification.admin.module';
+import { IdentityResolutionModule } from '@services/api-rest/identity-resolution';
 
 @Module({
   imports: [
@@ -301,6 +302,7 @@ import { InAppNotificationAdminModule } from './platform-admin/in-app-notificati
     InnovationHubModule,
     SsiCredentialFlowModule,
     StorageAccessModule,
+    IdentityResolutionModule,
     MeModule,
     ChatGuidanceModule,
     VirtualContributorModule,

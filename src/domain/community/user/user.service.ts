@@ -1,5 +1,6 @@
 import { LogContext, ProfileType } from '@common/enums';
 import {
+  DuplicateAuthIdException,
   EntityNotFoundException,
   ForbiddenException,
   RelationshipNotFoundException,
@@ -24,7 +25,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { Cache, CachingConfig } from 'cache-manager';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { FindOneOptions, QueryRunner, Repository } from 'typeorm';
 import { DirectRoomResult } from '../../communication/communication/dto/communication.dto.send.direct.message.user.result';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
@@ -224,6 +225,34 @@ export class UserService {
     return user;
   }
 
+  async assignAuthId(userId: string, authId: string): Promise<IUser> {
+    const targetUser = await this.getUserOrFail(userId);
+    const conflictingUser =
+      await this.userLookupService.getUserByAuthId(authId);
+
+    if (conflictingUser && conflictingUser.id !== targetUser.id) {
+      throw new DuplicateAuthIdException(authId, LogContext.COMMUNITY);
+    }
+
+    if (targetUser.authId === authId) {
+      this.logger.debug?.(
+        `AuthId ${authId} already linked to user ${userId}`,
+        LogContext.COMMUNITY
+      );
+      return targetUser;
+    }
+
+    targetUser.authId = authId;
+    const updatedUser = await this.save(targetUser);
+    await this.setUserCache(updatedUser);
+
+    this.logger.log?.(
+      `Assigned authId ${authId} to user ${userId}`,
+      LogContext.COMMUNITY
+    );
+    return updatedUser;
+  }
+
   private getDefaultUserSettings(): CreateUserSettingsInput {
     const settings: CreateUserSettingsInput = {
       communication: {
@@ -346,10 +375,26 @@ export class UserService {
       );
     }
 
+    const authId = agentInfo.authId?.trim();
+    if (!authId) {
+      throw new ValidationException(
+        'AuthId must be provided when creating a user from agent info',
+        LogContext.COMMUNITY
+      );
+    }
+
     if (await this.userLookupService.isRegisteredUser(email)) {
       throw new UserAlreadyRegisteredException(
         `User with email: ${email} already registered`
       );
+    }
+
+    const existingByAuthId = await this.userRepository.findOne({
+      where: { authId },
+    });
+
+    if (existingByAuthId) {
+      throw new DuplicateAuthIdException(authId, LogContext.COMMUNITY);
     }
 
     const userData: CreateUserInput = {
@@ -368,7 +413,8 @@ export class UserService {
       },
     };
 
-    return await this.createUser(userData, agentInfo);
+    const createdUser = await this.createUser(userData, agentInfo);
+    return await this.assignAuthId(createdUser.id, authId);
   }
 
   private async validateUserProfileCreationRequest(
@@ -810,3 +856,114 @@ export class UserService {
     );
   }
 }
+
+export type MigrationAssignAuthIdStatus =
+  | 'assigned'
+  | 'already-linked'
+  | 'duplicate'
+  | 'missing-user';
+
+export interface MigrationAssignAuthIdResult {
+  status: MigrationAssignAuthIdStatus;
+  userId: string;
+  authId: string;
+  conflictUserId?: string;
+}
+
+export interface MigrationAssignAuthIdHelper {
+  assign(userId: string, authId: string): Promise<MigrationAssignAuthIdResult>;
+}
+
+type LoggerLike = Pick<LoggerService, 'log' | 'warn' | 'debug'>;
+
+const USER_TABLE_NAME = 'user';
+
+export const createMigrationAssignAuthIdHelper = (
+  queryRunner: QueryRunner,
+  logger?: LoggerLike
+): MigrationAssignAuthIdHelper => {
+  const fetchUserById = async (
+    userId: string
+  ): Promise<{ id: string; authId: string | null } | undefined> => {
+    const result = (await queryRunner.query(
+      `SELECT id, authId FROM \`${USER_TABLE_NAME}\` WHERE id = ? LIMIT 1`,
+      [userId]
+    )) as Array<{ id: string; authId: string | null }>;
+
+    return result.length ? result[0] : undefined;
+  };
+
+  const fetchUserByAuthId = async (
+    authId: string,
+    excludeUserId: string
+  ): Promise<{ id: string } | undefined> => {
+    const result = (await queryRunner.query(
+      `SELECT id FROM \`${USER_TABLE_NAME}\` WHERE authId = ? AND id <> ? LIMIT 1`,
+      [authId, excludeUserId]
+    )) as Array<{ id: string }>;
+
+    return result.length ? result[0] : undefined;
+  };
+
+  return {
+    async assign(
+      userId: string,
+      authId: string
+    ): Promise<MigrationAssignAuthIdResult> {
+      const user = await fetchUserById(userId);
+      if (!user) {
+        logger?.warn?.(
+          `Migration assignAuthId skipped – user ${userId} not found`,
+          LogContext.COMMUNITY
+        );
+        return {
+          status: 'missing-user',
+          userId,
+          authId,
+        };
+      }
+
+      if (user.authId === authId) {
+        logger?.debug?.(
+          `Migration assignAuthId skipped – user ${userId} already linked to ${authId}`,
+          LogContext.COMMUNITY
+        );
+        return {
+          status: 'already-linked',
+          userId,
+          authId,
+        };
+      }
+
+      const conflictingUser = await fetchUserByAuthId(authId, userId);
+
+      if (conflictingUser && conflictingUser.id !== userId) {
+        logger?.warn?.(
+          `Migration assignAuthId conflict – authId ${authId} already linked to user ${conflictingUser.id}, skipping user ${userId}`,
+          LogContext.COMMUNITY
+        );
+        return {
+          status: 'duplicate',
+          userId,
+          authId,
+          conflictUserId: conflictingUser.id,
+        };
+      }
+
+      await queryRunner.query(
+        `UPDATE \`${USER_TABLE_NAME}\` SET authId = ? WHERE id = ?`,
+        [authId, userId]
+      );
+      logger?.log?.(
+        `Migration assignAuthId linked user ${userId} to authId ${authId}`,
+        LogContext.COMMUNITY
+      );
+
+      return {
+        status: 'assigned',
+        userId,
+        authId,
+      };
+    },
+  };
+};

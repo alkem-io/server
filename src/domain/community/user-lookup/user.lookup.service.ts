@@ -63,6 +63,33 @@ export class UserLookupService {
     return user;
   }
 
+  public async getUserByAuthId(
+    authId: string,
+    options?: FindOneOptions<User> | undefined
+  ): Promise<IUser | null> {
+    const user: IUser | null = await this.entityManager.findOne(User, {
+      where: {
+        authId,
+      },
+      ...options,
+    });
+
+    if (!user) {
+      this.logger.log(
+        `User lookup failed for authId ${authId}`,
+        LogContext.COMMUNITY
+      );
+      return null;
+    }
+
+    this.logger.log(
+      `User lookup resolved user ${user.id} via authId ${authId}`,
+      LogContext.COMMUNITY
+    );
+
+    return user;
+  }
+
   public async getUserByNameIdOrFail(
     userNameID: string,
     options?: FindOneOptions<User> | undefined

@@ -64,6 +64,7 @@ export class AgentInfoService {
       userAgentInfoMetadata.agentID = user.agent.id;
       userAgentInfoMetadata.userID = user.id;
       userAgentInfoMetadata.communicationID = user.communicationID;
+      userAgentInfoMetadata.authId = user.authId ?? undefined;
       return userAgentInfoMetadata;
     } catch (error) {
       this.logger.verbose?.(
@@ -92,6 +93,9 @@ export class AgentInfoService {
     agentInfo.agentID = agentInfoMetadata.agentID;
     agentInfo.userID = agentInfoMetadata.userID;
     agentInfo.communicationID = agentInfoMetadata.communicationID;
+    if (agentInfoMetadata.authId) {
+      agentInfo.authId = agentInfoMetadata.authId;
+    }
 
     if (agentInfoMetadata.credentials) {
       agentInfo.credentials = agentInfoMetadata.credentials;
@@ -143,6 +147,7 @@ export class AgentInfoService {
     const agentInfo = new AgentInfo();
     agentInfo.credentials = credentials;
     agentInfo.verifiedCredentials = verifiedCredentials;
+    agentInfo.authId = user.authId ?? '';
     return agentInfo;
   }
 }

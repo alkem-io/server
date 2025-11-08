@@ -21,6 +21,8 @@ The server primarily interacts via a _*GraphQL api*_' that it exposes. This can 
 
 This api is used by the [Alkemio Web Client](http://github.com/alkem-io/client-web), but also by any other clients / integrations that need to interact with the Alkemio server.
 
+Additionally, the server exposes internal REST endpoints for network-isolated service-to-service communication (e.g., identity resolution at `/rest/internal/identity/resolve`). These endpoints operate without bearer authentication and are intended for trusted internal services only.
+
 The key takeaway is that the Alkemio server is designed to be integrated, so that other tools or user interfaces can make use of the logical domain model maintained by the server.
 
 ## **Additional information**:
