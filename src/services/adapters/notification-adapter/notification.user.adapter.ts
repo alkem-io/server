@@ -358,11 +358,10 @@ export class NotificationUserAdapter {
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length > 0) {
-      const inAppPayload: InAppNotificationPayloadSpace =
-        {
-          type: NotificationEventPayload.SPACE,
-          spaceID: eventData.spaceID,
-        };
+      const inAppPayload: InAppNotificationPayloadSpace = {
+        type: NotificationEventPayload.SPACE,
+        spaceID: eventData.spaceID,
+      };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
         NotificationEvent.USER_SPACE_COMMUNITY_APPLICATION_DECLINED,

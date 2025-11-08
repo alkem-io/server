@@ -1,5 +1,12 @@
 import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
-import { Brackets, FindOptionsWhere, In, Not, Repository, UpdateResult } from 'typeorm';
+import {
+  Brackets,
+  FindOptionsWhere,
+  In,
+  Not,
+  Repository,
+  UpdateResult,
+} from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Inject } from '@nestjs/common/decorators';
@@ -11,7 +18,11 @@ import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationEventsFilterInput } from '@services/api/me/dto/me.notification.event.filter.dto.input';
 import { CreateInAppNotificationInput } from './dto/in.app.notification.create';
 import { IInAppNotification } from './in.app.notification.interface';
-import { getPaginationResults, PaginatedInAppNotifications, PaginationArgs } from '@core/pagination';
+import {
+  getPaginationResults,
+  PaginatedInAppNotifications,
+  PaginationArgs,
+} from '@core/pagination';
 import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
 import { InAppNotificationCoreEntityIds } from './in.app.notification.core.entity.ids';
 
