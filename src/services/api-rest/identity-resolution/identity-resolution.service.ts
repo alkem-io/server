@@ -130,6 +130,7 @@ export class IdentityResolutionService {
     let user;
     try {
       user = await this.registrationService.registerNewUser(agentInfo);
+      // Note: registerNewUser -> createUserFromAgentInfo already assigns authId internally
     } catch (error) {
       this.metrics.recordFailure(IdentityResolutionFailureReason.UNEXPECTED);
       this.logger.error?.(
@@ -138,31 +139,6 @@ export class IdentityResolutionService {
         LogContext.COMMUNITY
       );
       throw error;
-    }
-
-    try {
-      await this.userService.assignAuthId(user.id, identity.id);
-    } catch (error) {
-      if (error instanceof DuplicateAuthIdException) {
-        this.metrics.recordFailure(
-          IdentityResolutionFailureReason.DUPLICATE_AUTH_ID
-        );
-        this.logger.warn?.(
-          `Duplicate authId ${identity.id} detected during provisioning (auditId=${auditId})`,
-          LogContext.COMMUNITY
-        );
-        throw error;
-      }
-
-      this.metrics.recordFailure(IdentityResolutionFailureReason.UNEXPECTED);
-      this.logger.error?.(
-        `Failed to assign authId ${identity.id} to user ${user.id} (auditId=${auditId})`,
-        error instanceof Error ? error.stack : undefined,
-        LogContext.COMMUNITY
-      );
-      throw new InternalServerErrorException(
-        'Unable to link user with Kratos identity'
-      );
     }
 
     const result: IdentityResolutionResult = {

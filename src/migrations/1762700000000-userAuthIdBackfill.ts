@@ -37,6 +37,21 @@ class MigrationConsoleLogger {
   }
 }
 
+/**
+ * Migration to add authId column to User entity and backfill from Kratos.
+ *
+ * Error Handling Strategy:
+ * This migration uses a fail-fast approach. If any user fails to be processed
+ * (e.g., Kratos API error, database constraint violation), the migration stops
+ * immediately after recording the failure in the audit table. This ensures:
+ * - No partial success state that's difficult to reason about
+ * - Clear failure signal for operators
+ * - Systematic issues (affecting multiple users) are caught early
+ * - Audit table captures the exact failure point for diagnosis
+ *
+ * After fixing the underlying issue, operators can safely re-run the migration
+ * as it processes only users WHERE authId IS NULL.
+ */
 export class UserAuthIdBackfill1762700000000
   implements MigrationInterface
 {

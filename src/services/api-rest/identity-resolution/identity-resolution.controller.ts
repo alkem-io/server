@@ -58,16 +58,7 @@ export class IdentityResolutionController {
       correlationId
     );
 
-    if (!body?.kratosIdentityId) {
-      throw new BaseHttpException(
-        'kratosIdentityId is required.',
-        HttpStatus.BAD_REQUEST,
-        LogContext.AUTH,
-        'identity_request_invalid',
-        undefined,
-        correlationId
-      );
-    }
+    // ValidationPipe ensures kratosIdentityId is defined and is a valid UUID
 
     this.logger?.debug?.(
       `Identity resolution controller dispatch for Kratos identity ${body.kratosIdentityId} (correlationId=${correlationId})`,
