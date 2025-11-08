@@ -120,7 +120,7 @@ export class IdentityResolutionController {
       this.logger?.warn?.(`${baseMessage}: duplicate authId`, LogContext.AUTH);
       return new ConflictHttpException(
         'Kratos identity already linked to another user.',
-        LogContext.COMMUNITY,
+        LogContext.AUTH,
         'identity_duplicate',
         undefined,
         correlationId

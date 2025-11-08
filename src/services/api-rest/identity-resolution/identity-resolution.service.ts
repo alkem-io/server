@@ -132,6 +132,17 @@ export class IdentityResolutionService {
       user = await this.registrationService.registerNewUser(agentInfo);
       // Note: registerNewUser -> createUserFromAgentInfo already assigns authId internally
     } catch (error) {
+      if (error instanceof DuplicateAuthIdException) {
+        this.metrics.recordFailure(
+          IdentityResolutionFailureReason.DUPLICATE_AUTH_ID
+        );
+        this.logger.warn?.(
+          `Duplicate authId ${kratosIdentityId} detected during provisioning (auditId=${auditId})`,
+          LogContext.COMMUNITY
+        );
+        throw error;
+      }
+
       this.metrics.recordFailure(IdentityResolutionFailureReason.UNEXPECTED);
       this.logger.error?.(
         `Registration failed while provisioning user from identity ${kratosIdentityId} (auditId=${auditId})`,

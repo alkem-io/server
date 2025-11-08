@@ -151,10 +151,10 @@ describe('IdentityResolutionService', () => {
     await expect(service.resolveIdentity(identity.id)).rejects.toBe(
       duplicateError
     );
-    // Note: Since assignAuthId is called within registerNewUser, the error
-    // propagates during registration, not from a separate assignment call
+    // Updated: The catch block now properly detects DuplicateAuthIdException
+    // and records DUPLICATE_AUTH_ID instead of UNEXPECTED
     expect(metrics.recordFailure).toHaveBeenCalledWith(
-      IdentityResolutionFailureReason.UNEXPECTED
+      IdentityResolutionFailureReason.DUPLICATE_AUTH_ID
     );
   });
 
