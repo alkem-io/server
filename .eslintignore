@@ -1,8 +1,0 @@
-node_modules/
-dist/
-build/
-coverage/
-coverage-*/
-tmp/
-*.min.js
-.env*
