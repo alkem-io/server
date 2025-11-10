@@ -44,7 +44,7 @@ export class ContributorService {
 
     try {
       url = new URL(urlString);
-    } catch (_) {
+    } catch {
       return false;
     }
 

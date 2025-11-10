@@ -32,6 +32,6 @@ export class InAppNotificationPayloadSpaceCommunityCalendarEventCommentResolverF
     @Loader(CalendarEventLoaderCreator)
     loader: ILoader<ICalendarEvent>
   ): Promise<ICalendarEvent> {
-      return loader.load(payload.calendarEventID);
+    return loader.load(payload.calendarEventID);
   }
 }

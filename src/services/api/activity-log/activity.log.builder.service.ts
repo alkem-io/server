@@ -69,8 +69,7 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
         rawActivity.resourceID
       );
 
-    const contributorType =
-      getContributorType(contributorJoining);
+    const contributorType = getContributorType(contributorJoining);
     const activityMemberJoined: IActivityLogEntryMemberJoined = {
       ...this.activityLogEntryBase,
       community: community,
