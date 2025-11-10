@@ -108,7 +108,7 @@ services:
 
   hydra-migrate:
     container_name: alkemio_dev_hydra_migrate
-    image: oryd/hydra:v2.2.0
+    image: oryd/hydra:v2.3.0
     depends_on:
       postgres:
         condition: service_healthy
@@ -121,7 +121,7 @@ services:
 
   hydra:
     container_name: alkemio_dev_hydra
-    image: oryd/hydra:v2.2.0
+    image: oryd/hydra:v2.3.0
     depends_on:
       hydra-migrate:
         condition: service_completed_successfully
@@ -299,12 +299,14 @@ services:
       - POSTGRES_PASSWORD
       - POSTGRES_INITDB_ARGS=--encoding=UTF8 --lc-collate=C --lc-ctype=C
       - POSTGRES_MULTIPLE_DATABASES
+    entrypoint: [ "bash", "/usr/local/bin/entrypoint-wrapper.sh" ]
     restart: always
     ports:
       - 5432
     volumes:
       - alkemio_dev_postgres:/var/lib/postgresql/data
       - ./.build/postgres/init-multiple-databases.sh:/docker-entrypoint-initdb.d/init-multiple-databases.sh
+      - ./.build/postgres/entrypoint-wrapper.sh:/usr/local/bin/entrypoint-wrapper.sh:ro
     healthcheck:
       test: >
         bash -c "databases=\"$$POSTGRES_DB,$$POSTGRES_MULTIPLE_DATABASES\"; for db in $$(echo \"$$databases\" | tr ',' ' '); do [ -z \"$$db\" ] && continue; pg_isready -U \"$$POSTGRES_USER\" -d \"$$db\" -h localhost || exit 1; done"
@@ -479,10 +481,10 @@ services:
       - LOGGING_CONSOLE_ENABLED
       - LOGGING_LEVEL_CONSOLE
       - ENVIRONMENT=dev
-      - LOCAL_STORAGE_PATH
+      - LOCAL_STORAGE_PATH=storage
     restart: always
     volumes:
-      - ../server/.storage:${LOCAL_STORAGE_PATH}
+      - ../server/.storage:/usr/src/app/storage
     networks:
       - alkemio_dev_net
     ports:
