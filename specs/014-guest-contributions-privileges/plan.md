@@ -7,7 +7,7 @@
 
 ## Summary
 
-Extends the `allowGuestContributions` setting (from spec 013) with automatic PUBLIC_SHARE privilege management. When the setting is enabled on a space, the backend automatically grants PUBLIC_SHARE privilege to all space admins (on all whiteboards) and to whiteboard owners (on their own whiteboards). When disabled, all PUBLIC_SHARE privileges are revoked. The system enforces transactional integrity: if privilege assignment fails, both privileges and the setting are rolled back. Because each whiteboard policy embeds a credential rule for space admins, users promoted to space admin inherit PUBLIC_SHARE instantly without triggering an extra authorization reset.
+Extends the `allowGuestContributions` setting (from spec 013) with automatic PUBLIC_SHARE privilege management. When the setting is enabled on a space, the backend automatically grants PUBLIC_SHARE privilege to all space admins (on all whiteboards), to whiteboard owners (on their own whiteboards), and—when `allowPlatformSupportAsAdmin` is also enabled on a level-zero space—to users with the Global Support platform role. When disabled, all PUBLIC_SHARE privileges are revoked. The system enforces transactional integrity: if privilege assignment fails, both privileges and the setting are rolled back. Because each whiteboard policy embeds a credential rule for space admins (and leverages platform-role credentials when configured), users promoted to these roles inherit PUBLIC_SHARE instantly without triggering an extra authorization reset.
 
 ## Technical Context
 

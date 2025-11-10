@@ -151,7 +151,7 @@ if (shouldUpdateAuthorization) {
 
 ### 5. Space Admin Credential Binding for PUBLIC_SHARE
 
-**Decision**: Embed a credential rule for `AuthorizationCredential.SPACE_ADMIN` inside every whiteboard authorization policy whenever `allowGuestContributions` is true, granting PUBLIC_SHARE directly to that credential.
+**Decision**: Embed a credential rule for `AuthorizationCredential.SPACE_ADMIN` inside every whiteboard authorization policy whenever `allowGuestContributions` is true, granting PUBLIC_SHARE directly to that credential (and extend the same rule set to include Global Support credentials when `allowPlatformSupportAsAdmin` is enabled).
 
 **Rationale**:
 
@@ -236,6 +236,8 @@ const updatedAuthorizations =
 // Batch save in one operation
 await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 ```
+
+When `allowPlatformSupportAsAdmin` is also true for a level-zero space, the platform roles access definition already marks Global Support with elevated privileges; the authorization cascade retrieves those credentials and attaches them to the same PUBLIC_SHARE rule, satisfying FR-014.
 
 **Optimization Points**:
 
