@@ -49,9 +49,9 @@ pnpm start:dev
 
 ## Feature Testing Workflow
 
-### Test Scenario 1: Toggle Guest Contributions ON
+### Test Scenario 1: Toggle Guest Contributions ON (with Platform Support Opt-In)
 
-**Goal**: Verify PUBLIC_SHARE privilege granted to space admins and whiteboard owners
+**Goal**: Verify PUBLIC_SHARE privilege granted to space admins, whiteboard owners, and (when opted in) Global Support platform roles
 
 **Steps**:
 
@@ -118,27 +118,34 @@ pnpm start:dev
 
    **Expected**: No PUBLIC_SHARE privilege yet (setting defaults to false)
 
-5. **Enable Guest Contributions**:
+5. **Enable Guest Contributions & Platform Support Opt-In**:
 
    ```graphql
    mutation UpdateSpaceSettings {
      updateSpaceSettings(
        spaceID: "<space.id>"
-       settingsData: { collaboration: { allowGuestContributions: true } }
+       settingsData: {
+         collaboration: { allowGuestContributions: true }
+         privacy: { allowPlatformSupportAsAdmin: true }
+       }
      ) {
        id
        settings {
          collaboration {
            allowGuestContributions
          }
+         privacy {
+           allowPlatformSupportAsAdmin
+         }
        }
      }
    }
    ```
 
-   **Expected**: `allowGuestContributions = true`
+   **Expected**: `allowGuestContributions = true` and `allowPlatformSupportAsAdmin = true`
 
 6. **Verify Privilege Granted**:
+
    ```graphql
    query CheckWhiteboardAuth {
      whiteboard(ID: "<whiteboard.id>") {
@@ -155,25 +162,15 @@ pnpm start:dev
      }
    }
    ```
-   **Expected**:
-   ```json
-   {
-     "privilegeRules": [
-       {
-         "grantedPrivileges": ["public-share"],
-         "name": "space-admin-public-share"
-       }
-     ],
-     "credentialRules": [
-       {
-         "grantedPrivileges": ["public-share"],
-         "resourceID": "<admin.userId>"
-       }
-     ]
-   }
-   ```
 
----
+   **Expected**: The authorization response now contains:
+   - A credential rule granting `public-share` to the whiteboard creator (existing behavior)
+   - A credential rule granting `public-share` to the space admin credential
+   - A credential rule whose criterias include the `GLOBAL_SUPPORT` credential with `grantedPrivileges: ["public-share"]` when both settings are enabled
+
+7. **(Optional) Verify Global Support User Perspective**:
+
+## Authenticate as a user with the Global Support platform role and query the same whiteboard authorization. **Expected**: the resulting `credentialRules` include a criterion with credential type `GLOBAL_SUPPORT` granting `public-share`, confirming opt-in behavior.
 
 ### Test Scenario 2: Toggle Guest Contributions OFF
 
