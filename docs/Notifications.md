@@ -97,6 +97,8 @@ Events are categorized by their target audience:
 - `SPACE_COLLABORATION_CALLOUT_COMMENT` - Comments on callouts
 - `SPACE_COLLABORATION_CALLOUT_CONTRIBUTION` - Contributions to callouts
 - `SPACE_COLLABORATION_CALLOUT_POST_CONTRIBUTION_COMMENT` - Comments on post contributions
+- `SPACE_COMMUNITY_CALENDAR_EVENT_CREATED` - When a calendar event is created in the space community
+- `SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT` - When a comment is posted to a calendar event room
 - `SPACE_COMMUNICATION_MESSAGE_SENDER` - Copy of space message sent
 
 ### User Notifications
@@ -108,7 +110,6 @@ Events are categorized by their target audience:
 - `USER_SIGN_UP_WELCOME` - Welcome message for new users
 - `USER_MENTIONED` - When user is mentioned
 - `USER_MESSAGE` - Direct messages to users
-- `USER_MESSAGE_SENDER` - Copy of message sent by user
 - `USER_COMMENT_REPLY` - Replies to user's comments
 
 ### Virtual Contributor Notifications

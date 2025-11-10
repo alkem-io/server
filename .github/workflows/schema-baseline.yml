@@ -1,0 +1,271 @@
+name: Schema Baseline
+
+on:
+  push:
+    branches:
+      - develop
+  workflow_dispatch:
+
+concurrency:
+  group: schema-baseline-develop
+  cancel-in-progress: false
+
+jobs:
+  regenerate:
+    name: Regenerate Baseline
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: write
+      pull-requests: write
+    env:
+      SCHEMA_BOOTSTRAP_LIGHT: '1'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Initialize failure context tracking
+        run: |
+          {
+            echo "BASELINE_FAILURE_CONTEXT=Workflow failed before failure phase was recorded."
+            echo "BASELINE_FAILURE_PHASE=bootstrap"
+          } >> "$GITHUB_ENV"
+
+      - name: Bootstrap pnpm toolchain
+        run: |
+          set -euo pipefail
+          corepack enable
+          corepack prepare pnpm@10.17.1 --activate
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate schema snapshot
+        env:
+          SCHEMA_SNAPSHOT_DEBUG: '1'
+        run: |
+          set -o pipefail
+          pnpm exec ts-node -r tsconfig-paths/register scripts/schema/generate-schema.snapshot.ts schema.graphql 2>&1 | tee snapshot.log
+
+      - name: Verify generated snapshot
+        run: |
+          set -euo pipefail
+          if [ ! -f schema.graphql ]; then
+            echo "Schema snapshot was not generated" >&2
+            exit 1
+          fi
+          mkdir -p tmp
+          size=$(wc -c < schema.graphql)
+          echo "Snapshot size: $size"
+          echo "SNAPSHOT_SIZE=$size" >> "$GITHUB_ENV"
+          echo "SNAPSHOT_MD5=$(md5sum schema.graphql | awk '{print $1}')" >> "$GITHUB_ENV"
+
+      - name: Retrieve previous baseline
+        run: |
+          set -euo pipefail
+          echo "BASELINE_FAILURE_PHASE=diff" >> "$GITHUB_ENV"
+          mkdir -p tmp
+          git fetch origin develop --depth=2 || true
+          if git rev-parse HEAD^ >/dev/null 2>&1 && git show HEAD^:schema-baseline.graphql >/dev/null 2>&1; then
+            git show HEAD^:schema-baseline.graphql > tmp/prev.schema.graphql
+            echo "Loaded previous baseline from parent commit."
+          elif git show origin/develop^:schema-baseline.graphql >/dev/null 2>&1; then
+            git show origin/develop^:schema-baseline.graphql > tmp/prev.schema.graphql
+            echo "Loaded previous baseline from origin/develop^"
+          elif git show origin/develop:schema-baseline.graphql >/dev/null 2>&1; then
+            git show origin/develop:schema-baseline.graphql > tmp/prev.schema.graphql
+            echo "Loaded previous baseline from origin/develop"
+          else
+            echo "No previous baseline found; treating as initialization run."
+            rm -f tmp/prev.schema.graphql || true
+          fi
+
+      - name: Compute schema diff
+        id: diff
+        run: |
+          set -euo pipefail
+          if [ -f tmp/prev.schema.graphql ]; then
+            pnpm exec ts-node scripts/schema/diff-schema.ts --old tmp/prev.schema.graphql --current schema.graphql --out change-report.json --deprecations deprecations.json
+          else
+            pnpm exec ts-node scripts/schema/diff-schema.ts --current schema.graphql --out change-report.json --deprecations deprecations.json
+          fi
+
+      - name: Summarize diff and surface outputs
+        id: publish
+        run: pnpm exec ts-node scripts/schema/publish-baseline.ts --report change-report.json
+
+      - name: Prepare baseline update
+        if: steps.publish.outputs.baseline_changed == 'true'
+        run: |
+          set -euo pipefail
+          echo "BASELINE_FAILURE_PHASE=commit" >> "$GITHUB_ENV"
+          cp schema.graphql schema-baseline.graphql
+          git status --short schema-baseline.graphql || true
+
+      - name: Import automation signing key
+        if: steps.publish.outputs.baseline_changed == 'true'
+        id: import_gpg
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.ALKEMIO_INFRASTRUCTURE_BOT_GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.ALKEMIO_INFRASTRUCTURE_BOT_GPG_PASSPHRASE }}
+          trust_level: 5
+
+      - name: Commit baseline update
+        if: steps.publish.outputs.baseline_changed == 'true'
+        env:
+          GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
+          FALLBACK_GPG_KEY_ID: ${{ secrets.ALKEMIO_INFRASTRUCTURE_BOT_GPG_KEY_ID }}
+        run: |
+          set -Eeuo pipefail
+          trap '{
+            echo "BASELINE_FAILURE_CONTEXT=Failed during commit/push of schema baseline. Review git output above." >> "$GITHUB_ENV";
+            echo "BASELINE_FAILURE_PHASE=signing" >> "$GITHUB_ENV";
+          }' ERR
+
+          git config user.name "Alkemio Infrastructure Bot"
+          git config user.email "infrastructure@alkem.io"
+          git config commit.gpgsign true
+
+          if [ -n "${GPG_FINGERPRINT:-}" ]; then
+            git config user.signingkey "$GPG_FINGERPRINT"
+          elif [ -n "${FALLBACK_GPG_KEY_ID:-}" ]; then
+            git config user.signingkey "$FALLBACK_GPG_KEY_ID"
+          else
+            echo "::error::No GPG fingerprint available; set ALKEMIO_INFRASTRUCTURE_BOT_GPG_KEY_ID." >&2
+            exit 1
+          fi
+
+          git add schema-baseline.graphql
+          if git diff --cached --quiet; then
+            echo "No staged changes detected after baseline comparison."
+            exit 0
+          fi
+
+          git commit -m "chore: update schema baseline" -S
+          branch="schema-baseline/${GITHUB_RUN_ID}"
+          git branch --force "$branch"
+          echo "BASELINE_FAILURE_PHASE=push" >> "$GITHUB_ENV"
+          echo "BASELINE_PR_BRANCH=$branch" >> "$GITHUB_ENV"
+
+      - name: Push baseline branch
+        if: env.BASELINE_PR_BRANCH != ''
+        env:
+          PUSH_TOKEN: ${{ secrets.ALKEMIO_INFRASTRUCTURE_BOT_PUSH_TOKEN }}
+        run: |
+          set -Eeuo pipefail
+          trap '{
+            echo "BASELINE_FAILURE_CONTEXT=Failed while pushing baseline branch." >> "$GITHUB_ENV";
+            echo "BASELINE_FAILURE_PHASE=push" >> "$GITHUB_ENV";
+          }' ERR
+
+          if [ -z "${PUSH_TOKEN:-}" ]; then
+            echo "::error::Missing PAT; set secret ALKEMIO_INFRASTRUCTURE_BOT_PUSH_TOKEN." >&2
+            exit 1
+          fi
+
+          git push --force-with-lease "https://x-access-token:${PUSH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "${BASELINE_PR_BRANCH}"
+          echo "BASELINE_FAILURE_PHASE=pull-request" >> "$GITHUB_ENV"
+          echo "BASELINE_FAILURE_CONTEXT=Baseline branch ${BASELINE_PR_BRANCH} pushed." >> "$GITHUB_ENV"
+
+      - name: Open pull request
+        if: env.BASELINE_PR_BRANCH != ''
+        uses: actions/github-script@v7
+        env:
+          BASELINE_PR_BRANCH: ${{ env.BASELINE_PR_BRANCH }}
+        with:
+          github-token: ${{ secrets.ALKEMIO_INFRASTRUCTURE_BOT_PUSH_TOKEN }}
+          script: |
+            const branch = process.env.BASELINE_PR_BRANCH;
+            const title = 'chore: update schema baseline';
+            const body = [
+              'Automated schema baseline update.',
+              `Snapshot size: ${process.env.SNAPSHOT_SIZE || 'unknown'} bytes`,
+              `Snapshot md5: ${process.env.SNAPSHOT_MD5 || 'unknown'}`,
+              '',
+              'This PR was generated by the schema-baseline workflow.'
+            ].join('\n');
+
+            const existing = await github.paginate(github.rest.pulls.list, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              head: `${context.repo.owner}:${branch}`,
+              state: 'open'
+            });
+
+            let prNumber;
+            if (existing.length > 0) {
+              prNumber = existing[0].number;
+              core.info(`Baseline PR already open (#${prNumber}).`);
+            } else {
+              const pr = await github.rest.pulls.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                head: branch,
+                base: 'develop',
+                title,
+                body,
+                maintainer_can_modify: true
+              });
+              prNumber = pr.data.number;
+              core.info(`Created baseline PR #${prNumber}.`);
+            }
+
+            core.exportVariable('BASELINE_PR_NUMBER', prNumber.toString());
+            core.exportVariable('BASELINE_FAILURE_CONTEXT', `Baseline updates available in PR #${prNumber}.`);
+            core.exportVariable('BASELINE_FAILURE_PHASE', 'complete');
+      - name: Upload baseline artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: schema-baseline-${{ github.run_id }}
+          path: |
+            change-report.json
+            deprecations.json
+            schema.graphql
+            schema-baseline.graphql
+            snapshot.log
+            tmp/prev.schema.graphql
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Append failure summary
+        if: failure()
+        run: |
+          {
+            echo "## Schema baseline automation failed"
+            echo ""
+            echo "${BASELINE_FAILURE_CONTEXT}"
+            echo ""
+            echo "- Commit: \`${{ github.sha }}\`"
+            echo "- Run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Notify CODEOWNERS of failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const owners = ['@valentinyanakiev', '@techsmyth'];
+            const body = [
+              `Schema baseline regeneration failed for commit ${context.sha}.`,
+              `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              process.env.BASELINE_FAILURE_CONTEXT || 'No additional failure context captured.',
+              owners.join(' '),
+            ].join('\n\n');
+            await github.rest.repos.createCommitComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: context.sha,
+              body,
+            });

@@ -80,6 +80,8 @@ Governance environment variables:
 
 Override approval phrase: `BREAKING-APPROVED` (must appear in APPROVED review body by a CODEOWNER reviewer). Applies to BREAKING entries only; sets `overrideApplied=true` and per-entry `override=true` so gate treats them as informational.
 
+Workflow note: the `schema-contract` GitHub Action automatically fetches PR reviews, writes them to `tmp/schema-override-reviews.json`, and re-applies override evaluation during both the diff and gate steps. After each push, submit a fresh CODEOWNER approval review containing `BREAKING-APPROVED`, then re-run the workflow so the new review is ingested.
+
 Exit codes (schema gate):
 
 | Code | Meaning                    | Blocking Condition                                       |

@@ -152,7 +152,7 @@ export class ActivityLogResolverSubscriptions {
             AuthorizationPrivilege.READ,
             `Collaboration activity query: ${agentInfo.email}`
           );
-        } catch (e) {
+        } catch {
           return false;
         }
       }

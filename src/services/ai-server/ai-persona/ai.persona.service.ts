@@ -80,6 +80,25 @@ export class AiPersonaService {
         ...aiPersonaData.externalConfig,
       });
     }
+    if (aiPersonaData.promptGraph !== undefined) {
+      aiPersona.promptGraph = aiPersona.promptGraph || {};
+      const promptGraphData = aiPersonaData.promptGraph;
+      if (promptGraphData.nodes !== undefined) {
+        aiPersona.promptGraph.nodes = promptGraphData.nodes;
+      }
+      if (promptGraphData.edges !== undefined) {
+        aiPersona.promptGraph.edges = promptGraphData.edges;
+      }
+      if (promptGraphData.start !== undefined) {
+        aiPersona.promptGraph.start = promptGraphData.start;
+      }
+      if (promptGraphData.end !== undefined) {
+        aiPersona.promptGraph.end = promptGraphData.end;
+      }
+      if (promptGraphData.state !== undefined) {
+        aiPersona.promptGraph.state = promptGraphData.state;
+      }
+    }
 
     await this.aiPersonaRepository.save(aiPersona);
 
@@ -168,17 +187,20 @@ export class AiPersonaService {
       input.engine === AiPersonaEngine.EXPERT &&
       !invocationInput.promptGraph
     ) {
-      // Deep-clone the imported graphJson so we don't mutate the module-level object
-      const processedGraph = JSON.parse(JSON.stringify(graphJson));
+      let invocationGraph = aiPersona.promptGraph;
+      if (!invocationGraph) {
+        // Deep-clone the imported graphJson so we don't mutate the module-level object
+        const processedGraph = JSON.parse(JSON.stringify(graphJson));
+        // For each node, if prompt is an array, concatenate it into a single string with new lines
+        processedGraph.nodes?.forEach((node: any) => {
+          if (Array.isArray(node.prompt)) {
+            node.prompt = node.prompt.join('\n');
+          }
+        });
+        invocationGraph = processedGraph;
+      }
 
-      // For each node, if prompt is an array, concatenate it into a single string with new lines
-      processedGraph.nodes?.forEach((node: any) => {
-        if (Array.isArray(node.prompt)) {
-          node.prompt = node.prompt.join('\n');
-        }
-      });
-
-      input.promptGraph = processedGraph;
+      input.promptGraph = invocationGraph;
     }
 
     return this.aiPersonaEngineAdapter.invoke(input);

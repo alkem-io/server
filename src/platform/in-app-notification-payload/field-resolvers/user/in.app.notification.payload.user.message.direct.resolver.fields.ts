@@ -21,7 +21,7 @@ export class InAppNotificationPayloadUserMessageDirectResolverFields {
   }
 
   @ResolveField(() => String, {
-    nullable: true,
+    nullable: false,
     description: 'The message content.',
   })
   public message(

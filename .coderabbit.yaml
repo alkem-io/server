@@ -7,8 +7,10 @@ reviews:
   collapse_walkthrough: false
   path_filters:
     - "!**/.github/workflows/*"
+    - "!**/.github/prompts/*"      # Exclude Prompt files
     - "!**/node_modules/**"  # Exclude dependencies
     - "!**/dist/**"          # Exclude build files
+    - "!**/specify/**"       # Exclude Speckit files
   path_instructions:
     - path: "specs/**/spec.md"
       instructions: |
@@ -34,7 +36,7 @@ reviews:
         - `docs/Pagination.md` - Pagination design overview
         - `docs/Developing.md` - Development setup overview
         - `docs/graphql-typeorm-usage.md` - overview of GraphQL and TypeORM usage and how they are used together with NestJS in the project
-        - `docs/database-definitions.md` - guidelines for creating TypeORM entity defnitions
+        - `docs/database-definitions.md` - guidelines for creating TypeORM entity definitions
         - `src/core/error-handling/graphql.exception.filter.ts` - GraphQL error handling
         - `src/core/error-handling/http.exception.filter.ts` - HTTP error handling
         - `src/core/error-handling/rest.error.response.ts` - REST error response
@@ -65,18 +67,10 @@ reviews:
       instructions: "Review the kubernetes manifests for microservice alignment, RabbitMQ connectivity, config maps/secrets, and health probes."
     - path: "**/Dockerfile"
       instructions: "Review the Dockerfile for best practices in building, optimizing, and running a NestJS application."
-    - path: "**/quickstart-services.yml"
-      instructions: "Review Docker Compose configurations for environment setup, ensuring proper service configuration, network setup, and environment variables handling."
-    - path: "**/quickstart-services-ai.yml"
-      instructions: "Review Docker Compose configurations for environment setup, ensuring proper service configuration, network setup, and environment variables handling."
-    - path: "**/quickstart-services-ai-debug.yml"
-      instructions: "Review Docker Compose configurations for environment setup, ensuring proper service configuration, network setup, and environment variables handling."
-    - path: "**/quickstart-services-kratos-debug.yml"
+    - path: "**/quickstart-services*.yml"
       instructions: "Review Docker Compose configurations for environment setup, ensuring proper service configuration, network setup, and environment variables handling."
     - path: "alkemio.yml"
       instructions: "Check the service topology, message broker settings, and GraphQL endpoints align with microservice deployment expectations."
-    - path: "dist/alkemio.yml"
-      instructions: "Because this is the generated deployment constitution, ensure changes remain intentional and consistent with `alkemio.yml`."
     - path: "**/*.graphql"
       instructions: "Review schema files for backwards compatibility, authorization metadata, and alignment with contract tests."
     - path: "docs/**/*.md"
