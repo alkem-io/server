@@ -56,5 +56,5 @@ export default defineConfig([
       'no-multiple-empty-lines': 'error',
     },
   },
-  eslintPluginPrettierRecommended as any,
+  eslintPluginPrettierRecommended,
 ]);
