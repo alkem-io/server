@@ -2762,16 +2762,11 @@ interface InAppNotificationPayload {
   type: NotificationEventPayload!
 }
 
-type InAppNotificationPayloadOrganization implements InAppNotificationPayload {
-  """The payload type."""
-  type: NotificationEventPayload!
-}
-
 type InAppNotificationPayloadOrganizationMessageDirect implements InAppNotificationPayload {
   """The message content."""
   message: String!
   """The organization."""
-  organization: Contributor!
+  organization: Organization
   """The payload type."""
   type: NotificationEventPayload!
 }
@@ -2787,23 +2782,18 @@ type InAppNotificationPayloadOrganizationMessageRoom implements InAppNotificatio
   type: NotificationEventPayload!
 }
 
-type InAppNotificationPayloadPlatform implements InAppNotificationPayload {
-  """The payload type."""
-  type: NotificationEventPayload!
-}
-
 type InAppNotificationPayloadPlatformForumDiscussion implements InAppNotificationPayload {
   """The comment message."""
   comment: String
   """The discussion details."""
-  discussion: DiscussionDetails
+  discussion: DiscussionDetails!
   """The payload type."""
   type: NotificationEventPayload!
 }
 
 type InAppNotificationPayloadPlatformGlobalRoleChange implements InAppNotificationPayload {
   """The new role."""
-  role: String
+  role: String!
   """The payload type."""
   type: NotificationEventPayload!
   """The User whose role was changed."""
@@ -2817,56 +2807,56 @@ type InAppNotificationPayloadPlatformUser implements InAppNotificationPayload {
 
 type InAppNotificationPayloadPlatformUserMessageRoom implements InAppNotificationPayload {
   """The details of the message."""
-  messageDetails: MessageDetails
+  messageDetails: MessageDetails!
   """The payload type."""
   type: NotificationEventPayload!
-  """The User for the message."""
-  user: User
+  """The User receiver of the message."""
+  user: User!
 }
 
 type InAppNotificationPayloadPlatformUserProfileRemoved implements InAppNotificationPayload {
   """The payload type."""
   type: NotificationEventPayload!
   """The display name of the User that was removed."""
-  userDisplayName: String
+  userDisplayName: String!
   """The email of the User that was removed."""
-  userEmail: String
+  userEmail: String!
 }
 
 type InAppNotificationPayloadSpace implements InAppNotificationPayload {
   """The space details."""
-  space: Space
+  space: Space!
   """The payload type."""
   type: NotificationEventPayload!
 }
 
 type InAppNotificationPayloadSpaceCollaborationCallout implements InAppNotificationPayload {
   """The Callout that was published."""
-  callout: Callout
+  callout: Callout!
   """Where the callout is located."""
-  space: Space
+  space: Space!
   """The payload type."""
   type: NotificationEventPayload!
 }
 
 type InAppNotificationPayloadSpaceCollaborationCalloutComment implements InAppNotificationPayload {
   """The Callout that was published."""
-  callout: Callout
+  callout: Callout!
   """The details of the message."""
-  messageDetails: MessageDetails
+  messageDetails: MessageDetails!
   """The Space where the comment was made."""
-  space: Space
+  space: Space!
   """The payload type."""
   type: NotificationEventPayload!
 }
 
 type InAppNotificationPayloadSpaceCollaborationCalloutPostComment implements InAppNotificationPayload {
   """The Callout that was published."""
-  callout: Callout
+  callout: Callout!
   """The details of the message."""
-  messageDetails: MessageDetails
+  messageDetails: MessageDetails!
   """The Space where the comment was made."""
-  space: Space
+  space: Space!
   """The payload type."""
   type: NotificationEventPayload!
 }
@@ -2874,73 +2864,76 @@ type InAppNotificationPayloadSpaceCollaborationCalloutPostComment implements InA
 type InAppNotificationPayloadSpaceCommunicationMessageDirect implements InAppNotificationPayload {
   """The message content."""
   message: String!
-  """The space details."""
-  space: Space
+  """The Space where the message was sent."""
+  space: Space!
   """The payload type."""
   type: NotificationEventPayload!
 }
 
 type InAppNotificationPayloadSpaceCommunicationUpdate implements InAppNotificationPayload {
-  """The space details."""
-  space: Space
+  """The Space where the update was sent."""
+  space: Space!
   """The payload type."""
   type: NotificationEventPayload!
   """The update content."""
-  update: String
+  update: String!
 }
 
 type InAppNotificationPayloadSpaceCommunityApplication implements InAppNotificationPayload {
   """The Application that the notification is related to."""
-  application: Application
-  """The space details."""
-  space: Space
+  application: Application!
+  """The Space that the application was made to."""
+  space: Space!
   """The payload type."""
   type: NotificationEventPayload!
 }
 
 type InAppNotificationPayloadSpaceCommunityCalendarEvent implements InAppNotificationPayload {
   """The CalendarEvent that was created."""
-  calendarEvent: CalendarEvent
-  """ID of the calendar event."""
-  calendarEventID: UUID!
-  """Display title of the calendar event."""
-  calendarEventTitle: String!
-  """Type of the calendar event."""
-  calendarEventType: CalendarEventType!
-  """ID of the user who created the event."""
-  createdBy: UUID!
+  calendarEvent: CalendarEvent!
+  """The Space where the calendar event was created."""
+  space: Space!
+  """The payload type."""
+  type: NotificationEventPayload!
+}
+
+type InAppNotificationPayloadSpaceCommunityCalendarEventComment implements InAppNotificationPayload {
+  """The calendar event that was commented on."""
+  calendarEvent: CalendarEvent!
+  """Preview text of the comment"""
+  commentText: String!
   """The space details."""
-  space: Space
+  space: Space!
   """The payload type."""
   type: NotificationEventPayload!
 }
 
 type InAppNotificationPayloadSpaceCommunityContributor implements InAppNotificationPayload {
   """The Contributor that joined."""
-  contributor: Contributor
-  """The space details."""
-  space: Space
+  contributor: Contributor!
+  """The Space that was joined."""
+  space: Space!
   """The payload type."""
   type: NotificationEventPayload!
 }
 
 type InAppNotificationPayloadSpaceCommunityInvitation implements InAppNotificationPayload {
-  """The space details."""
-  space: Space
+  """The Space that the invitation is for."""
+  space: Space!
   """The payload type."""
   type: NotificationEventPayload!
 }
 
 type InAppNotificationPayloadSpaceCommunityInvitationPlatform implements InAppNotificationPayload {
-  """The space details."""
-  space: Space
+  """The Space that the invitation is for."""
+  space: Space!
   """The payload type."""
   type: NotificationEventPayload!
 }
 
 type InAppNotificationPayloadUserMessageDirect implements InAppNotificationPayload {
   """The message content."""
-  message: String
+  message: String!
   """The payload type."""
   type: NotificationEventPayload!
   """The User that was sent the message."""
@@ -2948,11 +2941,11 @@ type InAppNotificationPayloadUserMessageDirect implements InAppNotificationPaylo
 }
 
 type InAppNotificationPayloadVirtualContributor implements InAppNotificationPayload {
-  contributor: VirtualContributor
-  space: Space
+  contributor: VirtualContributor!
+  """The Space related to the notification"""
+  space: Space!
   """The payload type."""
   type: NotificationEventPayload!
-  virtualContributorID: String!
 }
 
 type InnovationFlow {
@@ -4273,13 +4266,13 @@ enum NotificationEvent {
   SPACE_COLLABORATION_CALLOUT_POST_CONTRIBUTION_COMMENT
   SPACE_COLLABORATION_CALLOUT_PUBLISHED
   SPACE_COMMUNICATION_UPDATE
+  SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT
   SPACE_COMMUNITY_CALENDAR_EVENT_CREATED
   SPACE_COMMUNITY_INVITATION_USER_PLATFORM
   SPACE_LEAD_COMMUNICATION_MESSAGE
   USER_COMMENT_REPLY
   USER_MENTIONED
   USER_MESSAGE
-  USER_MESSAGE_SENDER
   USER_SIGN_UP_WELCOME
   USER_SPACE_COMMUNITY_APPLICATION_DECLINED
   USER_SPACE_COMMUNITY_INVITATION
@@ -4307,7 +4300,6 @@ enum NotificationEventPayload {
   ORGANIZATION_MESSAGE_DIRECT
   ORGANIZATION_MESSAGE_ROOM
   PLATFORM_FORUM_DISCUSSION
-  PLATFORM_FORUM_DISCUSSION_COMMENT
   PLATFORM_GLOBAL_ROLE_CHANGE
   PLATFORM_USER_PROFILE_REMOVED
   SPACE
@@ -4318,6 +4310,7 @@ enum NotificationEventPayload {
   SPACE_COMMUNICATION_UPDATE
   SPACE_COMMUNITY_APPLICATION
   SPACE_COMMUNITY_CALENDAR_EVENT
+  SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT
   SPACE_COMMUNITY_CONTRIBUTOR
   SPACE_COMMUNITY_INVITATION
   SPACE_COMMUNITY_INVITATION_USER_PLATFORM

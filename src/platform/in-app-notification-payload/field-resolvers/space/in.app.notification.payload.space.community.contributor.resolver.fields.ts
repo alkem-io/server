@@ -10,25 +10,25 @@ import { InAppNotificationPayloadSpaceCommunityContributor } from '@platform/in-
 @Resolver(() => InAppNotificationPayloadSpaceCommunityContributor)
 export class InAppNotificationPayloadSpaceCommunityContributorResolverFields {
   @ResolveField(() => IContributor, {
-    nullable: true,
+    nullable: false,
     description: 'The Contributor that joined.',
   })
   public contributor(
     @Parent() payload: InAppNotificationPayloadSpaceCommunityContributor,
-    @Loader(ContributorLoaderCreator, { resolveToNull: true })
-    loader: ILoader<IContributor | null>
+    @Loader(ContributorLoaderCreator)
+    loader: ILoader<IContributor>
   ) {
     return loader.load(payload.contributorID);
   }
 
   @ResolveField(() => ISpace, {
-    nullable: true,
+    nullable: false,
     description: 'The Space that was joined.',
   })
   public space(
     @Parent() payload: InAppNotificationPayloadSpaceCommunityContributor,
-    @Loader(SpaceLoaderCreator, { resolveToNull: true })
-    loader: ILoader<ISpace | null>
+    @Loader(SpaceLoaderCreator)
+    loader: ILoader<ISpace>
   ) {
     return loader.load(payload.spaceID);
   }
