@@ -1,22 +1,15 @@
 import js from '@eslint/js';
 import globals from 'globals';
 import { defineConfig } from 'eslint/config';
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-expect-error
-import tsParser from '@typescript-eslint/parser';
-import typescriptEslintEslintPlugin from '@typescript-eslint/eslint-plugin';
+import tseslint from 'typescript-eslint';
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
-import { FlatCompat } from '@eslint/eslintrc';
 
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-  recommendedConfig: js.configs.recommended,
-  allConfig: js.configs.all,
-});
 const env = (prod: 0 | 1 | 2, dev: 0 | 1 | 2) =>
   process.env.NODE_ENV === 'production' ? prod : dev;
 
 export default defineConfig([
+  js.configs.recommended,
+  ...tseslint.configs.recommended,
   {
     files: ['**/*.{js,mjs,cjs,ts,mts,cts}'],
     ignores: [
@@ -32,7 +25,6 @@ export default defineConfig([
       'src/migrations/**',
     ],
     languageOptions: {
-      parser: tsParser,
       sourceType: 'module',
 
       parserOptions: {
@@ -44,14 +36,6 @@ export default defineConfig([
         ...globals.jest,
       },
     },
-    plugins: {
-      '@typescript-eslint': typescriptEslintEslintPlugin,
-    },
-
-    extends: compat.extends(
-      'plugin:@typescript-eslint/eslint-recommended',
-      'plugin:@typescript-eslint/recommended'
-    ),
 
     rules: {
       quotes: ['error', 'single'],
