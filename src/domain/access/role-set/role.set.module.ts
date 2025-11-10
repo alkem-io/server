@@ -1,6 +1,6 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { forwardRef, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { RoleSet } from './role.set.entity';
 import { RoleSetResolverFields } from './role.set.resolver.fields';
@@ -37,7 +37,6 @@ import { RoleSetMembershipStatusDataLoader } from './role.set.data.loader.member
 import { RoleSetCacheModule } from './role.set.service.cache.module';
 import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.module';
 import { RoleSetResolverMutationsMembership } from './role.set.resolver.mutations.membership';
-import { SpaceModule } from '@domain/space/space/space.module';
 
 @Module({
   imports: [
@@ -50,7 +49,6 @@ import { SpaceModule } from '@domain/space/space/space.module';
     UserModule,
     OrganizationLookupModule,
     SpaceLookupModule,
-    forwardRef(() => SpaceModule),
     VirtualContributorLookupModule,
     ContributorModule,
     RoleModule,
