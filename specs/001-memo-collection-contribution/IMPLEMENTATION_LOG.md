@@ -1093,7 +1093,7 @@ private async processActivityMemoCreated(
     id: contribution.memo.id,
     type: CalloutContributionType.MEMO,
     createdBy: await this.getContributorPayloadOrFail(
-      contribution.createdBy || ''
+      contribution.createdBy || contribution.memo.createdBy || ''
     ),
     displayName: contribution.memo.profile.displayName,
     description: contribution.memo.profile.description ?? '',
