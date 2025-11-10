@@ -37,7 +37,7 @@ export class StorageAccessController {
     let document;
     try {
       document = await this.documentService.getDocumentOrFail(id);
-    } catch (e) {
+    } catch {
       throw new NotFoundHttpException(
         `Document with id '${id}' not found`,
         LogContext.DOCUMENT
