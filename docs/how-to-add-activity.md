@@ -9,8 +9,6 @@ Step-by-step guide for adding activity types to the Alkemio server. Activities t
 
 ## Implementation Checklist
 
-## Implementation Checklist
-
 ### 1. Core Enum & Types
 
 **File:** `src/common/enums/activity.event.type.ts`
