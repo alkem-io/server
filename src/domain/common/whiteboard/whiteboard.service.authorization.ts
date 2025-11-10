@@ -163,7 +163,10 @@ export class WhiteboardAuthorizationService {
       }
     }
 
-    if (spaceSettings?.collaboration?.allowGuestContributions) {
+    const allowGuestContributions =
+      spaceSettings?.collaboration?.allowGuestContributions ?? false;
+
+    if (allowGuestContributions) {
       const adminCredentialDefinitions =
         await this.resolveAdminCredentialsWithParentsDefinitions(whiteboard.id);
 
@@ -250,12 +253,12 @@ export class WhiteboardAuthorizationService {
 
       // Add credentials of any platform roles that have admin access
       if (space.platformRolesAccess?.roles?.length) {
-        credentialDefinitions.push(
-          ...this.platformRolesAccessService.getCredentialsForRolesWithAccess(
+        const platformCredentials =
+          this.platformRolesAccessService.getCredentialsForRolesWithAccess(
             space.platformRolesAccess.roles,
             [AuthorizationPrivilege.PLATFORM_ADMIN]
-          )
-        );
+          );
+        credentialDefinitions.push(...platformCredentials);
       }
 
       return credentialDefinitions;
