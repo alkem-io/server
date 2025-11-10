@@ -159,7 +159,8 @@ export class AdminAuthenticationIDBackfillService {
           (error as Error)?.stack,
           LogContext.AUTH
         );
-        throw error;
+        outcome.skipped += 1;
+        continue;
       }
     }
   }

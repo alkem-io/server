@@ -64,7 +64,6 @@ export class AgentInfoService {
               },
             },
             conflictMode: 'log',
-            lookupByAuthenticationId: false,
           }
         );
 

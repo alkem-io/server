@@ -85,10 +85,10 @@ Ensure existing mutations that delete Kratos accounts clear the `authenticationI
 
 ## Dependencies & Execution Order
 
-```
+```text
 US1 → (enables) US2, US3, US4
 US2 ↘
-	↘
+  ↘
 US3 ----> Polish
 US4 ↗
 ```
