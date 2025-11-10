@@ -225,7 +225,7 @@ importers:
         specifier: ^7.8.1
         version: 7.8.2
       ts-node:
-        specifier: ^10.9.2
+        specifier: 10.9.2
         version: 10.9.2(@types/node@20.19.17)(typescript@5.3.3)
       tsconfig-paths:
         specifier: 4.2.0
@@ -243,14 +243,14 @@ importers:
         specifier: ^2.4.5
         version: 2.8.1
       yjs:
-        specifier: ^13.6.27
+        specifier: 13.6.27
         version: 13.6.27
     devDependencies:
       '@eslint/eslintrc':
-        specifier: ^3.3.1
+        specifier: 3.3.1
         version: 3.3.1
       '@eslint/js':
-        specifier: ^9.39.1
+        specifier: 9.39.1
         version: 9.39.1
       '@nestjs/cli':
         specifier: ^10.4.2
@@ -328,10 +328,10 @@ importers:
         specifier: ^2.31.0
         version: 2.32.0(@typescript-eslint/parser@8.46.3(eslint@9.26.0(jiti@2.6.1))(typescript@5.3.3))(eslint@9.26.0(jiti@2.6.1))
       eslint-plugin-prettier:
-        specifier: ^5.5.4
+        specifier: 5.5.4
         version: 5.5.4(@types/eslint@9.6.1)(eslint-config-prettier@10.1.8(eslint@9.26.0(jiti@2.6.1)))(eslint@9.26.0(jiti@2.6.1))(prettier@3.6.2)
       globals:
-        specifier: ^16.5.0
+        specifier: 16.5.0
         version: 16.5.0
       husky:
         specifier: ^4.3.8
@@ -361,7 +361,7 @@ importers:
         specifier: 5.3.3
         version: 5.3.3
       typescript-eslint:
-        specifier: ^8.46.3
+        specifier: 8.46.3
         version: 8.46.3(eslint@9.26.0(jiti@2.6.1))(typescript@5.3.3)
 
 packages:
