@@ -1,22 +1,24 @@
-const { defineConfig, globalIgnores } = require('eslint/config');
-
-const tsParser = require('@typescript-eslint/parser');
-const typescriptEslintEslintPlugin = require('@typescript-eslint/eslint-plugin');
-const prettier = require('eslint-plugin-prettier');
-const globals = require('globals');
-const js = require('@eslint/js');
-
-const { FlatCompat } = require('@eslint/eslintrc');
+import js from '@eslint/js';
+import globals from 'globals';
+import { defineConfig } from 'eslint/config';
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-expect-error
+import tsParser from '@typescript-eslint/parser';
+import typescriptEslintEslintPlugin from '@typescript-eslint/eslint-plugin';
+import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
+import { FlatCompat } from '@eslint/eslintrc';
 
 const compat = new FlatCompat({
   baseDirectory: __dirname,
   recommendedConfig: js.configs.recommended,
   allConfig: js.configs.all,
 });
-const env = (prod, dev) => (process.env.NODE_ENV === 'production' ? prod : dev);
+const env = (prod: 0 | 1 | 2, dev: 0 | 1 | 2) =>
+  process.env.NODE_ENV === 'production' ? prod : dev;
 
-module.exports = defineConfig([
+export default defineConfig([
   {
+    files: ['**/*.{js,mjs,cjs,ts,mts,cts}'],
     ignores: [
       '**/node_modules/**',
       '**/dist/**',
@@ -29,7 +31,6 @@ module.exports = defineConfig([
       '**/.eslintrc.js',
       'src/migrations/**',
     ],
-
     languageOptions: {
       parser: tsParser,
       sourceType: 'module',
@@ -43,17 +44,13 @@ module.exports = defineConfig([
         ...globals.jest,
       },
     },
-
     plugins: {
       '@typescript-eslint': typescriptEslintEslintPlugin,
-      prettier,
     },
 
     extends: compat.extends(
       'plugin:@typescript-eslint/eslint-recommended',
-      'plugin:@typescript-eslint/recommended',
-      'plugin:prettier/recommended',
-      'prettier'
+      'plugin:@typescript-eslint/recommended'
     ),
 
     rules: {
@@ -75,4 +72,5 @@ module.exports = defineConfig([
       'no-multiple-empty-lines': 'error',
     },
   },
+  eslintPluginPrettierRecommended as any,
 ]);
