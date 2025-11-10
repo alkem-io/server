@@ -425,6 +425,7 @@ export class BootstrapService {
       agentID: adminUser.agent?.id,
       verifiedCredentials: [],
       communicationID: adminUser.communicationID,
+      authenticationID: adminUser.authenticationID ?? '',
     };
   }
 

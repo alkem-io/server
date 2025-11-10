@@ -1,5 +1,5 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { IsEmail, IsOptional, MaxLength } from 'class-validator';
+import { IsEmail, IsOptional, IsUUID, MaxLength } from 'class-validator';
 import {
   LONG_TEXT_LENGTH,
   SMALL_TEXT_LENGTH,
@@ -35,4 +35,9 @@ export class CreateUserInput extends CreateContributorInput {
   @IsOptional()
   @MaxLength(SMALL_TEXT_LENGTH)
   phone?: string;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsUUID()
+  authenticationID?: string;
 }
