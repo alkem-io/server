@@ -10,28 +10,28 @@ import { RoleSetApplicationLoaderCreator } from '@core/dataloader/creators/loade
 @Resolver(() => InAppNotificationPayloadSpaceCommunityApplication)
 export class InAppNotificationPayloadSpaceCommunityApplicationResolverFields {
   @ResolveField(() => ISpace, {
-    nullable: true,
+    nullable: false,
     description: 'The Space that the application was made to.',
   })
   public space(
     @Parent()
     payload: InAppNotificationPayloadSpaceCommunityApplication,
-    @Loader(SpaceLoaderCreator, { resolveToNull: true })
-    loader: ILoader<ISpace | null>
+    @Loader(SpaceLoaderCreator)
+    loader: ILoader<ISpace>
   ) {
     return loader.load(payload.spaceID);
   }
 
   // Add in resolver for Application
   @ResolveField(() => IApplication, {
-    nullable: true,
+    nullable: false,
     description: 'The Application that the notification is related to.',
   })
   public application(
     @Parent()
     payload: InAppNotificationPayloadSpaceCommunityApplication,
-    @Loader(RoleSetApplicationLoaderCreator, { resolveToNull: true })
-    loader: ILoader<IApplication | null>
+    @Loader(RoleSetApplicationLoaderCreator)
+    loader: ILoader<IApplication>
   ) {
     return loader.load(payload.applicationID);
   }

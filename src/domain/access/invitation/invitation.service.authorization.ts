@@ -17,6 +17,7 @@ import { CREDENTIAL_RULE_ROLESET_INVITATION } from '@common/constants';
 import { RoleSetMembershipException } from '@common/exceptions/role.set.membership.exception';
 import { Organization } from '@domain/community/organization/organization.entity';
 import { User } from '@domain/community/user/user.entity';
+import { getContributorType } from '@domain/community/contributor/get.contributor.type';
 
 @Injectable()
 export class InvitationAuthorizationService {
@@ -53,8 +54,7 @@ export class InvitationAuthorizationService {
 
     // also grant the user privileges to work with their own invitation
     let accountID: string | undefined = undefined;
-    const contributorType =
-      this.contributorService.getContributorType(contributor);
+    const contributorType = getContributorType(contributor);
     const criterias: ICredentialDefinition[] = [];
     switch (contributorType) {
       case RoleSetContributorType.USER:

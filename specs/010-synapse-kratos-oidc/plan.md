@@ -84,28 +84,33 @@ This feature is **HYBRID**: Infrastructure/configuration (Synapse, Hydra, Docker
 **Applicable Principles**:
 
 ✅ **I. Test-Driven Development** (for NestJS controllers and services):
+
 - Unit tests MUST be written before implementation (T017-T019)
 - Integration tests follow implementation to validate end-to-end flow (T020a-T020b)
 - Red-Green-Refactor cycle enforced for all TypeScript code
 
 ✅ **II. Comprehensive Testing Coverage** (for NestJS code + infrastructure):
+
 - Unit tests for OidcController and HydraAdminService
 - Integration tests for REST endpoints
 - Manual E2E testing with real Matrix clients
 - Contract validation for Hydra Admin API interactions
 
 ✅ **III. Architectural Consistency**:
+
 - NestJS REST controllers follow existing patterns in `src/services/api/`
 - Service layer (HydraAdminService) handles business logic and external API calls
 - Controllers delegate to services (no business logic in controllers)
 
 ✅ **IV. Type Safety & Code Quality** (for TypeScript code):
+
 - Strict TypeScript for all NestJS controllers and services
 - ESLint compliance for all application code
 - Explicit types for Hydra/Kratos API responses
 - Path aliases used for imports
 
 ✅ **VI. Observability & Maintainability**:
+
 - OIDC controllers use Nest Logger integrated with the global Winston logger to produce JSON-structured logs
 - Authentication flow logs include required context (challenge IDs, user IDs, timestamps, error codes) and severity levels (INFO/ERROR/DEBUG)
 - Documentation provided (quickstart.md, research.md, data-model.md)
@@ -137,6 +142,7 @@ specs/010-synapse-kratos-oidc/
 ### Source Code (repository root)
 
 **Alkemio Server Repository** (this repo):
+
 ```
 .build/
 ├── postgres/
@@ -168,13 +174,13 @@ quickstart-services.yml                 # Hydra services added (MODIFIED)
 
 _This section documents departures from standard architecture that require justification._
 
-| Violation                  | Why Needed         | Simpler Alternative Rejected Because |
-| -------------------------- | ------------------ | ------------------------------------ |
-| Additional OAuth2 server (Hydra) | Kratos cannot act as OIDC provider alone - lacks OAuth2 authorization server capabilities | Using Kratos directly: Rejected because Kratos does not implement OAuth2 `/authorize`, `/token`, `/userinfo` endpoints required by OIDC clients like Synapse |
-| Custom NestJS REST controllers | Hydra requires external login/consent providers to bridge identity systems | Ory reference UI: Rejected due to poor UX, no Alkemio branding, separate deployment complexity; Standalone Express.js: Rejected due to deployment overhead |
-| PostgreSQL multi-database | Consolidate Hydra + Synapse databases | Separate PostgreSQL instance for Hydra: Rejected to reduce operational overhead, backup complexity |
-| REST endpoints in alkemio-server | Backend must handle OAuth2 flows without exposing Admin API to browsers | Frontend-only solution: Rejected because Hydra Admin API (port 4445) cannot be exposed to browser clients for security reasons |
-| Traefik routing for Hydra (T007a/T007b) | Enables OIDC discovery and OAuth2 endpoints accessible via same-origin requests, contributes to FR-001 (Synapse OIDC client config) | Direct port exposure: Rejected to maintain consistent routing architecture and avoid CORS complications |
+| Violation                               | Why Needed                                                                                                                          | Simpler Alternative Rejected Because                                                                                                                         |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Additional OAuth2 server (Hydra)        | Kratos cannot act as OIDC provider alone - lacks OAuth2 authorization server capabilities                                           | Using Kratos directly: Rejected because Kratos does not implement OAuth2 `/authorize`, `/token`, `/userinfo` endpoints required by OIDC clients like Synapse |
+| Custom NestJS REST controllers          | Hydra requires external login/consent providers to bridge identity systems                                                          | Ory reference UI: Rejected due to poor UX, no Alkemio branding, separate deployment complexity; Standalone Express.js: Rejected due to deployment overhead   |
+| PostgreSQL multi-database               | Consolidate Hydra + Synapse databases                                                                                               | Separate PostgreSQL instance for Hydra: Rejected to reduce operational overhead, backup complexity                                                           |
+| REST endpoints in alkemio-server        | Backend must handle OAuth2 flows without exposing Admin API to browsers                                                             | Frontend-only solution: Rejected because Hydra Admin API (port 4445) cannot be exposed to browser clients for security reasons                               |
+| Traefik routing for Hydra (T007a/T007b) | Enables OIDC discovery and OAuth2 endpoints accessible via same-origin requests, contributes to FR-001 (Synapse OIDC client config) | Direct port exposure: Rejected to maintain consistent routing architecture and avoid CORS complications                                                      |
 
 **Justification Summary**: Each complexity addition is **necessary and minimal**. Hydra is architecturally required (Kratos limitation). Custom NestJS controllers provide security (Admin API isolation) and leverage existing infrastructure. Multi-database PostgreSQL reduces operational complexity. Backend implementation follows NestJS architectural patterns. Traefik routing ensures OIDC standards compliance.
 
@@ -207,9 +213,11 @@ _This section documents departures from standard architecture that require justi
 ## Implementation Roadmap
 
 ### MVP Scope (User Story 1 - P1)
+
 **Goal**: Core SSO authentication working end-to-end
 
 **Deliverables**:
+
 1. Hydra deployed and configured in Docker Compose
 2. PostgreSQL multi-database setup (synapse, hydra)
 3. Synapse OIDC configuration enabled
@@ -224,12 +232,15 @@ _This section documents departures from standard architecture that require justi
 ### Post-MVP (User Stories 2, 4, 3)
 
 **User Story 2 (P2)**: Auto-provisioning for new users
+
 - Effort: 2 hours (configuration already in US1, just validation)
 
 **User Story 4 (P2)**: Account migration for existing users
+
 - Effort: 3 hours (test account linking, verify data preservation)
 
 **User Story 3 (P3)**: Session management synchronization
+
 - Effort: 2 hours (test logout/expiry flows)
 
 **Total Estimated Effort**: 15-19 hours across all user stories
@@ -239,6 +250,7 @@ _This section documents departures from standard architecture that require justi
 ## Risk Assessment
 
 ### High Risk
+
 1. **Hydra Admin API accessibility from frontend**: Frontend must reach Hydra Admin API (port 4445)
    - **Mitigation**: Test connectivity early, configure Docker networking correctly
 
@@ -249,6 +261,7 @@ _This section documents departures from standard architecture that require justi
    - **Mitigation**: Follow documented pattern in quickstart.md, validate with logs
 
 ### Medium Risk
+
 1. **PostgreSQL migration failures**: Multi-database init script may have issues
    - **Mitigation**: Test script separately before full deployment
 
@@ -256,6 +269,7 @@ _This section documents departures from standard architecture that require justi
    - **Mitigation**: Explicitly configure all session lifetimes to 48h
 
 ### Low Risk
+
 1. **Matrix User ID collisions**: Email-based usernames may collide
    - **Mitigation**: Synapse auto-appends numeric suffix (built-in handling)
 
@@ -264,6 +278,7 @@ _This section documents departures from standard architecture that require justi
 ## Success Criteria
 
 **Technical Success**:
+
 - [x] Research complete with all architectural decisions documented
 - [x] Contracts defined for all API interactions
 - [x] Deployment guide provides step-by-step instructions
@@ -271,6 +286,7 @@ _This section documents departures from standard architecture that require justi
 - [ ] All user stories validated (deferred to implementation phase)
 
 **Acceptance Criteria** (from spec.md):
+
 - [ ] User can authenticate to Matrix via Kratos OIDC (US1)
 - [ ] New users auto-provisioned (US2)
 - [ ] Existing users can link accounts (US4)
@@ -278,6 +294,7 @@ _This section documents departures from standard architecture that require justi
 - [ ] Authentication flow <10 seconds end-to-end
 
 **Documentation Success**:
+
 - [x] Architecture decisions clearly documented (research.md)
 - [x] API contracts defined (OpenAPI specs)
 - [x] Deployment procedures comprehensive (quickstart.md)
@@ -290,6 +307,7 @@ _This section documents departures from standard architecture that require justi
 **Command Execution Complete**: `/speckit.plan` has finished Phase 0 (Research) and Phase 1 (Design & Contracts).
 
 **Generated Artifacts**:
+
 - `/Users/antst/work/alkemio/server/specs/010-synapse-kratos-oidc/research.md`
 - `/Users/antst/work/alkemio/server/specs/010-synapse-kratos-oidc/data-model.md`
 - `/Users/antst/work/alkemio/server/specs/010-synapse-kratos-oidc/quickstart.md`
@@ -297,6 +315,7 @@ _This section documents departures from standard architecture that require justi
 - `/Users/antst/work/alkemio/server/specs/010-synapse-kratos-oidc/contracts/hydra-admin-api.yaml`
 
 **Proceed To**:
+
 1. Update agent context (run `.specify/scripts/bash/update-agent-context.sh`)
 2. Begin implementation following `tasks.md` (T001-T035)
 3. Start with MVP scope (User Story 1: T001-T021)
@@ -315,8 +334,10 @@ In this quickstart developer environment, the alkemio-server (NestJS) and the we
   - This allows the host-based alkemio-server to call admin endpoints via `HYDRA_ADMIN_URL=http://localhost:3000/hydra` (Traefik on port 3000 forwards to Hydra Admin after stripping the `/hydra` prefix).
 
 Security Position:
+
 - The `hydra-admin-web` router is a deliberate convenience for local development only. It MUST be removed or locked down for production (e.g., dedicated admin entrypoint, private network, or service-to-service only). A separate production deployment feature will address this.
 
 Operational Notes:
+
 - The Docker Compose file publishes Traefik on port 3000 (`- 3000:80`), forwarding requests to services and routers declared in `.build/traefik/http.yml`.
 - Host processes (server and web client) call container services via `http://localhost:3000/...` which Traefik maps to the appropriate internal services; container services can, in turn, reach the host processes via `host.docker.internal`.

@@ -4,7 +4,7 @@ import { InAppNotificationPayloadPlatformUserProfileRemoved } from '@platform/in
 @Resolver(() => InAppNotificationPayloadPlatformUserProfileRemoved)
 export class InAppNotificationPayloadPlatformUserProfileRemovedResolverFields {
   @ResolveField(() => String, {
-    nullable: true,
+    nullable: false,
     description: 'The display name of the User that was removed.',
   })
   public userDisplayName(
@@ -15,7 +15,7 @@ export class InAppNotificationPayloadPlatformUserProfileRemovedResolverFields {
   }
 
   @ResolveField(() => String, {
-    nullable: true,
+    nullable: false,
     description: 'The email of the User that was removed.',
   })
   public userEmail(

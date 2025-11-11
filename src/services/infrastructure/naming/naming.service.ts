@@ -171,6 +171,7 @@ export class NamingService {
         contributions: {
           whiteboard: true,
           post: true,
+          memo: true,
         },
       },
       select: ['contributions'],
@@ -183,6 +184,9 @@ export class NamingService {
       }
       if (contribution.post) {
         reservedNameIDs.push(contribution.post.nameID);
+      }
+      if (contribution.memo) {
+        reservedNameIDs.push(contribution.memo.nameID);
       }
     }
     return reservedNameIDs;
