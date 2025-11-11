@@ -1028,6 +1028,8 @@ type CalloutContribution {
   id: UUID!
   """The Link that was contributed."""
   link: Link
+  """The Memo that was contributed."""
+  memo: Memo
   """The Post that was contributed."""
   post: Post
   """The sorting order for this Contribution."""
@@ -7304,6 +7306,7 @@ type UrlResolverQueryResultCalloutsSet {
   calloutId: UUID
   contributionId: UUID
   id: UUID!
+  memoId: UUID
   postId: UUID
   type: UrlType!
   whiteboardId: UUID
@@ -7354,6 +7357,7 @@ enum UrlType {
   ADMIN
   CALLOUT
   CALLOUTS_SET
+  CONTRIBUTION_MEMO
   CONTRIBUTION_POST
   CONTRIBUTION_WHITEBOARD
   CONTRIBUTORS_EXPLORER
