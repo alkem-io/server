@@ -3,7 +3,7 @@ import {
   UserAuthenticationLinkMatch,
   UserAuthenticationLinkOutcome,
   UserAuthenticationLinkResult,
-} from '@domain/community/user/user.authentication.link.types';
+} from '@domain/community/user-authentication-link/user.authentication.link.types';
 
 describe('AgentInfoService', () => {
   const email = 'user@example.com';

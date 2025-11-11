@@ -1,6 +1,6 @@
 import { FindOneOptions } from 'typeorm';
-import { User } from './user.entity';
-import { IUser } from './user.interface';
+import { User } from '../user/user.entity';
+import { IUser } from '../user/user.interface';
 
 export type UserAuthenticationLinkConflictMode = 'error' | 'log';
 

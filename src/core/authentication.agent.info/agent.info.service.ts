@@ -11,7 +11,7 @@ import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager } from 'typeorm';
 import { User } from '@domain/community/user/user.entity';
 import { ICredential } from '@domain/agent/credential/credential.interface';
-import { UserAuthenticationLinkService } from '@domain/community/user/user.authentication.link.service';
+import { UserAuthenticationLinkService } from '@domain/community/user-authentication-link/user.authentication.link.service';
 
 @Injectable()
 export class AgentInfoService {

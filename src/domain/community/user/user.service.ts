@@ -65,8 +65,8 @@ import { AgentInfoCacheService } from '@core/authentication.agent.info/agent.inf
 import { VisualType } from '@common/enums/visual.type';
 import { InstrumentService } from '@src/apm/decorators';
 import { CreateUserSettingsInput } from '../user-settings/dto/user.settings.dto.create';
-import { UserAuthenticationLinkService } from './user.authentication.link.service';
-import { UserAuthenticationLinkOutcome } from './user.authentication.link.types';
+import { UserAuthenticationLinkService } from '../user-authentication-link/user.authentication.link.service';
+import { UserAuthenticationLinkOutcome } from '../user-authentication-link/user.authentication.link.types';
 
 @InstrumentService()
 @Injectable()
