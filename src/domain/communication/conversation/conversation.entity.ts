@@ -41,5 +41,5 @@ export class Conversation extends AuthorizableEntity implements IConversation {
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  room!: Room;
+  room?: Room;
 }
