@@ -33,7 +33,7 @@ export class Conversation extends AuthorizableEntity implements IConversation {
       onDelete: 'CASCADE',
     }
   )
-  conversationsSet?: ConversationsSet;
+  conversationsSet!: ConversationsSet;
 
   @OneToOne(() => Room, {
     eager: true,

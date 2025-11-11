@@ -18,5 +18,5 @@ export abstract class IConversation extends IAuthorizable {
   wellKnownVirtualContributor?: VirtualContributorWellKnown;
 
   room?: IRoom;
-  conversationsSet?: IConversationsSet;
+  conversationsSet!: IConversationsSet;
 }
