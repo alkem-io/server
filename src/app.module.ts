@@ -54,7 +54,6 @@ import { SessionSyncModule } from '@services/session-sync/session-sync.module';
 import { SsiCredentialFlowController } from '@services/api-rest/ssi-credential-flow/ssi.credential.flow.controller';
 import { SsiCredentialFlowModule } from '@services/api-rest/ssi-credential-flow/ssi.credential.flow.module';
 import { StorageAccessModule } from '@services/api-rest/storage-access/storage.access.module';
-import { IdentityResolveModule } from '@services/api-rest/identity-resolve/identity-resolve.module';
 import { MessageReactionModule } from '@domain/communication/message.reaction/message.reaction.module';
 import {
   HttpExceptionFilter,
@@ -302,7 +301,6 @@ import { InAppNotificationAdminModule } from './platform-admin/in-app-notificati
     InnovationHubModule,
     SsiCredentialFlowModule,
     StorageAccessModule,
-    IdentityResolveModule,
     MeModule,
     ChatGuidanceModule,
     VirtualContributorModule,

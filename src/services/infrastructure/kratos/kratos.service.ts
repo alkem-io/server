@@ -277,33 +277,6 @@ export class KratosService {
     return identity[0];
   }
 
-  public async getIdentityById(
-    identityId: string
-  ): Promise<Identity | undefined> {
-    try {
-      const { data: identity } = await this.kratosIdentityClient.getIdentity({
-        id: identityId,
-      });
-      return identity;
-    } catch (error) {
-      const status = (error as any)?.response?.status;
-      if (status === 404) {
-        this.logger.warn(
-          `Identity with id ${identityId} not found.`,
-          LogContext.KRATOS
-        );
-        return undefined;
-      }
-
-      this.logger.error(
-        `Error fetching identity with id ${identityId}: ${(error as Error)?.message}`,
-        (error as Error)?.stack,
-        LogContext.KRATOS
-      );
-      throw error;
-    }
-  }
-
   /**
    * Deletes an identity by email.
    *

@@ -4,21 +4,17 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { AuthorizationCredential, LogContext } from '@common/enums';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { IVerifiedCredential } from '@domain/agent/verified-credential/verified.credential.interface';
-import { AgentInfoMetadata } from './agent.info.metadata';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager } from 'typeorm';
 import { User } from '@domain/community/user/user.entity';
-import { ICredential } from '@domain/agent/credential/credential.interface';
-import { UserAuthenticationLinkService } from '@domain/community/user-authentication-link/user.authentication.link.service';
-
+import { AgentInfoMetadata } from './agent.info.metadata';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 @Injectable()
 export class AgentInfoService {
   constructor(
-    private readonly userAuthenticationLinkService: UserAuthenticationLinkService,
     @InjectEntityManager('default')
-    private readonly entityManager: EntityManager,
+    private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -44,51 +40,30 @@ export class AgentInfoService {
    * @throws Will log an error message if the user is not registered.
    */
   public async getAgentInfoMetadata(
-    email: string,
-    options?: { authenticationId?: string }
+    email: string
   ): Promise<AgentInfoMetadata | undefined> {
-    const agentInfo = new AgentInfo();
-    agentInfo.email = email;
-    if (options?.authenticationId) {
-      agentInfo.authenticationID = options.authenticationId;
-    }
-
     try {
-      const resolved =
-        await this.userAuthenticationLinkService.resolveExistingUser(
-          agentInfo,
-          {
-            relations: {
-              agent: {
-                credentials: true,
-              },
-            },
-            conflictMode: 'log',
-          }
-        );
-
-      if (!resolved) {
-        throw new EntityNotFoundException(
-          `Unable to load User, Agent or Credentials for User: ${email}`,
-          LogContext.COMMUNITY
-        );
-      }
-
-      const user = resolved.user;
+      const user = await this.entityManager.findOneOrFail(User, {
+        where: {
+          email: email,
+        },
+        relations: {
+          agent: {
+            credentials: true,
+          },
+        },
+      });
       if (!user || !user.agent || !user.agent.credentials) {
         throw new EntityNotFoundException(
           `Unable to load User, Agent or Credentials for User: ${email}`,
           LogContext.COMMUNITY
         );
       }
-
       const userAgentInfoMetadata = new AgentInfoMetadata();
       userAgentInfoMetadata.credentials = user.agent.credentials;
       userAgentInfoMetadata.agentID = user.agent.id;
       userAgentInfoMetadata.userID = user.id;
       userAgentInfoMetadata.communicationID = user.communicationID;
-      userAgentInfoMetadata.authenticationID =
-        user.authenticationID ?? undefined;
       return userAgentInfoMetadata;
     } catch (error) {
       this.logger.verbose?.(
@@ -117,9 +92,6 @@ export class AgentInfoService {
     agentInfo.agentID = agentInfoMetadata.agentID;
     agentInfo.userID = agentInfoMetadata.userID;
     agentInfo.communicationID = agentInfoMetadata.communicationID;
-    if (agentInfoMetadata.authenticationID) {
-      agentInfo.authenticationID = agentInfoMetadata.authenticationID;
-    }
 
     if (agentInfoMetadata.credentials) {
       agentInfo.credentials = agentInfoMetadata.credentials;
@@ -160,22 +132,17 @@ export class AgentInfoService {
     let credentials: ICredentialDefinition[] = [];
 
     if (user.agent.credentials.length !== 0) {
-      credentials = user.agent.credentials.map(
-        (credential: ICredential): ICredentialDefinition => {
-          return {
-            type: credential.type,
-            resourceID: credential.resourceID,
-          };
-        }
-      );
+      credentials = user.agent.credentials.map(c => {
+        return {
+          type: c.type,
+          resourceID: c.resourceID,
+        };
+      });
     }
 
     const agentInfo = new AgentInfo();
     agentInfo.credentials = credentials;
     agentInfo.verifiedCredentials = verifiedCredentials;
-    if (user.authenticationID) {
-      agentInfo.authenticationID = user.authenticationID;
-    }
     return agentInfo;
   }
 }

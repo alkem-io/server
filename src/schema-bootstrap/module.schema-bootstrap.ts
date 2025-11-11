@@ -28,7 +28,6 @@ import { ContributionReporterModule } from '@services/external/elasticsearch/con
 import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.module';
 import { SsiCredentialFlowModule } from '@services/api-rest/ssi-credential-flow/ssi.credential.flow.module';
 import { StorageAccessModule } from '@services/api-rest/storage-access/storage.access.module';
-import { IdentityResolveModule } from '@services/api-rest/identity-resolve/identity-resolve.module';
 import { MessageModule } from '@domain/communication/message/message.module';
 import { MessageReactionModule } from '@domain/communication/message.reaction/message.reaction.module';
 import { NotificationRecipientsModule } from '@services/api/notification-recipients/notification.recipients.module';
@@ -208,7 +207,6 @@ class SchemaBootstrapStubModule {}
     InnovationHubModule,
     SsiCredentialFlowModule,
     StorageAccessModule,
-    IdentityResolveModule,
     MessageModule,
     MessageReactionModule,
     NotificationRecipientsModule,

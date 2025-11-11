@@ -44,13 +44,10 @@ export class AdminUsersMutations {
     const user = await this.userService.getUserOrFail(userID);
     try {
       await this.kratosService.deleteIdentityByEmail(user.email);
-      const updatedUser =
-        await this.userService.clearAuthenticationIDForUser(user);
       this.logger.verbose?.(
-        `Account associated with User ${user.email} has been deleted and authentication ID cleared`,
+        `Account associated with User ${user.email} has been deleted`,
         LogContext.AUTH
       );
-      return updatedUser;
     } catch (error: any) {
       this.logger.error?.(
         `Failed to delete account for User ID ${userID}: ${error.message}`,
@@ -58,5 +55,6 @@ export class AdminUsersMutations {
       );
       throw new UserIdentityDeletionException('Failed to delete user account');
     }
+    return user;
   }
 }

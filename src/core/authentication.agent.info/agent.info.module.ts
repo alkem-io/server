@@ -1,9 +1,8 @@
 import { Module } from '@nestjs/common';
 import { AgentInfoCacheService } from './agent.info.cache.service';
 import { AgentInfoService } from './agent.info.service';
-import { UserAuthenticationLinkModule } from '@domain/community/user-authentication-link/user.authentication.link.module';
 @Module({
-  imports: [UserAuthenticationLinkModule],
+  imports: [],
   providers: [AgentInfoService, AgentInfoCacheService],
   exports: [AgentInfoService, AgentInfoCacheService],
 })

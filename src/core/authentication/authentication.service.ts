@@ -110,8 +110,7 @@ export class AuthenticationService {
     const agentInfo = this.buildAgentInfoFromOrySession(oryIdentity, session);
 
     const agentInfoMetadata = await this.agentInfoService.getAgentInfoMetadata(
-      agentInfo.email,
-      { authenticationId: agentInfo.authenticationID }
+      agentInfo.email
     );
     if (!agentInfoMetadata) return agentInfo;
 
@@ -180,7 +179,6 @@ export class AuthenticationService {
     agentInfo.firstName = oryTraits.name.first;
     agentInfo.lastName = oryTraits.name.last;
     agentInfo.avatarURL = oryTraits.picture;
-    agentInfo.authenticationID = oryIdentity.id;
     agentInfo.expiry = session?.expires_at
       ? new Date(session.expires_at).getTime()
       : undefined;

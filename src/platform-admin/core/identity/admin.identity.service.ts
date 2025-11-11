@@ -3,18 +3,14 @@ import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { IdentityVerificationStatusFilter } from '@common/enums/identity.verification.status.filter';
 import { Identity } from '@ory/kratos-client';
 import { OryDefaultIdentitySchema } from '@services/infrastructure/kratos/types/ory.default.identity.schema';
-import { LogContext } from '@common/enums';
+import { LogContext } from '@common/enums/logging.context';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { KratosIdentityDto } from './dto/kratos.identity.dto';
-import { UserService } from '@domain/community/user/user.service';
-import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 
 @Injectable()
 export class AdminIdentityService {
   constructor(
     private kratosService: KratosService,
-    private readonly userService: UserService,
-    private readonly userLookupService: UserLookupService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -67,26 +63,6 @@ export class AdminIdentityService {
    * @returns A promise that resolves when the identity is deleted.
    */
   async deleteIdentityByEmail(email: string): Promise<boolean> {
-    let identity: Identity | undefined;
-    try {
-      identity = await this.kratosService.getIdentityByEmail(email);
-    } catch (error) {
-      this.logger.error(
-        `Error fetching identity with email ${email}: ${(error as Error)?.message}`,
-        (error as Error)?.stack,
-        LogContext.KRATOS
-      );
-      return false;
-    }
-
-    if (!identity) {
-      this.logger.warn(
-        `No Kratos identity found for email ${email} when attempting deletion`,
-        LogContext.KRATOS
-      );
-      return false;
-    }
-
     try {
       await this.kratosService.deleteIdentityByEmail(email);
     } catch (error) {
@@ -97,8 +73,6 @@ export class AdminIdentityService {
       );
       return false;
     }
-
-    await this.clearAuthenticationId(identity?.id, email);
     return true;
   }
 
@@ -119,40 +93,7 @@ export class AdminIdentityService {
       );
       return false;
     }
-    await this.clearAuthenticationId(kratosIdentityId);
     return true;
-  }
-
-  private async clearAuthenticationId(
-    identityId?: string,
-    email?: string
-  ): Promise<void> {
-    try {
-      let user = identityId
-        ? await this.userLookupService.getUserByAuthenticationID(identityId)
-        : null;
-
-      if (!user && email) {
-        user = await this.userLookupService.getUserByEmail(email);
-      }
-
-      if (!user) {
-        this.logger.debug?.(
-          `No user found for identityId=${identityId ?? 'n/a'} email=${email ?? 'n/a'} while clearing authentication ID`,
-          LogContext.AUTH
-        );
-        return;
-      }
-
-      await this.userService.clearAuthenticationIDForUser(user);
-    } catch (error) {
-      this.logger.error(
-        `Error clearing authentication ID for identityId=${identityId ?? 'n/a'} email=${email ?? 'n/a'}: ${(error as Error)?.message}`,
-        (error as Error)?.stack,
-        LogContext.AUTH
-      );
-      throw error;
-    }
   }
 
   /**

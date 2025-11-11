@@ -3,6 +3,7 @@ import {
   EntityNotFoundException,
   ForbiddenException,
   RelationshipNotFoundException,
+  UserAlreadyRegisteredException,
   UserRegistrationInvalidEmail,
   ValidationException,
 } from '@common/exceptions';
@@ -65,8 +66,6 @@ import { AgentInfoCacheService } from '@core/authentication.agent.info/agent.inf
 import { VisualType } from '@common/enums/visual.type';
 import { InstrumentService } from '@src/apm/decorators';
 import { CreateUserSettingsInput } from '../user-settings/dto/user.settings.dto.create';
-import { UserAuthenticationLinkService } from '../user-authentication-link/user.authentication.link.service';
-import { UserAuthenticationLinkOutcome } from '../user-authentication-link/user.authentication.link.types';
 
 @InstrumentService()
 @Injectable()
@@ -81,7 +80,6 @@ export class UserService {
     private namingService: NamingService,
     private agentService: AgentService,
     private agentInfoCacheService: AgentInfoCacheService,
-    private readonly userAuthenticationLinkService: UserAuthenticationLinkService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private storageAggregatorService: StorageAggregatorService,
     private accountLookupService: AccountLookupService,
@@ -177,14 +175,6 @@ export class UserService {
     user.agent = await this.agentService.createAgent({
       type: AgentType.USER,
     });
-
-    const authenticationID = agentInfo?.authenticationID;
-    if (authenticationID) {
-      await this.userAuthenticationLinkService.ensureAuthenticationIdAvailable(
-        authenticationID
-      );
-      user.authenticationID = authenticationID;
-    }
 
     this.logger.verbose?.(
       `Created a new user with email: ${user.email}`,
@@ -356,16 +346,10 @@ export class UserService {
       );
     }
 
-    const resolvedUser =
-      await this.userAuthenticationLinkService.resolveExistingUser(agentInfo, {
-        conflictMode: 'error',
-      });
-
-    if (resolvedUser) {
-      if (resolvedUser.outcome === UserAuthenticationLinkOutcome.LINKED) {
-        await this.setUserCache(resolvedUser.user);
-      }
-      return resolvedUser.user;
+    if (await this.userLookupService.isRegisteredUser(email)) {
+      throw new UserAlreadyRegisteredException(
+        `User with email: ${email} already registered`
+      );
     }
 
     const userData: CreateUserInput = {
@@ -385,26 +369,6 @@ export class UserService {
     };
 
     return await this.createUser(userData, agentInfo);
-  }
-
-  async clearAuthenticationIDForUser(user: IUser): Promise<IUser> {
-    if (!user.authenticationID) {
-      return user;
-    }
-
-    user.authenticationID = null;
-    const updatedUser = await this.save(user);
-    await this.clearUserCache(updatedUser);
-    this.logger.verbose?.(
-      `Cleared authentication ID for user ${updatedUser.id}`,
-      LogContext.AUTH
-    );
-    return updatedUser;
-  }
-
-  async clearAuthenticationIDById(userId: string): Promise<IUser> {
-    const user = await this.getUserOrFail(userId);
-    return this.clearAuthenticationIDForUser(user);
   }
 
   private async validateUserProfileCreationRequest(
