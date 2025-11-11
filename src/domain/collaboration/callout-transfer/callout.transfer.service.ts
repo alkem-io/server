@@ -98,6 +98,11 @@ export class CalloutTransferService {
               storageBucket: true,
             },
           },
+          memo: {
+            profile: {
+              storageBucket: true,
+            },
+          },
         },
       },
     });
@@ -127,6 +132,10 @@ export class CalloutTransferService {
       );
       await this.updateStorageBucketAggregator(
         contribution.whiteboard?.profile.storageBucket,
+        storageAggregator
+      );
+      await this.updateStorageBucketAggregator(
+        contribution.memo?.profile.storageBucket,
         storageAggregator
       );
     }

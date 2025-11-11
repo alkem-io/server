@@ -382,6 +382,12 @@ export class CalloutResolverMutations {
           );
         }
       }
+
+      if (contributionData.memo && contribution.memo) {
+        if (callout.settings.visibility === CalloutVisibility.PUBLISHED) {
+          this.processActivityMemoCreated(callout, contribution, agentInfo);
+        }
+      }
     }
 
     return await this.calloutContributionService.getCalloutContributionOrFail(
@@ -499,6 +505,25 @@ export class CalloutResolverMutations {
         email: agentInfo.email,
       }
     );
+  }
+
+  private async processActivityMemoCreated(
+    callout: ICallout,
+    contribution: ICalloutContribution,
+    agentInfo: AgentInfo
+  ) {
+    const notificationInput: NotificationInputCollaborationCalloutContributionCreated =
+      {
+        contribution: contribution,
+        callout: callout,
+        contributionType: CalloutContributionType.MEMO,
+        triggeredBy: agentInfo.userID,
+      };
+    await this.notificationAdapterSpace.spaceCollaborationCalloutContributionCreated(
+      notificationInput
+    );
+
+    // todo: implement memo activity
   }
 
   @Mutation(() => [ICalloutContribution], {

@@ -42,6 +42,9 @@ export class CalloutContributionMoveService {
             whiteboard: {
               profile: true,
             },
+            memo: {
+              profile: true,
+            },
           },
         }
       )) as CalloutContribution;
@@ -93,6 +96,17 @@ export class CalloutContributionMoveService {
         LogContext.COLLABORATION
       );
     }
+    if (
+      contribution.memo &&
+      !targetCallout.settings.contribution.allowedTypes.includes(
+        CalloutContributionType.MEMO
+      )
+    ) {
+      throw new NotSupportedException(
+        'The destination callout does not allow contributions of type MEMO.',
+        LogContext.COLLABORATION
+      );
+    }
 
     if (targetCallout.calloutsSet?.id !== sourceCallout?.calloutsSet?.id) {
       throw new NotSupportedException(
@@ -111,6 +125,11 @@ export class CalloutContributionMoveService {
     if (contribution?.whiteboard?.profile.id) {
       await this.urlGeneratorCacheService.revokeUrlCache(
         contribution?.whiteboard?.profile.id
+      );
+    }
+    if (contribution?.memo?.profile.id) {
+      await this.urlGeneratorCacheService.revokeUrlCache(
+        contribution?.memo?.profile.id
       );
     }
 

@@ -286,6 +286,20 @@ export class NotificationExternalAdapter {
         description: contribution.link.profile.description ?? '',
         url: calloutURL, // no uri on link creation, use callout URL instead
       };
+    } else if (contribution.memo) {
+      contributionPayload = {
+        id: contribution.memo.id,
+        type: CalloutContributionType.MEMO,
+        createdBy: await this.getContributorPayloadOrFail(
+          contribution.createdBy || contribution.memo.createdBy || ''
+        ),
+        displayName: contribution.memo.profile.displayName,
+        description: contribution.memo.profile.description ?? '',
+        url: await this.urlGeneratorService.getMemoUrlPath(
+          contribution.memo.id,
+          contribution.memo.nameID
+        ),
+      };
     } else {
       throw new RelationshipNotFoundException(
         'No valid contribution type found (post, whiteboard, or link)',
