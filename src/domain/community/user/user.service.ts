@@ -178,8 +178,7 @@ export class UserService {
       type: AgentType.USER,
     });
 
-    const authenticationID =
-      userData.authenticationID ?? agentInfo?.authenticationID;
+    const authenticationID = agentInfo?.authenticationID;
     if (authenticationID) {
       await this.userAuthenticationLinkService.ensureAuthenticationIdAvailable(
         authenticationID
@@ -385,10 +384,6 @@ export class UserService {
       },
     };
 
-    if (agentInfo.authenticationID) {
-      userData.authenticationID = agentInfo.authenticationID;
-    }
-
     return await this.createUser(userData, agentInfo);
   }
 
@@ -425,11 +420,6 @@ export class UserService {
       );
     // Trim values to remove space issues
     userData.email = userData.email.trim();
-    if (userData.authenticationID) {
-      await this.userAuthenticationLinkService.ensureAuthenticationIdAvailable(
-        userData.authenticationID
-      );
-    }
     return true;
   }
 
