@@ -500,6 +500,21 @@ input ActivityLogInput {
   types: [ActivityEventType!]
 }
 
+type AdminAuthenticationIDBackfillResult {
+  """Total users examined during the backfill run"""
+  processed: Int!
+  """
+  Batches that initially failed but succeeded after a retry during the run
+  """
+  retriedBatches: Int!
+  """
+  Users skipped because they already had authenticationID or no Kratos identity was found
+  """
+  skipped: Int!
+  """Users whose authenticationID was updated during the run"""
+  updated: Int!
+}
+
 type Agent {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -1028,6 +1043,8 @@ type CalloutContribution {
   id: UUID!
   """The Link that was contributed."""
   link: Link
+  """The Memo that was contributed."""
+  memo: Memo
   """The Post that was contributed."""
   post: Post
   """The sorting order for this Contribution."""
@@ -3816,6 +3833,10 @@ type Mutation {
   addIframeAllowedURL(whitelistedURL: String!): [String!]!
   """Add a reaction to a message from the specified Room."""
   addReactionToMessageInRoom(reactionData: RoomAddReactionToMessageInput!): Reaction!
+  """
+  Populate authenticationID for existing users by querying Kratos Admin API
+  """
+  adminBackfillAuthenticationIDs: AdminAuthenticationIDBackfillResult!
   """Ensure all community members are registered for communications."""
   adminCommunicationEnsureAccessToCommunications(communicationData: CommunicationAdminEnsureAccessInput!): Boolean!
   """Remove an orphaned room from messaging platform."""
@@ -7304,6 +7325,7 @@ type UrlResolverQueryResultCalloutsSet {
   calloutId: UUID
   contributionId: UUID
   id: UUID!
+  memoId: UUID
   postId: UUID
   type: UrlType!
   whiteboardId: UUID
@@ -7354,6 +7376,7 @@ enum UrlType {
   ADMIN
   CALLOUT
   CALLOUTS_SET
+  CONTRIBUTION_MEMO
   CONTRIBUTION_POST
   CONTRIBUTION_WHITEBOARD
   CONTRIBUTORS_EXPLORER
