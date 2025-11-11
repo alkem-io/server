@@ -132,6 +132,8 @@ enum AuthorizationPolicyType {
   CLASSIFICATION
   COLLABORATION
   COMMUNICATION
+  COMMUNICATION_CONVERSATION
+  COMMUNICATION_CONVERSATIONS_SET
   COMMUNITY
   COMMUNITY_GUIDELINES
   DISCUSSION
@@ -270,6 +272,11 @@ enum CalloutsSetType {
 enum CalloutVisibility {
   DRAFT
   PUBLISHED
+}
+
+enum CommunicationConversationType {
+  USER_USER
+  USER_VC
 }
 
 enum CommunityMembershipPolicy {
@@ -471,7 +478,6 @@ enum NotificationEvent {
   USER_COMMENT_REPLY
   USER_MENTIONED
   USER_MESSAGE
-  USER_MESSAGE_SENDER
   USER_SIGN_UP_WELCOME
   USER_SPACE_COMMUNITY_APPLICATION_DECLINED
   USER_SPACE_COMMUNITY_INVITATION
@@ -499,7 +505,6 @@ enum NotificationEventPayload {
   ORGANIZATION_MESSAGE_DIRECT
   ORGANIZATION_MESSAGE_ROOM
   PLATFORM_FORUM_DISCUSSION
-  PLATFORM_FORUM_DISCUSSION_COMMENT
   PLATFORM_GLOBAL_ROLE_CHANGE
   PLATFORM_USER_PROFILE_REMOVED
   SPACE
@@ -725,6 +730,7 @@ enum UrlType {
   ADMIN
   CALLOUT
   CALLOUTS_SET
+  CONTRIBUTION_MEMO
   CONTRIBUTION_POST
   CONTRIBUTION_WHITEBOARD
   CONTRIBUTORS_EXPLORER
@@ -792,6 +798,11 @@ enum VirtualContributorModelCardEntryFlagName {
 enum VirtualContributorStatus {
   INITIALIZING
   READY
+}
+
+enum VirtualContributorWellKnown {
+  CHAT_GUIDANCE
+  STEWARD_OWNERSHIP_EXPERT
 }
 
 enum VisualType {
@@ -1545,6 +1556,8 @@ type CalloutContribution {
   id: UUID!
   """The Link that was contributed."""
   link: Link
+  """The Memo that was contributed."""
+  memo: Memo
   """The Post that was contributed."""
   post: Post
   """The sorting order for this Contribution."""
@@ -1926,6 +1939,27 @@ type ContributorRoles {
   spaces: [RolesResultSpace!]!
 }
 
+type Conversation {
+  """The authorization rules for the entity"""
+  authorization: Authorization
+  """The date at which the entity was created."""
+  createdDate: DateTime!
+  """The ID of the entity"""
+  id: UUID!
+  """The room for this Conversation."""
+  room: Room
+  type: CommunicationConversationType!
+  """The date at which the entity was last updated."""
+  updatedDate: DateTime!
+  """The user participating in this Conversation."""
+  user: User
+  """
+  The virtual contributor participating in this Conversation (only for USER_AGENT conversations).
+  """
+  virtualContributor: VirtualContributor
+  wellKnownVirtualContributor: VirtualContributorWellKnown
+}
+
 type CreateCalloutContributionData {
   link: CreateLinkData
   memo: CreateMemoData
@@ -2153,17 +2187,6 @@ type CredentialMetadataOutput {
   uniqueType: String!
 }
 
-type DirectRoom {
-  """The display name of the room"""
-  displayName: String!
-  """The identifier of the room"""
-  id: String!
-  """The messages that have been sent to the Room."""
-  messages: [Message!]!
-  """The recipient userID"""
-  receiverID: String
-}
-
 type Discussion {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -2333,16 +2356,11 @@ type InAppNotification {
   updatedDate: DateTime!
 }
 
-type InAppNotificationPayloadOrganization implements InAppNotificationPayload {
-  """The payload type."""
-  type: NotificationEventPayload!
-}
-
 type InAppNotificationPayloadOrganizationMessageDirect implements InAppNotificationPayload {
   """The message content."""
   message: String!
   """The organization."""
-  organization: Contributor!
+  organization: Organization
   """The payload type."""
   type: NotificationEventPayload!
 }
@@ -2358,23 +2376,18 @@ type InAppNotificationPayloadOrganizationMessageRoom implements InAppNotificatio
   type: NotificationEventPayload!
 }
 
-type InAppNotificationPayloadPlatform implements InAppNotificationPayload {
-  """The payload type."""
-  type: NotificationEventPayload!
-}
-
 type InAppNotificationPayloadPlatformForumDiscussion implements InAppNotificationPayload {
   """The comment message."""
   comment: String
   """The discussion details."""
-  discussion: DiscussionDetails
+  discussion: DiscussionDetails!
   """The payload type."""
   type: NotificationEventPayload!
 }
 
 type InAppNotificationPayloadPlatformGlobalRoleChange implements InAppNotificationPayload {
   """The new role."""
-  role: String
+  role: String!
   """The payload type."""
   type: NotificationEventPayload!
   """The User whose role was changed."""
@@ -2388,56 +2401,56 @@ type InAppNotificationPayloadPlatformUser implements InAppNotificationPayload {
 
 type InAppNotificationPayloadPlatformUserMessageRoom implements InAppNotificationPayload {
   """The details of the message."""
-  messageDetails: MessageDetails
+  messageDetails: MessageDetails!
   """The payload type."""
   type: NotificationEventPayload!
-  """The User for the message."""
-  user: User
+  """The User receiver of the message."""
+  user: User!
 }
 
 type InAppNotificationPayloadPlatformUserProfileRemoved implements InAppNotificationPayload {
   """The payload type."""
   type: NotificationEventPayload!
   """The display name of the User that was removed."""
-  userDisplayName: String
+  userDisplayName: String!
   """The email of the User that was removed."""
-  userEmail: String
+  userEmail: String!
 }
 
 type InAppNotificationPayloadSpace implements InAppNotificationPayload {
   """The space details."""
-  space: Space
+  space: Space!
   """The payload type."""
   type: NotificationEventPayload!
 }
 
 type InAppNotificationPayloadSpaceCollaborationCallout implements InAppNotificationPayload {
   """The Callout that was published."""
-  callout: Callout
+  callout: Callout!
   """Where the callout is located."""
-  space: Space
+  space: Space!
   """The payload type."""
   type: NotificationEventPayload!
 }
 
 type InAppNotificationPayloadSpaceCollaborationCalloutComment implements InAppNotificationPayload {
   """The Callout that was published."""
-  callout: Callout
+  callout: Callout!
   """The details of the message."""
-  messageDetails: MessageDetails
+  messageDetails: MessageDetails!
   """The Space where the comment was made."""
-  space: Space
+  space: Space!
   """The payload type."""
   type: NotificationEventPayload!
 }
 
 type InAppNotificationPayloadSpaceCollaborationCalloutPostComment implements InAppNotificationPayload {
   """The Callout that was published."""
-  callout: Callout
+  callout: Callout!
   """The details of the message."""
-  messageDetails: MessageDetails
+  messageDetails: MessageDetails!
   """The Space where the comment was made."""
-  space: Space
+  space: Space!
   """The payload type."""
   type: NotificationEventPayload!
 }
@@ -2445,80 +2458,76 @@ type InAppNotificationPayloadSpaceCollaborationCalloutPostComment implements InA
 type InAppNotificationPayloadSpaceCommunicationMessageDirect implements InAppNotificationPayload {
   """The message content."""
   message: String!
-  """The space details."""
-  space: Space
+  """The Space where the message was sent."""
+  space: Space!
   """The payload type."""
   type: NotificationEventPayload!
 }
 
 type InAppNotificationPayloadSpaceCommunicationUpdate implements InAppNotificationPayload {
-  """The space details."""
-  space: Space
+  """The Space where the update was sent."""
+  space: Space!
   """The payload type."""
   type: NotificationEventPayload!
   """The update content."""
-  update: String
+  update: String!
 }
 
 type InAppNotificationPayloadSpaceCommunityApplication implements InAppNotificationPayload {
   """The Application that the notification is related to."""
-  application: Application
-  """The space details."""
-  space: Space
+  application: Application!
+  """The Space that the application was made to."""
+  space: Space!
   """The payload type."""
   type: NotificationEventPayload!
 }
 
 type InAppNotificationPayloadSpaceCommunityCalendarEvent implements InAppNotificationPayload {
   """The CalendarEvent that was created."""
-  calendarEvent: CalendarEvent
-  """ID of the calendar event."""
-  calendarEventID: UUID!
-  """The space details."""
-  space: Space
+  calendarEvent: CalendarEvent!
+  """The Space where the calendar event was created."""
+  space: Space!
   """The payload type."""
   type: NotificationEventPayload!
 }
 
 type InAppNotificationPayloadSpaceCommunityCalendarEventComment implements InAppNotificationPayload {
   """The calendar event that was commented on."""
-  calendarEvent: CalendarEvent
-  """ID of the calendar event that was commented on."""
-  calendarEventID: UUID!
+  calendarEvent: CalendarEvent!
   """Preview text of the comment"""
   commentText: String!
   """The space details."""
-  space: Space
+  space: Space!
   """The payload type."""
   type: NotificationEventPayload!
 }
 
 type InAppNotificationPayloadSpaceCommunityContributor implements InAppNotificationPayload {
   """The Contributor that joined."""
-  contributor: Contributor
-  """The space details."""
-  space: Space
+  contributor: Contributor!
+  """The Space that was joined."""
+  space: Space!
   """The payload type."""
   type: NotificationEventPayload!
 }
 
 type InAppNotificationPayloadSpaceCommunityInvitation implements InAppNotificationPayload {
-  """The space details."""
-  space: Space
+  """The Space that the invitation is for."""
+  space: Space!
   """The payload type."""
   type: NotificationEventPayload!
 }
 
 type InAppNotificationPayloadSpaceCommunityInvitationPlatform implements InAppNotificationPayload {
-  """The space details."""
-  space: Space
+  """The Space that the invitation is for."""
+  space: Space!
   """The payload type."""
   type: NotificationEventPayload!
 }
 
 type InAppNotificationPayloadUserMessageDirect implements InAppNotificationPayload {
   """The message content."""
-  message: String
+  message: String!
   """The payload type."""
   type: NotificationEventPayload!
   """The User that was sent the message."""
@@ -2526,11 +2535,11 @@ type InAppNotificationPayloadUserMessageDirect implements InAppNotificationPaylo
 }
 
 type InAppNotificationPayloadVirtualContributor implements InAppNotificationPayload {
-  contributor: VirtualContributor
-  space: Space
+  contributor: VirtualContributor!
+  """The Space related to the notification"""
+  space: Space!
   """The payload type."""
   type: NotificationEventPayload!
-  virtualContributorID: String!
 }
 
 type InnovationFlow {
@@ -3034,6 +3043,8 @@ type LookupQueryResults {
   communityGuidelines(ID: UUID!): CommunityGuidelines
   """Lookup the specified CalloutContribution"""
   contribution(ID: UUID!): CalloutContribution
+  """Lookup the specified Conversation"""
+  conversation(ID: UUID!): Conversation
   """Lookup the specified Document"""
   document(ID: UUID!): Document
   """Lookup the specified InnovationFlow"""
@@ -3086,6 +3097,17 @@ type LookupQueryResults {
   whiteboard(ID: UUID!): Whiteboard
 }
 
+type MeConversationsResult {
+  """Conversations between users."""
+  users: [Conversation!]!
+  """
+  Get a conversation with a well-known virtual contributor for the current user.
+  """
+  virtualContributor(wellKnown: VirtualContributorWellKnown!): Conversation
+  """Conversations between users and virtual contributors."""
+  virtualContributors: [Conversation!]!
+}
+
 type Memo {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -3129,6 +3151,8 @@ type MeQueryResults {
     """The state names you want to filter on"""
     states: [String!]
   ): Float!
+  """The conversations the current authenticated user is part of."""
+  conversations: MeConversationsResult!
   """The query id"""
   id: String!
   """The Spaces I am contributing to"""
@@ -3316,7 +3340,7 @@ type Mutation {
   """Apply to join the specified RoleSet in the entry Role."""
   applyForEntryRoleOnRoleSet(applicationData: ApplyForEntryRoleOnRoleSetInput!): Application!
   """Ask the chat engine for guidance."""
-  askChatGuidanceQuestion(chatData: ChatGuidanceInput!): MessageAnswerQuestion!
+  askVcQuestion(input: ConversationVcAskQuestionInput!): MessageAnswerQuestion!
   """Assign the specified LicensePlan to an Account."""
   assignLicensePlanToAccount(planData: AssignLicensePlanToAccount!): Account!
   """Assign the specified LicensePlan to a Space."""
@@ -3367,10 +3391,10 @@ type Mutation {
   convertVirtualContributorToUseKnowledgeBase(conversionData: ConversionVcSpaceToVcKnowledgeBaseInput!): VirtualContributor!
   """Create a new Callout on the CalloutsSet."""
   createCalloutOnCalloutsSet(calloutData: CreateCalloutOnCalloutsSetInput!): Callout!
-  """Create a guidance chat room."""
-  createChatGuidanceRoom: Room
   """Create a new Contribution on the Callout."""
   createContributionOnCallout(contributionData: CreateContributionOnCalloutInput!): CalloutContribution!
+  """Create a new Conversation on the ConversationsSet."""
+  createConversationOnConversationsSet(conversationData: CreateConversationInput!): Conversation!
   """Creates a new Discussion as part of this Forum."""
   createDiscussion(createData: ForumCreateDiscussionInput!): Discussion!
   """Create a new CalendarEvent on the Calendar."""
@@ -3423,6 +3447,10 @@ type Mutation {
   deleteCallout(deleteData: DeleteCalloutInput!): Callout!
   """Deletes a contribution."""
   deleteContribution(deleteData: DeleteContributionInput!): CalloutContribution!
+  """
+  Deletes a Conversation. The Matrix room is only deleted if no reciprocal conversation exists.
+  """
+  deleteConversation(deleteData: DeleteConversationInput!): Conversation!
   """Deletes the specified Discussion."""
   deleteDiscussion(deleteData: DeleteDiscussionInput!): Discussion!
   """Deletes the specified Document."""
@@ -3471,6 +3499,8 @@ type Mutation {
   eventOnInvitation(eventData: InvitationEventInput!): Invitation!
   """Trigger an event on the Organization Verification."""
   eventOnOrganizationVerification(eventData: OrganizationVerificationEventInput!): OrganizationVerification!
+  """User vote if a specific answer is relevant."""
+  feedbackOnVcAnswerRelevance(input: ConversationVcAnswerRelevanceInput!): Boolean!
   """Grants an authorization credential to an Organization."""
   grantCredentialToOrganization(grantCredentialData: GrantOrganizationAuthorizationCredentialInput!): Organization!
   """Grants an authorization credential to a User."""
@@ -3520,7 +3550,7 @@ type Mutation {
   """Removes the specified User from specified user group"""
   removeUserFromGroup(membershipData: RemoveUserGroupMemberInput!): UserGroup!
   """Resets the interaction with the chat engine."""
-  resetChatGuidance: Boolean!
+  resetConversationVc(input: ConversationVcResetInput!): Conversation!
   """Reset all license plans on Accounts"""
   resetLicenseOnAccounts: Space!
   """Removes an authorization credential from an Organization."""
@@ -3539,10 +3569,12 @@ type Mutation {
   sendMessageToOrganization(messageData: CommunicationSendMessageToOrganizationInput!): Boolean!
   """Sends an comment message. Returns the id of the new Update message."""
   sendMessageToRoom(messageData: RoomSendMessageInput!): Message!
-  """Sends a message on the specified User`s behalf and returns the room id"""
-  sendMessageToUserDirect(messageData: UserSendMessageInput!): String!
   """Send message to multiple Users."""
   sendMessageToUsers(messageData: CommunicationSendMessageToUsersInput!): Boolean!
+  """
+  Set the mapping of a well-known Virtual Contributor to a specific Virtual Contributor UUID.
+  """
+  setPlatformWellKnownVirtualContributor(mappingData: SetPlatformWellKnownVirtualContributorInput!): PlatformWellKnownVirtualContributors!
   """
   Transfer the specified Callout from its current CalloutsSet to the target CalloutsSet. Note: this is experimental, and only for GlobalAdmins. The user that executes the transfer becomes the creator of the Callout.
   """
@@ -3555,8 +3587,6 @@ type Mutation {
   transferSpaceToAccount(transferData: TransferAccountSpaceInput!): Space!
   """Transfer the specified Virtual Contributor to another Account."""
   transferVirtualContributorToAccount(transferData: TransferAccountVirtualContributorInput!): InnovationPack!
-  """User vote if a specific answer is relevant."""
-  updateAnswerRelevance(input: ChatGuidanceAnswerRelevanceInput!): Boolean!
   """Update the Application Form used by this RoleSet."""
   updateApplicationFormOnRoleSet(applicationFormData: UpdateApplicationFormOnRoleSetInput!): RoleSet!
   """Update the baseline License Plan on the specified Account."""
@@ -3838,10 +3868,6 @@ type Platform {
   """The authorization rules for the entity"""
   authorization: Authorization
   """
-  The Virtual Contributor that is used to provide chat help on the platform.
-  """
-  chatGuidanceVirtualContributor: VirtualContributor!
-  """
   Alkemio configuration. Provides configuration to external services in the Alkemio ecosystem.
   """
   configuration: Config!
@@ -3878,6 +3904,8 @@ type Platform {
   templatesManager: TemplatesManager
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
+  """The mappings of well-known Virtual Contributors to their UUIDs."""
+  wellKnownVirtualContributors: PlatformWellKnownVirtualContributors!
 }
 
 type PlatformAccessRole {
@@ -4076,6 +4104,18 @@ type PlatformRolesAccess {
 type PlatformSettings {
   """The integration settings for this Platform"""
   integration: PlatformIntegrationSettings!
+}
+
+type PlatformWellKnownVirtualContributorMapping {
+  """The UUID of the Virtual Contributor."""
+  virtualContributorID: UUID!
+  """The well-known identifier for the Virtual Contributor."""
+  wellKnown: VirtualContributorWellKnown!
+}
+
+type PlatformWellKnownVirtualContributors {
+  """The mappings of well-known Virtual Contributors to their UUIDs."""
+  mappings: [PlatformWellKnownVirtualContributorMapping!]!
 }
 
 type Post {
@@ -5350,6 +5390,7 @@ type UrlResolverQueryResultCalloutsSet {
   calloutId: UUID
   contributionId: UUID
   id: UUID!
+  memoId: UUID
   postId: UUID
   type: UrlType!
   whiteboardId: UUID
@@ -5411,13 +5452,9 @@ type User implements Contributor {
   authorization: Authorization
   """The date at which the entity was created."""
   createdDate: DateTime!
-  """The direct rooms this user is a member of"""
-  directRooms: [DirectRoom!]
   """The email address for this User."""
   email: String!
   firstName: String!
-  """Guidance Chat Room for this user"""
-  guidanceRoom: Room
   """The ID of the Contributor"""
   id: UUID!
   """Can a message be sent to this User."""
@@ -5961,20 +5998,6 @@ input AssignUserGroupMemberInput {
   userID: UUID!
 }
 
-input ChatGuidanceAnswerRelevanceInput {
-  """The answer id."""
-  id: String!
-  """Is the answer relevant or not."""
-  relevant: Boolean!
-}
-
-input ChatGuidanceInput {
-  """The language of the answer."""
-  language: String
-  """The question that is being asked."""
-  question: String!
-}
-
 input CommunicationAdminEnsureAccessInput {
   communityID: UUID!
 }
@@ -6024,6 +6047,29 @@ input ContributionsFilterInput {
 input ContributorFilterInput {
   """Return contributors with credentials in the provided list"""
   credentials: [AuthorizationCredential!]
+}
+
+input ConversationVcAnswerRelevanceInput {
+  """The ID of the conversation."""
+  conversationID: UUID!
+  """The answer id."""
+  id: String!
+  """Is the answer relevant or not."""
+  relevant: Boolean!
+}
+
+input ConversationVcAskQuestionInput {
+  """The ID of the conversation."""
+  conversationID: UUID!
+  """The language of the answer."""
+  language: String
+  """The question that is being asked."""
+  question: String!
+}
+
+input ConversationVcResetInput {
+  """The ID of the conversation."""
+  conversationID: UUID!
 }
 
 input ConversionVcSpaceToVcKnowledgeBaseInput {
@@ -6209,6 +6255,13 @@ input CreateContributionOnCalloutInput {
   sortOrder: Float
   type: CalloutContributionType!
   whiteboard: CreateWhiteboardInput
+}
+
+input CreateConversationInput {
+  type: CommunicationConversationType!
+  userID: UUID!
+  virtualContributorID: UUID
+  wellKnownVirtualContributor: VirtualContributorWellKnown
 }
 
 input CreateInnovationFlowInput {
@@ -6601,6 +6654,10 @@ input DeleteCalloutInput {
 }
 
 input DeleteContributionInput {
+  ID: UUID!
+}
+
+input DeleteConversationInput {
   ID: UUID!
 }
 
@@ -7033,6 +7090,13 @@ input SearchInput {
   tagsetNames: [String!]
   """The terms to be searched for within this Space. Max 5."""
   terms: [String!]!
+}
+
+input SetPlatformWellKnownVirtualContributorInput {
+  """The UUID of the Virtual Contributor."""
+  virtualContributorID: UUID!
+  """The well-known Virtual Contributor type."""
+  wellKnown: VirtualContributorWellKnown!
 }
 
 input SpaceFilterInput {
@@ -7903,13 +7967,6 @@ input UserFilterInput {
   email: String
   firstName: String
   lastName: String
-}
-
-input UserSendMessageInput {
-  """The message being sent"""
-  message: String!
-  """The user a message is being sent to"""
-  receivingUserID: String!
 }
 
 input UsersWithAuthorizationCredentialInput {
