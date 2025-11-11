@@ -1,0 +1,49 @@
+openapi: 3.1.0
+info:
+  title: Alkemio Internal Kratos Identity Resolver
+  version: 1.0.0
+paths:
+  /rest/internal/identity/resolve:
+    post:
+      summary: Resolve or create an Alkemio user by Kratos identity UUID
+      description: |
+        Internal-only endpoint used by platform tooling. The caller must provide a
+        valid Kratos identity UUID. When the user does not exist, the server will
+        fetch the identity from the Kratos Admin API and reuse the registration
+        flow to create or link the user before responding. Requests trigger
+        structured audit logging under `LogContext.AUTH`.
+      tags:
+        - internal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - authenticationId
+              properties:
+                authenticationId:
+                  type: string
+                  format: uuid
+                  description: Kratos identity UUID to resolve
+      responses:
+        '200':
+          description: Successfully resolved or created the user
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - userId
+                properties:
+                  userId:
+                    type: string
+                    format: uuid
+                    description: Alkemio user ID mapped to the identity
+        '400':
+          description: Invalid UUID supplied
+        '404':
+          description: Kratos identity not found and cannot be created
+        '503':
+          description: Upstream Kratos Admin API unavailable

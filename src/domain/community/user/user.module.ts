@@ -27,6 +27,7 @@ import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup
 import { RoomLookupModule } from '@domain/communication/room-lookup/room.lookup.module';
 import { UserLookupModule } from '../user-lookup/user.lookup.module';
 import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/agent.info.module';
+import { UserAuthenticationLinkModule } from '../user-authentication-link/user.authentication.link.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/a
     AccountHostModule,
     AccountLookupModule,
     UserLookupModule,
+    UserAuthenticationLinkModule,
     NamingModule,
     AuthorizationPolicyModule,
     AuthorizationModule,

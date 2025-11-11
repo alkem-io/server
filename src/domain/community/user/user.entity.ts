@@ -51,6 +51,13 @@ export class User extends ContributorBase implements IUser {
   })
   phone?: string;
 
+  @Column('char', {
+    length: UUID_LENGTH,
+    nullable: true,
+    unique: true,
+  })
+  authenticationID!: string | null;
+
   @Column({ type: 'boolean', nullable: false })
   serviceProfile!: boolean;
 
