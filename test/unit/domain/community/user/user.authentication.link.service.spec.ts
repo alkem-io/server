@@ -1,11 +1,12 @@
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { LogContext } from '@common/enums';
 import { UserAlreadyRegisteredException } from '@common/exceptions';
+import { UserAuthenticationLinkService } from '@domain/community/user/user.authentication.link.service';
 import {
   UserAuthenticationLinkMatch,
   UserAuthenticationLinkOutcome,
-  UserAuthenticationLinkService,
-} from '@domain/community/user/user.authentication.link.service';
+  UserAuthenticationLinkResult,
+} from '@domain/community/user/user.authentication.link.types';
 import { LoggerService } from '@nestjs/common';
 
 const createAgentInfo = (overrides: Partial<AgentInfo> = {}) => {

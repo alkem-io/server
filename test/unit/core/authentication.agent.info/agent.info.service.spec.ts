@@ -3,7 +3,7 @@ import {
   UserAuthenticationLinkMatch,
   UserAuthenticationLinkOutcome,
   UserAuthenticationLinkResult,
-} from '@domain/community/user/user.authentication.link.service';
+} from '@domain/community/user/user.authentication.link.types';
 
 describe('AgentInfoService', () => {
   const email = 'user@example.com';
@@ -60,11 +60,11 @@ describe('AgentInfoService', () => {
 
     expect(linkService.resolveExistingUser).toHaveBeenCalledWith(
       expect.objectContaining({ email }),
-      expect.objectContaining({
-        conflictMode: 'log',
-        lookupByAuthenticationId: false,
-      })
+      expect.objectContaining({ conflictMode: 'log' })
     );
+    const callOptions =
+      linkService.resolveExistingUser.mock.calls[0][1] ?? ({} as any);
+    expect(callOptions.lookupByAuthenticationId).toBeUndefined();
     expect(metadata?.authenticationID).toEqual(authenticationId);
   });
 

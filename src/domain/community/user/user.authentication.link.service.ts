@@ -1,39 +1,19 @@
 import { Injectable, Inject, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, FindOneOptions } from 'typeorm';
+import { Repository } from 'typeorm';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { User } from '@domain/community/user/user.entity';
-import { IUser } from '@domain/community/user/user.interface';
 import { LogContext } from '@common/enums';
 import { UserAlreadyRegisteredException } from '@common/exceptions';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-
-type ConflictMode = 'error' | 'log';
-
-type ResolveOptions = {
-  relations?: FindOneOptions<User>['relations'];
-  conflictMode?: ConflictMode;
-  lookupByAuthenticationId?: boolean;
-};
-
-export enum UserAuthenticationLinkMatch {
-  AUTHENTICATION_ID = 'authentication-id',
-  EMAIL = 'email',
-}
-
-export enum UserAuthenticationLinkOutcome {
-  ALREADY_LINKED = 'already-linked',
-  LINKED = 'linked',
-  NO_AUTH_PROVIDED = 'no-auth-provided',
-  CONFLICT = 'conflict',
-}
-
-export interface UserAuthenticationLinkResult {
-  user: IUser;
-  matchedBy: UserAuthenticationLinkMatch;
-  outcome: UserAuthenticationLinkOutcome;
-}
+import {
+  UserAuthenticationLinkConflictMode,
+  UserAuthenticationLinkMatch,
+  UserAuthenticationLinkOutcome,
+  UserAuthenticationLinkResolveOptions,
+  UserAuthenticationLinkResult,
+} from './user.authentication.link.types';
 
 @Injectable()
 export class UserAuthenticationLinkService {
@@ -58,12 +38,13 @@ export class UserAuthenticationLinkService {
 
   public async resolveExistingUser(
     agentInfo: AgentInfo,
-    options?: ResolveOptions
+    options?: UserAuthenticationLinkResolveOptions
   ): Promise<UserAuthenticationLinkResult | null> {
     const authId = agentInfo.authenticationID?.trim();
     const email = agentInfo.email?.trim().toLowerCase();
     const relations = options?.relations;
-    const conflictMode: ConflictMode = options?.conflictMode ?? 'error';
+    const conflictMode: UserAuthenticationLinkConflictMode =
+      options?.conflictMode ?? 'error';
     const lookupByAuthenticationId = options?.lookupByAuthenticationId ?? true;
     const lookupOptions = relations ? { relations } : undefined;
 
@@ -164,7 +145,7 @@ export class UserAuthenticationLinkService {
   private async checkAuthenticationIdAvailability(
     authenticationId: string,
     currentUserId: string | undefined,
-    conflictMode: ConflictMode
+    conflictMode: UserAuthenticationLinkConflictMode
   ): Promise<boolean> {
     if (!authenticationId) {
       return true;

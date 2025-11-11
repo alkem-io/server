@@ -6,7 +6,7 @@ import {
   UserAuthenticationLinkOutcome,
   UserAuthenticationLinkResult,
   UserAuthenticationLinkMatch,
-} from '@domain/community/user/user.authentication.link.service';
+} from '@domain/community/user/user.authentication.link.types';
 
 describe('UserService.createUserFromAgentInfo', () => {
   const createService = () => {
