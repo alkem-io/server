@@ -8,4 +8,5 @@ export class AgentInfoMetadata {
   agentID!: string;
   did!: string;
   password!: string;
+  authenticationID?: string;
 }
