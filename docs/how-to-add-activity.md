@@ -166,7 +166,7 @@ Verify in `schema.graphql`:
 
 ## File Reference Map
 
-```
+```text
 Core
 ├── src/common/enums/activity.event.type.ts (enum)
 ├── src/platform/activity/activity.service.ts (persistence)

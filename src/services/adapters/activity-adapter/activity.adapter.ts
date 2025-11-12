@@ -552,8 +552,9 @@ export class ActivityAdapter {
     });
     if (!collaboration) {
       throw new EntityNotFoundException(
-        `Unable to identify Collaboration for Memo with ID: ${memoID}`,
-        LogContext.ACTIVITY
+        'Unable to identify Collaboration for Memo',
+        LogContext.ACTIVITY,
+        { memoID }
       );
     }
     return collaboration.id;
@@ -569,8 +570,9 @@ export class ActivityAdapter {
       .getOne();
     if (!whiteboard) {
       throw new EntityNotFoundException(
-        `Unable to identify Whiteboard with ID: ${whiteboardID}`,
-        LogContext.ACTIVITY
+        'Unable to identify Whiteboard',
+        LogContext.ACTIVITY,
+        { whiteboardID }
       );
     }
     return whiteboard.profile.displayName;
@@ -584,8 +586,9 @@ export class ActivityAdapter {
       .getOne();
     if (!memo) {
       throw new EntityNotFoundException(
-        `Unable to identify Memo with ID: ${memoID}`,
-        LogContext.ACTIVITY
+        'Unable to identify Memo',
+        LogContext.ACTIVITY,
+        { memoID }
       );
     }
     return memo.profile.displayName;
