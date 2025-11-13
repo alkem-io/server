@@ -28,6 +28,7 @@ import { ContributionReporterService } from '@services/external/elasticsearch/co
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { ActivityInputCalloutPostCreated } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.post.created';
 import { ActivityInputCalloutLinkCreated } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.link.created';
+import { ActivityInputCalloutMemoCreated } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.memo.created';
 import { CreateContributionOnCalloutInput } from './dto/callout.dto.create.contribution';
 import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
 import { CalloutContributionAuthorizationService } from '../callout-contribution/callout.contribution.service.authorization';
@@ -44,6 +45,7 @@ import { NotificationSpaceAdapter } from '@services/adapters/notification-adapte
 import { NotificationInputCollaborationCalloutContributionCreated } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.contribution.created';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
+import { IMemo } from '@domain/common/memo/types';
 
 @InstrumentResolver()
 @Resolver()
@@ -385,7 +387,13 @@ export class CalloutResolverMutations {
 
       if (contributionData.memo && contribution.memo) {
         if (callout.settings.visibility === CalloutVisibility.PUBLISHED) {
-          this.processActivityMemoCreated(callout, contribution, agentInfo);
+          this.processActivityMemoCreated(
+            callout,
+            contribution,
+            contribution.memo,
+            levelZeroSpaceID,
+            agentInfo
+          );
         }
       }
     }
@@ -510,6 +518,8 @@ export class CalloutResolverMutations {
   private async processActivityMemoCreated(
     callout: ICallout,
     contribution: ICalloutContribution,
+    memo: IMemo,
+    levelZeroSpaceID: string,
     agentInfo: AgentInfo
   ) {
     const notificationInput: NotificationInputCollaborationCalloutContributionCreated =
@@ -523,7 +533,24 @@ export class CalloutResolverMutations {
       notificationInput
     );
 
-    // todo: implement memo activity
+    const activityLogInput: ActivityInputCalloutMemoCreated = {
+      triggeredBy: agentInfo.userID,
+      memo: memo,
+      callout: callout,
+    };
+    this.activityAdapter.calloutMemoCreated(activityLogInput);
+
+    this.contributionReporter.calloutMemoCreated(
+      {
+        id: memo.id,
+        name: memo.nameID,
+        space: levelZeroSpaceID,
+      },
+      {
+        id: agentInfo.userID,
+        email: agentInfo.email,
+      }
+    );
   }
 
   @Mutation(() => [ICalloutContribution], {

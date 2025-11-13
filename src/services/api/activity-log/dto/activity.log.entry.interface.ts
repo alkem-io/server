@@ -8,6 +8,7 @@ import { IActivityLogEntryMemberJoined } from './activity.log.dto.entry.member.j
 import { IActivityLogEntryCalloutPublished } from './activity.log.dto.entry.callout.published';
 import { IActivityLogEntryCalloutPostCreated } from './activity.log.dto.entry.callout.post.created';
 import { IActivityLogEntryCalloutWhiteboardCreated } from './activity.log.dto.entry.callout.whiteboard.created';
+import { IActivityLogEntryCalloutMemoCreated } from './activity.log.dto.entry.callout.memo.created';
 import { IActivityLogEntryCalloutPostComment } from './activity.log.dto.entry.callout.post.comment';
 import { IActivityLogEntryCalloutDiscussionComment } from './activity.log.dto.entry.callout.discussion.comment';
 import { IActivityLogEntrySubspaceCreated } from './activity.log.dto.entry.subspace.created';
@@ -27,6 +28,8 @@ import { ISpace } from '@domain/space/space/space.interface';
         return IActivityLogEntryCalloutPostCreated;
       case ActivityEventType.CALLOUT_WHITEBOARD_CREATED:
         return IActivityLogEntryCalloutWhiteboardCreated;
+      case ActivityEventType.CALLOUT_MEMO_CREATED:
+        return IActivityLogEntryCalloutMemoCreated;
       case ActivityEventType.CALLOUT_WHITEBOARD_CONTENT_MODIFIED:
         return IActivityLogEntryCalloutWhiteboardContentModified;
       case ActivityEventType.CALLOUT_POST_COMMENT:
