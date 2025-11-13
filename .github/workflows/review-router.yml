@@ -110,10 +110,16 @@ jobs:
           rationaleParts.forEach(part => lines.push(`  - ${part}`));
           lines.push('');
           lines.push('### Flags');
-          lines.push(`High Risk Keyword: **${data.high_risk_keyword}**`);
-          lines.push(`Critical Path Change: **${data.critical_path_change}**`);
-          lines.push(`Low Risk Keyword: **${data.low_risk_keyword}**`);
-          lines.push(`Composite High Risk Trigger: **${data.high_risk_trigger}**`);
+          const flags = [];
+          if (data.high_risk_keyword) flags.push('High Risk Keyword');
+          if (data.critical_path_change) flags.push('Critical Path Change');
+          if (data.low_risk_keyword) flags.push('Low Risk Keyword');
+          if (data.high_risk_trigger) flags.push('Composite High Risk Trigger');
+          if (flags.length > 0) {
+            flags.forEach(f => lines.push(`- **${f}**`));
+          } else {
+            lines.push('_No risk flags detected_');
+          }
           lines.push('');
           lines.push('### Thresholds');
           lines.push('```json');
