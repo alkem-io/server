@@ -96,9 +96,9 @@ def compute_metrics(title: str, loc_changed: int, files_changed: int, file_paths
 
     # Track size simplicity
     if loc_changed <= CONFIG["SIMPLE_LOC_THRESHOLD"]:
-        rationale_parts.append("LOC<=simple_threshold")
+        rationale_parts.append("LOC<={}".format(CONFIG['SIMPLE_LOC_THRESHOLD']))
     if files_changed <= CONFIG["FILE_COUNT_THRESHOLD"]:
-        rationale_parts.append("files<=threshold")
+        rationale_parts.append("files<={}".format(CONFIG['FILE_COUNT_THRESHOLD']))
     if low_risk_keyword:
         rationale_parts.append("low_risk_keyword")
 
