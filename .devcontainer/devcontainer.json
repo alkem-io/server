@@ -1,0 +1,141 @@
+{
+  "name": "alkemio-server",
+  "dockerComposeFile": [
+    "../quickstart-services.yml",
+    "docker-compose.devcontainer.yml"
+  ],
+  "service": "server",
+  "workspaceFolder": "/workspaces/server",
+  "remoteUser": "node",
+  "shutdownAction": "stopCompose",
+  "runServices": [
+    "traefik",
+    "mysql",
+    "kratos-migrate",
+    "kratos",
+    "hydra-migrate",
+    "hydra",
+    "hydra-client-setup",
+    "oidc-service",
+    "oathkeeper",
+    "postgres",
+    "synapse",
+    "synapse-admin",
+    "mailslurper",
+    "rabbitmq",
+    "notification",
+    "matrix-adapter",
+    "redis",
+    "redis-commander",
+    "whiteboard-collaboration",
+    "file-service",
+    "collaborative-document"
+  ],
+  "initializeCommand": "bash -lc 'if [ -f .env.docker ] && [ ! -f .env ]; then cp .env.docker .env; fi'",
+  "postCreateCommand": "bash .devcontainer/scripts/post-create.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-azuretools.vscode-docker",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "GraphQL.vscode-graphql",
+        "eamodio.gitlens",
+        "Prisma.prisma",
+        "ms-vscode.vscode-typescript-next"
+      ],
+      "settings": {
+        "typescript.tsserver.maxTsServerMemory": 4096,
+        "editor.formatOnSave": true,
+        "mcp.servers": {
+          "github": {
+            "type": "stdio",
+            "command": "npx",
+            "args": [
+              "-y",
+              "@modelcontextprotocol/server-github@2025.4.8"
+            ],
+            "env": {
+              "GITHUB_PERSONAL_ACCESS_TOKEN": "${env:GITHUB_PERSONAL_ACCESS_TOKEN}"
+            }
+          },
+          "context7": {
+            "type": "stdio",
+            "command": "npx",
+            "args": [
+              "-y",
+              "@upstash/context7-mcp@1.0.1"
+            ]
+          },
+          "tavily": {
+            "type": "stdio",
+            "command": "python3",
+            "args": [
+              "-m",
+              "mcp_server_tavily"
+            ],
+            "env": {
+              "TAVILY_API_KEY": "${env:TAVILY_API_KEY}"
+            }
+          }
+        }
+      }
+    }
+  },
+  "forwardPorts": [
+    3000,
+    4000,
+    4001,
+    3306,
+    5432,
+    5672,
+    6379,
+    8008,
+    8888,
+    1025,
+    4436,
+    4437,
+    15672
+  ],
+  "portsAttributes": {
+    "3000": {
+      "label": "GraphQL Gateway"
+    },
+    "4000": {
+      "label": "Server (dev)"
+    },
+    "4001": {
+      "label": "Server (compose)"
+    },
+    "3306": {
+      "label": "MySQL"
+    },
+    "5432": {
+      "label": "Postgres"
+    },
+    "5672": {
+      "label": "RabbitMQ"
+    },
+    "15672": {
+      "label": "RabbitMQ Admin"
+    },
+    "6379": {
+      "label": "Redis"
+    },
+    "8008": {
+      "label": "Synapse"
+    },
+    "8888": {
+      "label": "Traefik"
+    },
+    "1025": {
+      "label": "SMTP"
+    },
+    "4436": {
+      "label": "Mailslurper UI"
+    },
+    "4437": {
+      "label": "Mailslurper API"
+    }
+  }
+}
