@@ -88,6 +88,7 @@ jobs:
     - name: Post Decision Comment (Native)
       uses: actions/github-script@v7
       with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
           const reviewType = core.getInput('review_type');
           const reviewer = core.getInput('reviewer');
@@ -139,14 +140,13 @@ jobs:
             `;
           }
 
-          # Post the comment using the native GitHub REST API
+          // Post the comment using the native GitHub REST API
           github.rest.issues.createComment({
             owner: context.repo.owner,
             repo: context.repo.repo,
             issue_number: context.issue.number,
             body: commentBody.trim()
           });
-        github-token: ${{ secrets.GITHUB_TOKEN }}
       env:
         review_type: ${{ steps.router.outputs.review_type }}
         reviewer: ${{ steps.router.outputs.reviewer }}
