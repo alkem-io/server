@@ -6,6 +6,9 @@
   ],
   "service": "server",
   "workspaceFolder": "/workspaces/server",
+  "mounts": [
+    "source=${localEnv:HOME}/.ssh/public,target=/home/node/.ssh,type=bind,consistency=cached"
+  ],
   "remoteUser": "node",
   "shutdownAction": "stopCompose",
   "runServices": [
