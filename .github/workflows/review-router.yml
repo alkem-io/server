@@ -96,29 +96,50 @@ jobs:
           // Generate the Markdown comment body based on the review type
           if (reviewType === 'LLM_ONLY') {
             commentBody = `
-              ## 🤖 Review Routing Decision
+              ## 🤖 Review Routing Decision: LLM Auto-Approval
 
-              The current review type is **LLM_ONLY**.
-              ✅ This PR is considered low-risk and qualifies for **LLM auto-approval**.
+              ### ✅ Recommendation: **LLM_ONLY**
+
+              This PR is considered **low-risk** and qualifies for automatic LLM approval.
+
+              **Why:**
+              * The change is highly focused (e.g., small LOC change, few files).
+              * The PR title contains low-risk keywords like \`docs\`, \`style\`, or \`typo\`.
+              * No critical system files (e.g., security, authentication, deployment config) were modified.
+
               No human review is mandatory.
             `;
           } else if (reviewType === 'HUMAN_ONLY') {
             commentBody = `
-              ## 🤖 Review Routing Decision
+              ## 🚨 Review Routing Decision: Mandatory Human Review
 
-              The current review type is **HUMAN_ONLY**.
-              🚨 **Human Review Required!** This change is high-risk and requires explicit approval by **@${reviewer}**.
+              ### 🛑 Recommendation: **HUMAN_ONLY**
+
+              This change is classified as **high-risk** and requires explicit approval by **@${reviewer}**.
+
+              **Why:**
+              * The PR size is large (over 100 LOC changed or 10 files modified).
+              * The PR touches **critical system files** (e.g., \`auth/\`, \`production.yml\`, CI/CD scripts).
+              * The PR title contains high-risk keywords like \`security\`, \`payment\`, or \`database migration\`.
+
+              The designated reviewer must perform a full, in-depth manual review.
             `;
           } else { // HUMAN_AUGMENTED_LLM
             commentBody = `
-              ## 🤖 Review Routing Decision
+              ## 🧠 Review Routing Decision: Hybrid Approach
 
-              The current review type is **HUMAN_AUGMENTED_LLM**.
-              🧠 **Human-Augmented Review.** The LLM will provide an initial pass, but a human reviewer (**@${reviewer}**) is required for final approval.
+              ### 🤝 Recommendation: **HUMAN_AUGMENTED_LLM**
+
+              This PR is of **moderate scope**. It will receive initial checks from the LLM, but requires final sign-off from a human reviewer (**@${reviewer}**).
+
+              **Why:**
+              * The change is too large or complex for full automation (e.g., exceeding 20 LOC or 3 files).
+              * The change does not meet the criteria for critically high risk (no critical path files or high-risk keywords).
+              * The human reviewer will focus on validating **business logic** and **architectural impact**, while the LLM handles surface-level checks.
             `;
           }
 
-          // Post the comment using the native GitHub REST API
+          # Post the comment using the native GitHub REST API
           github.rest.issues.createComment({
             owner: context.repo.owner,
             repo: context.repo.repo,
