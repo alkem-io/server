@@ -137,7 +137,7 @@ jobs:
             owner: context.repo.owner,
             repo: context.repo.repo,
             issue_number: context.issue.number,
-            body: lines
+            body: lines.join('\n')
           });
       env:
         metrics_json: ${{ steps.metrics.outputs.metrics_json }}
