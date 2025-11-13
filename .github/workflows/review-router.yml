@@ -105,19 +105,24 @@ jobs:
           lines.push(`**Total LOC Changed:** ${data.loc_changed}`);
           lines.push(`**Files Changed:** ${data.files_changed}`);
           lines.push(`**Proposed Review Type:** ${data.review_type}`);
-          lines.push(`**Rationale:** ${data.review_rationale}`);
-          lines.push('\n### Flags');
-            lines.push(`High Risk Keyword: ${data.high_risk_keyword}`);
-            lines.push(`Critical Path Change: ${data.critical_path_change}`);
-            lines.push(`Low Risk Keyword: ${data.low_risk_keyword}`);
-            lines.push(`Composite High Risk Trigger: ${data.high_risk_trigger}`);
-          lines.push('\n### Thresholds');
+          lines.push('**Rationale:**');
+          const rationaleParts = (data.review_rationale || '').split(';').map(s => s.trim()).filter(s => s);
+          rationaleParts.forEach(part => lines.push(`  - ${part}`));
+          lines.push('');
+          lines.push('### Flags');
+          lines.push(`High Risk Keyword: **${data.high_risk_keyword}**`);
+          lines.push(`Critical Path Change: **${data.critical_path_change}**`);
+          lines.push(`Low Risk Keyword: **${data.low_risk_keyword}**`);
+          lines.push(`Composite High Risk Trigger: **${data.high_risk_trigger}**`);
+          lines.push('');
+          lines.push('### Thresholds');
           lines.push('```json');
           lines.push(JSON.stringify(data.thresholds, null, 2));
           lines.push('```');
           const samplePaths = (data.file_paths || []).slice(0, 25);
-          lines.push(`\n### Changed Paths (first ${samplePaths.length})`);
-          lines.push(samplePaths.map(p => '- ' + p).join('\n'));
+          lines.push('');
+          lines.push(`### Changed Paths (first ${samplePaths.length})`);
+          samplePaths.forEach(p => lines.push('- ' + p));
           github.rest.issues.createComment({
             owner: context.repo.owner,
             repo: context.repo.repo,
