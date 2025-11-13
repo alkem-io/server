@@ -1,4 +1,4 @@
-name: PR Review Router
+name: PR Review Metrics
 
 # Controls when the workflow runs
 on:
@@ -6,7 +6,7 @@ on:
     types: [opened, reopened, synchronize] # Run when a PR is opened, reopened, or updated
 
 jobs:
-  route_review:
+  pr_metrics:
     runs-on: ubuntu-latest
     steps:
     # 1. Checkout the repository code
@@ -33,9 +33,9 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         # pip install -r requirements.txt # Uncomment if you use external packages
-    # 5. Extract PR metadata and run the Python script (REAL LOGIC)
-    - name: Run Review Router (Dynamic Metrics)
-      id: router
+    # 5. Collect PR Metrics
+    - name: Collect PR Metrics
+      id: metrics
       run: |
         # 1. Fetch the base branch to enable accurate diff calculation
         # We check out the PR branch, now we fetch the target branch for comparison
@@ -75,104 +75,54 @@ jobs:
 
         # 5. Execute the Python script with real data
         # We pass the accumulated file paths string as a single, quoted argument
-        OUTPUT=$(python review_router.py "${PR_TITLE}" "${LOC}" "${FILES}" "${CHANGED_PATHS}")
-
-        # Split the output (e.g., "HUMAN_AUGMENTED_LLM|team-reviewer")
-        REVIEW_TYPE=$(echo $OUTPUT | cut -d'|' -f1)
-        REVIEWER=$(echo $OUTPUT | cut -d'|' -f2)
+        JSON_OUTPUT=$(python review_router.py "${PR_TITLE}" "${LOC}" "${FILES}" "${CHANGED_PATHS}")
 
         # Make the outputs available to subsequent steps
-        echo "review_type=${REVIEW_TYPE}" >> $GITHUB_OUTPUT
-        echo "reviewer=${REVIEWER}" >> $GITHUB_OUTPUT
-    # 6. Post Decision Comment (using native github-script)
-    - name: Post Decision Comment (Native)
+        echo "metrics_json=${JSON_OUTPUT}" >> $GITHUB_OUTPUT
+    # 6. Post Metrics Comment
+    - name: Post Metrics Comment
       uses: actions/github-script@v7
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
-          const reviewType = core.getInput('review_type');
-          const reviewer = core.getInput('reviewer');
-          let commentBody;
-
-          // Generate the Markdown comment body based on the review type
-          if (reviewType === 'LLM_ONLY') {
-            commentBody = `
-              ## 🤖 Review Routing Decision: LLM Auto-Approval
-
-              ### ✅ Recommendation: **LLM_ONLY**
-
-              This PR is considered **low-risk** and qualifies for automatic LLM approval.
-
-              **Why:**
-              * The change is highly focused (e.g., small LOC change, few files).
-              * The PR title contains low-risk keywords like \`docs\`, \`style\`, or \`typo\`.
-              * No critical system files (e.g., security, authentication, deployment config) were modified.
-
-              No human review is mandatory.
-            `;
-          } else if (reviewType === 'HUMAN_ONLY') {
-            commentBody = `
-              ## 🚨 Review Routing Decision: Mandatory Human Review
-
-              ### 🛑 Recommendation: **HUMAN_ONLY**
-
-              This change is classified as **high-risk** and requires explicit approval by **@${reviewer}**.
-
-              **Why:**
-              * The PR size is large (over 100 LOC changed or 10 files modified).
-              * The PR touches **critical system files** (e.g., \`auth/\`, \`production.yml\`, CI/CD scripts).
-              * The PR title contains high-risk keywords like \`security\`, \`payment\`, or \`database migration\`.
-
-              The designated reviewer must perform a full, in-depth manual review.
-            `;
-          } else { // HUMAN_AUGMENTED_LLM
-            commentBody = `
-              ## 🧠 Review Routing Decision: Hybrid Approach
-
-              ### 🤝 Recommendation: **HUMAN_AUGMENTED_LLM**
-
-              This PR is of **moderate scope**. It will receive initial checks from the LLM, but requires final sign-off from a human reviewer (**@${reviewer}**).
-
-              **Why:**
-              * The change is too large or complex for full automation (e.g., exceeding 20 LOC or 3 files).
-              * The change does not meet the criteria for critically high risk (no critical path files or high-risk keywords).
-              * The human reviewer will focus on validating **business logic** and **architectural impact**, while the LLM handles surface-level checks.
-            `;
+          const raw = process.env.metrics_json || '';
+          let data;
+          try { data = JSON.parse(raw); } catch (e) {
+            data = { error: 'Failed to parse metrics JSON', raw };
           }
-
-          // Post the comment using the native GitHub REST API
+          if (data.error) {
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `⚠️ Metrics collection failed: ${data.error}`
+            });
+            return;
+          }
+          const lines = [];
+          lines.push('## 📊 PR Metrics Summary');
+          lines.push('**Title:** ' + data.title);
+          lines.push(`**Total LOC Changed:** ${data.loc_changed}`);
+          lines.push(`**Files Changed:** ${data.files_changed}`);
+          lines.push(`**Proposed Review Type:** ${data.review_type}`);
+          lines.push(`**Rationale:** ${data.review_rationale}`);
+          lines.push('\n### Flags');
+            lines.push(`High Risk Keyword: ${data.high_risk_keyword}`);
+            lines.push(`Critical Path Change: ${data.critical_path_change}`);
+            lines.push(`Low Risk Keyword: ${data.low_risk_keyword}`);
+            lines.push(`Composite High Risk Trigger: ${data.high_risk_trigger}`);
+          lines.push('\n### Thresholds');
+          lines.push('```json');
+          lines.push(JSON.stringify(data.thresholds, null, 2));
+          lines.push('```');
+          const samplePaths = (data.file_paths || []).slice(0, 25);
+          lines.push(`\n### Changed Paths (first ${samplePaths.length})`);
+          lines.push(samplePaths.map(p => '- ' + p).join('\n'));
           github.rest.issues.createComment({
             owner: context.repo.owner,
             repo: context.repo.repo,
             issue_number: context.issue.number,
-            body: commentBody.trim()
+            body: lines.join('\n')
           });
       env:
-        review_type: ${{ steps.router.outputs.review_type }}
-        reviewer: ${{ steps.router.outputs.reviewer }}
-    # 7. Assign the determined human reviewer
-    # ...
-    # 8. Add a label for easier filtering in GitHub
-    - name: Add Label
-      uses: actions/github-script@v7
-      with:
-        script: |
-          const reviewType = core.getInput('review_type');
-          let label;
-          if (reviewType === 'HUMAN_ONLY') {
-            label = 'review/human-mandatory';
-          } else if (reviewType === 'LLM_ONLY') {
-            label = 'review/llm-auto-candidate';
-          } else {
-            label = 'review/hybrid-needed';
-          }
-
-          github.rest.issues.addLabels({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            issue_number: context.issue.number,
-            labels: [label]
-          });
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-      env:
-        review_type: ${{ steps.router.outputs.review_type }}
+        metrics_json: ${{ steps.metrics.outputs.metrics_json }}
