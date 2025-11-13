@@ -131,13 +131,13 @@ jobs:
           lines.push('```');
           const samplePaths = (data.file_paths || []).slice(0, 25);
           lines.push('');
-          lines.push(`### Changed Paths (first ${samplePaths.length})`);
+          lines.push(`### Critical files changed`);
           samplePaths.forEach(p => lines.push('- ' + p));
           github.rest.issues.createComment({
             owner: context.repo.owner,
             repo: context.repo.repo,
             issue_number: context.issue.number,
-            body: lines.join('\n')
+            body: lines
           });
       env:
         metrics_json: ${{ steps.metrics.outputs.metrics_json }}
