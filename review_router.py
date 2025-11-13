@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import sys
 import json
+import fnmatch
 from typing import List, Dict
 
 # --- Configuration (thresholds retained for context) ---
@@ -13,11 +14,40 @@ CONFIG = {
         "security", "auth", "migration", "architecture",
         "core logic rewrite", "critical bug fix", "deployment"
     ],
-    # Critical Paths (If any file path contains one of these, it's high risk)
+    # Critical Paths (glob patterns and substring patterns; if matched, it's high risk)
     "CRITICAL_PATHS": [
+        # Infrastructure & deployment
         "Dockerfile",
-        ".github/workflows/",
-        "src/authorization.ts",
+        ".github/workflows/*",
+        "quickstart-*.yml",
+        "manifests/*",
+
+        # Authorization & security (per constitution & credential-based-authorization.md)
+        "src/services/infrastructure/authorization/*",
+        "src/domain/access/credential/*",
+        "src/platform/authorization/*",
+        "**/*.authorization.ts",
+
+        # Database schema & migrations (schema contract gate is mandatory)
+        "src/migrations/*",
+        "scripts/schema/*",
+        "schema.graphql",
+        "schema-baseline.graphql",
+
+        # Core bootstrap & configuration
+        "src/main.ts",
+        "src/core/*",
+        "alkemio.yml",
+        "package.json",
+
+        # Specification governance (constitution mandates SDD)
+        ".specify/memory/constitution.md",
+        "agents.md",
+
+        # External integrations with operational impact
+        "src/services/adapters/*",
+        "src/services/infrastructure/ssi/*",
+        "src/services/infrastructure/communication-adapter/*",
     ],
     # Low Risk Keywords (Prefixes/words that suggest a simple change)
     "LOW_RISK_KEYWORDS": [
@@ -34,7 +64,13 @@ def compute_metrics(title: str, loc_changed: int, files_changed: int, file_paths
     title_lower = title.lower()
 
     high_risk_keyword = any(k in title_lower for k in CONFIG["HIGH_RISK_KEYWORDS"])
-    critical_path_change = any(any(path in f for path in CONFIG["CRITICAL_PATHS"]) for f in file_paths)
+
+    # Use fnmatch for glob pattern matching on critical paths
+    critical_path_change = any(
+        any(fnmatch.fnmatch(f, pattern) or pattern in f for pattern in CONFIG["CRITICAL_PATHS"])
+        for f in file_paths
+    )
+
     low_risk_keyword = any(k in title_lower for k in CONFIG["LOW_RISK_KEYWORDS"])
 
     high_risk_trigger = (
