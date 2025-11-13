@@ -40,14 +40,14 @@ class DiscussionDetails {
 @Resolver(() => InAppNotificationPayloadPlatformForumDiscussion)
 export class InAppNotificationPayloadPlatformForumDiscussionResolverFields {
   @ResolveField(() => DiscussionDetails, {
-    nullable: true,
+    nullable: false,
     description: 'The discussion details.',
   })
   public discussion(
     @Parent()
     payload: InAppNotificationPayloadPlatformForumDiscussion
-  ): DiscussionDetails | undefined {
-    return payload.discussion;
+  ): DiscussionDetails {
+    return payload.discussion as DiscussionDetails;
   }
 
   @ResolveField(() => String, {

@@ -53,6 +53,7 @@ import { NotificationInputCollaborationCalloutComment } from '../notification-ad
 import { NotificationInputCollaborationCalloutPostContributionComment } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.post.contribution.comment';
 import { MessageDetails } from '@domain/communication/message.details/message.details.interface';
 import { ICalendarEvent } from '@domain/timeline/event/event.interface';
+import { getContributorType } from '@domain/community/contributor/get.contributor.type';
 
 interface CalloutContributionPayload {
   id: string;
@@ -284,6 +285,20 @@ export class NotificationExternalAdapter {
         displayName: contribution.link.profile.displayName,
         description: contribution.link.profile.description ?? '',
         url: calloutURL, // no uri on link creation, use callout URL instead
+      };
+    } else if (contribution.memo) {
+      contributionPayload = {
+        id: contribution.memo.id,
+        type: CalloutContributionType.MEMO,
+        createdBy: await this.getContributorPayloadOrFail(
+          contribution.createdBy || contribution.memo.createdBy || ''
+        ),
+        displayName: contribution.memo.profile.displayName,
+        description: contribution.memo.profile.description ?? '',
+        url: await this.urlGeneratorService.getMemoUrlPath(
+          contribution.memo.id,
+          contribution.memo.nameID
+        ),
       };
     } else {
       throw new RelationshipNotFoundException(
@@ -528,6 +543,42 @@ export class NotificationExternalAdapter {
         type: calendarEvent.type,
         createdBy: createdByUser,
         url: calendarEventUrl,
+      },
+    };
+  }
+
+  async buildSpaceCommunityCalendarEventCommentPayload(
+    eventType: NotificationEvent,
+    triggeredBy: string,
+    recipients: IUser[],
+    space: ISpace,
+    calendarEvent: ICalendarEvent,
+    comment: IMessage
+  ): Promise<any> {
+    const spacePayload = await this.buildSpacePayload(
+      eventType,
+      triggeredBy,
+      recipients,
+      space
+    );
+
+    const commenter = await this.getUserPayloadOrFail(comment.sender);
+    const commentPreview = comment.message.substring(0, 200);
+
+    // Generate URL for the calendar event
+    const calendarEventUrl =
+      await this.urlGeneratorService.getCalendarEventUrlPath(calendarEvent.id);
+
+    return {
+      ...spacePayload,
+      calendarEvent: {
+        id: calendarEvent.id,
+        title: calendarEvent.profile.displayName,
+        url: calendarEventUrl,
+      },
+      comment: {
+        text: commentPreview,
+        sender: commenter,
       },
     };
   }
@@ -919,8 +970,7 @@ export class NotificationExternalAdapter {
       );
     }
 
-    const contributorType =
-      this.contributorLookupService.getContributorType(contributor);
+    const contributorType = getContributorType(contributor);
 
     const contributorURL =
       this.urlGeneratorService.createUrlForContributor(contributor);

@@ -12,6 +12,8 @@ import { IWhiteboard } from '@domain/common/whiteboard/types';
 import { PostService } from '../post/post.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IPost } from '../post';
+import { MemoService } from '@domain/common/memo/memo.service';
+import { IMemo } from '@domain/common/memo/memo.interface';
 import { ICalloutSettingsContribution } from '../callout-settings/callout.settings.contribution.interface';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import {
@@ -32,6 +34,7 @@ export class CalloutContributionService {
     private postService: PostService,
     private whiteboardService: WhiteboardService,
     private linkService: LinkService,
+    private memoService: MemoService,
     @InjectRepository(CalloutContribution)
     private contributionRepository: Repository<CalloutContribution>
   ) {}
@@ -76,8 +79,9 @@ export class CalloutContributionService {
     );
     contribution.createdBy = userID;
     contribution.sortOrder = calloutContributionData.sortOrder ?? 0;
+    contribution.type = calloutContributionData.type;
 
-    const { post, whiteboard, link } = calloutContributionData;
+    const { post, whiteboard, link, memo } = calloutContributionData;
 
     if (whiteboard) {
       contribution.whiteboard = await this.whiteboardService.createWhiteboard(
@@ -99,6 +103,14 @@ export class CalloutContributionService {
       contribution.link = await this.linkService.createLink(
         link,
         storageAggregator
+      );
+    }
+
+    if (memo) {
+      contribution.memo = await this.memoService.createMemo(
+        memo,
+        storageAggregator,
+        userID
       );
     }
 
@@ -165,6 +177,7 @@ export class CalloutContributionService {
           post: true,
           whiteboard: true,
           link: true,
+          memo: true,
         },
       }
     );
@@ -178,6 +191,10 @@ export class CalloutContributionService {
 
     if (contribution.link) {
       await this.linkService.deleteLink(contribution.link.id);
+    }
+
+    if (contribution.memo) {
+      await this.memoService.deleteMemo(contribution.memo.id);
     }
 
     if (contribution.authorization) {
@@ -287,6 +304,23 @@ export class CalloutContributionService {
     return calloutContribution.post;
   }
 
+  public async getMemo(
+    calloutContributionInput: ICalloutContribution,
+    relations?: FindOptionsRelations<ICalloutContribution>
+  ): Promise<IMemo | null> {
+    const calloutContribution = await this.getCalloutContributionOrFail(
+      calloutContributionInput.id,
+      {
+        relations: { memo: true, ...relations },
+      }
+    );
+    if (!calloutContribution.memo) {
+      return null;
+    }
+
+    return calloutContribution.memo;
+  }
+
   /**
    * Retrieves the storage bucket associated with a specific contribution.
    * @param contributionID The ID of the contribution.
@@ -315,6 +349,11 @@ export class CalloutContributionService {
               storageBucket: true,
             },
           },
+          memo: {
+            profile: {
+              storageBucket: true,
+            },
+          },
         },
       }
     );
@@ -338,6 +377,8 @@ export class CalloutContributionService {
       return contribution.link.profile;
     } else if (contribution.whiteboard) {
       return contribution.whiteboard.profile;
+    } else if (contribution.memo) {
+      return contribution.memo.profile;
     }
     return undefined;
   }

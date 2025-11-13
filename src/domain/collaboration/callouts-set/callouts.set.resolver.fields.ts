@@ -10,6 +10,7 @@ import { AuthorizationAgentPrivilege } from '@common/decorators/authorization.ag
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { CalloutsSetArgsCallouts } from './dto/callouts.set.args.callouts';
 import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.interface';
+import { CalloutsSetArgsTags } from './dto/callouts.set.args.tags';
 
 @Resolver(() => ICalloutsSet)
 export class CalloutsSetResolverFields {
@@ -45,5 +46,25 @@ export class CalloutsSetResolverFields {
     const tagsetTemplateSet =
       await this.calloutsSetService.getTagsetTemplatesSet(calloutsSet.id);
     return tagsetTemplateSet.tagsetTemplates;
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('tags', () => [String], {
+    nullable: false,
+    description:
+      'All the tags of the Callouts and its contributions in this CalloutsSet. Sorted by frequency, then alphabetically.',
+  })
+  async tags(
+    @Parent() calloutsSet: ICalloutsSet,
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args({ nullable: true }) args: CalloutsSetArgsTags
+  ): Promise<string[]> {
+    const tags = await this.calloutsSetService.getAllTags(
+      calloutsSet.id,
+      agentInfo,
+      args?.classificationTagsets
+    );
+    return tags;
   }
 }

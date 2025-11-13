@@ -49,7 +49,7 @@ export class SearchService {
         await this.entityManager.findOneByOrFail(Space, {
           id: searchData.searchInSpaceFilter,
         });
-      } catch (e) {
+      } catch {
         throw new EntityNotFoundException(
           'Space with the given identifier not found',
           LogContext.SEARCH,
