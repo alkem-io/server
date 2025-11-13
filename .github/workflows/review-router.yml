@@ -129,10 +129,6 @@ jobs:
           lines.push('```json');
           lines.push(JSON.stringify(data.thresholds, null, 2));
           lines.push('```');
-          const samplePaths = (data.file_paths || []).slice(0, 25);
-          lines.push('');
-          lines.push(`### Critical files changed`);
-          samplePaths.forEach(p => lines.push('- ' + p));
           github.rest.issues.createComment({
             owner: context.repo.owner,
             repo: context.repo.repo,
