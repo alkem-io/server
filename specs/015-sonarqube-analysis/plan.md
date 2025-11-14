@@ -11,9 +11,11 @@ Introduce a non-blocking SonarQube static analysis flow for this repository so t
 
 At a high level the implementation will:
 
-- Use the official SonarQube `trigger-sonarqube.yml` GitHub Actions template as the frame of reference for the CI job configuration.
+- Use the existing `.github/workflows/trigger-sonarqube.yml` workflow file, which is based on the official SonarQube GitHub Actions template, as the implementation basis.
+- Ensure the workflow triggers only on pull requests (already configured with `on: pull_request`).
 - Wire CI jobs to call the existing SonarQube instance at https://sonarqube.alkem.io for every PR.
 - Configure project keys, tokens, and branch mapping centrally via the CI secrets manager.
+- Create `sonar-project.properties` at the repository root to define project-specific configuration.
 - Publish analysis status back to pull requests and maintain dashboards for the `develop` branch.
 - Treat SonarQube as an advisory signal (warnings only, no hard merge blocking) but make failed gates highly visible in release decisions.
 
@@ -65,13 +67,15 @@ src/
 
 .github/
   workflows/
-    sonar-*.yml           # New or updated CI workflow(s) invoking SonarQube
+    trigger-sonarqube.yml  # Existing workflow based on official SonarQube template
+
+sonar-project.properties   # SonarQube project configuration at repository root
 
 scripts/
-  sonar/                  # (Optional) Helper scripts for Sonar integration if needed
+  sonar/                   # (Optional) Helper scripts for Sonar integration if needed
 ```
 
-**Structure Decision**: Reuse the existing single backend project layout. All changes are confined to CI configuration under `.github/workflows` and, optionally, a small `scripts/sonar` helper; no new runtime modules under `src/` are required.
+**Structure Decision**: Reuse the existing single backend project layout. The `.github/workflows/trigger-sonarqube.yml` workflow is already in place based on the official SonarQube template. Configuration is defined in `sonar-project.properties` at the repository root. No new runtime modules under `src/` are required.
 
 ## Complexity Tracking
 
