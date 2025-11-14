@@ -206,7 +206,7 @@ fi
 echo "Using local file: $local_file"
 
 # Restore snapshot using the correct docker container and command based on storage
-if [[ "$STORAGE" == "mariadb" || "$STORAGE" == "mysql" ]]; then
+if [[ "$STORAGE" == "mysql" ]]; then
     # Drop and recreate the alkemio schema
     docker exec -i alkemio_dev_mysql /usr/bin/mysql -u root -p${MYSQL_ROOT_PASSWORD} -e "DROP SCHEMA IF EXISTS ${MYSQL_DATABASE}; CREATE SCHEMA ${MYSQL_DATABASE};"
     # Restore the backup
