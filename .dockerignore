@@ -21,3 +21,7 @@
 **/secrets.dev.yaml
 **/values.dev.yaml
 README.md
+# SonarQube artifacts
+.scannerwork/
+coverage*/
+sonar-project.properties
