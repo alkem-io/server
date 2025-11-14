@@ -59,7 +59,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           args: >
-            -Dsonar.projectBaseDir=.
+            -Dproject.settings=sonar-project.properties
+            -Dsonar.projectBaseDir=${{ github.workspace }}
       # Note: Quality gate check is intentionally not blocking merges
       # Results are advisory only and visible in PR checks
       - name: SonarQube Quality Gate Check
