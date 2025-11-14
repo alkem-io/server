@@ -1,7 +1,7 @@
 # Implementation Plan: SonarQube Static Analysis Integration
 
-**Branch**: `001-sonarqube-analysis` | **Date**: 2025-11-14 | **Spec**: `specs/001-sonarqube-analysis/spec.md`
-**Input**: Feature specification from `/specs/001-sonarqube-analysis/spec.md`
+**Branch**: `001-sonarqube-analysis` | **Date**: 2025-11-14 | **Spec**: `specs/015-sonarqube-analysis/spec.md`
+**Input**: Feature specification from `/specs/015-sonarqube-analysis/spec.md`
 
 **Note**: This template is filled in by the `/speckit.plan` command. See `.specify/templates/commands/plan.md` for the execution workflow.
 
@@ -48,7 +48,7 @@ _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 ### Documentation (this feature)
 
 ```text
-specs/001-sonarqube-analysis/
+specs/015-sonarqube-analysis/
 ├── plan.md              # This file (/speckit.plan command output)
 ├── research.md          # Phase 0 output (/speckit.plan command)
 ├── data-model.md        # Phase 1 output (/speckit.plan command)
