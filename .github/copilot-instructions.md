@@ -103,6 +103,9 @@
 
 ## Active Technologies
 
+- TypeScript 5.x on Node.js 20 (per repository toolchain) + NestJS server, existing CI runner stack, SonarQube at https://sonarqube.alkem.io (015-sonarqube-analysis)
+- N/A (SonarQube stores analysis; server DB not impacted by this feature) (015-sonarqube-analysis)
+
 - TypeScript 5.3, Node.js 20.15.1 (Volta-pinned), executed via ts-node + NestJS 10.x, TypeORM 0.3.x, Apollo Server 4.x, GraphQL 16.x, class-validator, class-transformer (013-timeline-comment-notification)
 - MySQL 8.0 with `mysql_native_password` authentication (013-timeline-comment-notification)
 

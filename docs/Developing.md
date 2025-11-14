@@ -58,6 +58,27 @@ The registration and the recovery flows include sending emails to the registered
 - To regenerate locally, follow `specs/012-generate-schema-baseline/quickstart.md` and push the resulting `schema-baseline.graphql` if automation is blocked.
 - Owners automatically receive a commit comment on failure; if the automation remains red after remediation, re-run the job from the Actions UI with `workflow_dispatch` to verify the fix.
 
+## SonarQube Static Analysis
+
+The repository automatically runs SonarQube static analysis on all pull requests and pushes to the `develop` branch. This provides continuous feedback on code quality, bugs, vulnerabilities, and test coverage.
+
+### For Contributors
+
+- The SonarQube analysis runs as part of the CI pipeline for every PR
+- Quality gate results appear in the PR checks section
+- Failed quality gates are **advisory only** and do not block merges
+- Click the SonarQube check details to view specific issues and recommendations
+
+### Configuration
+
+- SonarQube project configuration is in `sonar-project.properties` at the repository root
+- The workflow is defined in `.github/workflows/trigger-sonarqube.yml`
+- Project dashboard is available at https://sonarqube.alkem.io
+
+### Troubleshooting
+
+For common issues, token rotation, and detailed configuration, see `specs/015-sonarqube-analysis/quickstart.md`.
+
 ## File uploads
 
 In order to upload files, a file stream is created through GraphQL Upload to the server /uploads folder. From there the file is pinned in IPFS and CID is returned.
