@@ -23,9 +23,9 @@ description: 'Task list for SonarQube static analysis integration'
 
 **Purpose**: Ensure CI and SonarQube prerequisites are in place before any story work.
 
-- [ ] T001 Verify access to SonarQube project for this repo at https://sonarqube.alkem.io (no code changes)
-- [ ] T002 Confirm CI runner environment (Node 20, pnpm) matches repository toolchain in .github workflows
-- [ ] T003 Document required CI secrets for SonarQube (token, project key) in specs/015-sonarqube-analysis/quickstart.md
+- [x] T001 Verify access to SonarQube project for this repo at https://sonarqube.alkem.io (no code changes)
+- [x] T002 Confirm CI runner environment (Node 20, pnpm) matches repository toolchain in .github workflows
+- [x] T003 Document required CI secrets for SonarQube (token, project key) in specs/015-sonarqube-analysis/quickstart.md
 
 ---
 
@@ -35,11 +35,11 @@ description: 'Task list for SonarQube static analysis integration'
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T004 [P] Create or update SonarQube configuration file at `sonar-project.properties` (or equivalent) at repo root
-- [ ] T005 [P] Define SonarQube project key and name for this repository in `sonar-project.properties`
-- [ ] T006 [P] Configure SonarQube project and quality gate in the SonarQube UI for this repo (no code changes)
-- [ ] T007 Wire SonarQube token and project key into CI secrets (e.g., `SONAR_TOKEN`, `SONAR_PROJECT_KEY`) via CI settings (no code changes)
-- [ ] T008 Update specs/015-sonarqube-analysis/quickstart.md with final secret names and SonarQube project URL
+- [x] T004 [P] Create or update SonarQube configuration file at `sonar-project.properties` (or equivalent) at repo root
+- [x] T005 [P] Define SonarQube project key and name for this repository in `sonar-project.properties`
+- [x] T006 [P] Configure SonarQube project and quality gate in the SonarQube UI for this repo (no code changes)
+- [x] T007 Wire SonarQube token and project key into CI secrets (e.g., `SONAR_TOKEN`, `SONAR_PROJECT_KEY`) via CI settings (no code changes)
+- [x] T008 Update specs/015-sonarqube-analysis/quickstart.md with final secret names and SonarQube project URL
 
 **Checkpoint**: SonarQube project and CI secrets are ready; user story implementation can now begin.
 
@@ -53,12 +53,12 @@ description: 'Task list for SonarQube static analysis integration'
 
 ### Implementation for User Story 1
 
-- [ ] T009 [P] [US1] Add a dedicated SonarQube analysis job to `.github/workflows/ci.yml` (or new `.github/workflows/sonar-pr.yml`) that runs on pull_request events
-- [ ] T010 [P] [US1] Configure the SonarQube job to use repository Node 20 toolchain and pnpm for build steps
-- [ ] T011 [US1] Wire SonarQube CLI or scanner invocation into the CI job using `SONAR_TOKEN` and `SONAR_PROJECT_KEY` secrets
-- [ ] T012 [US1] Ensure the SonarQube job publishes a clear status back to the pull request checks (pass/fail) without blocking merges
-- [ ] T013 [US1] Adjust CI job naming and output messages so SonarQube results are easily discoverable by developers in the PR view
-- [ ] T014 [US1] Validate User Story 1 by opening a test PR and confirming analysis runs and status appears on the PR
+- [x] T009 [P] [US1] Add a dedicated SonarQube analysis job to `.github/workflows/ci.yml` (or new `.github/workflows/sonar-pr.yml`) that runs on pull_request events
+- [x] T010 [P] [US1] Configure the SonarQube job to use repository Node 20 toolchain and pnpm for build steps
+- [x] T011 [US1] Wire SonarQube CLI or scanner invocation into the CI job using `SONAR_TOKEN` and `SONAR_PROJECT_KEY` secrets
+- [x] T012 [US1] Ensure the SonarQube job publishes a clear status back to the pull request checks (pass/fail) without blocking merges
+- [x] T013 [US1] Adjust CI job naming and output messages so SonarQube results are easily discoverable by developers in the PR view
+- [x] T014 [US1] Validate User Story 1 by opening a test PR and confirming analysis runs and status appears on the PR
 
 **Checkpoint**: User Story 1 is independently functional; every PR runs SonarQube and shows a quality gate status.
 
@@ -72,11 +72,11 @@ description: 'Task list for SonarQube static analysis integration'
 
 ### Implementation for User Story 2
 
-- [ ] T015 [P] [US2] Confirm SonarQube project branch configuration treats `develop` as the main branch in the SonarQube UI
-- [ ] T016 [US2] Ensure CI job configuration sends branch information (including `develop`) correctly to SonarQube in `.github/workflows/ci.yml` or `.github/workflows/sonar-pr.yml`
-- [ ] T017 [US2] Verify that SonarQube retains history for `develop` and displays coverage, bugs, vulnerabilities, and code smells over time
-- [ ] T018 [US2] Add a short "How to read SonarQube dashboards" note to `specs/015-sonarqube-analysis/quickstart.md` for release managers
-- [ ] T019 [US2] Validate User Story 2 by checking the SonarQube project dashboard after merging at least one PR into `develop`
+- [x] T015 [P] [US2] Confirm SonarQube project branch configuration treats `develop` as the main branch in the SonarQube UI
+- [x] T016 [US2] Ensure CI job configuration sends branch information (including `develop`) correctly to SonarQube in `.github/workflows/ci.yml` or `.github/workflows/sonar-pr.yml`
+- [x] T017 [US2] Verify that SonarQube retains history for `develop` and displays coverage, bugs, vulnerabilities, and code smells over time
+- [x] T018 [US2] Add a short "How to read SonarQube dashboards" note to `specs/015-sonarqube-analysis/quickstart.md` for release managers
+- [x] T019 [US2] Validate User Story 2 by checking the SonarQube project dashboard after merging at least one PR into `develop`
 
 **Checkpoint**: User Story 2 is independently functional; release managers can see trends and current state for `develop`.
 
@@ -90,11 +90,11 @@ description: 'Task list for SonarQube static analysis integration'
 
 ### Implementation for User Story 3
 
-- [ ] T020 [P] [US3] Document the SonarQube token rotation procedure in `specs/015-sonarqube-analysis/quickstart.md` (including where to update CI secrets)
-- [ ] T021 [US3] Validate that SonarQube tokens and project keys never appear in repository files by scanning `.github/workflows/` and repo config
-- [ ] T022 [US3] Perform a dry-run token rotation in SonarQube (or test project) and update CI secrets to use the new token
-- [ ] T023 [US3] Open a test PR after rotation to confirm SonarQube analysis still succeeds with the new token
-- [ ] T024 [US3] Invalidate or remove the old token in SonarQube and confirm it can no longer be used
+- [x] T020 [P] [US3] Document the SonarQube token rotation procedure in `specs/015-sonarqube-analysis/quickstart.md` (including where to update CI secrets)
+- [x] T021 [US3] Validate that SonarQube tokens and project keys never appear in repository files by scanning `.github/workflows/` and repo config
+- [x] T022 [US3] Perform a dry-run token rotation in SonarQube (or test project) and update CI secrets to use the new token
+- [x] T023 [US3] Open a test PR after rotation to confirm SonarQube analysis still succeeds with the new token
+- [x] T024 [US3] Invalidate or remove the old token in SonarQube and confirm it can no longer be used
 
 **Checkpoint**: User Story 3 is independently functional; token rotation is safe, documented, and validated.
 
@@ -104,10 +104,10 @@ description: 'Task list for SonarQube static analysis integration'
 
 **Purpose**: Improvements that affect multiple user stories and overall maintainability.
 
-- [ ] T025 [P] Update repository documentation (e.g., `docs/QA.md` or `docs/Developing.md`) to mention SonarQube analysis for PRs
-- [ ] T026 Review CI workflow files for duplication and refactor SonarQube steps into reusable YAML anchors or composite actions if helpful
-- [ ] T027 [P] Add a short troubleshooting section to `specs/015-sonarqube-analysis/quickstart.md` for common SonarQube CI issues
-- [ ] T028 Run through the full quickstart flow and validate that all steps work as documented
+- [x] T025 [P] Update repository documentation (e.g., `docs/QA.md` or `docs/Developing.md`) to mention SonarQube analysis for PRs
+- [x] T026 Review CI workflow files for duplication and refactor SonarQube steps into reusable YAML anchors or composite actions if helpful
+- [x] T027 [P] Add a short troubleshooting section to `specs/015-sonarqube-analysis/quickstart.md` for common SonarQube CI issues
+- [x] T028 Run through the full quickstart flow and validate that all steps work as documented
 
 ---
 
