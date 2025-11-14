@@ -1,7 +1,7 @@
 # Implementation Plan: SonarQube Static Analysis Integration
 
-**Branch**: `015-sonarqube-analysis` | **Date**: 2025-11-14 | **Spec**: `specs/015-sonarqube-analysis/spec.md`
-**Input**: Feature specification from `/specs/015-sonarqube-analysis/spec.md`
+**Branch**: `001-sonarqube-analysis` | **Date**: 2025-11-14 | **Spec**: `specs/001-sonarqube-analysis/spec.md`
+**Input**: Feature specification from `/specs/001-sonarqube-analysis/spec.md`
 
 **Note**: This template is filled in by the `/speckit.plan` command. See `.specify/templates/commands/plan.md` for the execution workflow.
 
@@ -11,6 +11,7 @@ Introduce a non-blocking SonarQube static analysis flow for this repository so t
 
 At a high level the implementation will:
 
+- Use the official SonarQube `trigger-sonarqube.yml` GitHub Actions template as the frame of reference for the CI job configuration.
 - Wire CI jobs to call the existing SonarQube instance at https://sonarqube.alkem.io for every PR.
 - Configure project keys, tokens, and branch mapping centrally via the CI secrets manager.
 - Publish analysis status back to pull requests and maintain dashboards for the `develop` branch.
@@ -47,7 +48,7 @@ _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 ### Documentation (this feature)
 
 ```text
-specs/015-sonarqube-analysis/
+specs/001-sonarqube-analysis/
 ├── plan.md              # This file (/speckit.plan command output)
 ├── research.md          # Phase 0 output (/speckit.plan command)
 ├── data-model.md        # Phase 1 output (/speckit.plan command)
