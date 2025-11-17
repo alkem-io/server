@@ -23,6 +23,7 @@ import { TemporaryStorageModule } from '@services/infrastructure/temporary-stora
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { ClassificationModule } from '@domain/common/classification/classification.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
+import { PlatformRolesAccessModule } from '@domain/access/platform-roles-access/platform.roles.access.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { RoleSetModule } from '@domain/access/role-set/role.set.module';
     ClassificationModule,
     TemporaryStorageModule,
     RoleSetModule,
+    PlatformRolesAccessModule,
     TypeOrmModule.forFeature([Callout]),
   ],
   providers: [
