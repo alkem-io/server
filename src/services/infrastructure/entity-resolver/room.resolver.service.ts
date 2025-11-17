@@ -15,6 +15,7 @@ import { IPost } from '@domain/collaboration/post/post.interface';
 import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
+import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { ICalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.interface';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 
