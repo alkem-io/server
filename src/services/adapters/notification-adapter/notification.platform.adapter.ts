@@ -170,6 +170,7 @@ export class NotificationPlatformAdapter {
           category: eventData.discussion.category,
         },
         comment: {
+          id: eventData.commentSent.id,
           message: eventData.commentSent.message,
         },
       };
