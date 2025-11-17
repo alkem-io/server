@@ -47,13 +47,13 @@ export class InAppNotificationPayloadSpaceCollaborationCalloutCommentResolverFie
   }
 
   @ResolveField(() => MessageDetails, {
-    nullable: false,
+    nullable: true,
     description: 'The details of the message.',
   })
   public async messageDetails(
     @Parent()
     payload: InAppNotificationPayloadSpaceCollaborationCalloutComment
-  ): Promise<MessageDetails> {
+  ): Promise<MessageDetails | null> {
     try {
       return await this.messageDetailsService.getMessageDetails(
         payload.roomID,
@@ -70,7 +70,8 @@ export class InAppNotificationPayloadSpaceCollaborationCalloutCommentResolverFie
         (error as Error)?.stack,
         LogContext.IN_APP_NOTIFICATION
       );
-      throw error;
     }
+
+    return null;
   }
 }
