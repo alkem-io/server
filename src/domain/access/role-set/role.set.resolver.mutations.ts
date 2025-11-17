@@ -98,6 +98,7 @@ export class RoleSetResolverMutations {
         const authorizations =
           await this.userAuthorizationService.applyAuthorizationPolicy(user.id);
         await this.authorizationPolicyService.saveAll(authorizations);
+
         break;
       }
       case RoleSetType.ORGANIZATION: {
@@ -282,6 +283,7 @@ export class RoleSetResolverMutations {
         const authorizations =
           await this.userAuthorizationService.applyAuthorizationPolicy(user.id);
         await this.authorizationPolicyService.saveAll(authorizations);
+
         break;
       }
       case RoleSetType.ORGANIZATION: {
