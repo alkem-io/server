@@ -50,6 +50,7 @@ enum AccountType {
 enum ActivityEventType {
   CALENDAR_EVENT_CREATED
   CALLOUT_LINK_CREATED
+  CALLOUT_MEMO_CREATED
   CALLOUT_POST_COMMENT
   CALLOUT_POST_CREATED
   CALLOUT_PUBLISHED
@@ -1036,6 +1037,34 @@ type ActivityLogEntryCalloutLinkCreated implements ActivityLogEntry {
   type: ActivityEventType!
 }
 
+type ActivityLogEntryCalloutMemoCreated implements ActivityLogEntry {
+  """The Callout in which the Memo was created."""
+  callout: Callout!
+  """
+  Indicates if this Activity happened on a child Collaboration. Child results can be included via the "includeChild" parameter.
+  """
+  child: Boolean!
+  """
+  The id of the Collaboration entity within which the Activity was generated.
+  """
+  collaborationID: UUID!
+  """The timestamp for the Activity."""
+  createdDate: DateTime!
+  """The text details for this Activity."""
+  description: String!
+  id: UUID!
+  """The Memo that was created."""
+  memo: Memo!
+  """The display name of the parent"""
+  parentDisplayName: String!
+  """The Space where the activity happened"""
+  space: Space
+  """The user that triggered this Activity."""
+  triggeredBy: User!
+  """The event type for this Activity."""
+  type: ActivityEventType!
+}
+
 type ActivityLogEntryCalloutPostComment implements ActivityLogEntry {
   """The Callout in which the Post was commented."""
   callout: Callout!
@@ -1678,11 +1707,22 @@ type CalloutsSet {
     The type of Contributions the callouts allow; if omitted return all Callouts will be returned.
     """
     withContributionTypes: [CalloutContributionType!]
+    """
+    Return only Callouts that have at least one of the specified tags either on their framing or in their contributions.
+    """
+    withTags: [String!]
   ): [Callout!]!
   """The date at which the entity was created."""
   createdDate: DateTime!
   """The ID of the entity"""
   id: UUID!
+  """
+  All the tags of the Callouts and its contributions in this CalloutsSet. Sorted by frequency, then alphabetically.
+  """
+  tags(
+    """Return only Callouts matching the specified filter."""
+    classificationTagsets: [TagsetArgs!]
+  ): [String!]!
   """The tagset templates on this CalloutsSet."""
   tagsetTemplates: [TagsetTemplate!]
   """The set of CalloutGroups in use in this CalloutsSet."""
@@ -2484,16 +2524,16 @@ type InAppNotificationPayloadSpaceCommunityApplication implements InAppNotificat
 
 type InAppNotificationPayloadSpaceCommunityCalendarEvent implements InAppNotificationPayload {
   """The CalendarEvent that was created."""
-  calendarEvent: CalendarEvent!
-  """The Space where the calendar event was created."""
-  space: Space!
+  calendarEvent: CalendarEvent
+  """The space details."""
+  space: Space
   """The payload type."""
   type: NotificationEventPayload!
 }
 
 type InAppNotificationPayloadSpaceCommunityCalendarEventComment implements InAppNotificationPayload {
   """The calendar event that was commented on."""
-  calendarEvent: CalendarEvent!
+  calendarEvent: CalendarEvent
   """Preview text of the comment"""
   commentText: String!
   """The space details."""
@@ -6084,11 +6124,11 @@ input ConvertSpaceL1ToSpaceL0Input {
 
 input ConvertSpaceL1ToSpaceL2Input {
   """
-  The Space L1 to be the parent of the Space L1 when it is moved to be L2. 
+  The Space L1 to be the parent of the Space L1 when it is moved to be L2.
   """
   parentSpaceL1ID: UUID!
   """
-  The Space L1 to be moved to be a child of another Space L. Both the L1 Space and the parent Space must be in the same L0 Space. 
+  The Space L1 to be moved to be a child of another Space L. Both the L1 Space and the parent Space must be in the same L0 Space.
   """
   spaceL1ID: UUID!
 }

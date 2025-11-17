@@ -10,6 +10,7 @@ import { CommunityService } from '@domain/community/community/community.service'
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { PostService } from '@domain/collaboration/post/post.service';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
+import { MemoService } from '@domain/common/memo/memo.service';
 import { IActivity } from '@platform/activity/activity.interface';
 import { RoomService } from '@domain/communication/room/room.service';
 import { IActivityLogBuilder } from './activity.log.builder.interface';
@@ -33,6 +34,7 @@ export class ActivityLogService {
     private calloutService: CalloutService,
     private postService: PostService,
     private whiteboardService: WhiteboardService,
+    private memoService: MemoService,
     private spaceService: SpaceService,
     private roomService: RoomService,
     private linkService: LinkService,
@@ -141,6 +143,7 @@ export class ActivityLogService {
           this.calloutService,
           this.postService,
           this.whiteboardService,
+          this.memoService,
           this.spaceService,
           this.communityService,
           this.roomService,

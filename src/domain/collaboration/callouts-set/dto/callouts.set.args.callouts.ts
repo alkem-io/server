@@ -44,4 +44,11 @@ export class CalloutsSetArgsCallouts {
     nullable: true,
   })
   classificationTagsets?: TagsetArgs[];
+
+  @Field(() => [String], {
+    description:
+      'Return only Callouts that have at least one of the specified tags either on their framing or in their contributions.',
+    nullable: true,
+  })
+  withTags?: string[];
 }
