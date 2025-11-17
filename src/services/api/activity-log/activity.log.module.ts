@@ -8,6 +8,7 @@ import { CommunityModule } from '@domain/community/community/community.module';
 import { CalloutModule } from '@domain/collaboration/callout/callout.module';
 import { PostModule } from '@domain/collaboration/post/post.module';
 import { WhiteboardModule } from '@domain/common/whiteboard/whiteboard.module';
+import { MemoModule } from '@domain/common/memo/memo.module';
 import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
 import { ActivityLogService } from './activity.log.service';
 import { ActivityLogResolverQueries } from './activity.log.resolver.queries';
@@ -34,6 +35,7 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
     CalloutModule,
     PostModule,
     WhiteboardModule,
+    MemoModule,
     RoomModule,
     SpaceModule,
     LinkModule,
