@@ -61,6 +61,36 @@ To run only one test from a test file
 - Set the keyword _.only_ after `test` or `describe` (i.e. `test.only('should remove a challenge', async () => {})`)
 - Run the command for this particular test file: `pnpm run test:it ./test/functional/integration/challenge/query-challenge-data.it-spec.ts`
 
+## Static Code Analysis with SonarQube
+
+The repository uses SonarQube for static code analysis to maintain code quality standards. SonarQube analysis runs automatically on:
+
+- Every pull request targeting the `develop` or `main` branches
+- Every push to the `develop` branch
+- Manual workflow dispatch
+
+### Viewing Analysis Results
+
+1. **In Pull Requests**: Check the PR checks/status section for the "SonarQube Static Analysis" status
+2. **SonarQube Dashboard**: View detailed metrics at https://sonarqube.alkem.io for the alkemio-server project
+
+### Quality Gate
+
+The SonarQube quality gate is **advisory only** and does not block merges. However:
+
+- Failed quality gates should be reviewed and addressed when possible
+- Release managers should check the quality gate status before cutting releases
+- Metrics tracked include: coverage, bugs, vulnerabilities, and code smells
+
+### For More Information
+
+See the detailed quickstart guide at `specs/015-sonarqube-analysis/quickstart.md` for:
+
+- CI secrets configuration
+- Token rotation procedures
+- Troubleshooting common issues
+- How to read SonarQube dashboards
+
 ## Update user password secret for Travis CI
 
 In order to be able to update the user secret (used in automation tests) for Travis CI configuration, the following steps, should be performed:
