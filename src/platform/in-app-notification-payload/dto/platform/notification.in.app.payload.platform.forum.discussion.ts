@@ -7,7 +7,7 @@ import { NotificationEventPayload } from '@common/enums/notification.event.paylo
   implements: () => IInAppNotificationPayload,
 })
 export abstract class InAppNotificationPayloadPlatformForumDiscussion extends InAppNotificationPayloadPlatformBase {
-  discussion?: {
+  discussion!: {
     id: string;
     displayName: string;
     url: string;
@@ -15,6 +15,7 @@ export abstract class InAppNotificationPayloadPlatformForumDiscussion extends In
     category?: string;
   };
   comment?: {
+    id: string;
     message: string;
   };
   declare type: NotificationEventPayload.PLATFORM_FORUM_DISCUSSION;
