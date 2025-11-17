@@ -10,6 +10,7 @@ export enum UrlType {
   USER = 'user',
   VIRTUAL_CONTRIBUTOR = 'vc',
   CONTRIBUTION_WHITEBOARD = 'whiteboard',
+  CONTRIBUTION_MEMO = 'memo',
   FORUM = 'forum',
   DISCUSSION = 'discussion',
   SPACE_EXPLORER = 'spaces',
