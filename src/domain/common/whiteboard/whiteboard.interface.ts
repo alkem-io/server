@@ -25,6 +25,13 @@ export abstract class IWhiteboard extends INameable {
   })
   previewSettings!: IWhiteboardPreviewSettings;
 
+  @Field(() => Boolean, {
+    description:
+      'Indicates whether guest collaborators are currently allowed via GLOBAL_GUEST permissions.',
+    nullable: false,
+  })
+  guestContributionsAllowed?: boolean;
+
   createdBy?: string;
 
   callout?: ICallout;

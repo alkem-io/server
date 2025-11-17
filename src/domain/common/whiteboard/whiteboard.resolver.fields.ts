@@ -14,11 +14,15 @@ import {
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Whiteboard } from './whiteboard.entity';
 import { WhiteboardService } from './whiteboard.service';
+import { WhiteboardGuestAccessService } from './whiteboard.guest-access.service';
+import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 
 @Resolver(() => IWhiteboard)
 export class WhiteboardResolverFields {
   constructor(
     private whiteboardService: WhiteboardService,
+    private whiteboardGuestAccessService: WhiteboardGuestAccessService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -62,5 +66,38 @@ export class WhiteboardResolverFields {
     loader: ILoader<IProfile>
   ): Promise<IProfile> {
     return loader.load(whiteboard.id);
+  }
+
+  @ResolveField(() => Boolean, {
+    nullable: false,
+    description:
+      'Indicates whether guest collaborators are currently allowed via GLOBAL_GUEST permissions.',
+  })
+  async guestContributionsAllowed(
+    @Parent() whiteboard: IWhiteboard
+  ): Promise<boolean> {
+    if (typeof whiteboard.guestContributionsAllowed === 'boolean') {
+      return whiteboard.guestContributionsAllowed;
+    }
+
+    const whiteboardWithAuthorization =
+      await this.whiteboardService.getWhiteboardOrFail(whiteboard.id, {
+        loadEagerRelations: false,
+        relations: {
+          authorization: true,
+        },
+        select: {
+          id: true,
+          authorization:
+            this.authorizationPolicyService.authorizationSelectOptions,
+        },
+      });
+
+    const value = this.whiteboardGuestAccessService.isGuestAccessEnabled(
+      whiteboardWithAuthorization.authorization
+    );
+
+    whiteboard.guestContributionsAllowed = value;
+    return value;
   }
 }
