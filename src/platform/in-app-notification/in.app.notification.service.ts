@@ -436,6 +436,9 @@ export class InAppNotificationService {
         result.spaceID = (
           payload as InAppNotificationPayloadSpaceCommunicationUpdate
         ).spaceID;
+        result.messageID = (
+          payload as InAppNotificationPayloadSpaceCommunicationUpdate
+        ).messageID;
         break;
 
       case NotificationEvent.SPACE_COMMUNITY_CALENDAR_EVENT_CREATED:
