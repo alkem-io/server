@@ -3,7 +3,7 @@
 **Feature Branch**: `001-toggle-whiteboard-guest`
 **Created**: 2025-11-17
 **Status**: Draft
-**Input**: User description: "I want the server to support guest access toggling for whiteboards, following these rules: I want only whiteboard creators or space admins (with PUBLIC_SHARE privilege) to be able to enable or disable guest access, and only if the space’s allowGuestContribution setting is True. I want that, when guest access is toggled ON, the server adds GLOBAL_GUEST permissions (READ, WRITE, CONTRIBUTE) for that whiteboard and sets the guestContributionsAllowed field to True, returning a public URL in the response. I want that, when guest access is toggled OFF, the server immediately removes GLOBAL_GUEST permissions for that whiteboard, sets guestContributionsAllowed to False, and invalidates the public URL so it returns a 404. I want any attempt to toggle guest access to fail if the user is not authorized or if the allowGuestContribution setting is False, with a clear error sent to the client. I want the guestContributionsAllowed field for every whiteboard to accurately reflect the presence of GLOBAL_GUEST permissions, dynamically updated with every change. I want the API to provide a mutation endpoint that accepts whiteboard ID and new guest access state, performs all authorization and business logic, and returns updated access, guestContributionsAllowed. This guestContributionsAllowed is part of the whiteboard data, and travels with it on all whiteboard requests."
+**Input**: User description: "I want the server to support guest access toggling for whiteboards, following these rules: I want only members holding the PUBLIC_SHARE privilege for the whiteboard to be able to enable or disable guest access, and only if the space’s allowGuestContribution setting is True. I want that, when guest access is toggled ON, the server adds GLOBAL_GUEST permissions (READ, WRITE, CONTRIBUTE) for that whiteboard and sets the guestContributionsAllowed field to True, returning a public URL in the response. I want that, when guest access is toggled OFF, the server immediately removes GLOBAL_GUEST permissions for that whiteboard, sets guestContributionsAllowed to False, and invalidates the public URL so it returns a 404. I want any attempt to toggle guest access to fail if the user is not authorized or if the allowGuestContribution setting is False, with a clear error sent to the client. I want the guestContributionsAllowed field for every whiteboard to accurately reflect the presence of GLOBAL_GUEST permissions, dynamically updated with every change. I want the API to provide a mutation endpoint that accepts whiteboard ID and new guest access state, performs all authorization and business logic, and returns updated access, guestContributionsAllowed. This guestContributionsAllowed is part of the whiteboard data, and travels with it on all whiteboard requests."
 
 ## Clarifications
 
@@ -15,7 +15,7 @@
 
 ### User Story 1 - Enable Guest Access (Priority: P1)
 
-A whiteboard creator wants to enable guest collaboration so external participants can contribute without accounts.
+A member holding the PUBLIC_SHARE privilege wants to enable guest collaboration so external participants can contribute without accounts.
 
 **Why this priority**: Unlocks immediate collaboration value by allowing invited guests to engage with the whiteboard content.
 
@@ -23,14 +23,14 @@ A whiteboard creator wants to enable guest collaboration so external participant
 
 **Acceptance Scenarios**:
 
-1. **Given** a whiteboard whose space allows guest contribution and the creator is authenticated (the user doing the action has PUBLIC_SHARE privilege for this whiteboard), **When** they request guest access ON, **Then** the response confirms success, sets up privileges for credential GLOBAL_GUEST, reflects `guestContributionsAllowed = true`, and issues no share tokens or URLs.
+1. **Given** a whiteboard whose space allows guest contribution and the requester holds the PUBLIC_SHARE privilege for this whiteboard, **When** they request guest access ON, **Then** the response confirms success, sets up privileges for credential GLOBAL_GUEST, reflects `guestContributionsAllowed = true`, and issues no share tokens or URLs.
 2. **Given** the same whiteboard with guest access enabled, **When** an unauthenticated user opens the client-generated guest route for that whiteboard, **Then** the whiteboard is accessible with guest permissions to read, write, and contribute.
 
 ---
 
 ### User Story 2 - Disable Guest Access (Priority: P2)
 
-A space admin with PUBLIC_SHARE privilege wants to revoke guest access once collaboration is complete.
+A member holding the PUBLIC_SHARE privilege wants to revoke guest access once collaboration is complete.
 
 **Why this priority**: Protects space content by ensuring links can be revoked instantly, restoring private control.
 
@@ -38,7 +38,7 @@ A space admin with PUBLIC_SHARE privilege wants to revoke guest access once coll
 
 **Acceptance Scenarios**:
 
-1. **Given** a whiteboard with guest access enabled, **When** an authorized admin (the user doing the action has PUBLIC_SHARE privilege for this whiteboard) toggles guest access OFF, **Then** guest permissions are removed, the GLOBAL_GUEST credential is cleared from privileges for this whiteboard, and the response reports `guestContributionsAllowed = false` with no share metadata returned.
+1. **Given** a whiteboard with guest access enabled, **When** an authorized user holding the PUBLIC_SHARE privilege for this whiteboard toggles guest access OFF, **Then** guest permissions are removed, the GLOBAL_GUEST credential is cleared from privileges for this whiteboard, and the response reports `guestContributionsAllowed = false` with no share metadata returned.
 2. **Given** the previously shared client-generated guest route, **When** a guest tries to use it after deactivation, **Then** the server responds with a not-found outcome because the GLOBAL_GUEST credential no longer grants access.
 
 ---
@@ -53,7 +53,7 @@ An editor without required privileges attempts to change guest access but must b
 
 **Acceptance Scenarios**:
 
-1. **Given** a user lacking creator status or PUBLIC_SHARE privilege, **When** they request guest access ON or OFF, **Then** the server rejects the request with an authorization error and the whiteboard state is unchanged.
+1. **Given** a user lacking the PUBLIC_SHARE privilege, **When** they request guest access ON or OFF, **Then** the server rejects the request with an authorization error and the whiteboard state is unchanged.
 2. **Given** a space where `allowGuestContribution` is false, **When** any user attempts to enable guest access, **Then** the server rejects the request, citing the space setting, and guest access remains disabled.
 
 ---
@@ -68,7 +68,7 @@ An editor without required privileges attempts to change guest access but must b
 
 ### Functional Requirements
 
-- **FR-001**: Only the whiteboard creator or a space admin holding the PUBLIC_SHARE privilege may toggle guest access, and only when the parent space reports `allowGuestContribution = true`.
+- **FR-001**: Only users holding the PUBLIC_SHARE privilege for the whiteboard may toggle guest access, and only when the parent space reports `allowGuestContribution = true`.
 - **FR-002**: When guest access is enabled, the system must grant the GLOBAL_GUEST role read, write, and contribute capabilities for the targeted whiteboard and persist `guestContributionsAllowed = true`.
 - **FR-003**: When guest access is disabled, the system must revoke any GLOBAL_GUEST permissions tied to the whiteboard, mark `guestContributionsAllowed = false`, and ensure no client-generated guest routes continue to authorize access.
 - **FR-004**: The API must expose a mutation accepting whiteboard identifier and desired guest access state, executing authorization, enforcing business rules, and returning the updated access configuration and `guestContributionsAllowed` flag.

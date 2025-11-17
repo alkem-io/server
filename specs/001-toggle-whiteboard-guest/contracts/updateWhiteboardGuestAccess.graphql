@@ -1,0 +1,38 @@
+# GraphQL contract for whiteboard guest access toggle
+
+"""
+Mutation toggles GLOBAL_GUEST permissions for a whiteboard.
+"""
+mutation UpdateWhiteboardGuestAccess($input: UpdateWhiteboardGuestAccessInput!) {
+  updateWhiteboardGuestAccess(input: $input) {
+    whiteboard {
+      id
+      guestContributionsAllowed
+      accessGrants {
+        credential
+        permissions
+      }
+    }
+    errors {
+      code
+      message
+      path
+    }
+  }
+}
+
+"""
+Input contract sketch; final naming must align with generated schema utilities.
+"""
+input UpdateWhiteboardGuestAccessInput {
+  whiteboardId: UUID!
+  guestAccessEnabled: Boolean!
+}
+
+"""
+Expected payload excerpt; actual type may embed union types consistent with existing API patterns.
+"""
+ type UpdateWhiteboardGuestAccessResult {
+  whiteboard: Whiteboard!
+  errors: [MutationError!]
+}
