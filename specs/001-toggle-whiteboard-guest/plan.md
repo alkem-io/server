@@ -18,7 +18,7 @@ Expose a GraphQL mutation that lets PUBLIC_SHARE privilege holders toggle guest 
 **Target Platform**: Containerized Node.js backend (Linux) deployed via existing server pipeline
 **Project Type**: Monolithic backend service (NestJS modules under `src/`)
 **Performance Goals**: Keep toggle mutation p95 latency < 400 ms while updating permission state and cache layers
-**Constraints**: Preserve domain purity (business rules in `src/domain`), avoid server-generated share tokens, ensure concurrency-safe permission updates
+**Constraints**: Preserve domain purity (business rules in `src/domain`), avoid server-generated share tokens, ensure concurrency-safe permission updates, and account for schema evolution introduced by the new mutation + computed field (regenerate and diff GraphQL artifacts)
 **Scale/Scope**: Applies to all whiteboards within collaborative spaces; expect frequent toggles during live sessions across hundreds of rooms
 
 ## Constitution Check

@@ -31,7 +31,7 @@ description: 'Task list for implementing whiteboard guest access toggling'
 **Purpose**: Cross-cutting elements required before delving into any user story.
 
 - [ ] T003 Add the `GLOBAL_GUEST` enum entry and export so credentials can be assigned (src/common/enums/authorization.credential.ts)
-- [ ] T004 Surface `guestContributionsAllowed` as a computed field on the Whiteboard GraphQL DTO, resolving from authorization policies (src/domain/common/whiteboard/dto/whiteboard.dto.guest-access.view.ts)
+- [ ] T004 Surface `guestContributionsAllowed` as a computed field on the Whiteboard GraphQL DTO using existing exports (update `src/domain/common/whiteboard/whiteboard.interface.ts` while leaving `src/domain/common/whiteboard/dto/whiteboard.dto.create.ts` and `src/domain/common/whiteboard/dto/whiteboard.dto.update.ts` input shapes untouched)
 - [ ] T005 Create and register `WhiteboardGuestAccessService` with dependency injection wiring (src/domain/common/whiteboard/whiteboard.guest-access.service.ts)
 
 **Checkpoint**: Domain and schema primitives for guest access exist and are wired through the whiteboard module.
@@ -46,7 +46,7 @@ description: 'Task list for implementing whiteboard guest access toggling'
 
 ### Tests for User Story 1
 
-- [ ] T006 [US1] Add domain unit coverage ensuring enabling guest access assigns GLOBAL_GUEST with READ/WRITE/CONTRIBUTE (test/unit/domain/common/whiteboard/whiteboard.guest-access.service.spec.ts)
+- [ ] T006 [US1] Add domain unit coverage ensuring enabling guest access assigns GLOBAL_GUEST with READ/WRITE/CONTRIBUTE and remains idempotent when toggled on repeatedly (test/unit/domain/common/whiteboard/whiteboard.guest-access.service.spec.ts)
 - [ ] T007 [P] [US1] Add GraphQL integration test validating enable mutation response (test/integration/services/whiteboard/updateWhiteboardGuestAccess.enable.spec.ts)
 
 ### Implementation for User Story 1
@@ -67,8 +67,8 @@ description: 'Task list for implementing whiteboard guest access toggling'
 
 ### Tests for User Story 2
 
-- [ ] T011 [US2] Extend unit coverage ensuring disable flow removes GLOBAL_GUEST credential assignments (test/unit/domain/common/whiteboard/whiteboard.guest-access.service.spec.ts)
-- [ ] T012 [P] [US2] Add GraphQL integration test confirming disable mutation response and access revocation (test/integration/services/whiteboard/updateWhiteboardGuestAccess.disable.spec.ts)
+- [ ] T011 [US2] Extend unit coverage ensuring disable flow removes GLOBAL_GUEST credential assignments and resolves concurrent enable/disable commands deterministically (test/unit/domain/common/whiteboard/whiteboard.guest-access.service.spec.ts)
+- [ ] T012 [P] [US2] Add GraphQL integration test confirming disable mutation response, access revocation, and that racing enable/disable requests leave the final state matching the last accepted toggle (test/integration/services/whiteboard/updateWhiteboardGuestAccess.disable.spec.ts)
 
 ### Implementation for User Story 2
 
