@@ -23,7 +23,6 @@ import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platf
 import { PlatformRolesAccessService } from '@domain/access/platform-roles-access/platform.roles.access.service';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { MemoAuthorizationService } from '@domain/common/memo/memo.service.authorization';
-import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 
 @Injectable()
 export class CalloutContributionAuthorizationService {
