@@ -31,4 +31,4 @@
 
 ## Notes
 
-- Specification reviewed; all checklist items satisfied. Updated to reflect client-managed public link construction with server-issued tokens.
+- Specification reviewed; all checklist items satisfied. Clarified that clients compose public links without any server-issued tokens.
