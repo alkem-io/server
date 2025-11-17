@@ -8,13 +8,20 @@ import { SubscriptionServiceModule } from '@services/subscriptions/subscription-
 import { Community } from '@domain/community/community/community.entity';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
+import { Memo } from '@domain/common/memo/memo.entity';
 
 @Module({
   imports: [
     ActivityModule,
     SubscriptionServiceModule,
     EntityResolverModule,
-    TypeOrmModule.forFeature([Collaboration, Community, Callout, Whiteboard]),
+    TypeOrmModule.forFeature([
+      Collaboration,
+      Community,
+      Callout,
+      Whiteboard,
+      Memo,
+    ]),
   ],
   providers: [ActivityAdapter],
   exports: [ActivityAdapter],

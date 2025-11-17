@@ -78,3 +78,6 @@ tmp-deprecations.json
 change-report.json
 deprecations.json
 tmp/prev.schema.graphql
+
+# SonarQube scanner working directory
+.scannerwork/

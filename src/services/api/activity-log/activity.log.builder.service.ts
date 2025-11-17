@@ -4,12 +4,14 @@ import { IActivityLogEntryMemberJoined } from '@services/api/activity-log/dto/ac
 import { IActivityLogEntryCalloutPublished } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.published';
 import { IActivityLogEntryCalloutPostCreated } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.post.created';
 import { IActivityLogEntryCalloutWhiteboardCreated } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.whiteboard.created';
+import { IActivityLogEntryCalloutMemoCreated } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.memo.created';
 import { IActivityLogEntrySubspaceCreated } from '@services/api/activity-log/dto/activity.log.dto.entry.subspace.created';
 import { IActivityLogEntryCalloutPostComment } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.post.comment';
 import { IActivityLogEntryCalloutDiscussionComment } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.discussion.comment';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { PostService } from '@domain/collaboration/post/post.service';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
+import { MemoService } from '@domain/common/memo/memo.service';
 import { CommunityService } from '@domain/community/community/community.service';
 import { IActivityLogEntry } from './dto/activity.log.entry.interface';
 import { IActivityLogEntryUpdateSent } from './dto/activity.log.dto.entry.update.sent';
@@ -38,6 +40,7 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
     private readonly calloutService: CalloutService,
     private readonly postService: PostService,
     private readonly whiteboardService: WhiteboardService,
+    private readonly memoService: MemoService,
     private readonly spaceService: SpaceService,
     private readonly communityService: CommunityService,
     private readonly roomService: RoomService,
@@ -167,6 +170,32 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
         whiteboard: whiteboardCreated,
       };
     return activityCalloutWhiteboardCreated;
+  }
+
+  async [ActivityEventType.CALLOUT_MEMO_CREATED](rawActivity: IActivity) {
+    if (!rawActivity.parentID) {
+      throw new EntityNotFoundException(
+        `ParentID not set on ${rawActivity.type} activity`,
+        LogContext.ACTIVITY,
+        {
+          activityId: rawActivity.id,
+          type: rawActivity.type,
+        }
+      );
+    }
+
+    const calloutMemoCreated = await this.calloutService.getCalloutOrFail(
+      rawActivity.parentID
+    );
+    const memoCreated = await this.memoService.getMemoOrFail(
+      rawActivity.resourceID
+    );
+    const activityCalloutMemoCreated: IActivityLogEntryCalloutMemoCreated = {
+      ...this.activityLogEntryBase,
+      callout: calloutMemoCreated,
+      memo: memoCreated,
+    };
+    return activityCalloutMemoCreated;
   }
 
   async [ActivityEventType.CALLOUT_WHITEBOARD_CONTENT_MODIFIED](
