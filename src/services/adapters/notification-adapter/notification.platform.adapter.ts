@@ -115,6 +115,7 @@ export class NotificationPlatformAdapter {
           description: eventData.discussion.profile.description,
           url: discussionURL,
           category: eventData.discussion.category,
+          roomID: eventData.discussion.comments.id,
         },
       };
 
@@ -168,6 +169,7 @@ export class NotificationPlatformAdapter {
           description: eventData.discussion.profile.description,
           url: discussionURL,
           category: eventData.discussion.category,
+          roomID: eventData.discussion.comments.id,
         },
         comment: {
           id: eventData.commentSent.id,

@@ -327,7 +327,7 @@ export class InAppNotificationService {
       case NotificationEvent.PLATFORM_FORUM_DISCUSSION_CREATED:
         result.roomID = (
           payload as InAppNotificationPayloadPlatformForumDiscussion
-        ).discussion.id;
+        ).discussion.roomID;
         break;
 
       case NotificationEvent.PLATFORM_FORUM_DISCUSSION_COMMENT:
@@ -336,7 +336,7 @@ export class InAppNotificationService {
         ).comment?.id;
         result.roomID = (
           payload as InAppNotificationPayloadPlatformForumDiscussion
-        ).discussion.id;
+        ).discussion.roomID;
         break;
 
       case NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_REMOVED:

@@ -13,6 +13,7 @@ export abstract class InAppNotificationPayloadPlatformForumDiscussion extends In
     url: string;
     description?: string;
     category?: string;
+    roomID: string;
   };
   comment?: {
     id: string;
