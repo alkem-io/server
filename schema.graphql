@@ -99,6 +99,7 @@ enum AuthorizationCredential {
   GLOBAL_ADMIN
   GLOBAL_ANONYMOUS
   GLOBAL_COMMUNITY_READ
+  GLOBAL_GUEST
   GLOBAL_LICENSE_MANAGER
   GLOBAL_PLATFORM_MANAGER
   GLOBAL_REGISTERED
@@ -300,6 +301,7 @@ enum CredentialType {
   GLOBAL_ADMIN
   GLOBAL_ANONYMOUS
   GLOBAL_COMMUNITY_READ
+  GLOBAL_GUEST
   GLOBAL_LICENSE_MANAGER
   GLOBAL_PLATFORM_MANAGER
   GLOBAL_REGISTERED
@@ -801,6 +803,13 @@ enum VisualType {
   BANNER_WIDE
   CARD
   WHITEBOARD_PREVIEW
+}
+
+enum WhiteboardGuestAccessErrorCode {
+  NOT_AUTHORIZED
+  SPACE_GUEST_DISABLED
+  UNKNOWN
+  WHITEBOARD_NOT_FOUND
 }
 
 enum WhiteboardPreviewMode {
@@ -3688,6 +3697,10 @@ type Mutation {
   """Updates the specified Whiteboard."""
   updateWhiteboard(whiteboardData: UpdateWhiteboardEntityInput!): Whiteboard!
   """
+  Grants or revokes GLOBAL_GUEST permissions for a whiteboard using a single toggle.
+  """
+  updateWhiteboardGuestAccess(input: UpdateWhiteboardGuestAccessInput!): UpdateWhiteboardGuestAccessResult!
+  """
   Create a new Document on the Storage and return the value as part of the returned Link.
   """
   uploadFileOnLink(file: Upload!, uploadData: StorageBucketUploadFileOnLinkInput!): Link!
@@ -5371,6 +5384,15 @@ type Timeline {
   updatedDate: DateTime!
 }
 
+type UpdateWhiteboardGuestAccessResult {
+  """Structured error collection when the toggle fails."""
+  errors: [WhiteboardGuestAccessError!]
+  """Indicates whether the mutation completed successfully."""
+  success: Boolean!
+  """Whiteboard snapshot reflecting the latest guest access state."""
+  whiteboard: Whiteboard
+}
+
 type UrlResolverQueryResultCalendar {
   calendarEventId: UUID
   id: UUID!
@@ -5823,6 +5845,10 @@ type Whiteboard {
   createdBy: User
   """The date at which the entity was created."""
   createdDate: DateTime!
+  """
+  Indicates whether guest collaborators are currently allowed via GLOBAL_GUEST permissions.
+  """
+  guestContributionsAllowed: Boolean!
   """The ID of the entity"""
   id: UUID!
   """Whether the Whiteboard is multi-user enabled on Space level."""
@@ -5835,6 +5861,13 @@ type Whiteboard {
   profile: Profile!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
+}
+
+type WhiteboardGuestAccessError {
+  """Machine friendly error code describing the failure reason."""
+  code: WhiteboardGuestAccessErrorCode!
+  """Human readable description of the error."""
+  message: String!
 }
 
 type WhiteboardPreviewCoordinates {
@@ -7919,6 +7952,15 @@ input UpdateWhiteboardEntityInput {
   previewSettings: UpdateWhiteboardPreviewSettingsInput
   """The Profile of this entity."""
   profile: UpdateProfileInput
+}
+
+input UpdateWhiteboardGuestAccessInput {
+  """
+  Target state for guest collaboration. True enables GLOBAL_GUEST privileges.
+  """
+  guestAccessEnabled: Boolean!
+  """The identifier of the whiteboard whose guest access should be toggled."""
+  whiteboardId: UUID!
 }
 
 input UpdateWhiteboardPreviewSettingsInput {

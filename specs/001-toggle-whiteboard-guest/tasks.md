@@ -47,7 +47,7 @@ description: 'Task list for implementing whiteboard guest access toggling'
 ### Tests for User Story 1
 
 - [x] T006 [US1] Add unit tests proving enable flow grants GLOBAL_GUEST permissions idempotently (test/unit/domain/common/whiteboard/whiteboard.guest-access.service.spec.ts)
-- [ ] T007 [P] [US1] Add resolver unit tests ensuring the enable mutation reflects updated access grants (test/unit/domain/common/whiteboard/whiteboard.resolver.mutations.spec.ts)
+- [x] T007 [P] [US1] Add resolver unit tests ensuring the enable mutation reflects updated access grants (test/unit/domain/common/whiteboard/whiteboard.resolver.mutations.spec.ts)
 
 ### Implementation for User Story 1
 
@@ -68,13 +68,13 @@ description: 'Task list for implementing whiteboard guest access toggling'
 
 ### Tests for User Story 2
 
-- [ ] T012 [US2] Extend unit tests to cover disable flow, ensuring permissions are revoked and concurrent toggles settle deterministically (test/unit/domain/common/whiteboard/whiteboard.guest-access.service.spec.ts)
-- [ ] T013 [P] [US2] Add resolver unit tests validating disabled responses and guest-route invalidation behavior (test/unit/domain/common/whiteboard/whiteboard.resolver.mutations.spec.ts)
+- [x] T012 [US2] Extend unit tests to cover disable flow, ensuring permissions are revoked and concurrent toggles settle deterministically (test/unit/domain/common/whiteboard/whiteboard.guest-access.service.spec.ts)
+- [x] T013 [P] [US2] Add resolver unit tests validating disabled responses and guest-route invalidation behavior (test/unit/domain/common/whiteboard/whiteboard.resolver.mutations.spec.ts)
 
 ### Implementation for User Story 2
 
-- [ ] T014 [US2] Implement disable branch logic removing GLOBAL_GUEST assignments and clearing cached access state (src/domain/common/whiteboard/whiteboard.guest-access.service.ts)
-- [ ] T015 [US2] Ensure resolver payload reflects revoked access grants and updated `guestContributionsAllowed` while keeping mutation idempotent (src/domain/common/whiteboard/whiteboard.resolver.mutations.ts)
+- [x] T014 [US2] Implement disable branch logic removing GLOBAL_GUEST assignments and clearing cached access state (src/domain/common/whiteboard/whiteboard.guest-access.service.ts)
+- [x] T015 [US2] Ensure resolver payload reflects revoked access grants and updated `guestContributionsAllowed` while keeping mutation idempotent (src/domain/common/whiteboard/whiteboard.resolver.mutations.ts)
 
 **Checkpoint**: Disabling guest access reliably removes permissions and reports the final state.
 
@@ -88,13 +88,13 @@ description: 'Task list for implementing whiteboard guest access toggling'
 
 ### Tests for User Story 3
 
-- [ ] T016 [US3] Add unit coverage for missing PUBLIC_SHARE and disallowed space cases, confirming no changes occur (test/unit/domain/common/whiteboard/whiteboard.guest-access.service.spec.ts)
-- [ ] T017 [P] [US3] Add resolver unit tests asserting mutation errors include codes/messages and that whiteboard access remains stable (test/unit/domain/common/whiteboard/whiteboard.resolver.mutations.spec.ts)
+- [x] T016 [US3] Add unit coverage for missing PUBLIC_SHARE and disallowed space cases, confirming no changes occur (test/unit/domain/common/whiteboard/whiteboard.guest-access.service.spec.ts)
+- [x] T017 [P] [US3] Add resolver unit tests asserting mutation errors include codes/messages and that whiteboard access remains stable (test/unit/domain/common/whiteboard/whiteboard.resolver.mutations.spec.ts)
 
 ### Implementation for User Story 3
 
-- [ ] T018 [US3] Enforce authorization + space constraints inside the service with domain-specific exceptions (src/domain/common/whiteboard/whiteboard.guest-access.service.ts)
-- [ ] T019 [US3] Map domain errors to GraphQL error shapes so the mutation returns descriptive failures (src/domain/common/whiteboard/whiteboard.resolver.mutations.ts)
+- [x] T018 [US3] Enforce authorization + space constraints inside the service with domain-specific exceptions (src/domain/common/whiteboard/whiteboard.guest-access.service.ts)
+- [x] T019 [US3] Map domain errors to GraphQL error shapes so the mutation returns descriptive failures (src/domain/common/whiteboard/whiteboard.resolver.mutations.ts)
 
 **Checkpoint**: Unauthorized scenarios consistently produce errors and leave state untouched.
 
@@ -104,10 +104,10 @@ description: 'Task list for implementing whiteboard guest access toggling'
 
 **Purpose**: Harden telemetry, docs, and regression coverage once all stories pass.
 
-- [ ] T020 Refresh quickstart instructions with finalized mutation payload and verification steps (specs/001-toggle-whiteboard-guest/quickstart.md)
-- [ ] T021 Emit debug-level structured logs for toggle outcomes with correlation IDs (src/domain/common/whiteboard/whiteboard.guest-access.service.ts)
-- [ ] T022 Regenerate, sort, and diff the GraphQL schema to satisfy the contract gate (schema.graphql)
-- [ ] T023 Run targeted unit suites for the guest access toggle feature and capture artifacts (test/unit/domain/common/whiteboard/\*.spec.ts)
+- [x] T020 Refresh quickstart instructions with finalized mutation payload and verification steps (specs/001-toggle-whiteboard-guest/quickstart.md)
+- [x] T021 Emit debug-level structured logs for toggle outcomes with correlation IDs (src/domain/common/whiteboard/whiteboard.guest-access.service.ts)
+- [x] T022 Regenerate, sort, and diff the GraphQL schema to satisfy the contract gate (schema.graphql)
+- [x] T023 Run targeted unit suites for the guest access toggle feature and capture artifacts (test/unit/domain/common/whiteboard/\*.spec.ts)
 
 ---
 

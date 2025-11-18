@@ -42,12 +42,13 @@ export class WhiteboardGuestAccessService {
     whiteboardId: string,
     guestAccessEnabled: boolean
   ): Promise<IWhiteboard> {
-    this.logger.verbose?.('Requested whiteboard guest access toggle', {
-      whiteboardId,
+    const baseLogMeta = this.buildLogMetadata(agentInfo, whiteboardId, {
       guestAccessEnabled,
-      userId: agentInfo.userID,
-      context: LogContext.COLLABORATION,
     });
+    this.logger.debug?.(
+      'Whiteboard guest access toggle requested',
+      baseLogMeta
+    );
     const whiteboard = await this.whiteboardService.getWhiteboardOrFail(
       whiteboardId,
       {
@@ -75,6 +76,13 @@ export class WhiteboardGuestAccessService {
     const space = await this.resolveSpaceForWhiteboardOrFail(whiteboardId);
 
     if (guestAccessEnabled && !this.isGuestToggleAllowed(space)) {
+      this.logger.debug?.(
+        'Whiteboard guest access toggle rejected: space disallows guest contributions',
+        this.buildLogMetadata(agentInfo, whiteboardId, {
+          guestAccessEnabled,
+          spaceId: space.id,
+        })
+      );
       throw new ForbiddenException(
         'Guest contributions are disabled for the space',
         LogContext.COLLABORATION,
@@ -92,26 +100,29 @@ export class WhiteboardGuestAccessService {
 
     if (authorizationChanged) {
       await this.authorizationPolicyService.save(authorization);
-      this.logger.verbose?.('Persisted whiteboard guest access change', {
-        whiteboardId,
-        guestAccessEnabled,
-        userId: agentInfo.userID,
-        context: LogContext.COLLABORATION,
+      this.logger.debug?.('Persisted whiteboard guest access change', {
+        ...baseLogMeta,
+        authorizationChanged,
+        persisted: true,
       });
     } else {
       this.logger.debug?.(
         'Guest access toggle requested but authorization unchanged',
         {
-          whiteboardId,
-          guestAccessEnabled,
-          userId: agentInfo.userID,
-          context: LogContext.COLLABORATION,
+          ...baseLogMeta,
+          authorizationChanged,
+          persisted: false,
         }
       );
     }
 
     const guestAccessActive = this.isGuestAccessEnabled(authorization);
     whiteboard.guestContributionsAllowed = guestAccessActive;
+    this.logger.debug?.('Whiteboard guest access toggle resolved', {
+      ...baseLogMeta,
+      authorizationChanged,
+      guestAccessActive,
+    });
     return whiteboard;
   }
 
@@ -217,5 +228,26 @@ export class WhiteboardGuestAccessService {
 
   private isGuestToggleAllowed(space: ISpace): boolean {
     return space.settings?.collaboration?.allowGuestContributions === true;
+  }
+
+  private buildLogMetadata(
+    agentInfo: AgentInfo,
+    whiteboardId: string,
+    extra?: Record<string, unknown>
+  ) {
+    const metadata = {
+      whiteboardId,
+      userId:
+        agentInfo.userID || (agentInfo.isAnonymous ? 'anonymous' : 'unknown'),
+      correlationId:
+        agentInfo.correlationId ||
+        agentInfo.communicationID ||
+        agentInfo.agentID ||
+        agentInfo.userID ||
+        'unknown',
+      context: LogContext.COLLABORATION,
+    };
+
+    return extra ? { ...metadata, ...extra } : metadata;
   }
 }

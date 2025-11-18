@@ -11,6 +11,7 @@ import { CommunityResolverService } from '@services/infrastructure/entity-resolv
 import { ISpace } from '@domain/space/space/space.interface';
 import { LoggerService } from '@nestjs/common';
 import { ForbiddenException } from '@common/exceptions';
+import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
 
 describe('WhiteboardGuestAccessService', () => {
   const createAuthorization = () => {
@@ -150,7 +151,7 @@ describe('WhiteboardGuestAccessService', () => {
       expect(guestRules).toHaveLength(1);
     });
 
-    it('removes GLOBAL_GUEST privileges when disabling', async () => {
+    it('removes GLOBAL_GUEST privileges when disabling and remains idempotent', async () => {
       const authorization = createAuthorization();
       authorization.credentialRules.push({
         name: 'whiteboard-guest-access',
@@ -187,6 +188,80 @@ describe('WhiteboardGuestAccessService', () => {
         )
       ).toBe(false);
       expect(result.guestContributionsAllowed).toBe(false);
+
+      authorizationPolicyService.save.mockClear();
+      const secondResult = await service.updateGuestAccess(
+        agentInfo,
+        whiteboard.id,
+        false
+      );
+
+      expect(authorizationPolicyService.save).not.toHaveBeenCalled();
+      expect(secondResult.guestContributionsAllowed).toBe(false);
+      expect(
+        authorization.credentialRules.some(rule =>
+          rule.criterias.some(
+            criteria => criteria.type === AuthorizationCredential.GLOBAL_GUEST
+          )
+        )
+      ).toBe(false);
+    });
+
+    it('applies the final requested state when toggles alternate', async () => {
+      const authorization = createAuthorization();
+      const whiteboard = createWhiteboard(authorization);
+      whiteboardService.getWhiteboardOrFail.mockResolvedValue(whiteboard);
+
+      const agentInfo = new AgentInfo();
+      agentInfo.userID = 'user-2';
+
+      await service.updateGuestAccess(agentInfo, whiteboard.id, true);
+
+      const disableResult = await service.updateGuestAccess(
+        agentInfo,
+        whiteboard.id,
+        false
+      );
+
+      expect(disableResult.guestContributionsAllowed).toBe(false);
+      expect(
+        authorization.credentialRules.some(rule =>
+          rule.criterias.some(
+            criteria => criteria.type === AuthorizationCredential.GLOBAL_GUEST
+          )
+        )
+      ).toBe(false);
+      expect(authorizationPolicyService.save).toHaveBeenCalledTimes(2);
+    });
+
+    it('throws when PUBLIC_SHARE is missing and leaves authorization untouched', async () => {
+      const authorization = createAuthorization();
+      const whiteboard = createWhiteboard(authorization);
+      whiteboardService.getWhiteboardOrFail.mockResolvedValue(whiteboard);
+
+      const agentInfo = new AgentInfo();
+      agentInfo.userID = 'user-3';
+
+      authorizationService.grantAccessOrFail.mockImplementationOnce(() => {
+        throw new ForbiddenAuthorizationPolicyException(
+          'missing PUBLIC_SHARE',
+          AuthorizationPrivilege.PUBLIC_SHARE,
+          authorization.id,
+          agentInfo.userID
+        );
+      });
+
+      await expect(
+        service.updateGuestAccess(agentInfo, whiteboard.id, true)
+      ).rejects.toBeInstanceOf(ForbiddenAuthorizationPolicyException);
+      expect(authorizationPolicyService.save).not.toHaveBeenCalled();
+      expect(
+        authorization.credentialRules.some(rule =>
+          rule.criterias.some(
+            criteria => criteria.type === AuthorizationCredential.GLOBAL_GUEST
+          )
+        )
+      ).toBe(false);
     });
 
     it('throws ForbiddenException when space disallows guest contributions', async () => {

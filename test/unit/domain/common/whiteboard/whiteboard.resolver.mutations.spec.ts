@@ -92,6 +92,33 @@ describe('WhiteboardResolverMutations - updateWhiteboardGuestAccess', () => {
     expect(result.errors).toBeUndefined();
   });
 
+  it('returns success payload when disabling guest access', async () => {
+    const { resolver, whiteboardGuestAccessService } = createResolver();
+    const agentInfo = new AgentInfo();
+    agentInfo.userID = 'user-1';
+    const whiteboard = {
+      id: 'wb-1',
+      guestContributionsAllowed: false,
+    } as IWhiteboard;
+    whiteboardGuestAccessService.updateGuestAccess.mockResolvedValueOnce(
+      whiteboard
+    );
+
+    const result = await resolver.updateWhiteboardGuestAccess(agentInfo, {
+      whiteboardId: 'wb-1',
+      guestAccessEnabled: false,
+    });
+
+    expect(whiteboardGuestAccessService.updateGuestAccess).toHaveBeenCalledWith(
+      agentInfo,
+      'wb-1',
+      false
+    );
+    expect(result.success).toBe(true);
+    expect(result.whiteboard?.guestContributionsAllowed).toBe(false);
+    expect(result.errors).toBeUndefined();
+  });
+
   it('returns structured error when authorization fails', async () => {
     const { resolver, whiteboardGuestAccessService } = createResolver();
     const agentInfo = new AgentInfo();
@@ -116,6 +143,7 @@ describe('WhiteboardResolverMutations - updateWhiteboardGuestAccess', () => {
     expect(result.success).toBe(false);
     expect(result.errors).toBeDefined();
     expect(result.errors?.[0].code).toBe('NOT_AUTHORIZED');
+    expect(result.whiteboard).toBeUndefined();
   });
 
   it('maps ForbiddenException with space message to SPACE_GUEST_DISABLED', async () => {
@@ -157,5 +185,24 @@ describe('WhiteboardResolverMutations - updateWhiteboardGuestAccess', () => {
 
     expect(result.success).toBe(false);
     expect(result.errors?.[0].code).toBe('WHITEBOARD_NOT_FOUND');
+    expect(result.whiteboard).toBeUndefined();
+  });
+
+  it('maps unexpected errors to UNKNOWN', async () => {
+    const { resolver, whiteboardGuestAccessService } = createResolver();
+    const agentInfo = new AgentInfo();
+    agentInfo.userID = 'user-5';
+    whiteboardGuestAccessService.updateGuestAccess.mockRejectedValueOnce(
+      new Error('boom')
+    );
+
+    const result = await resolver.updateWhiteboardGuestAccess(agentInfo, {
+      whiteboardId: 'wb-err',
+      guestAccessEnabled: false,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.errors?.[0].code).toBe('UNKNOWN');
+    expect(result.whiteboard).toBeUndefined();
   });
 });
