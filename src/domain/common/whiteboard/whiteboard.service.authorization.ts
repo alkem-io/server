@@ -134,73 +134,94 @@ export class WhiteboardAuthorizationService {
           CREDENTIAL_RULE_WHITEBOARD_CREATED_BY
         );
       newRules.push(manageWhiteboardCreatedByPolicy);
-
-      // T007: Add PUBLIC_SHARE credential rule for whiteboard owner when guest contributions enabled
-      if (spaceSettings?.collaboration?.allowGuestContributions) {
-        const ownerPublicSharePolicy =
-          this.authorizationPolicyService.createCredentialRule(
-            [AuthorizationPrivilege.PUBLIC_SHARE],
-            [
-              {
-                type: AuthorizationCredential.USER_SELF_MANAGEMENT,
-                resourceID: whiteboard.createdBy,
-              },
-            ],
-            CREDENTIAL_RULE_WHITEBOARD_OWNER_PUBLIC_SHARE
-          );
-        ownerPublicSharePolicy.cascade = true;
-        newRules.push(ownerPublicSharePolicy);
-
-        // T011: Structured logging for owner PUBLIC_SHARE privilege assignment
-        this.logger.verbose?.(
-          'Granting PUBLIC_SHARE privilege to whiteboard owner',
-          {
-            whiteboardId: whiteboard.id,
-            userId: whiteboard.createdBy,
-            context: LogContext.COLLABORATION,
-          }
-        );
-      }
     }
 
-    if (spaceSettings?.collaboration?.allowGuestContributions) {
-      const adminCredentialDefinitions =
-        await this.resolveAdminCredentialsWithParentsDefinitions(whiteboard.id);
-
-      if (adminCredentialDefinitions.length > 0) {
-        const adminPublicSharePolicy =
-          this.authorizationPolicyService.createCredentialRule(
-            [AuthorizationPrivilege.PUBLIC_SHARE],
-            adminCredentialDefinitions,
-            CREDENTIAL_RULE_SPACE_ADMIN_PUBLIC_SHARE
-          );
-        adminPublicSharePolicy.cascade = true;
-        newRules.push(adminPublicSharePolicy);
-
-        this.logger.verbose?.(
-          'Granting PUBLIC_SHARE privilege to admin credential holders',
-          {
-            whiteboardId: whiteboard.id,
-            credentialCount: adminCredentialDefinitions.length,
-            context: LogContext.COLLABORATION,
-          }
-        );
-      } else {
-        this.logger.verbose?.(
-          `No admin credential holders resolved for whiteboard ${whiteboard.id}; skipping PUBLIC_SHARE admin rule`,
-          LogContext.COLLABORATION
-        );
-      }
-    } else if (spaceSettings?.collaboration !== undefined) {
-      this.logger.verbose?.(
-        `Skipping admin PUBLIC_SHARE credential rule for whiteboard ${whiteboard.id} - guest contributions disabled`,
-        LogContext.COLLABORATION
-      );
-    }
+    await this.appendSettingsDrivenCredentialRules(
+      whiteboard,
+      newRules,
+      spaceSettings
+    );
 
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
       newRules
+    );
+  }
+
+  private async appendSettingsDrivenCredentialRules(
+    whiteboard: IWhiteboard,
+    newRules: IAuthorizationPolicyRuleCredential[],
+    spaceSettings?: ISpaceSettings
+  ): Promise<void> {
+    if (!spaceSettings) {
+      return;
+    }
+
+    const allowGuestContributions =
+      spaceSettings.collaboration?.allowGuestContributions ?? false;
+
+    if (!allowGuestContributions) {
+      this.logger.verbose?.(
+        `Skipping admin PUBLIC_SHARE credential rule for whiteboard ${whiteboard.id} - guest contributions disabled`,
+        LogContext.COLLABORATION
+      );
+      return;
+    }
+
+    if (whiteboard.createdBy) {
+      // T007: Add PUBLIC_SHARE credential rule for whiteboard owner when guest contributions enabled
+      const ownerPublicSharePolicy =
+        this.authorizationPolicyService.createCredentialRule(
+          [AuthorizationPrivilege.PUBLIC_SHARE],
+          [
+            {
+              type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+              resourceID: whiteboard.createdBy,
+            },
+          ],
+          CREDENTIAL_RULE_WHITEBOARD_OWNER_PUBLIC_SHARE
+        );
+      ownerPublicSharePolicy.cascade = true;
+      newRules.push(ownerPublicSharePolicy);
+
+      // T011: Structured logging for owner PUBLIC_SHARE privilege assignment
+      this.logger.verbose?.(
+        'Granting PUBLIC_SHARE privilege to whiteboard owner',
+        {
+          whiteboardId: whiteboard.id,
+          userId: whiteboard.createdBy,
+          context: LogContext.COLLABORATION,
+        }
+      );
+    }
+
+    const adminCredentialDefinitions =
+      await this.resolveAdminCredentialsWithParentsDefinitions(whiteboard.id);
+
+    if (adminCredentialDefinitions.length === 0) {
+      this.logger.verbose?.(
+        `No admin credential holders resolved for whiteboard ${whiteboard.id}; skipping PUBLIC_SHARE admin rule`,
+        LogContext.COLLABORATION
+      );
+      return;
+    }
+
+    const adminPublicSharePolicy =
+      this.authorizationPolicyService.createCredentialRule(
+        [AuthorizationPrivilege.PUBLIC_SHARE],
+        adminCredentialDefinitions,
+        CREDENTIAL_RULE_SPACE_ADMIN_PUBLIC_SHARE
+      );
+    adminPublicSharePolicy.cascade = true;
+    newRules.push(adminPublicSharePolicy);
+
+    this.logger.verbose?.(
+      'Granting PUBLIC_SHARE privilege to admin credential holders',
+      {
+        whiteboardId: whiteboard.id,
+        credentialCount: adminCredentialDefinitions.length,
+        context: LogContext.COLLABORATION,
+      }
     );
   }
 
@@ -223,6 +244,8 @@ export class WhiteboardAuthorizationService {
           community.id
         );
 
+      const spaceCommunityRoleSet = space.community?.roleSet;
+
       if (whiteboardCommunityRoleSet) {
         // Get admin credentials for the whiteboard community and its parents
         const spaceAdminCredentials =
@@ -236,26 +259,26 @@ export class WhiteboardAuthorizationService {
           type: AuthorizationCredential.SPACE_ADMIN,
           resourceID: space.id,
         });
-      }
 
-      if (!whiteboardCommunityRoleSet && space.community?.roleSet) {
-        // Get admin credentials for the space community and its parents
-        const fallbackAdminCredentials =
-          await this.roleSetService.getCredentialsForRoleWithParents(
-            space.community.roleSet,
-            RoleName.ADMIN
-          );
-        credentialDefinitions.push(...fallbackAdminCredentials);
+        if (spaceCommunityRoleSet) {
+          // Get admin credentials for the space community and its parents
+          const fallbackAdminCredentials =
+            await this.roleSetService.getCredentialsForRoleWithParents(
+              spaceCommunityRoleSet,
+              RoleName.ADMIN
+            );
+          credentialDefinitions.push(...fallbackAdminCredentials);
+        }
       }
 
       // Add credentials of any platform roles that have admin access
       if (space.platformRolesAccess?.roles?.length) {
-        credentialDefinitions.push(
-          ...this.platformRolesAccessService.getCredentialsForRolesWithAccess(
+        const platformCredentials =
+          this.platformRolesAccessService.getCredentialsForRolesWithAccess(
             space.platformRolesAccess.roles,
             [AuthorizationPrivilege.PLATFORM_ADMIN]
-          )
-        );
+          );
+        credentialDefinitions.push(...platformCredentials);
       }
 
       return credentialDefinitions;

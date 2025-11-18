@@ -194,6 +194,23 @@ export class ContributionReporterService {
       details
     );
   }
+
+  public calloutMemoCreated(
+    contribution: ContributionDetails,
+    details: AuthorDetails
+  ): void {
+    this.createDocument(
+      {
+        type: 'CALLOUT_MEMO_CREATED',
+        id: contribution.id,
+        name: contribution.name,
+        author: details.id,
+        space: contribution.space,
+      },
+      details
+    );
+  }
+
   public calloutPostCommentCreated(
     contribution: ContributionDetails,
     details: AuthorDetails
