@@ -112,6 +112,11 @@ export class SpacePlatformRolesAccessService {
           AuthorizationPrivilege.DELETE,
           AuthorizationPrivilege.GRANT
         );
+
+        // This privilege is granted on all admins of space with setting enabled
+        if (spaceSettings.collaboration?.allowGuestContributions) {
+          privileges.push(AuthorizationPrivilege.PUBLIC_SHARE);
+        }
       }
     } else {
       if (!parentPlatformAccess) {

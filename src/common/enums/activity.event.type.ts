@@ -7,6 +7,7 @@ export enum ActivityEventType {
   CALLOUT_WHITEBOARD_CREATED = 'whiteboard-created',
   CALLOUT_WHITEBOARD_CONTENT_MODIFIED = 'whiteboard-content-modified',
   CALLOUT_LINK_CREATED = 'callout-link-added',
+  CALLOUT_MEMO_CREATED = 'memo-created',
   DISCUSSION_COMMENT = 'discussion-comment',
   UPDATE_SENT = 'update-sent',
   MEMBER_JOINED = 'member-joined',

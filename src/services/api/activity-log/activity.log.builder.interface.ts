@@ -3,6 +3,7 @@ import { IActivityLogEntryMemberJoined } from '@services/api/activity-log/dto/ac
 import { IActivityLogEntryCalloutPublished } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.published';
 import { IActivityLogEntryCalloutPostCreated } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.post.created';
 import { IActivityLogEntryCalloutWhiteboardCreated } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.whiteboard.created';
+import { IActivityLogEntryCalloutMemoCreated } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.memo.created';
 import { IActivityLogEntrySubspaceCreated } from '@services/api/activity-log/dto/activity.log.dto.entry.subspace.created';
 import { IActivityLogEntryCalloutPostComment } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.post.comment';
 import { IActivityLogEntryCalloutDiscussionComment } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.discussion.comment';
@@ -22,6 +23,7 @@ export interface IActivityLogBuilder {
   [ActivityEventType.CALLOUT_POST_CREATED]: ActivityLogBuilderFunction<IActivityLogEntryCalloutPostCreated>;
   [ActivityEventType.CALLOUT_LINK_CREATED]: ActivityLogBuilderFunction<IActivityLogEntryCalloutLinkCreated>;
   [ActivityEventType.CALLOUT_WHITEBOARD_CREATED]: ActivityLogBuilderFunction<IActivityLogEntryCalloutWhiteboardCreated>;
+  [ActivityEventType.CALLOUT_MEMO_CREATED]: ActivityLogBuilderFunction<IActivityLogEntryCalloutMemoCreated>;
   [ActivityEventType.CALLOUT_WHITEBOARD_CONTENT_MODIFIED]: ActivityLogBuilderFunction<IActivityLogEntryCalloutWhiteboardContentModified>;
   [ActivityEventType.CALLOUT_POST_COMMENT]: ActivityLogBuilderFunction<IActivityLogEntryCalloutPostComment>;
   [ActivityEventType.SUBSPACE_CREATED]: ActivityLogBuilderFunction<IActivityLogEntrySubspaceCreated>;

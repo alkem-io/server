@@ -79,13 +79,13 @@ const getSessionFromAuthorizationHeader = (
 
   try {
     return getSessionFromJwt(token);
-  } catch (e) {
+  } catch {
     // ...
   }
 
   try {
     return getSessionFromApiToken(kratosClient, token);
-  } catch (e) {
+  } catch {
     // ...
   }
 
