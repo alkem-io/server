@@ -21,8 +21,8 @@ description: 'Task list for implementing whiteboard guest access toggling'
 
 **Purpose**: Align the workspace and contracts before implementation begins.
 
-- [ ] T001 Install project dependencies via `pnpm install` to sync workspace tooling (package.json)
-- [ ] T002 Generate a clean GraphQL baseline via `pnpm run schema:print` for later diffing (schema.graphql)
+- [x] T001 Install project dependencies via `pnpm install` to sync workspace tooling (package.json)
+- [x] T002 Generate a clean GraphQL baseline via `pnpm run schema:print` for later diffing (schema.graphql)
 
 ---
 
@@ -30,72 +30,73 @@ description: 'Task list for implementing whiteboard guest access toggling'
 
 **Purpose**: Cross-cutting elements required before delving into any user story.
 
-- [ ] T003 Add the `GLOBAL_GUEST` enum entry and export so credentials can be assigned (src/common/enums/authorization.credential.ts)
-- [ ] T004 Surface `guestContributionsAllowed` as a computed field on the Whiteboard GraphQL DTO using existing exports (update `src/domain/common/whiteboard/whiteboard.interface.ts` while leaving `src/domain/common/whiteboard/dto/whiteboard.dto.create.ts` and `src/domain/common/whiteboard/dto/whiteboard.dto.update.ts` input shapes untouched)
-- [ ] T005 Create and register `WhiteboardGuestAccessService` with dependency injection wiring (src/domain/common/whiteboard/whiteboard.guest-access.service.ts)
+- [x] T003 Add the `GLOBAL_GUEST` enum entry and export so credentials can be assigned (src/common/enums/authorization.credential.ts)
+- [x] T004 Surface `guestContributionsAllowed` as a computed field on the Whiteboard GraphQL DTO using existing exports (update `src/domain/common/whiteboard/whiteboard.interface.ts` while leaving `src/domain/common/whiteboard/dto/whiteboard.dto.create.ts` and `src/domain/common/whiteboard/dto/whiteboard.dto.update.ts` input shapes untouched)
+- [x] T005 Create and register `WhiteboardGuestAccessService` with dependency injection wiring (src/domain/common/whiteboard/whiteboard.guest-access.service.ts)
 
 **Checkpoint**: Domain and schema primitives for guest access exist and are wired through the whiteboard module.
 
 ---
 
-## Phase 3: User Story 1 - Enable Guest Access (Priority: P1) 🎯 MVP
+## Phase 3: User Story 1 – Enable Guest Access (Priority: P1) 🎯 MVP
 
-**Goal**: Allow PUBLIC_SHARE privilege holders to enable guest collaboration by granting GLOBAL_GUEST permissions and reflecting `guestContributionsAllowed = true`.
+**Goal**: PUBLIC_SHARE holders can enable guest collaboration, granting GLOBAL_GUEST permissions and surfacing `guestContributionsAllowed = true` without issuing share tokens.
 
-**Independent Test**: Execute the mutation with `guestAccessEnabled: true` and verify the response includes GLOBAL_GUEST permissions and `guestContributionsAllowed = true` without emitting share tokens.
+**Independent Test**: Execute `updateWhiteboardGuestAccess` with `guestAccessEnabled: true` and confirm GLOBAL_GUEST receives READ/WRITE/CONTRIBUTE plus `guestContributionsAllowed` flips to true with no share metadata returned.
 
 ### Tests for User Story 1
 
-- [ ] T006 [US1] Add domain unit coverage ensuring enabling guest access assigns GLOBAL_GUEST with READ/WRITE/CONTRIBUTE and remains idempotent when toggled on repeatedly (test/unit/domain/common/whiteboard/whiteboard.guest-access.service.spec.ts)
-- [ ] T007 [P] [US1] Add GraphQL integration test validating enable mutation response (test/integration/services/whiteboard/updateWhiteboardGuestAccess.enable.spec.ts)
+- [x] T006 [US1] Add unit tests proving enable flow grants GLOBAL_GUEST permissions idempotently (test/unit/domain/common/whiteboard/whiteboard.guest-access.service.spec.ts)
+- [ ] T007 [P] [US1] Add resolver unit tests ensuring the enable mutation reflects updated access grants (test/unit/domain/common/whiteboard/whiteboard.resolver.mutations.spec.ts)
 
 ### Implementation for User Story 1
 
-- [ ] T008 [US1] Define `UpdateWhiteboardGuestAccessInput`/result DTOs and export them for GraphQL schema generation (src/domain/common/whiteboard/dto/whiteboard.dto.guest-access.toggle.ts)
-- [ ] T009 [US1] Implement enable branch in `WhiteboardGuestAccessService` to enforce PUBLIC_SHARE and grant GLOBAL_GUEST permissions (src/domain/common/whiteboard/whiteboard.guest-access.service.ts)
-- [ ] T010 [US1] Expose `updateWhiteboardGuestAccess` mutation and map payload to the updated whiteboard (src/domain/common/whiteboard/whiteboard.resolver.mutations.ts)
+- [x] T008 [US1] Define input/output DTOs (`UpdateWhiteboardGuestAccessInput`, result union) and export them for schema generation (src/domain/common/whiteboard/dto/whiteboard.dto.guest-access.toggle.ts)
+- [x] T009 [US1] Implement enable branch in `WhiteboardGuestAccessService` to validate PUBLIC_SHARE, check `Space.allowGuestContribution`, and grant GLOBAL_GUEST permissions (src/domain/common/whiteboard/whiteboard.guest-access.service.ts)
+- [x] T010 [US1] Wire `updateWhiteboardGuestAccess` mutation, map service result to the GraphQL payload, and ensure contract alignment (src/domain/common/whiteboard/whiteboard.resolver.mutations.ts)
+- [x] T011 [US1] Sync the GraphQL contract sample with the schema updates for documentation and tooling (specs/001-toggle-whiteboard-guest/contracts/updateWhiteboardGuestAccess.graphql)
 
-**Checkpoint**: Enabling guest access works end-to-end with passing tests and updated GraphQL schema artifacts ready for diffing.
+**Checkpoint**: Enabling guest access works end-to-end with schema artifacts ready for diffing.
 
 ---
 
-## Phase 4: User Story 2 - Disable Guest Access (Priority: P2)
+## Phase 4: User Story 2 – Disable Guest Access (Priority: P2)
 
-**Goal**: Allow PUBLIC_SHARE privilege holders to revoke guest collaboration instantly by removing GLOBAL_GUEST permissions and clearing the flag.
+**Goal**: Authorized members can revoke guest collaboration immediately, removing GLOBAL_GUEST permissions and clearing the flag.
 
-**Independent Test**: Execute the mutation with `guestAccessEnabled: false` and confirm `guestContributionsAllowed = false` and GLOBAL_GUEST assignments are removed.
+**Independent Test**: Run the mutation with `guestAccessEnabled: false` and confirm `guestContributionsAllowed = false`, GLOBAL_GUEST assignments disappear, and guest routes return not found on the next access.
 
 ### Tests for User Story 2
 
-- [ ] T011 [US2] Extend unit coverage ensuring disable flow removes GLOBAL_GUEST credential assignments and resolves concurrent enable/disable commands deterministically (test/unit/domain/common/whiteboard/whiteboard.guest-access.service.spec.ts)
-- [ ] T012 [P] [US2] Add GraphQL integration test confirming disable mutation response, access revocation, and that racing enable/disable requests leave the final state matching the last accepted toggle (test/integration/services/whiteboard/updateWhiteboardGuestAccess.disable.spec.ts)
+- [ ] T012 [US2] Extend unit tests to cover disable flow, ensuring permissions are revoked and concurrent toggles settle deterministically (test/unit/domain/common/whiteboard/whiteboard.guest-access.service.spec.ts)
+- [ ] T013 [P] [US2] Add resolver unit tests validating disabled responses and guest-route invalidation behavior (test/unit/domain/common/whiteboard/whiteboard.resolver.mutations.spec.ts)
 
 ### Implementation for User Story 2
 
-- [ ] T013 [US2] Implement disable branch in `WhiteboardGuestAccessService` to revoke GLOBAL_GUEST and update persistence (src/domain/common/whiteboard/whiteboard.guest-access.service.ts)
-- [ ] T014 [US2] Ensure mutation resolver propagates disabled state and refreshed access grants (src/domain/common/whiteboard/whiteboard.resolver.mutations.ts)
+- [ ] T014 [US2] Implement disable branch logic removing GLOBAL_GUEST assignments and clearing cached access state (src/domain/common/whiteboard/whiteboard.guest-access.service.ts)
+- [ ] T015 [US2] Ensure resolver payload reflects revoked access grants and updated `guestContributionsAllowed` while keeping mutation idempotent (src/domain/common/whiteboard/whiteboard.resolver.mutations.ts)
 
-**Checkpoint**: Disabling guest access removes permissions immediately and is reflected in API responses and tests.
+**Checkpoint**: Disabling guest access reliably removes permissions and reports the final state.
 
 ---
 
-## Phase 5: User Story 3 - Prevent Unauthorized Toggle (Priority: P3)
+## Phase 5: User Story 3 – Prevent Unauthorized Toggle (Priority: P3)
 
-**Goal**: Block toggle attempts for members without PUBLIC_SHARE or when `allowGuestContribution` is false, returning descriptive errors without state changes.
+**Goal**: Reject toggle attempts lacking PUBLIC_SHARE or when the space disallows guest contributions, returning descriptive errors without mutating state.
 
-**Independent Test**: Attempt the mutation as a member lacking PUBLIC_SHARE or in a space with guest contributions disabled and verify the mutation returns an authorization error with no state changes.
+**Independent Test**: Attempt the mutation with insufficient privileges or against `allowGuestContribution = false` and verify a structured error plus unchanged permissions.
 
 ### Tests for User Story 3
 
-- [ ] T015 [US3] Extend unit coverage for missing PUBLIC_SHARE and `allowGuestContribution` false scenarios (test/unit/domain/common/whiteboard/whiteboard.guest-access.service.spec.ts)
-- [ ] T016 [P] [US3] Add GraphQL integration test verifying unauthorized toggle errors leave permissions unchanged (test/integration/services/whiteboard/updateWhiteboardGuestAccess.unauthorized.spec.ts)
+- [ ] T016 [US3] Add unit coverage for missing PUBLIC_SHARE and disallowed space cases, confirming no changes occur (test/unit/domain/common/whiteboard/whiteboard.guest-access.service.spec.ts)
+- [ ] T017 [P] [US3] Add resolver unit tests asserting mutation errors include codes/messages and that whiteboard access remains stable (test/unit/domain/common/whiteboard/whiteboard.resolver.mutations.spec.ts)
 
 ### Implementation for User Story 3
 
-- [ ] T017 [US3] Add guards in `WhiteboardGuestAccessService` enforcing PUBLIC_SHARE and space configuration with structured error payloads (src/domain/common/whiteboard/whiteboard.guest-access.service.ts)
-- [ ] T018 [US3] Map domain errors to GraphQL error results for the mutation (src/domain/common/whiteboard/whiteboard.resolver.mutations.ts)
+- [ ] T018 [US3] Enforce authorization + space constraints inside the service with domain-specific exceptions (src/domain/common/whiteboard/whiteboard.guest-access.service.ts)
+- [ ] T019 [US3] Map domain errors to GraphQL error shapes so the mutation returns descriptive failures (src/domain/common/whiteboard/whiteboard.resolver.mutations.ts)
 
-**Checkpoint**: Unauthorized scenarios produce deterministic errors and preserve existing access state.
+**Checkpoint**: Unauthorized scenarios consistently produce errors and leave state untouched.
 
 ---
 
@@ -103,10 +104,10 @@ description: 'Task list for implementing whiteboard guest access toggling'
 
 **Purpose**: Harden telemetry, docs, and regression coverage once all stories pass.
 
-- [ ] T019 Refresh quickstart instructions with finalized mutation payload and verification steps (specs/001-toggle-whiteboard-guest/quickstart.md)
-- [ ] T020 Emit debug-level structured logs for toggle outcomes with correlation IDs (src/domain/common/whiteboard/whiteboard.guest-access.service.ts)
-- [ ] T021 Regenerate, sort, and diff the GraphQL schema to satisfy the contract gate (schema.graphql)
-- [ ] T022 Run targeted unit and integration suites for the guest access toggle feature (test/integration/services/whiteboard/updateWhiteboardGuestAccess.enable.spec.ts)
+- [ ] T020 Refresh quickstart instructions with finalized mutation payload and verification steps (specs/001-toggle-whiteboard-guest/quickstart.md)
+- [ ] T021 Emit debug-level structured logs for toggle outcomes with correlation IDs (src/domain/common/whiteboard/whiteboard.guest-access.service.ts)
+- [ ] T022 Regenerate, sort, and diff the GraphQL schema to satisfy the contract gate (schema.graphql)
+- [ ] T023 Run targeted unit suites for the guest access toggle feature and capture artifacts (test/unit/domain/common/whiteboard/\*.spec.ts)
 
 ---
 
@@ -134,8 +135,8 @@ description: 'Task list for implementing whiteboard guest access toggling'
 
 ### Parallel Opportunities
 
-- Integration tests for each user story (T007, T012, T016) reside in separate files and can be developed or executed concurrently after their respective domain logic stabilizes.
-- Documentation and telemetry hardening tasks in Phase 6 (T019, T020) can proceed in parallel once stories close.
+- Resolver unit tests for each user story (T007, T013, T017) reside in separate files and can be developed or executed concurrently after their respective domain logic stabilizes.
+- Documentation and telemetry hardening tasks in Phase 6 (T020, T021) can proceed in parallel once stories close.
 
 ---
 
@@ -146,7 +147,7 @@ description: 'Task list for implementing whiteboard guest access toggling'
 # Terminal 1
 pnpm exec jest test/unit/domain/common/whiteboard/whiteboard.guest-access.service.spec.ts --watch
 # Terminal 2
-pnpm exec jest test/integration/services/whiteboard/updateWhiteboardGuestAccess.enable.spec.ts --watch
+ pnpm exec jest test/unit/domain/common/whiteboard/whiteboard.resolver.mutations.spec.ts --watch
 ```
 
 ---
@@ -169,7 +170,7 @@ pnpm exec jest test/integration/services/whiteboard/updateWhiteboardGuestAccess.
 ### Team Parallelisation
 
 - Developer A: Focus on domain/service logic for US1 and US2.
-- Developer B: Build and evolve integration tests (T007, T012, T016) in parallel as implementations stabilize.
+- Developer B: Build and evolve resolver unit tests (T007, T013, T017) in parallel as implementations stabilize.
 - Developer C: Handle documentation, logging, and schema validation during Phase 6.
 
 ---
@@ -177,3 +178,17 @@ pnpm exec jest test/integration/services/whiteboard/updateWhiteboardGuestAccess.
 ## Checklist Format Validation
 
 All tasks above follow the `- [ ] T### [P?] [Story] Description (path)` structure, ensuring unambiguous execution by an LLM or developer.
+
+---
+
+## Task Summary & Validation ✅
+
+- Total tasks: **23**
+  - Phase 1: 2 tasks (T001–T002)
+  - Phase 2: 3 tasks (T003–T005)
+  - Phase 3: 6 tasks (T006–T011)
+  - Phase 4: 4 tasks (T012–T015)
+  - Phase 5: 4 tasks (T016–T019)
+  - Phase 6: 4 tasks (T020–T023)
+- Independent acceptance tests precede each user story section and describe the validation scenario.
+- Spot-checked formatting confirms every task retains `[ID] [P?] [Story] Description (path)` with concrete file references per the template instructions.

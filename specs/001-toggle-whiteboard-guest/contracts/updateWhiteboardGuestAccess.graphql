@@ -5,18 +5,20 @@ Mutation toggles GLOBAL_GUEST permissions for a whiteboard.
 """
 mutation UpdateWhiteboardGuestAccess($input: UpdateWhiteboardGuestAccessInput!) {
   updateWhiteboardGuestAccess(input: $input) {
+    success
     whiteboard {
       id
       guestContributionsAllowed
-      accessGrants {
-        credential
-        permissions
+      authorization {
+        credentialRules {
+          name
+          grantedPrivileges
+        }
       }
     }
     errors {
       code
       message
-      path
     }
   }
 }
@@ -33,6 +35,12 @@ input UpdateWhiteboardGuestAccessInput {
 Expected payload excerpt; actual type may embed union types consistent with existing API patterns.
 """
  type UpdateWhiteboardGuestAccessResult {
-  whiteboard: Whiteboard!
-  errors: [MutationError!]
+  success: Boolean!
+  whiteboard: Whiteboard
+  errors: [WhiteboardGuestAccessError!]
 }
+
+ type WhiteboardGuestAccessError {
+  code: WhiteboardGuestAccessErrorCode!
+  message: String!
+ }

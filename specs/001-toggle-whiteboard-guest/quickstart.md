@@ -15,11 +15,20 @@
      updateWhiteboardGuestAccess(
        input: { whiteboardId: $id, guestAccessEnabled: $enabled }
      ) {
-       whiteboardId
-       guestContributionsAllowed
-       access {
-         credential
-         permissions
+       success
+       whiteboard {
+         id
+         guestContributionsAllowed
+         authorization {
+           credentialRules {
+             name
+             grantedPrivileges
+           }
+         }
+       }
+       errors {
+         code
+         message
        }
      }
    }
@@ -36,7 +45,7 @@
 ## Disabling Guest Access
 
 1. Re-run the mutation with `guestAccessEnabled: false`.
-2. Confirm response shows `guestContributionsAllowed: false` and no GLOBAL_GUEST entry remains.
+2. Confirm the response shows `success: true`, `guestContributionsAllowed: false`, and the authorization payload no longer lists GLOBAL_GUEST privileges.
 3. Reload the guest route and expect a 404/authorization failure.
 
 ## Validation & Instrumentation

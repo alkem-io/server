@@ -16,6 +16,19 @@ import { CalloutContribution } from '@domain/collaboration/callout-contribution/
 import { EntityManager } from 'typeorm';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { WhiteboardGuestAccessService } from './whiteboard.guest-access.service';
+import {
+  UpdateWhiteboardGuestAccessInput,
+  UpdateWhiteboardGuestAccessResult,
+  WhiteboardGuestAccessError,
+  WhiteboardGuestAccessErrorCode,
+} from './dto/whiteboard.dto.guest-access.toggle';
+import {
+  EntityNotFoundException,
+  EntityNotInitializedException,
+  ForbiddenAuthorizationPolicyException,
+  ForbiddenException,
+} from '@common/exceptions';
 
 @InstrumentResolver()
 @Resolver(() => IWhiteboard)
@@ -25,9 +38,43 @@ export class WhiteboardResolverMutations {
     private authorizationPolicyService: AuthorizationPolicyService,
     private whiteboardService: WhiteboardService,
     private whiteboardAuthService: WhiteboardAuthorizationService,
+    private whiteboardGuestAccessService: WhiteboardGuestAccessService,
     @InjectEntityManager() private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
+
+  @Mutation(() => UpdateWhiteboardGuestAccessResult, {
+    description:
+      'Grants or revokes GLOBAL_GUEST permissions for a whiteboard using a single toggle.',
+  })
+  async updateWhiteboardGuestAccess(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('input') input: UpdateWhiteboardGuestAccessInput
+  ): Promise<UpdateWhiteboardGuestAccessResult> {
+    try {
+      const whiteboard =
+        await this.whiteboardGuestAccessService.updateGuestAccess(
+          agentInfo,
+          input.whiteboardId,
+          input.guestAccessEnabled
+        );
+
+      return {
+        success: true,
+        whiteboard,
+      };
+    } catch (error) {
+      const formattedError = this.buildGuestAccessError(error as Error);
+      if (!formattedError) {
+        throw error;
+      }
+
+      return {
+        success: false,
+        errors: [formattedError],
+      };
+    }
+  }
 
   @Mutation(() => IWhiteboard, {
     description: 'Updates the specified Whiteboard.',
@@ -117,5 +164,43 @@ export class WhiteboardResolverMutations {
     );
 
     return await this.whiteboardService.deleteWhiteboard(whiteboard.id);
+  }
+
+  private buildGuestAccessError(
+    error: Error
+  ): WhiteboardGuestAccessError | null {
+    if (error instanceof ForbiddenAuthorizationPolicyException) {
+      return {
+        code: WhiteboardGuestAccessErrorCode.NOT_AUTHORIZED,
+        message: error.message,
+      };
+    }
+
+    if (error instanceof ForbiddenException) {
+      const message = error.message || 'Guest access toggle rejected.';
+      const code = message.includes('Guest contributions are disabled')
+        ? WhiteboardGuestAccessErrorCode.SPACE_GUEST_DISABLED
+        : WhiteboardGuestAccessErrorCode.NOT_AUTHORIZED;
+
+      return {
+        code,
+        message,
+      };
+    }
+
+    if (
+      error instanceof EntityNotFoundException ||
+      error instanceof EntityNotInitializedException
+    ) {
+      return {
+        code: WhiteboardGuestAccessErrorCode.WHITEBOARD_NOT_FOUND,
+        message: error.message,
+      };
+    }
+
+    return {
+      code: WhiteboardGuestAccessErrorCode.UNKNOWN,
+      message: error.message,
+    };
   }
 }

@@ -95,6 +95,7 @@ export class WhiteboardGuestAccessService {
       this.logger.verbose?.('Persisted whiteboard guest access change', {
         whiteboardId,
         guestAccessEnabled,
+        userId: agentInfo.userID,
         context: LogContext.COLLABORATION,
       });
     } else {
@@ -103,6 +104,7 @@ export class WhiteboardGuestAccessService {
         {
           whiteboardId,
           guestAccessEnabled,
+          userId: agentInfo.userID,
           context: LogContext.COLLABORATION,
         }
       );

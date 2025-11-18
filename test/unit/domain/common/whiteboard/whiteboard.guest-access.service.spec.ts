@@ -10,6 +10,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { ISpace } from '@domain/space/space/space.interface';
 import { LoggerService } from '@nestjs/common';
+import { ForbiddenException } from '@common/exceptions';
 
 describe('WhiteboardGuestAccessService', () => {
   const createAuthorization = () => {
@@ -147,6 +148,62 @@ describe('WhiteboardGuestAccessService', () => {
         )
       );
       expect(guestRules).toHaveLength(1);
+    });
+
+    it('removes GLOBAL_GUEST privileges when disabling', async () => {
+      const authorization = createAuthorization();
+      authorization.credentialRules.push({
+        name: 'whiteboard-guest-access',
+        cascade: true,
+        criterias: [
+          {
+            type: AuthorizationCredential.GLOBAL_GUEST,
+            resourceID: '',
+          },
+        ],
+        grantedPrivileges: [
+          AuthorizationPrivilege.READ,
+          AuthorizationPrivilege.CONTRIBUTE,
+        ],
+      });
+      const whiteboard = createWhiteboard(authorization);
+      whiteboardService.getWhiteboardOrFail.mockResolvedValue(whiteboard);
+
+      const agentInfo = new AgentInfo();
+      agentInfo.userID = 'user-1';
+
+      const result = await service.updateGuestAccess(
+        agentInfo,
+        whiteboard.id,
+        false
+      );
+
+      expect(authorizationPolicyService.save).toHaveBeenCalledTimes(1);
+      expect(
+        authorization.credentialRules.some(rule =>
+          rule.criterias.some(
+            criteria => criteria.type === AuthorizationCredential.GLOBAL_GUEST
+          )
+        )
+      ).toBe(false);
+      expect(result.guestContributionsAllowed).toBe(false);
+    });
+
+    it('throws ForbiddenException when space disallows guest contributions', async () => {
+      const authorization = createAuthorization();
+      const whiteboard = createWhiteboard(authorization);
+      whiteboardService.getWhiteboardOrFail.mockResolvedValue(whiteboard);
+      communityResolverService.getSpaceForCommunityOrFail.mockResolvedValueOnce(
+        createSpace(false)
+      );
+
+      const agentInfo = new AgentInfo();
+      agentInfo.userID = 'user-1';
+
+      await expect(
+        service.updateGuestAccess(agentInfo, whiteboard.id, true)
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(authorizationPolicyService.save).not.toHaveBeenCalled();
     });
   });
 });
