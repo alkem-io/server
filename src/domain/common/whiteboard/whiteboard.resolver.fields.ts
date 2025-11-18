@@ -14,6 +14,8 @@ import {
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Whiteboard } from './whiteboard.entity';
 import { WhiteboardService } from './whiteboard.service';
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 
 @Resolver(() => IWhiteboard)
 export class WhiteboardResolverFields {
@@ -29,6 +31,45 @@ export class WhiteboardResolverFields {
   })
   public isMultiUser(@Parent() whiteboard: IWhiteboard): Promise<boolean> {
     return this.whiteboardService.isMultiUser(whiteboard.id);
+  }
+
+  @ResolveField('guestContributionsAllowed', () => Boolean, {
+    nullable: false,
+    description:
+      'Whether guest users are allowed to contribute to this Whiteboard.',
+  })
+  async guestContributionsAllowed(
+    @Parent() whiteboard: Whiteboard
+  ): Promise<boolean> {
+    const authorization = whiteboard.authorization;
+    if (!authorization || !authorization.credentialRules) {
+      return false;
+    }
+
+    // Check if there's a credential rule for GLOBAL_GUEST
+    const guestRule = authorization.credentialRules.find(rule =>
+      rule.criterias.some(
+        criteria => criteria.type === AuthorizationCredential.GLOBAL_GUEST
+      )
+    );
+
+    console.log({ guestRule });
+    if (!guestRule) {
+      return false;
+    }
+
+    // Check if the rule grants READ, UPDATE, and CONTRIBUTE privileges
+    const requiredPrivileges = [
+      AuthorizationPrivilege.READ,
+      AuthorizationPrivilege.UPDATE,
+      AuthorizationPrivilege.UPDATE_CONTENT,
+    ];
+
+    const hasAllPrivileges = requiredPrivileges.every(privilege =>
+      guestRule.grantedPrivileges.includes(privilege)
+    );
+
+    return hasAllPrivileges;
   }
 
   @ResolveField('createdBy', () => IUser, {

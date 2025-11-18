@@ -25,6 +25,8 @@ export abstract class IWhiteboard extends INameable {
   })
   previewSettings!: IWhiteboardPreviewSettings;
 
+  guestContributionsAllowed?: boolean = false;
+
   createdBy?: string;
 
   callout?: ICallout;
