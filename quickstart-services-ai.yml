@@ -211,6 +211,8 @@ services:
       - OIDC_KRATOS_PUBLIC_URL
       - OIDC_KRATOS_BROWSER_URL=http://localhost:3000/ory/kratos/public
       - OIDC_WEB_BASE_URL=http://localhost:3000
+      - OIDC_ALKEMIO_SERVER_URL
+      - OIDC_ALKEMIO_IDENTITY_RESOLVE_PATH
     networks:
       - alkemio_dev_net
     ports:
