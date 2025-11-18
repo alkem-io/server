@@ -49,24 +49,16 @@ export class AuthenticationService {
         opts.authorization,
         opts.cookie
       );
-    } catch {
-      // No valid session, check if this is a guest user
-      if (opts.guestName) {
-        return this.agentInfoService.createGuestAgentInfo(opts.guestName);
+      if (session?.identity) {
+        const oryIdentity = session.identity as OryDefaultIdentitySchema;
+        return this.createAgentInfo(oryIdentity);
       }
-      return this.agentInfoService.createAnonymousAgentInfo();
-    }
+    } catch {}
 
-    if (!session?.identity) {
-      // No identity in session, check if this is a guest user
-      if (opts.guestName) {
-        return this.agentInfoService.createGuestAgentInfo(opts.guestName);
-      }
-      return this.agentInfoService.createAnonymousAgentInfo();
+    if (opts.guestName) {
+      return this.agentInfoService.createGuestAgentInfo(opts.guestName);
     }
-
-    const oryIdentity = session.identity as OryDefaultIdentitySchema;
-    return this.createAgentInfo(oryIdentity);
+    return this.agentInfoService.createAnonymousAgentInfo();
   }
 
   /**

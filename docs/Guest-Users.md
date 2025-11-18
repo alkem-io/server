@@ -14,7 +14,7 @@ This implementation provides ephemeral guest users - anonymous users with a clie
 
 ### Guest Name Header
 
-Clients can provide a guest name using the `x-guest-name` header:
+Clients can provide a guest name using the `x-guest-name` header (defined as `X_GUEST_NAME_HEADER` constant in `src/core/authentication/constants.ts`):
 
 ```bash
 curl -X POST \
@@ -38,7 +38,7 @@ curl -X POST \
 The guest detection happens in `OryStrategy.validate()`:
 
 1. Check if valid JWT session exists
-2. If no session, check for `x-guest-name` header
+2. If no session, check for `X_GUEST_NAME_HEADER` (`x-guest-name`) header
 3. If guest name present, create guest `AgentInfo` with `GLOBAL_GUEST` credential
 4. Otherwise, fallback to anonymous `AgentInfo`
 
@@ -49,6 +49,7 @@ The guest detection happens in `OryStrategy.validate()`:
 - **AgentInfo**: Added `guestName` field for ephemeral guest identification
 - **AgentInfoService.createGuestAgentInfo()**: Creates guest agent info with name and credentials
 - **OryStrategy**: Primary authentication strategy now handles guest header detection
+- **X_GUEST_NAME_HEADER**: Constant defining the guest name header (`x-guest-name`)
 - **UserAuthenticationStatus**: New enum with `ANONYMOUS`, `GUEST`, `AUTHENTICATED` states
 - **RoleName.GUEST** & **AuthorizationCredential.GLOBAL_GUEST**: New role/credential types
 

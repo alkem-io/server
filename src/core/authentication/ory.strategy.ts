@@ -14,6 +14,7 @@ import { OryDefaultIdentitySchema } from '@services/infrastructure/kratos/types/
 import { KratosPayload } from '@services/infrastructure/kratos/types/kratos.payload';
 import { AUTH_STRATEGY_OATHKEEPER_JWT } from './strategy.names';
 import { AgentInfoService } from '../authentication.agent.info/agent.info.service';
+import { X_GUEST_NAME_HEADER } from './constants';
 
 @Injectable()
 export class OryStrategy extends PassportStrategy(
@@ -55,7 +56,7 @@ export class OryStrategy extends PassportStrategy(
       this.logger.verbose?.('No Ory Kratos session', LogContext.AUTH);
 
       // Check for guest name in headers
-      const guestName = req?.headers?.['x-guest-name'];
+      const guestName = req?.headers?.[X_GUEST_NAME_HEADER];
       if (guestName && guestName.trim().length > 0) {
         this.logger.verbose?.(
           `Creating guest agent info for: ${guestName}`,
