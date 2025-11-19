@@ -30,12 +30,12 @@ export class InAppNotificationPayloadUserMessageRoomResolverFields {
   }
 
   @ResolveField(() => MessageDetails, {
-    nullable: false,
+    nullable: true,
     description: 'The details of the message.',
   })
   public async messageDetails(
     @Parent() payload: InAppNotificationPayloadUserMessageRoom
-  ): Promise<MessageDetails> {
+  ): Promise<MessageDetails | null> {
     try {
       return await this.messageDetailsService.getMessageDetails(
         payload.roomID,
@@ -52,7 +52,8 @@ export class InAppNotificationPayloadUserMessageRoomResolverFields {
         (error as Error)?.stack,
         LogContext.IN_APP_NOTIFICATION
       );
-      throw error;
     }
+
+    return null;
   }
 }

@@ -600,6 +600,7 @@ enum RoleName {
   GLOBAL_SPACES_READER
   GLOBAL_SUPPORT
   GLOBAL_SUPPORT_MANAGER
+  GUEST
   LEAD
   MEMBER
   OWNER
@@ -2429,7 +2430,7 @@ type InAppNotificationPayloadPlatformUser implements InAppNotificationPayload {
 
 type InAppNotificationPayloadPlatformUserMessageRoom implements InAppNotificationPayload {
   """The details of the message."""
-  messageDetails: MessageDetails!
+  messageDetails: MessageDetails
   """The payload type."""
   type: NotificationEventPayload!
   """The User receiver of the message."""
@@ -2465,7 +2466,7 @@ type InAppNotificationPayloadSpaceCollaborationCalloutComment implements InAppNo
   """The Callout that was published."""
   callout: Callout!
   """The details of the message."""
-  messageDetails: MessageDetails!
+  messageDetails: MessageDetails
   """The Space where the comment was made."""
   space: Space!
   """The payload type."""
@@ -2476,7 +2477,7 @@ type InAppNotificationPayloadSpaceCollaborationCalloutPostComment implements InA
   """The Callout that was published."""
   callout: Callout!
   """The details of the message."""
-  messageDetails: MessageDetails!
+  messageDetails: MessageDetails
   """The Space where the comment was made."""
   space: Space!
   """The payload type."""

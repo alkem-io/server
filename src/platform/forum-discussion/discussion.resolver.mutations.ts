@@ -34,7 +34,7 @@ export class DiscussionResolverMutations {
       AuthorizationPrivilege.DELETE,
       `delete discussion: ${discussion.id}`
     );
-    return await this.discussionService.deleteDiscussion(deleteData.ID);
+    return await this.discussionService.removeDiscussion(deleteData);
   }
 
   @Mutation(() => IDiscussion, {
