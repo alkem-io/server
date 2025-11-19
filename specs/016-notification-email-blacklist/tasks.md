@@ -1,13 +1,13 @@
 # Tasks: Notification Email Blacklist
 
-**Input**: Design documents from `/specs/015-notification-email-blacklist/`
+**Input**: Design documents from `/specs/016-notification-email-blacklist/`
 **Prerequisites**: plan.md, spec.md, research.md, data-model.md, contracts/
 
 ## Phase 1: Setup (Shared Infrastructure)
 
 **Purpose**: Align contracts before touching runtime code.
 
-- [ ] T001 Align GraphQL contract additions for add/remove operations and integration field description in `specs/015-notification-email-blacklist/contracts/notification-email-blacklist.graphql`.
+- [ ] T001 Align GraphQL contract additions for add/remove operations and integration field description in `specs/016-notification-email-blacklist/contracts/notification-email-blacklist.graphql`.
 
 ---
 
@@ -73,7 +73,7 @@
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-- [ ] T014 Refresh the step-by-step instructions in `specs/015-notification-email-blacklist/quickstart.md` with the final mutation/query names and variables.
+- [ ] T014 Refresh the step-by-step instructions in `specs/016-notification-email-blacklist/quickstart.md` with the final mutation/query names and variables.
 - [ ] T015 Document the blacklist admin workflow and downstream sync expectations in `docs/Notifications.md`.
 - [ ] T016 Regenerate `schema.graphql` (plus run `pnpm run schema:diff`) to capture the new field and mutations, ensuring the diff is committed or approved.
 

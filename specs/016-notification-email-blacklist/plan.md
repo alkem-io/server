@@ -1,6 +1,6 @@
 # Implementation Plan: Notification Email Blacklist
 
-**Branch**: `015-notification-email-blacklist` | **Date**: 2025-11-19 | **Spec**: [Specification](./spec.md)
+**Branch**: `016-notification-email-blacklist` | **Date**: 2025-11-19 | **Spec**: [Specification](./spec.md)
 **Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
 
 **Note**: This template is filled in by the `/speckit.plan` command. See `.specify/templates/commands/plan.md` for the execution workflow.
