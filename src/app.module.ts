@@ -50,7 +50,6 @@ import { ContributionReporterModule } from '@services/external/elasticsearch/con
 import { DataLoaderInterceptor } from '@core/dataloader/interceptors';
 import { InnovationHubInterceptor } from '@common/interceptors';
 import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.module';
-import { SessionSyncModule } from '@services/session-sync/session-sync.module';
 import { SsiCredentialFlowController } from '@services/api-rest/ssi-credential-flow/ssi.credential.flow.controller';
 import { SsiCredentialFlowModule } from '@services/api-rest/ssi-credential-flow/ssi.credential.flow.module';
 import { StorageAccessModule } from '@services/api-rest/storage-access/storage.access.module';
@@ -289,7 +288,6 @@ import { InAppNotificationAdminModule } from './platform-admin/in-app-notificati
     MessageReactionModule,
     NotificationRecipientsModule,
     RegistrationModule,
-    SessionSyncModule,
     ConversionModule,
     LibraryModule,
     PlatformModule,

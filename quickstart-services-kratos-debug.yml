@@ -159,7 +159,6 @@ services:
       - HYDRA_ADMIN_URL=http://hydra:4445
       - SYNAPSE_OIDC_CLIENT_ID
       - SYNAPSE_OIDC_CLIENT_SECRET
-      - SYNAPSE_ADMIN_URL
       - SYNAPSE_PUBLIC_URL
     networks:
       - alkemio_dev_net
