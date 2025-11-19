@@ -10,6 +10,7 @@
    - Authenticate as a platform administrator via existing auth flow.
    - Obtain GraphQL token/cookies for `/graphiql` access.
 3. **Add a blacklisted email**
+
    ```graphql
    mutation AddBlacklist($email: String!) {
      addNotificationEmailToBlacklist(input: { email: $email })
@@ -17,6 +18,7 @@
    ```
 
    - Expect lowercase storage, duplicate attempts return validation error.
+
 4. **Remove a blacklisted email**
    ```graphql
    mutation RemoveBlacklist($email: String!) {
