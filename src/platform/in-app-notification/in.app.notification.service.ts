@@ -25,6 +25,31 @@ import {
 } from '@core/pagination';
 import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
 import { InAppNotificationCoreEntityIds } from './in.app.notification.core.entity.ids';
+import { InAppNotificationPayloadPlatformForumDiscussion } from '../in-app-notification-payload/dto/platform';
+import {
+  InAppNotificationPayloadUser,
+  InAppNotificationPayloadUserMessageDirect,
+  InAppNotificationPayloadUserMessageRoom,
+} from '../in-app-notification-payload/dto/user';
+import {
+  InAppNotificationPayloadSpace,
+  InAppNotificationPayloadSpaceCommunityApplication,
+  InAppNotificationPayloadSpaceCommunityContributor,
+  InAppNotificationPayloadSpaceCollaborationCallout,
+  InAppNotificationPayloadSpaceCommunicationMessageDirect,
+  InAppNotificationPayloadSpaceCommunicationUpdate,
+  InAppNotificationPayloadSpaceCommunityCalendarEvent,
+  InAppNotificationPayloadSpaceCommunityCalendarEventComment,
+  InAppNotificationPayloadSpaceCollaborationCalloutComment,
+  InAppNotificationPayloadSpaceCollaborationCalloutPostComment,
+  InAppNotificationPayloadSpaceCommunityInvitationPlatform,
+  InAppNotificationPayloadSpaceCommunityInvitation,
+} from '../in-app-notification-payload/dto/space';
+import {
+  InAppNotificationPayloadOrganizationMessageDirect,
+  InAppNotificationPayloadOrganizationMessageRoom,
+} from '../in-app-notification-payload/dto/organization';
+import { InAppNotificationPayloadVirtualContributor } from '../in-app-notification-payload/dto/virtual-contributor';
 
 @Injectable()
 export class InAppNotificationService {
@@ -300,19 +325,25 @@ export class InAppNotificationService {
       // ========================================
 
       case NotificationEvent.PLATFORM_FORUM_DISCUSSION_CREATED:
-        result.roomID = payload.roomID;
+        result.roomID = (
+          payload as InAppNotificationPayloadPlatformForumDiscussion
+        ).discussion.roomID;
         break;
 
       case NotificationEvent.PLATFORM_FORUM_DISCUSSION_COMMENT:
-        result.messageID = payload.messageID;
-        result.roomID = payload.roomID;
+        result.messageID = (
+          payload as InAppNotificationPayloadPlatformForumDiscussion
+        ).comment?.id;
+        result.roomID = (
+          payload as InAppNotificationPayloadPlatformForumDiscussion
+        ).discussion.roomID;
         break;
 
       case NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_REMOVED:
         break;
 
       case NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_CREATED:
-        result.userID = payload.userID;
+        result.userID = (payload as InAppNotificationPayloadUser).userID;
         break;
 
       case NotificationEvent.PLATFORM_ADMIN_GLOBAL_ROLE_CHANGED:
@@ -321,7 +352,7 @@ export class InAppNotificationService {
 
       case NotificationEvent.USER_SPACE_COMMUNITY_APPLICATION_DECLINED: // it's using the same payload as platform admin space created
       case NotificationEvent.PLATFORM_ADMIN_SPACE_CREATED:
-        result.spaceID = payload.spaceID;
+        result.spaceID = (payload as InAppNotificationPayloadSpace).spaceID;
         break;
 
       // ========================================
@@ -329,14 +360,18 @@ export class InAppNotificationService {
       // ========================================
 
       case NotificationEvent.ORGANIZATION_ADMIN_MESSAGE:
-        result.organizationID = payload.organizationID;
+        result.organizationID = (
+          payload as InAppNotificationPayloadOrganizationMessageDirect
+        ).organizationID;
         break;
       case NotificationEvent.ORGANIZATION_MESSAGE_SENDER:
         // we want to keep this notification for audit/historical reasons
         break;
 
       case NotificationEvent.ORGANIZATION_ADMIN_MENTIONED:
-        result.organizationID = payload.organizationID;
+        result.organizationID = (
+          payload as InAppNotificationPayloadOrganizationMessageRoom
+        ).organizationID;
         break;
 
       // ========================================
@@ -344,87 +379,133 @@ export class InAppNotificationService {
       // ========================================
 
       case NotificationEvent.SPACE_ADMIN_COMMUNITY_APPLICATION:
-        result.spaceID = payload.spaceID;
-        result.applicationID = payload.applicationID;
+        result.spaceID = (
+          payload as InAppNotificationPayloadSpaceCommunityApplication
+        ).spaceID;
+        result.applicationID = (
+          payload as InAppNotificationPayloadSpaceCommunityApplication
+        ).applicationID;
         break;
 
-      case NotificationEvent.SPACE_ADMIN_COMMUNITY_NEW_MEMBER:
-        result.spaceID = payload.spaceID;
+      case NotificationEvent.SPACE_ADMIN_COMMUNITY_NEW_MEMBER: {
+        const typedPayload =
+          payload as InAppNotificationPayloadSpaceCommunityContributor;
+        result.spaceID = typedPayload.spaceID;
         // contributor FKs
         result.contributorOrganizationID =
-          payload.contributorType === RoleSetContributorType.ORGANIZATION
-            ? payload.contributorID
+          typedPayload.contributorType === RoleSetContributorType.ORGANIZATION
+            ? typedPayload.contributorID
             : undefined;
         result.contributorUserID =
-          payload.contributorType === RoleSetContributorType.USER
-            ? payload.contributorID
+          typedPayload.contributorType === RoleSetContributorType.USER
+            ? typedPayload.contributorID
             : undefined;
         result.contributorVcID =
-          payload.contributorType === RoleSetContributorType.VIRTUAL
-            ? payload.contributorID
+          typedPayload.contributorType === RoleSetContributorType.VIRTUAL
+            ? typedPayload.contributorID
             : undefined;
-        break;
 
-      case NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION:
-        result.spaceID = payload.spaceID;
-        result.calloutID = payload.calloutID;
-        result.contributionID = payload.contributionID;
         break;
+      }
+
+      case NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION: {
+        const typedPayload =
+          payload as InAppNotificationPayloadSpaceCollaborationCallout;
+        result.spaceID = typedPayload.spaceID;
+        result.calloutID = typedPayload.calloutID;
+        result.contributionID = typedPayload.contributionID;
+        break;
+      }
 
       case NotificationEvent.SPACE_ADMIN_VIRTUAL_CONTRIBUTOR_COMMUNITY_INVITATION_DECLINED:
-        result.spaceID = payload.spaceID;
-        result.contributorVcID = payload.contributorID;
+        result.spaceID = (
+          payload as InAppNotificationPayloadSpaceCommunityContributor
+        ).spaceID;
+        result.contributorVcID = (
+          payload as InAppNotificationPayloadSpaceCommunityContributor
+        ).contributorID;
         break;
 
       case NotificationEvent.SPACE_LEAD_COMMUNICATION_MESSAGE:
-        result.spaceID = payload.spaceID;
+        result.spaceID = (
+          payload as InAppNotificationPayloadSpaceCommunicationMessageDirect
+        ).spaceID;
         break;
 
       case NotificationEvent.SPACE_COMMUNICATION_UPDATE:
-        result.spaceID = payload.spaceID;
+        result.spaceID = (
+          payload as InAppNotificationPayloadSpaceCommunicationUpdate
+        ).spaceID;
+        result.messageID = (
+          payload as InAppNotificationPayloadSpaceCommunicationUpdate
+        ).messageID;
         break;
 
       case NotificationEvent.SPACE_COMMUNITY_CALENDAR_EVENT_CREATED:
-        result.spaceID = payload.spaceID;
-        result.calendarEventID = payload.calendarEventID;
+        result.spaceID = (
+          payload as InAppNotificationPayloadSpaceCommunityCalendarEvent
+        ).spaceID;
+        result.calendarEventID = (
+          payload as InAppNotificationPayloadSpaceCommunityCalendarEvent
+        ).calendarEventID;
         break;
 
-      case NotificationEvent.SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT:
-        result.spaceID = payload.spaceID;
-        result.calendarEventID = payload.calendarEventID;
-        result.messageID = payload.messageID;
-        result.roomID = payload.roomID;
+      case NotificationEvent.SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT: {
+        const typedPayload =
+          payload as InAppNotificationPayloadSpaceCommunityCalendarEventComment;
+        result.spaceID = typedPayload.spaceID;
+        result.calendarEventID = typedPayload.calendarEventID;
+        result.messageID = typedPayload.messageID;
+        result.roomID = typedPayload.roomID;
         break;
+      }
 
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED:
-        result.spaceID = payload.spaceID;
-        result.calloutID = payload.calloutID;
+        result.spaceID = (
+          payload as InAppNotificationPayloadSpaceCollaborationCallout
+        ).spaceID;
+        result.calloutID = (
+          payload as InAppNotificationPayloadSpaceCollaborationCallout
+        ).calloutID;
         break;
 
-      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION:
-        result.spaceID = payload.spaceID;
-        result.calloutID = payload.calloutID;
-        result.contributionID = payload.contributionID;
+      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION: {
+        const typedPayload =
+          payload as InAppNotificationPayloadSpaceCollaborationCallout;
+        result.spaceID = typedPayload.spaceID;
+        result.calloutID = typedPayload.calloutID;
+        result.contributionID = typedPayload.contributionID;
         break;
+      }
 
-      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_COMMENT:
-        result.spaceID = payload.spaceID;
-        result.calloutID = payload.calloutID;
-        result.messageID = payload.messageID;
-        result.roomID = payload.roomID;
+      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_COMMENT: {
+        const typedPayload =
+          payload as InAppNotificationPayloadSpaceCollaborationCalloutComment;
+        result.spaceID = typedPayload.spaceID;
+        result.calloutID = typedPayload.calloutID;
+        result.messageID = typedPayload.messageID;
+        result.roomID = typedPayload.roomID;
         break;
+      }
 
-      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_POST_CONTRIBUTION_COMMENT:
-        result.spaceID = payload.spaceID;
-        result.calloutID = payload.calloutID;
-        result.contributionID = payload.contributionID;
-        result.messageID = payload.messageID;
-        result.roomID = payload.roomID;
+      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_POST_CONTRIBUTION_COMMENT: {
+        const typedPayload =
+          payload as InAppNotificationPayloadSpaceCollaborationCalloutPostComment;
+        result.spaceID = typedPayload.spaceID;
+        result.calloutID = typedPayload.calloutID;
+        result.contributionID = typedPayload.contributionID;
+        result.messageID = typedPayload.messageID;
+        result.roomID = typedPayload.roomID;
         break;
-
+      }
+      // this is not supported by the in-apps
       case NotificationEvent.SPACE_COMMUNITY_INVITATION_USER_PLATFORM:
-        result.spaceID = payload.spaceID;
-        result.invitationID = payload.invitationID;
+        result.spaceID = (
+          payload as InAppNotificationPayloadSpaceCommunityInvitationPlatform
+        ).spaceID;
+        result.invitationID = (
+          payload as InAppNotificationPayloadSpaceCommunityInvitationPlatform
+        ).platformInvitationID;
         break;
 
       // ========================================
@@ -436,33 +517,49 @@ export class InAppNotificationService {
         break;
 
       case NotificationEvent.USER_SPACE_COMMUNITY_INVITATION:
-        result.spaceID = payload.spaceID;
-        result.invitationID = payload.invitationID;
+        result.spaceID = (
+          payload as InAppNotificationPayloadSpaceCommunityInvitation
+        ).spaceID;
+        result.invitationID = (
+          payload as InAppNotificationPayloadSpaceCommunityInvitation
+        ).invitationID;
         break;
 
       case NotificationEvent.USER_SPACE_COMMUNITY_JOINED:
-        result.spaceID = payload.spaceID;
-        result.userID = payload.contributorID;
+        result.spaceID = (
+          payload as InAppNotificationPayloadSpaceCommunityContributor
+        ).spaceID;
+        result.userID = (
+          payload as InAppNotificationPayloadSpaceCommunityContributor
+        ).contributorID;
         break;
 
       case NotificationEvent.USER_MESSAGE:
-        result.userID = payload.userID;
+        result.userID = (
+          payload as InAppNotificationPayloadUserMessageDirect
+        ).userID;
         break;
 
       case NotificationEvent.USER_MENTIONED:
-      case NotificationEvent.USER_COMMENT_REPLY:
-        result.userID = payload.userID;
-        result.messageID = payload.messageID;
-        result.roomID = payload.roomID;
+      case NotificationEvent.USER_COMMENT_REPLY: {
+        const typedPayload = payload as InAppNotificationPayloadUserMessageRoom;
+        result.userID = typedPayload.userID;
+        result.messageID = typedPayload.messageID;
+        result.roomID = typedPayload.roomID;
         break;
+      }
 
       // ========================================
       // VIRTUAL CONTRIBUTOR NOTIFICATIONS
       // ========================================
 
       case NotificationEvent.VIRTUAL_CONTRIBUTOR_ADMIN_SPACE_COMMUNITY_INVITATION:
-        result.spaceID = payload.spaceID;
-        result.contributorVcID = payload.contributorID;
+        result.spaceID = (
+          payload as InAppNotificationPayloadVirtualContributor
+        ).space.id;
+        result.contributorVcID = (
+          payload as InAppNotificationPayloadVirtualContributor
+        ).virtualContributorID;
         break;
 
       default:
