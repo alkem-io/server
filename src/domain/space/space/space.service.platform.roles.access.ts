@@ -45,6 +45,15 @@ export class SpacePlatformRolesAccessService {
     });
 
     platformAccessRoles.push({
+      roleName: RoleName.GUEST,
+      grantedPrivileges: this.getAccessPrivilegesForGuestUsers(
+        space,
+        spaceSettings,
+        parentPlatformAccess
+      ),
+    });
+
+    platformAccessRoles.push({
       roleName: RoleName.REGISTERED,
       grantedPrivileges: this.getAccessPrivilegesForRegisteredUsers(
         space,
@@ -191,6 +200,47 @@ export class SpacePlatformRolesAccessService {
         privileges.push(AuthorizationPrivilege.READ_ABOUT);
         if (spaceSettings.privacy.mode === SpacePrivacyMode.PUBLIC) {
           privileges.push(AuthorizationPrivilege.READ);
+        }
+      }
+    }
+
+    return privileges;
+  }
+
+  private getAccessPrivilegesForGuestUsers(
+    space: ISpace,
+    spaceSettings: ISpaceSettings,
+    parentPlatformAccess?: IPlatformRolesAccess
+  ): AuthorizationPrivilege[] {
+    const privileges: AuthorizationPrivilege[] = [];
+    if (space.visibility === SpaceVisibility.ARCHIVED) {
+      return privileges; // No access for guest users on archived spaces
+    }
+
+    if (space.level === SpaceLevel.L0) {
+      privileges.push(AuthorizationPrivilege.READ_ABOUT);
+      if (spaceSettings.privacy.mode === SpacePrivacyMode.PUBLIC) {
+        privileges.push(AuthorizationPrivilege.READ);
+        // Guest users might have limited participation rights
+        privileges.push(AuthorizationPrivilege.READ_USERS);
+      }
+    } else {
+      if (!parentPlatformAccess) {
+        throw new EntityNotFoundException(
+          `Guest users: Parent platform access not found for space ${space.id}`,
+          LogContext.SPACES
+        );
+      }
+      const hasReadOnParent = this.platformAccessService.hasRolePrivilege(
+        parentPlatformAccess.roles,
+        RoleName.GUEST,
+        AuthorizationPrivilege.READ
+      );
+      if (hasReadOnParent) {
+        privileges.push(AuthorizationPrivilege.READ_ABOUT);
+        if (spaceSettings.privacy.mode === SpacePrivacyMode.PUBLIC) {
+          privileges.push(AuthorizationPrivilege.READ);
+          privileges.push(AuthorizationPrivilege.READ_USERS);
         }
       }
     }
