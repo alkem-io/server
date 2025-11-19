@@ -219,6 +219,12 @@ export type AlkemioConfig = {
       max_notifications_per_user: number;
       max_retention_period_days: number;
     };
+    email: {
+      blacklist: {
+        domains: string;
+        addresses: string;
+      };
+    };
   };
   collaboration: {
     membership: {

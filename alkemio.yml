@@ -422,6 +422,10 @@ notifications:
   in_app:
     max_notifications_per_user: ${IN_APP_MAX_NOTIFICATIONS_PER_USER}:100
     max_retention_period_days: ${IN_APP_MAX_RETENTION_PERIOD_DAYS}:90
+  email:
+    blacklist:
+      domains: ${NOTIFICATIONS_EMAIL_BLACKLIST_DOMAINS}:
+      addresses: ${NOTIFICATIONS_EMAIL_BLACKLIST_ADDRESSES}:
 
 collaboration:
   membership:

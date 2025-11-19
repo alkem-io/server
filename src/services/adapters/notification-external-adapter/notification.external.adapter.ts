@@ -3,6 +3,7 @@ import {
   EntityNotFoundException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
+import { isEmailBlacklisted } from '@common/utils/email.util';
 import { Inject, Injectable } from '@nestjs/common';
 import {
   BaseEventPayload,
@@ -192,19 +193,31 @@ export class NotificationExternalAdapter {
     space: ISpace,
     message?: string
   ): Promise<NotificationEventPayloadSpaceCommunityInvitationPlatform> {
-    const recipients: UserPayload[] = [
-      {
-        email: invitedUserEmail,
-        firstName: '',
-        lastName: '',
-        id: '',
-        type: RoleSetContributorType.USER,
-        profile: {
-          url: '',
-          displayName: '',
-        },
-      },
-    ];
+    // Check if the email is blacklisted
+    const blacklistedDomains = this.getBlacklistedDomains();
+    const blacklistedAddresses = this.getBlacklistedAddresses();
+    const isBlacklisted = isEmailBlacklisted(
+      invitedUserEmail,
+      blacklistedDomains,
+      blacklistedAddresses
+    );
+
+    // If blacklisted, return empty recipients array
+    const recipients: UserPayload[] = isBlacklisted
+      ? []
+      : [
+          {
+            email: invitedUserEmail,
+            firstName: '',
+            lastName: '',
+            id: '',
+            type: RoleSetContributorType.USER,
+            profile: {
+              url: '',
+              displayName: '',
+            },
+          },
+        ];
     const spacePayload = await this.buildSpacePayload(
       eventType,
       triggeredBy,
@@ -939,10 +952,25 @@ export class NotificationExternalAdapter {
     recipients: IUser[]
   ): Promise<BaseEventPayload> {
     const contributor = await this.getUserPayloadOrFail(triggeredBy);
+
+    // Get email blacklist configuration
+    const blacklistedDomains = this.getBlacklistedDomains();
+    const blacklistedAddresses = this.getBlacklistedAddresses();
+
+    // Filter out blacklisted recipients
+    const filteredRecipients = recipients.filter(recipient => {
+      const isBlacklisted = isEmailBlacklisted(
+        recipient.email,
+        blacklistedDomains,
+        blacklistedAddresses
+      );
+      return !isBlacklisted;
+    });
+
     const result: BaseEventPayload = {
       eventType,
       triggeredBy: contributor,
-      recipients: recipients.map(recipient =>
+      recipients: filteredRecipients.map(recipient =>
         this.createUserPayloadFromUser(recipient)
       ),
       platform: {
@@ -1025,6 +1053,44 @@ export class NotificationExternalAdapter {
 
   private getPlatformURL(): string {
     return this.configService.get('hosting.endpoint_cluster', { infer: true });
+  }
+
+  private getBlacklistedDomains(): string[] {
+    const domains = this.configService.get(
+      'notifications.email.blacklist.domains',
+      { infer: true }
+    );
+    if (!domains) {
+      return [];
+    }
+    // Handle comma-separated list
+    return typeof domains === 'string'
+      ? domains
+          .split(',')
+          .map(d => d.trim())
+          .filter(d => d.length > 0)
+      : Array.isArray(domains)
+        ? domains
+        : [];
+  }
+
+  private getBlacklistedAddresses(): string[] {
+    const addresses = this.configService.get(
+      'notifications.email.blacklist.addresses',
+      { infer: true }
+    );
+    if (!addresses) {
+      return [];
+    }
+    // Handle comma-separated list
+    return typeof addresses === 'string'
+      ? addresses
+          .split(',')
+          .map(a => a.trim())
+          .filter(a => a.length > 0)
+      : Array.isArray(addresses)
+        ? addresses
+        : [];
   }
 
   private async getContributorPayloadOrEmpty(
