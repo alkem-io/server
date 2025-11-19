@@ -5,10 +5,9 @@
 
 ## Phase 1: Setup (Shared Infrastructure)
 
-**Purpose**: Align contracts and test scaffolding before touching runtime code.
+**Purpose**: Align contracts before touching runtime code.
 
 - [ ] T001 Align GraphQL contract additions for add/remove operations and integration field description in `specs/001-notification-email-blacklist/contracts/notification-email-blacklist.graphql`.
-- [ ] T002 [P] Scaffold the integration test harness with describe blocks for mutations/queries in `test/integration/platform/platform-settings.blacklist.spec.ts`.
 
 ---
 
@@ -16,9 +15,9 @@
 
 **Purpose**: Ensure platform settings data structures can store and expose the blacklist array.
 
-- [ ] T003 Add the `notificationEmailBlacklist` field (with `@Field(() => [String])`) to `src/platform/platform-settings/platform.settings.integrations.interface.ts`.
-- [ ] T004 Allow bulk updates of `notificationEmailBlacklist` (with array + email validators) inside `src/platform/platform-settings/dto/platform.settings.integration.dto.update.ts`.
-- [ ] T005 Update `src/platform/platform-settings/platform.settings.service.ts` so `updateSettings` copies `notificationEmailBlacklist` values and initializes an empty array when missing.
+- [ ] T002 Add the `notificationEmailBlacklist` field (with `@Field(() => [String])`) to `src/platform/platform-settings/platform.settings.integrations.interface.ts`.
+- [ ] T003 Allow bulk updates of `notificationEmailBlacklist` (with array + email validators) inside `src/platform/platform-settings/dto/platform.settings.integration.dto.update.ts`.
+- [ ] T004 Update `src/platform/platform-settings/platform.settings.service.ts` so `updateSettings` copies `notificationEmailBlacklist` values and initializes an empty array when missing.
 
 **Checkpoint**: Integration settings now persist the blacklist array; user stories can proceed.
 
@@ -32,11 +31,10 @@
 
 ### Implementation
 
-- [ ] T006 [P] [US1] Create `NotificationEmailAddressInput` with `@IsEmail()` + lowercase sanitizer in `src/platform/platform-settings/dto/notification-email-blacklist.input.ts` and export it via `src/platform/platform-settings/index.ts`.
-- [ ] T007 [US1] Implement `addNotificationEmailToBlacklistOrFail` (dedupe, cap ≤250, wildcard rejection) in `src/platform/platform-settings/platform.settings.service.ts`.
-- [ ] T008 [US1] Add the `addNotificationEmailToBlacklist` mutation in `src/platform/platform/platform.resolver.mutations.ts`, wiring authorization, service call, and persistence.
-- [ ] T009 [P] [US1] Cover success/validation paths for the add method in `test/unit/platform/platform-settings/platform.settings.service.blacklist.spec.ts`.
-- [ ] T010 [US1] Add integration coverage for the add mutation + query reflection in `test/integration/platform/platform-settings.blacklist.spec.ts`.
+- [ ] T005 [P] [US1] Create `NotificationEmailAddressInput` with `@IsEmail()` + lowercase sanitizer in `src/platform/platform-settings/dto/notification-email-blacklist.input.ts` and export it via `src/platform/platform-settings/index.ts`.
+- [ ] T006 [US1] Implement `addNotificationEmailToBlacklistOrFail` (dedupe, cap ≤250, wildcard rejection) in `src/platform/platform-settings/platform.settings.service.ts`.
+- [ ] T007 [US1] Add the `addNotificationEmailToBlacklist` mutation in `src/platform/platform/platform.resolver.mutations.ts`, wiring authorization, service call, and persistence.
+- [ ] T008 [P] [US1] Cover success/validation paths for the add method in `test/unit/platform/platform-settings/platform.settings.service.blacklist.spec.ts`.
 
 **Checkpoint**: Admins can add emails and verify them via GraphQL; downstream services can pull the updated list.
 
@@ -50,10 +48,9 @@
 
 ### Implementation
 
-- [ ] T011 [US2] Implement `removeNotificationEmailFromBlacklistOrFail` (error when email missing) in `src/platform/platform-settings/platform.settings.service.ts`.
-- [ ] T012 [US2] Add the `removeNotificationEmailFromBlacklist` mutation to `src/platform/platform/platform.resolver.mutations.ts` with matching audit logging and persistence.
-- [ ] T013 [P] [US2] Extend `test/unit/platform/platform-settings/platform.settings.service.blacklist.spec.ts` with removal and "email not found" cases.
-- [ ] T014 [US2] Extend `test/integration/platform/platform-settings.blacklist.spec.ts` to cover removal happy-path plus error response.
+- [ ] T009 [US2] Implement `removeNotificationEmailFromBlacklistOrFail` (error when email missing) in `src/platform/platform-settings/platform.settings.service.ts`.
+- [ ] T010 [US2] Add the `removeNotificationEmailFromBlacklist` mutation to `src/platform/platform/platform.resolver.mutations.ts` with matching audit logging and persistence.
+- [ ] T011 [P] [US2] Extend `test/unit/platform/platform-settings/platform.settings.service.blacklist.spec.ts` with removal and "email not found" cases.
 
 **Checkpoint**: Admins can both add and remove entries without affecting other recipients.
 
@@ -67,9 +64,8 @@
 
 ### Implementation
 
-- [ ] T015 [US3] Guarantee serialization populates an empty array when the blacklist is undefined before returning settings in `src/platform/platform-settings/platform.settings.service.ts`.
-- [ ] T016 [US3] Update `src/platform/platform/platform.resolver.queries.ts` (and any DTO typings) so the `platform` query exposes `notificationEmailBlacklist` without additional resolvers.
-- [ ] T017 [P] [US3] Add query-only integration assertions for the blacklist field (non-empty + empty scenarios) in `test/integration/platform/platform-settings.blacklist.spec.ts`.
+- [ ] T012 [US3] Guarantee serialization populates an empty array when the blacklist is undefined before returning settings in `src/platform/platform-settings/platform.settings.service.ts`.
+- [ ] T013 [US3] Update `src/platform/platform/platform.resolver.queries.ts` (and any DTO typings) so the `platform` query exposes `notificationEmailBlacklist` without additional resolvers.
 
 **Checkpoint**: Support staff can audit the blacklist solely via GraphQL queries.
 
@@ -77,16 +73,16 @@
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-- [ ] T018 Refresh the step-by-step instructions in `specs/001-notification-email-blacklist/quickstart.md` with the final mutation/query names and variables.
-- [ ] T019 Document the blacklist admin workflow and downstream sync expectations in `docs/Notifications.md`.
-- [ ] T020 Regenerate `schema.graphql` (plus run `pnpm run schema:diff`) to capture the new field and mutations, ensuring the diff is committed or approved.
+- [ ] T014 Refresh the step-by-step instructions in `specs/001-notification-email-blacklist/quickstart.md` with the final mutation/query names and variables.
+- [ ] T015 Document the blacklist admin workflow and downstream sync expectations in `docs/Notifications.md`.
+- [ ] T016 Regenerate `schema.graphql` (plus run `pnpm run schema:diff`) to capture the new field and mutations, ensuring the diff is committed or approved.
 
 ---
 
 ## Dependencies & Execution Order
 
-1. **Phase 1 → Phase 2**: Contracts/test scaffolding must exist before modifying runtime types.
-2. **Phase 2 → User Stories**: Interface + service scaffolding (T003–T005) is required before any story-specific implementation.
+1. **Phase 1 → Phase 2**: Contract updates must exist before modifying runtime types.
+2. **Phase 2 → User Stories**: Interface + service scaffolding (T002–T004) is required before any story-specific implementation.
 3. **User Story Independence**:
    - **US1 (P1)** starts immediately after Phase 2 and delivers the MVP.
    - **US2 (P2)** can start once Phase 2 is done; it reuses service structures but does not depend on US1 completion.
@@ -96,9 +92,9 @@
 ## Parallel Execution Examples
 
 - **Setup**: T001 and T002 touch different files and can run together.
-- **US1**: While T007/T008 implement logic, T006 can be created independently and T009 can begin with test scaffolding.
-- **US2**: T013 (unit tests) can be prepared in parallel with T011/T012 since it focuses on the same file but different describe blocks.
-- **US3**: T017 (integration assertions) can run in parallel with T015–T016 after the serialization guard is stubbed.
+- **US1**: While T006/T007 implement logic, T005 can be created independently and T008 can begin with unit test scaffolding.
+- **US2**: T011 (unit tests) can be prepared in parallel with T009/T010 since it focuses on the same file but different describe blocks.
+- **US3**: T012 (service serialization) and T013 (resolver exposure) can run in parallel once the DTO typings are outlined, enabling Phase 6 docs/schema work (T014–T016) to begin sooner.
 
 ## Implementation Strategy
 
