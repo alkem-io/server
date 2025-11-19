@@ -264,6 +264,38 @@ describe('WhiteboardGuestAccessService', () => {
       ).toBe(false);
     });
 
+    it('rehydrates the whiteboard before returning the response', async () => {
+      const authorization = createAuthorization();
+      const thinWhiteboard = createWhiteboard(authorization);
+      const hydratedWhiteboard = {
+        ...thinWhiteboard,
+        nameID: 'wb-name-id',
+        title: 'Whiteboard Name',
+      } as IWhiteboard;
+
+      whiteboardService.getWhiteboardOrFail
+        .mockResolvedValueOnce(thinWhiteboard)
+        .mockResolvedValueOnce(hydratedWhiteboard);
+
+      const agentInfo = new AgentInfo();
+      agentInfo.userID = 'user-4';
+
+      const result = await service.updateGuestAccess(
+        agentInfo,
+        thinWhiteboard.id,
+        true
+      );
+
+      expect(whiteboardService.getWhiteboardOrFail).toHaveBeenCalledTimes(2);
+      expect(whiteboardService.getWhiteboardOrFail).toHaveBeenNthCalledWith(
+        2,
+        thinWhiteboard.id
+      );
+      expect(result).toBe(hydratedWhiteboard);
+      expect(result.nameID).toBe('wb-name-id');
+      expect(result.guestContributionsAllowed).toBe(true);
+    });
+
     it('throws ForbiddenException when space disallows guest contributions', async () => {
       const authorization = createAuthorization();
       const whiteboard = createWhiteboard(authorization);

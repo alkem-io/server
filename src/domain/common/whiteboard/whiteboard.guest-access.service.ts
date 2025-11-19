@@ -117,13 +117,16 @@ export class WhiteboardGuestAccessService {
     }
 
     const guestAccessActive = this.isGuestAccessEnabled(authorization);
-    whiteboard.guestContributionsAllowed = guestAccessActive;
+    const hydratedWhiteboard =
+      await this.whiteboardService.getWhiteboardOrFail(whiteboardId);
+
+    hydratedWhiteboard.guestContributionsAllowed = guestAccessActive;
     this.logger.debug?.('Whiteboard guest access toggle resolved', {
       ...baseLogMeta,
       authorizationChanged,
       guestAccessActive,
     });
-    return whiteboard;
+    return hydratedWhiteboard;
   }
 
   public isGuestAccessEnabled(
