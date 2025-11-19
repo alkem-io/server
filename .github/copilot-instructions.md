@@ -104,6 +104,8 @@
 ## Active Technologies
 - TypeScript 5.3 on Node.js 20.15.1 (NestJS) + NestJS 10, TypeORM 0.3, Apollo GraphQL 4, Express, Ory Kratos Admin API client (014-kratos-authentication-id-linking)
 - MySQL 8.0 via TypeORM (014-kratos-authentication-id-linking)
+- TypeScript 5.x on Node.js 20 (NestJS server) + NestJS 10, TypeORM 0.3, GraphQL/Apollo Server, MySQL 8 (016-drop-account-upn)
+- MySQL 8 via TypeORM entities and migrations (016-drop-account-upn)
 
 - TypeScript 5.x on Node.js 20 (per repository toolchain) + NestJS server, existing CI runner stack, SonarQube at https://sonarqube.alkem.io (015-sonarqube-analysis)
 - N/A (SonarQube stores analysis; server DB not impacted by this feature) (015-sonarqube-analysis)

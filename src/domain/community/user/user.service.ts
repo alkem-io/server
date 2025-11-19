@@ -132,7 +132,6 @@ export class UserService {
 
     let user: IUser = User.create({
       ...userData,
-      accountUpn: userData.accountUpn ?? userData.email,
     });
     user.authorization = new AuthorizationPolicy(AuthorizationPolicyType.USER);
     user.settings = this.userSettingsService.createUserSettings(
@@ -372,7 +371,6 @@ export class UserService {
       email: email,
       firstName: agentInfo.firstName,
       lastName: agentInfo.lastName,
-      accountUpn: email,
       profileData: {
         visuals: [
           {

@@ -8,7 +8,6 @@ import { userSettingsData } from './user.settings.mock';
 
 export const userData: { user: IUser } = {
   user: {
-    accountUpn: 'admin@alkem.io',
     firstName: 'admin',
     lastName: 'alkemio',
     email: 'admin@alkem.io',

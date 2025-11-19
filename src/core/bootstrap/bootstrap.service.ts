@@ -275,7 +275,6 @@ export class BootstrapService {
         if (!userExists) {
           const user = await this.userService.createUser({
             email: userData.email,
-            accountUpn: userData.email,
             firstName: userData.firstName,
             lastName: userData.lastName,
             profileData: {
