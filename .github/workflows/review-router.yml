@@ -43,6 +43,7 @@ jobs:
 
         # 2. Get the PR title
         PR_TITLE=$(jq -r '.pull_request.title' "${GITHUB_EVENT_PATH}")
+        PR_DESCRIPTION=$(jq -r '.pull_request.body // ""' "${GITHUB_EVENT_PATH}")
 
         # 3. Use 'git diff --numstat' to get stats between the base branch and the PR head
         # Format: <lines added>\t<lines removed>\t<file name>
@@ -75,7 +76,7 @@ jobs:
 
         # 5. Execute the Python script with real data
         # We pass the accumulated file paths string as a single, quoted argument
-        JSON_OUTPUT=$(python review_metrics.py "${PR_TITLE}" "${LOC}" "${FILES}" "${CHANGED_PATHS}")
+        JSON_OUTPUT=$(PR_DESCRIPTION="${PR_DESCRIPTION}" python review_metrics.py "${PR_TITLE}" "${LOC}" "${FILES}" "${CHANGED_PATHS}")
 
         # Extract review_type for conditional step execution
         REVIEW_TYPE=$(echo "${JSON_OUTPUT}" | python -c "import sys, json; print(json.load(sys.stdin).get('review_type', ''))")
