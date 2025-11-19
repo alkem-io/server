@@ -76,10 +76,6 @@ export class WhiteboardResolverFields {
   async guestContributionsAllowed(
     @Parent() whiteboard: IWhiteboard
   ): Promise<boolean> {
-    if (typeof whiteboard.guestContributionsAllowed === 'boolean') {
-      return whiteboard.guestContributionsAllowed;
-    }
-
     const whiteboardWithAuthorization =
       await this.whiteboardService.getWhiteboardOrFail(whiteboard.id, {
         loadEagerRelations: false,
@@ -96,8 +92,6 @@ export class WhiteboardResolverFields {
     const value = this.whiteboardGuestAccessService.isGuestAccessEnabled(
       whiteboardWithAuthorization.authorization
     );
-
-    whiteboard.guestContributionsAllowed = value;
     return value;
   }
 }
