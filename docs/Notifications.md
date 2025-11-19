@@ -423,6 +423,73 @@ const emailRecipients = candidates.filter(
 
 **Solution**: Ensure payload is added to `resolveType` function in interface resolver
 
+## Email Blacklist Configuration
+
+The notification system supports blacklisting email addresses or domains to prevent certain recipients from receiving email notifications. This is useful for:
+
+- Filtering out test accounts
+- Blocking temporary email services
+- Preventing notifications to invalid addresses
+
+### Configuration
+
+Email blacklist is configured in `alkemio.yml`:
+
+```yaml
+notifications:
+  email:
+    blacklist:
+      domains: ${NOTIFICATIONS_EMAIL_BLACKLIST_DOMAINS}:
+      addresses: ${NOTIFICATIONS_EMAIL_BLACKLIST_ADDRESSES}:
+```
+
+### Environment Variables
+
+Set via environment variables with comma-separated values:
+
+```bash
+# Block entire domains
+NOTIFICATIONS_EMAIL_BLACKLIST_DOMAINS=tempmail.com,throwaway.email,example.test
+
+# Block specific email addresses
+NOTIFICATIONS_EMAIL_BLACKLIST_ADDRESSES=spam@example.com,noreply@test.com
+```
+
+### How It Works
+
+1. When building notification payloads, recipients are filtered through `isEmailBlacklisted()` utility
+2. Matching is case-insensitive and trims whitespace
+3. For domain blacklisting, only the domain part of the email is checked
+4. For address blacklisting, the entire email address must match exactly
+5. Blacklisted recipients are silently removed from the recipient list
+
+### Usage Examples
+
+**Block a test domain:**
+```bash
+NOTIFICATIONS_EMAIL_BLACKLIST_DOMAINS=test.example.com
+```
+
+**Block specific test accounts:**
+```bash
+NOTIFICATIONS_EMAIL_BLACKLIST_ADDRESSES=testuser1@example.com,testuser2@example.com
+```
+
+**Combine both:**
+```bash
+NOTIFICATIONS_EMAIL_BLACKLIST_DOMAINS=tempmail.com,disposable.email
+NOTIFICATIONS_EMAIL_BLACKLIST_ADDRESSES=spam@example.com,bot@service.com
+```
+
+### Implementation Details
+
+The blacklist check is performed in two places:
+
+1. `NotificationExternalAdapter.buildBaseEventPayload()` - Filters regular user recipients
+2. `NotificationExternalAdapter.buildSpaceCommunityExternalInvitationCreatedNotificationPayload()` - Filters external email invitations
+
+Recipients are filtered before the payload is sent to the notifications service, ensuring blacklisted emails never receive notification events.
+
 ## Future Improvements
 
 1. **Batch Processing**: Implement batching for large recipient lists
