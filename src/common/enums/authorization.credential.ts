@@ -8,7 +8,6 @@ export enum AuthorizationCredential {
   GLOBAL_ANONYMOUS = 'global-anonymous', // credential issued to all non-authenticated interactions
   GLOBAL_GUEST = 'global-guest', // credential issued to guest users (named but limited access)
   GLOBAL_REGISTERED = 'global-registered', // credential issued to all registered users
-  GLOBAL_GUEST = 'global-guest', // credential issued to anonymous guest participants when enabled on resources
   GLOBAL_COMMUNITY_READ = 'global-community-read', // able to view all details of the top level community
   GLOBAL_SPACES_READER = 'global-spaces-read', // able to view all details of the top level community
   GLOBAL_PLATFORM_MANAGER = 'global-platform-manager', // to allow assignment of privileges for platform management
