@@ -127,7 +127,8 @@ export class PlatformResolverMutations {
   }
 
   @Mutation(() => [String], {
-    description: 'Adds a full email address to the platform notification blacklist',
+    description:
+      'Adds a full email address to the platform notification blacklist',
   })
   async addNotificationEmailToBlacklist(
     @CurrentUser() agentInfo: AgentInfo,
@@ -153,7 +154,8 @@ export class PlatformResolverMutations {
   }
 
   @Mutation(() => [String], {
-    description: 'Removes an email address from the platform notification blacklist',
+    description:
+      'Removes an email address from the platform notification blacklist',
   })
   async removeNotificationEmailFromBlacklist(
     @CurrentUser() agentInfo: AgentInfo,

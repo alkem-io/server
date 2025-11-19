@@ -83,14 +83,11 @@ export class PlatformSettingsService {
       );
 
     // Initialize blacklist if not present
-    const currentEmails =
-      settings.integration.notificationEmailBlacklist || [];
+    const currentEmails = settings.integration.notificationEmailBlacklist || [];
 
     // Reject wildcard characters
     if (email.includes('*') || email.includes('?')) {
-      throw new Error(
-        'Wildcard characters are not allowed in email addresses'
-      );
+      throw new Error('Wildcard characters are not allowed in email addresses');
     }
 
     // Lowercase for canonical storage and comparison
@@ -124,8 +121,7 @@ export class PlatformSettingsService {
         LogContext.PLATFORM
       );
 
-    const currentEmails =
-      settings.integration.notificationEmailBlacklist || [];
+    const currentEmails = settings.integration.notificationEmailBlacklist || [];
 
     // Lowercase for canonical comparison
     const canonicalEmail = email.toLowerCase();
