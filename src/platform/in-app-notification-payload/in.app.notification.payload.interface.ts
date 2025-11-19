@@ -3,7 +3,7 @@ import { Field, InterfaceType } from '@nestjs/graphql';
 import { AlkemioErrorStatus } from '@common/enums/alkemio.error.status';
 import { BaseException } from '@common/exceptions/base.exception';
 import { NotificationEventPayload } from '@common/enums/notification.event.payload';
-import { InAppNotificationPayloadSpace } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.base';
+import { InAppNotificationPayloadSpace } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space';
 import { InAppNotificationPayloadOrganizationMessageDirect } from '@platform/in-app-notification-payload/dto/organization/notification.in.app.payload.organization.message.direct';
 import { InAppNotificationPayloadOrganizationMessageRoom } from '@platform/in-app-notification-payload/dto/organization/notification.in.app.payload.organization.message.room';
 import { InAppNotificationPayloadSpaceCommunityApplication } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.application';
@@ -11,7 +11,7 @@ import { InAppNotificationPayloadSpaceCommunityContributor } from '@platform/in-
 import { InAppNotificationPayloadSpaceCommunityInvitation } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.invitation';
 import { InAppNotificationPayloadSpaceCommunicationMessageDirect } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.communication.message.direct';
 import { InAppNotificationPayloadSpaceCollaborationCallout } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout';
-import { InAppNotificationPayloadUser } from '@platform/in-app-notification-payload/dto/user/notification.in.app.payload.user.base';
+import { InAppNotificationPayloadUser } from '@platform/in-app-notification-payload/dto/user/notification.in.app.payload.user';
 import { InAppNotificationPayloadSpaceCommunicationUpdate } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.communication.update';
 import { InAppNotificationPayloadUserMessageRoom } from '@platform/in-app-notification-payload/dto/user/notification.in.app.payload.user.message.room';
 import { InAppNotificationPayloadUserMessageDirect } from '@platform/in-app-notification-payload/dto/user/notification.in.app.payload.user.message.direct';
@@ -22,6 +22,8 @@ import { InAppNotificationPayloadPlatformGlobalRoleChange } from '@platform/in-a
 import { InAppNotificationPayloadSpaceCollaborationCalloutPostComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout.post.comment';
 import { InAppNotificationPayloadVirtualContributor } from '@platform/in-app-notification-payload/dto/virtual-contributor/notification.in.app.payload.virtual.contributor';
 import { InAppNotificationPayloadSpaceCollaborationCalloutComment } from './dto/space/notification.in.app.payload.space.collaboration.callout.comment';
+import { InAppNotificationPayloadSpaceCommunityCalendarEvent } from './dto/space/notification.in.app.payload.space.community.calendar.event';
+import { InAppNotificationPayloadSpaceCommunityCalendarEventComment } from './dto/space/notification.in.app.payload.space.community.calendar.event.comment';
 
 @InterfaceType('InAppNotificationPayload', {
   isAbstract: true,
@@ -63,6 +65,10 @@ import { InAppNotificationPayloadSpaceCollaborationCalloutComment } from './dto/
         return InAppNotificationPayloadSpaceCollaborationCalloutPostComment;
       case NotificationEventPayload.SPACE_COLLABORATION_CALLOUT_COMMENT:
         return InAppNotificationPayloadSpaceCollaborationCalloutComment;
+      case NotificationEventPayload.SPACE_COMMUNITY_CALENDAR_EVENT:
+        return InAppNotificationPayloadSpaceCommunityCalendarEvent;
+      case NotificationEventPayload.SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT:
+        return InAppNotificationPayloadSpaceCommunityCalendarEventComment;
 
       // User notifications
       case NotificationEventPayload.USER:

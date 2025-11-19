@@ -79,7 +79,7 @@ export class InnovationHubInterceptor implements NestInterceptor {
         await this.innovationHubService.getInnovationHubFlexOrFail({
           subdomain: subDomain,
         });
-    } catch (e) {
+    } catch {
       this.logger.warn(
         `${this.constructor.name} unable to find Innovation Hub with subdomain '${subDomain}'`,
         LogContext.INNOVATION_HUB

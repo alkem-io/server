@@ -43,7 +43,7 @@ export class FileIntegrationService {
     let document: IDocument | undefined;
     try {
       document = await this.documentService.getDocumentOrFail(docId);
-    } catch (e: any) {
+    } catch {
       // ... consume
     }
 

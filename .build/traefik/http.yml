@@ -25,6 +25,21 @@ http:
         servers:
           - url: 'http://host.docker.internal:3001/'
 
+    hydra:
+      loadBalancer:
+        servers:
+          - url: 'http://hydra:4444/'
+
+    hydra-admin:
+      loadBalancer:
+        servers:
+          - url: 'http://hydra:4445/'
+
+    oidc-service:
+      loadBalancer:
+        servers:
+          - url: 'http://oidc-service:8080/'
+
     kratos-public:
       loadBalancer:
         servers:
@@ -118,7 +133,44 @@ http:
           - /jwks
         forceSlash: false
 
+    strip-hydra-admin-prefix:
+      stripPrefix:
+        prefixes:
+          - /hydra/admin
+        forceSlash: false
+
   routers:
+    oidc-public:
+      rule: 'PathPrefix(`/oidc`)'
+      service: 'oidc-service'
+      entryPoints:
+        - 'web'
+      priority: 130
+
+    hydra-public:
+      rule: 'PathPrefix(`/.well-known/`) || PathPrefix(`/oauth2/`)'
+      service: 'hydra'
+      entryPoints:
+        - 'web'
+      priority: 100
+
+    # Hydra Admin API accessible via /hydra for alkemio-server
+    hydra-admin-web:
+      rule: 'PathPrefix(`/hydra/admin`)'
+      service: 'hydra-admin'
+      middlewares:
+        - strip-hydra-admin-prefix
+      entryPoints:
+        - 'web'
+      priority: 99
+
+    # Hydra Admin API (internal use only - not exposed via 'web' entryPoint)
+    hydra-admin-internal:
+      rule: 'PathPrefix(`/`)'
+      service: 'hydra-admin'
+      entryPoints:
+        - 'hydra-admin'
+
     graphql:
       rule: 'PathPrefix(`/graphql`)'
       service: 'oathkeeper-proxy'
