@@ -39,7 +39,7 @@
     ".specify/scripts/powershell/": true
   },
   "sonarlint.connectedMode.project": {
-    "connectionId": "https-sonarqube-alkem-io-",
+    "connectionId": "https-sonarqube-alkem-io",
     "projectKey": "alkem-io_server_d19991f4-3746-4a7e-844c-9d33a88819dc"
   }
 }
