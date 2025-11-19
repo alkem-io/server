@@ -103,9 +103,6 @@
 
 ## Active Technologies
 
-- TypeScript 5.3 on Node.js 20.15.1 (Volta-managed) + NestJS 10 (GraphQL + dependency injection), Apollo Server 4, TypeORM 0.3, in-house authorization services (`@domain/common/whiteboard`, `@services/whiteboard-integration`) (001-toggle-whiteboard-guest)
-- MySQL 8 via TypeORM repositories (no schema changes expected) (001-toggle-whiteboard-guest)
-
 - TypeScript 5.x on Node.js 20 (per repository toolchain) + NestJS server, existing CI runner stack, SonarQube at https://sonarqube.alkem.io (015-sonarqube-analysis)
 - N/A (SonarQube stores analysis; server DB not impacted by this feature) (015-sonarqube-analysis)
 
