@@ -25,7 +25,12 @@ for table in $tables; do
 
 
     # Get columns of the table, omitting createdData, updatedDate, and version
-    columns=$(docker exec -i alkemio_dev_mysql mysql -u $user -p$password -e "SHOW COLUMNS FROM $table" $database | awk '{print $1}' | grep -v '^Field$' | grep -Ev '^(createdDate|updatedDate|version)$' | tr '\n' ',' | sed 's/,$//')
+    columns=$(docker exec -i alkemio_dev_mysql mysql -u $user -p$password -e "SHOW COLUMNS FROM $table" $database \
+        | awk '{print $1}' \
+        | grep -v '^Field$' \
+        | grep -Ev '^(createdDate|updatedDate|version)$' \
+        | sed 's/.*/`&`/' \
+        | paste -sd, -)
 
     filename="${table}.csv"
 

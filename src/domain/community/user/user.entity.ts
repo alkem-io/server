@@ -29,13 +29,6 @@ export class User extends ContributorBase implements IUser {
   @Generated('increment')
   rowId!: number;
 
-  @Column('varchar', {
-    length: SMALL_TEXT_LENGTH,
-    nullable: false,
-    unique: true,
-  })
-  accountUpn!: string;
-
   @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: false })
   firstName!: string;
 
