@@ -139,12 +139,17 @@ export class NotificationPlatformAdapter {
       eventData.userID
     );
 
+    // Filter out the commenter from email recipients
+    const emailRecipientsWithoutCommenter = recipients.emailRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+
     // build notification payload
     const payload =
       await this.notificationExternalAdapter.buildPlatformForumCommentCreatedOnDiscussionPayload(
         event,
         eventData.commentSent.sender,
-        recipients.emailRecipients,
+        emailRecipientsWithoutCommenter,
         eventData.discussion,
         eventData.commentSent
       );
@@ -152,7 +157,10 @@ export class NotificationPlatformAdapter {
     this.notificationExternalAdapter.sendExternalNotifications(event, payload);
 
     // Send in-app notifications
-    const inAppReceiverIDs = recipients.inAppRecipients.map(
+    const inAppRecipientsWithoutCommenter = recipients.inAppRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    const inAppReceiverIDs = inAppRecipientsWithoutCommenter.map(
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length > 0) {
