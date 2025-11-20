@@ -43,7 +43,6 @@ export class WhiteboardIntegrationController {
     @Ctx() context: RmqContext
   ): Promise<InfoOutputData> {
     ack(context);
-    console.log({ balbal: data });
     return this.integrationService.info(data);
   }
 

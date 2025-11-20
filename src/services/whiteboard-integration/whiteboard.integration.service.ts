@@ -58,22 +58,30 @@ export class WhiteboardIntegrationService {
 
       let agentInfo;
 
-      if (data.userId) {
+      try {
         agentInfo = await this.agentInfoService.buildAgentInfoForUser(
           data.userId
         );
-      } else if (data.guestName) {
-        agentInfo = this.agentInfoService.createGuestAgentInfo(data.guestName);
+      } catch {
+        if (data.guestName) {
+          agentInfo = this.agentInfoService.createGuestAgentInfo(
+            data.guestName
+          );
+        }
+      }
+      if (!agentInfo) {
+        this.logger.warn(
+          `Unable to build AgentInfo for userId: ${data.userId}`,
+          LogContext.WHITEBOARD_INTEGRATION
+        );
+        return false;
       }
 
-      if (agentInfo) {
-        return this.authorizationService.isAccessGranted(
-          agentInfo,
-          whiteboard.authorization,
-          data.privilege
-        );
-      }
-      return false;
+      return this.authorizationService.isAccessGranted(
+        agentInfo,
+        whiteboard.authorization,
+        data.privilege
+      );
     } catch (e: any) {
       this.logger.error(
         e?.message,
