@@ -2,23 +2,23 @@
 
 ## Phase 1 – Setup
 
-- [ ] T001 Confirm local Postgres 17.5 and MySQL availability per docs/Running.md
-- [ ] T002 Review existing DB-related docs in docs/DataManagement.md and docs/Running.md
-- [ ] T003 Create feature branch 017-postgres-db-convergence from develop
+- [X] T001 Confirm local Postgres 17.5 and MySQL availability per docs/Running.md
+- [X] T002 Review existing DB-related docs in docs/DataManagement.md and docs/Running.md
+- [X] T003 Create feature branch 017-postgres-db-convergence from develop
 
 ## Phase 2 – Foundational
 
-- [ ] T004 Inventory current Alkemio MySQL migrations in src/domain and scripts/migrations
-- [ ] T005 Inventory Kratos DB migrations/config in quickstart-services-kratos-debug.yml and related manifests
-- [ ] T006 Run existing migration validation scripts against Postgres-only stack to collect incompatibilities
-- [ ] T007 Document identified MySQL-specific constructs impacting Postgres convergence in specs/017-postgres-db-convergence/research.md
+- [X] T004 Inventory current Alkemio MySQL migrations in src/domain and scripts/migrations
+- [X] T005 Inventory Kratos DB migrations/config in quickstart-services-kratos-debug.yml and related manifests
+- [X] T006 Run existing migration validation scripts against Postgres-only stack to collect incompatibilities
+- [X] T007 Document identified MySQL-specific constructs impacting Postgres convergence in specs/017-postgres-db-convergence/research.md
 
 ## Phase 3 – User Story 1: Single Postgres backend for Alkemio (P1)
 
-- [ ] T008 [US1] Align quickstart-services.yml to run Alkemio and Kratos on Postgres only
-- [ ] T009 [US1] Update TypeORM config to support Postgres-only deployments in src/core/db
-- [ ] T010 [US1] Ensure Kratos Postgres config is wired in manifests and quickstart-services-kratos-debug.yml
-- [ ] T011 [US1] Verify Postgres-only install path via quickstart and update docs/Running.md
+- [X] T008 [US1] Align quickstart-services.yml to run Alkemio and Kratos on Postgres only
+- [X] T009 [US1] Update TypeORM config to support Postgres-only deployments in src/core/db
+- [X] T010 [US1] Ensure Kratos Postgres config is wired in manifests and quickstart-services-kratos-debug.yml
+- [X] T011 [US1] Verify Postgres-only install path via quickstart and update docs/Running.md
 
 ## Phase 4 – User Story 2: Migrate existing MySQL data to Postgres (P2)
 

@@ -14,9 +14,13 @@ To simplify setting up the Server development environment, a pre-configured dock
 - Docker Desktop for Mac (Apple Silicon) can run x86/amd64 images using emulation.
 - [Colima](https://github.com/abiosoft/colima) offers ARM-native Docker environments, but may be slower still, as it is still an emulation.
 
+## Database Backend
+
+**Alkemio now uses PostgreSQL 17.5 as the default database backend** for both the Alkemio server and Ory Kratos identity service. MySQL support is maintained for backward compatibility but is deprecated.
+
 ## Steps:
 
-1. Start the services alkemio server is dependent on (PostgreSQL, MySQL, Ory Kratos, Ory Hydra, Matrix Synapse, RabbitMQ, etc.):
+1. Start the services alkemio server is dependent on (PostgreSQL, Ory Kratos, Ory Hydra, Matrix Synapse, RabbitMQ, etc.):
 
 ```bash
 pnpm run start:services
@@ -49,7 +53,7 @@ pnpm start
 - The Synapse ↔ Hydra client credentials are read from `.env.docker` (`SYNAPSE_OIDC_CLIENT_ID` and `SYNAPSE_OIDC_CLIENT_SECRET`). Make sure these values exist before running the services.
 - Finally, ports available on localhost:
   - 3000/graphql (alkemio server),
-  - 3306 (MySQL database)
+  - 5432 (PostgreSQL database - default)
   - 8888 (traefik dashboard)
   - 3000 (alkemio client)
   - 8008 (synapse server)
