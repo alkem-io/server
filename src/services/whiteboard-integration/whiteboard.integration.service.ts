@@ -97,7 +97,6 @@ export class WhiteboardIntegrationService {
     whiteboardId,
     guestName,
   }: InfoInputData): Promise<InfoOutputData> {
-    console.log({ guestName });
     const read = await this.accessGranted({
       userId,
       whiteboardId,
