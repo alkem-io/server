@@ -40,6 +40,7 @@ CONFIG = {
         "src/core/*",
         "alkemio.yml",
         "package.json",
+        "Dockerfile",
 
         # Specification governance (constitution mandates SDD)
         ".specify/memory/constitution.md",

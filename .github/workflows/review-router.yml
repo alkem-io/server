@@ -76,7 +76,7 @@ jobs:
 
         # 5. Execute the Python script with real data
         # We pass the accumulated file paths string as a single, quoted argument
-        JSON_OUTPUT=$(PR_DESCRIPTION="${PR_DESCRIPTION}" python review_metrics.py "${PR_TITLE}" "${LOC}" "${FILES}" "${CHANGED_PATHS}")
+        JSON_OUTPUT=$(PR_DESCRIPTION="${PR_DESCRIPTION}" python .github/workflows/review_metrics/review_metrics.py "${PR_TITLE}" "${LOC}" "${FILES}" "${CHANGED_PATHS}")
 
         # Extract review_type for conditional step execution
         REVIEW_TYPE=$(echo "${JSON_OUTPUT}" | python -c "import sys, json; print(json.load(sys.stdin).get('review_type', ''))")
