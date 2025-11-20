@@ -51,7 +51,9 @@ describe('synchronous override evaluation (env-only)', () => {
     delete process.env.SCHEMA_OVERRIDE_REVIEWS_FILE;
     const res = performOverrideEvaluation();
     expect(res.applied).toBe(false);
-    expect(res.details.some(d => d.includes('No reviews provided via environment'))).toBe(true);
+    expect(
+      res.details.some(d => d.includes('No reviews provided via environment'))
+    ).toBe(true);
   });
 
   it('applies override when env reviews include owner with phrase', () => {
