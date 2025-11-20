@@ -17,8 +17,7 @@ function normalizeSDL(schema: GraphQLSchema): string {
 
 function countTypes(sdl: string): number {
   const schema = buildSchema(sdl);
-  return Object.keys(schema.getTypeMap())
-    .filter(name => !name.startsWith('__'))
+  return Object.keys(schema.getTypeMap()).filter(name => !name.startsWith('__'))
     .length;
 }
 
