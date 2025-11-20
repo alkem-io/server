@@ -15,14 +15,13 @@ import { ILoader } from '@core/dataloader/loader.interface';
 import { Whiteboard } from './whiteboard.entity';
 import { WhiteboardService } from './whiteboard.service';
 import { WhiteboardGuestAccessService } from './whiteboard.guest-access.service';
-import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
+import { EntityNotInitializedException } from '@common/exceptions';
 
 @Resolver(() => IWhiteboard)
 export class WhiteboardResolverFields {
   constructor(
     private whiteboardService: WhiteboardService,
     private whiteboardGuestAccessService: WhiteboardGuestAccessService,
-    private authorizationPolicyService: AuthorizationPolicyService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -76,22 +75,15 @@ export class WhiteboardResolverFields {
   async guestContributionsAllowed(
     @Parent() whiteboard: IWhiteboard
   ): Promise<boolean> {
-    const whiteboardWithAuthorization =
-      await this.whiteboardService.getWhiteboardOrFail(whiteboard.id, {
-        loadEagerRelations: false,
-        relations: {
-          authorization: true,
-        },
-        select: {
-          id: true,
-          authorization:
-            this.authorizationPolicyService.authorizationSelectOptions,
-        },
-      });
+    if (!whiteboard.authorization) {
+      throw new EntityNotInitializedException(
+        `Authorization not initialized for whiteboard: ${whiteboard.id}`,
+        LogContext.COLLABORATION
+      );
+    }
 
-    const value = this.whiteboardGuestAccessService.isGuestAccessEnabled(
-      whiteboardWithAuthorization.authorization
+    return this.whiteboardGuestAccessService.isGuestAccessEnabled(
+      whiteboard.authorization
     );
-    return value;
   }
 }
