@@ -411,6 +411,9 @@ export class UrlGeneratorService {
             id: rootTemplateContentSpaceId,
           },
         },
+        relations: {
+          profile: true,
+        },
       });
       if (template && template.profile) {
         return this.getTemplateUrlPathOrFail(template.profile.id);
