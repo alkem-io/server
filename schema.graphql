@@ -1708,7 +1708,7 @@ type CalloutsSet {
   All the tags of the Callouts and its contributions in this CalloutsSet. Sorted by frequency, then alphabetically.
   """
   tags(
-    """Return only Callouts matching the specified filter."""
+    """Return only tags of Callouts matching the specified filter."""
     classificationTagsets: [TagsetArgs!]
   ): [String!]!
   """The tagset templates on this CalloutsSet."""
@@ -2419,7 +2419,7 @@ type InAppNotificationPayloadPlatformUser implements InAppNotificationPayload {
 
 type InAppNotificationPayloadPlatformUserMessageRoom implements InAppNotificationPayload {
   """The details of the message."""
-  messageDetails: MessageDetails!
+  messageDetails: MessageDetails
   """The payload type."""
   type: NotificationEventPayload!
   """The User receiver of the message."""
@@ -2455,7 +2455,7 @@ type InAppNotificationPayloadSpaceCollaborationCalloutComment implements InAppNo
   """The Callout that was published."""
   callout: Callout!
   """The details of the message."""
-  messageDetails: MessageDetails!
+  messageDetails: MessageDetails
   """The Space where the comment was made."""
   space: Space!
   """The payload type."""
@@ -2466,7 +2466,7 @@ type InAppNotificationPayloadSpaceCollaborationCalloutPostComment implements InA
   """The Callout that was published."""
   callout: Callout!
   """The details of the message."""
-  messageDetails: MessageDetails!
+  messageDetails: MessageDetails
   """The Space where the comment was made."""
   space: Space!
   """The payload type."""
@@ -2502,16 +2502,16 @@ type InAppNotificationPayloadSpaceCommunityApplication implements InAppNotificat
 
 type InAppNotificationPayloadSpaceCommunityCalendarEvent implements InAppNotificationPayload {
   """The CalendarEvent that was created."""
-  calendarEvent: CalendarEvent
-  """The space details."""
-  space: Space
+  calendarEvent: CalendarEvent!
+  """The Space where the calendar event was created."""
+  space: Space!
   """The payload type."""
   type: NotificationEventPayload!
 }
 
 type InAppNotificationPayloadSpaceCommunityCalendarEventComment implements InAppNotificationPayload {
   """The calendar event that was commented on."""
-  calendarEvent: CalendarEvent
+  calendarEvent: CalendarEvent!
   """Preview text of the comment"""
   commentText: String!
   """The space details."""
@@ -3294,6 +3294,8 @@ type ModelCardSpaceUsageResult {
 type Mutation {
   """Adds an Iframe Allowed URL to the Platform Settings"""
   addIframeAllowedURL(whitelistedURL: String!): [String!]!
+  """Adds a full email address to the platform notification blacklist"""
+  addNotificationEmailToBlacklist(input: NotificationEmailAddressInput!): [String!]!
   """Add a reaction to a message from the specified Room."""
   addReactionToMessageInRoom(reactionData: RoomAddReactionToMessageInput!): Reaction!
   """Ensure all community members are registered for communications."""
@@ -3534,6 +3536,8 @@ type Mutation {
   removeIframeAllowedURL(whitelistedURL: String!): [String!]!
   """Removes a message."""
   removeMessageOnRoom(messageData: RoomRemoveMessageInput!): MessageID!
+  """Removes an email address from the platform notification blacklist"""
+  removeNotificationEmailFromBlacklist(input: NotificationEmailAddressInput!): [String!]!
   """Removes a User from a Role on the Platform."""
   removePlatformRoleFromUser(roleData: RemovePlatformRoleInput!): User!
   """Remove a reaction on a message from the specified Room."""
@@ -4008,6 +4012,10 @@ type PlatformFeatureFlag {
 type PlatformIntegrationSettings {
   """The list of allowed URLs for iFrames within Markdown content."""
   iframeAllowedUrls: [String!]!
+  """
+  List of fully-qualified email addresses blocked from receiving notifications
+  """
+  notificationEmailBlacklist: [String!]!
 }
 
 type PlatformInvitation {
@@ -6066,11 +6074,11 @@ input ConvertSpaceL1ToSpaceL0Input {
 
 input ConvertSpaceL1ToSpaceL2Input {
   """
-  The Space L1 to be the parent of the Space L1 when it is moved to be L2.
+  The Space L1 to be the parent of the Space L1 when it is moved to be L2. 
   """
   parentSpaceL1ID: UUID!
   """
-  The Space L1 to be moved to be a child of another Space L. Both the L1 Space and the parent Space must be in the same L0 Space.
+  The Space L1 to be moved to be a child of another Space L. Both the L1 Space and the parent Space must be in the same L0 Space. 
   """
   spaceL1ID: UUID!
 }
@@ -6821,6 +6829,11 @@ input MoveCalloutContributionInput {
   contributionID: UUID!
 }
 
+input NotificationEmailAddressInput {
+  """Full email address to add/remove; lowercase enforced by server"""
+  email: String!
+}
+
 input NotificationEventsFilterInput {
   """Return Notifications with a type matching one of the provided types."""
   types: [NotificationEvent!]
@@ -7538,6 +7551,10 @@ input UpdatePlatformSettingsInput {
 input UpdatePlatformSettingsIntegrationInput {
   """Update the list of allowed URLs for iFrames within Markdown content."""
   iframeAllowedUrls: [String!]!
+  """
+  Update the list of email addresses blocked from receiving notifications.
+  """
+  notificationEmailBlacklist: [String!]
 }
 
 input UpdatePostInput {
