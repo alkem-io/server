@@ -25,8 +25,8 @@
 - [ ] T012 [US2] Design offline snapshot-based migration flow and capture steps in specs/017-postgres-db-convergence/quickstart.md
 - [ ] T013 [US2] Implement migration tooling or scripts for Alkemio data transfer in scripts/migrations
 - [ ] T014 [US2] Implement migration tooling or scripts for Kratos data transfer (aligned with upstream) in scripts/migrations
-- [ ] T015 [US2] Define and document verification checklist for migrated environments in docs/DataManagement.md
-- [ ] T016 [US2] Execute migration on representative environment and document outcomes in specs/017-postgres-db-convergence/research.md
+- [ ] T015 [US2] Define and document verification checklist for migrated environments (including definition of "critical" data) in docs/DataManagement.md
+- [ ] T016 [US2] Execute migration against a production snapshot for a representative environment and document outcomes (including downtime window and data verification results) in specs/017-postgres-db-convergence/research.md
 
 ## Phase 5 – User Story 3: Verified baseline migrations for Postgres (P3)
 

@@ -17,7 +17,7 @@ Converge the Alkemio and Kratos relational backends onto Postgres as the only su
 **Testing**: Jest (`pnpm test:ci`), contract tests for schema/migrations, migration validation scripts
 **Target Platform**: Linux containers (Kubernetes), local Docker Compose for development
 **Project Type**: Backend service (single server project) with external Kratos service and DBs
-**Performance Goals**: Migration procedure must complete within documented maintenance window (see SC-003) and not materially degrade runtime performance post-cut-over
+**Performance Goals**: Migration procedure should complete within the target maintenance window (see SC-003) and not materially degrade runtime performance post-cut-over. For this iteration, validation is performed against a representative production snapshot rather than under live-traffic SLA conditions.
 **Constraints**: Zero MySQL dependency in steady state for supported topologies; downtime for migration <= 30 minutes for typical production-sized installs; roll-forward or rollback strategy must be documented
 **Scale/Scope**: Production datasets with potentially millions of records across Alkemio and Kratos schemas; multiple environments (dev/test/stage/prod) must be supported
 

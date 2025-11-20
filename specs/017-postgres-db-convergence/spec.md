@@ -108,6 +108,6 @@ Developers and operators want a clear, validated baseline migration story for Po
 ### Measurable Outcomes
 
 - **SC-001**: New Alkemio + Kratos installations on Postgres can be provisioned and started successfully following the official documentation, with no MySQL services configured or required, in at least two independent test environments.
-- **SC-002**: At least one representative existing MySQL-based Alkemio + Kratos environment is migrated to Postgres using the defined procedure, with 100% of critical user and content data verified as intact (per a defined verification checklist).
-- **SC-003**: For an agreed production-sized dataset, the end-to-end migration from MySQL to Postgres for both Alkemio and Kratos completes within the documented maintenance window and without irrecoverable data loss.
+- **SC-002**: At least one representative existing MySQL-based Alkemio + Kratos environment is migrated to Postgres using the defined procedure, with 100% of critical user and content data (as defined in the migration verification checklist) verified as intact.
+- **SC-003**: For a representative production-sized dataset taken from a production snapshot, the end-to-end migration from MySQL to Postgres for both Alkemio and Kratos completes within a target maintenance window (currently 30 minutes) and without irrecoverable data loss. Given current low active usage, this is treated as a target to validate on snapshot-based test runs rather than a hard SLA for this iteration.
 - **SC-004**: After documentation and tooling are available, support or operations requests related specifically to "running Alkemio with MySQL" are reduced compared to the previous release cycle, indicating successful adoption of the Postgres-only path.
