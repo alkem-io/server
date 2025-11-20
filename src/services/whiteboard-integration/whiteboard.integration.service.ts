@@ -55,28 +55,25 @@ export class WhiteboardIntegrationService {
       const whiteboard = await this.whiteboardService.getWhiteboardOrFail(
         data.whiteboardId
       );
-      console.log({ data });
 
       let agentInfo;
-      if (data.guestName) {
-        agentInfo = this.agentInfoService.createGuestAgentInfo(data.guestName);
-      } else {
+
+      if (data.userId) {
         agentInfo = await this.agentInfoService.buildAgentInfoForUser(
           data.userId
         );
+      } else if (data.guestName) {
+        agentInfo = this.agentInfoService.createGuestAgentInfo(data.guestName);
       }
-      // = await this.agentInfoService.buildAgentInfoForUser(
-      // data.userId
-      // );
-      // const agentInfo = await this.agentInfoService.buildAgentInfoForUser(
-      //   data.userId
-      // );
 
-      return this.authorizationService.isAccessGranted(
-        agentInfo,
-        whiteboard.authorization,
-        data.privilege
-      );
+      if (agentInfo) {
+        return this.authorizationService.isAccessGranted(
+          agentInfo,
+          whiteboard.authorization,
+          data.privilege
+        );
+      }
+      return false;
     } catch (e: any) {
       this.logger.error(
         e?.message,
