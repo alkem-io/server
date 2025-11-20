@@ -55,9 +55,27 @@ export class WhiteboardIntegrationService {
       const whiteboard = await this.whiteboardService.getWhiteboardOrFail(
         data.whiteboardId
       );
-      const agentInfo = await this.agentInfoService.buildAgentInfoForUser(
-        data.userId
-      );
+
+      let agentInfo;
+
+      try {
+        agentInfo = await this.agentInfoService.buildAgentInfoForUser(
+          data.userId
+        );
+      } catch {
+        if (data.guestName) {
+          agentInfo = this.agentInfoService.createGuestAgentInfo(
+            data.guestName
+          );
+        }
+      }
+      if (!agentInfo) {
+        this.logger.warn(
+          `Unable to build AgentInfo for userId: ${data.userId}`,
+          LogContext.WHITEBOARD_INTEGRATION
+        );
+        return false;
+      }
 
       return this.authorizationService.isAccessGranted(
         agentInfo,
@@ -77,11 +95,13 @@ export class WhiteboardIntegrationService {
   public async info({
     userId,
     whiteboardId,
+    guestName,
   }: InfoInputData): Promise<InfoOutputData> {
     const read = await this.accessGranted({
       userId,
       whiteboardId,
       privilege: AuthorizationPrivilege.READ,
+      guestName,
     });
 
     if (!read) {
@@ -96,6 +116,7 @@ export class WhiteboardIntegrationService {
       userId,
       whiteboardId,
       privilege: AuthorizationPrivilege.UPDATE_CONTENT,
+      guestName,
     });
 
     const maxCollaborators = (await this.whiteboardService.isMultiUser(
