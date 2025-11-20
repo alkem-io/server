@@ -1,0 +1,166 @@
+name: PR Review Metrics
+
+# Controls when the workflow runs
+on:
+  pull_request:
+    types: [opened, reopened, synchronize] # Run when a PR is opened, reopened, or updated
+
+jobs:
+  pr_metrics:
+    runs-on: ubuntu-latest
+    steps:
+    # 1. Checkout the repository code
+    - name: Checkout Code
+      uses: actions/checkout@v4
+      with:
+        # Fetch depth 0 is important to get the base branch reference for diffing
+        fetch-depth: 0
+    # 2. Setup Python environment
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+    # 3. Cache Python packages
+    - name: Cache Python dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    # 4. Install dependencies
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        # pip install -r requirements.txt # Uncomment if you use external packages
+    # 5. Collect PR Metrics
+    - name: Collect PR Metrics
+      id: metrics
+      run: |
+        # 1. Fetch the base branch to enable accurate diff calculation
+        # We check out the PR branch, now we fetch the target branch for comparison
+        git fetch origin ${{ github.event.pull_request.base.ref }}
+
+        # 2. Get the PR title
+        PR_TITLE=$(jq -r '.pull_request.title' "${GITHUB_EVENT_PATH}")
+
+        # 3. Use 'git diff --numstat' to get stats between the base branch and the PR head
+        # Format: <lines added>\t<lines removed>\t<file name>
+        DIFF_STATS=$(git diff --numstat origin/${{ github.event.pull_request.base.ref }} ${{ github.sha }})
+
+        # Initialize counters and file list
+        LOC=0
+        FILES=0
+        # We use a newline character (\n) as the separator for the list of files
+        CHANGED_PATHS=""
+
+        # 4. Process DIFF_STATS line by line
+        while IFS=$'\t' read -r ADDED DELETED FILE; do
+            # Skip if line is empty or not a stat line
+            if [ -z "$FILE" ]; then
+                continue
+            fi
+
+            # Ignore binary files or files with only renames
+            if [[ "$ADDED" != "-" && "$DELETED" != "-" ]]; then
+                # Total LOC changed = Additions + Deletions
+                LOC=$((LOC + ADDED + DELETED))
+                FILES=$((FILES + 1))
+                # Accumulate file paths, separated by a newline
+                CHANGED_PATHS="${CHANGED_PATHS}${FILE}\n"
+            fi
+        done <<< "$DIFF_STATS"
+
+        echo "Calculated LOC: ${LOC}, Files: ${FILES}"
+
+        # 5. Execute the Python script with real data
+        # We pass the accumulated file paths string as a single, quoted argument
+        JSON_OUTPUT=$(python review_metrics.py "${PR_TITLE}" "${LOC}" "${FILES}" "${CHANGED_PATHS}")
+
+        # Extract review_type for conditional step execution
+        REVIEW_TYPE=$(echo "${JSON_OUTPUT}" | python -c "import sys, json; print(json.load(sys.stdin).get('review_type', ''))")
+
+        # Make the outputs available to subsequent steps
+        echo "metrics_json=${JSON_OUTPUT}" >> $GITHUB_OUTPUT
+        echo "review_type=${REVIEW_TYPE}" >> $GITHUB_OUTPUT
+    # 6. Post Metrics Comment
+    - name: Post Metrics Comment
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const raw = process.env.metrics_json || '';
+          let data;
+          try { data = JSON.parse(raw); } catch (e) {
+            data = { error: 'Failed to parse metrics JSON', raw };
+          }
+          if (data.error) {
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `⚠️ Metrics collection failed: ${data.error}`
+            });
+            return;
+          }
+          const lines = [];
+          lines.push('## 📊 PR Metrics Summary');
+          lines.push('**Title:** ' + data.title);
+          lines.push(`**Total LOC Changed:** ${data.loc_changed}`);
+          lines.push(`**Files Changed:** ${data.files_changed}`);
+          lines.push(`**Proposed Review Type:** ${data.review_type}`);
+          lines.push('**Rationale:**');
+          const rationaleParts = (data.review_rationale || '').split(';').map(s => s.trim()).filter(s => s);
+          rationaleParts.forEach(part => lines.push(`  - ${part}`));
+          lines.push('');
+          lines.push('### Flags');
+          const flags = [];
+          if (data.high_risk_keyword) flags.push('High Risk Keyword');
+          if (data.critical_path_change) flags.push('Critical Path Change');
+          if (data.low_risk_keyword) flags.push('Low Risk Keyword');
+          if (data.high_risk_trigger) flags.push('Composite High Risk Trigger');
+          if (flags.length > 0) {
+            flags.forEach(f => lines.push(`- **${f}**`));
+          } else {
+            lines.push('_No risk flags detected_');
+          }
+          lines.push('');
+          lines.push('### Thresholds');
+          lines.push('```json');
+          lines.push(JSON.stringify(data.thresholds, null, 2));
+          lines.push('```');
+          github.rest.issues.createComment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+            body: lines.join('\n')
+          });
+      env:
+        metrics_json: ${{ steps.metrics.outputs.metrics_json }}
+    # 7. Add Label Based on Review Type
+    - name: Add Review Type Label
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const raw = process.env.metrics_json || '';
+          let data;
+          try { data = JSON.parse(raw); } catch (e) { return; }
+
+          let label = '';
+          if (data.review_type === 'LLM_ONLY') {
+            label = 'review/llm-only';
+          } else if (data.review_type === 'HUMAN_AUGMENTED_LLM') {
+            label = 'review/human-required';
+          }
+
+          if (label) {
+            github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: [label]
+            });
+          }
+      env:
+        metrics_json: ${{ steps.metrics.outputs.metrics_json }}
