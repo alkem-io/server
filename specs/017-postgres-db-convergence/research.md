@@ -36,7 +36,35 @@ This document consolidates decisions and findings required to converge Alkemio a
 - **Rationale**: Aligns with Constitution Principle 5 (operational readiness) and ensures operators have a safe fallback.
 - **Alternatives considered**: Immediate decommission of MySQL after migration without verification; rejected as too risky.
 
+## MySQL-Specific Constructs Identified
+
+Analysis of the existing 94 TypeORM migrations revealed several MySQL-specific constructs that need attention for Postgres compatibility:
+
+### Schema-Level Constructs
+1. **Engine Specification**: `ENGINE=InnoDB` - Postgres does not use storage engines
+2. **Character Sets**: `CHARSET` and collation specifications - Postgres uses different encoding approach
+3. **DateTime Functions**: `CURRENT_TIMESTAMP(6)` with precision - Postgres syntax differs
+4. **Auto-update Timestamps**: `ON UPDATE CURRENT_TIMESTAMP(6)` - Not directly supported in Postgres
+
+### Data Type Differences
+1. **TINYINT**: MySQL's `tinyint` for booleans (e.g., `tinyint NOT NULL`) - Postgres uses `boolean`
+2. **DATETIME**: MySQL's `datetime(6)` - Postgres uses `timestamp` or `timestamptz`
+3. **LONGTEXT**: MySQL's `longtext` - Postgres uses `text`
+4. **CHAR vs VARCHAR**: Fixed-length `char(36)` for UUIDs - Postgres has native `uuid` type
+
+### Index and Constraint Differences
+1. **Unique Index Syntax**: `UNIQUE INDEX` declarations differ between databases
+2. **Foreign Key Constraints**: Syntax variations in constraint definitions
+
+### Implementation Approach
+Given the extensive use of MySQL-specific syntax in the baseline migration (1730713372181-schemaSetup.ts), the recommended approach is:
+
+1. **Keep existing migrations as-is** for MySQL backward compatibility
+2. **Create Postgres-compatible versions** of critical migrations or a new baseline
+3. **Use TypeORM's database-agnostic APIs** for new migrations going forward
+4. **Leverage TypeORM's automatic schema generation** to create Postgres baseline
+
 ## Remaining Questions
 
-- Exact inventory of MySQL-specific migrations that are incompatible with Postgres (to be discovered by running migration validation against Postgres).
 - Final choice between a single new Postgres baseline vs. a short compatibility chain that adapts key historical migrations.
+- Whether to maintain parallel migration chains or consolidate into a single cross-database compatible baseline.

@@ -141,6 +141,7 @@ export type AlkemioConfig = {
       max_file_size: number;
     };
     database: {
+      type?: 'postgres' | 'mysql';
       host: string;
       port: number;
       timezone: string;
