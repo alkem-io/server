@@ -34,7 +34,7 @@
 - [ ] T005 [P] [US1] Create `NotificationEmailAddressInput` with `@IsEmail()` + lowercase sanitizer in `src/platform/platform-settings/dto/notification-email-blacklist.input.ts` and export it via `src/platform/platform-settings/index.ts`.
 - [ ] T006 [US1] Implement `addNotificationEmailToBlacklistOrFail` (dedupe, cap ≤250, wildcard rejection) in `src/platform/platform-settings/platform.settings.service.ts`.
 - [ ] T007 [US1] Add the `addNotificationEmailToBlacklist` mutation in `src/platform/platform/platform.resolver.mutations.ts`, wiring authorization, service call, and persistence.
-- [ ] T008 [P] [US1] Cover success/validation paths for the add method in `test/unit/platform/platform-settings/platform.settings.service.blacklist.spec.ts`.
+- [ ] T008 [P] [US1] Cover success/validation paths for the add method in `src/platform/platform/platform-settings/platform.settings.service.blacklist.spec.ts`.
 
 **Checkpoint**: Admins can add emails and verify them via GraphQL; downstream services can pull the updated list.
 
@@ -50,7 +50,7 @@
 
 - [ ] T009 [US2] Implement `removeNotificationEmailFromBlacklistOrFail` (error when email missing) in `src/platform/platform-settings/platform.settings.service.ts`.
 - [ ] T010 [US2] Add the `removeNotificationEmailFromBlacklist` mutation to `src/platform/platform/platform.resolver.mutations.ts` with matching audit logging and persistence.
-- [ ] T011 [P] [US2] Extend `test/unit/platform/platform-settings/platform.settings.service.blacklist.spec.ts` with removal and "email not found" cases.
+- [ ] T011 [P] [US2] Extend `src/platform/platform/platform-settings/platform.settings.service.blacklist.spec.ts` with removal and "email not found" cases.
 
 **Checkpoint**: Admins can both add and remove entries without affecting other recipients.
 
