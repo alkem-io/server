@@ -25,11 +25,11 @@
 ## Coding standards & Team agreements
 
 - When raising exceptions do not include dynamic data (e.g. IDs, email addresses) in messages.
-  Include such data as structured properties on the error object instead for logging purposes.
-  The property is called `details` of type `ExceptionDetails`, and usually is the third parameter of the exception constructor.
+Include such data as structured properties on the error object instead for logging purposes.
+The property is called `details` of type `ExceptionDetails`, and usually is the third parameter of the exception constructor.
 - When logging verbose and warning levels have two arguments - message and context.
-  Error has message, stacktrace, context.
-  You can log structured data as the message parameter - it accepts string or object.
+Error has message, stacktrace, context.
+You can log structured data as the message parameter - it accepts string or object.
 
 ## Bootstrap, Build & Run
 
