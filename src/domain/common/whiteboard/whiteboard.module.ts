@@ -16,6 +16,7 @@ import { WhiteboardAuthorizationService } from './whiteboard.service.authorizati
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
 import { ProfileDocumentsModule } from '@domain/profile-documents/profile.documents.module';
 import { LicenseModule } from '../license/license.module';
+import { WhiteboardGuestAccessService } from './whiteboard.guest-access.service';
 
 @Module({
   imports: [
@@ -35,12 +36,14 @@ import { LicenseModule } from '../license/license.module';
   providers: [
     WhiteboardService,
     WhiteboardAuthorizationService,
+    WhiteboardGuestAccessService,
     WhiteboardResolverMutations,
     WhiteboardResolverFields,
   ],
   exports: [
     WhiteboardService,
     WhiteboardAuthorizationService,
+    WhiteboardGuestAccessService,
     WhiteboardResolverMutations,
     WhiteboardResolverFields,
   ],

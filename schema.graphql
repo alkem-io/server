@@ -3695,6 +3695,10 @@ type Mutation {
   """Updates the specified Whiteboard."""
   updateWhiteboard(whiteboardData: UpdateWhiteboardEntityInput!): Whiteboard!
   """
+  Grants or revokes GLOBAL_GUEST permissions for a whiteboard using a single toggle.
+  """
+  updateWhiteboardGuestAccess(input: UpdateWhiteboardGuestAccessInput!): UpdateWhiteboardGuestAccessResult!
+  """
   Create a new Document on the Storage and return the value as part of the returned Link.
   """
   uploadFileOnLink(file: Upload!, uploadData: StorageBucketUploadFileOnLinkInput!): Link!
@@ -5382,6 +5386,13 @@ type Timeline {
   updatedDate: DateTime!
 }
 
+type UpdateWhiteboardGuestAccessResult {
+  """Indicates whether the mutation completed successfully."""
+  success: Boolean!
+  """Whiteboard snapshot reflecting the latest guest access state."""
+  whiteboard: Whiteboard
+}
+
 type UrlResolverQueryResultCalendar {
   calendarEventId: UUID
   id: UUID!
@@ -5834,6 +5845,10 @@ type Whiteboard {
   createdBy: User
   """The date at which the entity was created."""
   createdDate: DateTime!
+  """
+  Indicates whether guest collaborators are currently allowed via GLOBAL_GUEST permissions.
+  """
+  guestContributionsAllowed: Boolean!
   """The ID of the entity"""
   id: UUID!
   """Whether the Whiteboard is multi-user enabled on Space level."""
@@ -7939,6 +7954,15 @@ input UpdateWhiteboardEntityInput {
   previewSettings: UpdateWhiteboardPreviewSettingsInput
   """The Profile of this entity."""
   profile: UpdateProfileInput
+}
+
+input UpdateWhiteboardGuestAccessInput {
+  """
+  Target state for guest collaboration. True enables GLOBAL_GUEST privileges.
+  """
+  guestAccessEnabled: Boolean!
+  """The identifier of the whiteboard whose guest access should be toggled."""
+  whiteboardId: UUID!
 }
 
 input UpdateWhiteboardPreviewSettingsInput {

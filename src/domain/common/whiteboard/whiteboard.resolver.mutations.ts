@@ -16,6 +16,11 @@ import { CalloutContribution } from '@domain/collaboration/callout-contribution/
 import { EntityManager } from 'typeorm';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { WhiteboardGuestAccessService } from './whiteboard.guest-access.service';
+import {
+  UpdateWhiteboardGuestAccessInput,
+  UpdateWhiteboardGuestAccessResult,
+} from './dto/whiteboard.dto.guest-access.toggle';
 
 @InstrumentResolver()
 @Resolver(() => IWhiteboard)
@@ -25,9 +30,31 @@ export class WhiteboardResolverMutations {
     private authorizationPolicyService: AuthorizationPolicyService,
     private whiteboardService: WhiteboardService,
     private whiteboardAuthService: WhiteboardAuthorizationService,
+    private whiteboardGuestAccessService: WhiteboardGuestAccessService,
     @InjectEntityManager() private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
+
+  @Mutation(() => UpdateWhiteboardGuestAccessResult, {
+    description:
+      'Grants or revokes GLOBAL_GUEST permissions for a whiteboard using a single toggle.',
+  })
+  async updateWhiteboardGuestAccess(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('input') input: UpdateWhiteboardGuestAccessInput
+  ): Promise<UpdateWhiteboardGuestAccessResult> {
+    const whiteboard =
+      await this.whiteboardGuestAccessService.updateGuestAccess(
+        agentInfo,
+        input.whiteboardId,
+        input.guestAccessEnabled
+      );
+
+    return {
+      success: true,
+      whiteboard,
+    };
+  }
 
   @Mutation(() => IWhiteboard, {
     description: 'Updates the specified Whiteboard.',
