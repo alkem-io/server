@@ -26,10 +26,11 @@ module.exports = defineConfig([
       'tmp/**',
       '**/*.min.js',
       '.env*',
-      '**/.eslintrc.js',
+      '**/.eslint.config.js',
       'src/migrations/**',
     ],
-
+  },
+  {
     languageOptions: {
       parser: tsParser,
       sourceType: 'module',
