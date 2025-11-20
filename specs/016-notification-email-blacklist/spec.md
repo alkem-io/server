@@ -1,6 +1,6 @@
 # Feature Specification: Notification Email Blacklist
 
-**Feature Branch**: `015-notification-email-blacklist`
+**Feature Branch**: `016-notification-email-blacklist`
 **Created**: 2025-11-19
 **Status**: Draft
 **Input**: User description: "create a configurable blacklist of notification receiver emails. The list should include only full emails - e.g. valentin@alkem.io, without wildcards, regex, or full organizations by domain. The structure should be exactly the same as the one of whitelistedURLs. You can check platform.resolver.mutations.ts for reference, with addIframeAllowedURL and removeIframeAllowedURL as reference for adding / removing those emails. The GQL path to list those queries is {\n platform {\n settings {\n integration {\n iframeAllowedUrls\n }\n }\n }\n}."
