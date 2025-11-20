@@ -58,16 +58,19 @@ describe('PlatformSettingsService - notification email blacklist', () => {
       ).toThrow(EntityNotInitializedException);
     });
 
-    it('rejects wildcard characters in email addresses', () => {
-      const settings = createSettings();
+    it.each(['*', '?'])(
+      'rejects wildcard character %s in email addresses',
+      wildcard => {
+        const settings = createSettings();
 
-      expect(() =>
-        service.addNotificationEmailToBlacklistOrFail(
-          settings,
-          'user*@example.com'
-        )
-      ).toThrow('Wildcard characters are not allowed in email addresses');
-    });
+        expect(() =>
+          service.addNotificationEmailToBlacklistOrFail(
+            settings,
+            `user${wildcard}@example.com`
+          )
+        ).toThrow('Wildcard characters are not allowed in email addresses');
+      }
+    );
 
     it('prevents duplicate entries regardless of case', () => {
       const settings = createSettings({
@@ -125,6 +128,19 @@ describe('PlatformSettingsService - notification email blacklist', () => {
           'missing@example.com'
         )
       ).toThrow('Email missing@example.com not found in blacklist');
+    });
+
+    it('throws when the integration settings are missing', () => {
+      const settings = {
+        integration: undefined,
+      } as unknown as IPlatformSettings;
+
+      expect(() =>
+        service.removeNotificationEmailFromBlacklistOrFail(
+          settings,
+          'user@example.com'
+        )
+      ).toThrow(EntityNotInitializedException);
     });
   });
 });
