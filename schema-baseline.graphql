@@ -102,6 +102,7 @@ type ActivityCreatedSubscriptionResult {
 enum ActivityEventType {
   CALENDAR_EVENT_CREATED
   CALLOUT_LINK_CREATED
+  CALLOUT_MEMO_CREATED
   CALLOUT_POST_COMMENT
   CALLOUT_POST_CREATED
   CALLOUT_PUBLISHED
@@ -253,6 +254,34 @@ type ActivityLogEntryCalloutLinkCreated implements ActivityLogEntry {
   id: UUID!
   """The Link that was created."""
   link: Link!
+  """The display name of the parent"""
+  parentDisplayName: String!
+  """The Space where the activity happened"""
+  space: Space
+  """The user that triggered this Activity."""
+  triggeredBy: User!
+  """The event type for this Activity."""
+  type: ActivityEventType!
+}
+
+type ActivityLogEntryCalloutMemoCreated implements ActivityLogEntry {
+  """The Callout in which the Memo was created."""
+  callout: Callout!
+  """
+  Indicates if this Activity happened on a child Collaboration. Child results can be included via the "includeChild" parameter.
+  """
+  child: Boolean!
+  """
+  The id of the Collaboration entity within which the Activity was generated.
+  """
+  collaborationID: UUID!
+  """The timestamp for the Activity."""
+  createdDate: DateTime!
+  """The text details for this Activity."""
+  description: String!
+  id: UUID!
+  """The Memo that was created."""
+  memo: Memo!
   """The display name of the parent"""
   parentDisplayName: String!
   """The Space where the activity happened"""
@@ -2820,7 +2849,7 @@ type InAppNotificationPayloadPlatformUser implements InAppNotificationPayload {
 
 type InAppNotificationPayloadPlatformUserMessageRoom implements InAppNotificationPayload {
   """The details of the message."""
-  messageDetails: MessageDetails!
+  messageDetails: MessageDetails
   """The payload type."""
   type: NotificationEventPayload!
   """The User receiver of the message."""
@@ -2856,7 +2885,7 @@ type InAppNotificationPayloadSpaceCollaborationCalloutComment implements InAppNo
   """The Callout that was published."""
   callout: Callout!
   """The details of the message."""
-  messageDetails: MessageDetails!
+  messageDetails: MessageDetails
   """The Space where the comment was made."""
   space: Space!
   """The payload type."""
@@ -2867,7 +2896,7 @@ type InAppNotificationPayloadSpaceCollaborationCalloutPostComment implements InA
   """The Callout that was published."""
   callout: Callout!
   """The details of the message."""
-  messageDetails: MessageDetails!
+  messageDetails: MessageDetails
   """The Space where the comment was made."""
   space: Space!
   """The payload type."""
