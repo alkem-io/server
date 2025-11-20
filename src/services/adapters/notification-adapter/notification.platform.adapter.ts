@@ -144,17 +144,23 @@ export class NotificationPlatformAdapter {
       recipient => recipient.id !== eventData.triggeredBy
     );
 
-    // build notification payload
-    const payload =
-      await this.notificationExternalAdapter.buildPlatformForumCommentCreatedOnDiscussionPayload(
+    if (emailRecipientsWithoutCommenter.length > 0) {
+      // build notification payload
+      const payload =
+        await this.notificationExternalAdapter.buildPlatformForumCommentCreatedOnDiscussionPayload(
+          event,
+          eventData.commentSent.sender,
+          emailRecipientsWithoutCommenter,
+          eventData.discussion,
+          eventData.commentSent
+        );
+
+      // send notification event
+      this.notificationExternalAdapter.sendExternalNotifications(
         event,
-        eventData.commentSent.sender,
-        emailRecipientsWithoutCommenter,
-        eventData.discussion,
-        eventData.commentSent
+        payload
       );
-    // send notification event
-    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
+    }
 
     // Send in-app notifications
     const inAppRecipientsWithoutCommenter = recipients.inAppRecipients.filter(
