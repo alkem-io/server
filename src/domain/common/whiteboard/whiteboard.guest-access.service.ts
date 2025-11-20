@@ -245,8 +245,7 @@ export class WhiteboardGuestAccessService {
       whiteboardId,
       userId:
         agentInfo.userID || (agentInfo.isAnonymous ? 'anonymous' : 'unknown'),
-      correlationId:
-        agentInfo.correlationId ||
+      communicationID:
         agentInfo.communicationID ||
         agentInfo.agentID ||
         agentInfo.userID ||

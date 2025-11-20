@@ -3,7 +3,6 @@ import { IVerifiedCredential } from '@domain/agent/verified-credential/verified.
 export class AgentInfo {
   isAnonymous = false;
   userID = '';
-  correlationId?: string;
   email = '';
   emailVerified = false;
   firstName = '';
