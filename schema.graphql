@@ -806,13 +806,6 @@ enum VisualType {
   WHITEBOARD_PREVIEW
 }
 
-enum WhiteboardGuestAccessErrorCode {
-  NOT_AUTHORIZED
-  SPACE_GUEST_DISABLED
-  UNKNOWN
-  WHITEBOARD_NOT_FOUND
-}
-
 enum WhiteboardPreviewMode {
   AUTO
   CUSTOM
@@ -5386,8 +5379,6 @@ type Timeline {
 }
 
 type UpdateWhiteboardGuestAccessResult {
-  """Structured error collection when the toggle fails."""
-  errors: [WhiteboardGuestAccessError!]
   """Indicates whether the mutation completed successfully."""
   success: Boolean!
   """Whiteboard snapshot reflecting the latest guest access state."""
@@ -5862,13 +5853,6 @@ type Whiteboard {
   profile: Profile!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
-}
-
-type WhiteboardGuestAccessError {
-  """Machine friendly error code describing the failure reason."""
-  code: WhiteboardGuestAccessErrorCode!
-  """Human readable description of the error."""
-  message: String!
 }
 
 type WhiteboardPreviewCoordinates {

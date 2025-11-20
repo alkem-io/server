@@ -20,15 +20,7 @@ import { WhiteboardGuestAccessService } from './whiteboard.guest-access.service'
 import {
   UpdateWhiteboardGuestAccessInput,
   UpdateWhiteboardGuestAccessResult,
-  WhiteboardGuestAccessError,
-  WhiteboardGuestAccessErrorCode,
 } from './dto/whiteboard.dto.guest-access.toggle';
-import {
-  EntityNotFoundException,
-  EntityNotInitializedException,
-  ForbiddenAuthorizationPolicyException,
-  ForbiddenException,
-} from '@common/exceptions';
 
 @InstrumentResolver()
 @Resolver(() => IWhiteboard)
@@ -51,29 +43,17 @@ export class WhiteboardResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('input') input: UpdateWhiteboardGuestAccessInput
   ): Promise<UpdateWhiteboardGuestAccessResult> {
-    try {
-      const whiteboard =
-        await this.whiteboardGuestAccessService.updateGuestAccess(
-          agentInfo,
-          input.whiteboardId,
-          input.guestAccessEnabled
-        );
+    const whiteboard =
+      await this.whiteboardGuestAccessService.updateGuestAccess(
+        agentInfo,
+        input.whiteboardId,
+        input.guestAccessEnabled
+      );
 
-      return {
-        success: true,
-        whiteboard,
-      };
-    } catch (error) {
-      const formattedError = this.buildGuestAccessError(error as Error);
-      if (!formattedError) {
-        throw error;
-      }
-
-      return {
-        success: false,
-        errors: [formattedError],
-      };
-    }
+    return {
+      success: true,
+      whiteboard,
+    };
   }
 
   @Mutation(() => IWhiteboard, {
@@ -164,43 +144,5 @@ export class WhiteboardResolverMutations {
     );
 
     return await this.whiteboardService.deleteWhiteboard(whiteboard.id);
-  }
-
-  private buildGuestAccessError(
-    error: Error
-  ): WhiteboardGuestAccessError | null {
-    if (error instanceof ForbiddenAuthorizationPolicyException) {
-      return {
-        code: WhiteboardGuestAccessErrorCode.NOT_AUTHORIZED,
-        message: error.message,
-      };
-    }
-
-    if (error instanceof ForbiddenException) {
-      const message = error.message || 'Guest access toggle rejected.';
-      const code = message.includes('Guest contributions are disabled')
-        ? WhiteboardGuestAccessErrorCode.SPACE_GUEST_DISABLED
-        : WhiteboardGuestAccessErrorCode.NOT_AUTHORIZED;
-
-      return {
-        code,
-        message,
-      };
-    }
-
-    if (
-      error instanceof EntityNotFoundException ||
-      error instanceof EntityNotInitializedException
-    ) {
-      return {
-        code: WhiteboardGuestAccessErrorCode.WHITEBOARD_NOT_FOUND,
-        message: error.message,
-      };
-    }
-
-    return {
-      code: WhiteboardGuestAccessErrorCode.UNKNOWN,
-      message: error.message,
-    };
   }
 }

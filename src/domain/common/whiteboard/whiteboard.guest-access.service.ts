@@ -144,8 +144,11 @@ export class WhiteboardGuestAccessService {
   private ensureAuthorization(whiteboard: IWhiteboard): IAuthorizationPolicy {
     if (!whiteboard.authorization) {
       throw new EntityNotInitializedException(
-        `Authorization not initialized for whiteboard: ${whiteboard.id}`,
-        LogContext.COLLABORATION
+        'Authorization not initialized for whiteboard',
+        LogContext.COLLABORATION,
+        {
+          whiteboardId: whiteboard.id,
+        }
       );
     }
 

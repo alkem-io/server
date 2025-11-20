@@ -16,10 +16,6 @@ mutation UpdateWhiteboardGuestAccess($input: UpdateWhiteboardGuestAccessInput!) 
         }
       }
     }
-    errors {
-      code
-      message
-    }
   }
 }
 
@@ -37,10 +33,4 @@ Expected payload excerpt; actual type may embed union types consistent with exis
  type UpdateWhiteboardGuestAccessResult {
   success: Boolean!
   whiteboard: Whiteboard
-  errors: [WhiteboardGuestAccessError!]
 }
-
- type WhiteboardGuestAccessError {
-  code: WhiteboardGuestAccessErrorCode!
-  message: String!
- }
