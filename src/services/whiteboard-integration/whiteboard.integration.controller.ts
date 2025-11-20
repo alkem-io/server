@@ -57,9 +57,16 @@ export class WhiteboardIntegrationController {
         const { userID, email } = result;
         if (result.guestName) {
           const { guestName } = result;
+          // Sanitize guestName for email local part
+          const sanitizedName = guestName
+            .toLowerCase()
+            .replace(/[^a-z0-9-]/g, '-')
+            .replace(/-+/g, '-')
+            .substring(0, 64);
+          const email = `${sanitizedName}-guest@alkem.io`;
           return {
             id: randomUUID(),
-            email: `${guestName}-guest@alkem.io`,
+            email,
             guestName: guestName,
           };
         }

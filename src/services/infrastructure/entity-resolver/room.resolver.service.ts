@@ -25,7 +25,7 @@ export class RoomResolverService {
     private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
-  ) { }
+  ) {}
 
   public async getRoleSetAndSettingsForCollaborationCalloutsSet(
     calloutsSetID: string
