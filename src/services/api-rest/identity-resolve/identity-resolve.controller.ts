@@ -41,6 +41,9 @@ export class IdentityResolveController {
       }
     );
 
-    return { userId: user.id };
+    return {
+      userId: user.id,
+      agentId: user.agent.id,
+    };
   }
 }

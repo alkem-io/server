@@ -2,7 +2,7 @@ import {
   BadRequestHttpException,
   NotFoundHttpException,
 } from '@common/exceptions/http';
-import { LogContext } from '@common/enums';
+import { AlkemioErrorStatus, LogContext } from '@common/enums';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { RegistrationService } from '@services/api/registration/registration.service';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
@@ -33,14 +33,20 @@ export class IdentityResolveService {
     authenticationId: string,
     meta: IdentityResolveRequestMeta
   ): Promise<IUser> {
-    const existingUser =
-      await this.userLookupService.getUserByAuthenticationID(authenticationId);
+    const existingUser = await this.userLookupService.getUserByAuthenticationID(
+      authenticationId,
+      {
+        relations: {
+          agent: true,
+        },
+      }
+    );
     if (existingUser) {
       this.logger.log?.(
         `Identity resolve: returning existing user ${existingUser.id} for authenticationId=${authenticationId} (ip=${meta.ip ?? 'unknown'})`,
         LogContext.AUTH
       );
-      return existingUser;
+      return this.ensureAgentOrFail(existingUser, authenticationId);
     }
 
     const identity = await this.kratosService.getIdentityById(authenticationId);
@@ -81,7 +87,15 @@ export class IdentityResolveService {
         `Identity resolve: ${outcome} user ${user.id} for authenticationId=${authenticationId} (ip=${meta.ip ?? 'unknown'})`,
         LogContext.AUTH
       );
-      return user;
+      const userWithAgent = await this.userLookupService.getUserOrFail(
+        user.id,
+        {
+          relations: {
+            agent: true,
+          },
+        }
+      );
+      return this.ensureAgentOrFail(userWithAgent, authenticationId);
     } catch (error) {
       if (error instanceof UserAlreadyRegisteredException) {
         throw new BadRequestHttpException(error.message, LogContext.AUTH);
@@ -149,5 +163,21 @@ export class IdentityResolveService {
       : false;
 
     return agentInfo;
+  }
+
+  private ensureAgentOrFail(user: IUser, authenticationId: string): IUser {
+    if (!user.agent) {
+      this.logger.warn?.(
+        `Identity resolve: user ${user.id} has no agent linked for authenticationId=${authenticationId}`,
+        LogContext.AUTH
+      );
+      throw new NotFoundHttpException(
+        `Agent not found for user ${user.id}`,
+        LogContext.AUTH,
+        AlkemioErrorStatus.NO_AGENT_FOR_USER
+      );
+    }
+
+    return user;
   }
 }
