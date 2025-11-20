@@ -3,7 +3,7 @@
 **Feature Branch**: `014-guest-contributions-privileges`
 **Created**: 2025-11-05
 **Status**: Draft
-**Input**: User description: "Add the next steps of the functionality which was started with adding a new setting to a space's collaboration set of settings: allowGuestContributions. It enables spaces to allow or block guest contributions via a new allowGuestContributions setting in space configuration. When ON, the backend grants PUBLIC_SHARE privilege to all space admins and to owners of whiteboards within that space, automatically reflecting these privileges both on existing and newly created whiteboards. The privilege is per whiteboard inside this space or subspace only. There is no inheritance space > subspace of the settings, privileges, or anything. Per whiteboard only for its own creator and for the admins of the respective space or subspace. The client adapts the Share dialog: it performs authorization checks so only users with PUBLIC_SHARE on a whiteboard see the 'Guest access' toggle. When the setting is OFF, all guest contribution UI is hidden and all relevant privileges are revoked by the backend. This ensures permissions and UI stay consistent and correctly reflect the space's desired collaboration mode."
+**Input**: User description: "Add the next steps of the functionality which was started with adding a new setting to a space's collaboration set of settings: allowGuestContributions. It enables spaces to allow or block guest contributions via a new allowGuestContributions setting in space configuration. When ON, the backend grants PUBLIC_SHARE privilege to all space admins, to owners of whiteboards within that space, and (where spaces opt in via allowPlatformSupportAsAdmin) to Global Support platform roles, automatically reflecting these privileges both on existing and newly created whiteboards. The privilege is per whiteboard inside this space or subspace only. There is no inheritance space > subspace of the settings, privileges, or anything. Per whiteboard only for its own creator and for the admins of the respective space or subspace. The client adapts the Share dialog: it performs authorization checks so only users with PUBLIC_SHARE on a whiteboard see the 'Guest access' toggle. When the setting is OFF, all guest contribution UI is hidden and all relevant privileges are revoked by the backend. This ensures permissions and UI stay consistent and correctly reflect the space's desired collaboration mode."
 
 ## Clarifications
 
@@ -30,8 +30,9 @@ When a space admin enables the allowGuestContributions setting for their space, 
 
 1. **Given** a space has allowGuestContributions enabled, **When** a space admin views their privileges on any whiteboard in that space, **Then** they have PUBLIC_SHARE privilege on all whiteboards in that space.
 2. **Given** a space has allowGuestContributions enabled, **When** a user creates a new whiteboard in that space, **Then** the creator automatically receives PUBLIC_SHARE privilege on that whiteboard and all space admins receive PUBLIC_SHARE privilege on that whiteboard.
-3. **Given** a space has allowGuestContributions enabled and contains existing whiteboards, **When** the setting is toggled to ON, **Then** all space admins immediately receive PUBLIC_SHARE privilege on all whiteboards in that space, and all whiteboard owners receive PUBLIC_SHARE privilege on their own whiteboards.
+3. **Given** a space has allowGuestContributions enabled and contains existing whiteboards, **When** the setting is toggled to ON, **Then** all space admins immediately receive PUBLIC_SHARE privilege on all whiteboards in that space (and Global Support does as well when allowPlatformSupportAsAdmin is true), and all whiteboard owners receive PUBLIC_SHARE privilege on their own whiteboards.
 4. **Given** a whiteboard exists in a space, **When** allowGuestContributions is enabled, **Then** all space admins (not subspace admins) receive PUBLIC_SHARE privilege on that whiteboard, and the whiteboard owner receives PUBLIC_SHARE privilege on that specific whiteboard.
+5. **Given** a level-zero space has allowGuestContributions enabled and allowPlatformSupportAsAdmin set to true, **When** a Global Support user inspects any whiteboard in that space, **Then** they have PUBLIC_SHARE privilege on those whiteboards.
 
 ---
 
@@ -87,6 +88,7 @@ When a user is granted space admin privileges on a space that has allowGuestCont
 ### Edge Cases
 
 - **New space admin assignment**: When a user is newly granted space admin privileges on a space with allowGuestContributions enabled, they receive PUBLIC_SHARE privilege on all whiteboards synchronously with the admin role grant.
+- **Global support opt-in**: When allowGuestContributions is enabled and allowPlatformSupportAsAdmin is true for a level-zero space, users holding the Global Support platform role receive PUBLIC_SHARE on that space's whiteboards.
 - **Cross-boundary privilege scope**: A user who is an admin of both a parent space and a subspace only receives PUBLIC_SHARE for whiteboards in spaces where allowGuestContributions is enabled, not based on their role inheritance.
 - **Privilege timing**: When allowGuestContributions is toggled ON, privilege assignment happens synchronously and immediately reflects in authorization checks - no delay or eventual consistency.
 - **Privilege ownership**: PUBLIC_SHARE privilege is automatically assigned during authorization reset based on the allowGuestContributions setting and user roles; cannot be manually assigned or removed while the setting is enabled. Because each whiteboard authorization policy always contains the space-admin credential rule, any newly assigned space admin inherits PUBLIC_SHARE immediately without forcing an additional authorization reset.
@@ -112,6 +114,7 @@ When a user is granted space admin privileges on a space that has allowGuestCont
 - **FR-011**: System MUST emit metrics tracking the count and duration of privilege assignment operations for operational monitoring.
 - **FR-012**: System MUST audit all privilege rule changes during authorization reset, recording the triggering user, triggering action (setting change or whiteboard creation), affected users, and timestamp for compliance tracking.
 - **FR-013**: System MUST track the triggering event type (setting change or whiteboard creation) for each privilege assignment to support troubleshooting and operational analysis.
+- **FR-014**: System MUST grant PUBLIC_SHARE privilege to Global Support platform roles on whiteboards in level-zero spaces where both allowGuestContributions and allowPlatformSupportAsAdmin are enabled, and MUST revoke that privilege when either setting is disabled.
 
 ### Key Entities
 
@@ -119,6 +122,7 @@ When a user is granted space admin privileges on a space that has allowGuestCont
 - **PUBLIC_SHARE Privilege**: Authorization grant that enables a user to control guest access for a specific whiteboard through the Share dialog.
 - **Space/Subspace**: Hierarchical organizational containers with independent allowGuestContributions settings that determine privilege granting behavior for whiteboards within their scope.
 - **Space Admin**: User role that automatically receives PUBLIC_SHARE privilege on all whiteboards within their space (not subspaces) when allowGuestContributions is enabled.
+- **Global Support**: Platform role that inherits PUBLIC_SHARE on whiteboards when both allowGuestContributions and allowPlatformSupportAsAdmin are enabled for a level-zero space.
 - **Whiteboard Owner**: User who created a whiteboard and automatically receives PUBLIC_SHARE privilege on that specific whiteboard when allowGuestContributions is enabled for the containing space.
 
 ## Success Criteria _(mandatory)_
@@ -131,6 +135,7 @@ When a user is granted space admin privileges on a space that has allowGuestCont
 - **SC-004**: 100% consistency between allowGuestContributions setting state and PUBLIC_SHARE privilege existence across all whiteboards in a space.
 - **SC-005**: Zero privilege inheritance violations - PUBLIC_SHARE is only granted based on the specific space/subspace containing the whiteboard, not parent spaces.
 - **SC-006**: System maintains performance targets (1 second for privilege operations) for spaces containing up to 1000 whiteboards.
+- **SC-007**: When both allowGuestContributions and allowPlatformSupportAsAdmin are enabled on a level-zero space, Global Support users receive PUBLIC_SHARE on that space's whiteboards (and lose it within 1 second of either setting being disabled).
 
 ## Assumptions
 

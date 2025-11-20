@@ -33,6 +33,7 @@ export enum AuthorizationPrivilege {
 
 - Space admins (on all whiteboards in their space when `allowGuestContributions = true`)
 - Whiteboard owners (on their own whiteboard when containing space has `allowGuestContributions = true`)
+- Global Support platform role holders (on whiteboards in level-zero spaces when both `allowGuestContributions = true` and `allowPlatformSupportAsAdmin = true`)
 
 ---
 
@@ -99,6 +100,7 @@ When `allowGuestContributions = true` for a space, during authorization reset ca
    ```
 
 2. **For whiteboard owner**:
+
    ```typescript
    // Credential rule added to whiteboard's authorization policy during appendCredentialRules()
    {
@@ -113,6 +115,10 @@ When `allowGuestContributions = true` for a space, during authorization reset ca
      name: 'whiteboard-owner-public-share'
    }
    ```
+
+3. **For Global Support (optional)**:
+
+   When `allowPlatformSupportAsAdmin` is enabled on a level-zero space, existing platform-role credential rules already grant admin-equivalent privileges. Under this feature, the same rule now includes `PUBLIC_SHARE` alongside the other admin privileges so that Global Support inherits guest sharing control when the space explicitly opts in.
 
 **When `allowGuestContributions = false`**: `appendPrivilegeRules()` skips adding PUBLIC_SHARE rules, effectively revoking them during the reset.
 
