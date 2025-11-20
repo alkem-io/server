@@ -6,6 +6,8 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '../authorization-policy/authorization.policy.module';
 import { ProfileModule } from '../profile/profile.module';
+import { RoleSetModule } from '@domain/access/role-set/role.set.module';
+import { PlatformRolesAccessModule } from '@domain/access/platform-roles-access/platform.roles.access.module';
 import { Whiteboard } from './whiteboard.entity';
 import { WhiteboardResolverFields } from './whiteboard.resolver.fields';
 import { WhiteboardResolverMutations } from './whiteboard.resolver.mutations';
@@ -24,6 +26,8 @@ import { LicenseModule } from '../license/license.module';
     VisualModule,
     ProfileModule,
     UserModule,
+    RoleSetModule,
+    PlatformRolesAccessModule,
     StorageBucketModule,
     TypeOrmModule.forFeature([Whiteboard]),
     ProfileDocumentsModule,
