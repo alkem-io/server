@@ -14,13 +14,14 @@ import {
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Whiteboard } from './whiteboard.entity';
 import { WhiteboardService } from './whiteboard.service';
-import { AuthorizationCredential } from '@common/enums/authorization.credential';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { WhiteboardGuestAccessService } from './whiteboard.guest-access.service';
+import { EntityNotInitializedException } from '@common/exceptions';
 
 @Resolver(() => IWhiteboard)
 export class WhiteboardResolverFields {
   constructor(
     private whiteboardService: WhiteboardService,
+    private whiteboardGuestAccessService: WhiteboardGuestAccessService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -31,45 +32,6 @@ export class WhiteboardResolverFields {
   })
   public isMultiUser(@Parent() whiteboard: IWhiteboard): Promise<boolean> {
     return this.whiteboardService.isMultiUser(whiteboard.id);
-  }
-
-  @ResolveField('guestContributionsAllowed', () => Boolean, {
-    nullable: false,
-    description:
-      'Whether guest users are allowed to contribute to this Whiteboard.',
-  })
-  async guestContributionsAllowed(
-    @Parent() whiteboard: Whiteboard
-  ): Promise<boolean> {
-    const authorization = whiteboard.authorization;
-    if (!authorization || !authorization.credentialRules) {
-      return false;
-    }
-
-    // Check if there's a credential rule for GLOBAL_GUEST
-    const guestRule = authorization.credentialRules.find(rule =>
-      rule.criterias.some(
-        criteria => criteria.type === AuthorizationCredential.GLOBAL_GUEST
-      )
-    );
-
-    console.log({ guestRule });
-    if (!guestRule) {
-      return false;
-    }
-
-    // Check if the rule grants READ, UPDATE, and CONTRIBUTE privileges
-    const requiredPrivileges = [
-      AuthorizationPrivilege.READ,
-      AuthorizationPrivilege.UPDATE,
-      AuthorizationPrivilege.UPDATE_CONTENT,
-    ];
-
-    const hasAllPrivileges = requiredPrivileges.every(privilege =>
-      guestRule.grantedPrivileges.includes(privilege)
-    );
-
-    return hasAllPrivileges;
   }
 
   @ResolveField('createdBy', () => IUser, {
@@ -103,5 +65,25 @@ export class WhiteboardResolverFields {
     loader: ILoader<IProfile>
   ): Promise<IProfile> {
     return loader.load(whiteboard.id);
+  }
+
+  @ResolveField(() => Boolean, {
+    nullable: false,
+    description:
+      'Indicates whether guest collaborators are currently allowed via GLOBAL_GUEST permissions.',
+  })
+  async guestContributionsAllowed(
+    @Parent() whiteboard: IWhiteboard
+  ): Promise<boolean> {
+    if (!whiteboard.authorization) {
+      throw new EntityNotInitializedException(
+        `Authorization not initialized for whiteboard: ${whiteboard.id}`,
+        LogContext.COLLABORATION
+      );
+    }
+
+    return this.whiteboardGuestAccessService.isGuestAccessEnabled(
+      whiteboard.authorization
+    );
   }
 }

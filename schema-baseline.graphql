@@ -3856,6 +3856,8 @@ input MoveCalloutContributionInput {
 type Mutation {
   """Adds an Iframe Allowed URL to the Platform Settings"""
   addIframeAllowedURL(whitelistedURL: String!): [String!]!
+  """Adds a full email address to the platform notification blacklist"""
+  addNotificationEmailToBlacklist(input: NotificationEmailAddressInput!): [String!]!
   """Add a reaction to a message from the specified Room."""
   addReactionToMessageInRoom(reactionData: RoomAddReactionToMessageInput!): Reaction!
   """Ensure all community members are registered for communications."""
@@ -4096,6 +4098,8 @@ type Mutation {
   removeIframeAllowedURL(whitelistedURL: String!): [String!]!
   """Removes a message."""
   removeMessageOnRoom(messageData: RoomRemoveMessageInput!): MessageID!
+  """Removes an email address from the platform notification blacklist"""
+  removeNotificationEmailFromBlacklist(input: NotificationEmailAddressInput!): [String!]!
   """Removes a User from a Role on the Platform."""
   removePlatformRoleFromUser(roleData: RemovePlatformRoleInput!): User!
   """Remove a reaction on a message from the specified Room."""
@@ -4288,6 +4292,11 @@ type NVP {
 A human readable identifier, 3 <= length <= 28. Used for URL paths in clients. Characters allowed: a-z,A-Z,0-9.
 """
 scalar NameID
+
+input NotificationEmailAddressInput {
+  """Full email address to add/remove; lowercase enforced by server"""
+  email: String!
+}
 
 enum NotificationEvent {
   ORGANIZATION_ADMIN_MENTIONED
@@ -4748,6 +4757,10 @@ enum PlatformFeatureFlagName {
 type PlatformIntegrationSettings {
   """The list of allowed URLs for iFrames within Markdown content."""
   iframeAllowedUrls: [String!]!
+  """
+  List of fully-qualified email addresses blocked from receiving notifications
+  """
+  notificationEmailBlacklist: [String!]!
 }
 
 type PlatformInvitation {
@@ -6951,6 +6964,10 @@ input UpdatePlatformSettingsInput {
 input UpdatePlatformSettingsIntegrationInput {
   """Update the list of allowed URLs for iFrames within Markdown content."""
   iframeAllowedUrls: [String!]!
+  """
+  Update the list of email addresses blocked from receiving notifications.
+  """
+  notificationEmailBlacklist: [String!]
 }
 
 input UpdatePostInput {

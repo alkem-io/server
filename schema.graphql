@@ -3298,6 +3298,8 @@ type ModelCardSpaceUsageResult {
 type Mutation {
   """Adds an Iframe Allowed URL to the Platform Settings"""
   addIframeAllowedURL(whitelistedURL: String!): [String!]!
+  """Adds a full email address to the platform notification blacklist"""
+  addNotificationEmailToBlacklist(input: NotificationEmailAddressInput!): [String!]!
   """Add a reaction to a message from the specified Room."""
   addReactionToMessageInRoom(reactionData: RoomAddReactionToMessageInput!): Reaction!
   """Ensure all community members are registered for communications."""
@@ -3538,6 +3540,8 @@ type Mutation {
   removeIframeAllowedURL(whitelistedURL: String!): [String!]!
   """Removes a message."""
   removeMessageOnRoom(messageData: RoomRemoveMessageInput!): MessageID!
+  """Removes an email address from the platform notification blacklist"""
+  removeNotificationEmailFromBlacklist(input: NotificationEmailAddressInput!): [String!]!
   """Removes a User from a Role on the Platform."""
   removePlatformRoleFromUser(roleData: RemovePlatformRoleInput!): User!
   """Remove a reaction on a message from the specified Room."""
@@ -3690,6 +3694,10 @@ type Mutation {
   updateVisual(updateData: UpdateVisualInput!): Visual!
   """Updates the specified Whiteboard."""
   updateWhiteboard(whiteboardData: UpdateWhiteboardEntityInput!): Whiteboard!
+  """
+  Grants or revokes GLOBAL_GUEST permissions for a whiteboard using a single toggle.
+  """
+  updateWhiteboardGuestAccess(input: UpdateWhiteboardGuestAccessInput!): UpdateWhiteboardGuestAccessResult!
   """
   Create a new Document on the Storage and return the value as part of the returned Link.
   """
@@ -4012,6 +4020,10 @@ type PlatformFeatureFlag {
 type PlatformIntegrationSettings {
   """The list of allowed URLs for iFrames within Markdown content."""
   iframeAllowedUrls: [String!]!
+  """
+  List of fully-qualified email addresses blocked from receiving notifications
+  """
+  notificationEmailBlacklist: [String!]!
 }
 
 type PlatformInvitation {
@@ -5374,6 +5386,13 @@ type Timeline {
   updatedDate: DateTime!
 }
 
+type UpdateWhiteboardGuestAccessResult {
+  """Indicates whether the mutation completed successfully."""
+  success: Boolean!
+  """Whiteboard snapshot reflecting the latest guest access state."""
+  whiteboard: Whiteboard
+}
+
 type UrlResolverQueryResultCalendar {
   calendarEventId: UUID
   id: UUID!
@@ -5826,6 +5845,10 @@ type Whiteboard {
   createdBy: User
   """The date at which the entity was created."""
   createdDate: DateTime!
+  """
+  Indicates whether guest collaborators are currently allowed via GLOBAL_GUEST permissions.
+  """
+  guestContributionsAllowed: Boolean!
   """The ID of the entity"""
   id: UUID!
   """Whether the Whiteboard is multi-user enabled on Space level."""
@@ -6829,6 +6852,11 @@ input MoveCalloutContributionInput {
   contributionID: UUID!
 }
 
+input NotificationEmailAddressInput {
+  """Full email address to add/remove; lowercase enforced by server"""
+  email: String!
+}
+
 input NotificationEventsFilterInput {
   """Return Notifications with a type matching one of the provided types."""
   types: [NotificationEvent!]
@@ -7546,6 +7574,10 @@ input UpdatePlatformSettingsInput {
 input UpdatePlatformSettingsIntegrationInput {
   """Update the list of allowed URLs for iFrames within Markdown content."""
   iframeAllowedUrls: [String!]!
+  """
+  Update the list of email addresses blocked from receiving notifications.
+  """
+  notificationEmailBlacklist: [String!]
 }
 
 input UpdatePostInput {
@@ -7922,6 +7954,15 @@ input UpdateWhiteboardEntityInput {
   previewSettings: UpdateWhiteboardPreviewSettingsInput
   """The Profile of this entity."""
   profile: UpdateProfileInput
+}
+
+input UpdateWhiteboardGuestAccessInput {
+  """
+  Target state for guest collaboration. True enables GLOBAL_GUEST privileges.
+  """
+  guestAccessEnabled: Boolean!
+  """The identifier of the whiteboard whose guest access should be toggled."""
+  whiteboardId: UUID!
 }
 
 input UpdateWhiteboardPreviewSettingsInput {
