@@ -9,7 +9,10 @@ import { PlatformAuthorizationPolicyService } from '@platform/authorization/plat
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { PlatformService } from './platform.service';
 import { IPlatformSettings } from '@platform/platform-settings/platform.settings.interface';
-import { UpdatePlatformSettingsInput } from '@platform/platform-settings';
+import {
+  UpdatePlatformSettingsInput,
+  NotificationEmailAddressInput,
+} from '@platform/platform-settings';
 import { PlatformSettingsService } from '@platform/platform-settings/platform.settings.service';
 import { InstrumentResolver } from '@src/apm/decorators';
 
@@ -121,5 +124,59 @@ export class PlatformResolverMutations {
     await this.platformService.savePlatform(platform);
 
     return platform.settings.integration.iframeAllowedUrls;
+  }
+
+  @Mutation(() => [String], {
+    description:
+      'Adds a full email address to the platform notification blacklist',
+  })
+  async addNotificationEmailToBlacklist(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('input') input: NotificationEmailAddressInput
+  ): Promise<string[]> {
+    const platform = await this.platformService.getPlatformOrFail();
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      platform.authorization,
+      AuthorizationPrivilege.PLATFORM_ADMIN,
+      `add notification email to blacklist: ${input.email}`
+    );
+
+    platform.settings.integration.notificationEmailBlacklist =
+      this.platformSettingsService.addNotificationEmailToBlacklistOrFail(
+        platform.settings,
+        input.email
+      );
+    await this.platformService.savePlatform(platform);
+
+    return platform.settings.integration.notificationEmailBlacklist;
+  }
+
+  @Mutation(() => [String], {
+    description:
+      'Removes an email address from the platform notification blacklist',
+  })
+  async removeNotificationEmailFromBlacklist(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('input') input: NotificationEmailAddressInput
+  ): Promise<string[]> {
+    const platform = await this.platformService.getPlatformOrFail();
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      platform.authorization,
+      AuthorizationPrivilege.PLATFORM_ADMIN,
+      `remove notification email from blacklist: ${input.email}`
+    );
+
+    platform.settings.integration.notificationEmailBlacklist =
+      this.platformSettingsService.removeNotificationEmailFromBlacklistOrFail(
+        platform.settings,
+        input.email
+      );
+    await this.platformService.savePlatform(platform);
+
+    return platform.settings.integration.notificationEmailBlacklist;
   }
 }
