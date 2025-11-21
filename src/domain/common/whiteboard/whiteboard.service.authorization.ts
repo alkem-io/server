@@ -25,6 +25,7 @@ import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { PlatformRolesAccessService } from '@domain/access/platform-roles-access/platform.roles.access.service';
+import { WhiteboardGuestAccessService } from './whiteboard.guest-access.service';
 
 const CREDENTIAL_RULE_WHITEBOARD_OWNER_PUBLIC_SHARE =
   'whiteboard-owner-public-share';
@@ -39,6 +40,7 @@ export class WhiteboardAuthorizationService {
     private roleSetService: RoleSetService,
     private platformRolesAccessService: PlatformRolesAccessService,
     private communityResolverService: CommunityResolverService,
+    private whiteboardGuestAccessService: WhiteboardGuestAccessService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -72,10 +74,16 @@ export class WhiteboardAuthorizationService {
     );
     if (!whiteboard.profile) {
       throw new RelationshipNotFoundException(
-        `Unable to load entities on whiteboard reset auth:  ${whiteboardID} `,
-        LogContext.COLLABORATION
+        'Unable to load Profile on Whiteboard auth reset',
+        LogContext.COLLABORATION,
+        { whiteboardID }
       );
     }
+    const wasGuestAccessEnabledBeforeReset =
+      this.whiteboardGuestAccessService.isGuestAccessEnabled(
+        whiteboard.authorization
+      );
+
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     whiteboard.authorization =
@@ -86,6 +94,7 @@ export class WhiteboardAuthorizationService {
 
     whiteboard.authorization = await this.appendCredentialRules(
       whiteboard,
+      wasGuestAccessEnabledBeforeReset,
       spaceSettings
     );
     whiteboard.authorization = this.appendPrivilegeRules(
@@ -106,6 +115,7 @@ export class WhiteboardAuthorizationService {
 
   private async appendCredentialRules(
     whiteboard: IWhiteboard,
+    enabledGuestAccess: boolean,
     spaceSettings?: ISpaceSettings
   ): Promise<IAuthorizationPolicy> {
     const authorization = whiteboard.authorization;
@@ -141,6 +151,12 @@ export class WhiteboardAuthorizationService {
       newRules,
       spaceSettings
     );
+
+    if (enabledGuestAccess) {
+      newRules.push(
+        this.whiteboardGuestAccessService.getGuestAccessCredentialRule()
+      );
+    }
 
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
