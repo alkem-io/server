@@ -18,6 +18,7 @@ import {
 } from '@common/exceptions';
 import { UserNotVerifiedException } from '@common/exceptions/user/user.not.verified.exception';
 import { IdentityResolveRequestMeta } from './types/identity-resolve.request-meta';
+import { Session } from '@ory/kratos-client';
 
 @Injectable()
 export class IdentityResolveService {
@@ -33,6 +34,7 @@ export class IdentityResolveService {
     authenticationId: string,
     meta: IdentityResolveRequestMeta
   ): Promise<IUser> {
+
     const existingUser = await this.userLookupService.getUserByAuthenticationID(
       authenticationId,
       {
@@ -70,6 +72,14 @@ export class IdentityResolveService {
     const outcome = existingUserByEmail ? 'link' : 'create';
 
     try {
+      // FIXME: temporary ugly workaround to skip email verification for Kratos users,
+      //  based on the fact that this EP is called only by OIDC controller, so we silently assume
+      //  that this is OIDC session and don't care about email verification status from Kratos side.
+      // depending on future development and use of this EP we will need to either provide token/session
+      //  info here to verify that this is indeed OIDC session, or get list of sessions for user to deduct
+      //  that one of sessions is OIDC based, so we can skip email verification.
+      agentInfo.emailVerified=true;
+
       const user = await this.registrationService.registerNewUser(agentInfo);
 
       if (!user.authenticationID) {
