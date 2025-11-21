@@ -59,6 +59,26 @@ const parserRules: MarkdownParser['tokens'] = {
   list_item: { block: 'listItem' },
   hardbreak: { node: 'hardBreak' },
 
+  // Tables
+  table: { block: 'table' },
+  thead: { ignore: true },
+  tbody: { ignore: true },
+  tr: { block: 'tableRow' },
+  th: {
+    block: 'tableHeader',
+    getAttrs: (token: Token) => ({
+      colspan: Number(token.attrGet('colspan') || 1),
+      rowspan: Number(token.attrGet('rowspan') || 1),
+    }),
+  },
+  td: {
+    block: 'tableCell',
+    getAttrs: (token: Token) => ({
+      colspan: Number(token.attrGet('colspan') || 1),
+      rowspan: Number(token.attrGet('rowspan') || 1),
+    }),
+  },
+
   // Inline Nodes
   image: {
     node: 'image',
