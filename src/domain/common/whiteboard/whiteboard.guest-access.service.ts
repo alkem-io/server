@@ -18,13 +18,24 @@ import {
   EntityNotInitializedException,
   ForbiddenException,
 } from '@common/exceptions';
+import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 
 const WHITEBOARD_GUEST_RULE_NAME = 'whiteboard-guest-access';
-const REQUIRED_GUEST_PRIVILEGES: AuthorizationPrivilege[] = [
+const GRANTED_GUEST_PRIVILEGES: AuthorizationPrivilege[] = [
   AuthorizationPrivilege.READ,
   AuthorizationPrivilege.UPDATE_CONTENT,
   AuthorizationPrivilege.CONTRIBUTE,
-];
+] as const;
+
+const GUEST_ACCESS_CREDENTIAL_RULE = new AuthorizationPolicyRuleCredential(
+  GRANTED_GUEST_PRIVILEGES,
+  {
+    type: AuthorizationCredential.GLOBAL_GUEST,
+    resourceID: '',
+  },
+  WHITEBOARD_GUEST_RULE_NAME,
+  true
+);
 
 @Injectable()
 export class WhiteboardGuestAccessService {
@@ -36,6 +47,10 @@ export class WhiteboardGuestAccessService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
+
+  public getGuestAccessCredentialRule(): IAuthorizationPolicyRuleCredential {
+    return GUEST_ACCESS_CREDENTIAL_RULE;
+  }
 
   async updateGuestAccess(
     agentInfo: AgentInfo,
@@ -166,25 +181,14 @@ export class WhiteboardGuestAccessService {
   private enableGuestAccess(authorization: IAuthorizationPolicy): boolean {
     const existingRule = this.findGuestRule(authorization);
     if (!existingRule) {
-      const newRule: IAuthorizationPolicyRuleCredential = {
-        name: WHITEBOARD_GUEST_RULE_NAME,
-        cascade: true,
-        criterias: [
-          {
-            type: AuthorizationCredential.GLOBAL_GUEST,
-            resourceID: '',
-          },
-        ],
-        grantedPrivileges: [...REQUIRED_GUEST_PRIVILEGES],
-      };
-      authorization.credentialRules.push(newRule);
+      authorization.credentialRules.push(GUEST_ACCESS_CREDENTIAL_RULE);
       return true;
     }
 
     const previousPrivileges = new Set(existingRule.grantedPrivileges);
     let mutated = false;
 
-    for (const privilege of REQUIRED_GUEST_PRIVILEGES) {
+    for (const privilege of GRANTED_GUEST_PRIVILEGES) {
       if (!previousPrivileges.has(privilege)) {
         existingRule.grantedPrivileges.push(privilege);
         mutated = true;
