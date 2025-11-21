@@ -14,6 +14,7 @@ import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.con
 import { ISpace } from '@domain/space/space/space.interface';
 import { PromptGraphDefinition } from './dto/prompt-graph-definition/prompt.graph.definition.dto';
 import { IAiPersona } from '@services/ai-server/ai-persona';
+import { IVirtualContributorPlatformSettings } from '../virtual-contributor-platform-settings/virtual.contributor.platform.settings.interface';
 
 @ObjectType('VirtualContributor', {
   implements: () => [IContributor],
@@ -58,6 +59,13 @@ export class IVirtualContributor
     description: 'The settings of this Virtual Contributor.',
   })
   settings!: IVirtualContributorSettings;
+
+  @Field(() => IVirtualContributorPlatformSettings, {
+    nullable: true,
+    description:
+      'Platform-level settings of this Virtual Contributor, modifiable only by platform admins.',
+  })
+  platformSettings?: IVirtualContributorPlatformSettings;
 
   @Field(() => VirtualContributorDataAccessMode, {
     nullable: false,
