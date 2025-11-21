@@ -214,6 +214,40 @@ export const markdownSchema = new Schema({
         },
       ],
     },
+    table: {
+      content: 'tableRow+',
+      tableRole: 'table',
+      isolating: true,
+      group: 'block',
+      parseDOM: [{ tag: 'table' }],
+    },
+    tableRow: {
+      content: '(tableCell | tableHeader)*',
+      tableRole: 'row',
+      parseDOM: [{ tag: 'tr' }],
+    },
+    tableCell: {
+      content: 'block+',
+      tableRole: 'cell',
+      isolating: true,
+      attrs: {
+        colspan: { default: 1 },
+        rowspan: { default: 1 },
+        colwidth: { default: null },
+      },
+      parseDOM: [{ tag: 'td' }],
+    },
+    tableHeader: {
+      content: 'block+',
+      tableRole: 'header_cell',
+      isolating: true,
+      attrs: {
+        colspan: { default: 1 },
+        rowspan: { default: 1 },
+        colwidth: { default: null },
+      },
+      parseDOM: [{ tag: 'th' }],
+    },
   },
   marks: {
     link: {
