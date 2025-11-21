@@ -40,12 +40,12 @@
 
 ## Phase 5 – User Story 3: Repeatable migration, verification & rollback (P3)
 
-- [ ] T027 [US3] Draft detailed migration runbook (export → transform → import → verify → cut-over) in `docs/DataManagement.md`.
-- [ ] T028 [P] [US3] Create migration verification checklist (auth, spaces, content, authorization) in `specs/018-postgres-db-convergence/quickstart.md` or a new `verification-checklist.md` in the same folder.
-- [ ] T029 [US3] Document rollback strategy for failed or partial migrations in `docs/DataManagement.md`.
-- [ ] T030 [P] [US3] Add helper script to capture migration run metadata (timestamps, outcomes) in `.scripts/migrations/postgres-convergence/log_migration_run.sh`.
-- [ ] T031 [US3] Update `specs/018-postgres-db-convergence/spec.md` success criteria section with rehearsal/rollback details as implemented.
-- [ ] T032 [P] [US3] Add section to `docs/QA.md` describing how to rehearse the migration on staging and capture results.
+- [X] T027 [US3] Draft detailed migration runbook (export → transform → import → verify → cut-over) in `docs/DataManagement.md`.
+- [X] T028 [P] [US3] Create migration verification checklist (auth, spaces, content, authorization) in `specs/018-postgres-db-convergence/quickstart.md` or a new `verification-checklist.md` in the same folder.
+- [X] T029 [US3] Document rollback strategy for failed or partial migrations in `docs/DataManagement.md`.
+- [X] T030 [P] [US3] Add helper script to capture migration run metadata (timestamps, outcomes) in `.scripts/migrations/postgres-convergence/log_migration_run.sh`.
+- [X] T031 [US3] Update `specs/018-postgres-db-convergence/spec.md` success criteria section with rehearsal/rollback details as implemented.
+- [X] T032 [P] [US3] Add section to `docs/QA.md` describing how to rehearse the migration on staging and capture results.
 
 ## Phase 6 – Polish & Cross-Cutting
 

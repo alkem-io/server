@@ -316,6 +316,353 @@ All migration tooling is located in `.scripts/migrations/postgres-convergence/`:
 For detailed step-by-step instructions, see `specs/018-postgres-db-convergence/quickstart.md`.
 For complete CSV format documentation, see `specs/018-postgres-db-convergence/data-model.md`.
 
+### Complete Migration Runbook
+
+This runbook provides a detailed, step-by-step procedure for migrating from MySQL to PostgreSQL in a production environment.
+
+#### Pre-Migration Phase (1-2 weeks before)
+
+**1. Environment Preparation**
+
+- [ ] Schedule maintenance window (recommended: ≤30 minutes hard downtime)
+- [ ] Notify stakeholders of migration schedule
+- [ ] Prepare PostgreSQL target environment (development/staging/production)
+- [ ] Install required tools: pnpm, Docker, PostgreSQL client
+- [ ] Verify disk space: need ~1.5x current MySQL data size
+- [ ] Review and update `.env` configuration for PostgreSQL
+
+**2. Rehearsal on Staging**
+
+- [ ] Clone production MySQL to staging environment
+- [ ] Perform complete migration on staging (schemas + data)
+- [ ] Run full verification checklist
+- [ ] Measure actual migration time
+- [ ] Document any issues encountered
+- [ ] Test rollback procedure
+- [ ] Get stakeholder sign-off on staging results
+
+**3. Backup Strategy**
+
+- [ ] Create full MySQL backup (Alkemio + Kratos)
+- [ ] Test MySQL backup restoration
+- [ ] Document backup location and access procedures
+- [ ] Verify backup retention policy
+- [ ] Create snapshot of current running environment
+
+#### Migration Day - T-Minus Preparation
+
+**4. Final Checks (1 hour before)**
+
+- [ ] Verify PostgreSQL is running and healthy
+- [ ] Verify MySQL backup is current and accessible
+- [ ] Verify all scripts are executable and tested
+- [ ] Confirm stakeholder availability for approval
+- [ ] Clear any unnecessary background jobs
+- [ ] Document current system metrics (performance baseline)
+
+**5. Communication**
+
+- [ ] Send "migration starting" notification to users
+- [ ] Display maintenance mode message (if applicable)
+- [ ] Prepare status update channels (Slack, email, etc.)
+
+#### Migration Execution Phase
+
+**6. Stop Application Services**
+
+```bash
+# Stop Alkemio server
+pkill -f "node.*alkemio"
+
+# Stop dependent services (if needed)
+docker compose -f quickstart-services.yml down
+
+# Verify no active connections to MySQL
+docker exec mysql-container mysql -u root -p -e "SHOW PROCESSLIST"
+```
+
+**7. Export MySQL Data**
+
+```bash
+cd .scripts/migrations/postgres-convergence
+
+# Log migration start (T-0)
+./log_migration_run.sh started "Production migration - Target: ≤30min downtime"
+
+# Start timer
+START_TIME=$(date +%s)
+
+# Export Alkemio (expected: 5-10 minutes depending on data size)
+./export_alkemio_mysql_to_csv.sh
+ALKEMIO_EXPORT_DIR=$(ls -td csv_exports/alkemio/* | head -1)
+echo "Alkemio export: ${ALKEMIO_EXPORT_DIR}"
+
+# Export Kratos (expected: 1-2 minutes)
+./export_kratos_mysql_to_csv.sh
+KRATOS_EXPORT_DIR=$(ls -td csv_exports/kratos/* | head -1)
+echo "Kratos export: ${KRATOS_EXPORT_DIR}"
+
+# Check elapsed time
+EXPORT_END=$(date +%s)
+echo "Export duration: $((EXPORT_END - START_TIME)) seconds"
+```
+
+**8. Verify Exports**
+
+```bash
+# Quick validation
+cat "${ALKEMIO_EXPORT_DIR}/migration_manifest.json" | jq '.tables | length'
+cat "${KRATOS_EXPORT_DIR}/migration_manifest.json" | jq '.tables | length'
+
+# Check critical tables
+ls -lh "${ALKEMIO_EXPORT_DIR}"/{user,space,organization}.csv
+ls -lh "${KRATOS_EXPORT_DIR}"/identities.csv
+
+# If exports look wrong, STOP and investigate
+```
+
+**9. Apply PostgreSQL Schemas**
+
+```bash
+# Start PostgreSQL services
+docker compose -f quickstart-services.yml up postgres kratos -d
+
+# Wait for services to be ready (max 30 seconds)
+timeout 30 docker exec postgres pg_isready -U alkemio
+
+# Apply Alkemio migrations
+export DATABASE_TYPE=postgres
+export DATABASE_HOST=localhost
+export DATABASE_PORT=5432
+pnpm run migration:run
+
+# Verify Kratos migrations (auto-applied on container start)
+docker logs kratos | grep -i "migration"
+
+# Check elapsed time
+SCHEMA_END=$(date +%s)
+echo "Schema setup duration: $((SCHEMA_END - EXPORT_END)) seconds"
+```
+
+**10. Import Data into PostgreSQL**
+
+```bash
+# Import Alkemio data (expected: 10-15 minutes)
+./import_csv_to_postgres_alkemio.sh "${ALKEMIO_EXPORT_DIR}"
+
+# Check import log immediately
+tail -50 "${ALKEMIO_EXPORT_DIR}/import_log_"*.log
+
+# If import failed, STOP, review errors, and consider rollback
+
+# Import Kratos data (expected: 2-3 minutes)
+./import_csv_to_postgres_kratos.sh "${KRATOS_EXPORT_DIR}"
+
+# Check elapsed time
+IMPORT_END=$(date +%s)
+echo "Import duration: $((IMPORT_END - SCHEMA_END)) seconds"
+echo "Total migration time: $((IMPORT_END - START_TIME)) seconds"
+```
+
+**11. Quick Verification**
+
+```bash
+# Verify row counts (critical tables)
+docker exec postgres psql -U alkemio -d alkemio -c \
+  "SELECT tablename, n_live_tup FROM pg_stat_user_tables WHERE tablename IN ('user','space','organization') ORDER BY tablename;"
+
+docker exec postgres psql -U alkemio -d kratos -c \
+  "SELECT COUNT(*) as identity_count FROM identities;"
+
+# If counts are way off, STOP and investigate
+```
+
+#### Post-Migration Verification Phase
+
+**12. Start Services on PostgreSQL**
+
+```bash
+# Update configuration to use Postgres permanently
+export DATABASE_TYPE=postgres
+
+# Start all services
+docker compose -f quickstart-services.yml up -d
+
+# Start Alkemio server
+pnpm start &
+
+# Wait for server to be ready (max 60 seconds)
+timeout 60 bash -c 'until curl -sf http://localhost:3000/graphql; do sleep 2; done'
+```
+
+**13. Run Smoke Tests**
+
+```bash
+# Health checks
+curl -f http://localhost:3000/graphql || echo "GraphQL FAILED"
+curl -f http://localhost:4434/health/ready || echo "Kratos FAILED"
+
+# Basic functionality
+curl -X POST http://localhost:3000/graphql \
+  -H "Content-Type: application/json" \
+  -d '{"query": "{ platform { configuration { authentication { enabled } } } }"}' \
+  | jq .
+
+# If smoke tests fail, STOP and prepare for rollback
+```
+
+**14. Execute Verification Checklist**
+
+- [ ] Run complete verification checklist: `specs/018-postgres-db-convergence/verification-checklist.md`
+- [ ] Test authentication with 3 different user accounts
+- [ ] Verify critical operations (view spaces, access content, create post)
+- [ ] Check application logs for errors
+- [ ] Monitor performance for 10 minutes
+
+**15. Go/No-Go Decision**
+
+**If all checks pass:**
+- [ ] Log migration success: `./log_migration_run.sh completed "All checks passed"`
+- [ ] Send "migration successful" notification to users
+- [ ] Remove maintenance mode message
+- [ ] Begin post-migration monitoring (see below)
+
+**If critical issues found:**
+- [ ] Execute rollback procedure (see below)
+- [ ] Document issues encountered
+- [ ] Schedule follow-up migration attempt
+
+#### Post-Migration Monitoring
+
+**First 24 Hours:**
+- [ ] Check application logs every 2 hours
+- [ ] Monitor error rates and response times
+- [ ] Watch for user-reported issues
+- [ ] Verify data consistency periodically
+- [ ] Keep MySQL backup readily accessible
+
+**First Week:**
+- [ ] Daily health checks
+- [ ] Performance monitoring
+- [ ] User feedback collection
+- [ ] Document any anomalies
+
+**First Month:**
+- [ ] Weekly system checks
+- [ ] Review performance trends
+- [ ] Optimize queries if needed
+- [ ] Consider MySQL decommissioning after 30 days
+
+#### Rollback Procedure
+
+**Decision Criteria for Rollback:**
+
+Initiate rollback if any of the following occur:
+- Data import fails with constraint violations
+- Row count discrepancies > 1% for critical tables
+- Authentication/authorization completely broken
+- Data corruption detected
+- Performance degradation > 50% of baseline
+- Cannot meet downtime window target
+
+**Rollback Steps:**
+
+**1. Stop All Services Immediately**
+```bash
+# Log rollback decision
+cd .scripts/migrations/postgres-convergence
+./log_migration_run.sh rolled_back "Reason: [describe critical issue]"
+
+# Stop Alkemio server
+pkill -f "node.*alkemio"
+
+# Stop PostgreSQL services
+docker compose -f quickstart-services.yml down postgres kratos
+```
+
+**2. Restore MySQL Configuration**
+```bash
+# Switch back to MySQL
+export DATABASE_TYPE=mysql
+export DATABASE_HOST=localhost
+export MYSQL_DB_PORT=3306
+
+# Update .env if needed
+# Verify configuration
+env | grep DATABASE
+```
+
+**3. Start MySQL Services**
+```bash
+# Start MySQL and dependent services
+docker compose -f quickstart-services.yml up mysql kratos -d
+
+# Wait for MySQL to be ready
+timeout 30 bash -c 'until docker exec mysql-container mysql -u root -p${MYSQL_ROOT_PASSWORD} -e "SELECT 1"; do sleep 2; done'
+```
+
+**4. Verify MySQL Data Integrity**
+```bash
+# Check critical tables
+docker exec mysql-container mysql -u root -p${MYSQL_ROOT_PASSWORD} alkemio \
+  -e "SELECT COUNT(*) as user_count FROM user;"
+
+docker exec mysql-container mysql -u root -p${MYSQL_ROOT_PASSWORD} kratos \
+  -e "SELECT COUNT(*) as identity_count FROM identities;"
+
+# Verify backup timestamp matches expected
+```
+
+**5. Restart Application**
+```bash
+# Start Alkemio server with MySQL
+pnpm start &
+
+# Wait for server to be ready
+timeout 60 bash -c 'until curl -sf http://localhost:3000/graphql; do sleep 2; done'
+
+# Run quick smoke tests
+curl -f http://localhost:3000/graphql
+curl -f http://localhost:4433/health/ready
+```
+
+**6. Verify Functionality**
+```bash
+# Test authentication
+# Test space access
+# Test content operations
+# Check logs for errors
+
+# Monitor for 10 minutes to ensure stability
+```
+
+**7. Communication**
+```bash
+# Notify stakeholders of rollback
+# Update status channels
+# Remove maintenance mode
+# Schedule post-mortem
+
+# Document what went wrong
+# Capture logs and error messages
+# Plan fixes for next migration attempt
+```
+
+**8. Post-Rollback Actions**
+- [ ] Document root cause of rollback
+- [ ] Analyze what went wrong
+- [ ] Fix identified issues
+- [ ] Test fixes on staging
+- [ ] Schedule new migration window (if proceeding)
+- [ ] Update runbook with lessons learned
+
+**Rollback Time Estimate:** 10-15 minutes
+
+**Data Loss Considerations:**
+- Rollback returns to MySQL state at time of export
+- Any changes made during migration window are lost
+- Users should be warned about potential data loss window
+
 ### Migration Verification Checklist
 
 After migrating from MySQL to PostgreSQL, use this checklist to verify data integrity and system functionality.
