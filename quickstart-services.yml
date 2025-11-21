@@ -469,7 +469,7 @@ services:
   file-service:
     container_name: alkemio_dev_file_service
     hostname: file-service
-    image: alkemio/file-service:v0.1.2
+    image: alkemio/file-service:v0.2.0
     platform: linux/amd64
     depends_on:
       rabbitmq:
