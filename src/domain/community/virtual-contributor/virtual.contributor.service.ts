@@ -44,6 +44,10 @@ import { VirtualContributorDefaultsService } from '../virtual-contributor-defaul
 import { virtualContributorSettingsDefault } from './definition/virtual.contributor.settings.default';
 import { UpdateVirtualContributorSettingsEntityInput } from '../virtual-contributor-settings';
 import { VirtualContributorSettingsService } from '../virtual-contributor-settings/virtual.contributor.settings.service';
+import {
+  UpdateVirtualContributorPlatformSettingsEntityInput,
+  VirtualContributorPlatformSettingsService,
+} from '../virtual-contributor-platform-settings';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
 import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 
@@ -60,6 +64,7 @@ export class VirtualContributorService {
     private knowledgeBaseService: KnowledgeBaseService,
     private virtualContributorLookupService: VirtualContributorLookupService,
     private virtualContributorSettingsService: VirtualContributorSettingsService,
+    private virtualContributorPlatformSettingsService: VirtualContributorPlatformSettingsService,
     private accountLookupService: AccountLookupService,
     private virtualContributorDefaultsService: VirtualContributorDefaultsService,
     @InjectEntityManager('default')
@@ -205,6 +210,19 @@ export class VirtualContributorService {
         virtualContributor.settings,
         settingsData
       );
+    return await this.save(virtualContributor);
+  }
+
+  public async updateVirtualContributorPlatformSettings(
+    virtualContributor: IVirtualContributor,
+    settingsData: UpdateVirtualContributorPlatformSettingsEntityInput
+  ): Promise<IVirtualContributor> {
+    virtualContributor.platformSettings =
+      this.virtualContributorPlatformSettingsService.updateSettings(
+        virtualContributor.platformSettings,
+        settingsData
+      );
+
     return await this.save(virtualContributor);
   }
 

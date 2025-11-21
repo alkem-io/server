@@ -9,10 +9,11 @@ import { IVirtualContributor } from './virtual.contributor.interface';
 import {
   DeleteVirtualContributorInput,
   UpdateVirtualContributorInput,
+  UpdateVirtualContributorSettingsInput,
+  UpdateVirtualContributorPlatformSettingsInput,
 } from './dto';
 import { RefreshVirtualContributorBodyOfKnowledgeInput } from './dto/virtual.contributor.dto.refresh.body.of.knowledge';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { UpdateVirtualContributorSettingsInput } from './dto/virtual.contributor.dto.update.settings';
 import { VirtualContributorAuthorizationService } from './virtual.contributor.service.authorization';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -68,7 +69,7 @@ export class VirtualContributorResolverMutations {
   }
 
   @Mutation(() => IVirtualContributor, {
-    description: 'Updates one of the Setting on an Organization',
+    description: 'Updates one of the Setting on an Virtual Contributor',
   })
   async updateVirtualContributorSettings(
     @CurrentUser() agentInfo: AgentInfo,
@@ -110,6 +111,44 @@ export class VirtualContributorResolverMutations {
     virtualContributor =
       await this.virtualContributorService.save(virtualContributor);
     // As the settings may update the authorization for the Space, the authorization policy will need to be reset
+
+    const updatedAuthorizations =
+      await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
+        virtualContributor
+      );
+    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+
+    return this.virtualContributorService.getVirtualContributorOrFail(
+      virtualContributor.id
+    );
+  }
+
+  @Mutation(() => IVirtualContributor, {
+    description:
+      'Updates platform-level settings of a VirtualContributor (platform admins only).',
+  })
+  async updateVirtualContributorPlatformSettings(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('settingsData')
+    settingsData: UpdateVirtualContributorPlatformSettingsInput
+  ): Promise<IVirtualContributor> {
+    let virtualContributor =
+      await this.virtualContributorService.getVirtualContributorOrFail(
+        settingsData.virtualContributorID
+      );
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      virtualContributor.authorization,
+      AuthorizationPrivilege.PLATFORM_ADMIN,
+      `virtualContributor platform settings update: ${virtualContributor.id}`
+    );
+
+    virtualContributor =
+      await this.virtualContributorService.updateVirtualContributorPlatformSettings(
+        virtualContributor,
+        settingsData.settings
+      );
 
     const updatedAuthorizations =
       await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(

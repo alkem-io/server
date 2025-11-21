@@ -23,6 +23,7 @@ import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup
 import { VirtualContributorDefaultsModule } from '../virtual-contributor-defaults/virtual.contributor.defaults.module';
 import { VirtualContributorSettingsModule } from '../virtual-contributor-settings/virtual.contributor.settings.module';
 import { VirtualContributorModelCardModule } from '../virtual-contributor-model-card/virtual.contributor.model.card.module';
+import { VirtualContributorPlatformSettingsModule } from '../virtual-contributor-platform-settings';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { VirtualContributorModelCardModule } from '../virtual-contributor-model-
     CommunicationAdapterModule,
     VirtualContributorLookupModule,
     VirtualContributorSettingsModule,
+    VirtualContributorPlatformSettingsModule,
     VirtualContributorDefaultsModule,
     AccountLookupModule,
     TypeOrmModule.forFeature([VirtualContributor]),
