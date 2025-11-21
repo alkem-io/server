@@ -71,7 +71,8 @@ export class CalloutsSetAuthorizationService {
             callout.id,
             parentAuthorization,
             platformRolesAccess,
-            roleSet
+            roleSet,
+            spaceSettings
           );
         updatedAuthorizations.push(...calloutAuthorizations);
       }

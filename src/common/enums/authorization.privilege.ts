@@ -53,6 +53,7 @@ export enum AuthorizationPrivilege {
   TRANSFER_RESOURCE_OFFER = 'transfer-resource-offer',
   TRANSFER_RESOURCE_ACCEPT = 'transfer-resource-accept',
   ACCOUNT_LICENSE_MANAGE = 'account-license-manage',
+  PUBLIC_SHARE = 'public-share', // Allow sharing whiteboard content publicly for guest contributions
 }
 
 registerEnumType(AuthorizationPrivilege, {

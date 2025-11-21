@@ -11,6 +11,7 @@ export const agentInfoData: { agentInfo: AgentInfo } = {
     emailVerified: true,
     firstName: 'Valentin Admin',
     lastName: 'Yanakiev',
+    guestName: '',
     credentials: [
       {
         resourceID: '',

@@ -186,6 +186,7 @@ export const bootstrapTemplateSpaceContentCalloutsSpaceL0Tutorials: CreateTempla
         allowMembersToCreateCallouts: false,
         allowEventsFromSubspaces: true,
         allowMembersToVideoCall: false,
+        allowGuestContributions: false,
       },
     },
     about: {

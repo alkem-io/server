@@ -4,4 +4,5 @@ export type AccessGrantedInputData = {
   userId: string;
   whiteboardId: string;
   privilege: AuthorizationPrivilege;
+  guestName?: string;
 };

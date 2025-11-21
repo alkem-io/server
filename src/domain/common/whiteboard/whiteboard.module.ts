@@ -6,6 +6,8 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '../authorization-policy/authorization.policy.module';
 import { ProfileModule } from '../profile/profile.module';
+import { RoleSetModule } from '@domain/access/role-set/role.set.module';
+import { PlatformRolesAccessModule } from '@domain/access/platform-roles-access/platform.roles.access.module';
 import { Whiteboard } from './whiteboard.entity';
 import { WhiteboardResolverFields } from './whiteboard.resolver.fields';
 import { WhiteboardResolverMutations } from './whiteboard.resolver.mutations';
@@ -14,6 +16,7 @@ import { WhiteboardAuthorizationService } from './whiteboard.service.authorizati
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
 import { ProfileDocumentsModule } from '@domain/profile-documents/profile.documents.module';
 import { LicenseModule } from '../license/license.module';
+import { WhiteboardGuestAccessService } from './whiteboard.guest-access.service';
 
 @Module({
   imports: [
@@ -24,6 +27,8 @@ import { LicenseModule } from '../license/license.module';
     VisualModule,
     ProfileModule,
     UserModule,
+    RoleSetModule,
+    PlatformRolesAccessModule,
     StorageBucketModule,
     TypeOrmModule.forFeature([Whiteboard]),
     ProfileDocumentsModule,
@@ -31,12 +36,14 @@ import { LicenseModule } from '../license/license.module';
   providers: [
     WhiteboardService,
     WhiteboardAuthorizationService,
+    WhiteboardGuestAccessService,
     WhiteboardResolverMutations,
     WhiteboardResolverFields,
   ],
   exports: [
     WhiteboardService,
     WhiteboardAuthorizationService,
+    WhiteboardGuestAccessService,
     WhiteboardResolverMutations,
     WhiteboardResolverFields,
   ],

@@ -103,6 +103,8 @@ export class PlatformRolesAccessService {
         return AuthorizationCredential.VC_CAMPAIGN;
       case RoleName.REGISTERED:
         return AuthorizationCredential.GLOBAL_REGISTERED;
+      case RoleName.GUEST:
+        return AuthorizationCredential.GLOBAL_GUEST;
       case RoleName.ANONYMOUS:
         return AuthorizationCredential.GLOBAL_ANONYMOUS;
       default:

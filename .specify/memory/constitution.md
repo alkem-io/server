@@ -39,6 +39,8 @@ State changes MUST propagate through domain services emitting events (synchronou
 
 Every new module MUST define structured log contexts and describe the operational signals we actively consume. Instrument only what our observability stack ingests today—do not add orphaned Prometheus metrics or unused dashboards. Health indicators are required only when the module exposes an externally consumed surface; otherwise document why a lightweight runtime check or log hook suffices. Logs use contextual IDs (request, correlation, entity). Silent failure paths are forbidden. Feature flags and license checks MUST log decision points at debug level. Performance-sensitive queries require an inline comment explaining the chosen optimization.
 
+Exception messages are immutable identifiers: never interpolate dynamic data directly into the `message`. Place contextual variables into the exception `details` payload so they remain queryable without leaking runtime specifics into user-facing strings.
+
 ### 6. Code Quality with Pragmatic Testing
 
 Tests exist to defend domain invariants and observable behaviors that matter. Use a risk-based approach: add unit or integration tests when they deliver real signal, skip trivial pass-through coverage, and call out deliberate omissions in the PR when automation is unnecessary. Snapshot or superficial tests are discouraged unless asserting schema output. 100% coverage is NOT required; tests MUST stay maintainable and purposeful. Placeholder or “future we’ll fix it” tests are forbidden.

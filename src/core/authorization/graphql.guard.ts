@@ -98,6 +98,7 @@ export class GraphqlGuard extends AuthGuard([
         `[${this.instanceId}] - AgentInfo NOT present or false: ${agentInfo}`,
         LogContext.AUTH
       );
+      // Create anonymous agent info as fallback
       resultAgentInfo = this.createAnonymousAgentInfo();
     }
 
@@ -170,12 +171,12 @@ export class GraphqlGuard extends AuthGuard([
   }
 
   public createAnonymousAgentInfo(): AgentInfo {
-    const emptyAgentInfo = new AgentInfo();
+    const agentInfo = new AgentInfo();
     const anonymousCredential: ICredentialDefinition = {
       type: AuthorizationCredential.GLOBAL_ANONYMOUS,
       resourceID: '',
     };
-    emptyAgentInfo.credentials = [anonymousCredential];
-    return emptyAgentInfo;
+    agentInfo.credentials = [anonymousCredential];
+    return agentInfo;
   }
 }

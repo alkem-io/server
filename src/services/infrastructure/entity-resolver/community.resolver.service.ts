@@ -247,7 +247,9 @@ export class CommunityResolverService {
         },
       },
       relations: {
-        community: true,
+        community: {
+          roleSet: true,
+        },
       },
     });
     // check for whiteboard in framing
@@ -267,7 +269,9 @@ export class CommunityResolverService {
           },
         },
         relations: {
-          community: true,
+          community: {
+            roleSet: true,
+          },
         },
       });
     }
@@ -511,6 +515,9 @@ export class CommunityResolverService {
       relations: {
         about: {
           profile: true,
+        },
+        community: {
+          roleSet: true,
         },
       },
     });

@@ -16,6 +16,7 @@ export enum RoleName {
   PLATFORM_BETA_TESTER = 'platform-beta-tester',
   PLATFORM_VC_CAMPAIGN = 'platform-vc-campaign',
   REGISTERED = 'registered',
+  GUEST = 'guest',
   ANONYMOUS = 'anonymous',
 }
 

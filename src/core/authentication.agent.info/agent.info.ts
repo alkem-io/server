@@ -7,6 +7,7 @@ export class AgentInfo {
   emailVerified = false;
   firstName = '';
   lastName = '';
+  guestName = ''; // Name provided by client for guest users
   credentials: ICredentialDefinition[] = [];
   verifiedCredentials: IVerifiedCredential[] = [];
   communicationID = '';

@@ -141,7 +141,7 @@ async function main() {
       await app.close();
     } catch (closeErr) {
       process.stderr.write(
-        `Schema generation warning: failed to close Nest app: ${(closeErr as Error).stack}\n`,
+        `Schema generation warning: failed to close Nest app: ${(closeErr as Error).stack}\n`
       );
     }
     forceExit();

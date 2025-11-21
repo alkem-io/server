@@ -34,4 +34,10 @@ export class CreateSpaceSettingsCollaborationInput {
       'Flag to control if members can create video calls in this Space.',
   })
   allowMembersToVideoCall!: boolean;
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description: 'Flag to control if guest users can contribute to this Space.',
+  })
+  allowGuestContributions!: boolean;
 }
