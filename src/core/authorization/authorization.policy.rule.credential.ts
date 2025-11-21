@@ -7,17 +7,16 @@ export class AuthorizationPolicyRuleCredential
 {
   criterias: ICredentialDefinition[];
   grantedPrivileges: AuthorizationPrivilege[];
-  cascade: boolean;
   name: string;
 
   constructor(
     grantedPrivileges: AuthorizationPrivilege[],
     criteria: ICredentialDefinition,
-    name: string
+    name: string,
+    public cascade: boolean = true
   ) {
     this.criterias = [criteria];
     this.grantedPrivileges = grantedPrivileges;
-    this.cascade = true;
     this.name = name;
   }
 }
