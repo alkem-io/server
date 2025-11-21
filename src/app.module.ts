@@ -61,7 +61,6 @@ import {
   UnhandledExceptionFilter,
 } from '@core/error-handling';
 import { MeModule } from '@services/api/me';
-import { ChatGuidanceModule } from '@services/api/chat-guidance/chat.guidance.module';
 import { LookupModule } from '@services/api/lookup';
 import { AuthResetSubscriberModule } from '@services/auth-reset/subscriber/auth-reset.subscriber.module';
 import { APP_ID_PROVIDER } from '@common/app.id.provider';
@@ -302,7 +301,6 @@ import { InAppNotificationAdminModule } from './platform-admin/in-app-notificati
     SsiCredentialFlowModule,
     StorageAccessModule,
     MeModule,
-    ChatGuidanceModule,
     VirtualContributorModule,
     InputCreatorModule,
     LookupModule,

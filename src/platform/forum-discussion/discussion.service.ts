@@ -52,10 +52,10 @@ export class DiscussionService {
       AuthorizationPolicyType.DISCUSSION
     );
 
-    discussion.comments = await this.roomService.createRoom(
-      `${communicationDisplayName}-discussion-${discussion.profile.displayName}`,
-      roomType
-    );
+    discussion.comments = await this.roomService.createRoom({
+      displayName: `${communicationDisplayName}-discussion-${discussion.profile.displayName}`,
+      type: roomType,
+    });
 
     discussion.createdBy = userID;
 
@@ -75,7 +75,9 @@ export class DiscussionService {
     }
 
     if (discussion.comments) {
-      await this.roomService.deleteRoom(discussion.comments);
+      await this.roomService.deleteRoom({
+        roomID: discussion.comments.id,
+      });
     }
 
     const result = await this.discussionRepository.remove(

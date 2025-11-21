@@ -219,6 +219,14 @@ export class RoomResolverMutations {
           );
         }
         break;
+      case RoomType.CONVERSATION:
+        // Conversation rooms don't require special event processing i.e. no mentions or other notifications as other
+        // contributors would not be able to see the messages
+        break;
+      case RoomType.CONVERSATION_DIRECT:
+        // Conversation rooms don't require special event processing i.e. no mentions or other notifications as other
+        // contributors would not be able to see the messages
+        break;
       default:
       // ignore for now, later likely to be an exception
     }
@@ -426,6 +434,15 @@ export class RoomResolverMutations {
             agentInfo
           );
         }
+        break;
+      case RoomType.CONVERSATION:
+        // Conversation rooms don't require special event processing for mentions or other notifications as other
+        // contributors would not be able to see the messages
+        // TODO: what notifications should there be on rooms / replies
+        break;
+      case RoomType.CONVERSATION_DIRECT:
+        // Conversation rooms don't require special event processing i.e. no mentions or other notifications as other
+        // contributors would not be able to see the messages
         break;
       default:
       // ignore for now, later likely to be an exception

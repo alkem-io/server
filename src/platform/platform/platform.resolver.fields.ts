@@ -13,14 +13,23 @@ import { IForum } from '@platform/forum';
 import { ITemplatesManager } from '@domain/template/templates-manager/templates.manager.interface';
 import { ILicensingFramework } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.interface';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
-import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
+import { IPlatformWellKnownVirtualContributors } from '@platform/platform.well.known.virtual.contributors';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
+import { CurrentUser } from '@common/decorators';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AuthorizationPrivilege } from '@common/enums';
+import { PlatformWellKnownVirtualContributorMapping } from '@platform/platform.well.known.virtual.contributors/dto/platform.well.known.virtual.contributor.dto.mapping';
+import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
 
 @Resolver(() => IPlatform)
 export class PlatformResolverFields {
   constructor(
     private platformService: PlatformService,
     private configService: KonfigService,
-    private metadataService: MetadataService
+    private metadataService: MetadataService,
+    private authorizationService: AuthorizationService,
+    private platformAuthorizationService: PlatformAuthorizationPolicyService
   ) {}
 
   @ResolveField('authorization', () => IAuthorizationPolicy, {
@@ -69,15 +78,6 @@ export class PlatformResolverFields {
     return this.platformService.getStorageAggregator(platform);
   }
 
-  @ResolveField('chatGuidanceVirtualContributor', () => IVirtualContributor, {
-    nullable: false,
-    description:
-      'The Virtual Contributor that is used to provide chat help on the platform.',
-  })
-  chatGuidanceVirtualContributor(): Promise<IVirtualContributor> {
-    return this.platformService.getGuidanceVirtualContributorOrFail();
-  }
-
   @ResolveField('licensingFramework', () => ILicensingFramework, {
     nullable: false,
     description: 'The Licensing in use by the platform.',
@@ -121,5 +121,37 @@ export class PlatformResolverFields {
   })
   async templatesManager(): Promise<ITemplatesManager> {
     return await this.platformService.getTemplatesManagerOrFail();
+  }
+
+  @ResolveField(
+    'wellKnownVirtualContributors',
+    () => IPlatformWellKnownVirtualContributors,
+    {
+      nullable: false,
+      description: 'The well-known Virtual Contributors on the Platform.',
+    }
+  )
+  async wellKnownVirtualContributors(
+    @Parent() platform: IPlatform,
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<IPlatformWellKnownVirtualContributors> {
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
+      AuthorizationPrivilege.READ,
+      `get Platform well-known Virtual Contributors: ${agentInfo.email}`
+    );
+
+    // Convert from JSON storage format to DTO array format
+    const mappingsRecord = platform.wellKnownVirtualContributors as any;
+    const mappingsArray: PlatformWellKnownVirtualContributorMapping[] =
+      Object.entries(mappingsRecord || {}).map(
+        ([wellKnown, virtualContributorID]) => ({
+          wellKnown: wellKnown as VirtualContributorWellKnown,
+          virtualContributorID: virtualContributorID as string,
+        })
+      );
+
+    return { mappings: mappingsArray };
   }
 }

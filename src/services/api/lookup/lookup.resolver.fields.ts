@@ -80,6 +80,8 @@ import { TemplateContentSpaceService } from '@domain/template/template-content-s
 import { ITemplateContentSpace } from '@domain/template/template-content-space/template.content.space.interface';
 import { ICalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.interface';
 import { CalloutContributionService } from '@domain/collaboration/callout-contribution/callout.contribution.service';
+import { ConversationService } from '@domain/communication/conversation/conversation.service';
+import { IConversation } from '@domain/communication/conversation/conversation.interface';
 
 @Resolver(() => LookupQueryResults)
 export class LookupResolverFields {
@@ -121,7 +123,8 @@ export class LookupResolverFields {
     private roleSetService: RoleSetService,
     private licenseService: LicenseService,
     private knowledgeBaseService: KnowledgeBaseService,
-    private templateContentSpaceService: TemplateContentSpaceService
+    private templateContentSpaceService: TemplateContentSpaceService,
+    private conversationService: ConversationService
   ) {}
 
   @ResolveField(() => ISpace, {
@@ -160,6 +163,26 @@ export class LookupResolverFields {
     );
 
     return account;
+  }
+
+  @ResolveField(() => IConversation, {
+    nullable: true,
+    description: 'Lookup the specified Conversation',
+  })
+  async conversation(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('ID', { type: () => UUID }) id: string
+  ): Promise<IConversation> {
+    const conversation =
+      await this.conversationService.getConversationOrFail(id);
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      conversation.authorization,
+      AuthorizationPrivilege.READ,
+      `lookup Conversation: ${conversation.id}`
+    );
+
+    return conversation;
   }
 
   @ResolveField(() => IOrganization, {

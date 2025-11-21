@@ -61,10 +61,10 @@ export class CalendarEventService {
     );
     calendarEvent.createdBy = userID;
 
-    calendarEvent.comments = await this.roomService.createRoom(
-      `calendarEvent-comments-${calendarEvent.nameID}`,
-      RoomType.CALENDAR_EVENT
-    );
+    calendarEvent.comments = await this.roomService.createRoom({
+      displayName: `calendarEvent-comments-${calendarEvent.nameID}`,
+      type: RoomType.CALENDAR_EVENT,
+    });
 
     return await this.save(calendarEvent);
   }
@@ -87,7 +87,9 @@ export class CalendarEventService {
       await this.profileService.deleteProfile(calendarEvent.profile.id);
     }
     if (calendarEvent.comments) {
-      await this.roomService.deleteRoom(calendarEvent.comments);
+      await this.roomService.deleteRoom({
+        roomID: calendarEvent.comments.id,
+      });
     }
 
     const result = await this.calendarEventRepository.remove(

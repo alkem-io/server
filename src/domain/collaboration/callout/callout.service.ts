@@ -114,10 +114,11 @@ export class CalloutService {
     }
 
     if (!callout.isTemplate && callout.settings.framing.commentsEnabled) {
-      callout.comments = await this.roomService.createRoom(
-        `callout-comments-${callout.nameID}`,
-        RoomType.CALLOUT
-      );
+      callout.comments = await this.roomService.createRoom({
+        displayName: `callout-comments-${callout.nameID}`,
+        senderCommunicationID: userID,
+        type: RoomType.CALLOUT,
+      });
     }
 
     return callout;
@@ -288,10 +289,10 @@ export class CalloutService {
       callout.settings.framing.commentsEnabled &&
       !callout.comments
     ) {
-      callout.comments = await this.roomService.createRoom(
-        `callout-comments-${callout.nameID}`,
-        RoomType.CALLOUT
-      );
+      callout.comments = await this.roomService.createRoom({
+        displayName: `callout-comments-${callout.nameID}`,
+        type: RoomType.CALLOUT,
+      });
     }
 
     if (calloutUpdateData.sortOrder)
@@ -332,7 +333,9 @@ export class CalloutService {
     }
 
     if (callout.comments) {
-      await this.roomService.deleteRoom(callout.comments);
+      await this.roomService.deleteRoom({
+        roomID: callout.comments.id,
+      });
     }
 
     await this.contributionDefaultsService.delete(callout.contributionDefaults);

@@ -7,6 +7,6 @@ export const MockCommunicationAdapter: ValueProvider<
 > = {
   provide: CommunicationAdapter,
   useValue: {
-    sendMessageToUser: jest.fn(),
+    startDirectMessagingToUser: jest.fn(),
   },
 };

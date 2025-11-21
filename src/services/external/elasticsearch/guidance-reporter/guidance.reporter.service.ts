@@ -102,10 +102,16 @@ export class GuidanceReporterService {
     return;
   }
 
-  public async updateAnswerRelevance(answerId: string, relevance: boolean) {
+  public async updateAnswerRelevance(
+    virtualContributorID: string,
+    answerId: string,
+    relevance: boolean
+  ) {
     if (!this.client) {
       return false;
     }
+
+    // TODO: the reporting needs to be specific to the virtual contributor
 
     try {
       const result = await this.client.updateByQuery({
@@ -122,7 +128,7 @@ export class GuidanceReporterService {
     } catch (e: any) {
       const errorId = this.handleError(e);
       this.logger.error(
-        `Error while updating answer relevance '${answerId}'`,
+        `Error while updating answer relevance '${answerId}' on VC ${virtualContributorID}`,
         { errorId },
         LogContext.CHAT_GUIDANCE_REPORTER
       );
