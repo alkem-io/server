@@ -13,6 +13,7 @@ import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authoriz
 import {
   CREDENTIAL_RULE_WHITEBOARD_CREATED_BY,
   POLICY_RULE_WHITEBOARD_CONTENT_UPDATE,
+  POLICY_RULE_WHITEBOARD_GRANT_PUBLIC_SHARE,
 } from '@common/constants';
 import { ProfileAuthorizationService } from '../profile/profile.service.authorization';
 import { IWhiteboard } from './whiteboard.interface';
@@ -24,7 +25,6 @@ import { RoleName } from '@common/enums/role.name';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
-import { PlatformRolesAccessService } from '@domain/access/platform-roles-access/platform.roles.access.service';
 
 const CREDENTIAL_RULE_WHITEBOARD_OWNER_PUBLIC_SHARE =
   'whiteboard-owner-public-share';
@@ -37,7 +37,6 @@ export class WhiteboardAuthorizationService {
     private profileAuthorizationService: ProfileAuthorizationService,
     private whiteboardService: WhiteboardService,
     private roleSetService: RoleSetService,
-    private platformRolesAccessService: PlatformRolesAccessService,
     private communityResolverService: CommunityResolverService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
@@ -90,7 +89,8 @@ export class WhiteboardAuthorizationService {
     );
     whiteboard.authorization = this.appendPrivilegeRules(
       whiteboard.authorization,
-      whiteboard
+      whiteboard,
+      spaceSettings
     );
     updatedAuthorizations.push(whiteboard.authorization);
 
@@ -157,10 +157,7 @@ export class WhiteboardAuthorizationService {
       return;
     }
 
-    const allowGuestContributions =
-      spaceSettings.collaboration?.allowGuestContributions ?? false;
-
-    if (!allowGuestContributions) {
+    if (!spaceSettings.collaboration?.allowGuestContributions) {
       this.logger.verbose?.(
         `Skipping admin PUBLIC_SHARE credential rule for whiteboard ${whiteboard.id} - guest contributions disabled`,
         LogContext.COLLABORATION
@@ -181,7 +178,6 @@ export class WhiteboardAuthorizationService {
           ],
           CREDENTIAL_RULE_WHITEBOARD_OWNER_PUBLIC_SHARE
         );
-      ownerPublicSharePolicy.cascade = true;
       newRules.push(ownerPublicSharePolicy);
 
       // T011: Structured logging for owner PUBLIC_SHARE privilege assignment
@@ -212,7 +208,6 @@ export class WhiteboardAuthorizationService {
         adminCredentialDefinitions,
         CREDENTIAL_RULE_SPACE_ADMIN_PUBLIC_SHARE
       );
-    adminPublicSharePolicy.cascade = true;
     newRules.push(adminPublicSharePolicy);
 
     this.logger.verbose?.(
@@ -271,16 +266,6 @@ export class WhiteboardAuthorizationService {
         }
       }
 
-      // Add credentials of any platform roles that have admin access
-      if (space.platformRolesAccess?.roles?.length) {
-        const platformCredentials =
-          this.platformRolesAccessService.getCredentialsForRolesWithAccess(
-            space.platformRolesAccess.roles,
-            [AuthorizationPrivilege.PLATFORM_ADMIN]
-          );
-        credentialDefinitions.push(...platformCredentials);
-      }
-
       return credentialDefinitions;
     } catch (error) {
       this.logger.debug?.(
@@ -297,7 +282,8 @@ export class WhiteboardAuthorizationService {
 
   private appendPrivilegeRules(
     authorization: IAuthorizationPolicy,
-    whiteboard: IWhiteboard
+    whiteboard: IWhiteboard,
+    spaceSettings?: ISpaceSettings
   ): IAuthorizationPolicy {
     const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
 
@@ -324,6 +310,19 @@ export class WhiteboardAuthorizationService {
         privilegeRules.push(updateContentPrivilegeContributors);
         break;
       }
+    }
+
+    if (!!spaceSettings?.collaboration?.allowGuestContributions) {
+      // Guest contributions rely on global admins surfacing with GRANT;
+      // this privilege rule exists so those GRANT-only actors inherit PUBLIC_SHARE automatically.
+      // (Global Support remains wired through getAccessPrivilegesForSupport until we make it more robust.)
+      const grantToPublicShareRule = new AuthorizationPolicyRulePrivilege(
+        [AuthorizationPrivilege.PUBLIC_SHARE],
+        AuthorizationPrivilege.GRANT,
+        POLICY_RULE_WHITEBOARD_GRANT_PUBLIC_SHARE
+      );
+
+      privilegeRules.push(grantToPublicShareRule);
     }
 
     return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(

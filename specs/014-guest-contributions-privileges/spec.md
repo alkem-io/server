@@ -16,6 +16,10 @@
 - Q: Should the system track who/when triggered a privilege change for troubleshooting? → A: Track triggering event only (setting change/admin grant/whiteboard creation)
 - Q: If privilege assignment fails when enabling allowGuestContributions, should the setting be reverted? → A: Yes, revert allowGuestContributions to false in space collaboration settings
 
+### Authorization recognition update (2025-11-21)
+
+- The whiteboard authorization policy now maps `AuthorizationPrivilege.GRANT` → `AuthorizationPrivilege.PUBLIC_SHARE` whenever `allowGuestContributions` is true. That mapping exists specifically for global/platform administrators who only surface with GRANT via inherited policies; space admins and whiteboard owners still get PUBLIC_SHARE through their explicit credential rules. Global Support remains an exception for now: their privileges continue to be issued through the `getAccessPrivilegesForSupport` helper in the space platform roles access service, which applies the relevant privacy + guest contribution settings on level-zero spaces (future work will align this with a dedicated privilege rule as well).
+
 ## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Automatic privilege granting when guest contributions enabled (Priority: P1)

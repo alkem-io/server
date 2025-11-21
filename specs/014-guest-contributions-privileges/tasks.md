@@ -390,7 +390,7 @@ return hasOnlyAllowedFields(objValue, allowedValue);
 
 1. Disable feature flag (if implemented in frontend)
 2. Revert `allowGuestContributions` to false on all spaces via database update
-3. Trigger full authorization reset on affected spaces: `UPDATE space SET platformRolesAccess = platformRolesAccess` (forces dirty check)
+3. (Deprecated) Manual reset SQL pokes are gone—the GRANT→PUBLIC_SHARE rule baked into each whiteboard authorization exists solely to cover global administrators, so no out-of-band refresh is required. (Global Support still flows through the `getAccessPrivilegesForSupport` helper until we move them onto the same privilege rule stack.)
 
 **Future Work** (Optional Enhancements):
 

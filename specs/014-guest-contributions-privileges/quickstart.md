@@ -49,6 +49,8 @@ pnpm start:dev
 
 ## Feature Testing Workflow
 
+> **Important:** Guest access now relies on the authorization reset adding a privilege rule that maps `GRANT` → `PUBLIC_SHARE` on each whiteboard whenever `allowGuestContributions` is true. That mapping exists for global/platform administrators who show up with GRANT only; space admins and whiteboard owners continue to receive PUBLIC_SHARE via their credential rules. Global Support is still provisioned through the `getAccessPrivilegesForSupport` helper in the space platform roles access service, which inspects `allowPlatformSupportAsAdmin` and related settings until we replace it with a dedicated privilege rule.
+
 ### Test Scenario 1: Toggle Guest Contributions ON (with Platform Support Opt-In)
 
 **Goal**: Verify PUBLIC_SHARE privilege granted to space admins, whiteboard owners, and (when opted in) Global Support platform roles
