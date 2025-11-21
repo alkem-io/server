@@ -69,7 +69,7 @@ export class VirtualContributorResolverMutations {
   }
 
   @Mutation(() => IVirtualContributor, {
-    description: 'Updates one of the Setting on an Organization',
+    description: 'Updates one of the Setting on an Virtual Contributor',
   })
   async updateVirtualContributorSettings(
     @CurrentUser() agentInfo: AgentInfo,

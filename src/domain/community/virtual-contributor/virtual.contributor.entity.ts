@@ -42,7 +42,7 @@ export class VirtualContributor
   settings!: IVirtualContributorSettings;
 
   @Column('json', { nullable: true })
-  platformSettings?: IVirtualContributorPlatformSettings;
+  platformSettings!: IVirtualContributorPlatformSettings;
 
   // Direct reference to AiPersona using aiPersonaID as potentially in a separate server.
   @Column('char', { nullable: false, length: UUID_LENGTH })

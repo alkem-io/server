@@ -1,33 +1,17 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { Injectable } from '@nestjs/common';
 import { IVirtualContributorPlatformSettings } from './virtual.contributor.platform.settings.interface';
 import { UpdateVirtualContributorPlatformSettingsEntityInput } from './dto/virtual.contributor.platform.settings.dto.update';
 
 @Injectable()
 export class VirtualContributorPlatformSettingsService {
-  constructor(
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
-  ) {}
+  constructor() {}
 
   public updateSettings(
-    settings: IVirtualContributorPlatformSettings | undefined,
+    settings: IVirtualContributorPlatformSettings,
     updateData: UpdateVirtualContributorPlatformSettingsEntityInput
   ): IVirtualContributorPlatformSettings {
-    const currentSettings: IVirtualContributorPlatformSettings =
-      settings ??
-      ({
-        promptGraphEditingEnabled: true,
-      } as IVirtualContributorPlatformSettings);
+    settings.promptGraphEditingEnabled = updateData.promptGraphEditingEnabled;
 
-    const updatedSettings: IVirtualContributorPlatformSettings = {
-      ...currentSettings,
-    };
-
-    if (updateData.promptGraphEditingEnabled !== undefined) {
-      updatedSettings.promptGraphEditingEnabled =
-        updateData.promptGraphEditingEnabled;
-    }
-
-    return updatedSettings;
+    return settings;
   }
 }

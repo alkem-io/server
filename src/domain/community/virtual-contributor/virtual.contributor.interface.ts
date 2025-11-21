@@ -61,11 +61,11 @@ export class IVirtualContributor
   settings!: IVirtualContributorSettings;
 
   @Field(() => IVirtualContributorPlatformSettings, {
-    nullable: true,
+    nullable: false,
     description:
       'Platform-level settings of this Virtual Contributor, modifiable only by platform admins.',
   })
-  platformSettings?: IVirtualContributorPlatformSettings;
+  platformSettings!: IVirtualContributorPlatformSettings;
 
   @Field(() => VirtualContributorDataAccessMode, {
     nullable: false,
