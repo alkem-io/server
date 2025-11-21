@@ -27,16 +27,16 @@
 
 ## Phase 4 – User Story 2: CSV data migration (P2)
 
-- [ ] T017 [US2] Design CSV export/import mapping for core entities in `specs/018-postgres-db-convergence/data-model.md` (update with concrete mappings).
-- [ ] T018 [P] [US2] Implement MySQL→CSV export script for Alkemio data in `.scripts/migrations/postgres-convergence/export_alkemio_mysql_to_csv.sh`.
-- [ ] T019 [P] [US2] Implement MySQL→CSV export script for Kratos data in `.scripts/migrations/postgres-convergence/export_kratos_mysql_to_csv.sh`.
-- [ ] T020 [US2] Implement CSV transformation helper (e.g., enum/ID normalization) in `src/library/postgres-convergence/csvTransform.ts`.
-- [ ] T021 [P] [US2] Implement CSV→Postgres import script for Alkemio data in `.scripts/migrations/postgres-convergence/import_csv_to_postgres_alkemio.sh`.
-- [ ] T022 [P] [US2] Implement CSV→Postgres import script for Kratos data in `.scripts/migrations/postgres-convergence/import_csv_to_postgres_kratos.sh`.
-- [ ] T023 [US2] Add logging and fail-fast behavior for constraint violations in import scripts (`.scripts/migrations/postgres-convergence/*.sh`).
-- [ ] T024 [P] [US2] Add Jest tests for CSV transformation helper in `test/unit/library/postgres-convergence/csvTransform.spec.ts`.
-- [ ] T025 [US2] Document CSV file naming conventions and required columns in `docs/DataManagement.md`.
-- [ ] T026 [US2] Extend `specs/018-postgres-db-convergence/quickstart.md` with end-to-end CSV pipeline steps.
+- [X] T017 [US2] Design CSV export/import mapping for core entities in `specs/018-postgres-db-convergence/data-model.md` (update with concrete mappings).
+- [X] T018 [P] [US2] Implement MySQL→CSV export script for Alkemio data in `.scripts/migrations/postgres-convergence/export_alkemio_mysql_to_csv.sh`.
+- [X] T019 [P] [US2] Implement MySQL→CSV export script for Kratos data in `.scripts/migrations/postgres-convergence/export_kratos_mysql_to_csv.sh`.
+- [X] T020 [US2] Implement CSV transformation helper (e.g., enum/ID normalization) in `src/library/postgres-convergence/csvTransform.ts`.
+- [X] T021 [P] [US2] Implement CSV→Postgres import script for Alkemio data in `.scripts/migrations/postgres-convergence/import_csv_to_postgres_alkemio.sh`.
+- [X] T022 [P] [US2] Implement CSV→Postgres import script for Kratos data in `.scripts/migrations/postgres-convergence/import_csv_to_postgres_kratos.sh`.
+- [X] T023 [US2] Add logging and fail-fast behavior for constraint violations in import scripts (`.scripts/migrations/postgres-convergence/*.sh`).
+- [X] T024 [P] [US2] Add Jest tests for CSV transformation helper in `test/unit/library/postgres-convergence/csvTransform.spec.ts`.
+- [X] T025 [US2] Document CSV file naming conventions and required columns in `docs/DataManagement.md`.
+- [X] T026 [US2] Extend `specs/018-postgres-db-convergence/quickstart.md` with end-to-end CSV pipeline steps.
 
 ## Phase 5 – User Story 3: Repeatable migration, verification & rollback (P3)
 

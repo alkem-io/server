@@ -254,6 +254,55 @@ Before starting the migration:
 - Backup of MySQL databases
 - Tested rollback procedure
 
+#### CSV File Format and Conventions
+
+The migration uses CSV (Comma-Separated Values) files as the intermediate format:
+
+**File Naming Convention:**
+- Format: `<table_name>.csv`
+- Example: `user.csv`, `space.csv`, `identities.csv`
+- Manifest file: `migration_manifest.json` (contains export metadata)
+
+**CSV Format Specifications:**
+- **Delimiter**: Comma (`,`)
+- **Quote Character**: Double quote (`"`)
+- **NULL Representation**: `\N` (PostgreSQL standard)
+- **Header Row**: Present in all files
+- **Character Encoding**: UTF-8
+- **Line Endings**: Unix-style (`\n`)
+
+**Required Columns:**
+- All columns from source table except audit fields (createdDate, updatedDate, version)
+- Columns must match target Postgres schema
+
+**Data Type Representations:**
+- **Booleans**: `t` (true) or `f` (false) for Postgres; `1` or `0` in MySQL exports
+- **Timestamps**: ISO 8601 format with timezone (e.g., `2024-01-15T10:30:00Z`)
+- **UUIDs**: Standard 8-4-4-4-12 format (lowercase)
+- **JSON**: Escaped JSON strings (double-quotes doubled: `{{""key"":""value""}}`)
+- **NULL Values**: `\N` (no quotes)
+- **Empty Strings**: `""` (quoted empty string)
+
+**Migration Manifest Structure:**
+```json
+{
+  "migrationId": "unique-run-id",
+  "sourceDatabase": "mysql",
+  "targetDatabase": "postgres",
+  "exportTimestamp": "2025-01-21T12:00:00Z",
+  "tables": [
+    {"name": "user", "rowCount": 1500, "file": "user.csv"},
+    {"name": "space", "rowCount": 450, "file": "space.csv"}
+  ]
+}
+```
+
+The manifest provides:
+- Unique migration run identifier
+- Export timestamp for traceability
+- Row counts for validation
+- Complete list of exported tables
+
 #### Migration Scripts Location
 
 All migration tooling is located in `.scripts/migrations/postgres-convergence/`:
@@ -262,8 +311,10 @@ All migration tooling is located in `.scripts/migrations/postgres-convergence/`:
 - `import_csv_to_postgres_alkemio.sh` - Import Alkemio data into Postgres
 - `import_csv_to_postgres_kratos.sh` - Import Kratos data into Postgres
 - `log_migration_run.sh` - Capture migration metadata and outcomes
+- `README.md` - Detailed script documentation
 
 For detailed step-by-step instructions, see `specs/018-postgres-db-convergence/quickstart.md`.
+For complete CSV format documentation, see `specs/018-postgres-db-convergence/data-model.md`.
 
 ### Migration Verification Checklist
 
