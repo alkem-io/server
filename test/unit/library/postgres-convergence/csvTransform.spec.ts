@@ -63,13 +63,13 @@ describe('csvTransform', () => {
     it('should transform object to escaped JSON string', () => {
       const obj = { key: 'value', nested: { data: 123 } };
       const result = transformJson(obj);
-      expect(result).toBe('{{""key"":""value"",""nested"":{{""data"":123}}}}');
+      expect(result).toBe('{""key"":""value"",""nested"":{""data"":123}}');
     });
 
     it('should transform JSON string to escaped format', () => {
       const jsonStr = '{"key":"value"}';
       const result = transformJson(jsonStr);
-      expect(result).toBe('{{""key"":""value""}}');
+      expect(result).toBe('{""key"":""value""}');
     });
 
     it('should handle NULL values', () => {
@@ -174,7 +174,7 @@ describe('csvTransform', () => {
       expect(parts[1]).toBe('Test User'); // String
       expect(parts[2]).toBe('t'); // Boolean
       expect(parts[3]).toBe('2024-01-15T10:30:00.000Z'); // Timestamp
-      expect(parts[4]).toBe('{{""theme"":""dark""}}'); // JSON
+      expect(parts[4]).toBe('{""theme"":""dark""}'); // JSON
     });
 
     it('should handle NULL values in row', () => {
@@ -207,7 +207,7 @@ describe('csvTransform', () => {
       expect(mapColumnType('int')).toBe('INTEGER');
       expect(mapColumnType('INT(11)')).toBe('INTEGER');
       expect(mapColumnType('bigint')).toBe('BIGINT');
-      expect(mapColumnType('smallint')).toBe('SMALLINT');
+      expect(mapColumnType('tinyint(2)')).toBe('SMALLINT'); // tinyint (non-boolean) maps to smallint
     });
 
     it('should map MySQL datetime to Postgres TIMESTAMPTZ', () => {

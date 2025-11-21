@@ -208,9 +208,9 @@ export function mapColumnType(mysqlType: string): string {
   
   // Integer types
   if (type.includes('bigint')) return 'BIGINT';
-  if (type.includes('int')) return 'INTEGER';
   if (type.includes('smallint')) return 'SMALLINT';
   if (type.includes('tinyint')) return 'SMALLINT';
+  if (type.includes('int')) return 'INTEGER';
   
   // Floating point types
   if (type.includes('decimal') || type.includes('numeric')) {

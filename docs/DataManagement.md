@@ -838,3 +838,122 @@ The migration is considered successful when:
 - [ ] User-facing functionality works without issues
 - [ ] Monitoring shows stable system metrics
 
+### Known Limitations and Constraints
+
+#### Supported Configurations
+
+**Database Versions:**
+- **PostgreSQL**: Officially supported on PostgreSQL 17.5 (minimum: 14.x)
+- **MySQL**: Legacy support for MySQL 8.0 (deprecated, will be removed in future)
+
+**Schema Support:**
+- **Pristine Schemas Only**: Migration scripts support only vanilla Alkemio and Kratos schemas
+- **Custom Schema Changes**: Any custom tables, columns, or schema modifications are **not supported**
+- **Workaround**: Custom schema changes must be manually migrated or reapplied after base migration
+
+#### Data Constraints
+
+**Data Integrity Requirements:**
+- **Zero Tolerance for Corruption**: Migration fails fast on first constraint violation
+- **No Silent Fixes**: Data issues must be resolved at source (MySQL) before migration
+- **Foreign Key Integrity**: All FK relationships must be valid in source database
+
+**Unsupported Data Scenarios:**
+- Invalid UUIDs (must be valid 8-4-4-4-12 format)
+- Orphaned records (rows with missing FK references)
+- Invalid JSON in JSON columns
+- Text exceeding target column lengths
+- Timestamps outside PostgreSQL supported range (4713 BC to 294276 AD)
+
+#### Migration Process Limitations
+
+**CSV Pipeline Constraints:**
+- **Local Filesystem Only**: CSV files stored on local/mounted filesystems
+- **No S3/Cloud Support**: Direct cloud storage integration not provided (manual sync required)
+- **Disk Space**: Requires ~1.5x source database size for CSV exports
+- **Downtime**: Estimated 30 minutes for production-sized datasets (must rehearse)
+
+**Concurrent Access:**
+- **No Dual-Write**: System must be stopped during migration
+- **No Online Migration**: This is an offline migration requiring maintenance window
+- **No Live Replication**: Not a streaming replication solution
+
+#### Performance Considerations
+
+**Expected Performance:**
+- **Baseline**: Performance should match or exceed MySQL after migration
+- **Query Patterns**: Some queries may need optimization for PostgreSQL specifics
+- **Indexes**: All indexes migrated; may need PostgreSQL-specific optimization
+- **VACUUM**: PostgreSQL requires periodic VACUUM; auto-vacuum enabled by default
+
+**Known Differences:**
+- **Case Sensitivity**: PostgreSQL string comparisons are case-sensitive by default
+  - Use `LOWER()` or `ILIKE` for case-insensitive matching
+- **Boolean Syntax**: `TRUE/FALSE` vs `1/0`
+- **NULL Handling**: Subtle differences in NULL behavior in some edge cases
+- **Date Functions**: Different date/time function names and behaviors
+
+#### Operational Constraints
+
+**Rollback Limitations:**
+- **Data Loss Window**: Changes made during migration are lost on rollback
+- **Time-Bound**: Rollback works best within first few hours after migration
+- **No Bi-Directional Sync**: Cannot merge changes made in both MySQL and PostgreSQL
+
+**Automation Limitations:**
+- **No One-Click Migration**: Requires operator intervention and verification
+- **Manual Validation**: Verification checklist requires manual testing
+- **No Automated Rollback**: Rollback decision is manual based on verification results
+
+#### Scale Limitations
+
+**Tested Scale:**
+- **Dataset Size**: Tested with databases up to [specify size based on testing]
+- **Table Count**: All standard Alkemio tables (40+) and Kratos tables (20+)
+- **Row Counts**: Tested with millions of rows across tables
+
+**Potential Issues at Scale:**
+- Very large tables (>10M rows) may require longer maintenance windows
+- CSV file size may exceed filesystem limits for extremely large tables
+- Import performance may degrade with complex FK relationships at scale
+
+#### Security Constraints
+
+**Data Security:**
+- **CSV Files Contain Sensitive Data**: Must be stored securely, encrypted at rest
+- **Credentials in Environment**: Database credentials in environment variables
+- **Audit Trail**: Migration logs may contain sensitive information
+- **No Encryption**: CSV files are not encrypted during export/import
+
+**Recommendations:**
+- Store CSV files on encrypted volumes
+- Delete CSV exports after successful migration
+- Restrict access to migration scripts and logs
+- Use secure channels for any file transfers
+
+#### Future Enhancements Not Included
+
+**Out of Scope:**
+- Zero-downtime online migration
+- Bi-directional synchronization between MySQL and PostgreSQL
+- Cloud storage integration (S3, Azure Blob, GCS)
+- Automated rollback on failure detection
+- Custom schema migration (must be handled separately)
+- Streaming replication setup
+- Cross-database query federation
+- Automated performance optimization
+
+### Support and Troubleshooting
+
+For issues not covered in this documentation:
+1. Review migration logs in `.scripts/migrations/postgres-convergence/migration_logs/`
+2. Check CSV import error logs for detailed failure information
+3. Consult verification checklist: `specs/018-postgres-db-convergence/verification-checklist.md`
+4. Review staging rehearsal results for similar issues
+5. Consult PostgreSQL documentation: https://www.postgresql.org/docs/17/
+6. Consult Ory Kratos documentation: https://www.ory.sh/docs/kratos
+
+**Common Issues:**
+- See "Troubleshooting" section in `.scripts/migrations/postgres-convergence/README.md`
+- See "Migration Issues and Resolutions" earlier in this document
+

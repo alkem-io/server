@@ -2,8 +2,8 @@
 
 ## Phase 1 – Setup
 
-- [ ] T001 Ensure local Postgres instance (or connection) is available for baseline schema validation (no code change).
-- [ ] T002 Validate existing MySQL and Kratos connectivity for export/import rehearsals (no code change).
+- [X] T001 Ensure local Postgres instance (or connection) is available for baseline schema validation (no code change).
+- [X] T002 Validate existing MySQL and Kratos connectivity for export/import rehearsals (no code change).
 
 ## Phase 2 – Foundational
 
@@ -49,10 +49,10 @@
 
 ## Phase 6 – Polish & Cross-Cutting
 
-- [ ] T033 Align documentation across `docs/Developing.md`, `docs/Running.md`, and `docs/DataManagement.md` with the new Postgres convergence path.
-- [ ] T034 [P] Review logging for migration scripts to ensure structured, non-sensitive details only.
-- [ ] T035 [P] Ensure all paths and filenames in runbooks and scripts are correct and consistent.
-- [ ] T036 Capture known limitations and out-of-scope items (e.g., custom schema changes) in `docs/DataManagement.md`.
+- [X] T033 Align documentation across `docs/Developing.md`, `docs/Running.md`, and `docs/DataManagement.md` with the new Postgres convergence path.
+- [X] T034 [P] Review logging for migration scripts to ensure structured, non-sensitive details only.
+- [X] T035 [P] Ensure all paths and filenames in runbooks and scripts are correct and consistent.
+- [X] T036 Capture known limitations and out-of-scope items (e.g., custom schema changes) in `docs/DataManagement.md`.
 
 ## Dependencies & Ordering
 
