@@ -290,6 +290,12 @@ export class MeService {
       limit * 2 //magic number, should not be needed. toDo Fix in https://app.zenhub.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/gh/alkem-io/server/3626
     );
 
+    // Get the user's actual space memberships to filter activities
+    const credentialMap = groupCredentialsByEntity(agentInfo.credentials);
+    const userSpaceIds = new Set(
+      Array.from(credentialMap.get('spaces')?.keys() ?? [])
+    );
+
     const mySpaceResults: MySpaceResults[] = [];
 
     for (const rawActivity of rawActivities) {
@@ -303,6 +309,13 @@ export class MeService {
         );
         continue;
       }
+
+      // Only include spaces where the user has direct membership credentials
+      // This prevents VC memberships from appearing in the user's space list
+      if (!userSpaceIds.has(activityLog.space.id)) {
+        continue;
+      }
+
       mySpaceResults.push({
         space: activityLog.space,
         latestActivity: activityLog,
