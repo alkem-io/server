@@ -1,0 +1,30 @@
+services:
+  server:
+    build:
+      context: .
+      dockerfile: .devcontainer/Dockerfile
+    user: node
+    init: true
+    command: sleep infinity
+    working_dir: /workspaces/server
+    env_file:
+      - ./.env.docker
+    volumes:
+      - .:/workspaces/server:cached
+      - pnpm-store:/home/node/.local/share/pnpm/store
+    networks:
+      - alkemio_dev_net
+    depends_on:
+      traefik:
+        condition: service_started
+      mysql:
+        condition: service_started
+      postgres:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+      redis:
+        condition: service_started
+
+volumes:
+  pnpm-store:
