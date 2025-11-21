@@ -15,15 +15,15 @@
 
 ## Phase 3 – User Story 1: Postgres-only schemas (P1)
 
-- [ ] T008 [US1] Define Alkemio Postgres baseline migration strategy in `specs/018-postgres-db-convergence/plan.md` (update if needed).
-- [ ] T009 [P] [US1] Add or adjust TypeORM configuration to support Postgres baseline generation in `src/core/database/typeorm.config.ts`.
-- [ ] T010 [US1] Generate initial Postgres baseline migration file for Alkemio in `scripts/migrations/` (TypeORM migration).
-- [ ] T011 [US1] Wire Postgres baseline migration into existing migration run scripts in `package.json` and/or `scripts/migrations`.
-- [ ] T012 [P] [US1] Add documentation for applying Kratos migrations on Postgres in `docs/DataManagement.md`.
-- [ ] T013 [US1] Add quickstart section for Postgres-only Alkemio + Kratos deployment in `specs/018-postgres-db-convergence/quickstart.md` (update if needed).
-- [ ] T014 [US1] Create or update migration validation script for Postgres schema under `scripts/migrations/`.
-- [ ] T015 [P] [US1] Ensure contract tests and schema tests run correctly against Postgres-only setup (adjust `contract-tests/*.spec.ts` if needed).
-- [ ] T016 [US1] Add smoke-test instructions for Postgres-only environment to `docs/Running.md`.
+- [X] T008 [US1] Define Alkemio Postgres baseline migration strategy in `specs/018-postgres-db-convergence/plan.md` (update if needed).
+- [X] T009 [P] [US1] Add or adjust TypeORM configuration to support Postgres baseline generation in `src/core/database/typeorm.config.ts`.
+- [X] T010 [US1] Generate initial Postgres baseline migration file for Alkemio in `scripts/migrations/` (TypeORM migration).
+- [X] T011 [US1] Wire Postgres baseline migration into existing migration run scripts in `package.json` and/or `scripts/migrations`.
+- [X] T012 [P] [US1] Add documentation for applying Kratos migrations on Postgres in `docs/DataManagement.md`.
+- [X] T013 [US1] Add quickstart section for Postgres-only Alkemio + Kratos deployment in `specs/018-postgres-db-convergence/quickstart.md` (update if needed).
+- [X] T014 [US1] Create or update migration validation script for Postgres schema under `scripts/migrations/`.
+- [X] T015 [P] [US1] Ensure contract tests and schema tests run correctly against Postgres-only setup (adjust `contract-tests/*.spec.ts` if needed).
+- [X] T016 [US1] Add smoke-test instructions for Postgres-only environment to `docs/Running.md`.
 
 ## Phase 4 – User Story 2: CSV data migration (P2)
 
