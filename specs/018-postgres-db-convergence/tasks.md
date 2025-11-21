@@ -7,11 +7,11 @@
 
 ## Phase 2 – Foundational
 
-- [ ] T003 Document target Postgres version range and environment assumptions in `docs/DataManagement.md`.
-- [ ] T004 Add configuration entries for Postgres connections (Alkemio + Kratos) in `alkemio.yml` if missing.
-- [ ] T005 [P] Add any new environment variables required for Postgres/CSV migration in `.env.docker` and related sample env files.
-- [ ] T006 [P] Create migration tooling folder structure under `.scripts/migrations/postgres-convergence`.
-- [ ] T007 Add high-level migration overview section for schema-first + CSV approach in `docs/DataManagement.md`.
+- [X] T003 Document target Postgres version range and environment assumptions in `docs/DataManagement.md`.
+- [X] T004 Add configuration entries for Postgres connections (Alkemio + Kratos) in `alkemio.yml` if missing.
+- [X] T005 [P] Add any new environment variables required for Postgres/CSV migration in `.env.docker` and related sample env files.
+- [X] T006 [P] Create migration tooling folder structure under `.scripts/migrations/postgres-convergence`.
+- [X] T007 Add high-level migration overview section for schema-first + CSV approach in `docs/DataManagement.md`.
 
 ## Phase 3 – User Story 1: Postgres-only schemas (P1)
 

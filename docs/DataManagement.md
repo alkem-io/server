@@ -63,6 +63,16 @@ pnpm run migration:show
 
 Alkemio uses PostgreSQL 17.5 as the primary database backend for both the Alkemio application and Ory Kratos identity service.
 
+### Supported PostgreSQL Versions
+
+**Target Version**: PostgreSQL 17.5
+
+**Minimum Supported Version**: PostgreSQL 14.x
+
+The Postgres convergence strategy is tested and officially supported on PostgreSQL 17.5. While scripts and migrations maintain compatibility with PostgreSQL 14.x and above, PostgreSQL 17.5 is the recommended and officially supported version for production deployments. This aligns with current cloud provider offerings and maintained PostgreSQL versions.
+
+### Database Structure
+
 The default Docker Compose setup automatically provisions PostgreSQL with the required databases:
 - `alkemio` - Main application database
 - `kratos` - Ory Kratos identity database
@@ -109,6 +119,74 @@ docker run --name some-mysql \
 ```
 
 ## MySQL to PostgreSQL Migration
+
+### Overview: Schema-First + CSV Data Migration
+
+Alkemio provides a robust migration path from MySQL to PostgreSQL using a **schema-first approach** combined with **CSV-based data migration**. This strategy ensures data integrity, repeatability, and operator control throughout the convergence process.
+
+#### Migration Strategy
+
+The migration follows three key principles:
+
+1. **Schema-First Baseline**: PostgreSQL schemas are established independently using:
+   - **Alkemio**: TypeORM baseline migration generating a clean Postgres-native schema
+   - **Kratos**: Official Ory Kratos migrations applied directly to PostgreSQL
+   
+2. **CSV-Based Data Transfer**: Data moves from MySQL to PostgreSQL via CSV files:
+   - Widely supported format, easy to inspect and validate
+   - Technology-agnostic intermediate representation
+   - Enables transformation and validation before import
+   
+3. **Fail-Fast Integrity**: Import process fails immediately on constraint violations:
+   - Zero tolerance for data corruption or silent failures
+   - Clear error reporting for debugging
+   - Ensures referential integrity and data quality
+
+#### Migration Pipeline
+
+The complete migration follows these phases:
+
+**Phase 1: Schema Preparation**
+- Apply official Kratos migrations to Postgres Kratos database
+- Apply Alkemio Postgres baseline migration to Postgres Alkemio database
+- Validate schemas using contract tests and migration validation scripts
+
+**Phase 2: Data Export**
+- Export MySQL data to CSV files using provided export scripts
+- Store CSV files on mounted filesystem accessible to import process
+- CSV files include: users, spaces, memberships, content, identities, and all core entities
+
+**Phase 3: Data Import**
+- Import CSV files into prepared Postgres databases
+- Scripts monitor for constraint violations and fail-fast on errors
+- Comprehensive logging for troubleshooting
+
+**Phase 4: Verification & Cut-Over**
+- Execute migration verification checklist (see below)
+- Validate authentication, authorization, and core features
+- Update application configuration to point to Postgres databases
+- Follow rollback procedure if critical issues are found
+
+#### Prerequisites
+
+Before starting the migration:
+- Running MySQL-based Alkemio + Kratos deployment
+- Target PostgreSQL instance (recommended: 17.5) with databases created
+- Sufficient disk space for CSV exports (~1.5x your MySQL data size)
+- Maintenance window scheduled (target: ≤30 minutes hard downtime)
+- Backup of MySQL databases
+- Tested rollback procedure
+
+#### Migration Scripts Location
+
+All migration tooling is located in `.scripts/migrations/postgres-convergence/`:
+- `export_alkemio_mysql_to_csv.sh` - Export Alkemio data from MySQL
+- `export_kratos_mysql_to_csv.sh` - Export Kratos identity data from MySQL
+- `import_csv_to_postgres_alkemio.sh` - Import Alkemio data into Postgres
+- `import_csv_to_postgres_kratos.sh` - Import Kratos data into Postgres
+- `log_migration_run.sh` - Capture migration metadata and outcomes
+
+For detailed step-by-step instructions, see `specs/018-postgres-db-convergence/quickstart.md`.
 
 ### Migration Verification Checklist
 
