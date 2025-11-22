@@ -32,7 +32,7 @@ import { CreateMemoInput, IMemo } from '@domain/common/memo/types';
 import { ILink } from '../link/link.interface';
 import { MediaGalleryService } from '@domain/common/media-gallery/media.gallery.service';
 import { CreateMediaGalleryInput } from '@domain/common/media-gallery/dto/media.gallery.dto.create';
-import { MediaGalleryType } from '@domain/common/media-gallery/media.gallery.interface';
+import { IMediaGallery } from '@domain/common/media-gallery/media.gallery.interface';
 
 @Injectable()
 export class CalloutFramingService {
@@ -584,7 +584,7 @@ export class CalloutFramingService {
   public async getMediaGallery(
     calloutFramingInput: ICalloutFraming,
     relations?: FindOptionsRelations<ICalloutFraming>
-  ): Promise<MediaGalleryType | null> {
+  ): Promise<IMediaGallery | null> {
     const calloutFraming = await this.getCalloutFramingOrFail(
       calloutFramingInput.id,
       {

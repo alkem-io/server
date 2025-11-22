@@ -9,7 +9,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { CREDENTIAL_RULE_MEDIA_GALLERY_CREATED_BY } from '@common/constants';
-import { MediaGalleryType } from './media.gallery.interface';
+import { IMediaGallery } from './media.gallery.interface';
 import { MediaGalleryService } from './media.gallery.service';
 
 @Injectable()
@@ -53,7 +53,7 @@ export class MediaGalleryAuthorizationService {
   }
 
   private appendCredentialRules(
-    mediaGallery: MediaGalleryType
+    mediaGallery: IMediaGallery
   ): IAuthorizationPolicy {
     const authorization = mediaGallery.authorization;
     if (!authorization)

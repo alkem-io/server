@@ -1,12 +1,12 @@
 import { Entity, OneToMany, Column } from 'typeorm';
-import { MediaGalleryType } from './media.gallery.interface';
+import { IMediaGallery } from './media.gallery.interface';
 import { Visual } from '@domain/common/visual/visual.entity';
 
 import { UUID_LENGTH } from '@common/constants';
 import { NameableEntity } from '../entity/nameable-entity';
 
 @Entity()
-export class MediaGallery extends NameableEntity implements MediaGalleryType {
+export class MediaGallery extends NameableEntity implements IMediaGallery {
   @Column('char', { length: UUID_LENGTH, nullable: true })
   createdBy?: string;
 

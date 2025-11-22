@@ -2,8 +2,8 @@ import { Field, ObjectType } from '@nestjs/graphql';
 import { INameable } from '../entity/nameable-entity';
 import { IVisual } from '../visual';
 
-@ObjectType('MediaGalleryObject')
-export class MediaGalleryType extends INameable {
+@ObjectType('MediaGallery')
+export class IMediaGallery extends INameable {
   @Field(() => String, { nullable: true })
   createdBy?: string;
 

@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { MediaGallery } from './media.gallery.entity';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { CreateMediaGalleryInput, UpdateMediaGalleryInput } from './dto';
-import { MediaGalleryType } from './media.gallery.interface';
+import { IMediaGallery } from './media.gallery.interface';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
@@ -27,7 +27,7 @@ export class MediaGalleryService {
     mediaGalleryData: CreateMediaGalleryInput,
     storageAggregator: IStorageAggregator,
     userID?: string
-  ): Promise<MediaGalleryType> {
+  ): Promise<IMediaGallery> {
     const mediaGallery = MediaGallery.create({});
     mediaGallery.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.MEDIA_GALLERY
@@ -50,7 +50,7 @@ export class MediaGalleryService {
   public async updateMediaGallery(
     mediaGalleryId: string,
     updateData: UpdateMediaGalleryInput
-  ): Promise<MediaGalleryType> {
+  ): Promise<IMediaGallery> {
     const mediaGallery = await this.mediaGalleryRepository.findOneOrFail({
       where: { id: mediaGalleryId },
       relations: { visuals: true },
@@ -82,7 +82,7 @@ export class MediaGalleryService {
   public async getMediaGalleryOrFail(
     mediaGalleryID: string,
     options?: FindOneOptions<MediaGallery>
-  ): Promise<MediaGalleryType> {
+  ): Promise<IMediaGallery> {
     const mediaGallery = await this.mediaGalleryRepository.findOne({
       where: { id: mediaGalleryID },
       ...options,

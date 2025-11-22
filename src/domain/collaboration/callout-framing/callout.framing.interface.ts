@@ -5,7 +5,7 @@ import { Field, ObjectType } from '@nestjs/graphql';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { IMemo } from '@domain/common/memo/memo.interface';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
-import { MediaGalleryType } from '@domain/common/media-gallery/media.gallery.interface';
+import { IMediaGallery } from '@domain/common/media-gallery/media.gallery.interface';
 
 @ObjectType('CalloutFraming')
 export abstract class ICalloutFraming extends IAuthorizable {
@@ -23,9 +23,9 @@ export abstract class ICalloutFraming extends IAuthorizable {
 
   memo?: IMemo;
 
-  @Field(() => MediaGalleryType, {
+  @Field(() => IMediaGallery, {
     description: 'Media gallery attached to this callout framing.',
     nullable: true,
   })
-  mediaGallery?: MediaGalleryType;
+  mediaGallery?: IMediaGallery;
 }
