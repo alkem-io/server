@@ -30,6 +30,9 @@ import { CreateLinkInput } from '@domain/collaboration/link/dto/link.dto.create'
 import { ValidationException } from '@common/exceptions';
 import { CreateMemoInput, IMemo } from '@domain/common/memo/types';
 import { ILink } from '../link/link.interface';
+import { MediaGalleryService } from '@domain/common/media-gallery/media.gallery.service';
+import { CreateMediaGalleryInput } from '@domain/common/media-gallery/dto/media.gallery.dto.create';
+import { MediaGalleryType } from '@domain/common/media-gallery/media.gallery.interface';
 
 @Injectable()
 export class CalloutFramingService {
@@ -41,6 +44,7 @@ export class CalloutFramingService {
     private memoService: MemoService,
     private namingService: NamingService,
     private tagsetService: TagsetService,
+    private mediaGalleryService: MediaGalleryService,
     @InjectRepository(CalloutFraming)
     private calloutFramingRepository: Repository<CalloutFraming>
   ) {}
@@ -127,6 +131,22 @@ export class CalloutFramingService {
       }
     }
 
+    if (calloutFraming.type === CalloutFramingType.MEDIA_GALLERY) {
+      if (calloutFramingData.mediaGallery) {
+        await this.createNewMediaGalleryInCalloutFraming(
+          calloutFraming,
+          calloutFramingData.mediaGallery,
+          storageAggregator,
+          userID
+        );
+      } else {
+        throw new ValidationException(
+          'Callout Framing of type MEDIA_GALLERY requires media gallery data.',
+          LogContext.COLLABORATION
+        );
+      }
+    }
+
     return calloutFraming;
   }
 
@@ -181,6 +201,20 @@ export class CalloutFramingService {
       linkData,
       storageAggregator
     );
+  }
+
+  private async createNewMediaGalleryInCalloutFraming(
+    calloutFraming: ICalloutFraming,
+    mediaGalleryData: CreateMediaGalleryInput,
+    storageAggregator: IStorageAggregator,
+    userID?: string
+  ) {
+    calloutFraming.mediaGallery =
+      (await this.mediaGalleryService.createMediaGallery(
+        mediaGalleryData,
+        storageAggregator,
+        userID
+      )) as any;
   }
 
   public async updateCalloutFraming(
@@ -339,6 +373,44 @@ export class CalloutFramingService {
         }
         break;
       }
+      case CalloutFramingType.MEDIA_GALLERY: {
+        // If there was a whiteboard before, we delete it
+        if (calloutFraming.whiteboard) {
+          await this.whiteboardService.deleteWhiteboard(
+            calloutFraming.whiteboard.id
+          );
+          calloutFraming.whiteboard = undefined;
+        }
+
+        // If there was a memo before, we delete it
+        if (calloutFraming.memo) {
+          await this.memoService.deleteMemo(calloutFraming.memo.id);
+          calloutFraming.memo = undefined;
+        }
+
+        // If there was a link before, we delete it
+        if (calloutFraming.link) {
+          await this.linkService.deleteLink(calloutFraming.link.id);
+          calloutFraming.link = undefined;
+        }
+
+        // Handle MEDIA_GALLERY type updates
+        if (calloutFraming.mediaGallery && calloutFramingData.mediaGallery) {
+          calloutFraming.mediaGallery =
+            await this.mediaGalleryService.updateMediaGallery(
+              calloutFraming.mediaGallery.id,
+              calloutFramingData.mediaGallery
+            );
+        } else if (calloutFramingData.mediaGallery) {
+          await this.createNewMediaGalleryInCalloutFraming(
+            calloutFraming,
+            calloutFramingData.mediaGallery as unknown as CreateMediaGalleryInput,
+            storageAggregator,
+            userID
+          );
+        }
+        break;
+      }
       case CalloutFramingType.NONE:
       default: {
         // if the type is NONE we remove any existing framing content
@@ -355,6 +427,12 @@ export class CalloutFramingService {
         if (calloutFraming.link) {
           await this.linkService.deleteLink(calloutFraming.link.id);
           calloutFraming.link = undefined;
+        }
+        if (calloutFraming.mediaGallery) {
+          // TODO: Implement delete in MediaGalleryService if needed
+          // For now just set to undefined, assuming cascade or manual cleanup later
+          // Ideally: await this.mediaGalleryService.delete(calloutFraming.mediaGallery.id);
+          calloutFraming.mediaGallery = undefined;
         }
         break;
       }
@@ -373,6 +451,7 @@ export class CalloutFramingService {
           whiteboard: true,
           link: true,
           memo: true,
+          mediaGallery: true,
         },
       }
     );
@@ -398,6 +477,10 @@ export class CalloutFramingService {
       await this.authorizationPolicyService.delete(
         calloutFraming.authorization
       );
+    }
+
+    if (calloutFraming.mediaGallery) {
+      // Assuming cascade delete or we can add explicit delete call if needed later
     }
 
     const result = await this.calloutFramingRepository.remove(
@@ -496,5 +579,22 @@ export class CalloutFramingService {
     }
 
     return calloutFraming.memo;
+  }
+
+  public async getMediaGallery(
+    calloutFramingInput: ICalloutFraming,
+    relations?: FindOptionsRelations<ICalloutFraming>
+  ): Promise<MediaGalleryType | null> {
+    const calloutFraming = await this.getCalloutFramingOrFail(
+      calloutFramingInput.id,
+      {
+        relations: { mediaGallery: true, ...relations },
+      }
+    );
+    if (!calloutFraming.mediaGallery) {
+      return null;
+    }
+
+    return calloutFraming.mediaGallery;
   }
 }

@@ -1,4 +1,5 @@
 import { ProfileModule } from '@domain/common/profile/profile.module';
+import { MediaGalleryModule } from '@domain/common/media-gallery/media.gallery.module';
 import { Module } from '@nestjs/common';
 import { CalloutFramingService } from './callout.framing.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -22,6 +23,7 @@ import { TagsetModule } from '@domain/common/tagset/tagset.module';
     WhiteboardModule,
     LinkModule,
     MemoModule,
+    MediaGalleryModule,
     NamingModule,
     TypeOrmModule.forFeature([CalloutFraming]),
   ],

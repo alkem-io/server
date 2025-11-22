@@ -4,6 +4,7 @@ import { IVisual } from './visual.interface';
 import { Profile } from '@domain/common/profile/profile.entity';
 import { ALT_TEXT_LENGTH, URI_LENGTH } from '@common/constants';
 import { VISUAL_ALLOWED_TYPES } from './visual.constraints';
+import { MediaGallery } from '../media-gallery/media.gallery.entity';
 
 @Entity()
 export class Visual extends AuthorizableEntity implements IVisual {
@@ -40,6 +41,13 @@ export class Visual extends AuthorizableEntity implements IVisual {
     onDelete: 'CASCADE',
   })
   profile?: Profile;
+
+  @ManyToOne(() => MediaGallery, mediaGallery => mediaGallery.visuals, {
+    eager: false,
+    cascade: false,
+    onDelete: 'CASCADE',
+  })
+  mediaGallery?: MediaGallery;
 
   constructor() {
     super();

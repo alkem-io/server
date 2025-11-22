@@ -6,6 +6,7 @@ import { CalloutFramingService } from './callout.framing.service';
 import { ICalloutFraming } from './callout.framing.interface';
 import { WhiteboardAuthorizationService } from '@domain/common/whiteboard';
 import { MemoAuthorizationService } from '@domain/common/memo';
+import { MediaGalleryAuthorizationService } from '@domain/common/media-gallery/media.gallery.service.authorization';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { LogContext } from '@common/enums/logging.context';
 
@@ -16,7 +17,8 @@ export class CalloutFramingAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService,
     private whiteboardAuthorizationService: WhiteboardAuthorizationService,
-    private memoAuthorizationService: MemoAuthorizationService
+    private memoAuthorizationService: MemoAuthorizationService,
+    private mediaGalleryAuthorizationService: MediaGalleryAuthorizationService
   ) {}
 
   public async applyAuthorizationPolicy(
@@ -33,6 +35,7 @@ export class CalloutFramingAuthorizationService {
             profile: true,
             whiteboard: true,
             memo: true,
+            mediaGallery: true,
           },
           select: {
             id: true,
@@ -45,6 +48,9 @@ export class CalloutFramingAuthorizationService {
               id: true,
             },
             memo: {
+              id: true,
+            },
+            mediaGallery: {
               id: true,
             },
           },
@@ -89,6 +95,15 @@ export class CalloutFramingAuthorizationService {
           calloutFraming.authorization
         );
       updatedAuthorizations.push(...memoAuthorizations);
+    }
+
+    if (calloutFraming.mediaGallery) {
+      const mediaGalleryAuthorizations =
+        await this.mediaGalleryAuthorizationService.applyAuthorizationPolicy(
+          calloutFraming.mediaGallery.id,
+          calloutFraming.authorization
+        );
+      updatedAuthorizations.push(...mediaGalleryAuthorizations);
     }
 
     return updatedAuthorizations;

@@ -8,6 +8,7 @@ import { Memo } from '@domain/common/memo/memo.entity';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { ENUM_LENGTH } from '@common/constants';
 import { Callout } from '../callout/callout.entity';
+import { MediaGallery } from '@domain/common/media-gallery/media.gallery.entity';
 
 @Entity()
 export class CalloutFraming
@@ -55,4 +56,12 @@ export class CalloutFraming
   })
   @JoinColumn()
   memo?: Memo;
+
+  @OneToOne(() => MediaGallery, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  mediaGallery?: MediaGallery;
 }

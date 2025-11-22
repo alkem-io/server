@@ -106,6 +106,10 @@ import { UpdateUserSettingsNotificationSpaceAdminInput } from '@domain/community
 import { UpdateUserSettingsNotificationSpaceInput } from '@domain/community/user-settings/dto/user.settings.notification.space.dto.update';
 import { NotificationSettingInput } from '@domain/community/user-settings/dto/notification.setting.input';
 import { UpdateCalloutEntityInput } from '@domain/collaboration/callout/dto';
+import {
+  CreateMediaGalleryInput,
+  UpdateMediaGalleryInput,
+} from '@domain/common/media-gallery/dto';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -205,6 +209,8 @@ export class BaseHandler extends AbstractHandler {
       SendMessageOnCalloutInput,
       CreateCalloutOnCalloutsSetInput,
       UpdateBaselineLicensePlanOnAccount,
+      CreateMediaGalleryInput,
+      UpdateMediaGalleryInput,
     ];
 
     if (types.includes(metatype)) {

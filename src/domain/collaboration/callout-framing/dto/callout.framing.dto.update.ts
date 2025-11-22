@@ -7,6 +7,7 @@ import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { UpdateLinkInput } from '@domain/collaboration/link/dto';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { UpdateWhiteboardPreviewSettingsInput } from '@domain/common/whiteboard/types';
+import { UpdateMediaGalleryInput } from '@domain/common/media-gallery/dto/media.gallery.dto.update';
 
 @InputType()
 export class UpdateCalloutFramingInput {
@@ -55,4 +56,10 @@ export class UpdateCalloutFramingInput {
   })
   @IsOptional()
   memoContent?: string;
+
+  @Field(() => UpdateMediaGalleryInput, { nullable: true })
+  @IsOptional()
+  // @ValidateNested()
+  @Type(() => UpdateMediaGalleryInput)
+  mediaGallery?: UpdateMediaGalleryInput;
 }

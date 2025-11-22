@@ -6,6 +6,7 @@ import { CreateWhiteboardInput } from '@domain/common/whiteboard/types';
 import { CreateLinkInput } from '@domain/collaboration/link/dto/link.dto.create';
 import { CreateMemoInput } from '@domain/common/memo/types';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
+import { CreateMediaGalleryInput } from '@domain/common/media-gallery/dto/media.gallery.dto.create';
 
 @InputType()
 @ObjectType('CreateCalloutFramingData')
@@ -40,6 +41,12 @@ export class CreateCalloutFramingInput {
   @ValidateNested()
   @Type(() => CreateMemoInput)
   memo?: CreateMemoInput;
+
+  @Field(() => CreateMediaGalleryInput, { nullable: true })
+  @IsOptional()
+  // @ValidateNested()
+  @Type(() => CreateMediaGalleryInput)
+  mediaGallery?: CreateMediaGalleryInput;
 
   @Field(() => [String], { nullable: true })
   @IsOptional()

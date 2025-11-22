@@ -9,6 +9,7 @@ import { CalloutFramingService } from './callout.framing.service';
 import { IWhiteboard } from '@domain/common/whiteboard/types';
 import { ILink } from '@domain/collaboration/link/link.interface';
 import { IMemo } from '@domain/common/memo/types';
+import { MediaGalleryType } from '@domain/common/media-gallery/media.gallery.interface';
 
 @Resolver(() => ICalloutFraming)
 export class CalloutFramingResolverFields {
@@ -50,5 +51,15 @@ export class CalloutFramingResolverFields {
   })
   memo(@Parent() calloutFraming: ICalloutFraming): Promise<IMemo | null> {
     return this.calloutFramingService.getMemo(calloutFraming);
+  }
+
+  @ResolveField('mediaGallery', () => MediaGalleryType, {
+    nullable: true,
+    description: 'The media gallery associated with the callout framing',
+  })
+  async mediaGallery(
+    @Parent() calloutFraming: ICalloutFraming
+  ): Promise<MediaGalleryType | null> {
+    return this.calloutFramingService.getMediaGallery(calloutFraming);
   }
 }
