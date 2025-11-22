@@ -1,12 +1,11 @@
 import { InputType, Field } from '@nestjs/graphql';
-import { CreateVisualInput } from '@domain/common/visual/dto/visual.dto.create';
 import { ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { UpdateVisualInput } from '@domain/common/visual';
 
 @InputType()
 export class UpdateMediaGalleryInput {
-  @Field(() => [CreateVisualInput], {
+  @Field(() => [UpdateVisualInput], {
     description:
       'The new list of visuals for the media gallery. Replaces existing ones.',
   })

@@ -61,6 +61,10 @@ export class VisualService {
       visual.alternativeText = visualData.alternativeText;
     }
 
+    if (visualData.name) {
+      visual.name = visualData.name;
+    }
+
     return await this.visualRepository.save(visual);
   }
 

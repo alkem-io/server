@@ -7,12 +7,13 @@ import { CreateMediaGalleryInput, UpdateMediaGalleryInput } from './dto';
 import { IMediaGallery } from './media.gallery.interface';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { FindOneOptions } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { LogContext } from '@common/enums/logging.context';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { Visual } from '@domain/common/visual/visual.entity';
+import { VisualService } from '@domain/common/visual/visual.service';
+import { ProfileType } from '@common/enums/profile.type';
 
 @Injectable()
 export class MediaGalleryService {
@@ -20,28 +21,41 @@ export class MediaGalleryService {
     @InjectRepository(MediaGallery)
     private readonly mediaGalleryRepository: Repository<MediaGallery>,
     private readonly authorizationService: AuthorizationService,
-    private readonly profileService: ProfileService
+    private readonly profileService: ProfileService,
+    private readonly visualService: VisualService
   ) {}
 
   public async createMediaGallery(
     mediaGalleryData: CreateMediaGalleryInput,
-    storageAggregator: IStorageAggregator,
+    storageAggregatorId: string,
     userID?: string
   ): Promise<IMediaGallery> {
-    const mediaGallery = MediaGallery.create({});
+    const mediaGallery = MediaGallery.create({
+      nameID: mediaGalleryData.nameID,
+    });
     mediaGallery.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.MEDIA_GALLERY
     );
     mediaGallery.createdBy = userID;
 
-    // Visuals are usually attached to a Profile, but here they are attached to MediaGallery directly.
-    // However, Visual entity expects a Profile relation or MediaGallery relation.
-    // We need to handle the creation of Visual entities.
+    // Create profile with storage bucket for the media gallery
+    // Note: The storage aggregator is for the profile's storage bucket
+    mediaGallery.profile = (await this.profileService.createProfile(
+      {
+        displayName: mediaGalleryData.nameID || 'Media Gallery',
+        description: 'Media Gallery',
+      },
+      ProfileType.CALLOUT_FRAMING,
+      { id: storageAggregatorId } as any
+    )) as any;
 
+    // Create visuals using VisualService - use URI from DTO as-is
     mediaGallery.visuals = mediaGalleryData.visuals.map(visualData => {
-      const visual = new Visual();
-      Object.assign(visual, visualData);
-      return visual;
+      const visual = this.visualService.createVisual(
+        visualData,
+        visualData.uri
+      );
+      return visual as Visual;
     });
 
     return await this.mediaGalleryRepository.save(mediaGallery);
@@ -56,27 +70,37 @@ export class MediaGalleryService {
       relations: { visuals: true },
     });
 
-    // Replace visuals
-    // Since we have cascade: true, we can just assign new visuals.
-    // But we might need to handle deletion of old ones if TypeORM doesn't do it automatically with OneToMany cascade.
-    // Usually for OneToMany with cascade, replacing the array works if orphanRemoval is true (which TypeORM doesn't support directly like Hibernate).
-    // We might need to manually delete old visuals or rely on a specific update strategy.
-    // For now, let's try replacing the list.
-
-    // Actually, to ensure clean update, let's clear existing visuals first if needed,
-    // but TypeORM's save with cascade should handle new entities.
-    // For removing old ones, we might need to delete them explicitly if they are not in the new list.
-
-    // A simple approach: delete all existing visuals and add new ones.
-    // Or just update the list.
-
+    // Replace visuals using VisualService - use URI from DTO as-is
     mediaGallery.visuals = updateData.visuals.map(visualData => {
-      const visual = new Visual();
-      Object.assign(visual, visualData);
-      return visual;
+      const visual = this.visualService.createVisual(
+        visualData as any,
+        visualData.uri
+      );
+      return visual as Visual;
     });
 
     return await this.mediaGalleryRepository.save(mediaGallery);
+  }
+
+  private async getStorageAggregatorId(
+    mediaGalleryId: string
+  ): Promise<string> {
+    // For now, we'll need to get the storage aggregator from the callout framing
+    // This is a simplified approach - you may need to adjust based on your architecture
+    const mediaGallery = await this.mediaGalleryRepository.findOne({
+      where: { id: mediaGalleryId },
+      relations: { visuals: true },
+    });
+
+    if (mediaGallery && mediaGallery.visuals.length > 0) {
+      // Extract storage aggregator ID from existing visual URI
+      const existingVisual = mediaGallery.visuals[0];
+      const uriParts = existingVisual.uri.split('/');
+      return uriParts[0]; // Assuming URI format is "storageAggregatorId/..."
+    }
+
+    // Fallback - this should be passed from the caller
+    throw new Error('Unable to determine storage aggregator ID');
   }
 
   public async getMediaGalleryOrFail(

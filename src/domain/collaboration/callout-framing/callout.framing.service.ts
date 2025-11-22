@@ -209,10 +209,18 @@ export class CalloutFramingService {
     storageAggregator: IStorageAggregator,
     userID?: string
   ) {
+    if (!mediaGalleryData.nameID) {
+      mediaGalleryData.nameID =
+        this.namingService.createNameIdAvoidingReservedNameIDs(
+          'Media Gallery',
+          []
+        );
+    }
+
     calloutFraming.mediaGallery =
       (await this.mediaGalleryService.createMediaGallery(
         mediaGalleryData,
-        storageAggregator,
+        storageAggregator.id,
         userID
       )) as any;
   }
