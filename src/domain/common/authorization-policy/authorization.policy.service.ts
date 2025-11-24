@@ -67,12 +67,12 @@ export class AuthorizationPolicyService {
 
   createCredentialRuleUsingTypesOnly(
     grantedPrivileges: AuthorizationPrivilege[],
-    createntialTypes: AuthorizationCredential[],
+    credentialTypes: AuthorizationCredential[],
     name: string
   ): IAuthorizationPolicyRuleCredential {
     const criterias: ICredentialDefinition[] = [];
 
-    for (const credentialType of createntialTypes) {
+    for (const credentialType of credentialTypes) {
       const criteria: ICredentialDefinition = {
         type: credentialType,
         resourceID: '',
@@ -244,10 +244,12 @@ export class AuthorizationPolicyService {
     const rules = auth.credentialRules;
     const newRule = new AuthorizationPolicyRuleCredential(
       grantedPrivileges,
-      {
-        type: credentialCriteria.type,
-        resourceID: credentialCriteria.resourceID || '',
-      },
+      [
+        {
+          type: credentialCriteria.type,
+          resourceID: credentialCriteria.resourceID || '',
+        },
+      ],
       name
     );
     rules.push(newRule);
