@@ -55,9 +55,6 @@ import { AdminAuthorizationService } from '@src/platform-admin/domain/authorizat
 import { AiPersonaService } from '@services/ai-server/ai-persona';
 import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 import { VirtualContributorInteractionMode } from '@common/enums/virtual.contributor.interaction.mode';
-import { AUTH_REMOTE_EVALUATION_CLIENT } from '@services/external/auth-remote-evaluation/injection.token';
-import { ClientProxy } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class BootstrapService {

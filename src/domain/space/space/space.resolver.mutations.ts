@@ -21,11 +21,6 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { SpaceLicenseService } from './space.service.license';
 import { LicenseService } from '@domain/common/license/license.service';
 import { InstrumentResolver } from '@src/apm/decorators';
-import { AuthRemoteEvaluationService } from '@services/external/auth-remote-evaluation';
-import { InjectEntityManager } from '@nestjs/typeorm';
-import { EntityManager } from 'typeorm';
-import { User } from '@domain/community/user/user.entity';
-import { Space } from './space.entity';
 
 @InstrumentResolver()
 @Resolver()
@@ -40,10 +35,7 @@ export class SpaceResolverMutations {
     @Inject(SUBSCRIPTION_SUBSPACE_CREATED)
     private subspaceCreatedSubscription: PubSubEngine,
     private spaceLicenseService: SpaceLicenseService,
-    private licenseService: LicenseService,
-    private authEvaluationService: AuthRemoteEvaluationService,
-    @InjectEntityManager()
-    private entityManager: EntityManager
+    private licenseService: LicenseService
   ) {}
 
   @Mutation(() => ISpace, {
