@@ -56,22 +56,14 @@ export class WhiteboardIntegrationService {
         data.whiteboardId
       );
 
-      let agentInfo;
-
-      try {
-        agentInfo = await this.agentInfoService.buildAgentInfoForUser(
-          data.userId
-        );
-      } catch {
-        if (data.guestName) {
-          agentInfo = this.agentInfoService.createGuestAgentInfo(
-            data.guestName
-          );
-        }
-      }
+      const agentInfo = await this.resolveAgentInfo(data);
       if (!agentInfo) {
-        this.logger.warn(
-          `Unable to build AgentInfo for userId: ${data.userId}`,
+        this.logger.warn?.(
+          {
+            message: `Unable to build AgentInfo for userId: ${data.userId}`,
+            whiteboardId: data.whiteboardId,
+            guestName: data.guestName,
+          },
           LogContext.WHITEBOARD_INTEGRATION
         );
         return false;
@@ -216,5 +208,56 @@ export class WhiteboardIntegrationService {
           LogContext.WHITEBOARD_INTEGRATION
         );
       });
+  }
+
+  private async resolveAgentInfo(
+    data: AccessGrantedInputData
+  ): Promise<AgentInfo | null> {
+    if (this.isGuestUserIdentifier(data.userId)) {
+      return this.agentInfoService.createGuestAgentInfo(
+        this.normalizeGuestName(data.guestName)
+      );
+    }
+
+    try {
+      return await this.agentInfoService.buildAgentInfoForUser(data.userId);
+    } catch (error) {
+      if (data.guestName?.trim()) {
+        this.logger.verbose?.(
+          {
+            message:
+              'Falling back to guest agent info after user lookup failure',
+            userId: data.userId,
+            whiteboardId: data.whiteboardId,
+          },
+          LogContext.WHITEBOARD_INTEGRATION
+        );
+        return this.agentInfoService.createGuestAgentInfo(
+          data.guestName.trim()
+        );
+      }
+
+      throw error;
+    }
+  }
+
+  private isGuestUserIdentifier(userId: string): boolean {
+    if (!userId) {
+      return true;
+    }
+
+    const normalized = userId.trim().toLowerCase();
+    return (
+      normalized.length === 0 ||
+      normalized === 'n/a' ||
+      normalized === 'guest' ||
+      normalized.startsWith('guest-') ||
+      normalized.startsWith('guest_')
+    );
+  }
+
+  private normalizeGuestName(guestName?: string): string {
+    const trimmed = guestName?.trim();
+    return trimmed && trimmed.length > 0 ? trimmed : 'Guest collaborator';
   }
 }
