@@ -1,6 +1,6 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { CurrentUser } from '@src/common/decorators';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { RoomService } from './room.service';
@@ -10,7 +10,6 @@ import { RoomRemoveMessageInput } from './dto/room.dto.remove.message';
 import { MessageID } from '@domain/common/scalars';
 import { IMessage } from '../message/message.interface';
 import { RoomAuthorizationService } from './room.service.authorization';
-import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { RoomType } from '@common/enums/room.type';
 import { RoomRemoveReactionToMessageInput } from './dto/room.dto.remove.message.reaction';
 import { RoomAddReactionToMessageInput } from './dto/room.dto.add.reaction.to.message';
@@ -32,6 +31,7 @@ import { RoomLookupService } from '../room-lookup/room.lookup.service';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
+import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
 
 @InstrumentResolver()
 @Resolver()
@@ -39,7 +39,6 @@ export class RoomResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
     private roomService: RoomService,
-    private namingService: NamingService,
     private roomResolverService: RoomResolverService,
     private roomAuthorizationService: RoomAuthorizationService,
     private roomServiceEvents: RoomServiceEvents,
@@ -48,6 +47,7 @@ export class RoomResolverMutations {
     private subscriptionPublishService: SubscriptionPublishService,
     private virtualContributorMessageService: VirtualContributorMessageService,
     private virtualContributorLookupService: VirtualContributorLookupService,
+    private inAppNotificationService: InAppNotificationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -55,7 +55,6 @@ export class RoomResolverMutations {
     description:
       'Sends an comment message. Returns the id of the new Update message.',
   })
-  @Profiling.api
   async sendMessageToRoom(
     @Args('messageData') messageData: RoomSendMessageInput,
     @CurrentUser() agentInfo: AgentInfo
@@ -88,21 +87,22 @@ export class RoomResolverMutations {
 
     switch (room.type) {
       case RoomType.POST: {
-        const { post, callout } =
+        const { post, callout, contribution } =
           await this.roomResolverService.getCalloutWithPostContributionForRoom(
             messageData.roomID
           );
 
-        this.roomMentionsService.processNotificationMentions(
+        await this.roomMentionsService.processNotificationMentions(
           mentions,
           room,
           message,
           agentInfo
         );
 
-        this.roomServiceEvents.processNotificationPostContributionComment(
+        await this.roomServiceEvents.processNotificationPostContributionComment(
           callout,
           post,
+          contribution,
           room,
           message,
           agentInfo
@@ -126,39 +126,52 @@ export class RoomResolverMutations {
 
         break;
       }
-      case RoomType.CALENDAR_EVENT:
-        this.roomMentionsService.processNotificationMentions(
+      case RoomType.CALENDAR_EVENT: {
+        const calendarEvent =
+          await this.roomResolverService.getCalendarEventForRoom(
+            messageData.roomID
+          );
+
+        await this.roomMentionsService.processNotificationMentions(
           mentions,
           room,
           message,
           agentInfo
         );
 
+        await this.roomServiceEvents.processNotificationCalendarEventComment(
+          calendarEvent,
+          room,
+          message,
+          agentInfo
+        );
+
         break;
+      }
       case RoomType.DISCUSSION_FORUM:
         const discussionForum =
           await this.roomResolverService.getDiscussionForRoom(
             messageData.roomID
           );
-        this.roomMentionsService.processNotificationMentions(
+        await this.roomMentionsService.processNotificationMentions(
           mentions,
           room,
           message,
           agentInfo
         );
-        this.roomServiceEvents.processNotificationForumDiscussionComment(
+        await this.roomServiceEvents.processNotificationForumDiscussionComment(
           discussionForum,
           message,
           agentInfo
         );
         break;
       case RoomType.UPDATES:
-        this.roomServiceEvents.processNotificationUpdateSent(
+        await this.roomServiceEvents.processNotificationUpdateSent(
           room,
           message,
           agentInfo
         );
-        this.roomServiceEvents.processActivityUpdateSent(
+        await this.roomServiceEvents.processActivityUpdateSent(
           room,
           message,
           agentInfo
@@ -171,7 +184,7 @@ export class RoomResolverMutations {
         );
 
         // Mentions notifications should be sent regardless of callout visibility per client-web#5557
-        this.roomMentionsService.processNotificationMentions(
+        await this.roomMentionsService.processNotificationMentions(
           mentions,
           room,
           message,
@@ -192,13 +205,13 @@ export class RoomResolverMutations {
           callout.settings.visibility === CalloutVisibility.PUBLISHED &&
           callout.calloutsSet?.type === CalloutsSetType.COLLABORATION
         ) {
-          this.roomServiceEvents.processActivityCalloutCommentCreated(
+          await this.roomServiceEvents.processActivityCalloutCommentCreated(
             callout,
             message,
             agentInfo
           );
 
-          this.roomServiceEvents.processNotificationCalloutComment(
+          await this.roomServiceEvents.processNotificationCalloutComment(
             callout,
             room,
             message,
@@ -232,7 +245,6 @@ export class RoomResolverMutations {
   @Mutation(() => IMessage, {
     description: 'Sends a reply to a message from the specified Room.',
   })
-  @Profiling.api
   async sendMessageReplyToRoom(
     @Args('messageData') messageData: RoomSendMessageReplyInput,
     @CurrentUser() agentInfo: AgentInfo
@@ -276,13 +288,13 @@ export class RoomResolverMutations {
             messageData.roomID
           );
 
-        this.roomServiceEvents.processNotificationCommentReply(
+        await this.roomServiceEvents.processNotificationCommentReply(
           room,
           reply,
           agentInfo,
           messageOwnerId
         );
-        this.roomServiceEvents.processActivityPostComment(
+        await this.roomServiceEvents.processActivityPostComment(
           post,
           room,
           reply,
@@ -334,7 +346,7 @@ export class RoomResolverMutations {
         break;
       }
       case RoomType.CALENDAR_EVENT:
-        this.roomServiceEvents.processNotificationCommentReply(
+        await this.roomServiceEvents.processNotificationCommentReply(
           room,
           reply,
           agentInfo,
@@ -343,7 +355,7 @@ export class RoomResolverMutations {
 
         break;
       case RoomType.DISCUSSION_FORUM:
-        this.roomServiceEvents.processNotificationCommentReply(
+        await this.roomServiceEvents.processNotificationCommentReply(
           room,
           reply,
           agentInfo,
@@ -401,13 +413,13 @@ export class RoomResolverMutations {
             agentInfo
           );
 
-          this.roomServiceEvents.processNotificationCommentReply(
+          await this.roomServiceEvents.processNotificationCommentReply(
             room,
             reply,
             agentInfo,
             messageOwnerId
           );
-          this.roomMentionsService.processNotificationMentions(
+          await this.roomMentionsService.processNotificationMentions(
             mentions,
             room,
             reply,
@@ -425,7 +437,6 @@ export class RoomResolverMutations {
   @Mutation(() => IMessageReaction, {
     description: 'Add a reaction to a message from the specified Room.',
   })
-  @Profiling.api
   async addReactionToMessageInRoom(
     @Args('reactionData') reactionData: RoomAddReactionToMessageInput,
     @CurrentUser() agentInfo: AgentInfo
@@ -462,7 +473,6 @@ export class RoomResolverMutations {
   @Mutation(() => MessageID, {
     description: 'Removes a message.',
   })
-  @Profiling.api
   async removeMessageOnRoom(
     @Args('messageData') messageData: RoomRemoveMessageInput,
     @CurrentUser() agentInfo: AgentInfo
@@ -488,6 +498,7 @@ export class RoomResolverMutations {
       agentInfo.communicationID,
       messageData
     );
+    await this.inAppNotificationService.deleteAllByMessageId(messageID);
     await this.roomServiceEvents.processActivityMessageRemoved(
       messageID,
       agentInfo
@@ -514,7 +525,6 @@ export class RoomResolverMutations {
   @Mutation(() => Boolean, {
     description: 'Remove a reaction on a message from the specified Room.',
   })
-  @Profiling.api
   async removeReactionToMessageInRoom(
     @Args('reactionData') reactionData: RoomRemoveReactionToMessageInput,
     @CurrentUser() agentInfo: AgentInfo

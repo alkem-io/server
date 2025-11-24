@@ -2,16 +2,21 @@ import { Injectable } from '@nestjs/common';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
+import { AuthorDetails } from '@services/external/elasticsearch/types';
 import { ActivityInputMemberJoined } from '@services/adapters/activity-adapter/dto/activity.dto.input.member.joined';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { IRoleSet } from './role.set.interface';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { Organization } from '@domain/community/organization/organization.entity';
+import { User } from '@domain/community/user/user.entity';
+import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { SpaceLevel } from '@common/enums/space.level';
 import { RoleSetMembershipException } from '@common/exceptions/role.set.membership.exception';
 import { LogContext } from '@common/enums';
 import { NotificationInputCommunityNewMember } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.new.member';
 import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
+import { getContributorType } from '@domain/community/contributor/get.contributor.type';
 
 @Injectable()
 export class RoleSetEventsService {
@@ -59,6 +64,7 @@ export class RoleSetEventsService {
     const notificationInput: NotificationInputCommunityNewMember = {
       contributorID: newContributor.id,
       triggeredBy: agentInfo.userID,
+      contributorType: getContributorType(newContributor),
       community,
     };
     await this.notificationAdapterSpace.spaceCommunityNewMember(
@@ -66,6 +72,8 @@ export class RoleSetEventsService {
     );
 
     // Record the contribution events
+    const joiningContributor =
+      this.resolveAuthorDetailsFromContributor(newContributor);
     switch (space.level) {
       case SpaceLevel.L0: {
         this.contributionReporter.spaceJoined(
@@ -74,10 +82,7 @@ export class RoleSetEventsService {
             name: communityDisplayName,
             space: levelZeroSpaceID,
           },
-          {
-            id: agentInfo.userID,
-            email: agentInfo.email,
-          }
+          joiningContributor
         );
         break;
       }
@@ -89,10 +94,7 @@ export class RoleSetEventsService {
             name: communityDisplayName,
             space: levelZeroSpaceID,
           },
-          {
-            id: agentInfo.userID,
-            email: agentInfo.email,
-          }
+          joiningContributor
         );
         break;
       }
@@ -102,5 +104,35 @@ export class RoleSetEventsService {
           LogContext.ROLES
         );
     }
+  }
+
+  private resolveAuthorDetailsFromContributor(
+    contributor: IContributor
+  ): AuthorDetails {
+    if (contributor instanceof User) {
+      return {
+        id: contributor.id,
+        email: contributor.email,
+      };
+    }
+
+    if (contributor instanceof Organization) {
+      return {
+        id: contributor.id,
+        email: contributor.contactEmail ?? '',
+      };
+    }
+
+    if (contributor instanceof VirtualContributor) {
+      return {
+        id: contributor.id,
+        email: '',
+      };
+    }
+
+    return {
+      id: contributor.id,
+      email: '',
+    };
   }
 }

@@ -1,0 +1,123 @@
+{
+  "feature": "013-timeline-comment-notification",
+  "generated_at": "2025-11-05T00:00:00Z",
+  "total_tasks": 36,
+  "completed_tasks": 0,
+  "phases": [
+    {
+      "phase": "Phase 1: Setup & Infrastructure",
+      "tasks": ["T001", "T002"],
+      "status": "not-started"
+    },
+    {
+      "phase": "Phase 2: Foundational Data Structures",
+      "tasks": ["T003", "T004", "T005", "T006", "T007", "T008", "T009"],
+      "status": "not-started"
+    },
+    {
+      "phase": "Phase 3: User Story 1 - Core Notification Delivery (P1 - MVP)",
+      "tasks": [
+        "T010",
+        "T011",
+        "T012",
+        "T013",
+        "T014",
+        "T015",
+        "T016",
+        "T017",
+        "T018",
+        "T019",
+        "T020"
+      ],
+      "status": "not-started"
+    },
+    {
+      "phase": "Phase 4: User Story 2 - Respect User Preferences (P2)",
+      "tasks": ["T021", "T022", "T023", "T024"],
+      "status": "not-started"
+    },
+    {
+      "phase": "Phase 5: User Story 3 - Community Scope Filtering (P3)",
+      "tasks": ["T025", "T026", "T027", "T028"],
+      "status": "not-started"
+    },
+    {
+      "phase": "Phase 6: Integration & Polish",
+      "tasks": ["T029", "T030", "T031", "T032", "T033", "T034", "T035", "T036"],
+      "status": "not-started"
+    }
+  ],
+  "user_stories": [
+    {
+      "id": "US1",
+      "priority": "P1",
+      "description": "Core notification delivery when users comment on calendar events",
+      "tasks": [
+        "T010",
+        "T011",
+        "T012",
+        "T013",
+        "T014",
+        "T015",
+        "T016",
+        "T017",
+        "T018",
+        "T019",
+        "T020"
+      ],
+      "status": "not-started"
+    },
+    {
+      "id": "US2",
+      "priority": "P2",
+      "description": "Honor user notification preference settings",
+      "tasks": ["T021", "T022", "T023", "T024"],
+      "status": "not-started"
+    },
+    {
+      "id": "US3",
+      "priority": "P3",
+      "description": "Ensure only community members receive notifications",
+      "tasks": ["T025", "T026", "T027", "T028"],
+      "status": "not-started"
+    }
+  ],
+  "critical_path": [
+    "T001",
+    "T002",
+    "T003",
+    "T004",
+    "T005",
+    "T006",
+    "T007",
+    "T008",
+    "T009",
+    "T010",
+    "T011",
+    "T012",
+    "T013",
+    "T014",
+    "T015",
+    "T016",
+    "T017",
+    "T018",
+    "T019",
+    "T020"
+  ],
+  "parallel_tasks": [
+    ["T003", "T004"],
+    ["T010", "T011", "T012"],
+    ["T021", "T022", "T023", "T024"],
+    ["T025", "T026", "T027", "T028"],
+    ["T029", "T030", "T031", "T032", "T033"]
+  ],
+  "estimated_hours": {
+    "phase_1": 0.25,
+    "phase_2": 1.5,
+    "phase_3": 2.0,
+    "phase_4": 0.5,
+    "phase_5": 0.5,
+    "phase_6": 1.0,
+    "total": 5.75
+  }
+}

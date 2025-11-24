@@ -111,8 +111,12 @@ export class UrlGeneratorService {
       }
       case ProfileType.CALLOUT_FRAMING:
         return await this.getCalloutFramingUrlPathOrFail(profile.id);
-      case ProfileType.COMMUNITY_GUIDELINES:
-        return await this.getCommunityGuidelinesUrlPathOrFail(profile.id);
+      case ProfileType.COMMUNITY_GUIDELINES: {
+        const guidelinesUrl = await this.getCommunityGuidelinesUrlPathOrFail(
+          profile.id
+        );
+        return guidelinesUrl ?? '';
+      }
       case ProfileType.POST:
         return await this.getPostUrlPathByField(
           this.FIELD_PROFILE_ID,
@@ -362,39 +366,71 @@ export class UrlGeneratorService {
       );
     }
     if (collaboration.isTemplate) {
-      return this.getSpaceTemplateUrlPathOrFail(collaboration.id);
+      const templateUrl = await this.getSpaceTemplateUrlPathOrFail(
+        collaboration.id
+      );
+      // If no template found, return empty string instead of throwing
+      return templateUrl ?? '';
     }
 
     return this.getSpaceUrlPathByCollaborationID(collaboration.id);
   }
 
-  private async getSpaceTemplateUrlPathOrFail(collaborationId: string) {
-    const template = await this.entityManager.findOne(Template, {
-      where: {
-        contentSpace: {
+  private async getSpaceTemplateUrlPathOrFail(
+    collaborationId: string
+  ): Promise<string | null> {
+    // Check if this collaboration is part of a TemplateContentSpace
+    const contentSpace = await this.entityManager.findOne(
+      TemplateContentSpace,
+      {
+        where: {
           collaboration: {
             id: collaborationId,
           },
         },
-      },
-      relations: {
-        profile: true,
-      },
-    });
-
-    if (!template || !template.profile) {
-      throw new EntityNotFoundException(
-        `Unable to find collaboration template for collaboration: ${collaborationId}`,
-        LogContext.URL_GENERATOR
-      );
+        relations: {
+          parentSpace: {
+            parentSpace: true,
+          },
+        },
+      }
+    );
+    if (contentSpace) {
+      // Get the root TemplateContentSpace
+      let rootTemplateContentSpaceId = contentSpace.id;
+      if (contentSpace.parentSpace) {
+        rootTemplateContentSpaceId = contentSpace.parentSpace.id;
+        if (contentSpace.parentSpace.parentSpace) {
+          rootTemplateContentSpaceId = contentSpace.parentSpace.parentSpace.id;
+        }
+      }
+      // Find the template for that content space
+      const template = await this.entityManager.findOne(Template, {
+        where: {
+          contentSpace: {
+            id: rootTemplateContentSpaceId,
+          },
+        },
+        relations: {
+          profile: true,
+        },
+      });
+      if (template && template.profile) {
+        return this.getTemplateUrlPathOrFail(template.profile.id);
+      }
     }
 
-    return this.getTemplateUrlPathOrFail(template.profile.id);
+    // No template reference found - return null instead of throwing
+    this.logger.warn?.(
+      `Unable to find space template for collaboration: ${collaborationId} - returning null`,
+      LogContext.URL_GENERATOR
+    );
+    return null;
   }
 
   private async getCommunityGuidelinesUrlPathOrFail(
     profileID: string
-  ): Promise<string> {
+  ): Promise<string | null> {
     const communityGuidelines = await this.entityManager.findOne(
       CommunityGuidelines,
       {
@@ -407,12 +443,14 @@ export class UrlGeneratorService {
     );
 
     if (!communityGuidelines) {
-      throw new EntityNotFoundException(
-        `Unable to find community guidelines for profile: ${profileID}`,
+      this.logger.warn?.(
+        `Unable to find community guidelines for profile: ${profileID} - returning null`,
         LogContext.URL_GENERATOR
       );
+      return null;
     }
 
+    // Check if it's in a real Space
     const space = await this.entityManager.findOne(Space, {
       where: {
         about: {
@@ -430,7 +468,7 @@ export class UrlGeneratorService {
       return await this.getSpaceUrlPathByCommunityID(space.community.id);
     }
 
-    // Not directly in use, look in the templates
+    // Check if it's directly in a Template
     const template = await this.entityManager.findOne(Template, {
       where: {
         communityGuidelines: {
@@ -441,13 +479,17 @@ export class UrlGeneratorService {
         profile: true,
       },
     });
+
     if (template) {
       return await this.getTemplateUrlPathOrFail(template.profile.id);
     }
-    throw new EntityNotFoundException(
-      `Unable to find community guidelines for profile: ${profileID}, community guidelines: ${communityGuidelines.id}`,
+
+    // No parent reference found - return null instead of throwing
+    this.logger.warn?.(
+      `Unable to find parent for community guidelines: ${communityGuidelines.id} (profile: ${profileID}) - returning null`,
       LogContext.URL_GENERATOR
     );
+    return null;
   }
 
   private async getCalloutFramingUrlPathOrFail(
@@ -536,7 +578,11 @@ export class UrlGeneratorService {
         return `${collaborationJourneyUrlPath}/${UrlPathElement.COLLABORATION}/${callout.nameID}`;
       } else {
         // must be a space template
-        return await this.getSpaceTemplateUrlPathOrFail(collaboration.id);
+        const templateUrl = await this.getSpaceTemplateUrlPathOrFail(
+          collaboration.id
+        );
+        // If no template found, return empty string instead of throwing
+        return templateUrl ?? '';
       }
     } else {
       // Must be a KnowledgeBase

@@ -9,6 +9,8 @@ export const VISUAL_ALLOWED_TYPES = [
   'image/webp',
 ] as const;
 
+// We still have some of these copied in the client.
+// Keep in sync with client-web/src/domain/collaboration/whiteboard/WhiteboardVisuals/WhiteboardVisualsDimensions.ts
 export const DEFAULT_VISUAL_CONSTRAINTS = {
   [VisualType.AVATAR]: {
     minWidth: 190,
@@ -24,6 +26,14 @@ export const DEFAULT_VISUAL_CONSTRAINTS = {
     minHeight: 64,
     maxHeight: 256,
     aspectRatio: 6,
+    allowedTypes: VISUAL_ALLOWED_TYPES,
+  },
+  [VisualType.WHITEBOARD_PREVIEW]: {
+    minWidth: 500,
+    maxWidth: 1800,
+    minHeight: 200,
+    maxHeight: 720,
+    aspectRatio: 2.5,
     allowedTypes: VISUAL_ALLOWED_TYPES,
   },
   [VisualType.CARD]: {

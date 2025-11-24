@@ -16,7 +16,7 @@ To simplify setting up the Server development environment, a pre-configured dock
 
 ## Steps:
 
-1. Start the services alkemio server is dependent on:
+1. Start the services alkemio server is dependent on (PostgreSQL, MySQL, Ory Kratos, Ory Hydra, Matrix Synapse, RabbitMQ, etc.):
 
 ```bash
 pnpm run start:services
@@ -35,25 +35,26 @@ pnpm start
 ```
 
 4. Validate that the server is running by visiting the [graphql endpoint](http://localhost:3000/graphql).
+5. Optional: verify the OIDC stack
+
+- Hydra discovery endpoint: `curl http://localhost:3000/.well-known/openid-configuration`
+- Synapse OIDC callback health: check `docker logs alkemio_dev_synapse | grep oidc-hydra`
 
 ## Notes
 
 - The docker compose script puts the server listening on port 4001 - to avoid conflict with the default port that is used by local development.
 - The server will be almost empty after initially being created. To populate the Server with some sample data please use the [Alkemio Populator](http://github.com/alkem-io/Populator) tool which allows easy population from a local file. Please remember to specify the correct port to connect to!
 - Once you set up the services and run the migrations, two alkemio users will be created. Find them in table `users`. You will need to register them in order to set up passwords once you run the web client. If you wish, configure the user needed for notifications via SERVICE_ACCOUNT_USERNAME & SERVICE_ACCOUNT_PASSWORD env variables in .env.docker. The profiles need to be Global Community Admin - you can find this out yourself: Do you see an administration menu item in your Alkemio profiles?
-- To start the Matrix Synapse service, run the following from the repository root:
-
-```bash
-sudo bash ./.scripts/bootstrap_synapse.sh
-```
-
 - If you are using Windows you must go to docker settings -> resources -> file sharing and add the paths to .build and .scripts dirs.
+- The Synapse ↔ Hydra client credentials are read from `.env.docker` (`SYNAPSE_OIDC_CLIENT_ID` and `SYNAPSE_OIDC_CLIENT_SECRET`). Make sure these values exist before running the services.
 - Finally, ports available on localhost:
-  - 4000 (alkemio server),
+  - 3000/graphql (alkemio server),
   - 3306 (MySQL database)
   - 8888 (traefik dashboard)
   - 3000 (alkemio client)
   - 8008 (synapse server)
+  - 4444 (hydra public)
+  - 4445 (hydra admin)
   - 4436 (mailslurper UI)
   - 4437 (mailslurper API)
   - 5672 (rabbitMQ amqp)
@@ -77,3 +78,14 @@ pnpm run start:services:ai:debug
 ```
 
 Note: You may need multiple repositories cloned in order for this command to run. You can search the word `build` in `quickstart-services-ai-debug` and check which contexts are being built. If you need only one service to be built, comment the rest of the services which build the Dockerfile from relative path to the Alkemio Server.
+
+## Schema baseline automation prerequisites
+
+- The post-merge workflow `.github/workflows/schema-baseline.yml` regenerates `schema-baseline.graphql` on every push to `develop`, commits the snapshot, and opens a pull request from a temporary branch using the automation service account.
+- Configure the following GitHub Action secrets (repository or environment scoped) before enabling the workflow:
+  - `ALKEMIO_INFRASTRUCTURE_BOT_GPG_PRIVATE_KEY`: ASCII-armored private key for the automation identity.
+  - `ALKEMIO_INFRASTRUCTURE_BOT_GPG_PASSPHRASE`: Passphrase for the key (set to an empty string when the key is unprotected).
+- - `ALKEMIO_INFRASTRUCTURE_BOT_GPG_KEY_ID`: Fingerprint uploaded to GitHub so commits appear as verified.
+- - `ALKEMIO_INFRASTRUCTURE_BOT_PUSH_TOKEN`: Classic PAT with at least `repo` scope issued for the automation account; used to push the baseline branch and create the PR (also satisfies CLA requirements).
+- Grant the automation key push access via the PAT and verify the public key is registered with the bot account that owns the commits.
+- After updating secrets, trigger the workflow manually (`workflow_dispatch`) to confirm the baseline branch/PR path succeeds before relying on automatic runs.

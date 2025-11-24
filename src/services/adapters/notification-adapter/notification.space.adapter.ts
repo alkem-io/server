@@ -28,6 +28,13 @@ import { NotificationInputCollaborationCalloutPostContributionComment } from './
 import { InAppNotificationPayloadSpaceCollaborationCalloutPostComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout.post.comment';
 import { InAppNotificationPayloadSpaceCollaborationCalloutComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout.comment';
 import { NotificationInputVirtualContributorSpaceCommunityInvitationDeclined } from './dto/space/notification.dto.input.space.community.invitation.vc.declined';
+import { NotificationInputCommunityCalendarEventCreated } from './dto/space/notification.dto.input.space.community.calendar.event.created';
+import { InAppNotificationPayloadSpaceCommunityCalendarEvent } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.calendar.event';
+import { NotificationInputCommunityCalendarEventComment } from './dto/space/notification.dto.input.space.community.calendar.event.comment';
+import { InAppNotificationPayloadSpaceCommunityCalendarEventComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.calendar.event.comment';
+import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
+import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
+
 @Injectable()
 export class NotificationSpaceAdapter {
   constructor(
@@ -37,7 +44,8 @@ export class NotificationSpaceAdapter {
     private notificationInAppAdapter: NotificationInAppAdapter,
     private notificationAdapter: NotificationAdapter,
     private notificationUserAdapter: NotificationUserAdapter,
-    private communityResolverService: CommunityResolverService
+    private communityResolverService: CommunityResolverService,
+    private spaceLookupService: SpaceLookupService
   ) {}
 
   public async spaceCollaborationCalloutPublished(
@@ -61,18 +69,26 @@ export class NotificationSpaceAdapter {
       space.id
     );
 
+    // Filter out the publisher from email recipients
+    const emailRecipientsWithoutPublisher = recipients.emailRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+
     const payload =
       await this.notificationExternalAdapter.buildSpaceCollaborationCalloutPublishedPayload(
         event,
         eventData.triggeredBy,
-        recipients.emailRecipients,
+        emailRecipientsWithoutPublisher,
         space,
         eventData.callout
       );
     this.notificationExternalAdapter.sendExternalNotifications(event, payload);
 
     // Send in-app notifications
-    const inAppReceiverIDs = recipients.inAppRecipients.map(
+    const inAppRecipientsWithoutPublisher = recipients.inAppRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    const inAppReceiverIDs = inAppRecipientsWithoutPublisher.map(
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length > 0) {
@@ -84,6 +100,146 @@ export class NotificationSpaceAdapter {
 
       await this.notificationInAppAdapter.sendInAppNotifications(
         NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED,
+        NotificationEventCategory.SPACE_MEMBER,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
+        inAppPayload
+      );
+    }
+  }
+
+  public async spaceCommunityCalendarEventCreated(
+    eventData: NotificationInputCommunityCalendarEventCreated,
+    spaceID: string
+  ): Promise<void> {
+    const event = NotificationEvent.SPACE_COMMUNITY_CALENDAR_EVENT_CREATED;
+
+    const space = await this.spaceLookupService.getSpaceOrFail(spaceID, {
+      relations: {
+        about: {
+          profile: true,
+        },
+      },
+    });
+
+    const recipients = await this.getNotificationRecipientsSpace(
+      event,
+      eventData,
+      space.id
+    );
+
+    // Exclude the creator from both email and in-app recipients
+    const creatorID = eventData.calendarEvent.createdBy;
+    const emailRecipientsExcludingCreator = recipients.emailRecipients.filter(
+      recipient => recipient.id !== creatorID
+    );
+    const inAppRecipientsExcludingCreator = recipients.inAppRecipients.filter(
+      recipient => recipient.id !== creatorID
+    );
+
+    // Send email notifications
+    if (emailRecipientsExcludingCreator.length > 0) {
+      const payload =
+        await this.notificationExternalAdapter.buildSpaceCommunityCalendarEventCreatedPayload(
+          event,
+          eventData.triggeredBy,
+          emailRecipientsExcludingCreator,
+          space,
+          eventData.calendarEvent
+        );
+      this.notificationExternalAdapter.sendExternalNotifications(
+        event,
+        payload
+      );
+    }
+
+    // Send in-app notifications
+    const inAppReceiverIDs = inAppRecipientsExcludingCreator.map(
+      recipient => recipient.id
+    );
+    if (inAppReceiverIDs.length > 0) {
+      const inAppPayload: InAppNotificationPayloadSpaceCommunityCalendarEvent =
+        {
+          type: NotificationEventPayload.SPACE_COMMUNITY_CALENDAR_EVENT,
+          spaceID: space.id,
+          calendarEventID: eventData.calendarEvent.id,
+        };
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        NotificationEvent.SPACE_COMMUNITY_CALENDAR_EVENT_CREATED,
+        NotificationEventCategory.SPACE_MEMBER,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
+        inAppPayload
+      );
+    }
+  }
+
+  public async spaceCommunityCalendarEventComment(
+    eventData: NotificationInputCommunityCalendarEventComment,
+    spaceID: string
+  ): Promise<void> {
+    const event = NotificationEvent.SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT;
+
+    const space = await this.spaceLookupService.getSpaceOrFail(spaceID, {
+      relations: {
+        about: {
+          profile: true,
+        },
+      },
+    });
+
+    // Get the calendar event creator's user ID
+    const creatorID = eventData.calendarEvent.createdBy;
+    const commenterID = eventData.triggeredBy;
+
+    // Only notify the creator if they are not the commenter
+    if (creatorID === commenterID) {
+      return;
+    }
+
+    const recipients = await this.getNotificationRecipientsSpace(
+      event,
+      eventData,
+      space.id,
+      creatorID // Pass the creator's user ID
+    );
+
+    // Send email notifications
+    if (recipients.emailRecipients.length > 0) {
+      const payload =
+        await this.notificationExternalAdapter.buildSpaceCommunityCalendarEventCommentPayload(
+          event,
+          eventData.triggeredBy,
+          recipients.emailRecipients,
+          space,
+          eventData.calendarEvent,
+          eventData.commentSent
+        );
+      this.notificationExternalAdapter.sendExternalNotifications(
+        event,
+        payload
+      );
+    }
+
+    // Send in-app notifications
+    const inAppReceiverIDs = recipients.inAppRecipients.map(
+      recipient => recipient.id
+    );
+    if (inAppReceiverIDs.length > 0) {
+      const commentPreview = eventData.commentSent.message.substring(0, 200);
+      const inAppPayload: InAppNotificationPayloadSpaceCommunityCalendarEventComment =
+        {
+          type: NotificationEventPayload.SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT,
+          spaceID: space.id,
+          calendarEventID: eventData.calendarEvent.id,
+          commentText: commentPreview,
+          roomID: eventData.comments.id,
+          messageID: eventData.commentSent.id,
+        };
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        NotificationEvent.SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT,
         NotificationEventCategory.SPACE_MEMBER,
         eventData.triggeredBy,
         inAppReceiverIDs,
@@ -113,11 +269,16 @@ export class NotificationSpaceAdapter {
       space.id
     );
 
+    // Filter out the creator from email recipients
+    const emailRecipientsWithoutCreator = recipients.emailRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+
     const payload =
       await this.notificationExternalAdapter.buildSpaceCollaborationCreatedPayload(
         event,
         eventData.triggeredBy,
-        recipients.emailRecipients,
+        emailRecipientsWithoutCreator,
         space,
         eventData
       );
@@ -125,7 +286,10 @@ export class NotificationSpaceAdapter {
     this.notificationExternalAdapter.sendExternalNotifications(event, payload);
 
     // Send in-app notifications
-    const inAppReceiverIDs = recipients.inAppRecipients.map(
+    const inAppRecipientsWithoutCreator = recipients.inAppRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    const inAppReceiverIDs = inAppRecipientsWithoutCreator.map(
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length > 0) {
@@ -154,11 +318,17 @@ export class NotificationSpaceAdapter {
       space.id
     );
 
+    // Filter out the creator from admin email recipients
+    const adminEmailRecipientsWithoutCreator =
+      adminRecipients.emailRecipients.filter(
+        recipient => recipient.id !== eventData.triggeredBy
+      );
+
     const adminPayload =
       await this.notificationExternalAdapter.buildSpaceCollaborationCreatedPayload(
         adminEvent,
         eventData.triggeredBy,
-        adminRecipients.emailRecipients,
+        adminEmailRecipientsWithoutCreator,
         space,
         eventData
       );
@@ -168,7 +338,11 @@ export class NotificationSpaceAdapter {
     );
 
     // Send admin in-app notifications
-    const adminInAppReceiverIDs = adminRecipients.inAppRecipients.map(
+    const adminInAppRecipientsWithoutCreator =
+      adminRecipients.inAppRecipients.filter(
+        recipient => recipient.id !== eventData.triggeredBy
+      );
+    const adminInAppReceiverIDs = adminInAppRecipientsWithoutCreator.map(
       recipient => recipient.id
     );
     if (adminInAppReceiverIDs.length > 0) {
@@ -248,7 +422,7 @@ export class NotificationSpaceAdapter {
         {
           type: NotificationEventPayload.SPACE_COLLABORATION_CALLOUT_POST_COMMENT,
           spaceID: space.id,
-          contributionID: eventData.post.id,
+          contributionID: eventData.contribution.id,
           calloutID: eventData.callout.id,
           messageID: eventData.commentSent.id,
           roomID: eventData.room.id,
@@ -299,7 +473,10 @@ export class NotificationSpaceAdapter {
     this.notificationExternalAdapter.sendExternalNotifications(event, payload);
 
     // Send in-app notifications
-    const inAppReceiverIDs = recipients.inAppRecipients.map(
+    const inAppRecipientsWithoutSender = recipients.inAppRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    const inAppReceiverIDs = inAppRecipientsWithoutSender.map(
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length > 0) {
@@ -370,6 +547,7 @@ export class NotificationSpaceAdapter {
           type: NotificationEventPayload.SPACE_COMMUNITY_CONTRIBUTOR,
           spaceID: space.id,
           contributorID: eventData.contributorID,
+          contributorType: eventData.contributorType,
         };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
@@ -421,6 +599,7 @@ export class NotificationSpaceAdapter {
         type: NotificationEventPayload.SPACE_COMMUNITY_CONTRIBUTOR,
         spaceID: space.id,
         contributorID: eventData.virtualContributorID,
+        contributorType: RoleSetContributorType.VIRTUAL,
       };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
@@ -521,13 +700,19 @@ export class NotificationSpaceAdapter {
       eventData,
       space.id
     );
-    if (recipients.emailRecipients.length > 0) {
+
+    // Filter out the sender from email recipients
+    const emailRecipientsWithoutSender = recipients.emailRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+
+    if (emailRecipientsWithoutSender.length > 0) {
       // Emit the events to notify others
       const payloadRecipients =
         await this.notificationExternalAdapter.buildSpaceCommunicationMessageDirectNotificationPayload(
           eventRecipientsAdmins,
           eventData.triggeredBy,
-          recipients.emailRecipients,
+          emailRecipientsWithoutSender,
           space,
           eventData.message
         );
@@ -538,7 +723,10 @@ export class NotificationSpaceAdapter {
     }
 
     // Send in-app notifications
-    const inAppReceiverIDs = recipients.inAppRecipients.map(
+    const inAppRecipientsWithoutSender = recipients.inAppRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    const inAppReceiverIDs = inAppRecipientsWithoutSender.map(
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length > 0) {
@@ -613,7 +801,8 @@ export class NotificationSpaceAdapter {
       const inAppPayload: InAppNotificationPayloadSpaceCommunicationUpdate = {
         type: NotificationEventPayload.SPACE_COMMUNICATION_UPDATE,
         spaceID: space.id,
-        update: eventData.lastMessage?.message,
+        update: eventData.lastMessage.message,
+        messageID: eventData.lastMessage.id,
       };
 
       await this.notificationInAppAdapter.sendInAppNotifications(

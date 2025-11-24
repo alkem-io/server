@@ -1,17 +1,21 @@
+<!-- Implements constitution & agents.md. Does not introduce new governance. -->
+
 <!--
 Sync Impact Report
-Version change: 0.0.0 → 1.0.0 (initial full definition)
-Modified principles: (initial creation)
-Added sections: Core Principles, Architecture Standards, Engineering Workflow, Governance
+Version change: 1.0.0 → 2.0.0 (re-balanced observability + testing principles)
+Modified principles: 5. Observability & Operational Readiness (clarified signal expectations), 6. Code Quality with Pragmatic Testing (risk-based guidance)
+Added sections: (none)
 Removed sections: (none)
 Templates requiring updates:
- - .specify/templates/plan-template.md (Constitution Check gates) ✅
+ - .specify/templates/plan-template.md (Constitution Check alignment) ✅
+ - .specify/templates/tasks-template.md (testing guidance note) ✅
  - .specify/templates/spec-template.md (no changes required) ✅
- - .specify/templates/tasks-template.md (no changes required) ✅
 Deferred TODOs: None
 -->
 
 # Alkemio Server Engineering Constitution
+
+See also [`agents.md`](../../agents.md) and [`copilot-instructions.md`](../../.github/copilot-instructions.md) for operational guidance derived from this document.
 
 ## Core Principles
 
@@ -21,7 +25,7 @@ All core business logic MUST reside in clearly defined domain modules (under `sr
 
 ### 2. Modular NestJS Boundaries
 
-Each feature set MUST map to a NestJS module with a single, testable purpose. Modules expose only necessary providers; internal helpers remain private. Circular dependencies are forbidden—violations require redesign. Shared utilities live in `src/library` (pure, side‑effect free) or `src/common` (infrastructure + cross-cutting concerns). Adding a new module requires: purpose statement, public providers list, and dependency justification.
+Each feature set MUST map to a NestJS module with a single, testable purpose. Modules expose only necessary providers; internal helpers remain private. Circular dependencies are forbidden—violations require redesign. Shared utilities live in `src/library` (pure, side‑effect free),`src/common` (infrastructure + cross-cutting concerns) or `src/core` (core application flows like authentication, authorization, middlewares, pagination, filtering, exception handling). Adding a new module requires: purpose statement, public providers list, and dependency justification.
 
 ### 3. GraphQL Schema as Stable Contract
 
@@ -33,11 +37,11 @@ State changes MUST propagate through domain services emitting events (synchronou
 
 ### 5. Observability & Operational Readiness
 
-Every new module MUST define: structured log contexts, key metrics, and at least one meaningful health indicator if applicable. Logs use contextual IDs (request, correlation, entity). Silent failure paths are forbidden. Feature flags and license checks MUST log decision points at debug level. Performance-sensitive queries require an inline comment explaining chosen optimization.
+Every new module MUST define structured log contexts and describe the operational signals we actively consume. Instrument only what our observability stack ingests today—do not add orphaned Prometheus metrics or unused dashboards. Health indicators are required only when the module exposes an externally consumed surface; otherwise document why a lightweight runtime check or log hook suffices. Logs use contextual IDs (request, correlation, entity). Silent failure paths are forbidden. Feature flags and license checks MUST log decision points at debug level. Performance-sensitive queries require an inline comment explaining the chosen optimization.
 
 ### 6. Code Quality with Pragmatic Testing
 
-Minimum test expectations: unit tests for complex domain rules (happy + one edge path) AND integration tests for cross-module interactions or persistence mapping of new aggregates. Snapshot or superficial tests are discouraged unless asserting schema output. 100% coverage is NOT required; tests MUST defend invariants and contracts. Failure to justify absence of tests for non-trivial logic blocks the PR.
+Tests exist to defend domain invariants and observable behaviors that matter. Use a risk-based approach: add unit or integration tests when they deliver real signal, skip trivial pass-through coverage, and call out deliberate omissions in the PR when automation is unnecessary. Snapshot or superficial tests are discouraged unless asserting schema output. 100% coverage is NOT required; tests MUST stay maintainable and purposeful. Placeholder or “future we’ll fix it” tests are forbidden.
 
 ### 7. API Consistency & Evolution Discipline
 
@@ -61,9 +65,10 @@ Prefer the simplest viable implementation that satisfies domain constraints. Arc
    - `src/domain/*`: pure domain logic & repositories
    - `src/services/*`: application service orchestration & API layer helpers
    - `src/platform/*` & `src/platform-admin/*`: platform-scoped modules
-   - `src/common/*`: cross-cutting (auth, logging, config, exceptions)
+   - `src/common/*`: cross-cutting, lacking depth (exceptions, utils, constants, enums)
+   - `src/core/*`: core, cross-cutting, abstractions (auth, error-handling, microservices, pagination, filtering)
    - `src/library/*`: isolated reusable utilities (no Nest DI reliance)
-2. GraphQL schema generation MUST be deterministic and committed when changed.
+2. GraphQL schema generation MUST be deterministic and committed when changed. The committed `schema-baseline.graphql` artifact is maintained by the post-merge `schema-baseline` automation, which raises a signed pull request when differences are detected; manual edits require documented rationale and a follow-up automation run.
 3. Migrations MUST be idempotent and tested on a snapshot before prod promotion.
 4. Feature flags & licensing decisions centralize in dedicated services—not scattered conditionals.
 5. Storage aggregators & external service clients implement narrow interfaces consumed by domain services.
@@ -95,4 +100,4 @@ Enforcement:
 - Automated lint / CI may enforce schema stability, module boundaries, and logging context presence.
 - Manual review ensures domain purity & testing adequacy.
 
-**Version**: 1.0.0 | **Ratified**: 2025-10-04 | **Last Amended**: 2025-10-04
+**Version**: 2.0.0 | **Ratified**: 2025-10-04 | **Last Amended**: 2025-11-11

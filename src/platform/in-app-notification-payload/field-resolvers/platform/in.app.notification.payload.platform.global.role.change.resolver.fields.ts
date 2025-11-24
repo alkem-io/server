@@ -23,7 +23,7 @@ export class InAppNotificationPayloadPlatformGlobalRoleChangeResolverFields {
   }
 
   @ResolveField(() => String, {
-    nullable: true,
+    nullable: false,
     description: 'The new role.',
   })
   public role(
