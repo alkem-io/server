@@ -168,3 +168,13 @@ authorizationPolicy.credentialRules.push(guestContributeRule);
 - **Standards-compliant**: Integrates with existing authentication flow
 
 This approach provides named anonymous users for better UX in callout contributions while maintaining the platform's security and authorization model.
+
+## Whiteboard Guest Access Toggle
+
+Whiteboard collaboration builds on these credential primitives. When a space administrator enables guest access for a whiteboard (via the UI or by calling `WhiteboardGuestAccessService.updateGuestAccess()`), the platform now writes a single `public-access` credential rule to that whiteboard’s authorization policy:
+
+- **Granted privileges**: `READ`, `UPDATE_CONTENT`, and `CONTRIBUTE`, mirroring the editing capabilities surfaced in the UI.
+- **Credential scope**: both `GLOBAL_GUEST` _and_ `GLOBAL_REGISTERED`. This means every authenticated user can open an invited whiteboard whenever guest contributions are allowed, even if they are not yet members of the underlying space/community.
+- **Persistence & resets**: `WhiteboardAuthorizationService.appendCredentialRules()` re-applies the `public-access` rule whenever authorization definitions are rebuilt (for example, after an auth reset) as long as the whiteboard and its parent space still allow guest contributions. Disabling the toggle removes the rule entirely, leaving only owner/admin rules in place.
+
+> ℹ️ Previous revisions added separate credential rules for guests vs. authenticated users. Consolidating them into `public-access` keeps the contract auditable and prevents gaps between space members and other authenticated collaborators.

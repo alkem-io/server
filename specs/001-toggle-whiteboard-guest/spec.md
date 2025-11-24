@@ -69,7 +69,7 @@ An editor without required privileges attempts to change guest access but must b
 ### Functional Requirements
 
 - **FR-001**: Only users holding the PUBLIC_SHARE privilege for the whiteboard may toggle guest access, and only when the parent space reports `allowGuestContribution = true`.
-- **FR-002**: When guest access is enabled, the system must grant the GLOBAL_GUEST role read, write, and contribute capabilities for the targeted whiteboard and persist `guestContributionsAllowed = true`.
+- **FR-002**: When guest access is enabled, the system must grant a `public-access` credential rule that provides `READ`, `UPDATE_CONTENT`, and `CONTRIBUTE` privileges to both `GLOBAL_GUEST` and `GLOBAL_REGISTERED` credentials for the targeted whiteboard, ensuring `guestContributionsAllowed = true` for guests and any authenticated user.
 - **FR-003**: When guest access is disabled, the system must revoke any GLOBAL_GUEST permissions tied to the whiteboard, mark `guestContributionsAllowed = false`, and ensure no client-generated guest routes continue to authorize access.
 - **FR-004**: The API must expose a mutation accepting whiteboard identifier and desired guest access state, executing authorization, enforcing business rules, and returning the updated access configuration and `guestContributionsAllowed` flag.
 - **FR-005**: The mutation response must return the updated access configuration and the `guestContributionsAllowed` flag without emitting share tokens or URLs; clients rely on predictable routing patterns to expose the public link.

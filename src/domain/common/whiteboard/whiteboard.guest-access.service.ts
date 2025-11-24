@@ -20,22 +20,30 @@ import {
 } from '@common/exceptions';
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 
-const WHITEBOARD_GUEST_RULE_NAME = 'whiteboard-guest-access';
+const PUBLIC_RULE_NAME = 'public-access';
 const GRANTED_GUEST_PRIVILEGES: AuthorizationPrivilege[] = [
   AuthorizationPrivilege.READ,
   AuthorizationPrivilege.UPDATE_CONTENT,
   AuthorizationPrivilege.CONTRIBUTE,
+  AuthorizationPrivilege.FILE_UPLOAD,
 ] as const;
 
-const GUEST_ACCESS_CREDENTIAL_RULE = new AuthorizationPolicyRuleCredential(
-  GRANTED_GUEST_PRIVILEGES,
-  {
-    type: AuthorizationCredential.GLOBAL_GUEST,
-    resourceID: '',
-  },
-  WHITEBOARD_GUEST_RULE_NAME,
-  true
-);
+const createGuestAccessCredentialRule = () =>
+  new AuthorizationPolicyRuleCredential(
+    GRANTED_GUEST_PRIVILEGES,
+    [
+      {
+        type: AuthorizationCredential.GLOBAL_GUEST,
+        resourceID: '',
+      },
+      {
+        type: AuthorizationCredential.GLOBAL_REGISTERED,
+        resourceID: '',
+      },
+    ],
+    PUBLIC_RULE_NAME,
+    true
+  );
 
 @Injectable()
 export class WhiteboardGuestAccessService {
@@ -49,7 +57,7 @@ export class WhiteboardGuestAccessService {
   ) {}
 
   public getGuestAccessCredentialRule(): IAuthorizationPolicyRuleCredential {
-    return GUEST_ACCESS_CREDENTIAL_RULE;
+    return this.cloneCredentialRule(createGuestAccessCredentialRule());
   }
 
   async updateGuestAccess(
@@ -173,55 +181,101 @@ export class WhiteboardGuestAccessService {
   private ruleTargetsGuestCredential(
     rule: IAuthorizationPolicyRuleCredential
   ): boolean {
-    return rule.criterias.some(
-      criteria => criteria.type === AuthorizationCredential.GLOBAL_GUEST
+    return this.ruleTargetsCredentialType(
+      rule,
+      AuthorizationCredential.GLOBAL_GUEST
     );
   }
 
+  private ruleTargetsCredentialType(
+    rule: IAuthorizationPolicyRuleCredential,
+    credentialType: AuthorizationCredential
+  ): boolean {
+    return rule.criterias.some(criteria => criteria.type === credentialType);
+  }
+
   private enableGuestAccess(authorization: IAuthorizationPolicy): boolean {
-    const existingRule = this.findGuestRule(authorization);
-    if (!existingRule) {
-      authorization.credentialRules.push(GUEST_ACCESS_CREDENTIAL_RULE);
+    const guestRuleChanged = this.ensureCredentialRule(
+      authorization,
+      PUBLIC_RULE_NAME,
+      createGuestAccessCredentialRule()
+    );
+
+    return guestRuleChanged;
+  }
+
+  private disableGuestAccess(authorization: IAuthorizationPolicy): boolean {
+    const originalLength = authorization.credentialRules.length;
+    authorization.credentialRules = authorization.credentialRules.filter(
+      rule => !this.shouldRemoveGuestAccessRule(rule)
+    );
+    return authorization.credentialRules.length !== originalLength;
+  }
+
+  private shouldRemoveGuestAccessRule(
+    rule: IAuthorizationPolicyRuleCredential
+  ): boolean {
+    if (rule.name === PUBLIC_RULE_NAME) {
       return true;
     }
 
-    const previousPrivileges = new Set(existingRule.grantedPrivileges);
-    let mutated = false;
+    return (
+      !rule.name &&
+      this.ruleTargetsCredentialType(rule, AuthorizationCredential.GLOBAL_GUEST)
+    );
+  }
 
-    for (const privilege of GRANTED_GUEST_PRIVILEGES) {
+  private ensureCredentialRule(
+    authorization: IAuthorizationPolicy,
+    ruleName: string,
+    ruleTemplate: IAuthorizationPolicyRuleCredential
+  ): boolean {
+    const existingRule = this.findRuleByName(authorization, ruleName);
+    if (!existingRule) {
+      authorization.credentialRules.push(
+        this.cloneCredentialRule(ruleTemplate)
+      );
+      return true;
+    }
+
+    let mutated = false;
+    const previousPrivileges = new Set(existingRule.grantedPrivileges);
+
+    for (const privilege of ruleTemplate.grantedPrivileges) {
       if (!previousPrivileges.has(privilege)) {
         existingRule.grantedPrivileges.push(privilege);
         mutated = true;
       }
     }
 
-    if (!existingRule.cascade) {
+    if (ruleTemplate.cascade && !existingRule.cascade) {
       existingRule.cascade = true;
       mutated = true;
     }
 
-    if (existingRule.name !== WHITEBOARD_GUEST_RULE_NAME) {
-      existingRule.name = WHITEBOARD_GUEST_RULE_NAME;
+    if (existingRule.name !== ruleName) {
+      existingRule.name = ruleName;
       mutated = true;
     }
 
     return mutated;
   }
 
-  private disableGuestAccess(authorization: IAuthorizationPolicy): boolean {
-    const originalLength = authorization.credentialRules.length;
-    authorization.credentialRules = authorization.credentialRules.filter(
-      rule => !this.ruleTargetsGuestCredential(rule)
-    );
-    return authorization.credentialRules.length !== originalLength;
+  private findRuleByName(
+    authorization: IAuthorizationPolicy,
+    ruleName: string
+  ): IAuthorizationPolicyRuleCredential | undefined {
+    return authorization.credentialRules.find(rule => rule.name === ruleName);
   }
 
-  private findGuestRule(
-    authorization: IAuthorizationPolicy
-  ): IAuthorizationPolicyRuleCredential | undefined {
-    return authorization.credentialRules.find(rule =>
-      this.ruleTargetsGuestCredential(rule)
-    );
+  private cloneCredentialRule(
+    rule: IAuthorizationPolicyRuleCredential
+  ): IAuthorizationPolicyRuleCredential {
+    return {
+      ...rule,
+      grantedPrivileges: [...rule.grantedPrivileges],
+      criterias: rule.criterias.map(criteria => ({ ...criteria })),
+    };
   }
 
   private async resolveSpaceForWhiteboardOrFail(

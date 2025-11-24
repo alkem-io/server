@@ -96,7 +96,7 @@ describe('WhiteboardGuestAccessService', () => {
   });
 
   describe('updateGuestAccess', () => {
-    it('grants GLOBAL_GUEST privileges when enabling and remains idempotent', async () => {
+    it('grants combined public access privileges when enabling and remains idempotent', async () => {
       const authorization = createAuthorization();
       const whiteboard = createWhiteboard(authorization);
       whiteboardService.getWhiteboardOrFail.mockResolvedValue(whiteboard);
@@ -119,17 +119,25 @@ describe('WhiteboardGuestAccessService', () => {
 
       expect(authorizationPolicyService.save).toHaveBeenCalledTimes(1);
 
-      const guestRule = authorization.credentialRules.find(rule =>
-        rule.criterias.some(
-          criteria => criteria.type === AuthorizationCredential.GLOBAL_GUEST
-        )
+      const publicAccessRule = authorization.credentialRules.find(
+        rule => rule.name === 'public-access'
       );
-      expect(guestRule).toBeDefined();
-      expect(guestRule?.grantedPrivileges).toEqual(
+      expect(publicAccessRule).toBeDefined();
+      expect(publicAccessRule?.grantedPrivileges).toEqual(
         expect.arrayContaining([
           AuthorizationPrivilege.READ,
           AuthorizationPrivilege.UPDATE_CONTENT,
           AuthorizationPrivilege.CONTRIBUTE,
+        ])
+      );
+      expect(publicAccessRule?.criterias).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            type: AuthorizationCredential.GLOBAL_GUEST,
+          }),
+          expect.objectContaining({
+            type: AuthorizationCredential.GLOBAL_REGISTERED,
+          }),
         ])
       );
       expect(result.guestContributionsAllowed).toBe(true);
@@ -143,28 +151,44 @@ describe('WhiteboardGuestAccessService', () => {
 
       expect(authorizationPolicyService.save).not.toHaveBeenCalled();
       expect(secondResult.guestContributionsAllowed).toBe(true);
-      const guestRules = authorization.credentialRules.filter(rule =>
-        rule.criterias.some(
-          criteria => criteria.type === AuthorizationCredential.GLOBAL_GUEST
-        )
+      const publicRules = authorization.credentialRules.filter(
+        rule => rule.name === 'public-access'
       );
-      expect(guestRules).toHaveLength(1);
+      expect(publicRules).toHaveLength(1);
     });
 
-    it('removes GLOBAL_GUEST privileges when disabling and remains idempotent', async () => {
+    it('removes public access privileges when disabling and remains idempotent', async () => {
       const authorization = createAuthorization();
       authorization.credentialRules.push({
-        name: 'whiteboard-guest-access',
+        name: 'public-access',
         cascade: true,
         criterias: [
           {
             type: AuthorizationCredential.GLOBAL_GUEST,
             resourceID: '',
           },
+          {
+            type: AuthorizationCredential.GLOBAL_REGISTERED,
+            resourceID: '',
+          },
         ],
         grantedPrivileges: [
           AuthorizationPrivilege.READ,
           AuthorizationPrivilege.CONTRIBUTE,
+        ],
+      });
+      authorization.credentialRules.push({
+        name: 'whiteboard-owner-manage',
+        cascade: true,
+        criterias: [
+          {
+            type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+            resourceID: 'owner-1',
+          },
+        ],
+        grantedPrivileges: [
+          AuthorizationPrivilege.UPDATE,
+          AuthorizationPrivilege.DELETE,
         ],
       });
       const whiteboard = createWhiteboard(authorization);
@@ -178,15 +202,27 @@ describe('WhiteboardGuestAccessService', () => {
         whiteboard.id,
         false
       );
-
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        agentInfo,
+        authorization,
+        AuthorizationPrivilege.PUBLIC_SHARE,
+        expect.stringContaining(whiteboard.id)
+      );
       expect(authorizationPolicyService.save).toHaveBeenCalledTimes(1);
       expect(
         authorization.credentialRules.some(rule =>
           rule.criterias.some(
-            criteria => criteria.type === AuthorizationCredential.GLOBAL_GUEST
+            criteria =>
+              criteria.type === AuthorizationCredential.GLOBAL_GUEST ||
+              criteria.type === AuthorizationCredential.GLOBAL_REGISTERED
           )
         )
       ).toBe(false);
+      expect(
+        authorization.credentialRules.some(
+          rule => rule.name === 'whiteboard-owner-manage'
+        )
+      ).toBe(true);
       expect(result.guestContributionsAllowed).toBe(false);
 
       authorizationPolicyService.save.mockClear();
@@ -201,10 +237,17 @@ describe('WhiteboardGuestAccessService', () => {
       expect(
         authorization.credentialRules.some(rule =>
           rule.criterias.some(
-            criteria => criteria.type === AuthorizationCredential.GLOBAL_GUEST
+            criteria =>
+              criteria.type === AuthorizationCredential.GLOBAL_GUEST ||
+              criteria.type === AuthorizationCredential.GLOBAL_REGISTERED
           )
         )
       ).toBe(false);
+      expect(
+        authorization.credentialRules.some(
+          rule => rule.name === 'whiteboard-owner-manage'
+        )
+      ).toBe(true);
     });
 
     it('applies the final requested state when toggles alternate', async () => {
@@ -229,6 +272,11 @@ describe('WhiteboardGuestAccessService', () => {
           rule.criterias.some(
             criteria => criteria.type === AuthorizationCredential.GLOBAL_GUEST
           )
+        )
+      ).toBe(false);
+      expect(
+        authorization.credentialRules.some(
+          rule => rule.name === 'public-access'
         )
       ).toBe(false);
       expect(authorizationPolicyService.save).toHaveBeenCalledTimes(2);
