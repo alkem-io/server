@@ -1,13 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, FindOneOptions } from 'typeorm';
 import { MediaGallery } from './media.gallery.entity';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { CreateMediaGalleryInput, UpdateMediaGalleryInput } from './dto';
 import { IMediaGallery } from './media.gallery.interface';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { FindOneOptions } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { LogContext } from '@common/enums/logging.context';
 import { ProfileService } from '@domain/common/profile/profile.service';
@@ -80,27 +79,6 @@ export class MediaGalleryService {
     });
 
     return await this.mediaGalleryRepository.save(mediaGallery);
-  }
-
-  private async getStorageAggregatorId(
-    mediaGalleryId: string
-  ): Promise<string> {
-    // For now, we'll need to get the storage aggregator from the callout framing
-    // This is a simplified approach - you may need to adjust based on your architecture
-    const mediaGallery = await this.mediaGalleryRepository.findOne({
-      where: { id: mediaGalleryId },
-      relations: { visuals: true },
-    });
-
-    if (mediaGallery && mediaGallery.visuals.length > 0) {
-      // Extract storage aggregator ID from existing visual URI
-      const existingVisual = mediaGallery.visuals[0];
-      const uriParts = existingVisual.uri.split('/');
-      return uriParts[0]; // Assuming URI format is "storageAggregatorId/..."
-    }
-
-    // Fallback - this should be passed from the caller
-    throw new Error('Unable to determine storage aggregator ID');
   }
 
   public async getMediaGalleryOrFail(
