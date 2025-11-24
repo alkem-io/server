@@ -4,6 +4,7 @@ import { ILink } from '@domain/collaboration/link/link.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { IMemo } from '@domain/common/memo/memo.interface';
+import { IPoll } from '@domain/common/poll/poll.interface';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 
 @ObjectType('CalloutFraming')
@@ -21,4 +22,6 @@ export abstract class ICalloutFraming extends IAuthorizable {
   link?: ILink;
 
   memo?: IMemo;
+
+  poll?: IPoll;
 }

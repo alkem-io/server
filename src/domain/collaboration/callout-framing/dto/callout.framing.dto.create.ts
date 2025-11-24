@@ -5,6 +5,7 @@ import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.creat
 import { CreateWhiteboardInput } from '@domain/common/whiteboard/types';
 import { CreateLinkInput } from '@domain/collaboration/link/dto/link.dto.create';
 import { CreateMemoInput } from '@domain/common/memo/types';
+import { CreatePollInput } from '@domain/common/poll/dto/poll.dto.create';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 
 @InputType()
@@ -40,6 +41,12 @@ export class CreateCalloutFramingInput {
   @ValidateNested()
   @Type(() => CreateMemoInput)
   memo?: CreateMemoInput;
+
+  @Field(() => CreatePollInput, { nullable: true })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CreatePollInput)
+  poll?: CreatePollInput;
 
   @Field(() => [String], { nullable: true })
   @IsOptional()

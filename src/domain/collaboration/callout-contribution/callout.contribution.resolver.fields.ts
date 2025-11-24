@@ -5,6 +5,7 @@ import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { CalloutContributionService } from './callout.contribution.service';
 import { IPost } from '../post/post.interface';
 import { IMemo } from '@domain/common/memo/memo.interface';
+import { IPoll } from '@domain/common/poll/poll.interface';
 import { IUser } from '@domain/community/user/user.interface';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { LoggerService } from '@nestjs/common';
@@ -64,6 +65,16 @@ export class CalloutContributionResolverFields {
     @Parent() calloutContribution: ICalloutContribution
   ): Promise<IMemo | null> {
     return await this.calloutContributionService.getMemo(calloutContribution);
+  }
+
+  @ResolveField('poll', () => IPoll, {
+    nullable: true,
+    description: 'The Poll that was contributed.',
+  })
+  async poll(
+    @Parent() calloutContribution: ICalloutContribution
+  ): Promise<IPoll | null> {
+    return await this.calloutContributionService.getPoll(calloutContribution);
   }
 
   @ResolveField('createdBy', () => IUser, {

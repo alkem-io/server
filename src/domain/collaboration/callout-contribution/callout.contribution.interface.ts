@@ -4,6 +4,7 @@ import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { IPost } from '../post/post.interface';
 import { ILink } from '../link/link.interface';
 import { IMemo } from '@domain/common/memo/memo.interface';
+import { IPoll } from '@domain/common/poll/poll.interface';
 import { ICallout } from '../callout/callout.interface';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 
@@ -18,6 +19,8 @@ export abstract class ICalloutContribution extends IAuthorizable {
   post?: IPost;
 
   memo?: IMemo;
+
+  poll?: IPoll;
 
   createdBy?: string;
 

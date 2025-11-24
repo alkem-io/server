@@ -5,6 +5,7 @@ import { Profile } from '@domain/common/profile/profile.entity';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import { Link } from '@domain/collaboration/link/link.entity';
 import { Memo } from '@domain/common/memo/memo.entity';
+import { Poll } from '@domain/common/poll/poll.entity';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { ENUM_LENGTH } from '@common/constants';
 import { Callout } from '../callout/callout.entity';
@@ -55,4 +56,12 @@ export class CalloutFraming
   })
   @JoinColumn()
   memo?: Memo;
+
+  @OneToOne(() => Poll, poll => poll.framing, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  poll?: Poll;
 }

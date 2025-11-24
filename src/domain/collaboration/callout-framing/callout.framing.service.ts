@@ -30,6 +30,9 @@ import { CreateLinkInput } from '@domain/collaboration/link/dto/link.dto.create'
 import { ValidationException } from '@common/exceptions';
 import { CreateMemoInput, IMemo } from '@domain/common/memo/types';
 import { ILink } from '../link/link.interface';
+import { PollService } from '@domain/common/poll/poll.service';
+import { CreatePollInput } from '@domain/common/poll/dto/poll.dto.create';
+import { IPoll } from '@domain/common/poll/poll.interface';
 
 @Injectable()
 export class CalloutFramingService {
@@ -39,6 +42,7 @@ export class CalloutFramingService {
     private whiteboardService: WhiteboardService,
     private linkService: LinkService,
     private memoService: MemoService,
+    private pollService: PollService,
     private namingService: NamingService,
     private tagsetService: TagsetService,
     @InjectRepository(CalloutFraming)
@@ -91,6 +95,22 @@ export class CalloutFramingService {
       } else {
         throw new ValidationException(
           'Callout Framing of type WHITEBOARD requires whiteboard data.',
+          LogContext.COLLABORATION
+        );
+      }
+    }
+
+    if (calloutFraming.type === CalloutFramingType.POLL) {
+      if (calloutFramingData.poll) {
+        await this.createNewPollInCalloutFraming(
+          calloutFraming,
+          calloutFramingData.poll,
+          storageAggregator,
+          userID
+        );
+      } else {
+        throw new ValidationException(
+          'Callout Framing of type POLL requires poll data.',
           LogContext.COLLABORATION
         );
       }
@@ -183,6 +203,24 @@ export class CalloutFramingService {
     );
   }
 
+  private async createNewPollInCalloutFraming(
+    calloutFraming: ICalloutFraming,
+    pollData: CreatePollInput,
+    storageAggregator: IStorageAggregator,
+    userID?: string
+  ) {
+    const reservedNameIDs: string[] = []; // no reserved nameIDs for framing
+    pollData.nameID = this.namingService.createNameIdAvoidingReservedNameIDs(
+      `${pollData.profile?.displayName ?? 'poll'}`,
+      reservedNameIDs
+    );
+    calloutFraming.poll = await this.pollService.createPoll(
+      pollData,
+      storageAggregator,
+      userID
+    );
+  }
+
   public async updateCalloutFraming(
     calloutFraming: ICalloutFraming,
     calloutFramingData: UpdateCalloutFramingInput,
@@ -227,6 +265,11 @@ export class CalloutFramingService {
         if (calloutFraming.link) {
           await this.linkService.deleteLink(calloutFraming.link.id);
           calloutFraming.link = undefined;
+        }
+
+        if (calloutFraming.poll) {
+          await this.pollService.deletePoll(calloutFraming.poll.id);
+          calloutFraming.poll = undefined;
         }
 
         // if there is no content coming with the mutation, we do nothing with the whiteboard
@@ -311,6 +354,45 @@ export class CalloutFramingService {
         }
         break;
       }
+      case CalloutFramingType.POLL: {
+        if (calloutFraming.whiteboard) {
+          await this.whiteboardService.deleteWhiteboard(
+            calloutFraming.whiteboard.id
+          );
+          calloutFraming.whiteboard = undefined;
+        }
+        if (calloutFraming.memo) {
+          await this.memoService.deleteMemo(calloutFraming.memo.id);
+          calloutFraming.memo = undefined;
+        }
+        if (calloutFraming.link) {
+          await this.linkService.deleteLink(calloutFraming.link.id);
+          calloutFraming.link = undefined;
+        }
+
+        if (!calloutFramingData.pollContent) {
+          return calloutFraming;
+        }
+
+        if (calloutFraming.poll) {
+           await this.pollService.updatePoll(calloutFraming.poll, {
+             content: calloutFramingData.pollContent,
+           });
+        } else {
+           await this.createNewPollInCalloutFraming(
+            calloutFraming,
+            {
+              profile: {
+                displayName: 'Callout Framing Poll',
+              },
+              content: calloutFramingData.pollContent,
+            },
+            storageAggregator,
+            userID
+           );
+        }
+        break;
+      }
       case CalloutFramingType.LINK: {
         // If there was a whiteboard before, we delete it
         if (calloutFraming.whiteboard) {
@@ -324,6 +406,10 @@ export class CalloutFramingService {
         if (calloutFraming.memo) {
           await this.memoService.deleteMemo(calloutFraming.memo.id);
           calloutFraming.memo = undefined;
+        }
+        if (calloutFraming.poll) {
+          await this.pollService.deletePoll(calloutFraming.poll.id);
+          calloutFraming.poll = undefined;
         }
 
         // Handle LINK type updates
@@ -356,6 +442,10 @@ export class CalloutFramingService {
           await this.linkService.deleteLink(calloutFraming.link.id);
           calloutFraming.link = undefined;
         }
+        if (calloutFraming.poll) {
+          await this.pollService.deletePoll(calloutFraming.poll.id);
+          calloutFraming.poll = undefined;
+        }
         break;
       }
     }
@@ -373,6 +463,7 @@ export class CalloutFramingService {
           whiteboard: true,
           link: true,
           memo: true,
+          poll: true,
         },
       }
     );
@@ -392,6 +483,10 @@ export class CalloutFramingService {
 
     if (calloutFraming.memo) {
       await this.memoService.deleteMemo(calloutFraming.memo.id);
+    }
+
+    if (calloutFraming.poll) {
+      await this.pollService.deletePoll(calloutFraming.poll.id);
     }
 
     if (calloutFraming.authorization) {
@@ -496,5 +591,22 @@ export class CalloutFramingService {
     }
 
     return calloutFraming.memo;
+  }
+
+  public async getPoll(
+    calloutFramingInput: ICalloutFraming,
+    relations?: FindOptionsRelations<ICalloutFraming>
+  ): Promise<IPoll | null> {
+    const calloutFraming = await this.getCalloutFramingOrFail(
+      calloutFramingInput.id,
+      {
+        relations: { poll: true, ...relations },
+      }
+    );
+    if (!calloutFraming.poll) {
+      return null;
+    }
+
+    return calloutFraming.poll;
   }
 }

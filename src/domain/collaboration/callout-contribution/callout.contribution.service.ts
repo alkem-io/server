@@ -14,6 +14,8 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { IPost } from '../post';
 import { MemoService } from '@domain/common/memo/memo.service';
 import { IMemo } from '@domain/common/memo/memo.interface';
+import { PollService } from '@domain/common/poll/poll.service';
+import { IPoll } from '@domain/common/poll/poll.interface';
 import { ICalloutSettingsContribution } from '../callout-settings/callout.settings.contribution.interface';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import {
@@ -35,6 +37,7 @@ export class CalloutContributionService {
     private whiteboardService: WhiteboardService,
     private linkService: LinkService,
     private memoService: MemoService,
+    private pollService: PollService,
     @InjectRepository(CalloutContribution)
     private contributionRepository: Repository<CalloutContribution>
   ) {}
@@ -81,11 +84,19 @@ export class CalloutContributionService {
     contribution.sortOrder = calloutContributionData.sortOrder ?? 0;
     contribution.type = calloutContributionData.type;
 
-    const { post, whiteboard, link, memo } = calloutContributionData;
+    const { post, whiteboard, link, memo, poll } = calloutContributionData;
 
     if (whiteboard) {
       contribution.whiteboard = await this.whiteboardService.createWhiteboard(
         whiteboard,
+        storageAggregator,
+        userID
+      );
+    }
+
+    if (poll) {
+      contribution.poll = await this.pollService.createPoll(
+        poll,
         storageAggregator,
         userID
       );
@@ -139,6 +150,7 @@ export class CalloutContributionService {
       [CalloutContributionType.LINK]: 'link',
       [CalloutContributionType.WHITEBOARD]: 'whiteboard',
       [CalloutContributionType.MEMO]: 'memo',
+      [CalloutContributionType.POLL]: 'poll',
     };
 
     const declaredType = calloutContributionData.type;
@@ -178,6 +190,7 @@ export class CalloutContributionService {
           whiteboard: true,
           link: true,
           memo: true,
+          poll: true,
         },
       }
     );
@@ -195,6 +208,10 @@ export class CalloutContributionService {
 
     if (contribution.memo) {
       await this.memoService.deleteMemo(contribution.memo.id);
+    }
+
+    if (contribution.poll) {
+      await this.pollService.deletePoll(contribution.poll.id);
     }
 
     if (contribution.authorization) {
@@ -321,6 +338,23 @@ export class CalloutContributionService {
     return calloutContribution.memo;
   }
 
+  public async getPoll(
+    calloutContributionInput: ICalloutContribution,
+    relations?: FindOptionsRelations<ICalloutContribution>
+  ): Promise<IPoll | null> {
+    const calloutContribution = await this.getCalloutContributionOrFail(
+      calloutContributionInput.id,
+      {
+        relations: { poll: true, ...relations },
+      }
+    );
+    if (!calloutContribution.poll) {
+      return null;
+    }
+
+    return calloutContribution.poll;
+  }
+
   /**
    * Retrieves the storage bucket associated with a specific contribution.
    * @param contributionID The ID of the contribution.
@@ -354,6 +388,11 @@ export class CalloutContributionService {
               storageBucket: true,
             },
           },
+          poll: {
+            profile: {
+              storageBucket: true,
+            },
+          },
         },
       }
     );
@@ -379,6 +418,8 @@ export class CalloutContributionService {
       return contribution.whiteboard.profile;
     } else if (contribution.memo) {
       return contribution.memo.profile;
+    } else if (contribution.poll) {
+      return contribution.poll.profile;
     }
     return undefined;
   }

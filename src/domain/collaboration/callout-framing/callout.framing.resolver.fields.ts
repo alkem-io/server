@@ -9,6 +9,7 @@ import { CalloutFramingService } from './callout.framing.service';
 import { IWhiteboard } from '@domain/common/whiteboard/types';
 import { ILink } from '@domain/collaboration/link/link.interface';
 import { IMemo } from '@domain/common/memo/types';
+import { IPoll } from '@domain/common/poll/poll.interface';
 
 @Resolver(() => ICalloutFraming)
 export class CalloutFramingResolverFields {
@@ -50,5 +51,13 @@ export class CalloutFramingResolverFields {
   })
   memo(@Parent() calloutFraming: ICalloutFraming): Promise<IMemo | null> {
     return this.calloutFramingService.getMemo(calloutFraming);
+  }
+
+  @ResolveField('poll', () => IPoll, {
+    nullable: true,
+    description: 'The Poll for framing the associated Callout.',
+  })
+  poll(@Parent() calloutFraming: ICalloutFraming): Promise<IPoll | null> {
+    return this.calloutFramingService.getPoll(calloutFraming);
   }
 }

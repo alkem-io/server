@@ -7,6 +7,7 @@ import { Callout } from '../callout/callout.entity';
 import { Link } from '../link/link.entity';
 import { ENUM_LENGTH, UUID_LENGTH } from '@common/constants';
 import { Memo } from '@domain/common/memo/memo.entity';
+import { Poll } from '@domain/common/poll/poll.entity';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 
 @Entity()
@@ -39,6 +40,14 @@ export class CalloutContribution
   })
   @JoinColumn()
   memo?: Memo;
+
+  @OneToOne(() => Poll, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  poll?: Poll;
 
   @OneToOne(() => Post, post => post.contribution, {
     eager: false,

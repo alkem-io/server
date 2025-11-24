@@ -21,6 +21,7 @@ import { BootstrapModule } from '@core/bootstrap/bootstrap.module';
 import { RequestLoggerMiddleware } from '@core/middleware/request.logger.middleware';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { SpaceModule } from '@domain/space/space/space.module';
+import { PollModule } from '@domain/common/poll/poll.module';
 import { ScalarsModule } from '@domain/common/scalars/scalars.module';
 import { AdminCommunicationModule } from '@src/platform-admin/domain/communication/admin.communication.module';
 import { AppController } from '@src/app.controller';
@@ -270,6 +271,7 @@ import { InAppNotificationAdminModule } from './platform-admin/in-app-notificati
     AuthenticationModule,
     AuthorizationModule,
     SpaceModule,
+    PollModule,
     MetadataModule,
     BootstrapModule,
     ActivityLogModule,

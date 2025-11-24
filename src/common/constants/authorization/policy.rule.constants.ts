@@ -3,6 +3,7 @@ export const POLICY_RULE_SPACE_CREATE_SUBSPACE =
 export const POLICY_RULE_WHITEBOARD_CONTENT_UPDATE =
   'policyRule-whiteboardContentUpdate';
 export const POLICY_RULE_MEMO_CONTENT_UPDATE = 'policyRule-memoContentUpdate';
+export const POLICY_RULE_POLL_CONTENT_UPDATE = 'policyRule-pollContentUpdate';
 export const POLICY_RULE_VISUAL_UPDATE = 'policyRule-visualUpdate';
 export const POLICY_RULE_ROOM_CONTRIBUTE = 'policyRule-roomContribute';
 export const POLICY_RULE_ROOM_ADMINS = 'policyRule-roomAdminsCreate';

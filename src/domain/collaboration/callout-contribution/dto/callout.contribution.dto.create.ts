@@ -3,6 +3,7 @@ import { IsOptional, ValidateNested } from 'class-validator';
 import { CreateWhiteboardInput } from '@domain/common/whiteboard/types';
 import { CreatePostInput } from '@domain/collaboration/post/dto/post.dto.create';
 import { CreateMemoInput } from '@domain/common/memo/dto/memo.dto.create';
+import { CreatePollInput } from '@domain/common/poll/dto/poll.dto.create';
 import { CreateLinkInput } from '@domain/collaboration/link/dto/link.dto.create';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 
@@ -30,6 +31,11 @@ export class CreateCalloutContributionInput {
   @IsOptional()
   @ValidateNested({ each: true })
   memo?: CreateMemoInput;
+
+  @Field(() => CreatePollInput, { nullable: true })
+  @IsOptional()
+  @ValidateNested({ each: true })
+  poll?: CreatePollInput;
 
   @Field(() => Number, {
     nullable: true,
