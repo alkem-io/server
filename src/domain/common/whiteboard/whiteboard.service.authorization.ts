@@ -152,7 +152,10 @@ export class WhiteboardAuthorizationService {
       spaceSettings
     );
 
-    if (enabledGuestAccess) {
+    if (
+      enabledGuestAccess &&
+      spaceSettings?.collaboration?.allowGuestContributions
+    ) {
       newRules.push(
         this.whiteboardGuestAccessService.getGuestAccessCredentialRule()
       );
