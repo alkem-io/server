@@ -38,6 +38,12 @@ export class VisualService {
     visualInput: CreateVisualInput,
     initialUri?: string
   ): IVisual {
+    if (!visualInput.name) {
+      throw new ValidationException(
+        'Visual type (name) must be provided when creating a visual.',
+        LogContext.COMMUNITY
+      );
+    }
     const visual: IVisual = Visual.create({
       ...visualInput,
       uri: initialUri ?? '',
@@ -235,6 +241,26 @@ export class VisualService {
       {
         name: VisualType.AVATAR,
         ...DEFAULT_VISUAL_CONSTRAINTS[VisualType.AVATAR],
+      },
+      uri
+    );
+  }
+
+  public createVisualMediaGalleryImage(uri?: string): IVisual {
+    return this.createVisual(
+      {
+        name: VisualType.MEDIA_GALLERY_IMAGE,
+        ...DEFAULT_VISUAL_CONSTRAINTS[VisualType.MEDIA_GALLERY_IMAGE],
+      },
+      uri
+    );
+  }
+
+  public createVisualMediaGalleryVideo(uri?: string): IVisual {
+    return this.createVisual(
+      {
+        name: VisualType.MEDIA_GALLERY_VIDEO,
+        ...DEFAULT_VISUAL_CONSTRAINTS[VisualType.MEDIA_GALLERY_VIDEO],
       },
       uri
     );

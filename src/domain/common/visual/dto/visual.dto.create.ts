@@ -5,6 +5,7 @@ import { VisualType } from '@common/enums/visual.type';
 @ObjectType('CreateVisualData')
 export class CreateVisualInput {
   @Field(() => VisualType, {
+    nullable: false,
     description: 'Type of visual to create (e.g. banner, avatar).',
   })
   name!: VisualType;

@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, FindOneOptions } from 'typeorm';
 import { MediaGallery } from './media.gallery.entity';
-import { AuthorizationService } from '@core/authorization/authorization.service';
 import { CreateMediaGalleryInput, UpdateMediaGalleryInput } from './dto';
 import { IMediaGallery } from './media.gallery.interface';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
@@ -13,15 +12,33 @@ import { ProfileService } from '@domain/common/profile/profile.service';
 import { Visual } from '@domain/common/visual/visual.entity';
 import { VisualService } from '@domain/common/visual/visual.service';
 import { ProfileType } from '@common/enums/profile.type';
+import { DocumentService } from '@domain/storage/document/document.service';
+import { VisualType } from '@common/enums/visual.type';
+import { DEFAULT_VISUAL_CONSTRAINTS } from '@domain/common/visual/visual.constraints';
+import type { CreateVisualInput } from '@domain/common/visual/dto/visual.dto.create';
+
+type MediaGalleryVisualInput = Partial<
+  Pick<
+    CreateVisualInput,
+    | 'name'
+    | 'uri'
+    | 'alternativeText'
+    | 'minWidth'
+    | 'maxWidth'
+    | 'minHeight'
+    | 'maxHeight'
+    | 'aspectRatio'
+  >
+> & { uri?: string };
 
 @Injectable()
 export class MediaGalleryService {
   constructor(
     @InjectRepository(MediaGallery)
     private readonly mediaGalleryRepository: Repository<MediaGallery>,
-    private readonly authorizationService: AuthorizationService,
     private readonly profileService: ProfileService,
-    private readonly visualService: VisualService
+    private readonly visualService: VisualService,
+    private readonly documentService: DocumentService
   ) {}
 
   public async createMediaGallery(
@@ -49,13 +66,9 @@ export class MediaGalleryService {
     )) as any;
 
     // Create visuals using VisualService - use URI from DTO as-is
-    mediaGallery.visuals = mediaGalleryData.visuals.map(visualData => {
-      const visual = this.visualService.createVisual(
-        visualData,
-        visualData.uri
-      );
-      return visual as Visual;
-    });
+    mediaGallery.visuals = await this.createMediaGalleryVisuals(
+      mediaGalleryData.visuals
+    );
 
     return await this.mediaGalleryRepository.save(mediaGallery);
   }
@@ -70,13 +83,9 @@ export class MediaGalleryService {
     });
 
     // Replace visuals using VisualService - use URI from DTO as-is
-    mediaGallery.visuals = updateData.visuals.map(visualData => {
-      const visual = this.visualService.createVisual(
-        visualData as any,
-        visualData.uri
-      );
-      return visual as Visual;
-    });
+    mediaGallery.visuals = await this.createMediaGalleryVisuals(
+      updateData.visuals
+    );
 
     return await this.mediaGalleryRepository.save(mediaGallery);
   }
@@ -97,5 +106,117 @@ export class MediaGalleryService {
       );
     }
     return mediaGallery;
+  }
+
+  private async createMediaGalleryVisuals(
+    visuals: MediaGalleryVisualInput[]
+  ): Promise<Visual[]> {
+    return await Promise.all(
+      visuals.map(async visualInput =>
+        this.buildMediaGalleryVisual(visualInput)
+      )
+    );
+  }
+
+  private async buildMediaGalleryVisual(
+    visualInput: MediaGalleryVisualInput
+  ): Promise<Visual> {
+    const resolvedType = await this.resolveMediaGalleryVisualType(
+      visualInput.name,
+      visualInput.uri
+    );
+    const constraints = DEFAULT_VISUAL_CONSTRAINTS[resolvedType];
+    const mergedInput = {
+      ...visualInput,
+      minWidth:
+        'minWidth' in visualInput && visualInput.minWidth !== undefined
+          ? visualInput.minWidth
+          : constraints.minWidth,
+      maxWidth:
+        'maxWidth' in visualInput && visualInput.maxWidth !== undefined
+          ? visualInput.maxWidth
+          : constraints.maxWidth,
+      minHeight:
+        'minHeight' in visualInput && visualInput.minHeight !== undefined
+          ? visualInput.minHeight
+          : constraints.minHeight,
+      maxHeight:
+        'maxHeight' in visualInput && visualInput.maxHeight !== undefined
+          ? visualInput.maxHeight
+          : constraints.maxHeight,
+      aspectRatio:
+        'aspectRatio' in visualInput && visualInput.aspectRatio !== undefined
+          ? visualInput.aspectRatio
+          : constraints.aspectRatio,
+    } as MediaGalleryVisualInput;
+
+    const visual = this.visualService.createVisual(
+      {
+        ...(mergedInput as any),
+        name: resolvedType,
+      },
+      visualInput.uri
+    ) as Visual;
+
+    visual.allowedTypes = [...constraints.allowedTypes];
+
+    return visual;
+  }
+
+  private async resolveMediaGalleryVisualType(
+    providedType: VisualType | undefined,
+    uri?: string
+  ): Promise<VisualType> {
+    const inferredType = uri
+      ? await this.inferVisualTypeFromUri(uri)
+      : undefined;
+
+    // If caller explicitly provided a visual type (e.g. legacy banner), never override it.
+    if (providedType && !this.isMediaGalleryVisualType(providedType)) {
+      return providedType;
+    }
+
+    // When providedType is one of the new media gallery variants, prefer inferred type if any.
+    if (
+      providedType &&
+      this.isMediaGalleryVisualType(providedType) &&
+      inferredType
+    ) {
+      return inferredType;
+    }
+
+    if (providedType) {
+      return providedType;
+    }
+
+    return inferredType ?? VisualType.MEDIA_GALLERY_IMAGE;
+  }
+
+  private async inferVisualTypeFromUri(
+    uri: string
+  ): Promise<VisualType | undefined> {
+    const document = await this.documentService.getDocumentFromURL(uri);
+    const mimeType = document?.mimeType;
+
+    if (!mimeType) {
+      return undefined;
+    }
+
+    if (mimeType.startsWith('video/')) {
+      return VisualType.MEDIA_GALLERY_VIDEO;
+    }
+
+    if (mimeType.startsWith('image/')) {
+      return VisualType.MEDIA_GALLERY_IMAGE;
+    }
+
+    return undefined;
+  }
+
+  private isMediaGalleryVisualType(type: VisualType): boolean {
+    return (
+      type === VisualType.MEDIA_GALLERY_IMAGE ||
+      type === VisualType.MEDIA_GALLERY_VIDEO
+    );
   }
 }
