@@ -14,7 +14,10 @@ import { IAuthorizationPolicyRuleVerifiedCredential } from './authorization.poli
 import { AuthorizationInvalidPolicyException } from '@common/exceptions/authorization.invalid.policy.exception';
 import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
-import { AuthRemoteEvaluationService } from '@services/external/auth-remote-evaluation';
+import {
+  AuthEvaluationResponse,
+  AuthRemoteEvaluationService,
+} from '@services/external/auth-remote-evaluation';
 import { User } from '@domain/community/user/user.entity';
 import { Space } from '@domain/space/space/space.entity';
 import { InjectEntityManager } from '@nestjs/typeorm';
@@ -59,45 +62,6 @@ export class AuthorizationService {
       auth.id,
       agentInfo.userID
     );
-  }
-
-  async compareImplementations(
-    agentId: string,
-    authorizationId: string,
-    privilegeRequired: AuthorizationPrivilege
-  ) {
-    const agent = await this.entityManager.findOneBy(Agent, { id: agentId });
-    const policy = await this.entityManager.findOneBy(AuthorizationPolicy, {
-      id: authorizationId,
-    });
-    const ogImplStart = performance.now();
-    const originalImplementationResponse = this.isAccessGrantedForCredentials(
-      agent!.credentials!,
-      [],
-      policy!,
-      privilegeRequired
-    );
-    const ogImplEnd = performance.now();
-
-    const newImplStart = performance.now();
-    const newImplementationResponse =
-      await this.isAccessGrantedRemoteEvaluation(
-        agentId,
-        policy!.id,
-        privilegeRequired
-      );
-    const newImplEnd = performance.now();
-
-    return {
-      original: {
-        response: originalImplementationResponse,
-        latency: ogImplEnd - ogImplStart,
-      },
-      remote: {
-        response: newImplementationResponse,
-        latency: newImplEnd - newImplStart,
-      },
-    };
   }
 
   logCredentialCheckFailDetails(
@@ -157,23 +121,12 @@ export class AuthorizationService {
     authorization: IAuthorizationPolicy | undefined,
     privilegeRequired: AuthorizationPrivilege
   ): boolean {
-    const originalImplementationResponse = this.isAccessGrantedForCredentials(
+    return this.isAccessGrantedForCredentials(
       agentInfo.credentials,
       agentInfo.verifiedCredentials,
       authorization,
       privilegeRequired
     );
-
-    if (!authorization) {
-      return false;
-    }
-
-    const newImplementationResponse = this.isAccessGrantedRemoteEvaluation(
-      agentInfo.agentID,
-      authorization.id,
-      privilegeRequired
-    );
-    return originalImplementationResponse;
   }
 
   isAccessGrantedForCredentials(
@@ -252,13 +205,12 @@ export class AuthorizationService {
     agentId: string,
     authorizationPolicyId: string,
     requiredPrivilege: AuthorizationPrivilege
-  ): Promise<boolean> {
-    const { allowed } = await this.remoteAuthEvaluationService.evaluate({
+  ): Promise<AuthEvaluationResponse> {
+    return this.remoteAuthEvaluationService.evaluate({
       agentId,
       authorizationPolicyId,
       privilege: requiredPrivilege,
     });
-    return allowed;
   }
 
   public getGrantedPrivileges(
