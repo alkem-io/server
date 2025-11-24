@@ -20,7 +20,6 @@ import { Request, Response } from 'express';
 // this is used - it needs to start before the app
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { apmAgent } from './apm';
-import { NatsOptions } from '@nestjs/microservices/interfaces/microservice-configuration.interface';
 
 const bootstrap = async () => {
   const app = await NestFactory.create(AppModule, {
