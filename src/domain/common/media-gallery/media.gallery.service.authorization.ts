@@ -11,12 +11,15 @@ import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authoriz
 import { CREDENTIAL_RULE_MEDIA_GALLERY_CREATED_BY } from '@common/constants';
 import { IMediaGallery } from './media.gallery.interface';
 import { MediaGalleryService } from './media.gallery.service';
+import { VisualAuthorizationService } from '../visual/visual.service.authorization';
+import { RelationshipNotFoundException } from '@common/exceptions';
 
 @Injectable()
 export class MediaGalleryAuthorizationService {
   constructor(
-    private authorizationPolicyService: AuthorizationPolicyService,
-    private mediaGalleryService: MediaGalleryService
+    private readonly authorizationPolicyService: AuthorizationPolicyService,
+    private readonly mediaGalleryService: MediaGalleryService,
+    private readonly visualAuthorizationService: VisualAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -29,15 +32,30 @@ export class MediaGalleryAuthorizationService {
         loadEagerRelations: false,
         relations: {
           authorization: true,
+          visuals: {
+            authorization: true,
+          },
         },
         select: {
           id: true,
           createdBy: true,
           authorization:
             this.authorizationPolicyService.authorizationSelectOptions,
+          visuals: {
+            id: true,
+            authorization:
+              this.authorizationPolicyService.authorizationSelectOptions,
+          },
         },
       }
     );
+
+    if (!mediaGallery.visuals) {
+      throw new RelationshipNotFoundException(
+        `Unable to load MediaGallery visuals for auth reset: ${mediaGalleryID}`,
+        LogContext.COLLABORATION
+      );
+    }
 
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
     mediaGallery.authorization =
@@ -48,6 +66,15 @@ export class MediaGalleryAuthorizationService {
 
     mediaGallery.authorization = this.appendCredentialRules(mediaGallery);
     updatedAuthorizations.push(mediaGallery.authorization);
+
+    for (const visual of mediaGallery.visuals) {
+      visual.authorization =
+        this.visualAuthorizationService.applyAuthorizationPolicy(
+          visual,
+          mediaGallery.authorization
+        );
+      updatedAuthorizations.push(visual.authorization);
+    }
 
     return updatedAuthorizations;
   }
