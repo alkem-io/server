@@ -4,7 +4,6 @@ export class AgentInfoMetadata {
   userID!: string;
   email!: string;
   credentials: ICredentialDefinition[] = [];
-  communicationID!: string;
   agentID!: string;
   did!: string;
   password!: string;

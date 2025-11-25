@@ -235,7 +235,7 @@ export class ForumService {
     }
     await this.communicationAdapter.removeUserFromRooms(
       forumRoomIDs,
-      user.communicationID
+      user.agent.id
     );
 
     return true;

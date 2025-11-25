@@ -1,5 +1,5 @@
 export class CommunicationDeleteMessageInput {
-  senderCommunicationsID!: string;
+  agentID!: string;
 
   messageId!: string;
 

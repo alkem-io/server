@@ -16,12 +16,12 @@ import { Injectable } from '@nestjs/common';
 @Injectable()
 export class ChatGuidanceService {
   constructor(
-    private configService: ConfigService<AlkemioConfig, true>,
-    private aiServerAdapter: AiServerAdapter,
-    private communicationAdapter: CommunicationAdapter,
-    private roomService: RoomService,
-    private userService: UserService,
-    private platformService: PlatformService
+    private readonly configService: ConfigService<AlkemioConfig, true>,
+    private readonly aiServerAdapter: AiServerAdapter,
+    private readonly communicationAdapter: CommunicationAdapter,
+    private readonly roomService: RoomService,
+    private readonly userService: UserService,
+    private readonly platformService: PlatformService
   ) {}
 
   public async createGuidanceRoom(agentInfo: AgentInfo): Promise<IRoom> {
@@ -31,11 +31,11 @@ export class ChatGuidanceService {
 
     await this.communicationAdapter.userAddToRooms(
       [room.externalRoomID],
-      agentInfo.communicationID
+      agentInfo.agentID
     );
     await this.communicationAdapter.userAddToRooms(
       [room.externalRoomID],
-      guidanceVc.communicationID
+      guidanceVc.agent.id
     );
     return room;
   }
@@ -66,7 +66,7 @@ export class ChatGuidanceService {
 
     const message = await this.communicationAdapter.sendMessageToRoom({
       roomID: room.externalRoomID,
-      senderCommunicationsID: agentInfo.communicationID,
+      agentID: agentInfo.agentID,
       message: chatData.question,
     });
 
@@ -82,7 +82,7 @@ export class ChatGuidanceService {
         action: InvocationResultAction.POST_MESSAGE,
         roomDetails: {
           roomID: room.id,
-          communicationID: guidanceVc.communicationID,
+          agentID: guidanceVc.agent.id,
         },
       },
     });

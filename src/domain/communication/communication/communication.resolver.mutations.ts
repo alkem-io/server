@@ -50,6 +50,7 @@ export class CommunicationResolverMutations {
       {
         relations: {
           settings: true,
+          agent: true,
         },
       }
     );
@@ -73,9 +74,9 @@ export class CommunicationResolverMutations {
     }
 
     const message = await this.communicationAdapter.sendMessageToUser({
-      senderCommunicationsID: agentInfo.communicationID,
+      initiatingAgentID: agentInfo.agentID,
       message: messageData.message,
-      receiverCommunicationsID: receivingUser.communicationID,
+      receiverAgentID: receivingUser.agent.id,
     });
     // TODO: decide what should be the api
     return message.id;
@@ -88,7 +89,7 @@ export class CommunicationResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('messageData') messageData: CommunicationSendMessageToUsersInput
   ): Promise<boolean> {
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
@@ -134,7 +135,8 @@ export class CommunicationResolverMutations {
         );
         // Send direct message if only one receiver
         const receiver = await this.userService.getUserOrFail(
-          messageData.receiverIds[0]
+          messageData.receiverIds[0],
+          { relations: { agent: true } }
         );
         if (receiver.id === agentInfo.userID) {
           this.logger.warn(
@@ -143,9 +145,9 @@ export class CommunicationResolverMutations {
           );
         }
         await this.communicationAdapter.sendMessageToUser({
-          senderCommunicationsID: agentInfo.communicationID,
+          initiatingAgentID: agentInfo.agentID,
           message: messageData.message,
-          receiverCommunicationsID: receiver.communicationID,
+          receiverAgentID: receiver.agent.id,
         });
       }
     }
@@ -161,7 +163,7 @@ export class CommunicationResolverMutations {
     @Args('messageData')
     messageData: CommunicationSendMessageToOrganizationInput
   ): Promise<boolean> {
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
@@ -188,7 +190,7 @@ export class CommunicationResolverMutations {
     @Args('messageData')
     messageData: CommunicationSendMessageToCommunityLeadsInput
   ): Promise<boolean> {
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,

@@ -32,16 +32,17 @@ import {
   RoomMessageSendReplyPayload,
   RoomMessageSendResponsePayload,
   RoomUpdateStatePayload,
-  UserAddToRoomsPayload,
-  UserAddToRoomsResponsePayload,
-  UserRegisterPayload,
-  UserRegisterResponsePayload,
-  UserRemoveFromRoomsPayload,
-  UserRemoveFromRoomsResponsePayload,
-  UserRoomsDirectPayload,
-  UserRoomsPayload,
-  UserRoomsResponsePayload,
-  UserSendDirectMessagePayload,
+  ActorAddToRoomsPayload,
+  ActorAddToRoomsResponsePayload,
+  ActorRegisterPayload,
+  ActorRegisterResponsePayload,
+  ActorRemoveFromRoomsPayload,
+  ActorRemoveFromRoomsResponsePayload,
+  ActorRoomsDirectPayload,
+  ActorRoomsPayload,
+  ActorRoomsResponsePayload,
+  ActorStartDirectMessagingPayload,
+  ActorStartDirectMessagingResponsePayload,
 } from '@alkemio/matrix-adapter-lib';
 import { RoomDetailsPayload } from '@alkemio/matrix-adapter-lib';
 import { RoomDetailsResponsePayload } from '@alkemio/matrix-adapter-lib';
@@ -87,12 +88,18 @@ export class CommunicationAdapter {
   async sendMessageToRoom(
     sendMessageData: CommunicationSendMessageInput
   ): Promise<IMessage> {
+    if (!this.enabled) {
+      throw new MatrixEntityNotFoundException(
+        'Communications are disabled',
+        LogContext.COMMUNICATION
+      );
+    }
     const eventType = MatrixAdapterEventType.ROOM_MESSAGE_SEND;
     const inputPayload: RoomMessageSendPayload = {
-      triggeredBy: sendMessageData.senderCommunicationsID,
+      triggeredBy: sendMessageData.agentID,
       roomID: sendMessageData.roomID,
       message: sendMessageData.message,
-      senderID: sendMessageData.senderCommunicationsID,
+      senderActorID: sendMessageData.agentID,
     };
     const eventID = this.logInputPayload(eventType, inputPayload);
 
@@ -134,12 +141,18 @@ export class CommunicationAdapter {
     sendMessageData: CommunicationSendMessageReplyInput,
     senderType: 'user' | 'virtualContributor'
   ): Promise<IMessage> {
+    if (!this.enabled) {
+      throw new MatrixEntityNotFoundException(
+        'Communications are disabled',
+        LogContext.COMMUNICATION
+      );
+    }
     const eventType = MatrixAdapterEventType.ROOM_MESSAGE_SEND_REPLY;
     const inputPayload: RoomMessageSendReplyPayload = {
       triggeredBy: '',
       roomID: sendMessageData.roomID,
       message: sendMessageData.message,
-      senderID: sendMessageData.senderCommunicationsID,
+      senderActorID: sendMessageData.agentID,
       threadID: sendMessageData.threadID,
     };
     const eventID = this.logInputPayload(eventType, inputPayload);
@@ -181,12 +194,17 @@ export class CommunicationAdapter {
   public async sendMessageToUser(
     sendMessageUserData: CommunicationSendMessageUserInput
   ): Promise<IMessage> {
-    const eventType = MatrixAdapterEventType.USER_SEND_DIRECT_MESSAGE;
-    const inputPayload: UserSendDirectMessagePayload = {
+    if (!this.enabled) {
+      throw new MatrixEntityNotFoundException(
+        'Communications are disabled',
+        LogContext.COMMUNICATION
+      );
+    }
+    const eventType = MatrixAdapterEventType.ACTOR_START_DIRECT_MESSAGING;
+    const inputPayload: ActorStartDirectMessagingPayload = {
       triggeredBy: '',
-      message: sendMessageUserData.message,
-      receiverID: sendMessageUserData.receiverCommunicationsID,
-      senderID: sendMessageUserData.senderCommunicationsID,
+      receiverActorID: sendMessageUserData.receiverAgentID,
+      initiatingActorID: sendMessageUserData.initiatingAgentID,
     };
     const eventID = this.logInputPayload(eventType, inputPayload);
 
@@ -197,19 +215,20 @@ export class CommunicationAdapter {
 
     try {
       const responseData =
-        await firstValueFrom<RoomMessageSendResponsePayload>(response);
+        await firstValueFrom<ActorStartDirectMessagingResponsePayload>(
+          response
+        );
       this.logResponsePayload(eventType, responseData, eventID);
-      const message = responseData.message;
-      return {
-        ...message,
-        senderType: 'user',
-        reactions: message.reactions.map(reaction => {
-          return {
-            ...reaction,
-            senderType: 'user',
-          };
-        }),
-      };
+
+      if (!responseData.success || !responseData.roomID) {
+        throw new Error('Failed to start direct messaging');
+      }
+
+      return this.sendMessageToRoom({
+        roomID: responseData.roomID,
+        message: sendMessageUserData.message,
+        agentID: sendMessageUserData.initiatingAgentID,
+      });
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
@@ -222,12 +241,18 @@ export class CommunicationAdapter {
   async addReaction(
     sendMessageData: CommunicationAddReactionToMessageInput
   ): Promise<IMessageReaction> {
+    if (!this.enabled) {
+      throw new MatrixEntityNotFoundException(
+        'Communications are disabled',
+        LogContext.COMMUNICATION
+      );
+    }
     const eventType = MatrixAdapterEventType.ROOM_MESSAGE_ADD_REACTION;
     const inputPayload: RoomMessageAddReactionPayload = {
       triggeredBy: '',
       roomID: sendMessageData.roomID,
       emoji: sendMessageData.emoji,
-      senderID: sendMessageData.senderCommunicationsID,
+      senderActorID: sendMessageData.agentID,
       messageID: sendMessageData.messageID,
     };
     const eventID = this.logInputPayload(eventType, inputPayload);
@@ -263,12 +288,18 @@ export class CommunicationAdapter {
   async removeReaction(
     removeReactionData: CommunicationRemoveReactionToMessageInput
   ): Promise<string> {
+    if (!this.enabled) {
+      throw new MatrixEntityNotFoundException(
+        'Communications are disabled',
+        LogContext.COMMUNICATION
+      );
+    }
     const eventType = MatrixAdapterEventType.ROOM_MESSAGE_REMOVE_REACTION;
     const inputPayload: RoomMessageRemoveReactionPayload = {
-      triggeredBy: removeReactionData.senderCommunicationsID,
+      triggeredBy: removeReactionData.agentID,
       roomID: removeReactionData.roomID,
       reactionID: removeReactionData.reactionID,
-      senderID: removeReactionData.senderCommunicationsID,
+      senderActorID: removeReactionData.agentID,
     };
     const eventID = this.logInputPayload(eventType, inputPayload);
 
@@ -396,12 +427,18 @@ export class CommunicationAdapter {
   async deleteMessage(
     deleteMessageData: CommunicationDeleteMessageInput
   ): Promise<string> {
+    if (!this.enabled) {
+      throw new MatrixEntityNotFoundException(
+        'Communications are disabled',
+        LogContext.COMMUNICATION
+      );
+    }
     const eventType = MatrixAdapterEventType.ROOM_MESSAGE_DELETE;
     const inputPayload: RoomMessageDeletePayload = {
-      triggeredBy: deleteMessageData.senderCommunicationsID,
+      triggeredBy: deleteMessageData.agentID,
       roomID: deleteMessageData.roomID,
       messageID: deleteMessageData.messageId,
-      senderID: deleteMessageData.senderCommunicationsID,
+      senderActorID: deleteMessageData.agentID,
     };
     const eventID = this.logInputPayload(eventType, inputPayload);
 
@@ -425,6 +462,12 @@ export class CommunicationAdapter {
   }
 
   async getMessageSender(roomID: string, messageID: string): Promise<string> {
+    if (!this.enabled) {
+      throw new MatrixEntityNotFoundException(
+        'Communications are disabled',
+        LogContext.COMMUNICATION
+      );
+    }
     const eventType = MatrixAdapterEventType.ROOM_MESSAGE_SENDER;
     const inputPayload: RoomMessageSenderPayload = {
       triggeredBy: '',
@@ -441,7 +484,7 @@ export class CommunicationAdapter {
       const responseData =
         await firstValueFrom<RoomMessageSenderResponsePayload>(response);
       this.logResponsePayload(eventType, responseData, eventID);
-      return responseData.senderID;
+      return responseData.senderActorID;
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
@@ -452,6 +495,12 @@ export class CommunicationAdapter {
   }
 
   async getReactionSender(roomID: string, reactionID: string): Promise<string> {
+    if (!this.enabled) {
+      throw new MatrixEntityNotFoundException(
+        'Communications are disabled',
+        LogContext.COMMUNICATION
+      );
+    }
     const eventType = MatrixAdapterEventType.ROOM_MESSAGE_REACTION_SENDER;
     const inputPayload: RoomMessageReactionSenderPayload = {
       triggeredBy: '',
@@ -470,7 +519,7 @@ export class CommunicationAdapter {
           response
         );
       this.logResponsePayload(eventType, responseData, eventID);
-      return responseData.senderID;
+      return responseData.senderActorID;
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
@@ -480,11 +529,14 @@ export class CommunicationAdapter {
     }
   }
 
-  async tryRegisterNewUser(email: string): Promise<string | undefined> {
-    const eventType = MatrixAdapterEventType.USER_REGISTER;
-    const inputPayload: UserRegisterPayload = {
+  async tryRegisterNewUser(actorID: string): Promise<string | undefined> {
+    if (!this.enabled) {
+      return undefined;
+    }
+    const eventType = MatrixAdapterEventType.ACTOR_REGISTER;
+    const inputPayload: ActorRegisterPayload = {
       triggeredBy: '',
-      email,
+      actorID,
     };
     const eventID = this.logInputPayload(eventType, inputPayload);
     const response = this.matrixAdapterClient.send(
@@ -494,9 +546,9 @@ export class CommunicationAdapter {
 
     try {
       const responseData =
-        await firstValueFrom<UserRegisterResponsePayload>(response);
+        await firstValueFrom<ActorRegisterResponsePayload>(response);
       this.logResponsePayload(eventType, responseData, eventID);
-      return responseData.userID;
+      return actorID;
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       this.logger.verbose?.(
@@ -544,19 +596,16 @@ export class CommunicationAdapter {
     }
   }
 
-  async userAddToRooms(
-    roomIDs: string[],
-    matrixUserID: string
-  ): Promise<boolean> {
+  async userAddToRooms(roomIDs: string[], agentID: string): Promise<boolean> {
     // If not enabled just return
     if (!this.enabled) {
       return false;
     }
-    const eventType = MatrixAdapterEventType.USER_ADD_TO_ROOMS;
-    const inputPayload: UserAddToRoomsPayload = {
+    const eventType = MatrixAdapterEventType.ACTOR_ADD_TO_ROOMS;
+    const inputPayload: ActorAddToRoomsPayload = {
       triggeredBy: '',
       roomIDs,
-      userID: matrixUserID,
+      actorID: agentID,
     };
     const eventID = this.logInputPayload(eventType, inputPayload);
     const response = this.matrixAdapterClient.send(
@@ -566,31 +615,29 @@ export class CommunicationAdapter {
 
     try {
       const responseData =
-        await firstValueFrom<UserAddToRoomsResponsePayload>(response);
+        await firstValueFrom<ActorAddToRoomsResponsePayload>(response);
       this.logResponsePayload(eventType, responseData, eventID);
       return responseData.success;
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       this.logger.warn?.(
-        `Unable to add user (${matrixUserID}) to rooms (${roomIDs}): already added?: ${err}`,
+        `Unable to add user (${agentID}) to rooms (${roomIDs}): already added?: ${err}`,
         LogContext.COMMUNICATION
       );
       return false;
     }
   }
 
-  async getCommunityRooms(
-    matrixUserID: string
-  ): Promise<CommunicationRoomResult[]> {
+  async getCommunityRooms(agentID: string): Promise<CommunicationRoomResult[]> {
     const rooms: CommunicationRoomResult[] = [];
     // If not enabled just return an empty array
     if (!this.enabled) {
       return rooms;
     }
-    const eventType = MatrixAdapterEventType.USER_ROOMS;
-    const inputPayload: UserRoomsPayload = {
+    const eventType = MatrixAdapterEventType.ACTOR_ROOMS;
+    const inputPayload: ActorRoomsPayload = {
       triggeredBy: '',
-      userID: matrixUserID,
+      actorID: agentID,
     };
     const eventID = this.logInputPayload(eventType, inputPayload);
     const response = this.matrixAdapterClient.send(
@@ -600,16 +647,16 @@ export class CommunicationAdapter {
 
     try {
       const responseData =
-        await firstValueFrom<UserRoomsResponsePayload>(response);
+        await firstValueFrom<ActorRoomsResponsePayload>(response);
       this.logResponsePayload(eventType, responseData, eventID);
-      return responseData.rooms.map(room => {
+      return responseData.rooms.map((room: any) => {
         return {
           ...room,
-          messages: (room.messages || []).map(message => {
+          messages: (room.messages || []).map((message: any) => {
             return {
               ...message,
               senderType: 'user',
-              reactions: message.reactions.map(reaction => {
+              reactions: message.reactions.map((reaction: any) => {
                 return {
                   ...reaction,
                   senderType: 'user',
@@ -628,16 +675,16 @@ export class CommunicationAdapter {
     }
   }
 
-  async userGetDirectRooms(matrixUserID: string): Promise<DirectRoomResult[]> {
+  async userGetDirectRooms(agentID: string): Promise<DirectRoomResult[]> {
     const rooms: DirectRoomResult[] = [];
     // If not enabled just return an empty array
     if (!this.enabled) {
       return rooms;
     }
-    const eventType = MatrixAdapterEventType.USER_ROOMS_DIRECT;
-    const inputPayload: UserRoomsDirectPayload = {
+    const eventType = MatrixAdapterEventType.ACTOR_ROOMS_DIRECT;
+    const inputPayload: ActorRoomsDirectPayload = {
       triggeredBy: '',
-      userID: matrixUserID,
+      actorID: agentID,
     };
     const eventID = this.logInputPayload(eventType, inputPayload);
     const response = this.matrixAdapterClient.send(
@@ -647,16 +694,16 @@ export class CommunicationAdapter {
 
     try {
       const responseData =
-        await firstValueFrom<UserRoomsResponsePayload>(response);
+        await firstValueFrom<ActorRoomsResponsePayload>(response);
       this.logResponsePayload(eventType, responseData, eventID);
-      return responseData.rooms.map(room => {
+      return responseData.rooms.map((room: any) => {
         return {
           ...room,
-          messages: room.messages.map(message => {
+          messages: room.messages.map((message: any) => {
             return {
               ...message,
               senderType: 'user',
-              reactions: message.reactions.map(reaction => {
+              reactions: message.reactions.map((reaction: any) => {
                 return {
                   ...reaction,
                   senderType: 'user',
@@ -677,20 +724,20 @@ export class CommunicationAdapter {
 
   async removeUserFromRooms(
     roomIDs: string[],
-    matrixUserID: string
+    agentID: string
   ): Promise<boolean> {
     // If not enabled just return
     if (!this.enabled) {
       return false;
     }
-    const eventType = MatrixAdapterEventType.USER_REMOVE_FROM_ROOMS;
+    const eventType = MatrixAdapterEventType.ACTOR_REMOVE_FROM_ROOMS;
     this.logger.verbose?.(
-      `Removing user (${matrixUserID}) from rooms (${roomIDs})`,
+      `Removing user (${agentID}) from rooms (${roomIDs})`,
       LogContext.COMMUNICATION
     );
-    const inputPayload: UserRemoveFromRoomsPayload = {
+    const inputPayload: ActorRemoveFromRoomsPayload = {
       triggeredBy: '',
-      userID: matrixUserID,
+      actorID: agentID,
       roomIDs,
     };
     const eventID = this.logInputPayload(eventType, inputPayload);
@@ -701,7 +748,7 @@ export class CommunicationAdapter {
 
     try {
       const responseData =
-        await firstValueFrom<UserRemoveFromRoomsResponsePayload>(response);
+        await firstValueFrom<ActorRemoveFromRoomsResponsePayload>(response);
       this.logResponsePayload(eventType, responseData, eventID);
       return responseData.success;
     } catch (err: any) {
@@ -714,6 +761,9 @@ export class CommunicationAdapter {
   }
 
   async adminGetAllRooms(): Promise<RoomResult[]> {
+    if (!this.enabled) {
+      return [];
+    }
     const inputPayload: AdminAllRoomsPayload = {
       triggeredBy: '',
     };
@@ -726,7 +776,7 @@ export class CommunicationAdapter {
 
     try {
       const responseData =
-        await firstValueFrom<UserRoomsResponsePayload>(response);
+        await firstValueFrom<ActorRoomsResponsePayload>(response);
       this.logResponsePayload(eventType, responseData, eventID);
       return responseData.rooms;
     } catch (err: any) {
@@ -743,6 +793,9 @@ export class CommunicationAdapter {
     sourceRoomID: string,
     userToPrioritize: string
   ): Promise<boolean> {
+    if (!this.enabled) {
+      return false;
+    }
     this.logger.verbose?.(
       `[Replication] Replicating room membership from ${sourceRoomID} to ${targetRoomID}`,
       LogContext.COMMUNICATION
@@ -752,7 +805,7 @@ export class CommunicationAdapter {
       triggeredBy: '',
       targetRoomID,
       sourceRoomID,
-      userToPrioritize,
+      actorToPrioritize: userToPrioritize,
     };
     const eventID = this.logInputPayload(eventType, inputPayload);
     const response = this.matrixAdapterClient.send(
@@ -777,6 +830,9 @@ export class CommunicationAdapter {
   }
 
   async removeRoom(matrixRoomID: string) {
+    if (!this.enabled) {
+      return false;
+    }
     this.logger.verbose?.(
       `[Membership] Removing members from matrix room: ${matrixRoomID}`,
       LogContext.COMMUNICATION
@@ -812,6 +868,9 @@ export class CommunicationAdapter {
   }
 
   async getRoomMembers(matrixRoomID: string): Promise<string[]> {
+    if (!this.enabled) {
+      return [];
+    }
     let userIDs: string[] = [];
     this.logger.verbose?.(
       `Getting members of matrix room: ${matrixRoomID}`,
@@ -832,7 +891,7 @@ export class CommunicationAdapter {
       const responseData =
         await firstValueFrom<RoomMembersResponsePayload>(response);
       this.logResponsePayload(eventType, responseData, eventID);
-      userIDs = responseData.userIDs;
+      userIDs = responseData.actorIDs;
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       this.logger.verbose?.(
@@ -850,6 +909,14 @@ export class CommunicationAdapter {
     worldVisible = true,
     allowGuests = true
   ): Promise<CommunicationRoomResult> {
+    if (!this.enabled) {
+      return {
+        id: 'communications-not-enabled',
+        messages: [],
+        displayName: '',
+        members: [],
+      };
+    }
     const eventType = MatrixAdapterEventType.ROOM_UPDATE_STATE;
     const inputPayload: RoomUpdateStatePayload = {
       triggeredBy: '',

@@ -35,7 +35,8 @@ export class VirtualContributorMessageService {
   ) {
     const virtualContributor =
       await this.virtualContributorLookupService.getVirtualContributorOrFail(
-        virtualContributorID
+        virtualContributorID,
+        { relations: { agent: true } }
       );
 
     if (!virtualContributor.aiPersonaID) {
@@ -55,7 +56,7 @@ export class VirtualContributorMessageService {
         roomDetails: {
           roomID: room.id,
           threadID,
-          communicationID: virtualContributor.communicationID,
+          agentID: virtualContributor.agent.id,
           vcInteractionID: vcInteraction?.id,
         },
       },

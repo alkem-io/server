@@ -120,13 +120,9 @@ export class VirtualContributorService {
       virtualContributor.knowledgeBase
     );
 
-    const communicationID = await this.communicationAdapter.tryRegisterNewUser(
+    await this.communicationAdapter.tryRegisterNewUser(
       `virtual-contributor-${virtualContributor.nameID}@alkem.io`
     );
-
-    if (communicationID) {
-      virtualContributor.communicationID = communicationID;
-    }
 
     if (
       virtualContributorData.bodyOfKnowledgeType ===

@@ -154,12 +154,12 @@ export class RoomLookupService {
   async populateRoomMessageSenders(messages: IMessage[]): Promise<IMessage[]> {
     const knownSendersMap = new Map<string, MessageSender>();
     for (const message of messages) {
-      const matrixUserID = message.sender;
+      const agentID = message.sender;
       let messageSender: MessageSender = { id: 'unknown', type: 'unknown' };
       try {
         messageSender = await this.updateKnownSendersMap(
           knownSendersMap,
-          matrixUserID
+          agentID
         );
       } catch (error) {
         this.logger.warn?.(
@@ -189,20 +189,18 @@ export class RoomLookupService {
 
   async sendMessage(
     room: IRoom,
-    communicationUserID: string,
+    agentID: string,
     messageData: RoomSendMessageInput
   ): Promise<IMessage> {
     // Ensure the user is a member of room and group so can send
     await this.communicationAdapter.userAddToRooms(
       [room.externalRoomID],
-      communicationUserID
+      agentID
     );
     const alkemioUserID =
-      await this.identityResolverService.getUserIDByCommunicationsID(
-        communicationUserID
-      );
+      await this.identityResolverService.getUserIDByAgentID(agentID);
     const message = await this.communicationAdapter.sendMessageToRoom({
-      senderCommunicationsID: communicationUserID,
+      agentID: agentID,
       message: messageData.message,
       roomID: room.externalRoomID,
     });
@@ -215,27 +213,25 @@ export class RoomLookupService {
 
   async sendMessageReply(
     room: IRoom,
-    communicationUserID: string,
+    agentID: string,
     messageData: RoomSendMessageReplyInput,
     senderType: 'user' | 'virtualContributor'
   ): Promise<IMessage> {
     // Ensure the user is a member of room and group so can send
     await this.communicationAdapter.userAddToRooms(
       [room.externalRoomID],
-      communicationUserID
+      agentID
     );
 
     const alkemioSenderID =
       senderType === 'virtualContributor'
-        ? await this.identityResolverService.getContributorIDByCommunicationsID(
-            communicationUserID
+        ? await this.identityResolverService.getVirtualContributorIDByAgentID(
+            agentID
           )
-        : await this.identityResolverService.getUserIDByCommunicationsID(
-            communicationUserID
-          );
+        : await this.identityResolverService.getUserIDByAgentID(agentID);
     const message = await this.communicationAdapter.sendRoomMessageReply(
       {
-        senderCommunicationsID: communicationUserID,
+        agentID: agentID,
         message: messageData.message,
         roomID: room.externalRoomID,
         threadID: messageData.threadID,
@@ -261,20 +257,18 @@ export class RoomLookupService {
    * in the known senders map for future lookups.
    *
    * @param knownSendersMap - A map cache containing previously identified message senders
-   * @param matrixUserID - The Matrix user ID to identify
+   * @param agentID - The Matrix user ID to identify
    * @returns A promise that resolves to the MessageSender object containing the sender's ID and type
    * @throws {Error} When the Matrix user ID cannot be resolved to any known sender type
    */
   private async updateKnownSendersMap(
     knownSendersMap: Map<string, MessageSender>,
-    matrixUserID: string
+    agentID: string
   ): Promise<MessageSender> | never {
-    let messageSender = knownSendersMap.get(matrixUserID);
+    let messageSender = knownSendersMap.get(agentID);
     if (!messageSender) {
       const alkemioUserID =
-        await this.identityResolverService.getUserIDByCommunicationsID(
-          matrixUserID
-        );
+        await this.identityResolverService.getUserIDByAgentID(agentID);
       if (alkemioUserID) {
         messageSender = {
           id: alkemioUserID,
@@ -282,8 +276,8 @@ export class RoomLookupService {
         };
       } else {
         const virtualContributorID =
-          await this.identityResolverService.getContributorIDByCommunicationsID(
-            matrixUserID
+          await this.identityResolverService.getVirtualContributorIDByAgentID(
+            agentID
           );
         if (virtualContributorID) {
           messageSender = {
@@ -293,14 +287,14 @@ export class RoomLookupService {
         }
       }
       if (messageSender) {
-        knownSendersMap.set(matrixUserID, messageSender);
+        knownSendersMap.set(agentID, messageSender);
       }
     }
     if (!messageSender) {
       throw new EntityNotFoundException(
         'Unable to identify sender',
         LogContext.COMMUNICATION,
-        { matrixUserID }
+        { agentID }
       );
     }
     return messageSender;
@@ -311,11 +305,11 @@ export class RoomLookupService {
     knownSendersMap: Map<string, MessageSender>
   ): Promise<IMessageReaction[]> {
     for (const reaction of reactions) {
-      const matrixUserID = reaction.sender;
+      const agentID = reaction.sender;
       try {
         const reactionSender = await this.updateKnownSendersMap(
           knownSendersMap,
-          matrixUserID
+          agentID
         );
 
         reaction.sender = reactionSender.id;

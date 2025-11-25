@@ -98,11 +98,11 @@ export class RoomService {
 
   async removeRoomMessage(
     room: IRoom,
-    communicationUserID: string,
+    agentID: string,
     messageData: RoomRemoveMessageInput
   ): Promise<string> {
     await this.communicationAdapter.deleteMessage({
-      senderCommunicationsID: communicationUserID,
+      agentID: agentID,
       messageId: messageData.messageID,
       roomID: room.externalRoomID,
     });
@@ -139,21 +139,21 @@ export class RoomService {
 
   async addReactionToMessage(
     room: IRoom,
-    communicationUserID: string,
+    agentID: string,
     reactionData: RoomAddReactionToMessageInput
   ): Promise<IMessageReaction> {
     // Ensure the user is a member of room and group so can send
     await this.communicationAdapter.userAddToRooms(
       [room.externalRoomID],
-      communicationUserID
+      agentID
     );
 
     const alkemioUserID =
-      await this.identityResolverService.getUserIDByCommunicationsID(
-        communicationUserID
+      await this.identityResolverService.getUserIDByAgentID(
+        agentID
       );
     const reaction = await this.communicationAdapter.addReaction({
-      senderCommunicationsID: communicationUserID,
+      agentID: agentID,
       emoji: reactionData.emoji,
       roomID: room.externalRoomID,
       messageID: reactionData.messageID,
@@ -165,17 +165,17 @@ export class RoomService {
 
   async removeReactionToMessage(
     room: IRoom,
-    communicationUserID: string,
+    agentID: string,
     messageData: RoomRemoveReactionToMessageInput
   ): Promise<boolean> {
     // Ensure the user is a member of room and group so can send
     await this.communicationAdapter.userAddToRooms(
       [room.externalRoomID],
-      communicationUserID
+      agentID
     );
 
     await this.communicationAdapter.removeReaction({
-      senderCommunicationsID: communicationUserID,
+      agentID: agentID,
       roomID: room.externalRoomID,
       reactionID: messageData.reactionID,
     });
@@ -184,44 +184,44 @@ export class RoomService {
   }
 
   async getUserIdForMessage(room: IRoom, messageID: string): Promise<string> {
-    const senderCommunicationID =
+    const agentID =
       await this.communicationAdapter.getMessageSender(
         room.externalRoomID,
         messageID
       );
-    if (senderCommunicationID === '') {
+    if (agentID === '') {
       this.logger.error(
         `Unable to identify sender for ${room.id} - ${messageID}`,
         undefined,
         LogContext.COMMUNICATION
       );
-      return senderCommunicationID;
+      return agentID;
     }
     const alkemioUserID =
-      await this.identityResolverService.getUserIDByCommunicationsID(
-        senderCommunicationID
+      await this.identityResolverService.getUserIDByAgentID(
+        agentID
       );
 
     return alkemioUserID ?? '';
   }
 
   async getUserIdForReaction(room: IRoom, reactionID: string): Promise<string> {
-    const senderCommunicationID =
+    const agentID =
       await this.communicationAdapter.getReactionSender(
         room.externalRoomID,
         reactionID
       );
-    if (senderCommunicationID === '') {
+    if (agentID === '') {
       this.logger.error(
         `Unable to identify sender for ${room.id} - ${reactionID}`,
         undefined,
         LogContext.COMMUNICATION
       );
-      return senderCommunicationID;
+      return agentID;
     }
     const alkemioUserID =
-      await this.identityResolverService.getUserIDByCommunicationsID(
-        senderCommunicationID
+      await this.identityResolverService.getUserIDByAgentID(
+        agentID
       );
 
     return alkemioUserID ?? '';

@@ -423,7 +423,6 @@ export class BootstrapService {
       credentials: adminUser.agent?.credentials || [],
       agentID: adminUser.agent?.id,
       verifiedCredentials: [],
-      communicationID: adminUser.communicationID,
       authenticationID: adminUser.authenticationID ?? '',
     };
   }

@@ -147,7 +147,7 @@ export class CommunicationService {
 
     await this.communicationAdapter.removeUserFromRooms(
       communicationRoomIDs,
-      user.communicationID
+      user.agent.id
     );
 
     return true;

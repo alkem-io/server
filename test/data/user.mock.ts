@@ -12,7 +12,6 @@ export const userData: { user: IUser } = {
     lastName: 'alkemio',
     email: 'admin@alkem.io',
     phone: '',
-    communicationID: '@admin=alkem.io:alkemio.matrix.host',
     serviceProfile: false,
     id: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
     accountID: '777f82a1-bc7d-486c-85f9-e7ac6e689f4e',

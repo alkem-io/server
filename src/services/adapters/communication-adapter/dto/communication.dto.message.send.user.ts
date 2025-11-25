@@ -1,7 +1,7 @@
 export class CommunicationSendMessageUserInput {
-  senderCommunicationsID!: string;
+  initiatingAgentID!: string;
 
-  receiverCommunicationsID!: string;
+  receiverAgentID!: string;
 
   message!: string;
 }

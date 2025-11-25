@@ -86,7 +86,6 @@ export class AgentInfoService {
       userAgentInfoMetadata.credentials = user.agent.credentials;
       userAgentInfoMetadata.agentID = user.agent.id;
       userAgentInfoMetadata.userID = user.id;
-      userAgentInfoMetadata.communicationID = user.communicationID;
       userAgentInfoMetadata.authenticationID =
         user.authenticationID ?? undefined;
       return userAgentInfoMetadata;
@@ -116,7 +115,6 @@ export class AgentInfoService {
   ): void {
     agentInfo.agentID = agentInfoMetadata.agentID;
     agentInfo.userID = agentInfoMetadata.userID;
-    agentInfo.communicationID = agentInfoMetadata.communicationID;
     if (agentInfoMetadata.authenticationID) {
       agentInfo.authenticationID = agentInfoMetadata.authenticationID;
     }

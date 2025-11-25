@@ -37,17 +37,17 @@ import { InAppNotificationService } from '@platform/in-app-notification/in.app.n
 @Resolver()
 export class RoomResolverMutations {
   constructor(
-    private authorizationService: AuthorizationService,
-    private roomService: RoomService,
-    private roomResolverService: RoomResolverService,
-    private roomAuthorizationService: RoomAuthorizationService,
-    private roomServiceEvents: RoomServiceEvents,
-    private roomLookupService: RoomLookupService,
-    private roomMentionsService: RoomMentionsService,
-    private subscriptionPublishService: SubscriptionPublishService,
-    private virtualContributorMessageService: VirtualContributorMessageService,
-    private virtualContributorLookupService: VirtualContributorLookupService,
-    private inAppNotificationService: InAppNotificationService,
+    private readonly authorizationService: AuthorizationService,
+    private readonly roomService: RoomService,
+    private readonly roomResolverService: RoomResolverService,
+    private readonly roomAuthorizationService: RoomAuthorizationService,
+    private readonly roomServiceEvents: RoomServiceEvents,
+    private readonly roomLookupService: RoomLookupService,
+    private readonly roomMentionsService: RoomMentionsService,
+    private readonly subscriptionPublishService: SubscriptionPublishService,
+    private readonly virtualContributorMessageService: VirtualContributorMessageService,
+    private readonly virtualContributorLookupService: VirtualContributorLookupService,
+    private readonly inAppNotificationService: InAppNotificationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -80,7 +80,7 @@ export class RoomResolverMutations {
 
     const message = await this.roomLookupService.sendMessage(
       room,
-      agentInfo.communicationID,
+      agentInfo.agentID,
       messageData
     );
     const threadID = message.id;
@@ -148,7 +148,7 @@ export class RoomResolverMutations {
 
         break;
       }
-      case RoomType.DISCUSSION_FORUM:
+      case RoomType.DISCUSSION_FORUM: {
         const discussionForum =
           await this.roomResolverService.getDiscussionForRoom(
             messageData.roomID
@@ -165,6 +165,7 @@ export class RoomResolverMutations {
           agentInfo
         );
         break;
+      }
       case RoomType.UPDATES:
         await this.roomServiceEvents.processNotificationUpdateSent(
           room,
@@ -178,7 +179,7 @@ export class RoomResolverMutations {
         );
 
         break;
-      case RoomType.CALLOUT:
+      case RoomType.CALLOUT: {
         const callout = await this.roomResolverService.getCalloutForRoom(
           messageData.roomID
         );
@@ -219,6 +220,7 @@ export class RoomResolverMutations {
           );
         }
         break;
+      }
       default:
       // ignore for now, later likely to be an exception
     }
@@ -270,7 +272,7 @@ export class RoomResolverMutations {
 
     const reply = await this.roomLookupService.sendMessageReply(
       room,
-      agentInfo.communicationID,
+      agentInfo.agentID,
       messageData,
       'user'
     );
@@ -363,7 +365,7 @@ export class RoomResolverMutations {
         );
 
         break;
-      case RoomType.CALLOUT:
+      case RoomType.CALLOUT: {
         const callout = await this.roomResolverService.getCalloutForRoom(
           messageData.roomID
         );
@@ -427,6 +429,7 @@ export class RoomResolverMutations {
           );
         }
         break;
+      }
       default:
       // ignore for now, later likely to be an exception
     }
@@ -452,7 +455,7 @@ export class RoomResolverMutations {
 
     const reaction = await this.roomService.addReactionToMessage(
       room,
-      agentInfo.communicationID,
+      agentInfo.agentID,
       reactionData
     );
 
@@ -495,7 +498,7 @@ export class RoomResolverMutations {
     );
     const messageID = await this.roomService.removeRoomMessage(
       room,
-      agentInfo.communicationID,
+      agentInfo.agentID,
       messageData
     );
     await this.inAppNotificationService.deleteAllByMessageId(messageID);
@@ -550,7 +553,7 @@ export class RoomResolverMutations {
 
     const isDeleted = await this.roomService.removeReactionToMessage(
       room,
-      agentInfo.communicationID,
+      agentInfo.agentID,
       reactionData
     );
 

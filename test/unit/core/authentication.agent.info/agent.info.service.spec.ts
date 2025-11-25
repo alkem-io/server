@@ -39,7 +39,6 @@ describe('AgentInfoService', () => {
       id: 'user-1',
       email,
       authenticationID: authenticationId,
-      communicationID: 'comm-1',
       agent: {
         id: 'agent-1',
         credentials: [],
@@ -74,7 +73,6 @@ describe('AgentInfoService', () => {
       id: 'user-2',
       email,
       authenticationID: existingAuthenticationId,
-      communicationID: 'comm-2',
       agent: {
         id: 'agent-2',
         credentials: [],

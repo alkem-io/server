@@ -21,9 +21,9 @@ export class RoomDetails {
   threadID!: string;
   @Field(() => String, {
     nullable: false,
-    description: 'The communicationID for the VC',
+    description: 'The agentID for the VC',
   })
-  communicationID!: string;
+  agentID!: string;
   @Field(() => String, {
     nullable: true,
     description:

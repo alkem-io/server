@@ -97,22 +97,16 @@ export class UserService {
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache
   ) {}
 
-  private getUserCommunicationIdCacheKey(communicationId: string): string {
-    return `@user:communicationId:${communicationId}`;
-  }
-
   private async setUserCache(user: IUser) {
     await this.cacheManager.set(
-      this.getUserCommunicationIdCacheKey(user.email),
+      `@user:email:${user.email}`,
       user,
       this.cacheOptions
     );
   }
 
   private async clearUserCache(user: IUser) {
-    await this.cacheManager.del(
-      this.getUserCommunicationIdCacheKey(user.communicationID)
-    );
+    await this.cacheManager.del(`@user:email:${user.email}`);
     await this.agentInfoCacheService.deleteAgentInfoFromCache(user.email);
   }
 
@@ -208,20 +202,9 @@ export class UserService {
     // there are cases where a user could be messaged before they actually log-in
     // which will result in failure in communication (either missing user or unsent messages)
     // register the user asynchronously - we don't want to block the creation operation
-    const communicationID = await this.communicationAdapter.tryRegisterNewUser(
-      user.email
-    );
+    await this.communicationAdapter.tryRegisterNewUser(user.email);
 
     try {
-      if (!communicationID) {
-        this.logger.warn(
-          `User registration failed on user creation ${user.id}.`
-        );
-        return user;
-      }
-
-      user.communicationID = communicationID;
-
       await this.save(user);
       await this.setUserCache(user);
     } catch (e: any) {
@@ -793,6 +776,7 @@ export class UserService {
     const user = await this.getUserOrFail(userId, {
       relations: {
         guidanceRoom: true,
+        agent: true,
       },
     });
 
@@ -803,7 +787,7 @@ export class UserService {
     }
 
     const room = await this.roomService.createRoom(
-      `${user.communicationID}-guidance`,
+      `${user.agent.id}-guidance`,
       RoomType.GUIDANCE
     );
 
@@ -814,8 +798,16 @@ export class UserService {
   }
 
   public async getDirectRooms(user: IUser): Promise<DirectRoomResult[]> {
+    let agentID = user.agent?.id;
+    if (!agentID) {
+      const loadedUser = await this.getUserOrFail(user.id, {
+        relations: { agent: true },
+      });
+      agentID = loadedUser.agent.id;
+    }
+
     const directRooms = await this.communicationAdapter.userGetDirectRooms(
-      user.communicationID
+      agentID
     );
 
     await this.roomLookupService.populateRoomsMessageSenders(directRooms);

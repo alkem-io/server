@@ -9,7 +9,6 @@ export class AgentInfo {
   lastName = '';
   credentials: ICredentialDefinition[] = [];
   verifiedCredentials: IVerifiedCredential[] = [];
-  communicationID = '';
   agentID = '';
   avatarURL = '';
   authenticationID = '';

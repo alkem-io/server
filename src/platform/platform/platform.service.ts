@@ -137,7 +137,9 @@ export class PlatformService {
   async getGuidanceVirtualContributorOrFail(): Promise<IVirtualContributor> {
     const platform = await this.getPlatformOrFail({
       relations: {
-        guidanceVirtualContributor: true,
+        guidanceVirtualContributor: {
+          agent: true,
+        },
       },
     });
     const guidanceVC = platform.guidanceVirtualContributor;

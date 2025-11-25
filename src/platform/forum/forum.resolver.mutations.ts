@@ -81,7 +81,7 @@ export class ForumResolverMutations {
     let discussion = await this.forumService.createDiscussion(
       createData,
       agentInfo.userID,
-      agentInfo.communicationID
+      agentInfo.agentID
     );
     discussion = await this.discussionService.save(discussion);
 
