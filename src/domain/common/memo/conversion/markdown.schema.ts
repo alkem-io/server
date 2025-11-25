@@ -222,7 +222,7 @@ export const markdownSchema = new Schema({
       parseDOM: [{ tag: 'table' }],
     },
     tableRow: {
-      content: '(tableCell | tableHeader)*',
+      content: '(tableCell | tableHeader)+',
       tableRole: 'row',
       parseDOM: [{ tag: 'tr' }],
     },
