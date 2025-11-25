@@ -19,13 +19,13 @@ import {
   ForbiddenException,
 } from '@common/exceptions';
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
+import { ProfileAuthorizationService } from '../profile/profile.service.authorization';
 
 const PUBLIC_RULE_NAME = 'public-access';
 const GRANTED_GUEST_PRIVILEGES: AuthorizationPrivilege[] = [
   AuthorizationPrivilege.READ,
   AuthorizationPrivilege.UPDATE_CONTENT,
   AuthorizationPrivilege.CONTRIBUTE,
-  AuthorizationPrivilege.FILE_UPLOAD,
 ] as const;
 
 const createGuestAccessCredentialRule = () =>
@@ -52,6 +52,7 @@ export class WhiteboardGuestAccessService {
     private readonly authorizationService: AuthorizationService,
     private readonly authorizationPolicyService: AuthorizationPolicyService,
     private readonly communityResolverService: CommunityResolverService,
+    private readonly profileAuthService: ProfileAuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -78,6 +79,7 @@ export class WhiteboardGuestAccessService {
         loadEagerRelations: false,
         relations: {
           authorization: true,
+          profile: true,
         },
         select: {
           id: true,
@@ -149,6 +151,11 @@ export class WhiteboardGuestAccessService {
       authorizationChanged,
       guestAccessActive,
     });
+
+    await this.profileAuthService.applyAuthorizationPolicy(
+      whiteboard.profile.id,
+      whiteboard.authorization
+    );
     return hydratedWhiteboard;
   }
 
