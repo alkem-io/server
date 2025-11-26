@@ -12,6 +12,7 @@ export enum LogContext {
   COMMUNICATION = 'communication',
   PLATFORM_FORUM = 'platform-forum',
   COMMUNICATION_EVENTS = 'communication_events',
+  COMMUNICATION_CONVERSATION = 'communication_conversation',
   COLLABORATION = 'collaboration',
   AGENT = 'agent',
   ACTIVITY = 'activity',

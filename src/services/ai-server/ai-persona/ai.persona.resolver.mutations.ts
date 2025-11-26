@@ -1,6 +1,6 @@
 import { Args, Resolver, Mutation } from '@nestjs/graphql';
 import { AiPersonaService } from './ai.persona.service';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { CurrentUser } from '@src/common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -19,7 +19,6 @@ export class AiPersonaResolverMutations {
   @Mutation(() => IAiPersona, {
     description: 'Updates the specified AI Persona.',
   })
-  @Profiling.api
   async aiServerUpdateAiPersona(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('aiPersonaData')

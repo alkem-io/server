@@ -6,14 +6,17 @@ import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.ag
 import { Forum } from '@platform/forum/forum.entity';
 import { TemplatesManager } from '@domain/template/templates-manager/templates.manager.entity';
 import { LicensingFramework } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.entity';
-import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { RoleSet } from '@domain/access/role-set/role.set.entity';
 import { IPlatformSettings } from '@platform/platform-settings/platform.settings.interface';
+import { IPlatformWellKnownVirtualContributors } from '@platform/platform.well.known.virtual.contributors/platform.well.known.virtual.contributors.interface';
 
 @Entity()
 export class Platform extends AuthorizableEntity implements IPlatform {
   @Column('json', { nullable: false })
   settings!: IPlatformSettings;
+
+  @Column('json', { nullable: false })
+  wellKnownVirtualContributors!: IPlatformWellKnownVirtualContributors;
 
   @OneToOne(() => Forum, {
     eager: false,
@@ -54,14 +57,6 @@ export class Platform extends AuthorizableEntity implements IPlatform {
   })
   @JoinColumn()
   licensingFramework?: LicensingFramework;
-
-  @OneToOne(() => VirtualContributor, {
-    eager: false,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
-  guidanceVirtualContributor?: VirtualContributor;
 
   @OneToOne(() => RoleSet, {
     eager: false,
