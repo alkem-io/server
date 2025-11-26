@@ -57,7 +57,7 @@ import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { RoomType } from '@common/enums/room.type';
 import { UserSettingsService } from '../user-settings/user.settings.service';
-import { UpdateUserSettingsEntityInput } from '../user-settings/dto/user.settings.dto.update';
+import { UpdateUserSettingsEntityInput } from '@domain/community/user-settings';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { AccountHostService } from '@domain/space/account.host/account.host.service';
 import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup.service';
@@ -829,9 +829,8 @@ export class UserService {
       agentID = loadedUser.agent.id;
     }
 
-    const directRooms = await this.communicationAdapter.userGetDirectRooms(
-      agentID
-    );
+    const directRooms =
+      await this.communicationAdapter.userGetDirectRooms(agentID);
 
     await this.roomLookupService.populateRoomsMessageSenders(directRooms);
 
