@@ -16,6 +16,7 @@ import {
 import { LogContext } from '@common/enums';
 import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 
 const createResolver = () => {
   const authorizationService = {
@@ -38,6 +39,11 @@ const createResolver = () => {
     updateGuestAccess: jest.fn(),
   } as unknown as jest.Mocked<WhiteboardGuestAccessService>;
 
+  const communityResolverService = {
+    getCommunityFromWhiteboardOrFail: jest.fn(),
+    getSpaceForCommunityOrFail: jest.fn(),
+  } as unknown as jest.Mocked<CommunityResolverService>;
+
   const entityManager = {
     findOne: jest.fn(),
     save: jest.fn(),
@@ -55,6 +61,7 @@ const createResolver = () => {
     whiteboardService,
     whiteboardAuthorizationService,
     whiteboardGuestAccessService,
+    communityResolverService,
     entityManager,
     logger
   );
