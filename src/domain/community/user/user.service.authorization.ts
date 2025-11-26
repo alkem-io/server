@@ -31,6 +31,7 @@ import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.aut
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { UserLookupService } from '../user-lookup/user.lookup.service';
 import { UserSettingsAuthorizationService } from '../user-settings/user.settings.service.authorization';
+import { ConversationsSetAuthorizationService } from '@domain/communication/conversations-set/conversations.set.service.authorization';
 
 @Injectable()
 export class UserAuthorizationService {
@@ -41,6 +42,7 @@ export class UserAuthorizationService {
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
     private userSettingsAuthorizationService: UserSettingsAuthorizationService,
+    private conversationsSetAuthorizationService: ConversationsSetAuthorizationService,
     private agentService: AgentService,
     private userLookupService: UserLookupService
   ) {}
@@ -59,6 +61,9 @@ export class UserAuthorizationService {
           directStorage: { authorization: true },
         },
         settings: {
+          authorization: true,
+        },
+        conversationsSet: {
           authorization: true,
         },
       },
@@ -86,6 +91,11 @@ export class UserAuthorizationService {
               this.authorizationPolicyService.authorizationSelectOptions,
           },
         },
+        conversationsSet: {
+          id: true,
+          authorization:
+            this.authorizationPolicyService.authorizationSelectOptions,
+        },
         settings: {
           id: true,
           authorization:
@@ -97,10 +107,11 @@ export class UserAuthorizationService {
       !user.agent ||
       !user.profile ||
       !user.storageAggregator ||
-      !user.settings
+      !user.settings ||
+      !user.conversationsSet
     )
       throw new RelationshipNotFoundException(
-        `Unable to load agent or profile or preferences or storage for User ${user.id} `,
+        `Unable to load agent or profile or preferences or storage or conversations for User ${user.id} `,
         LogContext.COMMUNITY
       );
 
@@ -163,6 +174,14 @@ export class UserAuthorizationService {
         user.authorization
       );
     updatedAuthorizations.push(...storageAuthorizations);
+
+    const conversationsSetAuthorizations =
+      await this.conversationsSetAuthorizationService.applyAuthorizationPolicy(
+        user.conversationsSet,
+        user.id,
+        user.authorization
+      );
+    updatedAuthorizations.push(...conversationsSetAuthorizations);
 
     return updatedAuthorizations;
   }
