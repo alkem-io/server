@@ -1,0 +1,29 @@
+# GraphQL Contract: Notification Email Blacklist
+
+"""Mutation input for adding/removing blacklist entries"""
+input NotificationEmailAddressInput {
+  """Full email address to add/remove; lowercase enforced by server"""
+  email: String!
+}
+
+extend type PlatformSettingsIntegration {
+  """List of fully-qualified email addresses blocked from receiving notifications"""
+  notificationEmailBlacklist: [String!]!
+}
+
+extend type Mutation {
+  """Adds a full email address to the platform notification blacklist"""
+  addNotificationEmailToBlacklist(
+    input: NotificationEmailAddressInput!
+  ): [String!]!
+
+  """Removes an email address from the platform notification blacklist"""
+  removeNotificationEmailFromBlacklist(
+    input: NotificationEmailAddressInput!
+  ): [String!]!
+}
+
+extend type PlatformSettingsIntegration {
+  """Existing field documented path: platform { settings { integration { ... } } }"""
+  iframeAllowedUrls: [String!]!
+}

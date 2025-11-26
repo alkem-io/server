@@ -115,6 +115,7 @@ export class NotificationPlatformAdapter {
           description: eventData.discussion.profile.description,
           url: discussionURL,
           category: eventData.discussion.category,
+          roomID: eventData.discussion.comments.id,
         },
       };
 
@@ -138,20 +139,34 @@ export class NotificationPlatformAdapter {
       eventData.userID
     );
 
-    // build notification payload
-    const payload =
-      await this.notificationExternalAdapter.buildPlatformForumCommentCreatedOnDiscussionPayload(
+    // Filter out the commenter from email recipients
+    const emailRecipientsWithoutCommenter = recipients.emailRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+
+    if (emailRecipientsWithoutCommenter.length > 0) {
+      // build notification payload
+      const payload =
+        await this.notificationExternalAdapter.buildPlatformForumCommentCreatedOnDiscussionPayload(
+          event,
+          eventData.commentSent.sender,
+          emailRecipientsWithoutCommenter,
+          eventData.discussion,
+          eventData.commentSent
+        );
+
+      // send notification event
+      this.notificationExternalAdapter.sendExternalNotifications(
         event,
-        eventData.commentSent.sender,
-        recipients.emailRecipients,
-        eventData.discussion,
-        eventData.commentSent
+        payload
       );
-    // send notification event
-    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
+    }
 
     // Send in-app notifications
-    const inAppReceiverIDs = recipients.inAppRecipients.map(
+    const inAppRecipientsWithoutCommenter = recipients.inAppRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    const inAppReceiverIDs = inAppRecipientsWithoutCommenter.map(
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length > 0) {
@@ -168,8 +183,10 @@ export class NotificationPlatformAdapter {
           description: eventData.discussion.profile.description,
           url: discussionURL,
           category: eventData.discussion.category,
+          roomID: eventData.discussion.comments.id,
         },
         comment: {
+          id: eventData.commentSent.id,
           message: eventData.commentSent.message,
         },
       };
