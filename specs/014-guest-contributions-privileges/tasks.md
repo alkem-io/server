@@ -76,13 +76,11 @@
 
 ### Feature Delivery Summary
 
-### Feature Delivery Summary
-
 The implemented tasks deliver **100% of core user value + edge case optimization**:
 
 1. ✅ Space admins can enable/disable guest contributions
-2. ✅ Privileges are automatically granted when enabled
-3. ✅ Privileges are automatically revoked when disabled
+2. ✅ Privileges are granted when enabled
+3. ✅ Privileges are revoked when disabled
 4. ✅ New whiteboards inherit current settings immediately
 5. ✅ All whiteboard types (framing, contribution) work correctly
 6. ✅ New admins automatically receive PUBLIC_SHARE privileges (User Story 4)

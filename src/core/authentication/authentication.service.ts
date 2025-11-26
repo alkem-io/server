@@ -53,10 +53,15 @@ export class AuthenticationService {
         const oryIdentity = session.identity as OryDefaultIdentitySchema;
         return this.createAgentInfo(oryIdentity);
       }
-    } catch {}
+    } catch (error) {
+      this.logger.verbose?.(
+        `Session validation failed, falling back to guest/anonymous: ${error}`,
+        LogContext.AUTH
+      );
+    }
 
-    if (opts.guestName) {
-      return this.agentInfoService.createGuestAgentInfo(opts.guestName);
+    if (opts.guestName?.trim()) {
+      return this.agentInfoService.createGuestAgentInfo(opts.guestName.trim());
     }
     return this.agentInfoService.createAnonymousAgentInfo();
   }
