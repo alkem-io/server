@@ -445,7 +445,7 @@ it('should rollback setting and privileges on failure', async () => {
 2. **Verify Event Emission**:
 
    ```typescript
-   // Add breakpoint in SpaceService.updateSettings()
+   // Add breakpoint in SpaceService.updateSpaceSettings()
    this.eventEmitter.emit('SpaceSettingsUpdated', { ... });
    ```
 
