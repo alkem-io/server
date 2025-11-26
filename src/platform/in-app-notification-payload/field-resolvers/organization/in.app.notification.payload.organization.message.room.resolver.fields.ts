@@ -11,11 +11,11 @@ export class InAppNotificationPayloadOrganizationMessageRoomResolverFields {
     description: 'The organization.',
   })
   public async organization(
-    @Loader(OrganizationLoaderCreator, { resolveToNull: true })
-    loader: ILoader<IOrganization | null>,
+    @Loader(OrganizationLoaderCreator, { resolveToNull: false })
+    loader: ILoader<IOrganization>,
     @Parent()
     payload: InAppNotificationPayloadOrganizationMessageRoom
-  ): Promise<IOrganization | null> {
+  ): Promise<IOrganization> {
     return loader.load(payload.organizationID);
   }
 

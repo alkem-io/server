@@ -29,6 +29,7 @@ import { CreateContributionOnCalloutInput } from './dto/callout.dto.create.contr
 import { CalloutContributionService } from '../callout-contribution/callout.contribution.service';
 import { CreateWhiteboardInput } from '@domain/common/whiteboard/dto/whiteboard.dto.create';
 import { CreatePostInput } from '../post/dto/post.dto.create';
+import { CreateMemoInput } from '@domain/common/memo/dto/memo.dto.create';
 import { ICalloutContributionDefaults } from '../callout-contribution-defaults/callout.contribution.defaults.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
@@ -445,6 +446,25 @@ export class CalloutService {
     }
   }
 
+  private async setNameIdOnMemoData(
+    memoData: CreateMemoInput,
+    reservedNameIDs: string[]
+  ) {
+    if (memoData.nameID && memoData.nameID.length > 0) {
+      const nameIdTaken = reservedNameIDs.includes(memoData.nameID);
+      if (nameIdTaken)
+        throw new ValidationException(
+          `Unable to create Memo: the provided nameID is already taken: ${memoData.nameID}`,
+          LogContext.SPACES
+        );
+    } else {
+      memoData.nameID = this.namingService.createNameIdAvoidingReservedNameIDs(
+        `${memoData.profile?.displayName ?? 'Memo'}`,
+        reservedNameIDs
+      );
+    }
+  }
+
   public async createContributionOnCallout(
     contributionData: CreateContributionOnCalloutInput,
     userID: string
@@ -477,6 +497,9 @@ export class CalloutService {
         reservedNameIDs,
         callout
       );
+    }
+    if (contributionData.memo) {
+      await this.setNameIdOnMemoData(contributionData.memo, reservedNameIDs);
     }
 
     if (!callout.contributions) {

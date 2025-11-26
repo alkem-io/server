@@ -286,7 +286,7 @@ import { InAppNotificationAdminModule } from './platform-admin/in-app-notificati
     MessageModule,
     MessageReactionModule,
     NotificationRecipientsModule,
-  RegistrationModule,
+    RegistrationModule,
     SessionSyncModule,
     ConversionModule,
     LibraryModule,

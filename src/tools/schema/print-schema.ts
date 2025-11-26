@@ -107,6 +107,12 @@ function transform(doc: DocumentNode): DocumentNode {
   return { ...doc, definitions: ordered };
 }
 
+function forceExit() {
+  const code = process.exitCode ?? 0;
+  // Delay exit slightly so stdout/stderr flush before terminating the process.
+  setImmediate(() => process.exit(code));
+}
+
 async function main() {
   const outPath = process.argv[2] || 'schema.graphql';
   const app = await NestFactory.createApplicationContext(AppModule, {
@@ -131,7 +137,14 @@ async function main() {
     process.stderr.write(`Schema generation error: ${(err as Error).stack}\n`);
     process.exitCode = 1;
   } finally {
-    await app.close();
+    try {
+      await app.close();
+    } catch (closeErr) {
+      process.stderr.write(
+        `Schema generation warning: failed to close Nest app: ${(closeErr as Error).stack}\n`
+      );
+    }
+    forceExit();
   }
 }
 

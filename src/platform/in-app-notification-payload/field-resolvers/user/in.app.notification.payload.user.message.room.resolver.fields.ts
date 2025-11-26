@@ -19,15 +19,13 @@ export class InAppNotificationPayloadUserMessageRoomResolverFields {
   ) {}
 
   @ResolveField(() => IUser, {
-    nullable: true,
-    description: 'The User for the message.',
+    nullable: false,
+    description: 'The User receiver of the message.',
   })
   public async user(
-    @Loader(UserLoaderCreator, { resolveToNull: true })
-    loader: ILoader<IUser | null>,
-    @Parent()
-    payload: InAppNotificationPayloadUserMessageRoom
-  ): Promise<IUser | null> {
+    @Loader(UserLoaderCreator) loader: ILoader<IUser>,
+    @Parent() payload: InAppNotificationPayloadUserMessageRoom
+  ): Promise<IUser> {
     return loader.load(payload.userID);
   }
 
@@ -36,8 +34,7 @@ export class InAppNotificationPayloadUserMessageRoomResolverFields {
     description: 'The details of the message.',
   })
   public async messageDetails(
-    @Parent()
-    payload: InAppNotificationPayloadUserMessageRoom
+    @Parent() payload: InAppNotificationPayloadUserMessageRoom
   ): Promise<MessageDetails | null> {
     try {
       return await this.messageDetailsService.getMessageDetails(
@@ -55,7 +52,8 @@ export class InAppNotificationPayloadUserMessageRoomResolverFields {
         (error as Error)?.stack,
         LogContext.IN_APP_NOTIFICATION
       );
-      return null;
     }
+
+    return null;
   }
 }

@@ -8,26 +8,24 @@ import { InAppNotificationPayloadSpaceCommunicationUpdate } from '@platform/in-a
 @Resolver(() => InAppNotificationPayloadSpaceCommunicationUpdate)
 export class InAppNotificationPayloadSpaceCommunicationUpdateResolverFields {
   @ResolveField(() => ISpace, {
-    nullable: true,
+    nullable: false,
     description: 'The Space where the update was sent.',
   })
   public space(
-    @Parent()
-    payload: InAppNotificationPayloadSpaceCommunicationUpdate,
-    @Loader(SpaceLoaderCreator, { resolveToNull: true })
-    loader: ILoader<ISpace | null>
+    @Parent() payload: InAppNotificationPayloadSpaceCommunicationUpdate,
+    @Loader(SpaceLoaderCreator)
+    loader: ILoader<ISpace>
   ) {
     return loader.load(payload.spaceID);
   }
 
   @ResolveField(() => String, {
-    nullable: true,
+    nullable: false,
     description: 'The update content.',
   })
   public update(
-    @Parent()
-    payload: InAppNotificationPayloadSpaceCommunicationUpdate
-  ): string | undefined {
+    @Parent() payload: InAppNotificationPayloadSpaceCommunicationUpdate
+  ): string {
     return payload.update;
   }
 }

@@ -98,6 +98,7 @@ Events are categorized by their target audience:
 - `SPACE_COLLABORATION_CALLOUT_CONTRIBUTION` - Contributions to callouts
 - `SPACE_COLLABORATION_CALLOUT_POST_CONTRIBUTION_COMMENT` - Comments on post contributions
 - `SPACE_COMMUNITY_CALENDAR_EVENT_CREATED` - When a calendar event is created in the space community
+- `SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT` - When a comment is posted to a calendar event room
 - `SPACE_COMMUNICATION_MESSAGE_SENDER` - Copy of space message sent
 
 ### User Notifications
@@ -109,7 +110,6 @@ Events are categorized by their target audience:
 - `USER_SIGN_UP_WELCOME` - Welcome message for new users
 - `USER_MENTIONED` - When user is mentioned
 - `USER_MESSAGE` - Direct messages to users
-- `USER_MESSAGE_SENDER` - Copy of message sent by user
 - `USER_COMMENT_REPLY` - Replies to user's comments
 
 ### Virtual Contributor Notifications
@@ -422,6 +422,102 @@ const emailRecipients = candidates.filter(
 ### Issue: Missing payload types in GraphQL
 
 **Solution**: Ensure payload is added to `resolveType` function in interface resolver
+
+## Notification Email Blacklist
+
+The platform maintains a configurable blacklist of email addresses that should be blocked from receiving notifications. This provides a mechanism for platform administrators to prevent notifications from being sent to specific recipients (e.g., opted-out stakeholders, test accounts, or compliance-related exclusions).
+
+### Architecture
+
+- **Storage**: The blacklist is stored as an array of fully-qualified email addresses in `platform.settings.integration.notificationEmailBlacklist`
+- **Authorization**: Only platform administrators (with `PLATFORM_ADMIN` privilege) can add or remove entries
+- **Persistence**: Emails are stored with lowercase canonicalization for consistent comparisons
+- **Capacity**: Maximum of 250 entries to keep the list manageable and reviewable
+
+### GraphQL API
+
+#### Add Email to Blacklist
+
+```graphql
+mutation AddBlacklist($email: String!) {
+  addNotificationEmailToBlacklist(input: { email: $email })
+}
+```
+
+- Validates the email address format
+- Converts to lowercase for canonical storage
+- Prevents duplicate entries
+- Rejects wildcard characters or domain patterns
+- Returns the updated blacklist array
+
+#### Remove Email from Blacklist
+
+```graphql
+mutation RemoveBlacklist($email: String!) {
+  removeNotificationEmailFromBlacklist(input: { email: $email })
+}
+```
+
+- Performs case-insensitive lookup
+- Removes the matching email address
+- Returns error if email not found in blacklist
+- Returns the updated blacklist array
+
+#### Query Current Blacklist
+
+```graphql
+query {
+  platform {
+    settings {
+      integration {
+        notificationEmailBlacklist
+      }
+    }
+  }
+}
+```
+
+- Returns the complete list of blacklisted email addresses
+- Returns empty array if no entries exist
+- Available to all users who can query platform settings
+
+### Validation Rules
+
+1. **Email Format**: Must be a valid email address (validated with `@IsEmail()`)
+2. **No Wildcards**: Wildcard characters (`*`, `?`) are explicitly rejected
+3. **Full Addresses Only**: Only complete email addresses are allowed (no domain-only patterns)
+4. **Case Insensitive**: Emails are canonicalized to lowercase on write and compared case-insensitively
+5. **Unique Entries**: Duplicate emails are prevented (case-insensitive check)
+6. **Capacity Limit**: Maximum 250 entries enforced
+
+### Downstream Integration
+
+The blacklist is configuration-only at the platform level. Downstream notification services are responsible for:
+
+1. Fetching the blacklist via the GraphQL API
+2. Filtering recipients before sending notifications
+3. Handling already-queued notifications when new entries are added
+4. Implementing their own caching/sync strategies
+
+The platform does not enforce suppression logic itself - it maintains the authoritative blacklist configuration that other services consume.
+
+### Admin Workflow
+
+1. **Adding an Email**: Use the `addNotificationEmailToBlacklist` mutation with a valid email address. The mutation returns the updated list for immediate verification.
+
+2. **Removing an Email**: Use the `removeNotificationEmailFromBlacklist` mutation. Only emails that exist in the blacklist can be removed.
+
+3. **Auditing the List**: Query the `platform.settings.integration.notificationEmailBlacklist` field to review current entries. This is useful for compliance audits or troubleshooting.
+
+4. **Sync to Downstream Services**: After modifying the blacklist, downstream notification services will pick up changes on their next sync cycle. The platform does not push updates.
+
+### Best Practices
+
+- **Audit Regularly**: Periodically review the blacklist to remove obsolete entries
+- **Document Reasons**: Keep external documentation of why specific emails are blacklisted
+- **Monitor Capacity**: Be aware of the 250-entry limit and plan accordingly
+- **Coordinate Updates**: Communicate blacklist changes to stakeholders who may be troubleshooting notification issues
+- **Downstream Coordination**: Ensure notification services are configured to respect the blacklist
 
 ## Future Improvements
 

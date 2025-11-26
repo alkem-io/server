@@ -105,20 +105,6 @@ export class DiscussionService {
     return discussion;
   }
 
-  async deleteDiscussion(discussionID: string): Promise<IDiscussion> {
-    const discussion = await this.getDiscussionOrFail(discussionID, {
-      relations: { profile: true },
-    });
-    if (discussion.profile) {
-      await this.profileService.deleteProfile(discussion.profile.id);
-    }
-    const result = await this.discussionRepository.remove(
-      discussion as Discussion
-    );
-    result.id = discussionID;
-    return result;
-  }
-
   async updateDiscussion(
     discussion: IDiscussion,
     updateDiscussionData: UpdateDiscussionInput

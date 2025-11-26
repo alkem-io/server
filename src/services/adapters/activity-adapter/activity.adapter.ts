@@ -13,6 +13,7 @@ import { ActivityInputCalloutPublished } from './dto/activity.dto.input.callout.
 import { ActivityInputCalloutPostCreated } from './dto/activity.dto.input.callout.post.created';
 import { ActivityInputCalloutWhiteboardCreated } from './dto/activity.dto.input.callout.whiteboard.created';
 import { ActivityInputCalloutWhiteboardContentModified } from './dto/activity.dto.input.callout.whiteboard.content.modified';
+import { ActivityInputCalloutMemoCreated } from './dto/activity.dto.input.callout.memo.created';
 import { ActivityInputMemberJoined } from './dto/activity.dto.input.member.joined';
 import { ActivityInputCalloutPostComment } from './dto/activity.dto.input.callout.post.comment';
 import { ActivityInputCalloutDiscussionComment } from './dto/activity.dto.input.callout.discussion.comment';
@@ -26,6 +27,7 @@ import { ActivityInputCalloutLinkCreated } from './dto/activity.dto.input.callou
 import { ActivityInputCalendarEventCreated } from './dto/activity.dto.input.calendar.event.created';
 import { TimelineResolverService } from '@services/infrastructure/entity-resolver/timeline.resolver.service';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
+import { Memo } from '@domain/common/memo/memo.entity';
 import { Space } from '@domain/space/space/space.entity';
 
 @Injectable()
@@ -38,6 +40,8 @@ export class ActivityAdapter {
     private calloutRepository: Repository<Callout>,
     @InjectRepository(Whiteboard)
     private whiteboardRepository: Repository<Whiteboard>,
+    @InjectRepository(Memo)
+    private memoRepository: Repository<Memo>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private readonly graphqlSubscriptionService: SubscriptionPublishService,
@@ -239,6 +243,32 @@ export class ActivityAdapter {
       triggeredBy: eventData.triggeredBy,
       collaborationID,
       resourceID: whiteboard.id,
+      parentID: eventData.callout.id,
+      description: description,
+      type: eventType,
+      visibility: true,
+    });
+
+    this.graphqlSubscriptionService.publishActivity(collaborationID, activity);
+
+    return true;
+  }
+
+  public async calloutMemoCreated(
+    eventData: ActivityInputCalloutMemoCreated
+  ): Promise<boolean> {
+    const eventType = ActivityEventType.CALLOUT_MEMO_CREATED;
+    this.logEventTriggered(eventData, eventType);
+
+    const memo = eventData.memo;
+    const collaborationID = await this.getCollaborationIdForMemo(memo.id);
+    const memoDisplayName = await this.getMemoDisplayName(memo.id);
+
+    const description = `[${memoDisplayName}]`;
+    const activity = await this.activityService.createActivity({
+      triggeredBy: eventData.triggeredBy,
+      collaborationID,
+      resourceID: memo.id,
       parentID: eventData.callout.id,
       description: description,
       type: eventType,
@@ -506,6 +536,30 @@ export class ActivityAdapter {
     return collaboration.id;
   }
 
+  private async getCollaborationIdForMemo(memoID: string): Promise<string> {
+    const collaboration = await this.entityManager.findOne(Collaboration, {
+      where: {
+        calloutsSet: {
+          callouts: {
+            contributions: {
+              memo: {
+                id: memoID,
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!collaboration) {
+      throw new EntityNotFoundException(
+        'Unable to identify Collaboration for Memo',
+        LogContext.ACTIVITY,
+        { memoID }
+      );
+    }
+    return collaboration.id;
+  }
+
   private async getWhiteboardDisplayName(
     whiteboardID: string
   ): Promise<string> {
@@ -516,11 +570,28 @@ export class ActivityAdapter {
       .getOne();
     if (!whiteboard) {
       throw new EntityNotFoundException(
-        `Unable to identify Whiteboard with ID: ${whiteboardID}`,
-        LogContext.ACTIVITY
+        'Unable to identify Whiteboard',
+        LogContext.ACTIVITY,
+        { whiteboardID }
       );
     }
     return whiteboard.profile.displayName;
+  }
+
+  private async getMemoDisplayName(memoID: string): Promise<string> {
+    const memo = await this.memoRepository
+      .createQueryBuilder('memo')
+      .leftJoinAndSelect('memo.profile', 'profile')
+      .where({ id: memoID })
+      .getOne();
+    if (!memo) {
+      throw new EntityNotFoundException(
+        'Unable to identify Memo',
+        LogContext.ACTIVITY,
+        { memoID }
+      );
+    }
+    return memo.profile.displayName;
   }
 
   private async getCollaborationIdWithCalloutIdForWhiteboard(

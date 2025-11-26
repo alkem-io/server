@@ -28,6 +28,7 @@ import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type
 import { ContributorService } from '@domain/community/contributor/contributor.service';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { IUser } from '@domain/community/user/user.interface';
+import { getContributorType } from '@domain/community/contributor/get.contributor.type';
 import { InvitationLifecycleService } from './invitation.service.lifecycle';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { RoleSetCacheService } from '../role-set/role.set.service.cache';
@@ -51,8 +52,7 @@ export class InvitationService {
     contributor: IContributor
   ): Promise<IInvitation> {
     const invitation: IInvitation = Invitation.create(invitationData);
-    invitation.contributorType =
-      this.contributorService.getContributorType(contributor);
+    invitation.contributorType = getContributorType(contributor);
 
     invitation.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.INVITATION

@@ -21,28 +21,28 @@ export class InAppNotificationPayloadSpaceCollaborationCalloutPostCommentResolve
   ) {}
 
   @ResolveField(() => ISpace, {
-    nullable: true,
+    nullable: false,
     description: 'The Space where the comment was made.',
   })
   public async space(
     @Parent()
     payload: InAppNotificationPayloadSpaceCollaborationCalloutPostComment,
-    @Loader(SpaceLoaderCreator, { resolveToNull: true })
-    loader: ILoader<ISpace | null>
-  ): Promise<ISpace | null> {
+    @Loader(SpaceLoaderCreator)
+    loader: ILoader<ISpace>
+  ): Promise<ISpace> {
     return loader.load(payload.spaceID);
   }
 
   @ResolveField(() => ICallout, {
-    nullable: true,
+    nullable: false,
     description: 'The Callout that was published.',
   })
   public callout(
     @Parent()
     payload: InAppNotificationPayloadSpaceCollaborationCalloutPostComment,
-    @Loader(CalloutLoaderCreator, { resolveToNull: true })
-    loader: ILoader<ICallout | null>
-  ): Promise<ICallout | null> {
+    @Loader(CalloutLoaderCreator)
+    loader: ILoader<ICallout>
+  ): Promise<ICallout> {
     return loader.load(payload.calloutID);
   }
 
@@ -70,7 +70,8 @@ export class InAppNotificationPayloadSpaceCollaborationCalloutPostCommentResolve
         (error as Error)?.stack,
         LogContext.IN_APP_NOTIFICATION
       );
-      return null;
     }
+
+    return null;
   }
 }

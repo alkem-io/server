@@ -22,6 +22,15 @@
 - Optional but recommended: jq (used in docs for auth flows), mysql client, mkcert for TLS dev.
 - Module resolution uses `tsconfig.json` path aliases (e.g. `@domain/*`, `@services/*`). ESLint is configured via `eslint.config.js` with flat config, Prettier integration, and production-stricter `@typescript-eslint/no-unused-vars`.
 
+## Coding standards & Team agreements
+
+- When raising exceptions do not include dynamic data (e.g. IDs, email addresses) in messages.
+  Include such data as structured properties on the error object instead for logging purposes.
+  The property is called `details` of type `ExceptionDetails`, and usually is the third parameter of the exception constructor.
+- When logging verbose and warning levels have two arguments - message and context.
+  Error has message, stacktrace, context.
+  You can log structured data as the message parameter - it accepts string or object.
+
 ## Bootstrap, Build & Run
 
 - Install dependencies (verified 2025-10-27):
@@ -102,6 +111,13 @@
 - Trust this guide. Only search or explore when information here is missing or demonstrably outdated.
 
 ## Active Technologies
+
+- TypeScript 5.x on Node.js 20 (per repository toolchain) + NestJS server, existing CI runner stack, SonarQube at https://sonarqube.alkem.io (015-sonarqube-analysis)
+- N/A (SonarQube stores analysis; server DB not impacted by this feature) (015-sonarqube-analysis)
+- Winston for logging. Obey the logging signature.
+
+- TypeScript 5.3, Node.js 20.15.1 (Volta-pinned), executed via ts-node + NestJS 10.x, TypeORM 0.3.x, Apollo Server 4.x, GraphQL 16.x, class-validator, class-transformer (013-timeline-comment-notification)
+- MySQL 8.0 with `mysql_native_password` authentication (013-timeline-comment-notification)
 
 - TypeScript 5.3 (ts-node) executed on Node 20.x via GitHub Actions + pnpm 10.17.1, `actions/checkout@v4`, `actions/setup-node@v4`, `crazy-max/ghaction-import-gpg@v6`, `actions/github-script@v7`, repository schema scripts (`generate-schema.snapshot.ts`, `diff-schema.ts`) (012-generate-schema-baseline)
 - N/A – workflow operates on repository working tree only (012-generate-schema-baseline)

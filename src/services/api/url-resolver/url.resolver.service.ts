@@ -34,7 +34,7 @@ export class UrlResolverService {
     `/:spaceNameID{/${UrlPathElement.CHALLENGES}/:challengeNameID}{/${UrlPathElement.OPPORTUNITIES}/:opportunityNameID}{/*path}`
   );
   private spaceInternalPathMatcherCollaboration = match(
-    `/${UrlPathElement.COLLABORATION}/:calloutNameID{/${UrlPathElement.POSTS}/:postNameID}{/${UrlPathElement.WHITEBOARDS}/:whiteboardNameID}{/*path}`
+    `/${UrlPathElement.COLLABORATION}/:calloutNameID{/${UrlPathElement.POSTS}/:postNameID}{/${UrlPathElement.WHITEBOARDS}/:whiteboardNameID}{/${UrlPathElement.MEMOS}/:memoNameID}{/*path}`
   );
   private spaceInternalPathMatcherCalendar = match(
     `/${UrlPathElement.CALENDAR}/:calendarEventNameId`
@@ -46,7 +46,7 @@ export class UrlResolverService {
     `/${UrlPathBase.INNOVATION_PACKS}/:innovationPackNameID{/${UrlPathElement.SETTINGS}}{/:templateNameID}{/*path}`
   );
   private virtualContributorPathMatcher = match(
-    `/${UrlPathBase.VIRTUAL_CONTRIBUTOR}/:virtualContributorNameID{/${UrlPathElement.KNOWLEDGE_BASE}/:calloutNameID}{/${UrlPathElement.POSTS}/:postNameID}{/*path}`
+    `/${UrlPathBase.VIRTUAL_CONTRIBUTOR}/:virtualContributorNameID{/${UrlPathElement.KNOWLEDGE_BASE}/:calloutNameID}{/${UrlPathElement.POSTS}/:postNameID}{/${UrlPathElement.MEMOS}/:memoNameID}{/*path}`
   );
   private innovationHubPathMatcher = match(
     `/${UrlPathBase.INNOVATION_HUBS}/:innovationHubNameID{/*path}`
@@ -292,6 +292,7 @@ export class UrlResolverService {
       virtualContributorNameID?: string | string[];
       calloutNameID?: string | string[];
       postNameID?: string | string[];
+      memoNameID?: string | string[];
       path?: string | string[];
     };
 
@@ -300,6 +301,7 @@ export class UrlResolverService {
     );
     const calloutNameID = this.getMatchedResultAsString(params.calloutNameID);
     const postNameID = this.getMatchedResultAsString(params.postNameID);
+    const memoNameID = this.getMatchedResultAsString(params.memoNameID);
 
     if (!virtualContributorNameID) {
       throw new ValidationException(
@@ -319,6 +321,7 @@ export class UrlResolverService {
                   contributions: {
                     post: true,
                     whiteboard: true,
+                    memo: true,
                   },
                 },
               },
@@ -343,7 +346,8 @@ export class UrlResolverService {
       urlPath,
       calloutNameID,
       postNameID,
-      undefined
+      undefined,
+      memoNameID
     );
 
     result.virtualContributor = {
@@ -707,6 +711,7 @@ export class UrlResolverService {
       calloutNameID?: string | string[];
       postNameID?: string | string[];
       whiteboardNameID?: string | string[];
+      memoNameID?: string | string[];
       path?: string | string[];
     };
 
@@ -715,6 +720,7 @@ export class UrlResolverService {
     const whiteboardNameID = this.getMatchedResultAsString(
       params.whiteboardNameID
     );
+    const memoNameID = this.getMatchedResultAsString(params.memoNameID);
     const collaborationInternalPath = this.getMatchedResultAsPath(params.path);
     const calloutsSetResult = await this.populateCalloutsSetResult(
       result.space.collaboration.calloutsSet.id,
@@ -722,7 +728,8 @@ export class UrlResolverService {
       collaborationInternalPath || internalPath,
       calloutNameID,
       postNameID,
-      whiteboardNameID
+      whiteboardNameID,
+      memoNameID
     );
 
     result.space.collaboration.calloutsSet = calloutsSetResult;
@@ -736,7 +743,8 @@ export class UrlResolverService {
     urlPath: string,
     calloutNameID: string | undefined,
     postNameID: string | undefined,
-    whiteboardNameID: string | undefined
+    whiteboardNameID: string | undefined,
+    memoNameID: string | undefined
   ): Promise<UrlResolverQueryResultCalloutsSet> {
     const result: UrlResolverQueryResultCalloutsSet = {
       id: calloutsSetId,
@@ -760,6 +768,7 @@ export class UrlResolverService {
         contributions: {
           post: true,
           whiteboard: true,
+          memo: true,
         },
       },
     });
@@ -771,7 +780,7 @@ export class UrlResolverService {
     );
     result.calloutId = callout.id;
     result.type = UrlType.CALLOUT;
-    if (!postNameID && !whiteboardNameID) {
+    if (!postNameID && !whiteboardNameID && !memoNameID) {
       return result;
     }
 
@@ -843,6 +852,42 @@ export class UrlResolverService {
       result.contributionId = contribution.id;
       result.whiteboardId = contribution?.whiteboard?.id;
       result.type = UrlType.CONTRIBUTION_WHITEBOARD;
+      return result;
+    }
+
+    // Check for memo contribution
+    if (memoNameID) {
+      const contribution = await this.entityManager.findOne(
+        CalloutContribution,
+        {
+          where: {
+            callout: {
+              id: callout.id,
+            },
+            memo: {
+              nameID: memoNameID,
+            },
+          },
+          relations: {
+            authorization: true,
+            memo: true,
+          },
+        }
+      );
+      if (!contribution) {
+        // Do not throw an error but return what is available
+        return result;
+      }
+
+      this.authorizationService.grantAccessOrFail(
+        agentInfo,
+        contribution.authorization,
+        AuthorizationPrivilege.READ,
+        `resolving url for memo on callout ${urlPath}`
+      );
+      result.contributionId = contribution.id;
+      result.memoId = contribution?.memo?.id;
+      result.type = UrlType.CONTRIBUTION_MEMO;
       return result;
     }
 

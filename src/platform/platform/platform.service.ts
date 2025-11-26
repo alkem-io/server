@@ -47,6 +47,14 @@ export class PlatformService {
         LogContext.PLATFORM
       );
     }
+
+    // Ensure notificationEmailBlacklist is initialized
+    if (platform.settings?.integration) {
+      if (!platform.settings.integration.notificationEmailBlacklist) {
+        platform.settings.integration.notificationEmailBlacklist = [];
+      }
+    }
+
     return platform;
   }
 

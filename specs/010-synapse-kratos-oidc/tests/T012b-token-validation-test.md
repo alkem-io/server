@@ -22,11 +22,13 @@ Validate that Synapse correctly rejects expired or invalid OIDC tokens and promp
 **Given**: User has an active Matrix session with valid OIDC token
 **When**: Token expires (wait for refresh_token_lifetime=300s or manipulate token)
 **Then**:
+
 - Next Matrix action triggers token refresh
 - If refresh succeeds, session continues
 - If refresh fails, user is prompted to re-authenticate
 
 **Expected Behavior**:
+
 - Token refresh attempted automatically
 - On refresh failure: Error message displayed
 - User redirected to OIDC login flow
@@ -37,12 +39,14 @@ Validate that Synapse correctly rejects expired or invalid OIDC tokens and promp
 **Given**: User attempts to use a manipulated/invalid OIDC token
 **When**: Matrix client makes authenticated request with invalid token
 **Then**:
+
 - Synapse validates token signature
 - Validation fails
 - Authentication denied
 - User prompted to re-authenticate
 
 **Expected Log Output**:
+
 ```
 synapse.handlers.oidc - WARNING - Could not validate token: [error message]
 synapse.rest.client - INFO - Authentication failed, redirecting to login
@@ -52,10 +56,11 @@ synapse.rest.client - INFO - Authentication failed, redirecting to login
 
 **Given**: User has active Matrix session
 **When**:
+
 - Admin disables user's Kratos account
 - User attempts Matrix action
 - Token refresh triggered
-**Then**:
+  **Then**:
 - Hydra queries Kratos for user validation
 - Kratos returns "account disabled"
 - Token refresh denied
@@ -69,6 +74,7 @@ synapse.rest.client - INFO - Authentication failed, redirecting to login
 ### Manual Test (Scenario 1)
 
 1. **Setup**:
+
    ```bash
    # Login to Matrix via OIDC
    # Wait for token expiry (300s) or manipulate token expiry in database
@@ -87,12 +93,14 @@ synapse.rest.client - INFO - Authentication failed, redirecting to login
 ### Manual Test (Scenario 3 - Account Disable)
 
 1. **Setup**:
+
    ```bash
    # Login to Matrix via OIDC
    # Note: Account is redacted01@gmail.com
    ```
 
 2. **Disable Account in Kratos**:
+
    ```bash
    # Option 1: Via Kratos Admin API
    curl -X PATCH http://localhost:4434/admin/identities/{identity_id} \
@@ -105,6 +113,7 @@ synapse.rest.client - INFO - Authentication failed, redirecting to login
    ```
 
 3. **Wait for Token Refresh**:
+
    ```bash
    # Wait up to 5 minutes (300s refresh interval)
    # Or force refresh by restarting Matrix client
@@ -137,6 +146,7 @@ npm test -- src/services/api/oidc/oidc.integration.spec.ts -t "token validation"
 **Environment**: Docker Compose development
 
 **Scenario 1: Expired Access Token**
+
 - ✅ Status: [PASS/FAIL]
 - Token refresh attempted: [YES/NO]
 - Session continued: [YES/NO]
@@ -144,12 +154,14 @@ npm test -- src/services/api/oidc/oidc.integration.spec.ts -t "token validation"
 - Notes: [Any observations]
 
 **Scenario 2: Invalid Token**
+
 - ⏸️ Status: [Pending - requires token manipulation]
 - Authentication denied: [YES/NO]
 - Error message displayed: [YES/NO]
 - Re-authentication triggered: [YES/NO]
 
 **Scenario 3: Disabled Account**
+
 - ⏸️ Status: [Pending - requires Kratos account disable]
 - Token refresh denied: [YES/NO]
 - Session terminated within 5 minutes: [YES/NO]

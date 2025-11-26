@@ -36,7 +36,7 @@ export class InvitationResolverFields {
   async createdBy(@Parent() invitation: IInvitation): Promise<IUser | null> {
     try {
       return await this.invitationService.getCreatedByOrFail(invitation);
-    } catch (error) {
+    } catch {
       return null;
     }
   }

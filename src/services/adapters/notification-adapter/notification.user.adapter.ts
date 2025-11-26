@@ -10,7 +10,6 @@ import { NotificationRecipientResult } from '@services/api/notification-recipien
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { NotificationAdapter } from './notification.adapter';
 import { NotificationEventPayload } from '@common/enums/notification.event.payload';
-import { InAppNotificationPayloadUser } from '@platform/in-app-notification-payload/dto/user/notification.in.app.payload.user.base';
 import { InAppNotificationPayloadUserMessageDirect } from '@platform/in-app-notification-payload/dto/user/notification.in.app.payload.user.message.direct';
 import { LogContext } from '@common/enums/logging.context';
 import { InAppNotificationPayloadUserMessageRoom } from '@platform/in-app-notification-payload/dto/user/notification.in.app.payload.user.message.room';
@@ -22,9 +21,10 @@ import { InAppNotificationPayloadSpaceCommunityInvitation } from '@platform/in-a
 import { NotificationInputCommunityInvitation } from './dto/space/notification.dto.input.space.community.invitation';
 import { NotificationInputCommunityNewMember } from './dto/space/notification.dto.input.space.community.new.member';
 import { InAppNotificationPayloadSpaceCommunityContributor } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.contributor';
-import { InAppNotificationPayloadSpaceCommunityApplicationDeclined } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.application.declined';
+import { InAppNotificationPayloadSpace } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space';
 import { NotificationInputUserSpaceCommunityApplicationDeclined } from './dto/user/notification.dto.input.user.space.community.application.declined';
 import { MessageDetailsService } from '@domain/communication/message.details/message.details.service';
+import { InAppNotificationPayloadUser } from '@platform/in-app-notification-payload/dto/user/notification.in.app.payload.user';
 
 @Injectable()
 export class NotificationUserAdapter {
@@ -158,6 +158,7 @@ export class NotificationUserAdapter {
         type: NotificationEventPayload.SPACE_COMMUNITY_CONTRIBUTOR,
         spaceID: space.id,
         contributorID: eventData.contributorID,
+        contributorType: eventData.contributorType,
       };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
@@ -185,12 +186,17 @@ export class NotificationUserAdapter {
       eventData.userID
     );
 
-    if (recipients.emailRecipients.length > 0) {
+    // Filter out the sender from email recipients (in case user mentions themselves)
+    const emailRecipientsWithoutSender = recipients.emailRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+
+    if (emailRecipientsWithoutSender.length > 0) {
       const payload =
         await this.notificationExternalAdapter.buildUserMentionNotificationPayload(
           event,
           eventData.triggeredBy,
-          recipients.emailRecipients,
+          emailRecipientsWithoutSender,
           eventData.userID,
           messageDetails
         );
@@ -202,7 +208,10 @@ export class NotificationUserAdapter {
     }
 
     // In-app notification
-    const inAppReceiverIDs = recipients.inAppRecipients.map(
+    const inAppRecipientsWithoutSender = recipients.inAppRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    const inAppReceiverIDs = inAppRecipientsWithoutSender.map(
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length > 0) {
@@ -279,12 +288,16 @@ export class NotificationUserAdapter {
     );
 
     try {
-      if (recipients.emailRecipients.length > 0) {
+      // Filter out the sender from email recipients
+      const emailRecipientsWithoutSender = recipients.emailRecipients.filter(
+        recipient => recipient.id !== eventData.triggeredBy
+      );
+      if (emailRecipientsWithoutSender.length > 0) {
         const payload =
           await this.notificationExternalAdapter.buildUserCommentReplyPayload(
             event,
             eventData.triggeredBy,
-            recipients.emailRecipients,
+            emailRecipientsWithoutSender,
             eventData,
             messageDetails
           );
@@ -296,7 +309,10 @@ export class NotificationUserAdapter {
       }
 
       // In-app notification
-      const inAppReceiverIDs = recipients.inAppRecipients.map(
+      const inAppRecipientsWithoutSender = recipients.inAppRecipients.filter(
+        recipient => recipient.id !== eventData.triggeredBy
+      );
+      const inAppReceiverIDs = inAppRecipientsWithoutSender.map(
         recipient => recipient.id
       );
       if (inAppReceiverIDs.length > 0) {
@@ -357,11 +373,10 @@ export class NotificationUserAdapter {
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length > 0) {
-      const inAppPayload: InAppNotificationPayloadSpaceCommunityApplicationDeclined =
-        {
-          type: NotificationEventPayload.SPACE,
-          spaceID: eventData.spaceID,
-        };
+      const inAppPayload: InAppNotificationPayloadSpace = {
+        type: NotificationEventPayload.SPACE,
+        spaceID: eventData.spaceID,
+      };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
         NotificationEvent.USER_SPACE_COMMUNITY_APPLICATION_DECLINED,

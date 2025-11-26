@@ -17,6 +17,20 @@ const env = (prod, dev) => (process.env.NODE_ENV === 'production' ? prod : dev);
 
 module.exports = defineConfig([
   {
+    ignores: [
+      '**/node_modules/**',
+      '**/dist/**',
+      'build/**',
+      'coverage/**',
+      'coverage-*/**',
+      'tmp/**',
+      '**/*.min.js',
+      '.env*',
+      '**/.eslint.config.js',
+      'src/migrations/**',
+    ],
+  },
+  {
     languageOptions: {
       parser: tsParser,
       sourceType: 'module',
@@ -62,10 +76,4 @@ module.exports = defineConfig([
       'no-multiple-empty-lines': 'error',
     },
   },
-  globalIgnores([
-    '**/node_modules/**/*',
-    '**/dist**',
-    '**/.eslintrc.js',
-    'src/migrations',
-  ]),
 ]);

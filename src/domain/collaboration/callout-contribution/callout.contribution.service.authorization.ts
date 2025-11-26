@@ -21,6 +21,7 @@ import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
 import { PlatformRolesAccessService } from '@domain/access/platform-roles-access/platform.roles.access.service';
+import { MemoAuthorizationService } from '@domain/common/memo/memo.service.authorization';
 
 @Injectable()
 export class CalloutContributionAuthorizationService {
@@ -30,6 +31,7 @@ export class CalloutContributionAuthorizationService {
     private postAuthorizationService: PostAuthorizationService,
     private whiteboardAuthorizationService: WhiteboardAuthorizationService,
     private linkAuthorizationService: LinkAuthorizationService,
+    private memoAuthorizationService: MemoAuthorizationService,
     private platformRolesAccessService: PlatformRolesAccessService,
     private roleSetService: RoleSetService
   ) {}
@@ -68,6 +70,12 @@ export class CalloutContributionAuthorizationService {
                 authorization: true,
               },
             },
+            memo: {
+              authorization: true,
+              profile: {
+                authorization: true,
+              },
+            },
           },
           select: {
             id: true,
@@ -92,6 +100,14 @@ export class CalloutContributionAuthorizationService {
               id: true,
             },
             link: {
+              id: true,
+              authorization:
+                this.authorizationPolicyService.authorizationSelectOptions,
+              profile: {
+                id: true,
+              },
+            },
+            memo: {
               id: true,
               authorization:
                 this.authorizationPolicyService.authorizationSelectOptions,
@@ -145,6 +161,15 @@ export class CalloutContributionAuthorizationService {
           contribution.createdBy
         );
       updatedAuthorizations.push(...linkAuthorizations);
+    }
+
+    if (contribution.memo) {
+      const memoAuthorizations =
+        await this.memoAuthorizationService.applyAuthorizationPolicy(
+          contribution.memo.id,
+          contribution.authorization
+        );
+      updatedAuthorizations.push(...memoAuthorizations);
     }
 
     return updatedAuthorizations;
