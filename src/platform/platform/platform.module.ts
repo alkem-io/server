@@ -20,6 +20,7 @@ import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { PlatformLicenseService } from './platform.service.license';
 import { PlatformSettingsModule } from '@platform/platform-settings/platform.settings.module';
 import { LicenseEntitlementModule } from '@domain/common/license-entitlement/license.entitlement.module';
+import { PlatformWellKnownVirtualContributorsModule } from '@platform/platform.well.known.virtual.contributors';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { LicenseEntitlementModule } from '@domain/common/license-entitlement/lic
     LicensingFrameworkModule,
     TemplatesManagerModule,
     RoleSetModule,
+    PlatformWellKnownVirtualContributorsModule,
     TypeOrmModule.forFeature([Platform]),
   ],
   providers: [
