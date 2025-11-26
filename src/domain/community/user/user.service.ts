@@ -201,8 +201,9 @@ export class UserService {
 
     if (!user.agent) {
       throw new EntityNotInitializedException(
-        `User Agent not initialized for user: ${user.id}`,
-        LogContext.COMMUNITY
+        'User Agent not initialized for user',
+        LogContext.COMMUNITY,
+        { id: user.id }
       );
     }
 
@@ -213,7 +214,6 @@ export class UserService {
     await this.communicationAdapter.tryRegisterNewUser(user.agent.id);
 
     try {
-      await this.save(user);
       await this.setUserCache(user);
     } catch (e: any) {
       this.logger.error(e, e?.stack, LogContext.USER);
@@ -794,6 +794,14 @@ export class UserService {
       );
     }
 
+    if (!user.agent) {
+      throw new EntityNotInitializedException(
+        'User Agent not initialized',
+        LogContext.COMMUNITY,
+        { userId }
+      );
+    }
+
     const room = await this.roomService.createRoom(
       `${user.agent.id}-guidance`,
       RoomType.GUIDANCE
@@ -811,6 +819,13 @@ export class UserService {
       const loadedUser = await this.getUserOrFail(user.id, {
         relations: { agent: true },
       });
+      if (!loadedUser.agent) {
+        throw new EntityNotInitializedException(
+          'User Agent not initialized',
+          LogContext.COMMUNITY,
+          { userId: user.id }
+        );
+      }
       agentID = loadedUser.agent.id;
     }
 
