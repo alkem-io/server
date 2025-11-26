@@ -15,6 +15,7 @@ import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platf
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
+import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { CommunicationAdapterModule } from '@services/adapters/communication-ada
     CommunicationAdapterModule,
     NamingModule,
     TypeOrmModule.forFeature([Forum]),
+    UserLookupModule,
   ],
   providers: [
     ForumService,

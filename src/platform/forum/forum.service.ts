@@ -23,6 +23,7 @@ import { IForum } from './forum.interface';
 import { ForumDiscussionCategoryException } from '@common/exceptions/forum.discussion.category.exception';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 
 @Injectable()
 export class ForumService {
@@ -31,6 +32,7 @@ export class ForumService {
     private communicationAdapter: CommunicationAdapter,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
     private namingService: NamingService,
+    private userLookupService: UserLookupService,
     @InjectRepository(Forum)
     private forumRepository: Repository<Forum>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -227,16 +229,27 @@ export class ForumService {
   }
 
   async removeUserFromForums(forum: IForum, user: IUser): Promise<boolean> {
+    let agentId = user.agent?.id;
+    if (!agentId) {
+      const loadedUser = await this.userLookupService.getUserOrFail(user.id, {
+        relations: { agent: true },
+      });
+      if (!loadedUser.agent) {
+        throw new EntityNotInitializedException(
+          `User Agent not initialized for user: ${user.id}`,
+          LogContext.PLATFORM_FORUM
+        );
+      }
+      agentId = loadedUser.agent.id;
+    }
+
     // get the list of rooms to add the user to
     const forumRoomIDs: string[] = [];
     for (const discussion of await this.getDiscussions(forum)) {
       const room = await this.discussionService.getComments(discussion.id);
       forumRoomIDs.push(room.externalRoomID);
     }
-    await this.communicationAdapter.removeUserFromRooms(
-      forumRoomIDs,
-      user.agent.id
-    );
+    await this.communicationAdapter.removeUserFromRooms(forumRoomIDs, agentId);
 
     return true;
   }

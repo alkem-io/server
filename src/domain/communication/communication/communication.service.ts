@@ -140,6 +140,13 @@ export class CommunicationService {
     communication: ICommunication,
     user: IUser
   ): Promise<boolean> {
+    if (!user.agent) {
+      throw new EntityNotInitializedException(
+        `User Agent not initialized for user: ${user.id}`,
+        LogContext.COMMUNICATION
+      );
+    }
+
     // get the list of rooms to add the user to
     const communicationRoomIDs: string[] = [
       this.getUpdates(communication).externalRoomID,

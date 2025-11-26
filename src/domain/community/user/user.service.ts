@@ -1,6 +1,7 @@
 import { LogContext, ProfileType } from '@common/enums';
 import {
   EntityNotFoundException,
+  EntityNotInitializedException,
   ForbiddenException,
   RelationshipNotFoundException,
   UserRegistrationInvalidEmail,
@@ -196,13 +197,20 @@ export class UserService {
       user.id
     );
     // Reload to ensure have the updated avatar URL
-    user = await this.getUserOrFail(user.id);
+    user = await this.getUserOrFail(user.id, { relations: { agent: true } });
+
+    if (!user.agent) {
+      throw new EntityNotInitializedException(
+        `User Agent not initialized for user: ${user.id}`,
+        LogContext.COMMUNITY
+      );
+    }
 
     // all users need to be registered for communications at the absolute beginning
     // there are cases where a user could be messaged before they actually log-in
     // which will result in failure in communication (either missing user or unsent messages)
     // register the user asynchronously - we don't want to block the creation operation
-    await this.communicationAdapter.tryRegisterNewUser(user.email);
+    await this.communicationAdapter.tryRegisterNewUser(user.agent.id);
 
     try {
       await this.save(user);
