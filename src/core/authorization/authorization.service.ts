@@ -201,7 +201,7 @@ export class AuthorizationService {
     return false;
   }
 
-  private async isAccessGrantedRemoteEvaluation(
+  public async isAccessGrantedRemoteEvaluation(
     agentId: string,
     authorizationPolicyId: string,
     requiredPrivilege: AuthorizationPrivilege

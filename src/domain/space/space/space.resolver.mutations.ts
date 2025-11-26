@@ -38,6 +38,22 @@ export class SpaceResolverMutations {
     private licenseService: LicenseService
   ) {}
 
+  @Mutation(() => String)
+  async remoteTest(@CurrentUser() agentInfo: AgentInfo): Promise<string> {
+    const space = await this.spaceService.getSpaceOrFail(
+      '2a9d266c-acc5-4ea8-823e-f396b2be9524'
+    );
+
+    const result =
+      await this.authorizationService.isAccessGrantedRemoteEvaluation(
+        agentInfo.agentID,
+        space.authorization!.id,
+        AuthorizationPrivilege.READ
+      );
+
+    return JSON.stringify(result);
+  }
+
   @Mutation(() => ISpace, {
     description: 'Updates the Space.',
   })
