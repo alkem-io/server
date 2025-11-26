@@ -12,6 +12,7 @@ import { ISpace } from '@domain/space/space/space.interface';
 import { LoggerService } from '@nestjs/common';
 import { ForbiddenException } from '@common/exceptions';
 import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
+import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 
 describe('WhiteboardGuestAccessService', () => {
   const createAuthorization = () => {
@@ -29,6 +30,9 @@ describe('WhiteboardGuestAccessService', () => {
     return {
       id: 'whiteboard-1',
       authorization,
+      profile: {
+        id: 'profile-1',
+      },
     } as unknown as IWhiteboard;
   };
 
@@ -47,6 +51,7 @@ describe('WhiteboardGuestAccessService', () => {
   let authorizationService: jest.Mocked<AuthorizationService>;
   let authorizationPolicyService: jest.Mocked<AuthorizationPolicyService>;
   let communityResolverService: jest.Mocked<CommunityResolverService>;
+  let profileAuthService: jest.Mocked<ProfileAuthorizationService>;
   let logger: jest.Mocked<LoggerService>;
   let service: WhiteboardGuestAccessService;
 
@@ -78,6 +83,10 @@ describe('WhiteboardGuestAccessService', () => {
         .mockResolvedValue(createSpace(true)),
     } as unknown as jest.Mocked<CommunityResolverService>;
 
+    profileAuthService = {
+      applyAuthorizationPolicy: jest.fn(),
+    } as unknown as jest.Mocked<ProfileAuthorizationService>;
+
     logger = {
       verbose: jest.fn(),
       debug: jest.fn(),
@@ -91,6 +100,7 @@ describe('WhiteboardGuestAccessService', () => {
       authorizationService,
       authorizationPolicyService,
       communityResolverService,
+      profileAuthService,
       logger
     );
   });
