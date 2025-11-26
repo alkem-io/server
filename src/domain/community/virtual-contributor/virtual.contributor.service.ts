@@ -107,6 +107,10 @@ export class VirtualContributorService {
     // Pull the settings from a defaults file
     virtualContributor.settings = virtualContributorSettingsDefault;
 
+    virtualContributor.platformSettings = {
+      promptGraphEditingEnabled: false,
+    };
+
     const knowledgeBaseData =
       await this.virtualContributorDefaultsService.createKnowledgeBaseInput(
         virtualContributorData.knowledgeBaseData,

@@ -3727,7 +3727,11 @@ type Mutation {
   updateUserSettings(settingsData: UpdateUserSettingsInput!): User!
   """Updates the specified VirtualContributor."""
   updateVirtualContributor(virtualContributorData: UpdateVirtualContributorInput!): VirtualContributor!
-  """Updates one of the Setting on an Organization"""
+  """
+  Updates platform-level settings of a VirtualContributor (platform admins only).
+  """
+  updateVirtualContributorPlatformSettings(settingsData: UpdateVirtualContributorPlatformSettingsInput!): VirtualContributor!
+  """Updates one of the Setting on an Virtual Contributor"""
   updateVirtualContributorSettings(settingsData: UpdateVirtualContributorSettingsInput!): VirtualContributor!
   """Updates the image URI for the specified Visual."""
   updateVisual(updateData: UpdateVisualInput!): Visual!
@@ -5771,6 +5775,10 @@ type VirtualContributor implements Contributor {
   modelCard: VirtualContributorModelCard!
   """A name identifier of the Contributor, unique within a given scope."""
   nameID: NameID!
+  """
+  Platform-level settings of this Virtual Contributor, modifiable only by platform admins.
+  """
+  platformSettings: VirtualContributorPlatformSettings!
   """The profile for this Virtual."""
   profile: Profile!
   """Prompt graph definition for this Virtual Contributor."""
@@ -5803,6 +5811,13 @@ type VirtualContributorModelCardFlag {
   enabled: Boolean!
   """The name of the Model Card Entry flag"""
   name: VirtualContributorModelCardEntryFlagName!
+}
+
+type VirtualContributorPlatformSettings {
+  """
+  Enable or disable the editing of the prompt graph for this Virtual Contributor.
+  """
+  promptGraphEditingEnabled: Boolean!
 }
 
 type VirtualContributorSettings {
@@ -7967,6 +7982,20 @@ input UpdateVirtualContributorInput {
   profileData: UpdateProfileInput
   """Visibility of the VC in searches."""
   searchVisibility: SearchVisibility
+}
+
+input UpdateVirtualContributorPlatformSettingsEntityInput {
+  """
+  Enable or disable the editing of the prompt graph for this Virtual Contributor.
+  """
+  promptGraphEditingEnabled: Boolean!
+}
+
+input UpdateVirtualContributorPlatformSettingsInput {
+  """Platform-level settings to apply to this Virtual Contributor."""
+  settings: UpdateVirtualContributorPlatformSettingsEntityInput!
+  """ID of the Virtual Contributor to update."""
+  virtualContributorID: UUID!
 }
 
 input UpdateVirtualContributorSettingsEntityInput {
