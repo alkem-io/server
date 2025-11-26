@@ -12,7 +12,6 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { UserAuthorizationService } from './user.service.authorization';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
-import { RoomModule } from '@domain/communication/room/room.module';
 import { MicroservicesModule } from '@core/microservices/microservices.module';
 import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/platform.authorization.policy.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
@@ -24,9 +23,9 @@ import { AccountHostModule } from '@domain/space/account.host/account.host.modul
 import { KratosModule } from '@services/infrastructure/kratos/kratos.module';
 import { UserSettingsModule } from '../user-settings/user.settings.module';
 import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
-import { RoomLookupModule } from '@domain/communication/room-lookup/room.lookup.module';
 import { UserLookupModule } from '../user-lookup/user.lookup.module';
 import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/agent.info.module';
+import { ConversationsSetModule } from '@domain/communication/conversations-set/conversations.set.module';
 
 @Module({
   imports: [
@@ -42,8 +41,6 @@ import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/a
     AuthorizationPolicyModule,
     AuthorizationModule,
     EntityResolverModule,
-    RoomModule,
-    RoomLookupModule,
     MicroservicesModule,
     PlatformAuthorizationPolicyModule,
     StorageAggregatorModule,
@@ -51,6 +48,7 @@ import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/a
     DocumentModule,
     KratosModule,
     ContributorModule,
+    ConversationsSetModule,
     TypeOrmModule.forFeature([User]),
   ],
   providers: [
