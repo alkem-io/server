@@ -63,10 +63,10 @@ export class WhiteboardIntegrationController {
             .replace(/[^a-z0-9-]/g, '-')
             .replace(/-+/g, '-')
             .substring(0, 64);
-          const email = `${sanitizedName}-guest@alkem.io`;
+          const guestEmail = `${sanitizedName}-guest@alkem.io`;
           return {
             id: randomUUID(),
-            email,
+            email: guestEmail,
             guestName: guestName,
           };
         }
