@@ -385,7 +385,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_notifications
     hostname: notifications
-    image: alkemio/notifications:v0.27.0
+    image: alkemio/notifications:v0.28.1
     platform: linux/amd64
     depends_on:
       rabbitmq:
@@ -424,7 +424,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_matrix_adapter
     hostname: matrix-adapter
-    image: alkemio/matrix-adapter:v0.7.2
+    image: alkemio/matrix-adapter:v0.7.1
     platform: linux/amd64
     depends_on:
       - rabbitmq

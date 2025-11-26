@@ -10,7 +10,6 @@ import { FormatNotSupportedException } from '@common/exceptions/format.not.suppo
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
-import { RoomService } from '@domain/communication/room/room.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import {
   CreateUserInput,
@@ -24,7 +23,6 @@ import { CommunicationAdapter } from '@services/adapters/communication-adapter/c
 import { Cache, CachingConfig } from 'cache-manager';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
-import { DirectRoomResult } from '../../communication/communication/dto/communication.dto.send.direct.message.user.result';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { IProfile } from '@domain/common/profile/profile.interface';
@@ -53,18 +51,19 @@ import { ContributorService } from '../contributor/contributor.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { AccountType } from '@common/enums/account.type';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
-import { IRoom } from '@domain/communication/room/room.interface';
-import { RoomType } from '@common/enums/room.type';
 import { UserSettingsService } from '../user-settings/user.settings.service';
 import { UpdateUserSettingsEntityInput } from '../user-settings/dto/user.settings.dto.update';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { AccountHostService } from '@domain/space/account.host/account.host.service';
-import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup.service';
 import { UserLookupService } from '../user-lookup/user.lookup.service';
 import { AgentInfoCacheService } from '@core/authentication.agent.info/agent.info.cache.service';
 import { VisualType } from '@common/enums/visual.type';
 import { InstrumentService } from '@src/apm/decorators';
 import { CreateUserSettingsInput } from '../user-settings/dto/user.settings.dto.create';
+import { ConversationsSetService } from '@domain/communication/conversations-set/conversations.set.service';
+import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
+import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
+import { IConversationsSet } from '@domain/communication/conversations-set/conversations.set.interface';
 import { UserAuthenticationLinkService } from '../user-authentication-link/user.authentication.link.service';
 import { UserAuthenticationLinkOutcome } from '../user-authentication-link/user.authentication.link.types';
 
@@ -76,8 +75,6 @@ export class UserService {
   constructor(
     private profileService: ProfileService,
     private communicationAdapter: CommunicationAdapter,
-    private roomService: RoomService,
-    private roomLookupService: RoomLookupService,
     private namingService: NamingService,
     private agentService: AgentService,
     private agentInfoCacheService: AgentInfoCacheService,
@@ -90,6 +87,7 @@ export class UserService {
     private userSettingsService: UserSettingsService,
     private contributorService: ContributorService,
     private kratosService: KratosService,
+    private conversationsSetService: ConversationsSetService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -176,6 +174,9 @@ export class UserService {
     user.agent = await this.agentService.createAgent({
       type: AgentType.USER,
     });
+    const conversationsSet =
+      await this.conversationsSetService.createConversationsSet();
+    user.conversationsSet = conversationsSet;
 
     const authenticationID = agentInfo?.authenticationID;
     if (authenticationID) {
@@ -230,7 +231,41 @@ export class UserService {
 
     await this.setUserCache(user);
 
+    // Create a guidance conversation with the well-known chat guidance VC
+    await this.createGuidanceConversation(conversationsSet, user.id);
+
     return user;
+  }
+
+  private async createGuidanceConversation(
+    conversationSet: IConversationsSet,
+    userID: string
+  ): Promise<void> {
+    try {
+      await this.conversationsSetService.createConversationOnConversationsSet(
+        {
+          type: CommunicationConversationType.USER_VC,
+          userID: userID,
+          wellKnownVirtualContributor:
+            VirtualContributorWellKnown.CHAT_GUIDANCE,
+          currentUserID: userID,
+        },
+        conversationSet.id,
+        false
+      );
+
+      this.logger.verbose?.(
+        `Created guidance conversation for user: ${userID}`,
+        LogContext.COMMUNITY
+      );
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to create guidance conversation for user ${userID}: ${error}`,
+        error?.stack,
+        LogContext.COMMUNITY
+      );
+      // Don't throw - user creation should succeed even if conversation creation fails
+    }
   }
 
   private getDefaultUserSettings(): CreateUserSettingsInput {
@@ -439,8 +474,8 @@ export class UserService {
         profile: true,
         agent: true,
         storageAggregator: true,
-        guidanceRoom: true,
         settings: true,
+        conversationsSet: true,
       },
     });
 
@@ -449,7 +484,8 @@ export class UserService {
       !user.storageAggregator ||
       !user.agent ||
       !user.authorization ||
-      !user.settings
+      !user.settings ||
+      !user.conversationsSet
     ) {
       throw new RelationshipNotFoundException(
         `User entity missing required child entities when deleting: ${userID}`,
@@ -480,9 +516,11 @@ export class UserService {
 
     await this.userSettingsService.deleteUserSettings(user.settings.id);
 
-    if (user.guidanceRoom) {
-      await this.roomService.deleteRoom(user.guidanceRoom);
-    }
+    await this.conversationsSetService.deleteConversationsSet(
+      user.conversationsSet.id
+    );
+
+    // TODO: Get all of the conversations for this user and delete them
 
     if (deleteData.deleteIdentity) {
       await this.kratosService.deleteIdentityByEmail(user.email);
@@ -778,49 +816,6 @@ export class UserService {
     }
 
     return storageAggregator;
-  }
-
-  async getGuidanceRoom(userID: string): Promise<IRoom | undefined> {
-    const userWithGuidanceRoom = await this.getUserOrFail(userID, {
-      relations: {
-        guidanceRoom: true,
-      },
-    });
-    return userWithGuidanceRoom.guidanceRoom;
-  }
-
-  public async createGuidanceRoom(userId: string): Promise<IRoom> {
-    const user = await this.getUserOrFail(userId, {
-      relations: {
-        guidanceRoom: true,
-      },
-    });
-
-    if (user.guidanceRoom) {
-      throw new Error(
-        `Guidance room already exists for user with ID: ${userId}`
-      );
-    }
-
-    const room = await this.roomService.createRoom(
-      `${user.communicationID}-guidance`,
-      RoomType.GUIDANCE
-    );
-
-    user.guidanceRoom = room;
-    await this.save(user);
-
-    return room;
-  }
-
-  public async getDirectRooms(user: IUser): Promise<DirectRoomResult[]> {
-    const directRooms = await this.communicationAdapter.userGetDirectRooms(
-      user.communicationID
-    );
-
-    await this.roomLookupService.populateRoomsMessageSenders(directRooms);
-
-    return directRooms;
   }
 
   private async createUserNameID(userData: CreateUserInput): Promise<string> {

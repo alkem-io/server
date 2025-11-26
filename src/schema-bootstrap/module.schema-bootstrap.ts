@@ -35,7 +35,6 @@ import { NotificationRecipientsModule } from '@services/api/notification-recipie
 import { RegistrationModule } from '@services/api/registration/registration.module';
 import { ConversionModule } from '@services/api/conversion/conversion.module';
 import { LibraryModule } from '@library/library/library.module';
-import { ChatGuidanceModule } from '@services/api/chat-guidance/chat.guidance.module';
 import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 import { InputCreatorModule } from '@services/api/input-creator/input.creator.module';
 import { LookupModule } from '@services/api/lookup';
@@ -215,7 +214,6 @@ class SchemaBootstrapStubModule {}
     RegistrationModule,
     ConversionModule,
     LibraryModule,
-    ChatGuidanceModule,
     VirtualContributorModule,
     InputCreatorModule,
     LookupModule,

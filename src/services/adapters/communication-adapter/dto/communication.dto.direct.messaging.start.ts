@@ -1,7 +1,5 @@
-export class CommunicationSendMessageUserInput {
+export class CommunicationStartDirectMessagingUserInput {
   senderCommunicationsID!: string;
 
   receiverCommunicationsID!: string;
-
-  message!: string;
 }

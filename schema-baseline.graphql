@@ -821,6 +821,8 @@ enum AuthorizationPolicyType {
   CLASSIFICATION
   COLLABORATION
   COMMUNICATION
+  COMMUNICATION_CONVERSATION
+  COMMUNICATION_CONVERSATIONS_SET
   COMMUNITY
   COMMUNITY_GUIDELINES
   DISCUSSION
@@ -1227,20 +1229,6 @@ enum CalloutsSetType {
   KNOWLEDGE_BASE
 }
 
-input ChatGuidanceAnswerRelevanceInput {
-  """The answer id."""
-  id: String!
-  """Is the answer relevant or not."""
-  relevant: Boolean!
-}
-
-input ChatGuidanceInput {
-  """The language of the answer."""
-  language: String
-  """The question that is being asked."""
-  question: String!
-}
-
 type Classification {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -1346,6 +1334,11 @@ input CommunicationAdminUpdateRoomStateInput {
   isPublic: Boolean!
   isWorldVisible: Boolean!
   roomID: String!
+}
+
+enum CommunicationConversationType {
+  USER_USER
+  USER_VC
 }
 
 input CommunicationSendMessageToCommunityLeadsInput {
@@ -1574,6 +1567,50 @@ type ContributorRoles {
   Details of Spaces the User or Organization is a member of, with child memberships - if Space is accessible for the current user.
   """
   spaces: [RolesResultSpace!]!
+}
+
+type Conversation {
+  """The authorization rules for the entity"""
+  authorization: Authorization
+  """The date at which the entity was created."""
+  createdDate: DateTime!
+  """The ID of the entity"""
+  id: UUID!
+  """The room for this Conversation."""
+  room: Room
+  type: CommunicationConversationType!
+  """The date at which the entity was last updated."""
+  updatedDate: DateTime!
+  """The user participating in this Conversation."""
+  user: User
+  """
+  The virtual contributor participating in this Conversation (only for USER_AGENT conversations).
+  """
+  virtualContributor: VirtualContributor
+  wellKnownVirtualContributor: VirtualContributorWellKnown
+}
+
+input ConversationVcAnswerRelevanceInput {
+  """The ID of the conversation."""
+  conversationID: UUID!
+  """The answer id."""
+  id: String!
+  """Is the answer relevant or not."""
+  relevant: Boolean!
+}
+
+input ConversationVcAskQuestionInput {
+  """The ID of the conversation."""
+  conversationID: UUID!
+  """The language of the answer."""
+  language: String
+  """The question that is being asked."""
+  question: String!
+}
+
+input ConversationVcResetInput {
+  """The ID of the conversation."""
+  conversationID: UUID!
 }
 
 input ConversionVcSpaceToVcKnowledgeBaseInput {
@@ -1851,6 +1888,13 @@ input CreateContributionOnCalloutInput {
   sortOrder: Float
   type: CalloutContributionType!
   whiteboard: CreateWhiteboardInput
+}
+
+input CreateConversationInput {
+  type: CommunicationConversationType!
+  userID: UUID!
+  virtualContributorID: UUID
+  wellKnownVirtualContributor: VirtualContributorWellKnown
 }
 
 type CreateInnovationFlowData {
@@ -2423,6 +2467,10 @@ input DeleteContributionInput {
   ID: UUID!
 }
 
+input DeleteConversationInput {
+  ID: UUID!
+}
+
 input DeleteDiscussionInput {
   ID: UUID!
 }
@@ -2507,17 +2555,6 @@ input DeleteVirtualContributorInput {
 
 input DeleteWhiteboardInput {
   ID: UUID!
-}
-
-type DirectRoom {
-  """The display name of the room"""
-  displayName: String!
-  """The identifier of the room"""
-  id: String!
-  """The messages that have been sent to the Room."""
-  messages: [Message!]!
-  """The recipient userID"""
-  receiverID: String
 }
 
 type Discussion {
@@ -3583,6 +3620,8 @@ type LookupQueryResults {
   communityGuidelines(ID: UUID!): CommunityGuidelines
   """Lookup the specified CalloutContribution"""
   contribution(ID: UUID!): CalloutContribution
+  """Lookup the specified Conversation"""
+  conversation(ID: UUID!): Conversation
   """Lookup the specified Document"""
   document(ID: UUID!): Document
   """Lookup the specified InnovationFlow"""
@@ -3638,6 +3677,17 @@ type LookupQueryResults {
 """A decentralized identifier (DID) as per the W3C standard."""
 scalar Markdown
 
+type MeConversationsResult {
+  """Conversations between users."""
+  users: [Conversation!]!
+  """
+  Get a conversation with a well-known virtual contributor for the current user.
+  """
+  virtualContributor(wellKnown: VirtualContributorWellKnown!): Conversation
+  """Conversations between users and virtual contributors."""
+  virtualContributors: [Conversation!]!
+}
+
 type MeQueryResults {
   """The community applications current authenticated user can act on."""
   communityApplications(
@@ -3654,6 +3704,8 @@ type MeQueryResults {
     """The state names you want to filter on"""
     states: [String!]
   ): Float!
+  """The conversations the current authenticated user is part of."""
+  conversations: MeConversationsResult!
   """The query id"""
   id: String!
   """The Spaces I am contributing to"""
@@ -3856,6 +3908,8 @@ input MoveCalloutContributionInput {
 type Mutation {
   """Adds an Iframe Allowed URL to the Platform Settings"""
   addIframeAllowedURL(whitelistedURL: String!): [String!]!
+  """Adds a full email address to the platform notification blacklist"""
+  addNotificationEmailToBlacklist(input: NotificationEmailAddressInput!): [String!]!
   """Add a reaction to a message from the specified Room."""
   addReactionToMessageInRoom(reactionData: RoomAddReactionToMessageInput!): Reaction!
   """Ensure all community members are registered for communications."""
@@ -3905,7 +3959,7 @@ type Mutation {
   """Apply to join the specified RoleSet in the entry Role."""
   applyForEntryRoleOnRoleSet(applicationData: ApplyForEntryRoleOnRoleSetInput!): Application!
   """Ask the chat engine for guidance."""
-  askChatGuidanceQuestion(chatData: ChatGuidanceInput!): MessageAnswerQuestion!
+  askVcQuestion(input: ConversationVcAskQuestionInput!): MessageAnswerQuestion!
   """Assign the specified LicensePlan to an Account."""
   assignLicensePlanToAccount(planData: AssignLicensePlanToAccount!): Account!
   """Assign the specified LicensePlan to a Space."""
@@ -3956,10 +4010,10 @@ type Mutation {
   convertVirtualContributorToUseKnowledgeBase(conversionData: ConversionVcSpaceToVcKnowledgeBaseInput!): VirtualContributor!
   """Create a new Callout on the CalloutsSet."""
   createCalloutOnCalloutsSet(calloutData: CreateCalloutOnCalloutsSetInput!): Callout!
-  """Create a guidance chat room."""
-  createChatGuidanceRoom: Room
   """Create a new Contribution on the Callout."""
   createContributionOnCallout(contributionData: CreateContributionOnCalloutInput!): CalloutContribution!
+  """Create a new Conversation on the ConversationsSet."""
+  createConversationOnConversationsSet(conversationData: CreateConversationInput!): Conversation!
   """Creates a new Discussion as part of this Forum."""
   createDiscussion(createData: ForumCreateDiscussionInput!): Discussion!
   """Create a new CalendarEvent on the Calendar."""
@@ -4012,6 +4066,10 @@ type Mutation {
   deleteCallout(deleteData: DeleteCalloutInput!): Callout!
   """Deletes a contribution."""
   deleteContribution(deleteData: DeleteContributionInput!): CalloutContribution!
+  """
+  Deletes a Conversation. The Matrix room is only deleted if no reciprocal conversation exists.
+  """
+  deleteConversation(deleteData: DeleteConversationInput!): Conversation!
   """Deletes the specified Discussion."""
   deleteDiscussion(deleteData: DeleteDiscussionInput!): Discussion!
   """Deletes the specified Document."""
@@ -4060,6 +4118,8 @@ type Mutation {
   eventOnInvitation(eventData: InvitationEventInput!): Invitation!
   """Trigger an event on the Organization Verification."""
   eventOnOrganizationVerification(eventData: OrganizationVerificationEventInput!): OrganizationVerification!
+  """User vote if a specific answer is relevant."""
+  feedbackOnVcAnswerRelevance(input: ConversationVcAnswerRelevanceInput!): Boolean!
   """Grants an authorization credential to an Organization."""
   grantCredentialToOrganization(grantCredentialData: GrantOrganizationAuthorizationCredentialInput!): Organization!
   """Grants an authorization credential to a User."""
@@ -4096,6 +4156,8 @@ type Mutation {
   removeIframeAllowedURL(whitelistedURL: String!): [String!]!
   """Removes a message."""
   removeMessageOnRoom(messageData: RoomRemoveMessageInput!): MessageID!
+  """Removes an email address from the platform notification blacklist"""
+  removeNotificationEmailFromBlacklist(input: NotificationEmailAddressInput!): [String!]!
   """Removes a User from a Role on the Platform."""
   removePlatformRoleFromUser(roleData: RemovePlatformRoleInput!): User!
   """Remove a reaction on a message from the specified Room."""
@@ -4109,7 +4171,7 @@ type Mutation {
   """Removes the specified User from specified user group"""
   removeUserFromGroup(membershipData: RemoveUserGroupMemberInput!): UserGroup!
   """Resets the interaction with the chat engine."""
-  resetChatGuidance: Boolean!
+  resetConversationVc(input: ConversationVcResetInput!): Conversation!
   """Reset all license plans on Accounts"""
   resetLicenseOnAccounts: Space!
   """Removes an authorization credential from an Organization."""
@@ -4128,10 +4190,12 @@ type Mutation {
   sendMessageToOrganization(messageData: CommunicationSendMessageToOrganizationInput!): Boolean!
   """Sends an comment message. Returns the id of the new Update message."""
   sendMessageToRoom(messageData: RoomSendMessageInput!): Message!
-  """Sends a message on the specified User`s behalf and returns the room id"""
-  sendMessageToUserDirect(messageData: UserSendMessageInput!): String!
   """Send message to multiple Users."""
   sendMessageToUsers(messageData: CommunicationSendMessageToUsersInput!): Boolean!
+  """
+  Set the mapping of a well-known Virtual Contributor to a specific Virtual Contributor UUID.
+  """
+  setPlatformWellKnownVirtualContributor(mappingData: SetPlatformWellKnownVirtualContributorInput!): PlatformWellKnownVirtualContributors!
   """
   Transfer the specified Callout from its current CalloutsSet to the target CalloutsSet. Note: this is experimental, and only for GlobalAdmins. The user that executes the transfer becomes the creator of the Callout.
   """
@@ -4144,8 +4208,6 @@ type Mutation {
   transferSpaceToAccount(transferData: TransferAccountSpaceInput!): Space!
   """Transfer the specified Virtual Contributor to another Account."""
   transferVirtualContributorToAccount(transferData: TransferAccountVirtualContributorInput!): InnovationPack!
-  """User vote if a specific answer is relevant."""
-  updateAnswerRelevance(input: ChatGuidanceAnswerRelevanceInput!): Boolean!
   """Update the Application Form used by this RoleSet."""
   updateApplicationFormOnRoleSet(applicationFormData: UpdateApplicationFormOnRoleSetInput!): RoleSet!
   """Update the baseline License Plan on the specified Account."""
@@ -4288,6 +4350,11 @@ type NVP {
 A human readable identifier, 3 <= length <= 28. Used for URL paths in clients. Characters allowed: a-z,A-Z,0-9.
 """
 scalar NameID
+
+input NotificationEmailAddressInput {
+  """Full email address to add/remove; lowercase enforced by server"""
+  email: String!
+}
 
 enum NotificationEvent {
   ORGANIZATION_ADMIN_MENTIONED
@@ -4593,10 +4660,6 @@ type Platform {
   """The authorization rules for the entity"""
   authorization: Authorization
   """
-  The Virtual Contributor that is used to provide chat help on the platform.
-  """
-  chatGuidanceVirtualContributor: VirtualContributor!
-  """
   Alkemio configuration. Provides configuration to external services in the Alkemio ecosystem.
   """
   configuration: Config!
@@ -4633,6 +4696,8 @@ type Platform {
   templatesManager: TemplatesManager
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
+  """The mappings of well-known Virtual Contributors to their UUIDs."""
+  wellKnownVirtualContributors: PlatformWellKnownVirtualContributors!
 }
 
 type PlatformAccessRole {
@@ -4748,6 +4813,10 @@ enum PlatformFeatureFlagName {
 type PlatformIntegrationSettings {
   """The list of allowed URLs for iFrames within Markdown content."""
   iframeAllowedUrls: [String!]!
+  """
+  List of fully-qualified email addresses blocked from receiving notifications
+  """
+  notificationEmailBlacklist: [String!]!
 }
 
 type PlatformInvitation {
@@ -4843,6 +4912,18 @@ type PlatformRolesAccess {
 type PlatformSettings {
   """The integration settings for this Platform"""
   integration: PlatformIntegrationSettings!
+}
+
+type PlatformWellKnownVirtualContributorMapping {
+  """The UUID of the Virtual Contributor."""
+  virtualContributorID: UUID!
+  """The well-known identifier for the Virtual Contributor."""
+  wellKnown: VirtualContributorWellKnown!
+}
+
+type PlatformWellKnownVirtualContributors {
+  """The mappings of well-known Virtual Contributors to their UUIDs."""
+  mappings: [PlatformWellKnownVirtualContributorMapping!]!
 }
 
 type Post {
@@ -5921,6 +6002,13 @@ type ServiceMetadata {
   version: String
 }
 
+input SetPlatformWellKnownVirtualContributorInput {
+  """The UUID of the Virtual Contributor."""
+  virtualContributorID: UUID!
+  """The well-known Virtual Contributor type."""
+  wellKnown: VirtualContributorWellKnown!
+}
+
 type Space {
   """About this space."""
   about: SpaceAbout!
@@ -6951,6 +7039,10 @@ input UpdatePlatformSettingsInput {
 input UpdatePlatformSettingsIntegrationInput {
   """Update the list of allowed URLs for iFrames within Markdown content."""
   iframeAllowedUrls: [String!]!
+  """
+  Update the list of email addresses blocked from receiving notifications.
+  """
+  notificationEmailBlacklist: [String!]
 }
 
 input UpdatePostInput {
@@ -7442,13 +7534,9 @@ type User implements Contributor {
   authorization: Authorization
   """The date at which the entity was created."""
   createdDate: DateTime!
-  """The direct rooms this user is a member of"""
-  directRooms: [DirectRoom!]
   """The email address for this User."""
   email: String!
   firstName: String!
-  """Guidance Chat Room for this user"""
-  guidanceRoom: Room
   """The ID of the Contributor"""
   id: UUID!
   """Can a message be sent to this User."""
@@ -7506,13 +7594,6 @@ type UserGroup {
   profile: Profile
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
-}
-
-input UserSendMessageInput {
-  """The message being sent"""
-  message: String!
-  """The user a message is being sent to"""
-  receivingUserID: String!
 }
 
 type UserSettings {
@@ -7831,6 +7912,11 @@ enum VirtualContributorStatus {
 type VirtualContributorUpdatedSubscriptionResult {
   """The Virtual Contributor that was updated"""
   virtualContributor: VirtualContributor!
+}
+
+enum VirtualContributorWellKnown {
+  CHAT_GUIDANCE
+  STEWARD_OWNERSHIP_EXPERT
 }
 
 type VirtualContributorsInRolesResponse {

@@ -42,10 +42,11 @@ export class CommunicationService {
     // save to get the id assigned
     await this.save(communication);
 
-    communication.updates = await this.roomService.createRoom(
-      `${displayName}-Updates`,
-      RoomType.UPDATES
-    );
+    communication.updates = await this.roomService.createRoom({
+      displayName: `${displayName}-Updates`,
+      senderCommunicationID: undefined, // No sender for communication rooms
+      type: RoomType.UPDATES,
+    });
 
     return communication;
   }
@@ -94,7 +95,9 @@ export class CommunicationService {
         LogContext.COMMUNICATION
       );
 
-    await this.roomService.deleteRoom(communication.updates);
+    await this.roomService.deleteRoom({
+      roomID: communication.updates.id,
+    });
 
     await this.communicationRepository.remove(communication as Communication);
     return true;

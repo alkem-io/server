@@ -186,12 +186,17 @@ export class NotificationUserAdapter {
       eventData.userID
     );
 
-    if (recipients.emailRecipients.length > 0) {
+    // Filter out the sender from email recipients (in case user mentions themselves)
+    const emailRecipientsWithoutSender = recipients.emailRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+
+    if (emailRecipientsWithoutSender.length > 0) {
       const payload =
         await this.notificationExternalAdapter.buildUserMentionNotificationPayload(
           event,
           eventData.triggeredBy,
-          recipients.emailRecipients,
+          emailRecipientsWithoutSender,
           eventData.userID,
           messageDetails
         );
@@ -203,7 +208,10 @@ export class NotificationUserAdapter {
     }
 
     // In-app notification
-    const inAppReceiverIDs = recipients.inAppRecipients.map(
+    const inAppRecipientsWithoutSender = recipients.inAppRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    const inAppReceiverIDs = inAppRecipientsWithoutSender.map(
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length > 0) {
@@ -280,12 +288,16 @@ export class NotificationUserAdapter {
     );
 
     try {
-      if (recipients.emailRecipients.length > 0) {
+      // Filter out the sender from email recipients
+      const emailRecipientsWithoutSender = recipients.emailRecipients.filter(
+        recipient => recipient.id !== eventData.triggeredBy
+      );
+      if (emailRecipientsWithoutSender.length > 0) {
         const payload =
           await this.notificationExternalAdapter.buildUserCommentReplyPayload(
             event,
             eventData.triggeredBy,
-            recipients.emailRecipients,
+            emailRecipientsWithoutSender,
             eventData,
             messageDetails
           );
@@ -297,7 +309,10 @@ export class NotificationUserAdapter {
       }
 
       // In-app notification
-      const inAppReceiverIDs = recipients.inAppRecipients.map(
+      const inAppRecipientsWithoutSender = recipients.inAppRecipients.filter(
+        recipient => recipient.id !== eventData.triggeredBy
+      );
+      const inAppReceiverIDs = inAppRecipientsWithoutSender.map(
         recipient => recipient.id
       );
       if (inAppReceiverIDs.length > 0) {
