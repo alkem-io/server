@@ -14,7 +14,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: alkemio/server
+          images: alkemio/${{ github.event.repository.name }}
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
