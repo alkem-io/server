@@ -82,7 +82,7 @@ graph TD
 - **Authentication**: Ory Kratos (Identity Management) & Ory Hydra (OIDC Provider).
 - **Messaging**: RabbitMQ for domain events (e.g., `SpaceCreated`, `UserInvited`).
 - **Search**: Elasticsearch for full-text search across Domains.
-- **Caching**: Redis for session storage and query caching.
+- **Caching**: Redis for session storage.
 
 ## 4. Data Flow
 
@@ -92,9 +92,9 @@ graph TD
 2. **Guard**: `GqlAuthGuard` verifies JWT token with Ory.
 3. **Resolver**: `SpaceResolver` receives request.
 4. **Service**: `SpaceService` orchestrates logic.
-5. **Authorization**: Service calls `applyAuthorizationPolicy` to traverse the "Authorization Forest" and verify permissions.
+5. **Authorization**: Service calls `grantAccessOrFail` to traverse the "Authorization Forest" and verify permissions.
 6. **Cache Check**: Service checks Redis for hot data.
-7. **Database**: If miss, TypeORM queries PostgreSQL.
+7. **Database**: If missing, TypeORM queries PostgreSQL.
 8. **Response**: Data returned to client.
 
 ### Write Request (GraphQL Mutation)
@@ -102,21 +102,19 @@ graph TD
 1. **Validation**: DTO validation (Pipes).
 2. **Transaction**: Service starts DB transaction.
 3. **Execution**: Entity updated in DB.
-4. **Event**: `DomainEvent` published to RabbitMQ (e.g., `space.updated`).
 5. **Side Effects**:
-   - Search Service updates Elasticsearch index.
    - Notification Service emails followers.
 6. **Response**: Updated entity returned.
 
 ## 5. Scalability Strategies
 
-- **Stateless Core**: The NestJS server is stateless (sessions stored in Redis), allowing for Horizontal Scaling via Kubernetes HPA (Horizontal Pod Autoscaler).
+- **Stateless Core**: The NestJS server is stateless (sessions stored in Redis), allowing for Horizontal Scaling via Kubernetes HPA (Horizontal Pod Autoscaler) or manually.
 - **Database**:
-  - Read Replicas for offloading high-volume query traffic.
+  - DB Read Replicas for offloading high-volume query traffic.
   - Connection Pooling via TypeORM to manage DB load.
-- **Async Processing**: Heavy tasks (file processing, notifications) are offloaded to RabbitMQ workers, preventing main thread blocking.
-- **Caching**: Redis used extensively for:
-  - Authorization policy results (complex calculations).
+- **Async Processing**: Heavy tasks (file processing, notifications) are offloaded to RabbitMQ workers, preventing the main thread from blocking.
+- **Caching**: Redis is used extensively for:
+  - Authorization policy results (result of complex calculations).
   - API response caching.
 
 ## 6. Fault Tolerance & Reliability
@@ -130,7 +128,7 @@ graph TD
 ## 7. Security Architecture
 
 - **Authentication (AuthN)**: Delegated to Ory Kratos. The server never stores passwords.
-- **Authorization (AuthZ)**: Granular, code-defined "Authorization Forest" ensures users only access resources they inherit permissions for.
+- **Authorization (AuthZ)**: Granular, code-defined "Authorization Forest" ensures users only access resources they have permissions for.
 - **Input Sanitation**: Global Validation Pipes strip illegal characters; TypeORM prevents SQL injection.
 - **Secrets Management**: All secrets loaded via Environment Variables (Kubernetes Secrets).
 - **Audit Logging**: Critical mutations are logged for compliance.
@@ -140,8 +138,8 @@ graph TD
 - **CI/CD**: GitHub Actions workflows (`.github/workflows/`).
   - **Build**: Docker images built and pushed to Docker Hub.
   - **Test**: Unit, Integration, and E2E tests run on PRs.
-  - **Deploy**: Helm charts deploy to Hetzner Cloud (Kubernetes).
-- **Environments**: Dev, Sandbox, Test, Production.
+  - **Deploy**: Helm charts deploy to Hetzner or Scaleway Cloud (Kubernetes).
+- **Environments**: Dev, Test, Sandbox, Acceptance, Production.
 - **Migrations**: Database migrations run automatically on container startup via `pnpm run migration:run`.
 
 ## 9. Technology Stack
