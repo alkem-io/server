@@ -60,8 +60,8 @@
     }
   },
   "dependencies": {
+    "@alkemio/matrix-adapter-lib": "^0.7.0",
     "@alkemio/notifications-lib": "0.12.2",
-    "@alkemio/matrix-adapter-lib": "^0.6.2",
     "@apollo/server": "^4.10.4",
     "@elastic/elasticsearch": "^8.12.2",
     "@golevelup/nestjs-rabbitmq": "^5.3.0",

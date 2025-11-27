@@ -13,7 +13,7 @@ export enum InvocationResultAction {
 export class RoomDetails {
   roomID!: string;
   threadID?: string;
-  communicationID!: string;
+  agentID!: string;
   vcInteractionID?: string;
 }
 

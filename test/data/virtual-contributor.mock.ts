@@ -36,7 +36,6 @@ export const virtualContributorData: {
     searchVisibility: undefined as any, // Replace with a valid SearchVisibility if required
     listedInStore: false, // Default value, update as needed
     settings: undefined as any, // Replace with a valid mock if required by tests
-    communicationID: '',
     profile: {
       id: 'profile-08a43f9f-58e7-4c65-bf38-be283a548b3b',
       tagline: '',

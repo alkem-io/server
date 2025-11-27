@@ -16,6 +16,7 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
 import { VirtualContributorModule } from '../virtual-contributor/virtual.contributor.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { PlatformRolesAccessModule } from '@domain/access/platform-roles-access/platform.roles.access.module';
+import { UserLookupModule } from '../user-lookup/user.lookup.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { PlatformRolesAccessModule } from '@domain/access/platform-roles-access/
     VirtualContributorModule,
     TypeOrmModule.forFeature([Community]),
     TrustRegistryAdapterModule,
+    UserLookupModule,
   ],
   providers: [
     CommunityService,

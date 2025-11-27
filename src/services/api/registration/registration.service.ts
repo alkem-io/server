@@ -38,10 +38,14 @@ export class RegistrationService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async registerNewUser(agentInfo: AgentInfo): Promise<IUser> {
-    if (!agentInfo.emailVerified) {
+  async registerNewUser(
+    agentInfo: AgentInfo,
+    email: string,
+    emailVerified: boolean
+  ): Promise<IUser> {
+    if (!emailVerified) {
       throw new UserNotVerifiedException(
-        `User '${agentInfo.email}' not verified`,
+        `User '${email}' not verified`,
         LogContext.COMMUNITY
       );
     }
@@ -53,7 +57,10 @@ export class RegistrationService {
       );
     }
     // If a user has a valid session, and hence email / names etc set, then they can create a User profile
-    const user = await this.userService.createUserFromAgentInfo(agentInfo);
+    const user = await this.userService.createUserFromAgentInfo(
+      agentInfo,
+      email
+    );
 
     await this.assignUserToOrganizationByDomain(user);
     return user;

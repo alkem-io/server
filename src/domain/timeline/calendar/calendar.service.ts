@@ -30,20 +30,22 @@ import { Collaboration } from '@domain/collaboration/collaboration';
 import { Timeline } from '@domain/timeline/timeline/timeline.entity';
 import { CalendarEvent } from '@domain/timeline/event';
 import { SpaceLevel } from '@common/enums/space.level';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 
 @Injectable()
 export class CalendarService {
   constructor(
-    private calendarEventService: CalendarEventService,
-    private authorizationPolicyService: AuthorizationPolicyService,
-    private authorizationService: AuthorizationService,
-    private namingService: NamingService,
-    private activityAdapter: ActivityAdapter,
-    private contributionReporter: ContributionReporterService,
-    private storageAggregatorResolverService: StorageAggregatorResolverService,
-    private timelineResolverService: TimelineResolverService,
+    private readonly calendarEventService: CalendarEventService,
+    private readonly authorizationPolicyService: AuthorizationPolicyService,
+    private readonly authorizationService: AuthorizationService,
+    private readonly namingService: NamingService,
+    private readonly activityAdapter: ActivityAdapter,
+    private readonly contributionReporter: ContributionReporterService,
+    private readonly storageAggregatorResolverService: StorageAggregatorResolverService,
+    private readonly timelineResolverService: TimelineResolverService,
+    private readonly userLookupService: UserLookupService,
     @InjectRepository(Calendar)
-    private calendarRepository: Repository<Calendar>,
+    private readonly calendarRepository: Repository<Calendar>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -268,6 +270,8 @@ export class CalendarService {
     );
 
     if (spaceID) {
+      const user = await this.userLookupService.getUserOrFail(agentInfo.userID);
+
       this.contributionReporter.calendarEventCreated(
         {
           id: calendarEvent.id,
@@ -276,7 +280,7 @@ export class CalendarService {
         },
         {
           id: agentInfo.userID,
-          email: agentInfo.email,
+          email: user.email,
         }
       );
     }

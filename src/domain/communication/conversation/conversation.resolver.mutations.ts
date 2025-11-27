@@ -53,7 +53,7 @@ export class ConversationResolverMutations {
       agentInfo,
       conversation.authorization,
       AuthorizationPrivilege.UPDATE,
-      `conversation VC ask question: ${agentInfo.email}`
+      `conversation VC ask question: ${agentInfo.userID || 'anonymous'}`
     );
 
     return this.conversationService.askQuestion(input, agentInfo);
@@ -79,7 +79,7 @@ export class ConversationResolverMutations {
       agentInfo,
       conversation.authorization,
       AuthorizationPrivilege.UPDATE,
-      `conversation VC reset: ${agentInfo.email}`
+      `conversation VC reset: ${agentInfo.userID || 'anonymous'}`
     );
     conversation =
       await this.conversationService.resetUserConversationWithAgent(
@@ -127,7 +127,7 @@ export class ConversationResolverMutations {
       agentInfo,
       conversation.authorization,
       AuthorizationPrivilege.UPDATE,
-      `conversation VC reset: ${agentInfo.email}`
+      `conversation VC reset: ${agentInfo.userID || 'anonymous'}`
     );
 
     return this.guidanceReporterService.updateAnswerRelevance(

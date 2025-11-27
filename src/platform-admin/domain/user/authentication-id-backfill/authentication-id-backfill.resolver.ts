@@ -32,7 +32,7 @@ export class AdminAuthenticationIDBackfillResolver {
       agentInfo,
       platformPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `adminBackfillAuthenticationIDs:${agentInfo.email}`
+      `adminBackfillAuthenticationIDs:${agentInfo.userID}`
     );
 
     return this.adminAuthenticationIDBackfillService.backfillAuthenticationIDs();

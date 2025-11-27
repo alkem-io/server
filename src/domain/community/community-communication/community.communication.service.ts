@@ -18,10 +18,7 @@ export class CommunityCommunicationService {
     contributor: IContributor
   ): Promise<void> {
     this.communicationService
-      .addContributorToCommunications(
-        communication,
-        contributor.communicationID
-      )
+      .addContributorToCommunications(communication, contributor.agent.id)
       .catch(error =>
         this.logger.error(
           `Unable to add user to community messaging (${communication.id}): ${error}`,

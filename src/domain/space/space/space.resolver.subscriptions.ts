@@ -34,7 +34,7 @@ export class SpaceResolverSubscriptions {
       description: 'Receive new Subspaces created on the Space.',
       resolve(this: SpaceResolverSubscriptions, payload, args, context) {
         const agentInfo = context.req.user;
-        const logMsgPrefix = `[SubspaceCreated subscription] - [${agentInfo.email}] -`;
+        const logMsgPrefix = `[SubspaceCreated subscription] - [${agentInfo.userID || 'anonymous'}] -`;
         this.logger.verbose?.(
           `${logMsgPrefix} sending out event for created challenge on Space: ${payload.spaceID} `,
           LogContext.SUBSCRIPTIONS
@@ -43,7 +43,7 @@ export class SpaceResolverSubscriptions {
       },
       filter(this: SpaceResolverSubscriptions, payload, variables, context) {
         const agentInfo = context.req.user;
-        const logMsgPrefix = `[SubspaceCreated subscription] - [${agentInfo.email}] -`;
+        const logMsgPrefix = `[SubspaceCreated subscription] - [${agentInfo.userID || 'anonymous'}] -`;
         this.logger.verbose?.(
           `${logMsgPrefix} Filtering event '${payload.eventID}'`,
           LogContext.SUBSCRIPTIONS
@@ -67,7 +67,7 @@ export class SpaceResolverSubscriptions {
   ) {
     const logMsgPrefix = '[SubspaceCreated subscription] -';
     this.logger.verbose?.(
-      `${logMsgPrefix} User ${agentInfo.email} subscribed for new subspace on the following Space: ${args.spaceID}`,
+      `${logMsgPrefix} User ${agentInfo.userID || 'anonymous'} subscribed for new subspace on the following Space: ${args.spaceID}`,
       LogContext.SUBSCRIPTIONS
     );
     // Validate

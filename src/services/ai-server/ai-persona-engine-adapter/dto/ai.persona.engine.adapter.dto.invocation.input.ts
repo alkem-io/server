@@ -14,7 +14,7 @@ export enum InvocationResultAction {
 export class RoomDetails {
   roomID!: string;
   threadID?: string;
-  communicationID!: string;
+  agentID!: string;
 }
 
 export class ResultHandler {

@@ -45,7 +45,7 @@ export class AdminCommunicationResolverMutations {
       agentInfo,
       this.communicationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT,
-      `grant community members access to communications: ${agentInfo.email}`
+      `grant community members access to communications: ${agentInfo.userID}`
     );
     return await this.adminCommunicationService.ensureCommunityAccessToCommunications(
       ensureAccessData
@@ -65,7 +65,7 @@ export class AdminCommunicationResolverMutations {
       agentInfo,
       this.communicationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT,
-      `communications admin remove orphaned room: ${agentInfo.email}`
+      `communications admin remove orphaned room: ${agentInfo.userID}`
     );
     return await this.adminCommunicationService.removeOrphanedRoom(
       orphanedRoomData
@@ -85,7 +85,7 @@ export class AdminCommunicationResolverMutations {
       agentInfo,
       this.communicationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT,
-      `communications admin update join rule on all rooms: ${agentInfo.email}`
+      `communications admin update join rule on all rooms: ${agentInfo.userID}`
     );
     return await this.adminCommunicationService.updateMatrixRoomState(
       roomStateData.roomID,

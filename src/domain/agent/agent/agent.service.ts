@@ -478,7 +478,7 @@ export class AgentService {
     const payload: ProfileCredentialVerified = {
       eventID,
       vc: 'something something vc',
-      userEmail: agent.id ?? '',
+      agentID: agent.id ?? '',
     };
 
     await this.subscriptionVerifiedCredentials.publish(
@@ -560,7 +560,7 @@ export class AgentService {
     const payload: ProfileCredentialVerified = {
       eventID,
       vc: 'something something vc',
-      userEmail: agent.id ?? '', // TODO: not a flow we are maintaining at the moment
+      agentID: agent.id ?? '', // TODO: not a flow we are maintaining at the moment
     };
 
     await this.subscriptionVerifiedCredentials.publish(

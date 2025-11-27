@@ -51,11 +51,11 @@ export class CommunicationResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('messageData') messageData: CommunicationSendMessageToUsersInput
   ): Promise<boolean> {
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
-      `send user message from: ${agentInfo.email}`
+      `send user message from: ${agentInfo.userID}`
     );
 
     for (const receiverId of messageData.receiverIds) {
@@ -162,7 +162,7 @@ export class CommunicationResolverMutations {
     await this.communicationAdapter.sendMessageToRoom({
       roomID: conversation.room.externalRoomID,
       message: messageData.message,
-      senderCommunicationsID: agentInfo.communicationID,
+      senderAgentID: agentInfo.agentID,
     });
   }
 
@@ -174,11 +174,11 @@ export class CommunicationResolverMutations {
     @Args('messageData')
     messageData: CommunicationSendMessageToOrganizationInput
   ): Promise<boolean> {
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
-      `send message to organization ${messageData.organizationId} from: ${agentInfo.email}`
+      `send message to organization ${messageData.organizationId} from: ${agentInfo.userID}`
     );
 
     const notificationInput: NotificationInputOrganizationMessage = {
@@ -201,11 +201,11 @@ export class CommunicationResolverMutations {
     @Args('messageData')
     messageData: CommunicationSendMessageToCommunityLeadsInput
   ): Promise<boolean> {
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
-      `send message to community ${messageData.communityId} from: ${agentInfo.email}`
+      `send message to community ${messageData.communityId} from: ${agentInfo.userID}`
     );
 
     const notificationInput: NotificationInputCommunicationLeadsMessage = {

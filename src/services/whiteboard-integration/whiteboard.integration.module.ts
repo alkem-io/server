@@ -8,6 +8,7 @@ import { ContributionReporterModule } from '@services/external/elasticsearch/con
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/agent.info.module';
+import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/a
     ContributionReporterModule,
     EntityResolverModule,
     ActivityAdapterModule,
+    UserLookupModule,
   ],
   providers: [WhiteboardIntegrationService],
   controllers: [WhiteboardIntegrationController],

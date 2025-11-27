@@ -95,23 +95,29 @@ export class UserService {
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache
   ) {}
 
-  private getUserCommunicationIdCacheKey(communicationId: string): string {
-    return `@user:communicationId:${communicationId}`;
+  private getUserAgentIdCacheKey(agentId: string): string {
+    return `@user:agentId:${agentId}`;
   }
 
   private async setUserCache(user: IUser) {
-    await this.cacheManager.set(
-      this.getUserCommunicationIdCacheKey(user.email),
-      user,
-      this.cacheOptions
-    );
+    if (user.agent) {
+      await this.cacheManager.set(
+        this.getUserAgentIdCacheKey(user.agent.id),
+        user,
+        this.cacheOptions
+      );
+    }
   }
 
   private async clearUserCache(user: IUser) {
-    await this.cacheManager.del(
-      this.getUserCommunicationIdCacheKey(user.communicationID)
-    );
-    await this.agentInfoCacheService.deleteAgentInfoFromCache(user.email);
+    if (user.agent) {
+      await this.cacheManager.del(this.getUserAgentIdCacheKey(user.agent.id));
+    }
+    if (user.authenticationID) {
+      await this.agentInfoCacheService.deleteAgentInfoFromCache(
+        user.authenticationID
+      );
+    }
   }
 
   async createUser(
@@ -203,31 +209,15 @@ export class UserService {
       user.id
     );
     // Reload to ensure have the updated avatar URL
-    user = await this.getUserOrFail(user.id);
+    user = await this.getUserOrFail(user.id, {
+      relations: { agent: true, profile: true },
+    });
 
     // all users need to be registered for communications at the absolute beginning
     // there are cases where a user could be messaged before they actually log-in
     // which will result in failure in communication (either missing user or unsent messages)
     // register the user asynchronously - we don't want to block the creation operation
-    const communicationID = await this.communicationAdapter.tryRegisterNewUser(
-      user.email
-    );
-
-    try {
-      if (!communicationID) {
-        this.logger.warn(
-          `User registration failed on user creation ${user.id}.`
-        );
-        return user;
-      }
-
-      user.communicationID = communicationID;
-
-      await this.save(user);
-      await this.setUserCache(user);
-    } catch (e: any) {
-      this.logger.error(e, e?.stack, LogContext.USER);
-    }
+    await this.communicationAdapter.registerActor(user.agent.id);
 
     await this.setUserCache(user);
 
@@ -381,9 +371,11 @@ export class UserService {
     return result;
   }
 
-  async createUserFromAgentInfo(agentInfo: AgentInfo): Promise<IUser> {
+  async createUserFromAgentInfo(
+    agentInfo: AgentInfo,
+    email: string
+  ): Promise<IUser> {
     // Extra check that there is valid data + no user with the email
-    const email = agentInfo.email;
     if (!email || email.length === 0) {
       throw new UserRegistrationInvalidEmail(
         `Invalid email provided: ${email}`
@@ -391,9 +383,13 @@ export class UserService {
     }
 
     const resolvedUser =
-      await this.userAuthenticationLinkService.resolveExistingUser(agentInfo, {
-        conflictMode: 'error',
-      });
+      await this.userAuthenticationLinkService.resolveExistingUser(
+        agentInfo.authenticationID,
+        email,
+        {
+          conflictMode: 'error',
+        }
+      );
 
     if (resolvedUser) {
       if (resolvedUser.outcome === UserAuthenticationLinkOutcome.LINKED) {
@@ -714,7 +710,7 @@ export class UserService {
 
   async updateUser(userInput: UpdateUserInput): Promise<IUser> {
     const user = await this.getUserOrFail(userInput.ID, {
-      relations: { profile: true },
+      relations: { profile: true, agent: true },
     });
 
     if (userInput.nameID) {

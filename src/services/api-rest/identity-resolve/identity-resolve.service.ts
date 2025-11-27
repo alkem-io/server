@@ -34,7 +34,6 @@ export class IdentityResolveService {
     authenticationId: string,
     meta: IdentityResolveRequestMeta
   ): Promise<IUser> {
-
     const existingUser = await this.userLookupService.getUserByAuthenticationID(
       authenticationId,
       {
@@ -63,10 +62,10 @@ export class IdentityResolveService {
       );
     }
 
-    const agentInfo = this.buildAgentInfo(identity, authenticationId);
+    const { agentInfo, email } = this.buildAgentInfo(identity, authenticationId);
 
     const existingUserByEmail = await this.userLookupService.getUserByEmail(
-      agentInfo.email
+      email
     );
 
     const outcome = existingUserByEmail ? 'link' : 'create';
@@ -78,9 +77,13 @@ export class IdentityResolveService {
       // depending on future development and use of this EP we will need to either provide token/session
       //  info here to verify that this is indeed OIDC session, or get list of sessions for user to deduct
       //  that one of sessions is OIDC based, so we can skip email verification.
-      agentInfo.emailVerified=true;
+      const emailVerified = true;
 
-      const user = await this.registrationService.registerNewUser(agentInfo);
+      const user = await this.registrationService.registerNewUser(
+        agentInfo,
+        email,
+        emailVerified
+      );
 
       if (!user.authenticationID) {
         this.logger.error?.(
@@ -134,7 +137,7 @@ export class IdentityResolveService {
   private buildAgentInfo(
     identity: Identity,
     authenticationId: string
-  ): AgentInfo {
+  ): { agentInfo: AgentInfo; email: string } {
     const agentInfo = new AgentInfo();
     const oryIdentity = identity as OryDefaultIdentitySchema;
     const traits = (oryIdentity.traits ?? {}) as Record<string, any>;
@@ -155,7 +158,6 @@ export class IdentityResolveService {
       );
     }
 
-    agentInfo.email = email.toLowerCase();
     agentInfo.firstName = (traits?.name?.first as string) ?? '';
     agentInfo.lastName = (traits?.name?.last as string) ?? '';
     agentInfo.avatarURL = (traits?.picture as string) ?? '';
@@ -166,13 +168,8 @@ export class IdentityResolveService {
       );
     }
     agentInfo.authenticationID = authenticationId;
-    agentInfo.emailVerified = Array.isArray(oryIdentity.verifiable_addresses)
-      ? oryIdentity.verifiable_addresses.some(
-          address => address?.via === 'email' && address?.verified
-        )
-      : false;
 
-    return agentInfo;
+    return { agentInfo, email: email.toLowerCase() };
   }
 
   private ensureAgentOrFail(user: IUser, authenticationId: string): IUser {

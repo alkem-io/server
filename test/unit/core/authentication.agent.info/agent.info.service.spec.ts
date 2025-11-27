@@ -39,7 +39,6 @@ describe('AgentInfoService', () => {
       id: 'user-1',
       email,
       authenticationID: authenticationId,
-      communicationID: 'comm-1',
       agent: {
         id: 'agent-1',
         credentials: [],
@@ -59,11 +58,12 @@ describe('AgentInfoService', () => {
     });
 
     expect(linkService.resolveExistingUser).toHaveBeenCalledWith(
-      expect.objectContaining({ email }),
+      authenticationId,
+      email,
       expect.objectContaining({ conflictMode: 'log' })
     );
     const callOptions =
-      linkService.resolveExistingUser.mock.calls[0][1] ?? ({} as any);
+      linkService.resolveExistingUser.mock.calls[0][2] ?? ({} as any);
     expect(callOptions.lookupByAuthenticationId).toBeUndefined();
     expect(metadata?.authenticationID).toEqual(authenticationId);
   });
@@ -74,7 +74,6 @@ describe('AgentInfoService', () => {
       id: 'user-2',
       email,
       authenticationID: existingAuthenticationId,
-      communicationID: 'comm-2',
       agent: {
         id: 'agent-2',
         credentials: [],

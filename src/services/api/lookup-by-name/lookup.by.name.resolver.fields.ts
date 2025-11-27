@@ -102,7 +102,7 @@ export class LookupByNameResolverFields {
       agentInfo,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
-      `user lookup by NameID: ${agentInfo.email}`
+      `user lookup by NameID: ${agentInfo.userID || 'anonymous'}`
     );
 
     return user.id;

@@ -189,20 +189,18 @@ export class RoomLookupService {
 
   async sendMessage(
     room: IRoom,
-    communicationUserID: string,
+    agentID: string,
     messageData: RoomSendMessageInput
   ): Promise<IMessage> {
     // Ensure the user is a member of room and group so can send
-    await this.communicationAdapter.userAddToRooms(
+    await this.communicationAdapter.agentAddToRooms(
       [room.externalRoomID],
-      communicationUserID
+      agentID
     );
     const alkemioUserID =
-      await this.identityResolverService.getUserIDByCommunicationsID(
-        communicationUserID
-      );
+      await this.identityResolverService.getUserIDByAgentID(agentID);
     const message = await this.communicationAdapter.sendMessageToRoom({
-      senderCommunicationsID: communicationUserID,
+      senderAgentID: agentID,
       message: messageData.message,
       roomID: room.externalRoomID,
     });
@@ -215,27 +213,23 @@ export class RoomLookupService {
 
   async sendMessageReply(
     room: IRoom,
-    communicationUserID: string,
+    agentID: string,
     messageData: RoomSendMessageReplyInput,
     senderType: 'user' | 'virtualContributor'
   ): Promise<IMessage> {
     // Ensure the user is a member of room and group so can send
-    await this.communicationAdapter.userAddToRooms(
+    await this.communicationAdapter.agentAddToRooms(
       [room.externalRoomID],
-      communicationUserID
+      agentID
     );
 
     const alkemioSenderID =
       senderType === 'virtualContributor'
-        ? await this.identityResolverService.getContributorIDByCommunicationsID(
-            communicationUserID
-          )
-        : await this.identityResolverService.getUserIDByCommunicationsID(
-            communicationUserID
-          );
+        ? await this.identityResolverService.getContributorIDByAgentID(agentID)
+        : await this.identityResolverService.getUserIDByAgentID(agentID);
     const message = await this.communicationAdapter.sendRoomMessageReply(
       {
-        senderCommunicationsID: communicationUserID,
+        senderAgentID: agentID,
         message: messageData.message,
         roomID: room.externalRoomID,
         threadID: messageData.threadID,
@@ -272,9 +266,7 @@ export class RoomLookupService {
     let messageSender = knownSendersMap.get(matrixUserID);
     if (!messageSender) {
       const alkemioUserID =
-        await this.identityResolverService.getUserIDByCommunicationsID(
-          matrixUserID
-        );
+        await this.identityResolverService.getUserIDByAgentID(matrixUserID);
       if (alkemioUserID) {
         messageSender = {
           id: alkemioUserID,
@@ -282,7 +274,7 @@ export class RoomLookupService {
         };
       } else {
         const virtualContributorID =
-          await this.identityResolverService.getContributorIDByCommunicationsID(
+          await this.identityResolverService.getContributorIDByAgentID(
             matrixUserID
           );
         if (virtualContributorID) {

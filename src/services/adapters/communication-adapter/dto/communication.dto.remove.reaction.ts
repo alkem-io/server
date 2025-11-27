@@ -1,5 +1,5 @@
 export class CommunicationRemoveReactionToMessageInput {
-  senderCommunicationsID!: string;
+  senderAgentID!: string;
 
   roomID!: string;
 

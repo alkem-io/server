@@ -5,6 +5,7 @@ import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/a
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
+import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { CollaborativeDocumentIntegrationController } from './collaborative-document-integration.controller';
 import { CollaborativeDocumentIntegrationService } from './collaborative-document-integration.service';
 
@@ -16,6 +17,7 @@ import { CollaborativeDocumentIntegrationService } from './collaborative-documen
     MemoModule,
     ContributionReporterModule,
     EntityResolverModule,
+    UserLookupModule,
   ],
   controllers: [CollaborativeDocumentIntegrationController],
   providers: [CollaborativeDocumentIntegrationService],

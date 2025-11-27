@@ -13,9 +13,7 @@ export class AddAuthenticationIDToUser1762290000000
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(
-      'DROP INDEX `IDX_user_authenticationID` ON `user`'
-    );
+    await queryRunner.query('DROP INDEX `IDX_user_authenticationID` ON `user`');
     await queryRunner.query(
       'ALTER TABLE `user` DROP COLUMN `authenticationID`'
     );

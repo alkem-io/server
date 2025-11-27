@@ -64,11 +64,14 @@ describe('applyOverrides governance', () => {
       { reviewer: 'alice', body: 'LGTM BREAKING-APPROVED', state: 'APPROVED' },
     ]);
     const codeownersContent = '* @alice';
-    const tmpPath = 'CODEOWNERS';
+    const tmpPath = `CODEOWNERS.test.${Date.now()}.${Math.random()}`;
     fs.writeFileSync(tmpPath, codeownersContent);
     try {
       const report = makeReport([{}]);
-      withEnv({ SCHEMA_OVERRIDE_REVIEWS_JSON: reviewJson }, () => {
+      withEnv({
+        SCHEMA_OVERRIDE_REVIEWS_JSON: reviewJson,
+        SCHEMA_OVERRIDE_CODEOWNERS_PATH: tmpPath
+      }, () => {
         const res = applyOverrides(report);
         expect(res.applied).toBe(true);
         expect(report.overrideApplied).toBe(true);
@@ -78,7 +81,9 @@ describe('applyOverrides governance', () => {
         expect(breaking.every(b => (b as any).override === true)).toBe(true);
       });
     } finally {
-      fs.unlinkSync(tmpPath);
+      if (fs.existsSync(tmpPath)) {
+        fs.unlinkSync(tmpPath);
+      }
     }
   });
 
@@ -87,17 +92,22 @@ describe('applyOverrides governance', () => {
       { reviewer: 'alice', body: 'LGTM', state: 'APPROVED' },
     ]);
     const codeownersContent = '* @alice';
-    const tmpPath = 'CODEOWNERS';
+    const tmpPath = `CODEOWNERS.test.${Date.now()}.${Math.random()}`;
     fs.writeFileSync(tmpPath, codeownersContent);
     try {
       const report = makeReport([{}]);
-      withEnv({ SCHEMA_OVERRIDE_REVIEWS_JSON: reviewJson }, () => {
+      withEnv({
+        SCHEMA_OVERRIDE_REVIEWS_JSON: reviewJson,
+        SCHEMA_OVERRIDE_CODEOWNERS_PATH: tmpPath
+      }, () => {
         const res = applyOverrides(report);
         expect(res.applied).toBe(false);
         expect(report.overrideApplied).toBe(false);
       });
     } finally {
-      fs.unlinkSync(tmpPath);
+      if (fs.existsSync(tmpPath)) {
+        fs.unlinkSync(tmpPath);
+      }
     }
   });
 });

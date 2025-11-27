@@ -13,28 +13,28 @@ export class IdentityResolverService {
     private virtualContributorRepository: Repository<VirtualContributor>
   ) {}
 
-  async getUserIDByCommunicationsID(
-    communicationID: string
-  ): Promise<string | undefined> {
+  async getUserIDByAgentID(agentID: string): Promise<string | undefined> {
     const userMatch = await this.userRepository
       .createQueryBuilder('user')
-      .where('user.communicationID = :communicationID')
+      .leftJoinAndSelect('user.agent', 'agent')
+      .where('agent.id = :agentID')
       .setParameters({
-        communicationID: `${communicationID}`,
+        agentID: `${agentID}`,
       })
       .getOne();
 
     return userMatch ? userMatch.id : undefined;
   }
 
-  async getContributorIDByCommunicationsID(
-    communicationID: string
+  async getContributorIDByAgentID(
+    agentID: string
   ): Promise<string | undefined> {
     const userMatch = await this.virtualContributorRepository
       .createQueryBuilder('virtual_contributor')
-      .where('virtual_contributor.communicationID = :communicationID')
+      .leftJoinAndSelect('virtual_contributor.agent', 'agent')
+      .where('agent.id = :agentID')
       .setParameters({
-        communicationID: `${communicationID}`,
+        agentID: `${agentID}`,
       })
       .getOne();
 

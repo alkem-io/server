@@ -39,7 +39,7 @@ export class AdminGeoLocationMutations {
       agentInfo,
       platformPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `Update GeoLocation data: ${agentInfo.email}`
+      `Update GeoLocation data: ${agentInfo.userID}`
     );
 
     if (!this.geoapifyService.isEnabled()) {

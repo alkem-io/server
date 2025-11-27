@@ -1,5 +1,5 @@
 export class CommunicationSendMessageInput {
-  senderCommunicationsID!: string;
+  senderAgentID!: string;
 
   message!: string;
 

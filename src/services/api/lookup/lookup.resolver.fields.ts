@@ -320,7 +320,7 @@ export class LookupResolverFields {
       agentInfo,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `user privileges field: ${agentInfo.email}`
+      `user privileges field: ${agentInfo.userID || 'anonymous'}`
     );
     const authorization =
       await this.authorizationPolicyService.getAuthorizationPolicyOrFail(

@@ -39,7 +39,7 @@ export class UserResolverQueries {
       agentInfo,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
-      `users query: ${agentInfo.email}`
+      `users query: ${agentInfo.userID}`
     );
     return await this.userService.getUsersForQuery(args);
   }
@@ -64,7 +64,7 @@ export class UserResolverQueries {
       agentInfo,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
-      `users query: ${agentInfo.email}`
+      `users query: ${agentInfo.userID}`
     );
 
     return this.userService.getPaginatedUsers(pagination, withTags, filter);
@@ -79,11 +79,11 @@ export class UserResolverQueries {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IUser> {
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
-      `user query: ${agentInfo.email}`
+      `user query: ${agentInfo.userID}`
     );
     return await this.userService.getUserOrFail(id);
   }

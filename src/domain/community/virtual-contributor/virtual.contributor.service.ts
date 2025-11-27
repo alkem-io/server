@@ -129,14 +129,6 @@ export class VirtualContributorService {
       virtualContributor.knowledgeBase
     );
 
-    const communicationID = await this.communicationAdapter.tryRegisterNewUser(
-      `virtual-contributor-${virtualContributor.nameID}@alkem.io`
-    );
-
-    if (communicationID) {
-      virtualContributor.communicationID = communicationID;
-    }
-
     if (
       virtualContributorData.bodyOfKnowledgeType ===
       VirtualContributorBodyOfKnowledgeType.ALKEMIO_KNOWLEDGE_BASE
@@ -184,6 +176,8 @@ export class VirtualContributorService {
     virtualContributor.agent = await this.agentService.createAgent({
       type: AgentType.VIRTUAL_CONTRIBUTOR,
     });
+
+    await this.communicationAdapter.registerActor(virtualContributor.agent.id);
 
     virtualContributor = await this.save(virtualContributor);
 

@@ -1,5 +1,5 @@
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { CurrentUser } from '@src/common/decorators';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { Agent } from './agent.entity';
@@ -7,17 +7,20 @@ import { AlkemioUserClaim } from '@services/external/trust-registry/trust.regist
 import { AgentBeginVerifiedCredentialRequestOutput } from './dto/agent.dto.verified.credential.request.begin.output';
 import { AgentBeginVerifiedCredentialOfferOutput } from './dto/agent.dto.verified.credential.offer.begin.output';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 
 @InstrumentResolver()
 @Resolver(() => Agent)
 export class AgentResolverMutations {
-  constructor(private agentService: AgentService) {}
+  constructor(
+    private readonly agentService: AgentService,
+    private readonly userLookupService: UserLookupService
+  ) {}
 
   @Mutation(() => AgentBeginVerifiedCredentialRequestOutput, {
     nullable: false,
     description: 'Generate verified credential share request',
   })
-  @Profiling.api
   async beginVerifiedCredentialRequestInteraction(
     @CurrentUser() agentInfo: AgentInfo,
     @Args({ name: 'types', type: () => [String] }) types: string[]
@@ -31,10 +34,10 @@ export class AgentResolverMutations {
   @Mutation(() => AgentBeginVerifiedCredentialOfferOutput, {
     description: 'Generate Alkemio user credential offer',
   })
-  @Profiling.api
   async beginAlkemioUserVerifiedCredentialOfferInteraction(
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<AgentBeginVerifiedCredentialOfferOutput> {
+    const user = await this.userLookupService.getUserOrFail(agentInfo.userID);
     return await this.agentService.beginCredentialOfferInteraction(
       agentInfo.agentID,
       [
@@ -43,7 +46,7 @@ export class AgentResolverMutations {
           claims: [
             new AlkemioUserClaim({
               userID: agentInfo.userID,
-              email: agentInfo.email,
+              email: user.email,
             }),
           ],
         },

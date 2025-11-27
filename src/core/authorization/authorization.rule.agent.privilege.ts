@@ -41,7 +41,7 @@ export class AuthorizationRuleAgentPrivilege {
         authorizationID = this.fieldParent.authorization.id;
       }
       const fieldParentType = this.fieldParent.__proto__.constructor.name;
-      const errorMsg = `User (${agentInfo.email}) does not have credentials that grant '${this.privilege}' access to ${fieldParentType}.${this.fieldName} with id '${this.fieldParent.id}' with authorization: ${authorizationID}`;
+      const errorMsg = `User (${agentInfo.userID}) does not have credentials that grant '${this.privilege}' access to ${fieldParentType}.${this.fieldName} with id '${this.fieldParent.id}' with authorization: ${authorizationID}`;
       this.authorizationService.logCredentialCheckFailDetails(
         errorMsg,
         agentInfo,

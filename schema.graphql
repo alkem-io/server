@@ -4244,8 +4244,8 @@ type Profile {
 }
 
 type ProfileCredentialVerified {
-  """The email"""
-  userEmail: String!
+  """The agentID"""
+  agentID: String!
   """The vc."""
   vc: String!
 }

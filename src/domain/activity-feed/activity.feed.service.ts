@@ -259,7 +259,7 @@ export class ActivityFeedService {
           agentInfo,
           collaboration.authorization,
           AuthorizationPrivilege.READ,
-          `Collaboration activity query: ${agentInfo.email}`
+          `Collaboration activity query: ${agentInfo.userID || 'anonymous'}`
         );
         readableCollaborationIds.push(collaboration.id);
       } catch {
@@ -292,7 +292,7 @@ export class ActivityFeedService {
               agentInfo,
               childCollaboration.authorization,
               AuthorizationPrivilege.READ,
-              `Collaboration activity query: ${agentInfo.email} `
+              `Collaboration activity query: ${agentInfo.userID || 'anonymous'} `
             );
           } catch {
             return false;

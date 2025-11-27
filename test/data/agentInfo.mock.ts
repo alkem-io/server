@@ -7,8 +7,6 @@ export const agentInfoData: { agentInfo: AgentInfo } = {
   agentInfo: {
     isAnonymous: false,
     userID: '91b7e044-61ff-468b-a705-1672b0bda510',
-    email: 'admin@alkem.io',
-    emailVerified: true,
     firstName: 'Valentin Admin',
     lastName: 'Yanakiev',
     credentials: [
@@ -18,7 +16,6 @@ export const agentInfoData: { agentInfo: AgentInfo } = {
       },
     ],
     verifiedCredentials: [],
-    communicationID: '@admin=alkem.io:matrix.alkem.io',
     agentID: '66000b15-ae7f-448e-aade-3b4ae1fd4c33',
     authenticationID: '',
     avatarURL: '',

@@ -245,7 +245,7 @@ export class UserResolverFields {
       );
       if (hasGlobalAdminCredential) {
         this.logger.error(
-          `Agent: ${agentInfo.email} is not authorized to access user: ${
+          `Agent: ${agentInfo.userID} is not authorized to access user: ${
             user.email
           }: authorization policy of user: ${JSON.stringify(authorization)}`
         );

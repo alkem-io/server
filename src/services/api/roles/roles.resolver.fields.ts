@@ -59,7 +59,7 @@ export class RolesResolverFields {
       agentInfo,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `roles user query: ${agentInfo.email}`
+      `roles user query: ${agentInfo.userID || 'anonymous'}`
     );
     const invitations = await this.rolesService.getCommunityInvitationsForUser(
       roles.id,
@@ -87,7 +87,7 @@ export class RolesResolverFields {
       agentInfo,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `roles user query: ${agentInfo.email}`
+      `roles user query: ${agentInfo.userID || 'anonymous'}`
     );
     const applications =
       await this.rolesService.getCommunityApplicationsForUser(roles.id, states);

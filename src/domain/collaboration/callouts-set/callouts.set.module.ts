@@ -18,6 +18,7 @@ import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { WhiteboardModule } from '@domain/common/whiteboard/whiteboard.module';
 import { PostModule } from '../post/post.module';
+import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { PostModule } from '../post/post.module';
     WhiteboardModule,
     PostModule,
     TypeOrmModule.forFeature([CalloutsSet]),
+    UserLookupModule,
   ],
   providers: [
     CalloutsSetService,

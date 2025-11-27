@@ -58,7 +58,7 @@ export class SearchService {
       }
     }
     // search only in the public available data if the user is not authenticated
-    const onlyPublicResults = !agentInfo.email;
+    const onlyPublicResults = agentInfo.isAnonymous;
     const searchResults = await this.searchExtractService.search(
       searchData,
       onlyPublicResults

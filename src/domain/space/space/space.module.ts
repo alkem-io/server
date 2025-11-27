@@ -36,6 +36,7 @@ import { UrlGeneratorModule } from '@services/infrastructure/url-generator/url.g
 import { TemplateContentSpaceModule } from '@domain/template/template-content-space/template.content.space.module';
 import { PlatformRolesAccessModule } from '@domain/access/platform-roles-access/platform.roles.access.module';
 import { SpacePlatformRolesAccessService } from './space.service.platform.roles.access';
+import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 
 @Module({
   imports: [
@@ -66,6 +67,7 @@ import { SpacePlatformRolesAccessService } from './space.service.platform.roles.
     SpaceLookupModule,
     LicenseModule,
     UrlGeneratorModule,
+    UserLookupModule,
     TypeOrmModule.forFeature([Space]),
   ],
   providers: [

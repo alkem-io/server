@@ -130,7 +130,7 @@ export class AiServerResolverMutations {
       agentInfo,
       aiServer.authorization,
       AuthorizationPrivilege.GRANT, // to be auth reset
-      `reset authorization on aiServer: ${agentInfo.email}`
+      `reset authorization on aiServer: ${agentInfo.userID || 'anonymous'}`
     );
     const authorizations =
       await this.aiServerAuthorizationService.applyAuthorizationPolicy();

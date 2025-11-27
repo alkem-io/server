@@ -80,17 +80,17 @@ export class AdminCommunicationService {
     // check which ones are missing
     for (const communityMember of communityMembers) {
       const inCommunicationRoom = result.members.find(
-        roomMember => roomMember === communityMember.communicationID
+        roomMember => roomMember === communityMember.agent.id
       );
       if (!inCommunicationRoom) {
-        result.missingMembers.push(communityMember.communicationID);
+        result.missingMembers.push(communityMember.agent.id);
       }
     }
 
     // check which ones are extra
     for (const roomMember of result.members) {
       const inCommunity = communityMembers.find(
-        communityMember => communityMember.communicationID === roomMember
+        communityMember => communityMember.agent.id === roomMember
       );
       if (!inCommunity) {
         result.extraMembers.push(roomMember);
@@ -125,7 +125,7 @@ export class AdminCommunicationService {
     for (const communityMember of communityMembers) {
       await this.communicationService.addContributorToCommunications(
         communication,
-        communityMember.communicationID
+        communityMember.agent.id
       );
     }
     return true;

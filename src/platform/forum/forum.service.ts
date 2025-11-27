@@ -57,7 +57,7 @@ export class ForumService {
   async createDiscussion(
     discussionData: ForumCreateDiscussionInput,
     userID: string,
-    userForumID: string
+    agentID: string
   ): Promise<IDiscussion> {
     const displayName = discussionData.profile.displayName;
     const forumID = discussionData.forumID;
@@ -106,9 +106,9 @@ export class ForumService {
 
     // Trigger a room membership request for the current user that is not awaited
     const room = await this.discussionService.getComments(discussion.id);
-    await this.communicationAdapter.userAddToRooms(
+    await this.communicationAdapter.agentAddToRooms(
       [room.externalRoomID],
-      userForumID
+      agentID
     );
 
     return discussion;
@@ -198,9 +198,9 @@ export class ForumService {
     return true;
   }
 
-  async addUserToForums(forum: IForum, forumUserID: string): Promise<boolean> {
+  async addUserToForums(forum: IForum, agentID: string): Promise<boolean> {
     const forumRoomIDs = await this.getRoomsUsed(forum);
-    await this.communicationAdapter.userAddToRooms(forumRoomIDs, forumUserID);
+    await this.communicationAdapter.agentAddToRooms(forumRoomIDs, agentID);
 
     return true;
   }
@@ -233,9 +233,9 @@ export class ForumService {
       const room = await this.discussionService.getComments(discussion.id);
       forumRoomIDs.push(room.externalRoomID);
     }
-    await this.communicationAdapter.removeUserFromRooms(
+    await this.communicationAdapter.removeAgentFromRooms(
       forumRoomIDs,
-      user.communicationID
+      user.agent.id
     );
 
     return true;

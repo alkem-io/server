@@ -21,21 +21,23 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { SpaceLicenseService } from './space.service.license';
 import { LicenseService } from '@domain/common/license/license.service';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 
 @InstrumentResolver()
 @Resolver()
 export class SpaceResolverMutations {
   constructor(
-    private contributionReporter: ContributionReporterService,
-    private activityAdapter: ActivityAdapter,
-    private authorizationService: AuthorizationService,
-    private authorizationPolicyService: AuthorizationPolicyService,
-    private spaceService: SpaceService,
-    private spaceAuthorizationService: SpaceAuthorizationService,
+    private readonly contributionReporter: ContributionReporterService,
+    private readonly activityAdapter: ActivityAdapter,
+    private readonly authorizationService: AuthorizationService,
+    private readonly authorizationPolicyService: AuthorizationPolicyService,
+    private readonly spaceService: SpaceService,
+    private readonly spaceAuthorizationService: SpaceAuthorizationService,
     @Inject(SUBSCRIPTION_SUBSPACE_CREATED)
-    private subspaceCreatedSubscription: PubSubEngine,
-    private spaceLicenseService: SpaceLicenseService,
-    private licenseService: LicenseService
+    private readonly subspaceCreatedSubscription: PubSubEngine,
+    private readonly spaceLicenseService: SpaceLicenseService,
+    private readonly licenseService: LicenseService,
+    private readonly userLookupService: UserLookupService
   ) {}
 
   @Mutation(() => ISpace, {
@@ -52,7 +54,7 @@ export class SpaceResolverMutations {
         },
       },
     });
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       space.authorization,
       AuthorizationPrivilege.UPDATE,
@@ -61,6 +63,7 @@ export class SpaceResolverMutations {
 
     const updatedSpace = await this.spaceService.update(spaceData);
 
+    const user = await this.userLookupService.getUserOrFail(agentInfo.userID);
     this.contributionReporter.spaceContentEdited(
       {
         id: updatedSpace.id,
@@ -69,7 +72,7 @@ export class SpaceResolverMutations {
       },
       {
         id: agentInfo.userID,
-        email: agentInfo.email,
+        email: user.email,
       }
     );
 
@@ -198,6 +201,7 @@ export class SpaceResolverMutations {
       subspace,
     });
 
+    const user = await this.userLookupService.getUserOrFail(agentInfo.userID);
     this.contributionReporter.subspaceCreated(
       {
         id: subspace.id,
@@ -206,7 +210,7 @@ export class SpaceResolverMutations {
       },
       {
         id: agentInfo.userID,
-        email: agentInfo.email,
+        email: user.email,
       }
     );
 

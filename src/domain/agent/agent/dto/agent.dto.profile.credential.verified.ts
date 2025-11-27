@@ -13,7 +13,7 @@ export class ProfileCredentialVerified {
 
   @Field(() => String, {
     nullable: false,
-    description: 'The email',
+    description: 'The agentID',
   })
-  userEmail!: string;
+  agentID!: string;
 }

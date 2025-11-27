@@ -13,6 +13,7 @@ import { AccountModule } from '@domain/space/account/account.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { OrganizationLookupModule } from '@domain/community/organization-lookup/organization.lookup.module';
 import { OrganizationModule } from '@domain/community/organization/organization.module';
+import { KratosModule } from '@services/infrastructure/kratos/kratos.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { OrganizationModule } from '@domain/community/organization/organization.
     PlatformInvitationModule,
     PlatformAuthorizationPolicyModule,
     ApplicationModule,
+    KratosModule,
   ],
   providers: [RegistrationService, RegistrationResolverMutations],
   exports: [RegistrationService, RegistrationResolverMutations],

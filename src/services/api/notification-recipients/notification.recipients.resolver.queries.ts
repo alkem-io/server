@@ -32,7 +32,7 @@ export class NotificationRecipientsResolverQueries {
       agentInfo,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `notificationRecipients query: ${agentInfo.email}`
+      `notificationRecipients query: ${agentInfo.userID || 'anonymous'}`
     );
     return this.notificationRecipientsServices.getRecipients(eventData);
   }

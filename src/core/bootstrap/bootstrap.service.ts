@@ -418,15 +418,12 @@ export class BootstrapService {
     return {
       isAnonymous: false,
       userID: adminUser.id,
-      email: adminUser.email,
-      emailVerified: true,
       firstName: adminUser.firstName,
       lastName: adminUser.lastName,
       avatarURL: '',
       credentials: adminUser.agent?.credentials || [],
       agentID: adminUser.agent?.id,
       verifiedCredentials: [],
-      communicationID: adminUser.communicationID,
       authenticationID: adminUser.authenticationID ?? '',
     };
   }

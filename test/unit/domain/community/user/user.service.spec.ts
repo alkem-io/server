@@ -39,10 +39,9 @@ describe('UserService.createUserFromAgentInfo', () => {
       {} as any,
       {} as any,
       {} as any,
-      {} as any,
-      {} as any,
       { deleteAgentInfoFromCache: jest.fn() } as any,
       userAuthenticationLinkServiceMock as any,
+      {} as any,
       {} as any,
       {} as any,
       {} as any,
@@ -65,7 +64,6 @@ describe('UserService.createUserFromAgentInfo', () => {
 
   const buildAgentInfo = (overrides: Partial<AgentInfo> = {}) => {
     const agentInfo = new AgentInfo();
-    agentInfo.email = 'user@example.com';
     agentInfo.firstName = 'Existing';
     agentInfo.lastName = 'User';
     Object.assign(agentInfo, overrides);
@@ -78,14 +76,15 @@ describe('UserService.createUserFromAgentInfo', () => {
     const agentInfo = buildAgentInfo({
       authenticationID: 'kratos-identity-001',
     });
+    const email = 'user@example.com';
 
     const resolveResult: UserAuthenticationLinkResult = {
       user: {
         id: 'user-1',
-        email: agentInfo.email,
+        email: email,
         authenticationID: agentInfo.authenticationID,
       } as any,
-  matchedBy: UserAuthenticationLinkMatch.AUTHENTICATION_ID,
+      matchedBy: UserAuthenticationLinkMatch.AUTHENTICATION_ID,
       outcome: UserAuthenticationLinkOutcome.ALREADY_LINKED,
     };
 
@@ -93,12 +92,12 @@ describe('UserService.createUserFromAgentInfo', () => {
       resolveResult
     );
 
-    const result = await service.createUserFromAgentInfo(agentInfo);
+    const result = await service.createUserFromAgentInfo(agentInfo, email);
 
     expect(result).toBe(resolveResult.user);
-    expect(userAuthenticationLinkServiceMock.resolveExistingUser).toHaveBeenCalledTimes(
-      1
-    );
+    expect(
+      userAuthenticationLinkServiceMock.resolveExistingUser
+    ).toHaveBeenCalledTimes(1);
   });
 
   it('refreshes cache when authentication ID is linked during lookup', async () => {
@@ -108,14 +107,16 @@ describe('UserService.createUserFromAgentInfo', () => {
     const agentInfo = buildAgentInfo({
       authenticationID: 'kratos-identity-002',
     });
+    const email = 'user@example.com';
 
     const resolveResult: UserAuthenticationLinkResult = {
       user: {
         id: 'user-2',
-        email: agentInfo.email,
+        email: email,
         authenticationID: agentInfo.authenticationID,
+        agent: { id: 'agent-2' },
       } as any,
-  matchedBy: UserAuthenticationLinkMatch.EMAIL,
+      matchedBy: UserAuthenticationLinkMatch.EMAIL,
       outcome: UserAuthenticationLinkOutcome.LINKED,
     };
 
@@ -123,10 +124,10 @@ describe('UserService.createUserFromAgentInfo', () => {
       resolveResult
     );
 
-    const result = await service.createUserFromAgentInfo(agentInfo);
+    const result = await service.createUserFromAgentInfo(agentInfo, email);
 
     expect(cacheManagerMock.set).toHaveBeenCalledWith(
-      `@user:communicationId:${agentInfo.email}`,
+      '@user:agentId:agent-2',
       resolveResult.user,
       expect.objectContaining({ ttl: expect.any(Number) })
     );
@@ -136,6 +137,7 @@ describe('UserService.createUserFromAgentInfo', () => {
   it('falls back to user creation when linking service finds no user', async () => {
     const { service, userAuthenticationLinkServiceMock } = createService();
     const agentInfo = buildAgentInfo();
+    const email = 'user@example.com';
 
     userAuthenticationLinkServiceMock.resolveExistingUser.mockResolvedValue(
       null
@@ -145,10 +147,10 @@ describe('UserService.createUserFromAgentInfo', () => {
       .spyOn(service, 'createUser')
       .mockResolvedValue({ id: 'new-user' } as any);
 
-    const result = await service.createUserFromAgentInfo(agentInfo);
+    const result = await service.createUserFromAgentInfo(agentInfo, email);
 
     expect(createUserSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ email: agentInfo.email }),
+      expect.objectContaining({ email: email }),
       agentInfo
     );
     expect(result).toEqual({ id: 'new-user' });

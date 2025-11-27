@@ -14,6 +14,7 @@ import { SsiSovrhdAdapterModule } from '@services/adapters/ssi-sovrhd/ssi.sovrhd
 import { WalletManagerAdapterModule } from '@services/adapters/wallet-manager-adapter/wallet.manager.adapter.module';
 import { AgentAuthorizationService } from './agent.service.authorization';
 import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/agent.info.module';
+import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/a
     TrustRegistryAdapterModule,
     SsiSovrhdAdapterModule,
     WalletManagerAdapterModule,
+    UserLookupModule,
   ],
   providers: [
     AgentService,

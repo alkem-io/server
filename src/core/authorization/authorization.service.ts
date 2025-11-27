@@ -57,7 +57,7 @@ export class AuthorizationService {
     authorization: IAuthorizationPolicy
   ) {
     const msg = `${errorMsg}; agentInfo: ${
-      agentInfo.email
+      agentInfo.userID
     } has credentials '${JSON.stringify(
       agentInfo.credentials,
       this.replacer
@@ -67,7 +67,7 @@ export class AuthorizationService {
 
   logAgentInfo(agentInfo: AgentInfo) {
     this.logger.debug?.(
-      `AgentInfo: '${agentInfo.email}' has credentials '${JSON.stringify(
+      `AgentInfo: '${agentInfo.userID}' has credentials '${JSON.stringify(
         agentInfo.credentials,
         this.replacer
       )}'`,

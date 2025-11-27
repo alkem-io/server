@@ -41,7 +41,7 @@ export class ForumResolverSubscriptions {
     ): Promise<IDiscussion> {
       const agentInfo = context.req?.user;
       this.logger.verbose?.(
-        `[User (${agentInfo.email}) Discussion Update] - Sending out event: ${payload.eventID} `,
+        `[User (${agentInfo.userID}) Discussion Update] - Sending out event: ${payload.eventID} `,
         LogContext.SUBSCRIPTIONS
       );
       return await this.discussionService.getDiscussionOrFail(
@@ -61,7 +61,7 @@ export class ForumResolverSubscriptions {
         variables.forumID
       );
       this.logger.verbose?.(
-        `[User (${agentInfo.email}) Discussion Update] - Filtering event id '${payload.eventID}' - match? ${isMatch}`,
+        `[User (${agentInfo.userID}) Discussion Update] - Filtering event id '${payload.eventID}' - match? ${isMatch}`,
         LogContext.SUBSCRIPTIONS
       );
       return isMatch;
@@ -83,7 +83,7 @@ export class ForumResolverSubscriptions {
         LogContext.SUBSCRIPTIONS
       );
     }
-    const logMsgPrefix = `[User (${agentInfo.email}) Discussion Update] - `;
+    const logMsgPrefix = `[User (${agentInfo.userID}) Discussion Update] - `;
     this.logger.verbose?.(
       `${logMsgPrefix} Subscribing to Discussions on Forum: ${forumID}`,
       LogContext.SUBSCRIPTIONS

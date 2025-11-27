@@ -102,15 +102,15 @@ export class AuthenticationService {
   ): Promise<AgentInfo> {
     if (!oryIdentity) return this.agentInfoService.createAnonymousAgentInfo();
 
-    const oryTraits = this.validateEmail(oryIdentity);
+    this.validateEmail(oryIdentity);
 
-    const cachedAgentInfo = await this.getCachedAgentInfo(oryTraits.email);
+    const cachedAgentInfo = await this.getCachedAgentInfo(oryIdentity.id);
     if (cachedAgentInfo) return cachedAgentInfo;
 
     const agentInfo = this.buildAgentInfoFromOrySession(oryIdentity, session);
 
     const agentInfoMetadata = await this.agentInfoService.getAgentInfoMetadata(
-      agentInfo.email,
+      oryIdentity.traits.email,
       { authenticationId: agentInfo.authenticationID }
     );
     if (!agentInfoMetadata) return agentInfo;
@@ -153,9 +153,11 @@ export class AuthenticationService {
    * @returns A promise that resolves to the agent information if found in the cache, or undefined if not found.
    */
   private async getCachedAgentInfo(
-    email: string
+    authenticationID: string
   ): Promise<AgentInfo | undefined> {
-    return await this.agentInfoCacheService.getAgentInfoFromCache(email);
+    return await this.agentInfoCacheService.getAgentInfoFromCache(
+      authenticationID
+    );
   }
 
   /**
@@ -171,12 +173,7 @@ export class AuthenticationService {
   ): AgentInfo {
     const agentInfo = new AgentInfo();
     const oryTraits = oryIdentity.traits;
-    const isEmailVerified =
-      oryIdentity.verifiable_addresses.find(x => x.via === 'email')?.verified ??
-      false;
 
-    agentInfo.email = oryTraits.email;
-    agentInfo.emailVerified = isEmailVerified;
     agentInfo.firstName = oryTraits.name.first;
     agentInfo.lastName = oryTraits.name.last;
     agentInfo.avatarURL = oryTraits.picture;

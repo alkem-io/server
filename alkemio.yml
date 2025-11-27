@@ -32,7 +32,7 @@ hosting:
 
   # Support for subscriptions enabled or not. These require a WebSocket connection
   subscriptions:
-    enabled: ${SUBSCRIPTIONS_ENABLED}:false
+    enabled: ${SUBSCRIPTIONS_ENABLED}:true
 
   # Support for subscriptions enabled or not. These require a WebSocket connection
   whiteboard_rt:

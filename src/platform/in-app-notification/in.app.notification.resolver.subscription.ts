@@ -10,11 +10,16 @@ import { SubscriptionReadService } from '@services/subscriptions/subscription-se
 import { ForbiddenException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { IInAppNotification } from '@platform/in-app-notification/in.app.notification.interface';
+import { Inject, LoggerService } from '@nestjs/common';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @InstrumentResolver()
 @Resolver()
 export class InAppNotificationResolverSubscription {
-  constructor(private subscriptionService: SubscriptionReadService) {}
+  constructor(
+    private subscriptionService: SubscriptionReadService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+  ) {}
 
   @TypedSubscription<InAppNotificationReceivedSubscriptionPayload, never>(
     () => IInAppNotification,
@@ -36,6 +41,13 @@ export class InAppNotificationResolverSubscription {
         _args,
         _context
       ) {
+        if (!payload?.notification) {
+          this.logger.warn(
+            'Received empty payload for inAppNotificationReceived subscription',
+            LogContext.IN_APP_NOTIFICATION
+          );
+          return null;
+        }
         return {
           ...payload.notification,
           triggeredAt: new Date(payload.notification.triggeredAt),
@@ -75,6 +87,13 @@ export class InAppNotificationResolverSubscription {
         _args,
         _context
       ) {
+        if (!payload) {
+          this.logger.warn(
+            'Received empty payload for notificationsUnreadCount subscription',
+            LogContext.IN_APP_NOTIFICATION
+          );
+          return 0;
+        }
         return payload.count;
       },
     }

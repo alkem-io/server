@@ -1,6 +1,6 @@
-import { Inject, LoggerService } from '@nestjs/common';
+import { Inject, LoggerService, BadRequestException } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { CurrentUser } from '@src/common/decorators';
 import { IUser } from '@domain/community/user/user.interface';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -23,21 +23,23 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { DeleteOrganizationInput } from '@domain/community/organization/dto/organization.dto.delete';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
+import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 
 @InstrumentResolver()
 @Resolver()
 export class RegistrationResolverMutations {
   constructor(
-    private userAuthorizationService: UserAuthorizationService,
-    private notificationPlatformAdapter: NotificationPlatformAdapter,
-    private registrationService: RegistrationService,
-    private userService: UserService,
-    private organizationService: OrganizationService,
-    private organizationAuthorizationService: OrganizationAuthorizationService,
-    private authorizationService: AuthorizationService,
-    private platformAuthorizationService: PlatformAuthorizationPolicyService,
-    private accountAuthorizationService: AccountAuthorizationService,
-    private authorizationPolicyService: AuthorizationPolicyService,
+    private readonly userAuthorizationService: UserAuthorizationService,
+    private readonly notificationPlatformAdapter: NotificationPlatformAdapter,
+    private readonly registrationService: RegistrationService,
+    private readonly userService: UserService,
+    private readonly organizationService: OrganizationService,
+    private readonly organizationAuthorizationService: OrganizationAuthorizationService,
+    private readonly authorizationService: AuthorizationService,
+    private readonly platformAuthorizationService: PlatformAuthorizationPolicyService,
+    private readonly accountAuthorizationService: AccountAuthorizationService,
+    private readonly authorizationPolicyService: AuthorizationPolicyService,
+    private readonly kratosService: KratosService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -49,7 +51,32 @@ export class RegistrationResolverMutations {
   async createUserNewRegistration(
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<IUser> {
-    const user = await this.registrationService.registerNewUser(agentInfo);
+    const identity = await this.kratosService.getIdentityById(
+      agentInfo.authenticationID,
+      ['oidc']
+    );
+    if (!identity) {
+      throw new BadRequestException(
+        `Identity not found for authenticationID: ${agentInfo.authenticationID}`
+      );
+    }
+    const email = this.kratosService.getEmailFromIdentity(identity);
+    if (!email) {
+      throw new BadRequestException(
+        `Email not found for identity: ${identity.id}`
+      );
+    }
+    let emailVerified = this.kratosService.isEmailVerified(identity);
+
+    if (!emailVerified && identity.credentials?.oidc) {
+      emailVerified = true;
+    }
+
+    const user = await this.registrationService.registerNewUser(
+      agentInfo,
+      email,
+      emailVerified
+    );
     return await this.processCreatedUser(user);
   }
 
@@ -66,7 +93,7 @@ export class RegistrationResolverMutations {
       agentInfo,
       authorization,
       AuthorizationPrivilege.CREATE,
-      `create new User: ${agentInfo.email}`
+      `create new User: ${agentInfo.userID || 'anonymous'}`
     );
     const user = await this.userService.createUser(userData);
     return this.processCreatedUser(user);
@@ -105,7 +132,7 @@ export class RegistrationResolverMutations {
     const authorizationPolicy =
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
 
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       authorizationPolicy,
       AuthorizationPrivilege.CREATE_ORGANIZATION,
@@ -148,7 +175,6 @@ export class RegistrationResolverMutations {
   @Mutation(() => IUser, {
     description: 'Deletes the specified User.',
   })
-  @Profiling.api
   async deleteUser(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('deleteData') deleteData: DeleteUserInput
@@ -156,7 +182,7 @@ export class RegistrationResolverMutations {
     const user = await this.userService.getUserOrFail(deleteData.ID, {
       relations: { profile: true },
     });
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       user.authorization,
       AuthorizationPrivilege.DELETE,
@@ -187,7 +213,7 @@ export class RegistrationResolverMutations {
     const organization = await this.organizationService.getOrganizationOrFail(
       deleteData.ID
     );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.DELETE,

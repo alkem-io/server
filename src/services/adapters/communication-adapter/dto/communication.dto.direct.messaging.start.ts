@@ -1,5 +1,5 @@
-export class CommunicationStartDirectMessagingUserInput {
-  senderCommunicationsID!: string;
+export class CommunicationStartDirectMessagingAgentInput {
+  senderAgentID!: string;
 
-  receiverCommunicationsID!: string;
+  receiverAgentID!: string;
 }

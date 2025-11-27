@@ -295,7 +295,7 @@ export class AccountResolverMutations {
       agentInfo,
       account.authorization,
       AuthorizationPrivilege.AUTHORIZATION_RESET,
-      `reset authorization definition on Space: ${agentInfo.email}`
+      `reset authorization definition on Space: ${agentInfo.userID}`
     );
     const accountAuthorizations =
       await this.accountAuthorizationService.applyAuthorizationPolicy(account);
@@ -568,13 +568,13 @@ export class AccountResolverMutations {
       agentInfo,
       currentAccount.authorization,
       AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER,
-      `transfer ${resourceName} to another Account: ${agentInfo.email}`
+      `transfer ${resourceName} to another Account: ${agentInfo.userID}`
     );
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       targetAccount.authorization,
       AuthorizationPrivilege.TRANSFER_RESOURCE_ACCEPT,
-      `transfer ${resourceName} to target Account: ${agentInfo.email}`
+      `transfer ${resourceName} to target Account: ${agentInfo.userID}`
     );
   }
 

@@ -68,7 +68,7 @@ export class ConversionResolverMutations {
       agentInfo,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `convert challenge to space: ${agentInfo.email}`
+      `convert challenge to space: ${agentInfo.userID || 'anonymous'}`
     );
     let space =
       await this.conversionService.convertSpaceL1ToSpaceL0OrFail(
@@ -94,7 +94,7 @@ export class ConversionResolverMutations {
       agentInfo,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `convert space L2 to Space L1: ${agentInfo.email}`
+      `convert space L2 to Space L1: ${agentInfo.userID || 'anonymous'}`
     );
     let spaceL1 =
       await this.conversionService.convertSpaceL2ToSpaceL1OrFail(
@@ -130,7 +130,7 @@ export class ConversionResolverMutations {
       agentInfo,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `convert space L1 to Space L2: ${agentInfo.email}`
+      `convert space L1 to Space L2: ${agentInfo.userID || 'anonymous'}`
     );
     let spaceL2 =
       await this.conversionService.convertSpaceL1ToSpaceL2OrFail(
@@ -163,7 +163,7 @@ export class ConversionResolverMutations {
       agentInfo,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `convert VC of type Space to VC of type KnowledgeBase: ${agentInfo.email}`
+      `convert VC of type Space to VC of type KnowledgeBase: ${agentInfo.userID || 'anonymous'}`
     );
     const virtualContributor =
       await this.virtualContributorService.getVirtualContributorOrFail(

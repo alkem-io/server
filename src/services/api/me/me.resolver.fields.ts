@@ -86,15 +86,14 @@ export class MeResolverFields {
       'The current authenticated User;  null if not yet registered on the platform',
   })
   async user(@CurrentUser() agentInfo: AgentInfo): Promise<IUser | null> {
-    const email = agentInfo.email;
-    if (!email) {
+    if (agentInfo.isAnonymous) {
       throw new AuthenticationException(
         'Unable to retrieve authenticated user; no identifier',
         LogContext.RESOLVER_FIELD
       );
     }
     // When the user is just registered, the agentInfo.userID is still null
-    if (email && !agentInfo.userID) {
+    if (!agentInfo.userID) {
       return null;
     }
 

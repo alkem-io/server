@@ -13,16 +13,18 @@ import { AgentBeginVerifiedCredentialOfferOutput } from '@domain/agent/agent/dto
 import { AlkemioUserClaim } from '@services/external/trust-registry/trust.registry.claim/claim.alkemio.user';
 import { CommunityMemberClaim } from '@services/external/trust-registry/trust.registry.claim/claim.community.member';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { UserLookupService } from '../user-lookup/user.lookup.service';
 
 @InstrumentResolver()
 @Resolver()
 export class CommunityResolverMutations {
   constructor(
-    private authorizationService: AuthorizationService,
-    private authorizationPolicyService: AuthorizationPolicyService,
-    private userGroupAuthorizationService: UserGroupAuthorizationService,
-    private communityService: CommunityService,
-    private agentService: AgentService
+    private readonly authorizationService: AuthorizationService,
+    private readonly authorizationPolicyService: AuthorizationPolicyService,
+    private readonly userGroupAuthorizationService: UserGroupAuthorizationService,
+    private readonly communityService: CommunityService,
+    private readonly agentService: AgentService,
+    private readonly userLookupService: UserLookupService
   ) {}
 
   @Mutation(() => IUserGroup, {
@@ -36,7 +38,7 @@ export class CommunityResolverMutations {
     const community = await this.communityService.getCommunityOrFail(
       groupData.parentID
     );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       community.authorization,
       AuthorizationPrivilege.CREATE,
@@ -61,12 +63,14 @@ export class CommunityResolverMutations {
   ): Promise<AgentBeginVerifiedCredentialOfferOutput> {
     const community =
       await this.communityService.getCommunityOrFail(communityID);
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       community.authorization,
       AuthorizationPrivilege.READ,
       `beginCommunityMemberCredentialOfferInteraction: ${community.id}`
     );
+
+    const user = await this.userLookupService.getUserOrFail(agentInfo.userID);
 
     return await this.agentService.beginCredentialOfferInteraction(
       agentInfo.agentID,
@@ -76,7 +80,7 @@ export class CommunityResolverMutations {
           claims: [
             new AlkemioUserClaim({
               userID: agentInfo.userID,
-              email: agentInfo.email,
+              email: user.email,
             }),
             new CommunityMemberClaim({
               communityID: community.id,

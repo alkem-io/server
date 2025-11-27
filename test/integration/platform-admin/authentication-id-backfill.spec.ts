@@ -130,7 +130,7 @@ describe('AdminAuthenticationIDBackfillService (integration)', () => {
     expect(kratosService.getIdentityByEmail).toHaveBeenCalledWith(user.email);
     expect(userService.createUserFromAgentInfo).toHaveBeenCalledTimes(1);
     expect(agentInfoCacheService.deleteAgentInfoFromCache).toHaveBeenCalledWith(
-      user.email
+      identity.id
     );
     expect(loggerMock.log).toHaveBeenCalledWith(
       expect.stringContaining('Completed authentication ID backfill run'),
@@ -139,7 +139,8 @@ describe('AdminAuthenticationIDBackfillService (integration)', () => {
   });
 
   it('marks users as skipped when no identity is found', async () => {
-    const { service, kratosService, queryBuilder, userService } = createService();
+    const { service, kratosService, queryBuilder, userService } =
+      createService();
 
     const user = {
       id: 'user-2',

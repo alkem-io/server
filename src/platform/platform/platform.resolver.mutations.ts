@@ -1,5 +1,5 @@
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { CurrentUser } from '@src/common/decorators';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -31,7 +31,6 @@ export class PlatformResolverMutations {
   @Mutation(() => IPlatform, {
     description: 'Reset the Authorization Policy on the specified Platform.',
   })
-  @Profiling.api
   async authorizationPolicyResetOnPlatform(
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<IPlatform> {
@@ -41,7 +40,7 @@ export class PlatformResolverMutations {
       agentInfo,
       platformPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN, // TODO: back to authorization reset
-      `reset authorization on platform: ${agentInfo.email}`
+      `reset authorization on platform: ${agentInfo.userID}`
     );
     const updatedAuthorizations =
       await this.platformAuthorizationService.applyAuthorizationPolicy();

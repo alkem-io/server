@@ -47,16 +47,11 @@ export class AgentInfoService {
     email: string,
     options?: { authenticationId?: string }
   ): Promise<AgentInfoMetadata | undefined> {
-    const agentInfo = new AgentInfo();
-    agentInfo.email = email;
-    if (options?.authenticationId) {
-      agentInfo.authenticationID = options.authenticationId;
-    }
-
     try {
       const resolved =
         await this.userAuthenticationLinkService.resolveExistingUser(
-          agentInfo,
+          options?.authenticationId,
+          email,
           {
             relations: {
               agent: {
@@ -86,7 +81,6 @@ export class AgentInfoService {
       userAgentInfoMetadata.credentials = user.agent.credentials;
       userAgentInfoMetadata.agentID = user.agent.id;
       userAgentInfoMetadata.userID = user.id;
-      userAgentInfoMetadata.communicationID = user.communicationID;
       userAgentInfoMetadata.authenticationID =
         user.authenticationID ?? undefined;
       return userAgentInfoMetadata;
@@ -116,7 +110,6 @@ export class AgentInfoService {
   ): void {
     agentInfo.agentID = agentInfoMetadata.agentID;
     agentInfo.userID = agentInfoMetadata.userID;
-    agentInfo.communicationID = agentInfoMetadata.communicationID;
     if (agentInfoMetadata.authenticationID) {
       agentInfo.authenticationID = agentInfoMetadata.authenticationID;
     }
@@ -125,7 +118,7 @@ export class AgentInfoService {
       agentInfo.credentials = agentInfoMetadata.credentials;
     } else {
       this.logger.warn?.(
-        `Authentication Info: Unable to retrieve credentials for registered user: ${agentInfo.email}`,
+        `Authentication Info: Unable to retrieve credentials for registered user: ${agentInfo.userID}`,
         LogContext.AUTH
       );
     }

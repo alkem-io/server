@@ -3,13 +3,10 @@ import { IVerifiedCredential } from '@domain/agent/verified-credential/verified.
 export class AgentInfo {
   isAnonymous = false;
   userID = '';
-  email = '';
-  emailVerified = false;
   firstName = '';
   lastName = '';
   credentials: ICredentialDefinition[] = [];
   verifiedCredentials: IVerifiedCredential[] = [];
-  communicationID = '';
   agentID = '';
   avatarURL = '';
   authenticationID = '';

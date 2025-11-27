@@ -32,7 +32,7 @@ export class AdminAuthorizationResolverQueries {
       agentInfo,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
-      `authorization query: ${agentInfo.email}`
+      `authorization query: ${agentInfo.userID}`
     );
     return await this.adminAuthorizationService.usersWithCredentials(
       credentialsCriteriaData

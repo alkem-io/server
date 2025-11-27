@@ -64,7 +64,7 @@ export class AdminAuthorizationResolverMutations {
       agentInfo,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
-      `grant credential: ${agentInfo.email}`
+      `grant credential: ${agentInfo.userID}`
     );
 
     const user =
@@ -95,7 +95,7 @@ export class AdminAuthorizationResolverMutations {
       agentInfo,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
-      `revoke credential: ${agentInfo.email}`
+      `revoke credential: ${agentInfo.userID}`
     );
     const user =
       await this.adminAuthorizationService.revokeCredentialFromUser(
@@ -123,7 +123,7 @@ export class AdminAuthorizationResolverMutations {
       agentInfo,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
-      `grant credential: ${agentInfo.email}`
+      `grant credential: ${agentInfo.userID}`
     );
     return await this.adminAuthorizationService.grantCredentialToOrganization(
       grantCredentialData
@@ -143,7 +143,7 @@ export class AdminAuthorizationResolverMutations {
       agentInfo,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
-      `revoke credential: ${agentInfo.email}`
+      `revoke credential: ${agentInfo.userID}`
     );
     return await this.adminAuthorizationService.revokeCredentialFromOrganization(
       credentialRemoveData
@@ -163,7 +163,7 @@ export class AdminAuthorizationResolverMutations {
       agentInfo,
       platformPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN, // todo: replace with AUTHORIZATION_RESET once that has been granted
-      `reset authorization on platform: ${agentInfo.email}`
+      `reset authorization on platform: ${agentInfo.userID}`
     );
 
     return this.authResetService.publishResetAll();
@@ -183,7 +183,7 @@ export class AdminAuthorizationResolverMutations {
       agentInfo,
       platformPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN, // todo: replace with AUTHORIZATION_RESET once that has been granted
-      `reset platformRolesAccess on all Spaces: ${agentInfo.email}`
+      `reset platformRolesAccess on all Spaces: ${agentInfo.userID}`
     );
 
     const spaces = await this.entityManager.find(Space, {
@@ -215,7 +215,7 @@ export class AdminAuthorizationResolverMutations {
       agentInfo,
       platformPolicyUpdated,
       AuthorizationPrivilege.AUTHORIZATION_RESET,
-      `reset authorization on a single authorization policy: ${agentInfo.email}`
+      `reset authorization on a single authorization policy: ${agentInfo.userID}`
     );
 
     return this.adminAuthorizationService.resetAuthorizationPolicy(
@@ -236,7 +236,7 @@ export class AdminAuthorizationResolverMutations {
       agentInfo,
       platformPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `reset authorization on platform: ${agentInfo.email}`
+      `reset authorization on platform: ${agentInfo.userID}`
     );
 
     return this.virtualContributorService.refreshAllBodiesOfKnowledge(

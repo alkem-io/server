@@ -115,20 +115,25 @@ function forceExit() {
 
 async function main() {
   const outPath = process.argv[2] || 'schema.graphql';
-  const app = await NestFactory.createApplicationContext(AppModule, {
-    logger: false,
-  });
   try {
-    const gqlHost = app.get(GraphQLSchemaHost, { strict: false });
-    if (!gqlHost || !gqlHost.schema) {
-      throw new Error('GraphQL schema not available from GraphQLSchemaHost');
+    const app = await NestFactory.createApplicationContext(AppModule, {
+      logger: false,
+    });
+
+    try {
+      const gqlHost = app.get(GraphQLSchemaHost, { strict: false });
+      if (!gqlHost || !gqlHost.schema) {
+        throw new Error('GraphQL schema not available from GraphQLSchemaHost');
+      }
+      const rawSDL = printSchema(gqlHost.schema);
+      const parsed = parse(rawSDL, { noLocation: true });
+      const transformed = transform(parsed);
+      const sortedSDL = print(transformed).trim() + '\n';
+      writeFileSync(outPath, sortedSDL, 'utf-8');
+      process.stdout.write(`Wrote schema to ${outPath}\n`);
+    } finally {
+      await app.close();
     }
-    const rawSDL = printSchema(gqlHost.schema);
-    const parsed = parse(rawSDL, { noLocation: true });
-    const transformed = transform(parsed);
-    const sortedSDL = print(transformed).trim() + '\n';
-    writeFileSync(outPath, sortedSDL, 'utf-8');
-    process.stdout.write(`Wrote schema to ${outPath}\n`);
   } catch (err) {
     // Fallback to placeholder if something unexpected happens (keeps developer flow unblocked)
     const fallback =
@@ -137,13 +142,6 @@ async function main() {
     process.stderr.write(`Schema generation error: ${(err as Error).stack}\n`);
     process.exitCode = 1;
   } finally {
-    try {
-      await app.close();
-    } catch (closeErr) {
-      process.stderr.write(
-        `Schema generation warning: failed to close Nest app: ${(closeErr as Error).stack}\n`,
-      );
-    }
     forceExit();
   }
 }

@@ -55,7 +55,7 @@ export class PostService {
 
     post.comments = await this.roomService.createRoom({
       displayName: `post-comments-${post.nameID}`,
-      senderCommunicationID: userID,
+      senderAgentID: userID,
       type: RoomType.POST,
     });
 

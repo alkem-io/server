@@ -32,7 +32,7 @@ export class RolesResolverQueries {
       agentInfo,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
-      `roles user query: ${agentInfo.email}`
+      `roles user query: ${agentInfo.userID || 'anonymous'}`
     );
     return this.rolesServices.getRolesForUser(rolesData);
   }

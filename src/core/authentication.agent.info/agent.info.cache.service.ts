@@ -32,19 +32,30 @@ export class AgentInfoCacheService {
   }
 
   public async getAgentInfoFromCache(
-    email: string
+    authenticationID: string
   ): Promise<AgentInfo | undefined> {
     return await this.cacheManager.get<AgentInfo>(
-      this.getAgentInfoCacheKey(email)
+      this.getAgentInfoCacheKey(authenticationID)
     );
   }
 
-  public async deleteAgentInfoFromCache(email: string): Promise<any> {
-    return await this.cacheManager.del(this.getAgentInfoCacheKey(email));
+  public async deleteAgentInfoFromCache(
+    authenticationID: string
+  ): Promise<any> {
+    return await this.cacheManager.del(
+      this.getAgentInfoCacheKey(authenticationID)
+    );
   }
 
   public async setAgentInfoCache(agentInfo: AgentInfo): Promise<AgentInfo> {
-    const cacheKey = this.getAgentInfoCacheKey(agentInfo.email);
+    if (!agentInfo.authenticationID) {
+      this.logger.warn?.(
+        'Attempted to cache AgentInfo without authenticationID',
+        LogContext.AUTH
+      );
+      return agentInfo;
+    }
+    const cacheKey = this.getAgentInfoCacheKey(agentInfo.authenticationID);
     return await this.cacheManager.set<AgentInfo>(cacheKey, agentInfo, {
       ttl: this.cache_ttl,
     });
@@ -57,7 +68,7 @@ export class AgentInfoCacheService {
   //   agentInfo: AgentInfo
   // ): Promise<AgentInfo | undefined> {
   //   let updatedAgentInfo: AgentInfo = new AgentInfo();
-  //   const cacheKey = this.getAgentInfoCacheKey(agentInfo.email);
+  //   const cacheKey = this.getAgentInfoCacheKey(agentInfo.authenticationID);
 
   //   let lock;
   //   try {
@@ -107,15 +118,15 @@ export class AgentInfoCacheService {
   public async updateAgentInfoCache(
     agent: IAgent
   ): Promise<AgentInfo | undefined> {
-    const email = await this.getAgentEmail(agent.id);
+    const authenticationID = await this.getAgentAuthenticationID(agent.id);
 
-    if (!email) return undefined;
+    if (!authenticationID) return undefined;
 
-    const cachedAgentInfo = await this.getAgentInfoFromCache(email);
+    const cachedAgentInfo = await this.getAgentInfoFromCache(authenticationID);
     await this.cacheManager.store;
     if (!cachedAgentInfo) {
       this.logger.verbose?.(
-        `No user cache found for user ${email}. Skipping cache update!`,
+        `No user cache found for user ${authenticationID}. Skipping cache update!`,
         LogContext.AGENT
       );
 
@@ -126,14 +137,16 @@ export class AgentInfoCacheService {
     return await this.setAgentInfoCache(cachedAgentInfo);
   }
 
-  private getAgentInfoCacheKey(email: string): string {
-    return `@agentInfo:email:${email}`;
+  private getAgentInfoCacheKey(authenticationID: string): string {
+    return `@agentInfo:authId:${authenticationID}`;
   }
 
-  public async getAgentEmail(agentId: string): Promise<string | undefined> {
-    const users: { email: string }[] =
+  public async getAgentAuthenticationID(
+    agentId: string
+  ): Promise<string | undefined> {
+    const users: { authenticationID: string }[] =
       await this.entityManager.connection.query(
-        `SELECT \`u\`.\`email\` FROM \`agent\` as \`a\`
+        `SELECT \`u\`.\`authenticationID\` FROM \`agent\` as \`a\`
       RIGHT JOIN \`user\` as \`u\`
       ON \`u\`.\`agentId\` = \`a\`.\`id\`
       WHERE \`a\`.\`id\` = ?`,
@@ -142,6 +155,6 @@ export class AgentInfoCacheService {
 
     if (!users[0]) return undefined;
 
-    return users[0].email;
+    return users[0].authenticationID;
   }
 }

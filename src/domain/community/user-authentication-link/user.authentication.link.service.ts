@@ -1,7 +1,6 @@
 import { Injectable, Inject, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { User } from '@domain/community/user/user.entity';
 import { LogContext } from '@common/enums';
@@ -37,18 +36,19 @@ export class UserAuthenticationLinkService {
   }
 
   public async resolveExistingUser(
-    agentInfo: AgentInfo,
+    authenticationID: string | undefined,
+    email: string | undefined,
     options?: UserAuthenticationLinkResolveOptions
   ): Promise<UserAuthenticationLinkResult | null> {
-    const authId = agentInfo.authenticationID?.trim();
-    const email = agentInfo.email?.trim().toLowerCase();
+    const authId = authenticationID?.trim();
+    const normalizedEmail = email?.trim().toLowerCase();
     const relations = options?.relations;
     const conflictMode: UserAuthenticationLinkConflictMode =
       options?.conflictMode ?? 'error';
     const lookupByAuthenticationId = options?.lookupByAuthenticationId ?? true;
     const lookupOptions = relations ? { relations } : undefined;
 
-    if (!email) {
+    if (!normalizedEmail) {
       return null;
     }
 
@@ -72,7 +72,7 @@ export class UserAuthenticationLinkService {
     }
 
     const existingByEmail = await this.userLookupService.getUserByEmail(
-      email,
+      normalizedEmail,
       lookupOptions
     );
 
@@ -96,7 +96,7 @@ export class UserAuthenticationLinkService {
       this.logger.error?.(message, LogContext.AUTH);
       if (conflictMode === 'error') {
         throw new UserAlreadyRegisteredException(
-          `User with email: ${email} already registered`
+          `User with email: ${normalizedEmail} already registered`
         );
       }
       return {

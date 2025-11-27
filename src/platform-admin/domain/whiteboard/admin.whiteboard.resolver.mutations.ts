@@ -36,7 +36,7 @@ export class AdminWhiteboardResolverMutations {
       agentInfo,
       platformPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `upload files from content to storage: ${agentInfo.email}`
+      `upload files from content to storage: ${agentInfo.userID}`
     );
 
     return this.adminWhiteboardService.uploadFilesFromContentToStorageBucket(

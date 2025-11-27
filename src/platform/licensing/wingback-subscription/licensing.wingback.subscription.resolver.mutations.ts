@@ -34,7 +34,7 @@ export class LicensingWingbackSubscriptionServiceResolverMutations {
       agentInfo,
       platformPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `licensing wingback subscription create test customer: ${agentInfo.email}`
+      `licensing wingback subscription create test customer: ${agentInfo.userID}`
     );
     const res = await this.licensingWingbackSubscriptionService.createCustomer({
       name: `Test User ${randomUUID()}`,
@@ -65,7 +65,7 @@ export class LicensingWingbackSubscriptionServiceResolverMutations {
       agentInfo,
       platformPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `licensing wingback subscription entitlements: ${agentInfo.email}`
+      `licensing wingback subscription entitlements: ${agentInfo.userID}`
     );
     return this.licensingWingbackSubscriptionService.getEntitlements(
       customerId

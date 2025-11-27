@@ -37,7 +37,7 @@ export class AdminSearchIngestResolverMutations {
         agentInfo,
         platformPolicy,
         AuthorizationPrivilege.PLATFORM_ADMIN,
-        `Ingest new data into Elasticsearch from scratch: ${agentInfo.email}`
+        `Ingest new data into Elasticsearch from scratch: ${agentInfo.userID}`
       );
     } catch (e: any) {
       await this.taskService.updateTaskErrors(task.id, e?.message);

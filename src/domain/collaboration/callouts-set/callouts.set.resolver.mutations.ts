@@ -25,22 +25,24 @@ import { InstrumentResolver } from '@src/apm/decorators';
 import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
 import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
 import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 
 @InstrumentResolver()
 @Resolver()
 export class CalloutsSetResolverMutations {
   constructor(
-    private authorizationService: AuthorizationService,
-    private authorizationPolicyService: AuthorizationPolicyService,
-    private calloutsSetService: CalloutsSetService,
-    private calloutAuthorizationService: CalloutAuthorizationService,
-    private calloutService: CalloutService,
-    private communityResolverService: CommunityResolverService,
-    private contributionReporter: ContributionReporterService,
-    private activityAdapter: ActivityAdapter,
-    private notificationAdapterSpace: NotificationSpaceAdapter,
-    private roomResolverService: RoomResolverService,
-    private temporaryStorageService: TemporaryStorageService,
+    private readonly authorizationService: AuthorizationService,
+    private readonly authorizationPolicyService: AuthorizationPolicyService,
+    private readonly calloutsSetService: CalloutsSetService,
+    private readonly calloutAuthorizationService: CalloutAuthorizationService,
+    private readonly calloutService: CalloutService,
+    private readonly communityResolverService: CommunityResolverService,
+    private readonly contributionReporter: ContributionReporterService,
+    private readonly activityAdapter: ActivityAdapter,
+    private readonly notificationAdapterSpace: NotificationSpaceAdapter,
+    private readonly roomResolverService: RoomResolverService,
+    private readonly temporaryStorageService: TemporaryStorageService,
+    private readonly userLookupService: UserLookupService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -126,6 +128,7 @@ export class CalloutsSetResolverMutations {
           calloutsSet.id
         );
 
+      const user = await this.userLookupService.getUserOrFail(agentInfo.userID);
       this.contributionReporter.calloutCreated(
         {
           id: callout.id,
@@ -134,7 +137,7 @@ export class CalloutsSetResolverMutations {
         },
         {
           id: agentInfo.userID,
-          email: agentInfo.email,
+          email: user.email,
         }
       );
     }

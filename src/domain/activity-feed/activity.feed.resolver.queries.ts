@@ -37,7 +37,7 @@ export class ActivityFeedResolverQueries {
       agentInfo,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
-      `Activity feed query: ${agentInfo.email}`
+      `Activity feed query: ${agentInfo.userID || 'anonymous'}`
     );
 
     return this.feedService.getActivityFeed(agentInfo, { ...args, pagination });
@@ -58,7 +58,7 @@ export class ActivityFeedResolverQueries {
       agentInfo,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
-      `Activity feed query: ${agentInfo.email}`
+      `Activity feed query: ${agentInfo.userID || 'anonymous'}`
     );
 
     return this.feedService.getGroupedActivityFeed(agentInfo, args);

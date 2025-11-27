@@ -203,6 +203,37 @@ export class KratosService {
   }
 
   /**
+   * Extracts the email from the identity.
+   *
+   * @param identity - The identity object.
+   * @returns The email address if found, otherwise undefined.
+   */
+  public getEmailFromIdentity(identity: Identity): string | undefined {
+    const oryIdentity = identity as OryDefaultIdentitySchema;
+    const traits = (oryIdentity.traits ?? {}) as Record<string, any>;
+
+    return (
+      (traits.email as string | undefined) ??
+      oryIdentity.verifiable_addresses?.[0]?.value
+    );
+  }
+
+  /**
+   * Checks if the email is verified for the given identity.
+   *
+   * @param identity - The identity object.
+   * @returns True if the email is verified, otherwise false.
+   */
+  public isEmailVerified(identity: Identity): boolean {
+    const oryIdentity = identity as OryDefaultIdentitySchema;
+    return Array.isArray(oryIdentity.verifiable_addresses)
+      ? oryIdentity.verifiable_addresses.some(
+          address => address?.via === 'email' && address?.verified
+        )
+      : false;
+  }
+
+  /**
    * Maps the provided identity to an authentication type.
    *
    * @param identity - The identity object containing credentials.
@@ -278,11 +309,13 @@ export class KratosService {
   }
 
   public async getIdentityById(
-    identityId: string
+    identityId: string,
+    includeCredential?: Array<'oidc' | 'password'>
   ): Promise<Identity | undefined> {
     try {
       const { data: identity } = await this.kratosIdentityClient.getIdentity({
         id: identityId,
+        includeCredential,
       });
       return identity;
     } catch (error) {

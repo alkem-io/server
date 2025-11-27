@@ -29,7 +29,7 @@ export class AgentResolverSubscriptions {
       context: any
     ): Promise<ProfileCredentialVerified> {
       const agentInfo = context.req?.user;
-      const logMsgPrefix = `[User (${agentInfo.email}) VC added] - `;
+      const logMsgPrefix = `[User (${agentInfo.userID}) VC added] - `;
       this.logger.verbose?.(
         `${logMsgPrefix} Sending out event: ${payload.vc} `,
         LogContext.SUBSCRIPTIONS
@@ -44,10 +44,10 @@ export class AgentResolverSubscriptions {
       context: any
     ): Promise<boolean> {
       const agentInfo: AgentInfo = context.req?.user;
-      const isMatch = payload.userEmail === agentInfo.email;
+      const isMatch = payload.agentID === agentInfo.agentID;
 
       this.logger.verbose?.(
-        `[User (${agentInfo.email}) VC Added] - Filtering event id '${payload.eventID}' - match? ${isMatch}`,
+        `[User (${agentInfo.userID}) VC Added] - Filtering event id '${payload.eventID}' - match? ${isMatch}`,
         LogContext.SUBSCRIPTIONS
       );
       return isMatch;
@@ -55,7 +55,7 @@ export class AgentResolverSubscriptions {
   })
   async profileVerifiedCredential(@CurrentUser() agentInfo: AgentInfo) {
     this.logger.verbose?.(
-      `User (${agentInfo.email}) subscribing to his credential updates`,
+      `User (${agentInfo.userID}) subscribing to his credential updates`,
       LogContext.SUBSCRIPTIONS
     );
 

@@ -46,25 +46,27 @@ import { NotificationInputCollaborationCalloutContributionCreated } from '@servi
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
 import { IMemo } from '@domain/common/memo/types';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 
 @InstrumentResolver()
 @Resolver()
 export class CalloutResolverMutations {
   constructor(
-    private communityResolverService: CommunityResolverService,
-    private contributionReporter: ContributionReporterService,
-    private activityAdapter: ActivityAdapter,
-    private notificationAdapterSpace: NotificationSpaceAdapter,
-    private authorizationService: AuthorizationService,
-    private authorizationPolicyService: AuthorizationPolicyService,
-    private calloutService: CalloutService,
-    private calloutAuthorizationService: CalloutAuthorizationService,
-    private roomResolverService: RoomResolverService,
-    private contributionAuthorizationService: CalloutContributionAuthorizationService,
-    private calloutContributionService: CalloutContributionService,
-    private temporaryStorageService: TemporaryStorageService,
+    private readonly communityResolverService: CommunityResolverService,
+    private readonly contributionReporter: ContributionReporterService,
+    private readonly activityAdapter: ActivityAdapter,
+    private readonly notificationAdapterSpace: NotificationSpaceAdapter,
+    private readonly authorizationService: AuthorizationService,
+    private readonly authorizationPolicyService: AuthorizationPolicyService,
+    private readonly calloutService: CalloutService,
+    private readonly calloutAuthorizationService: CalloutAuthorizationService,
+    private readonly roomResolverService: RoomResolverService,
+    private readonly contributionAuthorizationService: CalloutContributionAuthorizationService,
+    private readonly calloutContributionService: CalloutContributionService,
+    private readonly temporaryStorageService: TemporaryStorageService,
+    private readonly userLookupService: UserLookupService,
     @Inject(SUBSCRIPTION_CALLOUT_POST_CREATED)
-    private postCreatedSubscription: PubSubEngine
+    private readonly postCreatedSubscription: PubSubEngine
   ) {}
 
   @Mutation(() => ICallout, {
@@ -427,6 +429,7 @@ export class CalloutResolverMutations {
     };
     this.activityAdapter.calloutLinkCreated(activityLogInput);
 
+    const user = await this.userLookupService.getUserOrFail(agentInfo.userID);
     this.contributionReporter.calloutLinkCreated(
       {
         id: link.id,
@@ -435,7 +438,7 @@ export class CalloutResolverMutations {
       },
       {
         id: agentInfo.userID,
-        email: agentInfo.email,
+        email: user.email,
       }
     );
   }
@@ -464,6 +467,7 @@ export class CalloutResolverMutations {
       callout: callout,
     });
 
+    const user = await this.userLookupService.getUserOrFail(agentInfo.userID);
     this.contributionReporter.calloutWhiteboardCreated(
       {
         id: whiteboard.id,
@@ -472,7 +476,7 @@ export class CalloutResolverMutations {
       },
       {
         id: agentInfo.userID,
-        email: agentInfo.email,
+        email: user.email,
       }
     );
   }
@@ -502,6 +506,7 @@ export class CalloutResolverMutations {
     };
     this.activityAdapter.calloutPostCreated(activityLogInput);
 
+    const user = await this.userLookupService.getUserOrFail(agentInfo.userID);
     this.contributionReporter.calloutPostCreated(
       {
         id: post.id,
@@ -510,7 +515,7 @@ export class CalloutResolverMutations {
       },
       {
         id: agentInfo.userID,
-        email: agentInfo.email,
+        email: user.email,
       }
     );
   }
@@ -540,6 +545,7 @@ export class CalloutResolverMutations {
     };
     this.activityAdapter.calloutMemoCreated(activityLogInput);
 
+    const user = await this.userLookupService.getUserOrFail(agentInfo.userID);
     this.contributionReporter.calloutMemoCreated(
       {
         id: memo.id,
@@ -548,7 +554,7 @@ export class CalloutResolverMutations {
       },
       {
         id: agentInfo.userID,
-        email: agentInfo.email,
+        email: user.email,
       }
     );
   }

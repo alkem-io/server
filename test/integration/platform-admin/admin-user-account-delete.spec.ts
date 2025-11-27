@@ -39,10 +39,12 @@ describe('Platform-admin identity deletion flows', () => {
         email: 'user@example.com',
         authenticationID: 'kratos-1',
       }),
-      clearAuthenticationIDForUser: jest.fn().mockImplementation(async user => ({
-        ...user,
-        authenticationID: null,
-      })),
+      clearAuthenticationIDForUser: jest
+        .fn()
+        .mockImplementation(async user => ({
+          ...user,
+          authenticationID: null,
+        })),
     } as unknown as UserService & {
       getUserOrFail: jest.Mock;
       clearAuthenticationIDForUser: jest.Mock;
@@ -57,7 +59,7 @@ describe('Platform-admin identity deletion flows', () => {
     );
 
     const agentInfo = new AgentInfo();
-    agentInfo.email = 'admin@example.com';
+    agentInfo.userID = 'admin-user-id';
 
     const result = await resolver.adminUserAccountDelete(agentInfo, 'user-1');
 

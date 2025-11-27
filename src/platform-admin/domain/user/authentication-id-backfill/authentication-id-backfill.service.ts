@@ -126,8 +126,10 @@ export class AdminAuthenticationIDBackfillService {
       const agentInfo = this.buildAgentInfo(identity, user.email);
 
       try {
-        const updatedUser =
-          await this.userService.createUserFromAgentInfo(agentInfo);
+        const updatedUser = await this.userService.createUserFromAgentInfo(
+          agentInfo,
+          user.email
+        );
         if (updatedUser.id !== user.id) {
           outcome.skipped += 1;
           this.logger.warn?.(
@@ -140,7 +142,7 @@ export class AdminAuthenticationIDBackfillService {
         if (updatedUser.authenticationID === identity.id) {
           outcome.updated += 1;
           await this.agentInfoCacheService.deleteAgentInfoFromCache(
-            updatedUser.email
+            updatedUser.authenticationID
           );
           this.logger.verbose?.(
             `Backfilled authenticationID for user ${updatedUser.id}`,
@@ -191,17 +193,10 @@ export class AdminAuthenticationIDBackfillService {
       );
     }
 
-    agentInfo.email = fallbackEmail;
     agentInfo.firstName = (traits?.name?.first as string) ?? '';
     agentInfo.lastName = (traits?.name?.last as string) ?? '';
     agentInfo.avatarURL = (traits?.picture as string) ?? '';
     agentInfo.authenticationID = identity.id;
-    agentInfo.emailVerified = Array.isArray(oryIdentity.verifiable_addresses)
-      ? oryIdentity.verifiable_addresses.some(
-          (address: { via?: string; verified?: boolean }) =>
-            address?.via === 'email' && address?.verified
-        )
-      : false;
     return agentInfo;
   }
 }

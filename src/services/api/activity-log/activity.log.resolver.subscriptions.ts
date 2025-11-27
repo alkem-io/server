@@ -38,7 +38,7 @@ export class ActivityLogResolverSubscriptions {
       context
     ) {
       const agentInfo = context.req.user;
-      const logMsgPrefix = `[New activity subscription] - [${agentInfo.email}] -`;
+      const logMsgPrefix = `[New activity subscription] - [${agentInfo.userID || 'anonymous'}] -`;
       this.logger.verbose?.(
         `${logMsgPrefix} sending out event for new activity on Collaboration: ${args.input.collaborationID} `,
         LogContext.SUBSCRIPTIONS
@@ -69,7 +69,7 @@ export class ActivityLogResolverSubscriptions {
     ) {
       const { types = [], collaborationID, includeChild } = variables.input;
       const agentInfo = context.req.user;
-      const logMsgPrefix = `[New activity subscription] - [${agentInfo.email}] -`;
+      const logMsgPrefix = `[New activity subscription] - [${agentInfo.userID || 'anonymous'}] -`;
       this.logger.verbose?.(
         `${logMsgPrefix} filtering event: ${payload.eventID}`,
         LogContext.SUBSCRIPTIONS
@@ -115,7 +115,7 @@ export class ActivityLogResolverSubscriptions {
   ) {
     const logMsgPrefix = '[New activity subscription] - ';
     this.logger.verbose?.(
-      `${logMsgPrefix} User ${agentInfo.email} subscribed for new activities on Collaboration: ${input.collaborationID}`,
+      `${logMsgPrefix} User ${agentInfo.userID || 'anonymous'} subscribed for new activities on Collaboration: ${input.collaborationID}`,
       LogContext.SUBSCRIPTIONS
     );
     // validate args
@@ -150,7 +150,7 @@ export class ActivityLogResolverSubscriptions {
             agentInfo,
             childCollaboration.authorization,
             AuthorizationPrivilege.READ,
-            `Collaboration activity query: ${agentInfo.email}`
+            `Collaboration activity query: ${agentInfo.userID || 'anonymous'}`
           );
         } catch {
           return false;

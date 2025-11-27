@@ -1,5 +1,5 @@
 export class CommunicationAddReactionToMessageInput {
-  senderCommunicationsID!: string;
+  senderAgentID!: string;
 
   emoji!: string;
 

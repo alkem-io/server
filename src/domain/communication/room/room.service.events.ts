@@ -26,17 +26,19 @@ import { ICalendarEvent } from '@domain/timeline/event/event.interface';
 import { LogContext } from '@common/enums/logging.context';
 import { TimelineResolverService } from '@services/infrastructure/entity-resolver/timeline.resolver.service';
 import { ICalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.interface';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 
 @Injectable()
 export class RoomServiceEvents {
   constructor(
-    private activityAdapter: ActivityAdapter,
-    private contributionReporter: ContributionReporterService,
-    private notificationSpaceAdapter: NotificationSpaceAdapter,
-    private notificationPlatformAdapter: NotificationPlatformAdapter,
-    private notificationUserAdapter: NotificationUserAdapter,
-    private communityResolverService: CommunityResolverService,
-    private timelineResolverService: TimelineResolverService,
+    private readonly activityAdapter: ActivityAdapter,
+    private readonly contributionReporter: ContributionReporterService,
+    private readonly notificationSpaceAdapter: NotificationSpaceAdapter,
+    private readonly notificationPlatformAdapter: NotificationPlatformAdapter,
+    private readonly notificationUserAdapter: NotificationUserAdapter,
+    private readonly communityResolverService: CommunityResolverService,
+    private readonly timelineResolverService: TimelineResolverService,
+    private readonly userLookupService: UserLookupService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -177,6 +179,7 @@ export class RoomServiceEvents {
       await this.communityResolverService.getLevelZeroSpaceIdForCommunity(
         community.id
       );
+    const user = await this.userLookupService.getUserOrFail(agentInfo.userID);
     this.contributionReporter.calloutPostCommentCreated(
       {
         id: post.id,
@@ -185,7 +188,7 @@ export class RoomServiceEvents {
       },
       {
         id: agentInfo.userID,
-        email: agentInfo.email,
+        email: user.email,
       }
     );
   }
@@ -222,6 +225,7 @@ export class RoomServiceEvents {
         community.id
       );
 
+    const user = await this.userLookupService.getUserOrFail(agentInfo.userID);
     this.contributionReporter.updateCreated(
       {
         id: room.id,
@@ -230,7 +234,7 @@ export class RoomServiceEvents {
       },
       {
         id: agentInfo.userID,
-        email: agentInfo.email,
+        email: user.email,
       }
     );
   }
@@ -271,6 +275,7 @@ export class RoomServiceEvents {
         community.id
       );
 
+    const user = await this.userLookupService.getUserOrFail(agentInfo.userID);
     this.contributionReporter.calloutCommentCreated(
       {
         id: callout.id,
@@ -279,7 +284,7 @@ export class RoomServiceEvents {
       },
       {
         id: agentInfo.userID,
-        email: agentInfo.email,
+        email: user.email,
       }
     );
   }

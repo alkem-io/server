@@ -139,7 +139,7 @@ export class PlatformResolverFields {
       agentInfo,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ,
-      `get Platform well-known Virtual Contributors: ${agentInfo.email}`
+      `get Platform well-known Virtual Contributors: ${agentInfo.userID}`
     );
 
     // Convert from JSON storage format to DTO array format

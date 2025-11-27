@@ -68,16 +68,18 @@ export class ConversationService {
     // Create the room if it's a user-to-user conversation
     if (conversation.type === CommunicationConversationType.USER_USER) {
       const sender = await this.userLookupService.getUserOrFail(
-        conversationData.currentUserID
+        conversationData.currentUserID,
+        { relations: { agent: true } }
       );
       const receiver = await this.userLookupService.getUserOrFail(
-        conversation.userID
+        conversation.userID,
+        { relations: { agent: true } }
       );
       conversation.room = await this.roomService.createRoom({
         displayName: `conversation-${conversationData.currentUserID}-${conversation.userID}`,
         type: RoomType.CONVERSATION_DIRECT,
-        senderCommunicationID: sender.communicationID,
-        receiverCommunicationID: receiver.communicationID,
+        senderAgentID: sender.agent.id,
+        receiverAgentID: receiver.agent.id,
       });
     }
 
@@ -90,12 +92,14 @@ export class ConversationService {
     roomType: RoomType
   ): Promise<IRoom> {
     // Create the room
-    const sender = await this.userLookupService.getUserOrFail(currentUserID);
+    const sender = await this.userLookupService.getUserOrFail(currentUserID, {
+      relations: { agent: true },
+    });
 
     const room = await this.roomService.createRoom({
       displayName: `conversation-${currentUserID}-${conversation.virtualContributorID}`,
       type: roomType,
-      senderCommunicationID: sender.communicationID,
+      senderAgentID: sender.agent.id,
     });
     return room;
   }
@@ -264,6 +268,7 @@ export class ConversationService {
           id: conversation.conversationsSet.id,
         },
       },
+      relations: { agent: true },
     });
 
     if (!conversationOwner) {
@@ -282,12 +287,13 @@ export class ConversationService {
     );
     if (room.type === RoomType.CONVERSATION_DIRECT) {
       const receiver = await this.userLookupService.getUserOrFail(
-        conversation.userID!
+        conversation.userID!,
+        { relations: { agent: true } }
       );
       await this.roomService.deleteRoom({
         roomID: conversation.room.id,
-        senderCommunicationID: conversationOwner.communicationID,
-        receiverCommunicationID: receiver.communicationID,
+        senderAgentID: conversationOwner.agent.id,
+        receiverAgentID: receiver.agent.id,
       });
     } else {
       // Just delete the room entity normally
@@ -364,7 +370,7 @@ export class ConversationService {
 
     const message = await this.roomLookupService.sendMessage(
       guidanceConversation.room,
-      agentInfo.communicationID,
+      agentInfo.agentID,
       {
         message: chatData.question,
         roomID: guidanceConversation.room.id,
@@ -373,7 +379,8 @@ export class ConversationService {
 
     const guidanceVc =
       await this.virtualContributorLookupService.getVirtualContributorByNameIdOrFail(
-        guidanceConversation.virtualContributorID!
+        guidanceConversation.virtualContributorID!,
+        { relations: { agent: true } }
       );
 
     this.aiServerAdapter.invoke({
@@ -388,7 +395,7 @@ export class ConversationService {
         action: InvocationResultAction.POST_MESSAGE,
         roomDetails: {
           roomID: guidanceConversation.room.id,
-          communicationID: guidanceVc.communicationID,
+          agentID: guidanceVc.agent.id,
         },
       },
     });

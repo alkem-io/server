@@ -19,8 +19,8 @@ import { VcInteractionService } from '../vc-interaction/vc.interaction.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { RoomLookupService } from '../room-lookup/room.lookup.service';
 import { CreateRoomInput } from './dto/room.dto.create';
-import { CommunicationStartDirectMessagingUserInput } from '@services/adapters/communication-adapter/dto/communication.dto.direct.messaging.start';
-import { CommunicationStopDirectMessagingUserInput } from '@services/adapters/communication-adapter/dto/communication.dto.direct.messaging.stop';
+import { CommunicationStartDirectMessagingAgentInput } from '@services/adapters/communication-adapter/dto/communication.dto.direct.messaging.start';
+import { CommunicationStopDirectMessagingAgentInput } from '@services/adapters/communication-adapter/dto/communication.dto.direct.messaging.stop';
 import { DeleteRoomInput } from './dto/room.dto.delete';
 
 @Injectable()
@@ -79,19 +79,16 @@ export class RoomService {
 
     // Only delete from external Matrix server if flag is true
     if (room.type === RoomType.CONVERSATION_DIRECT) {
-      if (
-        !deleteData.senderCommunicationID ||
-        !deleteData.receiverCommunicationID
-      ) {
+      if (!deleteData.senderAgentID || !deleteData.receiverAgentID) {
         throw new Error(
           `Missing senderID or receiverID for direct messaging room deletion: ${room.id}`
         );
       }
-      const deleteDirectData: CommunicationStopDirectMessagingUserInput = {
-        senderCommunicationsID: deleteData.senderCommunicationID,
-        receiverCommunicationsID: deleteData.receiverCommunicationID,
+      const deleteDirectData: CommunicationStopDirectMessagingAgentInput = {
+        senderAgentID: deleteData.senderAgentID,
+        receiverAgentID: deleteData.receiverAgentID,
       };
-      await this.communicationAdapter.stopDirectMessagingToUser(
+      await this.communicationAdapter.stopDirectMessagingToAgent(
         deleteDirectData
       );
     } else {
@@ -122,11 +119,11 @@ export class RoomService {
 
   async removeRoomMessage(
     room: IRoom,
-    communicationUserID: string,
+    agentID: string,
     messageData: RoomRemoveMessageInput
   ): Promise<string> {
     await this.communicationAdapter.deleteMessage({
-      senderCommunicationsID: communicationUserID,
+      senderAgentID: agentID,
       messageId: messageData.messageID,
       roomID: room.externalRoomID,
     });
@@ -140,10 +137,7 @@ export class RoomService {
   ): Promise<string> {
     try {
       if (roomData.type === RoomType.CONVERSATION_DIRECT) {
-        if (
-          !roomData.senderCommunicationID ||
-          !roomData.receiverCommunicationID
-        ) {
+        if (!roomData.senderAgentID || !roomData.receiverAgentID) {
           throw new Error(
             `Missing senderID or receiverID for direct messaging room creation: ${roomData.displayName}`
           );
@@ -152,12 +146,12 @@ export class RoomService {
           `Creating direct message room via Matrix for room: ${roomData.displayName}`,
           LogContext.COMMUNICATION_CONVERSATION
         );
-        const directMessagingData: CommunicationStartDirectMessagingUserInput =
+        const directMessagingData: CommunicationStartDirectMessagingAgentInput =
           {
-            senderCommunicationsID: roomData.senderCommunicationID,
-            receiverCommunicationsID: roomData.receiverCommunicationID,
+            senderAgentID: roomData.senderAgentID,
+            receiverAgentID: roomData.receiverAgentID,
           };
-        return await this.communicationAdapter.startDirectMessagingToUser(
+        return await this.communicationAdapter.startDirectMessagingToAgent(
           directMessagingData
         );
       } else {
@@ -168,7 +162,7 @@ export class RoomService {
 
         return await this.communicationAdapter.createCommunityRoom(
           roomData.displayName,
-          roomData.senderCommunicationID
+          roomData.senderAgentID
         );
       }
     } catch (error: any) {
@@ -183,21 +177,19 @@ export class RoomService {
 
   async addReactionToMessage(
     room: IRoom,
-    communicationUserID: string,
+    agentID: string,
     reactionData: RoomAddReactionToMessageInput
   ): Promise<IMessageReaction> {
     // Ensure the user is a member of room and group so can send
-    await this.communicationAdapter.userAddToRooms(
+    await this.communicationAdapter.agentAddToRooms(
       [room.externalRoomID],
-      communicationUserID
+      agentID
     );
 
     const alkemioUserID =
-      await this.identityResolverService.getUserIDByCommunicationsID(
-        communicationUserID
-      );
+      await this.identityResolverService.getUserIDByAgentID(agentID);
     const reaction = await this.communicationAdapter.addReaction({
-      senderCommunicationsID: communicationUserID,
+      senderAgentID: agentID,
       emoji: reactionData.emoji,
       roomID: room.externalRoomID,
       messageID: reactionData.messageID,
@@ -209,17 +201,17 @@ export class RoomService {
 
   async removeReactionToMessage(
     room: IRoom,
-    communicationUserID: string,
+    agentID: string,
     messageData: RoomRemoveReactionToMessageInput
   ): Promise<boolean> {
     // Ensure the user is a member of room and group so can send
-    await this.communicationAdapter.userAddToRooms(
+    await this.communicationAdapter.agentAddToRooms(
       [room.externalRoomID],
-      communicationUserID
+      agentID
     );
 
     await this.communicationAdapter.removeReaction({
-      senderCommunicationsID: communicationUserID,
+      senderAgentID: agentID,
       roomID: room.externalRoomID,
       reactionID: messageData.reactionID,
     });
@@ -228,45 +220,39 @@ export class RoomService {
   }
 
   async getUserIdForMessage(room: IRoom, messageID: string): Promise<string> {
-    const senderCommunicationID =
-      await this.communicationAdapter.getMessageSender(
-        room.externalRoomID,
-        messageID
-      );
-    if (senderCommunicationID === '') {
+    const senderAgentID = await this.communicationAdapter.getMessageSender(
+      room.externalRoomID,
+      messageID
+    );
+    if (senderAgentID === '') {
       this.logger.error(
         `Unable to identify sender for ${room.id} - ${messageID}`,
         undefined,
         LogContext.COMMUNICATION
       );
-      return senderCommunicationID;
+      return senderAgentID;
     }
     const alkemioUserID =
-      await this.identityResolverService.getUserIDByCommunicationsID(
-        senderCommunicationID
-      );
+      await this.identityResolverService.getUserIDByAgentID(senderAgentID);
 
     return alkemioUserID ?? '';
   }
 
   async getUserIdForReaction(room: IRoom, reactionID: string): Promise<string> {
-    const senderCommunicationID =
-      await this.communicationAdapter.getReactionSender(
-        room.externalRoomID,
-        reactionID
-      );
-    if (senderCommunicationID === '') {
+    const senderAgentID = await this.communicationAdapter.getReactionSender(
+      room.externalRoomID,
+      reactionID
+    );
+    if (senderAgentID === '') {
       this.logger.error(
         `Unable to identify sender for ${room.id} - ${reactionID}`,
         undefined,
         LogContext.COMMUNICATION
       );
-      return senderCommunicationID;
+      return senderAgentID;
     }
     const alkemioUserID =
-      await this.identityResolverService.getUserIDByCommunicationsID(
-        senderCommunicationID
-      );
+      await this.identityResolverService.getUserIDByAgentID(senderAgentID);
 
     return alkemioUserID ?? '';
   }

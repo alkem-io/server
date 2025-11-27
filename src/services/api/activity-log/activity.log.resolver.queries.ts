@@ -40,7 +40,7 @@ export class ActivityLogResolverQueries {
       agentInfo,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
-      `Collaboration activity query READ_USERS: ${agentInfo.email}`
+      `Collaboration activity query READ_USERS: ${agentInfo.userID || 'anonymous'}`
     );
     // does collaboration exist
     const collaboration =
@@ -52,7 +52,7 @@ export class ActivityLogResolverQueries {
       agentInfo,
       collaboration.authorization,
       AuthorizationPrivilege.READ,
-      `Collaboration activity query: ${agentInfo.email}`
+      `Collaboration activity query: ${agentInfo.userID || 'anonymous'}`
     );
 
     if (queryData.includeChild) {
@@ -70,7 +70,7 @@ export class ActivityLogResolverQueries {
               agentInfo,
               childCollaboration.authorization,
               AuthorizationPrivilege.READ,
-              `Collaboration activity query: ${agentInfo.email}`
+              `Collaboration activity query: ${agentInfo.userID || 'anonymous'}`
             );
           } catch {
             return false;

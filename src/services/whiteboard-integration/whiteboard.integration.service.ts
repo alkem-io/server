@@ -29,6 +29,7 @@ import {
 } from './outputs';
 import { FetchInputData } from '@services/whiteboard-integration/inputs/fetch.input.data';
 import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 
 @Injectable()
 export class WhiteboardIntegrationService {
@@ -42,6 +43,7 @@ export class WhiteboardIntegrationService {
     private readonly communityResolver: CommunityResolverService,
     private readonly activityAdapter: ActivityAdapter,
     private readonly agentInfoService: AgentInfoService,
+    private readonly userLookupService: UserLookupService,
     private readonly configService: ConfigService<AlkemioConfig, true>
   ) {
     this.maxCollaboratorsInRoom = this.configService.get(
@@ -107,8 +109,15 @@ export class WhiteboardIntegrationService {
     return { read, update, maxCollaborators };
   }
 
-  public who(data: WhoInputData): Promise<AgentInfo> {
-    return this.authenticationService.getAgentInfo(data.auth);
+  public async who(
+    data: WhoInputData
+  ): Promise<{ userID: string; email: string }> {
+    const agentInfo = await this.authenticationService.getAgentInfo(data.auth);
+    if (agentInfo.isAnonymous) {
+      return { userID: '', email: '' };
+    }
+    const user = await this.userLookupService.getUserByUUID(agentInfo.userID);
+    return { userID: agentInfo.userID, email: user?.email ?? '' };
   }
 
   public async save({

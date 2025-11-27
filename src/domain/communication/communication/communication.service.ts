@@ -44,7 +44,7 @@ export class CommunicationService {
 
     communication.updates = await this.roomService.createRoom({
       displayName: `${displayName}-Updates`,
-      senderCommunicationID: undefined, // No sender for communication rooms
+      senderAgentID: undefined, // No sender for communication rooms
       type: RoomType.UPDATES,
     });
 
@@ -105,16 +105,16 @@ export class CommunicationService {
 
   async addContributorToCommunications(
     communication: ICommunication,
-    contributorCommunicationID: string
+    contributorAgentID: string
   ): Promise<boolean> {
-    if (!contributorCommunicationID || contributorCommunicationID === '') {
+    if (!contributorAgentID || contributorAgentID === '') {
       // no communication ID to manage, just return
       return true;
     }
     const communicationRoomIDs = await this.getRoomsUsed(communication);
-    await this.communicationAdapter.userAddToRooms(
+    await this.communicationAdapter.agentAddToRooms(
       communicationRoomIDs,
-      contributorCommunicationID
+      contributorAgentID
     );
 
     return true;
@@ -148,9 +148,9 @@ export class CommunicationService {
       this.getUpdates(communication).externalRoomID,
     ];
 
-    await this.communicationAdapter.removeUserFromRooms(
+    await this.communicationAdapter.removeAgentFromRooms(
       communicationRoomIDs,
-      user.communicationID
+      user.agent.id
     );
 
     return true;

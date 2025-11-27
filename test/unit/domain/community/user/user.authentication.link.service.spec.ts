@@ -11,7 +11,6 @@ import { LoggerService } from '@nestjs/common';
 
 const createAgentInfo = (overrides: Partial<AgentInfo> = {}) => {
   const agentInfo = new AgentInfo();
-  agentInfo.email = 'user@example.com';
   agentInfo.authenticationID = 'auth-123';
   Object.assign(agentInfo, overrides);
   return agentInfo;
@@ -54,7 +53,11 @@ describe('UserAuthenticationLinkService', () => {
     const existingUser = { id: 'user-1', authenticationID: 'auth-123' };
     userLookupService.getUserByAuthenticationID.mockResolvedValue(existingUser);
 
-    const result = await service.resolveExistingUser(createAgentInfo());
+    const agentInfo = createAgentInfo();
+    const result = await service.resolveExistingUser(
+      agentInfo.authenticationID,
+      'user@example.com'
+    );
 
     expect(result?.user).toEqual(existingUser);
     expect(result?.matchedBy).toBe(
@@ -76,10 +79,14 @@ describe('UserAuthenticationLinkService', () => {
     userLookupService.getUserByAuthenticationID.mockResolvedValue(null);
     userLookupService.getUserByEmail.mockResolvedValue(existingUser);
 
-    const result = await service.resolveExistingUser(createAgentInfo());
+    const agentInfo = createAgentInfo();
+    const result = await service.resolveExistingUser(
+      agentInfo.authenticationID,
+      'user@example.com'
+    );
 
     expect(userRepository.save).toHaveBeenCalledWith(existingUser);
-  expect(result?.outcome).toBe(UserAuthenticationLinkOutcome.LINKED);
+    expect(result?.outcome).toBe(UserAuthenticationLinkOutcome.LINKED);
     expect(result?.user.authenticationID).toBe('auth-123');
   });
 
@@ -96,15 +103,20 @@ describe('UserAuthenticationLinkService', () => {
     userLookupService.getUserByAuthenticationID.mockResolvedValue(null);
     userLookupService.getUserByEmail.mockResolvedValue(existingUser);
 
-    const result = await service.resolveExistingUser(createAgentInfo(), {
-      conflictMode: 'log',
-    });
+    const agentInfo = createAgentInfo();
+    const result = await service.resolveExistingUser(
+      agentInfo.authenticationID,
+      'user@example.com',
+      {
+        conflictMode: 'log',
+      }
+    );
 
     expect(logger.error).toHaveBeenCalledWith(
       expect.stringContaining('Authentication ID mismatch'),
       LogContext.AUTH
     );
-  expect(result?.outcome).toBe(UserAuthenticationLinkOutcome.CONFLICT);
+    expect(result?.outcome).toBe(UserAuthenticationLinkOutcome.CONFLICT);
     expect(result?.user.authenticationID).toBe('other-auth');
   });
 
@@ -121,9 +133,16 @@ describe('UserAuthenticationLinkService', () => {
     userLookupService.getUserByAuthenticationID.mockResolvedValue(null);
     userLookupService.getUserByEmail.mockResolvedValue(existingUser);
 
-    await expect(service.resolveExistingUser(createAgentInfo(), {
-      conflictMode: 'error',
-    })).rejects.toBeInstanceOf(UserAlreadyRegisteredException);
+    const agentInfo = createAgentInfo();
+    await expect(
+      service.resolveExistingUser(
+        agentInfo.authenticationID,
+        'user@example.com',
+        {
+          conflictMode: 'error',
+        }
+      )
+    ).rejects.toBeInstanceOf(UserAlreadyRegisteredException);
   });
 
   it('prefers email lookup when requested even if authentication ID belongs to another user', async () => {
@@ -142,13 +161,20 @@ describe('UserAuthenticationLinkService', () => {
       agent: { credentials: [] },
     };
 
-    userLookupService.getUserByAuthenticationID.mockResolvedValue(conflictingUser);
+    userLookupService.getUserByAuthenticationID.mockResolvedValue(
+      conflictingUser
+    );
     userLookupService.getUserByEmail.mockResolvedValue(emailUser);
 
-    const result = await service.resolveExistingUser(createAgentInfo(), {
-      conflictMode: 'log',
-      lookupByAuthenticationId: false,
-    });
+    const agentInfo = createAgentInfo();
+    const result = await service.resolveExistingUser(
+      agentInfo.authenticationID,
+      'user@example.com',
+      {
+        conflictMode: 'log',
+        lookupByAuthenticationId: false,
+      }
+    );
 
     expect(result?.user).toEqual(emailUser);
     expect(result?.outcome).toBe(UserAuthenticationLinkOutcome.CONFLICT);
@@ -163,7 +189,11 @@ describe('UserAuthenticationLinkService', () => {
     userLookupService.getUserByAuthenticationID.mockResolvedValue(null);
     userLookupService.getUserByEmail.mockResolvedValue(null);
 
-    const result = await service.resolveExistingUser(createAgentInfo());
+    const agentInfo = createAgentInfo();
+    const result = await service.resolveExistingUser(
+      agentInfo.authenticationID,
+      'user@example.com'
+    );
 
     expect(result).toBeNull();
   });

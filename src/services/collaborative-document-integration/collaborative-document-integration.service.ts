@@ -12,6 +12,7 @@ import { MemoService } from '@domain/common/memo';
 import { MemoContributionsInputData } from '@services/collaborative-document-integration/inputs/memo.contributions.input.data';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import {
   FetchInputData,
   InfoInputData,
@@ -47,7 +48,8 @@ export class CollaborativeDocumentIntegrationService {
     private readonly memoService: MemoService,
     private readonly configService: ConfigService<AlkemioConfig, true>,
     private readonly contributionReporter: ContributionReporterService,
-    private readonly communityResolver: CommunityResolverService
+    private readonly communityResolver: CommunityResolverService,
+    private readonly userLookupService: UserLookupService
   ) {
     this.maxCollaboratorsInRoom = this.configService.get(
       'collaboration.memo.max_collaborators_in_room',
@@ -109,8 +111,15 @@ export class CollaborativeDocumentIntegrationService {
     return { read, update, isMultiUser, maxCollaborators };
   }
 
-  public who(data: WhoInputData): Promise<AgentInfo> {
-    return this.authenticationService.getAgentInfo(data.auth);
+  public async who(
+    data: WhoInputData
+  ): Promise<{ userID: string; email: string }> {
+    const agentInfo = await this.authenticationService.getAgentInfo(data.auth);
+    if (agentInfo.isAnonymous) {
+      return { userID: '', email: '' };
+    }
+    const user = await this.userLookupService.getUserByUUID(agentInfo.userID);
+    return { userID: agentInfo.userID, email: user?.email ?? '' };
   }
 
   public async save({
