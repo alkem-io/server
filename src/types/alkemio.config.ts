@@ -201,7 +201,9 @@ export type AlkemioConfig = {
          */
         timeout: number;
         /**
-         * Number of consecutive failures required to open the circuit.
+         * Minimum number of requests within the rolling window before
+         * the circuit breaker can trip. This prevents the circuit from
+         * opening on the very first failure.
          * @default 15
          */
         failure_threshold: number;
@@ -210,6 +212,24 @@ export type AlkemioConfig = {
          * @default 45000 (45 seconds)
          */
         reset_timeout: number;
+        /**
+         * Percentage of failures within the rolling window that will trip
+         * the circuit. Only evaluated after failure_threshold requests.
+         * @default 50
+         */
+        error_threshold_percentage: number;
+        /**
+         * Duration of the rolling window in milliseconds for tracking
+         * request success/failure rates.
+         * @default 60000 (60 seconds)
+         */
+        rolling_count_timeout: number;
+        /**
+         * Number of buckets in the rolling window. Each bucket represents
+         * rolling_count_timeout / rolling_count_buckets milliseconds.
+         * @default 10
+         */
+        rolling_count_buckets: number;
       };
       /** Retry configuration for transient failure handling */
       retry: {

@@ -211,7 +211,8 @@ export class AuthorizationService {
       const { reason, metadata, retryAfter } = response;
       this.logger.error(
         {
-          message: 'Remote authorization evaluation service is unavailable',
+          message:
+            'Connection issue with remote authorization evaluation service',
           reason,
           retryAfter,
           metadata,

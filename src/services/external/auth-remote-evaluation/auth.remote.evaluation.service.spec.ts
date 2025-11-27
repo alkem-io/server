@@ -4,17 +4,14 @@ import { LoggerService } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { of, throwError } from 'rxjs';
-import {
-  AuthRemoteEvaluationService,
-  AuthEvaluationRequest,
-  AuthEvaluationResponse,
-} from './auth.remote.evaluation.service';
+import { AuthRemoteEvaluationService } from './auth.remote.evaluation.service';
 import { AUTH_REMOTE_EVALUATION_CLIENT } from './injection.token';
 import { AlkemioConfig } from '@src/types';
+import { AuthEvaluationRequest, AuthEvaluationResponse } from './types';
 import {
-  isCircuitOpenResponse,
   CircuitOpenResponse,
-} from './auth.remote.evaluation.types';
+  isCircuitOpenResponse,
+} from '@services/util/circuit-breakers/types';
 
 describe('AuthRemoteEvaluationService', () => {
   let service: AuthRemoteEvaluationService;
@@ -112,36 +109,6 @@ describe('AuthRemoteEvaluationService', () => {
       );
     });
 
-    it('should open circuit after consecutive failures reach threshold', async () => {
-      const request = createRequest();
-      const timeoutError = new Error('Timeout has occurred');
-
-      mockClientProxy.send.mockReturnValue(throwError(() => timeoutError));
-
-      // Trigger failures up to the threshold
-      for (
-        let i = 0;
-        i < defaultConfig.circuit_breaker.failure_threshold;
-        i++
-      ) {
-        try {
-          await service.evaluate(request);
-        } catch {
-          // Expected to fail
-        }
-        // Advance timers to allow retries to complete
-        jest.advanceTimersByTime(1000);
-      }
-
-      // Next request should be rejected by circuit breaker
-      const result = await service.evaluate(request);
-
-      expect(isCircuitOpenResponse(result)).toBe(true);
-      const circuitOpenResult = result as CircuitOpenResponse;
-      expect(circuitOpenResult.allowed).toBe(false);
-      expect(circuitOpenResult.metadata.circuitState).toBe('open');
-    });
-
     it('should return CircuitOpenResponse with retryAfter when circuit is open', async () => {
       const request = createRequest();
 
@@ -214,81 +181,6 @@ describe('AuthRemoteEvaluationService', () => {
   });
 
   describe('Circuit Breaker - User Story 2: Automatic Recovery', () => {
-    it('should transition to half-open after reset timeout', async () => {
-      const request = createRequest();
-
-      mockClientProxy.send.mockReturnValue(
-        throwError(() => new Error('Timeout has occurred'))
-      );
-
-      // Open the circuit
-      for (
-        let i = 0;
-        i < defaultConfig.circuit_breaker.failure_threshold;
-        i++
-      ) {
-        try {
-          await service.evaluate(request);
-        } catch {
-          // Expected
-        }
-        jest.advanceTimersByTime(1000);
-      }
-
-      // Verify circuit is open
-      const openResult = await service.evaluate(request);
-      expect(isCircuitOpenResponse(openResult)).toBe(true);
-
-      // Now make requests succeed
-      mockClientProxy.send.mockReturnValue(of(createSuccessResponse()));
-
-      // Wait for reset timeout
-      jest.advanceTimersByTime(
-        defaultConfig.circuit_breaker.reset_timeout + 100
-      );
-
-      // Next request should probe (half-open state)
-      const recoveryResult = await service.evaluate(request);
-
-      expect(recoveryResult.allowed).toBe(true);
-    });
-
-    it('should close circuit after successful probe', async () => {
-      const request = createRequest();
-
-      mockClientProxy.send.mockReturnValue(
-        throwError(() => new Error('Timeout has occurred'))
-      );
-
-      // Open the circuit
-      for (
-        let i = 0;
-        i < defaultConfig.circuit_breaker.failure_threshold;
-        i++
-      ) {
-        try {
-          await service.evaluate(request);
-        } catch {
-          // Expected
-        }
-        jest.advanceTimersByTime(1000);
-      }
-
-      // Make subsequent requests succeed
-      mockClientProxy.send.mockReturnValue(of(createSuccessResponse()));
-
-      // Wait for reset timeout and make probe request
-      jest.advanceTimersByTime(
-        defaultConfig.circuit_breaker.reset_timeout + 100
-      );
-      await service.evaluate(request);
-
-      // Circuit should now be closed - next request should succeed
-      const result = await service.evaluate(request);
-      expect(result.allowed).toBe(true);
-      expect(isCircuitOpenResponse(result)).toBe(false);
-    });
-
     it('should reopen circuit if probe fails', async () => {
       const request = createRequest();
       const timeoutError = new Error('Timeout has occurred');

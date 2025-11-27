@@ -49,8 +49,8 @@ export class AuthRemoteEvaluationService
     AuthEvaluationResponse | CircuitOpenResponse
   >;
 
-  /** Tracks consecutive failures for circuit breaker threshold evaluation */
-  private consecutiveFailures = 0;
+  /** Tracks if circuit is in half-open state (opossum doesn't expose this cleanly) */
+  private isHalfOpen = false;
 
   /** Timestamp of last reject log to implement rate-limited logging */
   private lastRejectLogTime = 0;
@@ -91,7 +91,11 @@ export class AuthRemoteEvaluationService
   }
 
   /**
-   * Evaluates an authorization request through the circuit breaker.
+   * Evaluates an authorization request through the circuit breaker with retries.
+   *
+   * The circuit breaker wraps individual NATS requests so each failed attempt
+   * counts toward the failure threshold. Retries are handled outside the circuit
+   * breaker to ensure proper failure counting.
    *
    * When the circuit is closed, the request is forwarded to the remote
    * auth evaluation service via NATS. When open, returns a denial response
@@ -110,15 +114,102 @@ export class AuthRemoteEvaluationService
       return this.executeNatsRequest(request);
     }
 
-    return this.circuitBreaker.fire(request);
+    // Log circuit state for debugging using opossum's status property
+    const status = this.circuitBreaker.status;
+    const stats = status?.stats;
+
+    this.logger.verbose?.(
+      {
+        message: 'Evaluating auth request',
+        circuitState: this.getCircuitState(),
+        privilege: request.privilege,
+        stats: stats
+          ? {
+              failures: stats.failures,
+              successes: stats.successes,
+              rejects: stats.rejects,
+              fires: stats.fires,
+            }
+          : undefined,
+      },
+      LogContext.AUTH_EVALUATION
+    );
+
+    // Retry logic wraps the circuit breaker so each attempt counts as a separate
+    // "fire" and failures are properly tracked toward the threshold
+    try {
+      return await this.evaluateWithRetry(request);
+    } catch (error) {
+      // All retries exhausted - return a structured fail-closed response
+      const err = error as Error;
+      this.logger.warn(
+        {
+          message: 'Auth evaluation failed after all retries - denying access',
+          error: err.message,
+          circuitState: this.getCircuitState(),
+        },
+        LogContext.AUTH_EVALUATION
+      );
+
+      return this.createServiceUnavailableResponse(err);
+    }
+  }
+
+  /**
+   * Creates a structured response when the auth service is unavailable.
+   * Returns fail-closed (allowed: false) to maintain security invariants.
+   */
+  private createServiceUnavailableResponse(
+    error: Error
+  ): AuthEvaluationResponse & CircuitOpenResponse {
+    const stats = this.circuitBreaker.status?.stats;
+    const isNoSubscribers = this.isNoSubscribersError(error);
+
+    return {
+      allowed: false,
+      reason: isNoSubscribers
+        ? 'Authorization evaluation service is not running'
+        : 'Authorization evaluation service is temporarily unavailable',
+      metadata: {
+        circuitState: this.getCircuitState(),
+        failureCount: stats?.failures ?? 0,
+        errorType: isNoSubscribers ? 'no-subscribers' : 'service-error',
+      },
+      retryAfter: this.cbConfig.reset_timeout,
+    };
+  }
+
+  /**
+   * Gets the current circuit breaker state as a string.
+   * Uses opossum's status to determine the actual state.
+   */
+  private getCircuitState(): 'open' | 'half-open' | 'closed' {
+    // In opossum:
+    // - opened = true means circuit is OPEN (rejecting requests)
+    // - opened = false could mean CLOSED or HALF-OPEN
+    // - When in half-open, opened is false but it allows exactly one probe
+    //
+    // Unfortunately opossum doesn't expose a clean halfOpen property,
+    // so we track it via our event handler
+    if (this.circuitBreaker.opened) {
+      return 'open';
+    }
+    // Check if we're in half-open state by looking at the pending count
+    // In half-open, there should be exactly one pending request allowed
+    if (this.isHalfOpen) {
+      return 'half-open';
+    }
+    return 'closed';
   }
 
   /**
    * Creates and configures the circuit breaker instance.
    *
-   * The circuit breaker wraps the retry-enabled evaluation function and
-   * provides automatic failure detection and recovery. Configuration is
-   * loaded from alkemio.yml via ConfigService.
+   * The circuit breaker wraps individual NATS requests (not the retry loop)
+   * so that each failed attempt counts toward the failure threshold. This
+   * ensures accurate failure tracking for circuit state transitions.
+   *
+   * Configuration is loaded from alkemio.yml via ConfigService.
    *
    * @returns Configured CircuitBreaker instance
    */
@@ -137,35 +228,91 @@ export class AuthRemoteEvaluationService
       );
     }
 
-    // Create circuit breaker with configured options:
+    // Create circuit breaker wrapping individual NATS requests:
+    // - Each request attempt (including retries) counts as a separate "fire"
+    // - Each failure counts toward the failure threshold
     // - timeout: disabled here; we use RxJS timeout in executeNatsRequest
-    // - errorThresholdPercentage: 100% means we use volumeThreshold for consecutive failures
-    // - volumeThreshold: number of failures before opening the circuit
+    // - errorThresholdPercentage: percentage of failures to trip the circuit
+    // - volumeThreshold: minimum requests in window before circuit can trip
     // - resetTimeout: ms to wait before transitioning from open to half-open
+    // - rollingCountTimeout: window for counting failures
+    // - rollingCountBuckets: number of buckets in the rolling window
     const circuitBreaker = new CircuitBreaker(
-      (request: AuthEvaluationRequest) => this.evaluateWithRetry(request),
+      (request: AuthEvaluationRequest) => this.executeNatsRequest(request),
       {
         timeout: false,
-        errorThresholdPercentage: 100,
+        errorThresholdPercentage: this.cbConfig.error_threshold_percentage,
         volumeThreshold: this.cbConfig.failure_threshold,
         resetTimeout: this.cbConfig.reset_timeout,
+        rollingCountTimeout: this.cbConfig.rolling_count_timeout,
+        rollingCountBuckets: this.cbConfig.rolling_count_buckets,
       }
     );
 
-    // Fallback function executes when circuit is open.
-    // Returns a fail-closed response (allowed: false) to maintain security
-    // invariants even when the auth service is unavailable.
+    this.logger.log(
+      {
+        message: 'Circuit breaker initialized',
+        config: {
+          errorThresholdPercentage: this.cbConfig.error_threshold_percentage,
+          volumeThreshold: this.cbConfig.failure_threshold,
+          resetTimeout: this.cbConfig.reset_timeout,
+          timeout: this.cbConfig.timeout,
+          rollingCountTimeout: this.cbConfig.rolling_count_timeout,
+          rollingCountBuckets: this.cbConfig.rolling_count_buckets,
+        },
+      },
+      LogContext.AUTH_EVALUATION
+    );
+
+    // Fallback function executes when circuit is open (rejecting requests).
+    // When circuit is closed/half-open and the wrapped function throws,
+    // we let the error propagate so retry logic can handle it.
+    // We only return a fail-closed response when actively rejecting.
     circuitBreaker.fallback(
       (
-        _request: AuthEvaluationRequest
+        _request: AuthEvaluationRequest,
+        error?: Error
       ): AuthEvaluationResponse & CircuitOpenResponse => {
-        const retryAfter = this.calculateRetryAfter();
+        const retryAfter = this.cbConfig.reset_timeout;
+        const isOpen = circuitBreaker.opened;
+        const stats = circuitBreaker.status?.stats;
+
+        // If circuit is NOT open, this fallback was triggered by an error
+        // from the wrapped function. Re-throw so retry logic can handle it.
+        if (!isOpen && error) {
+          this.logger.verbose?.(
+            {
+              message:
+                'Fallback triggered by error (circuit closed) - re-throwing for retry',
+              error: error.message,
+              stats: stats
+                ? { failures: stats.failures, fires: stats.fires }
+                : undefined,
+            },
+            LogContext.AUTH_EVALUATION
+          );
+          throw error;
+        }
+
+        this.logger.verbose?.(
+          {
+            message: 'Circuit breaker fallback triggered - returning denial',
+            circuitOpen: isOpen,
+            reason: isOpen ? 'circuit-open' : 'half-open-probe-failed',
+            retryAfter,
+            stats: stats
+              ? { failures: stats.failures, fires: stats.fires }
+              : undefined,
+          },
+          LogContext.AUTH_EVALUATION
+        );
+
         return {
           allowed: false, // Fail-closed: deny access when service unavailable
           reason: 'Authorization evaluation service is temporarily unavailable',
           metadata: {
             circuitState: 'open',
-            failureCount: this.consecutiveFailures,
+            failureCount: stats?.failures ?? 0,
           },
           retryAfter, // Hints to clients when to retry
         };
@@ -186,7 +333,7 @@ export class AuthRemoteEvaluationService
    * - Rate limiting: preventing log flooding during sustained outages
    *
    * Event flow during a failure scenario:
-   * 1. Requests fail → failures accumulate
+   * 1. Requests fail → 'failure' events fire
    * 2. Threshold reached → 'open' event fires
    * 3. Reset timeout expires → 'halfOpen' event fires
    * 4. Probe request succeeds → 'close' event fires (or fails → back to 'open')
@@ -199,15 +346,31 @@ export class AuthRemoteEvaluationService
       AuthEvaluationResponse | CircuitOpenResponse
     >
   ): void {
+    // 'failure' event: A request failed (error was thrown from wrapped function)
+    circuitBreaker.on('failure', (error: Error) => {
+      this.logger.verbose?.(
+        {
+          message: 'Circuit breaker recorded failure',
+          error: error.message,
+          stats: circuitBreaker.status?.stats,
+        },
+        LogContext.AUTH_EVALUATION
+      );
+    });
+
     // 'open' event: Circuit has tripped due to too many failures.
     // This is a significant event indicating the downstream service is unhealthy.
     // Log at warn level to ensure visibility in monitoring systems.
     circuitBreaker.on('open', () => {
+      this.isHalfOpen = false;
+      const stats = circuitBreaker.status?.stats;
       this.logger.warn(
         {
-          message: 'Circuit breaker opened',
-          failureCount: this.consecutiveFailures,
+          message: 'Circuit breaker OPENED - requests will be rejected',
           resetTimeout: this.cbConfig.reset_timeout,
+          stats: stats
+            ? { failures: stats.failures, fires: stats.fires }
+            : undefined,
         },
         LogContext.AUTH_EVALUATION
       );
@@ -217,40 +380,55 @@ export class AuthRemoteEvaluationService
     // The next request will be a "probe" - if it succeeds, circuit closes;
     // if it fails, circuit reopens immediately.
     circuitBreaker.on('halfOpen', () => {
-      this.logger.verbose?.(
-        'Circuit breaker entering half-open state - probing for recovery',
+      this.isHalfOpen = true;
+      const stats = circuitBreaker.status?.stats;
+      this.logger.warn(
+        {
+          message:
+            'Circuit breaker HALF-OPEN - allowing probe request to test recovery',
+          stats: stats
+            ? { failures: stats.failures, fires: stats.fires }
+            : undefined,
+        },
         LogContext.AUTH_EVALUATION
       );
     });
 
     // 'close' event: Probe request succeeded, service has recovered.
-    // Reset the consecutive failure counter since we're back to normal operation.
+    // opossum automatically resets stats when circuit closes.
     circuitBreaker.on('close', () => {
-      this.consecutiveFailures = 0;
-      this.logger.verbose?.(
-        'Circuit breaker closed - service recovered',
+      this.isHalfOpen = false;
+      this.logger.warn(
+        {
+          message: 'Circuit breaker CLOSED - service recovered',
+        },
         LogContext.AUTH_EVALUATION
       );
     });
 
-    // 'timeout' event: A request exceeded the configured timeout.
-    // Note: We handle timeouts via RxJS, so this may not fire frequently.
+    // 'timeout' event: A request exceeded opossum's internal timeout.
+    // Note: We disabled opossum timeout and use RxJS, so this may not fire.
     circuitBreaker.on('timeout', () => {
-      this.logger.verbose?.('Request timed out', LogContext.AUTH_EVALUATION);
+      this.logger.verbose?.(
+        'Opossum timeout event fired',
+        LogContext.AUTH_EVALUATION
+      );
     });
 
     // 'reject' event: Request was rejected because circuit is open.
-    // This can fire very frequently during an outage (once per blocked request),
-    // so we rate-limit logging to once per reset_timeout interval to prevent
-    // log flooding while still providing visibility into ongoing issues.
+    // This fires for every blocked request while circuit is open.
+    // We rate-limit logging to prevent flooding.
     circuitBreaker.on('reject', () => {
       const now = Date.now();
       if (now - this.lastRejectLogTime > this.REJECT_LOG_INTERVAL) {
+        const stats = circuitBreaker.status?.stats;
         this.logger.warn(
           {
-            message: 'Circuit breaker rejecting requests',
-            failureCount: this.consecutiveFailures,
-            retryAfter: this.calculateRetryAfter(),
+            message: 'Circuit breaker REJECTING requests (circuit is open)',
+            retryAfterMs: this.cbConfig.reset_timeout,
+            stats: stats
+              ? { failures: stats.failures, fires: stats.fires }
+              : undefined,
           },
           LogContext.AUTH_EVALUATION
         );
@@ -263,54 +441,70 @@ export class AuthRemoteEvaluationService
    * Calculates the approximate time until the circuit breaker will
    * transition from open to half-open state.
    *
-   * This value is included in CircuitOpenResponse to help clients
-   * implement intelligent retry strategies.
-   *
-   * @returns Milliseconds until the circuit will attempt recovery
-   */
-  private calculateRetryAfter(): number {
-    const stats = this.circuitBreaker.stats;
-    const now = Date.now();
-    // Note: opossum doesn't expose the exact time the circuit opened,
-    // so we approximate based on reset_timeout from current time
-    const lastFailureTime = stats && 'latencyMean' in stats ? now : now;
-    const resetTimeout = this.cbConfig.reset_timeout;
-    return Math.max(0, resetTimeout - (now - lastFailureTime));
-  }
-
-  /**
    * Executes an authorization request with retry logic for transient failures.
+   *
+   * Each retry attempt goes through the circuit breaker, ensuring that every
+   * failed attempt is counted toward the failure threshold. This provides
+   * accurate failure tracking for circuit state transitions.
    *
    * Implements exponential backoff between retry attempts. Certain errors
    * (like "no subscribers listening") are not retried as they indicate
    * the service is not running rather than a transient issue.
    *
    * @param request - The authorization evaluation request
-   * @returns The successful evaluation response
+   * @returns The successful evaluation response, or CircuitOpenResponse if circuit is open
    * @throws The last error encountered if all retries are exhausted
    */
   private async evaluateWithRetry(
     request: AuthEvaluationRequest
-  ): Promise<AuthEvaluationResponse> {
+  ): Promise<AuthEvaluationResponse | CircuitOpenResponse> {
     let lastError: Error | undefined;
 
     for (let attempt = 1; attempt <= this.retryConfig.max_attempts; attempt++) {
+      // Check if circuit is open BEFORE firing - if open, return immediately
+      // This prevents unnecessary retry attempts when circuit has tripped
+      if (this.circuitBreaker.opened) {
+        this.logger.verbose?.(
+          {
+            message: 'Circuit is open - skipping retry attempt',
+            attempt,
+            maxAttempts: this.retryConfig.max_attempts,
+          },
+          LogContext.AUTH_EVALUATION
+        );
+        // Return fallback response directly
+        return this.createCircuitOpenResponse();
+      }
+
       try {
-        const result = await this.executeNatsRequest(request);
-        // Reset consecutive failures on success
-        this.consecutiveFailures = 0;
+        // Each attempt goes through the circuit breaker, so failures are counted
+        const result = await this.circuitBreaker.fire(request);
+
+        // Check if fallback was triggered (circuit opened during the call)
+        if (this.isCircuitOpenResponse(result)) {
+          // Circuit opened - don't retry, return immediately
+          return result;
+        }
+
+        // Success - return the result
         return result;
       } catch (error) {
         lastError = error as Error;
 
+        this.logger.verbose?.(
+          {
+            message: 'Auth evaluation attempt failed',
+            attempt,
+            maxAttempts: this.retryConfig.max_attempts,
+            error: lastError.message,
+          },
+          LogContext.AUTH_EVALUATION
+        );
+
         // FR-016: Don't retry on "no subscribers listening" - service not running
         if (this.isNoSubscribersError(lastError)) {
-          this.consecutiveFailures++;
           throw lastError;
         }
-
-        // Count failure toward circuit threshold
-        this.consecutiveFailures++;
 
         // Check if we should retry
         if (
@@ -331,12 +525,49 @@ export class AuthRemoteEvaluationService
           await this.delay(delay);
         } else {
           // Not retryable or max attempts reached
+          this.logger.warn(
+            {
+              message: 'Auth evaluation failed - no more retries',
+              attempt,
+              maxAttempts: this.retryConfig.max_attempts,
+              error: lastError.message,
+              isRetryable: this.isRetryableError(lastError),
+            },
+            LogContext.AUTH_EVALUATION
+          );
           break;
         }
       }
     }
 
     throw lastError ?? new Error('Auth evaluation failed after retries');
+  }
+
+  /**
+   * Type guard to check if a response indicates the circuit is open.
+   */
+  private isCircuitOpenResponse(
+    response: AuthEvaluationResponse | CircuitOpenResponse
+  ): response is CircuitOpenResponse {
+    return 'retryAfter' in response && 'metadata' in response;
+  }
+
+  /**
+   * Creates a circuit open response for when the circuit breaker is open.
+   * Used to provide a consistent response when requests are rejected.
+   */
+  private createCircuitOpenResponse(): AuthEvaluationResponse &
+    CircuitOpenResponse {
+    const stats = this.circuitBreaker.status?.stats;
+    return {
+      allowed: false,
+      reason: 'Authorization evaluation service is temporarily unavailable',
+      metadata: {
+        circuitState: 'open',
+        failureCount: stats?.failures ?? 0,
+      },
+      retryAfter: this.cbConfig.reset_timeout,
+    };
   }
 
   /**
@@ -370,7 +601,7 @@ export class AuthRemoteEvaluationService
    * Determines if an error is transient and worth retrying.
    *
    * Retryable errors include:
-   * - Timeouts (request didn't complete in time)
+   * - Timeouts (might be transient network delay)
    * - Connection/network errors (temporary connectivity issues)
    *
    * Non-retryable errors (fail fast):
@@ -382,6 +613,7 @@ export class AuthRemoteEvaluationService
    */
   private isRetryableError(error: Error): boolean {
     const message = error.message?.toLowerCase() ?? '';
+    // Retry on timeouts and transient connection/network errors
     if (message.includes('timeout') || message.includes('timed out')) {
       return true;
     }
