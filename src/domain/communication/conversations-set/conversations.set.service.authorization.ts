@@ -99,8 +99,12 @@ export class ConversationsSetAuthorizationService {
       );
     if (!hostConversationWithReceiver) {
       throw new ForbiddenException(
-        `user (${hostUserID}) does not have a conversation with the receiver(${receiverUserID}).`,
-        LogContext.COMMUNICATION
+        'Host user does not have a conversation with the receiver user.',
+        LogContext.COMMUNICATION,
+        {
+          hostUserID,
+          receiverUserID,
+        }
       );
     }
     const hostConversationWithReceiverAuthorizations =
