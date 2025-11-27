@@ -5,7 +5,6 @@ import {
   MESSAGEID_LENGTH,
   MID_TEXT_LENGTH,
   SMALL_TEXT_LENGTH,
-  UUID_LENGTH,
 } from '@common/constants';
 import { ActivityEventType } from '@common/enums/activity.event.type';
 
@@ -17,19 +16,19 @@ export class Activity extends BaseAlkemioEntity implements IActivity {
   @Generated('increment')
   rowId!: number;
 
-  @Column('char', { length: UUID_LENGTH, nullable: false })
+  @Column('uuid', { nullable: false })
   triggeredBy!: string;
 
-  @Column('char', { length: UUID_LENGTH, nullable: false })
+  @Column('uuid', { nullable: false })
   resourceID!: string;
 
-  @Column('char', { length: UUID_LENGTH, nullable: true })
+  @Column('uuid', { nullable: true })
   parentID?: string;
 
-  @Column('char', { length: UUID_LENGTH, nullable: false })
+  @Column('uuid', { nullable: false })
   collaborationID!: string;
 
-  @Column('char', { length: MESSAGEID_LENGTH, nullable: true })
+  @Column('varchar', { length: MESSAGEID_LENGTH, nullable: true })
   messageID!: string;
 
   @Column('boolean', { nullable: false })

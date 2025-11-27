@@ -325,13 +325,13 @@ storage:
     port: ${DATABASE_PORT}:5432
 
     # Database username.
-    username: ${DATABASE_USERNAME}:alkemio
+    username: ${DATABASE_USERNAME}:synapse
 
     # The timezone in which typeorm will interpret the dates. Default is Z for UTC (MySQL only)
     timezone: ${TYPEORM_TIMEZONE}:Z
 
     # Database password.
-    password: ${DATABASE_PASSWORD}:alkemio
+    password: ${DATABASE_PASSWORD}:synapse
 
     # Database schema / database name.
     schema: ${DATABASE_NAME}:alkemio

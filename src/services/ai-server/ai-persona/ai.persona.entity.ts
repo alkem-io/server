@@ -28,7 +28,7 @@ export class AiPersona extends AuthorizableEntity implements IAiPersona {
   })
   externalConfig?: IExternalConfig = {};
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   bodyOfKnowledgeLastUpdated: Date | null = null;
 
   @Column('json', { nullable: true, transformer: PromptGraphTransformer })
