@@ -131,12 +131,12 @@ SKIPPED_TABLES=()
 # First, process tables in the defined order
 for TABLE_NAME in "${IMPORT_ORDER[@]}"; do
     CSV_FILE="${EXPORT_DIR}/${TABLE_NAME}.csv"
-    
+
     # Check if CSV exists
     if [ ! -f "$CSV_FILE" ]; then
         continue
     fi
-    
+
     # Check if table should be skipped
     SHOULD_SKIP=false
     for SKIP in "${SKIP_TABLES[@]}"; do
@@ -147,18 +147,18 @@ for TABLE_NAME in "${IMPORT_ORDER[@]}"; do
             break
         fi
     done
-    
+
     if [ "$SHOULD_SKIP" = true ]; then
         continue
     fi
-    
+
     # Check if table exists in PostgreSQL
     if ! echo "$EXISTING_TABLES" | grep -q "^${TABLE_NAME}$"; then
         echo "  Skipping ${TABLE_NAME} - table does not exist in PostgreSQL"
         SKIPPED_TABLES+=("$TABLE_NAME")
         continue
     fi
-    
+
     TABLES_TO_IMPORT+=("$TABLE_NAME")
 done
 
@@ -166,7 +166,7 @@ done
 for CSV_FILE in $CSV_FILES; do
     FILENAME=$(basename "$CSV_FILE")
     TABLE_NAME="${FILENAME%.csv}"
-    
+
     # Check if already processed
     ALREADY_PROCESSED=false
     for ORDERED in "${IMPORT_ORDER[@]}"; do
@@ -181,18 +181,18 @@ for CSV_FILE in $CSV_FILES; do
             break
         fi
     done
-    
+
     if [ "$ALREADY_PROCESSED" = true ]; then
         continue
     fi
-    
+
     # Check if table exists in PostgreSQL
     if ! echo "$EXISTING_TABLES" | grep -q "^${TABLE_NAME}$"; then
         echo "  Skipping ${TABLE_NAME} - table does not exist in PostgreSQL"
         SKIPPED_TABLES+=("$TABLE_NAME")
         continue
     fi
-    
+
     TABLES_TO_IMPORT+=("$TABLE_NAME")
 done
 

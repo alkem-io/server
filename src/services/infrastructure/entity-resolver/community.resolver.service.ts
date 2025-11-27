@@ -455,12 +455,13 @@ export class CommunityResolverService {
       communityType: string;
     }[] = await this.entityManager.connection.query(
       `
-        SELECT \`space\`.\`id\` as \`spaceId\`, \`space\`.\`communityId\` as communityId, 'space' as \`entityType\` FROM \`timeline\`
-        RIGHT JOIN \`space\` on \`timeline\`.\`id\` = \`space\`.\`timelineID\`
-        JOIN \`calendar\` on \`timeline\`.\`calendarId\` = \`calendar\`.\`id\`
-        JOIN \`calendar_event\` on \`calendar\`.\`id\` = \`calendar_event\`.\`calendarId\`
-        WHERE \`calendar_event\`.\`id\` = '${calendarEventId}';
-      `
+        SELECT "space"."id" as "spaceId", "space"."communityId" as "communityId", 'space' as "entityType" FROM "timeline"
+        RIGHT JOIN "space" on "timeline"."id" = "space"."timelineID"
+        JOIN "calendar" on "timeline"."calendarId" = "calendar"."id"
+        JOIN "calendar_event" on "calendar"."id" = "calendar_event"."calendarId"
+        WHERE "calendar_event"."id" = $1
+      `,
+      [calendarEventId]
     );
 
     const community = await this.communityRepository.findOneBy({
