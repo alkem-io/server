@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import {
   ClientProxyFactory,
   Transport,
@@ -8,6 +9,7 @@ import { AUTH_REMOTE_EVALUATION_CLIENT } from './injection.token';
 import { AuthRemoteEvaluationService } from './auth.remote.evaluation.service';
 
 @Module({
+  imports: [ConfigModule],
   providers: [
     {
       provide: AUTH_REMOTE_EVALUATION_CLIENT,

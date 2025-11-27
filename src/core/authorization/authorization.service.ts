@@ -14,16 +14,11 @@ import { IAuthorizationPolicyRuleVerifiedCredential } from './authorization.poli
 import { AuthorizationInvalidPolicyException } from '@common/exceptions/authorization.invalid.policy.exception';
 import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
-import {
-  AuthEvaluationResponse,
-  AuthRemoteEvaluationService,
-} from '@services/external/auth-remote-evaluation';
-import { User } from '@domain/community/user/user.entity';
-import { Space } from '@domain/space/space/space.entity';
+import { AuthRemoteEvaluationService } from '@services/external/auth-remote-evaluation';
+import { AuthEvaluationResponse } from '@services/external/auth-remote-evaluation/types';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager } from 'typeorm';
-import { Agent } from '@domain/agent';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { isCircuitOpenResponse } from '@services/util/circuit-breakers/types';
 
 @Injectable()
 export class AuthorizationService {
@@ -206,11 +201,28 @@ export class AuthorizationService {
     authorizationPolicyId: string,
     requiredPrivilege: AuthorizationPrivilege
   ): Promise<AuthEvaluationResponse> {
-    return this.remoteAuthEvaluationService.evaluate({
+    const response = await this.remoteAuthEvaluationService.evaluate({
       agentId,
       authorizationPolicyId,
       privilege: requiredPrivilege,
     });
+
+    if (isCircuitOpenResponse(response)) {
+      const { reason, metadata, retryAfter } = response;
+      this.logger.error(
+        {
+          message: 'Remote authorization evaluation service is unavailable',
+          reason,
+          retryAfter,
+          metadata,
+        },
+        undefined,
+        LogContext.AUTH_EVALUATION
+      );
+      return { allowed: false, reason };
+    }
+
+    return response;
   }
 
   public getGrantedPrivileges(

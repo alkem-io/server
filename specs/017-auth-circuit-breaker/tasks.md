@@ -24,10 +24,10 @@
 
 **Purpose**: Install dependencies and extend configuration schema
 
-- [ ] T001 Install opossum circuit breaker library: `pnpm add opossum`
-- [ ] T002 Install opossum TypeScript types: `pnpm add -D @types/opossum`
-- [ ] T003 [P] Add auth_evaluation configuration section to `alkemio.yml` under microservices namespace
-- [ ] T004 [P] Extend AlkemioConfig type with auth_evaluation config in `src/types/alkemio.config.ts`
+- [x] T001 Install opossum circuit breaker library: `pnpm add opossum`
+- [x] T002 Install opossum TypeScript types: `pnpm add -D @types/opossum`
+- [x] T003 [P] Add auth_evaluation configuration section to `alkemio.yml` under microservices namespace
+- [x] T004 [P] Extend AlkemioConfig type with auth_evaluation config in `src/types/alkemio.config.ts`
 
 ---
 
@@ -37,7 +37,7 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T005 Create `src/services/external/auth-remote-evaluation/auth.remote.evaluation.types.ts` with:
+- [x] T005 Create `src/services/external/auth-remote-evaluation/auth.remote.evaluation.types.ts` with:
   - AuthEvaluationCircuitBreakerConfig interface
   - AuthEvaluationRetryConfig interface
   - AuthEvaluationConfig interface
@@ -45,7 +45,7 @@
   - CircuitOpenResponse interface
   - isCircuitOpenResponse type guard
   - AUTH_EVALUATION_CONFIG_DEFAULTS constant
-- [ ] T006 Update `src/services/external/auth-remote-evaluation/index.ts` to export new types
+- [x] T006 Update `src/services/external/auth-remote-evaluation/index.ts` to export new types
 
 **Checkpoint**: Foundation ready - type definitions in place for service implementation
 
@@ -57,10 +57,10 @@
 
 **Independent Test**: Stop NATS server or auth microservice, verify authorization requests fail within 3 seconds with CircuitOpenResponse
 
-- [ ] T007 [US1] Update `src/services/external/auth-remote-evaluation/auth.remote.evaluation.module.ts`:
+- [x] T007 [US1] Update `src/services/external/auth-remote-evaluation/auth.remote.evaluation.module.ts`:
   - Add ConfigModule import
   - Inject ConfigService into module providers
-- [ ] T008 [US1] Refactor `src/services/external/auth-remote-evaluation/auth.remote.evaluation.service.ts`:
+- [x] T008 [US1] Refactor `src/services/external/auth-remote-evaluation/auth.remote.evaluation.service.ts`:
   - Add ConfigService injection to constructor
   - Add private circuitBreaker: CircuitBreaker property
   - Add private retryConfig property from ConfigService
@@ -69,11 +69,11 @@
   - Create private isRetryableError() helper (retry timeouts/connections, not "no subscribers")
   - Create private delay() helper for backoff timing
   - Initialize circuit breaker in constructor
-- [ ] T009 [US1] Implement circuit breaker wrapping in `auth.remote.evaluation.service.ts`:
+- [x] T009 [US1] Implement circuit breaker wrapping in `auth.remote.evaluation.service.ts`:
   - Wrap NATS client.send() call inside circuit breaker
   - Add fallback function returning CircuitOpenResponse when circuit is open
   - Calculate retryAfter from circuit state and reset timeout
-- [ ] T010 [US1] Implement retry logic in `auth.remote.evaluation.service.ts`:
+- [x] T010 [US1] Implement retry logic in `auth.remote.evaluation.service.ts`:
   - Implement evaluateWithRetry() that wraps executeNatsRequest()
   - Add exponential backoff calculation: min(baseDelay * 2^(attempt-1), 8000)
   - Exit retry loop immediately on "no subscribers listening" error (FR-016)
@@ -89,10 +89,10 @@
 
 **Independent Test**: Simulate failure until circuit opens, wait 45s, restore service, verify circuit closes automatically
 
-- [ ] T011 [US2] Extend circuit breaker configuration in `auth.remote.evaluation.service.ts`:
+- [x] T011 [US2] Extend circuit breaker configuration in `auth.remote.evaluation.service.ts`:
   - Set resetTimeout from config (default: 45000ms)
   - Configure half-open behavior (single probe request)
-- [ ] T012 [US2] Implement state transition handling in `auth.remote.evaluation.service.ts`:
+- [x] T012 [US2] Implement state transition handling in `auth.remote.evaluation.service.ts`:
   - Track circuit state for response metadata
   - Reset failure count on successful probe
   - Reopen circuit immediately on probe failure
@@ -107,17 +107,17 @@
 
 **Independent Test**: Trigger circuit state changes, verify log entries with correct levels and context
 
-- [ ] T013 [US3] Add opossum event handlers in `auth.remote.evaluation.service.ts`:
+- [x] T013 [US3] Add opossum event handlers in `auth.remote.evaluation.service.ts`:
   - Create private attachEventHandlers() method called in constructor
   - Handle 'open' event: warn level log with failure count
   - Handle 'halfOpen' event: verbose level log
   - Handle 'close' event: verbose level log
   - Handle 'timeout' event: verbose level log
-- [ ] T014 [US3] Implement rate-limited reject logging in `auth.remote.evaluation.service.ts`:
+- [x] T014 [US3] Implement rate-limited reject logging in `auth.remote.evaluation.service.ts`:
   - Add private lastRejectLogTime: number = 0 property
   - Add private REJECT_LOG_INTERVAL = 45000 constant (matches reset timeout)
   - Handle 'reject' event: rate-limited warn log (once per circuit-open period)
-- [ ] T015 [US3] Add retry attempt logging in `auth.remote.evaluation.service.ts`:
+- [x] T015 [US3] Add retry attempt logging in `auth.remote.evaluation.service.ts`:
   - Log each retry at verbose level with: attempt number, delay, error reason
   - Use LogContext.AUTH_EVALUATION for all logs
 
@@ -133,19 +133,19 @@
 
 ### User Story 1 Tests - Circuit Breaker Core
 
-- [ ] T016 [P] [US1] Create `src/services/external/auth-remote-evaluation/auth.remote.evaluation.service.spec.ts`:
+- [x] T016 [P] [US1] Create `src/services/external/auth-remote-evaluation/auth.remote.evaluation.service.spec.ts`:
   - Test: circuit breaker opens after 15 consecutive failures
   - Test: request timeout triggers failure count
   - Test: CircuitOpenResponse returned when circuit is open
   - Test: retryAfter field correctly calculated
-- [ ] T017 [P] [US1] Add retry logic tests to `auth.remote.evaluation.service.spec.ts`:
+- [x] T017 [P] [US1] Add retry logic tests to `auth.remote.evaluation.service.spec.ts`:
   - Test: retry on timeout error with exponential backoff
   - Test: no retry on "no subscribers listening" error
   - Test: retry stops when circuit opens
 
 ### User Story 2 Tests - Recovery Behavior
 
-- [ ] T018 [P] [US2] Add recovery tests to `auth.remote.evaluation.service.spec.ts`:
+- [x] T018 [P] [US2] Add recovery tests to `auth.remote.evaluation.service.spec.ts`:
   - Test: circuit transitions to half-open after reset timeout
   - Test: successful probe closes circuit
   - Test: failed probe reopens circuit
@@ -153,7 +153,7 @@
 
 ### User Story 3 Tests - Observability
 
-- [ ] T019 [P] [US3] Add logging tests to `auth.remote.evaluation.service.spec.ts`:
+- [x] T019 [P] [US3] Add logging tests to `auth.remote.evaluation.service.spec.ts`:
   - Test: warn log emitted when circuit opens
   - Test: verbose log emitted on half-open and close
   - Test: retry attempts logged at verbose level
@@ -167,11 +167,11 @@
 
 **Purpose**: Documentation, validation, and cleanup
 
-- [ ] T020 [P] Verify lint passes: `pnpm lint`
-- [ ] T021 [P] Verify all tests pass: `pnpm test:ci -- --testPathPattern="auth.remote.evaluation"`
-- [ ] T022 [P] Update `specs/017-auth-circuit-breaker/quickstart.md` with actual test commands
-- [ ] T023 Run quickstart.md validation (manual test with NATS down)
-- [ ] T024 Code review: verify no dynamic data in exception messages per copilot-instructions.md
+- [x] T020 [P] Verify lint passes: `pnpm lint`
+- [x] T021 [P] Verify all tests pass: `pnpm test:ci -- --testPathPattern="auth.remote.evaluation"`
+- [x] T022 [P] Update `specs/017-auth-circuit-breaker/quickstart.md` with actual test commands
+- [x] T023 Run quickstart.md validation (manual test with NATS down)
+- [x] T024 Code review: verify no dynamic data in exception messages per copilot-instructions.md
 
 ---
 

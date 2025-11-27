@@ -385,6 +385,19 @@ microservices:
       invoke_engine_generic: ${RABBITMQ_INVOKE_ENGINE_GENERIC}:virtual-contributor-engine-generic
       invoke_engine_openai_assistant: ${RABBITMQ_INVOKE_ENGINE_OPENAI_ASSISTANT}:virtual-contributor-engine-openai-assistant
 
+  # Auth remote evaluation service configuration
+  auth_evaluation:
+    queue_name: ${AUTH_EVAL_QUEUE_NAME}:auth.evaluate
+    circuit_breaker:
+      enabled: ${AUTH_EVAL_CIRCUIT_BREAKER_ENABLED}:true
+      timeout: ${AUTH_EVAL_TIMEOUT}:3000
+      failure_threshold: ${AUTH_EVAL_FAILURE_THRESHOLD}:15
+      reset_timeout: ${AUTH_EVAL_RESET_TIMEOUT}:45000
+    retry:
+      max_attempts: ${AUTH_EVAL_MAX_RETRIES}:5
+      base_delay: ${AUTH_EVAL_RETRY_BASE_DELAY}:500
+      backoff_multiplier: ${AUTH_EVAL_RETRY_BACKOFF}:2
+
 # integrations with 3rd party services
 integrations:
   # Different types of geo information like lat, lan, city, country, etc...

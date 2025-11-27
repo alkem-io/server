@@ -182,6 +182,56 @@ export type AlkemioConfig = {
         invoke_engine_openai_assistant: string;
       };
     };
+    /** Auth evaluation service configuration for remote authorization checks */
+    auth_evaluation: {
+      // Name of the NATS queue for sending auth evaluation requests
+      queue_name: string;
+      /** Circuit breaker configuration for resilience against service failures */
+      circuit_breaker: {
+        /**
+         * Whether circuit breaker functionality is enabled.
+         * When false, requests pass through without circuit protection.
+         * @default true
+         */
+        enabled: boolean;
+        /**
+         * Request timeout in milliseconds.
+         * Requests exceeding this duration are considered failures.
+         * @default 3000 (3 seconds)
+         */
+        timeout: number;
+        /**
+         * Number of consecutive failures required to open the circuit.
+         * @default 15
+         */
+        failure_threshold: number;
+        /**
+         * Time in milliseconds before circuit transitions from open to half-open.
+         * @default 45000 (45 seconds)
+         */
+        reset_timeout: number;
+      };
+      /** Retry configuration for transient failure handling */
+      retry: {
+        /**
+         * Maximum number of retry attempts before giving up.
+         * Does not include the initial attempt.
+         * @default 5
+         */
+        max_attempts: number;
+        /**
+         * Base delay in milliseconds for the first retry.
+         * @default 500
+         */
+        base_delay: number;
+        /**
+         * Multiplier for exponential backoff calculation.
+         * delay = base_delay * (multiplier ^ attempt)
+         * @default 2
+         */
+        backoff_multiplier: number;
+      };
+    };
   };
   integrations: {
     geo: {
