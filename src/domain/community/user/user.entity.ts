@@ -10,13 +10,13 @@ import { IUser } from '@domain/community/user/user.interface';
 import { Application } from '@domain/access/application/application.entity';
 import { ContributorBase } from '../contributor/contributor.base.entity';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
-import { Room } from '@domain/communication/room/room.entity';
 import {
   MID_TEXT_LENGTH,
   SMALL_TEXT_LENGTH,
   UUID_LENGTH,
 } from '@common/constants';
 import { UserSettings } from '../user-settings/user.settings.entity';
+import { ConversationsSet } from '@domain/communication/conversations-set/conversations.set.entity';
 
 @Entity()
 export class User extends ContributorBase implements IUser {
@@ -76,11 +76,11 @@ export class User extends ContributorBase implements IUser {
   @JoinColumn()
   storageAggregator?: StorageAggregator;
 
-  @OneToOne(() => Room, {
+  @OneToOne(() => ConversationsSet, {
     eager: false,
     cascade: true,
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  guidanceRoom?: Room;
+  conversationsSet?: ConversationsSet;
 }

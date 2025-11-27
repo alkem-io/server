@@ -21,7 +21,11 @@ import { UserService } from '@domain/community/user/user.service';
 import { MessagingNotEnabledException } from '@common/exceptions/messaging.not.enabled.exception';
 import { LogContext } from '@common/enums/logging.context';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
-import { UserSendMessageInput } from '@domain/communication/communication/dto/communication.dto.send.direct.message.user';
+import { ConversationsSetService } from '../conversations-set/conversations.set.service';
+import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
+import { ConversationsSetAuthorizationService } from '../conversations-set/conversations.set.service.authorization';
+import { ConversationService } from '../conversation/conversation.service';
+import { MatrixEntityNotFoundException } from '@common/exceptions/matrix.entity.not.found.exception';
 
 @InstrumentResolver()
 @Resolver()
@@ -33,53 +37,12 @@ export class CommunicationResolverMutations {
     private notificationUserAdapter: NotificationUserAdapter,
     private notificationOrganizationAdapter: NotificationOrganizationAdapter,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
+    private conversationsSetService: ConversationsSetService,
+    private conversationService: ConversationService,
+    private conversationsSetAuthorizationService: ConversationsSetAuthorizationService,
     private userService: UserService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
-
-  @Mutation(() => String, {
-    description:
-      'Sends a message on the specified User`s behalf and returns the room id',
-  })
-  async sendMessageToUserDirect(
-    @Args('messageData') messageData: UserSendMessageInput,
-    @CurrentUser() agentInfo: AgentInfo
-  ): Promise<string> {
-    const receivingUser = await this.userService.getUserOrFail(
-      messageData.receivingUserID,
-      {
-        relations: {
-          settings: true,
-        },
-      }
-    );
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      receivingUser.authorization,
-      AuthorizationPrivilege.READ,
-      `user send message: ${receivingUser.id}`
-    );
-
-    // Check if the user is willing to receive messages
-    if (!receivingUser.settings.communication.allowOtherUsersToSendMessages) {
-      throw new MessagingNotEnabledException(
-        'User is not open to receiving messages',
-        LogContext.USER,
-        {
-          userId: receivingUser.id,
-          senderId: agentInfo.userID,
-        }
-      );
-    }
-
-    const message = await this.communicationAdapter.sendMessageToUser({
-      senderCommunicationsID: agentInfo.communicationID,
-      message: messageData.message,
-      receiverCommunicationsID: receivingUser.communicationID,
-    });
-    // TODO: decide what should be the api
-    return message.id;
-  }
 
   @Mutation(() => Boolean, {
     description: 'Send message to multiple Users.',
@@ -127,30 +90,80 @@ export class CommunicationResolverMutations {
 
     // To test out the logic
     if (messageData.receiverIds.length === 1) {
+      const receiverID = messageData.receiverIds[0];
       if (this.communicationAdapter.directMessageRoomsEnabled) {
-        this.logger.verbose?.(
-          `Sending direct message to user via Matrix ${messageData.receiverIds[0]}`,
-          LogContext.COMMUNICATION
+        await this.setupAndUseDirectMessaging(
+          agentInfo,
+          receiverID,
+          messageData
         );
-        // Send direct message if only one receiver
-        const receiver = await this.userService.getUserOrFail(
-          messageData.receiverIds[0]
-        );
-        if (receiver.id === agentInfo.userID) {
-          this.logger.warn(
-            `skipping sending to oneself: ${agentInfo.userID}`,
-            LogContext.COMMUNICATION
-          );
-        }
-        await this.communicationAdapter.sendMessageToUser({
-          senderCommunicationsID: agentInfo.communicationID,
-          message: messageData.message,
-          receiverCommunicationsID: receiver.communicationID,
-        });
       }
     }
 
     return true;
+  }
+
+  // NOTE: Temporary method to test direct messaging setup and sending
+  private async setupAndUseDirectMessaging(
+    agentInfo: AgentInfo,
+    receiverID: string,
+    messageData: CommunicationSendMessageToUsersInput
+  ) {
+    const senderID = agentInfo.userID!;
+    // Send direct message if only one receiver
+    if (receiverID === senderID) {
+      this.logger.warn(
+        `skipping sending to oneself: ${senderID}`,
+        LogContext.COMMUNICATION
+      );
+      return;
+    }
+    const sender = await this.userService.getUserOrFail(senderID, {
+      relations: {
+        conversationsSet: true,
+      },
+    });
+    this.logger.verbose?.(
+      `Initiating direct messaging to user ${receiverID}`,
+      LogContext.COMMUNICATION_CONVERSATION
+    );
+
+    let conversation =
+      await this.conversationsSetService.createConversationOnConversationsSet(
+        {
+          userID: receiverID,
+          type: CommunicationConversationType.USER_USER,
+          currentUserID: senderID,
+        },
+        sender.conversationsSet!.id,
+        true
+      );
+
+    await this.conversationsSetAuthorizationService.resetAuthorizationOnConversations(
+      senderID,
+      receiverID,
+      CommunicationConversationType.USER_USER
+    );
+    conversation = await this.conversationService.getConversationOrFail(
+      conversation.id,
+      {
+        relations: {
+          room: true,
+        },
+      }
+    );
+    if (!conversation.room) {
+      throw new MatrixEntityNotFoundException(
+        `Conversation ${conversation.id} does not have an associated room`,
+        LogContext.COMMUNICATION_CONVERSATION
+      );
+    }
+
+    await this.communicationAdapter.sendMessageToRoom({
+      roomID: conversation.room.externalRoomID,
+      message: messageData.message,
+      senderCommunicationsID: agentInfo.communicationID,
+    });
   }
 
   @Mutation(() => Boolean, {

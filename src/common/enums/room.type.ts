@@ -4,5 +4,6 @@ export enum RoomType {
   DISCUSSION_FORUM = 'discussion_forum',
   UPDATES = 'updates',
   CALLOUT = 'callout',
-  GUIDANCE = 'guidance',
+  CONVERSATION = 'conversation',
+  CONVERSATION_DIRECT = 'conversation_direct',
 }

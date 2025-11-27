@@ -3,7 +3,7 @@ import { Field, ObjectType } from '@nestjs/graphql';
 @ObjectType('MessageAnswerQuestion', {
   description: 'A detailed answer to a question, typically from an AI service.',
 })
-export class IMessageGuidanceQuestionResult {
+export class ConversationVcAskQuestionResult {
   @Field(() => String, {
     nullable: true,
     description: 'The id of the answer; null if an error was returned',

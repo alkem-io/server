@@ -52,9 +52,11 @@ import { bootstrapTemplateSpaceContentCalloutsVcKnowledgeBase } from './platform
 import { PlatformTemplatesService } from '@platform/platform-templates/platform.templates.service';
 import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
 import { AdminAuthorizationService } from '@src/platform-admin/domain/authorization/admin.authorization.service';
-import { AiPersonaService } from '@services/ai-server/ai-persona';
 import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 import { VirtualContributorInteractionMode } from '@common/enums/virtual.contributor.interaction.mode';
+import { ConversationsSetService } from '@domain/communication/conversations-set/conversations.set.service';
+import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors/platform.well.known.virtual.contributors.service';
+import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
 
 @Injectable()
 export class BootstrapService {
@@ -81,7 +83,6 @@ export class BootstrapService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private aiServer: AiServerService,
-    private aiPersonaService: AiPersonaService,
     private aiServerAuthorizationService: AiServerAuthorizationService,
     private templatesSetService: TemplatesSetService,
     private templateDefaultService: TemplateDefaultService,
@@ -89,7 +90,9 @@ export class BootstrapService {
     private accountLicenseService: AccountLicenseService,
     private licenseService: LicenseService,
     private licensingFrameworkService: LicensingFrameworkService,
-    private licensePlanService: LicensePlanService
+    private licensePlanService: LicensePlanService,
+    private conversationsSetService: ConversationsSetService,
+    private platformWellKnownVirtualContributorsService: PlatformWellKnownVirtualContributorsService
   ) {}
 
   async bootstrap() {
@@ -480,11 +483,13 @@ export class BootstrapService {
   }
 
   private async ensureGuidanceChat() {
-    const platform = await this.platformService.getPlatformOrFail({
-      relations: { guidanceVirtualContributor: true },
-    });
+    // Check if the CHAT_GUIDANCE well-known VC is configured
+    const wellKnownVCId =
+      await this.platformWellKnownVirtualContributorsService.getVirtualContributorID(
+        VirtualContributorWellKnown.CHAT_GUIDANCE
+      );
 
-    if (!platform.guidanceVirtualContributor?.id) {
+    if (!wellKnownVCId) {
       // Get admin account:
       const hostOrganization =
         await this.organizationLookupService.getOrganizationByNameIdOrFail(
@@ -518,8 +523,11 @@ export class BootstrapService {
         },
       });
 
-      platform.guidanceVirtualContributor = vc;
-      await this.platformService.savePlatform(platform);
+      // Register the VC as the CHAT_GUIDANCE well-known VC
+      await this.platformWellKnownVirtualContributorsService.setMapping(
+        VirtualContributorWellKnown.CHAT_GUIDANCE,
+        vc.id
+      );
     }
   }
 }
