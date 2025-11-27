@@ -182,9 +182,14 @@ export type AlkemioConfig = {
         invoke_engine_openai_assistant: string;
       };
     };
+    /** NATS messaging configuration */
+    nats: {
+      /** NATS server URL(s) for client connections */
+      server_url: string;
+    };
     /** Auth evaluation service configuration for remote authorization checks */
     auth_evaluation: {
-      // Name of the NATS queue for sending auth evaluation requests
+      /** Name of the NATS queue for sending auth evaluation requests */
       queue_name: string;
       /** Circuit breaker configuration for resilience against service failures */
       circuit_breaker: {

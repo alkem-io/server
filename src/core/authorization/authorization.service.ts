@@ -16,8 +16,6 @@ import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbid
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { AuthRemoteEvaluationService } from '@services/external/auth-remote-evaluation';
 import { AuthEvaluationResponse } from '@services/external/auth-remote-evaluation/types';
-import { InjectEntityManager } from '@nestjs/typeorm';
-import { EntityManager } from 'typeorm';
 import { isCircuitOpenResponse } from '@services/util/circuit-breakers/types';
 
 @Injectable()
@@ -25,9 +23,7 @@ export class AuthorizationService {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private remoteAuthEvaluationService: AuthRemoteEvaluationService,
-    @InjectEntityManager()
-    private entityManager: EntityManager
+    private remoteAuthEvaluationService: AuthRemoteEvaluationService
   ) {}
 
   /**
@@ -209,7 +205,7 @@ export class AuthorizationService {
 
     if (isCircuitOpenResponse(response)) {
       const { reason, metadata, retryAfter } = response;
-      this.logger.error(
+      this.logger.warn(
         {
           message:
             'Connection issue with remote authorization evaluation service',

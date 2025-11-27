@@ -37,7 +37,7 @@ export class SpaceResolverMutations {
     private spaceLicenseService: SpaceLicenseService,
     private licenseService: LicenseService
   ) {}
-
+  // TODO: Remove this test mutation once remote evaluation is verified to be working
   @Mutation(() => String)
   async remoteTest(@CurrentUser() agentInfo: AgentInfo): Promise<string> {
     const space = await this.spaceService.getSpaceOrFail(

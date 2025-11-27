@@ -384,6 +384,10 @@ microservices:
       invoke_engine_guidance: ${RABBITMQ_INVOKE_ENGINE_GUIDANCE}:virtual-contributor-engine-guidance
       invoke_engine_generic: ${RABBITMQ_INVOKE_ENGINE_GENERIC}:virtual-contributor-engine-generic
       invoke_engine_openai_assistant: ${RABBITMQ_INVOKE_ENGINE_OPENAI_ASSISTANT}:virtual-contributor-engine-openai-assistant
+  # NATS messaging configuration
+  nats:
+    # NATS server URL(s) for client connections
+    server_url: ${NATS_SERVER_URL}:nats://localhost:4222
 
   # Auth evaluation service configuration for remote authorization checks
   auth_evaluation:
