@@ -20,6 +20,7 @@ pnpm run start:services
 ```
 
 This starts:
+
 - PostgreSQL 17.5 with databases: alkemio, kratos, synapse, hydra
 - Ory Kratos (with auto-migrations enabled)
 - Redis, RabbitMQ, and other dependencies
@@ -69,6 +70,7 @@ docker compose -f quickstart-services.yml up postgres -d
 ```
 
 Wait for Postgres to be ready:
+
 ```bash
 docker exec -it alkemio-serverdev-postgres-1 pg_isready -U alkemio
 ```
@@ -119,27 +121,38 @@ psql -U alkemio -d kratos -c "\dt"
 ### Step 2: Export Data from MySQL
 
 Navigate to the migration scripts directory:
+
 ```bash
 cd .scripts/migrations/postgres-convergence
 ```
 
 **2.1 Log Migration Start**
+
 ```bash
 ./log_migration_run.sh started "Beginning production migration run"
 ```
 
 **2.2 Export Alkemio Data**
+
 ```bash
 # Export all Alkemio tables to CSV
 ./export_alkemio_mysql_to_csv.sh
 
-# Note the output directory (e.g., csv_exports/alkemio/20250121_120000)
+# Note the output directory (e.g., csv_exports/alkemio/20251127_160941)
 # This directory will contain:
-# - Individual CSV files for each table
-# - migration_manifest.json with export metadata
+# - Individual CSV files for each table (77 tables)
+# - migration_manifest.json with export metadata and row counts
 ```
 
+The export script automatically:
+
+- Queries MySQL `information_schema` for column types
+- Converts UUID columns (`char(36)`) empty strings to NULL using `NULLIF`
+- Exports blob/binary columns in hex format with `\x` prefix for PostgreSQL `bytea`
+- Preserves empty strings for regular varchar columns
+
 **2.3 Export Kratos Identity Data**
+
 ```bash
 # Export all Kratos tables to CSV
 ./export_kratos_mysql_to_csv.sh
@@ -148,6 +161,7 @@ cd .scripts/migrations/postgres-convergence
 ```
 
 **2.4 Verify Exports**
+
 ```bash
 # Check Alkemio manifest
 cat csv_exports/alkemio/*/migration_manifest.json | head -30
@@ -159,27 +173,31 @@ cat csv_exports/kratos/*/migration_manifest.json | head -30
 head -20 csv_exports/alkemio/*/user.csv
 head -20 csv_exports/kratos/*/identities.csv
 
-# Verify row counts match expectations
-wc -l csv_exports/alkemio/*/*.csv
-wc -l csv_exports/kratos/*/*.csv
+# Verify total row count (expect ~3.5 million for a typical deployment)
+grep -o 'COPY [0-9]*' csv_exports/alkemio/*/import_log_*.log | awk -F: '{sum+=$2} END {print sum}'
 ```
 
 ### Step 3: Import Data into Postgres
 
 **3.1 Import Alkemio Data**
+
 ```bash
 # Import CSV files into Postgres Alkemio database
-./import_csv_to_postgres_alkemio.sh csv_exports/alkemio/20250121_120000
+./import_csv_to_postgres_alkemio.sh csv_exports/alkemio/20251127_160941
 
-# Monitor the import progress
-# The script will:
-# - Import tables in dependency order
-# - Fail-fast on constraint violations
-# - Generate detailed logs: import_log_<timestamp>.log
-# - Update PostgreSQL sequences automatically
+# The import process:
+# 1. Copies CSV files to PostgreSQL container (/tmp/csv_import/)
+# 2. Skips tables that don't exist in PostgreSQL (challenge, opportunity)
+# 3. Generates SQL script with session_replication_role='replica' to disable FK triggers
+# 4. Runs TRUNCATE CASCADE + COPY for each table with column mapping
+# 5. Updates sequences after import
+
+# Monitor progress - large tables (authorization_policy ~5GB) take several minutes
+tail -f csv_exports/alkemio/*/import_log_*.log
 ```
 
 **3.2 Import Kratos Data**
+
 ```bash
 # Import CSV files into Postgres Kratos database
 ./import_csv_to_postgres_kratos.sh csv_exports/kratos/20250121_120000
@@ -188,16 +206,16 @@ wc -l csv_exports/kratos/*/*.csv
 ```
 
 **3.3 Verify Import Logs**
+
 ```bash
-# Check Alkemio import log
+# Check Alkemio import summary
 tail -50 csv_exports/alkemio/*/import_log_*.log
+
+# Check for COPY success messages (should see row counts)
+grep "COPY [0-9]" csv_exports/alkemio/*/import_log_*.log | tail -20
 
 # Check Kratos import log
 tail -50 csv_exports/kratos/*/import_log_*.log
-
-# If errors occurred, review error logs
-cat csv_exports/alkemio/*/import_errors_*.log
-cat csv_exports/kratos/*/import_errors_*.log
 ```
 
 ### Step 4: Verify and Cut Over
@@ -222,6 +240,7 @@ docker exec alkemio-serverdev-postgres-1 psql -U alkemio -d alkemio \
 **4.2 Functional Verification**
 
 Follow the migration verification checklist in `docs/DataManagement.md`:
+
 - [ ] Authentication: Users can log in via Kratos
 - [ ] Authorization: Role-based access control functions
 - [ ] Spaces: Can access and browse spaces

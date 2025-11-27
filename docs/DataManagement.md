@@ -13,7 +13,9 @@ Database synchronization is switched off and migrations are applied manually (or
 **NB! Migrations use TypeORM CLI. Dependencies and environment variables are not loaded using NestJS.**
 
 ### For PostgreSQL (Default):
+
 You will need the PostgreSQL configuration in your `.env` file:
+
 ```
 DATABASE_TYPE=postgres
 DATABASE_HOST=localhost
@@ -24,7 +26,9 @@ DATABASE_NAME=alkemio
 ```
 
 ### For MySQL (Legacy):
+
 You will need the MySQL configuration in your `.env` file:
+
 ```
 DATABASE_TYPE=mysql
 DATABASE_HOST=localhost
@@ -74,6 +78,7 @@ The Postgres convergence strategy is tested and officially supported on PostgreS
 ### Database Structure
 
 The default Docker Compose setup automatically provisions PostgreSQL with the required databases:
+
 - `alkemio` - Main application database
 - `kratos` - Ory Kratos identity database
 - `hydra` - Ory Hydra OAuth2 database
@@ -139,9 +144,9 @@ After applying migrations, verify the Kratos database schema:
 SELECT * FROM _kratos_migrations ORDER BY applied_at DESC;
 
 -- Verify core tables exist
-SELECT table_name FROM information_schema.tables 
-WHERE table_schema = 'public' 
-  AND table_name IN ('identities', 'identity_credentials', 'sessions', 
+SELECT table_name FROM information_schema.tables
+WHERE table_schema = 'public'
+  AND table_name IN ('identities', 'identity_credentials', 'sessions',
                      'identity_credential_identifiers', 'session_devices',
                      'identity_verifiable_addresses', 'identity_recovery_addresses')
 ORDER BY table_name;
@@ -164,6 +169,7 @@ dsn: postgres://username:password@host:port/database?sslmode=require
 #### Migration Documentation
 
 For detailed Kratos migration documentation, see:
+
 - Official Kratos Documentation: https://www.ory.sh/docs/kratos/manage-identities/migrations
 - Kratos GitHub: https://github.com/ory/kratos
 
@@ -208,12 +214,12 @@ The migration follows three key principles:
 1. **Schema-First Baseline**: PostgreSQL schemas are established independently using:
    - **Alkemio**: TypeORM baseline migration generating a clean Postgres-native schema
    - **Kratos**: Official Ory Kratos migrations applied directly to PostgreSQL
-   
+
 2. **CSV-Based Data Transfer**: Data moves from MySQL to PostgreSQL via CSV files:
    - Widely supported format, easy to inspect and validate
    - Technology-agnostic intermediate representation
    - Enables transformation and validation before import
-   
+
 3. **Fail-Fast Integrity**: Import process fails immediately on constraint violations:
    - Zero tolerance for data corruption or silent failures
    - Clear error reporting for debugging
@@ -224,21 +230,25 @@ The migration follows three key principles:
 The complete migration follows these phases:
 
 **Phase 1: Schema Preparation**
+
 - Apply official Kratos migrations to Postgres Kratos database
 - Apply Alkemio Postgres baseline migration to Postgres Alkemio database
 - Validate schemas using contract tests and migration validation scripts
 
 **Phase 2: Data Export**
+
 - Export MySQL data to CSV files using provided export scripts
 - Store CSV files on mounted filesystem accessible to import process
 - CSV files include: users, spaces, memberships, content, identities, and all core entities
 
 **Phase 3: Data Import**
+
 - Import CSV files into prepared Postgres databases
 - Scripts monitor for constraint violations and fail-fast on errors
 - Comprehensive logging for troubleshooting
 
 **Phase 4: Verification & Cut-Over**
+
 - Execute migration verification checklist (see below)
 - Validate authentication, authorization, and core features
 - Update application configuration to point to Postgres databases
@@ -247,6 +257,7 @@ The complete migration follows these phases:
 #### Prerequisites
 
 Before starting the migration:
+
 - Running MySQL-based Alkemio + Kratos deployment
 - Target PostgreSQL instance (recommended: 17.5) with databases created
 - Sufficient disk space for CSV exports (~1.5x your MySQL data size)
@@ -259,11 +270,13 @@ Before starting the migration:
 The migration uses CSV (Comma-Separated Values) files as the intermediate format:
 
 **File Naming Convention:**
+
 - Format: `<table_name>.csv`
 - Example: `user.csv`, `space.csv`, `identities.csv`
 - Manifest file: `migration_manifest.json` (contains export metadata)
 
 **CSV Format Specifications:**
+
 - **Delimiter**: Comma (`,`)
 - **Quote Character**: Double quote (`"`)
 - **NULL Representation**: `\N` (PostgreSQL standard)
@@ -272,18 +285,22 @@ The migration uses CSV (Comma-Separated Values) files as the intermediate format
 - **Line Endings**: Unix-style (`\n`)
 
 **Required Columns:**
+
 - All columns from source table except audit fields (createdDate, updatedDate, version)
 - Columns must match target Postgres schema
 
 **Data Type Representations:**
+
 - **Booleans**: `t` (true) or `f` (false) for Postgres; `1` or `0` in MySQL exports
 - **Timestamps**: ISO 8601 format with timezone (e.g., `2024-01-15T10:30:00Z`)
-- **UUIDs**: Standard 8-4-4-4-12 format (lowercase)
+- **UUIDs**: Standard 8-4-4-4-12 format (lowercase). Empty UUID columns exported as empty (converted to NULL on import)
 - **JSON**: Escaped JSON strings (double-quotes doubled: `{{""key"":""value""}}`)
-- **NULL Values**: `\N` (no quotes)
-- **Empty Strings**: `""` (quoted empty string)
+- **NULL Values**: Empty field (no quotes) - PostgreSQL COPY interprets as NULL
+- **Empty Strings**: `""` (quoted empty string) - preserved for varchar columns
+- **Binary/Blob Data**: Hex format with `\x` prefix (e.g., `"\x48656C6C6F"`) for PostgreSQL `bytea` columns
 
 **Migration Manifest Structure:**
+
 ```json
 {
   "migrationId": "unique-run-id",
@@ -291,13 +308,14 @@ The migration uses CSV (Comma-Separated Values) files as the intermediate format
   "targetDatabase": "postgres",
   "exportTimestamp": "2025-01-21T12:00:00Z",
   "tables": [
-    {"name": "user", "rowCount": 1500, "file": "user.csv"},
-    {"name": "space", "rowCount": 450, "file": "space.csv"}
+    { "name": "user", "rowCount": 1500, "file": "user.csv" },
+    { "name": "space", "rowCount": 450, "file": "space.csv" }
   ]
 }
 ```
 
 The manifest provides:
+
 - Unique migration run identifier
 - Export timestamp for traceability
 - Row counts for validation
@@ -306,6 +324,7 @@ The manifest provides:
 #### Migration Scripts Location
 
 All migration tooling is located in `.scripts/migrations/postgres-convergence/`:
+
 - `export_alkemio_mysql_to_csv.sh` - Export Alkemio data from MySQL
 - `export_kratos_mysql_to_csv.sh` - Export Kratos identity data from MySQL
 - `import_csv_to_postgres_alkemio.sh` - Import Alkemio data into Postgres
@@ -392,10 +411,17 @@ cd .scripts/migrations/postgres-convergence
 # Start timer
 START_TIME=$(date +%s)
 
-# Export Alkemio (expected: 5-10 minutes depending on data size)
+# Export Alkemio (expected: 2-5 minutes depending on data size)
+# The script automatically handles:
+# - UUID columns (char(36)): empty strings → NULL
+# - Blob columns: HEX format with \x prefix for bytea
+# - All other columns: preserve empty strings
 ./export_alkemio_mysql_to_csv.sh
 ALKEMIO_EXPORT_DIR=$(ls -td csv_exports/alkemio/* | head -1)
 echo "Alkemio export: ${ALKEMIO_EXPORT_DIR}"
+
+# Verify export row count from manifest
+cat "${ALKEMIO_EXPORT_DIR}/migration_manifest.json" | grep totalRows
 
 # Export Kratos (expected: 1-2 minutes)
 ./export_kratos_mysql_to_csv.sh
@@ -447,11 +473,22 @@ echo "Schema setup duration: $((SCHEMA_END - EXPORT_END)) seconds"
 **10. Import Data into PostgreSQL**
 
 ```bash
-# Import Alkemio data (expected: 10-15 minutes)
+# Import Alkemio data (expected: 5-10 minutes for ~3.5M rows)
+# Large tables like authorization_policy (~5GB) take several minutes to copy
 ./import_csv_to_postgres_alkemio.sh "${ALKEMIO_EXPORT_DIR}"
+
+# The import process:
+# 1. Copies CSV files to PostgreSQL container (/tmp/csv_import/)
+# 2. Skips non-existent tables (challenge, opportunity)
+# 3. Uses session_replication_role='replica' to disable FK triggers
+# 4. Runs TRUNCATE CASCADE + COPY with column mapping for each table
+# 5. Updates sequences after import
 
 # Check import log immediately
 tail -50 "${ALKEMIO_EXPORT_DIR}/import_log_"*.log
+
+# Verify COPY row counts
+grep "COPY [0-9]" "${ALKEMIO_EXPORT_DIR}/import_log_"*.log | tail -20
 
 # If import failed, STOP, review errors, and consider rollback
 
@@ -522,12 +559,14 @@ curl -X POST http://localhost:3000/graphql \
 **15. Go/No-Go Decision**
 
 **If all checks pass:**
+
 - [ ] Log migration success: `./log_migration_run.sh completed "All checks passed"`
 - [ ] Send "migration successful" notification to users
 - [ ] Remove maintenance mode message
 - [ ] Begin post-migration monitoring (see below)
 
 **If critical issues found:**
+
 - [ ] Execute rollback procedure (see below)
 - [ ] Document issues encountered
 - [ ] Schedule follow-up migration attempt
@@ -535,6 +574,7 @@ curl -X POST http://localhost:3000/graphql \
 #### Post-Migration Monitoring
 
 **First 24 Hours:**
+
 - [ ] Check application logs every 2 hours
 - [ ] Monitor error rates and response times
 - [ ] Watch for user-reported issues
@@ -542,12 +582,14 @@ curl -X POST http://localhost:3000/graphql \
 - [ ] Keep MySQL backup readily accessible
 
 **First Week:**
+
 - [ ] Daily health checks
 - [ ] Performance monitoring
 - [ ] User feedback collection
 - [ ] Document any anomalies
 
 **First Month:**
+
 - [ ] Weekly system checks
 - [ ] Review performance trends
 - [ ] Optimize queries if needed
@@ -558,6 +600,7 @@ curl -X POST http://localhost:3000/graphql \
 **Decision Criteria for Rollback:**
 
 Initiate rollback if any of the following occur:
+
 - Data import fails with constraint violations
 - Row count discrepancies > 1% for critical tables
 - Authentication/authorization completely broken
@@ -568,6 +611,7 @@ Initiate rollback if any of the following occur:
 **Rollback Steps:**
 
 **1. Stop All Services Immediately**
+
 ```bash
 # Log rollback decision
 cd .scripts/migrations/postgres-convergence
@@ -581,6 +625,7 @@ docker compose -f quickstart-services.yml down postgres kratos
 ```
 
 **2. Restore MySQL Configuration**
+
 ```bash
 # Switch back to MySQL
 export DATABASE_TYPE=mysql
@@ -593,6 +638,7 @@ env | grep DATABASE
 ```
 
 **3. Start MySQL Services**
+
 ```bash
 # Start MySQL and dependent services
 docker compose -f quickstart-services.yml up mysql kratos -d
@@ -602,6 +648,7 @@ timeout 30 bash -c 'until docker exec mysql-container mysql -u root -p${MYSQL_RO
 ```
 
 **4. Verify MySQL Data Integrity**
+
 ```bash
 # Check critical tables
 docker exec mysql-container mysql -u root -p${MYSQL_ROOT_PASSWORD} alkemio \
@@ -614,6 +661,7 @@ docker exec mysql-container mysql -u root -p${MYSQL_ROOT_PASSWORD} kratos \
 ```
 
 **5. Restart Application**
+
 ```bash
 # Start Alkemio server with MySQL
 pnpm start &
@@ -627,6 +675,7 @@ curl -f http://localhost:4433/health/ready
 ```
 
 **6. Verify Functionality**
+
 ```bash
 # Test authentication
 # Test space access
@@ -637,6 +686,7 @@ curl -f http://localhost:4433/health/ready
 ```
 
 **7. Communication**
+
 ```bash
 # Notify stakeholders of rollback
 # Update status channels
@@ -649,6 +699,7 @@ curl -f http://localhost:4433/health/ready
 ```
 
 **8. Post-Rollback Actions**
+
 - [ ] Document root cause of rollback
 - [ ] Analyze what went wrong
 - [ ] Fix identified issues
@@ -659,6 +710,7 @@ curl -f http://localhost:4433/health/ready
 **Rollback Time Estimate:** 10-15 minutes
 
 **Data Loss Considerations:**
+
 - Rollback returns to MySQL state at time of export
 - Any changes made during migration window are lost
 - Users should be warned about potential data loss window
@@ -672,22 +724,24 @@ After migrating from MySQL to PostgreSQL, use this checklist to verify data inte
 Run the following checks to ensure data was migrated correctly:
 
 **1. Table Row Count Comparison**
+
 ```sql
 -- MySQL
-SELECT table_name, table_rows 
-FROM information_schema.tables 
-WHERE table_schema = 'alkemio' 
+SELECT table_name, table_rows
+FROM information_schema.tables
+WHERE table_schema = 'alkemio'
 ORDER BY table_name;
 
 -- PostgreSQL
 SELECT schemaname, tablename, n_live_tup as approximate_row_count
-FROM pg_stat_user_tables 
+FROM pg_stat_user_tables
 WHERE schemaname = 'public'
 ORDER BY tablename;
 ```
 
 **2. Critical Tables Verification**
 Ensure the following critical tables exist and have data:
+
 - [ ] `user` - User accounts
 - [ ] `space` - Spaces/communities
 - [ ] `organization` - Organizations
@@ -702,15 +756,17 @@ Ensure the following critical tables exist and have data:
 - [ ] `activity_log` - Activity logs
 
 **3. Foreign Key Integrity**
+
 ```sql
 -- Check for orphaned records (example for users)
-SELECT COUNT(*) FROM "user" u 
-LEFT JOIN profile p ON u."profileId" = p.id 
+SELECT COUNT(*) FROM "user" u
+LEFT JOIN profile p ON u."profileId" = p.id
 WHERE p.id IS NULL;
 ```
 
 **4. Data Sampling**
 Manually verify a sample of records from key tables to ensure:
+
 - UUIDs are preserved
 - Text content is intact
 - Timestamps are correctly converted
@@ -719,12 +775,14 @@ Manually verify a sample of records from key tables to ensure:
 #### Functional Verification
 
 **Authentication & Authorization:**
+
 - [ ] Users can log in via Kratos
 - [ ] Session management works correctly
 - [ ] Authorization policies are enforced
 - [ ] Role-based access control functions
 
 **Core Features:**
+
 - [ ] GraphQL API responds correctly
 - [ ] Spaces are accessible
 - [ ] User profiles load and display correctly
@@ -734,6 +792,7 @@ Manually verify a sample of records from key tables to ensure:
 - [ ] Notifications are delivered
 
 **Data Relationships:**
+
 - [ ] User-Space memberships are intact
 - [ ] Organization hierarchies are correct
 - [ ] Content ownership is preserved
@@ -743,10 +802,11 @@ Manually verify a sample of records from key tables to ensure:
 #### Performance Verification
 
 **Database Performance:**
+
 ```sql
 -- Check for missing indexes
-SELECT schemaname, tablename, indexname 
-FROM pg_indexes 
+SELECT schemaname, tablename, indexname
+FROM pg_indexes
 WHERE schemaname = 'public'
 ORDER BY tablename, indexname;
 
@@ -755,11 +815,13 @@ EXPLAIN ANALYZE SELECT * FROM "user" WHERE email = 'test@example.com';
 ```
 
 **Connection Pool:**
+
 - [ ] Database connections are stable
 - [ ] No connection pool exhaustion
 - [ ] Query latency is acceptable
 
 **Application Metrics:**
+
 - [ ] API response times are within normal range
 - [ ] Error rates are not elevated
 - [ ] Memory usage is stable
@@ -767,6 +829,7 @@ EXPLAIN ANALYZE SELECT * FROM "user" WHERE email = 'test@example.com';
 #### Kratos Identity Verification
 
 **Kratos Database:**
+
 - [ ] Identity records exist
 - [ ] Credentials are preserved
 - [ ] Sessions can be created/validated
@@ -793,18 +856,49 @@ SELECT COUNT(*) FROM identity_credentials;
    - **Solution**: Set `client_encoding = 'UTF8'` in Postgres connection
 
 4. **AUTO_INCREMENT vs SERIAL**: Postgres sequences may need reset after import
-   - **Solution**: Run sequence update script (included in transformation script)
+   - **Solution**: Run sequence update script (included in import script automatically)
+
+5. **Empty String vs NULL for UUIDs**: MySQL allows empty strings in `char(36)` UUID columns; PostgreSQL `uuid` type requires valid UUID or NULL
+   - **Solution**: Export script uses `NULLIF` pattern for `char(36)` columns to convert empty strings to NULL
+   - **Detection**: `invalid input syntax for type uuid: ""` error during import
+
+6. **Invalid UUID Values**: Some tables may contain non-UUID values in UUID columns (e.g., nameID instead of actual UUID)
+   - **Solution**: Fix data quality in MySQL before export:
+
+   ```sql
+   -- Example: Find invalid UUIDs in vc_interaction
+   SELECT * FROM vc_interaction
+   WHERE virtualContributorID NOT REGEXP '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
+
+   -- Fix by joining to find correct UUID
+   UPDATE vc_interaction vi
+   JOIN virtual_contributor vc ON vi.virtualContributorID = vc.nameID
+   SET vi.virtualContributorID = vc.id
+   WHERE vi.virtualContributorID NOT REGEXP '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
+   ```
+
+7. **Binary/Blob Data (bytea)**: MySQL `mediumblob` must be exported in hex format for PostgreSQL `bytea`
+   - **Solution**: Export script detects blob columns and uses `HEX()` with `\x` prefix
+   - **Detection**: `invalid byte sequence for encoding "UTF8"` during import
+
+8. **Foreign Key Constraint Violations**: Import may fail if FK constraints are active
+   - **Solution**: Import script uses `session_replication_role = 'replica'` to disable triggers during import
+
+9. **Tables Not Existing in Target**: Some MySQL tables (e.g., `challenge`, `opportunity`) may not exist in PostgreSQL schema
+   - **Solution**: Import script automatically skips non-existent tables with a warning
 
 ### Rollback Procedure
 
 If critical issues are discovered:
 
 1. **Stop all services:**
+
    ```bash
    docker compose -f quickstart-services.yml down
    ```
 
 2. **Restore original MySQL configuration** in `.env.docker`:
+
    ```bash
    DATABASE_TYPE=mysql
    DATABASE_HOST=mysql
@@ -813,6 +907,7 @@ If critical issues are discovered:
 3. **Verify MySQL data is intact**
 
 4. **Restart services with MySQL:**
+
    ```bash
    docker compose -f quickstart-services.yml up -d
    ```
@@ -831,6 +926,7 @@ Monitor the following for 24-48 hours after migration:
 ### Migration Success Criteria
 
 The migration is considered successful when:
+
 - [ ] All critical data verification checks pass
 - [ ] All functional verification checks pass
 - [ ] Performance is equal to or better than MySQL
@@ -843,10 +939,12 @@ The migration is considered successful when:
 #### Supported Configurations
 
 **Database Versions:**
+
 - **PostgreSQL**: Officially supported on PostgreSQL 17.5 (minimum: 14.x)
 - **MySQL**: Legacy support for MySQL 8.0 (deprecated, will be removed in future)
 
 **Schema Support:**
+
 - **Pristine Schemas Only**: Migration scripts support only vanilla Alkemio and Kratos schemas
 - **Custom Schema Changes**: Any custom tables, columns, or schema modifications are **not supported**
 - **Workaround**: Custom schema changes must be manually migrated or reapplied after base migration
@@ -854,11 +952,13 @@ The migration is considered successful when:
 #### Data Constraints
 
 **Data Integrity Requirements:**
+
 - **Zero Tolerance for Corruption**: Migration fails fast on first constraint violation
 - **No Silent Fixes**: Data issues must be resolved at source (MySQL) before migration
 - **Foreign Key Integrity**: All FK relationships must be valid in source database
 
 **Unsupported Data Scenarios:**
+
 - Invalid UUIDs (must be valid 8-4-4-4-12 format)
 - Orphaned records (rows with missing FK references)
 - Invalid JSON in JSON columns
@@ -868,12 +968,14 @@ The migration is considered successful when:
 #### Migration Process Limitations
 
 **CSV Pipeline Constraints:**
+
 - **Local Filesystem Only**: CSV files stored on local/mounted filesystems
 - **No S3/Cloud Support**: Direct cloud storage integration not provided (manual sync required)
 - **Disk Space**: Requires ~1.5x source database size for CSV exports
 - **Downtime**: Estimated 30 minutes for production-sized datasets (must rehearse)
 
 **Concurrent Access:**
+
 - **No Dual-Write**: System must be stopped during migration
 - **No Online Migration**: This is an offline migration requiring maintenance window
 - **No Live Replication**: Not a streaming replication solution
@@ -881,12 +983,14 @@ The migration is considered successful when:
 #### Performance Considerations
 
 **Expected Performance:**
+
 - **Baseline**: Performance should match or exceed MySQL after migration
 - **Query Patterns**: Some queries may need optimization for PostgreSQL specifics
 - **Indexes**: All indexes migrated; may need PostgreSQL-specific optimization
 - **VACUUM**: PostgreSQL requires periodic VACUUM; auto-vacuum enabled by default
 
 **Known Differences:**
+
 - **Case Sensitivity**: PostgreSQL string comparisons are case-sensitive by default
   - Use `LOWER()` or `ILIKE` for case-insensitive matching
 - **Boolean Syntax**: `TRUE/FALSE` vs `1/0`
@@ -896,11 +1000,13 @@ The migration is considered successful when:
 #### Operational Constraints
 
 **Rollback Limitations:**
+
 - **Data Loss Window**: Changes made during migration are lost on rollback
 - **Time-Bound**: Rollback works best within first few hours after migration
 - **No Bi-Directional Sync**: Cannot merge changes made in both MySQL and PostgreSQL
 
 **Automation Limitations:**
+
 - **No One-Click Migration**: Requires operator intervention and verification
 - **Manual Validation**: Verification checklist requires manual testing
 - **No Automated Rollback**: Rollback decision is manual based on verification results
@@ -908,11 +1014,13 @@ The migration is considered successful when:
 #### Scale Limitations
 
 **Tested Scale:**
+
 - **Dataset Size**: Tested with databases up to [specify size based on testing]
 - **Table Count**: All standard Alkemio tables (40+) and Kratos tables (20+)
 - **Row Counts**: Tested with millions of rows across tables
 
 **Potential Issues at Scale:**
+
 - Very large tables (>10M rows) may require longer maintenance windows
 - CSV file size may exceed filesystem limits for extremely large tables
 - Import performance may degrade with complex FK relationships at scale
@@ -920,12 +1028,14 @@ The migration is considered successful when:
 #### Security Constraints
 
 **Data Security:**
+
 - **CSV Files Contain Sensitive Data**: Must be stored securely, encrypted at rest
 - **Credentials in Environment**: Database credentials in environment variables
 - **Audit Trail**: Migration logs may contain sensitive information
 - **No Encryption**: CSV files are not encrypted during export/import
 
 **Recommendations:**
+
 - Store CSV files on encrypted volumes
 - Delete CSV exports after successful migration
 - Restrict access to migration scripts and logs
@@ -934,6 +1044,7 @@ The migration is considered successful when:
 #### Future Enhancements Not Included
 
 **Out of Scope:**
+
 - Zero-downtime online migration
 - Bi-directional synchronization between MySQL and PostgreSQL
 - Cloud storage integration (S3, Azure Blob, GCS)
@@ -946,6 +1057,7 @@ The migration is considered successful when:
 ### Support and Troubleshooting
 
 For issues not covered in this documentation:
+
 1. Review migration logs in `.scripts/migrations/postgres-convergence/migration_logs/`
 2. Check CSV import error logs for detailed failure information
 3. Consult verification checklist: `specs/018-postgres-db-convergence/verification-checklist.md`
@@ -954,6 +1066,6 @@ For issues not covered in this documentation:
 6. Consult Ory Kratos documentation: https://www.ory.sh/docs/kratos
 
 **Common Issues:**
+
 - See "Troubleshooting" section in `.scripts/migrations/postgres-convergence/README.md`
 - See "Migration Issues and Resolutions" earlier in this document
-

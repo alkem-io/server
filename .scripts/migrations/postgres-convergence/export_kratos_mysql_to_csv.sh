@@ -67,18 +67,6 @@ TABLE_COUNT=$(echo "$TABLES" | wc -l)
 echo "Found ${TABLE_COUNT} tables to export"
 echo ""
 
-# Define known Kratos tables for reference (order matters for import due to foreign keys)
-# These are the typical tables in Ory Kratos:
-# - schema_migration (Kratos internal migrations)
-# - identities (core identity records)
-# - identity_credentials (credentials associated with identities)
-# - identity_credential_identifiers (credential identifiers like emails)
-# - identity_verifiable_addresses (verifiable addresses like email)
-# - identity_recovery_addresses (recovery addresses)
-# - sessions (active sessions)
-# - continuity_containers (flow continuity)
-# - selfservice_* tables (various self-service flows)
-
 # Initialize manifest
 echo "{" > "${MANIFEST_FILE}"
 echo '  "export_info": {' >> "${MANIFEST_FILE}"
@@ -97,13 +85,18 @@ TOTAL_ROWS=0
 for TABLE in $TABLES; do
     echo -n "Exporting ${TABLE}... "
 
-    # Get all columns for Kratos tables (we need to preserve all data)
-    COLUMNS=$(docker exec -i "${CONTAINER}" mysql -u"${MYSQL_USER}" -p"${MYSQL_PWD}" -N -e \
-        "SELECT GROUP_CONCAT(column_name ORDER BY ordinal_position)
+    # Get column names and types
+    COL_INFO=$(docker exec -i "${CONTAINER}" mysql -u"${MYSQL_USER}" -p"${MYSQL_PWD}" -N -e \
+        "SELECT column_name, column_type
          FROM information_schema.columns
          WHERE table_schema = '${DATABASE}'
-         AND table_name = '${TABLE}';" 2>/dev/null)
+         AND table_name = '${TABLE}'
+         ORDER BY ordinal_position;" 2>/dev/null)
 
+    # Build column list for header
+    COLUMNS=$(echo "$COL_INFO" | cut -f1 | tr '\n' ',' | sed 's/,$//')
+
+    # Skip if no columns found
     if [ -z "$COLUMNS" ] || [ "$COLUMNS" == "NULL" ]; then
         echo "SKIPPED (no columns)"
         continue
@@ -111,24 +104,35 @@ for TABLE in $TABLES; do
 
     FILENAME="${TABLE}.csv"
 
-    # Export data using mysql client with CSV-compatible output
-    docker exec -i "${CONTAINER}" mysql -u"${MYSQL_USER}" -p"${MYSQL_PWD}" -N -B -e \
-        "SELECT ${COLUMNS} FROM ${DATABASE}.\`${TABLE}\`;" 2>/dev/null | \
-        awk -F'\t' -v OFS=',' '{
-            for(i=1; i<=NF; i++) {
-                # Handle NULL values
-                if ($i == "NULL") {
-                    $i = ""
-                } else {
-                    # Escape quotes and wrap in quotes if contains comma, quote, or newline
-                    gsub(/"/, "\"\"", $i)
-                    if ($i ~ /[,"\n\r]/ || $i ~ /^[[:space:]]/ || $i ~ /[[:space:]]$/) {
-                        $i = "\"" $i "\""
-                    }
-                }
-            }
-            print
-        }' > "${EXPORT_DIR}/${FILENAME}"
+    # Build a SELECT that properly quotes all values for CSV output
+    # Handle UUID columns (char(36)) specially - empty strings should become NULL
+    COLUMN_LIST=""
+    FIRST_COL=true
+    while IFS=$'\t' read -r COL_NAME COL_TYPE; do
+        if [ "$FIRST_COL" = true ]; then
+            FIRST_COL=false
+        else
+            COLUMN_LIST="$COLUMN_LIST, ',', "
+        fi
+
+        # Check if this is a UUID-like column (char(36))
+        if [[ "$COL_TYPE" == "char(36)" ]]; then
+            # For UUID columns: empty string should become NULL (nothing between commas)
+            COLUMN_LIST="${COLUMN_LIST}IFNULL(NULLIF(CONCAT('\"', REPLACE(REPLACE(REPLACE(\`${COL_NAME}\`, '\"', '\"\"'), CHAR(10), ' '), CHAR(13), ''), '\"'), '\"\"'), '')"
+        elif [[ "$COL_TYPE" == *"blob"* ]] || [[ "$COL_TYPE" == *"binary"* ]]; then
+            # For blob/binary columns: export as hex for PostgreSQL bytea
+            COLUMN_LIST="${COLUMN_LIST}IFNULL(CONCAT('\"\\\\x', HEX(\`${COL_NAME}\`), '\"'), '')"
+        else
+            # For non-UUID columns: preserve empty strings as ""
+            COLUMN_LIST="${COLUMN_LIST}IFNULL(CONCAT('\"', REPLACE(REPLACE(REPLACE(\`${COL_NAME}\`, '\"', '\"\"'), CHAR(10), ' '), CHAR(13), ''), '\"'), '')"
+        fi
+    done <<< "$COL_INFO"
+
+    # Export with proper CSV formatting directly from MySQL
+    # Using SET NAMES utf8mb4 to ensure proper character encoding
+    echo "SET NAMES utf8mb4; SELECT CONCAT(${COLUMN_LIST}) FROM ${DATABASE}.\`${TABLE}\`;" | \
+        docker exec -i "${CONTAINER}" mysql -u"${MYSQL_USER}" -p"${MYSQL_PWD}" -N --raw --default-character-set=utf8mb4 2>/dev/null \
+        > "${EXPORT_DIR}/${FILENAME}"
 
     # Get row count
     ROW_COUNT=$(docker exec -i "${CONTAINER}" mysql -u"${MYSQL_USER}" -p"${MYSQL_PWD}" -N -e \
@@ -150,7 +154,7 @@ for TABLE in $TABLES; do
     else
         echo "," >> "${MANIFEST_FILE}"
     fi
-    # Escape any special characters in columns for JSON (remove newlines, escape quotes)
+    # Escape any special characters in columns for JSON
     COLUMNS_JSON=$(echo "$COLUMNS" | tr -d '\n\r' | sed 's/"/\\"/g')
     echo -n "    \"${TABLE}\": { \"rows\": ${ROW_COUNT}, \"columns\": \"${COLUMNS_JSON}\" }" >> "${MANIFEST_FILE}"
 done
