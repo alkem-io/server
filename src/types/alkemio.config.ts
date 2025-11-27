@@ -202,37 +202,31 @@ export type AlkemioConfig = {
         /**
          * Request timeout in milliseconds.
          * Requests exceeding this duration are considered failures.
-         * @default 3000 (3 seconds)
          */
         timeout: number;
         /**
          * Minimum number of requests within the rolling window before
          * the circuit breaker can trip. This prevents the circuit from
          * opening on the very first failure.
-         * @default 15
          */
         failure_threshold: number;
         /**
          * Time in milliseconds before circuit transitions from open to half-open.
-         * @default 45000 (45 seconds)
          */
         reset_timeout: number;
         /**
          * Percentage of failures within the rolling window that will trip
          * the circuit. Only evaluated after failure_threshold requests.
-         * @default 50
          */
         error_threshold_percentage: number;
         /**
          * Duration of the rolling window in milliseconds for tracking
          * request success/failure rates.
-         * @default 60000 (60 seconds)
          */
         rolling_count_timeout: number;
         /**
          * Number of buckets in the rolling window. Each bucket represents
          * rolling_count_timeout / rolling_count_buckets milliseconds.
-         * @default 10
          */
         rolling_count_buckets: number;
       };
@@ -241,18 +235,15 @@ export type AlkemioConfig = {
         /**
          * Maximum number of retry attempts before giving up.
          * Does not include the initial attempt.
-         * @default 5
          */
         max_attempts: number;
         /**
          * Base delay in milliseconds for the first retry.
-         * @default 500
          */
         base_delay: number;
         /**
          * Multiplier for exponential backoff calculation.
          * delay = base_delay * (multiplier ^ attempt)
-         * @default 2
          */
         backoff_multiplier: number;
       };

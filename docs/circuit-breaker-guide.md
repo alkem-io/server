@@ -71,8 +71,8 @@ The Auth Remote Evaluation Service implements the **Circuit Breaker pattern** to
 ```yaml
 circuit_breaker:
   enabled: true
-  timeout: 3000
-  failure_threshold: 15
+  timeout: 5000
+  failure_threshold: 30
   reset_timeout: 45000
   error_threshold_percentage: 50
   rolling_count_timeout: 60000
@@ -84,8 +84,8 @@ circuit_breaker:
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `enabled` | `true` | Master switch. When `false`, requests bypass circuit breaker entirely. |
-| `timeout` | `3000` | Request timeout in ms. Requests exceeding this are considered failures. |
-| `failure_threshold` | `15` | Minimum requests (volume) before circuit can trip. Prevents opening on first failure. |
+| `timeout` | `5000` | Request timeout in ms. Requests exceeding this are considered failures. |
+| `failure_threshold` | `30` | Minimum requests (volume) before circuit can trip. Prevents opening on first failure. |
 | `reset_timeout` | `45000` | Time in ms before transitioning from OPEN → HALF-OPEN. |
 | `error_threshold_percentage` | `50` | Percentage of failures to trip circuit (after volume threshold met). |
 | `rolling_count_timeout` | `60000` | Rolling window duration in ms for tracking success/failure rates. |
@@ -102,9 +102,9 @@ retry:
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `max_attempts` | `5` | Maximum retry attempts per request (including initial). |
+| `max_attempts` | `5` | Maximum retry attempts (does not include the initial attempt). |
 | `base_delay` | `500` | Initial delay in ms before first retry. |
-| `backoff_multiplier` | `1.5` | Exponential backoff factor. Delay = `base_delay × multiplier^(attempt-1)` |
+| `backoff_multiplier` | `1.5` | Exponential backoff factor. Delay = `base_delay × multiplier^attempt` |
 
 ---
 
@@ -158,17 +158,19 @@ Total max wait:            ~4062ms before final failure
 **Important**: Each retry attempt counts as a separate "fire" to the circuit breaker:
 
 ```
-1 request with 5 retries = 5 fires counted
+1 request with 5 retries = 6 fires counted (1 initial + 5 retries)
 
 If all fail:
-- failures = 5
-- fires = 5
+- failures = 6
+- fires = 6
 - failure_rate = 100%
 
-With failure_threshold=15:
-- Request 1 (5 retries) → 5 failures, circuit CLOSED
-- Request 2 (5 retries) → 10 failures, circuit CLOSED
-- Request 3 (5 retries) → 15 failures, circuit OPENS (100% > 50%)
+With failure_threshold=30:
+- Request 1 (6 attempts) → 6 failures, circuit CLOSED
+- Request 2 (6 attempts) → 12 failures, circuit CLOSED
+- Request 3 (6 attempts) → 18 failures, circuit CLOSED
+- Request 4 (6 attempts) → 24 failures, circuit CLOSED
+- Request 5 (6 attempts) → 30 failures, circuit OPENS (100% > 50%)
 ```
 
 ---
@@ -220,15 +222,21 @@ Client      evaluate()   evaluateWithRetry   CircuitBreaker   NATS
 ```
                Circuit State: CLOSED
                      │
-  Request 1 ────────►│ 5 failures (5 fires)
-                     │ failure_rate=100%, but fires < 15
+  Request 1 ────────►│ 6 failures (6 fires)
+                     │ failure_rate=100%, but fires < 30
                      │
-  Request 2 ────────►│ 10 failures (10 fires)
-                     │ failure_rate=100%, but fires < 15
+  Request 2 ────────►│ 12 failures (12 fires)
+                     │ failure_rate=100%, but fires < 30
                      │
-  Request 3 ────────►│ 15 failures (15 fires)
+  Request 3 ────────►│ 18 failures (18 fires)
+                     │ failure_rate=100%, but fires < 30
+                     │
+  Request 4 ────────►│ 24 failures (24 fires)
+                     │ failure_rate=100%, but fires < 30
+                     │
+  Request 5 ────────►│ 30 failures (30 fires)
                      │ failure_rate=100% >= 50%
-                     │ fires=15 >= threshold=15
+                     │ fires=30 >= threshold=30
                      │
                      ▼
                Circuit OPENS
@@ -456,8 +464,8 @@ stats: {
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `AUTH_EVAL_CIRCUIT_BREAKER_ENABLED` | `true` | Enable/disable circuit breaker |
-| `AUTH_EVAL_TIMEOUT` | `3000` | Request timeout (ms) |
-| `AUTH_EVAL_FAILURE_THRESHOLD` | `15` | Volume threshold |
+| `AUTH_EVAL_TIMEOUT` | `5000` | Request timeout (ms) |
+| `AUTH_EVAL_FAILURE_THRESHOLD` | `30` | Volume threshold |
 | `AUTH_EVAL_RESET_TIMEOUT` | `45000` | Open → half-open time (ms) |
 | `AUTH_EVAL_ERROR_THRESHOLD_PCT` | `50` | Failure percentage to trip |
 | `AUTH_EVAL_ROLLING_COUNT_TIMEOUT` | `60000` | Rolling window (ms) |
