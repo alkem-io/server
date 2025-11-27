@@ -82,9 +82,9 @@ As a platform operator, I want to observe the circuit breaker's state and failur
 
 - **FR-001**: System MUST implement the circuit breaker pattern with three states: Closed (normal operation), Open (failing fast), and Half-Open (probing recovery).
 - **FR-002**: System MUST track consecutive failures and open the circuit after 15 consecutive failures (default), ensuring intermittent successes reset the failure count.
-- **FR-003**: System MUST timeout individual requests that exceed the configured duration (default: 5 seconds) and count them as failures.
+- **FR-003**: System MUST timeout individual requests that exceed the configured duration (default: 3 seconds) and count them as failures.
 - **FR-004**: When the circuit is open, system MUST gracefully return an authorization denial response (allowed: false) with a reason indicating service unavailability, rather than throwing an exception.
-- **FR-005**: System MUST automatically transition to half-open state after the reset timeout elapses (default: 30 seconds).
+- **FR-005**: System MUST automatically transition to half-open state after the reset timeout elapses (default: 45 seconds).
 - **FR-006**: System MUST close the circuit when a probe request in half-open state succeeds.
 - **FR-007**: System MUST reopen the circuit immediately if a probe request in half-open state fails.
 - **FR-008**: System MUST emit structured log entries for all state transitions at verbose level (circuit close, half-open) except circuit open which uses warn level.
@@ -137,6 +137,7 @@ As a platform operator, I want to observe the circuit breaker's state and failur
 - Q: What log level should be used for circuit breaker and retry logs? → A: Verbose level for all operational logs (retries, state transitions); warn level only for circuit open events
 - Q: How should circuit-open rejections be handled? → A: Return authorization denial (allowed: false) with reason; rate-limit warn logs to once per circuit-open period to avoid flooding on many requests
 - Q: What metadata should the circuit-open response include? → A: Include reason, circuit state, failure count metadata, and retryAfter field in milliseconds indicating when recovery will be attempted
+- Q: Is 30s reset timeout sufficient given retry timing? → A: No, with 3s timeout and 5 retries, max failure window is ~30s. Reset timeout set to 45s to exceed this and allow adequate downstream recovery time
 
 ## Assumptions
 

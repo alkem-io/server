@@ -111,6 +111,8 @@ You can log structured data as the message parameter - it accepts string or obje
 - Trust this guide. Only search or explore when information here is missing or demonstrably outdated.
 
 ## Active Technologies
+- TypeScript 5.x on Node.js 20.15.1 (Volta-pinned) + NestJS 10.x, @nestjs/microservices (NATS transport), opossum (circuit breaker), @types/opossum, RxJS 7.x (017-auth-circuit-breaker)
+- N/A - no persistence required (circuit state is local to service instance) (017-auth-circuit-breaker)
 
 - TypeScript 5.x on Node.js 20 (per repository toolchain) + NestJS server, existing CI runner stack, SonarQube at https://sonarqube.alkem.io (015-sonarqube-analysis)
 - N/A (SonarQube stores analysis; server DB not impacted by this feature) (015-sonarqube-analysis)
