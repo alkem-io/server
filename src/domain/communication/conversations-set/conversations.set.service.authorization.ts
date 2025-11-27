@@ -103,7 +103,7 @@ export class ConversationsSetAuthorizationService {
         LogContext.COMMUNICATION
       );
     }
-    const hostConversationWIthReceiverAuthorizations =
+    const hostConversationWithReceiverAuthorizations =
       await this.conversationAuthorizationService.applyAuthorizationPolicy(
         hostConversationWithReceiver.id,
         hostUserID,
@@ -111,7 +111,7 @@ export class ConversationsSetAuthorizationService {
       );
 
     await this.authorizationPolicyService.saveAll(
-      hostConversationWIthReceiverAuthorizations
+      hostConversationWithReceiverAuthorizations
     );
   }
 }
