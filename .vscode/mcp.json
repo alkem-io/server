@@ -1,6 +1,24 @@
 {
   "servers": {
-    "postgres": {
+    "postgres-alkemio": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://root:toor@localhost:5432/alkemio"
+      ]
+    },
+    "postgres-kratos": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://synapse:synapse@localhost:5432/kratos"
+      ]
+    },
+    "postgres-synapse": {
       "type": "stdio",
       "command": "npx",
       "args": [
