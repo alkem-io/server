@@ -115,6 +115,11 @@ for TABLE in $TABLES; do
             # For blob/binary columns: export as hex for PostgreSQL bytea
             # PostgreSQL COPY can read hex format: \x followed by hex digits
             COLUMN_LIST="${COLUMN_LIST}IFNULL(CONCAT('\"\\\\x', HEX(\`${COL_NAME}\`), '\"'), '')"
+        elif [[ "$TABLE" == "whiteboard" && "$COL_NAME" == "content" ]]; then
+            # Special handling for whiteboard.content: export as base64 to preserve binary data
+            # The content field contains zlib-compressed data stored with 'binary' encoding
+            # which uses bytes 0x00-0xFF and will be corrupted by text encoding conversions
+            COLUMN_LIST="${COLUMN_LIST}IFNULL(CONCAT('\"', TO_BASE64(\`${COL_NAME}\`), '\"'), '')"
         else
             # For non-UUID columns: preserve empty strings as ""
             COLUMN_LIST="${COLUMN_LIST}IFNULL(CONCAT('\"', REPLACE(REPLACE(REPLACE(\`${COL_NAME}\`, '\"', '\"\"'), CHAR(10), ' '), CHAR(13), ''), '\"'), '')"

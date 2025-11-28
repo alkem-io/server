@@ -166,7 +166,18 @@ for TABLE_NAME in $TABLES_TO_IMPORT; do
     QUOTED_HEADER=$(echo "$HEADER" | sed 's/,/","/g' | sed 's/^/"/' | sed 's/$/"/')
 
     echo "\\echo 'Importing ${TABLE_NAME}...'" >> "${SQL_SCRIPT}"
-    echo "COPY \"${TABLE_NAME}\" (${QUOTED_HEADER}) FROM '/tmp/csv_import/${TABLE_NAME}.csv' WITH (FORMAT csv, HEADER true, NULL '');" >> "${SQL_SCRIPT}"
+
+    # Special handling for whiteboard table: content column is base64 encoded
+    if [ "$TABLE_NAME" = "whiteboard" ]; then
+        # For whiteboard table: The content is base64 encoded compressed data.
+        # We keep it as base64 in PostgreSQL because:
+        # 1. The compressed data may contain null bytes (0x00) which PostgreSQL text columns don't allow
+        # 2. The application code needs to be updated to handle base64 encoded content
+        # Just import directly - the content stays as base64
+        echo "COPY \"${TABLE_NAME}\" (${QUOTED_HEADER}) FROM '/tmp/csv_import/${TABLE_NAME}.csv' WITH (FORMAT csv, HEADER true, NULL '');" >> "${SQL_SCRIPT}"
+    else
+        echo "COPY \"${TABLE_NAME}\" (${QUOTED_HEADER}) FROM '/tmp/csv_import/${TABLE_NAME}.csv' WITH (FORMAT csv, HEADER true, NULL '');" >> "${SQL_SCRIPT}"
+    fi
     echo "" >> "${SQL_SCRIPT}"
 done
 
