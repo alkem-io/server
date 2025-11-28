@@ -166,8 +166,20 @@ export class WhiteboardGuestAccessService {
       return false;
     }
 
-    return authorization.credentialRules.some(rule =>
+    const guestRules = authorization.credentialRules.filter(rule =>
       this.ruleTargetsGuestCredential(rule)
+    );
+
+    if (guestRules.length === 0) {
+      return false;
+    }
+
+    const allGrantedPrivileges = new Set(
+      guestRules.flatMap(rule => rule.grantedPrivileges)
+    );
+
+    return GRANTED_GUEST_PRIVILEGES.every(privilege =>
+      allGrantedPrivileges.has(privilege)
     );
   }
 
