@@ -21,7 +21,6 @@ const mockAuth = (
   props?: Partial<IAuthorizationPolicy>
 ): IAuthorizationPolicy => ({
   credentialRules: [],
-  verifiedCredentialRules: [],
   privilegeRules: [],
   id: uniqueId(),
   createdDate: new Date(),

@@ -479,7 +479,6 @@ const getAuthorizationPolicyMock = (id: string): AuthorizationPolicy => ({
   credentialRules: [],
   privilegeRules: [],
   type: AuthorizationPolicyType.SPACE,
-  verifiedCredentialRules: [],
   ...getEntityMock<AuthorizationPolicy>(),
 });
 
