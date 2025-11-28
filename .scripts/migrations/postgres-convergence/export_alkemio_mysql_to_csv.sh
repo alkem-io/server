@@ -120,6 +120,10 @@ for TABLE in $TABLES; do
             # The content field contains zlib-compressed data stored with 'binary' encoding
             # which uses bytes 0x00-0xFF and will be corrupted by text encoding conversions
             COLUMN_LIST="${COLUMN_LIST}IFNULL(CONCAT('\"', TO_BASE64(\`${COL_NAME}\`), '\"'), '')"
+        elif [[ "$TABLE" == "callout_contribution_defaults" && "$COL_NAME" == "whiteboardContent" ]]; then
+            # Special handling for callout_contribution_defaults.whiteboardContent: export as base64
+            # Same issue as whiteboard.content - zlib-compressed data with binary encoding
+            COLUMN_LIST="${COLUMN_LIST}IFNULL(CONCAT('\"', TO_BASE64(\`${COL_NAME}\`), '\"'), '')"
         else
             # For non-UUID columns: preserve empty strings as ""
             COLUMN_LIST="${COLUMN_LIST}IFNULL(CONCAT('\"', REPLACE(REPLACE(REPLACE(\`${COL_NAME}\`, '\"', '\"\"'), CHAR(10), ' '), CHAR(13), ''), '\"'), '')"

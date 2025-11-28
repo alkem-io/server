@@ -21,37 +21,6 @@ const isBase64 = (value: string): boolean => {
 };
 
 /**
- * Check if a string appears to be legacy MySQL migrated data.
- * Legacy format starts with UTF-8 encoded bytes that originally represented
- * latin1 characters. The zlib header 0x78 0x9c becomes 'x' followed by
- * a multi-byte UTF-8 sequence (Â or Ã prefix for bytes >= 0x80).
- *
- * Common patterns:
- * - 0x78 0x9c -> 'x' + 'Â' + 'œ' (U+0153) or similar
- * - 0x78 0x01 -> 'x' + SOH (but this is rare)
- * - 0x78 0xda -> 'x' + 'Ã' + 'š' (U+0161)
- *
- * We detect this by checking if:
- * 1. String starts with 'x' (0x78 zlib header byte)
- * 2. OR string starts with 'e' followed by 'M' which is the UTF-8 re-encoding
- *    pattern we see: base64 'eM...' becomes the UTF-8 string pattern
- */
-const isLegacyMySqlMigratedFormat = (value: string): boolean => {
-  if (!value || value.length < 2) return false;
-
-  // Check for direct 'x' start (zlib header as latin1)
-  if (value.charCodeAt(0) === 0x78) return true;
-
-  // Check for UTF-8 multi-byte pattern that indicates re-encoded binary
-  // When 0x78 0x9c gets UTF-8 encoded and then decoded, we often see
-  // patterns starting with 'e' 'M' or containing special chars
-  // The pattern 'eMKc' or similar indicates base64-like but with high bytes
-  if (value.startsWith('eM') && value.includes('w')) return true;
-
-  return false;
-};
-
-/**
  * Check if a string appears to be legacy binary-encoded compressed data.
  * Legacy format from MySQL migration starts with 0x78 ('x') which is the zlib header.
  */
@@ -93,43 +62,17 @@ export const decompressText = async (value: string): Promise<string> => {
   console.log('[DECOMPRESS DEBUG] First 50 chars:', value?.substring(0, 50));
   console.log('[DECOMPRESS DEBUG] isBase64:', isBase64(value));
   console.log(
-    '[DECOMPRESS DEBUG] isLegacyMySqlMigratedFormat:',
-    isLegacyMySqlMigratedFormat(value)
-  );
-  console.log(
     '[DECOMPRESS DEBUG] isLegacyBinaryFormat:',
     isLegacyBinaryFormat(value)
   );
 
-  if (isLegacyMySqlMigratedFormat(value) && !isBase64(value)) {
-    // Legacy MySQL migrated format: the data was stored as latin1 bytes in MySQL,
-    // exported as base64, and PostgreSQL decoded it back to UTF-8 text.
-    // We need to: interpret UTF-8 string char codes as latin1 byte values
-    console.log('[DECOMPRESS DEBUG] Using legacy MySQL migrated format path');
-
-    // First, we need to decode the base64 that PostgreSQL might have auto-decoded
-    // Actually, looking at 'eMKc...' this IS the base64 that got partially decoded
-    // Let's try: the string chars represent bytes, decode as base64
-    const decoded = Buffer.from(value, 'base64');
-    console.log('[DECOMPRESS DEBUG] Base64 decoded length:', decoded.length);
-    console.log(
-      '[DECOMPRESS DEBUG] Base64 decoded first 10 bytes:',
-      decoded.subarray(0, 10).toString('hex')
-    );
-
-    if (hasValidZlibHeader(decoded)) {
-      // Direct zlib after base64 decode
-      console.log('[DECOMPRESS DEBUG] Valid zlib header after base64 decode');
-      compressedBuffer = decoded;
-    } else {
-      // Need to interpret UTF-8 as latin1
-      const utf8String = decoded.toString('utf8');
-      compressedBuffer = Buffer.from(utf8String, 'latin1');
-      console.log(
-        '[DECOMPRESS DEBUG] After UTF-8->latin1, first 10 bytes:',
-        compressedBuffer.subarray(0, 10).toString('hex')
-      );
-    }
+  if (isLegacyBinaryFormat(value) && !isBase64(value)) {
+    // Raw binary format - data starts with 'x' (0x78 zlib header)
+    // and contains non-base64 characters. This is legacy MySQL data
+    // that was stored as binary and not converted to base64 during export.
+    // Interpret each character code as a byte value (latin1 encoding).
+    console.log('[DECOMPRESS DEBUG] Using raw binary (latin1) path');
+    compressedBuffer = Buffer.from(value, 'latin1');
   } else if (isBase64(value)) {
     // Base64 encoded data - could be:
     // 1. New format: base64 of raw compressed bytes
@@ -165,14 +108,11 @@ export const decompressText = async (value: string): Promise<string> => {
         compressedBuffer.subarray(0, 10).toString('hex')
       );
     }
-  } else if (isLegacyBinaryFormat(value)) {
-    // Legacy binary format - data starts with 'x' (0x78 zlib header)
-    // Stored as UTF-8 text where each character code is a byte value
-    console.log('[DECOMPRESS DEBUG] Using legacy binary format path');
-    compressedBuffer = Buffer.from(value, 'latin1');
   } else {
-    // Unknown format - try latin1 interpretation
-    console.log('[DECOMPRESS DEBUG] Using unknown format path');
+    // Unknown format - try latin1 interpretation as fallback
+    console.log(
+      '[DECOMPRESS DEBUG] Using unknown format (latin1 fallback) path'
+    );
     compressedBuffer = Buffer.from(value, 'latin1');
   }
 
