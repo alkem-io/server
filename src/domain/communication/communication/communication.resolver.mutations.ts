@@ -22,10 +22,8 @@ import { MessagingNotEnabledException } from '@common/exceptions/messaging.not.e
 import { LogContext } from '@common/enums/logging.context';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { ConversationsSetService } from '../conversations-set/conversations.set.service';
-import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
 import { ConversationsSetAuthorizationService } from '../conversations-set/conversations.set.service.authorization';
 import { ConversationService } from '../conversation/conversation.service';
-import { MatrixEntityNotFoundException } from '@common/exceptions/matrix.entity.not.found.exception';
 
 @InstrumentResolver()
 @Resolver()
@@ -88,82 +86,7 @@ export class CommunicationResolverMutations {
       );
     }
 
-    // To test out the logic
-    if (messageData.receiverIds.length === 1) {
-      const receiverID = messageData.receiverIds[0];
-      if (this.communicationAdapter.directMessageRoomsEnabled) {
-        await this.setupAndUseDirectMessaging(
-          agentInfo,
-          receiverID,
-          messageData
-        );
-      }
-    }
-
     return true;
-  }
-
-  // NOTE: Temporary method to test direct messaging setup and sending
-  private async setupAndUseDirectMessaging(
-    agentInfo: AgentInfo,
-    receiverID: string,
-    messageData: CommunicationSendMessageToUsersInput
-  ) {
-    const senderID = agentInfo.userID!;
-    // Send direct message if only one receiver
-    if (receiverID === senderID) {
-      this.logger.warn(
-        `skipping sending to oneself: ${senderID}`,
-        LogContext.COMMUNICATION
-      );
-      return;
-    }
-    const sender = await this.userService.getUserOrFail(senderID, {
-      relations: {
-        conversationsSet: true,
-      },
-    });
-    this.logger.verbose?.(
-      `Initiating direct messaging to user ${receiverID}`,
-      LogContext.COMMUNICATION_CONVERSATION
-    );
-
-    let conversation =
-      await this.conversationsSetService.createConversationOnConversationsSet(
-        {
-          userID: receiverID,
-          type: CommunicationConversationType.USER_USER,
-          currentUserID: senderID,
-        },
-        sender.conversationsSet!.id,
-        true
-      );
-
-    await this.conversationsSetAuthorizationService.resetAuthorizationOnConversations(
-      senderID,
-      receiverID,
-      CommunicationConversationType.USER_USER
-    );
-    conversation = await this.conversationService.getConversationOrFail(
-      conversation.id,
-      {
-        relations: {
-          room: true,
-        },
-      }
-    );
-    if (!conversation.room) {
-      throw new MatrixEntityNotFoundException(
-        `Conversation ${conversation.id} does not have an associated room`,
-        LogContext.COMMUNICATION_CONVERSATION
-      );
-    }
-
-    await this.communicationAdapter.sendMessageToRoom({
-      roomID: conversation.room.externalRoomID,
-      message: messageData.message,
-      senderCommunicationsID: agentInfo.communicationID,
-    });
   }
 
   @Mutation(() => Boolean, {
