@@ -6,7 +6,6 @@ import {
   MATRIX_ADAPTER_SERVICE,
   SUBSCRIPTION_CALLOUT_POST_CREATED,
   WALLET_MANAGEMENT_SERVICE,
-  SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL,
   SUBSCRIPTION_DISCUSSION_UPDATED,
   SUBSCRIPTION_ROOM_EVENT,
   AUTH_RESET_SERVICE,
@@ -28,10 +27,6 @@ const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
   {
     provide: SUBSCRIPTION_CALLOUT_POST_CREATED,
     queueName: MessagingQueue.SUBSCRIPTION_CALLOUT_POST_CREATED,
-  },
-  {
-    provide: SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL,
-    queueName: MessagingQueue.SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL,
   },
   {
     provide: SUBSCRIPTION_SUBSPACE_CREATED,
@@ -70,11 +65,6 @@ const subscriptionFactoryProviders = subscriptionConfig.map(
       provide: MATRIX_ADAPTER_SERVICE,
       useFactory: clientProxyFactory(MessagingQueue.MATRIX_ADAPTER),
 
-      inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
-    },
-    {
-      provide: WALLET_MANAGEMENT_SERVICE,
-      useFactory: clientProxyFactory(MessagingQueue.WALLET_MANAGER),
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
     },
     {

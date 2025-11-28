@@ -26,8 +26,6 @@ import { ContributionMoveModule } from '@domain/collaboration/callout-contributi
 import { GeoLocationModule } from '@services/external/geo-location';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.module';
-import { SsiCredentialFlowModule } from '@services/api-rest/ssi-credential-flow/ssi.credential.flow.module';
-import { StorageAccessModule } from '@services/api-rest/storage-access/storage.access.module';
 import { MessageModule } from '@domain/communication/message/message.module';
 import { MessageReactionModule } from '@domain/communication/message.reaction/message.reaction.module';
 import { NotificationRecipientsModule } from '@services/api/notification-recipients/notification.recipients.module';
@@ -204,8 +202,6 @@ class SchemaBootstrapStubModule {}
     GeoLocationModule,
     ContributionReporterModule,
     InnovationHubModule,
-    SsiCredentialFlowModule,
-    StorageAccessModule,
     MessageModule,
     MessageReactionModule,
     NotificationRecipientsModule,

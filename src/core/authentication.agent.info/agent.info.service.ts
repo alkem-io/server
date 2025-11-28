@@ -3,7 +3,6 @@ import { AgentInfo } from './agent.info';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { AuthorizationCredential, LogContext } from '@common/enums';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
-import { IVerifiedCredential } from '@domain/agent/verified-credential/verified.credential.interface';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager } from 'typeorm';
 import { User } from '@domain/community/user/user.entity';
@@ -125,9 +124,6 @@ export class AgentInfoService {
       );
     }
 
-    // const verifiedCredentials =
-    //   await this.agentService.getVerifiedCredentials(user.agent);
-    const verifiedCredentials = [] as IVerifiedCredential[];
     // construct the agent info object needed for isAccessGranted
     let credentials: ICredentialDefinition[] = [];
 
@@ -142,7 +138,6 @@ export class AgentInfoService {
 
     const agentInfo = new AgentInfo();
     agentInfo.credentials = credentials;
-    agentInfo.verifiedCredentials = verifiedCredentials;
     return agentInfo;
   }
 }

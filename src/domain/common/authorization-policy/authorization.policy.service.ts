@@ -20,9 +20,7 @@ import { IAuthorizationPolicyRuleCredential } from '../../../core/authorization/
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential';
 import { IAuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege.interface';
-import { IAuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential.interface';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { ConfigService } from '@nestjs/config';
@@ -49,7 +47,6 @@ export class AuthorizationPolicyService {
     id: true,
     credentialRules: true,
     privilegeRules: true,
-    verifiedCredentialRules: true,
   };
 
   createCredentialRule(
@@ -67,12 +64,12 @@ export class AuthorizationPolicyService {
 
   createCredentialRuleUsingTypesOnly(
     grantedPrivileges: AuthorizationPrivilege[],
-    createntialTypes: AuthorizationCredential[],
+    credentialTypes: AuthorizationCredential[],
     name: string
   ): IAuthorizationPolicyRuleCredential {
     const criterias: ICredentialDefinition[] = [];
 
-    for (const credentialType of createntialTypes) {
+    for (const credentialType of credentialTypes) {
       const criteria: ICredentialDefinition = {
         type: credentialType,
         resourceID: '',
@@ -161,7 +158,6 @@ export class AuthorizationPolicyService {
       );
     }
     authorizationPolicy.credentialRules = [];
-    authorizationPolicy.verifiedCredentialRules = [];
     authorizationPolicy.privilegeRules = [];
     return authorizationPolicy;
   }
@@ -366,21 +362,6 @@ export class AuthorizationPolicyService {
     return auth;
   }
 
-  appendVerifiedCredentialAuthorizationRules(
-    authorization: IAuthorizationPolicy | undefined,
-    additionalRules: AuthorizationPolicyRuleVerifiedCredential[]
-  ): IAuthorizationPolicy {
-    const auth = this.validateAuthorization(authorization);
-
-    const existingRules = auth.verifiedCredentialRules;
-    for (const additionalRule of additionalRules) {
-      existingRules.push(additionalRule);
-    }
-
-    auth.verifiedCredentialRules = existingRules;
-    return auth;
-  }
-
   inheritParentAuthorization(
     childAuthorization: IAuthorizationPolicy | undefined,
     parentAuthorization: IAuthorizationPolicy | undefined
@@ -411,15 +392,6 @@ export class AuthorizationPolicyService {
     }
     resetAuthPolicy.credentialRules = newRules;
 
-    // (b) Inherit the verified credential rules
-    const inheritedVCRules = parent.verifiedCredentialRules;
-
-    const newVcRules: IAuthorizationPolicyRuleVerifiedCredential[] = [];
-    for (const inheritedVcRule of inheritedVCRules) {
-      newVcRules.push(inheritedVcRule);
-    }
-    resetAuthPolicy.verifiedCredentialRules = newVcRules;
-
     return resetAuthPolicy;
   }
 
@@ -427,12 +399,6 @@ export class AuthorizationPolicyService {
     authorization: IAuthorizationPolicy
   ): IAuthorizationPolicyRuleCredential[] {
     return authorization.credentialRules;
-  }
-
-  getVerifiedCredentialRules(
-    authorization: IAuthorizationPolicy
-  ): IAuthorizationPolicyRuleVerifiedCredential[] {
-    return authorization.verifiedCredentialRules;
   }
 
   getPrivilegeRules(
@@ -449,7 +415,6 @@ export class AuthorizationPolicyService {
 
     return this.authorizationService.getGrantedPrivileges(
       agentInfo.credentials,
-      agentInfo.verifiedCredentials,
       authorizationPolicy
     );
   }
