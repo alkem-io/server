@@ -7,7 +7,6 @@ import { Inject, LoggerService } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UserService } from './user.service';
-import { DirectRoomResult } from '../../communication/communication/dto/communication.dto.send.direct.message.user.result';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
@@ -27,7 +26,6 @@ import { User } from './user.entity';
 import { AuthenticationType } from '@common/enums/authentication.type';
 import { UserAuthenticationResult } from './dto/roles.dto.authentication.result';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
-import { IRoom } from '@domain/communication/room/room.interface';
 import { IUserSettings } from '../user-settings/user.settings.interface';
 import { InstrumentResolver } from '@src/apm/decorators';
 
@@ -79,14 +77,6 @@ export class UserResolverFields {
     loader: ILoader<IAuthorizationPolicy>
   ) {
     return loader.load(user.id);
-  }
-
-  @ResolveField('directRooms', () => [DirectRoomResult], {
-    nullable: true,
-    description: 'The direct rooms this user is a member of',
-  })
-  async directRooms(@Parent() user: User): Promise<DirectRoomResult[]> {
-    return this.userService.getDirectRooms(user);
   }
 
   @ResolveField('email', () => String, {
@@ -228,30 +218,6 @@ export class UserResolverFields {
     }
 
     return result;
-  }
-
-  @ResolveField(() => IRoom, {
-    nullable: true,
-    description: 'Guidance Chat Room for this user',
-  })
-  async guidanceRoom(
-    @Parent() user: User,
-    @CurrentUser() agentInfo: AgentInfo
-  ): Promise<IRoom | undefined> {
-    const { guidanceRoom } = await this.userService.getUserOrFail(user.id, {
-      relations: { guidanceRoom: true },
-    });
-    if (!guidanceRoom) {
-      return undefined;
-    }
-
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      guidanceRoom.authorization,
-      AuthorizationPrivilege.READ,
-      `guidance Room: ${guidanceRoom.id}`
-    );
-    return guidanceRoom;
   }
 
   private async isAccessGranted(
