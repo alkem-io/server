@@ -105,7 +105,8 @@ export class AccountService {
     spaceData.level = SpaceLevel.L0;
     spaceData.storageAggregatorParent = account.storageAggregator;
     // will be set properly after saving to its own ID
-    spaceData.levelZeroSpaceID = '';
+    // PostgreSQL requires null (not empty string) for nullable UUID columns
+    spaceData.levelZeroSpaceID = undefined as unknown as string;
 
     let space = await this.spaceService.createRootSpaceAndSubspaces(
       spaceData,
