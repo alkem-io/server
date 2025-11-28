@@ -43,7 +43,7 @@ mkdir -p "${EXPORT_DIR}"
 
 # Get list of tables (excluding system tables)
 echo "Fetching table list..."
-TABLES=$(docker exec -i "${CONTAINER}" mysql -u"${MYSQL_USER}" -p"${MYSQL_PWD}" -N -e \
+TABLES=$(docker exec -i "${CONTAINER}" mysql -u"${MYSQL_USER}" -p"${MYSQL_PWD}" -N --default-character-set=utf8mb4 -e \
     "SELECT table_name FROM information_schema.tables
      WHERE table_schema = '${DATABASE}'
      AND table_type = 'BASE TABLE'
@@ -77,7 +77,7 @@ for TABLE in $TABLES; do
     echo -n "Exporting ${TABLE}... "
 
     # Get column info with types - need to know which columns are UUID-like (char(36))
-    COL_INFO=$(docker exec -i "${CONTAINER}" mysql -u"${MYSQL_USER}" -p"${MYSQL_PWD}" -N -e \
+    COL_INFO=$(docker exec -i "${CONTAINER}" mysql -u"${MYSQL_USER}" -p"${MYSQL_PWD}" -N --default-character-set=utf8mb4 -e \
         "SELECT column_name, column_type
          FROM information_schema.columns
          WHERE table_schema = '${DATABASE}'
@@ -133,11 +133,11 @@ for TABLE in $TABLES; do
     # Export with proper CSV formatting directly from MySQL
     # Using CONCAT instead of CONCAT_WS to preserve empty positions for NULL values
     echo "SELECT CONCAT(${COLUMN_LIST}) FROM ${DATABASE}.\`${TABLE}\`;" | \
-        docker exec -i "${CONTAINER}" mysql -u"${MYSQL_USER}" -p"${MYSQL_PWD}" -N --raw 2>/dev/null \
+        docker exec -i "${CONTAINER}" mysql -u"${MYSQL_USER}" -p"${MYSQL_PWD}" -N --raw --default-character-set=utf8mb4 2>/dev/null \
         > "${EXPORT_DIR}/${FILENAME}"
 
     # Get row count
-    ROW_COUNT=$(docker exec -i "${CONTAINER}" mysql -u"${MYSQL_USER}" -p"${MYSQL_PWD}" -N -e \
+    ROW_COUNT=$(docker exec -i "${CONTAINER}" mysql -u"${MYSQL_USER}" -p"${MYSQL_PWD}" -N --default-character-set=utf8mb4 -e \
         "SELECT COUNT(*) FROM ${DATABASE}.\`${TABLE}\`;" 2>/dev/null)
 
     TOTAL_ROWS=$((TOTAL_ROWS + ROW_COUNT))

@@ -38,7 +38,7 @@ if ! docker ps --format '{{.Names}}' | grep -q "^${CONTAINER}$"; then
 fi
 
 # Check if Kratos database exists
-DB_EXISTS=$(docker exec -i "${CONTAINER}" mysql -u"${MYSQL_USER}" -p"${MYSQL_PWD}" -N -e \
+DB_EXISTS=$(docker exec -i "${CONTAINER}" mysql -u"${MYSQL_USER}" -p"${MYSQL_PWD}" -N --default-character-set=utf8mb4 -e \
     "SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = '${DATABASE}';" 2>/dev/null || echo "")
 
 if [ -z "$DB_EXISTS" ]; then
@@ -52,7 +52,7 @@ mkdir -p "${EXPORT_DIR}"
 
 # Get list of tables
 echo "Fetching table list..."
-TABLES=$(docker exec -i "${CONTAINER}" mysql -u"${MYSQL_USER}" -p"${MYSQL_PWD}" -N -e \
+TABLES=$(docker exec -i "${CONTAINER}" mysql -u"${MYSQL_USER}" -p"${MYSQL_PWD}" -N --default-character-set=utf8mb4 -e \
     "SELECT table_name FROM information_schema.tables
      WHERE table_schema = '${DATABASE}'
      AND table_type = 'BASE TABLE'
@@ -86,7 +86,7 @@ for TABLE in $TABLES; do
     echo -n "Exporting ${TABLE}... "
 
     # Get column names and types
-    COL_INFO=$(docker exec -i "${CONTAINER}" mysql -u"${MYSQL_USER}" -p"${MYSQL_PWD}" -N -e \
+    COL_INFO=$(docker exec -i "${CONTAINER}" mysql -u"${MYSQL_USER}" -p"${MYSQL_PWD}" -N --default-character-set=utf8mb4 -e \
         "SELECT column_name, column_type
          FROM information_schema.columns
          WHERE table_schema = '${DATABASE}'
@@ -135,7 +135,7 @@ for TABLE in $TABLES; do
         > "${EXPORT_DIR}/${FILENAME}"
 
     # Get row count
-    ROW_COUNT=$(docker exec -i "${CONTAINER}" mysql -u"${MYSQL_USER}" -p"${MYSQL_PWD}" -N -e \
+    ROW_COUNT=$(docker exec -i "${CONTAINER}" mysql -u"${MYSQL_USER}" -p"${MYSQL_PWD}" -N --default-character-set=utf8mb4 -e \
         "SELECT COUNT(*) FROM ${DATABASE}.\`${TABLE}\`;" 2>/dev/null)
 
     TOTAL_ROWS=$((TOTAL_ROWS + ROW_COUNT))

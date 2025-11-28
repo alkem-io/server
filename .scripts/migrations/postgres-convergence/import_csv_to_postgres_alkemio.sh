@@ -79,22 +79,14 @@ FILE_COUNT=$(echo "$CSV_FILES" | wc -l)
 echo "Found ${FILE_COUNT} CSV files to import"
 echo ""
 
-# Copy all CSV files to container first (with encoding sanitization)
+# Copy all CSV files to container first
 echo "Copying CSV files to container..."
-SANITIZED_DIR="${EXPORT_DIR}/sanitized_${IMPORT_TIMESTAMP}"
-mkdir -p "${SANITIZED_DIR}"
 
 for CSV_FILE in $CSV_FILES; do
     FILENAME=$(basename "$CSV_FILE")
-
-    # Sanitize encoding: convert Windows-1252 to UTF-8, replacing invalid sequences
-    # This handles em-dashes (0x96), smart quotes (0x92, 0x93, 0x94), etc.
-    if ! iconv -f WINDOWS-1252 -t UTF-8//TRANSLIT < "${CSV_FILE}" > "${SANITIZED_DIR}/${FILENAME}" 2>/dev/null; then
-        # Fallback: use tr to remove invalid bytes if iconv fails
-        tr -cd '\11\12\15\40-\176' < "${CSV_FILE}" > "${SANITIZED_DIR}/${FILENAME}"
-    fi
-
-    docker cp "${SANITIZED_DIR}/${FILENAME}" "${CONTAINER}:/tmp/csv_import/${FILENAME}"
+    # Files are already UTF-8 from MySQL export with --default-character-set=utf8mb4
+    # No encoding conversion needed - just copy directly
+    docker cp "${CSV_FILE}" "${CONTAINER}:/tmp/csv_import/${FILENAME}"
 done
 echo "Done copying files"
 echo ""
