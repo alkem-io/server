@@ -99,6 +99,7 @@ enum AuthorizationCredential {
   GLOBAL_ADMIN
   GLOBAL_ANONYMOUS
   GLOBAL_COMMUNITY_READ
+  GLOBAL_GUEST
   GLOBAL_LICENSE_MANAGER
   GLOBAL_PLATFORM_MANAGER
   GLOBAL_REGISTERED
@@ -209,6 +210,7 @@ enum AuthorizationPrivilege {
   MOVE_POST
   PLATFORM_ADMIN
   PLATFORM_SETTINGS_ADMIN
+  PUBLIC_SHARE
   READ
   READ_ABOUT
   READ_LICENSE
@@ -299,6 +301,7 @@ enum CredentialType {
   GLOBAL_ADMIN
   GLOBAL_ANONYMOUS
   GLOBAL_COMMUNITY_READ
+  GLOBAL_GUEST
   GLOBAL_LICENSE_MANAGER
   GLOBAL_PLATFORM_MANAGER
   GLOBAL_REGISTERED
@@ -597,6 +600,7 @@ enum RoleName {
   GLOBAL_SPACES_READER
   GLOBAL_SUPPORT
   GLOBAL_SUPPORT_MANAGER
+  GUEST
   LEAD
   MEMBER
   OWNER
@@ -3691,6 +3695,10 @@ type Mutation {
   """Updates the specified Whiteboard."""
   updateWhiteboard(whiteboardData: UpdateWhiteboardEntityInput!): Whiteboard!
   """
+  Grants or revokes GLOBAL_GUEST permissions for a whiteboard using a single toggle.
+  """
+  updateWhiteboardGuestAccess(input: UpdateWhiteboardGuestAccessInput!): UpdateWhiteboardGuestAccessResult!
+  """
   Create a new Document on the Storage and return the value as part of the returned Link.
   """
   uploadFileOnLink(file: Upload!, uploadData: StorageBucketUploadFileOnLinkInput!): Link!
@@ -5015,6 +5023,8 @@ type SpaceSettingsCollaboration {
   Flag to control if events from Subspaces are visible on this Space calendar as well.
   """
   allowEventsFromSubspaces: Boolean!
+  """Flag to control if guest users can contribute to this Space."""
+  allowGuestContributions: Boolean!
   """Flag to control if members can create callouts."""
   allowMembersToCreateCallouts: Boolean!
   """Flag to control if members can create subspaces."""
@@ -5374,6 +5384,13 @@ type Timeline {
   id: UUID!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
+}
+
+type UpdateWhiteboardGuestAccessResult {
+  """Indicates whether the mutation completed successfully."""
+  success: Boolean!
+  """Whiteboard snapshot reflecting the latest guest access state."""
+  whiteboard: Whiteboard
 }
 
 type UrlResolverQueryResultCalendar {
@@ -5828,6 +5845,10 @@ type Whiteboard {
   createdBy: User
   """The date at which the entity was created."""
   createdDate: DateTime!
+  """
+  Indicates whether guest collaborators are currently allowed via GLOBAL_GUEST permissions.
+  """
+  guestContributionsAllowed: Boolean!
   """The ID of the entity"""
   id: UUID!
   """Whether the Whiteboard is multi-user enabled on Space level."""
@@ -6435,6 +6456,8 @@ input CreateSpaceSettingsCollaborationInput {
   Flag to control if events from Subspaces are visible on this Space calendar as well.
   """
   allowEventsFromSubspaces: Boolean!
+  """Flag to control if guest users can contribute to this Space."""
+  allowGuestContributions: Boolean!
   """Flag to control if members can create callouts."""
   allowMembersToCreateCallouts: Boolean!
   """Flag to control if members can create subspaces."""
@@ -7624,6 +7647,8 @@ input UpdateSpaceSettingsCollaborationInput {
   Flag to control if events from Subspaces are visible on this Space calendar as well.
   """
   allowEventsFromSubspaces: Boolean!
+  """Flag to control if guest users can contribute to this Space."""
+  allowGuestContributions: Boolean!
   """Flag to control if members can create callouts."""
   allowMembersToCreateCallouts: Boolean!
   """Flag to control if members can create subspaces."""
@@ -7929,6 +7954,15 @@ input UpdateWhiteboardEntityInput {
   previewSettings: UpdateWhiteboardPreviewSettingsInput
   """The Profile of this entity."""
   profile: UpdateProfileInput
+}
+
+input UpdateWhiteboardGuestAccessInput {
+  """
+  Target state for guest collaboration. True enables GLOBAL_GUEST privileges.
+  """
+  guestAccessEnabled: Boolean!
+  """The identifier of the whiteboard whose guest access should be toggled."""
+  whiteboardId: UUID!
 }
 
 input UpdateWhiteboardPreviewSettingsInput {

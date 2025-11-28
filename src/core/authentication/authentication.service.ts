@@ -41,6 +41,7 @@ export class AuthenticationService {
   public async getAgentInfo(opts: {
     cookie?: string;
     authorization?: string;
+    guestName?: string;
   }): Promise<AgentInfo> {
     let session: Session | undefined;
     try {
@@ -48,16 +49,21 @@ export class AuthenticationService {
         opts.authorization,
         opts.cookie
       );
-    } catch {
-      return this.agentInfoService.createAnonymousAgentInfo();
+      if (session?.identity) {
+        const oryIdentity = session.identity as OryDefaultIdentitySchema;
+        return this.createAgentInfo(oryIdentity);
+      }
+    } catch (error) {
+      this.logger.verbose?.(
+        `Session validation failed, falling back to guest/anonymous: ${error}`,
+        LogContext.AUTH
+      );
     }
 
-    if (!session?.identity) {
-      return this.agentInfoService.createAnonymousAgentInfo();
+    if (opts.guestName?.trim()) {
+      return this.agentInfoService.createGuestAgentInfo(opts.guestName.trim());
     }
-
-    const oryIdentity = session.identity as OryDefaultIdentitySchema;
-    return this.createAgentInfo(oryIdentity);
+    return this.agentInfoService.createAnonymousAgentInfo();
   }
 
   /**

@@ -58,7 +58,7 @@ module.exports = defineConfig([
     ),
 
     rules: {
-      quotes: ['error', 'single'],
+      quotes: ['error', 'single', { avoidEscape: true }],
       'no-console': env(1, 0),
       'no-debugger': env(1, 0),
       '@typescript-eslint/interface-name-prefix': 'off',

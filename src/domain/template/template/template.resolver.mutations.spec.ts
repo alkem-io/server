@@ -1,24 +1,38 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { MockCacheManager } from '@test/mocks/cache-manager.mock';
+import { LoggerService } from '@nestjs/common';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
-import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { TemplateAuthorizationService } from './template.service.authorization';
 import { TemplateResolverMutations } from './template.resolver.mutations';
+import { TemplateService } from './template.service';
 
 describe('TemplateResolverMutations', () => {
   let resolver: TemplateResolverMutations;
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        TemplateResolverMutations,
-        MockCacheManager,
-        MockWinstonProvider,
-      ],
-    })
-      .useMocker(defaultMockerFactory)
-      .compile();
-
-    resolver = module.get(TemplateResolverMutations);
+  beforeEach(() => {
+    resolver = new TemplateResolverMutations(
+      {
+        grantAccessOrFail: jest.fn(),
+      } as unknown as AuthorizationService,
+      {
+        saveAll: jest.fn(),
+      } as unknown as AuthorizationPolicyService,
+      {
+        getSpaceOrFail: jest.fn(),
+      } as unknown as SpaceLookupService,
+      {
+        applyAuthorizationPolicy: jest.fn(),
+      } as unknown as TemplateAuthorizationService,
+      {
+        getTemplateOrFail: jest.fn(),
+        updateTemplate: jest.fn(),
+        updateTemplateFromSpace: jest.fn(),
+        delete: jest.fn(),
+        isTemplateInUseInTemplateDefault: jest.fn(),
+      } as unknown as TemplateService,
+      MockWinstonProvider.useValue as unknown as LoggerService
+    );
   });
 
   it('should be defined', () => {

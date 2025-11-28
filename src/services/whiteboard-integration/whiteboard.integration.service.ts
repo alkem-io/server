@@ -55,9 +55,19 @@ export class WhiteboardIntegrationService {
       const whiteboard = await this.whiteboardService.getWhiteboardOrFail(
         data.whiteboardId
       );
-      const agentInfo = await this.agentInfoService.buildAgentInfoForUser(
-        data.userId
-      );
+
+      const agentInfo = await this.resolveAgentInfo(data);
+      if (!agentInfo) {
+        this.logger.warn?.(
+          {
+            message: `Unable to build AgentInfo for userId: ${data.userId}`,
+            whiteboardId: data.whiteboardId,
+            guestName: data.guestName,
+          },
+          LogContext.WHITEBOARD_INTEGRATION
+        );
+        return false;
+      }
 
       return this.authorizationService.isAccessGranted(
         agentInfo,
@@ -77,11 +87,13 @@ export class WhiteboardIntegrationService {
   public async info({
     userId,
     whiteboardId,
+    guestName,
   }: InfoInputData): Promise<InfoOutputData> {
     const read = await this.accessGranted({
       userId,
       whiteboardId,
       privilege: AuthorizationPrivilege.READ,
+      guestName,
     });
 
     if (!read) {
@@ -96,6 +108,7 @@ export class WhiteboardIntegrationService {
       userId,
       whiteboardId,
       privilege: AuthorizationPrivilege.UPDATE_CONTENT,
+      guestName,
     });
 
     const maxCollaborators = (await this.whiteboardService.isMultiUser(
@@ -195,5 +208,56 @@ export class WhiteboardIntegrationService {
           LogContext.WHITEBOARD_INTEGRATION
         );
       });
+  }
+
+  private async resolveAgentInfo(
+    data: AccessGrantedInputData
+  ): Promise<AgentInfo | null> {
+    if (this.isGuestUserIdentifier(data.userId)) {
+      return this.agentInfoService.createGuestAgentInfo(
+        this.normalizeGuestName(data.guestName)
+      );
+    }
+
+    try {
+      return await this.agentInfoService.buildAgentInfoForUser(data.userId);
+    } catch (error) {
+      if (data.guestName?.trim()) {
+        this.logger.verbose?.(
+          {
+            message:
+              'Falling back to guest agent info after user lookup failure',
+            userId: data.userId,
+            whiteboardId: data.whiteboardId,
+          },
+          LogContext.WHITEBOARD_INTEGRATION
+        );
+        return this.agentInfoService.createGuestAgentInfo(
+          data.guestName.trim()
+        );
+      }
+
+      throw error;
+    }
+  }
+
+  private isGuestUserIdentifier(userId: string): boolean {
+    if (!userId) {
+      return true;
+    }
+
+    const normalized = userId.trim().toLowerCase();
+    return (
+      normalized.length === 0 ||
+      normalized === 'n/a' ||
+      normalized === 'guest' ||
+      normalized.startsWith('guest-') ||
+      normalized.startsWith('guest_')
+    );
+  }
+
+  private normalizeGuestName(guestName?: string): string {
+    const trimmed = guestName?.trim();
+    return trimmed && trimmed.length > 0 ? trimmed : 'Guest collaborator';
   }
 }

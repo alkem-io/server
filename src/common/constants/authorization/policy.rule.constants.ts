@@ -2,6 +2,8 @@ export const POLICY_RULE_SPACE_CREATE_SUBSPACE =
   'policyRule-spaceCreateSubspace';
 export const POLICY_RULE_WHITEBOARD_CONTENT_UPDATE =
   'policyRule-whiteboardContentUpdate';
+export const POLICY_RULE_WHITEBOARD_GRANT_PUBLIC_SHARE =
+  'policyRule-whiteboardGrantPublicShare';
 export const POLICY_RULE_MEMO_CONTENT_UPDATE = 'policyRule-memoContentUpdate';
 export const POLICY_RULE_VISUAL_UPDATE = 'policyRule-visualUpdate';
 export const POLICY_RULE_ROOM_CONTRIBUTE = 'policyRule-roomContribute';
