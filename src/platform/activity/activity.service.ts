@@ -172,7 +172,7 @@ export class ActivityService {
       const placeholders = collaborationIDs
         .map(() => `$${paramIndex++}`)
         .join(', ');
-      collaborationIdsCondition = `activity."collaborationId" IN (${placeholders})`;
+      collaborationIdsCondition = `activity."collaborationID" IN (${placeholders})`;
       queryParameters.push(...collaborationIDs);
     }
 
@@ -202,9 +202,9 @@ export class ActivityService {
       latest: string;
     }[] = await this.entityManager.connection.query(
       `
-      SELECT activity."triggeredBy", activity."resourceId", activity.type, MAX(activity."rowId") as latest FROM activity
+      SELECT activity."triggeredBy", activity."resourceID", activity.type, MAX(activity."rowId") as latest FROM activity
       WHERE ${whereConditions}
-      group by activity."resourceId", activity."triggeredBy", activity.type
+      group by activity."resourceID", activity."triggeredBy", activity.type
       order by latest ${orderBy}
       ${limit ? `LIMIT ${limit}` : ''}
       `,
