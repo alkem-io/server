@@ -102,6 +102,7 @@ type ActivityCreatedSubscriptionResult {
 enum ActivityEventType {
   CALENDAR_EVENT_CREATED
   CALLOUT_LINK_CREATED
+  CALLOUT_MEMO_CREATED
   CALLOUT_POST_COMMENT
   CALLOUT_POST_CREATED
   CALLOUT_PUBLISHED
@@ -253,6 +254,34 @@ type ActivityLogEntryCalloutLinkCreated implements ActivityLogEntry {
   id: UUID!
   """The Link that was created."""
   link: Link!
+  """The display name of the parent"""
+  parentDisplayName: String!
+  """The Space where the activity happened"""
+  space: Space
+  """The user that triggered this Activity."""
+  triggeredBy: User!
+  """The event type for this Activity."""
+  type: ActivityEventType!
+}
+
+type ActivityLogEntryCalloutMemoCreated implements ActivityLogEntry {
+  """The Callout in which the Memo was created."""
+  callout: Callout!
+  """
+  Indicates if this Activity happened on a child Collaboration. Child results can be included via the "includeChild" parameter.
+  """
+  child: Boolean!
+  """
+  The id of the Collaboration entity within which the Activity was generated.
+  """
+  collaborationID: UUID!
+  """The timestamp for the Activity."""
+  createdDate: DateTime!
+  """The text details for this Activity."""
+  description: String!
+  id: UUID!
+  """The Memo that was created."""
+  memo: Memo!
   """The display name of the parent"""
   parentDisplayName: String!
   """The Space where the activity happened"""
@@ -1028,6 +1057,8 @@ type CalloutContribution {
   id: UUID!
   """The Link that was contributed."""
   link: Link
+  """The Memo that was contributed."""
+  memo: Memo
   """The Post that was contributed."""
   post: Post
   """The sorting order for this Contribution."""
@@ -1167,11 +1198,22 @@ type CalloutsSet {
     The type of Contributions the callouts allow; if omitted return all Callouts will be returned.
     """
     withContributionTypes: [CalloutContributionType!]
+    """
+    Return only Callouts that have at least one of the specified tags either on their framing or in their contributions.
+    """
+    withTags: [String!]
   ): [Callout!]!
   """The date at which the entity was created."""
   createdDate: DateTime!
   """The ID of the entity"""
   id: UUID!
+  """
+  All the tags of the Callouts and its contributions in this CalloutsSet. Sorted by frequency, then alphabetically.
+  """
+  tags(
+    """Return only tags of Callouts matching the specified filter."""
+    classificationTagsets: [TagsetArgs!]
+  ): [String!]!
   """The tagset templates on this CalloutsSet."""
   tagsetTemplates: [TagsetTemplate!]
   """The set of CalloutGroups in use in this CalloutsSet."""
@@ -2807,7 +2849,7 @@ type InAppNotificationPayloadPlatformUser implements InAppNotificationPayload {
 
 type InAppNotificationPayloadPlatformUserMessageRoom implements InAppNotificationPayload {
   """The details of the message."""
-  messageDetails: MessageDetails!
+  messageDetails: MessageDetails
   """The payload type."""
   type: NotificationEventPayload!
   """The User receiver of the message."""
@@ -2843,7 +2885,7 @@ type InAppNotificationPayloadSpaceCollaborationCalloutComment implements InAppNo
   """The Callout that was published."""
   callout: Callout!
   """The details of the message."""
-  messageDetails: MessageDetails!
+  messageDetails: MessageDetails
   """The Space where the comment was made."""
   space: Space!
   """The payload type."""
@@ -2854,7 +2896,7 @@ type InAppNotificationPayloadSpaceCollaborationCalloutPostComment implements InA
   """The Callout that was published."""
   callout: Callout!
   """The details of the message."""
-  messageDetails: MessageDetails!
+  messageDetails: MessageDetails
   """The Space where the comment was made."""
   space: Space!
   """The payload type."""
@@ -3814,6 +3856,8 @@ input MoveCalloutContributionInput {
 type Mutation {
   """Adds an Iframe Allowed URL to the Platform Settings"""
   addIframeAllowedURL(whitelistedURL: String!): [String!]!
+  """Adds a full email address to the platform notification blacklist"""
+  addNotificationEmailToBlacklist(input: NotificationEmailAddressInput!): [String!]!
   """Add a reaction to a message from the specified Room."""
   addReactionToMessageInRoom(reactionData: RoomAddReactionToMessageInput!): Reaction!
   """Ensure all community members are registered for communications."""
@@ -4054,6 +4098,8 @@ type Mutation {
   removeIframeAllowedURL(whitelistedURL: String!): [String!]!
   """Removes a message."""
   removeMessageOnRoom(messageData: RoomRemoveMessageInput!): MessageID!
+  """Removes an email address from the platform notification blacklist"""
+  removeNotificationEmailFromBlacklist(input: NotificationEmailAddressInput!): [String!]!
   """Removes a User from a Role on the Platform."""
   removePlatformRoleFromUser(roleData: RemovePlatformRoleInput!): User!
   """Remove a reaction on a message from the specified Room."""
@@ -4246,6 +4292,11 @@ type NVP {
 A human readable identifier, 3 <= length <= 28. Used for URL paths in clients. Characters allowed: a-z,A-Z,0-9.
 """
 scalar NameID
+
+input NotificationEmailAddressInput {
+  """Full email address to add/remove; lowercase enforced by server"""
+  email: String!
+}
 
 enum NotificationEvent {
   ORGANIZATION_ADMIN_MENTIONED
@@ -4706,6 +4757,10 @@ enum PlatformFeatureFlagName {
 type PlatformIntegrationSettings {
   """The list of allowed URLs for iFrames within Markdown content."""
   iframeAllowedUrls: [String!]!
+  """
+  List of fully-qualified email addresses blocked from receiving notifications
+  """
+  notificationEmailBlacklist: [String!]!
 }
 
 type PlatformInvitation {
@@ -6909,6 +6964,10 @@ input UpdatePlatformSettingsInput {
 input UpdatePlatformSettingsIntegrationInput {
   """Update the list of allowed URLs for iFrames within Markdown content."""
   iframeAllowedUrls: [String!]!
+  """
+  Update the list of email addresses blocked from receiving notifications.
+  """
+  notificationEmailBlacklist: [String!]
 }
 
 input UpdatePostInput {
@@ -7304,6 +7363,7 @@ type UrlResolverQueryResultCalloutsSet {
   calloutId: UUID
   contributionId: UUID
   id: UUID!
+  memoId: UUID
   postId: UUID
   type: UrlType!
   whiteboardId: UUID
@@ -7354,6 +7414,7 @@ enum UrlType {
   ADMIN
   CALLOUT
   CALLOUTS_SET
+  CONTRIBUTION_MEMO
   CONTRIBUTION_POST
   CONTRIBUTION_WHITEBOARD
   CONTRIBUTORS_EXPLORER

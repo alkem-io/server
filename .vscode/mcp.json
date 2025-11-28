@@ -1,0 +1,31 @@
+{
+  "servers": {
+    "postgres": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://synapse:synapse@localhost:5432/synapse"
+      ]
+    },
+    "elasticsearch-mcp-server": {
+      "command": "uvx",
+      "args": ["elasticsearch-mcp-server==2.0.16"],
+      "env": {
+        "ELASTICSEARCH_HOSTS": "https://elastic.alkem.io:80",
+        "ELASTICSEARCH_API_KEY": "${input:ELASTICSEARCH_API_KEY}",
+        "ELASTICSEARCH_VERIFY_CERTS": "false"
+      },
+      "type": "stdio"
+    }
+  },
+  "inputs": [
+    {
+      "type": "promptString",
+      "id": "ELASTICSEARCH_API_KEY",
+      "description": "API key for Elasticsearch or Elastic Cloud authentication (recommended)",
+      "password": true
+    }
+  ]
+}

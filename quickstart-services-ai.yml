@@ -96,7 +96,7 @@ services:
 
   hydra-migrate:
     container_name: alkemio_dev_hydra_migrate
-    image: oryd/hydra:v2.2.0
+    image: oryd/hydra:v2.3.0
     depends_on:
       postgres:
         condition: service_healthy
@@ -109,7 +109,7 @@ services:
 
   hydra:
     container_name: alkemio_dev_hydra
-    image: oryd/hydra:v2.2.0
+    image: oryd/hydra:v2.3.0
     depends_on:
       hydra-migrate:
         condition: service_completed_successfully
@@ -147,7 +147,7 @@ services:
     networks:
       - alkemio_dev_net
     restart: on-failure
-    entrypoint: ["/bin/sh", "-c"]
+    entrypoint: ['/bin/sh', '-c']
     command:
       - |
         echo "Waiting for Hydra to be ready..."
@@ -287,12 +287,14 @@ services:
       - POSTGRES_PASSWORD
       - POSTGRES_INITDB_ARGS=--encoding=UTF8 --lc-collate=C --lc-ctype=C
       - POSTGRES_MULTIPLE_DATABASES
+    entrypoint: ['bash', '/usr/local/bin/entrypoint-wrapper.sh']
     restart: always
     ports:
       - 5432
     volumes:
       - alkemio_dev_postgres:/var/lib/postgresql/data
       - ./.build/postgres/init-multiple-databases.sh:/docker-entrypoint-initdb.d/init-multiple-databases.sh
+      - ./.build/postgres/entrypoint-wrapper.sh:/usr/local/bin/entrypoint-wrapper.sh:ro
     healthcheck:
       test: >
         bash -c "databases=\"$$POSTGRES_DB,$$POSTGRES_MULTIPLE_DATABASES\"; for db in $$(echo \"$$databases\" | tr ',' ' '); do [ -z \"$$db\" ] && continue; pg_isready -U \"$$POSTGRES_USER\" -d \"$$db\" -h localhost || exit 1; done"
@@ -344,7 +346,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_notifications
     hostname: notifications
-    image: alkemio/notifications:v0.27.0
+    image: alkemio/notifications:v0.28.1
     platform: linux/amd64
     depends_on:
       rabbitmq:
@@ -420,7 +422,7 @@ services:
   whiteboard-collaboration:
     container_name: alkemio_dev_whiteboard_collaboration
     hostname: whiteboard-collaboration
-    image: alkemio/whiteboard-collaboration-service:v0.5.0
+    image: alkemio/whiteboard-collaboration-service:v0.8.0
     platform: linux/amd64
     depends_on:
       rabbitmq:
@@ -441,7 +443,7 @@ services:
   file-service:
     container_name: alkemio_dev_file_service
     hostname: file-service
-    image: alkemio/file-service:v0.1.2
+    image: alkemio/file-service:v0.2.0
     platform: linux/amd64
     depends_on:
       rabbitmq:
@@ -453,10 +455,10 @@ services:
       - LOGGING_CONSOLE_ENABLED
       - LOGGING_LEVEL_CONSOLE
       - ENVIRONMENT=dev
-      - LOCAL_STORAGE_PATH=storage
+      - LOCAL_STORAGE_PATH
     restart: always
     volumes:
-      - ../server/.storage:/usr/src/app/storage
+      - ../server/.storage:${LOCAL_STORAGE_PATH}
     networks:
       - alkemio_dev_net
     ports:

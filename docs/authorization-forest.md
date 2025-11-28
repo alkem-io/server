@@ -203,6 +203,10 @@ graph TD
 	Collaboration --> License((License L))
 ```
 
+    #### Whiteboard guest contributions (GRANT → PUBLIC_SHARE)
+
+    When a space (or subspace) enables `allowGuestContributions`, each whiteboard in that scope appends a privilege rule that maps `AuthorizationPrivilege.GRANT` to `AuthorizationPrivilege.PUBLIC_SHARE`. This mapping is aimed at global administrators who inherit GRANT via upstream policies but do not have a dedicated credential rule on the whiteboard itself. Space admins and whiteboard owners still rely on their explicit credential rules for PUBLIC_SHARE. Global Support is currently the only exception: their privileges continue to be wired through the `getAccessPrivilegesForSupport` helper in the space platform roles access service, which evaluates `allowPlatformSupportAsAdmin` and guest contribution settings on L0 spaces. Future work tracks moving that path onto the same privilege-rule mechanism for consistency.
+
 ### 7. Storage Detail
 
 From `StorageAggregatorAuthorizationService`:

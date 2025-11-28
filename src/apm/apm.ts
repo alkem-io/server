@@ -24,7 +24,7 @@ export const apmAgent = process.env.APM_ENDPOINT
        *
        * Related to: https://github.com/alkem-io/server/issues/5127
        */
-      logLevel: (process.env.APM_LOG_LEVEL as any) ?? 'trace',
+      logLevel: (process.env.APM_LOG_LEVEL as any) ?? 'warn',
       /**
        * Specify the sampling rate to use when deciding whether to trace a request.
        * This must be a value between 0.0 and 1.0, where 1.0 means 100% of requests are traced.

@@ -16,6 +16,13 @@ import { CalloutContribution } from '@domain/collaboration/callout-contribution/
 import { EntityManager } from 'typeorm';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { WhiteboardGuestAccessService } from './whiteboard.guest-access.service';
+import {
+  UpdateWhiteboardGuestAccessInput,
+  UpdateWhiteboardGuestAccessResult,
+} from './dto/whiteboard.dto.guest-access.toggle';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 
 @InstrumentResolver()
 @Resolver(() => IWhiteboard)
@@ -25,9 +32,54 @@ export class WhiteboardResolverMutations {
     private authorizationPolicyService: AuthorizationPolicyService,
     private whiteboardService: WhiteboardService,
     private whiteboardAuthService: WhiteboardAuthorizationService,
+    private whiteboardGuestAccessService: WhiteboardGuestAccessService,
+    private communityResolverService: CommunityResolverService,
     @InjectEntityManager() private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
+
+  @Mutation(() => UpdateWhiteboardGuestAccessResult, {
+    description:
+      'Grants or revokes GLOBAL_GUEST permissions for a whiteboard using a single toggle.',
+  })
+  async updateWhiteboardGuestAccess(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('input') input: UpdateWhiteboardGuestAccessInput
+  ): Promise<UpdateWhiteboardGuestAccessResult> {
+    const whiteboard =
+      await this.whiteboardGuestAccessService.updateGuestAccess(
+        agentInfo,
+        input.whiteboardId,
+        input.guestAccessEnabled
+      );
+
+    return {
+      success: true,
+      whiteboard,
+    };
+  }
+
+  private async getSpaceSettingsForWhiteboard(
+    whiteboardId: string
+  ): Promise<ISpaceSettings | undefined> {
+    try {
+      const community =
+        await this.communityResolverService.getCommunityFromWhiteboardOrFail(
+          whiteboardId
+        );
+      const space =
+        await this.communityResolverService.getSpaceForCommunityOrFail(
+          community.id
+        );
+      return space.settings;
+    } catch (error) {
+      this.logger.warn?.(
+        `Failed to resolve space settings for whiteboard ${whiteboardId}`,
+        error
+      );
+      return undefined;
+    }
+  }
 
   @Mutation(() => IWhiteboard, {
     description: 'Updates the specified Whiteboard.',
@@ -52,6 +104,10 @@ export class WhiteboardResolverMutations {
       whiteboardData
     );
     if (updatedWhiteboard.contentUpdatePolicy !== originalContentPolicy) {
+      const spaceSettings = await this.getSpaceSettingsForWhiteboard(
+        whiteboard.id
+      );
+
       const framing = await this.entityManager.findOne(CalloutFraming, {
         where: {
           whiteboard: { id: whiteboard.id },
@@ -65,7 +121,8 @@ export class WhiteboardResolverMutations {
         const updatedWhiteboardAuthorizations =
           await this.whiteboardAuthService.applyAuthorizationPolicy(
             whiteboard.id,
-            framing.authorization
+            framing.authorization,
+            spaceSettings
           );
         await this.authorizationPolicyService.saveAll(
           updatedWhiteboardAuthorizations
@@ -86,7 +143,8 @@ export class WhiteboardResolverMutations {
           const contributionAuthorizations =
             await this.whiteboardAuthService.applyAuthorizationPolicy(
               whiteboard.id,
-              contribution.authorization
+              contribution.authorization,
+              spaceSettings
             );
           await this.authorizationPolicyService.saveAll(
             contributionAuthorizations

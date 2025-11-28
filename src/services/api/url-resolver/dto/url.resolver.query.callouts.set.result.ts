@@ -29,6 +29,11 @@ export class UrlResolverQueryResultCalloutsSet {
   })
   whiteboardId?: string;
 
+  @Field(() => UUID, {
+    nullable: true,
+  })
+  memoId?: string;
+
   @Field(() => UrlType, {
     nullable: false,
   })
