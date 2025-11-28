@@ -9,5 +9,12 @@ BASE_DIR="$(dirname "$(realpath "$0")")"
 # Source environment variables from .env file relative to the script's location
 . "$BASE_DIR/.env"
 
-# Restore snapshot using the mariadb docker container
-docker exec -i alkemio_dev_mysql /usr/bin/mysql -u root -p${MYSQL_ROOT_PASSWORD} ${MYSQL_DATABASE} < "$BASE_DIR/$ENV"
+# Set database connection details
+user=${POSTGRES_USER}
+database=${POSTGRES_DB}
+container=${POSTGRES_CONTAINER:-alkemio_dev_postgres}
+
+# Restore document table snapshot using the postgres docker container
+docker exec -i $container psql -U $user -d $database < "$BASE_DIR/$ENV"
+
+echo "Document backup restored successfully!"
