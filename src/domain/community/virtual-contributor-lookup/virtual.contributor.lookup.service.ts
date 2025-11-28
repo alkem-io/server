@@ -152,7 +152,7 @@ export class VirtualContributorLookupService {
         qb.expressionMap.wheres && qb.expressionMap.wheres.length > 0;
 
       qb[hasWhere ? 'andWhere' : 'where'](
-        'NOT virtual_contributor.id IN (:memberVirtualContributors)'
+        'NOT virtual_contributor.id IN (:...memberVirtualContributors)'
       ).setParameters({
         memberVirtualContributors: currentEntryRoleVirtualContributors.map(
           virtualContributor => virtualContributor.id
