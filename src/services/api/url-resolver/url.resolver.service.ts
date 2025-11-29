@@ -4,6 +4,7 @@ import { UrlResolverQueryResults } from './dto/url.resolver.query.results';
 import {
   RelationshipNotFoundException,
   ValidationException,
+  ForbiddenAuthorizationPolicyException,
 } from '@common/exceptions';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { UrlPathElement } from '@common/enums/url.path.element';
@@ -27,6 +28,7 @@ import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.serv
 import { UrlPathBase } from '@common/enums/url.path.base';
 import { UrlResolverException } from './url.resolver.exception';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
+import { UrlResolverResultState } from './dto/url.resolver.result.state';
 
 @Injectable()
 export class UrlResolverService {
@@ -74,10 +76,12 @@ export class UrlResolverService {
     const pathElements = this.getPathElements(url);
 
     const result: UrlResolverQueryResults = {
+      state: UrlResolverResultState.NOT_FOUND,
       type: UrlType.UNKNOWN,
     };
 
     if (pathElements.length === 0) {
+      result.state = UrlResolverResultState.RESOLVED;
       result.type = UrlType.HOME;
       return result;
     }
@@ -97,6 +101,14 @@ export class UrlResolverService {
           agentInfo
         );
       } catch (error: any) {
+        if (error instanceof ForbiddenAuthorizationPolicyException) {
+          result.state = UrlResolverResultState.NOT_AUTHORIZED;
+          result.closestAncestor = {
+            ...result,
+            url,
+          };
+          return result;
+        }
         throw new UrlResolverException(
           'Unable to resolve URL',
           LogContext.URL_RESOLVER,
@@ -114,6 +126,14 @@ export class UrlResolverService {
       await this.populateSpaceResult(result, agentInfo, urlPath);
       return await this.populateSpaceInternalResult(result, agentInfo);
     } catch (error: any) {
+      if (error instanceof ForbiddenAuthorizationPolicyException) {
+        result.state = UrlResolverResultState.NOT_AUTHORIZED;
+        result.closestAncestor = {
+          ...result,
+          url,
+        };
+        return result;
+      }
       throw new UrlResolverException(
         'Unable to resolve URL',
         LogContext.URL_RESOLVER,
@@ -143,18 +163,22 @@ export class UrlResolverService {
     switch (baseRoute) {
       case UrlPathBase.HOME: {
         result.type = UrlType.HOME;
+        result.state = UrlResolverResultState.RESOLVED;
         return result;
       }
       case UrlPathBase.CREATE_SPACE: {
         result.type = UrlType.FLOW;
+        result.state = UrlResolverResultState.RESOLVED;
         return result;
       }
       case UrlPathBase.DOCS: {
         result.type = UrlType.DOCUMENTATION;
+        result.state = UrlResolverResultState.RESOLVED;
         return result;
       }
       case UrlPathBase.USER: {
         result.type = UrlType.USER;
+        result.state = UrlResolverResultState.RESOLVED;
         if (pathElements.length < 2) {
           throw new ValidationException(
             `Invalid URL: ${url}`,
@@ -169,6 +193,7 @@ export class UrlResolverService {
       }
       case UrlPathBase.VIRTUAL_CONTRIBUTOR: {
         result.type = UrlType.VIRTUAL_CONTRIBUTOR;
+        result.state = UrlResolverResultState.RESOLVED;
         return await this.populateVirtualContributorResult(
           result,
           urlPath,
@@ -177,6 +202,7 @@ export class UrlResolverService {
       }
       case UrlPathBase.ORGANIZATION: {
         result.type = UrlType.ORGANIZATION;
+        result.state = UrlResolverResultState.RESOLVED;
         if (pathElements.length < 2) {
           throw new ValidationException(
             `Invalid URL: ${url}`,
@@ -195,23 +221,28 @@ export class UrlResolverService {
       case UrlPathBase.INNOVATION_HUBS:
         return await this.populateInnovationHubResult(result, urlPath);
       case UrlPathBase.INNOVATION_LIBRARY:
+        result.state = UrlResolverResultState.RESOLVED;
         result.type = UrlType.INNOVATION_LIBRARY;
         return result;
       case UrlPathBase.DOCUMENTATION:
+        result.state = UrlResolverResultState.RESOLVED;
         result.type = UrlType.DOCUMENTATION;
         return result;
       case UrlPathBase.INNOVATION_PACKS:
         return await this.populateInnovationPackResult(result, urlPath);
       case UrlPathBase.SPACE_EXPLORER: {
         result.type = UrlType.SPACE_EXPLORER;
+        result.state = UrlResolverResultState.RESOLVED;
         return result;
       }
       case UrlPathBase.CONTRIBUTORS_EXPLORER: {
         result.type = UrlType.CONTRIBUTORS_EXPLORER;
+        result.state = UrlResolverResultState.RESOLVED;
         return result;
       }
       case UrlPathBase.FORUM: {
         result.type = UrlType.FORUM;
+        result.state = UrlResolverResultState.RESOLVED;
         if (pathElements[1] === UrlPathElement.DISCUSSION) {
           if (pathElements.length < 2) {
             throw new ValidationException(
@@ -230,38 +261,46 @@ export class UrlResolverService {
       }
       case UrlPathBase.LOGIN: {
         result.type = UrlType.LOGIN;
+        result.state = UrlResolverResultState.RESOLVED;
         return result;
       }
       case UrlPathBase.LOGOUT: {
         result.type = UrlType.LOGOUT;
+        result.state = UrlResolverResultState.RESOLVED;
         return result;
       }
       case UrlPathBase.REGISTRATION: {
         result.type = UrlType.REGISTRATION;
+        result.state = UrlResolverResultState.RESOLVED;
         return result;
       }
       case UrlPathBase.SIGN_UP: {
         result.type = UrlType.SIGN_UP;
+        result.state = UrlResolverResultState.RESOLVED;
         return result;
       }
       case UrlPathBase.VERIFY: {
         result.type = UrlType.VERIFY;
+        result.state = UrlResolverResultState.RESOLVED;
         return result;
       }
       case UrlPathBase.RECOVERY: {
         result.type = UrlType.RECOVERY;
+        result.state = UrlResolverResultState.RESOLVED;
         return result;
       }
       case UrlPathBase.REQUIRED: {
         result.type = UrlType.REQUIRED;
-        return result;
+        result.state = UrlResolverResultState.RESOLVED;
       }
       case UrlPathBase.RESTRICTED: {
         result.type = UrlType.RESTRICTED;
+        result.state = UrlResolverResultState.RESOLVED;
         return result;
       }
       case UrlPathBase.ERROR: {
         result.type = UrlType.ERROR;
+        result.state = UrlResolverResultState.RESOLVED;
         return result;
       }
     }
@@ -340,8 +379,17 @@ export class UrlResolverService {
         LogContext.URL_RESOLVER
       );
     }
-    const calloutsSetResult = await this.populateCalloutsSetResult(
-      virtualContributor.knowledgeBase.calloutsSet.id,
+
+    result.virtualContributor = {
+      id: virtualContributor.id,
+      calloutsSet: {
+        id: virtualContributor.knowledgeBase.calloutsSet.id,
+        type: UrlType.CALLOUTS_SET,
+      },
+    };
+
+    await this.populateCalloutsSetResult(
+      result.virtualContributor.calloutsSet,
       agentInfo,
       urlPath,
       calloutNameID,
@@ -349,11 +397,6 @@ export class UrlResolverService {
       undefined,
       memoNameID
     );
-
-    result.virtualContributor = {
-      id: virtualContributor.id,
-      calloutsSet: calloutsSetResult,
-    };
 
     return result;
   }
@@ -541,6 +584,12 @@ export class UrlResolverService {
       url,
       spaceInternalPath
     );
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      space.authorization,
+      AuthorizationPrivilege.READ_ABOUT,
+      `resolving url ${url}`
+    );
 
     if (subspaceNameID) {
       const subspace =
@@ -557,6 +606,12 @@ export class UrlResolverService {
         spaceInternalPath
       );
       result.space.parentSpaces = parentSpaces;
+      this.authorizationService.grantAccessOrFail(
+        agentInfo,
+        subspace!.authorization,
+        AuthorizationPrivilege.READ_ABOUT,
+        `resolving url ${url}`
+      );
     }
     if (subsubspaceNameID) {
       const subsubspace =
@@ -575,6 +630,12 @@ export class UrlResolverService {
         spaceInternalPath
       );
       result.space.parentSpaces = parentSpaces;
+      this.authorizationService.grantAccessOrFail(
+        agentInfo,
+        subsubspace!.authorization,
+        AuthorizationPrivilege.READ_ABOUT,
+        `resolving url ${url}`
+      );
     }
     return result;
   }
@@ -722,8 +783,8 @@ export class UrlResolverService {
     );
     const memoNameID = this.getMatchedResultAsString(params.memoNameID);
     const collaborationInternalPath = this.getMatchedResultAsPath(params.path);
-    const calloutsSetResult = await this.populateCalloutsSetResult(
-      result.space.collaboration.calloutsSet.id,
+    await this.populateCalloutsSetResult(
+      result.space.collaboration.calloutsSet,
       agentInfo,
       collaborationInternalPath || internalPath,
       calloutNameID,
@@ -732,27 +793,20 @@ export class UrlResolverService {
       memoNameID
     );
 
-    result.space.collaboration.calloutsSet = calloutsSetResult;
-
     return result;
   }
 
   private async populateCalloutsSetResult(
-    calloutsSetId: string,
+    result: UrlResolverQueryResultCalloutsSet,
     agentInfo: AgentInfo,
     urlPath: string,
     calloutNameID: string | undefined,
     postNameID: string | undefined,
     whiteboardNameID: string | undefined,
     memoNameID: string | undefined
-  ): Promise<UrlResolverQueryResultCalloutsSet> {
-    const result: UrlResolverQueryResultCalloutsSet = {
-      id: calloutsSetId,
-      type: UrlType.CALLOUTS_SET,
-    };
-
+  ): Promise<void> {
     if (!calloutNameID) {
-      return result;
+      return;
     }
 
     // Assume have a callout
@@ -760,7 +814,7 @@ export class UrlResolverService {
       where: {
         nameID: calloutNameID,
         calloutsSet: {
-          id: calloutsSetId,
+          id: result.id,
         },
       },
       relations: {
@@ -772,16 +826,18 @@ export class UrlResolverService {
         },
       },
     });
+    result.calloutId = callout.id;
+    result.type = UrlType.CALLOUT;
+
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       callout.authorization,
       AuthorizationPrivilege.READ,
       `resolving url for callout ${urlPath}`
     );
-    result.calloutId = callout.id;
-    result.type = UrlType.CALLOUT;
+
     if (!postNameID && !whiteboardNameID && !memoNameID) {
-      return result;
+      return;
     }
 
     // Check for post contribution
@@ -805,18 +861,19 @@ export class UrlResolverService {
       );
       if (!contribution) {
         // Do not throw an error but return what is available
-        return result;
+        return;
       }
+      result.contributionId = contribution.id;
+      result.postId = contribution?.post?.id;
+      result.type = UrlType.CONTRIBUTION_POST;
+
       this.authorizationService.grantAccessOrFail(
         agentInfo,
         contribution.authorization,
         AuthorizationPrivilege.READ,
         `resolving url for post on callout ${urlPath}`
       );
-      result.contributionId = contribution.id;
-      result.postId = contribution?.post?.id;
-      result.type = UrlType.CONTRIBUTION_POST;
-      return result;
+      return;
     }
 
     // Check for whiteboard contribution
@@ -840,8 +897,12 @@ export class UrlResolverService {
       );
       if (!contribution) {
         // Do not throw an error but return what is available
-        return result;
+        return;
       }
+
+      result.contributionId = contribution.id;
+      result.whiteboardId = contribution?.whiteboard?.id;
+      result.type = UrlType.CONTRIBUTION_WHITEBOARD;
 
       this.authorizationService.grantAccessOrFail(
         agentInfo,
@@ -849,10 +910,7 @@ export class UrlResolverService {
         AuthorizationPrivilege.READ,
         `resolving url for whiteboard on callout ${urlPath}`
       );
-      result.contributionId = contribution.id;
-      result.whiteboardId = contribution?.whiteboard?.id;
-      result.type = UrlType.CONTRIBUTION_WHITEBOARD;
-      return result;
+      return;
     }
 
     // Check for memo contribution
@@ -876,8 +934,12 @@ export class UrlResolverService {
       );
       if (!contribution) {
         // Do not throw an error but return what is available
-        return result;
+        return;
       }
+
+      result.contributionId = contribution.id;
+      result.memoId = contribution?.memo?.id;
+      result.type = UrlType.CONTRIBUTION_MEMO;
 
       this.authorizationService.grantAccessOrFail(
         agentInfo,
@@ -885,13 +947,10 @@ export class UrlResolverService {
         AuthorizationPrivilege.READ,
         `resolving url for memo on callout ${urlPath}`
       );
-      result.contributionId = contribution.id;
-      result.memoId = contribution?.memo?.id;
-      result.type = UrlType.CONTRIBUTION_MEMO;
-      return result;
+      return;
     }
 
-    return result;
+    return;
   }
 
   private async populateSpaceInternalResultCalendar(
@@ -962,6 +1021,26 @@ export class UrlResolverService {
     return result;
   }
 
+  private returnNotAuthorizedResult(
+    closestAncestor: UrlResolverQueryResults,
+    url: string
+  ): UrlResolverQueryResults {
+    const {
+      state: _removedState,
+      closestAncestor: _removedClosestAncestor,
+      ...rest
+    } = closestAncestor;
+    const result: UrlResolverQueryResults = {
+      state: UrlResolverResultState.NOT_AUTHORIZED,
+      type: closestAncestor.type,
+      closestAncestor: {
+        ...rest,
+        url,
+      },
+    };
+    return result;
+  }
+
   private getPathElements(url: string): string[] {
     const parsedUrl = new URL(url);
 
@@ -993,12 +1072,7 @@ export class UrlResolverService {
         LogContext.URL_RESOLVER
       );
     }
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      space.authorization,
-      AuthorizationPrivilege.READ_ABOUT,
-      `resolving url ${url}`
-    );
+    // Authorization check moved to caller to allow partial result population
     const result: UrlResolverQueryResultSpace = {
       id: space.id,
       level: space.level,
