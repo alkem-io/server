@@ -72,7 +72,6 @@ export class CommunicationAdapter {
   private readonly enabled = false;
   private readonly timeout: number;
   private readonly retries: number;
-  public directMessageRoomsEnabled: boolean;
 
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -84,8 +83,6 @@ export class CommunicationAdapter {
     this.enabled = communications?.enabled;
     this.timeout = +communications?.matrix?.connection_timeout * 1000;
     this.retries = +communications?.matrix?.connection_retries;
-    this.directMessageRoomsEnabled =
-      communications?.direct_message_rooms?.enabled;
   }
 
   async sendMessageToRoom(
