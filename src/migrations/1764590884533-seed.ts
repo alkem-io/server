@@ -15,8 +15,8 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * - RoleSet for platform roles
  * - AI Server
  */
-export class Seed1764237534489 implements MigrationInterface {
-  name = 'Seed1764237534489';
+export class Seed1764590884533 implements MigrationInterface {
+  name = 'Seed1764590884533';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Check if platform already exists (not a fresh install)
@@ -61,8 +61,8 @@ export class Seed1764237534489 implements MigrationInterface {
     // Create Platform Authorization Policy
     const platformAuthID = randomUUID();
     await queryRunner.query(
-      `INSERT INTO authorization_policy (id, "createdDate", "updatedDate", version, "credentialRules", "privilegeRules", "verifiedCredentialRules", type)
-       VALUES ($1, NOW(), NOW(), 1, '[]', '[]', '[]', 'platform')`,
+      `INSERT INTO authorization_policy (id, "createdDate", "updatedDate", version, "credentialRules", "privilegeRules", type)
+       VALUES ($1, NOW(), NOW(), 1, '[]', '[]', 'platform')`,
       [platformAuthID]
     );
 
@@ -101,8 +101,8 @@ export class Seed1764237534489 implements MigrationInterface {
 
     // Create authorization policy for library
     await queryRunner.query(
-      `INSERT INTO authorization_policy (id, "createdDate", "updatedDate", version, "credentialRules", "privilegeRules", "verifiedCredentialRules", type)
-       VALUES ($1, NOW(), NOW(), 1, '[]', '[]', '[]', 'library')`,
+      `INSERT INTO authorization_policy (id, "createdDate", "updatedDate", version, "credentialRules", "privilegeRules", type)
+       VALUES ($1, NOW(), NOW(), 1, '[]', '[]', 'library')`,
       [libraryAuthID]
     );
 
@@ -124,8 +124,8 @@ export class Seed1764237534489 implements MigrationInterface {
     const licensePolicyAuthID = randomUUID();
 
     await queryRunner.query(
-      `INSERT INTO authorization_policy (id, "createdDate", "updatedDate", version, "credentialRules", "privilegeRules", "verifiedCredentialRules", type)
-       VALUES ($1, NOW(), NOW(), 1, '[]', '[]', '[]', 'license-policy')`,
+      `INSERT INTO authorization_policy (id, "createdDate", "updatedDate", version, "credentialRules", "privilegeRules", type)
+       VALUES ($1, NOW(), NOW(), 1, '[]', '[]', 'license-policy')`,
       [licensePolicyAuthID]
     );
 
@@ -144,8 +144,8 @@ export class Seed1764237534489 implements MigrationInterface {
     const licensingFrameworkAuthID = randomUUID();
 
     await queryRunner.query(
-      `INSERT INTO authorization_policy (id, "createdDate", "updatedDate", version, "credentialRules", "privilegeRules", "verifiedCredentialRules", type)
-       VALUES ($1, NOW(), NOW(), 1, '[]', '[]', '[]', 'licensing-framework')`,
+      `INSERT INTO authorization_policy (id, "createdDate", "updatedDate", version, "credentialRules", "privilegeRules", type)
+       VALUES ($1, NOW(), NOW(), 1, '[]', '[]', 'licensing-framework')`,
       [licensingFrameworkAuthID]
     );
 
@@ -169,8 +169,8 @@ export class Seed1764237534489 implements MigrationInterface {
     const templatesManagerAuthID = randomUUID();
 
     await queryRunner.query(
-      `INSERT INTO authorization_policy (id, "createdDate", "updatedDate", version, "credentialRules", "privilegeRules", "verifiedCredentialRules", type)
-       VALUES ($1, NOW(), NOW(), 1, '[]', '[]', '[]', 'templates-manager')`,
+      `INSERT INTO authorization_policy (id, "createdDate", "updatedDate", version, "credentialRules", "privilegeRules", type)
+       VALUES ($1, NOW(), NOW(), 1, '[]', '[]', 'templates-manager')`,
       [templatesManagerAuthID]
     );
 
@@ -214,8 +214,8 @@ export class Seed1764237534489 implements MigrationInterface {
     const templatesSetAuthID = randomUUID();
 
     await queryRunner.query(
-      `INSERT INTO authorization_policy (id, "createdDate", "updatedDate", version, "credentialRules", "privilegeRules", "verifiedCredentialRules", type)
-       VALUES ($1, NOW(), NOW(), 1, '[]', '[]', '[]', 'templates-set')`,
+      `INSERT INTO authorization_policy (id, "createdDate", "updatedDate", version, "credentialRules", "privilegeRules", type)
+       VALUES ($1, NOW(), NOW(), 1, '[]', '[]', 'templates-set')`,
       [templatesSetAuthID]
     );
 
@@ -238,8 +238,8 @@ export class Seed1764237534489 implements MigrationInterface {
     const templateDefaultAuthID = randomUUID();
 
     await queryRunner.query(
-      `INSERT INTO authorization_policy (id, "createdDate", "updatedDate", version, "credentialRules", "privilegeRules", "verifiedCredentialRules", type)
-       VALUES ($1, NOW(), NOW(), 1, '[]', '[]', '[]', 'template-default')`,
+      `INSERT INTO authorization_policy (id, "createdDate", "updatedDate", version, "credentialRules", "privilegeRules", type)
+       VALUES ($1, NOW(), NOW(), 1, '[]', '[]', 'template-default')`,
       [templateDefaultAuthID]
     );
 
@@ -268,15 +268,15 @@ export class Seed1764237534489 implements MigrationInterface {
 
     // Create auth for storage aggregator
     await queryRunner.query(
-      `INSERT INTO authorization_policy (id, "createdDate", "updatedDate", version, "credentialRules", "privilegeRules", "verifiedCredentialRules", type)
-       VALUES ($1, NOW(), NOW(), 1, '[]', '[]', '[]', 'storage-aggregator')`,
+      `INSERT INTO authorization_policy (id, "createdDate", "updatedDate", version, "credentialRules", "privilegeRules", type)
+       VALUES ($1, NOW(), NOW(), 1, '[]', '[]', 'storage-aggregator')`,
       [storageAggregatorAuthID]
     );
 
     // Create auth for direct storage bucket
     await queryRunner.query(
-      `INSERT INTO authorization_policy (id, "createdDate", "updatedDate", version, "credentialRules", "privilegeRules", "verifiedCredentialRules", type)
-       VALUES ($1, NOW(), NOW(), 1, '[]', '[]', '[]', 'storage-bucket')`,
+      `INSERT INTO authorization_policy (id, "createdDate", "updatedDate", version, "credentialRules", "privilegeRules", type)
+       VALUES ($1, NOW(), NOW(), 1, '[]', '[]', 'storage-bucket')`,
       [directStorageAuthID]
     );
 
@@ -319,16 +319,16 @@ export class Seed1764237534489 implements MigrationInterface {
 
     // Create authorization policy for role set
     await queryRunner.query(
-      `INSERT INTO authorization_policy (id, "createdDate", "updatedDate", version, "credentialRules", "privilegeRules", "verifiedCredentialRules", type)
-       VALUES ($1, NOW(), NOW(), 1, '[]', '[]', '[]', 'role-set')`,
+      `INSERT INTO authorization_policy (id, "createdDate", "updatedDate", version, "credentialRules", "privilegeRules", type)
+       VALUES ($1, NOW(), NOW(), 1, '[]', '[]', 'role-set')`,
       [roleSetAuthID]
     );
 
     // Create license for role set
     const licenseAuthID = randomUUID();
     await queryRunner.query(
-      `INSERT INTO authorization_policy (id, "createdDate", "updatedDate", version, "credentialRules", "privilegeRules", "verifiedCredentialRules", type)
-       VALUES ($1, NOW(), NOW(), 1, '[]', '[]', '[]', 'license')`,
+      `INSERT INTO authorization_policy (id, "createdDate", "updatedDate", version, "credentialRules", "privilegeRules", type)
+       VALUES ($1, NOW(), NOW(), 1, '[]', '[]', 'license')`,
       [licenseAuthID]
     );
 
@@ -446,8 +446,8 @@ export class Seed1764237534489 implements MigrationInterface {
     const aiServerAuthID = randomUUID();
 
     await queryRunner.query(
-      `INSERT INTO authorization_policy (id, "createdDate", "updatedDate", version, "credentialRules", "privilegeRules", "verifiedCredentialRules", type)
-       VALUES ($1, NOW(), NOW(), 1, '[]', '[]', '[]', 'ai-server')`,
+      `INSERT INTO authorization_policy (id, "createdDate", "updatedDate", version, "credentialRules", "privilegeRules", type)
+       VALUES ($1, NOW(), NOW(), 1, '[]', '[]', 'ai-server')`,
       [aiServerAuthID]
     );
 

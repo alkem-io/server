@@ -1,11 +1,11 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class Baseline1764237534488 implements MigrationInterface {
-  name = 'Baseline1764237534488';
+export class Baseline1764590884532 implements MigrationInterface {
+  name = 'Baseline1764590884532';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      `CREATE TABLE "authorization_policy" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "createdDate" TIMESTAMP NOT NULL DEFAULT now(), "updatedDate" TIMESTAMP NOT NULL DEFAULT now(), "version" integer NOT NULL, "credentialRules" json NOT NULL, "privilegeRules" json NOT NULL, "verifiedCredentialRules" json NOT NULL, "type" character varying(128) NOT NULL, "parentAuthorizationPolicyId" uuid, CONSTRAINT "PK_fe66e152ac920baa9a53a3499b7" PRIMARY KEY ("id"))`
+      `CREATE TABLE "authorization_policy" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "createdDate" TIMESTAMP NOT NULL DEFAULT now(), "updatedDate" TIMESTAMP NOT NULL DEFAULT now(), "version" integer NOT NULL, "credentialRules" json NOT NULL, "privilegeRules" json NOT NULL, "type" character varying(128) NOT NULL, "parentAuthorizationPolicyId" uuid, CONSTRAINT "PK_fe66e152ac920baa9a53a3499b7" PRIMARY KEY ("id"))`
     );
     await queryRunner.query(
       `CREATE TABLE "tagset_template_set" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "createdDate" TIMESTAMP NOT NULL DEFAULT now(), "updatedDate" TIMESTAMP NOT NULL DEFAULT now(), "version" integer NOT NULL, CONSTRAINT "PK_2836cef181f1d38f8ecbe9de246" PRIMARY KEY ("id"))`
@@ -110,7 +110,7 @@ export class Baseline1764237534488 implements MigrationInterface {
       `CREATE TABLE "credential" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "createdDate" TIMESTAMP NOT NULL DEFAULT now(), "updatedDate" TIMESTAMP NOT NULL DEFAULT now(), "version" integer NOT NULL, "resourceID" character varying(36) NOT NULL, "type" character varying(128) NOT NULL, "issuer" uuid, "expires" TIMESTAMP, "agentId" uuid, CONSTRAINT "PK_3a5169bcd3d5463cefeec78be82" PRIMARY KEY ("id"))`
     );
     await queryRunner.query(
-      `CREATE TABLE "agent" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "createdDate" TIMESTAMP NOT NULL DEFAULT now(), "updatedDate" TIMESTAMP NOT NULL DEFAULT now(), "version" integer NOT NULL, "did" character varying(255), "password" character varying(255), "type" character varying(128), "authorizationId" uuid, CONSTRAINT "REL_8ed9d1af584fa62f1ad3405b33" UNIQUE ("authorizationId"), CONSTRAINT "PK_1000e989398c5d4ed585cf9a46f" PRIMARY KEY ("id"))`
+      `CREATE TABLE "agent" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "createdDate" TIMESTAMP NOT NULL DEFAULT now(), "updatedDate" TIMESTAMP NOT NULL DEFAULT now(), "version" integer NOT NULL, "type" character varying(128), "authorizationId" uuid, CONSTRAINT "REL_8ed9d1af584fa62f1ad3405b33" UNIQUE ("authorizationId"), CONSTRAINT "PK_1000e989398c5d4ed585cf9a46f" PRIMARY KEY ("id"))`
     );
     await queryRunner.query(
       `CREATE TABLE "role" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "createdDate" TIMESTAMP NOT NULL DEFAULT now(), "updatedDate" TIMESTAMP NOT NULL DEFAULT now(), "version" integer NOT NULL, "name" character varying(128) NOT NULL, "credential" json NOT NULL, "parentCredentials" json NOT NULL, "requiresEntryRole" boolean NOT NULL, "requiresSameRoleInParentRoleSet" boolean NOT NULL, "userPolicy" json NOT NULL, "organizationPolicy" json NOT NULL, "virtualContributorPolicy" json NOT NULL, "roleSetId" uuid, CONSTRAINT "PK_b36bcfe02fc8de3c57a8b2391c2" PRIMARY KEY ("id"))`
@@ -197,16 +197,16 @@ export class Baseline1764237534488 implements MigrationInterface {
       `CREATE TABLE "innovation_hub" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "createdDate" TIMESTAMP NOT NULL DEFAULT now(), "updatedDate" TIMESTAMP NOT NULL DEFAULT now(), "version" integer NOT NULL, "nameID" character varying(36) NOT NULL, "subdomain" character varying(63) NOT NULL, "type" character varying NOT NULL, "spaceVisibilityFilter" character varying(255), "spaceListFilter" text, "listedInStore" boolean NOT NULL, "searchVisibility" character varying(128) NOT NULL DEFAULT 'account', "authorizationId" uuid, "profileId" uuid, "accountId" uuid, CONSTRAINT "UQ_8f35d04d098bb6c7c57a9a83ac2" UNIQUE ("subdomain"), CONSTRAINT "REL_b411e4f27d77a96eccdabbf4b4" UNIQUE ("authorizationId"), CONSTRAINT "REL_36c8905c2c6c59467c60d94fd8" UNIQUE ("profileId"), CONSTRAINT "PK_763015ae2feecc8aecbc2ec991d" PRIMARY KEY ("id"))`
     );
     await queryRunner.query(
-      `CREATE TABLE "library" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "createdDate" TIMESTAMP NOT NULL DEFAULT now(), "updatedDate" TIMESTAMP NOT NULL DEFAULT now(), "version" integer NOT NULL, "authorizationId" uuid, CONSTRAINT "REL_3879db652f2421337691219ace" UNIQUE ("authorizationId"), CONSTRAINT "PK_3a61ae2e897d9b5a59a64e91aa4" PRIMARY KEY ("id"))`
-    );
-    await queryRunner.query(
       `CREATE TABLE "activity" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "createdDate" TIMESTAMP NOT NULL DEFAULT now(), "updatedDate" TIMESTAMP NOT NULL DEFAULT now(), "version" integer NOT NULL, "rowId" SERIAL NOT NULL, "triggeredBy" uuid NOT NULL, "resourceID" uuid NOT NULL, "parentID" uuid, "collaborationID" uuid NOT NULL, "messageID" character varying(44), "visibility" boolean NOT NULL, "description" character varying(512), "type" character varying(128) NOT NULL, CONSTRAINT "UQ_07a39cea9426b689be25fd61ded" UNIQUE ("rowId"), CONSTRAINT "PK_24625a1d6b1b089c8ae206fe467" PRIMARY KEY ("id"))`
     );
     await queryRunner.query(
-      `CREATE TABLE "forum" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "createdDate" TIMESTAMP NOT NULL DEFAULT now(), "updatedDate" TIMESTAMP NOT NULL DEFAULT now(), "version" integer NOT NULL, "discussionCategories" text NOT NULL, "authorizationId" uuid, CONSTRAINT "REL_3b0c92945f36d06f37de80285d" UNIQUE ("authorizationId"), CONSTRAINT "PK_ffd925a9b1fa44ab1ce26c9821c" PRIMARY KEY ("id"))`
+      `CREATE TABLE "library" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "createdDate" TIMESTAMP NOT NULL DEFAULT now(), "updatedDate" TIMESTAMP NOT NULL DEFAULT now(), "version" integer NOT NULL, "authorizationId" uuid, CONSTRAINT "REL_3879db652f2421337691219ace" UNIQUE ("authorizationId"), CONSTRAINT "PK_3a61ae2e897d9b5a59a64e91aa4" PRIMARY KEY ("id"))`
     );
     await queryRunner.query(
       `CREATE TABLE "discussion" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "createdDate" TIMESTAMP NOT NULL DEFAULT now(), "updatedDate" TIMESTAMP NOT NULL DEFAULT now(), "version" integer NOT NULL, "nameID" character varying(36) NOT NULL, "category" text NOT NULL, "createdBy" uuid NOT NULL, "privacy" character varying(255) NOT NULL DEFAULT 'authenticated', "authorizationId" uuid, "profileId" uuid, "commentsId" uuid, "forumId" uuid, CONSTRAINT "REL_4555dccdda9ba57d8e3a634cd0" UNIQUE ("authorizationId"), CONSTRAINT "REL_2d8a3ca181c3f0346817685d21" UNIQUE ("profileId"), CONSTRAINT "REL_5337074c9b818bb63e6f314c80" UNIQUE ("commentsId"), CONSTRAINT "PK_b93169eb129e530c6a4c3b9fda1" PRIMARY KEY ("id"))`
+    );
+    await queryRunner.query(
+      `CREATE TABLE "forum" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "createdDate" TIMESTAMP NOT NULL DEFAULT now(), "updatedDate" TIMESTAMP NOT NULL DEFAULT now(), "version" integer NOT NULL, "discussionCategories" text NOT NULL, "authorizationId" uuid, CONSTRAINT "REL_3b0c92945f36d06f37de80285d" UNIQUE ("authorizationId"), CONSTRAINT "PK_ffd925a9b1fa44ab1ce26c9821c" PRIMARY KEY ("id"))`
     );
     await queryRunner.query(
       `CREATE TABLE "in_app_notification" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "createdDate" TIMESTAMP NOT NULL DEFAULT now(), "updatedDate" TIMESTAMP NOT NULL DEFAULT now(), "version" integer NOT NULL, "rowId" SERIAL NOT NULL, "type" character varying(128) NOT NULL, "state" character varying(128) NOT NULL, "category" character varying(128) NOT NULL, "triggeredAt" TIMESTAMP NOT NULL, "triggeredByID" uuid, "receiverID" uuid NOT NULL, "payload" json NOT NULL, "spaceID" uuid, "organizationID" uuid, "userID" uuid, "applicationID" uuid, "invitationID" uuid, "calloutID" uuid, "contributionID" uuid, "roomID" uuid, "messageID" character varying(44), "contributorOrganizationID" uuid, "contributorUserID" uuid, "contributorVcID" uuid, "calendarEventID" uuid, CONSTRAINT "UQ_4c6428607b038a5b96509f8c2e1" UNIQUE ("rowId"), CONSTRAINT "PK_9c57597f8e042ab80df73847de4" PRIMARY KEY ("id")); COMMENT ON COLUMN "in_app_notification"."category" IS 'Which category (role) is this notification targeted to.'; COMMENT ON COLUMN "in_app_notification"."triggeredAt" IS 'UTC'; COMMENT ON COLUMN "in_app_notification"."triggeredByID" IS 'The contributor who triggered the event.'; COMMENT ON COLUMN "in_app_notification"."receiverID" IS 'The contributor who is the receiver of this notification'; COMMENT ON COLUMN "in_app_notification"."payload" IS 'Additional data that is relevant for this Notification.'; COMMENT ON COLUMN "in_app_notification"."spaceID" IS 'FK to Space - cascade deletes notification when space is deleted'; COMMENT ON COLUMN "in_app_notification"."organizationID" IS 'FK to Organization - cascade deletes notification when organization is deleted'; COMMENT ON COLUMN "in_app_notification"."userID" IS 'FK to User - cascade deletes notification when referenced user is deleted'; COMMENT ON COLUMN "in_app_notification"."applicationID" IS 'FK to Application - cascade deletes notification when application is deleted'; COMMENT ON COLUMN "in_app_notification"."invitationID" IS 'FK to Invitation - cascade deletes notification when invitation is deleted'; COMMENT ON COLUMN "in_app_notification"."calloutID" IS 'FK to Callout - cascade deletes notification when callout is deleted'; COMMENT ON COLUMN "in_app_notification"."contributionID" IS 'FK to Callout Contribution - cascade deletes notification when Contribution is deleted'; COMMENT ON COLUMN "in_app_notification"."roomID" IS 'FK to Room - cascade deletes notification when the room is deleted'; COMMENT ON COLUMN "in_app_notification"."messageID" IS 'Not actual FK - used to manually delete notification when the message is deleted'; COMMENT ON COLUMN "in_app_notification"."contributorOrganizationID" IS 'FK to Organization - cascade deletes notification when organization contributor is deleted'; COMMENT ON COLUMN "in_app_notification"."contributorUserID" IS 'FK to User - cascade deletes notification when user contributor is deleted'; COMMENT ON COLUMN "in_app_notification"."contributorVcID" IS 'FK to VC - cascade deletes notification when VC contributor is deleted'; COMMENT ON COLUMN "in_app_notification"."calendarEventID" IS 'FK to Calendar Event - cascade deletes notification when the calendar event is deleted'`
@@ -740,9 +740,6 @@ export class Baseline1764237534488 implements MigrationInterface {
       `ALTER TABLE "library" ADD CONSTRAINT "FK_3879db652f2421337691219ace8" FOREIGN KEY ("authorizationId") REFERENCES "authorization_policy"("id") ON DELETE SET NULL ON UPDATE NO ACTION`
     );
     await queryRunner.query(
-      `ALTER TABLE "forum" ADD CONSTRAINT "FK_3b0c92945f36d06f37de80285dd" FOREIGN KEY ("authorizationId") REFERENCES "authorization_policy"("id") ON DELETE SET NULL ON UPDATE NO ACTION`
-    );
-    await queryRunner.query(
       `ALTER TABLE "discussion" ADD CONSTRAINT "FK_4555dccdda9ba57d8e3a634cd0d" FOREIGN KEY ("authorizationId") REFERENCES "authorization_policy"("id") ON DELETE SET NULL ON UPDATE NO ACTION`
     );
     await queryRunner.query(
@@ -753,6 +750,9 @@ export class Baseline1764237534488 implements MigrationInterface {
     );
     await queryRunner.query(
       `ALTER TABLE "discussion" ADD CONSTRAINT "FK_0de78853c1ee793f61bda7eff79" FOREIGN KEY ("forumId") REFERENCES "forum"("id") ON DELETE CASCADE ON UPDATE NO ACTION`
+    );
+    await queryRunner.query(
+      `ALTER TABLE "forum" ADD CONSTRAINT "FK_3b0c92945f36d06f37de80285dd" FOREIGN KEY ("authorizationId") REFERENCES "authorization_policy"("id") ON DELETE SET NULL ON UPDATE NO ACTION`
     );
     await queryRunner.query(
       `ALTER TABLE "in_app_notification" ADD CONSTRAINT "FK_a84dd5170304562dbd58b37521e" FOREIGN KEY ("receiverID") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE NO ACTION`
@@ -936,6 +936,9 @@ export class Baseline1764237534488 implements MigrationInterface {
       `ALTER TABLE "in_app_notification" DROP CONSTRAINT "FK_a84dd5170304562dbd58b37521e"`
     );
     await queryRunner.query(
+      `ALTER TABLE "forum" DROP CONSTRAINT "FK_3b0c92945f36d06f37de80285dd"`
+    );
+    await queryRunner.query(
       `ALTER TABLE "discussion" DROP CONSTRAINT "FK_0de78853c1ee793f61bda7eff79"`
     );
     await queryRunner.query(
@@ -946,9 +949,6 @@ export class Baseline1764237534488 implements MigrationInterface {
     );
     await queryRunner.query(
       `ALTER TABLE "discussion" DROP CONSTRAINT "FK_4555dccdda9ba57d8e3a634cd0d"`
-    );
-    await queryRunner.query(
-      `ALTER TABLE "forum" DROP CONSTRAINT "FK_3b0c92945f36d06f37de80285dd"`
     );
     await queryRunner.query(
       `ALTER TABLE "library" DROP CONSTRAINT "FK_3879db652f2421337691219ace8"`
@@ -1465,10 +1465,10 @@ export class Baseline1764237534488 implements MigrationInterface {
     await queryRunner.query(`DROP TABLE "license_plan"`);
     await queryRunner.query(`DROP TABLE "license_policy"`);
     await queryRunner.query(`DROP TABLE "in_app_notification"`);
-    await queryRunner.query(`DROP TABLE "discussion"`);
     await queryRunner.query(`DROP TABLE "forum"`);
-    await queryRunner.query(`DROP TABLE "activity"`);
+    await queryRunner.query(`DROP TABLE "discussion"`);
     await queryRunner.query(`DROP TABLE "library"`);
+    await queryRunner.query(`DROP TABLE "activity"`);
     await queryRunner.query(`DROP TABLE "innovation_hub"`);
     await queryRunner.query(`DROP TABLE "account"`);
     await queryRunner.query(`DROP TABLE "innovation_pack"`);
