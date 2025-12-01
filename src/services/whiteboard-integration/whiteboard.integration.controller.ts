@@ -25,6 +25,7 @@ import {
   SaveOutputData,
   FetchOutputData,
 } from './outputs';
+import { randomUUID } from 'node:crypto';
 
 /**
  * Controller exposing the Whiteboard Integration service via message queue.
@@ -51,9 +52,28 @@ export class WhiteboardIntegrationController {
     @Ctx() context: RmqContext
   ): Promise<UserInfo> {
     ack(context);
-    return this.integrationService
-      .who(data)
-      .then(({ userID, email }) => ({ id: userID, email }));
+    return this.integrationService.who(data).then(result => {
+      if (!result.isAnonymous) {
+        const { userID, email } = result;
+        if (result.guestName) {
+          const { guestName } = result;
+          // Sanitize guestName for email local part
+          const sanitizedName = guestName
+            .toLowerCase()
+            .replace(/[^a-z0-9-]/g, '-')
+            .replace(/-+/g, '-')
+            .substring(0, 64);
+          const guestEmail = `${sanitizedName}-guest@alkem.io`;
+          return {
+            id: randomUUID(),
+            email: guestEmail,
+            guestName: guestName,
+          };
+        }
+        return { id: userID, email };
+      }
+      return { id: '', email: '' };
+    });
   }
 
   @EventPattern(WhiteboardIntegrationEventPattern.CONTRIBUTION, Transport.RMQ)

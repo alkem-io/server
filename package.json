@@ -1,6 +1,6 @@
 {
   "name": "alkemio-server",
-  "version": "0.127.0",
+  "version": "0.127.3",
   "description": "Alkemio server, responsible for managing the shared Alkemio platform",
   "author": "Alkemio Foundation",
   "private": false,
@@ -21,7 +21,7 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/src/main.js",
-    "start:services": "docker compose -f quickstart-services.yml --env-file .env.docker up --build --force-recreate",
+    "start:services": "docker compose -f quickstart-services.yml --env-file .env.docker up --build --force-recreate -d",
     "start:services:ssi": "docker compose -f quickstart-services.yml -f quickstart-wallet-manager.yml --env-file .env.docker up --build --force-recreate",
     "start:services:kratos:debug": "docker compose -f quickstart-services-kratos-debug.yml --env-file .env.docker up --build --force-recreate",
     "start:services:ai": "docker compose -f quickstart-services-ai.yml --env-file .env.docker up --build --force-recreate",
