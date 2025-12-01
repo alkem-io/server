@@ -51,9 +51,6 @@ import { DataLoaderInterceptor } from '@core/dataloader/interceptors';
 import { InnovationHubInterceptor } from '@common/interceptors';
 import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.module';
 import { SessionSyncModule } from '@services/session-sync/session-sync.module';
-import { SsiCredentialFlowController } from '@services/api-rest/ssi-credential-flow/ssi.credential.flow.controller';
-import { SsiCredentialFlowModule } from '@services/api-rest/ssi-credential-flow/ssi.credential.flow.module';
-import { StorageAccessModule } from '@services/api-rest/storage-access/storage.access.module';
 import { MessageReactionModule } from '@domain/communication/message.reaction/message.reaction.module';
 import {
   HttpExceptionFilter,
@@ -311,8 +308,6 @@ import { InAppNotificationAdminModule } from './platform-admin/in-app-notificati
     GeoLocationModule,
     ContributionReporterModule,
     InnovationHubModule,
-    SsiCredentialFlowModule,
-    StorageAccessModule,
     MeModule,
     VirtualContributorModule,
     InputCreatorModule,
@@ -332,7 +327,7 @@ import { InAppNotificationAdminModule } from './platform-admin/in-app-notificati
     CalloutTransferModule,
     SearchModule,
   ],
-  controllers: [AppController, SsiCredentialFlowController],
+  controllers: [AppController],
   providers: [
     {
       provide: APP_INTERCEPTOR,
