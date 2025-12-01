@@ -329,7 +329,6 @@ export class LookupResolverFields {
     const { agent } = await this.userLookupService.getUserAndAgent(userID);
     return this.authorizationService.getGrantedPrivileges(
       agent.credentials || [],
-      [],
       authorization
     );
   }

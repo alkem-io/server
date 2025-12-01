@@ -907,23 +907,6 @@ export class SpaceService {
   ): Promise<boolean> {
     const space = await this.spaceRepository.findOneOrFail({
       where: { id: spaceId },
-      select: {
-        id: true,
-        settings: {
-          collaboration: {
-            allowEventsFromSubspaces: true,
-            allowMembersToCreateCallouts: true,
-            allowMembersToCreateSubspaces: true,
-            inheritMembershipRights: true,
-            allowMembersToVideoCall: false,
-          },
-          membership: {
-            allowSubspaceAdminsToInviteMembers: true,
-            policy: true,
-          },
-          privacy: { allowPlatformSupportAsAdmin: true, mode: true },
-        },
-      },
     });
 
     const originalSettings = space.settings;

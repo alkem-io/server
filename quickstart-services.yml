@@ -162,7 +162,7 @@ services:
     networks:
       - alkemio_dev_net
     restart: on-failure
-    entrypoint: ["/bin/sh", "-c"]
+    entrypoint: ['/bin/sh', '-c']
     command:
       - |
         echo "Waiting for Hydra to be ready..."
@@ -302,7 +302,7 @@ services:
       - POSTGRES_PASSWORD
       - POSTGRES_INITDB_ARGS=--encoding=UTF8 --lc-collate=C --lc-ctype=C
       - POSTGRES_MULTIPLE_DATABASES
-    entrypoint: [ "bash", "/usr/local/bin/entrypoint-wrapper.sh" ]
+    entrypoint: ['bash', '/usr/local/bin/entrypoint-wrapper.sh']
     restart: always
     ports:
       - 5432
@@ -400,7 +400,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_matrix_adapter
     hostname: matrix-adapter
-    image: alkemio/matrix-adapter:v0.7.1
+    image: alkemio/matrix-adapter:v0.7.3
     platform: linux/amd64
     depends_on:
       - rabbitmq
@@ -451,7 +451,7 @@ services:
   whiteboard-collaboration:
     container_name: alkemio_dev_whiteboard_collaboration
     hostname: whiteboard-collaboration
-    image: alkemio/whiteboard-collaboration-service:v0.6.1
+    image: alkemio/whiteboard-collaboration-service:v0.8.0
     platform: linux/amd64
     depends_on:
       rabbitmq:
@@ -472,7 +472,7 @@ services:
   file-service:
     container_name: alkemio_dev_file_service
     hostname: file-service
-    image: alkemio/file-service:v0.1.2
+    image: alkemio/file-service:v0.2.0
     platform: linux/amd64
     depends_on:
       rabbitmq:

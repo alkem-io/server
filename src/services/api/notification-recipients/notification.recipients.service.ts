@@ -205,7 +205,6 @@ export class NotificationRecipientsService {
           const accessGranted =
             this.authorizationService.isAccessGrantedForCredentials(
               credentials,
-              [],
               authorizationPolicy,
               privilegeRequired
             );

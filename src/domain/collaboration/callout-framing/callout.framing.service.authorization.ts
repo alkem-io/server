@@ -8,6 +8,7 @@ import { WhiteboardAuthorizationService } from '@domain/common/whiteboard/whiteb
 import { MemoAuthorizationService } from '@domain/common/memo/memo.service.authorization';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { LogContext } from '@common/enums/logging.context';
+import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 
 @Injectable()
 export class CalloutFramingAuthorizationService {
@@ -21,7 +22,8 @@ export class CalloutFramingAuthorizationService {
 
   public async applyAuthorizationPolicy(
     calloutFramingInput: ICalloutFraming,
-    parentAuthorization: IAuthorizationPolicy | undefined
+    parentAuthorization: IAuthorizationPolicy | undefined,
+    spaceSettings?: ISpaceSettings
   ): Promise<IAuthorizationPolicy[]> {
     const calloutFraming =
       await this.calloutFramingService.getCalloutFramingOrFail(
@@ -77,7 +79,8 @@ export class CalloutFramingAuthorizationService {
       const whiteboardAuthorizations =
         await this.whiteboardAuthorizationService.applyAuthorizationPolicy(
           calloutFraming.whiteboard.id,
-          calloutFraming.authorization
+          calloutFraming.authorization,
+          spaceSettings
         );
       updatedAuthorizations.push(...whiteboardAuthorizations);
     }
