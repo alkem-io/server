@@ -66,7 +66,6 @@ export class AdminAuthorizationService {
 
     const privileges = await this.authorizationService.getGrantedPrivileges(
       credentials,
-      agentInfo.verifiedCredentials,
       authorizationPolicy
     );
     return privileges;
