@@ -19,8 +19,6 @@ describe('AuthenticationService', () => {
   let agentInfoCacheService: jest.Mocked<AgentInfoCacheService>;
   let agentInfoService: jest.Mocked<AgentInfoService>;
   let kratosService: jest.Mocked<KratosService>;
-  let agentService: jest.Mocked<AgentService>;
-  let configService: jest.Mocked<ConfigService>;
 
   const mockOryIdentity: OryDefaultIdentitySchema = {
     id: 'test-id',
@@ -80,7 +78,6 @@ describe('AuthenticationService', () => {
     lastName: 'Doe',
     guestName: '',
     credentials: [],
-    verifiedCredentials: [],
     communicationID: 'comm-id',
     agentID: 'agent-id',
     avatarURL: 'http://example.com/avatar.jpg',
@@ -140,8 +137,6 @@ describe('AuthenticationService', () => {
     agentInfoCacheService = module.get(AgentInfoCacheService);
     agentInfoService = module.get(AgentInfoService);
     kratosService = module.get(KratosService);
-    agentService = module.get(AgentService);
-    configService = module.get(ConfigService);
   });
 
   beforeEach(() => {
@@ -250,49 +245,6 @@ describe('AuthenticationService', () => {
     });
   });
 
-  describe('addVerifiedCredentialsIfEnabled', () => {
-    it('should add verified credentials when SSI is enabled', async () => {
-      const mockVerifiedCredentials = [
-        {
-          type: 'test-credential',
-          issuer: 'test-issuer',
-          claim: 'test-claim',
-          claims: [],
-          context: 'test-context',
-          name: 'test-name',
-        },
-      ];
-      configService.get.mockReturnValue(true);
-      agentService.getVerifiedCredentials.mockResolvedValue(
-        mockVerifiedCredentials
-      );
-
-      const agentInfo = { ...mockAgentInfo };
-      await service.addVerifiedCredentialsIfEnabled(agentInfo, 'agent-id');
-
-      expect(configService.get).toHaveBeenCalledWith('ssi.enabled', {
-        infer: true,
-      });
-      expect(agentService.getVerifiedCredentials).toHaveBeenCalledWith(
-        'agent-id'
-      );
-      expect(agentInfo.verifiedCredentials).toEqual(mockVerifiedCredentials);
-    });
-
-    it('should not add verified credentials when SSI is disabled', async () => {
-      configService.get.mockReturnValue(false);
-
-      const agentInfo = { ...mockAgentInfo };
-      await service.addVerifiedCredentialsIfEnabled(agentInfo, 'agent-id');
-
-      expect(configService.get).toHaveBeenCalledWith('ssi.enabled', {
-        infer: true,
-      });
-      expect(agentService.getVerifiedCredentials).not.toHaveBeenCalled();
-      expect(agentInfo.verifiedCredentials).toEqual([]);
-    });
-  });
-
   describe('createAgentInfo', () => {
     it('should return anonymous agent info when no ory identity provided', async () => {
       const anonymousAgentInfo = { ...mockAgentInfo, isAnonymous: true };
@@ -350,9 +302,6 @@ describe('AuthenticationService', () => {
       jest
         .spyOn(service as any, 'buildAgentInfoFromOrySession')
         .mockReturnValue(builtAgentInfo);
-      jest
-        .spyOn(service, 'addVerifiedCredentialsIfEnabled')
-        .mockResolvedValue();
 
       const result = await service.createAgentInfo(
         mockOryIdentity,
@@ -362,10 +311,6 @@ describe('AuthenticationService', () => {
       expect(
         agentInfoService.populateAgentInfoWithMetadata
       ).toHaveBeenCalledWith(builtAgentInfo, mockAgentInfoMetadata);
-      expect(service.addVerifiedCredentialsIfEnabled).toHaveBeenCalledWith(
-        builtAgentInfo,
-        'agent-id'
-      );
       expect(agentInfoCacheService.setAgentInfoCache).toHaveBeenCalledWith(
         builtAgentInfo
       );
