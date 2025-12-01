@@ -75,6 +75,24 @@ export class UrlGeneratorService {
     return `${this.endpoint_cluster}/vc/${nameID}`;
   }
 
+  public async generateUrlForVCById(id: string): Promise<string> {
+    const vc = await this.entityManager.findOne(VirtualContributor, {
+      where: {
+        id: id,
+      },
+      select: {
+        nameID: true,
+      },
+    });
+    if (!vc) {
+      throw new EntityNotFoundException(
+        `Unable to find VirtualContributor with ID: ${id}`,
+        LogContext.URL_GENERATOR
+      );
+    }
+    return this.generateUrlForVC(vc.nameID);
+  }
+
   public generateUrlForPlatform(): string {
     return `${this.endpoint_cluster}/home`;
   }
