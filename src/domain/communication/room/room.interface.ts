@@ -5,7 +5,6 @@ import { RoomType } from '@common/enums/room.type';
 
 @ObjectType('Room')
 export abstract class IRoom extends IAuthorizable {
-  // this should be RoomType instead of string but is breaking the world now :(
   type!: RoomType;
 
   @Field(() => Number, {

@@ -4,8 +4,8 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { CalloutFramingService } from './callout.framing.service';
 import { ICalloutFraming } from './callout.framing.interface';
-import { WhiteboardAuthorizationService } from '@domain/common/whiteboard';
-import { MemoAuthorizationService } from '@domain/common/memo';
+import { WhiteboardAuthorizationService } from '@domain/common/whiteboard/whiteboard.service.authorization';
+import { MemoAuthorizationService } from '@domain/common/memo/memo.service.authorization';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { LogContext } from '@common/enums/logging.context';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';

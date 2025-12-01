@@ -6,3 +6,5 @@ export * from './virtual.contributor.dto.refresh.body.of.knowledge';
 export * from './virtual.contributor.updated.subscription.args';
 export * from './virtual.contributor.updated.subscription.result';
 export * from './utils';
+export * from './virtual.contributor.dto.update.settings';
+export * from './virtual.contributor.dto.update.platform.settings';
