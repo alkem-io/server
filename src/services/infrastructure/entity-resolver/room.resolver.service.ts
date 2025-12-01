@@ -73,6 +73,7 @@ export class RoomResolverService {
   ): Promise<{
     roleSet?: IRoleSet;
     platformRolesAccess: IPlatformRolesAccess;
+    spaceSettings?: ISpaceSettings;
   }> {
     const space = await this.entityManager.findOne(Space, {
       where: {
@@ -98,8 +99,9 @@ export class RoomResolverService {
       space?.platformRolesAccess || {
         roles: [],
       };
+    const spaceSettings: ISpaceSettings | undefined = space?.settings;
 
-    return { roleSet: roleSet, platformRolesAccess };
+    return { roleSet, platformRolesAccess, spaceSettings };
   }
 
   async getCalloutWithPostContributionForRoom(roomID: string): Promise<{
