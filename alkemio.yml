@@ -298,8 +298,6 @@ communications:
       ssl: ${SYNAPSE_DB_SSL}:false
   discussions:
     enabled: ${COMMUNICATIONS_DISCUSSIONS_ENABLED}:true
-  direct_message_rooms:
-    enabled: ${COMMUNICATIONS_DIRECT_MESSAGE_ROOMS_ENABLED}:false
 
 
 ## storage ##

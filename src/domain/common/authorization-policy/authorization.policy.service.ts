@@ -240,10 +240,12 @@ export class AuthorizationPolicyService {
     const rules = auth.credentialRules;
     const newRule = new AuthorizationPolicyRuleCredential(
       grantedPrivileges,
-      {
-        type: credentialCriteria.type,
-        resourceID: credentialCriteria.resourceID || '',
-      },
+      [
+        {
+          type: credentialCriteria.type,
+          resourceID: credentialCriteria.resourceID || '',
+        },
+      ],
       name
     );
     rules.push(newRule);
