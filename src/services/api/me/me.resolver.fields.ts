@@ -5,7 +5,6 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { MeQueryResults } from '@services/api/me/dto';
 import { IUser } from '@domain/community/user/user.interface';
 import { ForbiddenException, ValidationException } from '@common/exceptions';
-import { UserService } from '@domain/community/user/user.service';
 import { MeService } from './me.service';
 import { LogContext } from '@common/enums';
 import { MySpaceResults } from './dto/my.journeys.results';
@@ -16,12 +15,14 @@ import { NotificationEventsFilterInput } from './dto/me.notification.event.filte
 import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
 import { PaginatedInAppNotifications } from '@core/pagination/paginated.in-app-notification';
 import { PaginationArgs } from '@core/pagination';
+import { MeConversationsResult } from './dto/me.conversations.result';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 
 @Resolver(() => MeQueryResults)
 export class MeResolverFields {
   constructor(
     private meService: MeService,
-    private userService: UserService,
+    private userLookupService: UserLookupService,
     private inAppNotificationService: InAppNotificationService
   ) {}
 
@@ -92,7 +93,7 @@ export class MeResolverFields {
       return null;
     }
 
-    return this.userService.getUserOrFail(userID);
+    return this.userLookupService.getUserOrFail(agentInfo.userID);
   }
 
   @ResolveField('communityInvitationsCount', () => Number, {
@@ -213,5 +214,23 @@ export class MeResolverFields {
     limit: number
   ): Promise<MySpaceResults[]> {
     return this.meService.getMySpaces(agentInfo, limit);
+  }
+
+  @ResolveField(() => MeConversationsResult, {
+    description: 'The conversations the current authenticated user is part of.',
+    nullable: false,
+  })
+  public async conversations(
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<MeConversationsResult> {
+    if (!agentInfo.userID) {
+      throw new ValidationException(
+        'Unable to retrieve conversations as no userID provided.',
+        LogContext.COMMUNICATION
+      );
+    }
+
+    // Return an empty object - the fields will be resolved by MeConversationsResolverFields
+    return {} as MeConversationsResult;
   }
 }
