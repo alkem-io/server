@@ -22,7 +22,6 @@ describe('WhiteboardGuestAccessService', () => {
     authorization.id = 'authorization-1';
     authorization.credentialRules = [];
     authorization.privilegeRules = [];
-    authorization.verifiedCredentialRules = [];
     return authorization;
   };
 

@@ -1,5 +1,4 @@
 export * from './agent.service.mock';
-export * from './app.service.mock';
 export * from './agent.service.mock';
 export * from './application.service.mock';
 export * from './authorization.policy.service.mock';
