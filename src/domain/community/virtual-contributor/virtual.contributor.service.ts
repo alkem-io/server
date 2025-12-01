@@ -318,6 +318,29 @@ export class VirtualContributorService {
         virtualContributorData.knowledgeBaseData.profile?.description;
     }
 
+    if (
+      virtualContributorData.bodyOfKnowledgeType &&
+      virtualContributorData.bodyOfKnowledgeType !== virtual.bodyOfKnowledgeType
+    ) {
+      virtual.bodyOfKnowledgeType = virtualContributorData.bodyOfKnowledgeType;
+    }
+
+    if (
+      virtualContributorData.dataAccessMode &&
+      virtualContributorData.dataAccessMode !== virtual.dataAccessMode
+    ) {
+      virtual.dataAccessMode = virtualContributorData.dataAccessMode;
+    }
+
+    if (virtualContributorData.interactionModes) {
+      virtual.interactionModes = virtualContributorData.interactionModes;
+    }
+
+    if (typeof virtualContributorData.bodyOfKnowledgeDescription === 'string') {
+      virtual.bodyOfKnowledgeDescription =
+        virtualContributorData.bodyOfKnowledgeDescription;
+    }
+
     return await this.save(virtual);
   }
 
