@@ -5,19 +5,10 @@ import { IAuthorizationPolicyRuleCredential } from './authorization.policy.rule.
 export class AuthorizationPolicyRuleCredential
   implements IAuthorizationPolicyRuleCredential
 {
-  criterias: ICredentialDefinition[];
-  grantedPrivileges: AuthorizationPrivilege[];
-  cascade: boolean;
-  name: string;
-
   constructor(
-    grantedPrivileges: AuthorizationPrivilege[],
-    criteria: ICredentialDefinition,
-    name: string
-  ) {
-    this.criterias = [criteria];
-    this.grantedPrivileges = grantedPrivileges;
-    this.cascade = true;
-    this.name = name;
-  }
+    public grantedPrivileges: AuthorizationPrivilege[],
+    public criterias: ICredentialDefinition[],
+    public name: string,
+    public cascade: boolean = true
+  ) {}
 }

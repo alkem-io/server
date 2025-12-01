@@ -4,8 +4,6 @@ export const SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED =
   'alkemio-subscriptions-vritual-contributor-updated';
 export const SUBSCRIPTION_CALLOUT_POST_CREATED =
   'alkemio-subscriptions-callout-post-created';
-export const SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL =
-  'alkemio-subscriptions-profile-verified-credential';
 export const SUBSCRIPTION_SUBSPACE_CREATED =
   'alkemio-subscriptions-subspace-created';
 export const SUBSCRIPTION_ACTIVITY_CREATED =
@@ -16,7 +14,6 @@ export const SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER =
   'alkemio-subscriptions-notification-counter';
 export const AUTH_RESET_SERVICE = 'alkemio-auth-reset';
 export const NOTIFICATIONS_SERVICE = 'alkemio-notifications';
-export const WALLET_MANAGEMENT_SERVICE = 'alkemio-wallet-manager';
 export const MATRIX_ADAPTER_SERVICE = 'alkemio-matrix-adapter';
 export const SUBSCRIPTION_ROOM_EVENT = 'alkemio-subscriptions-room-event';
 export const ELASTICSEARCH_CLIENT_PROVIDER = 'elasticsearch-client-provider';

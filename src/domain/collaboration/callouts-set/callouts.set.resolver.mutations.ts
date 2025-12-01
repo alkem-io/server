@@ -85,6 +85,7 @@ export class CalloutsSetResolverMutations {
     let platformRolesAccess: IPlatformRolesAccess = {
       roles: [],
     };
+    let spaceSettings = undefined;
     if (calloutsSet.type === CalloutsSetType.COLLABORATION) {
       const roleSetAndSettings =
         await this.roomResolverService.getRoleSetAndSettingsForCollaborationCalloutsSet(
@@ -92,13 +93,15 @@ export class CalloutsSetResolverMutations {
         );
       roleSet = roleSetAndSettings.roleSet;
       platformRolesAccess = roleSetAndSettings.platformRolesAccess;
+      spaceSettings = roleSetAndSettings.spaceSettings;
     }
     const authorizations =
       await this.calloutAuthorizationService.applyAuthorizationPolicy(
         callout.id,
         calloutsSet.authorization,
         platformRolesAccess,
-        roleSet
+        roleSet,
+        spaceSettings
       );
     await this.authorizationPolicyService.saveAll(authorizations);
 

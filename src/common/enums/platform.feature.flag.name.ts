@@ -1,7 +1,6 @@
 import { registerEnumType } from '@nestjs/graphql';
 
 export enum PlatformFeatureFlagName {
-  SSI = 'ssi',
   COMMUNICATIONS = 'communications',
   COMMUNICATIONS_DISCUSSIONS = 'communications-discussions',
   SUBSCRIPTIONS = 'subscriptions',

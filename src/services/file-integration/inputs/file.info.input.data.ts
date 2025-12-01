@@ -6,6 +6,7 @@ export class FileInfoInputData extends BaseInputData {
     public auth: {
       cookie?: string;
       authorization?: string;
+      guestName?: string;
     }
   ) {
     super('file-info-input');

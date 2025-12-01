@@ -1,11 +1,9 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
-import { AgentModule } from '@domain/agent/agent/agent.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { CommunicationModule } from '@domain/communication/communication/communication.module';
 import { UserGroupModule } from '@domain/community/user-group/user-group.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { TrustRegistryAdapterModule } from '@services/external/trust-registry/trust.registry.adapter/trust.registry.adapter.module';
 import { Community } from './community.entity';
 import { CommunityResolverFields } from './community.resolver.fields';
 import { CommunityResolverMutations } from './community.resolver.mutations';
@@ -21,7 +19,6 @@ import { PlatformRolesAccessModule } from '@domain/access/platform-roles-access/
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
-    AgentModule,
     EntityResolverModule,
     UserGroupModule,
     RoleSetModule,
@@ -30,7 +27,6 @@ import { PlatformRolesAccessModule } from '@domain/access/platform-roles-access/
     PlatformRolesAccessModule,
     VirtualContributorModule,
     TypeOrmModule.forFeature([Community]),
-    TrustRegistryAdapterModule,
   ],
   providers: [
     CommunityService,
