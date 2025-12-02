@@ -226,7 +226,7 @@ export class ActivityService {
   async getActivityForMessage(messageID: string): Promise<IActivity | null> {
     const entry: IActivity | null = await this.activityRepository
       .createQueryBuilder('activity')
-      .where('messageID = :messageID')
+      .where('"messageID" = :messageID')
       .setParameters({
         messageID: messageID,
       })
