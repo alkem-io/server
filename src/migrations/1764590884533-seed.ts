@@ -518,7 +518,7 @@ const licenseCredentialRules: CredentialRule[] = [
     grantedEntitlements: [
       {
         type: LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS,
-        limit: -1,
+        limit: 1,
       },
     ],
     name: 'Space Virtual Contributors',
@@ -530,7 +530,7 @@ const licenseCredentialRules: CredentialRule[] = [
     grantedEntitlements: [
       {
         type: LicenseEntitlementType.SPACE_FLAG_WHITEBOARD_MULTI_USER,
-        limit: -1,
+        limit: 1,
       },
     ],
     name: 'Space Multi-user whiteboards',
@@ -540,7 +540,7 @@ const licenseCredentialRules: CredentialRule[] = [
     credentialType:
       LicensingCredentialBasedCredentialType.SPACE_FEATURE_SAVE_AS_TEMPLATE,
     grantedEntitlements: [
-      { type: LicenseEntitlementType.SPACE_FLAG_SAVE_AS_TEMPLATE, limit: -1 },
+      { type: LicenseEntitlementType.SPACE_FLAG_SAVE_AS_TEMPLATE, limit: 1 },
     ],
     name: 'Space Save As Template',
   },
@@ -549,15 +549,15 @@ const licenseCredentialRules: CredentialRule[] = [
     credentialType:
       LicensingCredentialBasedCredentialType.SPACE_FEATURE_MEMO_MULTI_USER,
     grantedEntitlements: [
-      { type: LicenseEntitlementType.SPACE_FLAG_MEMO_MULTI_USER, limit: -1 },
+      { type: LicenseEntitlementType.SPACE_FLAG_MEMO_MULTI_USER, limit: 1 },
     ],
-    name: 'Space Multi-user Memo',
+    name: 'Space Multi-User memo',
   },
   {
     id: randomUUID(),
     credentialType: LicensingCredentialBasedCredentialType.SPACE_LICENSE_FREE,
     grantedEntitlements: [
-      { type: LicenseEntitlementType.SPACE_FREE, limit: -1 },
+      { type: LicenseEntitlementType.SPACE_FREE, limit: 1 },
     ],
     name: 'Space License Free',
   },
@@ -565,12 +565,12 @@ const licenseCredentialRules: CredentialRule[] = [
     id: randomUUID(),
     credentialType: LicensingCredentialBasedCredentialType.SPACE_LICENSE_PLUS,
     grantedEntitlements: [
-      { type: LicenseEntitlementType.SPACE_PLUS, limit: -1 },
+      { type: LicenseEntitlementType.SPACE_PLUS, limit: 1 },
       {
         type: LicenseEntitlementType.SPACE_FLAG_WHITEBOARD_MULTI_USER,
-        limit: -1,
+        limit: 1,
       },
-      { type: LicenseEntitlementType.SPACE_FLAG_SAVE_AS_TEMPLATE, limit: -1 },
+      { type: LicenseEntitlementType.SPACE_FLAG_SAVE_AS_TEMPLATE, limit: 1 },
     ],
     name: 'Space License Plus',
   },
@@ -579,12 +579,12 @@ const licenseCredentialRules: CredentialRule[] = [
     credentialType:
       LicensingCredentialBasedCredentialType.SPACE_LICENSE_PREMIUM,
     grantedEntitlements: [
-      { type: LicenseEntitlementType.SPACE_PREMIUM, limit: -1 },
+      { type: LicenseEntitlementType.SPACE_PREMIUM, limit: 1 },
       {
         type: LicenseEntitlementType.SPACE_FLAG_WHITEBOARD_MULTI_USER,
-        limit: -1,
+        limit: 1,
       },
-      { type: LicenseEntitlementType.SPACE_FLAG_SAVE_AS_TEMPLATE, limit: -1 },
+      { type: LicenseEntitlementType.SPACE_FLAG_SAVE_AS_TEMPLATE, limit: 1 },
     ],
     name: 'Space License Premium',
   },
@@ -600,10 +600,10 @@ const licenseCredentialRules: CredentialRule[] = [
     id: randomUUID(),
     credentialType: LicensingCredentialBasedCredentialType.ACCOUNT_LICENSE_PLUS,
     grantedEntitlements: [
-      { type: LicenseEntitlementType.ACCOUNT_SPACE_FREE, limit: -1 },
-      { type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR, limit: -1 },
-      { type: LicenseEntitlementType.ACCOUNT_INNOVATION_PACK, limit: -1 },
+      { type: LicenseEntitlementType.ACCOUNT_SPACE_FREE, limit: 3 },
+      { type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR, limit: 3 },
       { type: LicenseEntitlementType.ACCOUNT_INNOVATION_HUB, limit: 1 },
+      { type: LicenseEntitlementType.ACCOUNT_INNOVATION_PACK, limit: 3 },
     ],
     name: 'Account License Plus',
   },

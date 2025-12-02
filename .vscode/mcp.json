@@ -6,7 +6,7 @@
       "args": [
         "-y",
         "@modelcontextprotocol/server-postgres",
-        "postgresql://root:toor@localhost:5432/alkemio"
+        "postgresql://synapse:synapse@localhost:5432/alkemio"
       ]
     },
     "postgres-kratos": {
