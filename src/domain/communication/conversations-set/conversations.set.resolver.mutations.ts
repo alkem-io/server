@@ -69,6 +69,7 @@ export class ConversationsSetResolverMutations {
         conversationData.userID
       );
     }
+    conversationData.currentUserID = agentInfo.userID!;
 
     const conversation =
       await this.conversationsSetService.createConversationOnConversationsSet(
@@ -76,9 +77,6 @@ export class ConversationsSetResolverMutations {
         conversationsSet.id,
         true
       );
-
-    // conversation needs to be saved to apply the authorization policy
-    await this.conversationService.save(conversation);
 
     await this.conversationsSetAuthorizationService.resetAuthorizationOnConversations(
       agentInfo.userID!,

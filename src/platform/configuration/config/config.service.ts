@@ -37,10 +37,6 @@ export class KonfigService {
       },
       featureFlags: [
         {
-          name: PlatformFeatureFlagName.SSI,
-          enabled: this.configService.get('ssi.enabled', { infer: true }),
-        },
-        {
           name: PlatformFeatureFlagName.COMMUNICATIONS,
           enabled: this.configService.get('communications.enabled', {
             infer: true,

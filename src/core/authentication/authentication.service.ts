@@ -41,6 +41,7 @@ export class AuthenticationService {
   public async getAgentInfo(opts: {
     cookie?: string;
     authorization?: string;
+    guestName?: string;
   }): Promise<AgentInfo> {
     let session: Session | undefined;
     try {
@@ -48,35 +49,21 @@ export class AuthenticationService {
         opts.authorization,
         opts.cookie
       );
-    } catch {
-      return this.agentInfoService.createAnonymousAgentInfo();
+      if (session?.identity) {
+        const oryIdentity = session.identity as OryDefaultIdentitySchema;
+        return this.createAgentInfo(oryIdentity);
+      }
+    } catch (error) {
+      this.logger.verbose?.(
+        `Session validation failed, falling back to guest/anonymous: ${error}`,
+        LogContext.AUTH
+      );
     }
 
-    if (!session?.identity) {
-      return this.agentInfoService.createAnonymousAgentInfo();
+    if (opts.guestName?.trim()) {
+      return this.agentInfoService.createGuestAgentInfo(opts.guestName.trim());
     }
-
-    const oryIdentity = session.identity as OryDefaultIdentitySchema;
-    return this.createAgentInfo(oryIdentity);
-  }
-
-  /**
-   * Adds verified credentials to the agent information if SSI (Self-Sovereign Identity) is enabled.
-   *
-   * @param agentInfo - The information of the agent to which verified credentials will be added.
-   * @param agentID - The unique identifier of the agent.
-   * @returns A promise that resolves when the operation is complete.
-   */
-  public async addVerifiedCredentialsIfEnabled(
-    agentInfo: AgentInfo,
-    agentID: string
-  ): Promise<void> {
-    const ssiEnabled = this.configService.get('ssi.enabled', { infer: true });
-    if (ssiEnabled) {
-      const verifiedCredentials =
-        await this.agentService.getVerifiedCredentials(agentID);
-      agentInfo.verifiedCredentials = verifiedCredentials;
-    }
+    return this.agentInfoService.createAnonymousAgentInfo();
   }
 
   /**
@@ -118,10 +105,6 @@ export class AuthenticationService {
     this.agentInfoService.populateAgentInfoWithMetadata(
       agentInfo,
       agentInfoMetadata
-    );
-    await this.addVerifiedCredentialsIfEnabled(
-      agentInfo,
-      agentInfoMetadata.agentID
     );
 
     await this.agentInfoCacheService.setAgentInfoCache(agentInfo);

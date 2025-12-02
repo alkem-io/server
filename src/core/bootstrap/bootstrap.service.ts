@@ -19,7 +19,6 @@ import {
 } from '@common/constants';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { OrganizationAuthorizationService } from '@domain/community/organization/organization.service.authorization';
-import { AgentService } from '@domain/agent/agent/agent.service';
 import { PlatformService } from '@platform/platform/platform.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { PlatformAuthorizationService } from '@platform/platform/platform.service.authorization';
@@ -63,7 +62,6 @@ export class BootstrapService {
   constructor(
     private accountService: AccountService,
     private accountAuthorizationService: AccountAuthorizationService,
-    private agentService: AgentService,
     private agentInfoService: AgentInfoService,
     private spaceService: SpaceService,
     private userService: UserService,
@@ -120,7 +118,6 @@ export class BootstrapService {
       await this.ensureOrganizationSingleton();
       await this.ensureSpaceSingleton(anonymousAgentInfo);
       await this.ensureGuidanceChat();
-      await this.ensureSsiPopulated();
       // reset auth as last in the actions
       // await this.ensureSpaceNamesInElastic();
     } catch (error: any) {
@@ -319,13 +316,6 @@ export class BootstrapService {
     }
   }
 
-  async ensureSsiPopulated() {
-    const ssiEnabled = this.configService.get('ssi.enabled', { infer: true });
-    if (ssiEnabled) {
-      await this.agentService.ensureDidsCreated();
-    }
-  }
-
   private async ensureAuthorizationsPopulated() {
     // For platform
     const platform = await this.platformService.getPlatformOrFail();
@@ -422,10 +412,10 @@ export class BootstrapService {
       emailVerified: true,
       firstName: adminUser.firstName,
       lastName: adminUser.lastName,
+      guestName: '',
       avatarURL: '',
       credentials: adminUser.agent?.credentials || [],
       agentID: adminUser.agent?.id,
-      verifiedCredentials: [],
       communicationID: adminUser.communicationID,
       authenticationID: adminUser.authenticationID ?? '',
     };

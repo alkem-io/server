@@ -5,7 +5,6 @@ export enum MessagingQueue {
   VIRTUAL_CONTRIBUTOR_ENGINE_GENERIC = 'virtual-contributor-engine-generic',
   VIRTUAL_CONTRIBUTOR_ENGINE_OPENAI_ASSISTANT = 'virtual-contributor-engine-openai-assistant',
   //
-  WALLET_MANAGER = 'alkemio-wallet-manager',
   NOTIFICATIONS = 'alkemio-notifications',
   MATRIX_ADAPTER = 'alkemio-matrix-adapter',
   //

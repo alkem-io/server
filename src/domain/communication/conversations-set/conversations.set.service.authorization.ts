@@ -93,23 +93,29 @@ export class ConversationsSetAuthorizationService {
         LogContext.COMMUNICATION
       );
     }
-    const receivingUserConversation =
+    const hostConversationWithReceiver =
       hostUser.conversationsSet.conversations.find(
         conversation => conversation.userID === receiverUserID
       );
-    if (!receivingUserConversation) {
+    if (!hostConversationWithReceiver) {
       throw new ForbiddenException(
-        `user(${hostUserID}) does not have a conversation with the sender(${receiverUserID}).`,
-        LogContext.COMMUNICATION
+        'Host user does not have a conversation with the receiver user.',
+        LogContext.COMMUNICATION,
+        {
+          hostUserID,
+          receiverUserID,
+        }
       );
     }
-    const receivingUserAuthorizations =
+    const hostConversationWithReceiverAuthorizations =
       await this.conversationAuthorizationService.applyAuthorizationPolicy(
-        receivingUserConversation.id,
+        hostConversationWithReceiver.id,
         hostUserID,
         hostUser.conversationsSet.authorization
       );
 
-    await this.authorizationPolicyService.saveAll(receivingUserAuthorizations);
+    await this.authorizationPolicyService.saveAll(
+      hostConversationWithReceiverAuthorizations
+    );
   }
 }
