@@ -14,11 +14,14 @@ import {
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Whiteboard } from './whiteboard.entity';
 import { WhiteboardService } from './whiteboard.service';
+import { WhiteboardGuestAccessService } from './whiteboard.guest-access.service';
+import { EntityNotInitializedException } from '@common/exceptions';
 
 @Resolver(() => IWhiteboard)
 export class WhiteboardResolverFields {
   constructor(
     private whiteboardService: WhiteboardService,
+    private whiteboardGuestAccessService: WhiteboardGuestAccessService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -62,5 +65,25 @@ export class WhiteboardResolverFields {
     loader: ILoader<IProfile>
   ): Promise<IProfile> {
     return loader.load(whiteboard.id);
+  }
+
+  @ResolveField(() => Boolean, {
+    nullable: false,
+    description:
+      'Indicates whether guest collaborators are currently allowed via GLOBAL_GUEST permissions.',
+  })
+  async guestContributionsAllowed(
+    @Parent() whiteboard: IWhiteboard
+  ): Promise<boolean> {
+    if (!whiteboard.authorization) {
+      throw new EntityNotInitializedException(
+        `Authorization not initialized for whiteboard: ${whiteboard.id}`,
+        LogContext.COLLABORATION
+      );
+    }
+
+    return this.whiteboardGuestAccessService.isGuestAccessEnabled(
+      whiteboard.authorization
+    );
   }
 }

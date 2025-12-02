@@ -24,5 +24,12 @@ export abstract class IWhiteboard extends INameable {
   })
   previewSettings!: IWhiteboardPreviewSettings;
 
+  /**
+   * Computed value exposed via `guestContributionsAllowed` resolver; retained on the interface for
+   * local hydrations and service methods that override it before returning to the API layer.
+   * Always treated as a defined boolean at runtime, so there is no GraphQL decorator here.
+   */
+  guestContributionsAllowed!: boolean;
+
   createdBy?: string;
 }

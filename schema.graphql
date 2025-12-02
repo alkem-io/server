@@ -99,6 +99,7 @@ enum AuthorizationCredential {
   GLOBAL_ADMIN
   GLOBAL_ANONYMOUS
   GLOBAL_COMMUNITY_READ
+  GLOBAL_GUEST
   GLOBAL_LICENSE_MANAGER
   GLOBAL_PLATFORM_MANAGER
   GLOBAL_REGISTERED
@@ -211,6 +212,7 @@ enum AuthorizationPrivilege {
   MOVE_POST
   PLATFORM_ADMIN
   PLATFORM_SETTINGS_ADMIN
+  PUBLIC_SHARE
   READ
   READ_ABOUT
   READ_LICENSE
@@ -306,6 +308,7 @@ enum CredentialType {
   GLOBAL_ADMIN
   GLOBAL_ANONYMOUS
   GLOBAL_COMMUNITY_READ
+  GLOBAL_GUEST
   GLOBAL_LICENSE_MANAGER
   GLOBAL_PLATFORM_MANAGER
   GLOBAL_REGISTERED
@@ -604,6 +607,7 @@ enum RoleName {
   GLOBAL_SPACES_READER
   GLOBAL_SUPPORT
   GLOBAL_SUPPORT_MANAGER
+  GUEST
   LEAD
   MEMBER
   OWNER
@@ -3727,12 +3731,20 @@ type Mutation {
   updateUserSettings(settingsData: UpdateUserSettingsInput!): User!
   """Updates the specified VirtualContributor."""
   updateVirtualContributor(virtualContributorData: UpdateVirtualContributorInput!): VirtualContributor!
-  """Updates one of the Setting on an Organization"""
+  """
+  Updates platform-level settings of a VirtualContributor (platform admins only).
+  """
+  updateVirtualContributorPlatformSettings(settingsData: UpdateVirtualContributorPlatformSettingsInput!): VirtualContributor!
+  """Updates one of the Setting on an Virtual Contributor"""
   updateVirtualContributorSettings(settingsData: UpdateVirtualContributorSettingsInput!): VirtualContributor!
   """Updates the image URI for the specified Visual."""
   updateVisual(updateData: UpdateVisualInput!): Visual!
   """Updates the specified Whiteboard."""
   updateWhiteboard(whiteboardData: UpdateWhiteboardEntityInput!): Whiteboard!
+  """
+  Grants or revokes GLOBAL_GUEST permissions for a whiteboard using a single toggle.
+  """
+  updateWhiteboardGuestAccess(input: UpdateWhiteboardGuestAccessInput!): UpdateWhiteboardGuestAccessResult!
   """
   Create a new Document on the Storage and return the value as part of the returned Link.
   """
@@ -5068,6 +5080,8 @@ type SpaceSettingsCollaboration {
   Flag to control if events from Subspaces are visible on this Space calendar as well.
   """
   allowEventsFromSubspaces: Boolean!
+  """Flag to control if guest users can contribute to this Space."""
+  allowGuestContributions: Boolean!
   """Flag to control if members can create callouts."""
   allowMembersToCreateCallouts: Boolean!
   """Flag to control if members can create subspaces."""
@@ -5429,6 +5443,13 @@ type Timeline {
   updatedDate: DateTime!
 }
 
+type UpdateWhiteboardGuestAccessResult {
+  """Indicates whether the mutation completed successfully."""
+  success: Boolean!
+  """Whiteboard snapshot reflecting the latest guest access state."""
+  whiteboard: Whiteboard
+}
+
 type UrlResolverQueryResultCalendar {
   calendarEventId: UUID
   id: UUID!
@@ -5771,6 +5792,10 @@ type VirtualContributor implements Contributor {
   modelCard: VirtualContributorModelCard!
   """A name identifier of the Contributor, unique within a given scope."""
   nameID: NameID!
+  """
+  Platform-level settings of this Virtual Contributor, modifiable only by platform admins.
+  """
+  platformSettings: VirtualContributorPlatformSettings!
   """The profile for this Virtual."""
   profile: Profile!
   """Prompt graph definition for this Virtual Contributor."""
@@ -5803,6 +5828,13 @@ type VirtualContributorModelCardFlag {
   enabled: Boolean!
   """The name of the Model Card Entry flag"""
   name: VirtualContributorModelCardEntryFlagName!
+}
+
+type VirtualContributorPlatformSettings {
+  """
+  Enable or disable the editing of the prompt graph for this Virtual Contributor.
+  """
+  promptGraphEditingEnabled: Boolean!
 }
 
 type VirtualContributorSettings {
@@ -5877,6 +5909,10 @@ type Whiteboard {
   createdBy: User
   """The date at which the entity was created."""
   createdDate: DateTime!
+  """
+  Indicates whether guest collaborators are currently allowed via GLOBAL_GUEST permissions.
+  """
+  guestContributionsAllowed: Boolean!
   """The ID of the entity"""
   id: UUID!
   """Whether the Whiteboard is multi-user enabled on Space level."""
@@ -6500,6 +6536,8 @@ input CreateSpaceSettingsCollaborationInput {
   Flag to control if events from Subspaces are visible on this Space calendar as well.
   """
   allowEventsFromSubspaces: Boolean!
+  """Flag to control if guest users can contribute to this Space."""
+  allowGuestContributions: Boolean!
   """Flag to control if members can create callouts."""
   allowMembersToCreateCallouts: Boolean!
   """Flag to control if members can create subspaces."""
@@ -7700,6 +7738,8 @@ input UpdateSpaceSettingsCollaborationInput {
   Flag to control if events from Subspaces are visible on this Space calendar as well.
   """
   allowEventsFromSubspaces: Boolean!
+  """Flag to control if guest users can contribute to this Space."""
+  allowGuestContributions: Boolean!
   """Flag to control if members can create callouts."""
   allowMembersToCreateCallouts: Boolean!
   """Flag to control if members can create subspaces."""
@@ -7969,6 +8009,20 @@ input UpdateVirtualContributorInput {
   searchVisibility: SearchVisibility
 }
 
+input UpdateVirtualContributorPlatformSettingsEntityInput {
+  """
+  Enable or disable the editing of the prompt graph for this Virtual Contributor.
+  """
+  promptGraphEditingEnabled: Boolean!
+}
+
+input UpdateVirtualContributorPlatformSettingsInput {
+  """Platform-level settings to apply to this Virtual Contributor."""
+  settings: UpdateVirtualContributorPlatformSettingsEntityInput!
+  """ID of the Virtual Contributor to update."""
+  virtualContributorID: UUID!
+}
+
 input UpdateVirtualContributorSettingsEntityInput {
   """"""
   privacy: UpdateVirtualContributorSettingsPrivacyInput
@@ -8005,6 +8059,15 @@ input UpdateWhiteboardEntityInput {
   previewSettings: UpdateWhiteboardPreviewSettingsInput
   """The Profile of this entity."""
   profile: UpdateProfileInput
+}
+
+input UpdateWhiteboardGuestAccessInput {
+  """
+  Target state for guest collaboration. True enables GLOBAL_GUEST privileges.
+  """
+  guestAccessEnabled: Boolean!
+  """The identifier of the whiteboard whose guest access should be toggled."""
+  whiteboardId: UUID!
 }
 
 input UpdateWhiteboardPreviewSettingsInput {

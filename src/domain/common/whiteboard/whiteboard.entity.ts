@@ -63,4 +63,10 @@ export class Whiteboard extends NameableEntity implements IWhiteboard {
 
   @Column('json', { nullable: false })
   previewSettings!: IWhiteboardPreviewSettings;
+
+  /**
+   * Non-persisted field used by GraphQL resolver to surface the computed guest access flag.
+   * Default `false` so consumers always receive a defined boolean.
+   */
+  guestContributionsAllowed = false;
 }

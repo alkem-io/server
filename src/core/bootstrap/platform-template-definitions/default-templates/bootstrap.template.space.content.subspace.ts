@@ -69,7 +69,6 @@ export const bootstrapTemplateSpaceContentSubspace: CreateTemplateContentSpaceIn
               profile: {
                 displayName: '👋 Welcome to your subspace!',
                 description:
-                  // eslint-disable-next-line quotes
                   "Take an interactive tour below to discover how our subspaces are designed. We're excited to have you here! \n<div style='position: relative; padding-bottom: calc(40% + 41px); height: 0; width: 100%;'><iframe src='https://demo.arcade.software/X6hQiRnkEmUSoOgRupvA?embed&show_copy_link=true'title='Welcome to your Subspace ' frameborder='0' loading='lazy' webkitallowfullscreen mozallowfullscreen allowfullscreen allow='clipboard-write' style='position: absolute; top: 0; left: 0; width: 100%; height: 100%;color-scheme: light;'></iframe></div>\n",
               },
             },
@@ -90,7 +89,6 @@ export const bootstrapTemplateSpaceContentSubspace: CreateTemplateContentSpaceIn
                 displayName:
                   '🪇 Write, draw, or link anything with the Collaboration Tools',
                 description:
-                  // eslint-disable-next-line quotes
                   "Collaboration tools allow you to gather existing knowledge from your community and (co-)create new insights through text and visuals. In the tour below you will learn all about the different tools and how to use them. Enjoy! \n<div style='position: relative; padding-bottom: calc(40% + 41px); height: 0; width: 100%;'><iframe src='https://demo.arcade.software/5fvizP4ekEOya5CGHIwa?embed&show_copy_link=true'title='Subpace Collaboration Tools' frameborder='0' loading='lazy' webkitallowfullscreen mozallowfullscreen allowfullscreen allow='clipboard-write' style='position: absolute; top: 0; left: 0; width: 100%; height: 100%;color-scheme: light;'></iframe></div>\n",
               },
             },
@@ -114,6 +112,7 @@ export const bootstrapTemplateSpaceContentSubspace: CreateTemplateContentSpaceIn
         allowMembersToCreateCallouts: true,
         allowEventsFromSubspaces: true,
         allowMembersToVideoCall: false,
+        allowGuestContributions: false,
       },
     },
     about: {

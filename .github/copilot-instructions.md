@@ -71,7 +71,7 @@
   - `platform/` & `platform-admin/`: platform-scoped modules and admin operations.
 - Tests in `test/` mirror production code (`functional/e2e`, `functional/integration`, `unit`, `config/jest.*`).
 - Specs & plans reside in `specs/00x-*`. Update or create spec artifacts before product changes.
-- Compose files: `quickstart-services*.yml`, `quickstart-wallet-manager.yml` orchestrate dependencies. Docker settings assume `.env.docker` for credentials.
+- Compose files: `quickstart-services*.yml` orchestrate dependencies. Docker settings assume `.env.docker` for credentials.
 - Config & tooling: `nest-cli.json`, `tsconfig*.json`, `eslint.config.js`, `alkemio.yml`, `scripts/schema/*.ts`, `.scripts/tests/*.ts`, `.scripts/migrations/*.sh`.
 
 ## CI & Release Signals

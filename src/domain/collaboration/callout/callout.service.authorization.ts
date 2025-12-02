@@ -28,6 +28,7 @@ import { ICredentialDefinition } from '@domain/agent/credential/credential.defin
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { RoleName } from '@common/enums/role.name';
 import { PlatformRolesAccessService } from '@domain/access/platform-roles-access/platform.roles.access.service';
+import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 
 @Injectable()
 export class CalloutAuthorizationService {
@@ -45,7 +46,8 @@ export class CalloutAuthorizationService {
     calloutID: string,
     parentAuthorization: IAuthorizationPolicy | undefined,
     platformRolesAccess: IPlatformRolesAccess,
-    roleSet?: IRoleSet
+    roleSet?: IRoleSet,
+    spaceSettings?: ISpaceSettings
   ): Promise<IAuthorizationPolicy[]> {
     const callout = await this.calloutService.getCalloutOrFail(calloutID, {
       relations: {
@@ -111,7 +113,8 @@ export class CalloutAuthorizationService {
           contribution.id,
           callout.authorization,
           platformRolesAccess,
-          roleSet
+          roleSet,
+          spaceSettings
         );
       updatedAuthorizations.push(...updatedContributionAuthorizations);
     }
@@ -119,7 +122,8 @@ export class CalloutAuthorizationService {
     const framingAuthorizations =
       await this.calloutFramingAuthorizationService.applyAuthorizationPolicy(
         callout.framing,
-        callout.authorization
+        callout.authorization,
+        spaceSettings
       );
     updatedAuthorizations.push(...framingAuthorizations);
 

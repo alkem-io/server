@@ -6,7 +6,6 @@ import { AuthorizationPolicyService } from './authorization.policy.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPrivilege } from '@common/enums';
 import { IAuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege.interface';
-import { IAuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential.interface';
 
 @Resolver(() => IAuthorizationPolicy)
 export class AuthorizationPolicyResolverFields {
@@ -21,23 +20,6 @@ export class AuthorizationPolicyResolverFields {
     @Parent() authorization: IAuthorizationPolicy
   ): IAuthorizationPolicyRuleCredential[] {
     return this.authorizationPolicyService.getCredentialRules(authorization);
-  }
-
-  @ResolveField(
-    'verifiedCredentialRules',
-    () => [IAuthorizationPolicyRuleVerifiedCredential],
-    {
-      nullable: true,
-      description:
-        'The set of verified credential rules that are contained by this Authorization Policy.',
-    }
-  )
-  verifiedCredentialRules(
-    @Parent() authorization: IAuthorizationPolicy
-  ): IAuthorizationPolicyRuleVerifiedCredential[] {
-    return this.authorizationPolicyService.getVerifiedCredentialRules(
-      authorization
-    );
   }
 
   @ResolveField('privilegeRules', () => [IAuthorizationPolicyRulePrivilege], {

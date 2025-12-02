@@ -479,7 +479,6 @@ const getAuthorizationPolicyMock = (id: string): AuthorizationPolicy => ({
   credentialRules: [],
   privilegeRules: [],
   type: AuthorizationPolicyType.SPACE,
-  verifiedCredentialRules: [],
   ...getEntityMock<AuthorizationPolicy>(),
 });
 
@@ -499,6 +498,7 @@ const spaceSettings = {
     allowMembersToCreateCallouts: true,
     allowEventsFromSubspaces: true,
     allowMembersToVideoCall: false,
+    allowGuestContributions: false,
   },
 };
 

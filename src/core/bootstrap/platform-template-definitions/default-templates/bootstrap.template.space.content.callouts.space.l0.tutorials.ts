@@ -1,4 +1,3 @@
-/* eslint-disable quotes */
 import { CreateTemplateContentSpaceInput } from '@domain/template/template-content-space/dto/template.content.space.dto.create';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
@@ -186,6 +185,7 @@ export const bootstrapTemplateSpaceContentCalloutsSpaceL0Tutorials: CreateTempla
         allowMembersToCreateCallouts: false,
         allowEventsFromSubspaces: true,
         allowMembersToVideoCall: false,
+        allowGuestContributions: false,
       },
     },
     about: {

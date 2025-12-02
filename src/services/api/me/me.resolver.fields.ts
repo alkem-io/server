@@ -4,11 +4,7 @@ import { Args, ResolveField } from '@nestjs/graphql';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { MeQueryResults } from '@services/api/me/dto';
 import { IUser } from '@domain/community/user/user.interface';
-import {
-  AuthenticationException,
-  ForbiddenException,
-  ValidationException,
-} from '@common/exceptions';
+import { ForbiddenException, ValidationException } from '@common/exceptions';
 import { MeService } from './me.service';
 import { LogContext } from '@common/enums';
 import { MySpaceResults } from './dto/my.journeys.results';
@@ -86,15 +82,14 @@ export class MeResolverFields {
       'The current authenticated User;  null if not yet registered on the platform',
   })
   async user(@CurrentUser() agentInfo: AgentInfo): Promise<IUser | null> {
-    const email = agentInfo.email;
-    if (!email) {
-      throw new AuthenticationException(
-        'Unable to retrieve authenticated user; no identifier',
-        LogContext.RESOLVER_FIELD
-      );
+    const { email, userID } = agentInfo;
+
+    // Anonymous / guest requests do not carry identifiers; expose null instead of failing the whole query.
+    if (!email && !userID) {
+      return null;
     }
     // When the user is just registered, the agentInfo.userID is still null
-    if (email && !agentInfo.userID) {
+    if (email && !userID) {
       return null;
     }
 
