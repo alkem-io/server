@@ -105,7 +105,7 @@ export class UrlResolverService {
       error instanceof RelationshipNotFoundException ||
       error instanceof ValidationException
     ) {
-      result.state = UrlResolverResultState.NOT_FOUND;
+      result.state = UrlResolverResultState.ERROR;
       await this.populateClosestAncestor(result);
       return result;
     }
@@ -113,7 +113,7 @@ export class UrlResolverService {
       error instanceof ForbiddenException ||
       error instanceof ForbiddenAuthorizationPolicyException
     ) {
-      result.state = UrlResolverResultState.NOT_AUTHORIZED;
+      result.state = UrlResolverResultState.ERROR;
       await this.populateClosestAncestor(result);
       return result;
     }
@@ -177,10 +177,7 @@ export class UrlResolverService {
     }
 
     // Clean up partial results if we are in an error state
-    if (
-      result.state === UrlResolverResultState.NOT_FOUND ||
-      result.state === UrlResolverResultState.NOT_AUTHORIZED
-    ) {
+    if (result.state === UrlResolverResultState.ERROR) {
       delete result.space;
       delete result.virtualContributor;
     }
