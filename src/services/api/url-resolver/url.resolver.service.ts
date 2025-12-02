@@ -18,7 +18,7 @@ import { ISpace } from '@domain/space/space/space.interface';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { EntityManager } from 'typeorm';
+import { EntityManager, EntityNotFoundError } from 'typeorm';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { UrlType } from '@common/enums/url.type';
@@ -103,7 +103,8 @@ export class UrlResolverService {
     if (
       error instanceof EntityNotFoundException ||
       error instanceof RelationshipNotFoundException ||
-      error instanceof ValidationException
+      error instanceof ValidationException ||
+      error instanceof EntityNotFoundError // TypeORM couldn't find the entity
     ) {
       result.state = UrlResolverResultState.ERROR;
       await this.populateClosestAncestor(result);
