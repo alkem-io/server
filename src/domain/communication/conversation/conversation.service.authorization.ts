@@ -43,12 +43,6 @@ export class ConversationAuthorizationService {
     }
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
-    // Reset the authorization policy - do NOT inherit from parent
-    // Conversations are private and should only be accessible by participants
-    conversation.authorization = this.authorizationPolicyService.reset(
-      conversation.authorization
-    );
-
     // Determine all participants in the conversation
     const participantUserIDs: string[] = [conversationHostID];
     if (
