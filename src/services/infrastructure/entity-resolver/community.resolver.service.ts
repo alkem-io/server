@@ -181,7 +181,7 @@ export class CommunityResolverService {
 
     const community = await this.communityRepository
       .createQueryBuilder('community')
-      .where('communicationId = :id')
+      .where('"communicationId" = :id')
       .setParameters({ id: `${communication?.id}` })
       .getOne();
 
