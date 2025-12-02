@@ -23,8 +23,7 @@ export class ConversationAuthorizationService {
 
   public async applyAuthorizationPolicy(
     conversationID: string,
-    conversationHostID: string,
-    parentAuthorization: IAuthorizationPolicy | undefined
+    conversationHostID: string
   ): Promise<IAuthorizationPolicy[]> {
     const conversation = await this.conversationService.getConversationOrFail(
       conversationID,
@@ -44,29 +43,26 @@ export class ConversationAuthorizationService {
     }
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
-    conversation.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
-        conversation.authorization,
-        parentAuthorization
-      );
-
-    // Allow the host user to contribute to the conversation
-    conversation.authorization.credentialRules.push(
-      this.createCredentialRuleContributors([conversationHostID])
+    // Reset the authorization policy - do NOT inherit from parent
+    // Conversations are private and should only be accessible by participants
+    conversation.authorization = this.authorizationPolicyService.reset(
+      conversation.authorization
     );
 
-    // Add in logic to allow the users to send messages in the conversation
-    if (conversation.type === CommunicationConversationType.USER_USER) {
-      if (!conversation.userID) {
-        throw new EntityNotInitializedException(
-          `conversation: Missing userID for USER_USER conversation: ${conversation.id}`,
-          LogContext.COMMUNICATION
-        );
-      }
-      conversation.authorization.credentialRules.push(
-        this.createCredentialRuleContributors([conversation.userID])
-      );
+    // Determine all participants in the conversation
+    const participantUserIDs: string[] = [conversationHostID];
+    if (
+      conversation.type === CommunicationConversationType.USER_USER &&
+      conversation.userID
+    ) {
+      participantUserIDs.push(conversation.userID);
     }
+
+    // Add READ + CONTRIBUTE access only for the conversation participants
+    // This restricts who can view and interact with the conversation to only the participants
+    conversation.authorization.credentialRules.push(
+      this.createCredentialRuleParticipantAccess(participantUserIDs)
+    );
 
     updatedAuthorizations.push(conversation.authorization);
 
@@ -91,22 +87,22 @@ export class ConversationAuthorizationService {
     return updatedAuthorizations;
   }
 
-  private createCredentialRuleContributors(
+  private createCredentialRuleParticipantAccess(
     userIDs: string[]
   ): IAuthorizationPolicyRuleCredential {
-    const contributorCriterias: ICredentialDefinition[] = userIDs.map(
+    const participantCriterias: ICredentialDefinition[] = userIDs.map(
       userID => ({
         type: AuthorizationCredential.USER_SELF_MANAGEMENT,
         resourceID: userID,
       })
     );
-    const contributorsRule =
+    const participantRule =
       this.authorizationPolicyService.createCredentialRule(
-        [AuthorizationPrivilege.CONTRIBUTE],
-        contributorCriterias,
-        'Communication Conversation Contributors'
+        [AuthorizationPrivilege.READ, AuthorizationPrivilege.CONTRIBUTE],
+        participantCriterias,
+        'Communication Conversation Participants Access'
       );
-    contributorsRule.cascade = true;
-    return contributorsRule;
+    participantRule.cascade = true;
+    return participantRule;
   }
 }

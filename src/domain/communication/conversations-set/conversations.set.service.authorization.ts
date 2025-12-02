@@ -50,8 +50,7 @@ export class ConversationsSetAuthorizationService {
         const conversationAuthorizations =
           await this.conversationAuthorizationService.applyAuthorizationPolicy(
             conversation.id,
-            hostUserID,
-            parentAuthorization
+            hostUserID
           );
         updatedAuthorizations.push(...conversationAuthorizations);
       }
@@ -110,8 +109,7 @@ export class ConversationsSetAuthorizationService {
     const hostConversationWithReceiverAuthorizations =
       await this.conversationAuthorizationService.applyAuthorizationPolicy(
         hostConversationWithReceiver.id,
-        hostUserID,
-        hostUser.conversationsSet.authorization
+        hostUserID
       );
 
     await this.authorizationPolicyService.saveAll(
