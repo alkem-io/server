@@ -150,9 +150,9 @@ export class UrlResolverService {
         };
       } catch (e) {
         this.logger.warn?.(
-          `Failed to generate URL for closest ancestor space ${result.space.id}`,
+          'Failed to generate URL for closest ancestor space',
           LogContext.URL_RESOLVER,
-          { error: e }
+          { error: e, spaceId: result.space.id }
         );
       }
     }
@@ -170,9 +170,9 @@ export class UrlResolverService {
         };
       } catch (e) {
         this.logger.warn?.(
-          `Failed to generate URL for closest ancestor virtual contributor ${result.virtualContributor.id}`,
+          'Failed to generate URL for closest ancestor virtual contributor',
           LogContext.URL_RESOLVER,
-          { error: e }
+          { error: e, vcId: result.virtualContributor.id }
         );
       }
     }
@@ -392,11 +392,14 @@ export class UrlResolverService {
     // Set the VC result immediately so it can be used as an ancestor if subsequent checks fail
     result.virtualContributor = {
       id: virtualContributor.id,
-      // We cast to any here because calloutsSet is required by the type but we don't have it yet.
+      // This empty object will never be returned
       // If resolution succeeds, we will overwrite it.
       // If resolution fails, handleException will use this partial object to calculate closestAncestor
       // and then remove it from the final result.
-      calloutsSet: undefined as any,
+      calloutsSet: {
+        id: '',
+        type: UrlType.CALLOUTS_SET,
+      },
     };
 
     if (

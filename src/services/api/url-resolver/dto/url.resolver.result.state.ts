@@ -6,5 +6,5 @@ export enum UrlResolverResultState {
 }
 
 registerEnumType(UrlResolverResultState, {
-  name: 'UrlResolverResult',
+  name: 'UrlResolverResultState',
 });

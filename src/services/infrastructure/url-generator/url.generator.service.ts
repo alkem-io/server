@@ -86,8 +86,9 @@ export class UrlGeneratorService {
     });
     if (!vc) {
       throw new EntityNotFoundException(
-        `Unable to find VirtualContributor with ID: ${id}`,
-        LogContext.URL_GENERATOR
+        'Unable to find VirtualContributor',
+        LogContext.URL_GENERATOR,
+        { vcId: id }
       );
     }
     return this.generateUrlForVC(vc.nameID);
@@ -618,8 +619,9 @@ export class UrlGeneratorService {
       );
       if (!virtualContributor) {
         throw new EntityNotFoundException(
-          `Unable to find VirtualContributor for CalloutsSet where id: ${callout.calloutsSet.id}`,
-          LogContext.URL_GENERATOR
+          'Unable to find VirtualContributor for CalloutsSet',
+          LogContext.URL_GENERATOR,
+          { calloutsSetId: callout.calloutsSet.id }
         );
       }
       const vcUrl = this.generateUrlForVC(virtualContributor.nameID);
@@ -1159,8 +1161,9 @@ export class UrlGeneratorService {
 
     if (!vc) {
       throw new EntityNotFoundException(
-        `Unable to find VirtualContributor for KnowledgeBase with profile ID: ${kbProfileId}`,
-        LogContext.URL_GENERATOR
+        'Unable to find VirtualContributor for KnowledgeBase with profile',
+        LogContext.URL_GENERATOR,
+        { kbProfileId }
       );
     }
     return vc;
