@@ -1909,7 +1909,7 @@ export class RoleSetService {
     await this.save(roleSet);
     // TypeORM does not support removing relations as far as I can tell, so do it manually
     await this.roleSetRepository.query(
-      `UPDATE role_set SET parentRoleSetId = NULL WHERE id = '${roleSetID}'`
+      `UPDATE role_set SET "parentRoleSetId" = NULL WHERE id = '${roleSetID}'`
     );
 
     return await this.getRoleSetOrFail(roleSetID);
