@@ -1,8 +1,9 @@
 import { registerEnumType } from '@nestjs/graphql';
 
 export enum UrlResolverResultState {
-  RESOLVED = 'RESOLVED',
-  ERROR = 'ERROR',
+  Resolved = 'RESOLVED',
+  NotFound = 'NOT_FOUND',
+  Forbidden = 'FORBIDDEN',
 }
 
 registerEnumType(UrlResolverResultState, {

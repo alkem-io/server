@@ -59,7 +59,7 @@ export class UrlResolverService {
 
     const result: UrlResolverQueryResults = {
       type: UrlType.UNKNOWN,
-      state: UrlResolverResultState.RESOLVED,
+      state: UrlResolverResultState.Resolved,
     };
 
     if (pathElements.length === 0) {
@@ -106,7 +106,7 @@ export class UrlResolverService {
       error instanceof ValidationException ||
       error instanceof EntityNotFoundError // TypeORM couldn't find the entity
     ) {
-      result.state = UrlResolverResultState.ERROR;
+      result.state = UrlResolverResultState.NotFound;
       await this.populateClosestAncestor(result);
       return result;
     }
@@ -114,7 +114,7 @@ export class UrlResolverService {
       error instanceof ForbiddenException ||
       error instanceof ForbiddenAuthorizationPolicyException
     ) {
-      result.state = UrlResolverResultState.ERROR;
+      result.state = UrlResolverResultState.Forbidden;
       await this.populateClosestAncestor(result);
       return result;
     }
@@ -178,7 +178,7 @@ export class UrlResolverService {
     }
 
     // Clean up partial results if we are in an error state
-    if (result.state === UrlResolverResultState.ERROR) {
+    if (result.state !== UrlResolverResultState.Resolved) {
       delete result.space;
       delete result.virtualContributor;
     }
