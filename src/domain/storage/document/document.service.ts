@@ -97,8 +97,9 @@ export class DocumentService {
     });
     if (!document)
       throw new EntityNotFoundException(
-        `Not able to locate document with the specified ID: ${documentID}`,
-        LogContext.STORAGE_BUCKET
+        'Not able to locate document with the specified ID',
+        LogContext.STORAGE_BUCKET,
+        { documentID }
       );
     return document;
   }
@@ -116,8 +117,9 @@ export class DocumentService {
     });
     if (!document)
       throw new EntityNotFoundException(
-        `Not able to locate document with the specified external id: ${externalID}`,
-        LogContext.STORAGE_BUCKET
+        'Not able to locate document with the specified external ID',
+        LogContext.STORAGE_BUCKET,
+        { externalID }
       );
     return document;
   }
@@ -132,8 +134,9 @@ export class DocumentService {
     });
     if (!document)
       throw new EntityNotFoundException(
-        `Not able to locate document with the specified ID: ${documentID}`,
-        LogContext.STORAGE_BUCKET
+        'Not able to locate document with the specified ID',
+        LogContext.STORAGE_BUCKET,
+        { documentID }
       );
     return document.createdDate;
   }
@@ -158,8 +161,9 @@ export class DocumentService {
     if (documentData.tagset) {
       if (!document.tagset) {
         throw new EntityNotFoundException(
-          `Document not initialised: ${document.id}`,
-          LogContext.CALENDAR
+          'Document not initialised',
+          LogContext.CALENDAR,
+          { documentID: document.id }
         );
       }
       document.tagset = await this.tagsetService.updateTagset(
