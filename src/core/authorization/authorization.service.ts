@@ -12,12 +12,16 @@ import { IAuthorizationPolicyRuleCredential } from './authorization.policy.rule.
 import { AuthorizationInvalidPolicyException } from '@common/exceptions/authorization.invalid.policy.exception';
 import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { AuthRemoteEvaluationService } from '@services/external/auth-remote-evaluation';
+import { AuthEvaluationResponse } from '@services/external/auth-remote-evaluation/types';
+import { isCircuitOpenResponse } from '@services/util/circuit-breakers/types';
 
 @Injectable()
 export class AuthorizationService {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService
+    private readonly logger: LoggerService,
+    private remoteAuthEvaluationService: AuthRemoteEvaluationService
   ) {}
 
   /**
@@ -159,6 +163,36 @@ export class AuthorizationService {
       }
     }
     return false;
+  }
+
+  public async isAccessGrantedRemoteEvaluation(
+    agentId: string,
+    authorizationPolicyId: string,
+    requiredPrivilege: AuthorizationPrivilege
+  ): Promise<AuthEvaluationResponse> {
+    const response = await this.remoteAuthEvaluationService.evaluate({
+      agentId,
+      authorizationPolicyId,
+      privilege: requiredPrivilege,
+    });
+
+    if (isCircuitOpenResponse(response)) {
+      const { reason, metadata, retryAfter } = response;
+      this.logger.warn(
+        {
+          message:
+            'Connection issue with remote authorization evaluation service',
+          reason,
+          retryAfter,
+          metadata,
+        },
+        undefined,
+        LogContext.AUTH_EVALUATION
+      );
+      return { allowed: false, reason };
+    }
+
+    return response;
   }
 
   public getGrantedPrivileges(

@@ -28,6 +28,7 @@ import { AdminAuthorizationModule } from '@src/platform-admin/domain/authorizati
 import { AiPersonaModule } from '@services/ai-server/ai-persona';
 import { ConversationsSetModule } from '@domain/communication/conversations-set/conversations.set.module';
 import { PlatformWellKnownVirtualContributorsModule } from '@platform/platform.well.known.virtual.contributors/platform.well.known.virtual.contributors.module';
+import { AuthRemoteEvaluationModule } from '@services/external/auth-remote-evaluation';
 
 @Module({
   imports: [
@@ -59,6 +60,7 @@ import { PlatformWellKnownVirtualContributorsModule } from '@platform/platform.w
     LicensePlanModule,
     ConversationsSetModule,
     PlatformWellKnownVirtualContributorsModule,
+    AuthRemoteEvaluationModule,
   ],
   providers: [BootstrapService],
   exports: [BootstrapService],
