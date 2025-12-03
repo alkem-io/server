@@ -91,7 +91,7 @@ export class AccountLookupService {
       return organization;
     }
 
-    this.logger.warn?.(
+    this.logger.warn(
       `Unable to find contributor associated with account: ${account.id}`,
       LogContext.ACCOUNT
     );
