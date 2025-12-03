@@ -300,16 +300,16 @@ export class ConversationsSetService {
         wellKnownVC
       );
 
-    if (!virtualContributorID) {
-      return undefined;
-    }
-
     // Find the conversation between the user and this VC
+    // Match by either the resolved virtualContributorID or the wellKnownVirtualContributor enum
+    // (conversations may be created with wellKnownVirtualContributor before the ID is resolved)
     const userConversations = await this.getConversations(conversationsSetID);
     return userConversations.find(
       conversation =>
-        conversation.virtualContributorID === virtualContributorID &&
-        conversation.type === CommunicationConversationType.USER_VC
+        conversation.type === CommunicationConversationType.USER_VC &&
+        (conversation.wellKnownVirtualContributor === wellKnownVC ||
+          (virtualContributorID &&
+            conversation.virtualContributorID === virtualContributorID))
     );
   }
 
