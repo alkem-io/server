@@ -69,6 +69,13 @@ subscriptions.log
 
 # Ignores all scripts and files downloaded by the scripts and local build files
 .scripts/
+!.scripts/migrations/
+!.scripts/migrations/postgres-convergence/
+!.scripts/migrations/postgres-convergence/**
+# Exclude CSV exports and generated files from version control
+.scripts/migrations/postgres-convergence/csv_exports/
+.scripts/migrations/postgres-convergence/migration_log.json
+.scripts/migrations/postgres-convergence/*.log
 .storage/
 .build/synapse/homeserver.yaml
 

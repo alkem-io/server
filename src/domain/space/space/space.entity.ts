@@ -8,11 +8,7 @@ import {
   OneToOne,
 } from 'typeorm';
 import { ISpace } from '@domain/space/space/space.interface';
-import {
-  ENUM_LENGTH,
-  NAMEID_MAX_LENGTH_SCHEMA,
-  UUID_LENGTH,
-} from '@common/constants';
+import { ENUM_LENGTH, NAMEID_MAX_LENGTH_SCHEMA } from '@common/constants';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 import { Community } from '@domain/community/community/community.entity';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
@@ -99,7 +95,7 @@ export class Space extends AuthorizableEntity implements ISpace {
   @JoinColumn()
   storageAggregator?: StorageAggregator;
 
-  @Column('char', { length: UUID_LENGTH, nullable: true })
+  @Column('uuid', { nullable: true })
   levelZeroSpaceID!: string;
 
   @Column('int', { nullable: false })
