@@ -2,6 +2,7 @@ import { EntityManager, FindOneOptions, In, FindManyOptions } from 'typeorm';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { isUUID } from 'class-validator';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -25,6 +26,10 @@ export class UserLookupService {
     userID: string,
     options?: FindOneOptions<User> | undefined
   ): Promise<IUser | null> {
+    if (!isUUID(userID)) {
+      return null;
+    }
+
     const user: IUser | null = await this.entityManager.findOne(User, {
       where: {
         id: userID,
@@ -39,9 +44,14 @@ export class UserLookupService {
     userIDs: string[],
     options?: FindManyOptions<User> | undefined
   ): Promise<IUser[]> {
+    const validUUIDs = userIDs.filter(id => isUUID(id));
+    if (validUUIDs.length === 0) {
+      return [];
+    }
+
     const users: IUser[] = await this.entityManager.find(User, {
       where: {
-        id: In(userIDs),
+        id: In(validUUIDs),
       },
       ...options,
     });

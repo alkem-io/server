@@ -53,10 +53,12 @@ export class SpaceAboutResolverFields {
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('provider', () => IContributor, {
-    nullable: false,
+    nullable: true,
     description: 'The Space provider (host).',
   })
-  async provider(@Parent() spaceAbout: ISpaceAbout): Promise<IContributor> {
+  async provider(
+    @Parent() spaceAbout: ISpaceAbout
+  ): Promise<IContributor | null> {
     return await this.spaceLookupService.getProvider(spaceAbout);
   }
 

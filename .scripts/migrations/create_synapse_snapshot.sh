@@ -9,5 +9,10 @@ BASE_DIR="$(dirname "$(realpath "$0")")"
 # Source environment variables from .env file relative to the script's location
 . "$BASE_DIR/.env"
 
+# Set database connection details (use Synapse-specific vars if available, fall back to general Postgres vars)
+user=${SYNAPSE_POSTGRES_USER:-$POSTGRES_USER}
+database=${SYNAPSE_POSTGRES_DB:-synapse}
+container=${SYNAPSE_POSTGRES_CONTAINER:-alkemio_dev_postgres}
+
 # Create snapshot using the postgres docker container
-docker exec alkemio_dev_postgres /usr/bin/pg_dump --username=$POSTGRES_USER --dbname=$POSTGRES_DB > $BACKUP_FILE
+docker exec $container pg_dump --username=$user --dbname=$database > "$BASE_DIR/$BACKUP_FILE"
