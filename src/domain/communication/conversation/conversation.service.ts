@@ -246,13 +246,19 @@ export class ConversationService {
       },
     });
 
-    if (
-      !conversation.room ||
-      !conversation.authorization ||
-      !conversation.conversationsSet
-    ) {
+    if (!conversation.authorization || !conversation.conversationsSet) {
       throw new EntityNotInitializedException(
         `Unable to load conversation for deleting: ${conversation.id}`,
+        LogContext.COMMUNICATION_CONVERSATION
+      );
+    }
+
+    const room = conversation.room;
+
+    if (!room) {
+      // TODO(CONVERSATION_CLEANUP): Deletion should not depend on nullable room state; revisit once the conversation lifecycle is refactored.
+      this.logger.warn?.(
+        `Deleting conversation (${conversation.id}) without initialized room; skipping room cleanup step`,
         LogContext.COMMUNICATION_CONVERSATION
       );
     }
@@ -273,27 +279,27 @@ export class ConversationService {
       );
     }
 
-    // Delete the room entity
-    const room = conversation.room;
-    // For direct messaging rooms, provide sender/receiver IDs to handle Matrix cleanup
-    this.logger.verbose?.(
-      `Deleting conversation room (${room.id}) of type (${room.type})`,
-      LogContext.COMMUNICATION_CONVERSATION
-    );
-    if (room.type === RoomType.CONVERSATION_DIRECT) {
-      const receiver = await this.userLookupService.getUserOrFail(
-        conversation.userID!
+    if (room) {
+      // For direct messaging rooms, provide sender/receiver IDs to handle Matrix cleanup
+      this.logger.verbose?.(
+        `Deleting conversation room (${room.id}) of type (${room.type})`,
+        LogContext.COMMUNICATION_CONVERSATION
       );
-      await this.roomService.deleteRoom({
-        roomID: conversation.room.id,
-        senderCommunicationID: conversationOwner.communicationID,
-        receiverCommunicationID: receiver.communicationID,
-      });
-    } else {
-      // Just delete the room entity normally
-      await this.roomService.deleteRoom({
-        roomID: conversation.room.id,
-      });
+      if (room.type === RoomType.CONVERSATION_DIRECT) {
+        const receiver = await this.userLookupService.getUserOrFail(
+          conversation.userID!
+        );
+        await this.roomService.deleteRoom({
+          roomID: room.id,
+          senderCommunicationID: conversationOwner.communicationID,
+          receiverCommunicationID: receiver.communicationID,
+        });
+      } else {
+        // Just delete the room entity normally
+        await this.roomService.deleteRoom({
+          roomID: room.id,
+        });
+      }
     }
 
     await this.authorizationPolicyService.delete(conversation.authorization);

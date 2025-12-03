@@ -1,11 +1,7 @@
 import { Column, Entity, ManyToOne } from 'typeorm';
 import { IPlatformInvitation } from './platform.invitation.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
-import {
-  LONGER_TEXT_LENGTH,
-  SMALL_TEXT_LENGTH,
-  UUID_LENGTH,
-} from '@common/constants';
+import { LONGER_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@common/constants';
 import { RoleSet } from '@domain/access/role-set/role.set.entity';
 import { RoleName } from '@common/enums/role.name';
 @Entity()
@@ -35,7 +31,7 @@ export class PlatformInvitation
   @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: true })
   lastName?: string;
 
-  @Column('char', { length: UUID_LENGTH, nullable: false })
+  @Column('uuid', { nullable: false })
   createdBy!: string;
 
   @Column('varchar', { length: LONGER_TEXT_LENGTH, nullable: true })

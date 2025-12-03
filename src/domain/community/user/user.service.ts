@@ -564,7 +564,7 @@ export class UserService {
         .createQueryBuilder('user')
         .leftJoinAndSelect('user.agent', 'agent')
         .leftJoinAndSelect('agent.credentials', 'credential')
-        .where('credential.type IN (:credentialsFilter)')
+        .where('credential.type IN (:...credentialsFilter)')
         .setParameters({
           credentialsFilter: credentialsFilter,
         })
@@ -630,7 +630,7 @@ export class UserService {
         qb.expressionMap.wheres && qb.expressionMap.wheres.length > 0;
 
       qb[hasWhere ? 'andWhere' : 'where'](
-        'NOT user.id IN (:memberUsers)'
+        'NOT user.id IN (:...memberUsers)'
       ).setParameters({
         memberUsers: currentEntryRoleUsers.map(user => user.id),
       });
@@ -666,7 +666,7 @@ export class UserService {
       });
 
     if (currentElevatedRoleUsers.length > 0) {
-      qb.andWhere('NOT user.id IN (:leadUsers)').setParameters({
+      qb.andWhere('NOT user.id IN (:...leadUsers)').setParameters({
         leadUsers: currentElevatedRoleUsers.map(user => user.id),
       });
     }

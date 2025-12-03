@@ -18,8 +18,8 @@ Establish a Postgres-native baseline schema for Alkemio using TypeORM migrations
 -->
 
 **Language/Version**: TypeScript 5.x on Node.js 20 (NestJS server)
-**Primary Dependencies**: NestJS, TypeORM, Ory Kratos migrations, Docker + Compose, MySQL 8, PostgreSQL 17.5 (NEEDS CLARIFICATION on exact PG version support range)
-**Storage**: MySQL (source), PostgreSQL (target) for Alkemio and Kratos; ntermediate CSV files stored on local disk on the migration runner; S3/object storage not in scope for this feature.
+**Primary Dependencies**: NestJS, TypeORM, Ory Kratos migrations, Docker + Compose, MySQL 8, PostgreSQL 17.5 (minimum supported: PostgreSQL 14.x)
+**Storage**: MySQL (source), PostgreSQL (target) for Alkemio and Kratos; intermediate CSV files stored on local disk on the migration runner; S3/object storage not in scope for this feature.
 **Testing**: Jest test suites (`pnpm test:ci`), schema contract tests under `contract-tests/`, migration validation scripts under `scripts/migrations/`. This migration is one-off; primary validation happens via manual rehearsals and runbooks on staging environments. Automated tests are limited to high-signal helpers (e.g., CSV transforms), not full end-to-end migration.
 **Target Platform**: Linux server deployments via Docker/Kubernetes (Hetzner clusters) running Postgres-backed Alkemio + Kratos
 **Project Type**: Single NestJS backend service with external Kratos, plus migration/runbook tooling
@@ -92,6 +92,98 @@ specs/018-postgres-db-convergence/
 ```
 
 **Structure Decision**: Reuse the existing NestJS backend layout under `src/` with additions focused on a migration/convergence domain and scripting under `scripts/migrations/`. No new top-level projects are introduced; this feature is scoped to backend + operational tooling only.
+
+## Postgres Baseline Migration Strategy
+
+### Alkemio Schema Baseline
+
+The existing TypeORM migrations in `src/migrations/` already support both MySQL and PostgreSQL through the dual-database configuration in `src/config/typeorm.cli.config.run.ts`. The convergence strategy leverages this existing capability:
+
+**Current State:**
+
+- Migration files in `src/migrations/` are database-agnostic TypeORM migrations
+- The `typeormCliConfig` in `typeorm.cli.config.run.ts` supports both 'mysql' and 'postgres' database types
+- Database type is determined by `DATABASE_TYPE` environment variable (defaults to 'postgres')
+- All existing migrations can be applied to a fresh Postgres database to establish the baseline schema
+
+**Baseline Generation Approach:**
+
+1. **Use Existing Migrations**: The current migration files (`1730713372181-schemaSetup.ts` and subsequent) serve as the Postgres baseline
+2. **Clean Slate Application**: Apply all existing migrations to a fresh Postgres database using `pnpm run migration:run`
+3. **Validation**: Use TypeORM's migration:show and schema contract tests to verify completeness
+4. **No New Baseline Migration Needed**: Since migrations are already database-agnostic, no separate "Postgres baseline" migration file is required
+
+**Migration Execution:**
+
+```bash
+# Set Postgres as target database
+export DATABASE_TYPE=postgres
+export DATABASE_HOST=localhost
+export DATABASE_PORT=5432
+export DATABASE_USERNAME=alkemio
+export DATABASE_PASSWORD=alkemio
+export DATABASE_NAME=alkemio
+
+# Apply all migrations to fresh Postgres database
+pnpm run migration:run
+```
+
+**Validation Steps:**
+
+1. Verify all migrations applied: `pnpm run migration:show`
+2. Run schema contract tests: Located in `contract-tests/`
+3. Compare schema with baseline: Use `pnpm run schema:print` and `pnpm run schema:diff`
+4. Run migration validation script: `.scripts/migrations/run_validate_migration.sh`
+
+### Kratos Schema Baseline
+
+**Official Ory Kratos Migrations:**
+
+- Kratos provides official SQL migrations for PostgreSQL
+- Migrations are applied using Kratos CLI or Docker initialization
+- Documentation: https://www.ory.sh/docs/kratos/manage-identities/migrations
+
+**Application Steps:**
+
+1. Use Kratos container with auto-migration on startup:
+
+   ```yaml
+   command:
+     - serve
+     - --config
+     - /etc/config/kratos/kratos.yml
+     - migrate
+     - sql
+     - -e
+     - --yes
+   ```
+
+2. Or run migrations manually:
+   ```bash
+   kratos migrate sql -e --yes --config /path/to/kratos.yml
+   ```
+
+**Verification:**
+
+- Check migrations table: `SELECT * FROM _kratos_migrations;`
+- Verify core tables exist: `identities`, `identity_credentials`, `sessions`, etc.
+- Run Kratos health check: `curl http://kratos:4433/health/ready`
+
+### Schema Compatibility Notes
+
+**TypeORM Postgres Specifics:**
+
+- Uses `SERIAL` for auto-increment instead of MySQL's `AUTO_INCREMENT`
+- Boolean types are native `BOOLEAN` instead of `TINYINT(1)`
+- Timestamp precision matches or exceeds MySQL capabilities
+- JSON/JSONB types are first-class citizens
+- Case-sensitive string comparisons by default (use LOWER() for case-insensitive)
+
+**Migration Script Adjustments:**
+
+- CSV export scripts must handle type differences (boolean representation, timestamps)
+- Import scripts must set correct Postgres sequence values after bulk insert
+- Transformation helpers in `src/library/postgres-convergence/` handle these conversions
 
 ## Complexity Tracking
 
