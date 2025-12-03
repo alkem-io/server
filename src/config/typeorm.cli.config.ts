@@ -5,7 +5,8 @@ import { DataSourceOptions } from 'typeorm';
 dotenv.config();
 
 // Support both MySQL (legacy) and Postgres databases
-const dbType = (process.env.DATABASE_TYPE as 'mysql' | 'postgres') ?? 'postgres';
+const dbType =
+  (process.env.DATABASE_TYPE as 'mysql' | 'postgres') ?? 'postgres';
 
 const commonConfig = {
   cache: true,
@@ -32,8 +33,8 @@ export const typeormCliConfig: DataSourceOptions =
         port: process.env.POSTGRES_DB_PORT
           ? Number(process.env.POSTGRES_DB_PORT)
           : 5432,
-        username: process.env.POSTGRES_USER ?? 'alkemio',
-        password: process.env.POSTGRES_PASSWORD ?? 'alkemio',
+        username: process.env.POSTGRES_USER ?? 'synapse',
+        password: process.env.POSTGRES_PASSWORD ?? 'synapse',
         database: process.env.POSTGRES_DATABASE ?? 'alkemio',
       }
     : {

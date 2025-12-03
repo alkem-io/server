@@ -8,7 +8,6 @@ import {
   ENUM_LENGTH,
   MID_TEXT_LENGTH,
   SMALL_TEXT_LENGTH,
-  UUID_LENGTH,
 } from '@common/constants';
 
 @Entity()
@@ -23,7 +22,7 @@ export class Document extends AuthorizableEntity implements IDocument {
   //   onDelete: 'SET NULL',
   // })
   // @JoinColumn()
-  @Column('char', { length: UUID_LENGTH, nullable: true })
+  @Column('uuid', { nullable: true })
   createdBy!: string;
 
   @ManyToOne(() => StorageBucket, storage => storage.documents, {
