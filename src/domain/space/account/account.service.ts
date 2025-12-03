@@ -285,15 +285,15 @@ export class AccountService {
     const [account] = await this.accountRepository.query(
       `
         SELECT
-          account.id as accountId, account.externalSubscriptionID as externalSubscriptionID,
-          organization.id as orgId, organization.contactEmail as orgContactEmail, organization.legalEntityName as orgLegalName, organization.nameID as orgNameID,
-          profile.displayName as orgDisplayName,
-          user.id as userId, user.email as userEmail, CONCAT(user.firstName, ' ', user.lastName) as userName
-        FROM account
-        LEFT JOIN user on account.id = user.accountID
-        LEFT JOIN organization on account.id = organization.accountID
-        left join profile on organization.profileId = profile.id
-        WHERE account.id = ?
+          "account"."id" as "accountId", "account"."externalSubscriptionID" as "externalSubscriptionID",
+          "organization"."id" as "orgId", "organization"."contactEmail" as "orgContactEmail", "organization"."legalEntityName" as "orgLegalName", "organization"."nameID" as "orgNameID",
+          "profile"."displayName" as "orgDisplayName",
+          "user"."id" as "userId", "user"."email" as "userEmail", CONCAT("user"."firstName", ' ', "user"."lastName") as "userName"
+        FROM "account"
+        LEFT JOIN "user" on "account"."id" = "user"."accountID"
+        LEFT JOIN "organization" on "account"."id" = "organization"."accountID"
+        LEFT JOIN "profile" on "organization"."profileId" = "profile"."id"
+        WHERE "account"."id" = $1
     `,
       [accountID]
     );
