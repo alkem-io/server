@@ -66,6 +66,20 @@ cleanup() {
     fi
 }
 
+# Global variable for stash tracking (set by replicate_pr)
+STASH_CREATED=false
+
+cleanup_on_error() {
+    local temp_branch="$1"
+    cleanup "$temp_branch"
+    
+    # Restore stash if we created one
+    if [[ "$STASH_CREATED" == true ]]; then
+        echo -e "${YELLOW}⚠${NC} Restoring stashed changes after error..."
+        git stash pop 2>/dev/null || echo -e "${YELLOW}⚠${NC} Could not auto-restore stash - check 'git stash list'"
+    fi
+}
+
 # Parse command line arguments
 parse_args() {
     if [[ $# -lt 1 ]]; then
@@ -218,12 +232,20 @@ fetch_pr_info() {
 replicate_pr() {
     local temp_branch="temp-pr-$PR_NUMBER-$$"
 
-    # Set up cleanup trap
-    trap "cleanup '$temp_branch'" EXIT
+    # Set up cleanup trap (will restore stash on error)
+    trap "cleanup_on_error '$temp_branch'" EXIT
 
     # Save current branch to return to it later
     local original_branch
     original_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null) || original_branch=""
+
+    # Check for uncommitted changes and stash them
+    if ! git diff --quiet || ! git diff --cached --quiet; then
+        log_warn "Uncommitted changes detected - stashing them..."
+        git stash push -m "replicate-pr.sh: auto-stash before PR #$PR_NUMBER replication" --include-untracked
+        STASH_CREATED=true
+        log_success "Changes stashed"
+    fi
 
     log_info "Fetching PR #$PR_NUMBER from $REMOTE..."
     git fetch "$REMOTE" "pull/$PR_NUMBER/head:$temp_branch" || {
@@ -266,10 +288,21 @@ replicate_pr() {
         exit 1
     }
 
-    # Force-add all files including ignored ones (e.g., .scripts/)
-    # This ensures files that were force-added in the original PR are included
-    log_info "Staging all changes (including ignored files)..."
-    git add -f .
+    # Force-add files that are in .gitignore but were included in the original PR
+    # Common directories that may need force-adding: .scripts/
+    log_info "Staging all changes (including previously force-added ignored files)..."
+    
+    # First, add all normal tracked/untracked files
+    git add -A
+    
+    # Then force-add specific ignored directories that are commonly included in PRs
+    # Only add if they have changes staged from the merge
+    for ignored_path in .scripts; do
+        if git diff --cached --name-only | grep -q "^${ignored_path}/"; then
+            log_info "Force-adding ignored path: $ignored_path"
+            git add -f "$ignored_path" 2>/dev/null || true
+        fi
+    done
 
     # Count changes
     local files_changed additions deletions
@@ -313,6 +346,16 @@ replicate_pr() {
 
     # Clean up temp branch
     git branch -D "$temp_branch" 2>/dev/null || true
+
+    # Restore stashed changes if we created a stash
+    if [[ "$STASH_CREATED" == true ]]; then
+        log_info "Restoring stashed changes..."
+        if git stash pop; then
+            log_success "Stashed changes restored"
+        else
+            log_warn "Could not restore stash automatically - your changes are in 'git stash list'"
+        fi
+    fi
 }
 
 # Main execution
