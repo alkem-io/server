@@ -52,7 +52,7 @@ export class ConversationResolverMutations {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       conversation.authorization,
-      AuthorizationPrivilege.UPDATE,
+      AuthorizationPrivilege.CONTRIBUTE,
       `conversation VC ask question: ${agentInfo.email}`
     );
 
@@ -78,7 +78,7 @@ export class ConversationResolverMutations {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       conversation.authorization,
-      AuthorizationPrivilege.UPDATE,
+      AuthorizationPrivilege.CONTRIBUTE,
       `conversation VC reset: ${agentInfo.email}`
     );
     conversation =
@@ -125,8 +125,8 @@ export class ConversationResolverMutations {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       conversation.authorization,
-      AuthorizationPrivilege.UPDATE,
-      `conversation VC reset: ${agentInfo.email}`
+      AuthorizationPrivilege.CONTRIBUTE,
+      `conversation VC feedback: ${agentInfo.email}`
     );
 
     return this.guidanceReporterService.updateAnswerRelevance(
