@@ -67,25 +67,6 @@ export class AuthenticationService {
   }
 
   /**
-   * Adds verified credentials to the agent information if SSI (Self-Sovereign Identity) is enabled.
-   *
-   * @param agentInfo - The information of the agent to which verified credentials will be added.
-   * @param agentID - The unique identifier of the agent.
-   * @returns A promise that resolves when the operation is complete.
-   */
-  public async addVerifiedCredentialsIfEnabled(
-    agentInfo: AgentInfo,
-    agentID: string
-  ): Promise<void> {
-    const ssiEnabled = this.configService.get('ssi.enabled', { infer: true });
-    if (ssiEnabled) {
-      const verifiedCredentials =
-        await this.agentService.getVerifiedCredentials(agentID);
-      agentInfo.verifiedCredentials = verifiedCredentials;
-    }
-  }
-
-  /**
    * Creates and returns an `AgentInfo` object based on the provided Ory identity and session.
    *
    * @param oryIdentity - Optional Ory identity schema containing user traits.
@@ -123,10 +104,6 @@ export class AuthenticationService {
     this.agentInfoService.populateAgentInfoWithMetadata(
       agentInfo,
       agentInfoMetadata
-    );
-    await this.addVerifiedCredentialsIfEnabled(
-      agentInfo,
-      agentInfoMetadata.agentID
     );
 
     await this.agentInfoCacheService.setAgentInfoCache(agentInfo);

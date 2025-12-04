@@ -210,15 +210,24 @@ export class SpaceLookupService {
     return collaboration;
   }
 
-  public async getProvider(spaceAbout: ISpaceAbout): Promise<IContributor> {
-    const space = await this.spaceRepository.findOneOrFail({
+  public async getProvider(
+    spaceAbout: ISpaceAbout
+  ): Promise<IContributor | null> {
+    const space = await this.spaceRepository.findOne({
       where: {
         about: {
           id: spaceAbout.id,
         },
       },
     });
-    const l0Space = await this.spaceRepository.findOneOrFail({
+    if (!space) {
+      this.logger.warn(
+        `Unable to find Space for SpaceAbout: ${spaceAbout.id}`,
+        LogContext.SPACES
+      );
+      return null;
+    }
+    const l0Space = await this.spaceRepository.findOne({
       where: {
         id: space.levelZeroSpaceID,
       },
@@ -227,18 +236,12 @@ export class SpaceLookupService {
       },
     });
     if (!l0Space || !l0Space.account) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Space with account to get Provider ${spaceAbout.id} `,
-        LogContext.LIBRARY
+      this.logger.warn(
+        `Unable to load Space with account to get Provider for SpaceAbout: ${spaceAbout.id}`,
+        LogContext.SPACES
       );
+      return null;
     }
-    const provider = await this.accountLookupService.getHost(l0Space.account);
-    if (!provider) {
-      throw new RelationshipNotFoundException(
-        `Unable to load provider for Space ${space.id} `,
-        LogContext.SPACE_ABOUT
-      );
-    }
-    return provider;
+    return await this.accountLookupService.getHost(l0Space.account);
   }
 }

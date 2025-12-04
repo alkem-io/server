@@ -7,7 +7,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AlkemioConfig } from '@src/types';
-import { createPool, Pool, PoolOptions, RowDataPacket } from 'mysql2/promise';
+import { Pool } from 'pg';
 
 export type KratosSessionSyncConfig =
   AlkemioConfig['identity']['authentication']['providers']['ory']['session_sync'];
@@ -32,15 +32,17 @@ export class KratosSessionRepository implements OnModuleDestroy {
 
   async onModuleDestroy(): Promise<void> {
     await this.pool.end().catch((error: Error) => {
-      this.logger.warn?.(`Failed to close Kratos MySQL pool: ${error.message}`);
+      this.logger.warn?.(
+        `Failed to close Kratos PostgreSQL pool: ${error.message}`
+      );
     });
   }
 
   async findExpiredSessions(limit = 100): Promise<KratosExpiredSession[]> {
     const query =
-      'SELECT id, identity_id FROM sessions WHERE active = 1 AND expires_at < NOW() LIMIT ?';
-    const [rows] = await this.pool.query<RowDataPacket[]>(query, [limit]);
-    return rows.map(row => ({
+      'SELECT id, identity_id FROM sessions WHERE active = true AND expires_at < NOW() LIMIT $1';
+    const result = await this.pool.query(query, [limit]);
+    return result.rows.map(row => ({
       id: String(row.id ?? ''),
       identity_id: String(row.identity_id ?? ''),
     }));
@@ -49,9 +51,9 @@ export class KratosSessionRepository implements OnModuleDestroy {
   async getIdentityTraits(
     identityId: string
   ): Promise<Record<string, unknown> | null> {
-    const query = 'SELECT traits FROM identities WHERE id = ? LIMIT 1';
-    const [rows] = await this.pool.query<RowDataPacket[]>(query, [identityId]);
-    const traitsRaw = rows[0]?.traits;
+    const query = 'SELECT traits FROM identities WHERE id = $1 LIMIT 1';
+    const result = await this.pool.query(query, [identityId]);
+    const traitsRaw = result.rows[0]?.traits;
 
     if (!traitsRaw) {
       return null;
@@ -80,7 +82,7 @@ export class KratosSessionRepository implements OnModuleDestroy {
   }
 
   async markSessionInactive(sessionId: string): Promise<void> {
-    await this.pool.query('UPDATE sessions SET active = 0 WHERE id = ?', [
+    await this.pool.query('UPDATE sessions SET active = false WHERE id = $1', [
       sessionId,
     ]);
   }
@@ -116,19 +118,14 @@ export class KratosSessionRepository implements OnModuleDestroy {
     const password = db.password ?? storageDb.password;
     const database = db.database ?? storageDb.database;
 
-    const options: PoolOptions = {
+    return new Pool({
       host,
       port,
       user,
       password,
       database,
-      waitForConnections: true,
-      connectionLimit: 5,
-      maxIdle: 5,
-      idleTimeout: 60_000,
-      queueLimit: 0,
-    };
-
-    return createPool(options);
+      max: 5,
+      idleTimeoutMillis: 60_000,
+    });
   }
 }

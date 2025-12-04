@@ -18,7 +18,6 @@ export const agentInfoData: { agentInfo: AgentInfo } = {
         type: AuthorizationCredential.GLOBAL_ADMIN,
       },
     ],
-    verifiedCredentials: [],
     communicationID: '@admin=alkem.io:matrix.alkem.io',
     agentID: '66000b15-ae7f-448e-aade-3b4ae1fd4c33',
     avatarURL: '',

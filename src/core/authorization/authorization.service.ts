@@ -8,9 +8,7 @@ import {
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { LogContext } from '@common/enums';
-import { IVerifiedCredential } from '@domain/agent/verified-credential/verified.credential.interface';
 import { IAuthorizationPolicyRuleCredential } from './authorization.policy.rule.credential.interface';
-import { IAuthorizationPolicyRuleVerifiedCredential } from './authorization.policy.rule.verified.credential.interface';
 import { AuthorizationInvalidPolicyException } from '@common/exceptions/authorization.invalid.policy.exception';
 import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
@@ -110,7 +108,6 @@ export class AuthorizationService {
   ): boolean {
     return this.isAccessGrantedForCredentials(
       agentInfo.credentials,
-      agentInfo.verifiedCredentials,
       authorization,
       privilegeRequired
     );
@@ -118,7 +115,6 @@ export class AuthorizationService {
 
   isAccessGrantedForCredentials(
     credentials: ICredentialDefinition[],
-    verifiedCredentials: IVerifiedCredential[],
     authorization: IAuthorizationPolicy | undefined,
     privilegeRequired: AuthorizationPrivilege
   ): boolean {
@@ -150,29 +146,6 @@ export class AuthorizationService {
       }
     }
 
-    const verifiedCredentialRules: IAuthorizationPolicyRuleVerifiedCredential[] =
-      authorization.verifiedCredentialRules;
-    for (const rule of verifiedCredentialRules) {
-      for (const verifiedCredential of verifiedCredentials) {
-        const isMatch = this.isVerifiedCredentialMatch(
-          verifiedCredential,
-          rule
-        );
-        if (isMatch) {
-          for (const privilege of rule.grantedPrivileges) {
-            if (privilege === privilegeRequired) {
-              this.logger.verbose?.(
-                `[VerifiedCredentialRule] Access granted based on VC of type: '${verifiedCredential.type}'`,
-                LogContext.AUTH_POLICY
-              );
-              return true;
-            }
-            grantedPrivileges.push(privilege);
-          }
-        }
-      }
-    }
-
     const privilegeRules = authorization.privilegeRules;
     for (const rule of privilegeRules) {
       if (grantedPrivileges.includes(rule.sourcePrivilege)) {
@@ -190,7 +163,6 @@ export class AuthorizationService {
 
   public getGrantedPrivileges(
     credentials: ICredentialDefinition[],
-    verifiedCredentials: IVerifiedCredential[],
     authorization: IAuthorizationPolicy
   ): AuthorizationPrivilege[] {
     const grantedPrivileges = new Set<AuthorizationPrivilege>();
@@ -200,18 +172,6 @@ export class AuthorizationService {
     credentialRules.forEach(rule => {
       credentials.forEach(credential => {
         if (this.isCredentialMatch(credential, rule)) {
-          rule.grantedPrivileges.forEach(privilege =>
-            grantedPrivileges.add(privilege)
-          );
-        }
-      });
-    });
-
-    const verifiedCredentialRules = authorization.verifiedCredentialRules || [];
-
-    verifiedCredentialRules.forEach(rule => {
-      verifiedCredentials.forEach(credential => {
-        if (this.isVerifiedCredentialMatch(credential, rule)) {
           rule.grantedPrivileges.forEach(privilege =>
             grantedPrivileges.add(privilege)
           );
@@ -249,23 +209,5 @@ export class AuthorizationService {
         (criteria.resourceID === '' ||
           credential.resourceID === criteria.resourceID)
     );
-  }
-
-  private isVerifiedCredentialMatch(
-    verifiedCredential: IVerifiedCredential,
-    credentialRule: IAuthorizationPolicyRuleVerifiedCredential
-  ): boolean {
-    if (verifiedCredential.name === credentialRule.credentialName) {
-      const claimRuleStr = credentialRule.claimRule;
-      if (claimRuleStr.length === 0) return true;
-      const claimRule: { name: string; value: string } =
-        JSON.parse(claimRuleStr);
-      for (const claim of verifiedCredential.claims) {
-        if (claim.name === claimRule.name && claim.value === claimRule.value) {
-          return true;
-        }
-      }
-    }
-    return false;
   }
 }

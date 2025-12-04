@@ -21,10 +21,7 @@ export const virtualContributorData: {
     },
     agent: {
       type: AgentType.SPACE,
-      // Add other required IAgent fields as needed for type safety
-      did: '',
       credentials: [],
-      password: '',
       authorization: undefined as any, // Replace with a valid mock if required by tests
       createdDate: new Date('2024-01-01T00:00:00.000Z'),
       updatedDate: new Date('2024-01-01T00:00:00.000Z'),

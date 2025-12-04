@@ -22,7 +22,6 @@ describe('WhiteboardGuestAccessService', () => {
     authorization.id = 'authorization-1';
     authorization.credentialRules = [];
     authorization.privilegeRules = [];
-    authorization.verifiedCredentialRules = [];
     return authorization;
   };
 
@@ -70,7 +69,6 @@ describe('WhiteboardGuestAccessService', () => {
         id: true,
         credentialRules: true,
         privilegeRules: true,
-        verifiedCredentialRules: true,
       } as any,
     } as unknown as jest.Mocked<AuthorizationPolicyService>;
 
