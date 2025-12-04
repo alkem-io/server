@@ -78,9 +78,9 @@ describe('AuthenticationService', () => {
     lastName: 'Doe',
     guestName: '',
     credentials: [],
-    communicationID: 'comm-id',
     agentID: 'agent-id',
     avatarURL: 'http://example.com/avatar.jpg',
+    authenticationID: 'auth-id',
     expiry: new Date('2023-12-31T23:59:59Z').getTime(),
   };
 
@@ -88,7 +88,6 @@ describe('AuthenticationService', () => {
     userID: 'user-id',
     email: 'test@example.com',
     credentials: [],
-    communicationID: 'comm-id',
     agentID: 'agent-id',
     did: 'did:test:123',
     password: 'test-password',
@@ -287,7 +286,8 @@ describe('AuthenticationService', () => {
       );
 
       expect(agentInfoService.getAgentInfoMetadata).toHaveBeenCalledWith(
-        'test@example.com'
+        'test@example.com',
+        { authenticationId: 'auth-id' }
       );
       expect(result).toEqual(builtAgentInfo);
     });

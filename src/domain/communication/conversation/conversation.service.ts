@@ -68,16 +68,18 @@ export class ConversationService {
     // Create the room if it's a user-to-user conversation
     if (conversation.type === CommunicationConversationType.USER_USER) {
       const sender = await this.userLookupService.getUserOrFail(
-        conversationData.currentUserID
+        conversationData.currentUserID,
+        { relations: { agent: true } }
       );
       const receiver = await this.userLookupService.getUserOrFail(
-        conversation.userID
+        conversation.userID,
+        { relations: { agent: true } }
       );
       conversation.room = await this.roomService.createRoom({
         displayName: `conversation-${conversationData.currentUserID}-${conversation.userID}`,
         type: RoomType.CONVERSATION_DIRECT,
-        senderCommunicationID: sender.communicationID,
-        receiverCommunicationID: receiver.communicationID,
+        senderActorId: sender.agent.id,
+        receiverActorId: receiver.agent.id,
       });
     }
 
@@ -90,12 +92,14 @@ export class ConversationService {
     roomType: RoomType
   ): Promise<IRoom> {
     // Create the room
-    const sender = await this.userLookupService.getUserOrFail(currentUserID);
+    const sender = await this.userLookupService.getUserOrFail(currentUserID, {
+      relations: { agent: true },
+    });
 
     const room = await this.roomService.createRoom({
       displayName: `conversation-${currentUserID}-${conversation.virtualContributorID}`,
       type: roomType,
-      senderCommunicationID: sender.communicationID,
+      senderActorId: sender.agent.id,
     });
     return room;
   }
@@ -264,6 +268,9 @@ export class ConversationService {
           id: conversation.conversationsSet.id,
         },
       },
+      relations: {
+        agent: true,
+      },
     });
 
     if (!conversationOwner) {
@@ -280,21 +287,10 @@ export class ConversationService {
       `Deleting conversation room (${room.id}) of type (${room.type})`,
       LogContext.COMMUNICATION_CONVERSATION
     );
-    if (room.type === RoomType.CONVERSATION_DIRECT) {
-      const receiver = await this.userLookupService.getUserOrFail(
-        conversation.userID!
-      );
-      await this.roomService.deleteRoom({
-        roomID: conversation.room.id,
-        senderCommunicationID: conversationOwner.communicationID,
-        receiverCommunicationID: receiver.communicationID,
-      });
-    } else {
-      // Just delete the room entity normally
-      await this.roomService.deleteRoom({
-        roomID: conversation.room.id,
-      });
-    }
+    // The Matrix adapter handles room type internally
+    await this.roomService.deleteRoom({
+      roomID: conversation.room.id,
+    });
 
     await this.authorizationPolicyService.delete(conversation.authorization);
 
@@ -364,7 +360,7 @@ export class ConversationService {
 
     const message = await this.roomLookupService.sendMessage(
       guidanceConversation.room,
-      agentInfo.communicationID,
+      agentInfo.agentID,
       {
         message: chatData.question,
         roomID: guidanceConversation.room.id,
@@ -373,7 +369,8 @@ export class ConversationService {
 
     const guidanceVc =
       await this.virtualContributorLookupService.getVirtualContributorByNameIdOrFail(
-        guidanceConversation.virtualContributorID!
+        guidanceConversation.virtualContributorID!,
+        { relations: { agent: true } }
       );
 
     this.aiServerAdapter.invoke({
@@ -388,7 +385,7 @@ export class ConversationService {
         action: InvocationResultAction.POST_MESSAGE,
         roomDetails: {
           roomID: guidanceConversation.room.id,
-          communicationID: guidanceVc.communicationID,
+          actorId: guidanceVc.agent.id,
         },
       },
     });

@@ -211,6 +211,54 @@ export class ContributorLookupService {
     return contributor;
   }
 
+  /**
+   * Finds a contributor (User, Organization, or VirtualContributor) by their agent ID.
+   * @param agentId The ID of the agent associated with the contributor
+   * @returns The contributor if found, null otherwise
+   */
+  async getContributorByAgentId(
+    agentId: string
+  ): Promise<IContributor | null> {
+    if (!isUUID(agentId)) {
+      throw new InvalidUUID('Invalid UUID provided for agent ID!', LogContext.COMMUNITY, {
+        provided: agentId,
+      });
+    }
+
+    let contributor: IContributor | null = await this.entityManager.findOne(
+      User,
+      {
+        where: { agent: { id: agentId } },
+      }
+    );
+    contributor ??= await this.entityManager.findOne(Organization, {
+      where: { agent: { id: agentId } },
+    });
+    contributor ??= await this.entityManager.findOne(VirtualContributor, {
+      where: { agent: { id: agentId } },
+    });
+
+    return contributor;
+  }
+
+  /**
+   * Finds a User by their agent ID.
+   * @param agentId The ID of the agent associated with the user
+   * @returns The user ID if found, undefined otherwise
+   */
+  async getUserIdByAgentId(agentId: string): Promise<string | undefined> {
+    if (!isUUID(agentId)) {
+      return undefined;
+    }
+
+    const user = await this.entityManager.findOne(User, {
+      where: { agent: { id: agentId } },
+      select: ['id'],
+    });
+
+    return user?.id;
+  }
+
   private async getCredentialsByTypeHeldByAgent(
     agentID: string,
     credentialTypes: AuthorizationCredential[]

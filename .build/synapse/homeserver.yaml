@@ -43,6 +43,8 @@ url_preview_enabled: false
 enable_registration: true
 enable_registration_without_verification: true
 
+app_service_config_files:
+  - /data/matrix-adapter.yaml
 # Password authentication configuration
 # Disabled to enforce SSO-only authentication (FR-001, FR-002)
 #password_config:

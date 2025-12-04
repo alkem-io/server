@@ -424,21 +424,23 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_matrix_adapter
     hostname: matrix-adapter
-    image: alkemio/matrix-adapter:v0.7.3
-    platform: linux/amd64
+#    image: alkemio/matrix-adapter:v0.7.3
+    image: alkemio/matrix-adapter-go
+#    platform: linux/amd64
     depends_on:
       - rabbitmq
     environment:
       - RABBITMQ_HOST
       - RABBITMQ_USER
       - RABBITMQ_PASSWORD
-      - SYNAPSE_ADMIN_USERNAME
       - SYNAPSE_HOMESERVER_NAME
       - SYNAPSE_SERVER_URL
-      - SYNAPSE_SERVER_SHARED_SECRET
       - SYNAPSE_SERVER_NAME
+      - MATRIX_AS_TOKEN
+      - MATRIX_HS_TOKEN
+#      - MATRIX_BOT_ACTOR_ID
       - LOGGING_CONSOLE_ENABLED
-      - LOGGING_LEVEL_CONSOLE
+      - LOGGING_LEVEL_CONSOLE=debug
       - ENVIRONMENT=dev
       - WAIT_HOSTS=host.docker.internal:3000
       - WAIT_HOSTS_TIMEOUT=300
@@ -447,7 +449,7 @@ services:
     restart: always
     networks:
       - alkemio_dev_net
-    command: sh -c "/wait && npm run start"
+    command: sh -c "/wait && /app/matrix-adapter"
 
   redis:
     extra_hosts:

@@ -277,7 +277,8 @@ communications:
   enabled: ${COMMUNICATIONS_ENABLED}:true
   matrix:
     connection_retries: ${COMMUNICATIONS_MATRIX_CONNECTION_RETRIES}:5
-    connection_timeout: ${COMMUNICATIONS_MATRIX_CONNECTION_TIMEOUT}:30
+    # Timeout in milliseconds for RPC calls to the Matrix adapter
+    connection_timeout: ${COMMUNICATIONS_MATRIX_CONNECTION_TIMEOUT}:30000
   discussions:
     enabled: ${COMMUNICATIONS_DISCUSSIONS_ENABLED}:true
 

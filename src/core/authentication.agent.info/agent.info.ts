@@ -8,7 +8,6 @@ export class AgentInfo {
   lastName = '';
   guestName = ''; // Name provided by client for guest users
   credentials: ICredentialDefinition[] = [];
-  communicationID = '';
   agentID = '';
   avatarURL = '';
   authenticationID = '';

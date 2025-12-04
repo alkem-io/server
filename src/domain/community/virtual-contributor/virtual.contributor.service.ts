@@ -129,14 +129,6 @@ export class VirtualContributorService {
       virtualContributor.knowledgeBase
     );
 
-    const communicationID = await this.communicationAdapter.tryRegisterNewUser(
-      `virtual-contributor-${virtualContributor.nameID}@alkem.io`
-    );
-
-    if (communicationID) {
-      virtualContributor.communicationID = communicationID;
-    }
-
     if (
       virtualContributorData.bodyOfKnowledgeType ===
       VirtualContributorBodyOfKnowledgeType.ALKEMIO_KNOWLEDGE_BASE
@@ -195,8 +187,31 @@ export class VirtualContributorService {
 
     // Reload to ensure have the updated avatar URL
     virtualContributor = await this.getVirtualContributorOrFail(
-      virtualContributor.id
+      virtualContributor.id,
+      { relations: { agent: true } }
     );
+
+    // Sync the VC's agent to the communication adapter
+    // The agent.id is used as the AlkemioActorID for all communication operations
+    const displayName = virtualContributor.profile?.displayName || virtualContributor.nameID;
+    try {
+      await this.communicationAdapter.syncActor(
+        virtualContributor.agent.id,
+        displayName
+      );
+      this.logger.verbose?.(
+        `Synced VC actor to communication adapter: ${virtualContributor.agent.id}`,
+        LogContext.COMMUNITY
+      );
+    } catch (e: any) {
+      this.logger.error(
+        `Failed to sync VC actor to communication adapter: ${virtualContributor.agent.id}`,
+        e?.stack,
+        LogContext.COMMUNITY
+      );
+      // Don't throw - VC creation should succeed even if sync fails
+    }
+
     this.logger.verbose?.(
       `Created new virtual with id ${virtualContributor.id}`,
       LogContext.COMMUNITY

@@ -112,6 +112,8 @@ export class PlatformService {
     });
     const forum = platform.forum;
     if (!forum) {
+      // Forum is a direct child of Platform. Since Platform has no Matrix Space,
+      // Forum becomes a root-level Matrix Space (no parent).
       platform.forum = await this.forumService.createForum(
         Object.values(ForumDiscussionCategory)
       );

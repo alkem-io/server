@@ -55,7 +55,6 @@ export class PostService {
 
     post.comments = await this.roomService.createRoom({
       displayName: `post-comments-${post.nameID}`,
-      senderCommunicationID: userID,
       type: RoomType.POST,
     });
 
@@ -101,10 +100,8 @@ export class PostService {
 
   public async updatePost(postData: UpdatePostInput): Promise<IPost> {
     const post = await this.getPostOrFail(postData.ID, {
-      relations: { profile: true },
+      relations: { profile: true, comments: true },
     });
-
-    // Copy over the received data
 
     if (postData.profileData) {
       if (!post.profile) {
@@ -113,6 +110,17 @@ export class PostService {
           LogContext.COLLABORATION
         );
       }
+
+      // Sync room name if displayName is changing
+      if (
+        postData.profileData.displayName &&
+        post.comments &&
+        post.profile.displayName !== postData.profileData.displayName
+      ) {
+        const newRoomName = `post-comments-${post.nameID}`;
+        await this.roomService.updateRoomDisplayName(post.comments, newRoomName);
+      }
+
       post.profile = await this.profileService.updateProfile(
         post.profile,
         postData.profileData

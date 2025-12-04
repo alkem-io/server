@@ -9,9 +9,6 @@ import { Post } from '@domain/collaboration/post/post.entity';
 
 @Entity()
 export class Room extends AuthorizableEntity implements IRoom {
-  @Column()
-  externalRoomID!: string;
-
   @Column('int', { nullable: false })
   messagesCount!: number;
 

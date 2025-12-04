@@ -9,9 +9,6 @@ import { User } from '@domain/community/user/user.entity';
 import { AgentInfoMetadata } from './agent.info.metadata';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
-import { InjectEntityManager } from '@nestjs/typeorm';
-import { EntityManager } from 'typeorm';
-import { User } from '@domain/community/user/user.entity';
 import { ICredential } from '@domain/agent/credential/credential.interface';
 import { UserAuthenticationLinkService } from '@domain/community/user-authentication-link/user.authentication.link.service';
 
@@ -101,7 +98,6 @@ export class AgentInfoService {
       userAgentInfoMetadata.credentials = user.agent.credentials;
       userAgentInfoMetadata.agentID = user.agent.id;
       userAgentInfoMetadata.userID = user.id;
-      userAgentInfoMetadata.communicationID = user.communicationID;
       userAgentInfoMetadata.authenticationID =
         user.authenticationID ?? undefined;
       return userAgentInfoMetadata;
@@ -121,7 +117,7 @@ export class AgentInfoService {
    * @param agentInfoMetadata - The metadata containing information to populate the agent info.
    *
    * @remarks
-   * This method assigns the `agentID`, `userID`, and `communicationID` from `agentInfoMetadata` to `agentInfo`.
+   * This method assigns the `agentID` and `userID` from `agentInfoMetadata` to `agentInfo`.
    * If `agentInfoMetadata` contains credentials, they are also assigned to `agentInfo`.
    * If credentials are not available, a warning is logged.
    */
@@ -131,7 +127,6 @@ export class AgentInfoService {
   ): void {
     agentInfo.agentID = agentInfoMetadata.agentID;
     agentInfo.userID = agentInfoMetadata.userID;
-    agentInfo.communicationID = agentInfoMetadata.communicationID;
     if (agentInfoMetadata.authenticationID) {
       agentInfo.authenticationID = agentInfoMetadata.authenticationID;
     }

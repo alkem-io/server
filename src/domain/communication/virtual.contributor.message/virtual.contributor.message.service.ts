@@ -35,12 +35,24 @@ export class VirtualContributorMessageService {
   ) {
     const virtualContributor =
       await this.virtualContributorLookupService.getVirtualContributorOrFail(
-        virtualContributorID
+        virtualContributorID,
+        {
+          relations: {
+            agent: true,
+          },
+        }
       );
 
     if (!virtualContributor.aiPersonaID) {
       throw new EntityNotInitializedException(
         `AI Persona ID not set for VirtualContributor ${virtualContributor?.id}`,
+        LogContext.VIRTUAL_CONTRIBUTOR
+      );
+    }
+
+    if (!virtualContributor.agent) {
+      throw new EntityNotInitializedException(
+        `Agent not initialized for VirtualContributor ${virtualContributor?.id}`,
         LogContext.VIRTUAL_CONTRIBUTOR
       );
     }
@@ -55,7 +67,7 @@ export class VirtualContributorMessageService {
         roomDetails: {
           roomID: room.id,
           threadID,
-          communicationID: virtualContributor.communicationID,
+          actorId: virtualContributor.agent.id,
           vcInteractionID: vcInteraction?.id,
         },
       },

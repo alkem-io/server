@@ -8,9 +8,9 @@ importers:
 
   .:
     dependencies:
-      '@alkemio/matrix-adapter-lib':
-        specifier: ^0.6.2
-        version: 0.6.2
+      '@alkem-io/matrix-adapter-go-lib':
+        specifier: 0.2.0
+        version: 0.2.0
       '@alkemio/notifications-lib':
         specifier: 0.12.2
         version: 0.12.2(@types/express@4.17.23)
@@ -367,12 +367,12 @@ packages:
     resolution: {integrity: sha512-29lUK80d1muEQqiUsSo+3A0yP6CdspgC95EnKBMi22Xlwt79i/En4Vr67+cXhU+cZjbti3TgGGC5wy1stIywVQ==}
     engines: {node: '>=0.8'}
 
+  '@alkem-io/matrix-adapter-go-lib@0.2.0':
+    resolution: {integrity: sha512-zq4skUBIoqKOTGVB/WjhaEFLqxNg8ogDvjC7t1t25kBha+rGJac1d0883MNVtIqUljqZOt+dAdrF5YfocOrGKw==, tarball: https://npm.pkg.github.com/download/@alkem-io/matrix-adapter-go-lib/0.2.0/d6d9004edcaec6d17ae7731adb77a84670c32fe5}
+    engines: {node: '>=22.x', pnpm: '>=9.x'}
+
   '@alkemio/client-lib@0.35.0':
     resolution: {integrity: sha512-Gd7gsI/RLjDgTO42pgcewsirbAr0WCj6Gktiq0pjV1N2ZGSf1dBOEIhMCX+wHPoekCY0qs4EY1puYwBxi8/PQA==}
-    engines: {node: '>=16.15.0', npm: '>=8.5.5'}
-
-  '@alkemio/matrix-adapter-lib@0.6.2':
-    resolution: {integrity: sha512-DUoJgpiESYnndVTi/igy89cEmbtv6WydMwAy9Pkc8avRtHirpkyiG9TJ4Khc2/kylOzezTIijSn5uAyNCfNj7Q==}
     engines: {node: '>=16.15.0', npm: '>=8.5.5'}
 
   '@alkemio/notifications-lib@0.12.2':
@@ -6174,6 +6174,8 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  '@alkem-io/matrix-adapter-go-lib@0.2.0': {}
+
   '@alkemio/client-lib@0.35.0(@types/express@4.17.23)':
     dependencies:
       '@graphql-codegen/typescript-graphql-request': 4.5.9(graphql-request@3.7.0(graphql@16.11.0))(graphql-tag@2.12.6(graphql@16.11.0))(graphql@16.11.0)
@@ -6194,8 +6196,6 @@ snapshots:
       - debug
       - encoding
       - supports-color
-
-  '@alkemio/matrix-adapter-lib@0.6.2': {}
 
   '@alkemio/notifications-lib@0.12.2(@types/express@4.17.23)':
     dependencies:

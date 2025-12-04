@@ -39,10 +39,9 @@ describe('UserService.createUserFromAgentInfo', () => {
       {} as any,
       {} as any,
       {} as any,
-      {} as any,
-      {} as any,
       { deleteAgentInfoFromCache: jest.fn() } as any,
       userAuthenticationLinkServiceMock as any,
+      {} as any,
       {} as any,
       {} as any,
       {} as any,
@@ -126,7 +125,7 @@ describe('UserService.createUserFromAgentInfo', () => {
     const result = await service.createUserFromAgentInfo(agentInfo);
 
     expect(cacheManagerMock.set).toHaveBeenCalledWith(
-      `@user:communicationId:${agentInfo.email}`,
+      `@user:email:${agentInfo.email}`,
       resolveResult.user,
       expect.objectContaining({ ttl: expect.any(Number) })
     );

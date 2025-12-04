@@ -416,7 +416,6 @@ export class BootstrapService {
       avatarURL: '',
       credentials: adminUser.agent?.credentials || [],
       agentID: adminUser.agent?.id,
-      communicationID: adminUser.communicationID,
       authenticationID: adminUser.authenticationID ?? '',
     };
   }

@@ -95,22 +95,20 @@ export class UserService {
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache
   ) {}
 
-  private getUserCommunicationIdCacheKey(communicationId: string): string {
-    return `@user:communicationId:${communicationId}`;
+  private getUserCacheKey(email: string): string {
+    return `@user:email:${email}`;
   }
 
   private async setUserCache(user: IUser) {
     await this.cacheManager.set(
-      this.getUserCommunicationIdCacheKey(user.email),
+      this.getUserCacheKey(user.email),
       user,
       this.cacheOptions
     );
   }
 
   private async clearUserCache(user: IUser) {
-    await this.cacheManager.del(
-      this.getUserCommunicationIdCacheKey(user.communicationID)
-    );
+    await this.cacheManager.del(this.getUserCacheKey(user.email));
     await this.agentInfoCacheService.deleteAgentInfoFromCache(user.email);
   }
 
@@ -203,30 +201,30 @@ export class UserService {
       user.id
     );
     // Reload to ensure have the updated avatar URL
-    user = await this.getUserOrFail(user.id);
+    user = await this.getUserOrFail(user.id, {
+      relations: { agent: true },
+    });
 
-    // all users need to be registered for communications at the absolute beginning
-    // there are cases where a user could be messaged before they actually log-in
-    // which will result in failure in communication (either missing user or unsent messages)
-    // register the user asynchronously - we don't want to block the creation operation
-    const communicationID = await this.communicationAdapter.tryRegisterNewUser(
-      user.email
-    );
+    // Sync the user's agent to the communication adapter
+    // The agent.id is used as the AlkemioActorID for all communication operations
+    const displayName = `${user.firstName} ${user.lastName}`.trim() || user.email;
 
     try {
-      if (!communicationID) {
-        this.logger.warn(
-          `User registration failed on user creation ${user.id}.`
-        );
-        return user;
-      }
-
-      user.communicationID = communicationID;
-
-      await this.save(user);
-      await this.setUserCache(user);
+      await this.communicationAdapter.syncActor(
+        user.agent.id,
+        displayName
+      );
+      this.logger.verbose?.(
+        `Synced user actor to communication adapter: ${user.agent.id}`,
+        LogContext.COMMUNITY
+      );
     } catch (e: any) {
-      this.logger.error(e, e?.stack, LogContext.USER);
+      this.logger.error(
+        `Failed to sync user actor to communication adapter: ${user.agent.id}`,
+        e?.stack,
+        LogContext.COMMUNITY
+      );
+      // Don't throw - user creation should succeed even if sync fails
     }
 
     await this.setUserCache(user);

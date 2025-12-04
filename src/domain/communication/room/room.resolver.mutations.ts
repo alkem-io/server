@@ -80,7 +80,7 @@ export class RoomResolverMutations {
 
     const message = await this.roomLookupService.sendMessage(
       room,
-      agentInfo.communicationID,
+      agentInfo.agentID,
       messageData
     );
     const threadID = message.id;
@@ -278,7 +278,7 @@ export class RoomResolverMutations {
 
     const reply = await this.roomLookupService.sendMessageReply(
       room,
-      agentInfo.communicationID,
+      agentInfo.agentID,
       messageData,
       'user'
     );
@@ -469,7 +469,7 @@ export class RoomResolverMutations {
 
     const reaction = await this.roomService.addReactionToMessage(
       room,
-      agentInfo.communicationID,
+      agentInfo.agentID,
       reactionData
     );
 
@@ -512,7 +512,7 @@ export class RoomResolverMutations {
     );
     const messageID = await this.roomService.removeRoomMessage(
       room,
-      agentInfo.communicationID,
+      agentInfo.agentID,
       messageData
     );
     await this.inAppNotificationService.deleteAllByMessageId(messageID);
@@ -567,7 +567,7 @@ export class RoomResolverMutations {
 
     const isDeleted = await this.roomService.removeReactionToMessage(
       room,
-      agentInfo.communicationID,
+      agentInfo.agentID,
       reactionData
     );
 

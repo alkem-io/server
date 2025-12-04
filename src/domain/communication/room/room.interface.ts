@@ -12,8 +12,6 @@ export abstract class IRoom extends IAuthorizable {
   })
   messagesCount!: number;
 
-  externalRoomID!: string;
-
   displayName!: string;
 
   vcInteractions?: IVcInteraction[];

@@ -5,7 +5,7 @@ import { CommunicationAdapter } from '@services/adapters/communication-adapter/c
 import { IRoom } from '../room/room.interface';
 import { IMessage } from '../message/message.interface';
 import { IMessageReaction } from '../message.reaction/message.reaction.interface';
-import { IdentityResolverService } from '@services/infrastructure/entity-resolver/identity.resolver.service';
+import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
 import { FindOneOptions, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
@@ -25,7 +25,7 @@ interface MessageSender {
 export class RoomLookupService {
   constructor(
     private communicationAdapter: CommunicationAdapter,
-    private identityResolverService: IdentityResolverService,
+    private contributorLookupService: ContributorLookupService,
     private vcInteractionService: VcInteractionService,
     @InjectRepository(Room)
     private roomRepository: Repository<Room>,
@@ -41,9 +41,7 @@ export class RoomLookupService {
       `Getting messages in thread ${threadID} for room ${room.id}`,
       LogContext.COMMUNICATION
     );
-    const roomResult = await this.communicationAdapter.getCommunityRoom(
-      room.externalRoomID
-    );
+    const roomResult = await this.communicationAdapter.getRoom(room.id);
     // First message in the thread provides the threadID, but it itself does not have the threadID set
     const threadMessages = roomResult.messages.filter(
       m => m.threadID === threadID || m.id === threadID
@@ -61,10 +59,7 @@ export class RoomLookupService {
       LogContext.COMMUNICATION
     );
     const room = await this.getRoomOrFail(roomID);
-    const roomResult = await this.communicationAdapter.getRoomMessage(
-      room.externalRoomID,
-      messageID
-    );
+    const roomResult = await this.communicationAdapter.getRoom(room.id);
     // First message in the thread provides the threadID, but it itself does not have the threadID set
     const message = roomResult.messages.find(m => m.id === messageID);
 
@@ -79,9 +74,7 @@ export class RoomLookupService {
   }
 
   async getMessages(room: IRoom): Promise<IMessage[]> {
-    const externalRoom = await this.communicationAdapter.getCommunityRoom(
-      room.externalRoomID
-    );
+    const externalRoom = await this.communicationAdapter.getRoom(room.id);
 
     return await this.populateRoomMessageSenders(externalRoom.messages);
   }
@@ -189,25 +182,24 @@ export class RoomLookupService {
 
   async sendMessage(
     room: IRoom,
-    communicationUserID: string,
+    actorId: string,
     messageData: RoomSendMessageInput
   ): Promise<IMessage> {
-    // Ensure the user is a member of room and group so can send
-    await this.communicationAdapter.userAddToRooms(
-      [room.externalRoomID],
-      communicationUserID
-    );
-    const alkemioUserID =
-      await this.identityResolverService.getUserIDByCommunicationsID(
-        communicationUserID
-      );
-    const message = await this.communicationAdapter.sendMessageToRoom({
-      senderCommunicationsID: communicationUserID,
+    // The new adapter uses alkemio room ID and handles membership internally
+    const message = await this.communicationAdapter.sendMessage({
+      actorId: actorId,
       message: messageData.message,
-      roomID: room.externalRoomID,
+      roomID: room.id,
     });
 
-    message.sender = alkemioUserID!;
+    // The message.sender from adapter is already the actorId (agent.id)
+    // Resolve to the contributor ID for display purposes
+    const contributorId =
+      await this.contributorLookupService.getUserIdByAgentId(actorId);
+    if (contributorId) {
+      message.sender = contributorId;
+    }
+
     room.messagesCount = room.messagesCount + 1;
     await this.roomRepository.save(room);
     return message;
@@ -215,35 +207,28 @@ export class RoomLookupService {
 
   async sendMessageReply(
     room: IRoom,
-    communicationUserID: string,
+    actorId: string,
     messageData: RoomSendMessageReplyInput,
     senderType: 'user' | 'virtualContributor'
   ): Promise<IMessage> {
-    // Ensure the user is a member of room and group so can send
-    await this.communicationAdapter.userAddToRooms(
-      [room.externalRoomID],
-      communicationUserID
-    );
-
-    const alkemioSenderID =
-      senderType === 'virtualContributor'
-        ? await this.identityResolverService.getContributorIDByCommunicationsID(
-            communicationUserID
-          )
-        : await this.identityResolverService.getUserIDByCommunicationsID(
-            communicationUserID
-          );
-    const message = await this.communicationAdapter.sendRoomMessageReply(
+    // The new adapter uses alkemio room ID and handles membership internally
+    const message = await this.communicationAdapter.sendMessageReply(
       {
-        senderCommunicationsID: communicationUserID,
+        actorId: actorId,
         message: messageData.message,
-        roomID: room.externalRoomID,
+        roomID: room.id,
         threadID: messageData.threadID,
       },
       senderType
     );
 
-    message.sender = alkemioSenderID!;
+    // The message.sender from adapter is already the actorId (agent.id)
+    // Resolve to the contributor ID for display purposes
+    const contributor =
+      await this.contributorLookupService.getContributorByAgentId(actorId);
+    if (contributor) {
+      message.sender = contributor.id;
+    }
     message.senderType = senderType;
 
     room.messagesCount = room.messagesCount + 1;
@@ -253,54 +238,43 @@ export class RoomLookupService {
   }
 
   /**
-   * Identifies and returns the message sender information for a given Matrix user ID.
+   * Identifies and returns the message sender information for a given agent ID.
    *
    * This method first checks if the sender is already known in the provided map. If not found,
-   * it attempts to resolve the Matrix user ID to either an Alkemio user or virtual contributor
-   * by querying the identity resolver service. Once identified, the sender information is cached
+   * it attempts to resolve the agent ID to either an Alkemio user or virtual contributor
+   * by querying the contributor lookup service. Once identified, the sender information is cached
    * in the known senders map for future lookups.
    *
    * @param knownSendersMap - A map cache containing previously identified message senders
-   * @param matrixUserID - The Matrix user ID to identify
+   * @param agentId - The agent ID to identify (agent.id of the contributor)
    * @returns A promise that resolves to the MessageSender object containing the sender's ID and type
-   * @throws {Error} When the Matrix user ID cannot be resolved to any known sender type
+   * @throws {Error} When the agent ID cannot be resolved to any known sender type
    */
   private async updateKnownSendersMap(
     knownSendersMap: Map<string, MessageSender>,
-    matrixUserID: string
+    agentId: string
   ): Promise<MessageSender> | never {
-    let messageSender = knownSendersMap.get(matrixUserID);
+    let messageSender = knownSendersMap.get(agentId);
     if (!messageSender) {
-      const alkemioUserID =
-        await this.identityResolverService.getUserIDByCommunicationsID(
-          matrixUserID
-        );
-      if (alkemioUserID) {
+      const contributor =
+        await this.contributorLookupService.getContributorByAgentId(agentId);
+      if (contributor) {
+        // Determine if it's a user or virtual contributor by checking the type
+        // Users have 'accountID' while VirtualContributors don't at the top level
+        // A more reliable check would be to see if it has User-specific properties
+        const isUser = 'accountID' in contributor;
         messageSender = {
-          id: alkemioUserID,
-          type: 'user',
+          id: contributor.id,
+          type: isUser ? 'user' : 'virtualContributor',
         };
-      } else {
-        const virtualContributorID =
-          await this.identityResolverService.getContributorIDByCommunicationsID(
-            matrixUserID
-          );
-        if (virtualContributorID) {
-          messageSender = {
-            id: virtualContributorID,
-            type: 'virtualContributor',
-          };
-        }
-      }
-      if (messageSender) {
-        knownSendersMap.set(matrixUserID, messageSender);
+        knownSendersMap.set(agentId, messageSender);
       }
     }
     if (!messageSender) {
       throw new EntityNotFoundException(
         'Unable to identify sender',
         LogContext.COMMUNICATION,
-        { matrixUserID }
+        { agentId }
       );
     }
     return messageSender;
@@ -311,11 +285,11 @@ export class RoomLookupService {
     knownSendersMap: Map<string, MessageSender>
   ): Promise<IMessageReaction[]> {
     for (const reaction of reactions) {
-      const matrixUserID = reaction.sender;
+      const agentId = reaction.sender;
       try {
         const reactionSender = await this.updateKnownSendersMap(
           knownSendersMap,
-          matrixUserID
+          agentId
         );
 
         reaction.sender = reactionSender.id;

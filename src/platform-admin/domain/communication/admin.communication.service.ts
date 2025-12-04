@@ -73,24 +73,27 @@ export class AdminCommunicationService {
       room.id,
       room.displayName
     );
-    result.roomID = room.externalRoomID;
-    result.members = await this.communicationAdapter.getRoomMembers(
-      room.externalRoomID
-    );
-    // check which ones are missing
+    result.roomID = room.id;
+    const roomData = await this.communicationAdapter.getRoom(room.id);
+    result.members = roomData.members;
+    // check which ones are missing - compare using agent.id (actorId)
     for (const communityMember of communityMembers) {
+      const memberActorId = communityMember.agent?.id;
+      if (!memberActorId) {
+        continue; // skip members without agent
+      }
       const inCommunicationRoom = result.members.find(
-        roomMember => roomMember === communityMember.communicationID
+        roomMember => roomMember === memberActorId
       );
       if (!inCommunicationRoom) {
-        result.missingMembers.push(communityMember.communicationID);
+        result.missingMembers.push(memberActorId);
       }
     }
 
-    // check which ones are extra
+    // check which ones are extra - compare using agent.id (actorId)
     for (const roomMember of result.members) {
       const inCommunity = communityMembers.find(
-        communityMember => communityMember.communicationID === roomMember
+        communityMember => communityMember.agent?.id === roomMember
       );
       if (!inCommunity) {
         result.extraMembers.push(roomMember);
@@ -123,24 +126,30 @@ export class AdminCommunicationService {
       RoleName.MEMBER
     );
     for (const communityMember of communityMembers) {
+      const memberActorId = communityMember.agent?.id;
+      if (!memberActorId) {
+        continue; // skip members without agent
+      }
       await this.communicationService.addContributorToCommunications(
         communication,
-        communityMember.communicationID
+        memberActorId
       );
     }
     return true;
   }
 
-  async updateMatrixRoomState(
+  async updateRoomState(
     roomID: string,
     isPublic: boolean,
-    isWorldVisible: boolean
+    _isWorldVisible: boolean
   ) {
-    return await this.communicationAdapter.updateMatrixRoomState(
+    await this.communicationAdapter.updateRoom(
       roomID,
-      isWorldVisible,
+      undefined,
+      undefined,
       isPublic
     );
+    return await this.communicationAdapter.getRoom(roomID);
   }
 
   async removeOrphanedRoom(
@@ -155,7 +164,7 @@ export class AdminCommunicationService {
         LogContext.COMMUNICATION
       );
     }
-    return await this.communicationAdapter.removeRoom(orphanedRoomID);
+    return await this.communicationAdapter.deleteRoom(orphanedRoomID);
   }
 
   async orphanedUsage(): Promise<CommunicationAdminOrphanedUsageResult> {
@@ -167,24 +176,23 @@ export class AdminCommunicationService {
     const roomsUsed = await this.getRoomsUsed();
 
     // Get all the rooms used in Matrix + filter to only create results for those not used
-    const matrixRooms = await this.communicationAdapter.adminGetAllRooms();
-    for (const matrixRoom of matrixRooms) {
-      const found = roomsUsed.find(roomID => roomID === matrixRoom.id);
+    const matrixRoomIds = await this.communicationAdapter.listRooms();
+    for (const matrixRoomId of matrixRoomIds) {
+      const found = roomsUsed.find(roomID => roomID === matrixRoomId);
       if (!found) {
-        const roomNotUsed = await this.communicationAdapter.getCommunityRoom(
-          matrixRoom.id
-        );
+        const roomNotUsed =
+          await this.communicationAdapter.getRoom(matrixRoomId);
         const roomResult = new CommunicationAdminRoomResult(
           roomNotUsed.id,
           roomNotUsed.displayName
         );
-        roomResult.members = matrixRoom.members;
+        roomResult.members = roomNotUsed.members;
         result.rooms.push(roomResult);
       }
     }
 
     this.logger.verbose?.(
-      `communication admin: found ${roomsUsed.length} rooms used; found ${matrixRooms.length} rooms in Matrix; found ${result.rooms.length} rooms not used`,
+      `communication admin: found ${roomsUsed.length} rooms used; found ${matrixRoomIds.length} rooms in Matrix; found ${result.rooms.length} rooms not used`,
       LogContext.COMMUNICATION
     );
 
@@ -199,7 +207,7 @@ export class AdminCommunicationService {
       const communication =
         await this.communicationService.getCommunicationOrFail(communicationID);
       const communicationRoomsUsed =
-        await this.communicationService.getRoomsUsed(communication);
+        this.communicationService.getRoomIds(communication);
       roomsUsed = roomsUsed.concat(communicationRoomsUsed);
     }
     return roomsUsed;

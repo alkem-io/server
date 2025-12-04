@@ -3,14 +3,14 @@ import { RoomLookupService } from './room.lookup.service';
 import { Room } from '../room/room.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
-import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
+import { ContributorLookupModule } from '@services/infrastructure/contributor-lookup/contributor.lookup.module';
 import { VcInteractionModule } from '../vc-interaction/vc.interaction.module';
 
 // Module created to be able to avoid a circular dependency, but the proper solution is
 // a bigger refactoring...
 @Module({
   imports: [
-    EntityResolverModule,
+    ContributorLookupModule,
     CommunicationAdapterModule,
     VcInteractionModule,
     TypeOrmModule.forFeature([Room]),
