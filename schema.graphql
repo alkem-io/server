@@ -3753,8 +3753,8 @@ type Mutation {
   Create a new Document on the Storage and return the value as part of the returned Reference.
   """
   uploadFileOnReference(file: Upload!, uploadData: StorageBucketUploadFileOnReferenceInput!): Reference!
-  """Create a new Document on the Storage and return the public Url."""
-  uploadFileOnStorageBucket(file: Upload!, uploadData: StorageBucketUploadFileInput!): String!
+  """Create a new Document on the Storage and return the ID and public URL."""
+  uploadFileOnStorageBucket(file: Upload!, uploadData: StorageBucketUploadFileInput!): StorageBucketUploadFileResult!
   """Uploads and sets an image for the specified Visual."""
   uploadImageOnVisual(file: Upload!, uploadData: VisualUploadImageInput!): Visual!
 }
@@ -5197,6 +5197,13 @@ type StorageBucketParent {
   """The type of entity that this StorageBucket is being used with."""
   type: ProfileType!
   """The URL that can be used to access the parent entity."""
+  url: String!
+}
+
+type StorageBucketUploadFileResult {
+  """The ID of the uploaded Document."""
+  id: UUID!
+  """The publicly accessible URL for the uploaded file."""
   url: String!
 }
 
