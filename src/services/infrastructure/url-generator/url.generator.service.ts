@@ -81,6 +81,7 @@ export class UrlGeneratorService {
         id: id,
       },
       select: {
+        id: true,
         nameID: true,
       },
     });
