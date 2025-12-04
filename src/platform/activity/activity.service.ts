@@ -161,32 +161,31 @@ export class ActivityService {
     } = options ?? {};
 
     const queryParameters: unknown[] = [];
+    let paramIndex = 1;
 
-    const visibilityCondition = 'activity.visibility = ?';
+    const visibilityCondition = `activity.visibility = $${paramIndex++}`;
 
     queryParameters.push(visibility);
 
-    const collaborationIdsCondition =
-      collaborationIDs && collaborationIDs.length > 0
-        ? 'activity.collaborationId IN (?)'
-        : undefined;
-
-    if (collaborationIdsCondition) {
-      queryParameters.push(collaborationIDs);
+    let collaborationIdsCondition: string | undefined;
+    if (collaborationIDs && collaborationIDs.length > 0) {
+      const placeholders = collaborationIDs
+        .map(() => `$${paramIndex++}`)
+        .join(', ');
+      collaborationIdsCondition = `activity."collaborationID" IN (${placeholders})`;
+      queryParameters.push(...collaborationIDs);
     }
 
-    const typesCondition =
-      types && types.length > 0 ? 'activity.type IN (?)' : undefined;
-
-    if (typesCondition) {
-      queryParameters.push(types);
+    let typesCondition: string | undefined;
+    if (types && types.length > 0) {
+      const placeholders = types.map(() => `$${paramIndex++}`).join(', ');
+      typesCondition = `activity.type IN (${placeholders})`;
+      queryParameters.push(...types);
     }
 
-    const triggeredByCondition = userID
-      ? 'activity.triggeredBy = ?'
-      : undefined;
-
-    if (triggeredByCondition) {
+    let triggeredByCondition: string | undefined;
+    if (userID) {
+      triggeredByCondition = `activity."triggeredBy" = $${paramIndex++}`;
       queryParameters.push(userID);
     }
 
@@ -203,11 +202,11 @@ export class ActivityService {
       latest: string;
     }[] = await this.entityManager.connection.query(
       `
-      SELECT activity.triggeredBy, activity.resourceId, activity.type, MAX(activity.rowId) as latest FROM alkemio.activity
+      SELECT activity."triggeredBy", activity."resourceID", activity.type, MAX(activity."rowId") as latest FROM activity
       WHERE ${whereConditions}
-      group by activity.resourceId, activity.triggeredBy, activity.type
+      group by activity."resourceID", activity."triggeredBy", activity.type
       order by latest ${orderBy}
-      ${limit ? `LIMIT ${limit}` : ''};
+      ${limit ? `LIMIT ${limit}` : ''}
       `,
       queryParameters
     );
@@ -227,7 +226,7 @@ export class ActivityService {
   async getActivityForMessage(messageID: string): Promise<IActivity | null> {
     const entry: IActivity | null = await this.activityRepository
       .createQueryBuilder('activity')
-      .where('messageID = :messageID')
+      .where('"messageID" = :messageID')
       .setParameters({
         messageID: messageID,
       })

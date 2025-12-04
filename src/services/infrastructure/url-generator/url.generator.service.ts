@@ -284,9 +284,10 @@ export class UrlGeneratorService {
       entityNameID: string;
     }[] = await this.entityManager.connection.query(
       `
-        SELECT \`${entityTableName}\`.\`id\` as \`entityID\`, \`${entityTableName}\`.\`nameID\` as entityNameID FROM \`${entityTableName}\`
-        WHERE \`${entityTableName}\`.\`profileId\` = '${profileID}'
-      `
+        SELECT "${entityTableName}"."id" as "entityID", "${entityTableName}"."nameID" as "entityNameID" FROM "${entityTableName}"
+        WHERE "${entityTableName}"."profileId" = $1
+      `,
+      [profileID]
     );
 
     if (!result) {
@@ -832,9 +833,10 @@ export class UrlGeneratorService {
       postNameId: string;
     }[] = await this.entityManager.connection.query(
       `
-        SELECT post.id as postId, post.nameID as postNameId FROM post
-        WHERE post.${fieldName} = '${fieldID}'
-      `
+        SELECT post.id as "postId", post."nameID" as "postNameId" FROM post
+        WHERE post."${fieldName}" = $1
+      `,
+      [fieldID]
     );
 
     if (!result) {
@@ -1114,9 +1116,10 @@ export class UrlGeneratorService {
       calendarID: string;
     }[] = await this.entityManager.connection.query(
       `
-        SELECT calendar_event.id as entityID, calendar_event.nameID as entityNameID, calendar_event.calendarId as calendarID FROM calendar_event
-        WHERE calendar_event.${fieldName} = '${fieldID}'
-      `
+        SELECT calendar_event.id as "entityID", calendar_event."nameID" as "entityNameID", calendar_event."calendarId" as "calendarID" FROM calendar_event
+        WHERE calendar_event."${fieldName}" = $1
+      `,
+      [fieldID]
     );
 
     if (!calendarEventInfo) {

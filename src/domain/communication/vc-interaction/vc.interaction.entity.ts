@@ -2,7 +2,7 @@ import { Column, Entity, ManyToOne } from 'typeorm';
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
 import { IVcInteraction } from './vc.interaction.interface';
 import { Room } from '../room/room.entity';
-import { MESSAGEID_LENGTH, UUID_LENGTH } from '@common/constants';
+import { MESSAGEID_LENGTH } from '@common/constants';
 
 export type ExternalMetadata = {
   threadId?: string;
@@ -20,7 +20,7 @@ export class VcInteraction extends BaseAlkemioEntity implements IVcInteraction {
   @Column('varchar', { length: MESSAGEID_LENGTH, nullable: false })
   threadID!: string;
 
-  @Column('char', { length: UUID_LENGTH, nullable: false })
+  @Column('uuid', { nullable: false })
   virtualContributorID!: string;
 
   @Column('simple-json')

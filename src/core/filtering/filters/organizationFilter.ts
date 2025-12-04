@@ -22,12 +22,11 @@ export const applyOrganizationFilter = <T extends ObjectLiteral>(
 
       if (displayName) {
         const hasRest = Object.keys(rest).length > 0;
-        const alias = 'displayName';
-        query
-          .leftJoin('organization.profile', 'profile')
-          .addSelect('profile.displayName', alias);
-        // does not find the alias if an object is used instead
-        wqb[hasRest ? 'orWhere' : 'where'](`${alias} LIKE '%${displayName}%'`);
+        query.leftJoin('organization.profile', 'profile');
+        // Use the table-qualified column directly instead of alias (PostgreSQL requires quoted identifiers)
+        wqb[hasRest ? 'orWhere' : 'where'](
+          `"profile"."displayName" LIKE '%${displayName}%'`
+        );
       }
     })
   );
