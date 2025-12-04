@@ -10,8 +10,11 @@ import { IUser } from '@domain/community/user/user.interface';
 import { Application } from '@domain/access/application/application.entity';
 import { ContributorBase } from '../contributor/contributor.base.entity';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
-import { MID_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@common/constants';
-import { UserSettings } from '../user-settings/user.settings.entity';
+import {
+  MID_TEXT_LENGTH,
+  SMALL_TEXT_LENGTH,
+  UUID_LENGTH,
+} from '@common/constants';import { UserSettings } from '../user-settings/user.settings.entity';
 import { ConversationsSet } from '@domain/communication/conversations-set/conversations.set.entity';
 
 @Entity()

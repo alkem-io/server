@@ -320,7 +320,7 @@ services:
 
   postgres:
     container_name: alkemio_dev_postgres
-    image: postgres:17.5
+    image: postgres:18
     networks:
       - alkemio_dev_net
     environment:
@@ -334,7 +334,7 @@ services:
     ports:
       - 5432
     volumes:
-      - alkemio_dev_postgres:/var/lib/postgresql/data
+      - alkemio_dev_postgres:/var/lib/postgresql
       - ./.build/postgres/init-multiple-databases.sh:/docker-entrypoint-initdb.d/init-multiple-databases.sh
       - ./.build/postgres/entrypoint-wrapper.sh:/usr/local/bin/entrypoint-wrapper.sh:ro
     healthcheck:
