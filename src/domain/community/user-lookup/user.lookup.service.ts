@@ -35,6 +35,26 @@ export class UserLookupService {
     return user;
   }
 
+  public async getUserByAgentId(
+    agentID: string,
+    options?: FindOneOptions<User> | undefined
+  ): Promise<IUser | null> {
+    const user: IUser | null = await this.entityManager.findOne(User, {
+      where: {
+        agent: {
+          id: agentID,
+        },
+      },
+      relations: {
+        agent: true,
+        ...options?.relations,
+      },
+      ...options,
+    });
+
+    return user;
+  }
+
   public async getUsersByUUID(
     userIDs: string[],
     options?: FindManyOptions<User> | undefined

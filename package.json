@@ -59,7 +59,7 @@
     }
   },
   "dependencies": {
-    "@alkem-io/matrix-adapter-go-lib": "0.2.0",
+    "@alkem-io/matrix-adapter-go-lib": "1.0.0-beta1",
     "@alkemio/notifications-lib": "0.12.2",
     "@apollo/server": "^4.10.4",
     "@elastic/elasticsearch": "^8.12.2",

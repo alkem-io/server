@@ -65,6 +65,27 @@ export class VirtualContributorLookupService {
     return virtualContributor;
   }
 
+  async getVirtualContributorByAgentId(
+    agentID: string,
+    options?: FindOneOptions<VirtualContributor>
+  ): Promise<IVirtualContributor | null> {
+    const virtualContributor: IVirtualContributor | null =
+      await this.entityManager.findOne(VirtualContributor, {
+        ...options,
+        where: {
+          ...options?.where,
+          agent: {
+            id: agentID,
+          },
+        },
+        relations: {
+          agent: true,
+          ...options?.relations,
+        },
+      });
+    return virtualContributor;
+  }
+
   async getVirtualContributorByNameIdOrFail(
     virtualContributorNameID: string,
     options?: FindOneOptions<VirtualContributor>

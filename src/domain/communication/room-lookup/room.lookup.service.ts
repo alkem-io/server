@@ -4,7 +4,6 @@ import { LogContext } from '@common/enums';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { IRoom } from '../room/room.interface';
 import { IMessage } from '../message/message.interface';
-import { IMessageReaction } from '../message.reaction/message.reaction.interface';
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
 import { FindOneOptions, Repository } from 'typeorm';
@@ -147,12 +146,12 @@ export class RoomLookupService {
   async populateRoomMessageSenders(messages: IMessage[]): Promise<IMessage[]> {
     const knownSendersMap = new Map<string, MessageSender>();
     for (const message of messages) {
-      const matrixUserID = message.sender;
-      let messageSender: MessageSender = { id: 'unknown', type: 'unknown' };
+      const agentId = message.sender;
+      let messageSender: MessageSender = { id: agentId, type: 'unknown' };
       try {
         messageSender = await this.updateKnownSendersMap(
           knownSendersMap,
-          matrixUserID
+          agentId
         );
       } catch (error) {
         this.logger.warn?.(
@@ -165,13 +164,15 @@ export class RoomLookupService {
         );
       }
 
-      message.sender = messageSender.id;
+      // Keep the agent ID in the sender field - the field resolver will handle the lookup
+      // message.sender stays as agentId
       message.senderType = messageSender.type;
       if (message.reactions) {
-        message.reactions = await this.populateRoomReactionSenders(
-          message.reactions,
-          knownSendersMap
-        );
+        // Reactions also keep their agent IDs - field resolvers handle lookup
+        message.reactions = message.reactions.map(r => ({
+          ...r,
+          senderType: 'user' as const, // Will be resolved by field resolver
+        }));
       } else {
         message.reactions = [];
       }
@@ -193,12 +194,7 @@ export class RoomLookupService {
     });
 
     // The message.sender from adapter is already the actorId (agent.id)
-    // Resolve to the contributor ID for display purposes
-    const contributorId =
-      await this.contributorLookupService.getUserIdByAgentId(actorId);
-    if (contributorId) {
-      message.sender = contributorId;
-    }
+    // Keep it as agent ID - the field resolver will handle the lookup
 
     room.messagesCount = room.messagesCount + 1;
     await this.roomRepository.save(room);
@@ -223,12 +219,7 @@ export class RoomLookupService {
     );
 
     // The message.sender from adapter is already the actorId (agent.id)
-    // Resolve to the contributor ID for display purposes
-    const contributor =
-      await this.contributorLookupService.getContributorByAgentId(actorId);
-    if (contributor) {
-      message.sender = contributor.id;
-    }
+    // Keep it as agent ID - the field resolver will handle the lookup
     message.senderType = senderType;
 
     room.messagesCount = room.messagesCount + 1;
@@ -280,24 +271,4 @@ export class RoomLookupService {
     return messageSender;
   }
 
-  async populateRoomReactionSenders(
-    reactions: IMessageReaction[],
-    knownSendersMap: Map<string, MessageSender>
-  ): Promise<IMessageReaction[]> {
-    for (const reaction of reactions) {
-      const agentId = reaction.sender;
-      try {
-        const reactionSender = await this.updateKnownSendersMap(
-          knownSendersMap,
-          agentId
-        );
-
-        reaction.sender = reactionSender.id;
-      } catch {
-        reaction.sender = 'unknown';
-      }
-    }
-
-    return reactions;
-  }
 }

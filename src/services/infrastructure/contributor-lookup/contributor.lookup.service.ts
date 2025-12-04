@@ -214,10 +214,12 @@ export class ContributorLookupService {
   /**
    * Finds a contributor (User, Organization, or VirtualContributor) by their agent ID.
    * @param agentId The ID of the agent associated with the contributor
+   * @param options Optional TypeORM find options (e.g., relations)
    * @returns The contributor if found, null otherwise
    */
   async getContributorByAgentId(
-    agentId: string
+    agentId: string,
+    options?: Omit<FindOneOptions<User>, 'where'>
   ): Promise<IContributor | null> {
     if (!isUUID(agentId)) {
       throw new InvalidUUID('Invalid UUID provided for agent ID!', LogContext.COMMUNITY, {
@@ -229,13 +231,16 @@ export class ContributorLookupService {
       User,
       {
         where: { agent: { id: agentId } },
+        ...options,
       }
     );
     contributor ??= await this.entityManager.findOne(Organization, {
       where: { agent: { id: agentId } },
+      ...options,
     });
     contributor ??= await this.entityManager.findOne(VirtualContributor, {
       where: { agent: { id: agentId } },
+      ...options,
     });
 
     return contributor;

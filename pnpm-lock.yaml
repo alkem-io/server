@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@alkem-io/matrix-adapter-go-lib':
-        specifier: 0.2.0
-        version: 0.2.0
+        specifier: 1.0.0-beta1
+        version: 1.0.0-beta1
       '@alkemio/notifications-lib':
         specifier: 0.12.2
         version: 0.12.2(@types/express@4.17.23)
@@ -367,8 +367,8 @@ packages:
     resolution: {integrity: sha512-29lUK80d1muEQqiUsSo+3A0yP6CdspgC95EnKBMi22Xlwt79i/En4Vr67+cXhU+cZjbti3TgGGC5wy1stIywVQ==}
     engines: {node: '>=0.8'}
 
-  '@alkem-io/matrix-adapter-go-lib@0.2.0':
-    resolution: {integrity: sha512-zq4skUBIoqKOTGVB/WjhaEFLqxNg8ogDvjC7t1t25kBha+rGJac1d0883MNVtIqUljqZOt+dAdrF5YfocOrGKw==, tarball: https://npm.pkg.github.com/download/@alkem-io/matrix-adapter-go-lib/0.2.0/d6d9004edcaec6d17ae7731adb77a84670c32fe5}
+  '@alkem-io/matrix-adapter-go-lib@1.0.0-beta1':
+    resolution: {integrity: sha512-CsG0ACTSZmYkahBb8JQ3AanmhlM76dBWWhTiKXZmJNloD4LYW8qWH1E0dY2vnAOjW2rXp0+jpK1Ce1WL1U1Lig==, tarball: https://npm.pkg.github.com/download/@alkem-io/matrix-adapter-go-lib/1.0.0-beta1/d5984df155f60a4214530f80fa3c18140ce8049a}
     engines: {node: '>=22.x', pnpm: '>=9.x'}
 
   '@alkemio/client-lib@0.35.0':
@@ -4896,8 +4896,8 @@ packages:
   promise-breaker@6.0.0:
     resolution: {integrity: sha512-BthzO9yTPswGf7etOBiHCVuugs2N01/Q/94dIPls48z2zCmrnDptUUZzfIb+41xq0MnYZ/BzmOd6ikDR4ibNZA==}
 
-  promise-coalesce@1.1.2:
-    resolution: {integrity: sha512-zLaJ9b8hnC564fnJH6NFSOGZYYdzrAJn2JUUIwzoQb32fG2QAakpDNM+CZo1km6keXkRXRM+hml1BFAPVnPkxg==}
+  promise-coalesce@1.5.0:
+    resolution: {integrity: sha512-cTJ30U+ur1LD7pMPyQxiKIwxjtAjLsyU7ivRhVWZrX9BNIXtf78pc37vSMc8Vikx7DVzEKNk2SEJ5KWUpSG2ig==}
     engines: {node: '>=16'}
 
   promise@7.3.1:
@@ -6174,7 +6174,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@alkem-io/matrix-adapter-go-lib@0.2.0': {}
+  '@alkem-io/matrix-adapter-go-lib@1.0.0-beta1': {}
 
   '@alkemio/client-lib@0.35.0(@types/express@4.17.23)':
     dependencies:
@@ -8701,7 +8701,7 @@ snapshots:
       eventemitter3: 5.0.1
       lodash.clonedeep: 4.5.0
       lru-cache: 10.4.3
-      promise-coalesce: 1.1.2
+      promise-coalesce: 1.5.0
 
   call-bind-apply-helpers@1.0.2:
     dependencies:
@@ -11590,7 +11590,7 @@ snapshots:
 
   promise-breaker@6.0.0: {}
 
-  promise-coalesce@1.1.2: {}
+  promise-coalesce@1.5.0: {}
 
   promise@7.3.1:
     dependencies:

@@ -3,16 +3,8 @@ A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date
 """
 scalar DateTime
 
-"""A decentralized identifier (DID) as per the W3C standard."""
-scalar DID
-
 """An Emoji."""
 scalar Emoji
-
-"""
-The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
-"""
-scalar JSON
 
 """
 A representation of a Lifecycle Definition, based on XState. It is serialized JSON.
@@ -569,7 +561,6 @@ enum PlatformFeatureFlagName {
   LANDING_PAGE
   MEMO
   NOTIFICATIONS
-  SSI
   SUBSCRIPTIONS
   WHITEBOARDS
 }
@@ -1315,38 +1306,12 @@ type Agent {
   createdDate: DateTime!
   """The Credentials held by this Agent."""
   credentials: [Credential!]
-  """The Decentralized Identifier (DID) for this Agent."""
-  did: DID
   """The ID of the entity"""
   id: UUID!
   """A type of entity that this Agent is being used with."""
   type: AgentType!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
-  """The Verfied Credentials for this Agent."""
-  verifiedCredentials: [VerifiedCredential!]
-}
-
-type AgentBeginVerifiedCredentialOfferOutput {
-  """
-  The token containing the information about issuer, callback endpoint and the credentials offered
-  """
-  jwt: String!
-  """
-  The QR Code Image to be offered on the client for scanning by a mobile wallet
-  """
-  qrCodeImg: String!
-}
-
-type AgentBeginVerifiedCredentialRequestOutput {
-  """
-  The token containing the information about issuer, callback endpoint and the credentials offered
-  """
-  jwt: String!
-  """
-  The QR Code Image to be offered on the client for scanning by a mobile wallet
-  """
-  qrCodeImg: String!
 }
 
 type AiPersona {
@@ -1459,10 +1424,6 @@ type Authorization {
   type: AuthorizationPolicyType
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
-  """
-  The set of verified credential rules that are contained by this Authorization Policy.
-  """
-  verifiedCredentialRules: [AuthorizationPolicyRuleVerifiedCredential!]
 }
 
 type AuthorizationPolicyRuleCredential {
@@ -1476,12 +1437,6 @@ type AuthorizationPolicyRulePrivilege {
   grantedPrivileges: [AuthorizationPrivilege!]!
   name: String
   sourcePrivilege: AuthorizationPrivilege!
-}
-
-type AuthorizationPolicyRuleVerifiedCredential {
-  claimRule: String!
-  credentialName: String!
-  grantedPrivileges: [AuthorizationPrivilege!]!
 }
 
 type Calendar {
@@ -2227,23 +2182,6 @@ type CredentialDefinition {
   resourceID: String!
   """The type for this CredentialDefinition"""
   type: String!
-}
-
-type CredentialMetadataOutput {
-  """
-  A json description of what the claim contains and schema validation definition
-  """
-  context: String!
-  """The purpose of the credential"""
-  description: String!
-  """The display name of the credential"""
-  name: String!
-  """The schema that the credential will be validated against"""
-  schema: String!
-  """The credential types that are associated with this credential"""
-  types: [String!]!
-  """System recognized unique type for the credential"""
-  uniqueType: String!
 }
 
 type Discussion {
@@ -3434,12 +3372,6 @@ type Mutation {
   authorizationPolicyResetOnUser(authorizationResetData: UserAuthorizationResetInput!): User!
   """Reset the specified Authorization Policy to global admin privileges"""
   authorizationPolicyResetToGlobalAdminsAccess(authorizationID: String!): Authorization!
-  """Generate Alkemio user credential offer"""
-  beginAlkemioUserVerifiedCredentialOfferInteraction: AgentBeginVerifiedCredentialOfferOutput!
-  """Generate community member credential offer"""
-  beginCommunityMemberVerifiedCredentialOfferInteraction(communityID: String!): AgentBeginVerifiedCredentialOfferOutput!
-  """Generate verified credential share request"""
-  beginVerifiedCredentialRequestInteraction(types: [String!]!): AgentBeginVerifiedCredentialRequestOutput!
   """Deletes collections nameID-..."""
   cleanupCollections: MigrateEmbeddings!
   """Move an L1 Space up in the hierarchy, to be a L0 Space."""
@@ -4251,13 +4183,6 @@ type Profile {
   visuals: [Visual!]!
 }
 
-type ProfileCredentialVerified {
-  """The email"""
-  userEmail: String!
-  """The vc."""
-  vc: String!
-}
-
 type PromptGraph {
   edges: [PromptGraphEdge!]
   end: String
@@ -4367,8 +4292,6 @@ type Query {
   aiServer: AiServer!
   """Active Spaces only, order by most active in the past X days."""
   exploreSpaces(options: ExploreSpacesInput): [Space!]!
-  """Get supported credential metadata"""
-  getSupportedVerifiedCredentialMetadata: [CredentialMetadataOutput!]!
   """
   Allow creation of inputs based on existing entities in the domain model
   """
@@ -5244,8 +5167,6 @@ type Subscription {
   Counter of unread in-app notifications for the currently authenticated user.
   """
   notificationsUnreadCount: Int!
-  """Received on verified credentials change"""
-  profileVerifiedCredential: ProfileCredentialVerified!
   """Receive Room event"""
   roomEvents(
     """The Room to receive the events from."""
@@ -5742,30 +5663,6 @@ type VcInteraction {
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
   virtualContributorID: UUID!
-}
-
-type VerifiedCredential {
-  """The time at which the credential is no longer valid"""
-  claims: [VerifiedCredentialClaim!]!
-  """JSON for the context in the credential"""
-  context: JSON!
-  """The time at which the credential is no longer valid"""
-  expires: String!
-  """The time at which the credential was issued"""
-  issued: String!
-  """The party issuing the VC"""
-  issuer: String!
-  """The name of the VC"""
-  name: String!
-  """The type of VC"""
-  type: String!
-}
-
-type VerifiedCredentialClaim {
-  """The name of the claim"""
-  name: JSON!
-  """The value for the claim"""
-  value: JSON!
 }
 
 type VirtualContributor implements Contributor {

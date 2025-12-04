@@ -6,52 +6,42 @@ import { CommunicationDeleteMessageInput } from './dto/communication.dto.message
 import { IMessage } from '@domain/communication/message/message.interface';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import {
+  // Type-safe command registry types
+  CommandTopic,
+  RequestFor,
+  ResponseFor,
+  // Event types (topics)
   MatrixAdapterEventType,
+  // Request types (used with `satisfies` for payload validation)
   SyncActorRequest,
-  SyncActorResponse,
   CreateRoomRequest,
-  CreateRoomResponse,
   UpdateRoomRequest,
-  UpdateRoomResponse,
   DeleteRoomRequest,
-  DeleteRoomResponse,
   CreateSpaceRequest,
-  CreateSpaceResponse,
   UpdateSpaceRequest,
-  UpdateSpaceResponse,
   DeleteSpaceRequest,
-  DeleteSpaceResponse,
   SetParentRequest,
-  SetParentResponse,
   BatchAddMemberRequest,
-  BatchAddMemberResponse,
   BatchRemoveMemberRequest,
-  BatchRemoveMemberResponse,
   SendMessageRequest,
-  SendMessageResponse,
   DeleteMessageRequest,
-  DeleteMessageResponse,
   AddReactionRequest,
-  AddReactionResponse,
   RemoveReactionRequest,
-  RemoveReactionResponse,
   GetRoomRequest,
-  GetRoomResponse,
   GetMessageRequest,
-  GetMessageResponse,
   GetReactionRequest,
-  GetReactionResponse,
   ListRoomsRequest,
-  ListRoomsResponse,
   ListSpacesRequest,
-  ListSpacesResponse,
+  // Response type for converter helper
+  GetRoomResponse,
+  // Room type constants
   RoomTypeCommunity,
   RoomTypeDirect,
+  // ID type aliases
   AlkemioRoomID,
   AlkemioActorID,
   AlkemioContextID,
   RoomType,
-  BaseResponse,
 } from '@alkem-io/matrix-adapter-go-lib';
 import { CommunicationSendMessageInput } from './dto/communication.dto.message.send';
 import { getRandomId } from '@common/utils/random.id.generator.util';
@@ -65,14 +55,19 @@ import { CommunicationRemoveReactionToMessageInput } from './dto/communication.d
 import { RoomType as AlkemioRoomType } from '@common/enums/room.type';
 import { CommunicationAdapterException } from './communication.adapter.exception';
 
-/** Options for RPC command execution */
-interface RpcOptions<TResponse> {
+/**
+ * Options for RPC command execution.
+ * Uses the Commands registry from @alkem-io/matrix-adapter-go-lib for type-safe mapping.
+ *
+ * @template T - Command topic from the Commands registry
+ */
+interface RpcOptions<T extends CommandTopic> {
   /** Operation name for logging and error context */
   operation: string;
-  /** Event type to send */
-  eventType: MatrixAdapterEventType;
-  /** Request payload */
-  payload: Record<string, unknown>;
+  /** Command topic - determines the request/response types automatically */
+  topic: T;
+  /** Request payload - must match RequestFor<T> */
+  payload: RequestFor<T>;
   /** Context details for error reporting */
   errorContext?: Record<string, unknown>;
   /**
@@ -94,6 +89,7 @@ interface RpcOptions<TResponse> {
  *
  * Key features:
  * - Uses @golevelup/nestjs-rabbitmq AmqpConnection.request() for RPC
+ * - Type-safe command mapping via Commands registry from @alkem-io/matrix-adapter-go-lib
  * - Standard AMQP RPC: publishes to queue with correlation_id and reply_to properties
  * - Compatible with Watermill-based Go adapter via Direct Reply-To queue
  * - Uses Alkemio UUIDs exclusively (AlkemioActorID, AlkemioRoomID, AlkemioContextID)
@@ -128,35 +124,35 @@ export class CommunicationAdapter {
    * - Uses Direct Reply-To queue (amq.rabbitmq.reply-to) for responses
    * - Is compatible with any AMQP RPC server (Go Watermill, etc.)
    *
-   * @template TResponse - Response type that extends BaseResponse (flat structure with success/error)
+   * @template T - Command topic from the Commands registry, determines request/response types
    */
-  private async sendCommand<TResponse extends BaseResponse>(
-    options: RpcOptions<TResponse>
-  ): Promise<TResponse | undefined> {
+  private async sendCommand<T extends CommandTopic>(
+    options: RpcOptions<T>
+  ): Promise<ResponseFor<T> | undefined> {
     const {
       operation,
-      eventType,
+      topic,
       payload,
       errorContext,
       onError = 'throw',
       ensureSuccess = false,
     } = options;
 
-    const eventID = this.logInputPayload(eventType, payload);
+    const eventID = this.logInputPayload(topic, payload);
 
     try {
       // Use standard AMQP RPC via AmqpConnection.request()
       // - exchange: '' (default exchange) routes directly to queue by name
-      // - routingKey: eventType (the queue name the Go adapter listens on)
+      // - routingKey: topic (the queue name the Go adapter listens on)
       // - Sets correlation_id and reply_to automatically for RPC
-      const response = await this.amqpConnection.request<TResponse>({
+      const response = await this.amqpConnection.request<ResponseFor<T>>({
         exchange: '',
-        routingKey: eventType,
+        routingKey: topic,
         payload,
         timeout: this.rpcTimeout,
       });
 
-      this.logResponsePayload(eventType, response, eventID);
+      this.logResponsePayload(topic, response, eventID);
 
       if (ensureSuccess) {
         // Response types extend BaseResponse, so success/error are direct properties
@@ -165,7 +161,7 @@ export class CommunicationAdapter {
 
       return response;
     } catch (err: unknown) {
-      this.logInteractionError(eventType, err, eventID);
+      this.logInteractionError(topic, err, eventID);
 
       // If it's already our exception (from ensureSuccess), always rethrow
       if (err instanceof CommunicationAdapterException) {
@@ -206,9 +202,9 @@ export class CommunicationAdapter {
   ): Promise<boolean> {
     if (!this.enabled) return true;
 
-    const response = await this.sendCommand<SyncActorResponse>({
+    const response = await this.sendCommand({
       operation: 'syncActor',
-      eventType: MatrixAdapterEventType.COMMUNICATION_ACTOR_SYNC,
+      topic: MatrixAdapterEventType.COMMUNICATION_ACTOR_SYNC,
       payload: {
         actor_id: actorId,
         display_name: displayName,
@@ -245,9 +241,9 @@ export class CommunicationAdapter {
       });
     }
 
-    const response = await this.sendCommand<CreateRoomResponse>({
+    const response = await this.sendCommand({
       operation: 'createRoom',
-      eventType: MatrixAdapterEventType.COMMUNICATION_ROOM_CREATE,
+      topic: MatrixAdapterEventType.COMMUNICATION_ROOM_CREATE,
       payload: {
         alkemio_room_id: alkemioRoomId,
         type: this.mapRoomType(roomType),
@@ -279,9 +275,9 @@ export class CommunicationAdapter {
   ): Promise<boolean> {
     if (!this.enabled) return true;
 
-    const response = await this.sendCommand<UpdateRoomResponse>({
+    const response = await this.sendCommand({
       operation: 'updateRoom',
-      eventType: MatrixAdapterEventType.COMMUNICATION_ROOM_UPDATE,
+      topic: MatrixAdapterEventType.COMMUNICATION_ROOM_UPDATE,
       payload: {
         alkemio_room_id: alkemioRoomId,
         name,
@@ -304,9 +300,9 @@ export class CommunicationAdapter {
   ): Promise<boolean> {
     if (!this.enabled) return true;
 
-    const response = await this.sendCommand<DeleteRoomResponse>({
+    const response = await this.sendCommand({
       operation: 'deleteRoom',
-      eventType: MatrixAdapterEventType.COMMUNICATION_ROOM_DELETE,
+      topic: MatrixAdapterEventType.COMMUNICATION_ROOM_DELETE,
       payload: {
         alkemio_room_id: alkemioRoomId,
         reason,
@@ -344,9 +340,9 @@ export class CommunicationAdapter {
       };
     }
 
-    const response = await this.sendCommand<GetRoomResponse>({
+    const response = await this.sendCommand({
       operation: 'getRoom',
-      eventType: MatrixAdapterEventType.COMMUNICATION_ROOM_GET,
+      topic: MatrixAdapterEventType.COMMUNICATION_ROOM_GET,
       payload: {
         alkemio_room_id: alkemioRoomId,
       } satisfies GetRoomRequest,
@@ -354,6 +350,7 @@ export class CommunicationAdapter {
       ensureSuccess: true,
     });
 
+    // Response is guaranteed non-null when ensureSuccess: true (throws on failure)
     return this.convertGetRoomResponseToCommunicationRoomResult(response!);
   }
 
@@ -371,9 +368,9 @@ export class CommunicationAdapter {
   ): Promise<boolean> {
     if (!this.enabled) return true;
 
-    const response = await this.sendCommand<CreateSpaceResponse>({
+    const response = await this.sendCommand({
       operation: 'createSpace',
-      eventType: MatrixAdapterEventType.COMMUNICATION_SPACE_CREATE,
+      topic: MatrixAdapterEventType.COMMUNICATION_SPACE_CREATE,
       payload: {
         alkemio_context_id: alkemioContextId,
         name,
@@ -402,9 +399,9 @@ export class CommunicationAdapter {
   ): Promise<boolean> {
     if (!this.enabled) return true;
 
-    const response = await this.sendCommand<UpdateSpaceResponse>({
+    const response = await this.sendCommand({
       operation: 'updateSpace',
-      eventType: MatrixAdapterEventType.COMMUNICATION_SPACE_UPDATE,
+      topic: MatrixAdapterEventType.COMMUNICATION_SPACE_UPDATE,
       payload: {
         alkemio_context_id: alkemioContextId,
         name,
@@ -426,9 +423,9 @@ export class CommunicationAdapter {
   ): Promise<boolean> {
     if (!this.enabled) return true;
 
-    const response = await this.sendCommand<DeleteSpaceResponse>({
+    const response = await this.sendCommand({
       operation: 'deleteSpace',
-      eventType: MatrixAdapterEventType.COMMUNICATION_SPACE_DELETE,
+      topic: MatrixAdapterEventType.COMMUNICATION_SPACE_DELETE,
       payload: {
         alkemio_context_id: alkemioContextId,
         reason,
@@ -461,9 +458,9 @@ export class CommunicationAdapter {
   ): Promise<boolean> {
     if (!this.enabled) return true;
 
-    const response = await this.sendCommand<SetParentResponse>({
+    const response = await this.sendCommand({
       operation: 'setParent',
-      eventType: MatrixAdapterEventType.COMMUNICATION_HIERARCHY_SET_PARENT,
+      topic: MatrixAdapterEventType.COMMUNICATION_HIERARCHY_SET_PARENT,
       payload: {
         child_id: childId,
         is_space: isSpace,
@@ -489,9 +486,9 @@ export class CommunicationAdapter {
   ): Promise<boolean> {
     if (!this.enabled || roomIds.length === 0) return true;
 
-    const response = await this.sendCommand<BatchAddMemberResponse>({
+    const response = await this.sendCommand({
       operation: 'batchAddMember',
-      eventType: MatrixAdapterEventType.COMMUNICATION_ROOM_MEMBER_BATCH_ADD,
+      topic: MatrixAdapterEventType.COMMUNICATION_ROOM_MEMBER_BATCH_ADD,
       payload: {
         actor_id: actorId,
         alkemio_room_ids: roomIds,
@@ -520,9 +517,9 @@ export class CommunicationAdapter {
   ): Promise<boolean> {
     if (!this.enabled || roomIds.length === 0) return true;
 
-    const response = await this.sendCommand<BatchRemoveMemberResponse>({
+    const response = await this.sendCommand({
       operation: 'batchRemoveMember',
-      eventType: MatrixAdapterEventType.COMMUNICATION_ROOM_MEMBER_BATCH_REMOVE,
+      topic: MatrixAdapterEventType.COMMUNICATION_ROOM_MEMBER_BATCH_REMOVE,
       payload: {
         actor_id: actorId,
         alkemio_room_ids: roomIds,
@@ -552,9 +549,9 @@ export class CommunicationAdapter {
       });
     }
 
-    const response = await this.sendCommand<SendMessageResponse>({
+    const response = await this.sendCommand({
       operation: 'sendMessage',
-      eventType: MatrixAdapterEventType.COMMUNICATION_MESSAGE_SEND,
+      topic: MatrixAdapterEventType.COMMUNICATION_MESSAGE_SEND,
       payload: {
         alkemio_room_id: sendMessageData.roomID,
         sender_actor_id: sendMessageData.actorId,
@@ -574,7 +571,7 @@ export class CommunicationAdapter {
       message: sendMessageData.message,
       sender: sendMessageData.actorId,
       senderType: 'user',
-      timestamp: Number.parseFloat(response!.timestamp),
+      timestamp: this.parseTimestamp(response!.timestamp),
       threadID: undefined,
       reactions: [],
     };
@@ -588,9 +585,9 @@ export class CommunicationAdapter {
     sendMessageData: CommunicationSendMessageReplyInput,
     senderType: 'user' | 'virtualContributor'
   ): Promise<IMessage> {
-    const response = await this.sendCommand<SendMessageResponse>({
+    const response = await this.sendCommand({
       operation: 'sendMessageReply',
-      eventType: MatrixAdapterEventType.COMMUNICATION_MESSAGE_SEND,
+      topic: MatrixAdapterEventType.COMMUNICATION_MESSAGE_SEND,
       payload: {
         alkemio_room_id: sendMessageData.roomID,
         sender_actor_id: sendMessageData.actorId,
@@ -611,7 +608,7 @@ export class CommunicationAdapter {
       message: sendMessageData.message,
       sender: sendMessageData.actorId,
       senderType,
-      timestamp: Number.parseFloat(response!.timestamp),
+      timestamp: this.parseTimestamp(response!.timestamp),
       threadID: sendMessageData.threadID,
       reactions: [],
     };
@@ -624,9 +621,9 @@ export class CommunicationAdapter {
   async deleteMessage(
     deleteMessageData: CommunicationDeleteMessageInput
   ): Promise<string> {
-    await this.sendCommand<DeleteMessageResponse>({
+    await this.sendCommand({
       operation: 'deleteMessage',
-      eventType: MatrixAdapterEventType.COMMUNICATION_MESSAGE_DELETE,
+      topic: MatrixAdapterEventType.COMMUNICATION_MESSAGE_DELETE,
       payload: {
         alkemio_room_id: deleteMessageData.roomID,
         message_id: deleteMessageData.messageId,
@@ -653,9 +650,9 @@ export class CommunicationAdapter {
   async addReaction(
     reactionData: CommunicationAddReactionToMessageInput
   ): Promise<IMessageReaction> {
-    const response = await this.sendCommand<AddReactionResponse>({
+    const response = await this.sendCommand({
       operation: 'addReaction',
-      eventType: MatrixAdapterEventType.COMMUNICATION_REACTION_ADD,
+      topic: MatrixAdapterEventType.COMMUNICATION_REACTION_ADD,
       payload: {
         alkemio_room_id: reactionData.alkemioRoomId,
         message_id: reactionData.messageId,
@@ -690,9 +687,9 @@ export class CommunicationAdapter {
   async removeReaction(
     removeReactionData: CommunicationRemoveReactionToMessageInput
   ): Promise<string> {
-    await this.sendCommand<RemoveReactionResponse>({
+    await this.sendCommand({
       operation: 'removeReaction',
-      eventType: MatrixAdapterEventType.COMMUNICATION_REACTION_REMOVE,
+      topic: MatrixAdapterEventType.COMMUNICATION_REACTION_REMOVE,
       payload: {
         alkemio_room_id: removeReactionData.alkemioRoomId,
         reaction_id: removeReactionData.reactionId,
@@ -722,9 +719,9 @@ export class CommunicationAdapter {
   }): Promise<AlkemioActorID> {
     if (!this.enabled) return '';
 
-    const response = await this.sendCommand<GetMessageResponse>({
+    const response = await this.sendCommand({
       operation: 'getMessageSenderActor',
-      eventType: MatrixAdapterEventType.COMMUNICATION_MESSAGE_GET,
+      topic: MatrixAdapterEventType.COMMUNICATION_MESSAGE_GET,
       payload: {
         alkemio_room_id: data.alkemioRoomId,
         message_id: data.messageId,
@@ -736,7 +733,7 @@ export class CommunicationAdapter {
       onError: 'silent',
     });
 
-    return response?.message.sender_actor_id ?? '';
+    return response?.message?.sender_actor_id ?? '';
   }
 
   /**
@@ -749,9 +746,9 @@ export class CommunicationAdapter {
   }): Promise<AlkemioActorID> {
     if (!this.enabled) return '';
 
-    const response = await this.sendCommand<GetReactionResponse>({
+    const response = await this.sendCommand({
       operation: 'getReactionSenderActor',
-      eventType: MatrixAdapterEventType.COMMUNICATION_REACTION_GET,
+      topic: MatrixAdapterEventType.COMMUNICATION_REACTION_GET,
       payload: {
         alkemio_room_id: data.alkemioRoomId,
         reaction_id: data.reactionId,
@@ -763,7 +760,7 @@ export class CommunicationAdapter {
       onError: 'silent',
     });
 
-    return response?.reaction.sender_actor_id ?? '';
+    return response?.reaction?.sender_actor_id ?? '';
   }
 
   // ============================================================================
@@ -780,14 +777,14 @@ export class CommunicationAdapter {
   async listRooms(): Promise<AlkemioRoomID[]> {
     if (!this.enabled) return [];
 
-    const response = await this.sendCommand<ListRoomsResponse>({
+    const response = await this.sendCommand({
       operation: 'listRooms',
-      eventType: MatrixAdapterEventType.COMMUNICATION_ROOM_LIST,
+      topic: MatrixAdapterEventType.COMMUNICATION_ROOM_LIST,
       payload: {} satisfies ListRoomsRequest,
       ensureSuccess: true,
     });
 
-    return response!.alkemio_room_ids;
+    return response!.alkemio_room_ids ?? [];
   }
 
   /**
@@ -800,14 +797,14 @@ export class CommunicationAdapter {
   async listSpaces(): Promise<AlkemioContextID[]> {
     if (!this.enabled) return [];
 
-    const response = await this.sendCommand<ListSpacesResponse>({
+    const response = await this.sendCommand({
       operation: 'listSpaces',
-      eventType: MatrixAdapterEventType.COMMUNICATION_SPACE_LIST,
+      topic: MatrixAdapterEventType.COMMUNICATION_SPACE_LIST,
       payload: {} satisfies ListSpacesRequest,
       ensureSuccess: true,
     });
 
-    return response!.alkemio_context_ids;
+    return response!.alkemio_context_ids ?? [];
   }
 
   // ============================================================================
@@ -827,57 +824,69 @@ export class CommunicationAdapter {
     return {
       id: response.alkemio_room_id,
       displayName: response.display_name,
-      members: response.member_actor_ids,
-      messages: response.messages.map(msg => ({
+      members: response.member_actor_ids ?? [],
+      messages: (response.messages ?? []).map(msg => ({
         id: msg.id,
         message: msg.content,
         sender: msg.sender_actor_id,
         senderType: 'user' as const,
-        timestamp: Number.parseFloat(msg.timestamp),
+        timestamp: this.parseTimestamp(msg.timestamp),
         threadID: msg.thread_id,
-        reactions: msg.reactions.map(r => ({
+        reactions: (msg.reactions ?? []).map(r => ({
           id: r.id,
           emoji: r.emoji,
           sender: r.sender_actor_id,
           senderType: 'user' as const,
-          timestamp: Number.parseFloat(r.timestamp),
+          timestamp: this.parseTimestamp(r.timestamp),
         })),
       })),
     };
   }
 
-  private logInputPayload(
-    event: MatrixAdapterEventType,
-    payload: unknown
-  ): number {
+  /**
+   * Parse timestamp from Go adapter response.
+   * Handles both ISO 8601 strings ("2025-12-04T13:21:19.021Z") and Unix timestamps.
+   */
+  private parseTimestamp(timestamp: string): number {
+    // Try parsing as ISO 8601 date string first
+    const parsed = Date.parse(timestamp);
+    if (!Number.isNaN(parsed)) {
+      return parsed;
+    }
+    // Fall back to parsing as numeric timestamp
+    const numeric = Number.parseFloat(timestamp);
+    return Number.isNaN(numeric) ? Date.now() : numeric;
+  }
+
+  private logInputPayload(topic: string, payload: unknown): number {
     const randomID = getRandomId();
     const payloadData = stringifyWithoutAuthorizationMetaInfo(payload);
     this.logger.verbose?.(
-      `[${event}-${randomID}] - Input payload: ${payloadData}`,
+      `[${topic}-${randomID}] - Input payload: ${payloadData}`,
       LogContext.COMMUNICATION
     );
     return randomID;
   }
 
   private logResponsePayload(
-    event: MatrixAdapterEventType,
+    topic: string,
     payload: unknown,
     eventID: number
   ): void {
     const loggedData = stringifyWithoutAuthorizationMetaInfo(payload);
     this.logger.verbose?.(
-      `[${event}-${eventID}] - Response payload: ${loggedData}`,
+      `[${topic}-${eventID}] - Response payload: ${loggedData}`,
       LogContext.COMMUNICATION
     );
   }
 
   private logInteractionError(
-    event: MatrixAdapterEventType,
+    topic: string,
     error: unknown,
     eventID: number
   ): void {
     this.logger.warn(
-      `[${event}-${eventID}] - Error: ${JSON.stringify(error)}`,
+      `[${topic}-${eventID}] - Error: ${JSON.stringify(error)}`,
       LogContext.COMMUNICATION
     );
   }
