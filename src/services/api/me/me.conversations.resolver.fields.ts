@@ -98,8 +98,20 @@ export class MeConversationsResolverFields {
       );
     }
 
+    const user = await this.userLookupService.getUserOrFail(agentInfo.userID, {
+      relations: {
+        conversationsSet: true,
+      },
+    });
+    if (!user.conversationsSet) {
+      throw new ValidationException(
+        `User(${agentInfo.userID}) does not have a conversations set.`,
+        LogContext.COMMUNICATION
+      );
+    }
+
     return await this.conversationsSetService.getConversationWithWellKnownVC(
-      agentInfo.userID,
+      user.conversationsSet.id,
       wellKnown
     );
   }
