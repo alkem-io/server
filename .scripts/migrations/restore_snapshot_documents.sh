@@ -1,0 +1,20 @@
+#!/bin/sh
+
+# The backup filename is the first argument passed to the script.
+ENV=${1:-alkemio_dump_documents.sql}
+
+# Base directory: the location of the script
+BASE_DIR="$(dirname "$(realpath "$0")")"
+
+# Source environment variables from .env file relative to the script's location
+. "$BASE_DIR/.env"
+
+# Set database connection details
+user=${POSTGRES_USER}
+database=${POSTGRES_DB}
+container=${POSTGRES_CONTAINER:-alkemio_dev_postgres}
+
+# Restore document table snapshot using the postgres docker container
+docker exec -i $container psql -U $user -d $database < "$BASE_DIR/$ENV"
+
+echo "Document backup restored successfully!"

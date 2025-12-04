@@ -5,6 +5,7 @@ function create_database() {
     local database=$1
     echo "Creating database '$database'"
     psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname="postgres" -c "CREATE DATABASE \"${database}\"" 2>/dev/null || true
+    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname="${database}" -c 'CREATE EXTENSION IF NOT EXISTS "uuid-ossp"' 2>/dev/null || true
     echo "Database '$database' ready"
 }
 

@@ -22,7 +22,7 @@ export class CalloutContributionDefaults
   @Column('text', { nullable: true })
   postDescription? = '';
 
-  @Column('longtext', { nullable: true })
+  @Column('text', { nullable: true })
   whiteboardContent?: string;
 
   @BeforeInsert()

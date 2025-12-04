@@ -6022,7 +6022,7 @@ type SpaceAbout {
   """The Profile for the Space."""
   profile: Profile!
   """The Space provider (host)."""
-  provider: Contributor!
+  provider: Contributor
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
   """Who should get involved in this challenge"""

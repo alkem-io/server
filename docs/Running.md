@@ -14,9 +14,13 @@ To simplify setting up the Server development environment, a pre-configured dock
 - Docker Desktop for Mac (Apple Silicon) can run x86/amd64 images using emulation.
 - [Colima](https://github.com/abiosoft/colima) offers ARM-native Docker environments, but may be slower still, as it is still an emulation.
 
+## Database Backend
+
+**Alkemio now uses PostgreSQL 17.5 as the default database backend** for both the Alkemio server and Ory Kratos identity service. MySQL support is maintained for backward compatibility but is deprecated.
+
 ## Steps:
 
-1. Start the services alkemio server is dependent on (PostgreSQL, MySQL, Ory Kratos, Ory Hydra, Matrix Synapse, RabbitMQ, etc.):
+1. Start the services alkemio server is dependent on (PostgreSQL, Ory Kratos, Ory Hydra, Matrix Synapse, RabbitMQ, etc.):
 
 ```bash
 pnpm run start:services
@@ -40,6 +44,103 @@ pnpm start
 - Hydra discovery endpoint: `curl http://localhost:3000/.well-known/openid-configuration`
 - Synapse OIDC callback health: check `docker logs alkemio_dev_synapse | grep oidc-hydra`
 
+## Smoke Tests for Postgres-Only Environment
+
+After starting a Postgres-only deployment, verify core functionality with these smoke tests:
+
+### Database Connectivity
+
+```bash
+# Verify Postgres is running and accessible
+docker exec alkemio-serverdev-postgres-1 pg_isready -U alkemio
+
+# Check Alkemio database exists and has tables
+docker exec alkemio-serverdev-postgres-1 \
+  psql -U alkemio -d alkemio -c "\dt" | grep -E "(user|space|organization)"
+
+# Check Kratos database exists and has tables
+docker exec alkemio-serverdev-postgres-1 \
+  psql -U alkemio -d kratos -c "\dt" | grep -E "(identities|sessions)"
+
+# Verify migrations applied
+pnpm run migration:show
+```
+
+### API Health Checks
+
+```bash
+# GraphQL endpoint is responding
+curl -f http://localhost:3000/graphql || echo "GraphQL endpoint not available"
+
+# Kratos health check
+curl -f http://localhost:4434/health/ready || echo "Kratos not ready"
+
+# Hydra health check
+curl -f http://localhost:4445/health/ready || echo "Hydra not ready"
+```
+
+### Basic GraphQL Operations
+
+Test basic queries to ensure database connectivity and GraphQL resolvers work:
+
+```bash
+# Query platform configuration (should return data)
+curl -X POST http://localhost:3000/graphql \
+  -H "Content-Type: application/json" \
+  -d '{"query": "{ platform { configuration { authentication { enabled } } } }"}'
+
+# Query spaces (may be empty but should not error)
+curl -X POST http://localhost:3000/graphql \
+  -H "Content-Type: application/json" \
+  -d '{"query": "{ spaces { id nameID } }"}'
+```
+
+### Authentication Flow Verification
+
+```bash
+# Verify Kratos can access identity database
+curl -X GET http://localhost:4433/identities \
+  -H "Authorization: Bearer $(echo 'test-token-for-health-check')" \
+  || echo "Kratos identity query returned expected error"
+
+# Check session cookie configuration
+curl -I http://localhost:4433/sessions/whoami \
+  | grep -i "set-cookie" || echo "Session endpoint responding"
+```
+
+### Schema Contract Tests
+
+Run automated schema contract tests to verify Postgres schema integrity:
+
+```bash
+# Requires Postgres services running
+pnpm run test:ci contract-tests/
+```
+
+### Common Issues and Troubleshooting
+
+**Connection refused errors:**
+
+- Ensure all services are up: `docker compose -f quickstart-services.yml ps`
+- Check service logs: `docker compose -f quickstart-services.yml logs postgres kratos`
+
+**Migration failures:**
+
+- Verify DATABASE_TYPE is set to 'postgres'
+- Check connection string environment variables
+- Ensure Postgres is ready before running migrations
+
+**Schema mismatch:**
+
+- Regenerate schema: `pnpm run schema:print`
+- Compare with baseline: `pnpm run schema:diff`
+
+**Kratos migration issues:**
+
+- Check Kratos logs: `docker logs alkemio-serverdev-kratos-1`
+- Verify DSN in Kratos config
+- Manually run migrations: `docker exec kratos kratos migrate sql -e --yes`
+
 ## Notes
 
 - The docker compose script puts the server listening on port 4001 - to avoid conflict with the default port that is used by local development.
@@ -49,7 +150,7 @@ pnpm start
 - The Synapse ↔ Hydra client credentials are read from `.env.docker` (`SYNAPSE_OIDC_CLIENT_ID` and `SYNAPSE_OIDC_CLIENT_SECRET`). Make sure these values exist before running the services.
 - Finally, ports available on localhost:
   - 3000/graphql (alkemio server),
-  - 3306 (MySQL database)
+  - 5432 (PostgreSQL database - default)
   - 8888 (traefik dashboard)
   - 3000 (alkemio client)
   - 8008 (synapse server)

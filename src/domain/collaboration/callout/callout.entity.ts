@@ -12,7 +12,7 @@ import { CalloutFraming } from '../callout-framing/callout.framing.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
 import { CalloutContributionDefaults } from '../callout-contribution-defaults/callout.contribution.defaults.entity';
 import { CalloutContribution } from '../callout-contribution/callout.contribution.entity';
-import { NAMEID_MAX_LENGTH_SCHEMA, UUID_LENGTH } from '@common/constants';
+import { NAMEID_MAX_LENGTH_SCHEMA } from '@common/constants';
 import { CalloutsSet } from '../callouts-set/callouts.set.entity';
 import { Classification } from '@domain/common/classification/classification.entity';
 import { ICalloutSettings } from '../callout-settings/callout.settings.interface';
@@ -25,7 +25,7 @@ export class Callout extends AuthorizableEntity implements ICallout {
   @Column({ type: 'boolean', nullable: false, default: false })
   isTemplate!: boolean;
 
-  @Column('char', { length: UUID_LENGTH, nullable: true })
+  @Column('uuid', { nullable: true })
   createdBy?: string;
 
   @OneToOne(() => CalloutFraming, framing => framing.callout, {
@@ -81,10 +81,10 @@ export class Callout extends AuthorizableEntity implements ICallout {
 
   activity!: number;
 
-  @Column('char', { length: UUID_LENGTH, nullable: true })
+  @Column('uuid', { nullable: true })
   publishedBy?: string;
 
-  @Column('datetime', { nullable: true })
+  @Column('timestamp', { nullable: true })
   publishedDate?: Date;
 
   constructor() {
