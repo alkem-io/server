@@ -6,7 +6,7 @@ export const addPreferenceSet = async (
 ): Promise<string> => {
   const prefSetAuthId = randomUUID();
   await queryRunner.query(`
-    INSERT INTO authorization_policy (id, createdDate, updatedDate, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules)
+    INSERT INTO authorization_policy (id, createdDate, updatedDate, version, credentialRules, anonymousReadAccess, privilegeRules)
     VALUES ('${prefSetAuthId}', NOW(), NOW(), 1, '', '', 0, '')
   `);
   const prefSetId = randomUUID();
