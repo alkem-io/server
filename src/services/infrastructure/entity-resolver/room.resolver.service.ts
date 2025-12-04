@@ -17,6 +17,8 @@ import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { ICalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.interface';
+import { Conversation } from '@domain/communication/conversation/conversation.entity';
+import { IConversation } from '@domain/communication/conversation/conversation.interface';
 
 @Injectable()
 export class RoomResolverService {
@@ -73,6 +75,7 @@ export class RoomResolverService {
   ): Promise<{
     roleSet?: IRoleSet;
     platformRolesAccess: IPlatformRolesAccess;
+    spaceSettings?: ISpaceSettings;
   }> {
     const space = await this.entityManager.findOne(Space, {
       where: {
@@ -98,8 +101,9 @@ export class RoomResolverService {
       space?.platformRolesAccess || {
         roles: [],
       };
+    const spaceSettings: ISpaceSettings | undefined = space?.settings;
 
-    return { roleSet: roleSet, platformRolesAccess };
+    return { roleSet, platformRolesAccess, spaceSettings };
   }
 
   async getCalloutWithPostContributionForRoom(roomID: string): Promise<{
@@ -190,6 +194,21 @@ export class RoomResolverService {
       throw new EntityNotFoundException(
         `Unable to identify Discussion for Room: : ${commentsID}`,
         LogContext.COLLABORATION
+      );
+    }
+    return result;
+  }
+
+  async getConversationForRoom(roomID: string): Promise<IConversation> {
+    const result = await this.entityManager.findOne(Conversation, {
+      where: {
+        room: { id: roomID },
+      },
+    });
+    if (!result) {
+      throw new EntityNotFoundException(
+        `Unable to identify Conversation for Room: ${roomID}`,
+        LogContext.COMMUNICATION
       );
     }
     return result;

@@ -32,6 +32,8 @@ import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
 import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { MessagingNotEnabledException } from '@common/exceptions/messaging.not.enabled.exception';
 
 @InstrumentResolver()
 @Resolver()
@@ -48,6 +50,7 @@ export class RoomResolverMutations {
     private virtualContributorMessageService: VirtualContributorMessageService,
     private virtualContributorLookupService: VirtualContributorLookupService,
     private inAppNotificationService: InAppNotificationService,
+    private userLookupService: UserLookupService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -71,6 +74,7 @@ export class RoomResolverMutations {
     );
 
     await this.validateMessageOnCalloutOrFail(room);
+    await this.validateMessageOnDirectConversationOrFail(room, agentInfo);
 
     const accessVirtualContributors = this.virtualContributorsEnabled();
 
@@ -219,6 +223,14 @@ export class RoomResolverMutations {
           );
         }
         break;
+      case RoomType.CONVERSATION:
+        // Conversation rooms don't require special event processing i.e. no mentions or other notifications as other
+        // contributors would not be able to see the messages
+        break;
+      case RoomType.CONVERSATION_DIRECT:
+        // Conversation rooms don't require special event processing i.e. no mentions or other notifications as other
+        // contributors would not be able to see the messages
+        break;
       default:
       // ignore for now, later likely to be an exception
     }
@@ -239,6 +251,49 @@ export class RoomResolverMutations {
           `New collaborations to a closed Callout with id: '${callout.id}' are not allowed!`
         );
       }
+    }
+  }
+
+  /**
+   * Validates that the receiver of a direct conversation has messaging enabled.
+   * Only applies to CONVERSATION_DIRECT room types (user-to-user conversations).
+   */
+  private async validateMessageOnDirectConversationOrFail(
+    room: IRoom,
+    agentInfo: AgentInfo
+  ) {
+    if (room.type !== RoomType.CONVERSATION_DIRECT) {
+      return;
+    }
+
+    const conversation = await this.roomResolverService.getConversationForRoom(
+      room.id
+    );
+
+    // The conversation.userID is the ID of the other user in the conversation
+    // We need to check if that user allows messages from other users
+    if (!conversation.userID) {
+      return;
+    }
+
+    const receivingUser = await this.userLookupService.getUserOrFail(
+      conversation.userID,
+      {
+        relations: {
+          settings: true,
+        },
+      }
+    );
+
+    if (!receivingUser.settings.communication.allowOtherUsersToSendMessages) {
+      throw new MessagingNotEnabledException(
+        'User is not open to receiving messages',
+        LogContext.COMMUNICATION,
+        {
+          receiverId: receivingUser.id,
+          senderId: agentInfo.userID,
+        }
+      );
     }
   }
 
@@ -426,6 +481,15 @@ export class RoomResolverMutations {
             agentInfo
           );
         }
+        break;
+      case RoomType.CONVERSATION:
+        // Conversation rooms don't require special event processing for mentions or other notifications as other
+        // contributors would not be able to see the messages
+        // TODO: what notifications should there be on rooms / replies
+        break;
+      case RoomType.CONVERSATION_DIRECT:
+        // Conversation rooms don't require special event processing i.e. no mentions or other notifications as other
+        // contributors would not be able to see the messages
         break;
       default:
       // ignore for now, later likely to be an exception

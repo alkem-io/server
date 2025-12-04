@@ -291,7 +291,7 @@ export class CalloutResolverMutations {
       agentInfo.userID
     );
 
-    const { roleSet, platformRolesAccess } =
+    const { roleSet, platformRolesAccess, spaceSettings } =
       await this.roomResolverService.getRoleSetAndPlatformRolesWithAccessForCallout(
         callout.id
       );
@@ -314,7 +314,8 @@ export class CalloutResolverMutations {
         contribution.id,
         callout.authorization,
         platformRolesAccess,
-        roleSet
+        roleSet,
+        spaceSettings
       );
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
