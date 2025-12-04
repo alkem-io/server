@@ -4,6 +4,7 @@ export class Baseline1764590884532 implements MigrationInterface {
   name = 'Baseline1764590884532';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
     await queryRunner.query(
       `CREATE TABLE "authorization_policy" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "createdDate" TIMESTAMP NOT NULL DEFAULT now(), "updatedDate" TIMESTAMP NOT NULL DEFAULT now(), "version" integer NOT NULL, "credentialRules" json NOT NULL, "privilegeRules" json NOT NULL, "type" character varying(128) NOT NULL, "parentAuthorizationPolicyId" uuid, CONSTRAINT "PK_fe66e152ac920baa9a53a3499b7" PRIMARY KEY ("id"))`
     );
