@@ -351,9 +351,38 @@ export class ConversationService {
       await this.conversationRepository.save(guidanceConversation);
     }
 
+    // If the conversation has a well-known VC but the virtualContributorID is not resolved yet,
+    // resolve it now (can happen for conversations created before VC ID resolution was persisted)
+    if (
+      !guidanceConversation.virtualContributorID &&
+      guidanceConversation.wellKnownVirtualContributor
+    ) {
+      const vcId =
+        await this.platformWellKnownVirtualContributorsService.getVirtualContributorID(
+          guidanceConversation.wellKnownVirtualContributor
+        );
+
+      if (!vcId) {
+        throw new ValidationException(
+          `Well-known virtual contributor ${guidanceConversation.wellKnownVirtualContributor} is not configured`,
+          LogContext.COMMUNICATION_CONVERSATION
+        );
+      }
+
+      guidanceConversation.virtualContributorID = vcId;
+      await this.conversationRepository.save(guidanceConversation);
+    }
+
     if (!guidanceConversation.room) {
       throw new ValidationException(
         `Conversation has no associated room: ${guidanceConversation.id}`,
+        LogContext.COMMUNICATION_CONVERSATION
+      );
+    }
+
+    if (!guidanceConversation.virtualContributorID) {
+      throw new ValidationException(
+        `Conversation has no associated virtual contributor: ${guidanceConversation.id}`,
         LogContext.COMMUNICATION_CONVERSATION
       );
     }

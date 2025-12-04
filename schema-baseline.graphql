@@ -4264,8 +4264,8 @@ type Mutation {
   Create a new Document on the Storage and return the value as part of the returned Reference.
   """
   uploadFileOnReference(file: Upload!, uploadData: StorageBucketUploadFileOnReferenceInput!): Reference!
-  """Create a new Document on the Storage and return the public Url."""
-  uploadFileOnStorageBucket(file: Upload!, uploadData: StorageBucketUploadFileInput!): String!
+  """Create a new Document on the Storage and return the ID and public URL."""
+  uploadFileOnStorageBucket(file: Upload!, uploadData: StorageBucketUploadFileInput!): StorageBucketUploadFileResult!
   """Uploads and sets an image for the specified Visual."""
   uploadImageOnVisual(file: Upload!, uploadData: VisualUploadImageInput!): Visual!
 }
@@ -6022,7 +6022,7 @@ type SpaceAbout {
   """The Profile for the Space."""
   profile: Profile!
   """The Space provider (host)."""
-  provider: Contributor!
+  provider: Contributor
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
   """Who should get involved in this challenge"""
@@ -6239,6 +6239,13 @@ input StorageBucketUploadFileOnLinkInput {
 
 input StorageBucketUploadFileOnReferenceInput {
   referenceID: String!
+}
+
+type StorageBucketUploadFileResult {
+  """The ID of the uploaded Document."""
+  id: UUID!
+  """The publicly accessible URL for the uploaded file."""
+  url: String!
 }
 
 type StorageConfig {

@@ -131,7 +131,26 @@ export class ActivityAdapter {
 
     const post = eventData.post;
     const description = `[${post.profile.displayName}] - ${post.profile.description}`;
-    const collaborationID = await this.getCollaborationIdForPost(post.id);
+
+    let collaborationID: string;
+    try {
+      collaborationID = await this.getCollaborationIdForPost(post.id);
+    } catch (error) {
+      if (error instanceof EntityNotFoundException) {
+        this.logger.warn(
+          {
+            message:
+              'Skipping activity creation; post was deleted before activity could be recorded',
+            postId: post.id,
+            calloutId: eventData.callout.id,
+          },
+          LogContext.ACTIVITY
+        );
+        return false;
+      }
+      throw error;
+    }
+
     const activity = await this.activityService.createActivity({
       triggeredBy: eventData.triggeredBy,
       collaborationID,
@@ -504,7 +523,7 @@ export class ActivityAdapter {
     });
     if (!collaboration) {
       throw new EntityNotFoundException(
-        `Unable to identify Collaboration for Whiteboard with ID: ${postID}`,
+        `Unable to identify Collaboration for Post with ID: ${postID}`,
         LogContext.ACTIVITY
       );
     }
