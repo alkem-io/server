@@ -4,7 +4,10 @@ import { UrlResolverQueryResults } from './dto/url.resolver.query.results';
 import {
   RelationshipNotFoundException,
   ValidationException,
+  EntityNotFoundException,
+  ForbiddenException,
 } from '@common/exceptions';
+import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { UrlPathElement } from '@common/enums/url.path.element';
 import { ForumDiscussionLookupService } from '@platform/forum-discussion-lookup/forum.discussion.lookup.service';
@@ -15,43 +18,23 @@ import { ISpace } from '@domain/space/space/space.interface';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { EntityManager } from 'typeorm';
+import { EntityManager, EntityNotFoundError } from 'typeorm';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { UrlType } from '@common/enums/url.type';
 import { UrlResolverQueryResultSpace } from './dto/url.resolver.query.space.result';
-import { match } from 'path-to-regexp';
 import { InnovationPackService } from '@library/innovation-pack/innovation.pack.service';
 import { UrlResolverQueryResultCalloutsSet } from './dto/url.resolver.query.callouts.set.result';
 import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.service';
 import { UrlPathBase } from '@common/enums/url.path.base';
 import { UrlResolverException } from './url.resolver.exception';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
+import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
+import { UrlResolverResultState } from './dto/url.resolver.result.state';
+import * as Utils from './url.resolver.utils';
 
 @Injectable()
 export class UrlResolverService {
-  private spacePathMatcher = match(
-    `/:spaceNameID{/${UrlPathElement.CHALLENGES}/:challengeNameID}{/${UrlPathElement.OPPORTUNITIES}/:opportunityNameID}{/*path}`
-  );
-  private spaceInternalPathMatcherCollaboration = match(
-    `/${UrlPathElement.COLLABORATION}/:calloutNameID{/${UrlPathElement.POSTS}/:postNameID}{/${UrlPathElement.WHITEBOARDS}/:whiteboardNameID}{/${UrlPathElement.MEMOS}/:memoNameID}{/*path}`
-  );
-  private spaceInternalPathMatcherCalendar = match(
-    `/${UrlPathElement.CALENDAR}/:calendarEventNameId`
-  );
-  private spaceInternalPathMatcherSettings = match(
-    `/${UrlPathElement.SETTINGS}/${UrlPathElement.TEMPLATES}{/:templateNameID}{/*path}`
-  );
-  private innovationPackPathMatcher = match(
-    `/${UrlPathBase.INNOVATION_PACKS}/:innovationPackNameID{/${UrlPathElement.SETTINGS}}{/:templateNameID}{/*path}`
-  );
-  private virtualContributorPathMatcher = match(
-    `/${UrlPathBase.VIRTUAL_CONTRIBUTOR}/:virtualContributorNameID{/${UrlPathElement.KNOWLEDGE_BASE}/:calloutNameID}{/${UrlPathElement.POSTS}/:postNameID}{/${UrlPathElement.MEMOS}/:memoNameID}{/*path}`
-  );
-  private innovationHubPathMatcher = match(
-    `/${UrlPathBase.INNOVATION_HUBS}/:innovationHubNameID{/*path}`
-  );
-
   constructor(
     private authorizationService: AuthorizationService,
     private userLookupService: UserLookupService,
@@ -61,6 +44,7 @@ export class UrlResolverService {
     private spaceLookupService: SpaceLookupService,
     private innovationPackService: InnovationPackService,
     private innovationHubService: InnovationHubService,
+    private urlGeneratorService: UrlGeneratorService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     @InjectEntityManager('default')
@@ -71,10 +55,11 @@ export class UrlResolverService {
     url: string,
     agentInfo: AgentInfo
   ): Promise<UrlResolverQueryResults> {
-    const pathElements = this.getPathElements(url);
+    const pathElements = Utils.getPathElements(url);
 
     const result: UrlResolverQueryResults = {
       type: UrlType.UNKNOWN,
+      state: UrlResolverResultState.Resolved,
     };
 
     if (pathElements.length === 0) {
@@ -83,7 +68,7 @@ export class UrlResolverService {
     }
 
     const urlPathBase = pathElements[0];
-    const urlPath = this.getPath(url);
+    const urlPath = Utils.getPath(url);
 
     // First check for reserved top level base routes
     const baseRoute = this.getBaseRoute(urlPathBase);
@@ -97,15 +82,7 @@ export class UrlResolverService {
           agentInfo
         );
       } catch (error: any) {
-        throw new UrlResolverException(
-          'Unable to resolve URL',
-          LogContext.URL_RESOLVER,
-          {
-            message: error?.message,
-            originalException: error,
-            url,
-          }
-        );
+        return await this.handleException(error, url, result);
       }
     }
 
@@ -114,15 +91,96 @@ export class UrlResolverService {
       await this.populateSpaceResult(result, agentInfo, urlPath);
       return await this.populateSpaceInternalResult(result, agentInfo);
     } catch (error: any) {
-      throw new UrlResolverException(
-        'Unable to resolve URL',
-        LogContext.URL_RESOLVER,
-        {
-          message: error?.message,
-          originalException: error,
-          url,
-        }
-      );
+      return await this.handleException(error, url, result);
+    }
+  }
+
+  private async handleException(
+    error: any,
+    url: string,
+    result: UrlResolverQueryResults
+  ): Promise<UrlResolverQueryResults> {
+    if (
+      error instanceof EntityNotFoundException ||
+      error instanceof RelationshipNotFoundException ||
+      error instanceof ValidationException ||
+      error instanceof EntityNotFoundError // TypeORM couldn't find the entity
+    ) {
+      result.state = UrlResolverResultState.NotFound;
+      await this.populateClosestAncestor(result);
+      return result;
+    }
+    if (
+      error instanceof ForbiddenException ||
+      error instanceof ForbiddenAuthorizationPolicyException
+    ) {
+      result.state = UrlResolverResultState.Forbidden;
+      await this.populateClosestAncestor(result);
+      return result;
+    }
+
+    throw new UrlResolverException(
+      'Unable to resolve URL',
+      LogContext.URL_RESOLVER,
+      {
+        message: error?.message,
+        originalException: error,
+        url,
+      }
+    );
+  }
+
+  private async populateClosestAncestor(result: UrlResolverQueryResults) {
+    // Default to HOME if nothing else is found
+    result.closestAncestor = {
+      type: UrlType.HOME,
+      url: this.urlGeneratorService.generateUrlForPlatform(),
+    };
+
+    // If we have a space, that's a better ancestor
+    if (result.space) {
+      try {
+        const url = await this.urlGeneratorService.getSpaceUrlPathByID(
+          result.space.id
+        );
+        result.closestAncestor = {
+          type: UrlType.SPACE,
+          url: url,
+          space: result.space,
+        };
+      } catch (e) {
+        this.logger.warn?.(
+          'Failed to generate URL for closest ancestor space',
+          LogContext.URL_RESOLVER,
+          { error: e, spaceId: result.space.id }
+        );
+      }
+    }
+
+    // If we have a virtual contributor, that's also a good ancestor
+    if (result.virtualContributor) {
+      try {
+        const url = await this.urlGeneratorService.generateUrlForVCById(
+          result.virtualContributor.id
+        );
+        result.closestAncestor = {
+          type: UrlType.VIRTUAL_CONTRIBUTOR,
+          url: url,
+          virtualContributor: result.virtualContributor,
+        };
+      } catch (e) {
+        this.logger.warn?.(
+          'Failed to generate URL for closest ancestor virtual contributor',
+          LogContext.URL_RESOLVER,
+          { error: e, vcId: result.virtualContributor.id }
+        );
+      }
+    }
+
+    // Clean up partial results if we are in an error state
+    if (result.state !== UrlResolverResultState.Resolved) {
+      delete result.space;
+      delete result.virtualContributor;
     }
   }
 
@@ -138,8 +196,8 @@ export class UrlResolverService {
     pathElements: string[],
     url: string,
     agentInfo: AgentInfo
-  ): Promise<UrlResolverQueryResults | never> {
-    const urlPath = this.getPath(url);
+  ): Promise<UrlResolverQueryResults> {
+    const urlPath = Utils.getPath(url);
     switch (baseRoute) {
       case UrlPathBase.HOME: {
         result.type = UrlType.HOME;
@@ -281,7 +339,8 @@ export class UrlResolverService {
     agentInfo: AgentInfo
   ): Promise<UrlResolverQueryResults> {
     result.type = UrlType.VIRTUAL_CONTRIBUTOR;
-    const virtualContributorMatch = this.virtualContributorPathMatcher(urlPath);
+    const virtualContributorMatch =
+      Utils.virtualContributorPathMatcher(urlPath);
     if (!virtualContributorMatch || !virtualContributorMatch.params) {
       throw new ValidationException(
         `Invalid URL: ${urlPath}`,
@@ -296,12 +355,12 @@ export class UrlResolverService {
       path?: string | string[];
     };
 
-    const virtualContributorNameID = this.getMatchedResultAsString(
+    const virtualContributorNameID = Utils.getMatchedResultAsString(
       params.virtualContributorNameID
     );
-    const calloutNameID = this.getMatchedResultAsString(params.calloutNameID);
-    const postNameID = this.getMatchedResultAsString(params.postNameID);
-    const memoNameID = this.getMatchedResultAsString(params.memoNameID);
+    const calloutNameID = Utils.getMatchedResultAsString(params.calloutNameID);
+    const postNameID = Utils.getMatchedResultAsString(params.postNameID);
+    const memoNameID = Utils.getMatchedResultAsString(params.memoNameID);
 
     if (!virtualContributorNameID) {
       throw new ValidationException(
@@ -330,6 +389,19 @@ export class UrlResolverService {
         }
       );
 
+    // Set the VC result immediately so it can be used as an ancestor if subsequent checks fail
+    result.virtualContributor = {
+      id: virtualContributor.id,
+      // This empty object will never be returned
+      // If resolution succeeds, we will overwrite it.
+      // If resolution fails, handleException will use this partial object to calculate closestAncestor
+      // and then remove it from the final result.
+      calloutsSet: {
+        id: '',
+        type: UrlType.CALLOUTS_SET,
+      },
+    };
+
     if (
       !virtualContributor.knowledgeBase ||
       !virtualContributor.knowledgeBase.calloutsSet ||
@@ -350,10 +422,7 @@ export class UrlResolverService {
       memoNameID
     );
 
-    result.virtualContributor = {
-      id: virtualContributor.id,
-      calloutsSet: calloutsSetResult,
-    };
+    result.virtualContributor.calloutsSet = calloutsSetResult;
 
     return result;
   }
@@ -371,7 +440,7 @@ export class UrlResolverService {
     urlPath: string
   ): Promise<UrlResolverQueryResults> {
     result.type = UrlType.INNOVATION_HUB;
-    const innovationHubMatch = this.innovationHubPathMatcher(urlPath);
+    const innovationHubMatch = Utils.innovationHubPathMatcher(urlPath);
     if (!innovationHubMatch || !innovationHubMatch.params) {
       return result;
     }
@@ -380,7 +449,7 @@ export class UrlResolverService {
       path?: string | string[];
     };
 
-    const innovationHubNameID = this.getMatchedResultAsString(
+    const innovationHubNameID = Utils.getMatchedResultAsString(
       params.innovationHubNameID
     );
 
@@ -408,7 +477,7 @@ export class UrlResolverService {
     urlPath: string
   ): Promise<UrlResolverQueryResults> {
     result.type = UrlType.INNOVATION_PACKS;
-    const innovationPackMatch = this.innovationPackPathMatcher(urlPath);
+    const innovationPackMatch = Utils.innovationPackPathMatcher(urlPath);
     if (!innovationPackMatch || !innovationPackMatch.params) {
       throw new ValidationException(
         `Invalid URL: ${urlPath}`,
@@ -421,10 +490,12 @@ export class UrlResolverService {
       path?: string | string[];
     };
 
-    const innovationPackNameID = this.getMatchedResultAsString(
+    const innovationPackNameID = Utils.getMatchedResultAsString(
       params.innovationPackNameID
     );
-    const templateNameID = this.getMatchedResultAsString(params.templateNameID);
+    const templateNameID = Utils.getMatchedResultAsString(
+      params.templateNameID
+    );
 
     if (!innovationPackNameID) {
       throw new ValidationException(
@@ -471,37 +542,13 @@ export class UrlResolverService {
     return result;
   }
 
-  private getMatchedResultAsString(
-    matchedResult: string | string[] | undefined
-  ): string | undefined {
-    if (!matchedResult) {
-      return undefined;
-    }
-    if (Array.isArray(matchedResult)) {
-      return matchedResult[0];
-    }
-    return matchedResult;
-  }
-
-  private getMatchedResultAsPath(
-    matchedResult: string | string[] | undefined
-  ): string | undefined {
-    if (!matchedResult) {
-      return undefined;
-    }
-    if (Array.isArray(matchedResult)) {
-      return this.createPathFromElements(matchedResult);
-    }
-    return `/${matchedResult}`;
-  }
-
   private async populateSpaceResult(
     result: UrlResolverQueryResults,
     agentInfo: AgentInfo,
     url: string
   ): Promise<UrlResolverQueryResults> {
     result.type = UrlType.SPACE;
-    const spacePathMatch = this.spacePathMatcher(url);
+    const spacePathMatch = Utils.spacePathMatcher(url);
     if (!spacePathMatch || !spacePathMatch.params) {
       throw new ValidationException(
         `Invalid URL: ${url}`,
@@ -515,14 +562,14 @@ export class UrlResolverService {
       path?: string | string[];
     };
 
-    const spaceNameID = this.getMatchedResultAsString(params.spaceNameID);
-    const subspaceNameID = this.getMatchedResultAsString(
+    const spaceNameID = Utils.getMatchedResultAsString(params.spaceNameID);
+    const subspaceNameID = Utils.getMatchedResultAsString(
       params.challengeNameID
     );
-    const subsubspaceNameID = this.getMatchedResultAsString(
+    const subsubspaceNameID = Utils.getMatchedResultAsString(
       params.opportunityNameID
     );
-    const spaceInternalPath = this.getMatchedResultAsPath(params.path);
+    const spaceInternalPath = Utils.getMatchedResultAsPath(params.path);
 
     if (!spaceNameID) {
       throw new ValidationException(
@@ -579,11 +626,6 @@ export class UrlResolverService {
     return result;
   }
 
-  private createPathFromElements(pathElements: string[]): string {
-    // Note: any domain works, we just need a valid URL base
-    return '/' + pathElements.join('/');
-  }
-
   private async populateSpaceInternalResult(
     result: UrlResolverQueryResults,
     agentInfo: AgentInfo
@@ -600,7 +642,7 @@ export class UrlResolverService {
 
     const internalPath = result.space.internalPath;
     const collaborationMatch =
-      this.spaceInternalPathMatcherCollaboration(internalPath);
+      Utils.spaceInternalPathMatcherCollaboration(internalPath);
     if (collaborationMatch) {
       return await this.populateSpaceInternalResultCollaboration(
         collaborationMatch,
@@ -610,7 +652,7 @@ export class UrlResolverService {
       );
     }
 
-    const calendarMatch = this.spaceInternalPathMatcherCalendar(internalPath);
+    const calendarMatch = Utils.spaceInternalPathMatcherCalendar(internalPath);
     if (calendarMatch) {
       return await this.populateSpaceInternalResultCalendar(
         calendarMatch,
@@ -620,7 +662,7 @@ export class UrlResolverService {
     }
 
     // Try a settings match
-    const settingsMatch = this.spaceInternalPathMatcherSettings(internalPath);
+    const settingsMatch = Utils.spaceInternalPathMatcherSettings(internalPath);
     if (settingsMatch) {
       return await this.populateSpaceInternalResultSettings(
         settingsMatch,
@@ -648,7 +690,9 @@ export class UrlResolverService {
       path?: string | string[];
     };
 
-    const templateNameID = this.getMatchedResultAsString(params.templateNameID);
+    const templateNameID = Utils.getMatchedResultAsString(
+      params.templateNameID
+    );
 
     const space = await this.spaceLookupService.getSpaceOrFail(
       result.space.levelZeroSpaceID,
@@ -715,13 +759,13 @@ export class UrlResolverService {
       path?: string | string[];
     };
 
-    const calloutNameID = this.getMatchedResultAsString(params.calloutNameID);
-    const postNameID = this.getMatchedResultAsString(params.postNameID);
-    const whiteboardNameID = this.getMatchedResultAsString(
+    const calloutNameID = Utils.getMatchedResultAsString(params.calloutNameID);
+    const postNameID = Utils.getMatchedResultAsString(params.postNameID);
+    const whiteboardNameID = Utils.getMatchedResultAsString(
       params.whiteboardNameID
     );
-    const memoNameID = this.getMatchedResultAsString(params.memoNameID);
-    const collaborationInternalPath = this.getMatchedResultAsPath(params.path);
+    const memoNameID = Utils.getMatchedResultAsString(params.memoNameID);
+    const collaborationInternalPath = Utils.getMatchedResultAsPath(params.path);
     const calloutsSetResult = await this.populateCalloutsSetResult(
       result.space.collaboration.calloutsSet.id,
       agentInfo,
@@ -913,7 +957,7 @@ export class UrlResolverService {
       path?: string | string[];
     };
 
-    const calendarEventNameId = this.getMatchedResultAsString(
+    const calendarEventNameId = Utils.getMatchedResultAsString(
       params.calendarEventNameId
     );
 
@@ -960,19 +1004,6 @@ export class UrlResolverService {
     }
 
     return result;
-  }
-
-  private getPathElements(url: string): string[] {
-    const parsedUrl = new URL(url);
-
-    const pathElements = parsedUrl.pathname.split('/').filter(Boolean);
-    return pathElements;
-  }
-
-  private getPath(url: string): string {
-    const parsedUrl = new URL(url);
-
-    return parsedUrl.pathname;
   }
 
   private createSpaceResult(

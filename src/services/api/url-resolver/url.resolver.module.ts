@@ -9,6 +9,7 @@ import { ForumDiscussionLookupModule } from '@platform/forum-discussion-lookup/f
 import { InnovationPackModule } from '@library/innovation-pack/innovation.pack.module';
 import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.module';
 import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.module';
+import { UrlGeneratorModule } from '@services/infrastructure/url-generator/url.generator.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.modul
     SpaceLookupModule,
     InnovationPackModule,
     InnovationHubModule,
+    UrlGeneratorModule,
   ],
   providers: [UrlResolverService, UrlResolverResolverQueries],
   exports: [],
