@@ -121,6 +121,8 @@
 - Existing application database and identity stores (no new storage required) (018-identity-resolve-agent-id)
 - TypeScript 5.3 on Node.js 20.15.1 (Volta-pinned) + NestJS 10.3.10, TypeORM 10.0.2, Apollo Server 4.10.4, GraphQL 16.9.0 (001-conversation-architecture-refactor)
 - MySQL 8.0 with TypeORM entities and migrations (001-conversation-architecture-refactor)
+- TypeScript 5.3 on Node.js 20.15.1 (Volta-pinned) + NestJS 10, TypeORM 0.3.x (023-drop-wellknown-vc-column)
+- PostgreSQL (via TypeORM migrations) (023-drop-wellknown-vc-column)
 
 - TypeScript 5.x on Node.js 20 (per repository toolchain) + NestJS server, existing CI runner stack, SonarQube at https://sonarqube.alkem.io (015-sonarqube-analysis)
 - N/A (SonarQube stores analysis; server DB not impacted by this feature) (015-sonarqube-analysis)
