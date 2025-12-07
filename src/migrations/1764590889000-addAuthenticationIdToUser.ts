@@ -6,9 +6,7 @@ export class AddAuthenticationIDToUser1764590889000
   name = 'AddAuthenticationIDToUser1764590889000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(
-      `ALTER TABLE "user" ADD "authenticationID" uuid`
-    );
+    await queryRunner.query(`ALTER TABLE "user" ADD "authenticationID" uuid`);
     await queryRunner.query(
       `CREATE UNIQUE INDEX "IDX_user_authenticationID" ON "user" ("authenticationID")`
     );

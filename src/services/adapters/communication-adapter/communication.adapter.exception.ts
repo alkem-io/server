@@ -2,7 +2,7 @@ import { LogContext } from '@common/enums';
 import { AlkemioErrorStatus } from '@common/enums/alkemio.error.status';
 import { BaseException } from '@common/exceptions/base.exception';
 import { ExceptionDetails } from '@common/exceptions/exception.details';
-import { ErrorCode } from '@alkem-io/matrix-adapter-go-lib';
+import { ErrorCode } from '@alkemio/matrix-adapter-lib';
 import { AdapterErrorInfo } from './communication.adapter.response';
 
 /**

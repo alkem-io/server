@@ -119,6 +119,8 @@
 - MySQL 8 (application DB) + legacy Kratos DB (read-only references to be removed) (017-drop-session-sync)
 - TypeScript 5.x on Node.js 20 (NestJS server) + NestJS, existing REST controller stack, identity resolution services already used by `/rest/internal/identity/resolve` (018-identity-resolve-agent-id)
 - Existing application database and identity stores (no new storage required) (018-identity-resolve-agent-id)
+- TypeScript 5.3 on Node.js 20.15.1 (Volta-pinned) + NestJS 10.3.10, TypeORM 10.0.2, Apollo Server 4.10.4, GraphQL 16.9.0 (001-conversation-architecture-refactor)
+- MySQL 8.0 with TypeORM entities and migrations (001-conversation-architecture-refactor)
 
 - TypeScript 5.x on Node.js 20 (per repository toolchain) + NestJS server, existing CI runner stack, SonarQube at https://sonarqube.alkem.io (015-sonarqube-analysis)
 - N/A (SonarQube stores analysis; server DB not impacted by this feature) (015-sonarqube-analysis)

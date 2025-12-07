@@ -15,6 +15,7 @@ import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platf
 import { UserModule } from '@domain/community/user/user.module';
 import { ConversationsSetModule } from '../conversations-set/conversations.set.module';
 import { ConversationModule } from '../conversation/conversation.module';
+import { MessageInboxModule } from '../message-inbox/message.inbox.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { ConversationModule } from '../conversation/conversation.module';
     ConversationsSetModule,
     ConversationModule,
     UserModule,
+    MessageInboxModule,
     TypeOrmModule.forFeature([Communication]),
   ],
   providers: [

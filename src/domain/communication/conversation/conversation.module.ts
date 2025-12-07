@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { Conversation } from './conversation.entity';
+import { ConversationMembership } from './conversation-membership.entity';
 import { RoomModule } from '@domain/communication/room/room.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { ConversationService } from './conversation.service';
@@ -26,7 +27,7 @@ import { RoomLookupModule } from '../room-lookup/room.lookup.module';
     AiServerAdapterModule,
     GuidanceReporterModule,
     PlatformWellKnownVirtualContributorsModule,
-    TypeOrmModule.forFeature([Conversation]),
+    TypeOrmModule.forFeature([Conversation, ConversationMembership]),
   ],
   providers: [
     ConversationService,

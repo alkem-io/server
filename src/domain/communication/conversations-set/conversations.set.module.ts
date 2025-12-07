@@ -4,11 +4,14 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConversationModule } from '../conversation/conversation.module';
 import { ConversationsSet } from './conversations.set.entity';
+import { ConversationMembership } from '../conversation/conversation-membership.entity';
 import { ConversationsSetAuthorizationService } from './conversations.set.service.authorization';
 import { ConversationsSetResolverMutations } from './conversations.set.resolver.mutations';
 import { ConversationsSetService } from './conversations.set.service';
 import { PlatformWellKnownVirtualContributorsModule } from '@platform/platform.well.known.virtual.contributors';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
+import { VirtualContributorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
+import { AgentModule } from '@domain/agent/agent/agent.module';
 
 @Module({
   imports: [
@@ -16,8 +19,10 @@ import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.modu
     AuthorizationModule,
     ConversationModule,
     UserLookupModule,
+    VirtualContributorLookupModule,
+    AgentModule,
     PlatformWellKnownVirtualContributorsModule,
-    TypeOrmModule.forFeature([ConversationsSet]),
+    TypeOrmModule.forFeature([ConversationsSet, ConversationMembership]),
   ],
   providers: [
     ConversationsSetService,

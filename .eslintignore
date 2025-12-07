@@ -1,0 +1,10 @@
+node_modules/
+dist/
+build/
+coverage/
+coverage-*/
+tmp/
+*.min.js
+.scripts/
+.build/
+.storage/

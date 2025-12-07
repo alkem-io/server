@@ -19,7 +19,7 @@ entryPoints:
   synapse-admin:
     address: ':8088'
   matrix-adapter:
-    address: ':8081'
+    address: ':8280'
   kratos-admin-ui:
     address: ':8188'
   mailslurper-client:

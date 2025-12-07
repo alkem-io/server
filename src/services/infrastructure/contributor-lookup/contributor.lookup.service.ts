@@ -222,9 +222,13 @@ export class ContributorLookupService {
     options?: Omit<FindOneOptions<User>, 'where'>
   ): Promise<IContributor | null> {
     if (!isUUID(agentId)) {
-      throw new InvalidUUID('Invalid UUID provided for agent ID!', LogContext.COMMUNITY, {
-        provided: agentId,
-      });
+      throw new InvalidUUID(
+        'Invalid UUID provided for agent ID!',
+        LogContext.COMMUNITY,
+        {
+          provided: agentId,
+        }
+      );
     }
 
     let contributor: IContributor | null = await this.entityManager.findOne(

@@ -3,7 +3,6 @@ import { IContributorBase } from '../contributor/contributor.base.interface';
 import { IContributor } from '../contributor/contributor.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IUserSettings } from '../user-settings/user.settings.interface';
-import { IConversationsSet } from '@domain/communication/conversations-set/conversations.set.interface';
 
 @ObjectType('User', {
   implements: () => [IContributor],
@@ -21,8 +20,6 @@ export class IUser extends IContributorBase implements IContributor {
   lastName!: string;
 
   storageAggregator?: IStorageAggregator;
-
-  conversationsSet?: IConversationsSet;
 
   // Indicates if this profile is a service profile that is only used for service account style access
   // to the platform. Temporary measure, full service account support for later.

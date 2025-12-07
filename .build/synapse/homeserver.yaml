@@ -45,6 +45,14 @@ enable_registration_without_verification: true
 
 app_service_config_files:
   - /data/matrix-adapter.yaml
+
+modules_search_paths:
+  - /data
+
+modules:
+  - module: alkemio_room_control.AlkemioRoomControl
+    config: {}
+
 # Password authentication configuration
 # Disabled to enforce SSO-only authentication (FR-001, FR-002)
 #password_config:

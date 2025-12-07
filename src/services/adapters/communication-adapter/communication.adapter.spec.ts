@@ -7,7 +7,7 @@ import { CommunicationAdapterException } from './communication.adapter.exception
 import {
   MatrixAdapterEventType,
   BaseResponse,
-} from '@alkem-io/matrix-adapter-go-lib';
+} from '@alkemio/matrix-adapter-lib';
 import { RoomType as AlkemioRoomType } from '@common/enums/room.type';
 import { CommunicationSendMessageInput } from './dto/communication.dto.message.send';
 

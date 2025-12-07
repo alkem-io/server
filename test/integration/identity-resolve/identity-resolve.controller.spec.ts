@@ -31,7 +31,7 @@ const buildIdentity = (overrides: Partial<Identity> = {}): Identity =>
       },
     ],
     ...overrides,
-  } as Identity);
+  }) as Identity;
 
 describe('IdentityResolveController (REST)', () => {
   let app: INestApplication;
@@ -77,7 +77,9 @@ describe('IdentityResolveController (REST)', () => {
     }).compile();
 
     app = moduleRef.createNestApplication();
-    app.useGlobalPipes(new NestValidationPipe({ whitelist: true, transform: true }));
+    app.useGlobalPipes(
+      new NestValidationPipe({ whitelist: true, transform: true })
+    );
     app.useGlobalFilters(new HttpExceptionFilter(loggerMock));
     await app.init();
   });
@@ -87,7 +89,9 @@ describe('IdentityResolveController (REST)', () => {
   });
 
   it('returns existing user when authentication ID already linked', async () => {
-    (userLookupService.getUserByAuthenticationID as jest.Mock).mockResolvedValueOnce({
+    (
+      userLookupService.getUserByAuthenticationID as jest.Mock
+    ).mockResolvedValueOnce({
       id: 'user-existing',
       authenticationID: authenticationId,
       agent: { id: 'agent-existing' },
@@ -104,8 +108,12 @@ describe('IdentityResolveController (REST)', () => {
   });
 
   it('returns 404 when Kratos identity cannot be found', async () => {
-    (userLookupService.getUserByAuthenticationID as jest.Mock).mockResolvedValueOnce(null);
-    (kratosService.getIdentityById as jest.Mock).mockResolvedValueOnce(undefined);
+    (
+      userLookupService.getUserByAuthenticationID as jest.Mock
+    ).mockResolvedValueOnce(null);
+    (kratosService.getIdentityById as jest.Mock).mockResolvedValueOnce(
+      undefined
+    );
 
     await request(app.getHttpServer())
       .post('/rest/internal/identity/resolve')
@@ -119,11 +127,15 @@ describe('IdentityResolveController (REST)', () => {
   });
 
   it('creates a new user when identity is unknown', async () => {
-    (userLookupService.getUserByAuthenticationID as jest.Mock).mockResolvedValueOnce(null);
+    (
+      userLookupService.getUserByAuthenticationID as jest.Mock
+    ).mockResolvedValueOnce(null);
     (userLookupService.getUserByEmail as jest.Mock).mockResolvedValueOnce(null);
 
     const identity = buildIdentity();
-    (kratosService.getIdentityById as jest.Mock).mockResolvedValueOnce(identity);
+    (kratosService.getIdentityById as jest.Mock).mockResolvedValueOnce(
+      identity
+    );
 
     (registrationService.registerNewUser as jest.Mock).mockImplementationOnce(
       async agentInfo => ({
@@ -156,7 +168,9 @@ describe('IdentityResolveController (REST)', () => {
   });
 
   it('returns an error when an existing user lacks an agent', async () => {
-    (userLookupService.getUserByAuthenticationID as jest.Mock).mockResolvedValueOnce({
+    (
+      userLookupService.getUserByAuthenticationID as jest.Mock
+    ).mockResolvedValueOnce({
       id: 'user-existing',
       authenticationID: authenticationId,
       agent: null,
@@ -173,11 +187,15 @@ describe('IdentityResolveController (REST)', () => {
   });
 
   it('returns an error when the newly registered user lacks an agent', async () => {
-    (userLookupService.getUserByAuthenticationID as jest.Mock).mockResolvedValueOnce(null);
+    (
+      userLookupService.getUserByAuthenticationID as jest.Mock
+    ).mockResolvedValueOnce(null);
     (userLookupService.getUserByEmail as jest.Mock).mockResolvedValueOnce(null);
 
     const identity = buildIdentity();
-    (kratosService.getIdentityById as jest.Mock).mockResolvedValueOnce(identity);
+    (kratosService.getIdentityById as jest.Mock).mockResolvedValueOnce(
+      identity
+    );
 
     (registrationService.registerNewUser as jest.Mock).mockResolvedValueOnce({
       id: 'user-new',

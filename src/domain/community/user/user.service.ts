@@ -62,8 +62,6 @@ import { InstrumentService } from '@src/apm/decorators';
 import { CreateUserSettingsInput } from '../user-settings/dto/user.settings.dto.create';
 import { ConversationsSetService } from '@domain/communication/conversations-set/conversations.set.service';
 import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
-import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
-import { IConversationsSet } from '@domain/communication/conversations-set/conversations.set.interface';
 import { UserAuthenticationLinkService } from '../user-authentication-link/user.authentication.link.service';
 import { UserAuthenticationLinkOutcome } from '../user-authentication-link/user.authentication.link.types';
 
@@ -172,9 +170,9 @@ export class UserService {
     user.agent = await this.agentService.createAgent({
       type: AgentType.USER,
     });
-    const conversationsSet =
-      await this.conversationsSetService.createConversationsSet();
-    user.conversationsSet = conversationsSet;
+
+    // Note: Conversations now belong to the single platform ConversationsSet.
+    // User conversations are tracked via the conversation_membership pivot table.
 
     const authenticationID = agentInfo?.authenticationID;
     if (authenticationID) {
@@ -207,13 +205,11 @@ export class UserService {
 
     // Sync the user's agent to the communication adapter
     // The agent.id is used as the AlkemioActorID for all communication operations
-    const displayName = `${user.firstName} ${user.lastName}`.trim() || user.email;
+    const displayName =
+      `${user.firstName} ${user.lastName}`.trim() || user.email;
 
     try {
-      await this.communicationAdapter.syncActor(
-        user.agent.id,
-        displayName
-      );
+      await this.communicationAdapter.syncActor(user.agent.id, displayName);
       this.logger.verbose?.(
         `Synced user actor to communication adapter: ${user.agent.id}`,
         LogContext.COMMUNITY
@@ -230,26 +226,28 @@ export class UserService {
     await this.setUserCache(user);
 
     // Create a guidance conversation with the well-known chat guidance VC
-    await this.createGuidanceConversation(conversationsSet, user.id);
+    await this.createGuidanceConversation(user.id);
 
     return user;
   }
 
-  private async createGuidanceConversation(
-    conversationSet: IConversationsSet,
-    userID: string
-  ): Promise<void> {
+  private async createGuidanceConversation(userID: string): Promise<void> {
     try {
+      // Get user's agent ID for the new internal API
+      const user = await this.userLookupService.getUserOrFail(userID, {
+        relations: { agent: true },
+      });
+      const callerAgentId = user.agent.id;
+
+      // Use platform conversation set (null parameter)
+      // wellKnownVirtualContributor will be resolved to agent ID by the service
       await this.conversationsSetService.createConversationOnConversationsSet(
         {
-          type: CommunicationConversationType.USER_VC,
-          userID: userID,
+          callerAgentId,
           wellKnownVirtualContributor:
             VirtualContributorWellKnown.CHAT_GUIDANCE,
-          currentUserID: userID,
         },
-        conversationSet.id,
-        false
+        null // Use platform set
       );
 
       this.logger.verbose?.(
@@ -473,7 +471,6 @@ export class UserService {
         agent: true,
         storageAggregator: true,
         settings: true,
-        conversationsSet: true,
       },
     });
 
@@ -482,8 +479,7 @@ export class UserService {
       !user.storageAggregator ||
       !user.agent ||
       !user.authorization ||
-      !user.settings ||
-      !user.conversationsSet
+      !user.settings
     ) {
       throw new RelationshipNotFoundException(
         `User entity missing required child entities when deleting: ${userID}`,
@@ -514,11 +510,9 @@ export class UserService {
 
     await this.userSettingsService.deleteUserSettings(user.settings.id);
 
-    await this.conversationsSetService.deleteConversationsSet(
-      user.conversationsSet.id
-    );
-
-    // TODO: Get all of the conversations for this user and delete them
+    // Note: Conversations belong to the platform ConversationsSet.
+    // User's conversation memberships are cleaned up via cascade.
+    // TODO: Consider deleting conversations where this user is the only member
 
     if (deleteData.deleteIdentity) {
       await this.kratosService.deleteIdentityByEmail(user.email);

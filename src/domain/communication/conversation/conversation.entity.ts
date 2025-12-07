@@ -1,25 +1,24 @@
-import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
+import { Entity, JoinColumn, ManyToOne, OneToMany, OneToOne } from 'typeorm';
 import { IConversation } from './conversation.interface';
 import { Room } from '@domain/communication/room/room.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
 import { ConversationsSet } from '../conversations-set/conversations.set.entity';
-import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
-import { ENUM_LENGTH } from '@common/constants/entity.field.length.constants';
-import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
+import { ConversationMembership } from './conversation-membership.entity';
 
 @Entity()
 export class Conversation extends AuthorizableEntity implements IConversation {
-  @Column('varchar', { length: ENUM_LENGTH, nullable: false })
-  type!: CommunicationConversationType;
+  // All participant tracking now via ConversationMembership pivot table
+  // Type inferred dynamically via field resolver from member agent types
 
-  @Column('uuid', { nullable: true })
-  userID?: string;
-
-  @Column('uuid', { nullable: true })
-  virtualContributorID?: string;
-
-  @Column('varchar', { length: ENUM_LENGTH, nullable: true })
-  wellKnownVirtualContributor?: VirtualContributorWellKnown;
+  @OneToMany(
+    () => ConversationMembership,
+    membership => membership.conversation,
+    {
+      eager: false,
+      cascade: true,
+    }
+  )
+  memberships!: ConversationMembership[];
 
   @ManyToOne(
     () => ConversationsSet,

@@ -10,8 +10,10 @@ import { FindOneOptions, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { Room } from '../room/room.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import { IVcInteraction } from '../vc-interaction/vc.interaction.interface';
-import { VcInteractionService } from '../vc-interaction/vc.interaction.service';
+import {
+  IVcInteraction,
+  generateVcInteractionId,
+} from '../vc-interaction/vc.interaction.interface';
 import { CreateVcInteractionInput } from '../vc-interaction/dto/vc.interaction.dto.create';
 import { RoomSendMessageReplyInput } from '../room/dto/room.dto.send.message.reply';
 import { RoomSendMessageInput } from '../room/dto/room.dto.send.message';
@@ -25,7 +27,6 @@ export class RoomLookupService {
   constructor(
     private communicationAdapter: CommunicationAdapter,
     private contributorLookupService: ContributorLookupService,
-    private vcInteractionService: VcInteractionService,
     @InjectRepository(Room)
     private roomRepository: Repository<Room>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -40,13 +41,8 @@ export class RoomLookupService {
       `Getting messages in thread ${threadID} for room ${room.id}`,
       LogContext.COMMUNICATION
     );
-    const roomResult = await this.communicationAdapter.getRoom(room.id);
-    // First message in the thread provides the threadID, but it itself does not have the threadID set
-    const threadMessages = roomResult.messages.filter(
-      m => m.threadID === threadID || m.id === threadID
-    );
-
-    return threadMessages;
+    // Use getThreadMessages for efficient thread-only lookup (no full room fetch)
+    return this.communicationAdapter.getThreadMessages(room.id, threadID);
   }
 
   public async getMessageInRoom(
@@ -54,13 +50,16 @@ export class RoomLookupService {
     messageID: string
   ): Promise<{ message: IMessage; room: IRoom }> {
     this.logger.verbose?.(
-      `Getting message in thread ${messageID} for room ${roomID}`,
+      `Getting message ${messageID} in room ${roomID}`,
       LogContext.COMMUNICATION
     );
     const room = await this.getRoomOrFail(roomID);
-    const roomResult = await this.communicationAdapter.getRoom(room.id);
-    // First message in the thread provides the threadID, but it itself does not have the threadID set
-    const message = roomResult.messages.find(m => m.id === messageID);
+
+    // Use getMessage() for efficient single-message lookup instead of fetching entire room
+    const message = await this.communicationAdapter.getMessage({
+      alkemioRoomId: room.id,
+      messageId: messageID,
+    });
 
     if (!message) {
       throw new EntityNotFoundException(
@@ -81,40 +80,38 @@ export class RoomLookupService {
   public async addVcInteractionToRoom(
     interactionData: CreateVcInteractionInput
   ): Promise<IVcInteraction> {
-    const room = await this.getRoomOrFail(interactionData.roomID, {
-      relations: {
-        vcInteractions: true,
-      },
-    });
-    if (!room.vcInteractions) {
-      throw new EntityNotFoundException(
-        `Not able to locate interactions for the room: ${interactionData.roomID}`,
-        LogContext.COMMUNICATION
-      );
+    const room = await this.getRoomOrFail(interactionData.roomID);
+
+    // Add to JSON map
+    if (!room.vcInteractionsByThread) {
+      room.vcInteractionsByThread = {};
     }
 
-    const interaction =
-      this.vcInteractionService.buildVcInteraction(interactionData);
-    room.vcInteractions.push(interaction);
+    room.vcInteractionsByThread[interactionData.threadID] = {
+      virtualContributorActorID: interactionData.virtualContributorActorID,
+    };
+
     await this.roomRepository.save(room);
-    return interaction;
+
+    return {
+      id: generateVcInteractionId(
+        interactionData.threadID,
+        interactionData.virtualContributorActorID
+      ),
+      threadID: interactionData.threadID,
+      virtualContributorID: interactionData.virtualContributorActorID,
+    };
   }
 
   async getVcInteractions(roomID: string): Promise<IVcInteraction[]> {
-    const room = await this.getRoomOrFail(roomID, {
-      relations: {
-        vcInteractions: {
-          room: true,
-        },
-      },
-    });
-    if (!room.vcInteractions) {
-      throw new EntityNotFoundException(
-        `Not able to locate interactions for the room: ${roomID}`,
-        LogContext.COMMUNICATION
-      );
-    }
-    return room.vcInteractions;
+    const room = await this.getRoomOrFail(roomID);
+
+    const vcInteractionsByThread = room.vcInteractionsByThread || {};
+    return Object.entries(vcInteractionsByThread).map(([threadID, data]) => ({
+      id: generateVcInteractionId(threadID, data.virtualContributorActorID),
+      threadID,
+      virtualContributorID: data.virtualContributorActorID,
+    }));
   }
 
   async getRoomOrFail(
@@ -131,6 +128,10 @@ export class RoomLookupService {
         LogContext.COMMUNICATION
       );
     return room;
+  }
+
+  async save(room: IRoom): Promise<IRoom> {
+    return await this.roomRepository.save(room as Room);
   }
 
   async populateRoomsMessageSenders(
@@ -270,5 +271,4 @@ export class RoomLookupService {
     }
     return messageSender;
   }
-
 }

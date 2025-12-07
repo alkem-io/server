@@ -83,6 +83,11 @@ export class SubscriptionPublishService {
       };
     }
 
+    this.logger.verbose?.(
+      `Publishing room event: roomID=${room.id}, eventID=${payload.eventID}, type=${type}`,
+      LogContext.SUBSCRIPTIONS
+    );
+
     return this.roomEventsSubscription.publish(
       SubscriptionType.ROOM_EVENTS,
       payload

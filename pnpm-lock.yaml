@@ -8,9 +8,9 @@ importers:
 
   .:
     dependencies:
-      '@alkem-io/matrix-adapter-go-lib':
-        specifier: 1.0.0-beta1
-        version: 1.0.0-beta1
+      '@alkemio/matrix-adapter-lib':
+        specifier: 1.0.0-beta3
+        version: 1.0.0-beta3
       '@alkemio/notifications-lib':
         specifier: 0.12.2
         version: 0.12.2(@types/express@4.17.23)
@@ -47,6 +47,9 @@ importers:
       '@nestjs/cqrs':
         specifier: ^10.2.7
         version: 10.2.8(@nestjs/common@10.4.20(class-transformer@0.5.1)(class-validator@0.14.0)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@10.4.20)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/event-emitter':
+        specifier: ^3.0.1
+        version: 3.0.1(@nestjs/common@10.4.20(class-transformer@0.5.1)(class-validator@0.14.0)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@10.4.20)
       '@nestjs/graphql':
         specifier: ^12.2.0
         version: 12.2.2(@nestjs/common@10.4.20(class-transformer@0.5.1)(class-validator@0.14.0)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@10.4.20)(class-transformer@0.5.1)(class-validator@0.14.0)(graphql@16.11.0)(reflect-metadata@0.2.2)
@@ -367,13 +370,13 @@ packages:
     resolution: {integrity: sha512-29lUK80d1muEQqiUsSo+3A0yP6CdspgC95EnKBMi22Xlwt79i/En4Vr67+cXhU+cZjbti3TgGGC5wy1stIywVQ==}
     engines: {node: '>=0.8'}
 
-  '@alkem-io/matrix-adapter-go-lib@1.0.0-beta1':
-    resolution: {integrity: sha512-CsG0ACTSZmYkahBb8JQ3AanmhlM76dBWWhTiKXZmJNloD4LYW8qWH1E0dY2vnAOjW2rXp0+jpK1Ce1WL1U1Lig==, tarball: https://npm.pkg.github.com/download/@alkem-io/matrix-adapter-go-lib/1.0.0-beta1/d5984df155f60a4214530f80fa3c18140ce8049a}
-    engines: {node: '>=22.x', pnpm: '>=9.x'}
-
   '@alkemio/client-lib@0.35.0':
     resolution: {integrity: sha512-Gd7gsI/RLjDgTO42pgcewsirbAr0WCj6Gktiq0pjV1N2ZGSf1dBOEIhMCX+wHPoekCY0qs4EY1puYwBxi8/PQA==}
     engines: {node: '>=16.15.0', npm: '>=8.5.5'}
+
+  '@alkemio/matrix-adapter-lib@1.0.0-beta3':
+    resolution: {integrity: sha512-59rBZc/V5No9o8EPctcRpaKRvvnT16CFr/V9RQYHQRl+p3v81+pSsnJuLtpRynog3pSGB6fsRGRt+R93ac6KAA==}
+    engines: {node: '>=22.x', pnpm: '>=9.x'}
 
   '@alkemio/notifications-lib@0.12.2':
     resolution: {integrity: sha512-DwjWkw7pgEhpkQWS9TFahwTvVMDde7FZWW/1wAaK0EyimCFuUtBtjpaaPzm1E0V2vmssS6BInCVQ2JRbmCWSPQ==}
@@ -1264,6 +1267,12 @@ packages:
       '@nestjs/core': ^9.0.0 || ^10.0.0
       reflect-metadata: ^0.1.13 || ^0.2.0
       rxjs: ^7.2.0
+
+  '@nestjs/event-emitter@3.0.1':
+    resolution: {integrity: sha512-0Ln/x+7xkU6AJFOcQI9tIhUMXVF7D5itiaQGOyJbXtlAfAIt8gzDdJm+Im7cFzKoWkiW5nCXCPh6GSvdQd/3Dw==}
+    peerDependencies:
+      '@nestjs/common': ^10.0.0 || ^11.0.0
+      '@nestjs/core': ^10.0.0 || ^11.0.0
 
   '@nestjs/graphql@12.2.2':
     resolution: {integrity: sha512-lUDy/1uqbRA1kBKpXcmY0aHhcPbfeG52Wg5+9Jzd1d57dwSjCAmuO+mWy5jz9ugopVCZeK0S/kdAMvA+r9fNdA==}
@@ -3087,6 +3096,9 @@ packages:
   event-target-shim@5.0.1:
     resolution: {integrity: sha512-i/2XbnSz/uxRCU6+NdVJgKWDTM427+MqYbkQzD321DuCQJUqOuJKIA0IM2+W2xtYHdKOmZ4dR6fExsd4SXL+WQ==}
     engines: {node: '>=6'}
+
+  eventemitter2@6.4.9:
+    resolution: {integrity: sha512-JEPTiaOt9f04oa6NOkc4aH+nVp5I3wEjpHbIPqfgCdD5v5bUzy7xQqwcVO2aDQgOWhI28da57HksMrzK9HlRxg==}
 
   eventemitter3@3.1.2:
     resolution: {integrity: sha512-tvtQIeLVHjDkJYnzf2dgVMxfuSGJeM/7UCG17TT4EumTfNtF+0nebF/4zWOIkCreAbtNqhGEboB6BWrwqNaw4Q==}
@@ -6174,8 +6186,6 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@alkem-io/matrix-adapter-go-lib@1.0.0-beta1': {}
-
   '@alkemio/client-lib@0.35.0(@types/express@4.17.23)':
     dependencies:
       '@graphql-codegen/typescript-graphql-request': 4.5.9(graphql-request@3.7.0(graphql@16.11.0))(graphql-tag@2.12.6(graphql@16.11.0))(graphql@16.11.0)
@@ -6196,6 +6206,8 @@ snapshots:
       - debug
       - encoding
       - supports-color
+
+  '@alkemio/matrix-adapter-lib@1.0.0-beta3': {}
 
   '@alkemio/notifications-lib@0.12.2(@types/express@4.17.23)':
     dependencies:
@@ -7403,6 +7415,12 @@ snapshots:
       reflect-metadata: 0.2.2
       rxjs: 7.8.2
       uuid: 11.0.2
+
+  '@nestjs/event-emitter@3.0.1(@nestjs/common@10.4.20(class-transformer@0.5.1)(class-validator@0.14.0)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@10.4.20)':
+    dependencies:
+      '@nestjs/common': 10.4.20(class-transformer@0.5.1)(class-validator@0.14.0)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/core': 10.4.20(@nestjs/common@10.4.20(class-transformer@0.5.1)(class-validator@0.14.0)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/microservices@10.4.20)(@nestjs/platform-express@10.4.20)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      eventemitter2: 6.4.9
 
   '@nestjs/graphql@12.2.2(@nestjs/common@10.4.20(class-transformer@0.5.1)(class-validator@0.14.0)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@10.4.20)(class-transformer@0.5.1)(class-validator@0.14.0)(graphql@16.11.0)(reflect-metadata@0.2.2)':
     dependencies:
@@ -9532,6 +9550,8 @@ snapshots:
   etag@1.8.1: {}
 
   event-target-shim@5.0.1: {}
+
+  eventemitter2@6.4.9: {}
 
   eventemitter3@3.1.2: {}
 

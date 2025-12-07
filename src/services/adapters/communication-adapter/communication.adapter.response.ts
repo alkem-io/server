@@ -9,7 +9,7 @@ import {
   ErrCodeMatrixError,
   ErrCodeInternalError,
   ErrCodeNotAllowed,
-} from '@alkem-io/matrix-adapter-go-lib';
+} from '@alkemio/matrix-adapter-lib';
 
 /**
  * Result of processing a batch operation response.

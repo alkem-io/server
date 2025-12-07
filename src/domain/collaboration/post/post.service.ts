@@ -118,7 +118,10 @@ export class PostService {
         post.profile.displayName !== postData.profileData.displayName
       ) {
         const newRoomName = `post-comments-${post.nameID}`;
-        await this.roomService.updateRoomDisplayName(post.comments, newRoomName);
+        await this.roomService.updateRoomDisplayName(
+          post.comments,
+          newRoomName
+        );
       }
 
       post.profile = await this.profileService.updateProfile(

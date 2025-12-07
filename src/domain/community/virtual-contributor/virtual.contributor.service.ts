@@ -193,7 +193,8 @@ export class VirtualContributorService {
 
     // Sync the VC's agent to the communication adapter
     // The agent.id is used as the AlkemioActorID for all communication operations
-    const displayName = virtualContributor.profile?.displayName || virtualContributor.nameID;
+    const displayName =
+      virtualContributor.profile?.displayName || virtualContributor.nameID;
     try {
       await this.communicationAdapter.syncActor(
         virtualContributor.agent.id,

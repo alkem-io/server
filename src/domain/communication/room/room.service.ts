@@ -14,7 +14,6 @@ import { IMessageReaction } from '../message.reaction/message.reaction.interface
 import { RoomAddReactionToMessageInput } from './dto/room.dto.add.reaction.to.message';
 import { RoomRemoveReactionToMessageInput } from './dto/room.dto.remove.message.reaction';
 import { RoomRemoveMessageInput } from './dto/room.dto.remove.message';
-import { VcInteractionService } from '../vc-interaction/vc.interaction.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { RoomLookupService } from '../room-lookup/room.lookup.service';
 import { CreateRoomInput } from './dto/room.dto.create';
@@ -27,7 +26,6 @@ export class RoomService {
     @InjectRepository(Room)
     private readonly roomRepository: Repository<Room>,
     private readonly communicationAdapter: CommunicationAdapter,
-    private readonly vcInteractionService: VcInteractionService,
     private readonly roomLookupService: RoomLookupService,
     private readonly contributorLookupService: ContributorLookupService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -37,7 +35,7 @@ export class RoomService {
     const room = new Room(roomData.displayName, roomData.type);
     room.authorization = new AuthorizationPolicy(AuthorizationPolicyType.ROOM);
     room.messagesCount = 0;
-    room.vcInteractions = [];
+    room.vcInteractionsByThread = {};
 
     // Save first to get the ID assigned by the database
     const savedRoom = await this.save(room);
@@ -58,20 +56,8 @@ export class RoomService {
   }
 
   async deleteRoom(deleteData: DeleteRoomInput): Promise<IRoom> {
-    const room = await this.getRoomOrFail(deleteData.roomID, {
-      relations: {
-        vcInteractions: true,
-      },
-    });
-    if (!room.vcInteractions) {
-      throw new EntityNotFoundException(
-        `Not able to locate entities on Room for deletion: ${deleteData.roomID}`,
-        LogContext.COMMUNICATION
-      );
-    }
-    for (const interaction of room.vcInteractions) {
-      await this.vcInteractionService.removeVcInteraction(interaction.id);
-    }
+    const room = await this.getRoomOrFail(deleteData.roomID);
+
     const result = await this.roomRepository.remove(room as Room);
 
     // Delete from external Matrix server

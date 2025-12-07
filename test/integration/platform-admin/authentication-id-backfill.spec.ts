@@ -139,7 +139,8 @@ describe('AdminAuthenticationIDBackfillService (integration)', () => {
   });
 
   it('marks users as skipped when no identity is found', async () => {
-    const { service, kratosService, queryBuilder, userService } = createService();
+    const { service, kratosService, queryBuilder, userService } =
+      createService();
 
     const user = {
       id: 'user-2',

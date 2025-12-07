@@ -48,8 +48,11 @@ import { AlkemioConfig } from '@src/types';
           defaultRpcTimeout: timeout,
           // No exchanges needed - we publish directly to queues using default exchange
           exchanges: [],
-          // No queues to declare - the Go adapter owns the queues
+          // No queues to declare - controller handlers will auto-subscribe
+          // to events using routing keys (e.g., "communication.message.received")
           queues: [],
+          // Enable controller handler discovery for @EventPattern decorators
+          enableControllerDiscovery: true,
         };
       },
     }),

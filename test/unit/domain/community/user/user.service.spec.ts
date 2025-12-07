@@ -84,7 +84,7 @@ describe('UserService.createUserFromAgentInfo', () => {
         email: agentInfo.email,
         authenticationID: agentInfo.authenticationID,
       } as any,
-  matchedBy: UserAuthenticationLinkMatch.AUTHENTICATION_ID,
+      matchedBy: UserAuthenticationLinkMatch.AUTHENTICATION_ID,
       outcome: UserAuthenticationLinkOutcome.ALREADY_LINKED,
     };
 
@@ -95,9 +95,9 @@ describe('UserService.createUserFromAgentInfo', () => {
     const result = await service.createUserFromAgentInfo(agentInfo);
 
     expect(result).toBe(resolveResult.user);
-    expect(userAuthenticationLinkServiceMock.resolveExistingUser).toHaveBeenCalledTimes(
-      1
-    );
+    expect(
+      userAuthenticationLinkServiceMock.resolveExistingUser
+    ).toHaveBeenCalledTimes(1);
   });
 
   it('refreshes cache when authentication ID is linked during lookup', async () => {
@@ -114,7 +114,7 @@ describe('UserService.createUserFromAgentInfo', () => {
         email: agentInfo.email,
         authenticationID: agentInfo.authenticationID,
       } as any,
-  matchedBy: UserAuthenticationLinkMatch.EMAIL,
+      matchedBy: UserAuthenticationLinkMatch.EMAIL,
       outcome: UserAuthenticationLinkOutcome.LINKED,
     };
 

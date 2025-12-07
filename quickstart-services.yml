@@ -20,6 +20,7 @@ services:
     ports:
       - 8888:8080
       - 8088:8088
+      - 8280:8280
       - 3000:80
       - 3306:3306
       - 5432:5432
@@ -239,7 +240,8 @@ services:
 
   oidc-service:
     container_name: alkemio_dev_oidc_service
-    image: docker.io/alkemio/oidc-service:v0.6.0
+    image: docker.io/alkemio/oidc-service:v0.7.0
+#    image: oidc-service:latest
     platform: linux/amd64
     depends_on:
       - hydra
@@ -305,6 +307,7 @@ services:
       - SYNAPSE_HOMESERVER_NAME
       - SYNAPSE_SERVER_URL
       - SYNAPSE_SERVER_SHARED_SECRET
+      - PYTHONPATH=/data/modules
     networks:
       - alkemio_dev_net
     ports:
@@ -427,9 +430,9 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_matrix_adapter
     hostname: matrix-adapter
-#    image: alkemio/matrix-adapter:v0.7.3
-    image: alkemio/matrix-adapter-go
-#    platform: linux/amd64
+    image: alkemio/matrix-adapter:v1.0.0-beta3
+#    image: alkemio/matrix-adapter-go
+    platform: linux/amd64
     depends_on:
       - rabbitmq
     environment:
@@ -452,6 +455,8 @@ services:
     restart: always
     networks:
       - alkemio_dev_net
+    ports:
+      - 8280
     command: sh -c "/wait && /app/matrix-adapter"
 
   redis:

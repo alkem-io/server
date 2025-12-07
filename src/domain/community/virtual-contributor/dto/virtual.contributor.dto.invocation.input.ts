@@ -24,12 +24,6 @@ export class RoomDetails {
     description: 'The actor ID (agent.id) for the VC',
   })
   actorId!: string;
-  @Field(() => String, {
-    nullable: true,
-    description:
-      'The Virtual Contributor interaciton part of which is this question',
-  })
-  vcInteractionID?: string | undefined = undefined;
 }
 
 @InputType()

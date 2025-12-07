@@ -34,7 +34,6 @@ export class IdentityResolveService {
     authenticationId: string,
     meta: IdentityResolveRequestMeta
   ): Promise<IUser> {
-
     const existingUser = await this.userLookupService.getUserByAuthenticationID(
       authenticationId,
       {
@@ -78,7 +77,7 @@ export class IdentityResolveService {
       // depending on future development and use of this EP we will need to either provide token/session
       //  info here to verify that this is indeed OIDC session, or get list of sessions for user to deduct
       //  that one of sessions is OIDC based, so we can skip email verification.
-      agentInfo.emailVerified=true;
+      agentInfo.emailVerified = true;
 
       const user = await this.registrationService.registerNewUser(agentInfo);
 

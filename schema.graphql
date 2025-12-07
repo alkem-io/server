@@ -722,6 +722,12 @@ enum TemplateType {
   WHITEBOARD
 }
 
+enum UrlResolverResultState {
+  Forbidden
+  NotFound
+  Resolved
+}
+
 enum UrlType {
   ADMIN
   CALLOUT
@@ -1962,6 +1968,9 @@ type Conversation {
   id: UUID!
   """The room for this Conversation."""
   room: Room
+  """
+  The type of this Conversation (USER_USER or USER_VC), inferred from member agent types.
+  """
   type: CommunicationConversationType!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
@@ -1971,7 +1980,6 @@ type Conversation {
   The virtual contributor participating in this Conversation (only for USER_AGENT conversations).
   """
   virtualContributor: VirtualContributor
-  wellKnownVirtualContributor: VirtualContributorWellKnown
 }
 
 type CreateCalloutContributionData {
@@ -4969,7 +4977,7 @@ type SpaceAbout {
   """The Profile for the Space."""
   profile: Profile!
   """The Space provider (host)."""
-  provider: Contributor!
+  provider: Contributor
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
   """Who should get involved in this challenge"""
@@ -5397,6 +5405,18 @@ type UpdateWhiteboardGuestAccessResult {
   whiteboard: Whiteboard
 }
 
+type UrlResolverQueryClosestAncestor {
+  discussionId: UUID
+  innovationHubId: UUID
+  innovationPack: UrlResolverQueryResultInnovationPack
+  organizationId: UUID
+  space: UrlResolverQueryResultSpace
+  type: UrlType!
+  url: String!
+  userId: UUID
+  virtualContributor: UrlResolverQueryResultVirtualContributor
+}
+
 type UrlResolverQueryResultCalendar {
   calendarEventId: UUID
   id: UUID!
@@ -5423,11 +5443,13 @@ type UrlResolverQueryResultInnovationPack {
 }
 
 type UrlResolverQueryResults {
+  closestAncestor: UrlResolverQueryClosestAncestor
   discussionId: UUID
   innovationHubId: UUID
   innovationPack: UrlResolverQueryResultInnovationPack
   organizationId: UUID
   space: UrlResolverQueryResultSpace
+  state: UrlResolverResultState!
   type: UrlType!
   userId: UUID
   virtualContributor: UrlResolverQueryResultVirtualContributor
@@ -5661,15 +5683,10 @@ type UsersInRolesResponse {
 }
 
 type VcInteraction {
-  """The date at which the entity was created."""
-  createdDate: DateTime!
-  """The ID of the entity"""
-  id: UUID!
-  room: Room!
+  """The thread ID (Matrix message ID) where VC is engaged"""
   threadID: String!
-  """The date at which the entity was last updated."""
-  updatedDate: DateTime!
-  virtualContributorID: UUID!
+  """The actor ID (agent.id) of the Virtual Contributor"""
+  virtualContributorActorID: String!
 }
 
 type VirtualContributor implements Contributor {
@@ -5729,6 +5746,10 @@ type VirtualContributor implements Contributor {
   status: VirtualContributorStatus!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
+  """
+  The well-known identifier of this Virtual Contributor, if configured at platform level.
+  """
+  wellKnownVirtualContributor: VirtualContributorWellKnown
 }
 
 type VirtualContributorModelCard {
@@ -6261,7 +6282,6 @@ input CreateContributionOnCalloutInput {
 }
 
 input CreateConversationInput {
-  type: CommunicationConversationType!
   userID: UUID!
   virtualContributorID: UUID
   wellKnownVirtualContributor: VirtualContributorWellKnown

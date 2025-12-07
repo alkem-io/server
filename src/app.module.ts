@@ -6,6 +6,7 @@ import { GraphQLModule } from '@nestjs/graphql';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { ScheduleModule } from '@nestjs/schedule';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { CloseCode } from 'graphql-ws';
 import { ValidationPipe } from '@common/pipes/validation.pipe';
 import configuration from '@config/configuration';
@@ -115,6 +116,9 @@ import { InAppNotificationAdminModule } from './platform-admin/in-app-notificati
       envFilePath: ['.env'],
       isGlobal: true,
       load: [configuration],
+    }),
+    EventEmitterModule.forRoot({
+      global: true,
     }),
     ScheduleModule.forRoot(),
     CacheModule.registerAsync({

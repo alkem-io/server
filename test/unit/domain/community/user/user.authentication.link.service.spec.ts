@@ -79,7 +79,7 @@ describe('UserAuthenticationLinkService', () => {
     const result = await service.resolveExistingUser(createAgentInfo());
 
     expect(userRepository.save).toHaveBeenCalledWith(existingUser);
-  expect(result?.outcome).toBe(UserAuthenticationLinkOutcome.LINKED);
+    expect(result?.outcome).toBe(UserAuthenticationLinkOutcome.LINKED);
     expect(result?.user.authenticationID).toBe('auth-123');
   });
 
@@ -104,7 +104,7 @@ describe('UserAuthenticationLinkService', () => {
       expect.stringContaining('Authentication ID mismatch'),
       LogContext.AUTH
     );
-  expect(result?.outcome).toBe(UserAuthenticationLinkOutcome.CONFLICT);
+    expect(result?.outcome).toBe(UserAuthenticationLinkOutcome.CONFLICT);
     expect(result?.user.authenticationID).toBe('other-auth');
   });
 
@@ -121,9 +121,11 @@ describe('UserAuthenticationLinkService', () => {
     userLookupService.getUserByAuthenticationID.mockResolvedValue(null);
     userLookupService.getUserByEmail.mockResolvedValue(existingUser);
 
-    await expect(service.resolveExistingUser(createAgentInfo(), {
-      conflictMode: 'error',
-    })).rejects.toBeInstanceOf(UserAlreadyRegisteredException);
+    await expect(
+      service.resolveExistingUser(createAgentInfo(), {
+        conflictMode: 'error',
+      })
+    ).rejects.toBeInstanceOf(UserAlreadyRegisteredException);
   });
 
   it('prefers email lookup when requested even if authentication ID belongs to another user', async () => {
@@ -142,7 +144,9 @@ describe('UserAuthenticationLinkService', () => {
       agent: { credentials: [] },
     };
 
-    userLookupService.getUserByAuthenticationID.mockResolvedValue(conflictingUser);
+    userLookupService.getUserByAuthenticationID.mockResolvedValue(
+      conflictingUser
+    );
     userLookupService.getUserByEmail.mockResolvedValue(emailUser);
 
     const result = await service.resolveExistingUser(createAgentInfo(), {

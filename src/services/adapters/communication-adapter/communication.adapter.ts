@@ -30,6 +30,8 @@ import {
   GetRoomRequest,
   GetMessageRequest,
   GetReactionRequest,
+  GetRoomMembersRequest,
+  GetThreadMessagesRequest,
   ListRoomsRequest,
   ListSpacesRequest,
   // Response type for converter helper
@@ -42,7 +44,7 @@ import {
   AlkemioActorID,
   AlkemioContextID,
   RoomType,
-} from '@alkem-io/matrix-adapter-go-lib';
+} from '@alkemio/matrix-adapter-lib';
 import { CommunicationSendMessageInput } from './dto/communication.dto.message.send';
 import { getRandomId } from '@common/utils/random.id.generator.util';
 import { stringifyWithoutAuthorizationMetaInfo } from '@common/utils/stringify.util';
@@ -57,7 +59,7 @@ import { CommunicationAdapterException } from './communication.adapter.exception
 
 /**
  * Options for RPC command execution.
- * Uses the Commands registry from @alkem-io/matrix-adapter-go-lib for type-safe mapping.
+ * Uses the Commands registry from @alkemio/matrix-adapter-lib for type-safe mapping.
  *
  * @template T - Command topic from the Commands registry
  */
@@ -89,7 +91,7 @@ interface RpcOptions<T extends CommandTopic> {
  *
  * Key features:
  * - Uses @golevelup/nestjs-rabbitmq AmqpConnection.request() for RPC
- * - Type-safe command mapping via Commands registry from @alkem-io/matrix-adapter-go-lib
+ * - Type-safe command mapping via Commands registry from @alkemio/matrix-adapter-lib
  * - Standard AMQP RPC: publishes to queue with correlation_id and reply_to properties
  * - Compatible with Watermill-based Go adapter via Direct Reply-To queue
  * - Uses Alkemio UUIDs exclusively (AlkemioActorID, AlkemioRoomID, AlkemioContextID)
@@ -352,6 +354,54 @@ export class CommunicationAdapter {
 
     // Response is guaranteed non-null when ensureSuccess: true (throws on failure)
     return this.convertGetRoomResponseToCommunicationRoomResult(response!);
+  }
+
+  /**
+   * Get room members only (lightweight alternative to getRoom).
+   * Use this when you only need membership info, not messages.
+   */
+  async getRoomMembers(
+    alkemioRoomId: AlkemioRoomID
+  ): Promise<AlkemioActorID[]> {
+    if (!this.enabled) return [];
+
+    const response = await this.sendCommand({
+      operation: 'getRoomMembers',
+      topic: MatrixAdapterEventType.COMMUNICATION_ROOM_MEMBERS_GET,
+      payload: {
+        alkemio_room_id: alkemioRoomId,
+      } satisfies GetRoomMembersRequest,
+      errorContext: { alkemioRoomId },
+      ensureSuccess: true,
+    });
+
+    return response?.member_actor_ids ?? [];
+  }
+
+  /**
+   * Get messages in a thread (lightweight alternative to getRoom).
+   * Use this when you only need thread messages, not full room data.
+   */
+  async getThreadMessages(
+    alkemioRoomId: AlkemioRoomID,
+    threadRootId: string
+  ): Promise<IMessage[]> {
+    if (!this.enabled) return [];
+
+    const response = await this.sendCommand({
+      operation: 'getThreadMessages',
+      topic: MatrixAdapterEventType.COMMUNICATION_THREAD_MESSAGES_GET,
+      payload: {
+        alkemio_room_id: alkemioRoomId,
+        thread_root_id: threadRootId,
+      } satisfies GetThreadMessagesRequest,
+      errorContext: { alkemioRoomId, threadRootId },
+      ensureSuccess: true,
+    });
+
+    return (response?.messages ?? []).map(msg =>
+      this.convertMessageDtoToIMessage(msg)
+    );
   }
 
   // ============================================================================
@@ -706,8 +756,39 @@ export class CommunicationAdapter {
   }
 
   // ============================================================================
-  // Message and Reaction Lookup (for authorization)
+  // Message and Reaction Lookup
   // ============================================================================
+
+  /**
+   * Get a single message by ID from a room.
+   * More efficient than getRoom() when you only need one message.
+   */
+  async getMessage(data: {
+    alkemioRoomId: AlkemioRoomID;
+    messageId: string;
+  }): Promise<IMessage | undefined> {
+    if (!this.enabled) return undefined;
+
+    const response = await this.sendCommand({
+      operation: 'getMessage',
+      topic: MatrixAdapterEventType.COMMUNICATION_MESSAGE_GET,
+      payload: {
+        alkemio_room_id: data.alkemioRoomId,
+        message_id: data.messageId,
+      } satisfies GetMessageRequest,
+      errorContext: {
+        alkemioRoomId: data.alkemioRoomId,
+        messageId: data.messageId,
+      },
+      onError: 'silent',
+    });
+
+    if (!response?.message) {
+      return undefined;
+    }
+
+    return this.convertMessageDtoToIMessage(response.message);
+  }
 
   /**
    * Get the sender actor ID of a message (for authorization).
@@ -825,20 +906,41 @@ export class CommunicationAdapter {
       id: response.alkemio_room_id,
       displayName: response.display_name,
       members: response.member_actor_ids ?? [],
-      messages: (response.messages ?? []).map(msg => ({
-        id: msg.id,
-        message: msg.content,
-        sender: msg.sender_actor_id,
+      messages: (response.messages ?? []).map(msg =>
+        this.convertMessageDtoToIMessage(msg)
+      ),
+    };
+  }
+
+  /**
+   * Convert a MessageDto from the Go adapter to an IMessage.
+   */
+  private convertMessageDtoToIMessage(msg: {
+    id: string;
+    content: string;
+    sender_actor_id: string;
+    timestamp: string;
+    thread_id?: string;
+    reactions?: Array<{
+      id: string;
+      emoji: string;
+      sender_actor_id: string;
+      timestamp: string;
+    }>;
+  }): IMessage {
+    return {
+      id: msg.id,
+      message: msg.content,
+      sender: msg.sender_actor_id,
+      senderType: 'user' as const,
+      timestamp: this.parseTimestamp(msg.timestamp),
+      threadID: msg.thread_id,
+      reactions: (msg.reactions ?? []).map(r => ({
+        id: r.id,
+        emoji: r.emoji,
+        sender: r.sender_actor_id,
         senderType: 'user' as const,
-        timestamp: this.parseTimestamp(msg.timestamp),
-        threadID: msg.thread_id,
-        reactions: (msg.reactions ?? []).map(r => ({
-          id: r.id,
-          emoji: r.emoji,
-          sender: r.sender_actor_id,
-          senderType: 'user' as const,
-          timestamp: this.parseTimestamp(r.timestamp),
-        })),
+        timestamp: this.parseTimestamp(r.timestamp),
       })),
     };
   }

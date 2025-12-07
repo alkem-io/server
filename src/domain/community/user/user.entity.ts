@@ -1,6 +1,7 @@
 import {
   Column,
   Entity,
+  Index,
   JoinColumn,
   OneToOne,
   OneToMany,
@@ -10,12 +11,8 @@ import { IUser } from '@domain/community/user/user.interface';
 import { Application } from '@domain/access/application/application.entity';
 import { ContributorBase } from '../contributor/contributor.base.entity';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
-import {
-  MID_TEXT_LENGTH,
-  SMALL_TEXT_LENGTH,
-  UUID_LENGTH,
-} from '@common/constants';import { UserSettings } from '../user-settings/user.settings.entity';
-import { ConversationsSet } from '@domain/communication/conversations-set/conversations.set.entity';
+import { MID_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@common/constants';
+import { UserSettings } from '../user-settings/user.settings.entity';
 
 @Entity()
 export class User extends ContributorBase implements IUser {
@@ -43,8 +40,8 @@ export class User extends ContributorBase implements IUser {
   })
   phone?: string;
 
-  @Column('char', {
-    length: UUID_LENGTH,
+  @Index()
+  @Column('uuid', {
     nullable: true,
     unique: true,
   })
@@ -74,12 +71,4 @@ export class User extends ContributorBase implements IUser {
   })
   @JoinColumn()
   storageAggregator?: StorageAggregator;
-
-  @OneToOne(() => ConversationsSet, {
-    eager: false,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
-  conversationsSet?: ConversationsSet;
 }

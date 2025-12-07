@@ -18,7 +18,6 @@ import { RoomServiceEvents } from './room.service.events';
 import { RoomEventResolverSubscription } from './room.event.resolver.subscription';
 import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
 import { MessageModule } from '../message/message.module';
-import { VcInteractionModule } from '../vc-interaction/vc.interaction.module';
 import { VirtualContributorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { InAppNotificationModule } from '@platform/in-app-notification/in.app.notification.module';
@@ -38,7 +37,6 @@ import { VirtualContributorMessageModule } from '../virtual.contributor.message/
     CommunicationAdapterModule,
     EntityResolverModule,
     MessageModule,
-    VcInteractionModule,
     VirtualContributorLookupModule,
     VirtualContributorMessageModule,
     UserLookupModule,

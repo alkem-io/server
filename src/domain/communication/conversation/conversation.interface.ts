@@ -1,21 +1,15 @@
-import { Field, ObjectType } from '@nestjs/graphql';
+import { ObjectType } from '@nestjs/graphql';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity/authorizable.interface';
 import { IConversationsSet } from '../conversations-set/conversations.set.interface';
-import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
-import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
+import { IConversationMembership } from './conversation-membership.interface';
 
 @ObjectType('Conversation')
 export abstract class IConversation extends IAuthorizable {
-  @Field(() => CommunicationConversationType, { nullable: false })
-  type!: CommunicationConversationType;
+  // All fields now resolved via ConversationMembership pivot table or computed dynamically
+  // See conversation.resolver.fields.ts for type/user/virtualContributor field resolvers
 
-  userID?: string;
-
-  virtualContributorID?: string;
-
-  @Field(() => VirtualContributorWellKnown, { nullable: true })
-  wellKnownVirtualContributor?: VirtualContributorWellKnown;
+  memberships?: IConversationMembership[];
 
   room?: IRoom;
   conversationsSet!: IConversationsSet;

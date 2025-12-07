@@ -718,7 +718,9 @@ export class NotificationExternalAdapter {
       },
       comment: {
         message: message.message,
-        createdBy: await this.getContributorPayloadByAgentIdOrFail(message.sender),
+        createdBy: await this.getContributorPayloadByAgentIdOrFail(
+          message.sender
+        ),
         url: '',
       },
       ...basePayload,

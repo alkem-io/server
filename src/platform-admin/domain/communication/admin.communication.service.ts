@@ -74,8 +74,8 @@ export class AdminCommunicationService {
       room.displayName
     );
     result.roomID = room.id;
-    const roomData = await this.communicationAdapter.getRoom(room.id);
-    result.members = roomData.members;
+    // Use getRoomMembers for efficient membership-only lookup (no message history)
+    result.members = await this.communicationAdapter.getRoomMembers(room.id);
     // check which ones are missing - compare using agent.id (actorId)
     for (const communityMember of communityMembers) {
       const memberActorId = communityMember.agent?.id;

@@ -6,8 +6,8 @@ import { IConversationsSet } from './conversations.set.interface';
 import { ConversationsSetService } from './conversations.set.service';
 import { ForbiddenException } from '@common/exceptions/forbidden.exception';
 import { LogContext } from '@common/enums/logging.context';
-import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
+import { ConversationService } from '../conversation/conversation.service';
 
 @Injectable()
 export class ConversationsSetAuthorizationService {
@@ -15,7 +15,7 @@ export class ConversationsSetAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private conversationsSetService: ConversationsSetService,
     private conversationAuthorizationService: ConversationAuthorizationService,
-    private userLookupService: UserLookupService
+    private conversationService: ConversationService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -61,44 +61,45 @@ export class ConversationsSetAuthorizationService {
 
   public async resetAuthorizationOnConversations(
     hostUserID: string,
-    receiverUserID: string,
-    type: CommunicationConversationType
+    receiverUserID: string
   ) {
-    // Reset the authorization policies for the conversation
+    // With membership-based architecture, there is only ONE conversation
+    // between two users (not two "reciprocal" conversations).
+    // We just need to reset authorization on that single conversation.
     await this.resetConversationAuthorization(hostUserID, receiverUserID);
-    if (type === CommunicationConversationType.USER_USER) {
-      await this.resetConversationAuthorization(receiverUserID, hostUserID);
-    }
   }
 
+  /**
+   * Reset authorization on the conversation between two users.
+   * Uses platform conversation set and membership queries to find the conversation.
+   */
   private async resetConversationAuthorization(
     hostUserID: string,
     receiverUserID: string
   ) {
-    const hostUser = await this.userLookupService.getUserOrFail(hostUserID, {
-      relations: {
-        authorization: true,
-        conversationsSet: {
-          authorization: true,
-          conversations: {
-            authorization: true,
-          },
-        },
-      },
-    });
-    if (!hostUser.conversationsSet) {
-      throw new ForbiddenException(
-        `Unable to access user(${hostUser.id}) as they do not have a conversations set.`,
-        LogContext.COMMUNICATION
+    // Get conversations for the host user from the platform set
+    const hostUserConversations =
+      await this.conversationsSetService.getConversationsForUser(
+        hostUserID,
+        CommunicationConversationType.USER_USER
       );
+
+    // Find the conversation with the receiver user
+    let conversationWithReceiver;
+    for (const conversation of hostUserConversations) {
+      const otherUser = await this.conversationService.getUserFromConversation(
+        conversation.id,
+        hostUserID
+      );
+      if (otherUser?.id === receiverUserID) {
+        conversationWithReceiver = conversation;
+        break;
+      }
     }
-    const hostConversationWithReceiver =
-      hostUser.conversationsSet.conversations.find(
-        conversation => conversation.userID === receiverUserID
-      );
-    if (!hostConversationWithReceiver) {
+
+    if (!conversationWithReceiver) {
       throw new ForbiddenException(
-        'Host user does not have a conversation with the receiver user.',
+        'Could not find conversation between the users.',
         LogContext.COMMUNICATION,
         {
           hostUserID,
@@ -106,14 +107,13 @@ export class ConversationsSetAuthorizationService {
         }
       );
     }
-    const hostConversationWithReceiverAuthorizations =
+
+    const conversationAuthorizations =
       await this.conversationAuthorizationService.applyAuthorizationPolicy(
-        hostConversationWithReceiver.id,
+        conversationWithReceiver.id,
         hostUserID
       );
 
-    await this.authorizationPolicyService.saveAll(
-      hostConversationWithReceiverAuthorizations
-    );
+    await this.authorizationPolicyService.saveAll(conversationAuthorizations);
   }
 }

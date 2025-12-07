@@ -344,7 +344,7 @@ tcp:
     matrix-adapter:
       loadBalancer:
         servers:
-          - address: 'matrix-adapter:8081'
+          - address: 'matrix-adapter:8280'
 
   routers:
     mysql:
