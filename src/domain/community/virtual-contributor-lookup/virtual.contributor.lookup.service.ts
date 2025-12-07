@@ -67,8 +67,9 @@ export class VirtualContributorLookupService {
       });
     if (!virtualContributor)
       throw new EntityNotFoundException(
-        `Unable to find VirtualContributor with ID: ${virtualContributorID}`,
-        LogContext.COMMUNITY
+        'Unable to find VirtualContributor with ID',
+        LogContext.COMMUNITY,
+        { virtualContributorID }
       );
     return virtualContributor;
   }
@@ -105,8 +106,9 @@ export class VirtualContributorLookupService {
       });
     if (!virtualContributor)
       throw new EntityNotFoundException(
-        `Unable to find VirtualContributor with NameID: ${virtualContributorNameID}`,
-        LogContext.COMMUNITY
+        'Unable to find VirtualContributor with NameID',
+        LogContext.COMMUNITY,
+        { virtualContributorNameID }
       );
     return virtualContributor;
   }
