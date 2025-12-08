@@ -51,9 +51,6 @@ import { DataLoaderInterceptor } from '@core/dataloader/interceptors';
 import { InnovationHubInterceptor } from '@common/interceptors';
 import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.module';
 import { SessionSyncModule } from '@services/session-sync/session-sync.module';
-import { SsiCredentialFlowController } from '@services/api-rest/ssi-credential-flow/ssi.credential.flow.controller';
-import { SsiCredentialFlowModule } from '@services/api-rest/ssi-credential-flow/ssi.credential.flow.module';
-import { StorageAccessModule } from '@services/api-rest/storage-access/storage.access.module';
 import { MessageReactionModule } from '@domain/communication/message.reaction/message.reaction.module';
 import {
   HttpExceptionFilter,
@@ -143,21 +140,34 @@ import { InAppNotificationAdminModule } from './platform-admin/in-app-notificati
         const dbOptions = configService.get('storage.database', {
           infer: true,
         });
-        return {
-          type: 'mysql',
-          insecureAuth: true,
+        const dbType = dbOptions.type || 'postgres';
+
+        const commonConfig = {
           synchronize: false,
           cache: true,
           entities: [join(__dirname, '**', '*.entity.{ts,js}')],
           host: dbOptions.host,
           port: dbOptions.port,
-          timezone: dbOptions.timezone,
-          charset: dbOptions.charset,
           username: dbOptions.username,
           password: dbOptions.password,
           database: dbOptions.database,
           logging: dbOptions.logging,
         };
+
+        if (dbType === 'postgres') {
+          return {
+            ...commonConfig,
+            type: 'postgres' as const,
+          };
+        } else {
+          return {
+            ...commonConfig,
+            type: 'mysql' as const,
+            insecureAuth: true,
+            timezone: dbOptions.timezone,
+            charset: dbOptions.charset,
+          };
+        }
       },
     }),
     WinstonModule.forRootAsync({
@@ -298,8 +308,6 @@ import { InAppNotificationAdminModule } from './platform-admin/in-app-notificati
     GeoLocationModule,
     ContributionReporterModule,
     InnovationHubModule,
-    SsiCredentialFlowModule,
-    StorageAccessModule,
     MeModule,
     VirtualContributorModule,
     InputCreatorModule,
@@ -319,7 +327,7 @@ import { InAppNotificationAdminModule } from './platform-admin/in-app-notificati
     CalloutTransferModule,
     SearchModule,
   ],
-  controllers: [AppController, SsiCredentialFlowController],
+  controllers: [AppController],
   providers: [
     {
       provide: APP_INTERCEPTOR,

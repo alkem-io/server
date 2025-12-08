@@ -216,8 +216,10 @@ export class CommunicationAdapter {
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
-        `Failed to send message to user: ${err}`,
-        LogContext.COMMUNICATION
+        'Failed to send message to user',
+        LogContext.COMMUNICATION,
+        undefined,
+        { originalException: err }
       );
     }
   }
@@ -246,8 +248,10 @@ export class CommunicationAdapter {
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
-        `Failed to send message to user: ${err}`,
-        LogContext.COMMUNICATION
+        'Failed to stop direct messaging to user',
+        LogContext.COMMUNICATION,
+        undefined,
+        { originalException: err }
       );
     }
   }
@@ -287,8 +291,10 @@ export class CommunicationAdapter {
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
-        `Failed to add reaction to message in room: ${err?.message ?? err}`,
-        LogContext.COMMUNICATION
+        'Failed to add reaction to message in room',
+        LogContext.COMMUNICATION,
+        undefined,
+        { originalException: err }
       );
     }
   }
@@ -533,7 +539,7 @@ export class CommunicationAdapter {
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       this.logger.verbose?.(
-        `Attempt to register user failed: ${err}; user registration for Communication to be re-tried later`,
+        `Attempt to register user failed: ${err?.message ?? JSON.stringify(err)}; user registration for Communication to be re-tried later`,
         LogContext.COMMUNICATION
       );
     }
@@ -576,8 +582,10 @@ export class CommunicationAdapter {
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
-        `Failed to create room: ${err}`,
-        LogContext.COMMUNICATION
+        'Failed to create room',
+        LogContext.COMMUNICATION,
+        undefined,
+        { originalException: err }
       );
     }
   }
@@ -610,7 +618,7 @@ export class CommunicationAdapter {
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       this.logger.warn?.(
-        `Unable to add user (${matrixUserID}) to rooms (${roomIDs}): already added?: ${err}`,
+        `Unable to add user (${matrixUserID}) to rooms (${roomIDs}): already added?: ${err?.message ?? JSON.stringify(err)}`,
         LogContext.COMMUNICATION
       );
       return false;
@@ -660,8 +668,10 @@ export class CommunicationAdapter {
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
-        `Failed to get rooms for User: ${err}`,
-        LogContext.COMMUNICATION
+        'Failed to get rooms for User',
+        LogContext.COMMUNICATION,
+        undefined,
+        { originalException: err }
       );
     }
   }
@@ -745,8 +755,10 @@ export class CommunicationAdapter {
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
-        `Failed to remove user from rooms: ${err}`,
-        LogContext.COMMUNICATION
+        'Failed to remove user from rooms',
+        LogContext.COMMUNICATION,
+        undefined,
+        { originalException: err }
       );
     }
   }
@@ -770,8 +782,10 @@ export class CommunicationAdapter {
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
-        `Failed to get all rooms: ${err}`,
-        LogContext.COMMUNICATION
+        'Failed to get all rooms',
+        LogContext.COMMUNICATION,
+        undefined,
+        { originalException: err }
       );
     }
   }
@@ -808,8 +822,10 @@ export class CommunicationAdapter {
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
-        `Failed to replicate room membership: ${err}`,
-        LogContext.COMMUNICATION
+        'Failed to replicate room membership',
+        LogContext.COMMUNICATION,
+        undefined,
+        { originalException: err }
       );
     }
   }
@@ -842,7 +858,7 @@ export class CommunicationAdapter {
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       this.logger.verbose?.(
-        `Unable to remove room  (${matrixRoomID}): ${err}`,
+        `Unable to remove room  (${matrixRoomID}): ${err?.message ?? JSON.stringify(err)}`,
         LogContext.COMMUNICATION
       );
       return false;
@@ -874,7 +890,7 @@ export class CommunicationAdapter {
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       this.logger.verbose?.(
-        `Unable to get room members  (${matrixRoomID}): ${err}`,
+        `Unable to get room members  (${matrixRoomID}): ${err?.message ?? JSON.stringify(err)}`,
         LogContext.COMMUNICATION
       );
       throw err;
@@ -910,9 +926,7 @@ export class CommunicationAdapter {
       );
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
-      const message = `Unable to change guest access for rooms to (${
-        allowGuests ? 'Public' : 'Private'
-      }): ${err}`;
+      const message = `Unable to change guest access for rooms to (${allowGuests ? 'Public' : 'Private'}): ${err?.message ?? JSON.stringify(err)}`;
       this.logger.error(message, err?.stack, LogContext.COMMUNICATION);
       throw err;
     }

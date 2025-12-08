@@ -24,7 +24,11 @@ export class CommunityCommunicationService {
       )
       .catch(error =>
         this.logger.error(
-          `Unable to add user to community messaging (${communication.id}): ${error}`,
+          {
+            message: `Unable to add user to community messaging (${communication.id})`,
+            error: error?.message,
+            details: error?.details,
+          },
           error?.stack,
           LogContext.COMMUNICATION
         )
@@ -39,7 +43,11 @@ export class CommunityCommunicationService {
       .removeUserFromCommunications(communication, user)
       .catch(error =>
         this.logger.error(
-          `Unable remove user from community messaging (${communication.id}): ${error}`,
+          {
+            message: `Unable remove user from community messaging (${communication.id})`,
+            error: error?.message,
+            details: error?.details,
+          },
           error?.stack,
           LogContext.COMMUNICATION
         )
