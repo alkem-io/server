@@ -4,7 +4,6 @@ import { IAuthorizationPolicy } from './authorization.policy.interface';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { ENUM_LENGTH } from '@common/constants';
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
-import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 
 @Entity()
@@ -17,9 +16,6 @@ export class AuthorizationPolicy
 
   @Column({ type: 'json', nullable: false })
   privilegeRules: AuthorizationPolicyRulePrivilege[];
-
-  @Column({ type: 'json', nullable: false })
-  verifiedCredentialRules: AuthorizationPolicyRuleVerifiedCredential[];
 
   @Column('varchar', { length: ENUM_LENGTH, nullable: false })
   type!: AuthorizationPolicyType;
@@ -37,7 +33,6 @@ export class AuthorizationPolicy
   constructor(type: AuthorizationPolicyType) {
     super();
     this.credentialRules = [];
-    this.verifiedCredentialRules = [];
     this.privilegeRules = [];
     this.type = type;
   }
