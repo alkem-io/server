@@ -57,13 +57,15 @@ export class WhiteboardIntegrationController {
         const { userID, email } = result;
         if (result.guestName) {
           const { guestName } = result;
-          // Sanitize guestName for email local part
+          // Sanitize guestName for email local part - use Unicode-aware regex
+          // \p{L} matches any Unicode letter, \p{N} matches any Unicode number
           const sanitizedName = guestName
             .toLowerCase()
-            .replace(/[^a-z0-9-]/g, '-')
+            .replace(/[^\p{L}\p{N}-]/gu, '-')
             .replace(/-+/g, '-')
+            .replace(/^-|-$/g, '')
             .substring(0, 64);
-          const guestEmail = `${sanitizedName}-guest@alkem.io`;
+          const guestEmail = `${sanitizedName || 'guest'}-guest@alkem.io`;
           return {
             id: randomUUID(),
             email: guestEmail,

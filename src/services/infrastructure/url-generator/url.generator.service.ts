@@ -75,6 +75,26 @@ export class UrlGeneratorService {
     return `${this.endpoint_cluster}/vc/${nameID}`;
   }
 
+  public async generateUrlForVCById(id: string): Promise<string> {
+    const vc = await this.entityManager.findOne(VirtualContributor, {
+      where: {
+        id: id,
+      },
+      select: {
+        id: true,
+        nameID: true,
+      },
+    });
+    if (!vc) {
+      throw new EntityNotFoundException(
+        'Unable to find VirtualContributor',
+        LogContext.URL_GENERATOR,
+        { vcId: id }
+      );
+    }
+    return this.generateUrlForVC(vc.nameID);
+  }
+
   public generateUrlForPlatform(): string {
     return `${this.endpoint_cluster}/home`;
   }
@@ -264,9 +284,10 @@ export class UrlGeneratorService {
       entityNameID: string;
     }[] = await this.entityManager.connection.query(
       `
-        SELECT \`${entityTableName}\`.\`id\` as \`entityID\`, \`${entityTableName}\`.\`nameID\` as entityNameID FROM \`${entityTableName}\`
-        WHERE \`${entityTableName}\`.\`profileId\` = '${profileID}'
-      `
+        SELECT "${entityTableName}"."id" as "entityID", "${entityTableName}"."nameID" as "entityNameID" FROM "${entityTableName}"
+        WHERE "${entityTableName}"."profileId" = $1
+      `,
+      [profileID]
     );
 
     if (!result) {
@@ -600,8 +621,9 @@ export class UrlGeneratorService {
       );
       if (!virtualContributor) {
         throw new EntityNotFoundException(
-          `Unable to find VirtualContributor for CalloutsSet where id: ${callout.calloutsSet.id}`,
-          LogContext.URL_GENERATOR
+          'Unable to find VirtualContributor for CalloutsSet',
+          LogContext.URL_GENERATOR,
+          { calloutsSetId: callout.calloutsSet.id }
         );
       }
       const vcUrl = this.generateUrlForVC(virtualContributor.nameID);
@@ -811,9 +833,10 @@ export class UrlGeneratorService {
       postNameId: string;
     }[] = await this.entityManager.connection.query(
       `
-        SELECT post.id as postId, post.nameID as postNameId FROM post
-        WHERE post.${fieldName} = '${fieldID}'
-      `
+        SELECT post.id as "postId", post."nameID" as "postNameId" FROM post
+        WHERE post."${fieldName}" = $1
+      `,
+      [fieldID]
     );
 
     if (!result) {
@@ -1093,9 +1116,10 @@ export class UrlGeneratorService {
       calendarID: string;
     }[] = await this.entityManager.connection.query(
       `
-        SELECT calendar_event.id as entityID, calendar_event.nameID as entityNameID, calendar_event.calendarId as calendarID FROM calendar_event
-        WHERE calendar_event.${fieldName} = '${fieldID}'
-      `
+        SELECT calendar_event.id as "entityID", calendar_event."nameID" as "entityNameID", calendar_event."calendarId" as "calendarID" FROM calendar_event
+        WHERE calendar_event."${fieldName}" = $1
+      `,
+      [fieldID]
     );
 
     if (!calendarEventInfo) {
@@ -1141,8 +1165,9 @@ export class UrlGeneratorService {
 
     if (!vc) {
       throw new EntityNotFoundException(
-        `Unable to find VirtualContributor for KnowledgeBase with profile ID: ${kbProfileId}`,
-        LogContext.URL_GENERATOR
+        'Unable to find VirtualContributor for KnowledgeBase with profile',
+        LogContext.URL_GENERATOR,
+        { kbProfileId }
       );
     }
     return vc;

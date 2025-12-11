@@ -5,7 +5,6 @@ import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/au
 import { IInnovationFlowSettings } from '../innovation-flow-settings/innovation.flow.settings.interface';
 import { TagsetTemplate } from '@domain/common/tagset-template/tagset.template.entity';
 import { InnovationFlowState } from '../innovation-flow-state/innovation.flow.state.entity';
-import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 
 @Entity()
 export class InnovationFlow
@@ -26,7 +25,7 @@ export class InnovationFlow
   })
   states!: InnovationFlowState[];
 
-  @Column('char', { length: UUID_LENGTH, nullable: true })
+  @Column('uuid', { nullable: true })
   currentStateID?: string;
 
   @Column('json', { nullable: false })

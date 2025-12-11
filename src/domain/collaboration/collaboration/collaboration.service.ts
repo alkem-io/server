@@ -356,13 +356,14 @@ export class CollaborationService {
       postsCount: number;
     }[] = await this.entityManager.connection.query(
       `
-      SELECT COUNT(*) as postsCount FROM \`callouts_set\`
-      RIGHT JOIN \`callout\` ON \`callout\`.\`calloutsSetId\` = \`callouts_set\`.\`id\`
-      RIGHT JOIN \`callout_contribution\` ON \`callout_contribution\`.\`calloutId\` = \`callout\`.\`id\`
-      WHERE \`callouts_set\`.\`id\` = '${calloutsSet.id}'
-        AND \`callout\`.\`visibility\` = '${CalloutVisibility.PUBLISHED}'
-        AND NOT(ISNULL(\`callout_contribution\`.\`postId\`));
-      `
+      SELECT COUNT(*) as "postsCount" FROM "callouts_set"
+      RIGHT JOIN "callout" ON "callout"."calloutsSetId" = "callouts_set"."id"
+      RIGHT JOIN "callout_contribution" ON "callout_contribution"."calloutId" = "callout"."id"
+      WHERE "callouts_set"."id" = $1
+        AND "callout"."visibility" = $2
+        AND "callout_contribution"."postId" IS NOT NULL
+      `,
+      [calloutsSet.id, CalloutVisibility.PUBLISHED]
     );
 
     return result.postsCount;
@@ -373,13 +374,14 @@ export class CollaborationService {
       whiteboardsCount: number;
     }[] = await this.entityManager.connection.query(
       `
-      SELECT COUNT(*) as whiteboardsCount
-      FROM \`callouts_set\` RIGHT JOIN \`callout\` ON \`callout\`.\`calloutsSetId\` = \`callouts_set\`.\`id\`
-      RIGHT JOIN \`callout_contribution\` ON \`callout_contribution\`.\`calloutId\` = \`callout\`.\`id\`
-      WHERE \`callouts_set\`.\`id\` = '${calloutsSet.id}'
-        AND \`callout\`.\`visibility\` = '${CalloutVisibility.PUBLISHED}'
-        AND NOT(ISNULL(\`callout_contribution\`.\`whiteboardId\`));
-      `
+      SELECT COUNT(*) as "whiteboardsCount"
+      FROM "callouts_set" RIGHT JOIN "callout" ON "callout"."calloutsSetId" = "callouts_set"."id"
+      RIGHT JOIN "callout_contribution" ON "callout_contribution"."calloutId" = "callout"."id"
+      WHERE "callouts_set"."id" = $1
+        AND "callout"."visibility" = $2
+        AND "callout_contribution"."whiteboardId" IS NOT NULL
+      `,
+      [calloutsSet.id, CalloutVisibility.PUBLISHED]
     );
 
     return result.whiteboardsCount;

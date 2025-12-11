@@ -649,29 +649,47 @@ export class SpaceService {
     return space;
   }
 
-  public getExploreSpaces(
+  public async getExploreSpaces(
     limit = EXPLORE_SPACES_LIMIT,
     daysOld = EXPLORE_SPACES_ACTIVITY_DAYS_OLD
   ): Promise<ISpace[]> {
     const daysAgo = new Date();
     daysAgo.setDate(daysAgo.getDate() - daysOld);
 
-    return (
-      this.spaceRepository
-        .createQueryBuilder('s')
-        .leftJoinAndSelect('s.authorization', 'authorization') // eager load the authorization
-        .innerJoin(Activity, 'a', 's.collaborationId = a.collaborationID')
-        .where({
-          level: SpaceLevel.L0,
-          visibility: SpaceVisibility.ACTIVE,
-        })
-        // activities in the past "daysOld" days
-        .andWhere('a.createdDate >= :daysAgo', { daysAgo })
-        .groupBy('s.id')
-        .orderBy('COUNT(a.id)', 'DESC')
-        .limit(limit)
-        .getMany()
-    );
+    // First, get the space IDs ordered by activity count using a subquery approach
+    // This avoids PostgreSQL GROUP BY issues with joined columns
+    const spaceIdsWithActivity = await this.spaceRepository
+      .createQueryBuilder('s')
+      .select('s.id', 'id')
+      .innerJoin(Activity, 'a', 's.collaborationId = a.collaborationID')
+      .where({
+        level: SpaceLevel.L0,
+        visibility: SpaceVisibility.ACTIVE,
+      })
+      // activities in the past "daysOld" days
+      .andWhere('a.createdDate >= :daysAgo', { daysAgo })
+      .groupBy('s.id')
+      .orderBy('COUNT(a.id)', 'DESC')
+      .limit(limit)
+      .getRawMany<{ id: string }>();
+
+    if (spaceIdsWithActivity.length === 0) {
+      return [];
+    }
+
+    const spaceIds = spaceIdsWithActivity.map(row => row.id);
+
+    // Then fetch the full space entities with authorization relation
+    const spaces = await this.spaceRepository.find({
+      where: { id: In(spaceIds) },
+      relations: { authorization: true },
+    });
+
+    // Preserve the activity-based ordering from the first query
+    const spaceMap = new Map(spaces.map(space => [space.id, space]));
+    return spaceIds
+      .map(id => spaceMap.get(id))
+      .filter((space): space is Space => space !== undefined);
   }
 
   async getSpace(

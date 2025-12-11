@@ -38,7 +38,7 @@ export const createStorageBucketAndLink = async (
   const storageBucketAuthID = randomUUID();
 
   await queryRunner.query(
-    `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules) VALUES
+    `INSERT INTO authorization_policy (id, version, credentialRules, anonymousReadAccess, privilegeRules) VALUES
       ('${storageBucketAuthID}',
       1, '', '', 0, '')`
   );

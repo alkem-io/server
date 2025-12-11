@@ -91,10 +91,11 @@ export class AccountLookupService {
       return organization;
     }
 
-    throw new RelationshipNotFoundException(
-      `Unable to find contributor associated with account ${account.id}`,
+    this.logger.warn(
+      `Unable to find contributor associated with account: ${account.id}`,
       LogContext.ACCOUNT
     );
+    return null;
   }
 
   public async areResourcesInAccount(accountID: string): Promise<boolean> {

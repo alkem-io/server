@@ -65,11 +65,11 @@ describe('WhiteboardGuestAccessService', () => {
 
     authorizationPolicyService = {
       save: jest.fn(async auth => auth),
+      saveAll: jest.fn(async auths => auths),
       authorizationSelectOptions: {
         id: true,
         credentialRules: true,
         privilegeRules: true,
-        verifiedCredentialRules: true,
       } as any,
     } as unknown as jest.Mocked<AuthorizationPolicyService>;
 

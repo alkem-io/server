@@ -1,5 +1,4 @@
-import { Injectable } from '@nestjs/common';
-import { InvitationService } from './invitation.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
@@ -18,14 +17,16 @@ import { RoleSetMembershipException } from '@common/exceptions/role.set.membersh
 import { Organization } from '@domain/community/organization/organization.entity';
 import { User } from '@domain/community/user/user.entity';
 import { getContributorType } from '@domain/community/contributor/get.contributor.type';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class InvitationAuthorizationService {
   constructor(
-    private invitationService: InvitationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private contributorService: ContributorService,
-    private virtualContributorLookupService: VirtualContributorLookupService
+    private virtualContributorLookupService: VirtualContributorLookupService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -48,9 +49,24 @@ export class InvitationAuthorizationService {
   ): Promise<IAuthorizationPolicy> {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    // get the user
-    const contributor =
-      await this.invitationService.getInvitedContributor(invitation);
+    // get the contributor - may be null if orphaned
+    const contributor = await this.contributorService.getContributor(
+      invitation.invitedContributorID
+    );
+
+    if (!contributor) {
+      // Orphaned invitation - contributor no longer exists
+      // Log warning and skip adding custom authorization rules
+      this.logger.warn(
+        {
+          message: 'Invitation references non-existent contributor',
+          invitationId: invitation.id,
+          contributorId: invitation.invitedContributorID,
+        },
+        LogContext.COMMUNITY
+      );
+      return invitation.authorization!;
+    }
 
     // also grant the user privileges to work with their own invitation
     let accountID: string | undefined = undefined;

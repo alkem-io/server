@@ -140,21 +140,34 @@ import { InAppNotificationAdminModule } from './platform-admin/in-app-notificati
         const dbOptions = configService.get('storage.database', {
           infer: true,
         });
-        return {
-          type: 'mysql',
-          insecureAuth: true,
+        const dbType = dbOptions.type || 'postgres';
+
+        const commonConfig = {
           synchronize: false,
           cache: true,
           entities: [join(__dirname, '**', '*.entity.{ts,js}')],
           host: dbOptions.host,
           port: dbOptions.port,
-          timezone: dbOptions.timezone,
-          charset: dbOptions.charset,
           username: dbOptions.username,
           password: dbOptions.password,
           database: dbOptions.database,
           logging: dbOptions.logging,
         };
+
+        if (dbType === 'postgres') {
+          return {
+            ...commonConfig,
+            type: 'postgres' as const,
+          };
+        } else {
+          return {
+            ...commonConfig,
+            type: 'mysql' as const,
+            insecureAuth: true,
+            timezone: dbOptions.timezone,
+            charset: dbOptions.charset,
+          };
+        }
       },
     }),
     WinstonModule.forRootAsync({

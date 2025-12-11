@@ -543,7 +543,7 @@ export class VirtualContributorService {
         .createQueryBuilder('virtual_contributor')
         .leftJoinAndSelect('virtual_contributor.agent', 'agent')
         .leftJoinAndSelect('agent.credentials', 'credential')
-        .where('credential.type IN (:credentialsFilter)')
+        .where('credential.type IN (:...credentialsFilter)')
         .setParameters({
           credentialsFilter: credentialsFilter,
         })

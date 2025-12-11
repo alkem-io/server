@@ -1,6 +1,6 @@
 {
   "name": "alkemio-server",
-  "version": "0.128.3",
+  "version": "0.129.0",
   "description": "Alkemio server, responsible for managing the shared Alkemio platform",
   "author": "Alkemio Foundation",
   "private": false,
@@ -45,6 +45,7 @@
     "circular-dependencies": "madge --circular dist",
     "db:recreate": "ts-node .scripts/tests/recreate-db.ts",
     "db:reset": "pnpm run db:recreate && pnpm run migration:run",
+    "db:reset:pg": "./scripts/db/reset-postgres.sh",
     "schema:print": "ts-node -r tsconfig-paths/register src/tools/schema/print-schema.ts schema.graphql",
     "schema:sort": "ts-node -r tsconfig-paths/register src/tools/schema/sort-sdl.ts schema.graphql",
     "schema:diff": "ts-node -r tsconfig-paths/register src/tools/schema/diff-schema.ts --old tmp/prev.schema.graphql --new schema.graphql --out change-report.json --deprecations deprecations.json",
