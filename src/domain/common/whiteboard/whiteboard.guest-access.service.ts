@@ -152,10 +152,12 @@ export class WhiteboardGuestAccessService {
       guestAccessActive,
     });
 
-    await this.profileAuthService.applyAuthorizationPolicy(
-      whiteboard.profile.id,
-      whiteboard.authorization
-    );
+    const profileAuthorizations =
+      await this.profileAuthService.applyAuthorizationPolicy(
+        whiteboard.profile.id,
+        whiteboard.authorization
+      );
+    await this.authorizationPolicyService.saveAll(profileAuthorizations);
     return hydratedWhiteboard;
   }
 
