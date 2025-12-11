@@ -65,6 +65,7 @@ describe('WhiteboardGuestAccessService', () => {
 
     authorizationPolicyService = {
       save: jest.fn(async auth => auth),
+      saveAll: jest.fn(async auths => auths),
       authorizationSelectOptions: {
         id: true,
         credentialRules: true,
