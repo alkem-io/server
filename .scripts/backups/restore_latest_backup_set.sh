@@ -84,11 +84,14 @@ yq e ".server_name = \"$SERVER_NAME\"" -i $HOMESERVER_FILE_PATH
 # Path to your existing script
 SCRIPT_PATH='restore_latest_backup.sh'
 
-# Call the existing script for mysql
-bash $SCRIPT_PATH mysql $ENV
+# Call the existing script for alkemio (with non-interactive mode)
+bash $SCRIPT_PATH alkemio $ENV true
 
-# Call the existing script for postgres
-bash $SCRIPT_PATH postgres $ENV
+# Call the existing script for kratos (with non-interactive mode)
+bash $SCRIPT_PATH kratos $ENV true
+
+# Call the existing script for synapse (with non-interactive mode)
+bash $SCRIPT_PATH synapse $ENV true
 
 # Conditionally restart services based on the RESTART_SERVICES flag
 if [[ "$RESTART_SERVICES" == "true" ]]; then
@@ -96,16 +99,16 @@ if [[ "$RESTART_SERVICES" == "true" ]]; then
     # Start services
     pnpm run start:services &
 
-    # Wait for alkemio_dev_mysql container to be up
+    # Wait for alkemio_dev_postgres container to be up
     while true; do
         # Check the status of the container
-        CONTAINER_STATUS=$(docker inspect --format="{{.State.Status}}" alkemio_dev_mysql)
+        CONTAINER_STATUS=$(docker inspect --format="{{.State.Status}}" alkemio_dev_postgres)
 
         # If the container is running, break out of the loop
         if [ "$CONTAINER_STATUS" == "running" ]; then
             break
         else
-            echo "Waiting for alkemio_dev_mysql to start..."
+            echo "Waiting for alkemio_dev_postgres to start..."
         sleep 500
         fi
     done
