@@ -22,12 +22,12 @@ configure_aws_cli
 # ------------------------------------------------------------------------------
 usage() {
   echo "Usage:"
-  echo "  $0 empty [all|mysql|postgres]"
-  echo "     Recreates empty databases for either MySQL, PostgreSQL, or both."
+  echo "  $0 empty [all|alkemio|kratos|synapse]"
+  echo "     Recreates empty PostgreSQL databases."
   echo
-  echo "  $0 restore <environment> [all|mysql|postgres]"
+  echo "  $0 restore <environment> [all|alkemio|kratos|synapse]"
   echo "     Restores the latest backup from S3 for the specified environment."
-  echo "     Storage can be 'all', 'mysql', or 'postgres'."
+  echo "     Database can be 'all', 'alkemio', 'kratos', or 'synapse'."
   echo
   echo "Environments: acc, dev, sandbox, prod."
   exit 1
@@ -48,23 +48,16 @@ fi
 # 4) Case: ACTION = empty
 # ------------------------------------------------------------------------------
 if [[ "$ACTION" == "empty" ]]; then
-  # Usage: ./recreate_databases.sh empty [all|mysql|postgres]
+  # Usage: ./recreate_databases.sh empty [all|alkemio|kratos|synapse]
 
-  STORAGE=${2:-all}   # Default to "all" if not provided
+  DATABASE=${2:-all}   # Default to "all" if not provided
 
-  case "$STORAGE" in
-    mysql)
-      recreate_empty_databases "mysql"
-      ;;
-    postgres)
-      recreate_empty_databases "postgres"
-      ;;
-    all)
-      recreate_empty_databases "mysql"
-      recreate_empty_databases "postgres"
+  case "$DATABASE" in
+    alkemio|kratos|synapse|all)
+      recreate_empty_database "$DATABASE"
       ;;
     *)
-      echo "Invalid storage: $STORAGE"
+      echo "Invalid database: $DATABASE"
       usage
       ;;
   esac
@@ -76,10 +69,10 @@ fi
 # 5) Case: ACTION = restore
 # ------------------------------------------------------------------------------
 if [[ "$ACTION" == "restore" ]]; then
-  # Usage: ./recreate_databases.sh restore <env> [all|mysql|postgres]
+  # Usage: ./recreate_databases.sh restore <env> [all|alkemio|kratos|synapse]
 
   ENV=$2
-  STORAGE=${3:-all}  # Default to "all" if not provided
+  DATABASE=${3:-all}  # Default to "all" if not provided
 
   # Check if environment was provided
   if [ -z "$ENV" ]; then
@@ -93,28 +86,31 @@ if [[ "$ACTION" == "restore" ]]; then
     exit 1
   fi
 
-  case "$STORAGE" in
-    mysql)
-      echo "Restoring MySQL from the $ENV environment..."
-      LATEST_FILE_MYSQL=$(get_latest_backup "mysql" "$ENV")
-      restore_database "mysql" "$LATEST_FILE_MYSQL"
+  restore_single_db() {
+    local db=$1
+    echo "Restoring $db from the $ENV environment..."
+    LATEST_FILE=$(get_latest_backup "$db" "$ENV")
+    restore_database "$db" "$LATEST_FILE"
+  }
+
+  case "$DATABASE" in
+    alkemio)
+      restore_single_db "alkemio"
       ;;
-    postgres)
-      echo "Restoring PostgreSQL from the $ENV environment..."
-      LATEST_FILE_POSTGRES=$(get_latest_backup "postgres" "$ENV")
-      restore_database "postgres" "$LATEST_FILE_POSTGRES"
+    kratos)
+      restore_single_db "kratos"
+      ;;
+    synapse)
+      restore_single_db "synapse"
       ;;
     all)
-      echo "Restoring MySQL and PostgreSQL from the $ENV environment..."
-      # MySQL
-      LATEST_FILE_MYSQL=$(get_latest_backup "mysql" "$ENV")
-      restore_database "mysql" "$LATEST_FILE_MYSQL"
-      # PostgreSQL
-      LATEST_FILE_POSTGRES=$(get_latest_backup "postgres" "$ENV")
-      restore_database "postgres" "$LATEST_FILE_POSTGRES"
+      echo "Restoring all databases from the $ENV environment..."
+      restore_single_db "alkemio"
+      restore_single_db "kratos"
+      restore_single_db "synapse"
       ;;
     *)
-      echo "Invalid storage: $STORAGE"
+      echo "Invalid database: $DATABASE"
       usage
       ;;
   esac
