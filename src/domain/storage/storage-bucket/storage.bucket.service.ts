@@ -179,7 +179,7 @@ export class StorageBucketService {
       externalID: externalID,
       displayName: filename,
       size: size,
-      createdBy: userID,
+      createdBy: userID || undefined,
       temporaryLocation: temporaryLocation,
     };
 
