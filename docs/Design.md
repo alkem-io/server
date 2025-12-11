@@ -18,7 +18,7 @@ The development stack of Alkemio uses docker-compose to build up the dependent d
 - NestJS as a framework
 - TypeScript: for all logic
 - TypeORM: for the orbject relational mapping
-- mySQL: for data persistance
+- PostgreSQL: for data persistance
 - docker: for containers
 - docker-compose: for container orchestration
 - passportjs for authentication

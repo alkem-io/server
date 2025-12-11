@@ -219,7 +219,7 @@ export class TemplateService {
   ): Promise<ITemplate | never> {
     /* TODO: This should be a findOne, but we have to use find because of a bug in TypeORM.
      * updateTemplate makes use of this method and the select option to only fetch the whiteboard.id
-     * is causing an MySQL error with findOne which is not happening with find.
+     * is causing an error with findOne which is not happening with find.
      * When we tackle #4106 (Typeorm upgrade) we can switch back to findOne
      */
     const templates = await this.templateRepository.find({

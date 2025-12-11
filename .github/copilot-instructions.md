@@ -5,7 +5,7 @@
 ## Repository Snapshot
 
 - Purpose: NestJS GraphQL server for the Alkemio collaboration platform; exposes `http://localhost:3000/graphql` and orchestrates domain + integration services.
-- Stack: TypeScript, Node 20 LTS (Volta pins 20.15.1), pnpm 10.17.1 via Corepack, NestJS, TypeORM (MySQL), Apollo Server, RabbitMQ queues, Elastic APM, Ory Kratos/Oathkeeper for auth.
+- Stack: TypeScript, Node 20 LTS (Volta pins 20.15.1), pnpm 10.17.1 via Corepack, NestJS, TypeORM (PostgreSQL), Apollo Server, RabbitMQ queues, Elastic APM, Ory Kratos/Oathkeeper for auth.
 - Scale: ~3k TypeScript files; key roots include `src/`, `test/`, `docs/`, `.specify/`, `scripts/`, `specs/00x-*`, `quickstart-*.yml`, `Dockerfile`, `package.json`, `pnpm-lock.yaml`.
 - Docs: `docs/Developing.md`, `docs/Running.md`, `docs/QA.md`, `docs/DataManagement.md`, `docs/Design.md` hold authoritative setup, architecture, QA, and migration guidance. Authorization flows and decision trees live in `docs/authorization-forest.md` and credential semantics in `docs/credential-based-authorization.md`.
 
@@ -18,8 +18,8 @@
 
 ## Environment & Toolchain
 
-- Prerequisites: Node ≥20.9 (Volta config helps), pnpm ≥10.17.1 (`corepack enable && corepack prepare pnpm@10.17.1 --activate`), Docker + Compose, MySQL 8 (with `mysql_native_password`), RabbitMQ, Redis, Ory Kratos/Oathkeeper stack. `.env.docker` feeds compose stacks; local `.env` variables are required for TypeORM CLI.
-- Optional but recommended: jq (used in docs for auth flows), mysql client, mkcert for TLS dev.
+- Prerequisites: Node ≥20.9 (Volta config helps), pnpm ≥10.17.1 (`corepack enable && corepack prepare pnpm@10.17.1 --activate`), Docker + Compose, PostgreSQL 17.5, RabbitMQ, Redis, Ory Kratos/Oathkeeper stack. `.env.docker` feeds compose stacks; local `.env` variables are required for TypeORM CLI.
+- Optional but recommended: jq (used in docs for auth flows), psql client, mkcert for TLS dev.
 - Module resolution uses `tsconfig.json` path aliases (e.g. `@domain/*`, `@services/*`). ESLint is configured via `eslint.config.js` with flat config, Prettier integration, and production-stricter `@typescript-eslint/no-unused-vars`.
 
 ## Coding standards & Team agreements
@@ -37,7 +37,7 @@
   - `pnpm install` (0.6s when cache warm; respects `pnpm-lock.yaml`). Always run after pulling.
 - Build artifacts:
   - `pnpm build` (passes; outputs to `dist/` and copies `alkemio.yml`).
-- Local runtime without containers requires MySQL, RabbitMQ, Redis, Elastic, Kratos already up. Typical flow:
+- Local runtime without containers requires PostgreSQL, RabbitMQ, Redis, Elastic, Kratos already up. Typical flow:
   1. `pnpm run start:services` to spin dependencies from `quickstart-services.yml` via Docker (maps server graphql endpoint to localhost:3000/graphql; clients still at 3000).
   2. `pnpm run migration:run` once services are healthy to prime schema.
   3. `pnpm start` (or `pnpm start:dev` for hot reload) launches the API on port configured in `config/hosting`. GraphQL Playground available at `/graphiql`.
@@ -117,7 +117,7 @@
 - Winston for logging. Obey the logging signature.
 
 - TypeScript 5.3, Node.js 20.15.1 (Volta-pinned), executed via ts-node + NestJS 10.x, TypeORM 0.3.x, Apollo Server 4.x, GraphQL 16.x, class-validator, class-transformer (013-timeline-comment-notification)
-- MySQL 8.0 with `mysql_native_password` authentication (013-timeline-comment-notification)
+- PostgreSQL 17.5 for data persistence (013-timeline-comment-notification)
 
 - TypeScript 5.3 (ts-node) executed on Node 20.x via GitHub Actions + pnpm 10.17.1, `actions/checkout@v4`, `actions/setup-node@v4`, `crazy-max/ghaction-import-gpg@v6`, `actions/github-script@v7`, repository schema scripts (`generate-schema.snapshot.ts`, `diff-schema.ts`) (012-generate-schema-baseline)
 - N/A – workflow operates on repository working tree only (012-generate-schema-baseline)
