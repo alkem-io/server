@@ -12,6 +12,22 @@ export class Markdown implements CustomScalar<string, string> {
   }
 
   serialize(value: any): string {
+    if (typeof value === 'string') {
+      // Convert escaped newlines/carriage returns to actual newlines
+      // Also convert markdown hard line breaks (backslash followed by space) to newlines
+      // Convert double spaces to newlines (data migration artifact)
+      // Remove empty span tags used as spacers
+      // Convert <br> tags to newlines
+      // Preserve markdown list markers (* followed by spaces)
+      return value
+        .replace(/\\n/g, '\n')
+        .replace(/\\r/g, '\r')
+        .replace(/\\ /g, '\n')
+        .replace(/<span>\s*<\/span>/g, '')
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/\*   /g, '* ')
+        .replace(/ {2,}/g, '\n');
+    }
     return value; // value sent to the client
   }
 
