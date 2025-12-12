@@ -187,7 +187,7 @@ export class VirtualContributorService {
 
     virtualContributor = await this.save(virtualContributor);
 
-    const userID = agentInfo ? agentInfo.userID : '';
+    const userID = agentInfo?.userID;
     await this.contributorService.ensureAvatarIsStoredInLocalStorageBucket(
       virtualContributor.profile.id,
       userID
