@@ -2,29 +2,29 @@ import { Injectable } from '@nestjs/common';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { ConversationAuthorizationService } from '../conversation/conversation.service.authorization';
-import { IConversationsSet } from './conversations.set.interface';
-import { ConversationsSetService } from './conversations.set.service';
+import { IMessaging } from './messaging.interface';
+import { MessagingService } from './messaging.service';
 import { ForbiddenException } from '@common/exceptions/forbidden.exception';
 import { LogContext } from '@common/enums/logging.context';
 import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
 import { ConversationService } from '../conversation/conversation.service';
 
 @Injectable()
-export class ConversationsSetAuthorizationService {
+export class MessagingAuthorizationService {
   constructor(
-    private authorizationPolicyService: AuthorizationPolicyService,
-    private conversationsSetService: ConversationsSetService,
-    private conversationAuthorizationService: ConversationAuthorizationService,
-    private conversationService: ConversationService
+    private readonly authorizationPolicyService: AuthorizationPolicyService,
+    private readonly messagingService: MessagingService,
+    private readonly conversationAuthorizationService: ConversationAuthorizationService,
+    private readonly conversationService: ConversationService
   ) {}
 
   async applyAuthorizationPolicy(
-    conversationsSetInput: IConversationsSet,
+    messagingInput: IMessaging,
     parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IAuthorizationPolicy[]> {
-    const conversationsSet =
-      await this.conversationsSetService.getConversationsSetOrFail(
-        conversationsSetInput.id,
+    const messaging =
+      await this.messagingService.getMessagingOrFail(
+        messagingInput.id,
         {
           relations: {
             authorization: true,
@@ -36,16 +36,16 @@ export class ConversationsSetAuthorizationService {
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     // Inherit from the parent
-    conversationsSet.authorization =
+    messaging.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
-        conversationsSet.authorization,
+        messaging.authorization,
         parentAuthorization
       );
 
-    updatedAuthorizations.push(conversationsSet.authorization);
+    updatedAuthorizations.push(messaging.authorization);
 
-    if (conversationsSet.conversations) {
-      for (const conversation of conversationsSet.conversations) {
+    if (messaging.conversations) {
+      for (const conversation of messaging.conversations) {
         const conversationAuthorizations =
           await this.conversationAuthorizationService.applyAuthorizationPolicy(
             conversation.id
@@ -77,7 +77,7 @@ export class ConversationsSetAuthorizationService {
   ) {
     // Get conversations for the host user from the platform set
     const hostUserConversations =
-      await this.conversationsSetService.getConversationsForUser(
+      await this.messagingService.getConversationsForUser(
         hostUserID,
         CommunicationConversationType.USER_USER
       );

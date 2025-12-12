@@ -2,7 +2,7 @@ import { Resolver, ResolveField, Parent, Args } from '@nestjs/graphql';
 import { MeConversationsResult } from './dto/me.conversations.result';
 import { IConversation } from '@domain/communication/conversation/conversation.interface';
 import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
-import { ConversationsSetService } from '@domain/communication/conversations-set/conversations.set.service';
+import { MessagingService } from '@domain/communication/messaging/messaging.service';
 import { CurrentUser } from '@common/decorators';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { ValidationException } from '@common/exceptions';
@@ -11,9 +11,7 @@ import { CommunicationConversationType } from '@common/enums/communication.conve
 
 @Resolver(() => MeConversationsResult)
 export class MeConversationsResolverFields {
-  constructor(
-    private readonly conversationsSetService: ConversationsSetService
-  ) {}
+  constructor(private readonly messagingService: MessagingService) {}
 
   @ResolveField(() => [IConversation], {
     nullable: false,
@@ -31,7 +29,7 @@ export class MeConversationsResolverFields {
       );
     }
 
-    return await this.conversationsSetService.getConversationsForUser(
+    return await this.messagingService.getConversationsForUser(
       agentInfo.userID,
       CommunicationConversationType.USER_USER
     );
@@ -53,7 +51,7 @@ export class MeConversationsResolverFields {
       );
     }
 
-    return await this.conversationsSetService.getConversationsForUser(
+    return await this.messagingService.getConversationsForUser(
       agentInfo.userID,
       CommunicationConversationType.USER_VC
     );
@@ -77,7 +75,7 @@ export class MeConversationsResolverFields {
       );
     }
 
-    return await this.conversationsSetService.getConversationWithWellKnownVC(
+    return await this.messagingService.getConversationWithWellKnownVC(
       agentInfo.userID,
       wellKnown
     );

@@ -8,7 +8,7 @@ import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ConversationService } from '../conversation/conversation.service';
 import { InstrumentResolver } from '@src/apm/decorators';
-import { ConversationsSetService } from './conversations.set.service';
+import { MessagingService } from './messaging.service';
 import { LogContext } from '@common/enums/logging.context';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import {
@@ -17,17 +17,17 @@ import {
 } from '../conversation/dto/conversation.dto.create';
 import { MessagingNotEnabledException } from '@common/exceptions/messaging.not.enabled.exception';
 import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
-import { ConversationsSetAuthorizationService } from './conversations.set.service.authorization';
+import { MessagingAuthorizationService } from './messaging.service.authorization';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 
 @InstrumentResolver()
 @Resolver()
-export class ConversationsSetResolverMutations {
+export class MessagingResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
-    private conversationsSetService: ConversationsSetService,
-    private conversationsSetAuthorizationService: ConversationsSetAuthorizationService,
+    private readonly messagingService: MessagingService,
+    private readonly messagingAuthorizationService: MessagingAuthorizationService,
     private userLookupService: UserLookupService,
     private virtualContributorLookupService: VirtualContributorLookupService,
     private conversationService: ConversationService,
@@ -35,22 +35,22 @@ export class ConversationsSetResolverMutations {
   ) {}
 
   @Mutation(() => IConversation, {
-    description: 'Create a new Conversation on the ConversationsSet.',
+    description: 'Create a new Conversation on the Messaging.',
   })
-  async createConversationOnConversationsSet(
+  async createConversation(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('conversationData')
     conversationData: CreateConversationInput
   ): Promise<IConversation> {
-    // Get the platform conversations set
-    const conversationsSet =
-      await this.conversationsSetService.getPlatformConversationsSet();
+    // Get the platform messaging
+    const messaging =
+      await this.messagingService.getPlatformMessaging();
 
     this.authorizationService.grantAccessOrFail(
       agentInfo,
-      conversationsSet.authorization,
+      messaging.authorization,
       AuthorizationPrivilege.CREATE,
-      `create conversation on conversations Set: ${conversationsSet.id}`
+      `create conversation on messaging: ${messaging.id}`
     );
 
     // Infer conversation type from input
@@ -100,11 +100,11 @@ export class ConversationsSetResolverMutations {
     }
 
     const conversation =
-      await this.conversationsSetService.createConversationOnConversationsSet(
+      await this.messagingService.createConversation(
         internalData
       );
 
-    await this.conversationsSetAuthorizationService.resetAuthorizationOnConversations(
+    await this.messagingAuthorizationService.resetAuthorizationOnConversations(
       agentInfo.userID,
       conversationData.userID
     );
@@ -112,6 +112,18 @@ export class ConversationsSetResolverMutations {
     return await this.conversationService.getConversationOrFail(
       conversation.id
     );
+  }
+
+  @Mutation(() => IConversation, {
+    description: 'Create a new Conversation on the ConversationsSet.',
+    deprecationReason: 'Use createConversation instead',
+  })
+  async createConversationOnConversationsSet(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('conversationData')
+    conversationData: CreateConversationInput
+  ): Promise<IConversation> {
+    return this.createConversation(agentInfo, conversationData);
   }
 
   private async checkReceivingUserAccessAndSettings(

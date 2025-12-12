@@ -9,7 +9,7 @@ import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-a
 import { TemplatesManagerAuthorizationService } from '@domain/template/templates-manager/templates.manager.service.authorization';
 import { LicensingFrameworkAuthorizationService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service.authorization';
 import { RoleSetAuthorizationService } from '@domain/access/role-set/role.set.service.authorization';
-import { ConversationsSetAuthorizationService } from '@domain/communication/conversations-set/conversations.set.service.authorization';
+import { MessagingAuthorizationService } from '@domain/communication/messaging/messaging.service.authorization';
 import { IPlatform } from './platform.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
@@ -19,7 +19,7 @@ import { RoleSetType } from '@common/enums/role.set.type';
 describe('PlatformAuthorizationService', () => {
   let service: PlatformAuthorizationService;
   let platformService: jest.Mocked<PlatformService>;
-  let conversationsSetAuthorizationService: jest.Mocked<ConversationsSetAuthorizationService>;
+  let messagingAuthorizationService: jest.Mocked<MessagingAuthorizationService>;
 
   const mockPlatform: IPlatform = {
     id: 'platform-1',
@@ -38,7 +38,7 @@ describe('PlatformAuthorizationService', () => {
     licensingFramework: { id: 'licensing-1' } as any,
     templatesManager: { id: 'templates-1' } as any,
     roleSet: { id: 'roleset-1', type: RoleSetType.PLATFORM } as any,
-    conversationsSet: { id: 'conversations-set-1' } as any,
+    messaging: { id: 'messaging-1' } as any,
   } as IPlatform;
 
   beforeEach(async () => {
@@ -87,7 +87,7 @@ describe('PlatformAuthorizationService', () => {
       applyAuthorizationPolicy: jest.fn().mockResolvedValue([]),
     };
 
-    const mockConversationsSetAuthorizationService = {
+    const mockMessagingAuthorizationService = {
       applyAuthorizationPolicy: jest.fn(),
     };
 
@@ -131,8 +131,8 @@ describe('PlatformAuthorizationService', () => {
           useValue: mockRoleSetAuthorizationService,
         },
         {
-          provide: ConversationsSetAuthorizationService,
-          useValue: mockConversationsSetAuthorizationService,
+          provide: MessagingAuthorizationService,
+          useValue: mockMessagingAuthorizationService,
         },
       ],
     }).compile();
@@ -141,8 +141,8 @@ describe('PlatformAuthorizationService', () => {
       PlatformAuthorizationService
     );
     platformService = module.get(PlatformService);
-    conversationsSetAuthorizationService = module.get(
-      ConversationsSetAuthorizationService
+    messagingAuthorizationService = module.get(
+      MessagingAuthorizationService
     );
   });
 
@@ -151,13 +151,13 @@ describe('PlatformAuthorizationService', () => {
   });
 
   describe('applyAuthorizationPolicy', () => {
-    it('should throw error if conversationsSet is missing', async () => {
-      const platformWithoutConversationsSet = {
+    it('should throw error if messaging is missing', async () => {
+      const platformWithoutMessaging = {
         ...mockPlatform,
-        conversationsSet: undefined,
+        messaging: undefined,
       };
       platformService.getPlatformOrFail.mockResolvedValue(
-        platformWithoutConversationsSet
+        platformWithoutMessaging
       );
 
       await expect(service.applyAuthorizationPolicy()).rejects.toThrow(
@@ -165,47 +165,47 @@ describe('PlatformAuthorizationService', () => {
       );
     });
 
-    it('should cascade authorization to conversationsSet', async () => {
+    it('should cascade authorization to messaging', async () => {
       platformService.getPlatformOrFail.mockResolvedValue(mockPlatform);
-      conversationsSetAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
-        [{ id: 'conversations-set-auth' } as IAuthorizationPolicy]
+      messagingAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        [{ id: 'messaging-auth' } as IAuthorizationPolicy]
       );
 
       await service.applyAuthorizationPolicy();
 
       expect(
-        conversationsSetAuthorizationService.applyAuthorizationPolicy
+        messagingAuthorizationService.applyAuthorizationPolicy
       ).toHaveBeenCalledWith(
-        mockPlatform.conversationsSet,
+        mockPlatform.messaging,
         mockPlatform.authorization
       );
     });
 
-    it('should include conversationsSet authorizations in result', async () => {
+    it('should include messaging authorizations in result', async () => {
       platformService.getPlatformOrFail.mockResolvedValue(mockPlatform);
-      const conversationsSetAuth = {
-        id: 'conversations-set-auth',
+      const messagingAuth = {
+        id: 'messaging-auth',
       } as IAuthorizationPolicy;
-      conversationsSetAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
-        [conversationsSetAuth]
+      messagingAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        [messagingAuth]
       );
 
       const result = await service.applyAuthorizationPolicy();
 
-      expect(result).toContainEqual(conversationsSetAuth);
+      expect(result).toContainEqual(messagingAuth);
     });
 
     it('should apply authorization to all platform children', async () => {
       platformService.getPlatformOrFail.mockResolvedValue(mockPlatform);
-      conversationsSetAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+      messagingAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
         []
       );
 
       const result = await service.applyAuthorizationPolicy();
 
-      // Should have called authorization for all children including conversationsSet
+      // Should have called authorization for all children including messaging
       expect(
-        conversationsSetAuthorizationService.applyAuthorizationPolicy
+        messagingAuthorizationService.applyAuthorizationPolicy
       ).toHaveBeenCalled();
       expect(result).toBeDefined();
       expect(Array.isArray(result)).toBe(true);

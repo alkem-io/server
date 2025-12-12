@@ -174,14 +174,14 @@ export class ConversationService {
     const conversation = await this.getConversationOrFail(conversationID, {
       relations: {
         room: true,
-        conversationsSet: true,
+        messaging: true,
       },
     });
 
     if (
       !conversation.room ||
       !conversation.authorization ||
-      !conversation.conversationsSet
+      !conversation.messaging
     ) {
       throw new EntityNotInitializedException(
         `Unable to load conversation for deleting: ${conversation.id}`,
@@ -189,7 +189,7 @@ export class ConversationService {
       );
     }
 
-    // Note: Conversations now belong to the platform ConversationsSet, not to a user.
+    // Note: Conversations now belong to the platform Messaging, not to a user.
     // Memberships are cleaned up via cascade when the conversation is deleted.
 
     // Delete the room entity

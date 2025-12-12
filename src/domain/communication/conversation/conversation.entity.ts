@@ -2,7 +2,7 @@ import { Entity, JoinColumn, ManyToOne, OneToMany, OneToOne } from 'typeorm';
 import { IConversation } from './conversation.interface';
 import { Room } from '@domain/communication/room/room.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
-import { ConversationsSet } from '../conversations-set/conversations.set.entity';
+import { Messaging } from '../messaging/messaging.entity';
 import { ConversationMembership } from '../conversation-membership/conversation.membership.entity';
 
 @Entity()
@@ -21,15 +21,19 @@ export class Conversation extends AuthorizableEntity implements IConversation {
   memberships!: ConversationMembership[];
 
   @ManyToOne(
-    () => ConversationsSet,
-    conversationsSet => conversationsSet.conversations,
+    () => Messaging,
+    messaging => messaging.conversations,
     {
       eager: false,
       cascade: false,
       onDelete: 'CASCADE',
     }
   )
-  conversationsSet!: ConversationsSet;
+  messaging!: Messaging;
+
+  get conversationsSet(): Messaging {
+    return this.messaging;
+  }
 
   @OneToOne(() => Room, {
     eager: true,

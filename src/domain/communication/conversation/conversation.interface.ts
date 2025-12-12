@@ -1,7 +1,7 @@
-import { ObjectType } from '@nestjs/graphql';
+import { ObjectType, Field } from '@nestjs/graphql';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity/authorizable.interface';
-import { IConversationsSet } from '../conversations-set/conversations.set.interface';
+import { IMessaging, IConversationsSet } from '../messaging/messaging.interface';
 import { IConversationMembership } from '../conversation-membership/conversation.membership.interface';
 
 @ObjectType('Conversation')
@@ -12,5 +12,10 @@ export abstract class IConversation extends IAuthorizable {
   memberships?: IConversationMembership[];
 
   room?: IRoom;
+
+  @Field(() => IMessaging)
+  messaging!: IMessaging;
+
+  @Field(() => IConversationsSet, { deprecationReason: 'Use messaging instead' })
   conversationsSet!: IConversationsSet;
 }

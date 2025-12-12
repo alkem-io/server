@@ -1,20 +1,20 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ConversationsSetAuthorizationService } from './conversations.set.service.authorization';
+import { MessagingAuthorizationService } from './messaging.service.authorization';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { ConversationsSetService } from './conversations.set.service';
+import { MessagingService } from './messaging.service';
 import { ConversationAuthorizationService } from '../conversation/conversation.service.authorization';
 import { ConversationService } from '../conversation/conversation.service';
-import { IConversationsSet } from './conversations.set.interface';
+import { IMessaging } from './messaging.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 
-describe('ConversationsSetAuthorizationService', () => {
-  let service: ConversationsSetAuthorizationService;
+describe('MessagingAuthorizationService', () => {
+  let service: MessagingAuthorizationService;
   let authorizationPolicyService: jest.Mocked<AuthorizationPolicyService>;
-  let conversationsSetService: jest.Mocked<ConversationsSetService>;
+  let messagingService: jest.Mocked<MessagingService>;
   let conversationAuthorizationService: jest.Mocked<ConversationAuthorizationService>;
 
-  const mockConversationsSet: IConversationsSet = {
-    id: 'conversations-set-1',
+  const mockMessaging: IMessaging = {
+    id: 'messaging-1',
     authorization: {
       id: 'auth-1',
       type: 'COMMUNICATION_CONVERSATION' as any,
@@ -28,7 +28,7 @@ describe('ConversationsSetAuthorizationService', () => {
       { id: 'conversation-1' } as any,
       { id: 'conversation-2' } as any,
     ],
-  } as IConversationsSet;
+  } as IMessaging;
 
   const mockParentAuthorization: IAuthorizationPolicy = {
     id: 'parent-auth-1',
@@ -53,8 +53,8 @@ describe('ConversationsSetAuthorizationService', () => {
       saveAll: jest.fn(),
     };
 
-    const mockConversationsSetService = {
-      getConversationsSetOrFail: jest.fn(),
+    const mockMessagingService = {
+      getMessagingOrFail: jest.fn(),
     };
 
     const mockConversationAuthorizationService = {
@@ -65,14 +65,14 @@ describe('ConversationsSetAuthorizationService', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        ConversationsSetAuthorizationService,
+        MessagingAuthorizationService,
         {
           provide: AuthorizationPolicyService,
           useValue: mockAuthorizationPolicyService,
         },
         {
-          provide: ConversationsSetService,
-          useValue: mockConversationsSetService,
+          provide: MessagingService,
+          useValue: mockMessagingService,
         },
         {
           provide: ConversationAuthorizationService,
@@ -85,11 +85,11 @@ describe('ConversationsSetAuthorizationService', () => {
       ],
     }).compile();
 
-    service = module.get<ConversationsSetAuthorizationService>(
-      ConversationsSetAuthorizationService
+    service = module.get<MessagingAuthorizationService>(
+      MessagingAuthorizationService
     );
     authorizationPolicyService = module.get(AuthorizationPolicyService);
-    conversationsSetService = module.get(ConversationsSetService);
+    messagingService = module.get(MessagingService);
     conversationAuthorizationService = module.get(
       ConversationAuthorizationService
     );
@@ -101,11 +101,11 @@ describe('ConversationsSetAuthorizationService', () => {
 
   describe('applyAuthorizationPolicy', () => {
     it('should inherit authorization from parent', async () => {
-      conversationsSetService.getConversationsSetOrFail.mockResolvedValue(
-        mockConversationsSet
+      messagingService.getMessagingOrFail.mockResolvedValue(
+        mockMessaging
       );
       authorizationPolicyService.inheritParentAuthorization.mockReturnValue({
-        ...mockConversationsSet.authorization,
+        ...mockMessaging.authorization,
         credentialRules: [...mockParentAuthorization.credentialRules],
       } as IAuthorizationPolicy);
       conversationAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
@@ -113,10 +113,10 @@ describe('ConversationsSetAuthorizationService', () => {
       );
 
       // Capture the original authorization before the call
-      const originalAuthorization = mockConversationsSet.authorization;
+      const originalAuthorization = mockMessaging.authorization;
 
       await service.applyAuthorizationPolicy(
-        mockConversationsSet,
+        mockMessaging,
         mockParentAuthorization
       );
 
@@ -126,18 +126,18 @@ describe('ConversationsSetAuthorizationService', () => {
     });
 
     it('should cascade authorization to all conversations', async () => {
-      conversationsSetService.getConversationsSetOrFail.mockResolvedValue(
-        mockConversationsSet
+      messagingService.getMessagingOrFail.mockResolvedValue(
+        mockMessaging
       );
       authorizationPolicyService.inheritParentAuthorization.mockReturnValue(
-        mockConversationsSet.authorization as IAuthorizationPolicy
+        mockMessaging.authorization as IAuthorizationPolicy
       );
       conversationAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
         [{ id: 'conv-auth-1' } as IAuthorizationPolicy]
       );
 
       const result = await service.applyAuthorizationPolicy(
-        mockConversationsSet,
+        mockMessaging,
         mockParentAuthorization
       );
 
@@ -154,11 +154,11 @@ describe('ConversationsSetAuthorizationService', () => {
     });
 
     it('should return updated authorizations for set and conversations', async () => {
-      conversationsSetService.getConversationsSetOrFail.mockResolvedValue(
-        mockConversationsSet
+      messagingService.getMessagingOrFail.mockResolvedValue(
+        mockMessaging
       );
       const inheritedAuth = {
-        ...mockConversationsSet.authorization,
+        ...mockMessaging.authorization,
         credentialRules: [...mockParentAuthorization.credentialRules],
       } as IAuthorizationPolicy;
       authorizationPolicyService.inheritParentAuthorization.mockReturnValue(
@@ -169,7 +169,7 @@ describe('ConversationsSetAuthorizationService', () => {
       );
 
       const result = await service.applyAuthorizationPolicy(
-        mockConversationsSet,
+        mockMessaging,
         mockParentAuthorization
       );
 
@@ -179,10 +179,10 @@ describe('ConversationsSetAuthorizationService', () => {
 
     it('should handle empty conversations array', async () => {
       const emptySet = {
-        ...mockConversationsSet,
+        ...mockMessaging,
         conversations: [],
       };
-      conversationsSetService.getConversationsSetOrFail.mockResolvedValue(
+      messagingService.getMessagingOrFail.mockResolvedValue(
         emptySet
       );
       authorizationPolicyService.inheritParentAuthorization.mockReturnValue(

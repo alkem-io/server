@@ -29,7 +29,7 @@ import { LicensingFrameworkAuthorizationService } from '@platform/licensing/cred
 import { RoleSetAuthorizationService } from '@domain/access/role-set/role.set.service.authorization';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { RoleSetType } from '@common/enums/role.set.type';
-import { ConversationsSetAuthorizationService } from '@domain/communication/conversations-set/conversations.set.service.authorization';
+import { MessagingAuthorizationService } from '@domain/communication/messaging/messaging.service.authorization';
 
 @Injectable()
 export class PlatformAuthorizationService {
@@ -43,7 +43,7 @@ export class PlatformAuthorizationService {
     private readonly licensingFrameworkAuthorizationService: LicensingFrameworkAuthorizationService,
     private readonly templatesManagerAuthorizationService: TemplatesManagerAuthorizationService,
     private readonly roleSetAuthorizationService: RoleSetAuthorizationService,
-    private readonly conversationsSetAuthorizationService: ConversationsSetAuthorizationService
+    private readonly messagingAuthorizationService: MessagingAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(): Promise<IAuthorizationPolicy[]> {
@@ -56,7 +56,7 @@ export class PlatformAuthorizationService {
         licensingFramework: true,
         templatesManager: true,
         roleSet: true,
-        conversationsSet: true,
+        messaging: true,
       },
     });
 
@@ -68,7 +68,7 @@ export class PlatformAuthorizationService {
       !platform.licensingFramework ||
       !platform.templatesManager ||
       !platform.roleSet ||
-      !platform.conversationsSet
+      !platform.messaging
     )
       throw new RelationshipNotFoundException(
         `Unable to load entities for platform: ${platform.id} `,
@@ -145,12 +145,12 @@ export class PlatformAuthorizationService {
       );
     updatedAuthorizations.push(...platformLicensingAuthorizations);
 
-    const conversationsSetAuthorizations =
-      await this.conversationsSetAuthorizationService.applyAuthorizationPolicy(
-        platform.conversationsSet,
+    const messagingAuthorizations =
+      await this.messagingAuthorizationService.applyAuthorizationPolicy(
+        platform.messaging,
         platform.authorization
       );
-    updatedAuthorizations.push(...conversationsSetAuthorizations);
+    updatedAuthorizations.push(...messagingAuthorizations);
 
     return updatedAuthorizations;
   }

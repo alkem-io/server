@@ -127,7 +127,7 @@ enum AuthorizationPolicyType {
   COLLABORATION
   COMMUNICATION
   COMMUNICATION_CONVERSATION
-  COMMUNICATION_CONVERSATIONS_SET
+  COMMUNICATION_MESSAGING
   COMMUNITY
   COMMUNITY_GUIDELINES
   DISCUSSION
@@ -1962,10 +1962,12 @@ type ContributorRoles {
 type Conversation {
   """The authorization rules for the entity"""
   authorization: Authorization
+  conversationsSet: ConversationsSet! @deprecated(reason: "Use messaging instead")
   """The date at which the entity was created."""
   createdDate: DateTime!
   """The ID of the entity"""
   id: UUID!
+  messaging: Messaging!
   """The room for this Conversation."""
   room: Room
   """
@@ -1980,6 +1982,17 @@ type Conversation {
   The virtual contributor participating in this Conversation (only for USER_AGENT conversations).
   """
   virtualContributor: VirtualContributor
+}
+
+type ConversationsSet {
+  """The authorization rules for the entity"""
+  authorization: Authorization
+  """The date at which the entity was created."""
+  createdDate: DateTime!
+  """The ID of the entity"""
+  id: UUID!
+  """The date at which the entity was last updated."""
+  updatedDate: DateTime!
 }
 
 type CreateCalloutContributionData {
@@ -3248,6 +3261,17 @@ type MessageParent {
   url: String!
 }
 
+type Messaging {
+  """The authorization rules for the entity"""
+  authorization: Authorization
+  """The date at which the entity was created."""
+  createdDate: DateTime!
+  """The ID of the entity"""
+  id: UUID!
+  """The date at which the entity was last updated."""
+  updatedDate: DateTime!
+}
+
 type Metadata {
   """Collection of metadata about Alkemio services."""
   services: [ServiceMetadata!]!
@@ -3398,8 +3422,10 @@ type Mutation {
   createCalloutOnCalloutsSet(calloutData: CreateCalloutOnCalloutsSetInput!): Callout!
   """Create a new Contribution on the Callout."""
   createContributionOnCallout(contributionData: CreateContributionOnCalloutInput!): CalloutContribution!
+  """Create a new Conversation on the Messaging."""
+  createConversation(conversationData: CreateConversationInput!): Conversation!
   """Create a new Conversation on the ConversationsSet."""
-  createConversationOnConversationsSet(conversationData: CreateConversationInput!): Conversation!
+  createConversationOnConversationsSet(conversationData: CreateConversationInput!): Conversation! @deprecated(reason: "Use createConversation instead")
   """Creates a new Discussion as part of this Forum."""
   createDiscussion(createData: ForumCreateDiscussionInput!): Discussion!
   """Create a new CalendarEvent on the Calendar."""
@@ -3886,6 +3912,7 @@ type Platform {
   Alkemio configuration. Provides configuration to external services in the Alkemio ecosystem.
   """
   configuration: Config!
+  conversationsSet: ConversationsSet! @deprecated(reason: "Use messaging instead")
   """The date at which the entity was created."""
   createdDate: DateTime!
   """The Forum for the platform"""
@@ -3905,6 +3932,7 @@ type Platform {
   library: Library!
   """The Licensing in use by the platform."""
   licensingFramework: Licensing!
+  messaging: Messaging
   """Alkemio Services Metadata."""
   metadata: Metadata!
   """The RoleSet for this Platform."""

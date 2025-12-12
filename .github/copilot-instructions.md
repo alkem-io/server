@@ -125,6 +125,7 @@
 - PostgreSQL (via TypeORM migrations) (023-drop-wellknown-vc-column)
 - TypeScript 5.3, Node.js 20.15.1 + NestJS 10, TypeORM 0.3, PostgreSQL (024-conversations-set-inheritance)
 - PostgreSQL (via TypeORM) (024-conversations-set-inheritance)
+- TypeScript 5.3, Node.js 20.15.1 + NestJS 10, TypeORM 0.3, Apollo GraphQL 4 (025-rename-conversations-set)
 
 - TypeScript 5.x on Node.js 20 (per repository toolchain) + NestJS server, existing CI runner stack, SonarQube at https://sonarqube.alkem.io (015-sonarqube-analysis)
 - N/A (SonarQube stores analysis; server DB not impacted by this feature) (015-sonarqube-analysis)

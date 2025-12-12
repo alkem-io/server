@@ -8,8 +8,8 @@ import {
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { ConversationsSet } from './conversations.set.entity';
-import { IConversationsSet } from './conversations.set.interface';
+import { Messaging } from './messaging.entity';
+import { IMessaging } from './messaging.interface';
 import { ConversationService } from '../conversation/conversation.service';
 import { ConversationMembership } from '../conversation-membership/conversation.membership.entity';
 import { IConversation } from '../conversation/conversation.interface';
@@ -28,13 +28,13 @@ import { AgentService } from '@domain/agent/agent/agent.service';
 import { AgentType } from '@common/enums/agent.type';
 
 @Injectable()
-export class ConversationsSetService {
+export class MessagingService {
   constructor(
     private readonly configService: ConfigService<AlkemioConfig, true>,
     private readonly authorizationPolicyService: AuthorizationPolicyService,
     private readonly entityManager: EntityManager,
-    @InjectRepository(ConversationsSet)
-    private readonly conversationsSetRepository: Repository<ConversationsSet>,
+    @InjectRepository(Messaging)
+    private readonly messagingRepository: Repository<Messaging>,
     @InjectRepository(ConversationMembership)
     private readonly conversationMembershipRepository: Repository<ConversationMembership>,
     private readonly conversationService: ConversationService,
@@ -45,39 +45,39 @@ export class ConversationsSetService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  public async createConversationsSet(): Promise<IConversationsSet> {
-    const conversation: IConversationsSet = ConversationsSet.create();
+  public async createMessaging(): Promise<IMessaging> {
+    const messaging: IMessaging = Messaging.create();
 
-    conversation.authorization = new AuthorizationPolicy(
-      AuthorizationPolicyType.COMMUNICATION_CONVERSATION
+    messaging.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.COMMUNICATION_MESSAGING
     );
 
-    return await this.conversationsSetRepository.save(
-      conversation as ConversationsSet
+    return await this.messagingRepository.save(
+      messaging as Messaging
     );
   }
 
-  async getConversationsSetOrFail(
-    conversationsSetID: string,
-    options?: FindOneOptions<ConversationsSet>
-  ): Promise<IConversationsSet | never> {
-    const conversationsSet = await ConversationsSet.findOne({
-      where: { id: conversationsSetID },
+  async getMessagingOrFail(
+    messagingID: string,
+    options?: FindOneOptions<Messaging>
+  ): Promise<IMessaging> {
+    const messaging = await Messaging.findOne({
+      where: { id: messagingID },
       ...options,
     });
-    if (!conversationsSet)
+    if (!messaging)
       throw new EntityNotFoundException(
-        `ConversationsSet with id(${conversationsSetID}) not found!`,
+        `Messaging with id(${messagingID}) not found!`,
         LogContext.TEMPLATES
       );
-    return conversationsSet;
+    return messaging;
   }
 
-  async deleteConversationsSet(
-    conversationsSetID: string
-  ): Promise<IConversationsSet> {
-    const conversationsSet = await this.getConversationsSetOrFail(
-      conversationsSetID,
+  async deleteMessaging(
+    messagingID: string
+  ): Promise<IMessaging> {
+    const messaging = await this.getMessagingOrFail(
+      messagingID,
       {
         relations: {
           authorization: true,
@@ -86,62 +86,61 @@ export class ConversationsSetService {
       }
     );
 
-    if (!conversationsSet.conversations || !conversationsSet.authorization) {
+    if (!messaging.conversations || !messaging.authorization) {
       throw new EntityNotInitializedException(
-        `ConversationsSet (${conversationsSetID}) not initialised, cannot delete`,
+        `Messaging (${messagingID}) not initialised, cannot delete`,
         LogContext.COLLABORATION
       );
     }
 
     await this.authorizationPolicyService.delete(
-      conversationsSet.authorization
+      messaging.authorization
     );
 
-    for (const conversation of conversationsSet.conversations) {
+    for (const conversation of messaging.conversations) {
       await this.conversationService.deleteConversation(conversation.id);
     }
 
-    return await this.conversationsSetRepository.remove(
-      conversationsSet as ConversationsSet
+    return await this.messagingRepository.remove(
+      messaging as Messaging
     );
   }
 
   public async getConversations(
-    conversationsSetID: string
+    messagingID: string
   ): Promise<IConversation[]> {
-    const conversationsSet = await this.getConversationsSetOrFail(
-      conversationsSetID,
+    const messaging = await this.getMessagingOrFail(
+      messagingID,
       {
         relations: { conversations: true },
       }
     );
-    return conversationsSet.conversations;
+    return messaging.conversations;
   }
 
   public async getConversationsCount(
-    conversationsSetID: string
+    messagingID: string
   ): Promise<number> {
-    const conversationsSet = await this.getConversationsSetOrFail(
-      conversationsSetID,
+    const messaging = await this.getMessagingOrFail(
+      messagingID,
       {
         relations: { conversations: true },
       }
     );
-    return conversationsSet.conversations.length;
+    return messaging.conversations.length;
   }
 
   /**
-   * Create a conversation on the platform conversations set.
+   * Create a conversation on the platform messaging.
    * Works with agent IDs - callers are responsible for resolving user/VC IDs to agent IDs.
    *
    * @param conversationData - Internal DTO with callerAgentId and either invitedAgentId or wellKnownVirtualContributor
-   * @param conversationsSetID - Optional set ID (defaults to platform set)
    */
-  public async createConversationOnConversationsSet(
+  public async createConversation(
     conversationData: CreateConversationData
   ): Promise<IConversation> {
-    // Always use platform conversationsSet (singleton pattern)
-    const conversationsSet = await this.getPlatformConversationsSet();
+    // Always use platform messaging (singleton pattern)
+    const messaging = await this.getPlatformMessaging();
 
     // Resolve the invited party to an agent ID if wellKnown was provided
     let invitedAgentId: string;
@@ -190,10 +189,10 @@ export class ConversationsSetService {
       createRoom
     );
 
-    // Only set conversationsSet if this is a newly created conversation
+    // Only set messaging if this is a newly created conversation
     // (createConversation returns existing conversation if found)
-    if (!conversation.conversationsSet) {
-      conversation.conversationsSet = conversationsSet;
+    if (!conversation.messaging) {
+      conversation.messaging = messaging as Messaging;
       await this.conversationService.save(conversation);
     }
 
@@ -209,9 +208,9 @@ export class ConversationsSetService {
   }
 
   public async save(
-    conversationsSet: IConversationsSet
-  ): Promise<IConversationsSet> {
-    return await this.conversationsSetRepository.save(conversationsSet);
+    messaging: IMessaging
+  ): Promise<IMessaging> {
+    return await this.messagingRepository.save(messaging as Messaging);
   }
 
   // T086: Find conversation with well-known VC using efficient membership query
@@ -232,18 +231,18 @@ export class ConversationsSetService {
   }
 
   /**
-   * Get or create the singleton platform conversation set.
+   * Get or create the singleton platform messaging.
    * All conversations belong to this single platform-owned set.
    * Retrieves the set via explicit Platform entity relationship.
    * Creates one if it doesn't exist (for bootstrap scenarios).
-   * @returns The platform conversations set
+   * @returns The platform messaging
    */
-  public async getPlatformConversationsSet(): Promise<IConversationsSet> {
-    // Query the platform and load the conversationsSet relation
+  public async getPlatformMessaging(): Promise<IMessaging> {
+    // Query the platform and load the messaging relation
     const platform = await this.entityManager
       .getRepository('Platform')
       .createQueryBuilder('platform')
-      .leftJoinAndSelect('platform.conversationsSet', 'conversationsSet')
+      .leftJoinAndSelect('platform.messaging', 'messaging')
       .getOne();
 
     if (!platform) {
@@ -253,28 +252,28 @@ export class ConversationsSetService {
       );
     }
 
-    const conversationsSet = platform.conversationsSet;
-    if (!conversationsSet) {
+    const messaging = platform.messaging;
+    if (!messaging) {
       throw new EntityNotFoundException(
-        'No Platform ConversationsSet found!',
+        'No Platform Messaging found!',
         LogContext.COMMUNICATION
       );
     }
 
-    return conversationsSet;
+    return messaging;
   }
 
   /**
-   * Get all conversations for a specific agent within a conversations set.
+   * Get all conversations for a specific agent within a messaging container.
    * Uses the pivot table to find conversations where the agent is a member.
    * Optionally filters by conversation type.
-   * @param conversationsSetId - UUID of the conversations set (typically platform set)
+   * @param messagingId - UUID of the messaging container (typically platform set)
    * @param agentId - UUID of the agent
    * @param typeFilter - Optional filter for conversation type (USER_USER or USER_VC)
    * @returns Array of conversations the agent is a member of
    */
   public async getConversationsForAgent(
-    conversationsSetId: string,
+    messagingId: string,
     agentId: string,
     typeFilter?: CommunicationConversationType
   ): Promise<IConversation[]> {
@@ -282,8 +281,8 @@ export class ConversationsSetService {
       .createQueryBuilder('membership')
       .innerJoinAndSelect('membership.conversation', 'conversation')
       .where('membership.agentId = :agentId', { agentId })
-      .andWhere('conversation.conversationsSetId = :conversationsSetId', {
-        conversationsSetId,
+      .andWhere('conversation.messagingId = :messagingId', {
+        messagingId,
       });
 
     const memberships = await query.getMany();
@@ -307,7 +306,7 @@ export class ConversationsSetService {
   }
 
   /**
-   * Get all conversations for a user from the platform conversation set.
+   * Get all conversations for a user from the platform messaging.
    * Helper method that looks up user's agent and queries platform set.
    * @param userID - UUID of the user
    * @param typeFilter - Optional filter for conversation type (USER_USER or USER_VC)
@@ -328,15 +327,15 @@ export class ConversationsSetService {
       );
     }
 
-    const platformSet = await this.getPlatformConversationsSet();
+    const platformMessaging = await this.getPlatformMessaging();
     const conversations = await this.getConversationsForAgent(
-      platformSet.id,
+      platformMessaging.id,
       user.agent.id,
       typeFilter
     );
 
     this.logger.verbose?.(
-      `Platform conversation set query: found ${conversations.length} conversations for agent ${user.agent.id}`,
+      `Platform messaging query: found ${conversations.length} conversations for agent ${user.agent.id}`,
       LogContext.COMMUNICATION
     );
 

@@ -3,11 +3,11 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConversationModule } from '../conversation/conversation.module';
-import { ConversationsSet } from './conversations.set.entity';
+import { Messaging } from './messaging.entity';
 import { ConversationMembershipModule } from '../conversation-membership/conversation.membership.module';
-import { ConversationsSetAuthorizationService } from './conversations.set.service.authorization';
-import { ConversationsSetResolverMutations } from './conversations.set.resolver.mutations';
-import { ConversationsSetService } from './conversations.set.service';
+import { MessagingAuthorizationService } from './messaging.service.authorization';
+import { MessagingResolverMutations } from './messaging.resolver.mutations';
+import { MessagingService } from './messaging.service';
 import { PlatformWellKnownVirtualContributorsModule } from '@platform/platform.well.known.virtual.contributors';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { VirtualContributorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
@@ -23,17 +23,17 @@ import { AgentModule } from '@domain/agent/agent/agent.module';
     AgentModule,
     PlatformWellKnownVirtualContributorsModule,
     ConversationMembershipModule,
-    TypeOrmModule.forFeature([ConversationsSet]),
+    TypeOrmModule.forFeature([Messaging]),
   ],
   providers: [
-    ConversationsSetService,
-    ConversationsSetAuthorizationService,
-    ConversationsSetResolverMutations,
+    MessagingService,
+    MessagingAuthorizationService,
+    MessagingResolverMutations,
   ],
   exports: [
-    ConversationsSetService,
-    ConversationsSetAuthorizationService,
-    ConversationsSetResolverMutations,
+    MessagingService,
+    MessagingAuthorizationService,
+    MessagingResolverMutations,
   ],
 })
-export class ConversationsSetModule {}
+export class MessagingModule {}

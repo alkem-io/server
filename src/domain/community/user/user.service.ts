@@ -59,7 +59,7 @@ import { AgentInfoCacheService } from '@core/authentication.agent.info/agent.inf
 import { VisualType } from '@common/enums/visual.type';
 import { InstrumentService } from '@src/apm/decorators';
 import { CreateUserSettingsInput } from '../user-settings/dto/user.settings.dto.create';
-import { ConversationsSetService } from '@domain/communication/conversations-set/conversations.set.service';
+import { MessagingService } from '@domain/communication/messaging/messaging.service';
 import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
 import { UserAuthenticationLinkService } from '../user-authentication-link/user.authentication.link.service';
 
@@ -81,7 +81,7 @@ export class UserService {
     private userSettingsService: UserSettingsService,
     private contributorService: ContributorService,
     private kratosService: KratosService,
-    private conversationsSetService: ConversationsSetService,
+    private readonly messagingService: MessagingService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -157,7 +157,7 @@ export class UserService {
       type: AgentType.USER,
     });
 
-    // Note: Conversations now belong to the single platform ConversationsSet.
+    // Note: Conversations now belong to the single platform Messaging.
     // User conversations are tracked via the conversation_membership pivot table.
 
     const authenticationID = agentInfo?.authenticationID;
@@ -224,7 +224,7 @@ export class UserService {
       const callerAgentId = user.agent.id;
 
       // wellKnownVirtualContributor will be resolved to agent ID by the service
-      await this.conversationsSetService.createConversationOnConversationsSet({
+      await this.messagingService.createConversation({
         callerAgentId,
         wellKnownVirtualContributor: VirtualContributorWellKnown.CHAT_GUIDANCE,
       });
@@ -490,7 +490,7 @@ export class UserService {
 
     await this.userSettingsService.deleteUserSettings(user.settings.id);
 
-    // Note: Conversations belong to the platform ConversationsSet.
+    // Note: Conversations belong to the platform Messaging.
     // User's conversation memberships are cleaned up via cascade.
     // TODO: Consider deleting conversations where this user is the only member
 

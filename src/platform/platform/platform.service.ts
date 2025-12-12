@@ -18,8 +18,8 @@ import { ReleaseDiscussionOutput } from './dto/release.discussion.dto';
 import { ForumService } from '@platform/forum/forum.service';
 import { IForum } from '@platform/forum/forum.interface';
 import { ForumDiscussionCategory } from '@common/enums/forum.discussion.category';
-import { ConversationsSetService } from '@domain/communication/conversations-set/conversations.set.service';
-import { IConversationsSet } from '@domain/communication/conversations-set/conversations.set.interface';
+import { MessagingService } from '@domain/communication/messaging/messaging.service';
+import { IMessaging } from '@domain/communication/messaging/messaging.interface';
 import { Discussion } from '@platform/forum-discussion/discussion.entity';
 import { ITemplatesManager } from '@domain/template/templates-manager/templates.manager.interface';
 import { ILicensingFramework } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.interface';
@@ -29,7 +29,7 @@ import { IRoleSet } from '@domain/access/role-set';
 export class PlatformService {
   constructor(
     private forumService: ForumService,
-    private conversationsSetService: ConversationsSetService,
+    private readonly messagingService: MessagingService,
     private entityManager: EntityManager,
     @InjectRepository(Platform)
     private platformRepository: Repository<Platform>,
@@ -126,17 +126,24 @@ export class PlatformService {
     return forum;
   }
 
-  async ensureConversationsSetCreated(): Promise<IConversationsSet> {
+  async ensureMessagingCreated(): Promise<IMessaging> {
     const platform = await this.getPlatformOrFail({
-      relations: { conversationsSet: true },
+      relations: { messaging: true },
     });
-    const conversationsSet = platform.conversationsSet;
-    if (!conversationsSet) {
-      platform.conversationsSet = await this.conversationsSetService.createConversationsSet();
+    const messaging = platform.messaging;
+    if (!messaging) {
+      platform.messaging = await this.messagingService.createMessaging();
       await this.savePlatform(platform);
-      return platform.conversationsSet;
+      return platform.messaging;
     }
-    return conversationsSet;
+    return messaging;
+  }
+
+  /**
+   * @deprecated Use ensureMessagingCreated instead
+   */
+  async ensureConversationsSetCreated(): Promise<IMessaging> {
+    return this.ensureMessagingCreated();
   }
 
   async getStorageAggregator(

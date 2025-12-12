@@ -53,7 +53,7 @@ import { AgentInfoService } from '@core/authentication.agent.info/agent.info.ser
 import { AdminAuthorizationService } from '@src/platform-admin/domain/authorization/admin.authorization.service';
 import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 import { VirtualContributorInteractionMode } from '@common/enums/virtual.contributor.interaction.mode';
-import { ConversationsSetService } from '@domain/communication/conversations-set/conversations.set.service';
+import { MessagingService } from '@domain/communication/messaging/messaging.service';
 import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors/platform.well.known.virtual.contributors.service';
 import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
@@ -91,7 +91,7 @@ export class BootstrapService {
     private licenseService: LicenseService,
     private licensingFrameworkService: LicensingFrameworkService,
     private licensePlanService: LicensePlanService,
-    private conversationsSetService: ConversationsSetService,
+    private readonly messagingService: MessagingService,
     private platformWellKnownVirtualContributorsService: PlatformWellKnownVirtualContributorsService,
     private roleSetService: RoleSetService
   ) {}
@@ -114,7 +114,7 @@ export class BootstrapService {
         this.agentInfoService.createAnonymousAgentInfo();
 
       // Order matters:
-      // 1. Infrastructure: Forum, ConversationsSet
+      // 1. Infrastructure: Forum, Messaging
       // 2. Templates (needed for VC creation)
       // 3. Organization (created without admin first)
       // 4. Guidance VC (needs organization and templates)
@@ -125,7 +125,7 @@ export class BootstrapService {
       // 9. Space
 
       await this.platformService.ensureForumCreated();
-      await this.ensureConversationsSetCreated();
+      await this.ensureMessagingCreated();
       await this.ensurePlatformTemplatesArePresent();
 
       // Create Org first (without admin if needed)
@@ -156,14 +156,13 @@ export class BootstrapService {
   }
 
   /**
-   * Ensures the platform ConversationsSet exists.
+   * Ensures the platform Messaging exists.
    * Creates it if missing (should happen only on fresh deployments).
    */
-  private async ensureConversationsSetCreated(): Promise<void> {
-    const conversationsSet =
-      await this.platformService.ensureConversationsSetCreated();
+  private async ensureMessagingCreated(): Promise<void> {
+    const messaging = await this.platformService.ensureMessagingCreated();
     this.logger.verbose?.(
-      `Platform ConversationsSet ensured: ${conversationsSet.id}`,
+      `Platform Messaging ensured: ${messaging.id}`,
       LogContext.BOOTSTRAP
     );
   }

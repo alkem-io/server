@@ -31,20 +31,18 @@ import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.aut
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { UserLookupService } from '../user-lookup/user.lookup.service';
 import { UserSettingsAuthorizationService } from '../user-settings/user.settings.service.authorization';
-import { ConversationsSetAuthorizationService } from '@domain/communication/conversations-set/conversations.set.service.authorization';
 
 @Injectable()
 export class UserAuthorizationService {
   constructor(
-    private authorizationPolicyService: AuthorizationPolicyService,
-    private agentAuthorizationService: AgentAuthorizationService,
-    private profileAuthorizationService: ProfileAuthorizationService,
-    private platformAuthorizationService: PlatformAuthorizationPolicyService,
-    private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
-    private userSettingsAuthorizationService: UserSettingsAuthorizationService,
-    private conversationsSetAuthorizationService: ConversationsSetAuthorizationService,
-    private agentService: AgentService,
-    private userLookupService: UserLookupService
+    private readonly authorizationPolicyService: AuthorizationPolicyService,
+    private readonly agentAuthorizationService: AgentAuthorizationService,
+    private readonly profileAuthorizationService: ProfileAuthorizationService,
+    private readonly platformAuthorizationService: PlatformAuthorizationPolicyService,
+    private readonly storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
+    private readonly userSettingsAuthorizationService: UserSettingsAuthorizationService,
+    private readonly agentService: AgentService,
+    private readonly userLookupService: UserLookupService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -166,7 +164,7 @@ export class UserAuthorizationService {
       );
     updatedAuthorizations.push(...storageAuthorizations);
 
-    // Note: Conversations are now managed via the platform ConversationsSet
+    // Note: Conversations are now managed via the platform Messaging
     // Authorization is applied on conversations through conversation memberships
 
     return updatedAuthorizations;

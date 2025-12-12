@@ -25,7 +25,7 @@ import { UserSettingsModule } from '../user-settings/user.settings.module';
 import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
 import { UserLookupModule } from '../user-lookup/user.lookup.module';
 import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/agent.info.module';
-import { ConversationsSetModule } from '@domain/communication/conversations-set/conversations.set.module';
+import { MessagingModule } from '@domain/communication/messaging/messaging.module';
 import { UserAuthenticationLinkModule } from '../user-authentication-link/user.authentication.link.module';
 
 @Module({
@@ -50,7 +50,7 @@ import { UserAuthenticationLinkModule } from '../user-authentication-link/user.a
     DocumentModule,
     KratosModule,
     ContributorModule,
-    ConversationsSetModule,
+    MessagingModule,
     TypeOrmModule.forFeature([User]),
   ],
   providers: [
