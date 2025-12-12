@@ -43,8 +43,7 @@ export class MessagingResolverMutations {
     conversationData: CreateConversationInput
   ): Promise<IConversation> {
     // Get the platform messaging
-    const messaging =
-      await this.messagingService.getPlatformMessaging();
+    const messaging = await this.messagingService.getPlatformMessaging();
 
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -100,9 +99,7 @@ export class MessagingResolverMutations {
     }
 
     const conversation =
-      await this.messagingService.createConversation(
-        internalData
-      );
+      await this.messagingService.createConversation(internalData);
 
     await this.messagingAuthorizationService.resetAuthorizationOnConversations(
       agentInfo.userID,

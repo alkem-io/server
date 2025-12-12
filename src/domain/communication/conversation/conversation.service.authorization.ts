@@ -13,7 +13,6 @@ import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authoriz
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { AgentType } from '@common/enums/agent.type';
-import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
 
 @Injectable()
 export class ConversationAuthorizationService {

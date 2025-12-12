@@ -1,7 +1,6 @@
 import { Field, InputType, ObjectType } from '@nestjs/graphql';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
-import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
 
 /**
  * GraphQL input for creating a conversation.
@@ -13,13 +12,6 @@ import { CommunicationConversationType } from '@common/enums/communication.conve
 export class CreateConversationInput {
   @Field(() => UUID, { nullable: false })
   userID!: string;
-
-  /**
-   * @deprecated Type is now inferred from presence of virtualContributorID/wellKnownVirtualContributor.
-   * Kept for backward compatibility with existing clients. Value is ignored.
-   */
-  @Field(() => CommunicationConversationType, { nullable: true })
-  type?: CommunicationConversationType;
 
   @Field(() => UUID, { nullable: true })
   virtualContributorID?: string;
