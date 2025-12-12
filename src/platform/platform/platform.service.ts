@@ -18,6 +18,8 @@ import { ReleaseDiscussionOutput } from './dto/release.discussion.dto';
 import { ForumService } from '@platform/forum/forum.service';
 import { IForum } from '@platform/forum/forum.interface';
 import { ForumDiscussionCategory } from '@common/enums/forum.discussion.category';
+import { ConversationsSetService } from '@domain/communication/conversations-set/conversations.set.service';
+import { IConversationsSet } from '@domain/communication/conversations-set/conversations.set.interface';
 import { Discussion } from '@platform/forum-discussion/discussion.entity';
 import { ITemplatesManager } from '@domain/template/templates-manager/templates.manager.interface';
 import { ILicensingFramework } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.interface';
@@ -27,6 +29,7 @@ import { IRoleSet } from '@domain/access/role-set';
 export class PlatformService {
   constructor(
     private forumService: ForumService,
+    private conversationsSetService: ConversationsSetService,
     private entityManager: EntityManager,
     @InjectRepository(Platform)
     private platformRepository: Repository<Platform>,
@@ -112,6 +115,8 @@ export class PlatformService {
     });
     const forum = platform.forum;
     if (!forum) {
+      // Forum is a direct child of Platform. Since Platform has no Matrix Space,
+      // Forum becomes a root-level Matrix Space (no parent).
       platform.forum = await this.forumService.createForum(
         Object.values(ForumDiscussionCategory)
       );
@@ -119,6 +124,19 @@ export class PlatformService {
       return platform.forum;
     }
     return forum;
+  }
+
+  async ensureConversationsSetCreated(): Promise<IConversationsSet> {
+    const platform = await this.getPlatformOrFail({
+      relations: { conversationsSet: true },
+    });
+    const conversationsSet = platform.conversationsSet;
+    if (!conversationsSet) {
+      platform.conversationsSet = await this.conversationsSetService.createConversationsSet();
+      await this.savePlatform(platform);
+      return platform.conversationsSet;
+    }
+    return conversationsSet;
   }
 
   async getStorageAggregator(

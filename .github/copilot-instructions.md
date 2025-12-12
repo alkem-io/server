@@ -111,6 +111,20 @@
 - Trust this guide. Only search or explore when information here is missing or demonstrably outdated.
 
 ## Active Technologies
+- TypeScript 5.3 on Node.js 20.15.1 (NestJS) + NestJS 10, TypeORM 0.3, Apollo GraphQL 4, Express, Ory Kratos Admin API client (014-kratos-authentication-id-linking)
+- MySQL 8.0 via TypeORM (014-kratos-authentication-id-linking)
+- TypeScript 5.x on Node.js 20 (NestJS server) + NestJS 10, TypeORM 0.3, GraphQL/Apollo Server, MySQL 8 (016-drop-account-upn)
+- MySQL 8 via TypeORM entities and migrations (016-drop-account-upn)
+- TypeScript 5.3 on Node.js 20.15.1 (Volta pinned) + NestJS 10 (DI, Scheduler), TypeORM/MySQL, ConfigService, Synapse integration services, Jest for tests (017-drop-session-sync)
+- MySQL 8 (application DB) + legacy Kratos DB (read-only references to be removed) (017-drop-session-sync)
+- TypeScript 5.x on Node.js 20 (NestJS server) + NestJS, existing REST controller stack, identity resolution services already used by `/rest/internal/identity/resolve` (018-identity-resolve-agent-id)
+- Existing application database and identity stores (no new storage required) (018-identity-resolve-agent-id)
+- TypeScript 5.3 on Node.js 20.15.1 (Volta-pinned) + NestJS 10.3.10, TypeORM 10.0.2, Apollo Server 4.10.4, GraphQL 16.9.0 (001-conversation-architecture-refactor)
+- MySQL 8.0 with TypeORM entities and migrations (001-conversation-architecture-refactor)
+- TypeScript 5.3 on Node.js 20.15.1 (Volta-pinned) + NestJS 10, TypeORM 0.3.x (023-drop-wellknown-vc-column)
+- PostgreSQL (via TypeORM migrations) (023-drop-wellknown-vc-column)
+- TypeScript 5.3, Node.js 20.15.1 + NestJS 10, TypeORM 0.3, PostgreSQL (024-conversations-set-inheritance)
+- PostgreSQL (via TypeORM) (024-conversations-set-inheritance)
 
 - TypeScript 5.x on Node.js 20 (per repository toolchain) + NestJS server, existing CI runner stack, SonarQube at https://sonarqube.alkem.io (015-sonarqube-analysis)
 - N/A (SonarQube stores analysis; server DB not impacted by this feature) (015-sonarqube-analysis)

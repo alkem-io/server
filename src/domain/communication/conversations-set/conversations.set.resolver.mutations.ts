@@ -9,14 +9,17 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ConversationService } from '../conversation/conversation.service';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { ConversationsSetService } from './conversations.set.service';
-import { ForbiddenException } from '@common/exceptions/forbidden.exception';
 import { LogContext } from '@common/enums/logging.context';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { CreateConversationInput } from '../conversation/dto/conversation.dto.create';
+import {
+  CreateConversationInput,
+  CreateConversationData,
+} from '../conversation/dto/conversation.dto.create';
 import { MessagingNotEnabledException } from '@common/exceptions/messaging.not.enabled.exception';
 import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
 import { ConversationsSetAuthorizationService } from './conversations.set.service.authorization';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
+import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 
 @InstrumentResolver()
 @Resolver()
@@ -26,6 +29,7 @@ export class ConversationsSetResolverMutations {
     private conversationsSetService: ConversationsSetService,
     private conversationsSetAuthorizationService: ConversationsSetAuthorizationService,
     private userLookupService: UserLookupService,
+    private virtualContributorLookupService: VirtualContributorLookupService,
     private conversationService: ConversationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -38,22 +42,9 @@ export class ConversationsSetResolverMutations {
     @Args('conversationData')
     conversationData: CreateConversationInput
   ): Promise<IConversation> {
-    // Get the conversations set for the current user
-    const userWithConversationsSet = await this.userLookupService.getUserOrFail(
-      agentInfo.userID!,
-      {
-        relations: {
-          conversationsSet: true,
-        },
-      }
-    );
-    const conversationsSet = userWithConversationsSet.conversationsSet;
-    if (!conversationsSet) {
-      throw new ForbiddenException(
-        `User(${agentInfo.userID}) does not have a conversations set.`,
-        LogContext.COMMUNICATION
-      );
-    }
+    // Get the platform conversations set
+    const conversationsSet =
+      await this.conversationsSetService.getPlatformConversationsSet();
 
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -62,26 +53,60 @@ export class ConversationsSetResolverMutations {
       `create conversation on conversations Set: ${conversationsSet.id}`
     );
 
+    // Infer conversation type from input
+    const isUserVc =
+      !!conversationData.virtualContributorID ||
+      !!conversationData.wellKnownVirtualContributor;
+    const conversationType = isUserVc
+      ? CommunicationConversationType.USER_VC
+      : CommunicationConversationType.USER_USER;
+
     // Also check if the receiving user wants to accept conversations
-    if (conversationData.type === CommunicationConversationType.USER_USER) {
+    if (conversationType === CommunicationConversationType.USER_USER) {
       await this.checkReceivingUserAccessAndSettings(
         agentInfo,
         conversationData.userID
       );
     }
-    conversationData.currentUserID = agentInfo.userID!;
+
+    // Resolve current user's agent ID
+    const currentUser = await this.userLookupService.getUserOrFail(
+      agentInfo.userID,
+      { relations: { agent: true } }
+    );
+    const callerAgentId = currentUser.agent.id;
+
+    // Build internal DTO with agent IDs
+    const internalData: CreateConversationData = {
+      callerAgentId,
+      wellKnownVirtualContributor: conversationData.wellKnownVirtualContributor,
+    };
+
+    // Resolve invited party to agent ID
+    if (conversationData.virtualContributorID) {
+      const vc =
+        await this.virtualContributorLookupService.getVirtualContributorOrFail(
+          conversationData.virtualContributorID,
+          { relations: { agent: true } }
+        );
+      internalData.invitedAgentId = vc.agent.id;
+    } else if (!conversationData.wellKnownVirtualContributor) {
+      // User-to-user: resolve other user's agent ID
+      const otherUser = await this.userLookupService.getUserOrFail(
+        conversationData.userID,
+        { relations: { agent: true } }
+      );
+      internalData.invitedAgentId = otherUser.agent.id;
+    }
 
     const conversation =
       await this.conversationsSetService.createConversationOnConversationsSet(
-        conversationData,
-        conversationsSet.id,
-        true
+        internalData
       );
 
     await this.conversationsSetAuthorizationService.resetAuthorizationOnConversations(
-      agentInfo.userID!,
-      conversationData.userID,
-      conversationData.type
+      agentInfo.userID,
+      conversationData.userID
     );
 
     return await this.conversationService.getConversationOrFail(

@@ -7,13 +7,12 @@ import { CurrentUser } from '@common/decorators';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { ValidationException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
 
 @Resolver(() => MeConversationsResult)
 export class MeConversationsResolverFields {
   constructor(
-    private conversationsSetService: ConversationsSetService,
-    private userLookupService: UserLookupService
+    private readonly conversationsSetService: ConversationsSetService
   ) {}
 
   @ResolveField(() => [IConversation], {
@@ -31,20 +30,10 @@ export class MeConversationsResolverFields {
         LogContext.COMMUNICATION
       );
     }
-    const user = await this.userLookupService.getUserOrFail(agentInfo.userID, {
-      relations: {
-        conversationsSet: true,
-      },
-    });
-    if (!user.conversationsSet) {
-      throw new ValidationException(
-        `User(${agentInfo.userID}) does not have a conversations set.`,
-        LogContext.COMMUNICATION
-      );
-    }
 
-    return await this.conversationsSetService.getUserConversations(
-      user.conversationsSet.id
+    return await this.conversationsSetService.getConversationsForUser(
+      agentInfo.userID,
+      CommunicationConversationType.USER_USER
     );
   }
 
@@ -63,20 +52,10 @@ export class MeConversationsResolverFields {
         LogContext.COMMUNICATION
       );
     }
-    const user = await this.userLookupService.getUserOrFail(agentInfo.userID, {
-      relations: {
-        conversationsSet: true,
-      },
-    });
-    if (!user.conversationsSet) {
-      throw new ValidationException(
-        `User(${agentInfo.userID}) does not have a conversations set.`,
-        LogContext.COMMUNICATION
-      );
-    }
 
-    return await this.conversationsSetService.getVcConversations(
-      user.conversationsSet.id
+    return await this.conversationsSetService.getConversationsForUser(
+      agentInfo.userID,
+      CommunicationConversationType.USER_VC
     );
   }
 
@@ -90,7 +69,7 @@ export class MeConversationsResolverFields {
     @Parent() _parent: MeConversationsResult,
     @Args('wellKnown', { type: () => VirtualContributorWellKnown })
     wellKnown: VirtualContributorWellKnown
-  ): Promise<IConversation | undefined> {
+  ): Promise<IConversation | null> {
     if (!agentInfo.userID) {
       throw new ValidationException(
         'Unable to retrieve conversation as no userID provided.',
@@ -98,20 +77,8 @@ export class MeConversationsResolverFields {
       );
     }
 
-    const user = await this.userLookupService.getUserOrFail(agentInfo.userID, {
-      relations: {
-        conversationsSet: true,
-      },
-    });
-    if (!user.conversationsSet) {
-      throw new ValidationException(
-        `User(${agentInfo.userID}) does not have a conversations set.`,
-        LogContext.COMMUNICATION
-      );
-    }
-
     return await this.conversationsSetService.getConversationWithWellKnownVC(
-      user.conversationsSet.id,
+      agentInfo.userID,
       wellKnown
     );
   }

@@ -26,6 +26,7 @@ import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup
 import { UserLookupModule } from '../user-lookup/user.lookup.module';
 import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/agent.info.module';
 import { ConversationsSetModule } from '@domain/communication/conversations-set/conversations.set.module';
+import { UserAuthenticationLinkModule } from '../user-authentication-link/user.authentication.link.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { ConversationsSetModule } from '@domain/communication/conversations-set/
     AccountHostModule,
     AccountLookupModule,
     UserLookupModule,
+    UserAuthenticationLinkModule,
     NamingModule,
     AuthorizationPolicyModule,
     AuthorizationModule,

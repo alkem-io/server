@@ -21,6 +21,7 @@ import { PlatformLicenseService } from './platform.service.license';
 import { PlatformSettingsModule } from '@platform/platform-settings/platform.settings.module';
 import { LicenseEntitlementModule } from '@domain/common/license-entitlement/license.entitlement.module';
 import { PlatformWellKnownVirtualContributorsModule } from '@platform/platform.well.known.virtual.contributors';
+import { ConversationsSetModule } from '@domain/communication/conversations-set/conversations.set.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { PlatformWellKnownVirtualContributorsModule } from '@platform/platform.w
     PlatformSettingsModule,
     LibraryModule,
     ForumModule,
+    ConversationsSetModule,
     StorageAggregatorModule,
     LicenseEntitlementModule,
     KonfigModule,

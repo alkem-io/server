@@ -29,19 +29,21 @@ import { LicensingFrameworkAuthorizationService } from '@platform/licensing/cred
 import { RoleSetAuthorizationService } from '@domain/access/role-set/role.set.service.authorization';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { RoleSetType } from '@common/enums/role.set.type';
+import { ConversationsSetAuthorizationService } from '@domain/communication/conversations-set/conversations.set.service.authorization';
 
 @Injectable()
 export class PlatformAuthorizationService {
   constructor(
-    private authorizationPolicyService: AuthorizationPolicyService,
-    private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService,
-    private forumAuthorizationService: ForumAuthorizationService,
-    private platformService: PlatformService,
-    private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
-    private libraryAuthorizationService: LibraryAuthorizationService,
-    private licensingFrameworkAuthorizationService: LicensingFrameworkAuthorizationService,
-    private templatesManagerAuthorizationService: TemplatesManagerAuthorizationService,
-    private roleSetAuthorizationService: RoleSetAuthorizationService
+    private readonly authorizationPolicyService: AuthorizationPolicyService,
+    private readonly platformAuthorizationPolicyService: PlatformAuthorizationPolicyService,
+    private readonly forumAuthorizationService: ForumAuthorizationService,
+    private readonly platformService: PlatformService,
+    private readonly storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
+    private readonly libraryAuthorizationService: LibraryAuthorizationService,
+    private readonly licensingFrameworkAuthorizationService: LicensingFrameworkAuthorizationService,
+    private readonly templatesManagerAuthorizationService: TemplatesManagerAuthorizationService,
+    private readonly roleSetAuthorizationService: RoleSetAuthorizationService,
+    private readonly conversationsSetAuthorizationService: ConversationsSetAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(): Promise<IAuthorizationPolicy[]> {
@@ -54,6 +56,7 @@ export class PlatformAuthorizationService {
         licensingFramework: true,
         templatesManager: true,
         roleSet: true,
+        conversationsSet: true,
       },
     });
 
@@ -64,7 +67,8 @@ export class PlatformAuthorizationService {
       !platform.storageAggregator ||
       !platform.licensingFramework ||
       !platform.templatesManager ||
-      !platform.roleSet
+      !platform.roleSet ||
+      !platform.conversationsSet
     )
       throw new RelationshipNotFoundException(
         `Unable to load entities for platform: ${platform.id} `,
@@ -72,7 +76,7 @@ export class PlatformAuthorizationService {
       );
 
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
-    platform.authorization = await this.authorizationPolicyService.reset(
+    platform.authorization = this.authorizationPolicyService.reset(
       platform.authorization
     );
     platform.authorization =
@@ -140,6 +144,13 @@ export class PlatformAuthorizationService {
         platform.authorization
       );
     updatedAuthorizations.push(...platformLicensingAuthorizations);
+
+    const conversationsSetAuthorizations =
+      await this.conversationsSetAuthorizationService.applyAuthorizationPolicy(
+        platform.conversationsSet,
+        platform.authorization
+      );
+    updatedAuthorizations.push(...conversationsSetAuthorizations);
 
     return updatedAuthorizations;
   }

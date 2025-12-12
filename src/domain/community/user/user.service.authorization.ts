@@ -63,9 +63,6 @@ export class UserAuthorizationService {
         settings: {
           authorization: true,
         },
-        conversationsSet: {
-          authorization: true,
-        },
       },
       select: {
         id: true,
@@ -91,11 +88,6 @@ export class UserAuthorizationService {
               this.authorizationPolicyService.authorizationSelectOptions,
           },
         },
-        conversationsSet: {
-          id: true,
-          authorization:
-            this.authorizationPolicyService.authorizationSelectOptions,
-        },
         settings: {
           id: true,
           authorization:
@@ -107,11 +99,10 @@ export class UserAuthorizationService {
       !user.agent ||
       !user.profile ||
       !user.storageAggregator ||
-      !user.settings ||
-      !user.conversationsSet
+      !user.settings
     )
       throw new RelationshipNotFoundException(
-        `Unable to load agent or profile or preferences or storage or conversations for User ${user.id} `,
+        `Unable to load agent or profile or preferences or storage for User ${user.id} `,
         LogContext.COMMUNITY
       );
 
@@ -175,13 +166,8 @@ export class UserAuthorizationService {
       );
     updatedAuthorizations.push(...storageAuthorizations);
 
-    const conversationsSetAuthorizations =
-      await this.conversationsSetAuthorizationService.applyAuthorizationPolicy(
-        user.conversationsSet,
-        user.id,
-        user.authorization
-      );
-    updatedAuthorizations.push(...conversationsSetAuthorizations);
+    // Note: Conversations are now managed via the platform ConversationsSet
+    // Authorization is applied on conversations through conversation memberships
 
     return updatedAuthorizations;
   }

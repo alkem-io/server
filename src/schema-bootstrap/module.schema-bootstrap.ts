@@ -26,6 +26,7 @@ import { ContributionMoveModule } from '@domain/collaboration/callout-contributi
 import { GeoLocationModule } from '@services/external/geo-location';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.module';
+import { IdentityResolveModule } from '@services/api-rest/identity-resolve/identity-resolve.module';
 import { MessageModule } from '@domain/communication/message/message.module';
 import { MessageReactionModule } from '@domain/communication/message.reaction/message.reaction.module';
 import { NotificationRecipientsModule } from '@services/api/notification-recipients/notification.recipients.module';
@@ -74,6 +75,7 @@ import { EventBusProviderStubs } from './stubs/event-bus-providers.stub';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EncryptionService } from '@hedger/nestjs-encryption';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 const STUB_PROVIDERS = [
   CacheStubProvider,
@@ -148,6 +150,13 @@ const STUB_PROVIDERS = [
       decrypt: (value: string) => value,
     },
   },
+  {
+    // Simplified event emitter stub for providers that publish domain events during schema bootstrap.
+    provide: EventEmitter2,
+    useValue: {
+      emit: () => undefined,
+    },
+  },
 ];
 
 @Global()
@@ -202,6 +211,7 @@ class SchemaBootstrapStubModule {}
     GeoLocationModule,
     ContributionReporterModule,
     InnovationHubModule,
+    IdentityResolveModule,
     MessageModule,
     MessageReactionModule,
     NotificationRecipientsModule,

@@ -110,9 +110,21 @@ export class BootstrapService {
       const anonymousAgentInfo =
         this.agentInfoService.createAnonymousAgentInfo();
 
+      // Order matters:
+      // 1. User profiles FIRST (admin user needed for organization creation)
+      //    Note: Guidance conversation creation may fail if VC doesn't exist yet,
+      //    but this is handled gracefully (logged, not thrown)
+      // 2. License plans
+      // 3. Infrastructure: Forum, ConversationsSet
+      // 4. Authorization policies
+      // 5. Templates
+      // 6. Organization (needs admin user from step 1)
+      // 7. Space
+      // 8. Guidance VC
       await this.bootstrapUserProfiles();
       await this.bootstrapLicensePlans();
       await this.platformService.ensureForumCreated();
+      await this.ensureConversationsSetCreated();
       await this.ensureAuthorizationsPopulated();
       await this.ensurePlatformTemplatesArePresent();
       await this.ensureOrganizationSingleton();
@@ -128,6 +140,19 @@ export class BootstrapService {
       );
       throw new BootstrapException(error.message, { originalException: error });
     }
+  }
+
+  /**
+   * Ensures the platform ConversationsSet exists.
+   * Creates it if missing (should happen only on fresh deployments).
+   */
+  private async ensureConversationsSetCreated(): Promise<void> {
+    const conversationsSet =
+      await this.platformService.ensureConversationsSetCreated();
+    this.logger.verbose?.(
+      `Platform ConversationsSet ensured: ${conversationsSet.id}`,
+      LogContext.BOOTSTRAP
+    );
   }
 
   private async ensurePlatformTemplatesArePresent() {
@@ -275,7 +300,6 @@ export class BootstrapService {
         if (!userExists) {
           const user = await this.userService.createUser({
             email: userData.email,
-            accountUpn: userData.email,
             firstName: userData.firstName,
             lastName: userData.lastName,
             profileData: {
@@ -417,7 +441,7 @@ export class BootstrapService {
       avatarURL: '',
       credentials: adminUser.agent?.credentials || [],
       agentID: adminUser.agent?.id,
-      communicationID: adminUser.communicationID,
+      authenticationID: adminUser.authenticationID ?? '',
     };
   }
 

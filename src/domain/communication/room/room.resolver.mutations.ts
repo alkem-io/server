@@ -34,6 +34,7 @@ import { RoomResolverService } from '@services/infrastructure/entity-resolver/ro
 import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { MessagingNotEnabledException } from '@common/exceptions/messaging.not.enabled.exception';
+import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 
 @InstrumentResolver()
 @Resolver()
@@ -51,6 +52,7 @@ export class RoomResolverMutations {
     private virtualContributorLookupService: VirtualContributorLookupService,
     private inAppNotificationService: InAppNotificationService,
     private userLookupService: UserLookupService,
+    private communicationAdapter: CommunicationAdapter,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -76,18 +78,15 @@ export class RoomResolverMutations {
     await this.validateMessageOnCalloutOrFail(room);
     await this.validateMessageOnDirectConversationOrFail(room, agentInfo);
 
-    const accessVirtualContributors = this.virtualContributorsEnabled();
-
     const mentions = await this.roomMentionsService.getMentionsFromText(
       messageData.message
     );
 
     const message = await this.roomLookupService.sendMessage(
       room,
-      agentInfo.communicationID,
+      agentInfo.agentID,
       messageData
     );
-    const threadID = message.id;
 
     switch (room.type) {
       case RoomType.POST: {
@@ -118,15 +117,7 @@ export class RoomResolverMutations {
           message,
           agentInfo
         );
-        if (accessVirtualContributors) {
-          await this.roomMentionsService.processVirtualContributorMentions(
-            mentions,
-            message.message,
-            threadID,
-            agentInfo,
-            room
-          );
-        }
+        // VC invocation now handled by MessageInboxService via RabbitMQ event
 
         break;
       }
@@ -195,15 +186,7 @@ export class RoomResolverMutations {
           agentInfo
         );
 
-        if (accessVirtualContributors) {
-          await this.roomMentionsService.processVirtualContributorMentions(
-            mentions,
-            message.message,
-            threadID,
-            agentInfo,
-            room
-          );
-        }
+        // VC invocation now handled by MessageInboxService via RabbitMQ event
 
         if (
           callout.settings.visibility === CalloutVisibility.PUBLISHED &&
@@ -234,11 +217,7 @@ export class RoomResolverMutations {
       default:
       // ignore for now, later likely to be an exception
     }
-    this.subscriptionPublishService.publishRoomEvent(
-      room,
-      MutationType.CREATE,
-      message
-    );
+    // Subscription will fire when Matrix echoes back via MessageInboxService
     return message;
   }
 
@@ -266,18 +245,34 @@ export class RoomResolverMutations {
       return;
     }
 
-    const conversation = await this.roomResolverService.getConversationForRoom(
-      room.id
+    // Get room members from Matrix (lightweight call - no message history)
+    const members = await this.communicationAdapter.getRoomMembers(room.id);
+
+    // Find the other user (not the sender) - members contains agent IDs
+    const otherMemberAgentIds = members.filter(
+      (memberId: string) => memberId !== agentInfo.agentID
     );
 
-    // The conversation.userID is the ID of the other user in the conversation
-    // We need to check if that user allows messages from other users
-    if (!conversation.userID) {
+    if (otherMemberAgentIds.length === 0) {
+      // Only sender in room, skip validation
       return;
     }
 
-    const receivingUser = await this.userLookupService.getUserOrFail(
-      conversation.userID,
+    // For direct conversations, check the first other member's messaging preferences
+    // (In practice there should only be 2 members in a direct conversation)
+    const receivingUserAgentId = otherMemberAgentIds[0];
+
+    // Look up user by their agent ID
+    const receivingUser =
+      await this.userLookupService.getUserByAgentId(receivingUserAgentId);
+
+    if (!receivingUser) {
+      // Agent ID doesn't map to a user (might be a VC or deleted user)
+      return;
+    }
+
+    const receivingUserFull = await this.userLookupService.getUserOrFail(
+      receivingUser.id,
       {
         relations: {
           settings: true,
@@ -285,7 +280,9 @@ export class RoomResolverMutations {
       }
     );
 
-    if (!receivingUser.settings.communication.allowOtherUsersToSendMessages) {
+    if (
+      !receivingUserFull.settings.communication.allowOtherUsersToSendMessages
+    ) {
       throw new MessagingNotEnabledException(
         'User is not open to receiving messages',
         LogContext.COMMUNICATION,
@@ -313,7 +310,6 @@ export class RoomResolverMutations {
       `room reply to message: ${room.id}`
     );
 
-    const accessVirtualContributors = this.virtualContributorsEnabled();
     const mentions: Mention[] =
       await this.roomMentionsService.getMentionsFromText(messageData.message);
     const threadID = messageData.threadID;
@@ -325,7 +321,7 @@ export class RoomResolverMutations {
 
     const reply = await this.roomLookupService.sendMessageReply(
       room,
-      agentInfo.communicationID,
+      agentInfo.agentID,
       messageData,
       'user'
     );
@@ -356,48 +352,6 @@ export class RoomResolverMutations {
           agentInfo
         );
 
-        // TODO extract in a helper function
-        if (accessVirtualContributors) {
-          // Check before processing so as not to reply to same message where interaction started
-          const vcInteraction =
-            await this.roomMentionsService.getVcInteractionByThread(
-              room.id,
-              threadID
-            );
-
-          await this.roomMentionsService.processVirtualContributorMentions(
-            mentions,
-            messageData.message,
-            threadID,
-            agentInfo,
-            room
-          );
-
-          if (vcInteraction) {
-            this.logger.verbose?.(
-              `VC Interaction found in thread ${messageData.threadID} in room ${room.id}`,
-              LogContext.VIRTUAL_CONTRIBUTOR
-            );
-            const contextSpaceID =
-              await this.roomMentionsService.getSpaceIdForRoom(room);
-
-            const vcMentioned =
-              await this.virtualContributorLookupService.getVirtualContributorOrFail(
-                vcInteraction.virtualContributorID
-              );
-
-            await this.virtualContributorMessageService.invokeVirtualContributor(
-              vcMentioned.id,
-              messageData.message,
-              threadID,
-              agentInfo,
-              contextSpaceID,
-              room,
-              vcInteraction
-            );
-          }
-        }
-
         break;
       }
       case RoomType.CALENDAR_EVENT:
@@ -418,49 +372,11 @@ export class RoomResolverMutations {
         );
 
         break;
-      case RoomType.CALLOUT:
+      case RoomType.CALLOUT: {
         const callout = await this.roomResolverService.getCalloutForRoom(
           messageData.roomID
         );
 
-        if (accessVirtualContributors) {
-          // Check before processing so as not to reply to same message where interaction started
-          const vcInteraction =
-            await this.roomMentionsService.getVcInteractionByThread(
-              room.id,
-              threadID
-            );
-          await this.roomMentionsService.processVirtualContributorMentions(
-            mentions,
-            messageData.message,
-            threadID,
-            agentInfo,
-            room
-          );
-
-          if (vcInteraction) {
-            this.logger.verbose?.(
-              `VC Interaction found in thread ${messageData.threadID} in room ${room.id}`,
-              LogContext.VIRTUAL_CONTRIBUTOR
-            );
-            const vcMentioned =
-              await this.virtualContributorLookupService.getVirtualContributorOrFail(
-                vcInteraction.virtualContributorID
-              );
-            const contextSpaceID =
-              await this.roomMentionsService.getSpaceIdForRoom(room);
-
-            await this.virtualContributorMessageService.invokeVirtualContributor(
-              vcMentioned.id,
-              messageData.message,
-              threadID,
-              agentInfo,
-              contextSpaceID,
-              room,
-              vcInteraction
-            );
-          }
-        }
         if (callout.settings.visibility === CalloutVisibility.PUBLISHED) {
           this.roomServiceEvents.processActivityCalloutCommentCreated(
             callout,
@@ -482,6 +398,7 @@ export class RoomResolverMutations {
           );
         }
         break;
+      }
       case RoomType.CONVERSATION:
         // Conversation rooms don't require special event processing for mentions or other notifications as other
         // contributors would not be able to see the messages
@@ -516,17 +433,11 @@ export class RoomResolverMutations {
 
     const reaction = await this.roomService.addReactionToMessage(
       room,
-      agentInfo.communicationID,
+      agentInfo.agentID,
       reactionData
     );
 
-    this.subscriptionPublishService.publishRoomEvent(
-      room,
-      MutationType.CREATE,
-      reaction,
-      reactionData.messageID
-    );
-
+    // Subscription will be published by MessageInboxService when Matrix echoes the reaction
     return reaction;
   }
 
@@ -559,7 +470,7 @@ export class RoomResolverMutations {
     );
     const messageID = await this.roomService.removeRoomMessage(
       room,
-      agentInfo.communicationID,
+      agentInfo.agentID,
       messageData
     );
     await this.inAppNotificationService.deleteAllByMessageId(messageID);
@@ -614,24 +525,11 @@ export class RoomResolverMutations {
 
     const isDeleted = await this.roomService.removeReactionToMessage(
       room,
-      agentInfo.communicationID,
+      agentInfo.agentID,
       reactionData
     );
 
-    if (isDeleted) {
-      this.subscriptionPublishService.publishRoomEvent(
-        room,
-        MutationType.DELETE,
-        // send empty data, because the resource is deleted
-        {
-          id: reactionData.reactionID,
-          emoji: '',
-          sender: '',
-          timestamp: -1,
-        } as IMessageReaction
-      );
-    }
-
+    // Subscription will be published by MessageInboxService when Matrix echoes the removal
     return isDeleted;
   }
 }

@@ -3,5 +3,5 @@ export class CreateVcInteractionInput {
 
   threadID!: string;
 
-  virtualContributorID!: string;
+  virtualContributorActorID!: string;
 }

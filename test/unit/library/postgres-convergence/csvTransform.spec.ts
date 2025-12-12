@@ -31,7 +31,9 @@ describe('csvTransform', () => {
     });
 
     it('should throw error for invalid boolean values', () => {
-      expect(() => transformBoolean('invalid')).toThrow('Invalid boolean value');
+      expect(() => transformBoolean('invalid')).toThrow(
+        'Invalid boolean value'
+      );
       expect(() => transformBoolean(2)).toThrow('Invalid boolean value');
     });
   });
@@ -55,7 +57,9 @@ describe('csvTransform', () => {
     });
 
     it('should throw error for invalid date strings', () => {
-      expect(() => transformTimestamp('not-a-date')).toThrow('Failed to transform timestamp');
+      expect(() => transformTimestamp('not-a-date')).toThrow(
+        'Failed to transform timestamp'
+      );
     });
   });
 
@@ -117,7 +121,9 @@ describe('csvTransform', () => {
 
     it('should throw error for invalid UUID format', () => {
       expect(() => transformUuid('not-a-uuid')).toThrow('Invalid UUID format');
-      expect(() => transformUuid('12345678-1234-1234-1234-123456789')).toThrow('Invalid UUID format');
+      expect(() => transformUuid('12345678-1234-1234-1234-123456789')).toThrow(
+        'Invalid UUID format'
+      );
     });
   });
 

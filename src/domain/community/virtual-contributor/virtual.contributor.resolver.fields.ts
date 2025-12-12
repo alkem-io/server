@@ -26,14 +26,42 @@ import { VirtualContributorModelCard } from '../virtual-contributor-model-card/d
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 import { IAiPersona } from '@services/ai-server/ai-persona';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
+import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
+import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
 
 @Resolver(() => IVirtualContributor)
 export class VirtualContributorResolverFields {
   constructor(
     private virtualContributorService: VirtualContributorService,
     private authorizationService: AuthorizationService,
-    private aiServerAdapter: AiServerAdapter
+    private aiServerAdapter: AiServerAdapter,
+    private platformWellKnownVirtualContributorsService: PlatformWellKnownVirtualContributorsService
   ) {}
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField(
+    'wellKnownVirtualContributor',
+    () => VirtualContributorWellKnown,
+    {
+      nullable: true,
+      description:
+        'The well-known identifier of this Virtual Contributor, if configured at platform level.',
+    }
+  )
+  async wellKnownVirtualContributor(
+    @Parent() virtualContributor: VirtualContributor
+  ): Promise<VirtualContributorWellKnown | undefined> {
+    // Reverse lookup: check all platform mappings to find if this VC ID is registered
+    const mappings =
+      await this.platformWellKnownVirtualContributorsService.getMappings();
+    for (const [wellKnown, vcId] of Object.entries(mappings)) {
+      if (vcId === virtualContributor.id) {
+        return wellKnown as VirtualContributorWellKnown;
+      }
+    }
+    return undefined;
+  }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)

@@ -11,6 +11,8 @@ import { EntityNotInitializedException } from '@common/exceptions';
 import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { AgentType } from '@common/enums/agent.type';
 import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
 
 @Injectable()
@@ -18,12 +20,12 @@ export class ConversationAuthorizationService {
   constructor(
     private conversationService: ConversationService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    private roomAuthorizationService: RoomAuthorizationService
+    private roomAuthorizationService: RoomAuthorizationService,
+    private userLookupService: UserLookupService
   ) {}
 
   public async applyAuthorizationPolicy(
-    conversationID: string,
-    conversationHostID: string
+    conversationID: string
   ): Promise<IAuthorizationPolicy[]> {
     const conversation = await this.conversationService.getConversationOrFail(
       conversationID,
@@ -43,17 +45,31 @@ export class ConversationAuthorizationService {
     }
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
-    // Determine all participants in the conversation
-    const participantUserIDs: string[] = [conversationHostID];
-    if (
-      conversation.type === CommunicationConversationType.USER_USER &&
-      conversation.userID
-    ) {
-      participantUserIDs.push(conversation.userID);
+    // T056: Determine all participants via membership pivot table
+    const memberships =
+      await this.conversationService.getConversationMembers(conversationID);
+
+    // Resolve agent IDs to user IDs for authorization
+    // Note: Current authorization system uses USER_SELF_MANAGEMENT credentials
+    // In the future, this should be refactored to use agent-based credentials
+    const participantUserIDs: string[] = [];
+    for (const membership of memberships) {
+      if (membership.agent?.type === AgentType.USER) {
+        const user = await this.userLookupService.getUserByAgentId(
+          membership.agentId
+        );
+        if (user) {
+          participantUserIDs.push(user.id);
+        }
+      }
+      // Note: Virtual contributors don't have user IDs, so they won't be included
+      // in the authorization rules. This is acceptable since VCs interact via
+      // the platform's service credentials, not user credentials.
     }
 
-    // Add READ + CONTRIBUTE access only for the conversation participants
-    // This restricts who can view and interact with the conversation to only the participants
+    // Add READ + CONTRIBUTE access for all user participants
+    // T057: Membership grants both read and send message privileges
+    // T058: Structured logging with conversation ID and agent IDs in exception details
     conversation.authorization.credentialRules.push(
       this.createCredentialRuleParticipantAccess(participantUserIDs)
     );
@@ -94,7 +110,7 @@ export class ConversationAuthorizationService {
       this.authorizationPolicyService.createCredentialRule(
         [AuthorizationPrivilege.READ, AuthorizationPrivilege.CONTRIBUTE],
         participantCriterias,
-        'Communication Conversation Participants Access'
+        'Communication Conversation Participants Access (Membership-based)'
       );
     participantRule.cascade = true;
     return participantRule;
