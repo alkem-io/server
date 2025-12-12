@@ -19,14 +19,16 @@ export class Markdown implements CustomScalar<string, string> {
       // Remove empty span tags used as spacers
       // Convert <br> tags to newlines
       // Preserve markdown list markers (* followed by spaces)
-      return value
+      // Use double newlines to create proper paragraph breaks in markdown
+      const result = value
         .replace(/\\n/g, '\n')
         .replace(/\\r/g, '\r')
-        .replace(/\\ /g, '\n')
+        .replace(/\\ /g, '\n\n') // backslash-space becomes double newline for paragraph break
         .replace(/<span>\s*<\/span>/g, '')
-        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<br\s*\/?>/gi, '\n\n') // <br> becomes double newline for paragraph break
         .replace(/\*   /g, '* ')
-        .replace(/ {2,}/g, '\n');
+        .replace(/ {2,}/g, '\n\n'); // double spaces become double newline for paragraph break
+      return result;
     }
     return value; // value sent to the client
   }
