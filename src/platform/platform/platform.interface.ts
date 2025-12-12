@@ -10,7 +10,7 @@ import { ILicensingFramework } from '@platform/licensing/credential-based/licens
 import { IMetadata } from '@platform/metadata/metadata.interface';
 import { IPlatformSettings } from '@platform/platform-settings/platform.settings.interface';
 import { IPlatformWellKnownVirtualContributors } from '@platform/platform.well.known.virtual.contributors/platform.well.known.virtual.contributors.interface';
-import { IMessaging, IConversationsSet } from '@domain/communication/messaging/messaging.interface';
+import { IMessaging } from '@domain/communication/messaging/messaging.interface';
 
 @ObjectType('Platform')
 export abstract class IPlatform extends IAuthorizable {
@@ -25,9 +25,6 @@ export abstract class IPlatform extends IAuthorizable {
 
   @Field(() => IMessaging, { nullable: true })
   messaging?: IMessaging;
-
-  @Field(() => IConversationsSet, { deprecationReason: 'Use messaging instead' })
-  conversationsSet?: IConversationsSet;
 
   @Field(() => IPlatformSettings, {
     nullable: false,

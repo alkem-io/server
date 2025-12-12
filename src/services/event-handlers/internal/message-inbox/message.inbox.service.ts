@@ -7,16 +7,15 @@ import { RoomType } from '@common/enums/room.type';
 import { MessageReceivedEvent } from './message.received.event';
 import { ReactionAddedEvent } from './reaction.added.event';
 import { ReactionRemovedEvent } from './reaction.removed.event';
-import { RoomLookupService } from '../room-lookup/room.lookup.service';
-import { RoomMentionsService } from '../room-mentions/room.mentions.service';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
-import { VirtualContributorMessageService } from '../virtual.contributor.message/virtual.contributor.message.service';
-import { MentionedEntityType } from '../messaging/mention.interface';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { generateVcInteractionId } from '../vc-interaction/vc.interaction.interface';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { VirtualContributorMessageService } from '@domain/communication/virtual.contributor.message/virtual.contributor.message.service';
+import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup.service';
+import { RoomMentionsService } from '@domain/communication/room-mentions/room.mentions.service';
+import { MentionedEntityType } from '@domain/communication/messaging/mention.interface';
 
 /**
  * Domain service for processing incoming messages from Matrix.
@@ -160,7 +159,6 @@ export class MessageInboxService {
           '', // contextSpaceID out of scope
           room,
           {
-            id: generateVcInteractionId(threadID, vcActorID),
             threadID,
             virtualContributorID: vcActorID,
           }
@@ -201,7 +199,6 @@ export class MessageInboxService {
       '', // contextSpaceID out of scope
       room,
       {
-        id: generateVcInteractionId(threadID, vcData.virtualContributorActorID),
         threadID,
         virtualContributorID: vcData.virtualContributorActorID,
       }

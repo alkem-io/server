@@ -25,12 +25,12 @@ import { VirtualContributorLookupService } from '@domain/community/virtual-contr
 @Resolver()
 export class MessagingResolverMutations {
   constructor(
-    private authorizationService: AuthorizationService,
+    private readonly authorizationService: AuthorizationService,
     private readonly messagingService: MessagingService,
     private readonly messagingAuthorizationService: MessagingAuthorizationService,
-    private userLookupService: UserLookupService,
-    private virtualContributorLookupService: VirtualContributorLookupService,
-    private conversationService: ConversationService,
+    private readonly userLookupService: UserLookupService,
+    private readonly virtualContributorLookupService: VirtualContributorLookupService,
+    private readonly conversationService: ConversationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -109,18 +109,6 @@ export class MessagingResolverMutations {
     return await this.conversationService.getConversationOrFail(
       conversation.id
     );
-  }
-
-  @Mutation(() => IConversation, {
-    description: 'Create a new Conversation on the ConversationsSet.',
-    deprecationReason: 'Use createConversation instead',
-  })
-  async createConversationOnConversationsSet(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('conversationData')
-    conversationData: CreateConversationInput
-  ): Promise<IConversation> {
-    return this.createConversation(agentInfo, conversationData);
   }
 
   private async checkReceivingUserAccessAndSettings(

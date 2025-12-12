@@ -1,7 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IMessage } from '../message/message.interface';
-import { RoomType } from '@common/enums/room.type';
 import { NotificationInputEntityMentions } from '@services/adapters/notification-adapter/dto/user/notification.dto.input.entity.mentions';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { Mention, MentionedEntityType } from '../messaging/mention.interface';
@@ -16,10 +15,7 @@ import { VirtualContributorLookupService } from '@domain/community/virtual-contr
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { IRoom } from '../room/room.interface';
-import {
-  IVcInteraction,
-  generateVcInteractionId,
-} from '../vc-interaction/vc.interaction.interface';
+import { IVcInteraction } from '../vc-interaction/vc.interaction.interface';
 import { RoomLookupService } from '../room-lookup/room.lookup.service';
 import { NotificationInputUserMention } from '@services/adapters/notification-adapter/dto/user/notification.dto.input.user.mention';
 import { NotificationUserAdapter } from '@services/adapters/notification-adapter/notification.user.adapter';
@@ -34,14 +30,14 @@ export class RoomMentionsService {
   );
 
   constructor(
-    private notificationUserAdapter: NotificationUserAdapter,
-    private notificationOrganizationAdapter: NotificationOrganizationAdapter,
-    private communityResolverService: CommunityResolverService,
-    private roomLookupService: RoomLookupService,
-    private virtualContributorMessageService: VirtualContributorMessageService,
-    private virtualContributorLookupService: VirtualContributorLookupService,
-    private userLookupService: UserLookupService,
-    private organizationLookupService: OrganizationLookupService,
+    private readonly notificationUserAdapter: NotificationUserAdapter,
+    private readonly notificationOrganizationAdapter: NotificationOrganizationAdapter,
+    private readonly communityResolverService: CommunityResolverService,
+    private readonly roomLookupService: RoomLookupService,
+    private readonly virtualContributorMessageService: VirtualContributorMessageService,
+    private readonly virtualContributorLookupService: VirtualContributorLookupService,
+    private readonly userLookupService: UserLookupService,
+    private readonly organizationLookupService: OrganizationLookupService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -49,7 +45,7 @@ export class RoomMentionsService {
   public async getSpaceIdForRoom(room: IRoom): Promise<string> {
     const community = await this.communityResolverService.getCommunityFromRoom(
       room.id,
-      room.type as RoomType
+      room.type
     );
 
     // The ID of the actual community where the vc is being invoked
@@ -71,7 +67,6 @@ export class RoomMentionsService {
     }
 
     return {
-      id: generateVcInteractionId(threadID, vcData.virtualContributorActorID),
       threadID,
       virtualContributorID: vcData.virtualContributorActorID,
     };

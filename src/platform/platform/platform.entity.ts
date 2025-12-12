@@ -74,8 +74,4 @@ export class Platform extends AuthorizableEntity implements IPlatform {
   })
   @JoinColumn()
   messaging?: Messaging;
-
-  get conversationsSet(): Messaging | undefined {
-    return this.messaging;
-  }
 }

@@ -24,8 +24,6 @@ import { MutationType } from '@common/enums/subscriptions';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Mention } from '../messaging/mention.interface';
 import { IRoom } from './room.interface';
-import { VirtualContributorMessageService } from '../virtual.contributor.message/virtual.contributor.message.service';
-import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { RoomMentionsService } from '../room-mentions/room.mentions.service';
 import { RoomLookupService } from '../room-lookup/room.lookup.service';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
@@ -48,8 +46,6 @@ export class RoomResolverMutations {
     private roomLookupService: RoomLookupService,
     private roomMentionsService: RoomMentionsService,
     private subscriptionPublishService: SubscriptionPublishService,
-    private virtualContributorMessageService: VirtualContributorMessageService,
-    private virtualContributorLookupService: VirtualContributorLookupService,
     private inAppNotificationService: InAppNotificationService,
     private userLookupService: UserLookupService,
     private communicationAdapter: CommunicationAdapter,

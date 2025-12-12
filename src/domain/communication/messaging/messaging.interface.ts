@@ -6,6 +6,3 @@ import { IConversation } from '../conversation/conversation.interface';
 export abstract class IMessaging extends IAuthorizable {
   conversations!: IConversation[];
 }
-
-@ObjectType('ConversationsSet')
-export abstract class IConversationsSet extends IMessaging {}

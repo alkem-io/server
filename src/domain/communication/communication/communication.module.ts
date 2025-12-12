@@ -15,7 +15,7 @@ import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platf
 import { UserModule } from '@domain/community/user/user.module';
 import { MessagingModule } from '../messaging/messaging.module';
 import { ConversationModule } from '../conversation/conversation.module';
-import { MessageInboxModule } from '../message-inbox/message.inbox.module';
+import { MessageInboxModule } from '@services/event-handlers/internal/message-inbox/message.inbox.module';
 
 @Module({
   imports: [

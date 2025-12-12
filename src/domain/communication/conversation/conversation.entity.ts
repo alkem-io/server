@@ -20,20 +20,12 @@ export class Conversation extends AuthorizableEntity implements IConversation {
   )
   memberships!: ConversationMembership[];
 
-  @ManyToOne(
-    () => Messaging,
-    messaging => messaging.conversations,
-    {
-      eager: false,
-      cascade: false,
-      onDelete: 'CASCADE',
-    }
-  )
+  @ManyToOne(() => Messaging, messaging => messaging.conversations, {
+    eager: false,
+    cascade: false,
+    onDelete: 'CASCADE',
+  })
   messaging!: Messaging;
-
-  get conversationsSet(): Messaging {
-    return this.messaging;
-  }
 
   @OneToOne(() => Room, {
     eager: true,

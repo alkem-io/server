@@ -9,20 +9,15 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { IMessage } from '../message/message.interface';
 import { IRoom } from './room.interface';
 import { RoomService } from './room.service';
-import {
-  IVcInteraction,
-  generateVcInteractionId,
-} from '../vc-interaction/vc.interaction.interface';
+import { IVcInteraction } from '../vc-interaction/vc.interaction.interface';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { RoomLookupService } from '../room-lookup/room.lookup.service';
 
 @Resolver(() => IRoom)
 export class RoomResolverFields {
   constructor(
-    private roomService: RoomService,
-    private roomLookupService: RoomLookupService,
-    private authorizationService: AuthorizationService
+    private readonly roomService: RoomService,
+    private readonly authorizationService: AuthorizationService
   ) {}
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -56,7 +51,6 @@ export class RoomResolverFields {
     // Convert JSON map to array of IVcInteraction
     const vcInteractionsByThread = reloadedRoom.vcInteractionsByThread || {};
     return Object.entries(vcInteractionsByThread).map(([threadID, data]) => ({
-      id: generateVcInteractionId(threadID, data.virtualContributorActorID),
       threadID,
       virtualContributorID: data.virtualContributorActorID,
     }));

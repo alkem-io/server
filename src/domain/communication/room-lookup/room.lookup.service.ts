@@ -10,10 +10,7 @@ import { FindOneOptions, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { Room } from '../room/room.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import {
-  IVcInteraction,
-  generateVcInteractionId,
-} from '../vc-interaction/vc.interaction.interface';
+import { IVcInteraction } from '../vc-interaction/vc.interaction.interface';
 import { CreateVcInteractionInput } from '../vc-interaction/dto/vc.interaction.dto.create';
 import { RoomSendMessageReplyInput } from '../room/dto/room.dto.send.message.reply';
 import { RoomSendMessageInput } from '../room/dto/room.dto.send.message';
@@ -25,10 +22,10 @@ interface MessageSender {
 
 export class RoomLookupService {
   constructor(
-    private communicationAdapter: CommunicationAdapter,
-    private contributorLookupService: ContributorLookupService,
+    private readonly communicationAdapter: CommunicationAdapter,
+    private readonly contributorLookupService: ContributorLookupService,
     @InjectRepository(Room)
-    private roomRepository: Repository<Room>,
+    private readonly roomRepository: Repository<Room>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: WinstonLogger
   ) {}
@@ -94,10 +91,6 @@ export class RoomLookupService {
     await this.roomRepository.save(room);
 
     return {
-      id: generateVcInteractionId(
-        interactionData.threadID,
-        interactionData.virtualContributorActorID
-      ),
       threadID: interactionData.threadID,
       virtualContributorID: interactionData.virtualContributorActorID,
     };
@@ -108,7 +101,6 @@ export class RoomLookupService {
 
     const vcInteractionsByThread = room.vcInteractionsByThread || {};
     return Object.entries(vcInteractionsByThread).map(([threadID, data]) => ({
-      id: generateVcInteractionId(threadID, data.virtualContributorActorID),
       threadID,
       virtualContributorID: data.virtualContributorActorID,
     }));

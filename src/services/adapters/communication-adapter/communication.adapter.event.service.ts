@@ -8,10 +8,10 @@ import {
   ReactionAddedEvent as MatrixReactionAddedEvent,
   ReactionRemovedEvent as MatrixReactionRemovedEvent,
 } from '@alkemio/matrix-adapter-lib';
-import { MessageReceivedEvent } from '@domain/communication/message-inbox/message.received.event';
-import { ReactionAddedEvent } from '@domain/communication/message-inbox/reaction.added.event';
-import { ReactionRemovedEvent } from '@domain/communication/message-inbox/reaction.removed.event';
 import { RabbitSubscribe, Nack } from '@golevelup/nestjs-rabbitmq';
+import { MessageReceivedEvent } from '@services/event-handlers/internal/message-inbox/message.received.event';
+import { ReactionAddedEvent } from '@services/event-handlers/internal/message-inbox/reaction.added.event';
+import { ReactionRemovedEvent } from '@services/event-handlers/internal/message-inbox/reaction.removed.event';
 
 /**
  * Boundary service for Matrix Adapter RabbitMQ events.
