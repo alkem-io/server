@@ -20,22 +20,31 @@ describe('Markdown Scalar', () => {
       expect(scalar.serialize('item1\\ item2')).toBe('item1\n\nitem2');
     });
 
-    it('should remove empty span tags', () => {
+    it('should preserve whitespace inside span tags while removing the tags', () => {
       expect(scalar.serialize('before<span></span>after')).toBe('beforeafter');
-      expect(scalar.serialize('before<span>  </span>after')).toBe(
-        'beforeafter'
+      expect(scalar.serialize('before<span> </span>after')).toBe(
+        'before after'
+      );
+      expect(scalar.serialize('label:<span> </span>value')).toBe(
+        'label: value'
       );
     });
 
-    it('should convert br tags to double newlines for paragraph break', () => {
-      expect(scalar.serialize('line1<br>line2')).toBe('line1\n\nline2');
-      expect(scalar.serialize('line1<br/>line2')).toBe('line1\n\nline2');
-      expect(scalar.serialize('line1<br />line2')).toBe('line1\n\nline2');
-      expect(scalar.serialize('line1<BR>line2')).toBe('line1\n\nline2');
+    it('should convert br tags to newlines', () => {
+      expect(scalar.serialize('line1<br>line2')).toBe('line1\nline2');
+      expect(scalar.serialize('line1<br/>line2')).toBe('line1\nline2');
+      expect(scalar.serialize('line1<br />line2')).toBe('line1\nline2');
+      expect(scalar.serialize('line1<BR>line2')).toBe('line1\nline2');
     });
 
-    it('should normalize markdown list markers with extra spaces', () => {
-      expect(scalar.serialize('*   item')).toBe('* item');
+    it('should put list items on new lines and normalize spacing', () => {
+      expect(scalar.serialize('*   item')).toBe('\n* item');
+    });
+
+    it('should preserve indentation for nested lists', () => {
+      const input = '*   Either :      *   nested item';
+      const expected = '\n* Either :\n      * nested item';
+      expect(scalar.serialize(input)).toBe(expected);
     });
 
     it('should convert double spaces to double newlines for paragraph break', () => {

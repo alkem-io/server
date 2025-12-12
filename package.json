@@ -1,6 +1,6 @@
 {
   "name": "alkemio-server",
-  "version": "0.129.2",
+  "version": "0.129.3",
   "description": "Alkemio server, responsible for managing the shared Alkemio platform",
   "author": "Alkemio Foundation",
   "private": false,
@@ -189,11 +189,11 @@
     }
   },
   "engines": {
-    "node": ">=20.9.0",
+    "node": ">=20.19.0",
     "pnpm": ">=9.0.0"
   },
   "packageManager": "pnpm@10.17.1",
   "volta": {
-    "node": "20.15.1"
+    "node": "20.19.0"
   }
 }

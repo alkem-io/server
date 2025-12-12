@@ -15,19 +15,19 @@ export class Markdown implements CustomScalar<string, string> {
     if (typeof value === 'string') {
       // Convert escaped newlines/carriage returns to actual newlines
       // Also convert markdown hard line breaks (backslash followed by space) to newlines
-      // Convert double spaces to newlines (data migration artifact)
-      // Remove empty span tags used as spacers
+      // Replace span tags with their content (preserving any space inside)
       // Convert <br> tags to newlines
-      // Preserve markdown list markers (* followed by spaces)
-      // Use double newlines to create proper paragraph breaks in markdown
+      // Normalize markdown list markers and ensure they start on new lines (BEFORE double-space)
+      // Preserve indentation for nested lists
+      // Convert double spaces between words to paragraph breaks
       const result = value
         .replace(/\\n/g, '\n')
         .replace(/\\r/g, '\r')
         .replace(/\\ /g, '\n\n') // backslash-space becomes double newline for paragraph break
-        .replace(/<span>\s*<\/span>/g, '')
-        .replace(/<br\s*\/?>/gi, '\n\n') // <br> becomes double newline for paragraph break
-        .replace(/\*   /g, '* ')
-        .replace(/ {2,}/g, '\n\n'); // double spaces become double newline for paragraph break
+        .replace(/<span>(\s*)<\/span>/g, '$1') // preserve any whitespace inside span tags
+        .replace(/<br\s*\/?>/gi, '\n') // <br> becomes newline
+        .replace(/( *)\*   /g, '\n$1* ') // put list items on new line, preserve indentation
+        .replace(/(\S)  +(\S)/g, '$1\n\n$2'); // double spaces between non-whitespace become paragraph breaks
       return result;
     }
     return value; // value sent to the client
