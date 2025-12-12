@@ -11,7 +11,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { ConversationsSet } from './conversations.set.entity';
 import { IConversationsSet } from './conversations.set.interface';
 import { ConversationService } from '../conversation/conversation.service';
-import { ConversationMembership } from '../conversation/conversation-membership.entity';
+import { ConversationMembership } from '../conversation-membership/conversation.membership.entity';
 import { IConversation } from '../conversation/conversation.interface';
 import { ConfigService } from '@nestjs/config';
 import { AlkemioConfig } from '@src/types/alkemio.config';

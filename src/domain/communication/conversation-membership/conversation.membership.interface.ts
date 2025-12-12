@@ -1,5 +1,5 @@
 import { IAgent } from '@domain/agent/agent/agent.interface';
-import { IConversation } from './conversation.interface';
+import { IConversation } from '../conversation/conversation.interface';
 
 export interface IConversationMembership {
   conversationId: string;

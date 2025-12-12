@@ -3,7 +3,7 @@ import { IConversation } from './conversation.interface';
 import { Room } from '@domain/communication/room/room.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
 import { ConversationsSet } from '../conversations-set/conversations.set.entity';
-import { ConversationMembership } from './conversation-membership.entity';
+import { ConversationMembership } from '../conversation-membership/conversation.membership.entity';
 
 @Entity()
 export class Conversation extends AuthorizableEntity implements IConversation {

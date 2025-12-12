@@ -56,6 +56,8 @@ import { VirtualContributorInteractionMode } from '@common/enums/virtual.contrib
 import { ConversationsSetService } from '@domain/communication/conversations-set/conversations.set.service';
 import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors/platform.well.known.virtual.contributors.service';
 import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
+import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { RoleName } from '@common/enums/role.name';
 
 @Injectable()
 export class BootstrapService {
@@ -90,7 +92,8 @@ export class BootstrapService {
     private licensingFrameworkService: LicensingFrameworkService,
     private licensePlanService: LicensePlanService,
     private conversationsSetService: ConversationsSetService,
-    private platformWellKnownVirtualContributorsService: PlatformWellKnownVirtualContributorsService
+    private platformWellKnownVirtualContributorsService: PlatformWellKnownVirtualContributorsService,
+    private roleSetService: RoleSetService
   ) {}
 
   async bootstrap() {
@@ -111,25 +114,35 @@ export class BootstrapService {
         this.agentInfoService.createAnonymousAgentInfo();
 
       // Order matters:
-      // 1. User profiles FIRST (admin user needed for organization creation)
-      //    Note: Guidance conversation creation may fail if VC doesn't exist yet,
-      //    but this is handled gracefully (logged, not thrown)
-      // 2. License plans
-      // 3. Infrastructure: Forum, ConversationsSet
-      // 4. Authorization policies
-      // 5. Templates
-      // 6. Organization (needs admin user from step 1)
-      // 7. Space
-      // 8. Guidance VC
-      await this.bootstrapUserProfiles();
-      await this.bootstrapLicensePlans();
+      // 1. Infrastructure: Forum, ConversationsSet
+      // 2. Templates (needed for VC creation)
+      // 3. Organization (created without admin first)
+      // 4. Guidance VC (needs organization and templates)
+      // 5. Users (including Admin) - will get guidance conversation created successfully
+      // 6. Link Admin to Organization
+      // 7. License plans
+      // 8. Authorization policies
+      // 9. Space
+
       await this.platformService.ensureForumCreated();
       await this.ensureConversationsSetCreated();
-      await this.ensureAuthorizationsPopulated();
       await this.ensurePlatformTemplatesArePresent();
+
+      // Create Org first (without admin if needed)
       await this.ensureOrganizationSingleton();
-      await this.ensureSpaceSingleton(anonymousAgentInfo);
+
+      // Create VC (needs Org)
       await this.ensureGuidanceChat();
+
+      // Create Users (including Admin)
+      await this.bootstrapUserProfiles();
+
+      // Ensure Admin is linked to Org
+      await this.ensureAdminUserLinkedToOrganization();
+
+      await this.bootstrapLicensePlans();
+      await this.ensureAuthorizationsPopulated();
+      await this.ensureSpaceSingleton(anonymousAgentInfo);
       // reset auth as last in the actions
       // await this.ensureSpaceNamesInElastic();
     } catch (error: any) {
@@ -381,14 +394,15 @@ export class BootstrapService {
     }
   }
 
-  private async ensureOrganizationSingleton() {
+  private async ensureOrganizationSingleton(agentInfo?: AgentInfo) {
     // create a default host org
     let hostOrganization =
       await this.organizationLookupService.getOrganizationByNameId(
         DEFAULT_HOST_ORG_NAMEID
       );
     if (!hostOrganization) {
-      const adminAgentInfo = await this.getAdminAgentInfo();
+      // If agentInfo is not provided, we create without an admin initially
+      // The admin will be linked later
       hostOrganization = await this.organizationService.createOrganization(
         {
           nameID: DEFAULT_HOST_ORG_NAMEID,
@@ -396,7 +410,7 @@ export class BootstrapService {
             displayName: DEFAULT_HOST_ORG_DISPLAY_NAME,
           },
         },
-        adminAgentInfo
+        agentInfo
       );
       const orgAuthorizations =
         await this.organizationAuthorizationService.applyAuthorizationPolicy(
@@ -416,6 +430,38 @@ export class BootstrapService {
         await this.accountLicenseService.applyLicensePolicy(account.id);
       await this.licenseService.saveAll(accountEntitlements);
     }
+  }
+
+  private async ensureAdminUserLinkedToOrganization() {
+    const adminAgentInfo = await this.getAdminAgentInfo();
+    const hostOrganization =
+      await this.organizationLookupService.getOrganizationByNameIdOrFail(
+        DEFAULT_HOST_ORG_NAMEID
+      );
+
+    const roleSet = await this.organizationService.getRoleSet(hostOrganization);
+
+    // Assign Admin as Associate and Admin
+    await this.roleSetService.assignUserToRole(
+      roleSet,
+      RoleName.ASSOCIATE,
+      adminAgentInfo.userID,
+      adminAgentInfo,
+      false
+    );
+
+    await this.roleSetService.assignUserToRole(
+      roleSet,
+      RoleName.ADMIN,
+      adminAgentInfo.userID,
+      adminAgentInfo,
+      false
+    );
+
+    this.logger.verbose?.(
+      `Ensured Admin user linked to Organization: ${hostOrganization.id}`,
+      LogContext.BOOTSTRAP
+    );
   }
 
   private async getAdminAgentInfo(): Promise<AgentInfo> {

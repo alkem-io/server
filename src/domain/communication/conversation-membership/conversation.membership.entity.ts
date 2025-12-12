@@ -5,8 +5,8 @@ import {
   ManyToOne,
   PrimaryColumn,
 } from 'typeorm';
-import { IConversationMembership } from './conversation-membership.interface';
-import { Conversation } from './conversation.entity';
+import { IConversationMembership } from './conversation.membership.interface';
+import { Conversation } from '../conversation/conversation.entity';
 import { Agent } from '@domain/agent/agent/agent.entity';
 
 @Entity()

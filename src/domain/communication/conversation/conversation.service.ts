@@ -16,8 +16,8 @@ import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { Conversation } from './conversation.entity';
 import { IConversation } from './conversation.interface';
-import { ConversationMembership } from './conversation-membership.entity';
-import { IConversationMembership } from './conversation-membership.interface';
+import { ConversationMembership } from '../conversation-membership/conversation.membership.entity';
+import { IConversationMembership } from '../conversation-membership/conversation.membership.interface';
 import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
 import { AgentType } from '@common/enums/agent.type';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';

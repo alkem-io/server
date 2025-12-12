@@ -322,7 +322,7 @@ services:
 
   postgres:
     container_name: alkemio_dev_postgres
-    image: postgres:18
+    image: postgres:17.5
     networks:
       - alkemio_dev_net
     environment:

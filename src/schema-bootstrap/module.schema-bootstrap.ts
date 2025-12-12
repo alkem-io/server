@@ -75,7 +75,8 @@ import { EventBusProviderStubs } from './stubs/event-bus-providers.stub';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EncryptionService } from '@hedger/nestjs-encryption';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+import { IS_SCHEMA_BOOTSTRAP } from '@common/constants';
 
 const STUB_PROVIDERS = [
   CacheStubProvider,
@@ -87,6 +88,10 @@ const STUB_PROVIDERS = [
   SearchStubProvider,
   ...MicroservicesStubProviders,
   ...EventBusProviderStubs,
+  {
+    provide: IS_SCHEMA_BOOTSTRAP,
+    useValue: true,
+  },
   {
     provide: AmqpConnection,
     useValue: {
@@ -150,13 +155,6 @@ const STUB_PROVIDERS = [
       decrypt: (value: string) => value,
     },
   },
-  {
-    // Simplified event emitter stub for providers that publish domain events during schema bootstrap.
-    provide: EventEmitter2,
-    useValue: {
-      emit: () => undefined,
-    },
-  },
 ];
 
 @Global()
@@ -173,6 +171,9 @@ class SchemaBootstrapStubModule {}
       envFilePath: ['.env'],
       isGlobal: true,
       load: [configuration],
+    }),
+    EventEmitterModule.forRoot({
+      global: true,
     }),
     GraphQLModule.forRoot<ApolloDriverConfig>({
       driver: ApolloDriver,
