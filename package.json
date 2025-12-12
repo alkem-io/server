@@ -158,7 +158,7 @@
     "@types/lodash": "^4.17.14",
     "@types/markdown-it": "^14.1.2",
     "@types/module-alias": "^2.0.4",
-    "@types/node": "^20.14.10",
+    "@types/node": "^22.0.0",
     "@types/passport": "^1.0.17",
     "@types/passport-jwt": "^4.0.1",
     "@types/pg": "^8.15.5",
@@ -190,11 +190,11 @@
     }
   },
   "engines": {
-    "node": ">=20.9.0",
+    "node": ">=22.0.0",
     "pnpm": ">=9.0.0"
   },
   "packageManager": "pnpm@10.17.1",
   "volta": {
-    "node": "20.15.1"
+    "node": "22.21.1"
   }
 }

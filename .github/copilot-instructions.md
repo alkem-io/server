@@ -5,7 +5,7 @@
 ## Repository Snapshot
 
 - Purpose: NestJS GraphQL server for the Alkemio collaboration platform; exposes `http://localhost:3000/graphql` and orchestrates domain + integration services.
-- Stack: TypeScript, Node 20 LTS (Volta pins 20.15.1), pnpm 10.17.1 via Corepack, NestJS, TypeORM (MySQL), Apollo Server, RabbitMQ queues, Elastic APM, Ory Kratos/Oathkeeper for auth.
+- Stack: TypeScript, Node 22 LTS (Volta pins 22.21.1), pnpm 10.17.1 via Corepack, NestJS, TypeORM (MySQL), Apollo Server, RabbitMQ queues, Elastic APM, Ory Kratos/Oathkeeper for auth.
 - Scale: ~3k TypeScript files; key roots include `src/`, `test/`, `docs/`, `.specify/`, `scripts/`, `specs/00x-*`, `quickstart-*.yml`, `Dockerfile`, `package.json`, `pnpm-lock.yaml`.
 - Docs: `docs/Developing.md`, `docs/Running.md`, `docs/QA.md`, `docs/DataManagement.md`, `docs/Design.md` hold authoritative setup, architecture, QA, and migration guidance. Authorization flows and decision trees live in `docs/authorization-forest.md` and credential semantics in `docs/credential-based-authorization.md`.
 
@@ -18,7 +18,7 @@
 
 ## Environment & Toolchain
 
-- Prerequisites: Node ≥20.9 (Volta config helps), pnpm ≥10.17.1 (`corepack enable && corepack prepare pnpm@10.17.1 --activate`), Docker + Compose, MySQL 8 (with `mysql_native_password`), RabbitMQ, Redis, Ory Kratos/Oathkeeper stack. `.env.docker` feeds compose stacks; local `.env` variables are required for TypeORM CLI.
+- Prerequisites: Node ≥22.0 (Volta config helps), pnpm ≥10.17.1 (`corepack enable && corepack prepare pnpm@10.17.1 --activate`), Docker + Compose, MySQL 8 (with `mysql_native_password`), RabbitMQ, Redis, Ory Kratos/Oathkeeper stack. `.env.docker` feeds compose stacks; local `.env` variables are required for TypeORM CLI.
 - Optional but recommended: jq (used in docs for auth flows), mysql client, mkcert for TLS dev.
 - Module resolution uses `tsconfig.json` path aliases (e.g. `@domain/*`, `@services/*`). ESLint is configured via `eslint.config.js` with flat config, Prettier integration, and production-stricter `@typescript-eslint/no-unused-vars`.
 
@@ -79,7 +79,7 @@
 - GitHub Actions:
   - `schema-contract.yml` runs pnpm install, generates schema snapshot (light bootstrap), diffs vs baseline, posts sticky PR comment, and fails on unapproved BREAKING/PREMATURE_REMOVAL issues.
   - `schema-baseline.yml` runs on merges to `develop`, regenerates the baseline snapshot, uploads diff artifacts, and raises a signed pull request with the refreshed `schema-baseline.graphql` when it detects changes (falling back to CODEOWNER notification on failure).
-  - `build-release-docker-hub.yml` builds and publishes Docker images (Node 20 + pnpm caches).
+  - `build-release-docker-hub.yml` builds and publishes Docker images (Node 22 + pnpm caches).
   - `build-deploy-k8s-*.yml` target dev/sandbox/test Hetzner clusters after container build.
   - `trigger-e2e-tests.yml` dispatches downstream full-stack tests.
 - Legacy Travis badge remains in README; GitHub Actions are the authoritative CI. Expect schema gate + build workflows to run on PRs touching `src/**`, schema artifacts, or package manifests.
