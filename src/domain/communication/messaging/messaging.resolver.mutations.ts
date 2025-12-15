@@ -6,7 +6,6 @@ import { IConversation } from '../conversation/conversation.interface';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { ConversationService } from '../conversation/conversation.service';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { MessagingService } from './messaging.service';
 import { LogContext } from '@common/enums/logging.context';
@@ -14,10 +13,9 @@ import { UserLookupService } from '@domain/community/user-lookup/user.lookup.ser
 import {
   CreateConversationInput,
   CreateConversationData,
-} from '../conversation/dto/conversation.dto.create';
+} from '@domain/communication/conversation/dto';
 import { MessagingNotEnabledException } from '@common/exceptions/messaging.not.enabled.exception';
 import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
-import { MessagingAuthorizationService } from './messaging.service.authorization';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 
@@ -27,10 +25,8 @@ export class MessagingResolverMutations {
   constructor(
     private readonly authorizationService: AuthorizationService,
     private readonly messagingService: MessagingService,
-    private readonly messagingAuthorizationService: MessagingAuthorizationService,
     private readonly userLookupService: UserLookupService,
     private readonly virtualContributorLookupService: VirtualContributorLookupService,
-    private readonly conversationService: ConversationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -98,17 +94,8 @@ export class MessagingResolverMutations {
       internalData.invitedAgentId = otherUser.agent.id;
     }
 
-    const conversation =
-      await this.messagingService.createConversation(internalData);
-
-    await this.messagingAuthorizationService.resetAuthorizationOnConversations(
-      agentInfo.userID,
-      conversationData.userID
-    );
-
-    return await this.conversationService.getConversationOrFail(
-      conversation.id
-    );
+    // Authorization is now applied directly within createConversation
+    return await this.messagingService.createConversation(internalData);
   }
 
   private async checkReceivingUserAccessAndSettings(

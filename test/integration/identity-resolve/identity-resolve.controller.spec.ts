@@ -10,6 +10,7 @@ import { IdentityResolveService } from '@services/api-rest/identity-resolve/iden
 import { RegistrationService } from '@services/api/registration/registration.service';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Identity } from '@ory/kratos-client';
 import { LogContext, AlkemioErrorStatus } from '@common/enums';
@@ -46,6 +47,17 @@ describe('IdentityResolveController (REST)', () => {
     getUserByEmail: jest.fn(),
     getUserOrFail: jest.fn(),
   } as unknown as UserLookupService;
+  const agentInfoService = {
+    buildAgentInfoFromOryIdentity: jest
+      .fn()
+      .mockImplementation((identity, options) => ({
+        authenticationID: options?.authenticationId || identity.id,
+        email: identity.traits?.email || '',
+        firstName: identity.traits?.name?.first || '',
+        lastName: identity.traits?.name?.last || '',
+        avatarURL: identity.traits?.picture || '',
+      })),
+  } as unknown as AgentInfoService;
   const loggerMock: LoggerService & {
     log: jest.Mock;
     warn: jest.Mock;
@@ -72,6 +84,7 @@ describe('IdentityResolveController (REST)', () => {
         { provide: RegistrationService, useValue: registrationService },
         { provide: KratosService, useValue: kratosService },
         { provide: UserLookupService, useValue: userLookupService },
+        { provide: AgentInfoService, useValue: agentInfoService },
         { provide: WINSTON_MODULE_NEST_PROVIDER, useValue: loggerMock },
       ],
     }).compile();

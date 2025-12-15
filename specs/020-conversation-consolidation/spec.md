@@ -30,7 +30,7 @@ This specification consolidates a major refactoring of the conversation domain a
 
 ### User Story 3 - Matrix Adapter Upgrade (Priority: P1)
 
-**From Spec 021**: The `CommunicationAdapter` is refactored to use `@alkem-io/matrix-adapter-go-lib`. It adopts the "Unified Actor Pattern," using `Agent.id` as the `actorId` for all communication operations, eliminating the distinction between Users and Virtual Contributors at the adapter level.
+**From Spec 021**: The `CommunicationAdapter` is refactored to use `@alkemio/matrix-adapter-lib`. It adopts the "Unified Actor Pattern," using `Agent.id` as the `actorId` for all communication operations, eliminating the distinction between Users and Virtual Contributors at the adapter level.
 
 **Acceptance Scenarios**:
 1.  **Given** a message send request, **When** processed, **Then** the adapter uses `agent.id` as the `sender_actor_id`.
@@ -51,7 +51,7 @@ This specification consolidates a major refactoring of the conversation domain a
 
 -   **FR-001**: Implement `ConversationMembership` entity and pivot table.
 -   **FR-002**: Link `ConversationsSet` to `Platform` (FK: `conversationsSetId`) and implement auth inheritance.
--   **FR-003**: Refactor `CommunicationAdapter` to use `@alkem-io/matrix-adapter-go-lib`.
+-   **FR-003**: Refactor `CommunicationAdapter` to use `@alkemio/matrix-adapter-lib`.
 -   **FR-004**: Use `Agent.id` as `actorId` in all communication payloads.
 -   **FR-005**: Migrate `vc_interaction` data to `room.vcInteractionsByThread`.
 -   **FR-006**: Drop legacy columns: `user.conversationsSetId`, `conversation.userID`, `conversation.virtualContributorID`, `conversation.type`, `room.externalRoomID`.

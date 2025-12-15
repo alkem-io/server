@@ -2,18 +2,18 @@ import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { LoggerService } from '@nestjs/common';
 import { Inject, UseGuards } from '@nestjs/common/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { AuthorizationAgentPrivilege } from '@common/decorators';
+import { AuthorizationAgentPrivilege, CurrentUser } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { ConversationService } from './conversation.service';
 import { IConversation } from './conversation.interface';
 import { IUser } from '@domain/community/user/user.interface';
-import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
 import { AgentType } from '@common/enums/agent.type';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 
 @Resolver(() => IConversation)
 export class ConversationResolverFields {
@@ -21,7 +21,6 @@ export class ConversationResolverFields {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private readonly conversationService: ConversationService,
-    private readonly userLookupService: UserLookupService,
     private readonly virtualContributorLookupService: VirtualContributorLookupService
   ) {}
 
@@ -54,26 +53,18 @@ export class ConversationResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('user', () => IUser || null, {
+  @ResolveField('user', () => IUser, {
     nullable: true,
-    description: 'The user participating in this Conversation.',
+    description:
+      'The other user participating in this Conversation (excludes the current user).',
   })
-  async user(@Parent() conversation: IConversation): Promise<IUser | null> {
-    const memberships = await this.conversationService.getConversationMembers(
-      conversation.id
-    );
-
-    // Find the user agent among members
-    const userMembership = memberships.find(
-      m => m.agent?.type === AgentType.USER
-    );
-
-    if (!userMembership?.agentId) {
-      return null;
-    }
-
-    return await this.userLookupService.getUserByAgentId(
-      userMembership.agentId
+  async user(
+    @Parent() conversation: IConversation,
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<IUser | null> {
+    return await this.conversationService.getUserFromConversation(
+      conversation.id,
+      agentInfo.agentID
     );
   }
 

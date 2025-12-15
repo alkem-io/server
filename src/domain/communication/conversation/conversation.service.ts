@@ -136,13 +136,12 @@ export class ConversationService {
     receiverAgentId: string,
     roomType: RoomType
   ): Promise<IRoom> {
-    const room = await this.roomService.createRoom({
+    return await this.roomService.createRoom({
       displayName: `conversation-${senderAgentId}-${receiverAgentId}`,
       type: roomType,
       senderActorId: senderAgentId,
       receiverActorId: receiverAgentId,
     });
-    return room;
   }
 
   public async getConversationOrFail(
@@ -480,47 +479,29 @@ export class ConversationService {
    * T075: Get the user from a conversation via membership resolution.
    * Replaces direct access to conversation.userID (column dropped).
    * @param conversationId - UUID of the conversation
-   * @param excludeUserId - Optional user ID to exclude (for finding "the other user")
+   * @param excludeAgentId - Optional agent ID to exclude (for finding "the other user")
    * @returns The user if found, null if conversation has no user member (or only excluded user)
    */
   async getUserFromConversation(
     conversationId: string,
-    excludeUserId?: string
+    excludeAgentId?: string
   ): Promise<IUser | null> {
     const members = await this.getConversationMembers(conversationId);
-    const userMember = members.find(m => {
-      if (m.agent.type !== AgentType.USER) return false;
-      // If excluding a user, check agent's user relationship
-      // Note: This requires agent.user to be loaded, which isn't by default
-      // For now, we'll need to resolve user and check ID afterward
-      return true;
-    });
+
+    // Find a user member, excluding the specified agent if provided
+    const userMember = members.find(
+      m =>
+        m.agent.type === AgentType.USER &&
+        (!excludeAgentId || m.agentId !== excludeAgentId)
+    );
 
     if (!userMember) {
       return null;
     }
 
-    const user = await this.userLookupService.getUserByAgentId(
-      userMember.agentId,
-      { relations: { agent: true } }
-    );
-
-    // Apply exclusion filter if specified
-    if (excludeUserId && user?.id === excludeUserId) {
-      // Find the other user member
-      const otherUserMember = members.find(
-        m => m.agent.type === AgentType.USER && m.agentId !== userMember.agentId
-      );
-
-      if (!otherUserMember) return null;
-
-      return await this.userLookupService.getUserByAgentId(
-        otherUserMember.agentId,
-        { relations: { agent: true } }
-      );
-    }
-
-    return user;
+    return await this.userLookupService.getUserByAgentId(userMember.agentId, {
+      relations: { agent: true },
+    });
   }
 
   /**

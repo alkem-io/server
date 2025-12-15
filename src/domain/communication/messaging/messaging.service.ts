@@ -18,7 +18,7 @@ import { AlkemioConfig } from '@src/types/alkemio.config';
 import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
 import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
 import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
-import { CreateConversationData } from '../conversation/dto/conversation.dto.create';
+import { CreateConversationData } from '@domain/communication/conversation/dto';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -26,12 +26,14 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy/authori
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AgentType } from '@common/enums/agent.type';
+import { ConversationAuthorizationService } from '../conversation/conversation.service.authorization';
 
 @Injectable()
 export class MessagingService {
   constructor(
     private readonly configService: ConfigService<AlkemioConfig, true>,
     private readonly authorizationPolicyService: AuthorizationPolicyService,
+    private readonly conversationAuthorizationService: ConversationAuthorizationService,
     private readonly entityManager: EntityManager,
     @InjectRepository(Messaging)
     private readonly messagingRepository: Repository<Messaging>,
@@ -52,9 +54,7 @@ export class MessagingService {
       AuthorizationPolicyType.COMMUNICATION_MESSAGING
     );
 
-    return await this.messagingRepository.save(
-      messaging as Messaging
-    );
+    return await this.messagingRepository.save(messaging as Messaging);
   }
 
   async getMessagingOrFail(
@@ -73,18 +73,13 @@ export class MessagingService {
     return messaging;
   }
 
-  async deleteMessaging(
-    messagingID: string
-  ): Promise<IMessaging> {
-    const messaging = await this.getMessagingOrFail(
-      messagingID,
-      {
-        relations: {
-          authorization: true,
-          conversations: true,
-        },
-      }
-    );
+  async deleteMessaging(messagingID: string): Promise<IMessaging> {
+    const messaging = await this.getMessagingOrFail(messagingID, {
+      relations: {
+        authorization: true,
+        conversations: true,
+      },
+    });
 
     if (!messaging.conversations || !messaging.authorization) {
       throw new EntityNotInitializedException(
@@ -93,40 +88,26 @@ export class MessagingService {
       );
     }
 
-    await this.authorizationPolicyService.delete(
-      messaging.authorization
-    );
+    await this.authorizationPolicyService.delete(messaging.authorization);
 
     for (const conversation of messaging.conversations) {
       await this.conversationService.deleteConversation(conversation.id);
     }
 
-    return await this.messagingRepository.remove(
-      messaging as Messaging
-    );
+    return await this.messagingRepository.remove(messaging as Messaging);
   }
 
-  public async getConversations(
-    messagingID: string
-  ): Promise<IConversation[]> {
-    const messaging = await this.getMessagingOrFail(
-      messagingID,
-      {
-        relations: { conversations: true },
-      }
-    );
+  public async getConversations(messagingID: string): Promise<IConversation[]> {
+    const messaging = await this.getMessagingOrFail(messagingID, {
+      relations: { conversations: true },
+    });
     return messaging.conversations;
   }
 
-  public async getConversationsCount(
-    messagingID: string
-  ): Promise<number> {
-    const messaging = await this.getMessagingOrFail(
-      messagingID,
-      {
-        relations: { conversations: true },
-      }
-    );
+  public async getConversationsCount(messagingID: string): Promise<number> {
+    const messaging = await this.getMessagingOrFail(messagingID, {
+      relations: { conversations: true },
+    });
     return messaging.conversations.length;
   }
 
@@ -189,11 +170,18 @@ export class MessagingService {
       createRoom
     );
 
-    // Only set messaging if this is a newly created conversation
+    // Only set messaging and apply authorization if this is a newly created conversation
     // (createConversation returns existing conversation if found)
     if (!conversation.messaging) {
       conversation.messaging = messaging as Messaging;
       await this.conversationService.save(conversation);
+
+      // Apply authorization policy directly - no need for redundant search
+      const authorizations =
+        await this.conversationAuthorizationService.applyAuthorizationPolicy(
+          conversation.id
+        );
+      await this.authorizationPolicyService.saveAll(authorizations);
     }
 
     return await this.conversationService.getConversationOrFail(
@@ -207,9 +195,7 @@ export class MessagingService {
     );
   }
 
-  public async save(
-    messaging: IMessaging
-  ): Promise<IMessaging> {
+  public async save(messaging: IMessaging): Promise<IMessaging> {
     return await this.messagingRepository.save(messaging as Messaging);
   }
 
@@ -277,32 +263,33 @@ export class MessagingService {
     agentId: string,
     typeFilter?: CommunicationConversationType
   ): Promise<IConversation[]> {
-    const query = this.conversationMembershipRepository
+    const queryBuilder = this.conversationMembershipRepository
       .createQueryBuilder('membership')
       .innerJoinAndSelect('membership.conversation', 'conversation')
       .where('membership.agentId = :agentId', { agentId })
-      .andWhere('conversation.messagingId = :messagingId', {
-        messagingId,
-      });
+      .andWhere('conversation.messagingId = :messagingId', { messagingId });
 
-    const memberships = await query.getMany();
-    const conversations = memberships.map(m => m.conversation);
-
-    // Filter by type if requested (requires inference)
+    // Filter by type using subquery - O(1) instead of O(n)
     if (typeFilter) {
-      const filtered: IConversation[] = [];
-      for (const conv of conversations) {
-        const type = await this.conversationService.inferConversationType(
-          conv.id
-        );
-        if (type === typeFilter) {
-          filtered.push(conv);
-        }
+      // Subquery checks if conversation has a VC member
+      const vcExistsSubquery = this.conversationMembershipRepository
+        .createQueryBuilder('m2')
+        .innerJoin('m2.agent', 'a')
+        .where('m2.conversationId = membership.conversationId')
+        .andWhere('a.type = :vcType')
+        .select('1');
+
+      if (typeFilter === CommunicationConversationType.USER_VC) {
+        queryBuilder.andWhere(`EXISTS (${vcExistsSubquery.getQuery()})`);
+      } else {
+        // USER_USER: No VC members
+        queryBuilder.andWhere(`NOT EXISTS (${vcExistsSubquery.getQuery()})`);
       }
-      return filtered;
+      queryBuilder.setParameter('vcType', AgentType.VIRTUAL_CONTRIBUTOR);
     }
 
-    return conversations;
+    const memberships = await queryBuilder.getMany();
+    return memberships.map(m => m.conversation);
   }
 
   /**

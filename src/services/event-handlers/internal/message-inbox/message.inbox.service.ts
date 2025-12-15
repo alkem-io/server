@@ -9,13 +9,12 @@ import { ReactionAddedEvent } from './reaction.added.event';
 import { ReactionRemovedEvent } from './reaction.removed.event';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
-import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { VirtualContributorMessageService } from '@domain/communication/virtual.contributor.message/virtual.contributor.message.service';
 import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup.service';
 import { RoomMentionsService } from '@domain/communication/room-mentions/room.mentions.service';
 import { MentionedEntityType } from '@domain/communication/messaging/mention.interface';
+import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
 
 /**
  * Domain service for processing incoming messages from Matrix.
@@ -32,7 +31,7 @@ export class MessageInboxService {
     private readonly virtualContributorLookupService: VirtualContributorLookupService,
     private readonly virtualContributorMessageService: VirtualContributorMessageService,
     private readonly subscriptionPublishService: SubscriptionPublishService,
-    private readonly userLookupService: UserLookupService,
+    private readonly agentInfoService: AgentInfoService,
     private readonly communicationAdapter: CommunicationAdapter,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
@@ -138,7 +137,9 @@ export class MessageInboxService {
     }
 
     // Build AgentInfo from sender
-    const agentInfo = await this.buildAgentInfo(payload.actorID);
+    const agentInfo = await this.agentInfoService.buildAgentInfoForAgent(
+      payload.actorID
+    );
 
     // Use message ID as threadID for DIRECT conversations
     const threadID = payload.message.id;
@@ -189,7 +190,9 @@ export class MessageInboxService {
     );
 
     // Build AgentInfo from sender
-    const agentInfo = await this.buildAgentInfo(payload.actorID);
+    const agentInfo = await this.agentInfoService.buildAgentInfoForAgent(
+      payload.actorID
+    );
 
     await this.virtualContributorMessageService.invokeVirtualContributor(
       vcData.virtualContributorActorID,
@@ -203,36 +206,6 @@ export class MessageInboxService {
         virtualContributorID: vcData.virtualContributorActorID,
       }
     );
-  }
-
-  /**
-   * Build AgentInfo from actorID (agent.id).
-   * Attempts to find user by agent.id, falls back to anonymous if not found (e.g., VC sender).
-   */
-  private async buildAgentInfo(actorID: string): Promise<AgentInfo> {
-    // Try to find user by agent.id
-    const user = await this.userLookupService.getUserByAgentId(actorID, {
-      relations: { agent: true },
-    });
-
-    if (user) {
-      const agentInfo = new AgentInfo();
-      agentInfo.userID = user.id;
-      agentInfo.agentID = actorID;
-      agentInfo.email = user.email;
-      agentInfo.firstName = user.firstName;
-      agentInfo.lastName = user.lastName;
-      agentInfo.isAnonymous = false;
-      agentInfo.credentials = []; // Credentials not needed for VC invocation
-      agentInfo.authenticationID = user.authenticationID || '';
-      return agentInfo;
-    }
-
-    // Sender is not a user (likely a VC or system), use anonymous
-    const agentInfo = new AgentInfo();
-    agentInfo.agentID = actorID;
-    agentInfo.isAnonymous = true;
-    return agentInfo;
   }
 
   private async handleNewThread(
@@ -262,7 +235,9 @@ export class MessageInboxService {
     }
 
     // Build AgentInfo from sender
-    const agentInfo = await this.buildAgentInfo(payload.actorID);
+    const agentInfo = await this.agentInfoService.buildAgentInfoForAgent(
+      payload.actorID
+    );
 
     // Process all VC mentions
     await this.roomMentionsService.processVirtualContributorMentions(

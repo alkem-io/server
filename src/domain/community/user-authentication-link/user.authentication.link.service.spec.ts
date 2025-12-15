@@ -5,7 +5,6 @@ import { UserAuthenticationLinkService } from '@domain/community/user-authentica
 import {
   UserAuthenticationLinkMatch,
   UserAuthenticationLinkOutcome,
-  UserAuthenticationLinkResult,
 } from '@domain/community/user-authentication-link/user.authentication.link.types';
 import { LoggerService } from '@nestjs/common';
 

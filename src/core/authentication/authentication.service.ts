@@ -94,7 +94,10 @@ export class AuthenticationService {
       await this.agentInfoCacheService.getAgentInfoFromCache(authenticationID);
     if (cachedAgentInfo) return cachedAgentInfo;
 
-    const agentInfo = this.buildAgentInfoFromOrySession(oryIdentity, session);
+    const agentInfo = this.agentInfoService.buildAgentInfoFromOryIdentity(
+      oryIdentity,
+      { session }
+    );
 
     const agentInfoMetadata = await this.agentInfoService.getAgentInfoMetadata(
       agentInfo.email,
@@ -125,36 +128,6 @@ export class AuthenticationService {
         LogContext.AUTH
       );
     }
-  }
-
-  /**
-   * Builds and returns an `AgentInfo` object based on the provided Ory identity schema and session.
-   *
-   * @param oryIdentity - The Ory identity schema containing user traits and verifiable addresses.
-   * @param session - Optional session object containing session details like expiration time.
-   * @returns An `AgentInfo` object populated with the user's email, name, avatar URL, and session expiry.
-   */
-  private buildAgentInfoFromOrySession(
-    oryIdentity: OryDefaultIdentitySchema,
-    session?: Session
-  ): AgentInfo {
-    const agentInfo = new AgentInfo();
-    const oryTraits = oryIdentity.traits;
-    const isEmailVerified =
-      oryIdentity.verifiable_addresses.find(x => x.via === 'email')?.verified ??
-      false;
-
-    agentInfo.email = oryTraits.email;
-    agentInfo.emailVerified = isEmailVerified;
-    agentInfo.firstName = oryTraits.name.first;
-    agentInfo.lastName = oryTraits.name.last;
-    agentInfo.avatarURL = oryTraits.picture;
-    agentInfo.authenticationID = oryIdentity.id;
-    agentInfo.expiry = session?.expires_at
-      ? new Date(session.expires_at).getTime()
-      : undefined;
-
-    return agentInfo;
   }
 
   public async extendSession(sessionToBeExtended: Session): Promise<void> {
