@@ -5,7 +5,7 @@ import { Kind, ValueNode } from 'graphql';
 
 @Scalar('Markdown')
 export class Markdown implements CustomScalar<string, string> {
-  description = 'A decentralized identifier (DID) as per the W3C standard.';
+  description = 'A markdown string.';
 
   parseValue(value: unknown): string {
     return this.validate(value);
