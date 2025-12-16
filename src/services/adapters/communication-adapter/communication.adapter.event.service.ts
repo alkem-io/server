@@ -42,6 +42,8 @@ export class CommunicationAdapterEventService {
    * @param payload - Message details from Matrix Adapter
    */
   @RabbitSubscribe({
+    exchange: '',
+    routingKey: '',
     queue: MatrixAdapterEventType.COMMUNICATION_MESSAGE_RECEIVED,
     createQueueIfNotExists: true,
     queueOptions: {
@@ -80,6 +82,8 @@ export class CommunicationAdapterEventService {
    * Publishes internal 'reaction.added' event for domain processing.
    */
   @RabbitSubscribe({
+    exchange: '',
+    routingKey: '',
     queue: MatrixAdapterEventType.COMMUNICATION_REACTION_ADDED,
     createQueueIfNotExists: true,
     queueOptions: {
@@ -120,6 +124,8 @@ export class CommunicationAdapterEventService {
    * Publishes internal 'reaction.removed' event for domain processing.
    */
   @RabbitSubscribe({
+    exchange: '',
+    routingKey: '',
     queue: MatrixAdapterEventType.COMMUNICATION_REACTION_REMOVED,
     createQueueIfNotExists: true,
     queueOptions: {
