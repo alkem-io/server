@@ -384,7 +384,7 @@ export class CommunicationAdapter {
    */
   async getThreadMessages(
     alkemioRoomId: AlkemioRoomID,
-    threadRootId: string
+    threadId: string
   ): Promise<IMessage[]> {
     if (!this.enabled) return [];
 
@@ -393,9 +393,9 @@ export class CommunicationAdapter {
       topic: MatrixAdapterEventType.COMMUNICATION_THREAD_MESSAGES_GET,
       payload: {
         alkemio_room_id: alkemioRoomId,
-        thread_id: threadRootId,
+        thread_id: threadId,
       } satisfies GetThreadMessagesRequest,
-      errorContext: { alkemioRoomId, threadRootId },
+      errorContext: { alkemioRoomId, threadRootId: threadId },
       ensureSuccess: true,
     });
 
