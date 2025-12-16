@@ -393,7 +393,7 @@ export class CommunicationAdapter {
       topic: MatrixAdapterEventType.COMMUNICATION_THREAD_MESSAGES_GET,
       payload: {
         alkemio_room_id: alkemioRoomId,
-        thread_root_id: threadRootId,
+        thread_id: threadRootId,
       } satisfies GetThreadMessagesRequest,
       errorContext: { alkemioRoomId, threadRootId },
       ensureSuccess: true,
