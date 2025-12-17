@@ -53,12 +53,12 @@ services:
       - SYNAPSE_ADMIN_URL=http://synapse:8008
       - SYNAPSE_SHARED_SECRET=n#P.uIl8IDOYPR-fiLzDoFw9ZPvTIlYg7*F9*~eaDZFK#;.KRg
       - KRATOS_API_PUBLIC_ENDPOINT=http://kratos:4433/
-      - AUTH_ORY_KRATOS_PUBLIC_BASE_URL=http://kratos:4433
+      - AUTH_ORY_KRATOS_PUBLIC_BASE_URL=http://localhost:3000/ory/kratos/public
       - AUTH_ORY_KRATOS_ADMIN_BASE_URL=http://kratos:4434
       - AUTH_ORY_KRATOS_PUBLIC_BASE_URL_SERVER=http://kratos:4433
       - AUTH_ORY_KRATOS_ADMIN_BASE_URL_SERVER=http://kratos:4434
-      - AUTH_ORY_KRATOS_JWKS_URI=http://kratos:4433/.well-known/jwks.json
-      - ENDPOINT_CLUSTER=http://localhost:4000
+      - AUTH_ORY_KRATOS_JWKS_URI=http://oathkeeper:4456/.well-known/jwks.json
+      - ENDPOINT_CLUSTER=http://localhost:3000
       - LOGGING_CONSOLE_ENABLED=true
       - LOGGING_LEVEL_CONSOLE=verbose
       - LOGGING_PROFILING_ENABLED=true
@@ -336,3 +336,26 @@ services:
       - EMAIL_FROM=noreply@alkem.io
       - EMAIL_FROM_NAME=Alkemio
     restart: unless-stopped
+
+  traefik:
+    image: traefik:v2.10
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - oathkeeper
+      - kratos
+      - hydra
+    ports:
+      - "3000:3000"
+      - "8080:8080"
+    command:
+      - "--api.insecure=true"
+      - "--api.dashboard=true"
+      - "--providers.file.filename=/etc/traefik/http.yml"
+      - "--providers.file.watch=true"
+      - "--entrypoints.web.address=:3000"
+      - "--accesslog=true"
+      - "--log.level=DEBUG"
+    volumes:
+      - ../.build/traefik/http.yml:/etc/traefik/http.yml:ro
