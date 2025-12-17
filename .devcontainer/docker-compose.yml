@@ -4,6 +4,7 @@ volumes:
   redis-data:
   rabbitmq-data:
   synapse-data:
+  storage-data:
 
 services:
   app:
@@ -11,9 +12,12 @@ services:
     user: "1000:1000"
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    ports:
+      - "4000:4000"
     volumes:
       - ..:/workspaces/server:cached
       - pnpm-store:/root/.local/share/pnpm
+      - storage-data:/workspaces/server/.storage
     command: sleep infinity
     depends_on:
       postgres:
@@ -25,6 +29,8 @@ services:
       kratos:
         condition: service_started
       oathkeeper:
+        condition: service_started
+      matrix-adapter:
         condition: service_started
     environment:
       - NODE_ENV=development
@@ -54,6 +60,10 @@ services:
       - AUTH_ORY_KRATOS_JWKS_URI=http://kratos:4433/.well-known/jwks.json
       - ENDPOINT_CLUSTER=http://localhost:4000
       - LOGGING_CONSOLE_ENABLED=true
+      - LOGGING_LEVEL_CONSOLE=verbose
+      - LOGGING_PROFILING_ENABLED=true
+      - ENABLE_ORM_LOGGING=false
+      - LOCAL_STORAGE_PATH=/workspaces/server/.storage
 
   postgres:
     image: postgres:17.5
@@ -187,6 +197,23 @@ services:
       - ../.build/ory/oathkeeper:/etc/config/oathkeeper
     command: serve proxy -c "/etc/config/oathkeeper/oathkeeper.yml"
 
+  oidc-service:
+    image: docker.io/alkemio/oidc-service:v0.6.0
+    platform: linux/amd64
+    depends_on:
+      - hydra
+      - kratos
+    environment:
+      - OIDC_ALLOW_INSECURE_HTTP=true
+      - OIDC_HYDRA_ADMIN_URL=http://hydra:4445
+      - OIDC_KRATOS_ADMIN_URL=http://kratos:4434
+      - OIDC_KRATOS_PUBLIC_URL=http://kratos:4433
+      - OIDC_KRATOS_BROWSER_URL=http://localhost:3000/ory/kratos/public
+      - OIDC_WEB_BASE_URL=http://localhost:3000
+    ports:
+      - "3002:8080"
+    restart: unless-stopped
+
   synapse:
     image: matrixdotorg/synapse:v1.132.0
     extra_hosts:
@@ -205,3 +232,107 @@ services:
     volumes:
       - ../.build/synapse:/data
       - synapse-data:/data/keys
+
+  matrix-adapter:
+    image: alkemio/matrix-adapter:v0.7.3
+    platform: linux/amd64
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      synapse:
+        condition: service_started
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_USER=alkemio-admin
+      - RABBITMQ_PASSWORD=alkemio!
+      - SYNAPSE_ADMIN_USERNAME=admin
+      - SYNAPSE_HOMESERVER_NAME=alkemio.matrix.host
+      - SYNAPSE_SERVER_URL=http://synapse:8008
+      - SYNAPSE_SERVER_SHARED_SECRET=n#P.uIl8IDOYPR-fiLzDoFw9ZPvTIlYg7*F9*~eaDZFK#;.KRg
+      - SYNAPSE_SERVER_NAME=alkemio.matrix.host
+      - LOGGING_CONSOLE_ENABLED=true
+      - LOGGING_LEVEL_CONSOLE=verbose
+      - ENVIRONMENT=dev
+    restart: unless-stopped
+
+  whiteboard-collaboration:
+    image: alkemio/whiteboard-collaboration-service:v0.8.0
+    platform: linux/amd64
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_USER=alkemio-admin
+      - RABBITMQ_PASSWORD=alkemio!
+      - LOGGING_CONSOLE_ENABLED=true
+      - LOGGING_LEVEL_CONSOLE=verbose
+      - ENVIRONMENT=dev
+    restart: unless-stopped
+    ports:
+      - "4002:4002"
+
+  file-service:
+    image: alkemio/file-service:v0.2.0
+    platform: linux/amd64
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_USER=alkemio-admin
+      - RABBITMQ_PASSWORD=alkemio!
+      - LOGGING_CONSOLE_ENABLED=true
+      - LOGGING_LEVEL_CONSOLE=verbose
+      - ENVIRONMENT=dev
+      - LOCAL_STORAGE_PATH=/storage
+    volumes:
+      - storage-data:/storage
+    restart: unless-stopped
+    ports:
+      - "4003:4003"
+
+  collaborative-document:
+    image: alkemio/collaborative-document-service:v0.0.1
+    platform: linux/amd64
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_USER=alkemio-admin
+      - RABBITMQ_PASSWORD=alkemio!
+      - LOGGING_CONSOLE_ENABLED=true
+      - LOGGING_LEVEL_CONSOLE=verbose
+      - ENVIRONMENT=dev
+    restart: unless-stopped
+    ports:
+      - "4004:4004"
+
+  notification:
+    image: alkemio/notifications:v0.28.1
+    platform: linux/amd64
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_USER=alkemio-admin
+      - RABBITMQ_PASSWORD=alkemio!
+      - LOGGING_CONSOLE_ENABLED=true
+      - LOGGING_LEVEL_CONSOLE=verbose
+      - EMAIL_SMTP_HOST=mailslurper
+      - EMAIL_MULTI_PROVIDER_STRATEGY=fallback
+      - EMAIL_SMTP_SECURE=false
+      - EMAIL_SMTP_PORT=1025
+      - ENVIRONMENT=dev
+      - ALKEMIO_SERVER_ENDPOINT=http://app:4000/graphql
+      - ALKEMIO_WEBCLIENT_ENDPOINT=http://localhost:3000
+      - KRATOS_API_PUBLIC_ENDPOINT=http://kratos:4433/
+      - EMAIL_FROM=noreply@alkem.io
+      - EMAIL_FROM_NAME=Alkemio
+    restart: unless-stopped
