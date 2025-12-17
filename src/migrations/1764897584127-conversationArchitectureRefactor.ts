@@ -8,7 +8,7 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * - conversation table: has type (varchar(128), NOT NULL, DEFAULT 'user-user'), userID (uuid),
  *                       virtualContributorID (uuid), wellKnownVirtualContributor (varchar(128))
  * - virtual_contributor table: does NOT have wellKnownVirtualContributor
- * - room table: does NOT have vcInteractionsByThread
+ * - room table: has externalRoomID (varchar, NOT NULL), does NOT have vcInteractionsByThread
  * - platform table: does NOT have conversationsSetId
  * - vc_interaction table: EXISTS
  * - conversation_membership table: does NOT EXIST
@@ -18,7 +18,7 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * - user table: has authenticationID (uuid, UNIQUE CONSTRAINT + INDEX), no conversationsSetId
  * - conversation table: no type, userID, virtualContributorID, wellKnownVirtualContributor
  * - virtual_contributor table: no wellKnownVirtualContributor
- * - room table: has vcInteractionsByThread (jsonb, NOT NULL, DEFAULT '{}')
+ * - room table: no externalRoomID, has vcInteractionsByThread (jsonb, NOT NULL, DEFAULT '{}')
  * - platform table: has conversationsSetId (uuid, UNIQUE, FK to conversations_set)
  * - vc_interaction table: DROPPED
  * - conversation_membership table: EXISTS (with FKs to conversation and agent)
@@ -26,10 +26,15 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  *
  * This migration:
  * 1. Creates conversation_membership pivot table with FKs
- * 2. Drops legacy conversation columns (type, userID, virtualContributorID, wellKnownVirtualContributor)
- * 3. Migrates vc_interaction data to room.vcInteractionsByThread JSONB column
- * 4. Drops vc_interaction table
- * 5. Moves conversationsSet ownership from user to platform:
+ * 2. Migrates conversation participants to conversation_membership:
+ *    A) USER_VC conversations: insert user agent + VC agent
+ *    B) USER_USER pairs (share externalRoomID): merge into one, insert both user agents
+ *    C) Standalone USER_USER: insert single user agent
+ * 3. Drops legacy conversation columns (type, userID, virtualContributorID, wellKnownVirtualContributor)
+ * 4. Drops externalRoomID from room table
+ * 5. Migrates vc_interaction data to room.vcInteractionsByThread JSONB column
+ * 6. Drops vc_interaction table
+ * 7. Moves conversationsSet ownership from user to platform:
  *    - Adds conversationsSetId column to platform table
  *    - If conversations exist: picks one existing conversations_set (or creates one if none),
  *      assigns to platform, moves all conversations to it, deletes other sets
@@ -60,7 +65,170 @@ export class ConversationArchitectureRefactor1764897584127
       `ALTER TABLE "conversation_membership" ADD CONSTRAINT "FK_d348791d10e1f31c61d7f5bd2a7" FOREIGN KEY ("agentId") REFERENCES "agent"("id") ON DELETE CASCADE ON UPDATE NO ACTION`
     );
 
-    // 2. Drop legacy conversation columns
+    // 2. Migrate conversation participants to conversation_membership
+    // Count total conversations for logging
+    const totalConversations = await queryRunner.query(
+      `SELECT COUNT(*) as count FROM conversation`
+    );
+    console.log(
+      `[Migration] Total conversations to process: ${totalConversations[0]?.count ?? 0}`
+    );
+
+    // 2A. USER_VC conversations: insert user agent + VC agent
+    const userVcUserResult = await queryRunner.query(`
+      INSERT INTO conversation_membership ("conversationId", "agentId")
+      SELECT c.id, u."agentId"
+      FROM conversation c
+      JOIN "user" u ON c."userID" = u.id
+      WHERE c."virtualContributorID" IS NOT NULL
+    `);
+    console.log(
+      `[Migration] 2A: Inserted ${userVcUserResult[1] ?? 0} user agents for USER_VC conversations`
+    );
+
+    const userVcVcResult = await queryRunner.query(`
+      INSERT INTO conversation_membership ("conversationId", "agentId")
+      SELECT c.id, vc."agentId"
+      FROM conversation c
+      JOIN virtual_contributor vc ON c."virtualContributorID" = vc.id
+      WHERE c."virtualContributorID" IS NOT NULL
+    `);
+    console.log(
+      `[Migration] 2A: Inserted ${userVcVcResult[1] ?? 0} VC agents for USER_VC conversations`
+    );
+
+    // 2B. USER_USER pairs: find conversations sharing externalRoomID via their rooms
+    // First, identify the pairs and insert memberships for the kept conversation
+    const pairedInsertResult = await queryRunner.query(`
+      WITH paired AS (
+        SELECT
+          c.id as conv_id,
+          c."userID",
+          r.id as room_id,
+          r."externalRoomID",
+          ROW_NUMBER() OVER (PARTITION BY r."externalRoomID" ORDER BY c.id) as rn
+        FROM conversation c
+        JOIN room r ON c."roomId" = r.id
+        WHERE c."virtualContributorID" IS NULL
+          AND r."externalRoomID" IS NOT NULL
+          AND r."externalRoomID" != ''
+      ),
+      pairs_only AS (
+        SELECT "externalRoomID"
+        FROM paired
+        GROUP BY "externalRoomID"
+        HAVING COUNT(*) = 2
+      )
+      INSERT INTO conversation_membership ("conversationId", "agentId")
+      SELECT DISTINCT p1.conv_id, u."agentId"
+      FROM paired p1
+      JOIN pairs_only po ON p1."externalRoomID" = po."externalRoomID"
+      JOIN paired p2 ON p1."externalRoomID" = p2."externalRoomID"
+      JOIN "user" u ON u.id IN (p1."userID", p2."userID")
+      WHERE p1.rn = 1
+    `);
+    console.log(
+      `[Migration] 2B: Inserted ${pairedInsertResult[1] ?? 0} memberships for USER_USER pairs`
+    );
+
+    // Delete the duplicate conversations (rn=2) - FK CASCADE will handle any memberships
+    const deletedConversations = await queryRunner.query(`
+      WITH paired AS (
+        SELECT
+          c.id as conv_id,
+          r."externalRoomID",
+          ROW_NUMBER() OVER (PARTITION BY r."externalRoomID" ORDER BY c.id) as rn
+        FROM conversation c
+        JOIN room r ON c."roomId" = r.id
+        WHERE c."virtualContributorID" IS NULL
+          AND r."externalRoomID" IS NOT NULL
+          AND r."externalRoomID" != ''
+      ),
+      pairs_only AS (
+        SELECT "externalRoomID"
+        FROM paired
+        GROUP BY "externalRoomID"
+        HAVING COUNT(*) = 2
+      )
+      DELETE FROM conversation
+      WHERE id IN (
+        SELECT p.conv_id
+        FROM paired p
+        JOIN pairs_only po ON p."externalRoomID" = po."externalRoomID"
+        WHERE p.rn = 2
+      )
+    `);
+    console.log(
+      `[Migration] 2B: Deleted ${deletedConversations[1] ?? 0} duplicate conversations`
+    );
+
+    // Delete the orphaned rooms (rn=2)
+    const deletedRooms = await queryRunner.query(`
+      WITH paired AS (
+        SELECT
+          c.id as conv_id,
+          r.id as room_id,
+          r."externalRoomID",
+          ROW_NUMBER() OVER (PARTITION BY r."externalRoomID" ORDER BY c.id) as rn
+        FROM conversation c
+        JOIN room r ON c."roomId" = r.id
+        WHERE c."virtualContributorID" IS NULL
+          AND r."externalRoomID" IS NOT NULL
+          AND r."externalRoomID" != ''
+      ),
+      pairs_only AS (
+        SELECT "externalRoomID"
+        FROM paired
+        GROUP BY "externalRoomID"
+        HAVING COUNT(*) = 2
+      )
+      DELETE FROM room
+      WHERE id IN (
+        SELECT p.room_id
+        FROM paired p
+        JOIN pairs_only po ON p."externalRoomID" = po."externalRoomID"
+        WHERE p.rn = 2
+      )
+    `);
+    console.log(
+      `[Migration] 2B: Deleted ${deletedRooms[1] ?? 0} orphaned rooms`
+    );
+
+    // 2C. Standalone USER_USER: insert single user agent (those not yet in conversation_membership)
+    const standaloneResult = await queryRunner.query(`
+      INSERT INTO conversation_membership ("conversationId", "agentId")
+      SELECT c.id, u."agentId"
+      FROM conversation c
+      JOIN "user" u ON c."userID" = u.id
+      WHERE c."virtualContributorID" IS NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM conversation_membership cm WHERE cm."conversationId" = c.id
+        )
+    `);
+    console.log(
+      `[Migration] 2C: Inserted ${standaloneResult[1] ?? 0} memberships for standalone USER_USER conversations`
+    );
+
+    // 2D. Check for any orphan conversations (not matching A, B, or C)
+    const orphanConversations = await queryRunner.query(`
+      SELECT c.id, c."userID", c."virtualContributorID"
+      FROM conversation c
+      WHERE NOT EXISTS (
+        SELECT 1 FROM conversation_membership cm WHERE cm."conversationId" = c.id
+      )
+    `);
+    if (orphanConversations.length > 0) {
+      console.warn(
+        `[Migration] WARNING: Found ${orphanConversations.length} conversations without memberships:`,
+        orphanConversations.map((c: { id: string }) => c.id)
+      );
+    } else {
+      console.log(
+        `[Migration] 2D: All conversations have memberships - no orphans found`
+      );
+    }
+
+    // 3. Drop legacy conversation columns
     await queryRunner.query(`ALTER TABLE "conversation" DROP COLUMN "type"`);
     await queryRunner.query(`ALTER TABLE "conversation" DROP COLUMN "userID"`);
     await queryRunner.query(
@@ -70,7 +238,10 @@ export class ConversationArchitectureRefactor1764897584127
       `ALTER TABLE "conversation" DROP COLUMN "wellKnownVirtualContributor"`
     );
 
-    // 3. Add vcInteractionsByThread JSONB column to room and migrate data from vc_interaction
+    // 4. Drop externalRoomID from room table
+    await queryRunner.query('ALTER TABLE "room" DROP COLUMN "externalRoomID"');
+
+    // 5. Add vcInteractionsByThread JSONB column to room and migrate data from vc_interaction
     await queryRunner.query(
       `ALTER TABLE "room" ADD "vcInteractionsByThread" jsonb NOT NULL DEFAULT '{}'`
     );
@@ -98,11 +269,11 @@ export class ConversationArchitectureRefactor1764897584127
       )
     `);
 
-    // 4. Drop vc_interaction table
+    // 6. Drop vc_interaction table
     await queryRunner.query(`DROP TABLE IF EXISTS "vc_interaction"`);
 
-    // 5. Move conversationsSet ownership from user to platform
-    // 5a. Add conversationsSetId column to platform table first
+    // 7. Move conversationsSet ownership from user to platform
+    // 7a. Add conversationsSetId column to platform table first
     await queryRunner.query(
       `ALTER TABLE "platform" ADD "conversationsSetId" uuid`
     );
@@ -113,7 +284,7 @@ export class ConversationArchitectureRefactor1764897584127
       `ALTER TABLE "platform" ADD CONSTRAINT "FK_dc8bdff7728d61097c8560ae7a9" FOREIGN KEY ("conversationsSetId") REFERENCES "conversations_set"("id") ON DELETE CASCADE ON UPDATE NO ACTION`
     );
 
-    // 5b. Check if there are any existing conversations (only migrate data if conversations exist)
+    // 7b. Check if there are any existing conversations (only migrate data if conversations exist)
     const existingConversations = await queryRunner.query(
       `SELECT id FROM conversation LIMIT 1`
     );
@@ -163,7 +334,7 @@ export class ConversationArchitectureRefactor1764897584127
       await queryRunner.query(`DELETE FROM conversations_set`);
     }
 
-    // 5c. Drop FK and column from user table
+    // 7c. Drop FK and column from user table
     const fkConstraints = await queryRunner.query(`
       SELECT constraint_name
       FROM information_schema.table_constraints
@@ -190,7 +361,7 @@ export class ConversationArchitectureRefactor1764897584127
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    // 5. Move conversationsSet ownership from platform back to user
+    // 7. Move conversationsSet ownership from platform back to user
     await queryRunner.query(`ALTER TABLE "user" ADD "conversationsSetId" uuid`);
     await queryRunner.query(
       `ALTER TABLE "user" ADD CONSTRAINT "FK_user_conversationsSet" FOREIGN KEY ("conversationsSetId") REFERENCES "conversations_set"("id") ON DELETE SET NULL ON UPDATE NO ACTION`
@@ -206,7 +377,7 @@ export class ConversationArchitectureRefactor1764897584127
       `ALTER TABLE "platform" DROP COLUMN "conversationsSetId"`
     );
 
-    // 4. Recreate vc_interaction table
+    // 6. Recreate vc_interaction table
     await queryRunner.query(`
       CREATE TABLE "vc_interaction" (
         "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -221,7 +392,7 @@ export class ConversationArchitectureRefactor1764897584127
       )
     `);
 
-    // 3. Migrate data back from room.vcInteractionsByThread to vc_interaction
+    // 5. Migrate data back from room.vcInteractionsByThread to vc_interaction
     await queryRunner.query(`
       INSERT INTO vc_interaction ("threadID", "virtualContributorID", "roomId", "externalMetadata")
       SELECT
@@ -244,7 +415,14 @@ export class ConversationArchitectureRefactor1764897584127
       `ALTER TABLE "room" DROP COLUMN "vcInteractionsByThread"`
     );
 
-    // 2. Re-add legacy conversation columns
+    // 4. Re-add externalRoomID to room table
+    await queryRunner.query(
+      'ALTER TABLE "room" ADD "externalRoomID" character varying NOT NULL DEFAULT \'\''
+    );
+
+    // 3. Re-add legacy conversation columns
+    // Note: Step 2 (data migration to conversation_membership) is not reversible -
+    // we cannot recreate the original userID/virtualContributorID assignments
     await queryRunner.query(
       `ALTER TABLE "conversation" ADD "wellKnownVirtualContributor" character varying(128)`
     );

@@ -7,19 +7,16 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * - user table: has accountUpn (varchar(128), NOT NULL, UNIQUE), communicationID (varchar, NOT NULL)
  * - virtual_contributor table: has communicationID (varchar, NOT NULL)
  * - organization table: has communicationID (varchar, NOT NULL)
- * - room table: has externalRoomID (varchar, NOT NULL)
  *
  * After State:
  * - user table: has authenticationID (uuid, NULLABLE, UNIQUE CONSTRAINT + INDEX), no accountUpn, no communicationID
  * - virtual_contributor table: no communicationID
  * - organization table: no communicationID
- * - room table: no externalRoomID
  *
  * This migration:
  * 1. Adds authenticationID column to user table with unique constraint and index
  * 2. Drops accountUpn column and its unique constraint from user table
  * 3. Drops communicationID from user, virtual_contributor, and organization tables
- * 4. Drops externalRoomID from room table
  */
 export class UserIdentityCleanup1764590889000 implements MigrationInterface {
   name = 'UserIdentityCleanup1764590889000';
@@ -48,17 +45,9 @@ export class UserIdentityCleanup1764590889000 implements MigrationInterface {
     await queryRunner.query(
       'ALTER TABLE "organization" DROP COLUMN "communicationID"'
     );
-
-    // 4. Drop externalRoomID from room table
-    await queryRunner.query('ALTER TABLE "room" DROP COLUMN "externalRoomID"');
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    // 4. Re-add externalRoomID to room table
-    await queryRunner.query(
-      'ALTER TABLE "room" ADD "externalRoomID" character varying NOT NULL DEFAULT \'\''
-    );
-
     // 3. Re-add communicationID to contributor tables
     await queryRunner.query(
       'ALTER TABLE "organization" ADD "communicationID" character varying NOT NULL DEFAULT \'\''
