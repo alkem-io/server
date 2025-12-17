@@ -1,0 +1,207 @@
+volumes:
+  pnpm-store:
+  postgres-data:
+  redis-data:
+  rabbitmq-data:
+  synapse-data:
+
+services:
+  app:
+    image: alkemio-server-devcontainer
+    user: "1000:1000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ..:/workspaces/server:cached
+      - pnpm-store:/root/.local/share/pnpm
+    command: sleep infinity
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+      kratos:
+        condition: service_started
+      oathkeeper:
+        condition: service_started
+    environment:
+      - NODE_ENV=development
+      - DATABASE_TYPE=postgres
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USERNAME=synapse
+      - DATABASE_PASSWORD=synapse
+      - DATABASE_NAME=alkemio
+      - POSTGRES_USER=synapse
+      - POSTGRES_PASSWORD=synapse
+      - POSTGRES_DATABASE=alkemio
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_USER=alkemio-admin
+      - RABBITMQ_PASSWORD=alkemio!
+      - REDIS_HOST=redis
+      - SYNAPSE_HOMESERVER_NAME=alkemio.matrix.host
+      - SYNAPSE_SERVER_NAME=alkemio.matrix.host
+      - SYNAPSE_SERVER_URL=http://synapse:8008
+      - SYNAPSE_ADMIN_URL=http://synapse:8008
+      - SYNAPSE_SHARED_SECRET=n#P.uIl8IDOYPR-fiLzDoFw9ZPvTIlYg7*F9*~eaDZFK#;.KRg
+      - KRATOS_API_PUBLIC_ENDPOINT=http://kratos:4433/
+      - AUTH_ORY_KRATOS_PUBLIC_BASE_URL=http://kratos:4433
+      - AUTH_ORY_KRATOS_ADMIN_BASE_URL=http://kratos:4434
+      - AUTH_ORY_KRATOS_PUBLIC_BASE_URL_SERVER=http://kratos:4433
+      - AUTH_ORY_KRATOS_ADMIN_BASE_URL_SERVER=http://kratos:4434
+      - AUTH_ORY_KRATOS_JWKS_URI=http://kratos:4433/.well-known/jwks.json
+      - ENDPOINT_CLUSTER=http://localhost:4000
+      - LOGGING_CONSOLE_ENABLED=true
+
+  postgres:
+    image: postgres:17.5
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=synapse
+      - POSTGRES_USER=synapse
+      - POSTGRES_PASSWORD=synapse
+      - POSTGRES_INITDB_ARGS=--encoding=UTF8 --lc-collate=C --lc-ctype=C
+      - POSTGRES_MULTIPLE_DATABASES=alkemio,kratos,synapse,hydra
+    entrypoint: ['bash', '/usr/local/bin/entrypoint-wrapper.sh']
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ../.build/postgres/init-multiple-databases.sh:/docker-entrypoint-initdb.d/init-multiple-databases.sh
+      - ../.build/postgres/entrypoint-wrapper.sh:/usr/local/bin/entrypoint-wrapper.sh:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U synapse -d alkemio"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
+
+  redis:
+    image: redis:7.0.2
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+
+  rabbitmq:
+    image: rabbitmq:3.9.13-management
+    restart: unless-stopped
+    environment:
+      - RABBITMQ_DEFAULT_USER=alkemio-admin
+      - RABBITMQ_DEFAULT_PASS=alkemio!
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: rabbitmq-diagnostics check_port_connectivity
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  mailslurper:
+    image: oryd/mailslurper:latest-smtps
+    restart: unless-stopped
+    ports:
+      - "4436:4436"
+      - "4437:4437"
+      - "1025:1025"
+
+  kratos-migrate:
+    image: oryd/kratos:v1.3.1
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - DSN=postgres://synapse:synapse@postgres:5432/kratos?sslmode=disable&max_conns=20&max_idle_conns=4
+    restart: on-failure
+    volumes:
+      - ../.build/ory/kratos:/etc/config/kratos
+    command: -c /etc/config/kratos/kratos.yml migrate sql -e --yes
+
+  kratos:
+    image: oryd/kratos:v1.3.1
+    depends_on:
+      kratos-migrate:
+        condition: service_completed_successfully
+    ports:
+      - "4433:4433"
+      - "4434:4434"
+    restart: unless-stopped
+    environment:
+      - DSN=postgres://synapse:synapse@postgres:5432/kratos?sslmode=disable&max_conns=20&max_idle_conns=4
+      - LOG_LEVEL=trace
+    volumes:
+      - ../.build/ory/kratos:/etc/config/kratos
+    command: serve -c /etc/config/kratos/kratos.yml --dev --watch-courier
+
+  hydra-migrate:
+    image: oryd/hydra:v2.3.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - DSN=postgres://synapse:synapse@postgres:5432/hydra?sslmode=disable&max_conns=20&max_idle_conns=4
+    command: migrate sql -e --yes
+    restart: on-failure
+
+  hydra:
+    image: oryd/hydra:v2.3.0
+    depends_on:
+      hydra-migrate:
+        condition: service_completed_successfully
+    ports:
+      - "4444:4444"
+      - "4445:4445"
+    environment:
+      - DSN=postgres://synapse:synapse@postgres:5432/hydra?sslmode=disable&max_conns=20&max_idle_conns=4
+      - SECRETS_SYSTEM=d6fbf37acaf143b9b4c7560094bb9af237e3bd50e7afe7c7888a8948d0938398
+      - URLS_SELF_PUBLIC=http://localhost:4444/
+      - URLS_SELF_ISSUER=http://localhost:4444/
+      - URLS_LOGIN=http://localhost:3000/oidc/login
+      - URLS_CONSENT=http://localhost:3000/oidc/consent
+      - URLS_SELF_ADMIN=http://hydra:4445/
+      - SERVE_PUBLIC_CORS_ENABLED=true
+      - SERVE_ADMIN_CORS_ENABLED=true
+      - LOG_LEVEL=debug
+    command: serve all --dev
+    restart: unless-stopped
+
+  oathkeeper:
+    image: oryd/oathkeeper:v0.38.19-beta.1
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - kratos
+    ports:
+      - "4455:4455"
+      - "4456:4456"
+    environment:
+      - LOG_LEVEL=debug
+    volumes:
+      - ../.build/ory/oathkeeper:/etc/config/oathkeeper
+    command: serve proxy -c "/etc/config/oathkeeper/oathkeeper.yml"
+
+  synapse:
+    image: matrixdotorg/synapse:v1.132.0
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    environment:
+      - SYNAPSE_NO_TLS=true
+      - SYNAPSE_ENABLE_REGISTRATION=true
+      - SYNAPSE_HOMESERVER_NAME=alkemio.matrix.host
+      - SYNAPSE_SERVER_URL=http://synapse:8008
+    ports:
+      - "8008:8008"
+    volumes:
+      - ../.build/synapse:/data
+      - synapse-data:/data/keys

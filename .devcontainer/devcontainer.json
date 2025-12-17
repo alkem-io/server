@@ -1,0 +1,53 @@
+{
+  "name": "Alkemio Server",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspaces/server",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "ms-azuretools.vscode-docker",
+        "eamodio.gitlens",
+        "firsttris.vscode-jest-runner",
+        "GraphQL.vscode-graphql",
+        "GraphQL.vscode-graphql-syntax",
+        "christian-kohler.path-intellisense",
+        "mikestead.dotenv"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.codeActionsOnSave": {
+          "source.fixAll.eslint": "explicit"
+        },
+        "typescript.preferences.importModuleSpecifier": "relative",
+        "typescript.updateImportsOnFileMove.enabled": "always"
+      }
+    }
+  },
+  "forwardPorts": [
+    4000, 5432, 6379, 5672, 15672, 4433, 4434, 4444, 4445, 4455, 4456, 8008,
+    1025, 4436, 4437
+  ],
+  "portsAttributes": {
+    "4000": { "label": "GraphQL API" },
+    "5432": { "label": "PostgreSQL" },
+    "6379": { "label": "Redis" },
+    "5672": { "label": "RabbitMQ" },
+    "15672": { "label": "RabbitMQ Management" },
+    "4433": { "label": "Kratos Public" },
+    "4434": { "label": "Kratos Admin" },
+    "4444": { "label": "Hydra Public" },
+    "4445": { "label": "Hydra Admin" },
+    "4455": { "label": "Oathkeeper Proxy" },
+    "4456": { "label": "Oathkeeper API" },
+    "8008": { "label": "Synapse Matrix" },
+    "1025": { "label": "Mailslurper SMTP" },
+    "4436": { "label": "Mailslurper Web" },
+    "4437": { "label": "Mailslurper API" }
+  },
+  "initializeCommand": "DOCKER_BUILDKIT=0 docker build -t alkemio-server-devcontainer -f .devcontainer/Dockerfile .devcontainer && rm -rf node_modules 2>/dev/null || true",
+  "postCreateCommand": "pnpm install"
+}
