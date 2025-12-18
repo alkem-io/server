@@ -6,8 +6,7 @@
   },
   "features": {
     "ghcr.io/devcontainers/features/git:1": {},
-    "ghcr.io/devcontainers/features/github-cli:1": {},
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+    "ghcr.io/devcontainers/features/github-cli:1": {}
   },
   "customizations": {
     "vscode": {
@@ -20,7 +19,8 @@
         "GraphQL.vscode-graphql",
         "GraphQL.vscode-graphql-syntax",
         "christian-kohler.path-intellisense",
-        "mikestead.dotenv"
+        "mikestead.dotenv",
+        "anthropic.claude-code"
       ],
       "settings": {
         "editor.formatOnSave": true,
@@ -37,8 +37,5 @@
   "postCreateCommand": "pnpm install",
   "postStartCommand": "pnpm run start:services &",
   "remoteUser": "node",
-  "mounts": [
-    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
-  ],
   "initializeCommand": "mkdir -p ${localWorkspaceFolder}/.storage"
 }

@@ -14,7 +14,8 @@
         "GraphQL.vscode-graphql",
         "GraphQL.vscode-graphql-syntax",
         "christian-kohler.path-intellisense",
-        "mikestead.dotenv"
+        "mikestead.dotenv",
+        "anthropic.claude-code"
       ],
       "settings": {
         "editor.formatOnSave": true,
@@ -49,5 +50,9 @@
     "4437": { "label": "Mailslurper API" }
   },
   "initializeCommand": "DOCKER_BUILDKIT=0 docker build -t alkemio-server-devcontainer -f .devcontainer/Dockerfile .devcontainer && rm -rf node_modules 2>/dev/null || true",
-  "postCreateCommand": "pnpm install"
+  "postCreateCommand": "pnpm install",
+  "remoteUser": "node",
+  "remoteEnv": {
+    "HOME": "/home/node"
+  }
 }
