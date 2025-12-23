@@ -12,13 +12,9 @@ export type DriverWithUUIDFixed = Driver & {
  * For PostgreSQL:
  *   - 'uuid' type stays as 'uuid'
  *   - 'char' with length 36 becomes 'uuid' (UUID storage)
- * For MySQL:
- *   - 'uuid' becomes 'char' (with length 36)
- *   - 'char' stays as 'char'
  */
 const fixUUIDColumnType = (driver: Driver): DriverWithUUIDFixed => {
   const driverWithUUIDFixed = driver as DriverWithUUIDFixed;
-  const isPostgres = driver.options.type === 'postgres';
 
   driverWithUUIDFixed.oldNormalizeType = driver.normalizeType;
   driverWithUUIDFixed.normalizeType = (column: {
@@ -27,9 +23,9 @@ const fixUUIDColumnType = (driver: Driver): DriverWithUUIDFixed => {
     precision?: number | null;
     scale?: number;
   }): string => {
-    // Handle explicit UUID type
+    // Handle explicit UUID type - PostgreSQL supports native uuid
     if (column.type === 'uuid') {
-      return isPostgres ? 'uuid' : 'char';
+      return 'uuid';
     }
 
     // Handle char(36) columns used for UUID storage - convert to native uuid for PostgreSQL
@@ -37,11 +33,9 @@ const fixUUIDColumnType = (driver: Driver): DriverWithUUIDFixed => {
       column.type === 'char' &&
       (column.length === 36 || column.length === '36')
     ) {
-      if (isPostgres) {
-        // Remove length for uuid type and return uuid
-        delete column.length;
-        return 'uuid';
-      }
+      // Remove length for uuid type and return uuid
+      delete column.length;
+      return 'uuid';
     }
 
     return driverWithUUIDFixed.oldNormalizeType(column);
