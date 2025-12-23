@@ -117,15 +117,12 @@ export type AlkemioConfig = {
       max_file_size: number;
     };
     database: {
-      type?: 'postgres' | 'mysql';
       host: string;
       port: number;
-      timezone: string;
       username: string;
       password: string;
       schema: string;
       database: string;
-      charset: string;
       logging: boolean;
     };
     local_storage: {
