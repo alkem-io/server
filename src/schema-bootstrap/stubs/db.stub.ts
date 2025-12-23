@@ -69,7 +69,7 @@ const dataSourceStub = {
     release: async () => undefined,
   }),
   entityMetadatas: [],
-  options: { type: 'mysql' },
+  options: { type: 'postgres' },
 };
 
 export const DataSourceStubProvider = {

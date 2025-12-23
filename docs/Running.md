@@ -16,7 +16,7 @@ To simplify setting up the Server development environment, a pre-configured dock
 
 ## Database Backend
 
-**Alkemio now uses PostgreSQL 17.5 as the default database backend** for both the Alkemio server and Ory Kratos identity service. MySQL support is maintained for backward compatibility but is deprecated.
+**Alkemio uses PostgreSQL 17.5 as the database backend** for both the Alkemio server and Ory Kratos identity service.
 
 ## Steps:
 

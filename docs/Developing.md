@@ -32,12 +32,6 @@ pnpm start
 
 There should now be a [running Alkemio server](http://localhost:4000/graphql)!
 
-## MySQL Database
-
-It is of course also possible to use a separate MySQL database server.
-
-If installing MySQL locally, please refer to [the data management document](DataManagement.md#MySQL-Server-specific-configuration-for-version-8) if using **MySQL 8**.
-
 ## Authentication
 
 Authentication and SSO are handled by the `Ory Kratos` + `Ory Hydra` stack. Hydra issues OAuth2/OIDC challenges that are served by the NestJS controllers, and Synapse consumes the resulting tokens for Matrix access.
