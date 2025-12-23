@@ -1,4 +1,4 @@
-# Copyright 2025 Copyright Alkemio BV
+# Copyright 2025 Alkemio Foundation
 # SPDX-License-Identifier: EUPL-1.2
 
 """
@@ -30,6 +30,7 @@ from typing import Optional
 from synapse.module_api import ModuleApi
 from synapse.module_api.errors import Codes, SynapseError
 from synapse.http.client import SimpleHttpClient
+from synapse.types import Requester
 
 logger = logging.getLogger(__name__)
 
@@ -59,9 +60,9 @@ class AlkemioRoomControl:
         # Find and configure from registered AppService
         detected = self._detect_appservice_config()
 
-        # Use detected values
-        self.appservice_sender = detected.get("sender", "matrix-adapter")
-        self.adapter_url = detected.get("url", "http://localhost:8080")
+        # Use detected values (fallback to default UUID if not found)
+        self.appservice_sender = detected.get("sender", "00000000-0000-0000-0000-000000000000")
+        self.adapter_url = detected.get("url", "http://localhost:8280")
         self.hs_token = detected.get("hs_token")
 
         # Register third-party rules callback for room creation control
@@ -216,7 +217,7 @@ class AlkemioRoomControl:
 
     async def on_create_room(
         self,
-        requester: "synapse.types.Requester",
+        requester: Requester,
         request_content: dict,
         is_requester_admin: bool,
     ) -> None:
@@ -225,6 +226,12 @@ class AlkemioRoomControl:
 
         This runs BEFORE the spam checker and can raise SynapseError with
         a custom message that Element may display.
+
+        Room creation policy:
+        - Server admins and AppService bot: Always allowed
+        - DM rooms (is_direct=true, 1 invitee): ALLOWED, but adapter is notified
+          so it can track/manage the room (e.g., set alias if room already exists)
+        - Community rooms: BLOCKED - must be created via Alkemio platform
 
         Args:
             requester: The user requesting room creation
@@ -244,11 +251,12 @@ class AlkemioRoomControl:
         if is_direct and len(invite_list) == 1:
             target_user_id = invite_list[0]
             logger.info(
-                "DM creation blocked via third_party_rules: %s -> %s",
+                "DM creation ALLOWED - notifying adapter: %s -> %s",
                 user_id,
                 target_user_id,
             )
             # Notify adapter about DM request (fire and forget - don't block on failure)
+            # Adapter can use this to track the DM or set an alias if room already exists
             try:
                 await self._notify_dm_request(user_id, target_user_id)
             except Exception as e:
@@ -257,12 +265,9 @@ class AlkemioRoomControl:
                     str(e),
                 )
 
-            raise SynapseError(
-                403,
-                "Direct messages must be initiated through Alkemio. "
-                "Your request has been forwarded for processing.",
-                Codes.FORBIDDEN,
-            )
+            # ALLOW the DM room creation to proceed
+            # The adapter will be notified and can manage the room as needed
+            return
 
         # Block non-DM room creation
         logger.info(
