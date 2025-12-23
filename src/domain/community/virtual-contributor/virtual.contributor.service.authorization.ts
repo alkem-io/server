@@ -104,10 +104,22 @@ export class VirtualContributorAuthorizationService {
 
     updatedAuthorizations.push(virtualContributor.authorization);
 
+    // Clone the authorization policy to ensure the profile is always publicly readable
+    // (similar to User profiles) so that VCs can be displayed as message authors in public spaces
+    let profileParentAuthorization =
+      this.authorizationPolicyService.cloneAuthorizationPolicy(
+        virtualContributor.authorization
+      );
+    profileParentAuthorization =
+      this.authorizationPolicyService.appendCredentialRuleAnonymousRegisteredAccess(
+        profileParentAuthorization,
+        AuthorizationPrivilege.READ
+      );
+
     const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
         virtualContributor.profile.id,
-        virtualContributor.authorization
+        profileParentAuthorization
       );
     updatedAuthorizations.push(...profileAuthorizations);
 

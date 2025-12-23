@@ -1,7 +1,6 @@
 version: '3.7'
 
 volumes:
-  # alkemio_dev_mysql:  # Legacy MySQL volume - deprecated in favor of Postgres
   alkemio_dev_postgres:
   tmpvolume:
   rabbitmq_data:
@@ -23,7 +22,6 @@ services:
       - 8088:8088
       - 8280:8280
       - 3000:80
-      - 3306:3306
       - 5432:5432
       - 8008:8008
       - 5001:5001
@@ -42,26 +40,6 @@ services:
       - type: bind
         source: ./.build/traefik/
         target: /etc/traefik/
-
-  # MySQL service - deprecated in favor of Postgres
-  # Uncomment if you need to run legacy services that require MySQL
-  # mysql:
-  #   container_name: alkemio_dev_mysql
-  #   image: mysql:8.3.0
-  #   networks:
-  #     - alkemio_dev_net
-  #   environment:
-  #     - MYSQL_ROOT_PASSWORD
-  #     - MYSQL_DATABASE
-  #   restart: always
-  #   ports:
-  #     - 3306
-  #   volumes:
-  #     - alkemio_dev_mysql:/var/lib/mysql
-  #     - ./.scripts/schema.sql:/bootstrap_scripts/1.sql
-  #     - ./.scripts/migrations/CSVs:/tmp/CSVs
-  #     - tmpvolume:/tmp
-  #   command: --sql_mode="" --default-authentication-plugin=mysql_native_password --init-file /bootstrap_scripts/1.sql
 
   kratos-migrate:
     container_name: alkemio_dev_kratos_migrate
