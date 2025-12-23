@@ -24,12 +24,13 @@ get_latest_backup() {
     local env=$2
 
     # Decide bucket/path based on env
+    # Database-specific backup paths (e.g., storage/postgres/backups/alkemio/)
     if [[ "$env" == "prod" ]]; then
-        S3_BUCKET="alkemio-s3-backups-prod"
-        S3_PATH="s3://${S3_BUCKET}/storage/postgres/backups/"
+        S3_BUCKET="alkemio-s3-backups-prod-paris"
+        S3_PATH="s3://${S3_BUCKET}/storage/postgres/backups/${database}/"
     else
         S3_BUCKET="alkemio-s3-backups-dev"
-        S3_PATH="s3://${S3_BUCKET}/storage/postgres/backups/${env}/"
+        S3_PATH="s3://${S3_BUCKET}/storage/postgres/backups/${env}/${database}/"
     fi
 
     echo "Fetching latest backup for $database in $env from $S3_PATH..."
