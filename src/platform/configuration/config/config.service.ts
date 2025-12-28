@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { IConfig } from './config.interface';
-import { IAuthenticationProviderConfig } from './authentication/providers/authentication.provider.config.interface';
+import { IAuthenticationProviderConfig } from '@platform/configuration';
 import { IOryConfig } from './authentication/providers/ory/ory.config.interface';
 import { PlatformFeatureFlagName } from '@common/enums/platform.feature.flag.name';
 import { AlkemioConfig } from '@src/types';

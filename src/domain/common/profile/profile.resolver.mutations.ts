@@ -3,7 +3,7 @@ import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { ProfileService } from './profile.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
@@ -34,14 +34,14 @@ export class ProfileResolverMutations {
   })
   @Profiling.api
   async createTagsetOnProfile(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('tagsetData') tagsetData: CreateTagsetOnProfileInput
   ): Promise<ITagset> {
     const profile = await this.profileService.getProfileOrFail(
       tagsetData.profileID
     );
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       profile.authorization,
       AuthorizationPrivilege.CREATE,
       `profile: ${profile.id}`
@@ -74,7 +74,7 @@ export class ProfileResolverMutations {
   })
   @Profiling.api
   async createReferenceOnProfile(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('referenceInput') referenceInput: CreateReferenceOnProfileInput
   ): Promise<IReference> {
     const profile = await this.profileService.getProfileOrFail(
@@ -84,7 +84,7 @@ export class ProfileResolverMutations {
       }
     );
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       profile.authorization,
       AuthorizationPrivilege.CREATE,
       `profile: ${profile.id}`
@@ -103,14 +103,14 @@ export class ProfileResolverMutations {
   })
   @Profiling.api
   async updateProfile(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('profileData') profileData: UpdateProfileDirectInput
   ): Promise<IProfile> {
     const profile = await this.profileService.getProfileOrFail(
       profileData.profileID
     );
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       profile.authorization,
       AuthorizationPrivilege.UPDATE,
       `profile: ${profile.id}`

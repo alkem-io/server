@@ -1,5 +1,5 @@
 import { Query, Resolver } from '@nestjs/graphql';
-import { InputCreatorQueryResults } from './dto/input.creator.query.results';
+import { InputCreatorQueryResults } from '@services/api/input-creator/dto';
 import { InstrumentResolver } from '@src/apm/decorators';
 
 @InstrumentResolver()

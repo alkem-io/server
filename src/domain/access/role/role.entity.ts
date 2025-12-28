@@ -2,10 +2,10 @@ import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
 import { Column, Entity, ManyToOne } from 'typeorm';
 import { IRole } from './role.interface';
 import { ENUM_LENGTH } from '@common/constants/entity.field.length.constants';
-import { RoleSet } from '../role-set/role.set.entity';
+import { RoleSet } from '@domain/access/role-set';
 import { RoleName } from '@common/enums/role.name';
-import { IContributorRolePolicy } from './contributor.role.policy.interface';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { IActorRolePolicy } from './actor.role.policy.interface';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 
 @Entity()
 export class Role extends BaseAlkemioEntity implements IRole {
@@ -32,11 +32,11 @@ export class Role extends BaseAlkemioEntity implements IRole {
   requiresSameRoleInParentRoleSet!: boolean;
 
   @Column('jsonb', { nullable: false })
-  userPolicy!: IContributorRolePolicy;
+  userPolicy!: IActorRolePolicy;
 
   @Column('jsonb', { nullable: false })
-  organizationPolicy!: IContributorRolePolicy;
+  organizationPolicy!: IActorRolePolicy;
 
   @Column('jsonb', { nullable: false })
-  virtualContributorPolicy!: IContributorRolePolicy;
+  virtualContributorPolicy!: IActorRolePolicy;
 }

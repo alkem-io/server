@@ -1,6 +1,6 @@
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser } from '@src/common/decorators';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { DeleteInvitationInput } from './dto/invitation.dto.delete';
@@ -20,14 +20,14 @@ export class InvitationResolverMutations {
     description: 'Removes the specified User invitation.',
   })
   async deleteInvitation(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteInvitationInput
   ): Promise<IInvitation> {
     const invitation = await this.invitationService.getInvitationOrFail(
       deleteData.ID
     );
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       invitation.authorization,
       AuthorizationPrivilege.DELETE,
       `delete invitation to community: ${invitation.id}`

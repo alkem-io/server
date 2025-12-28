@@ -9,9 +9,11 @@ import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.modul
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { OrganizationLookupModule } from '@domain/community/organization-lookup/organization.lookup.module';
 import { VirtualContributorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
+import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
 
 @Module({
   imports: [
+    ActorLookupModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
     PlatformAuthorizationPolicyModule,

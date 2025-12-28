@@ -2,7 +2,7 @@ import { Column, Entity, OneToOne } from 'typeorm';
 import { IRoom } from './room.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { RoomType } from '@common/enums/room.type';
-import { VcInteractionsByThread } from '../vc-interaction/vc.interaction.entity';
+import { VcData } from '../vc-interaction/vc.interaction.entity';
 import { ENUM_LENGTH } from '@common/constants';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { Post } from '@domain/collaboration/post/post.entity';
@@ -19,7 +19,7 @@ export class Room extends AuthorizableEntity implements IRoom {
   displayName!: string;
 
   @Column('jsonb', { default: {} })
-  vcInteractionsByThread!: VcInteractionsByThread;
+  vcData!: VcData;
 
   @OneToOne(() => Callout, callout => callout.comments)
   callout?: Callout;
@@ -32,6 +32,6 @@ export class Room extends AuthorizableEntity implements IRoom {
     this.type = type;
     this.displayName = displayName;
     this.messagesCount = 0;
-    this.vcInteractionsByThread = {};
+    this.vcData = {};
   }
 }

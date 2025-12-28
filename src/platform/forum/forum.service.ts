@@ -224,22 +224,14 @@ export class ForumService {
   }
 
   async removeUserFromForums(forum: IForum, user: IUser): Promise<boolean> {
-    if (!user.agent?.id) {
-      throw new EntityNotInitializedException(
-        `User ${user.id} does not have an agent`,
-        LogContext.PLATFORM_FORUM
-      );
-    }
+    // User IS an Actor - user.id is the actorId
     // get the list of rooms to remove the user from
     const forumRoomIDs: string[] = [];
     for (const discussion of await this.getDiscussions(forum)) {
       const room = await this.discussionService.getComments(discussion.id);
       forumRoomIDs.push(room.id);
     }
-    await this.communicationAdapter.batchRemoveMember(
-      user.agent.id,
-      forumRoomIDs
-    );
+    await this.communicationAdapter.batchRemoveMember(user.id, forumRoomIDs);
 
     return true;
   }

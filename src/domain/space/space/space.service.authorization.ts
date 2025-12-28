@@ -25,9 +25,8 @@ import {
   POLICY_RULE_READ_ABOUT,
 } from '@common/constants';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import { SpaceLevel } from '@common/enums/space.level';
-import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { IRoleSet } from '@domain/access/role-set';
 import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
@@ -46,7 +45,6 @@ export class SpaceAuthorizationService {
   constructor(
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    private agentAuthorizationService: AgentAuthorizationService,
     private roleSetService: RoleSetService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
     private communityAuthorizationService: CommunityAuthorizationService,
@@ -74,7 +72,6 @@ export class SpaceAuthorizationService {
           },
           parentSpace: true,
         },
-        agent: true,
         community: {
           roleSet: true,
         },
@@ -385,7 +382,6 @@ export class SpaceAuthorizationService {
   ): Promise<IAuthorizationPolicy[]> {
     if (
       !space.authorization ||
-      !space.agent ||
       !space.collaboration ||
       !space.community ||
       !space.community.roleSet ||
@@ -414,13 +410,6 @@ export class SpaceAuthorizationService {
         isSubspaceCommunity
       );
     updatedAuthorizations.push(...communityAuthorizations);
-
-    const agentAuthorization =
-      this.agentAuthorizationService.applyAuthorizationPolicy(
-        space.agent,
-        space.authorization
-      );
-    updatedAuthorizations.push(agentAuthorization);
 
     const storageAuthorizations =
       await this.storageAggregatorAuthorizationService.applyAuthorizationPolicy(

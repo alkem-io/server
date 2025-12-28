@@ -9,7 +9,7 @@ import { writeFileSync } from 'node:fs';
 import { NestFactory } from '@nestjs/core';
 import { GraphQLSchemaHost } from '@nestjs/graphql';
 import { printSchema } from 'graphql';
-import { AppModule } from '../../app.module';
+import { AppModule } from '@src/app.module';
 import { parse, print, DocumentNode } from 'graphql';
 // Reuse sorting by invoking the logic in sort-sdl via an internal function copy to avoid circular import.
 

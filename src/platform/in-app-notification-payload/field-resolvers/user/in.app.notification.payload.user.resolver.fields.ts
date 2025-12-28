@@ -3,7 +3,7 @@ import { Loader } from '@core/dataloader/decorators/data.loader.decorator';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { IUser } from '@domain/community/user/user.interface';
 import { Resolver, ResolveField, Parent } from '@nestjs/graphql';
-import { InAppNotificationPayloadUser } from '../../dto/user/notification.in.app.payload.user';
+import { InAppNotificationPayloadUser } from '@platform/in-app-notification-payload/dto/user';
 
 @Resolver(() => InAppNotificationPayloadUser)
 export class InAppNotificationPayloadUserResolverFields {

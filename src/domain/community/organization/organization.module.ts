@@ -10,7 +10,6 @@ import { OrganizationResolverQueries } from './organization.resolver.queries';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { OrganizationAuthorizationService } from './organization.service.authorization';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
-import { AgentModule } from '@domain/agent/agent/agent.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { OrganizationVerificationModule } from '../organization-verification/organization.verification.module';
 import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/platform.authorization.policy.module';
@@ -25,12 +24,10 @@ import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { OrganizationLicenseService } from './organization.service.license';
 import { OrganizationLookupModule } from '../organization-lookup/organization.lookup.module';
 import { LicenseEntitlementModule } from '@domain/common/license-entitlement/license.entitlement.module';
-
 @Module({
   imports: [
     AccountHostModule,
     AccountLookupModule,
-    AgentModule,
     AuthorizationPolicyModule,
     AuthorizationModule,
     RoleSetModule,

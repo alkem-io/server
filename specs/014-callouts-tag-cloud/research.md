@@ -186,7 +186,7 @@ Reviewed existing authorization patterns in `CalloutsSetService.getCalloutsFromC
 // Add WHERE clause to exclude unauthorized callouts
 relations: { callouts: { authorization: true } },
 where: {
-  'authorization.privileges': { contains: agentInfo.privileges }
+  'authorization.privileges': { contains: actorContext.privileges }
 }
 ```
 
@@ -200,7 +200,7 @@ where: {
 const allCallouts = calloutsSetLoaded.callouts;
 const availableCallouts = allCallouts.filter(callout => {
   return this.authorizationService.isAccessGranted(
-    agentInfo,
+    actorContext,
     callout.authorization,
     AuthorizationPrivilege.READ
   );

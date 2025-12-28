@@ -1,6 +1,6 @@
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { ILicensingCredentialBasedPolicyCredentialRule } from '../licensing-credential-based-entitlements-engine/licensing.credential.based.policy.credential.rule.interface';
+import { ILicensingCredentialBasedPolicyCredentialRule } from '@platform/licensing/credential-based/licensing-credential-based-entitlements-engine';
 
 @ObjectType('LicensePolicy')
 export abstract class ILicensePolicy extends IAuthorizable {

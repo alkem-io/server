@@ -17,7 +17,7 @@ import {
   Repository,
 } from 'typeorm';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { IActor } from '@domain/actor/actor/actor.interface';
 import { AccountLookupService } from '../account.lookup/account.lookup.service';
 import { ISpaceAbout } from '../space.about';
 import { SpaceLevel } from '@common/enums/space.level';
@@ -210,9 +210,7 @@ export class SpaceLookupService {
     return collaboration;
   }
 
-  public async getProvider(
-    spaceAbout: ISpaceAbout
-  ): Promise<IContributor | null> {
+  public async getProvider(spaceAbout: ISpaceAbout): Promise<IActor | null> {
     const space = await this.spaceRepository.findOne({
       where: {
         about: {

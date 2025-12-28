@@ -8,7 +8,7 @@ import { ConversationMembership } from '../conversation-membership/conversation.
 @Entity()
 export class Conversation extends AuthorizableEntity implements IConversation {
   // All participant tracking now via ConversationMembership pivot table
-  // Type inferred dynamically via field resolver from member agent types
+  // Type inferred dynamically via field resolver from member actor types
 
   @OneToMany(
     () => ConversationMembership,

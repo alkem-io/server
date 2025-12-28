@@ -3,7 +3,7 @@ import { Resolver, Args, Mutation } from '@nestjs/graphql';
 import { CurrentUser } from '@src/common/decorators';
 import { SpaceService } from './space.service';
 import { DeleteSpaceInput, UpdateSpaceInput } from '@domain/space/space';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { SpaceAuthorizationService } from './space.service.authorization';
@@ -42,7 +42,7 @@ export class SpaceResolverMutations {
     description: 'Updates the Space.',
   })
   async updateSpace(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('spaceData') spaceData: UpdateSpaceInput
   ): Promise<ISpace> {
     const space = await this.spaceService.getSpaceOrFail(spaceData.ID, {
@@ -53,7 +53,7 @@ export class SpaceResolverMutations {
       },
     });
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       space.authorization,
       AuthorizationPrivilege.UPDATE,
       `update Space: ${space.id}`
@@ -67,10 +67,7 @@ export class SpaceResolverMutations {
         name: updatedSpace.about.profile.displayName,
         space: updatedSpace.id,
       },
-      {
-        id: agentInfo.userID,
-        email: agentInfo.email,
-      }
+      actorContext.actorId
     );
 
     return updatedSpace;
@@ -80,13 +77,13 @@ export class SpaceResolverMutations {
     description: 'Deletes the specified Space.',
   })
   async deleteSpace(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteSpaceInput
   ): Promise<ISpace> {
     const space = await this.spaceService.getSpaceOrFail(deleteData.ID);
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       space.authorization,
       AuthorizationPrivilege.DELETE,
       `deleteSpace: ${space.nameID}`
@@ -98,13 +95,13 @@ export class SpaceResolverMutations {
     description: 'Updates one of the Setting on a Space',
   })
   async updateSpaceSettings(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('settingsData') settingsData: UpdateSpaceSettingsInput
   ): Promise<ISpace> {
     let space = await this.spaceService.getSpaceOrFail(settingsData.spaceID);
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       space.authorization,
       AuthorizationPrivilege.UPDATE,
       `space settings update: ${space.id}`
@@ -136,14 +133,14 @@ export class SpaceResolverMutations {
       'Update the platform settings, such as nameID, of the specified Space.',
   })
   async updateSpacePlatformSettings(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('updateData') updateData: UpdateSpacePlatformSettingsInput
   ): Promise<ISpace> {
     let space = await this.spaceService.getSpaceOrFail(updateData.spaceID, {
       relations: { about: { profile: true } },
     });
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       space.authorization,
       AuthorizationPrivilege.PLATFORM_ADMIN,
       `update platform settings on space: ${space.id}`
@@ -166,14 +163,14 @@ export class SpaceResolverMutations {
     description: 'Creates a new Subspace within the specified Space.',
   })
   async createSubspace(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('subspaceData') subspaceData: CreateSubspaceInput
   ): Promise<ISpace> {
     const space = await this.spaceService.getSpaceOrFail(subspaceData.spaceID, {
       relations: {},
     });
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       space.authorization,
       AuthorizationPrivilege.CREATE_SUBSPACE,
       `subspace create in: ${space.id}`
@@ -181,7 +178,7 @@ export class SpaceResolverMutations {
 
     const subspace = await this.spaceService.createSubspace(
       subspaceData,
-      agentInfo
+      actorContext
     );
     // Save here so can reuse it later without another load
     const displayName = subspace.about.profile.displayName;
@@ -194,7 +191,7 @@ export class SpaceResolverMutations {
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
     this.activityAdapter.subspaceCreated({
-      triggeredBy: agentInfo.userID,
+      triggeredBy: actorContext.actorId,
       subspace,
     });
 
@@ -204,22 +201,20 @@ export class SpaceResolverMutations {
         name: displayName,
         space: space.id, //TODO: should this be a root space ID?
       },
-      {
-        id: agentInfo.userID,
-        email: agentInfo.email,
-      }
+      actorContext.actorId
     );
 
+    // Space extends Actor - credentials are on the space directly
     const level0Space = await this.spaceService.getSpaceOrFail(
       subspace.levelZeroSpaceID,
       {
-        relations: { agent: { credentials: true } },
+        relations: { credentials: true },
       }
     );
 
     const updatedLicenses = await this.spaceLicenseService.applyLicensePolicy(
       subspace.id,
-      level0Space.agent
+      level0Space.credentials
     );
     await this.licenseService.saveAll(updatedLicenses);
 

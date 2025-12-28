@@ -1,5 +1,5 @@
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { InstrumentResolver } from '@src/apm/decorators';
@@ -20,7 +20,7 @@ export class ClassificationResolverMutations {
     description: 'Updates a Tagset on a Classification.',
   })
   async updateClassificationTagset(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('updateData') updateData: UpdateClassificationSelectTagsetValueInput
   ): Promise<ITagset> {
     const classification =
@@ -28,7 +28,7 @@ export class ClassificationResolverMutations {
         updateData.classificationID
       );
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       classification.authorization,
       AuthorizationPrivilege.UPDATE,
       `classification: ${classification.id}`

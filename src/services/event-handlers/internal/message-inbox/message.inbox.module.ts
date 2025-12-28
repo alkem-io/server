@@ -6,7 +6,7 @@ import { CommunicationAdapterModule } from '@services/adapters/communication-ada
 import { RoomLookupModule } from '@domain/communication/room-lookup/room.lookup.module';
 import { RoomMentionsModule } from '@domain/communication/room-mentions/room.mentions.module';
 import { VirtualContributorMessageModule } from '@domain/communication/virtual.contributor.message/virtual.contributor.message.module';
-import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/agent.info.module';
+import { ActorContextModule } from '@core/actor-context';
 
 @Module({
   imports: [
@@ -15,7 +15,7 @@ import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/a
     VirtualContributorLookupModule,
     VirtualContributorMessageModule,
     SubscriptionServiceModule,
-    AuthenticationAgentInfoModule,
+    ActorContextModule,
     CommunicationAdapterModule,
   ],
   providers: [MessageInboxService],

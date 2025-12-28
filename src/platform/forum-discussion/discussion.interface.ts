@@ -1,5 +1,5 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { IRoom } from '../../domain/communication/room/room.interface';
+import { IRoom } from '@domain/communication/room/room.interface';
 import { INameable } from '@domain/common/entity/nameable-entity';
 import { ForumDiscussionPrivacy } from '@common/enums/forum.discussion.privacy';
 import { ForumDiscussionCategory } from '@common/enums/forum.discussion.category';

@@ -6,12 +6,11 @@ import { ICommunity } from '@domain/community/community';
 import { UseGuards } from '@nestjs/common';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import {
-  AuthorizationAgentPrivilege,
+  AuthorizationActorPrivilege,
   CurrentUser,
 } from '@src/common/decorators';
 import { SpaceService } from '@domain/space/space/space.service';
 import { ISpace } from '@domain/space/space/space.interface';
-import { IAgent } from '@domain/agent/agent';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
 import { Loader } from '@core/dataloader/decorators';
@@ -19,10 +18,9 @@ import {
   SpaceCollaborationLoaderCreator,
   SpaceCommunityLoaderCreator,
   SpaceAboutLoaderCreator,
-  AgentLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
@@ -130,22 +128,7 @@ export class SpaceResolverFields {
     return loader.load(space.id);
   }
 
-  @ResolveField('agent', () => IAgent, {
-    nullable: false,
-    description: 'The Agent representing this Space.',
-  })
-  async agent(
-    @Parent() space: Space,
-    @Loader(AgentLoaderCreator, {
-      parentClassRef: Space,
-      checkParentPrivilege: AuthorizationPrivilege.READ,
-    })
-    loader: ILoader<IAgent>
-  ): Promise<IAgent> {
-    return loader.load(space.id);
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('storageAggregator', () => IStorageAggregator, {
     nullable: false,
@@ -166,7 +149,7 @@ export class SpaceResolverFields {
     return await this.spaceService.getSubspaces(space, args);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('account', () => IAccount, {
     nullable: false,
@@ -176,7 +159,7 @@ export class SpaceResolverFields {
     return await this.spaceService.getAccountForLevelZeroSpaceOrFail(space);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('subspaceByNameID', () => ISpace, {
     nullable: false,
@@ -184,7 +167,7 @@ export class SpaceResolverFields {
   })
   async subspace(
     @Args('NAMEID', { type: () => NameID }) id: string,
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Parent() space: ISpace
   ): Promise<ISpace> {
     const subspace =
@@ -196,7 +179,7 @@ export class SpaceResolverFields {
       throw new EntityNotFoundException(
         `Unable to find subspace with ID: '${id}'`,
         LogContext.SPACES,
-        { subspaceId: id, spaceId: space.id, userId: agentInfo.userID }
+        { subspaceId: id, spaceId: space.id, userId: actorContext.actorId }
       );
     }
     return subspace;
@@ -211,7 +194,7 @@ export class SpaceResolverFields {
     return new Date(createdDate);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('settings', () => ISpaceSettings, {
     nullable: false,
@@ -221,7 +204,7 @@ export class SpaceResolverFields {
     return space.settings;
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('templatesManager', () => ITemplatesManager, {
     nullable: true,

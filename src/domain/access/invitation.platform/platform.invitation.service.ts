@@ -17,7 +17,7 @@ import { IUser } from '@domain/community/user/user.interface';
 import { RoleName } from '@common/enums/role.name';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { IRoleSet } from '../role-set/role.set.interface';
+import { IRoleSet } from '@domain/access/role-set';
 import { RoleSetType } from '@common/enums/role.set.type';
 import { RoleSetMembershipException } from '@common/exceptions/role.set.membership.exception';
 
@@ -115,7 +115,7 @@ export class PlatformInvitationService {
   }
 
   async getCreatedBy(platformInvitation: IPlatformInvitation): Promise<IUser> {
-    const user = await this.userLookupService.getUserOrFail(
+    const user = await this.userLookupService.getUserByIdOrFail(
       platformInvitation.createdBy
     );
     return user;

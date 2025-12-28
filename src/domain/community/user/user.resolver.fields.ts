@@ -1,7 +1,6 @@
 import { CurrentUser } from '@common/decorators';
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { IAgent } from '@domain/agent/agent';
+import { ActorContext } from '@core/actor-context';
 import { IUser } from '@domain/community/user/user.interface';
 import { Inject, LoggerService } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
@@ -13,7 +12,6 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy/author
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { UserStorageAggregatorLoaderCreator } from '@core/dataloader/creators/loader.creators/community/user.storage.aggregator.loader.creator';
 import {
-  AgentLoaderCreator,
   AuthorizationLoaderCreator,
   ProfileLoaderCreator,
   UserSettingsLoaderCreator,
@@ -55,18 +53,6 @@ export class UserResolverFields {
     return loader.load(user.id);
   }
 
-  @ResolveField('agent', () => IAgent, {
-    nullable: false,
-    description: 'The Agent representing this User.',
-  })
-  async agent(
-    @Parent() user: User,
-    @Loader(AgentLoaderCreator, { parentClassRef: User })
-    loader: ILoader<IAgent>
-  ): Promise<IAgent> {
-    return loader.load(user.id);
-  }
-
   @ResolveField('authorization', () => IAuthorizationPolicy, {
     nullable: false,
     description: 'The Authorization for this User.',
@@ -85,12 +71,12 @@ export class UserResolverFields {
   })
   async email(
     @Parent() user: User,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentUser() actorContext: ActorContext
   ): Promise<string | 'not accessible'> {
     if (
       await this.isAccessGranted(
         user,
-        agentInfo,
+        actorContext,
         AuthorizationPrivilege.READ_USER_PII
       )
     ) {
@@ -105,12 +91,12 @@ export class UserResolverFields {
   })
   async phone(
     @Parent() user: User,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentUser() actorContext: ActorContext
   ): Promise<string | null | 'not accessible'> {
     if (
       await this.isAccessGranted(
         user,
-        agentInfo,
+        actorContext,
         AuthorizationPrivilege.READ_USER_PII
       )
     ) {
@@ -125,13 +111,13 @@ export class UserResolverFields {
   })
   async account(
     @Parent() user: User,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentUser() actorContext: ActorContext
   ): Promise<IAccount | undefined> {
     const accountVisible =
-      user.id === agentInfo.userID || // user can see their own account
+      user.id === actorContext.actorId || // user can see their own account
       (await this.isAccessGranted(
         user,
-        agentInfo,
+        actorContext,
         AuthorizationPrivilege.READ_USER_PII
       ));
     if (accountVisible) {
@@ -193,11 +179,11 @@ export class UserResolverFields {
   })
   async authentication(
     @Parent() user: IUser,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentUser() actorContext: ActorContext
   ): Promise<UserAuthenticationResult> {
-    const isCurrentUser = user.id === agentInfo.userID;
+    const isCurrentUser = user.id === actorContext.actorId;
     const platformAccessGranted = this.authorizationService.isAccessGranted(
-      agentInfo,
+      actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_ADMIN
     );
@@ -222,30 +208,33 @@ export class UserResolverFields {
 
   private async isAccessGranted(
     user: IUser,
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     privilege: AuthorizationPrivilege
   ): Promise<boolean> {
     // needs to be loaded if you are not going through the orm layer
     // e.g. pagination is going around the orm layer
-    const { authorization } = await this.userService.getUserOrFail(user.id, {
-      relations: { authorization: true },
-    });
+    const { authorization } = await this.userService.getUserByIdOrFail(
+      user.id,
+      {
+        relations: { authorization: true },
+      }
+    );
     const accessGranted = this.authorizationService.isAccessGranted(
-      agentInfo,
+      actorContext,
       authorization,
       privilege
     );
     if (!accessGranted) {
       // Check if the user has a particular credential, which signals that it should be able to access the user
       // todo: remove later, this is code to track down a particular race condition: https://github.com/alkem-io/notifications/issues/283
-      const hasGlobalAdminCredential = agentInfo.credentials.some(
+      const hasGlobalAdminCredential = actorContext.credentials.some(
         credential =>
           credential.type === AuthorizationCredential.GLOBAL_COMMUNITY_READ ||
           credential.type === AuthorizationCredential.GLOBAL_SUPPORT
       );
       if (hasGlobalAdminCredential) {
         this.logger.error(
-          `Agent: ${agentInfo.email} is not authorized to access user: ${
+          `Actor: ${actorContext.actorId} is not authorized to access user: ${
             user.email
           }: authorization policy of user: ${JSON.stringify(authorization)}`
         );

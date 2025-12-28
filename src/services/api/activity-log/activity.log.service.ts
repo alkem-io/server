@@ -22,14 +22,14 @@ import { LinkService } from '@domain/collaboration/link/link.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { EntityManager } from 'typeorm/entity-manager/EntityManager';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 
 export class ActivityLogService {
   constructor(
     private activityService: ActivityService,
     private userService: UserService,
-    private contributorLookupService: ContributorLookupService,
+    private actorLookupService: ActorLookupService,
     private communityResolverService: CommunityResolverService,
     private calloutService: CalloutService,
     private postService: PostService,
@@ -101,7 +101,7 @@ export class ActivityLogService {
         return undefined;
       }
 
-      const userTriggeringActivity = await this.userService.getUserOrFail(
+      const userTriggeringActivity = await this.userService.getUserByIdOrFail(
         rawActivity.triggeredBy
       );
 
@@ -139,7 +139,7 @@ export class ActivityLogService {
       const activityBuilder: IActivityLogBuilder =
         new ActivityLogBuilderService(
           activityLogEntryBase,
-          this.contributorLookupService,
+          this.actorLookupService,
           this.calloutService,
           this.postService,
           this.whiteboardService,

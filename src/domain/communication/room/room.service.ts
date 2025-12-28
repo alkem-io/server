@@ -1,8 +1,8 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository } from 'typeorm';
-import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
+import { ActorType } from '@common/enums/actor.type';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { Room } from './room.entity';
 import { IRoom } from './room.interface';
@@ -18,7 +18,7 @@ import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type
 import { RoomLookupService } from '../room-lookup/room.lookup.service';
 import { CreateRoomInput } from './dto/room.dto.create';
 import { DeleteRoomInput } from './dto/room.dto.delete';
-import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
+import { ActorLookupService } from '@domain/actor/actor-lookup';
 
 @Injectable()
 export class RoomService {
@@ -27,7 +27,7 @@ export class RoomService {
     private readonly roomRepository: Repository<Room>,
     private readonly communicationAdapter: CommunicationAdapter,
     private readonly roomLookupService: RoomLookupService,
-    private readonly contributorLookupService: ContributorLookupService,
+    private readonly actorLookupService: ActorLookupService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -35,7 +35,7 @@ export class RoomService {
     const room = new Room(roomData.displayName, roomData.type);
     room.authorization = new AuthorizationPolicy(AuthorizationPolicyType.ROOM);
     room.messagesCount = 0;
-    room.vcInteractionsByThread = {};
+    room.vcData = {};
 
     // Save first to get the ID assigned by the database
     const savedRoom = await this.save(room);
@@ -209,10 +209,11 @@ export class RoomService {
       );
       return '';
     }
-    const userId =
-      await this.contributorLookupService.getUserIdByAgentId(senderActorId);
-
-    return userId ?? '';
+    const isUser = await this.actorLookupService.isType(
+      senderActorId,
+      ActorType.USER
+    );
+    return isUser ? senderActorId : '';
   }
 
   async getUserIdForReaction(room: IRoom, reactionID: string): Promise<string> {
@@ -229,9 +230,10 @@ export class RoomService {
       );
       return '';
     }
-    const userId =
-      await this.contributorLookupService.getUserIdByAgentId(senderActorId);
-
-    return userId ?? '';
+    const isUser = await this.actorLookupService.isType(
+      senderActorId,
+      ActorType.USER
+    );
+    return isUser ? senderActorId : '';
   }
 }

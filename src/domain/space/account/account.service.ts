@@ -11,9 +11,8 @@ import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Account } from './account.entity';
 import { IAccount } from './account.interface';
-import { AgentService } from '@domain/agent/agent/agent.service';
 import { SpaceService } from '../space/space.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { ISpace } from '../space/space.interface';
 import { CreateVirtualContributorOnAccountInput } from './dto/account.dto.create.virtual.contributor';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
@@ -43,7 +42,7 @@ import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dt
 import { PlatformTemplatesService } from '@platform/platform-templates/platform.templates.service';
 import { TemplateDefaultType } from '@common/enums/template.default.type';
 import { IRoleSet } from '@domain/access/role-set';
-import { IAgent } from '@domain/agent';
+import { ICredential } from '@domain/actor/credential/credential.interface';
 
 @InstrumentService()
 @Injectable()
@@ -53,7 +52,6 @@ export class AccountService {
     private accountLookupService: AccountLookupService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private spaceService: SpaceService,
-    private agentService: AgentService,
     private storageAggregatorService: StorageAggregatorService,
     private virtualContributorService: VirtualContributorService,
     private innovationHubService: InnovationHubService,
@@ -70,7 +68,7 @@ export class AccountService {
 
   async createSpaceOnAccount(
     spaceData: CreateSpaceOnAccountInput,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ): Promise<ISpace> {
     const account = await this.getAccountOrFail(spaceData.accountID, {
       relations: {
@@ -110,7 +108,7 @@ export class AccountService {
 
     let space = await this.spaceService.createRootSpaceAndSubspaces(
       spaceData,
-      agentInfo
+      actorContext
     );
     space.account = account;
     space = await this.spaceService.save(space);
@@ -130,27 +128,25 @@ export class AccountService {
             },
           },
         },
-        agent: true,
       },
     });
-    if (!space.agent || !space.community || !space.community.roleSet) {
+    if (!space.community || !space.community.roleSet) {
       throw new EntityNotInitializedException(
         `Unable to load space ${space.id} with required entities for creating space`,
         LogContext.SPACES
       );
     }
-    const spaceAgent = space.agent;
 
     const roleSets = this.findNestedRoleSets(space);
 
-    if (!agentInfo.isAnonymous) {
+    if (!actorContext.isAnonymous) {
       for (const roleSet of roleSets) {
-        await this.spaceService.assignUserToRoles(roleSet, agentInfo);
+        await this.spaceService.assignUserToRoles(roleSet, actorContext);
       }
     }
 
     // Add in org as member + lead if applicable
-    if (account.type === AccountType.ORGANIZATION) {
+    if (account.accountType === AccountType.ORGANIZATION) {
       const host = await this.accountLookupService.getHostOrFail(account);
       const organizationID = host.id;
       const rootRoleSet = space.community.roleSet;
@@ -160,17 +156,13 @@ export class AccountService {
       );
     }
 
-    space.agent = await this.accountHostService.assignLicensePlansToSpace(
-      spaceAgent,
+    // Space IS an Actor - assign license plans directly using space.id as actorId
+    await this.accountHostService.assignLicensePlansToSpace(
       space.id,
-      account.type,
+      account.accountType,
       spaceData.licensePlanID
     );
-    return await this.spaceService.getSpaceOrFail(space.id, {
-      relations: {
-        agent: true,
-      },
-    });
+    return await this.spaceService.getSpaceOrFail(space.id);
   }
 
   private findNestedRoleSets = (
@@ -200,7 +192,6 @@ export class AccountService {
     const accountID = accountInput.id;
     const account = await this.getAccountOrFail(accountID, {
       relations: {
-        agent: true,
         spaces: true,
         virtualContributors: true,
         innovationPacks: true,
@@ -211,7 +202,6 @@ export class AccountService {
     });
 
     if (
-      !account.agent ||
       !account.spaces ||
       !account.virtualContributors ||
       !account.storageAggregator ||
@@ -225,8 +215,7 @@ export class AccountService {
       );
     }
 
-    await this.agentService.deleteAgent(account.agent.id);
-
+    // Account extends Actor - credentials will be deleted via cascade when account is removed
     await this.storageAggregatorService.delete(account.storageAggregator.id);
 
     await this.licenseService.removeLicenseOrFail(account.license.id);
@@ -335,27 +324,26 @@ export class AccountService {
     return accounts;
   }
 
-  public async getAgentOrFail(accountID: string): Promise<IAgent> {
+  // Account now extends Actor, so credentials are on the account directly
+  // Returns the actorId (account.id) and credentials for backward compatibility
+  public async getActorOrFail(
+    accountID: string
+  ): Promise<{ actorId: string; credentials: ICredential[] }> {
     const account = await this.getAccountOrFail(accountID, {
       relations: {
-        agent: true,
+        credentials: true,
       },
     });
 
-    if (!account.agent) {
-      throw new EntityNotInitializedException(
-        'Unable to load Agent for Account',
-        LogContext.ACCOUNT,
-        { accountId: accountID }
-      );
-    }
-
-    return account.agent;
+    return {
+      actorId: account.id,
+      credentials: account.credentials || [],
+    };
   }
 
   public async createVirtualContributorOnAccount(
     vcData: CreateVirtualContributorOnAccountInput,
-    agentInfo?: AgentInfo
+    actorContext?: ActorContext
   ): Promise<IVirtualContributor> {
     const accountID = vcData.accountID;
     const account = await this.getAccountOrFail(accountID, {
@@ -367,7 +355,7 @@ export class AccountService {
 
     if (!account.virtualContributors || !account.storageAggregator) {
       throw new RelationshipNotFoundException(
-        `Unable to load Account with required entities for creating VC: ${account.id} by user ${agentInfo?.userID}`,
+        `Unable to load Account with required entities for creating VC: ${account.id} by user ${actorContext?.actorId}`,
         LogContext.ACCOUNT
       );
     }
@@ -380,7 +368,7 @@ export class AccountService {
       vcData,
       knowledgeBaseCalloutDefaults,
       account.storageAggregator,
-      agentInfo
+      actorContext
     );
     vc.account = account;
     return await this.virtualContributorService.save(vc);
@@ -464,23 +452,22 @@ export class AccountService {
   async getSubscriptions(
     accountInput: IAccount
   ): Promise<IAccountSubscription[]> {
+    // Account now extends Actor, so credentials are on the account directly
     const account = await this.getAccountOrFail(accountInput.id, {
       relations: {
-        agent: {
-          credentials: true,
-        },
+        credentials: true,
       },
     });
 
-    if (!account.agent || !account.agent.credentials) {
+    if (!account.credentials) {
       throw new EntityNotFoundException(
-        `Unable to find agent with credentials for the account: ${accountInput.id}`,
+        `Unable to find credentials for the account: ${accountInput.id}`,
         LogContext.ACCOUNT
       );
     }
 
     const subscriptions: IAccountSubscription[] = [];
-    for (const credential of account.agent.credentials) {
+    for (const credential of account.credentials) {
       if (
         Object.values(LicensingCredentialBasedCredentialType).includes(
           credential.type as LicensingCredentialBasedCredentialType

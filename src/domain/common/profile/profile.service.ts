@@ -24,7 +24,7 @@ import { CreateReferenceOnProfileInput } from './dto/profile.dto.create.referenc
 import { ILocation, LocationService } from '@domain/common/location';
 import { VisualType } from '@common/enums/visual.type';
 import { CreateTagsetInput } from '../tagset';
-import { ITagsetTemplate } from '../tagset-template/tagset.template.interface';
+import { ITagsetTemplate } from '@domain/common/tagset-template';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';

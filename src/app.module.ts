@@ -20,7 +20,7 @@ import { AuthenticationModule } from '@core/authentication/authentication.module
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { BootstrapModule } from '@core/bootstrap/bootstrap.module';
 import { RequestLoggerMiddleware } from '@core/middleware/request.logger.middleware';
-import { AgentModule } from '@domain/agent/agent/agent.module';
+import { ActorModule } from '@domain/actor/actor.module';
 import { SpaceModule } from '@domain/space/space/space.module';
 import { ScalarsModule } from '@domain/common/scalars/scalars.module';
 import { AdminCommunicationModule } from '@src/platform-admin/domain/communication/admin.communication.module';
@@ -161,7 +161,8 @@ import { InAppNotificationAdminModule } from './platform-admin/in-app-notificati
           extra: {
             max: dbOptions.pool?.max ?? 50,
             idleTimeoutMillis: dbOptions.pool?.idle_timeout_ms ?? 30000,
-            connectionTimeoutMillis: dbOptions.pool?.connection_timeout_ms ?? 10000,
+            connectionTimeoutMillis:
+              dbOptions.pool?.connection_timeout_ms ?? 10000,
           },
         };
       },
@@ -288,7 +289,7 @@ import { InAppNotificationAdminModule } from './platform-admin/in-app-notificati
     AdminGeoLocationModule,
     LicensingWingbackSubscriptionModule,
     WingbackManagerModule,
-    AgentModule,
+    ActorModule,
     MessageModule,
     MessageReactionModule,
     NotificationRecipientsModule,

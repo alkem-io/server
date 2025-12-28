@@ -1,5 +1,5 @@
 import { Resolver, ResolveField, Parent } from '@nestjs/graphql';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { IActor } from '@domain/actor/actor/actor.interface';
 import { ISpace } from '@domain/space/space/space.interface';
 import { ContributorLoaderCreator } from '@core/dataloader/creators/loader.creators/in-app-notification/contributor.loader.creator';
 import { ILoader } from '@core/dataloader/loader.interface';
@@ -9,16 +9,16 @@ import { InAppNotificationPayloadSpaceCommunityContributor } from '@platform/in-
 
 @Resolver(() => InAppNotificationPayloadSpaceCommunityContributor)
 export class InAppNotificationPayloadSpaceCommunityContributorResolverFields {
-  @ResolveField(() => IContributor, {
+  @ResolveField(() => IActor, {
     nullable: false,
     description: 'The Contributor that joined.',
   })
   public contributor(
     @Parent() payload: InAppNotificationPayloadSpaceCommunityContributor,
     @Loader(ContributorLoaderCreator)
-    loader: ILoader<IContributor>
+    loader: ILoader<IActor>
   ) {
-    return loader.load(payload.contributorID);
+    return loader.load(payload.actorId);
   }
 
   @ResolveField(() => ISpace, {

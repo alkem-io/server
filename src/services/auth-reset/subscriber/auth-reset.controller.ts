@@ -163,7 +163,9 @@ export class AuthResetController {
 
     try {
       const organization =
-        await this.organizationLookupService.getOrganizationOrFail(payload.id);
+        await this.organizationLookupService.getOrganizationByIdOrFail(
+          payload.id
+        );
       const updatedLicenses =
         await this.organizationLicenseService.applyLicensePolicy(
           organization.id
@@ -343,7 +345,7 @@ export class AuthResetController {
     const retryCount = originalMsg.properties.headers?.[RETRY_HEADER] ?? 0;
 
     try {
-      const user = await this.userService.getUserOrFail(payload.id);
+      const user = await this.userService.getUserByIdOrFail(payload.id);
       const authorizations =
         await this.userAuthorizationService.applyAuthorizationPolicy(user.id);
       await this.authorizationPolicyService.saveAll(authorizations);
@@ -396,9 +398,8 @@ export class AuthResetController {
     const retryCount = originalMsg.properties.headers?.[RETRY_HEADER] ?? 0;
 
     try {
-      const organization = await this.organizationService.getOrganizationOrFail(
-        payload.id
-      );
+      const organization =
+        await this.organizationService.getOrganizationByIdOrFail(payload.id);
       const authorizations =
         await this.organizationAuthorizationService.applyAuthorizationPolicy(
           organization

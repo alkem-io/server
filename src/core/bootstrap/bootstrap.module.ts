@@ -3,7 +3,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { SpaceModule } from '@domain/space/space/space.module';
 import { UserModule } from '@domain/community/user/user.module';
 import { OrganizationModule } from '@domain/community/organization/organization.module';
-import { AgentModule } from '@domain/agent/agent/agent.module';
 import { BootstrapService } from './bootstrap.service';
 import { CommunicationModule } from '@domain/communication/communication/communication.module';
 import { PlatformModule } from '@platform/platform/platform.module';
@@ -23,7 +22,7 @@ import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.modu
 import { OrganizationLookupModule } from '@domain/community/organization-lookup/organization.lookup.module';
 import { PlatformTemplatesModule } from '@platform/platform-templates/platform.templates.module';
 import { TemplatesManagerModule } from '@domain/template/templates-manager/templates.manager.module';
-import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/agent.info.module';
+import { ActorContextModule } from '@core/actor-context';
 import { AdminAuthorizationModule } from '@src/platform-admin/domain/authorization/admin.authorization.module';
 import { AiPersonaModule } from '@services/ai-server/ai-persona';
 import { MessagingModule } from '@domain/communication/messaging/messaging.module';
@@ -34,8 +33,7 @@ import { RoleSetModule } from '@domain/access/role-set/role.set.module';
   imports: [
     AiServerModule,
     AiPersonaModule,
-    AgentModule,
-    AuthenticationAgentInfoModule,
+    ActorContextModule,
     AuthorizationPolicyModule,
     LicenseModule,
     ContributorModule,

@@ -1,5 +1,5 @@
-import { AgentModule } from '@domain/agent/agent/agent.module';
-import { CredentialModule } from '@domain/agent/credential/credential.module';
+import { ActorModule } from '@domain/actor/actor/actor.module';
+import { CredentialModule } from '@domain/actor/credential/credential.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { Module } from '@nestjs/common';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
@@ -18,7 +18,7 @@ import { VirtualContributorModule } from '@domain/community/virtual-contributor/
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
-    AgentModule,
+    ActorModule,
     UserLookupModule,
     OrganizationLookupModule,
     CredentialModule,

@@ -2,7 +2,7 @@ import { Inject, LoggerService } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql';
 import { CurrentUser } from '@src/common/decorators';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -42,23 +42,26 @@ export class CommunicationResolverMutations {
     description: 'Send message to multiple Users.',
   })
   async sendMessageToUsers(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('messageData') messageData: CommunicationSendMessageToUsersInput
   ): Promise<boolean> {
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
-      `send user message from: ${agentInfo.email}`
+      `send user message from: ${actorContext.actorId}`
     );
 
     for (const receiverId of messageData.receiverIds) {
       // Check if the receiving user allows messages from other users
-      const receivingUser = await this.userService.getUserOrFail(receiverId, {
-        relations: {
-          settings: true,
-        },
-      });
+      const receivingUser = await this.userService.getUserByIdOrFail(
+        receiverId,
+        {
+          relations: {
+            settings: true,
+          },
+        }
+      );
 
       // Check if the user is willing to receive messages
       if (!receivingUser.settings.communication.allowOtherUsersToSendMessages) {
@@ -67,13 +70,13 @@ export class CommunicationResolverMutations {
           LogContext.USER,
           {
             userId: receivingUser.id,
-            senderId: agentInfo.userID,
+            senderId: actorContext.actorId,
           }
         );
       }
 
       const notificationInput: NotificationInputUserMessage = {
-        triggeredBy: agentInfo.userID,
+        triggeredBy: actorContext.actorId,
         receiverID: receiverId,
         message: messageData.message,
       };
@@ -89,19 +92,19 @@ export class CommunicationResolverMutations {
     description: 'Send message to an Organization.',
   })
   async sendMessageToOrganization(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('messageData')
     messageData: CommunicationSendMessageToOrganizationInput
   ): Promise<boolean> {
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
-      `send message to organization ${messageData.organizationId} from: ${agentInfo.email}`
+      `send message to organization ${messageData.organizationId} from: ${actorContext.actorId}`
     );
 
     const notificationInput: NotificationInputOrganizationMessage = {
-      triggeredBy: agentInfo.userID,
+      triggeredBy: actorContext.actorId,
       message: messageData.message,
       organizationID: messageData.organizationId,
     };
@@ -116,19 +119,19 @@ export class CommunicationResolverMutations {
     description: 'Send message to Community Leads.',
   })
   async sendMessageToCommunityLeads(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('messageData')
     messageData: CommunicationSendMessageToCommunityLeadsInput
   ): Promise<boolean> {
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
-      `send message to community ${messageData.communityId} from: ${agentInfo.email}`
+      `send message to community ${messageData.communityId} from: ${actorContext.actorId}`
     );
 
     const notificationInput: NotificationInputCommunicationLeadsMessage = {
-      triggeredBy: agentInfo.userID,
+      triggeredBy: actorContext.actorId,
       communityID: messageData.communityId,
       message: messageData.message,
     };

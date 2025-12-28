@@ -1,10 +1,10 @@
 import { ICommunity } from '@domain/community/community/community.interface';
-import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
+import { ActorType } from '@common/enums/actor.type';
 import { NotificationInputBase } from '../notification.dto.input.base';
 
 export interface NotificationInputCommunityNewMember
   extends NotificationInputBase {
-  contributorID: string;
-  contributorType: RoleSetContributorType;
+  actorId: string;
+  actorType: ActorType;
   community: ICommunity;
 }

@@ -1,5 +1,5 @@
 import { Column, Entity } from 'typeorm';
-import { BaseAlkemioEntity } from '../entity/base-entity/base.alkemio.entity';
+import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
 import { ILocation } from './location.interface';
 import { MID_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@common/constants';
 import { IGeoLocation } from './geolocation.interface';

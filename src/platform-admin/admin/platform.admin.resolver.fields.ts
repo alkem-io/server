@@ -1,7 +1,7 @@
 import { Args, Resolver } from '@nestjs/graphql';
 import { CurrentUser } from '@src/common/decorators';
 import { ResolveField } from '@nestjs/graphql';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { PlatformAdminQueryResults } from './dto/platform.admin.query.results';
 import { PlatformAdminIdentityQueryResults } from './dto/platform.admin.query.identity.results';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -37,10 +37,10 @@ export class PlatformAdminResolverFields {
       'Retrieve all Innovation Hubs on the Platform. This is only available to Platform Admins.',
   })
   async innovationHubs(
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentUser() actorContext: ActorContext
   ): Promise<IInnovationHub[]> {
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_ADMIN,
       'platformAdmin InnovationHubs'
@@ -55,12 +55,12 @@ export class PlatformAdminResolverFields {
       'Retrieve all Innovation Packs on the Platform. This is only available to Platform Admins.',
   })
   async innovationPacks(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('queryData', { type: () => InnovationPacksInput, nullable: true })
     args?: InnovationPacksInput
   ): Promise<IInnovationPack[]> {
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_ADMIN,
       'platformAdmin InnovationPacks'
@@ -75,11 +75,11 @@ export class PlatformAdminResolverFields {
       'Retrieve all Spaces on the Platform. This is only available to Platform Admins.',
   })
   async spaces(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args() args: SpacesQueryArgs
   ): Promise<ISpace[]> {
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_ADMIN,
       'platformAdmin Spaces'
@@ -94,7 +94,7 @@ export class PlatformAdminResolverFields {
       'Retrieve all Users on the Platform. This is only available to Platform Admins.',
   })
   async users(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args() pagination: PaginationArgs,
     @Args({
       name: 'withTags',
@@ -105,7 +105,7 @@ export class PlatformAdminResolverFields {
     @Args('filter', { nullable: true }) filter?: UserFilterInput
   ): Promise<PaginatedUsers> {
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_ADMIN,
       'platformAdmin Users'
@@ -120,7 +120,7 @@ export class PlatformAdminResolverFields {
       'Retrieve all Organizations on the Platform. This is only available to Platform Admins.',
   })
   async organizations(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args() pagination: PaginationArgs,
     @Args('status', {
       nullable: true,
@@ -131,7 +131,7 @@ export class PlatformAdminResolverFields {
     @Args('filter', { nullable: true }) filter?: OrganizationFilterInput
   ): Promise<PaginatedOrganization> {
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_ADMIN,
       'platformAdmin Organizations'
@@ -149,11 +149,11 @@ export class PlatformAdminResolverFields {
       'Retrieve all Virtual Contributors on the Platform. This is only available to Platform Admins.',
   })
   async virtualContributors(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args() args: ContributorQueryArgs
   ): Promise<IVirtualContributor[]> {
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_ADMIN,
       'platformAdmin Virtual Contributors'
@@ -167,10 +167,10 @@ export class PlatformAdminResolverFields {
     description: 'Lookup Communication related information.',
   })
   async communication(
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentUser() actorContext: ActorContext
   ): Promise<PlatformAdminCommunicationQueryResults> {
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_ADMIN,
       'platformAdmin Communication'
@@ -183,10 +183,10 @@ export class PlatformAdminResolverFields {
     description: 'Lookup Identity related information.',
   })
   async identity(
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentUser() actorContext: ActorContext
   ): Promise<PlatformAdminIdentityQueryResults> {
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_ADMIN,
       'platformAdmin Identity'

@@ -8,9 +8,9 @@ import { AiServer } from './ai.server.entity';
 import { IAiServer } from './ai.server.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AiPersona, IAiPersona } from '@services/ai-server/ai-persona';
-import { AiPersonaService } from '../ai-persona/ai.persona.service';
+import { AiPersonaService } from '@services/ai-server/ai-persona';
 import { CreateAiPersonaInput, UpdateAiPersonaInput } from '../ai-persona/dto';
-import { AiPersonaInvocationInput } from '../ai-persona/dto/ai.persona.invocation/ai.persona.invocation.dto.input';
+import { AiPersonaInvocationInput } from '@services/ai-server/ai-persona';
 import {
   IngestBodyOfKnowledge,
   IngestionPurpose,
@@ -21,15 +21,15 @@ import { ChromaClient } from 'chromadb';
 import {
   InteractionMessage,
   MessageSenderRole,
-} from '../ai-persona/dto/interaction.message';
+} from '@services/ai-server/ai-persona';
 import { AlkemioConfig } from '@src/types';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 import { InvokeEngineResult } from '@services/infrastructure/event-bus/messages/invoke.engine.result';
-import { InvocationResultAction } from '../ai-persona/dto/ai.persona.invocation/invocation.result.action.dto';
-import { RoomDetails } from '../ai-persona/dto/ai.persona.invocation/room.details.dto';
+import { InvocationResultAction } from '@services/ai-server/ai-persona';
+import { RoomDetails } from '@services/ai-server/ai-persona';
 import { RoomControllerService } from '@services/room-integration/room.controller.service';
 import { IMessage } from '@domain/communication/message/message.interface';
 import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';

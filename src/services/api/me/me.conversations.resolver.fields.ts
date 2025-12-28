@@ -1,10 +1,10 @@
 import { Resolver, ResolveField, Parent, Args } from '@nestjs/graphql';
-import { MeConversationsResult } from './dto/me.conversations.result';
+import { MeConversationsResult } from '@services/api/me/dto';
 import { IConversation } from '@domain/communication/conversation/conversation.interface';
 import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
 import { MessagingService } from '@domain/communication/messaging/messaging.service';
 import { CurrentUser } from '@common/decorators';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { ValidationException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
@@ -19,10 +19,10 @@ export class MeConversationsResolverFields {
       'Conversations between users for the current authenticated user.',
   })
   async users(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Parent() _parent: MeConversationsResult
   ): Promise<IConversation[]> {
-    if (!agentInfo.userID) {
+    if (!actorContext.actorId) {
       throw new ValidationException(
         'Unable to retrieve conversations as no userID provided.',
         LogContext.COMMUNICATION
@@ -30,7 +30,7 @@ export class MeConversationsResolverFields {
     }
 
     return await this.messagingService.getConversationsForUser(
-      agentInfo.userID,
+      actorContext.actorId,
       CommunicationConversationType.USER_USER
     );
   }
@@ -41,10 +41,10 @@ export class MeConversationsResolverFields {
       'Conversations between users and virtual contributors for the current authenticated user.',
   })
   async virtualContributors(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Parent() _parent: MeConversationsResult
   ): Promise<IConversation[]> {
-    if (!agentInfo.userID) {
+    if (!actorContext.actorId) {
       throw new ValidationException(
         'Unable to retrieve conversations as no userID provided.',
         LogContext.COMMUNICATION
@@ -52,7 +52,7 @@ export class MeConversationsResolverFields {
     }
 
     return await this.messagingService.getConversationsForUser(
-      agentInfo.userID,
+      actorContext.actorId,
       CommunicationConversationType.USER_VC
     );
   }
@@ -63,12 +63,12 @@ export class MeConversationsResolverFields {
       'Get a conversation with a well-known virtual contributor for the current user.',
   })
   async virtualContributor(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Parent() _parent: MeConversationsResult,
     @Args('wellKnown', { type: () => VirtualContributorWellKnown })
     wellKnown: VirtualContributorWellKnown
   ): Promise<IConversation | null> {
-    if (!agentInfo.userID) {
+    if (!actorContext.actorId) {
       throw new ValidationException(
         'Unable to retrieve conversation as no userID provided.',
         LogContext.COMMUNICATION
@@ -76,7 +76,7 @@ export class MeConversationsResolverFields {
     }
 
     return await this.messagingService.getConversationWithWellKnownVC(
-      agentInfo.userID,
+      actorContext.actorId,
       wellKnown
     );
   }

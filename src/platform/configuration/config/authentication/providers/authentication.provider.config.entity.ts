@@ -1,6 +1,6 @@
 import { AuthenticationProviderConfigs } from '@common/enums';
 import { createUnionType, Field, ObjectType } from '@nestjs/graphql';
-import { IAuthenticationProviderConfig } from './authentication.provider.config.interface';
+import { IAuthenticationProviderConfig } from '@platform/configuration';
 import { OryConfig } from './ory/ory.config.entity';
 
 @ObjectType()

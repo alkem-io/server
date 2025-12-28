@@ -86,7 +86,7 @@ export class LifecycleService {
     try {
       actor.send({
         type: eventName,
-        agentInfo: eventData.agentInfo,
+        actorContext: eventData.actorContext,
         authorization: eventData.authorization,
       });
     } catch (e: any) {

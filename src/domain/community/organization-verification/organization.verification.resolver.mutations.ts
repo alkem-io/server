@@ -1,6 +1,6 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { OrganizationVerificationEventInput } from './dto/organization.verification.dto.event';
 import { IOrganizationVerification } from './organization.verification.interface';
 import { OrganizationVerificationService } from './organization.verification.service';
@@ -32,14 +32,14 @@ export class OrganizationVerificationResolverMutations {
   async eventOnOrganizationVerification(
     @Args('eventData')
     organizationVerificationEventData: OrganizationVerificationEventInput,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentUser() actorContext: ActorContext
   ): Promise<IOrganizationVerification> {
     let organizationVerification =
       await this.organizationVerificationService.getOrganizationVerificationOrFail(
         organizationVerificationEventData.organizationVerificationID
       );
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       organizationVerification.authorization,
       AuthorizationPrivilege.UPDATE,
       `event on organization verification: ${organizationVerification.id}`
@@ -56,7 +56,7 @@ export class OrganizationVerificationResolverMutations {
       machine:
         this.organizationVerificationLifecycleService.getOrganizationVerificationMachine(),
       eventName: organizationVerificationEventData.eventName,
-      agentInfo,
+      actorContext,
       authorization: organizationVerification.authorization,
     };
 

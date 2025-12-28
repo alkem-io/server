@@ -1,7 +1,7 @@
 import { Injectable, Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { randomUUID } from 'crypto';
 import { IAccount } from '../account/account.interface';
-import { AgentService } from '@domain/agent/agent/agent.service';
 import { ILicensePlan } from '@platform/licensing/credential-based/license-plan/license.plan.interface';
 import { LicenseIssuerService } from '@platform/licensing/credential-based/license-credential-issuer/license.issuer.service';
 import { Account } from '../account/account.entity';
@@ -10,22 +10,20 @@ import { StorageAggregatorService } from '@domain/storage/storage-aggregator/sto
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
-import { AgentType } from '@common/enums/agent.type';
+import { ActorType } from '@common/enums/actor.type';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { AccountType } from '@common/enums/account.type';
-import { IAgent } from '@domain/agent/agent/agent.interface';
 import { LicenseService } from '@domain/common/license/license.service';
 import { LicenseType } from '@common/enums/license.type';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
 import { LicensingFrameworkService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service';
-import { IAccountLicensePlan } from '../account.license.plan/account.license.plan.interface';
+import { IAccountLicensePlan } from '@domain/space/account.license.plan';
 import { DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN } from '../account/constants';
 
 @Injectable()
 export class AccountHostService {
   constructor(
-    private agentService: AgentService,
     private licenseIssuerService: LicenseIssuerService,
     private licensingFrameworkService: LicensingFrameworkService,
     private licenseService: LicenseService,
@@ -37,7 +35,11 @@ export class AccountHostService {
 
   async createAccount(accountType: AccountType): Promise<IAccount> {
     const account: IAccount = new Account();
-    account.type = accountType;
+    account.accountType = accountType;
+    // Account extends Actor - set the actor type (credentials are managed through Actor)
+    account.type = ActorType.ACCOUNT;
+    // Generate a unique nameID for the account using first 8 chars of a UUID
+    account.nameID = `account-${randomUUID().substring(0, 8)}`;
     account.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.ACCOUNT
     );
@@ -46,10 +48,6 @@ export class AccountHostService {
       await this.storageAggregatorService.createStorageAggregator(
         StorageAggregatorType.ACCOUNT
       );
-
-    account.agent = await this.agentService.createAgent({
-      type: AgentType.ACCOUNT,
-    });
 
     account.license = this.licenseService.createLicense({
       type: LicenseType.ACCOUNT,
@@ -100,12 +98,15 @@ export class AccountHostService {
     return DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN;
   }
 
+  /**
+   * Assign license plans to a Space.
+   * Space IS an Actor - credentials are granted directly to the Space using its ID as actorId.
+   */
   public async assignLicensePlansToSpace(
-    spaceAgent: IAgent,
-    spaceID: string,
+    spaceId: string,
     type: AccountType,
     licensePlanID?: string
-  ): Promise<IAgent> {
+  ): Promise<void> {
     const licensingFramework =
       await this.licensingFrameworkService.getDefaultLicensingOrFail();
     const licensePlansToAssign: ILicensePlan[] = [];
@@ -139,12 +140,12 @@ export class AccountHostService {
     }
 
     for (const licensePlan of licensePlansToAssign) {
+      // Space IS an Actor - grant credentials directly using spaceId as actorId
       await this.licenseIssuerService.assignLicensePlan(
-        spaceAgent,
+        spaceId,
         licensePlan,
-        spaceID
+        spaceId
       );
     }
-    return await this.agentService.getAgentOrFail(spaceAgent.id);
   }
 }

@@ -10,8 +10,7 @@ import { isElasticError, isElasticResponseError } from '../utils';
 import { GuidanceUsage } from './guidance.usage';
 import { GuidanceUsageDocument } from './guidance.usage.document';
 import { AlkemioConfig } from '@src/types';
-
-const isFromAlkemioTeam = (email: string) => /.*@alkem\.io/.test(email);
+import { isAlkemioEmail } from '@domain/community/user-lookup/user.lookup.service';
 
 @Injectable()
 export class GuidanceReporterService {
@@ -57,7 +56,7 @@ export class GuidanceReporterService {
   // answerId: string,
   // userId: string
   : Promise<void> {
-    // const { email } = await this.userService.getUserOrFail(userId);
+    // const { email } = await this.userService.getUserByIdOrFail(userId);
     // this.reportUsage({
     //   usage: {
     //     answerId,
@@ -87,7 +86,7 @@ export class GuidanceReporterService {
       ...usage,
       author: author.id,
       '@timestamp': new Date(),
-      alkemio: isFromAlkemioTeam(author.email),
+      alkemio: isAlkemioEmail(author.email),
       environment: this.environment,
     };
 

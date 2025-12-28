@@ -3,7 +3,7 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
 import { ActivityModule } from '@src/platform/activity/activity.module';
 import { NotificationAdapter } from './notification.adapter';
 import { UrlGeneratorModule } from '@services/infrastructure/url-generator/url.generator.module';
-import { ContributorLookupModule } from '@services/infrastructure/contributor-lookup/contributor.lookup.module';
+import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
 import { NotificationExternalAdapterModule } from '../notification-external-adapter/notification.external.adapter.module';
 import { NotificationInAppAdapterModule } from '../notification-in-app-adapter/notification.in.app.adapter.module';
 import { NotificationRecipientsModule } from '@services/api/notification-recipients/notification.recipients.module';
@@ -19,7 +19,7 @@ import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.modul
   imports: [
     ActivityModule,
     UrlGeneratorModule,
-    ContributorLookupModule,
+    ActorLookupModule,
     EntityResolverModule,
     MessageDetailsModule,
     NotificationRecipientsModule,

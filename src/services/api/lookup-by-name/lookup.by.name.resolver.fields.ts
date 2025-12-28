@@ -1,8 +1,8 @@
 import { Args, Resolver } from '@nestjs/graphql';
 import { CurrentUser } from '@src/common/decorators';
 import { ResolveField } from '@nestjs/graphql';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { LookupByNameQueryResults } from './dto/lookup.by.name.query.results';
+import { ActorContext } from '@core/actor-context';
+import { LookupByNameQueryResults } from '@services/api/lookup-by-name/dto';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.service';
@@ -35,13 +35,13 @@ export class LookupByNameResolverFields {
     description: 'Lookup the ID of the specified InnovationHub using a NameID',
   })
   async innovationHub(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('NAMEID', { type: () => NameID }) nameid: string
   ): Promise<string> {
     const innovationHub =
       await this.innovationHubService.getInnovationHubByNameIdOrFail(nameid);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       innovationHub.authorization,
       AuthorizationPrivilege.READ,
       `lookup InnovationHub by NameID: ${innovationHub.id}`
@@ -55,13 +55,13 @@ export class LookupByNameResolverFields {
     description: 'Lookup the ID of the specified InnovationPack using a NameID',
   })
   async innovationPack(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('NAMEID', { type: () => NameID }) nameid: string
   ): Promise<string> {
     const innovationPack =
       await this.innovationPackService.getInnovationPackByNameIdOrFail(nameid);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       innovationPack.authorization,
       AuthorizationPrivilege.READ,
       `lookup InnovationPack by NameID: ${innovationPack.id}`
@@ -75,12 +75,12 @@ export class LookupByNameResolverFields {
     description: 'Lookup a Space using a NameID',
   })
   async space(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('NAMEID', { type: () => NameID }) nameid: string
   ): Promise<ISpace> {
     const space = await this.spaceLookupService.getSpaceByNameIdOrFail(nameid);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       space.authorization,
       AuthorizationPrivilege.READ_ABOUT,
       `lookup L0 Space by NameID: ${nameid}`
@@ -94,15 +94,15 @@ export class LookupByNameResolverFields {
     description: 'Lookup the ID of the specified User using a NameID',
   })
   async user(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('NAMEID', { type: () => NameID }) nameid: string
   ): Promise<string> {
     const user = await this.userLookupService.getUserByNameIdOrFail(nameid);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
-      `user lookup by NameID: ${agentInfo.email}`
+      `user lookup by NameID: ${actorContext.actorId}`
     );
 
     return user.id;
@@ -128,7 +128,7 @@ export class LookupByNameResolverFields {
       'Lookup the ID of the specified Virtual Contributor using a NameID',
   })
   async virtualContributor(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('NAMEID', { type: () => NameID }) nameid: string
   ): Promise<string> {
     const virtualContributor =
@@ -137,7 +137,7 @@ export class LookupByNameResolverFields {
       );
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       virtualContributor.authorization,
       AuthorizationPrivilege.READ,
       `lookup virtual contributor by NameID: ${virtualContributor.id}`
@@ -152,7 +152,7 @@ export class LookupByNameResolverFields {
       'Lookup the ID of the specified Template using a templatesSetId and the template NameID',
   })
   async template(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('templatesSetID', { type: () => UUID }) ID: string,
     @Args('NAMEID', { type: () => NameID }) nameID: string
   ): Promise<string> {
@@ -163,7 +163,7 @@ export class LookupByNameResolverFields {
       );
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       template.authorization,
       AuthorizationPrivilege.READ,
       `lookup template by NameID: ${template.id}`

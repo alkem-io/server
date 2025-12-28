@@ -3,7 +3,7 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UUID } from '@domain/common/scalars';
 import { Args, Query, Resolver } from '@nestjs/graphql';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { PaginatedUsers, PaginationArgs } from '@core/pagination';
 import { UserService } from './user.service';
 import { IUser } from './user.interface';
@@ -26,14 +26,14 @@ export class UserResolverQueries {
     description: 'The users who have profiles on this platform',
   })
   async users(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args({ nullable: true }) args: UsersQueryArgs
   ): Promise<IUser[]> {
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
-      `users query: ${agentInfo.email}`
+      `users query: ${actorContext.actorId}`
     );
     return await this.userService.getUsersForQuery(args);
   }
@@ -43,7 +43,7 @@ export class UserResolverQueries {
     description: 'The users who have profiles on this platform',
   })
   async usersPaginated(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args({ nullable: true }) pagination: PaginationArgs,
     @Args({
       name: 'withTags',
@@ -54,10 +54,10 @@ export class UserResolverQueries {
     @Args('filter', { nullable: true }) filter?: UserFilterInput
   ): Promise<PaginatedUsers> {
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
-      `users query: ${agentInfo.email}`
+      `users query: ${actorContext.actorId}`
     );
 
     return this.userService.getPaginatedUsers(pagination, withTags, filter);
@@ -68,15 +68,15 @@ export class UserResolverQueries {
     description: 'A particular user, identified by the ID or by email',
   })
   async user(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IUser> {
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
-      `user query: ${agentInfo.email}`
+      `user query: ${actorContext.actorId}`
     );
-    return await this.userService.getUserOrFail(id);
+    return await this.userService.getUserByIdOrFail(id);
   }
 }

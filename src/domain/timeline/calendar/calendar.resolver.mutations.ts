@@ -1,10 +1,10 @@
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { CalendarService } from './calendar.service';
-import { ICalendarEvent } from '../event/event.interface';
+import { ICalendarEvent } from '@domain/timeline/event';
 import { CalendarEventAuthorizationService } from '../event/event.service.authorization';
 import { CreateCalendarEventOnCalendarInput } from './dto/calendar.dto.create.event';
 import { CalendarEventService } from '../event/event.service';
@@ -32,7 +32,7 @@ export class CalendarResolverMutations {
   })
   @Profiling.api
   async createEventOnCalendar(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('eventData') eventData: CreateCalendarEventOnCalendarInput
   ): Promise<ICalendarEvent> {
     const calendar = await this.calendarService.getCalendarOrFail(
@@ -40,7 +40,7 @@ export class CalendarResolverMutations {
     );
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       calendar.authorization,
       AuthorizationPrivilege.CREATE,
       `create calendarEvent on calendar: ${calendar.id}`
@@ -48,7 +48,7 @@ export class CalendarResolverMutations {
 
     const calendarEvent = await this.calendarService.createCalendarEvent(
       eventData,
-      agentInfo.userID
+      actorContext.actorId
     );
     await this.calendarEventService.save(calendarEvent);
 
@@ -62,7 +62,7 @@ export class CalendarResolverMutations {
     await this.calendarService.processActivityCalendarEventCreated(
       calendar,
       calendarEvent,
-      agentInfo
+      actorContext
     );
 
     // Send notification to community members
@@ -73,7 +73,7 @@ export class CalendarResolverMutations {
     if (spaceID) {
       const notificationInput: NotificationInputCommunityCalendarEventCreated =
         {
-          triggeredBy: agentInfo.userID,
+          triggeredBy: actorContext.actorId,
           calendarEvent: calendarEvent,
         };
 

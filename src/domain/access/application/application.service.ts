@@ -20,7 +20,7 @@ import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IQuestion } from '@domain/common/question/question.interface';
-import { IContributor } from '../../community/contributor/contributor.interface';
+import { IActor } from '@domain/actor/actor/actor.interface';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { ApplicationLifecycleService } from './application.service.lifecycle';
 import { RoleSetCacheService } from '../role-set/role.set.service.cache';
@@ -43,8 +43,8 @@ export class ApplicationService {
     applicationData: CreateApplicationInput
   ): Promise<IApplication> {
     const application: IApplication = Application.create(applicationData);
-    application.user = await this.userService.getUserOrFail(
-      applicationData.userID
+    application.user = await this.userService.getUserByIdOrFail(
+      applicationData.userId
     );
 
     application.authorization = new AuthorizationPolicy(
@@ -113,7 +113,7 @@ export class ApplicationService {
     return await this.applicationRepository.save(application);
   }
 
-  async getContributor(applicationID: string): Promise<IContributor> {
+  async getContributor(applicationID: string): Promise<IActor> {
     const application = await this.getApplicationOrFail(applicationID, {
       relations: { user: true },
     });

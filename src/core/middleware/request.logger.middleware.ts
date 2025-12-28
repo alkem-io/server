@@ -12,9 +12,9 @@ import { AlkemioConfig } from '@src/types';
 
 @Injectable()
 export class RequestLoggerMiddleware implements NestMiddleware {
-  private requestFullLogging = false;
-  private requestHeadersLogging = false;
-  private responseHeadersLogging = false;
+  private readonly requestFullLogging = false;
+  private readonly requestHeadersLogging = false;
+  private readonly responseHeadersLogging = false;
   constructor(
     private readonly configService: ConfigService<AlkemioConfig, true>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService

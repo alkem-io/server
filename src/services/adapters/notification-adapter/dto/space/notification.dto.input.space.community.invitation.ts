@@ -5,6 +5,6 @@ export interface NotificationInputCommunityInvitation
   extends NotificationInputBase {
   community: ICommunity;
   invitationID: string;
-  invitedContributorID: string;
+  invitedActorId: string;
   welcomeMessage?: string;
 }

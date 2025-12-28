@@ -1,7 +1,7 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Resolver, Mutation } from '@nestjs/graphql';
 import { CurrentUser } from '@src/common/decorators';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { WhiteboardService } from './whiteboard.service';
 import { IWhiteboard } from './whiteboard.interface';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -43,12 +43,12 @@ export class WhiteboardResolverMutations {
       'Grants or revokes GLOBAL_GUEST permissions for a whiteboard using a single toggle.',
   })
   async updateWhiteboardGuestAccess(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('input') input: UpdateWhiteboardGuestAccessInput
   ): Promise<UpdateWhiteboardGuestAccessResult> {
     const whiteboard =
       await this.whiteboardGuestAccessService.updateGuestAccess(
-        agentInfo,
+        actorContext,
         input.whiteboardId,
         input.guestAccessEnabled
       );
@@ -85,7 +85,7 @@ export class WhiteboardResolverMutations {
     description: 'Updates the specified Whiteboard.',
   })
   async updateWhiteboard(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('whiteboardData') whiteboardData: UpdateWhiteboardEntityInput
   ): Promise<IWhiteboard> {
     const whiteboard = await this.whiteboardService.getWhiteboardOrFail(
@@ -93,7 +93,7 @@ export class WhiteboardResolverMutations {
     );
     const originalContentPolicy = whiteboard.contentUpdatePolicy;
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       whiteboard.authorization,
       AuthorizationPrivilege.UPDATE,
       `update Whiteboard: ${whiteboard.id}`
@@ -161,14 +161,14 @@ export class WhiteboardResolverMutations {
     description: 'Deletes the specified Whiteboard.',
   })
   async deleteWhiteboard(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('whiteboardData') whiteboardData: DeleteWhiteboardInput
   ): Promise<IWhiteboard> {
     const whiteboard = await this.whiteboardService.getWhiteboardOrFail(
       whiteboardData.ID
     );
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       whiteboard.authorization,
       AuthorizationPrivilege.DELETE,
       `delete Whiteboard: ${whiteboard.id}`

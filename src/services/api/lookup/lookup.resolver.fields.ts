@@ -1,8 +1,8 @@
 import { Args, Resolver } from '@nestjs/graphql';
 import { CurrentUser } from '@src/common/decorators';
 import { ResolveField } from '@nestjs/graphql';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { LookupQueryResults } from './dto/lookup.query.results';
+import { ActorContext } from '@core/actor-context';
+import { LookupQueryResults } from '@services/api/lookup/dto';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -132,12 +132,12 @@ export class LookupResolverFields {
     description: 'Lookup the specified Space',
   })
   async space(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<ISpace> {
     const space = await this.spaceService.getSpaceOrFail(id);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       space.authorization,
       AuthorizationPrivilege.READ_ABOUT,
       `lookup Space: ${space.id}`
@@ -151,12 +151,12 @@ export class LookupResolverFields {
     description: 'Lookup the specified Account',
   })
   async account(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IAccount> {
     const account = await this.accountService.getAccountOrFail(id);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       account.authorization,
       AuthorizationPrivilege.READ,
       `lookup Account: ${account.id}`
@@ -170,13 +170,13 @@ export class LookupResolverFields {
     description: 'Lookup the specified Conversation',
   })
   async conversation(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IConversation> {
     const conversation =
       await this.conversationService.getConversationOrFail(id);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       conversation.authorization,
       AuthorizationPrivilege.READ,
       `lookup Conversation: ${conversation.id}`
@@ -192,7 +192,7 @@ export class LookupResolverFields {
   async organization(
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IOrganization> {
-    return await this.organizationLookupService.getOrganizationOrFail(id);
+    return await this.organizationLookupService.getOrganizationByIdOrFail(id);
   }
 
   @ResolveField(() => LookupMyPrivilegesQueryResults, {
@@ -213,7 +213,7 @@ export class LookupResolverFields {
     const roleSet = await this.roleSetService.getRoleSetOrFail(id);
     // Note: RoleSet is publicly accessible for information such as RoleDefinitions, so do not check for READ access here
     // this.authorizationService.grantAccessOrFail(
-    //   agentInfo,
+    //   actorContext,
     //   roleSet.authorization,
     //   AuthorizationPrivilege.READ,
     //   `lookup RoleSet: ${roleSet.id}`
@@ -227,12 +227,12 @@ export class LookupResolverFields {
     description: 'Lookup the specified Document',
   })
   async document(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IDocument> {
     const document = await this.documentService.getDocumentOrFail(id);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       document.authorization,
       AuthorizationPrivilege.READ,
       `lookup Document: ${document.id}`
@@ -246,13 +246,13 @@ export class LookupResolverFields {
     description: 'A particular VirtualContributor',
   })
   async virtualContributor(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID, nullable: false }) id: string
   ): Promise<IVirtualContributor> {
     const virtualContributor =
-      await this.virtualContributorService.getVirtualContributorOrFail(id);
+      await this.virtualContributorService.getVirtualContributorByIdOrFail(id);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       virtualContributor.authorization,
       AuthorizationPrivilege.READ,
       `lookup VirtualContributor: ${virtualContributor.id}`
@@ -265,12 +265,12 @@ export class LookupResolverFields {
     description: 'A particular User',
   })
   async user(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID, nullable: false }) id: string
   ): Promise<IUser> {
-    const user = await this.userLookupService.getUserOrFail(id);
+    const user = await this.userLookupService.getUserByIdOrFail(id);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       user.authorization,
       AuthorizationPrivilege.READ,
       `lookup User: ${user.id}`
@@ -283,7 +283,7 @@ export class LookupResolverFields {
     description: 'Lookup the specified Authorization Policy',
   })
   async authorizationPolicy(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IAuthorizationPolicy> {
     // Note: this is a special case, mostly to track down issues related to authorization policies, so restrict access to platform admins
@@ -292,7 +292,7 @@ export class LookupResolverFields {
     const platformAuthorization =
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       platformAuthorization,
       AuthorizationPrivilege.PLATFORM_ADMIN,
       `lookup AuthorizationPolicy: ${authorizationPolicy.id}`
@@ -311,24 +311,27 @@ export class LookupResolverFields {
     }
   )
   async authorizationPrivilegesForUser(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('userID', { type: () => UUID }) userID: string,
     @Args('authorizationPolicyID', { type: () => UUID })
     authorizationPolicyID: string
   ): Promise<AuthorizationPrivilege[]> {
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `user privileges field: ${agentInfo.email}`
+      `user privileges field: ${actorContext.actorId}`
     );
     const authorization =
       await this.authorizationPolicyService.getAuthorizationPolicyOrFail(
         authorizationPolicyID
       );
-    const { agent } = await this.userLookupService.getUserAndAgent(userID);
+    // User IS an Actor - credentials are directly on the entity
+    const user = await this.userLookupService.getUserByIdOrFail(userID, {
+      relations: { credentials: true },
+    });
     return this.authorizationService.getGrantedPrivileges(
-      agent.credentials || [],
+      user.credentials || [],
       authorization
     );
   }
@@ -338,13 +341,13 @@ export class LookupResolverFields {
     description: 'Lookup the specified StorageAggregator',
   })
   async storageAggregator(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IStorageAggregator> {
     const document =
       await this.storageAggregatorService.getStorageAggregatorOrFail(id);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       document.authorization,
       AuthorizationPrivilege.READ,
       `lookup StorageAggregator: ${document.id}`
@@ -358,13 +361,13 @@ export class LookupResolverFields {
     description: 'Lookup the specified InnovationPack',
   })
   async innovationPack(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IInnovationPack> {
     const innovationPack =
       await this.innovationPackService.getInnovationPackOrFail(id);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       innovationPack.authorization,
       AuthorizationPrivilege.READ,
       `lookup InnovationPack: ${innovationPack.id}`
@@ -378,12 +381,12 @@ export class LookupResolverFields {
     description: 'Lookup the specified StorageBucket',
   })
   async storageBucket(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IStorageBucket> {
     const document = await this.storageBucketService.getStorageBucketOrFail(id);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       document.authorization,
       AuthorizationPrivilege.READ,
       `lookup StorageBucket: ${document.id}`
@@ -397,13 +400,13 @@ export class LookupResolverFields {
     description: 'Lookup the specified InnovationHub',
   })
   async innovationHub(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IInnovationHub> {
     const innovationHub =
       await this.innovationHubService.getInnovationHubOrFail(id);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       innovationHub.authorization,
       AuthorizationPrivilege.READ,
       `lookup InnovationHub: ${innovationHub.id}`
@@ -417,12 +420,12 @@ export class LookupResolverFields {
     description: 'Lookup the specified Application',
   })
   async application(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IApplication> {
     const application = await this.applicationService.getApplicationOrFail(id);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       application.authorization,
       AuthorizationPrivilege.READ,
       `lookup Application: ${application.id}`
@@ -436,12 +439,12 @@ export class LookupResolverFields {
     description: 'Lookup the specified Invitation',
   })
   async invitation(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IInvitation> {
     const invitation = await this.invitationService.getInvitationOrFail(id);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       invitation.authorization,
       AuthorizationPrivilege.READ,
       `lookup Invitation: ${invitation.id}`
@@ -455,13 +458,13 @@ export class LookupResolverFields {
     description: 'Lookup the specified PlatformInvitation',
   })
   async platformInvitation(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IPlatformInvitation> {
     const platformInvitation =
       await this.platformInvitationService.getPlatformInvitationOrFail(id);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       platformInvitation.authorization,
       AuthorizationPrivilege.READ,
       `lookup Platform Invitation: ${platformInvitation.id}`
@@ -480,7 +483,7 @@ export class LookupResolverFields {
     const community = await this.communityService.getCommunityOrFail(id);
     // Do not check for READ access here, rely on per field check on resolver in Community
     // await this.authorizationService.grantAccessOrFail(
-    //   agentInfo,
+    //   actorContext,
     //   community.authorization,
     //   AuthorizationPrivilege.READ,
     //   `lookup Community: ${community.id}`
@@ -494,7 +497,7 @@ export class LookupResolverFields {
     description: 'Lookup the specified Collaboration',
   })
   async collaboration(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<ICollaboration> {
     const collaboration =
@@ -508,13 +511,13 @@ export class LookupResolverFields {
     description: 'Lookup the specified CalendarEvent',
   })
   async calendarEvent(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<ICalendarEvent> {
     const calendarEvent =
       await this.calendarEventService.getCalendarEventOrFail(id);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       calendarEvent.authorization,
       AuthorizationPrivilege.READ,
       `lookup calendar event: ${calendarEvent.id}`
@@ -528,12 +531,12 @@ export class LookupResolverFields {
     description: 'Lookup the specified CalloutsSet',
   })
   async calloutsSet(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<ICalloutsSet> {
     const calloutsSet = await this.calloutsSetService.getCalloutsSetOrFail(id);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       calloutsSet.authorization,
       AuthorizationPrivilege.READ,
       `lookup calloutsSet: ${calloutsSet.id}`
@@ -547,12 +550,12 @@ export class LookupResolverFields {
     description: 'Lookup the specified Calendar',
   })
   async calendar(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<ICalendar> {
     const calendar = await this.calendarService.getCalendarOrFail(id);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       calendar.authorization,
       AuthorizationPrivilege.READ,
       `lookup calendar : ${calendar.id}`
@@ -566,12 +569,12 @@ export class LookupResolverFields {
     description: 'Lookup the specified SpaceAbout',
   })
   async about(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<ISpaceAbout> {
     const about = await this.spaceAboutService.getSpaceAboutOrFail(id);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       about.authorization,
       AuthorizationPrivilege.READ,
       `lookup SpaceAbout: ${about.id}`
@@ -585,12 +588,12 @@ export class LookupResolverFields {
     description: 'Lookup the specified Whiteboard',
   })
   async whiteboard(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IWhiteboard> {
     const whiteboard = await this.whiteboardService.getWhiteboardOrFail(id);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       whiteboard.authorization,
       AuthorizationPrivilege.READ,
       `lookup Whiteboard: ${whiteboard.id}`
@@ -604,12 +607,12 @@ export class LookupResolverFields {
     description: 'Lookup the specified Memo',
   })
   async memo(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IMemo> {
     const memo = await this.memoService.getMemoOrFail(id);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       memo.authorization,
       AuthorizationPrivilege.READ,
       `lookup Memo: ${memo.id}`
@@ -623,12 +626,12 @@ export class LookupResolverFields {
     description: 'Lookup the specified Profile',
   })
   async profile(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IProfile> {
     const profile = await this.profileService.getProfileOrFail(id);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       profile.authorization,
       AuthorizationPrivilege.READ,
       `lookup Profile: ${profile.id}`
@@ -642,12 +645,12 @@ export class LookupResolverFields {
     description: 'Lookup the specified Callout',
   })
   async callout(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<ICallout> {
     const callout = await this.calloutService.getCalloutOrFail(id);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       callout.authorization,
       AuthorizationPrivilege.READ,
       `lookup Callout: ${callout.id}`
@@ -661,13 +664,13 @@ export class LookupResolverFields {
     description: 'Lookup the specified CalloutContribution',
   })
   async contribution(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<ICalloutContribution> {
     const contribution =
       await this.contributionService.getCalloutContributionOrFail(id);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       contribution.authorization,
       AuthorizationPrivilege.READ,
       `lookup CalloutContribution: ${contribution.id}`
@@ -681,12 +684,12 @@ export class LookupResolverFields {
     description: 'Lookup the specified Post',
   })
   async post(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IPost> {
     const post = await this.postService.getPostOrFail(id);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       post.authorization,
       AuthorizationPrivilege.READ,
       `lookup Post: ${post.id}`
@@ -700,12 +703,12 @@ export class LookupResolverFields {
     description: 'Lookup the specified Room',
   })
   async room(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IRoom> {
     const room = await this.roomService.getRoomOrFail(id);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       room.authorization,
       AuthorizationPrivilege.READ,
       `lookup Room: ${room.id}`
@@ -719,13 +722,13 @@ export class LookupResolverFields {
     description: 'Lookup the specified InnovationFlow',
   })
   async innovationFlow(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IInnovationFlow> {
     const innovationFlow =
       await this.innovationFlowService.getInnovationFlowOrFail(id);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       innovationFlow.authorization,
       AuthorizationPrivilege.READ,
       `lookup InnovationFlow: ${innovationFlow.id}`
@@ -739,12 +742,12 @@ export class LookupResolverFields {
     description: 'Lookup the specified Template',
   })
   async template(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<ITemplate> {
     const template = await this.templateService.getTemplateOrFail(id);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       template.authorization,
       AuthorizationPrivilege.READ,
       `lookup Template: ${template.id}`
@@ -758,13 +761,13 @@ export class LookupResolverFields {
     description: 'Lookup the specified Space Content Template',
   })
   async templateContentSpace(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<ITemplateContentSpace> {
     const template =
       await this.templateContentSpaceService.getTemplateContentSpaceOrFail(id);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       template.authorization,
       AuthorizationPrivilege.READ,
       `lookup TemplateContentSpace: ${template.id}`
@@ -778,13 +781,13 @@ export class LookupResolverFields {
     description: 'Lookup the specified TemplatesSet',
   })
   async templatesSet(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<ITemplatesSet> {
     const templatesSet =
       await this.templatesSetService.getTemplatesSetOrFail(id);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       templatesSet.authorization,
       AuthorizationPrivilege.READ,
       `lookup TemplatesSet: ${templatesSet.id}`
@@ -798,13 +801,13 @@ export class LookupResolverFields {
     description: 'Lookup the specified TemplatesManager',
   })
   async templatesManager(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<ITemplatesManager> {
     const templatesManager =
       await this.templatesManagerService.getTemplatesManagerOrFail(id);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       templatesManager.authorization,
       AuthorizationPrivilege.READ,
       `lookup TemplatesManager: ${templatesManager.id}`
@@ -818,13 +821,13 @@ export class LookupResolverFields {
     description: 'Lookup the specified Community guidelines',
   })
   async communityGuidelines(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<ICommunityGuidelines> {
     const guidelines =
       await this.guidelinesService.getCommunityGuidelinesOrFail(id);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       guidelines.authorization,
       AuthorizationPrivilege.READ,
       `lookup Community guidelines: ${guidelines.id}`
@@ -850,13 +853,13 @@ export class LookupResolverFields {
     description: 'Lookup as specific KnowledgeBase',
   })
   async knowledgeBase(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID, nullable: false }) id: string
   ): Promise<IKnowledgeBase> {
     const knowledgeBase =
       await this.knowledgeBaseService.getKnowledgeBaseOrFail(id);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       knowledgeBase.authorization,
       AuthorizationPrivilege.READ_ABOUT,
       `lookup KnowledgeBase: ${knowledgeBase.id}`

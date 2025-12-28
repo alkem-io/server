@@ -5,7 +5,7 @@ import { Profiling } from '@src/common/decorators';
 import { IUser } from '@domain/community/user/user.interface';
 import { LogContext } from '@common/enums/logging.context';
 import { Loader } from '@core/dataloader/decorators';
-import { IProfile } from '../profile/profile.interface';
+import { IProfile } from '@domain/common/profile';
 import { IWhiteboard } from './whiteboard.interface';
 import {
   ProfileLoaderCreator,

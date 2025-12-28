@@ -2,7 +2,6 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { WhiteboardService } from '@domain/common/whiteboard';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { AuthenticationService } from '@core/authentication/authentication.service';
@@ -28,8 +27,8 @@ import {
   SaveOutputData,
 } from './outputs';
 import { FetchInputData } from '@services/whiteboard-integration/inputs/fetch.input.data';
-import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
-
+import { ActorContextService } from '@core/actor-context';
+import { ActorContext } from '@core/actor-context';
 @Injectable()
 export class WhiteboardIntegrationService {
   private readonly maxCollaboratorsInRoom: number;
@@ -41,7 +40,7 @@ export class WhiteboardIntegrationService {
     private readonly contributionReporter: ContributionReporterService,
     private readonly communityResolver: CommunityResolverService,
     private readonly activityAdapter: ActivityAdapter,
-    private readonly agentInfoService: AgentInfoService,
+    private readonly authActorInfoService: ActorContextService,
     private readonly configService: ConfigService<AlkemioConfig, true>
   ) {
     this.maxCollaboratorsInRoom = this.configService.get(
@@ -56,11 +55,11 @@ export class WhiteboardIntegrationService {
         data.whiteboardId
       );
 
-      const agentInfo = await this.resolveAgentInfo(data);
-      if (!agentInfo) {
+      const actorContext = await this.resolveActorContext(data);
+      if (!actorContext) {
         this.logger.warn?.(
           {
-            message: `Unable to build AgentInfo for userId: ${data.userId}`,
+            message: `Unable to build ActorContext for userId: ${data.userId}`,
             whiteboardId: data.whiteboardId,
             guestName: data.guestName,
           },
@@ -70,7 +69,7 @@ export class WhiteboardIntegrationService {
       }
 
       return this.authorizationService.isAccessGranted(
-        agentInfo,
+        actorContext,
         whiteboard.authorization,
         data.privilege
       );
@@ -120,8 +119,20 @@ export class WhiteboardIntegrationService {
     return { read, update, maxCollaborators };
   }
 
-  public who(data: WhoInputData): Promise<AgentInfo> {
-    return this.authenticationService.getAgentInfo(data.auth);
+  public async who(data: WhoInputData): Promise<string> {
+    const authCtx = await this.authenticationService.getActorContext(data.auth);
+
+    // Handle guest users - generate temporary ID
+    if (authCtx.guestName) {
+      return crypto.randomUUID();
+    }
+
+    // Handle anonymous users
+    if (authCtx.isAnonymous || !authCtx.actorId) {
+      return '';
+    }
+
+    return authCtx.actorId;
   }
 
   public async save({
@@ -180,14 +191,14 @@ export class WhiteboardIntegrationService {
       );
     const wb = await this.whiteboardService.getProfile(whiteboardId);
 
-    users.forEach(({ id, email }) => {
+    users.forEach(({ id }) => {
       this.contributionReporter.whiteboardContribution(
         {
           id: whiteboardId,
           name: wb.displayName,
           space: levelZeroSpaceID,
         },
-        { id, email }
+        id
       );
     });
   }
@@ -210,31 +221,29 @@ export class WhiteboardIntegrationService {
       });
   }
 
-  private async resolveAgentInfo(
+  private async resolveActorContext(
     data: AccessGrantedInputData
-  ): Promise<AgentInfo | null> {
+  ): Promise<ActorContext | null> {
     if (this.isGuestUserIdentifier(data.userId)) {
-      return this.agentInfoService.createGuestAgentInfo(
+      return this.authActorInfoService.createGuest(
         this.normalizeGuestName(data.guestName)
       );
     }
 
     try {
-      return await this.agentInfoService.buildAgentInfoForUser(data.userId);
+      return await this.authActorInfoService.buildForUser(data.userId);
     } catch (error) {
       if (data.guestName?.trim()) {
         this.logger.verbose?.(
           {
             message:
-              'Falling back to guest agent info after user lookup failure',
+              'Falling back to guest actor context after user lookup failure',
             userId: data.userId,
             whiteboardId: data.whiteboardId,
           },
           LogContext.WHITEBOARD_INTEGRATION
         );
-        return this.agentInfoService.createGuestAgentInfo(
-          data.guestName.trim()
-        );
+        return this.authActorInfoService.createGuest(data.guestName.trim());
       }
 
       throw error;

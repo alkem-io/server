@@ -17,7 +17,7 @@ import { IPlatformWellKnownVirtualContributors } from '@platform/platform.well.k
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { CurrentUser } from '@common/decorators';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { AuthorizationPrivilege } from '@common/enums';
 import { PlatformWellKnownVirtualContributorMapping } from '@platform/platform.well.known.virtual.contributors/dto/platform.well.known.virtual.contributor.dto.mapping';
 import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
@@ -133,13 +133,13 @@ export class PlatformResolverFields {
   )
   async wellKnownVirtualContributors(
     @Parent() platform: IPlatform,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentUser() actorContext: ActorContext
   ): Promise<IPlatformWellKnownVirtualContributors> {
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ,
-      `get Platform well-known Virtual Contributors: ${agentInfo.email}`
+      `get Platform well-known Virtual Contributors: ${actorContext.actorId}`
     );
 
     // Convert from JSON storage format to DTO array format

@@ -3,7 +3,7 @@ import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ICallout } from '../callout/callout.interface';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { CalloutAuthorizationService } from '../callout/callout.service.authorization';
@@ -39,7 +39,7 @@ export class CalloutTransferResolverMutations {
       'Transfer the specified Callout from its current CalloutsSet to the target CalloutsSet. Note: this is experimental, and only for GlobalAdmins. The user that executes the transfer becomes the creator of the Callout.',
   })
   async transferCallout(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('transferData')
     transferData: TransferCalloutInput
   ): Promise<ICallout> {
@@ -69,13 +69,13 @@ export class CalloutTransferResolverMutations {
         transferData.targetCalloutsSetID
       );
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       sourceCalloutsSet.authorization,
       AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER,
       `callouts set transfer callout: ${callout.id}`
     );
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       targetCalloutsSet.authorization,
       AuthorizationPrivilege.TRANSFER_RESOURCE_ACCEPT,
       `callouts set transfer callout: ${callout.id}`
@@ -85,7 +85,7 @@ export class CalloutTransferResolverMutations {
     await this.calloutTransferService.transferCallout(
       callout,
       targetCalloutsSet,
-      agentInfo
+      actorContext
     );
 
     const { platformRolesAccess } =

@@ -33,7 +33,7 @@ export class IdentityResolveController {
       LogContext.AUTH
     );
 
-    const user = await this.identityResolveService.resolveUser(
+    const actorId = await this.identityResolveService.resolveActorId(
       body.authenticationId,
       {
         ip: req.ip,
@@ -41,9 +41,6 @@ export class IdentityResolveController {
       }
     );
 
-    return {
-      userId: user.id,
-      agentId: user.agent.id,
-    };
+    return { actorId };
   }
 }

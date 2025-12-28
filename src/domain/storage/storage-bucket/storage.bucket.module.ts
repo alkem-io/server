@@ -8,7 +8,7 @@ import { StorageBucketResolverFields } from './storage.bucket.resolver.fields';
 import { StorageBucketResolverMutations } from './storage.bucket.resolver.mutations';
 import { StorageBucketService } from './storage.bucket.service';
 import { StorageBucketAuthorizationService } from './storage.bucket.service.authorization';
-import { Document } from '../document/document.entity';
+import { Document } from '@domain/storage/document';
 import { Profile } from '@domain/common/profile/profile.entity';
 import { UrlGeneratorModule } from '@services/infrastructure/url-generator';
 import { AvatarCreatorModule } from '@services/external/avatar-creator/avatar.creator.module';

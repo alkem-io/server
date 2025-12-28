@@ -5,14 +5,14 @@ import { PlatformInvitationService } from './platform.invitation.service';
 import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { IUser } from '@domain/community/user/user.interface';
-import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
+import { AuthorizationActorPrivilege, Profiling } from '@src/common/decorators';
 import { IPlatformInvitation } from './platform.invitation.interface';
 
 @Resolver(() => IPlatformInvitation)
 export class PlatformInvitationResolverFields {
   constructor(private platformInvitationService: PlatformInvitationService) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('createdBy', () => IUser, {
     nullable: false,

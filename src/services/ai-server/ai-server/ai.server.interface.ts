@@ -1,6 +1,6 @@
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { ObjectType, Field } from '@nestjs/graphql';
-import { IAiPersona } from '../ai-persona/ai.persona.interface';
+import { IAiPersona } from '@services/ai-server/ai-persona';
 
 @ObjectType('AiServer')
 export abstract class IAiServer extends IAuthorizable {

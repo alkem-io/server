@@ -8,7 +8,7 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { CreateTagsetTemplateInput } from '@domain/common/tagset-template/dto/tagset.template.dto.create';
 import { UpdateTagsetTemplateDefinitionInput } from './dto/tagset.template.dto.update';
 import { TagsetTemplate } from './tagset.template.entity';
-import { ITagset } from '../tagset/tagset.interface';
+import { ITagset } from '@domain/common/tagset';
 
 @Injectable()
 export class TagsetTemplateService {

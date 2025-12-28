@@ -7,76 +7,54 @@ import {
   EntityNotFoundException,
   EntityNotInitializedException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { ActorType, LogContext } from '@common/enums';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { User } from '../user/user.entity';
 import { IUser } from '../user/user.interface';
-import { IAgent } from '@domain/agent/agent/agent.interface';
-import { ICredential } from '@domain/agent/credential/credential.interface';
-import { CredentialsSearchInput } from '@domain/agent/credential/dto/credentials.dto.search';
+import { ICredential } from '@domain/actor/credential/credential.interface';
+import { CredentialsSearchInput } from '@domain/actor/credential/dto/credentials.dto.search';
+
+// Utility function for checking Alkemio team email - can be used directly when email is available
+export const isAlkemioEmail = (email: string): boolean =>
+  /.*@alkem\.io/.test(email);
 
 export class UserLookupService {
   constructor(
     @InjectEntityManager('default')
     private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService
+    private readonly logger: LoggerService,
+    private actorLookupService: ActorLookupService
   ) {}
 
-  public async getUserByUUID(
-    userID: string,
+  public async getUserById(
+    userId: string,
     options?: FindOneOptions<User> | undefined
   ): Promise<IUser | null> {
-    if (!isUUID(userID)) {
+    if (!isUUID(userId)) {
       return null;
     }
 
-    const user: IUser | null = await this.entityManager.findOne(User, {
-      where: {
-        id: userID,
-      },
+    return this.entityManager.findOne(User, {
+      where: { id: userId },
       ...options,
     });
-
-    return user;
   }
 
-  public async getUserByAgentId(
-    agentID: string,
-    options?: FindOneOptions<User> | undefined
-  ): Promise<IUser | null> {
-    const user: IUser | null = await this.entityManager.findOne(User, {
-      where: {
-        agent: {
-          id: agentID,
-        },
-      },
-      relations: {
-        agent: true,
-        ...options?.relations,
-      },
-      ...options,
-    });
-
-    return user;
-  }
-
-  public async getUsersByUUID(
-    userIDs: string[],
+  public async getUsersByIds(
+    userIds: string[],
     options?: FindManyOptions<User> | undefined
   ): Promise<IUser[]> {
-    const validUUIDs = userIDs.filter(id => isUUID(id));
-    if (validUUIDs.length === 0) {
+    const validIds = userIds.filter(id => isUUID(id));
+    if (validIds.length === 0) {
       return [];
     }
 
-    const users: IUser[] = await this.entityManager.find(User, {
-      where: {
-        id: In(validUUIDs),
-      },
+    return this.entityManager.find(User, {
+      where: { id: In(validIds) },
       ...options,
     });
-
-    return users;
   }
 
   public async getUserByEmail(
@@ -132,15 +110,16 @@ export class UserLookupService {
     return false;
   }
 
-  public async getUserOrFail(
-    userID: string,
+  public async getUserByIdOrFail(
+    userId: string,
     options?: FindOneOptions<User> | undefined
   ): Promise<IUser> {
-    const user = await this.getUserByUUID(userID, options);
+    const user = await this.getUserById(userId, options);
     if (!user) {
       throw new EntityNotFoundException(
-        `User with id ${userID} not found`,
-        LogContext.COMMUNITY
+        'User not found',
+        LogContext.COMMUNITY,
+        { userId }
       );
     }
     return user;
@@ -164,121 +143,90 @@ export class UserLookupService {
     }
 
     // Build OR conditions for multiple credential criteria
+    // User IS an Actor - credentials are directly on the Actor entity
     const whereConditions = credentialCriteriaArray.map(criteria => ({
-      agent: {
-        credentials: {
-          type: criteria.type,
-          resourceID: criteria.resourceID || '',
-        },
+      credentials: {
+        type: criteria.type,
+        resourceID: criteria.resourceID || '',
       },
     }));
 
     const findOptions: FindManyOptions<User> = {
       where: whereConditions,
       relations: {
-        agent: {
-          credentials: true,
-        },
+        credentials: true,
         ...options?.relations,
       },
       take: limit,
       ...options,
     };
 
-    // Merge relations properly to avoid overriding the agent.credentials relation
-    if (options?.relations) {
-      findOptions.relations = {
-        ...findOptions.relations,
-        ...options.relations,
-        agent: {
-          credentials: true,
-          ...(options.relations as any)?.agent,
-        },
-      };
-    }
-
     const users = await this.entityManager.find(User, findOptions);
 
     return users;
   }
 
+  /**
+   * Count users with a given credential.
+   * Wraps ActorLookupService.countActorsWithCredentials with USER type filter.
+   */
   public async countUsersWithCredentials(
     credentialCriteria: CredentialsSearchInput
   ): Promise<number> {
-    const credResourceID = credentialCriteria.resourceID || '';
-
-    const usersCount = await this.entityManager.count(User, {
-      where: {
-        agent: {
-          credentials: {
-            type: credentialCriteria.type,
-            resourceID: credResourceID,
-          },
-        },
-      },
-    });
-    return usersCount;
+    return this.actorLookupService.countActorsWithCredentials(
+      credentialCriteria,
+      [ActorType.USER]
+    );
   }
 
-  public async getUsersWithAgent(ids: string[]): Promise<IUser[]> {
+  // User IS an Actor - credentials are eager loaded on Actor
+  public async getUsersWithCredentials(ids: string[]): Promise<IUser[]> {
     const users = await this.entityManager.find(User, {
       where: {
         id: In(ids),
       },
       relations: {
-        agent: true,
+        credentials: true,
       },
     });
     return users;
   }
 
   public async getUserAndCredentials(
-    userID: string
+    userId: string
   ): Promise<{ user: IUser; credentials: ICredential[] }> {
-    const user = await this.getUserOrFail(userID, {
-      relations: { agent: true },
+    const user = await this.getUserByIdOrFail(userId, {
+      relations: { credentials: true },
     });
 
-    if (!user.agent || !user.agent.credentials) {
+    if (!user.credentials) {
       throw new EntityNotInitializedException(
-        `User Agent not initialized: ${userID}`,
-        LogContext.AUTH
+        'User credentials not initialized',
+        LogContext.AUTH,
+        { userId }
       );
     }
-    return { user: user, credentials: user.agent.credentials };
+    return { user, credentials: user.credentials };
   }
 
-  async getUserAndAgent(
-    userID: string
-  ): Promise<{ user: IUser; agent: IAgent }> {
-    const user = await this.getUserOrFail(userID, {
-      relations: { agent: true },
-    });
-
-    if (!user.agent) {
-      throw new EntityNotInitializedException(
-        `User Agent not initialized: ${userID}`,
-        LogContext.AUTH
-      );
+  public async isFromAlkemioTeam(userId: string): Promise<boolean> {
+    if (!userId) {
+      return false;
     }
-    return { user: user, agent: user.agent };
+    const user = await this.getUserById(userId);
+    if (!user?.email) {
+      return false;
+    }
+    return /.*@alkem\.io/.test(user.email);
   }
 
-  async getUserWithAgent(userID: string): Promise<IUser> {
-    const user = await this.getUserOrFail(userID, {
-      relations: {
-        agent: {
-          credentials: true,
-        },
-      },
-    });
-
-    if (!user.agent || !user.agent.credentials) {
-      throw new EntityNotInitializedException(
-        `User Agent not initialized: ${userID}`,
-        LogContext.AUTH
-      );
-    }
-    return user;
+  /**
+   * Get authorization policy for a user without loading the full entity.
+   * Wraps ActorLookupService.getActorAuthorizationOrFail.
+   */
+  public async getUserAuthorizationOrFail(
+    userId: string
+  ): Promise<IAuthorizationPolicy> {
+    return this.actorLookupService.getActorAuthorizationOrFail(userId);
   }
 }

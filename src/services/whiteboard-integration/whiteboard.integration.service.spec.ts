@@ -1,6 +1,6 @@
 import { AuthorizationPrivilege } from '@common/enums';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
+import { ActorContext } from '@core/actor-context';
+import { ActorContextService } from '@core/actor-context';
 import { AuthenticationService } from '@core/authentication/authentication.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { WhiteboardService } from '@domain/common/whiteboard';
@@ -13,10 +13,10 @@ import { ConfigService } from '@nestjs/config';
 import { LoggerService } from '@nestjs/common';
 import { AlkemioConfig } from '@src/types';
 
-const buildGuestAgentInfo = (guestName: string): AgentInfo => {
-  const agentInfo = new AgentInfo();
-  agentInfo.guestName = guestName;
-  return agentInfo;
+const buildGuestActorContext = (guestName: string): ActorContext => {
+  const authCtx = new ActorContext();
+  authCtx.guestName = guestName;
+  return authCtx;
 };
 
 describe('WhiteboardIntegrationService - guest handling', () => {
@@ -27,7 +27,7 @@ describe('WhiteboardIntegrationService - guest handling', () => {
   let contributionReporter: jest.Mocked<ContributionReporterService>;
   let communityResolver: jest.Mocked<CommunityResolverService>;
   let activityAdapter: jest.Mocked<ActivityAdapter>;
-  let agentInfoService: jest.Mocked<AgentInfoService>;
+  let actorContextService: jest.Mocked<ActorContextService>;
   let configService: jest.Mocked<ConfigService<AlkemioConfig, true>>;
   let logger: jest.Mocked<LoggerService>;
 
@@ -40,7 +40,7 @@ describe('WhiteboardIntegrationService - guest handling', () => {
       contributionReporter,
       communityResolver,
       activityAdapter,
-      agentInfoService,
+      actorContextService,
       configService
     );
 
@@ -57,7 +57,7 @@ describe('WhiteboardIntegrationService - guest handling', () => {
     } as unknown as jest.Mocked<AuthorizationService>;
 
     authenticationService = {
-      getAgentInfo: jest.fn(),
+      getActorContext: jest.fn(),
     } as unknown as jest.Mocked<AuthenticationService>;
 
     contributionReporter = {
@@ -73,12 +73,12 @@ describe('WhiteboardIntegrationService - guest handling', () => {
       calloutWhiteboardContentModified: jest.fn(),
     } as unknown as jest.Mocked<ActivityAdapter>;
 
-    agentInfoService = {
-      buildAgentInfoForUser: jest.fn(),
-      createGuestAgentInfo: jest
+    actorContextService = {
+      buildForUser: jest.fn(),
+      createGuest: jest
         .fn()
-        .mockImplementation(name => buildGuestAgentInfo(name)),
-    } as unknown as jest.Mocked<AgentInfoService>;
+        .mockImplementation(name => buildGuestActorContext(name)),
+    } as unknown as jest.Mocked<ActorContextService>;
 
     configService = {
       get: jest.fn().mockReturnValue(10),
@@ -95,7 +95,7 @@ describe('WhiteboardIntegrationService - guest handling', () => {
     service = createService();
   });
 
-  it('creates guest agent info when userId is marked as not available', async () => {
+  it('creates guest actor context when userId is marked as not available', async () => {
     const payload: AccessGrantedInputData = {
       userId: 'N/A',
       whiteboardId: 'whiteboard-guest',
@@ -105,8 +105,8 @@ describe('WhiteboardIntegrationService - guest handling', () => {
 
     const result = await service.accessGranted(payload);
 
-    expect(agentInfoService.buildAgentInfoForUser).not.toHaveBeenCalled();
-    expect(agentInfoService.createGuestAgentInfo).toHaveBeenCalledWith('Nick');
+    expect(actorContextService.buildForUser).not.toHaveBeenCalled();
+    expect(actorContextService.createGuest).toHaveBeenCalledWith('Nick');
     expect(authorizationService.isAccessGranted).toHaveBeenCalledWith(
       expect.objectContaining({ guestName: 'Nick' }),
       expect.anything(),
@@ -116,7 +116,7 @@ describe('WhiteboardIntegrationService - guest handling', () => {
   });
 
   it('falls back to guest credentials when lookup fails and guest name is provided', async () => {
-    agentInfoService.buildAgentInfoForUser.mockRejectedValueOnce(
+    actorContextService.buildForUser.mockRejectedValueOnce(
       new Error('lookup failed')
     );
 
@@ -129,9 +129,7 @@ describe('WhiteboardIntegrationService - guest handling', () => {
 
     const result = await service.accessGranted(payload);
 
-    expect(agentInfoService.createGuestAgentInfo).toHaveBeenCalledWith(
-      'Taylor'
-    );
+    expect(actorContextService.createGuest).toHaveBeenCalledWith('Taylor');
     expect(result).toBe(true);
   });
 
@@ -144,7 +142,7 @@ describe('WhiteboardIntegrationService - guest handling', () => {
 
     await service.accessGranted(payload);
 
-    expect(agentInfoService.createGuestAgentInfo).toHaveBeenCalledWith(
+    expect(actorContextService.createGuest).toHaveBeenCalledWith(
       'Guest collaborator'
     );
   });

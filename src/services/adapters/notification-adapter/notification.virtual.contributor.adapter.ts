@@ -35,7 +35,7 @@ export class NotificationVirtualContributorAdapter {
     const recipients = await this.getNotificationRecipientsVirtualContributor(
       event,
       eventData,
-      eventData.invitedContributorID
+      eventData.invitedActorId
     );
 
     const payload =
@@ -43,7 +43,7 @@ export class NotificationVirtualContributorAdapter {
         event,
         eventData.triggeredBy,
         recipients.emailRecipients,
-        eventData.invitedContributorID,
+        eventData.invitedActorId,
         eventData.accountHost,
         space,
         eventData.welcomeMessage
@@ -58,7 +58,7 @@ export class NotificationVirtualContributorAdapter {
     if (inAppReceiverIDs.length > 0) {
       const inAppPayload: InAppNotificationPayloadVirtualContributor = {
         type: NotificationEventPayload.VIRTUAL_CONTRIBUTOR,
-        virtualContributorID: eventData.invitedContributorID,
+        virtualContributorID: eventData.invitedActorId,
         space,
       };
 

@@ -8,13 +8,13 @@ import {
   AuthorizationRoleGlobal,
 } from '@common/enums';
 import { ForbiddenException, ValidationException } from '@common/exceptions';
-import { AgentService } from '@domain/agent/agent/agent.service';
+import { ActorService } from '@domain/actor/actor/actor.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { GrantAuthorizationCredentialInput } from './dto/authorization.dto.credential.grant';
 import { RevokeAuthorizationCredentialInput } from './dto/authorization.dto.credential.revoke';
-import { UsersWithAuthorizationCredentialInput } from './dto/authorization.dto.users.with.credential';
+import { UsersWithAuthorizationCredentialInput } from '@src/platform-admin/domain/authorization/dto';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { IOrganization } from '@domain/community/organization';
 import { RevokeOrganizationAuthorizationCredentialInput } from './dto/authorization.dto.credential.revoke.organization';
 import { GrantOrganizationAuthorizationCredentialInput } from './dto/authorization.dto.credential.grant.organization';
@@ -29,7 +29,7 @@ export class AdminAuthorizationService {
   constructor(
     private authorizationService: AuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    private agentService: AgentService,
+    private actorService: ActorService,
     private userLookupService: UserLookupService,
     private organizationLookupService: OrganizationLookupService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -51,7 +51,7 @@ export class AdminAuthorizationService {
   }
 
   async userAuthorizationPrivileges(
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     userAuthorizationPrivilegesData: UserAuthorizationPrivilegesInput
   ): Promise<AuthorizationPrivilege[]> {
     // get the user
@@ -82,12 +82,12 @@ export class AdminAuthorizationService {
           LogContext.AUTH
         );
     }
-    const { user, agent } = await this.userLookupService.getUserAndAgent(
+    const user = await this.userLookupService.getUserByIdOrFail(
       grantCredentialData.userID
     );
 
-    user.agent = await this.agentService.grantCredentialOrFail({
-      agentID: agent.id,
+    // User IS an Actor - grant credential directly using user.id as actorId
+    await this.actorService.grantCredentialOrFail(user.id, {
       type: grantCredentialData.type,
       resourceID: grantCredentialData.resourceID,
     });
@@ -106,12 +106,12 @@ export class AdminAuthorizationService {
         );
     }
 
-    const { user, agent } = await this.userLookupService.getUserAndAgent(
+    const user = await this.userLookupService.getUserByIdOrFail(
       revokeCredentialData.userID
     );
 
-    user.agent = await this.agentService.revokeCredential({
-      agentID: agent.id,
+    // User IS an Actor - revoke credential directly using user.id as actorId
+    await this.actorService.revokeCredential(user.id, {
       type: revokeCredentialData.type,
       resourceID: revokeCredentialData.resourceID,
     });
@@ -130,13 +130,13 @@ export class AdminAuthorizationService {
           LogContext.AUTH
         );
     }
-    const { organization, agent } =
-      await this.organizationLookupService.getOrganizationAndAgent(
+    const organization =
+      await this.organizationLookupService.getOrganizationByIdOrFail(
         grantCredentialData.organizationID
       );
 
-    organization.agent = await this.agentService.grantCredentialOrFail({
-      agentID: agent.id,
+    // Organization IS an Actor - grant credential directly using organization.id as actorId
+    await this.actorService.grantCredentialOrFail(organization.id, {
       type: grantCredentialData.type,
       resourceID: grantCredentialData.resourceID,
     });
@@ -155,13 +155,13 @@ export class AdminAuthorizationService {
         );
     }
 
-    const { organization, agent } =
-      await this.organizationLookupService.getOrganizationAndAgent(
+    const organization =
+      await this.organizationLookupService.getOrganizationByIdOrFail(
         revokeCredentialData.organizationID
       );
 
-    organization.agent = await this.agentService.revokeCredential({
-      agentID: agent.id,
+    // Organization IS an Actor - revoke credential directly using organization.id as actorId
+    await this.actorService.revokeCredential(organization.id, {
       type: revokeCredentialData.type,
       resourceID: revokeCredentialData.resourceID || '',
     });

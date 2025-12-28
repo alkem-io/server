@@ -1,7 +1,7 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser } from '@src/common/decorators';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { RoomService } from './room.service';
 import { RoomSendMessageInput } from './dto/room.dto.send.message';
@@ -58,21 +58,26 @@ export class RoomResolverMutations {
   })
   async sendMessageToRoom(
     @Args('messageData') messageData: RoomSendMessageInput,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentUser() actorContext: ActorContext
   ): Promise<IMessage> {
     const room = await this.roomService.getRoomOrFail(messageData.roomID, {
       relations: { authorization: true },
     });
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       room.authorization,
       AuthorizationPrivilege.CREATE_MESSAGE,
       `room send message: ${room.id}`
     );
 
     await this.validateMessageOnCalloutOrFail(room);
-    await this.validateMessageOnDirectConversationOrFail(room, agentInfo);
+    await this.validateMessageOnDirectConversationOrFail(room, actorContext);
+
+    // Update VC options on room if provided (for conversation rooms with VCs)
+    if (messageData.vcOptions?.language) {
+      await this.updateRoomVcOptions(room, messageData.vcOptions.language);
+    }
 
     const mentions = await this.roomMentionsService.getMentionsFromText(
       messageData.message
@@ -80,7 +85,7 @@ export class RoomResolverMutations {
 
     const message = await this.roomLookupService.sendMessage(
       room,
-      agentInfo.agentID,
+      actorContext.actorId,
       messageData
     );
 
@@ -100,7 +105,7 @@ export class RoomResolverMutations {
           mentions,
           room,
           message,
-          agentInfo
+          actorContext
         );
 
         await this.roomServiceEvents.processNotificationPostContributionComment(
@@ -109,7 +114,7 @@ export class RoomResolverMutations {
           contribution,
           room,
           message,
-          agentInfo,
+          actorContext,
           mentionedUserIDs
         );
 
@@ -117,7 +122,7 @@ export class RoomResolverMutations {
           post,
           room,
           message,
-          agentInfo
+          actorContext
         );
         // VC invocation now handled by MessageInboxService via RabbitMQ event
 
@@ -133,14 +138,14 @@ export class RoomResolverMutations {
           mentions,
           room,
           message,
-          agentInfo
+          actorContext
         );
 
         await this.roomServiceEvents.processNotificationCalendarEventComment(
           calendarEvent,
           room,
           message,
-          agentInfo
+          actorContext
         );
 
         break;
@@ -154,24 +159,24 @@ export class RoomResolverMutations {
           mentions,
           room,
           message,
-          agentInfo
+          actorContext
         );
         await this.roomServiceEvents.processNotificationForumDiscussionComment(
           discussionForum,
           message,
-          agentInfo
+          actorContext
         );
         break;
       case RoomType.UPDATES:
         await this.roomServiceEvents.processNotificationUpdateSent(
           room,
           message,
-          agentInfo
+          actorContext
         );
         await this.roomServiceEvents.processActivityUpdateSent(
           room,
           message,
-          agentInfo
+          actorContext
         );
 
         break;
@@ -185,7 +190,7 @@ export class RoomResolverMutations {
           mentions,
           room,
           message,
-          agentInfo
+          actorContext
         );
 
         // VC invocation now handled by MessageInboxService via RabbitMQ event
@@ -197,14 +202,14 @@ export class RoomResolverMutations {
           await this.roomServiceEvents.processActivityCalloutCommentCreated(
             callout,
             message,
-            agentInfo
+            actorContext
           );
 
           await this.roomServiceEvents.processNotificationCalloutComment(
             callout,
             room,
             message,
-            agentInfo,
+            actorContext,
             mentionedUserIDs
           );
         }
@@ -237,12 +242,31 @@ export class RoomResolverMutations {
   }
 
   /**
+   * Updates VC options (e.g., language preference) on the room.
+   * Only updates if the value has changed.
+   */
+  private async updateRoomVcOptions(
+    room: IRoom,
+    language: string
+  ): Promise<void> {
+    if (room.vcData?.language === language) {
+      return;
+    }
+
+    if (!room.vcData) {
+      room.vcData = {};
+    }
+    room.vcData.language = language;
+    await this.roomLookupService.save(room);
+  }
+
+  /**
    * Validates that the receiver of a direct conversation has messaging enabled.
    * Only applies to CONVERSATION_DIRECT room types (user-to-user conversations).
    */
   private async validateMessageOnDirectConversationOrFail(
     room: IRoom,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ) {
     if (room.type !== RoomType.CONVERSATION_DIRECT) {
       return;
@@ -251,30 +275,30 @@ export class RoomResolverMutations {
     // Get room members from Matrix (lightweight call - no message history)
     const members = await this.communicationAdapter.getRoomMembers(room.id);
 
-    // Find the other user (not the sender) - members contains agent IDs
-    const otherMemberAgentIds = members.filter(
-      (memberId: string) => memberId !== agentInfo.agentID
+    // Find the other user (not the sender) - members contains actor IDs
+    const otherMemberActorIds = members.filter(
+      (memberId: string) => memberId !== actorContext.actorId
     );
 
-    if (otherMemberAgentIds.length === 0) {
+    if (otherMemberActorIds.length === 0) {
       // Only sender in room, skip validation
       return;
     }
 
     // For direct conversations, check the first other member's messaging preferences
     // (In practice there should only be 2 members in a direct conversation)
-    const receivingUserAgentId = otherMemberAgentIds[0];
+    const receivingUserActorId = otherMemberActorIds[0];
 
-    // Look up user by their agent ID
+    // Look up user by their actor ID
     const receivingUser =
-      await this.userLookupService.getUserByAgentId(receivingUserAgentId);
+      await this.userLookupService.getUserById(receivingUserActorId);
 
     if (!receivingUser) {
-      // Agent ID doesn't map to a user (might be a VC or deleted user)
+      // Actor ID doesn't map to a user (might be a VC or deleted user)
       return;
     }
 
-    const receivingUserFull = await this.userLookupService.getUserOrFail(
+    const receivingUserFull = await this.userLookupService.getUserByIdOrFail(
       receivingUser.id,
       {
         relations: {
@@ -291,7 +315,7 @@ export class RoomResolverMutations {
         LogContext.COMMUNICATION,
         {
           receiverId: receivingUser.id,
-          senderId: agentInfo.userID,
+          senderId: actorContext.actorId,
         }
       );
     }
@@ -302,12 +326,12 @@ export class RoomResolverMutations {
   })
   async sendMessageReplyToRoom(
     @Args('messageData') messageData: RoomSendMessageReplyInput,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentUser() actorContext: ActorContext
   ): Promise<IMessage> {
     const room = await this.roomService.getRoomOrFail(messageData.roomID);
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       room.authorization,
       AuthorizationPrivilege.CREATE_MESSAGE_REPLY,
       `room reply to message: ${room.id}`
@@ -324,9 +348,8 @@ export class RoomResolverMutations {
 
     const reply = await this.roomLookupService.sendMessageReply(
       room,
-      agentInfo.agentID,
-      messageData,
-      'user'
+      actorContext.actorId,
+      messageData
     );
 
     this.subscriptionPublishService.publishRoomEvent(
@@ -345,14 +368,14 @@ export class RoomResolverMutations {
         await this.roomServiceEvents.processNotificationCommentReply(
           room,
           reply,
-          agentInfo,
+          actorContext,
           messageOwnerId
         );
         await this.roomServiceEvents.processActivityPostComment(
           post,
           room,
           reply,
-          agentInfo
+          actorContext
         );
 
         break;
@@ -361,7 +384,7 @@ export class RoomResolverMutations {
         await this.roomServiceEvents.processNotificationCommentReply(
           room,
           reply,
-          agentInfo,
+          actorContext,
           messageOwnerId
         );
 
@@ -370,7 +393,7 @@ export class RoomResolverMutations {
         await this.roomServiceEvents.processNotificationCommentReply(
           room,
           reply,
-          agentInfo,
+          actorContext,
           messageOwnerId
         );
 
@@ -384,20 +407,20 @@ export class RoomResolverMutations {
           this.roomServiceEvents.processActivityCalloutCommentCreated(
             callout,
             reply,
-            agentInfo
+            actorContext
           );
 
           await this.roomServiceEvents.processNotificationCommentReply(
             room,
             reply,
-            agentInfo,
+            actorContext,
             messageOwnerId
           );
           await this.roomMentionsService.processNotificationMentions(
             mentions,
             room,
             reply,
-            agentInfo
+            actorContext
           );
         }
         break;
@@ -423,12 +446,12 @@ export class RoomResolverMutations {
   })
   async addReactionToMessageInRoom(
     @Args('reactionData') reactionData: RoomAddReactionToMessageInput,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentUser() actorContext: ActorContext
   ): Promise<IMessageReaction> {
     const room = await this.roomService.getRoomOrFail(reactionData.roomID);
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       room.authorization,
       AuthorizationPrivilege.CREATE_MESSAGE_REACTION,
       `room add reaction to message in room: ${room.id}`
@@ -436,7 +459,7 @@ export class RoomResolverMutations {
 
     const reaction = await this.roomService.addReactionToMessage(
       room,
-      agentInfo.agentID,
+      actorContext.actorId,
       reactionData
     );
 
@@ -444,16 +467,12 @@ export class RoomResolverMutations {
     return reaction;
   }
 
-  private virtualContributorsEnabled(): boolean {
-    return true;
-  }
-
   @Mutation(() => MessageID, {
     description: 'Removes a message.',
   })
   async removeMessageOnRoom(
     @Args('messageData') messageData: RoomRemoveMessageInput,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentUser() actorContext: ActorContext
   ): Promise<string> {
     const room = await this.roomService.getRoomOrFail(messageData.roomID);
 
@@ -466,20 +485,20 @@ export class RoomResolverMutations {
         messageData.messageID
       );
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       extendedAuthorization,
       AuthorizationPrivilege.DELETE,
       `room remove message: ${room.id}`
     );
     const messageID = await this.roomService.removeRoomMessage(
       room,
-      agentInfo.agentID,
+      actorContext.actorId,
       messageData
     );
     await this.inAppNotificationService.deleteAllByMessageId(messageID);
     await this.roomServiceEvents.processActivityMessageRemoved(
       messageID,
-      agentInfo
+      actorContext
     );
 
     this.subscriptionPublishService.publishRoomEvent(
@@ -491,7 +510,6 @@ export class RoomResolverMutations {
         message: '',
         reactions: [],
         sender: '',
-        senderType: 'user',
         threadID: '',
         timestamp: -1,
       }
@@ -505,7 +523,7 @@ export class RoomResolverMutations {
   })
   async removeReactionToMessageInRoom(
     @Args('reactionData') reactionData: RoomRemoveReactionToMessageInput,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentUser() actorContext: ActorContext
   ): Promise<boolean> {
     const room = await this.roomService.getRoomOrFail(reactionData.roomID);
 
@@ -520,7 +538,7 @@ export class RoomResolverMutations {
         reactionData.reactionID
       );
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       extendedAuthorization,
       AuthorizationPrivilege.DELETE,
       `room remove reaction: ${room.id}`
@@ -528,7 +546,7 @@ export class RoomResolverMutations {
 
     const isDeleted = await this.roomService.removeReactionToMessage(
       room,
-      agentInfo.agentID,
+      actorContext.actorId,
       reactionData
     );
 

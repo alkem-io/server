@@ -3,7 +3,7 @@ import { DocumentService } from './document.service';
 import { CurrentUser } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { IDocument } from './document.interface';
 import { DeleteDocumentInput } from './dto/document.dto.delete';
 import { UpdateDocumentInput } from './dto/document.dto.update';
@@ -21,14 +21,14 @@ export class DocumentResolverMutations {
     description: 'Deletes the specified Document.',
   })
   async deleteDocument(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteDocumentInput
   ): Promise<IDocument> {
     const document = await this.documentService.getDocumentOrFail(
       deleteData.ID
     );
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       document.authorization,
       AuthorizationPrivilege.DELETE,
       `delete document: ${document.displayName}`
@@ -41,14 +41,14 @@ export class DocumentResolverMutations {
     description: 'Updates the specified Document.',
   })
   async updateDocument(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('documentData') documentData: UpdateDocumentInput
   ): Promise<IDocument> {
     const document = await this.documentService.getDocumentOrFail(
       documentData.ID
     );
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       document.authorization,
       AuthorizationPrivilege.UPDATE,
       `update document: ${document.displayName}`

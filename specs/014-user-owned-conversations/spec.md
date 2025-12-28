@@ -1066,7 +1066,7 @@ async deleteRoom(
 @Mutation(() => IConversation)
 @UseGuards(GraphqlGuard)
 async deleteConversation(
-  @CurrentUser() agentInfo: AgentInfo,
+  @CurrentUser() actorContext: AgentInfo,
   @Args('deleteData') deleteData: DeleteConversationInput
 ): Promise<IConversation> {
   const conversation = await this.conversationService.getConversationOrFail(
@@ -1080,14 +1080,14 @@ async deleteConversation(
   });
 
   // Authorization: User can only delete their own conversations
-  if (conversationOwner?.id !== agentInfo.userID) {
+  if (conversationOwner?.id !== actorContext.userID) {
     throw new ForbiddenException(
       'User can only delete conversations in their own conversations set'
     );
   }
 
   this.authorizationService.grantAccessOrFail(
-    agentInfo,
+    actorContext,
     conversation.authorization,
     AuthorizationPrivilege.DELETE,
     `delete conversation: ${conversation.id}`

@@ -1,13 +1,10 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import {
-  EntityNotFoundException,
-  ForbiddenException,
-} from '@common/exceptions';
+import { ForbiddenException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { ILicensePolicy } from '@platform/licensing/credential-based/license-policy/license.policy.interface';
 import { ForbiddenLicensePolicyException } from '@common/exceptions/forbidden.license.policy.exception';
-import { IAgent, ICredential } from '@domain/agent';
+import { ICredential } from '@domain/actor/credential/credential.interface';
 import { ILicensingCredentialBasedPolicyCredentialRule } from './licensing.credential.based.policy.credential.rule.interface';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { LicensingGrantedEntitlement } from '@platform/licensing/dto/licensing.dto.granted.entitlement';
@@ -23,35 +20,34 @@ export class LicensingCredentialBasedService {
 
   public async grantEntitlementOrFail(
     entitlementRequired: LicenseEntitlementType,
-    agent: IAgent,
+    credentials: ICredential[],
+    actorId: string,
     msg: string,
     licensePolicy: ILicensePolicy | undefined
   ) {
     const accessGranted = await this.isEntitlementGranted(
       entitlementRequired,
-      agent,
+      credentials,
       licensePolicy
     );
     if (accessGranted) return true;
 
-    const errorMsg = `License.engine: unable to grant '${entitlementRequired}' privilege: ${msg} license: ${agent.id}`;
-    // If you get to here then no match was found
+    const errorMsg = `License.engine: unable to grant '${entitlementRequired}' privilege: ${msg} actor: ${actorId}`;
     throw new ForbiddenLicensePolicyException(
       errorMsg,
       entitlementRequired,
       licensePolicy?.id || 'no license policy',
-      agent.id
+      actorId
     );
   }
 
   public async isEntitlementGranted(
     entitlementRequired: LicenseEntitlementType,
-    agent: IAgent,
+    credentials: ICredential[],
     licensePolicy?: ILicensePolicy | undefined
   ): Promise<boolean> {
     const policy =
       await this.getLicensingCredentialBasedPolicyOrFail(licensePolicy);
-    const credentials = await this.getCredentialsFromAgent(agent);
 
     const credentialRules = policy.credentialRules;
     for (const credentialRule of credentialRules) {
@@ -75,12 +71,11 @@ export class LicensingCredentialBasedService {
 
   public async getEntitlementIfGranted(
     entitlementRequired: LicenseEntitlementType,
-    agent: IAgent,
+    credentials: ICredential[],
     licensePolicy?: ILicensePolicy | undefined
   ): Promise<LicensingGrantedEntitlement | undefined> {
     const policy =
       await this.getLicensingCredentialBasedPolicyOrFail(licensePolicy);
-    const credentials = await this.getCredentialsFromAgent(agent);
 
     const credentialRules = policy.credentialRules;
     for (const credentialRule of credentialRules) {
@@ -102,17 +97,6 @@ export class LicensingCredentialBasedService {
     return undefined;
   }
 
-  private async getCredentialsFromAgent(agent: IAgent): Promise<ICredential[]> {
-    const credentials = agent.credentials;
-    if (!credentials) {
-      throw new EntityNotFoundException(
-        `Unable to find credentials on agent ${agent.id}`,
-        LogContext.LICENSE
-      );
-    }
-    return credentials;
-  }
-
   private async getLicensingCredentialBasedPolicyOrFail(
     licensePolicy?: ILicensePolicy | undefined
   ): Promise<ILicensePolicy> {
@@ -124,12 +108,11 @@ export class LicensingCredentialBasedService {
   }
 
   public async getGrantedEntitlements(
-    agent: IAgent,
+    credentials: ICredential[],
     licensePolicy?: ILicensePolicy
   ): Promise<LicenseEntitlementType[]> {
     const policy =
       await this.getLicensingCredentialBasedPolicyOrFail(licensePolicy);
-    const credentials = await this.getCredentialsFromAgent(agent);
 
     const grantedEntitlements: LicenseEntitlementType[] = [];
 

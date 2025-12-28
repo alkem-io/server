@@ -2,7 +2,7 @@ import { Query, Resolver } from '@nestjs/graphql';
 import { CurrentUser } from '@src/common/decorators';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 
 import { InstrumentResolver } from '@src/apm/decorators';
@@ -23,10 +23,10 @@ export class AdminIdentityResolverQueries {
     description: 'Get all unverified identities from Kratos.',
   })
   async adminIdentitiesUnverified(
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentUser() actorContext: ActorContext
   ): Promise<KratosIdentityDto[]> {
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_ADMIN,
       'adminIdentitiesUnverified'

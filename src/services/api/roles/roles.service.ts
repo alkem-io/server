@@ -5,10 +5,9 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ApplicationService } from '@domain/access/application/application.service';
 import { IApplication } from '@domain/access/application';
 import { SpaceFilterService } from '@services/infrastructure/space-filter/space.filter.service';
-import { RolesUserInput } from './dto/roles.dto.input.user';
-import { ContributorRoles } from './dto/roles.dto.result.contributor';
+import { ActorRoles } from './dto/roles.dto.result.actor';
 import { CommunityApplicationForRoleResult } from './dto/roles.dto.result.community.application';
-import { RolesOrganizationInput } from './dto/roles.dto.input.organization';
+import { RolesActorInput } from './dto/roles.dto.input.actor';
 import { mapSpaceCredentialsToRoles } from './util/map.space.credentials.to.roles';
 import { CommunityInvitationForRoleResult } from './dto/roles.dto.result.community.invitation';
 import { InvitationService } from '@domain/access/invitation/invitation.service';
@@ -17,79 +16,39 @@ import { CommunityResolverService } from '@services/infrastructure/entity-resolv
 import { RolesResultOrganization } from './dto/roles.dto.result.organization';
 import { mapOrganizationCredentialsToRoles } from './util/map.organization.credentials.to.roles';
 import { RolesResultSpace } from './dto/roles.dto.result.space';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
-import { RolesVirtualContributorInput } from './dto/roles.dto.input.virtual.contributor';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { IRoleSet } from '@domain/access/role-set';
-import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
-import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 
 export class RolesService {
   constructor(
     @InjectEntityManager() private entityManager: EntityManager,
-    private userLookupService: UserLookupService,
-    private virtualContributorLookupService: VirtualContributorLookupService,
     private applicationService: ApplicationService,
     private invitationService: InvitationService,
     private spaceFilterService: SpaceFilterService,
     private communityResolverService: CommunityResolverService,
     private authorizationService: AuthorizationService,
-    private organizationLookupService: OrganizationLookupService,
-    private contributorLookupService: ContributorLookupService,
+    private actorLookupService: ActorLookupService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async getRolesForUser(
-    membershipData: RolesUserInput
-  ): Promise<ContributorRoles> {
-    const contributorRoles = new ContributorRoles();
-    const user = await this.userLookupService.getUserWithAgent(
-      membershipData.userID
+  async getRolesForActor(membershipData: RolesActorInput): Promise<ActorRoles> {
+    const actor = await this.actorLookupService.getActorByIdOrFail(
+      membershipData.actorId,
+      { relations: { credentials: true } }
     );
 
-    contributorRoles.id = membershipData.userID;
-    contributorRoles.filter = membershipData.filter;
-    contributorRoles.credentials = user.agent?.credentials || [];
+    const actorRoles = new ActorRoles();
+    actorRoles.id = membershipData.actorId;
+    actorRoles.filter = membershipData.filter;
+    actorRoles.credentials = actor.credentials || [];
 
-    return contributorRoles;
+    return actorRoles;
   }
 
-  async getRolesForOrganization(
-    membershipData: RolesOrganizationInput
-  ): Promise<ContributorRoles> {
-    const contributorRoles = new ContributorRoles();
-
-    const { agent } =
-      await this.organizationLookupService.getOrganizationAndAgent(
-        membershipData.organizationID
-      );
-
-    contributorRoles.id = membershipData.organizationID;
-    contributorRoles.filter = membershipData.filter;
-    contributorRoles.credentials = agent?.credentials || [];
-
-    return contributorRoles;
-  }
-
-  async getRolesForVirtualContributor(
-    membershipData: RolesVirtualContributorInput
-  ): Promise<ContributorRoles> {
-    const contributorRoles = new ContributorRoles();
-    const vc =
-      await this.virtualContributorLookupService.getVirtualContributorAndAgent(
-        membershipData.virtualContributorID
-      );
-
-    contributorRoles.id = membershipData.virtualContributorID;
-    contributorRoles.credentials = vc.agent?.credentials || [];
-
-    return contributorRoles;
-  }
-
-  async getOrganizationRolesForUser(
-    roles: ContributorRoles
+  async getOrganizationRoles(
+    roles: ActorRoles
   ): Promise<RolesResultOrganization[]> {
     return await mapOrganizationCredentialsToRoles(
       this.entityManager,
@@ -97,9 +56,9 @@ export class RolesService {
     );
   }
 
-  public async getSpaceRolesForContributor(
-    roles: ContributorRoles,
-    agentInfo: AgentInfo
+  public async getSpaceRoles(
+    roles: ActorRoles,
+    actorContext: ActorContext
   ): Promise<RolesResultSpace[]> {
     const allowedVisibilities = this.spaceFilterService.getAllowedVisibilities(
       roles.filter
@@ -109,7 +68,7 @@ export class RolesService {
       this.entityManager,
       roles.credentials,
       allowedVisibilities,
-      agentInfo,
+      actorContext,
       this.authorizationService
     );
   }
@@ -181,7 +140,7 @@ export class RolesService {
   ): Promise<IInvitation[]> {
     // What contributors are managed by this user?
     const contributorsManagedByUser =
-      await this.contributorLookupService.getContributorsManagedByUser(userID);
+      await this.actorLookupService.getActorsManagedByUser(userID);
     const invitations: IInvitation[] = [];
     for (const contributor of contributorsManagedByUser) {
       const contributorInvitations =
@@ -244,8 +203,13 @@ export class RolesService {
       invitation.createdDate,
       invitation.updatedDate
     );
-    invitationResult.contributorID = invitation.invitedContributorID;
-    invitationResult.contributorType = invitation.contributorType;
+    invitationResult.actorId = invitation.invitedActorId;
+
+    // Derive actor type from the invited contributor
+    invitationResult.actorType =
+      await this.actorLookupService.getActorTypeByIdOrFail(
+        invitation.invitedActorId
+      );
 
     invitationResult.createdBy = invitation.createdBy ?? '';
     invitationResult.welcomeMessage = invitation.welcomeMessage;

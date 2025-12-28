@@ -13,6 +13,8 @@ import { OryDefaultIdentitySchema } from '@services/infrastructure/kratos/types/
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { Session } from '@ory/kratos-client';
 import { AUTH_STRATEGY_OATHKEEPER_API_TOKEN } from './strategy.names';
+import { ActorContextService } from '../actor-context';
+import { ActorContext } from '@core/actor-context';
 
 @Injectable()
 export class OryApiStrategy extends PassportStrategy(
@@ -22,13 +24,14 @@ export class OryApiStrategy extends PassportStrategy(
   constructor(
     private readonly configService: ConfigService<AlkemioConfig, true>,
     private readonly authService: AuthenticationService,
+    private readonly authActorInfoService: ActorContextService,
     private kratosService: KratosService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {
     super();
   }
 
-  async validate(payload: IncomingMessage) {
+  async validate(payload: IncomingMessage): Promise<ActorContext> {
     const apiAccessEnabled = this.configService.get(
       'identity.authentication.api_access_enabled',
       { infer: true }
@@ -45,7 +48,7 @@ export class OryApiStrategy extends PassportStrategy(
 
     if (!bearerToken) {
       this.logger.verbose?.('Bearer token is not provided', LogContext.AUTH);
-      return this.authService.createAgentInfo();
+      return this.authActorInfoService.createAnonymous();
     }
 
     const data: Session =
@@ -53,13 +56,23 @@ export class OryApiStrategy extends PassportStrategy(
 
     if (!data) {
       this.logger.verbose?.('No Ory Kratos API session', LogContext.AUTH);
-      return this.authService.createAgentInfo();
+      return this.authActorInfoService.createAnonymous();
     }
 
     const session = verifyIdentityIfOidcAuth(data);
     this.logger.debug?.(session.identity, LogContext.AUTH);
 
     const oryIdentity = session.identity as OryDefaultIdentitySchema;
-    return this.authService.createAgentInfo(oryIdentity, session);
+    const actorId = oryIdentity.metadata_public?.alkemio_actor_id;
+
+    if (!actorId) {
+      this.logger.warn?.(
+        'API session identity missing alkemio_actor_id in metadata_public',
+        LogContext.AUTH
+      );
+      return this.authActorInfoService.createAnonymous();
+    }
+
+    return this.authService.createActorContext(actorId, session);
   }
 }

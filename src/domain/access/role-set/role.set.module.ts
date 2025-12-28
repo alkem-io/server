@@ -12,8 +12,9 @@ import { PlatformInvitationModule } from '@domain/access/invitation.platform/pla
 import { InvitationModule } from '@domain/access/invitation/invitation.module';
 import { ApplicationModule } from '@domain/access/application/application.module';
 import { RoleModule } from '../role/role.module';
-import { AgentModule } from '@domain/agent/agent/agent.module';
+import { ActorModule } from '@domain/actor/actor/actor.module';
 import { ContributorModule } from '@domain/community/contributor/contributor.module';
+import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { RoleSetEventsService } from './role.set.service.events';
 import { AiServerAdapterModule } from '@services/adapters/ai-server-adapter/ai.server.adapter.module';
@@ -33,7 +34,7 @@ import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { OrganizationLookupModule } from '@domain/community/organization-lookup/organization.lookup.module';
 import { UserModule } from '@domain/community/user/user.module';
-import { RoleSetAgentRolesDataLoader } from './role.set.data.loaders.agent.roles';
+import { RoleSetActorRolesDataLoader } from './role.set.data.loaders.actor.roles';
 import { RoleSetMembershipStatusDataLoader } from './role.set.data.loader.membership.status';
 import { RoleSetCacheModule } from './role.set.service.cache.module';
 import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.module';
@@ -45,13 +46,14 @@ import { RoleSetResolverMutationsMembership } from './role.set.resolver.mutation
     AuthorizationPolicyModule,
     LicenseModule,
     FormModule,
-    AgentModule,
+    ActorModule,
     UserLookupModule,
     UserModule,
     OrganizationLookupModule,
     SpaceLookupModule,
     VirtualContributorLookupModule,
     ContributorModule,
+    ActorLookupModule,
     RoleModule,
     InvitationModule,
     EntityResolverModule,
@@ -79,7 +81,7 @@ import { RoleSetResolverMutationsMembership } from './role.set.resolver.mutation
     RoleSetEventsService,
     RoleSetServiceLifecycleApplication,
     RoleSetServiceLifecycleInvitation,
-    RoleSetAgentRolesDataLoader,
+    RoleSetActorRolesDataLoader,
     RoleSetMembershipStatusDataLoader,
   ],
   exports: [RoleSetService, RoleSetAuthorizationService, RoleSetLicenseService],

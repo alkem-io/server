@@ -3,7 +3,7 @@ import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { UpdateCollaborationFromSpaceTemplateInput } from './dto/template.applier.dto.update.collaboration';
 import { TemplateApplierService } from './template.applier.service';
@@ -35,7 +35,7 @@ export class TemplateApplierResolverMutations {
       'Updates a Collaboration, including InnovationFlow states, using the Space content from the specified Template.',
   })
   async updateCollaborationFromSpaceTemplate(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('updateData')
     updateData: UpdateCollaborationFromSpaceTemplateInput
   ): Promise<ICollaboration> {
@@ -61,7 +61,7 @@ export class TemplateApplierResolverMutations {
       );
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       targetCollaboration.authorization,
       AuthorizationPrivilege.UPDATE,
       `update InnovationFlow states from template: ${targetCollaboration.id}`
@@ -71,7 +71,7 @@ export class TemplateApplierResolverMutations {
       await this.templateApplierService.updateCollaborationFromSpaceTemplate(
         updateData,
         targetCollaboration,
-        agentInfo.userID
+        actorContext.actorId
       );
     // Reset the authorization policy to re-evaluate the access control rules.
     targetCollaboration =

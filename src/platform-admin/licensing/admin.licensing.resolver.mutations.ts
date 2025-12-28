@@ -1,6 +1,6 @@
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AssignLicensePlanToSpace } from './dto/admin.licensing.dto.assign.license.plan.to.space';
@@ -38,13 +38,13 @@ export class AdminLicensingResolverMutations {
     description: 'Creates an account in Wingback',
   })
   async createWingbackAccount(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('accountID', { type: () => UUID }) accountID: string
   ): Promise<string> {
     const account = await this.accountService.getAccountOrFail(accountID);
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       account.authorization,
       AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE,
       `create Wingback account for account (${accountID})`
@@ -57,7 +57,7 @@ export class AdminLicensingResolverMutations {
     description: 'Assign the specified LicensePlan to an Account.',
   })
   async assignLicensePlanToAccount(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('planData') planData: AssignLicensePlanToAccount
   ): Promise<IAccount> {
     let licensing: ILicensingFramework | undefined;
@@ -71,7 +71,7 @@ export class AdminLicensingResolverMutations {
     }
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       licensing.authorization,
       AuthorizationPrivilege.GRANT,
       `assign licensePlan (${planData.licensePlanID}) on account (${planData.accountID})`
@@ -95,7 +95,7 @@ export class AdminLicensingResolverMutations {
   })
   @Profiling.api
   async assignLicensePlanToSpace(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('planData') planData: AssignLicensePlanToSpace
   ): Promise<ISpace> {
     let licensing: ILicensingFramework | undefined;
@@ -109,7 +109,7 @@ export class AdminLicensingResolverMutations {
     }
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       licensing.authorization,
       AuthorizationPrivilege.GRANT,
       `assign licensePlan (${planData.licensePlanID}) on account (${planData.spaceID})`
@@ -133,7 +133,7 @@ export class AdminLicensingResolverMutations {
   })
   @Profiling.api
   async revokeLicensePlanFromAccount(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('planData') planData: RevokeLicensePlanFromAccount
   ): Promise<IAccount> {
     let licensing: ILicensingFramework | undefined;
@@ -147,7 +147,7 @@ export class AdminLicensingResolverMutations {
     }
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       licensing.authorization,
       AuthorizationPrivilege.GRANT,
       `revoke licensePlan (${planData.licensePlanID}) on account (${planData.accountID})`
@@ -172,7 +172,7 @@ export class AdminLicensingResolverMutations {
   })
   @Profiling.api
   async revokeLicensePlanFromSpace(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('planData') planData: RevokeLicensePlanFromSpace
   ): Promise<ISpace> {
     let licensing: ILicensingFramework | undefined;
@@ -186,7 +186,7 @@ export class AdminLicensingResolverMutations {
     }
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       licensing.authorization,
       AuthorizationPrivilege.GRANT,
       `revoke licensePlan (${planData.licensePlanID}) on account (${planData.spaceID})`
@@ -209,13 +209,13 @@ export class AdminLicensingResolverMutations {
   })
   @Profiling.api
   async resetLicenseOnAccounts(
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentUser() actorContext: ActorContext
   ): Promise<void> {
     const licensing =
       await this.licensingFrameworkService.getDefaultLicensingOrFail();
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       licensing.authorization,
       AuthorizationPrivilege.GRANT,
       'reset licenses on accounts'

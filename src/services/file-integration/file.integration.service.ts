@@ -37,8 +37,8 @@ export class FileIntegrationService {
       });
     }
 
-    const requesterAgentInfo =
-      await this.authenticationService.getAgentInfo(auth);
+    const requesterActorContext =
+      await this.authenticationService.getActorContext(auth);
 
     let document: IDocument | undefined;
     try {
@@ -65,7 +65,7 @@ export class FileIntegrationService {
     }
 
     const canRequesterReadDocument = this.authorizationService.isAccessGranted(
-      requesterAgentInfo,
+      requesterActorContext,
       document.authorization,
       AuthorizationPrivilege.READ
     );

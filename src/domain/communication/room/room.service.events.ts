@@ -1,12 +1,12 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { IMessage } from '../message/message.interface';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { ActivityInputCalloutPostComment } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.post.comment';
 import { IPost } from '@domain/collaboration/post/post.interface';
 import { IRoom } from './room.interface';
 import { NotificationInputPlatformForumDiscussionComment } from '@services/adapters/notification-adapter/dto/platform/notification.dto.input.platform.forum.discussion.comment';
-import { IDiscussion } from '../../../platform/forum-discussion/discussion.interface';
+import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
 import { ActivityInputUpdateSent } from '@services/adapters/activity-adapter/dto/activity.dto.input.update.sent';
 import { ActivityInputMessageRemoved } from '@services/adapters/activity-adapter/dto/activity.dto.input.message.removed';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
@@ -44,12 +44,12 @@ export class RoomServiceEvents {
   public async processNotificationCommentReply(
     room: IRoom,
     reply: IMessage,
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     messageOwnerId: string
   ) {
     // Send the notification
     const notificationInput: NotificationInputCommentReply = {
-      triggeredBy: agentInfo.userID,
+      triggeredBy: actorContext.actorId,
       roomId: room.id,
       messageRepliedToOwnerID: messageOwnerId,
       messageID: reply.id,
@@ -61,12 +61,12 @@ export class RoomServiceEvents {
     callout: ICallout,
     room: IRoom,
     message: IMessage,
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     mentionedUserIDs?: string[]
   ) {
     // Send the notification
     const notificationInput: NotificationInputCollaborationCalloutComment = {
-      triggeredBy: agentInfo.userID,
+      triggeredBy: actorContext.actorId,
       callout,
       comments: room,
       commentSent: message,
@@ -83,13 +83,13 @@ export class RoomServiceEvents {
     contribution: ICalloutContribution,
     room: IRoom,
     message: IMessage,
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     mentionedUserIDs?: string[]
   ) {
     // Send the notification
     const notificationInput: NotificationInputCollaborationCalloutPostContributionComment =
       {
-        triggeredBy: agentInfo.userID,
+        triggeredBy: actorContext.actorId,
         post,
         callout,
         contribution,
@@ -105,11 +105,11 @@ export class RoomServiceEvents {
   public async processNotificationForumDiscussionComment(
     discussion: IDiscussion,
     message: IMessage,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ) {
     const forumDiscussionCommentNotificationInput: NotificationInputPlatformForumDiscussionComment =
       {
-        triggeredBy: agentInfo.userID,
+        triggeredBy: actorContext.actorId,
         discussion,
         commentSent: message,
         userID: discussion.createdBy,
@@ -123,7 +123,7 @@ export class RoomServiceEvents {
     calendarEvent: ICalendarEvent,
     room: IRoom,
     message: IMessage,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ) {
     // Get space ID from calendar event's calendar
     if (!calendarEvent.calendar?.id) {
@@ -148,7 +148,7 @@ export class RoomServiceEvents {
 
     // Send the notification
     const notificationInput: NotificationInputCommunityCalendarEventComment = {
-      triggeredBy: agentInfo.userID,
+      triggeredBy: actorContext.actorId,
       calendarEvent,
       comments: room,
       commentSent: message,
@@ -164,10 +164,10 @@ export class RoomServiceEvents {
     post: IPost,
     room: IRoom,
     message: IMessage,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ) {
     const activityLogInput: ActivityInputCalloutPostComment = {
-      triggeredBy: agentInfo.userID,
+      triggeredBy: actorContext.actorId,
       post: post,
       message: message,
     };
@@ -187,19 +187,16 @@ export class RoomServiceEvents {
         name: post.profile.displayName,
         space: levelZeroSpaceID,
       },
-      {
-        id: agentInfo.userID,
-        email: agentInfo.email,
-      }
+      actorContext.actorId
     );
   }
 
   public async processActivityMessageRemoved(
     messageID: string,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ) {
     const activityMessageRemoved: ActivityInputMessageRemoved = {
-      triggeredBy: agentInfo.userID,
+      triggeredBy: actorContext.actorId,
       messageID: messageID,
     };
     await this.activityAdapter.messageRemoved(activityMessageRemoved);
@@ -208,10 +205,10 @@ export class RoomServiceEvents {
   public async processActivityUpdateSent(
     room: IRoom,
     message: IMessage,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ) {
     const activityLogInput: ActivityInputUpdateSent = {
-      triggeredBy: agentInfo.userID,
+      triggeredBy: actorContext.actorId,
       updates: room,
       message: message,
     };
@@ -232,20 +229,17 @@ export class RoomServiceEvents {
         name: '',
         space: levelZeroSpaceID,
       },
-      {
-        id: agentInfo.userID,
-        email: agentInfo.email,
-      }
+      actorContext.actorId
     );
   }
 
   public async processNotificationUpdateSent(
     updates: IRoom,
     lastMessage: IMessage,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ) {
     const notificationInput: NotificationInputUpdateSent = {
-      triggeredBy: agentInfo.userID,
+      triggeredBy: actorContext.actorId,
       updates: updates,
       lastMessage: lastMessage,
     };
@@ -257,10 +251,10 @@ export class RoomServiceEvents {
   public async processActivityCalloutCommentCreated(
     callout: ICallout,
     message: IMessage,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ) {
     const activityLogInput: ActivityInputCalloutDiscussionComment = {
-      triggeredBy: agentInfo.userID,
+      triggeredBy: actorContext.actorId,
       callout: callout,
       message,
     };
@@ -281,10 +275,7 @@ export class RoomServiceEvents {
         name: callout.nameID,
         space: levelZeroSpaceID,
       },
-      {
-        id: agentInfo.userID,
-        email: agentInfo.email,
-      }
+      actorContext.actorId
     );
   }
 }

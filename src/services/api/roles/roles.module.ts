@@ -11,10 +11,7 @@ import { SpaceFilterModule } from '@services/infrastructure/space-filter/space.f
 import { InvitationModule } from '@domain/access/invitation/invitation.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { RolesResolverFields } from './roles.resolver.fields';
-import { ContributorLookupModule } from '@services/infrastructure/contributor-lookup/contributor.lookup.module';
-import { OrganizationLookupModule } from '@domain/community/organization-lookup/organization.lookup.module';
-import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
-import { VirtualContributorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
+import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
 
 @Module({
   imports: [
@@ -23,10 +20,7 @@ import { VirtualContributorLookupModule } from '@domain/community/virtual-contri
     ApplicationModule,
     InvitationModule,
     CommunityModule,
-    UserLookupModule,
-    OrganizationLookupModule,
-    VirtualContributorLookupModule,
-    ContributorLookupModule,
+    ActorLookupModule,
     SpaceModule,
     PlatformAuthorizationPolicyModule,
     SpaceFilterModule,

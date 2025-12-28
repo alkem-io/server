@@ -36,13 +36,13 @@ import { ConfigService } from '@nestjs/config/dist/config.service';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
-import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
+import { IActor } from '@domain/actor/actor/actor.interface';
 import { AlkemioConfig } from '@src/types';
 import { ClientProxy } from '@nestjs/microservices';
 import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
 import { NotificationEvent } from '@common/enums/notification.event';
-import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
+import { ActorType } from '@common/enums/actor.type';
 import { ISpace } from '@domain/space/space/space.interface';
 import { UserPayload } from '@alkemio/notifications-lib/dist/dto/user.payload';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
@@ -53,7 +53,6 @@ import { NotificationInputCollaborationCalloutComment } from '../notification-ad
 import { NotificationInputCollaborationCalloutPostContributionComment } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.post.contribution.comment';
 import { MessageDetails } from '@domain/communication/message.details/message.details.interface';
 import { ICalendarEvent } from '@domain/timeline/event/event.interface';
-import { getContributorType } from '@domain/community/contributor/get.contributor.type';
 
 interface CalloutContributionPayload {
   id: string;
@@ -67,7 +66,7 @@ interface CalloutContributionPayload {
 @Injectable()
 export class NotificationExternalAdapter {
   constructor(
-    private contributorLookupService: ContributorLookupService,
+    private actorLookupService: ActorLookupService,
     private userLookupService: UserLookupService,
     private configService: ConfigService<AlkemioConfig, true>,
     private urlGeneratorService: UrlGeneratorService,
@@ -133,7 +132,7 @@ export class NotificationExternalAdapter {
     triggeredBy: string,
     recipients: IUser[],
     virtualContributorID: string,
-    accountHost: IContributor,
+    accountHost: IActor,
     space: ISpace,
     welcomeMessage?: string
   ): Promise<NotificationEventPayloadSpaceCommunityInvitationVirtualContributor> {
@@ -198,7 +197,7 @@ export class NotificationExternalAdapter {
         firstName: '',
         lastName: '',
         id: '',
-        type: RoleSetContributorType.USER,
+        type: ActorType.USER,
         profile: {
           url: '',
           displayName: '',
@@ -441,7 +440,7 @@ export class NotificationExternalAdapter {
       },
       comment: {
         message: messageResult.message,
-        createdBy: await this.getContributorPayloadByAgentIdOrFail(
+        createdBy: await this.getContributorPayloadByActorIdOrFail(
           messageResult.sender
         ),
       },
@@ -718,7 +717,7 @@ export class NotificationExternalAdapter {
       },
       comment: {
         message: message.message,
-        createdBy: await this.getContributorPayloadByAgentIdOrFail(
+        createdBy: await this.getContributorPayloadByActorIdOrFail(
           message.sender
         ),
         url: '',
@@ -960,12 +959,14 @@ export class NotificationExternalAdapter {
   private async getContributorPayloadOrFail(
     contributorID: string
   ): Promise<ContributorPayload> {
-    const contributor =
-      await this.contributorLookupService.getContributorByUUID(contributorID, {
+    const contributor = await this.actorLookupService.getFullActorById(
+      contributorID,
+      {
         relations: {
           profile: true,
         },
-      });
+      }
+    );
 
     if (!contributor || !contributor.profile) {
       throw new EntityNotFoundException(
@@ -974,7 +975,7 @@ export class NotificationExternalAdapter {
       );
     }
 
-    const contributorType = getContributorType(contributor);
+    const contributorType = contributor.type;
 
     const contributorURL =
       this.urlGeneratorService.createUrlForContributor(contributor);
@@ -989,24 +990,26 @@ export class NotificationExternalAdapter {
     return result;
   }
 
-  private async getContributorPayloadByAgentIdOrFail(
-    agentId: string
+  private async getContributorPayloadByActorIdOrFail(
+    actorId: string
   ): Promise<ContributorPayload> {
-    const contributor =
-      await this.contributorLookupService.getContributorByAgentId(agentId, {
+    const contributor = await this.actorLookupService.getFullActorById(
+      actorId,
+      {
         relations: {
           profile: true,
         },
-      });
+      }
+    );
 
     if (!contributor || !contributor.profile) {
       throw new EntityNotFoundException(
-        `Unable to find Contributor with profile for agent id: ${agentId}`,
+        `Unable to find Contributor with profile for actor id: ${actorId}`,
         LogContext.COMMUNITY
       );
     }
 
-    const contributorType = getContributorType(contributor);
+    const contributorType = contributor.type;
 
     const contributorURL =
       this.urlGeneratorService.createUrlForContributor(contributor);
@@ -1022,7 +1025,7 @@ export class NotificationExternalAdapter {
   }
 
   private async getUserPayloadOrFail(userID: string): Promise<UserPayload> {
-    const user = await this.userLookupService.getUserOrFail(userID, {
+    const user = await this.userLookupService.getUserByIdOrFail(userID, {
       relations: {
         profile: true,
       },
@@ -1040,7 +1043,7 @@ export class NotificationExternalAdapter {
         displayName: user.profile.displayName,
         url: userURL,
       },
-      type: RoleSetContributorType.USER,
+      type: ActorType.USER,
     };
     return result;
   }
@@ -1055,7 +1058,7 @@ export class NotificationExternalAdapter {
         displayName: user.profile.displayName,
         url: this.urlGeneratorService.createUrlForUserNameID(user.nameID),
       },
-      type: RoleSetContributorType.USER,
+      type: ActorType.USER,
     };
   }
 
@@ -1073,7 +1076,7 @@ export class NotificationExternalAdapter {
           displayName: '',
           url: '',
         },
-        type: RoleSetContributorType.USER,
+        type: ActorType.USER,
       };
     }
 

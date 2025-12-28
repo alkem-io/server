@@ -1,7 +1,7 @@
 import { Args, Resolver, Query } from '@nestjs/graphql';
 import { CurrentUser } from '@src/common/decorators';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { NotificationRecipientsService } from './notification.recipients.service';
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
@@ -24,15 +24,15 @@ export class NotificationRecipientsResolverQueries {
       'The notificationRecipients for the provided event on the given entity.',
   })
   async notificationRecipients(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('eventData')
     eventData: NotificationRecipientsInput
   ): Promise<NotificationRecipientResult> {
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `notificationRecipients query: ${agentInfo.email}`
+      `notificationRecipients query: ${actorContext.actorId}`
     );
     return this.notificationRecipientsServices.getRecipients(eventData);
   }

@@ -1,6 +1,6 @@
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { IPlatform } from './platform.interface';
@@ -33,15 +33,15 @@ export class PlatformResolverMutations {
   })
   @Profiling.api
   async authorizationPolicyResetOnPlatform(
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentUser() actorContext: ActorContext
   ): Promise<IPlatform> {
     const platformPolicy =
       await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       platformPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN, // TODO: back to authorization reset
-      `reset authorization on platform: ${agentInfo.email}`
+      `reset authorization on platform: ${actorContext.actorId}`
     );
     const updatedAuthorizations =
       await this.platformAuthorizationService.applyAuthorizationPolicy();
@@ -53,13 +53,13 @@ export class PlatformResolverMutations {
     description: 'Updates one of the Setting on the Platform',
   })
   async updatePlatformSettings(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('settingsData') settingsData: UpdatePlatformSettingsInput
   ): Promise<IPlatformSettings> {
     const platform = await this.platformService.getPlatformOrFail();
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       platform.authorization,
       AuthorizationPrivilege.PLATFORM_SETTINGS_ADMIN,
       `platform settings update: ${JSON.stringify(settingsData.integration)}`
@@ -78,13 +78,13 @@ export class PlatformResolverMutations {
     description: 'Adds an Iframe Allowed URL to the Platform Settings',
   })
   async addIframeAllowedURL(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('whitelistedURL') whitelistedURL: string
   ): Promise<string[]> {
     const platform = await this.platformService.getPlatformOrFail();
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       platform.authorization,
       AuthorizationPrivilege.PLATFORM_ADMIN,
       `add iframe URL: ${whitelistedURL}`
@@ -104,13 +104,13 @@ export class PlatformResolverMutations {
     description: 'Removes an Iframe Allowed URL from the Platform Settings',
   })
   async removeIframeAllowedURL(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('whitelistedURL') whitelistedURL: string
   ): Promise<string[]> {
     const platform = await this.platformService.getPlatformOrFail();
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       platform.authorization,
       AuthorizationPrivilege.PLATFORM_ADMIN,
       `remove iframe URL: ${whitelistedURL}`
@@ -131,13 +131,13 @@ export class PlatformResolverMutations {
       'Adds a full email address to the platform notification blacklist',
   })
   async addNotificationEmailToBlacklist(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('input') input: NotificationEmailAddressInput
   ): Promise<string[]> {
     const platform = await this.platformService.getPlatformOrFail();
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       platform.authorization,
       AuthorizationPrivilege.PLATFORM_ADMIN,
       `add notification email to blacklist: ${input.email}`
@@ -158,13 +158,13 @@ export class PlatformResolverMutations {
       'Removes an email address from the platform notification blacklist',
   })
   async removeNotificationEmailFromBlacklist(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('input') input: NotificationEmailAddressInput
   ): Promise<string[]> {
     const platform = await this.platformService.getPlatformOrFail();
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       platform.authorization,
       AuthorizationPrivilege.PLATFORM_ADMIN,
       `remove notification email from blacklist: ${input.email}`

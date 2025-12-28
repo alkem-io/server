@@ -2,7 +2,7 @@
 // It uses the IOrganization interface for type safety.
 import { IOrganization } from '@domain/community/organization/organization.interface';
 import { ProfileType } from '@common/enums/profile.type';
-import { AgentType } from '@common/enums/agent.type';
+import { ActorType } from '@common/enums/actor.type';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
@@ -11,6 +11,7 @@ import { RoleSetType } from '@common/enums/role.set.type';
 
 export const organizationData: { organization: IOrganization } = {
   organization: {
+    type: ActorType.ORGANIZATION,
     legalEntityName: '',
     domain: '',
     website: '',
@@ -78,114 +79,16 @@ export const organizationData: { organization: IOrganization } = {
       createdDate: new Date('2024-01-01T00:00:00.000Z'),
       updatedDate: new Date('2024-01-01T00:00:00.000Z'),
     },
-    agent: {
-      type: AgentType.ORGANIZATION,
-      id: '8f5c08b1-444a-42c0-8f48-58b3ddef53b0',
-      authorization: {
-        type: AuthorizationPolicyType.AGENT,
-        credentialRules: [
-          {
-            name: '1',
-            criterias: [
-              { type: AuthorizationCredential.GLOBAL_ADMIN, resourceID: '' },
-            ],
-            grantedPrivileges: [
-              AuthorizationPrivilege.CREATE,
-              AuthorizationPrivilege.GRANT,
-              AuthorizationPrivilege.READ,
-              AuthorizationPrivilege.UPDATE,
-              AuthorizationPrivilege.DELETE,
-            ],
-            cascade: true,
-          },
-          {
-            name: '2',
-            criterias: [
-              { type: AuthorizationCredential.GLOBAL_SUPPORT, resourceID: '' },
-            ],
-            grantedPrivileges: [
-              AuthorizationPrivilege.GRANT,
-              AuthorizationPrivilege.CREATE,
-              AuthorizationPrivilege.READ,
-              AuthorizationPrivilege.UPDATE,
-              AuthorizationPrivilege.DELETE,
-            ],
-            cascade: true,
-          },
-          {
-            name: 'org-admin',
-            criterias: [
-              {
-                type: AuthorizationCredential.ORGANIZATION_ADMIN,
-                resourceID: '03bb5b07-f134-4074-97b9-1dd7950c7fa4',
-              },
-            ],
-            grantedPrivileges: [
-              AuthorizationPrivilege.GRANT,
-              AuthorizationPrivilege.CREATE,
-              AuthorizationPrivilege.READ,
-              AuthorizationPrivilege.UPDATE,
-              AuthorizationPrivilege.DELETE,
-            ],
-            cascade: true,
-          },
-          {
-            name: 'org-owner',
-            criterias: [
-              {
-                type: AuthorizationCredential.ORGANIZATION_OWNER,
-                resourceID: '03bb5b07-f134-4074-97b9-1dd7950c7fa4',
-              },
-            ],
-            grantedPrivileges: [
-              AuthorizationPrivilege.GRANT,
-              AuthorizationPrivilege.CREATE,
-              AuthorizationPrivilege.READ,
-              AuthorizationPrivilege.UPDATE,
-              AuthorizationPrivilege.DELETE,
-            ],
-            cascade: true,
-          },
-          {
-            name: 'org-associate',
-            criterias: [
-              {
-                type: AuthorizationCredential.ORGANIZATION_ASSOCIATE,
-                resourceID: '03bb5b07-f134-4074-97b9-1dd7950c7fa4',
-              },
-            ],
-            grantedPrivileges: [AuthorizationPrivilege.READ],
-            cascade: true,
-          },
-          {
-            name: 'global-registered',
-            criterias: [
-              {
-                type: AuthorizationCredential.GLOBAL_REGISTERED,
-                resourceID: '',
-              },
-            ],
-            grantedPrivileges: [AuthorizationPrivilege.READ],
-            cascade: true,
-          },
-        ],
-        privilegeRules: [],
-        id: '28b65c95-a2ff-49aa-a654-a04bad7991aa',
-        createdDate: new Date('2024-01-01T00:00:00.000Z'),
-        updatedDate: new Date('2024-01-01T00:00:00.000Z'),
+    // Organization IS an Actor - credentials are directly on the entity
+    credentials: [
+      {
+        type: AuthorizationCredential.ACCOUNT_ADMIN,
+        resourceID: '00655835-4d15-4546-801e-1ab80ac3078a',
+        id: 'bc898751-6ea0-4c1f-93e8-9c01e985ce72',
+        createdDate: new Date('2025-05-14T00:00:00.000Z'),
+        updatedDate: new Date('2025-05-14T00:00:00.000Z'),
       },
-      credentials: [
-        {
-          type: AuthorizationCredential.ACCOUNT_ADMIN,
-          resourceID: '00655835-4d15-4546-801e-1ab80ac3078a',
-          id: 'bc898751-6ea0-4c1f-93e8-9c01e985ce72',
-          createdDate: new Date('2025-05-14T00:00:00.000Z'),
-          updatedDate: new Date('2025-05-14T00:00:00.000Z'),
-        },
-      ],
-      createdDate: new Date('2024-01-01T00:00:00.000Z'),
-      updatedDate: new Date('2024-01-01T00:00:00.000Z'),
-    },
+    ],
     authorization: {
       type: AuthorizationPolicyType.PROFILE,
       credentialRules: [

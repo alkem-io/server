@@ -409,11 +409,11 @@ public async processNotificationCalendarEventComment(
   calendarEvent: ICalendarEvent,
   room: IRoom,
   message: IMessage,
-  agentInfo: AgentInfo
+  actorContext: AgentInfo
 ) {
   // Send the notification
   const notificationInput: NotificationInputCommunityCalendarEventComment = {
-    triggeredBy: agentInfo.userID,
+    triggeredBy: actorContext.userID,
     calendarEvent,
     comments: room,
     commentSent: message,
@@ -482,7 +482,7 @@ case RoomType.CALENDAR_EVENT:
     mentions,
     room,
     message,
-    agentInfo
+    actorContext
   );
 
   // ADD THIS:
@@ -490,7 +490,7 @@ case RoomType.CALENDAR_EVENT:
     calendarEvent,
     room,
     message,
-    agentInfo
+    actorContext
   );
 
   break;

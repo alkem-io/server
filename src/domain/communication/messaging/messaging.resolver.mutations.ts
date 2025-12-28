@@ -3,21 +3,19 @@ import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IConversation } from '../conversation/conversation.interface';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { MessagingService } from './messaging.service';
 import { LogContext } from '@common/enums/logging.context';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import {
-  CreateConversationInput,
-  CreateConversationData,
-} from '@domain/communication/conversation/dto';
+import { CreateConversationInput } from '@domain/communication/conversation/dto';
 import { MessagingNotEnabledException } from '@common/exceptions/messaging.not.enabled.exception';
-import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
-import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { ValidationException } from '@common/exceptions/validation.exception';
+import { ActorLookupService } from '@domain/actor/actor-lookup';
+import { ActorType } from '@common/enums/actor.type';
 
 @InstrumentResolver()
 @Resolver()
@@ -26,7 +24,7 @@ export class MessagingResolverMutations {
     private readonly authorizationService: AuthorizationService,
     private readonly messagingService: MessagingService,
     private readonly userLookupService: UserLookupService,
-    private readonly virtualContributorLookupService: VirtualContributorLookupService,
+    private readonly actorLookupService: ActorLookupService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -34,75 +32,59 @@ export class MessagingResolverMutations {
     description: 'Create a new Conversation on the Messaging.',
   })
   async createConversation(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('conversationData')
     conversationData: CreateConversationInput
   ): Promise<IConversation> {
-    // Get the platform messaging
-    const messaging = await this.messagingService.getPlatformMessaging();
+    // Validate input
+    if (
+      !conversationData.receiverActorId &&
+      !conversationData.wellKnownVirtualContributor
+    ) {
+      throw new ValidationException(
+        'Either receiverActorId or wellKnownVirtualContributor must be provided',
+        LogContext.COMMUNICATION_CONVERSATION
+      );
+    }
 
+    // Auth check on platform messaging
+    const messaging = await this.messagingService.getPlatformMessaging();
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       messaging.authorization,
       AuthorizationPrivilege.CREATE,
       `create conversation on messaging: ${messaging.id}`
     );
 
-    // Infer conversation type from input
-    const isUserVc =
-      !!conversationData.virtualContributorID ||
-      !!conversationData.wellKnownVirtualContributor;
-    const conversationType = isUserVc
-      ? CommunicationConversationType.USER_VC
-      : CommunicationConversationType.USER_USER;
-
-    // Also check if the receiving user wants to accept conversations
-    if (conversationType === CommunicationConversationType.USER_USER) {
-      await this.checkReceivingUserAccessAndSettings(
-        agentInfo,
-        conversationData.userID
+    // For user-to-user conversations, check receiving user's settings
+    if (
+      conversationData.receiverActorId &&
+      !conversationData.wellKnownVirtualContributor
+    ) {
+      const receiverType = await this.actorLookupService.getActorTypeById(
+        conversationData.receiverActorId
       );
-    }
-
-    // Resolve current user's agent ID
-    const currentUser = await this.userLookupService.getUserOrFail(
-      agentInfo.userID,
-      { relations: { agent: true } }
-    );
-    const callerAgentId = currentUser.agent.id;
-
-    // Build internal DTO with agent IDs
-    const internalData: CreateConversationData = {
-      callerAgentId,
-      wellKnownVirtualContributor: conversationData.wellKnownVirtualContributor,
-    };
-
-    // Resolve invited party to agent ID
-    if (conversationData.virtualContributorID) {
-      const vc =
-        await this.virtualContributorLookupService.getVirtualContributorOrFail(
-          conversationData.virtualContributorID,
-          { relations: { agent: true } }
+      if (receiverType === ActorType.USER) {
+        await this.checkReceivingUserAccessAndSettings(
+          actorContext,
+          conversationData.receiverActorId
         );
-      internalData.invitedAgentId = vc.agent.id;
-    } else if (!conversationData.wellKnownVirtualContributor) {
-      // User-to-user: resolve other user's agent ID
-      const otherUser = await this.userLookupService.getUserOrFail(
-        conversationData.userID,
-        { relations: { agent: true } }
-      );
-      internalData.invitedAgentId = otherUser.agent.id;
+      }
     }
 
-    // Authorization is now applied directly within createConversation
-    return await this.messagingService.createConversation(internalData);
+    // Delegate to service - it handles wellKnownVC resolution and type checking
+    return await this.messagingService.createConversation(
+      actorContext.actorId,
+      conversationData.receiverActorId,
+      conversationData.wellKnownVirtualContributor
+    );
   }
 
   private async checkReceivingUserAccessAndSettings(
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     receivingUserID: string
   ) {
-    const receivingUser = await this.userLookupService.getUserOrFail(
+    const receivingUser = await this.userLookupService.getUserByIdOrFail(
       receivingUserID,
       {
         relations: {
@@ -111,10 +93,10 @@ export class MessagingResolverMutations {
       }
     );
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       receivingUser.authorization,
       AuthorizationPrivilege.READ,
-      `user ${agentInfo.userID} starting conversation with: ${receivingUser.id}`
+      `user ${actorContext.actorId} starting conversation with: ${receivingUser.id}`
     );
 
     if (!receivingUser.settings) {
@@ -124,14 +106,13 @@ export class MessagingResolverMutations {
       );
     }
 
-    // Check if the user is willing to receive messages
     if (!receivingUser.settings.communication.allowOtherUsersToSendMessages) {
       throw new MessagingNotEnabledException(
         'User is not open to receiving messages',
         LogContext.USER,
         {
           userId: receivingUser.id,
-          senderId: agentInfo.userID,
+          senderId: actorContext.actorId,
         }
       );
     }

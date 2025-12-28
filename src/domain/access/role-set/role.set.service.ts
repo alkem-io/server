@@ -23,29 +23,28 @@ import { InvitationService } from '@domain/access/invitation/invitation.service'
 import { RoleSet } from './role.set.entity';
 import { IRoleSet } from './role.set.interface';
 import { RoleService } from '../role/role.service';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import { IRole } from '../role/role.interface';
+import { IActorRolePolicy } from '../role/actor.role.policy.interface';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
-import { AgentService } from '@domain/agent/agent/agent.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { IInvitation } from '../invitation/invitation.interface';
+import { ActorService } from '@domain/actor/actor/actor.service';
+import { ActorContext } from '@core/actor-context';
+import { IInvitation } from '@domain/access/invitation';
 import { IUser } from '@domain/community/user/user.interface';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
-import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { ActorType } from '@common/enums/actor.type';
+import { IActor } from '@domain/actor/actor/actor.interface';
 import { RoleSetRoleImplicit } from '@common/enums/role.set.role.implicit';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { RoleName } from '@common/enums/role.name';
-import { IApplication } from '../application/application.interface';
+import { IApplication } from '@domain/access/application';
 import { IOrganization } from '@domain/community/organization/organization.interface';
-import { IAgent } from '@domain/agent/agent/agent.interface';
 import { RoleSetUpdateType } from '@common/enums/role.set.update.type';
 import { RoleSetMembershipException } from '@common/exceptions/role.set.membership.exception';
-import { CreateApplicationInput } from '../application/dto/application.dto.create';
-import { CreateInvitationInput } from '../invitation/dto/invitation.dto.create';
+import { CreateApplicationInput } from '@domain/access/application';
+import { CreateInvitationInput } from '@domain/access/invitation';
 import { IPlatformInvitation } from '@domain/access/invitation.platform/platform.invitation.interface';
 import { CreatePlatformInvitationInput } from '@domain/access/invitation.platform/dto/platform.invitation.dto.create';
-import { ContributorService } from '@domain/community/contributor/contributor.service';
 import { RoleSetEventsService } from './role.set.service.events';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
@@ -58,6 +57,7 @@ import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.da
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { RoleSetType } from '@common/enums/role.set.type';
 import { RoleSetCacheService } from './role.set.service.cache';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
@@ -72,8 +72,8 @@ export class RoleSetService {
     private platformInvitationService: PlatformInvitationService,
     private formService: FormService,
     private roleService: RoleService,
-    private agentService: AgentService,
-    private contributorService: ContributorService,
+    private actorService: ActorService,
+    private actorLookupService: ActorLookupService,
     private userLookupService: UserLookupService,
     private organizationLookupService: OrganizationLookupService,
     private spaceLookupService: SpaceLookupService,
@@ -263,29 +263,35 @@ export class RoleSetService {
   }
 
   private async removeAllRoleAssignments(roleSet: IRoleSet) {
-    // Remove all issued role credentials for contributors
+    // Remove all issued role credentials for all contributor types
     const roleNames = await this.getRoleNames(roleSet);
     for (const roleName of roleNames) {
-      const users = await this.getUsersWithRole(roleSet, roleName);
-      for (const user of users) {
-        await this.removeUserFromRole(roleSet, roleName, user.id, false);
+      // UNIFIED: Get all contributors (users, orgs, VCs) with this role
+      const contributors = await this.getActorsWithRole(roleSet, roleName);
+      for (const contributor of contributors) {
+        await this.removeActorFromRole(
+          roleSet,
+          roleName,
+          contributor.id,
+          false
+        );
       }
 
-      // Remove all implicit role assignments
+      // Handle implicit role credentials (these are user-specific)
       if (roleSet.type === RoleSetType.SPACE) {
         const invitees = await this.getUsersWithImplicitSpaceRole(
           roleSet,
           AuthorizationCredential.SPACE_MEMBER_INVITEE
         );
         for (const invitee of invitees) {
-          await this.removeUserFromRole(roleSet, roleName, invitee.id, false);
+          await this.removeActorFromRole(roleSet, roleName, invitee.id, false);
         }
         const subspace_admins = await this.getUsersWithImplicitSpaceRole(
           roleSet,
           AuthorizationCredential.SPACE_SUBSPACE_ADMIN
         );
         for (const subspaceAdmin of subspace_admins) {
-          await this.removeUserFromRole(
+          await this.removeActorFromRole(
             roleSet,
             roleName,
             subspaceAdmin.id,
@@ -298,7 +304,7 @@ export class RoleSetService {
         const accountAdmins =
           await this.getUsersWithImplicitOrganizationAccountAdminRole(roleSet);
         for (const accountAdmin of accountAdmins) {
-          await this.removeUserFromRole(
+          await this.removeActorFromRole(
             roleSet,
             roleName,
             accountAdmin.id,
@@ -306,67 +312,41 @@ export class RoleSetService {
           );
         }
       }
-
-      const organizations = await this.getOrganizationsWithRole(
-        roleSet,
-        roleName
-      );
-      for (const organization of organizations) {
-        await this.removeOrganizationFromRole(
-          roleSet,
-          roleName,
-          organization.id,
-          false
-        );
-      }
-
-      const virtualContributors = await this.getVirtualContributorsWithRole(
-        roleSet,
-        roleName
-      );
-      for (const virtualContributor of virtualContributors) {
-        await this.removeVirtualFromRole(
-          roleSet,
-          roleName,
-          virtualContributor.id,
-          false
-        );
-      }
     }
   }
 
-  async getRolesForAgentInfo(
-    agentInfo: AgentInfo,
+  async getRolesForActorContext(
+    actorContext: ActorContext,
     roleSet: IRoleSet
   ): Promise<RoleName[]> {
-    if (!agentInfo.agentID) {
+    if (!actorContext.actorId) {
       return [];
     }
 
-    const cached = await this.roleSetCacheService.getAgentRolesFromCache(
-      agentInfo.agentID,
+    const cached = await this.roleSetCacheService.getActorRolesFromCache(
+      actorContext.actorId,
       roleSet.id
     );
     if (cached) {
       return cached;
     }
-    const agent = await this.agentService.getAgentOrFail(agentInfo.agentID);
+    const actorId = actorContext.actorId;
     const roles: RoleName[] = await this.getRoleNames(roleSet);
-    const rolesThatAgentHas = await Promise.all(
+    const rolesThatActorHas = await Promise.all(
       roles.map(async role => {
-        const hasAgentRole = await this.isInRole(agent, roleSet, role);
-        return hasAgentRole ? role : undefined;
+        const hasActorRole = await this.isInRole(actorId, roleSet, role);
+        return hasActorRole ? role : undefined;
       })
     );
-    const agentRoles = rolesThatAgentHas.filter(
+    const actorRoles = rolesThatActorHas.filter(
       (role): role is RoleName => role !== undefined
     );
-    await this.roleSetCacheService.setAgentRolesCache(
-      agent.id,
+    await this.roleSetCacheService.setActorRolesCache(
+      actorId,
       roleSet.id,
-      agentRoles
+      actorRoles
     );
-    return agentRoles;
+    return actorRoles;
   }
 
   public async findOpenApplication(
@@ -401,27 +381,27 @@ export class RoleSetService {
     return undefined;
   }
 
-  async getMembershipStatusByAgentInfo(
-    agentInfo: AgentInfo,
+  async getMembershipStatusByActorContext(
+    actorContext: ActorContext,
     roleSet: IRoleSet
   ): Promise<CommunityMembershipStatus> {
-    if (!agentInfo.agentID) {
+    if (!actorContext.actorId) {
       return CommunityMembershipStatus.NOT_MEMBER;
     }
 
     const cached = await this.roleSetCacheService.getMembershipStatusFromCache(
-      agentInfo.agentID,
+      actorContext.actorId,
       roleSet.id
     );
     if (cached) {
       return cached;
     }
 
-    const agent = await this.agentService.getAgentOrFail(agentInfo.agentID);
-    const isMember = await this.isMember(agent, roleSet);
+    const actorId = actorContext.actorId;
+    const isMember = await this.isMember(actorId, roleSet);
     if (isMember) {
       await this.roleSetCacheService.setMembershipStatusCache(
-        agent.id,
+        actorId,
         roleSet.id,
         CommunityMembershipStatus.MEMBER
       );
@@ -429,29 +409,23 @@ export class RoleSetService {
       return CommunityMembershipStatus.MEMBER;
     }
 
-    const openApplication = await this.findOpenApplication(
-      agentInfo.userID,
-      roleSet.id
-    );
+    const openApplication = await this.findOpenApplication(actorId, roleSet.id);
     if (openApplication) {
       await this.roleSetCacheService.setMembershipStatusCache(
-        agent.id,
+        actorId,
         roleSet.id,
         CommunityMembershipStatus.APPLICATION_PENDING
       );
       return CommunityMembershipStatus.APPLICATION_PENDING;
     }
 
-    const openInvitation = await this.findOpenInvitation(
-      agentInfo.userID,
-      roleSet.id
-    );
+    const openInvitation = await this.findOpenInvitation(actorId, roleSet.id);
     if (
       openInvitation &&
       (await this.invitationService.canInvitationBeAccepted(openInvitation.id))
     ) {
       await this.roleSetCacheService.setMembershipStatusCache(
-        agent.id,
+        actorId,
         roleSet.id,
         CommunityMembershipStatus.INVITATION_PENDING
       );
@@ -459,7 +433,7 @@ export class RoleSetService {
     }
 
     await this.roleSetCacheService.setMembershipStatusCache(
-      agent.id,
+      actorId,
       roleSet.id,
       CommunityMembershipStatus.NOT_MEMBER
     );
@@ -468,11 +442,11 @@ export class RoleSetService {
   }
 
   public async findOpenInvitation(
-    contributorID: string,
+    actorId: string,
     roleSetID: string
   ): Promise<IInvitation | undefined> {
     const cached = await this.roleSetCacheService.getOpenInvitationFromCache(
-      contributorID,
+      actorId,
       roleSetID
     );
     if (cached) {
@@ -480,7 +454,7 @@ export class RoleSetService {
     }
 
     const invitations = await this.invitationService.findExistingInvitations(
-      contributorID,
+      actorId,
       roleSetID
     );
     for (const invitation of invitations) {
@@ -492,7 +466,7 @@ export class RoleSetService {
         continue;
       }
       await this.roleSetCacheService.setOpenInvitationCache(
-        contributorID,
+        actorId,
         roleSetID,
         invitation
       );
@@ -501,22 +475,58 @@ export class RoleSetService {
     return undefined;
   }
 
+  // UNIFIED: Get actors with role, optionally filtered by type
+  // TypeORM inheritance returns concrete types automatically
+  public async getActorsWithRole(
+    roleSet: IRoleSet,
+    roleType: RoleName,
+    actorTypes?: ActorType[],
+    limit?: number
+  ): Promise<IActor[]> {
+    const membershipCredential = await this.getCredentialDefinitionForRole(
+      roleSet,
+      roleType
+    );
+    return await this.actorLookupService.actorsWithCredentials(
+      {
+        type: membershipCredential.type,
+        resourceID: membershipCredential.resourceID,
+      },
+      actorTypes,
+      limit
+    );
+  }
+
+  // Convenience methods for GraphQL resolvers that need specific types
   public async getUsersWithRole(
     roleSet: IRoleSet,
     roleType: RoleName,
     limit?: number
   ): Promise<IUser[]> {
-    const membershipCredential = await this.getCredentialDefinitionForRole(
+    return (await this.getActorsWithRole(
       roleSet,
-      roleType
-    );
-    return await this.userLookupService.usersWithCredential(
-      {
-        type: membershipCredential.type,
-        resourceID: membershipCredential.resourceID,
-      },
+      roleType,
+      [ActorType.USER],
       limit
-    );
+    )) as IUser[];
+  }
+
+  public async getOrganizationsWithRole(
+    roleSet: IRoleSet,
+    roleType: RoleName
+  ): Promise<IOrganization[]> {
+    return (await this.getActorsWithRole(roleSet, roleType, [
+      ActorType.ORGANIZATION,
+    ])) as IOrganization[];
+  }
+
+  public async getVirtualContributorsWithRole(
+    roleSet: IRoleSet,
+    roleType: RoleName
+  ): Promise<IVirtualContributor[]> {
+    return (await this.getActorsWithRole(roleSet, roleType, [
+      ActorType.VIRTUAL,
+    ])) as IVirtualContributor[];
   }
 
   private async getUsersWithImplicitSpaceRole(
@@ -576,63 +586,23 @@ export class RoleSetService {
     return eligibleVirtualContributors;
   }
 
-  public async getVirtualContributorsWithRole(
-    roleSet: IRoleSet,
-    roleType: RoleName
-  ): Promise<IVirtualContributor[]> {
-    const membershipCredential = await this.getCredentialDefinitionForRole(
-      roleSet,
-      roleType
-    );
-    return await this.virtualContributorLookupService.virtualContributorsWithCredentials(
-      {
-        type: membershipCredential.type,
-        resourceID: membershipCredential.resourceID,
-      }
-    );
-  }
-
-  public async getOrganizationsWithRole(
-    roleSet: IRoleSet,
-    roleType: RoleName
-  ): Promise<IOrganization[]> {
-    const membershipCredential = await this.getCredentialDefinitionForRole(
-      roleSet,
-      roleType
-    );
-    return await this.organizationLookupService.organizationsWithCredentials({
-      type: membershipCredential.type,
-      resourceID: membershipCredential.resourceID,
-    });
-  }
-
-  public async countContributorsPerRole(
+  // Count actors with role, optionally filtered by type
+  public async countActorsWithRole(
     roleSet: IRoleSet,
     roleType: RoleName,
-    contributorType: RoleSetContributorType
+    actorTypes?: ActorType[]
   ): Promise<number> {
     const membershipCredential = await this.getCredentialDefinitionForRole(
       roleSet,
       roleType
     );
-
-    if (contributorType === RoleSetContributorType.ORGANIZATION) {
-      return await this.organizationLookupService.countOrganizationsWithCredentials(
-        {
-          type: membershipCredential.type,
-          resourceID: membershipCredential.resourceID,
-        }
-      );
-    }
-
-    if (contributorType === RoleSetContributorType.USER) {
-      return await this.userLookupService.countUsersWithCredentials({
+    return await this.actorLookupService.countActorsWithCredentials(
+      {
         type: membershipCredential.type,
         resourceID: membershipCredential.resourceID,
-      });
-    }
-
-    return 0;
+      },
+      actorTypes
+    );
   }
 
   public async getCredentialDefinitionForRole(
@@ -643,101 +613,65 @@ export class RoleSetService {
     return credential;
   }
 
-  public async assignContributorToRole(
+  // UNIFIED: One method for ALL actor types
+  // Any actor can be assigned to any role - the logic is the same
+  public async assignActorToRole(
     roleSet: IRoleSet,
     roleType: RoleName,
-    contributorID: string,
-    contributorType: RoleSetContributorType,
-    agentInfo?: AgentInfo,
+    actorId: string,
+    actorContext?: ActorContext,
     triggerNewMemberEvents = false
-  ): Promise<IContributor> {
-    switch (contributorType) {
-      case RoleSetContributorType.USER:
-        return await this.assignUserToRole(
-          roleSet,
-          roleType,
-          contributorID,
-          agentInfo,
-          triggerNewMemberEvents
-        );
-      case RoleSetContributorType.ORGANIZATION:
-        return await this.assignOrganizationToRole(
-          roleSet,
-          roleType,
-          contributorID
-        );
-      case RoleSetContributorType.VIRTUAL:
-        return await this.assignVirtualToRole(
-          roleSet,
-          roleType,
-          contributorID,
-          agentInfo,
-          triggerNewMemberEvents
-        );
-      default:
-        throw new EntityNotInitializedException(
-          `Invalid roleSet contributor type: ${contributorType}`,
-          LogContext.ROLES
-        );
-    }
-  }
+  ): Promise<string> {
+    // 1. Get actor type without loading full entity
+    const actorType =
+      await this.actorLookupService.getActorTypeByIdOrFail(actorId);
 
-  async assignUserToRole(
-    roleSet: IRoleSet,
-    roleName: RoleName,
-    userID: string,
-    agentInfo?: AgentInfo,
-    triggerNewMemberEvents = false
-  ): Promise<IUser> {
-    const { user, agent } =
-      await this.userLookupService.getUserAndAgent(userID);
+    // 2. Check membership in parent role set
     const { isMember: hasMemberRoleInParent, parentRoleSet } =
-      await this.isMemberInParentRoleSet(agent, roleSet.id);
+      await this.isActorMemberInParentRoleSet(actorId, roleSet.id);
     if (!hasMemberRoleInParent) {
       throw new ValidationException(
-        `Unable to assign Agent (${agent.id}) to roleSet (${roleSet.id}): agent is not a member of parent roleSet ${parentRoleSet?.id}`,
+        `Unable to assign Actor (${actorId}) to roleSet (${roleSet.id}): actor is not a member of parent roleSet ${parentRoleSet?.id}`,
         LogContext.SPACES
       );
     }
 
-    const userAlreadyHasRole = await this.isInRole(agent, roleSet, roleName);
-    if (userAlreadyHasRole) {
-      return user;
+    // 3. Check if already in role
+    const alreadyHasRole = await this.isInRole(actorId, roleSet, roleType);
+    if (alreadyHasRole) {
+      return actorId;
     }
 
-    await this.assignContributorAgentToRole(
-      roleSet,
-      roleName,
-      agent,
-      RoleSetContributorType.USER
-    );
+    // 4. Assign role credential
+    await this.grantRoleCredential(roleSet, roleType, actorId, actorType);
 
+    // 5. Clear caches (applies to all actors)
     await this.roleSetCacheService.deleteOpenApplicationFromCache(
-      userID,
+      actorId,
       roleSet.id
     );
     await this.roleSetCacheService.deleteOpenInvitationFromCache(
-      userID,
+      actorId,
       roleSet.id
     );
 
+    // 6. Handle implicit roles (for ALL actor types - any actor can be admin!)
     switch (roleSet.type) {
       case RoleSetType.SPACE: {
-        if (roleName === RoleName.ADMIN && parentRoleSet) {
-          // also assign as subspace admin in parent roleSet if there is a parent roleSet
+        if (roleType === RoleName.ADMIN && parentRoleSet) {
+          // Grant subspace admin credential to any actor becoming admin
           const subspaceAdminCredential =
             await this.getCredentialSpaceImplicitRole(
               parentRoleSet,
               AuthorizationCredential.SPACE_SUBSPACE_ADMIN
             );
           const alreadyHasSubspaceAdmin =
-            await this.agentService.hasValidCredential(
-              agent.id,
+            await this.actorService.hasValidCredential(
+              actorId,
               subspaceAdminCredential
             );
           if (!alreadyHasSubspaceAdmin) {
-            await this.agentService.grantCredentialOrFail({
-              agentID: agent.id,
+            await this.actorService.grantCredentialOrFail(actorId, {
               type: subspaceAdminCredential.type,
               resourceID: subspaceAdminCredential.resourceID,
             });
@@ -746,18 +680,17 @@ export class RoleSetService {
         break;
       }
       case RoleSetType.ORGANIZATION: {
-        if (roleName === RoleName.ADMIN || roleName === RoleName.OWNER) {
-          // also assign as subspace admin in parent roleSet if there is a parent roleSet
+        if (roleType === RoleName.ADMIN || roleType === RoleName.OWNER) {
+          // Grant account admin credential to any actor becoming admin/owner
           const accountAdminCredential =
             await this.getCredentialForOrganizationImplicitRole(roleSet);
           const alreadyHasAccountAdmin =
-            await this.agentService.hasValidCredential(
-              agent.id,
+            await this.actorService.hasValidCredential(
+              actorId,
               accountAdminCredential
             );
           if (!alreadyHasAccountAdmin) {
-            await this.agentService.grantCredentialOrFail({
-              agentID: agent.id,
+            await this.actorService.grantCredentialOrFail(actorId, {
               type: accountAdminCredential.type,
               resourceID: accountAdminCredential.resourceID,
             });
@@ -767,21 +700,32 @@ export class RoleSetService {
       }
     }
 
-    await this.contributorAddedToRole(
-      user,
-      agent.id,
+    // 7. Post-assignment processing (unified for all actors)
+    await this.actorAddedToRole(
+      actorId,
+      actorType,
       roleSet,
-      roleName,
-      agentInfo,
+      roleType,
+      actorContext,
       triggerNewMemberEvents
     );
 
-    return await this.userLookupService.getUserOrFail(userID);
+    // 8. Type-specific extensions (can be moved to events later)
+    if (actorType === ActorType.VIRTUAL && roleSet.type === RoleSetType.SPACE) {
+      const space =
+        await this.communityResolverService.getSpaceForRoleSetOrFail(
+          roleSet.id
+        );
+      this.aiServerAdapter.ensureContextIsLoaded(space.id);
+    }
+
+    return actorId;
   }
 
+  // UNIFIED: Accept invitation - works for any actor type
   public async acceptInvitationToRoleSet(
     invitationID: string,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ): Promise<void> {
     try {
       const invitation = await this.invitationService.getInvitationOrFail(
@@ -795,16 +739,15 @@ export class RoleSetService {
         }
       );
 
-      const contributorID = invitation.invitedContributorID;
+      const actorId = invitation.invitedActorId;
       const roleSet = invitation.roleSet;
-      if (!contributorID || !roleSet) {
+      if (!actorId || !roleSet) {
         throw new EntityNotInitializedException(
           `Lifecycle not initialized on Invitation: ${invitation.id}`,
           LogContext.COMMUNITY
         );
       }
-      const { agent } =
-        await this.contributorService.getContributorAndAgent(contributorID);
+
       if (invitation.invitedToParent) {
         if (!roleSet.parentRoleSet) {
           throw new EntityNotInitializedException(
@@ -812,57 +755,54 @@ export class RoleSetService {
             LogContext.COMMUNITY
           );
         }
-        // Check if the user is already a member of the parent roleSet
+        // Check if the actor is already a member of the parent roleSet
         const isMemberOfParentRoleSet = await this.isMember(
-          agent,
+          actorId,
           roleSet.parentRoleSet
         );
         if (!isMemberOfParentRoleSet) {
-          await this.assignContributorToRole(
+          await this.assignActorToRole(
             roleSet.parentRoleSet,
             RoleName.MEMBER,
-            contributorID,
-            invitation.contributorType,
-            agentInfo,
+            actorId,
+            actorContext,
             true
           );
         }
       }
-      await this.assignContributorToRole(
+
+      await this.assignActorToRole(
         roleSet,
         RoleName.MEMBER,
-        contributorID,
-        invitation.contributorType,
-        agentInfo,
+        actorId,
+        actorContext,
         true
       );
-      if (
-        roleSet.type === RoleSetType.SPACE &&
-        invitation.contributorType === RoleSetContributorType.USER
-      ) {
-        // Remove the credential for being an invitee
-        await this.removeSpaceInviteeCredential(agent, roleSet);
+
+      // Remove invitee credential for ANY actor type (not just users)
+      if (roleSet.type === RoleSetType.SPACE) {
+        await this.removeSpaceInviteeCredential(actorId, roleSet);
       }
+
       for (const extraRole of invitation.extraRoles) {
         try {
-          await this.assignContributorToRole(
+          await this.assignActorToRole(
             roleSet,
             extraRole,
-            contributorID,
-            invitation.contributorType,
-            agentInfo,
+            actorId,
+            actorContext,
             false
           );
         } catch (e: any) {
           // Do not throw an exception further as there might not be entitlements to grant the extra role
           this.logger.warn?.(
-            `Unable to add contributor (${contributorID}) to extra roles (${invitation.extraRoles}) in community: ${e}`,
+            `Unable to add actor (${actorId}) to extra roles (${invitation.extraRoles}) in community: ${e}`,
             LogContext.COMMUNITY
           );
         }
       }
       await this.roleSetCacheService.deleteOpenInvitationFromCache(
-        contributorID,
+        actorId,
         roleSet.id
       );
     } catch (e: any) {
@@ -877,57 +817,62 @@ export class RoleSetService {
     }
   }
 
-  private async assignSpaceInviteeCredential(agent: IAgent, roleSet: IRoleSet) {
+  // Actor-based credential methods - entity.id IS the actorId
+  private async assignSpaceInviteeCredential(
+    actorId: string,
+    roleSet: IRoleSet
+  ) {
     const inviteeCredential = await this.getCredentialSpaceImplicitRole(
       roleSet,
       AuthorizationCredential.SPACE_MEMBER_INVITEE
     );
-    const hasInviteeCredential = await this.agentService.hasValidCredential(
-      agent.id,
+    const hasInviteeCredential = await this.actorService.hasValidCredential(
+      actorId,
       {
         type: inviteeCredential.type,
         resourceID: inviteeCredential.resourceID,
       }
     );
     if (!hasInviteeCredential) {
-      await this.agentService.grantCredentialOrFail({
-        agentID: agent.id,
+      await this.actorService.grantCredentialOrFail(actorId, {
         type: inviteeCredential.type,
         resourceID: inviteeCredential.resourceID,
       });
     }
   }
 
-  private async removeSpaceInviteeCredential(agent: IAgent, roleSet: IRoleSet) {
+  private async removeSpaceInviteeCredential(
+    actorId: string,
+    roleSet: IRoleSet
+  ) {
     const inviteeCredential = await this.getCredentialSpaceImplicitRole(
       roleSet,
       AuthorizationCredential.SPACE_MEMBER_INVITEE
     );
-    const hasInviteeCredential = await this.agentService.hasValidCredential(
-      agent.id,
+    const hasInviteeCredential = await this.actorService.hasValidCredential(
+      actorId,
       {
         type: inviteeCredential.type,
         resourceID: inviteeCredential.resourceID,
       }
     );
     if (hasInviteeCredential) {
-      await this.agentService.revokeCredential({
-        agentID: agent.id,
+      await this.actorService.revokeCredential(actorId, {
         type: inviteeCredential.type,
         resourceID: inviteeCredential.resourceID,
       });
     }
   }
-  private async contributorAddedToRole(
-    contributor: IContributor,
-    contributorAgentId: string,
+  private async actorAddedToRole(
+    actorId: string,
+    actorType: ActorType,
     roleSet: IRoleSet,
     role: RoleName,
-    agentInfo?: AgentInfo,
+    actorContext?: ActorContext,
     triggerNewMemberEvents = false
   ) {
-    await this.roleSetCacheService.appendAgentRoleCache(
-      contributorAgentId,
+    await this.roleSetCacheService.appendActorRoleCache(
+      actorId,
       roleSet.id,
       role
     );
@@ -944,27 +889,28 @@ export class RoleSetService {
             );
           await this.communityCommunicationService.addMemberToCommunication(
             communication,
-            contributor
+            actorId
           );
 
           await this.roleSetCacheService.setMembershipStatusCache(
-            contributorAgentId,
+            actorId,
             roleSet.id,
             CommunityMembershipStatus.MEMBER
           );
 
-          if (agentInfo) {
+          if (actorContext) {
             await this.roleSetEventsService.registerCommunityNewMemberActivity(
               roleSet,
-              contributor,
-              agentInfo
+              actorId,
+              actorContext
             );
 
             if (triggerNewMemberEvents) {
               await this.roleSetEventsService.processCommunityNewMemberEvents(
                 roleSet,
-                agentInfo,
-                contributor
+                actorContext,
+                actorId,
+                actorType
               );
             }
           }
@@ -974,74 +920,20 @@ export class RoleSetService {
     }
   }
 
-  async assignVirtualToRole(
-    roleSet: IRoleSet,
-    roleType: RoleName,
-    virtualContributorID: string,
-    agentInfo?: AgentInfo,
-    triggerNewMemberEvents = false
-  ): Promise<IVirtualContributor> {
-    const { virtualContributor, agent } =
-      await this.virtualContributorLookupService.getVirtualContributorAndAgent(
-        virtualContributorID
-      );
-    const { isMember: hasMemberRoleInParent, parentRoleSet } =
-      await this.isMemberInParentRoleSet(agent, roleSet.id);
-    if (!hasMemberRoleInParent) {
-      if (!parentRoleSet) {
-        throw new ValidationException(
-          `Unable to find parent roleSet for roleSet ${roleSet.id}`,
-          LogContext.SPACES
-        );
-      }
-      throw new ValidationException(
-        `Unable to assign Agent (${agent.id}) to roleSet (${roleSet.id}): agent is not a member of parent roleSet ${parentRoleSet.id}`,
-        LogContext.SPACES
-      );
-    }
-
-    const virtualAlreadyHasRole = await this.isInRole(agent, roleSet, roleType);
-    if (virtualAlreadyHasRole) {
-      return virtualContributor;
-    }
-
-    virtualContributor.agent = await this.assignContributorAgentToRole(
-      roleSet,
-      roleType,
-      agent,
-      RoleSetContributorType.VIRTUAL
-    );
-
-    await this.contributorAddedToRole(
-      virtualContributor,
-      agent.id,
-      roleSet,
-      roleType,
-      agentInfo,
-      triggerNewMemberEvents
-    );
-    if (roleSet.type === RoleSetType.SPACE) {
-      // TO: THIS BREAKS THE DECOUPLING
-      const space =
-        await this.communityResolverService.getSpaceForRoleSetOrFail(
-          roleSet.id
-        );
-      this.aiServerAdapter.ensureContextIsLoaded(space.id);
-    }
-    return virtualContributor;
-  }
-
-  private async isMemberInParentRoleSet(
-    agent: IAgent,
+  // Actor-based methods for VirtualContributor (which extends Actor)
+  private async isActorMemberInParentRoleSet(
+    actorId: string,
     roleSetID: string
   ): Promise<{ parentRoleSet: IRoleSet | undefined; isMember: boolean }> {
     const roleSet = await this.getRoleSetOrFail(roleSetID, {
       relations: { parentRoleSet: true },
     });
 
-    // If the parent roleSet is set, then check if the user is also a member there
     if (roleSet.parentRoleSet) {
-      const isParentMember = await this.isMember(agent, roleSet.parentRoleSet);
+      const isParentMember = await this.isActorMember(
+        actorId,
+        roleSet.parentRoleSet
+      );
       return {
         parentRoleSet: roleSet?.parentRoleSet,
         isMember: isParentMember,
@@ -1053,51 +945,112 @@ export class RoleSetService {
     };
   }
 
-  async assignOrganizationToRole(
-    roleSet: IRoleSet,
-    roleType: RoleName,
-    organizationID: string
-  ): Promise<IOrganization> {
-    const { organization, agent } =
-      await this.organizationLookupService.getOrganizationAndAgent(
-        organizationID
-      );
-
-    organization.agent = await this.assignContributorAgentToRole(
+  private async isActorMember(
+    actorId: string,
+    roleSet: IRoleSet
+  ): Promise<boolean> {
+    const membershipCredential = await this.getCredentialDefinitionForRole(
       roleSet,
-      roleType,
-      agent,
-      RoleSetContributorType.ORGANIZATION
+      RoleName.MEMBER
     );
-
-    return organization;
+    return await this.actorService.hasValidCredential(actorId, {
+      type: membershipCredential.type,
+      resourceID: membershipCredential.resourceID,
+    });
   }
 
-  async removeUserFromRole(
+  private async isActorInRole(
+    actorId: string,
+    roleSet: IRoleSet,
+    role: RoleName
+  ): Promise<boolean> {
+    const roleCredential = await this.getCredentialDefinitionForRole(
+      roleSet,
+      role
+    );
+    return await this.actorService.hasValidCredential(actorId, {
+      type: roleCredential.type,
+      resourceID: roleCredential.resourceID,
+    });
+  }
+
+  private async grantRoleCredential(
     roleSet: IRoleSet,
     roleType: RoleName,
-    userID: string,
-    validatePolicyLimits = true
-  ): Promise<IUser> {
-    const { user, agent } =
-      await this.userLookupService.getUserAndAgent(userID);
-
-    user.agent = await this.removeContributorFromRole(
+    actorId: string,
+    actorType: ActorType
+  ): Promise<void> {
+    const roleCredential = await this.getCredentialDefinitionForRole(
+      roleSet,
+      roleType
+    );
+    await this.validateActorPolicyLimits(
       roleSet,
       roleType,
-      agent,
-      RoleSetContributorType.USER,
+      RoleSetUpdateType.ASSIGN,
+      actorType
+    );
+    await this.actorService.grantCredentialOrFail(actorId, {
+      type: roleCredential.type,
+      resourceID: roleCredential.resourceID,
+    });
+  }
+
+  private async revokeRoleCredential(
+    roleSet: IRoleSet,
+    roleType: RoleName,
+    actorId: string,
+    actorType: ActorType,
+    validatePolicyLimits = true
+  ): Promise<void> {
+    if (validatePolicyLimits) {
+      await this.validateActorPolicyLimits(
+        roleSet,
+        roleType,
+        RoleSetUpdateType.REMOVE,
+        actorType
+      );
+    }
+    const roleCredential = await this.getCredentialDefinitionForRole(
+      roleSet,
+      roleType
+    );
+    await this.actorService.revokeCredential(actorId, {
+      type: roleCredential.type,
+      resourceID: roleCredential.resourceID,
+    });
+  }
+
+  // UNIFIED: One method for ALL actor types
+  // Any actor can be removed from any role - the logic is the same
+  public async removeActorFromRole(
+    roleSet: IRoleSet,
+    roleType: RoleName,
+    actorId: string,
+    validatePolicyLimits = true
+  ): Promise<string> {
+    // 1. Get actor type without loading full entity
+    const actorType =
+      await this.actorLookupService.getActorTypeByIdOrFail(actorId);
+
+    // 2. Remove role credential
+    await this.revokeRoleCredential(
+      roleSet,
+      roleType,
+      actorId,
+      actorType,
       validatePolicyLimits
     );
 
+    // 3. Handle implicit role removal (for ALL actor types)
     switch (roleSet.type) {
       case RoleSetType.SPACE: {
         const parentRoleSet = await this.getParentRoleSet(roleSet);
         if (roleType === RoleName.ADMIN && parentRoleSet) {
-          await this.removeContributorFromSubspaceAdminImplicitRole(
+          await this.removeActorFromSubspaceAdminImplicitRole(
             roleSet,
             parentRoleSet,
-            agent
+            actorId
           );
         }
         if (roleType === RoleName.MEMBER) {
@@ -1105,10 +1058,10 @@ export class RoleSetService {
             await this.communityResolverService.getCommunicationForRoleSet(
               roleSet.id
             );
-
+          // Remove from communication (works for any actor)
           await this.communityCommunicationService.removeMemberFromCommunication(
             communication,
-            user
+            actorId
           );
 
           // Clean up notifications for this user in this space and all descendant spaces (L1, L2, etc.)
@@ -1119,7 +1072,7 @@ export class RoleSetService {
 
           // Delete notifications from the current space
           await this.inAppNotificationService.deleteAllForReceiverInSpace(
-            userID,
+            actorId,
             space.id
           );
 
@@ -1129,7 +1082,7 @@ export class RoleSetService {
             await this.spaceLookupService.getAllDescendantSpaceIDs(space.id);
           if (descendantSpaceIDs.length > 0) {
             await this.inAppNotificationService.deleteAllForReceiverInSpaces(
-              userID,
+              actorId,
               descendantSpaceIDs
             );
           }
@@ -1138,10 +1091,7 @@ export class RoleSetService {
       }
       case RoleSetType.ORGANIZATION: {
         if (roleType === RoleName.ADMIN || roleType === RoleName.OWNER) {
-          await this.removeContributorFromAccountAdminImplicitRole(
-            roleSet,
-            agent
-          );
+          await this.removeActorFromAccountAdminImplicitRole(roleSet, actorId);
         }
 
         // Clean up notifications only when user is completely removed (MEMBER role)
@@ -1152,7 +1102,7 @@ export class RoleSetService {
             RoleName.ADMIN
           );
           await this.inAppNotificationService.deleteAllForReceiverInOrganization(
-            userID,
+            actorId,
             adminCredential.resourceID
           );
         }
@@ -1160,104 +1110,13 @@ export class RoleSetService {
       }
     }
 
-    await this.roleSetCacheService.cleanAgentMembershipCache(
-      agent.id,
+    // 4. Clean cache
+    await this.roleSetCacheService.cleanActorMembershipCache(
+      actorId,
       roleSet.id
     );
 
-    return user;
-  }
-
-  async removeOrganizationFromRole(
-    roleSet: IRoleSet,
-    roleType: RoleName,
-    organizationID: string,
-    validatePolicyLimits = true
-  ): Promise<IOrganization> {
-    const { organization, agent } =
-      await this.organizationLookupService.getOrganizationAndAgent(
-        organizationID
-      );
-
-    organization.agent = await this.removeContributorFromRole(
-      roleSet,
-      roleType,
-      agent,
-      RoleSetContributorType.ORGANIZATION,
-      validatePolicyLimits
-    );
-
-    // Clean up notifications for this organization when removed from space and all descendant spaces
-    if (roleSet.type === RoleSetType.SPACE && roleType === RoleName.MEMBER) {
-      const space =
-        await this.communityResolverService.getSpaceForRoleSetOrFail(
-          roleSet.id
-        );
-
-      // Delete notifications from the current space
-      await this.inAppNotificationService.deleteAllForContributorOrganizationInSpace(
-        organizationID,
-        space.id
-      );
-
-      // Also delete notifications from all descendant spaces (L1, L2, etc.)
-      const descendantSpaceIDs =
-        await this.spaceLookupService.getAllDescendantSpaceIDs(space.id);
-      if (descendantSpaceIDs.length > 0) {
-        await this.inAppNotificationService.deleteAllForContributorOrganizationInSpaces(
-          organizationID,
-          descendantSpaceIDs
-        );
-      }
-    }
-
-    return organization;
-  }
-
-  async removeVirtualFromRole(
-    roleSet: IRoleSet,
-    roleType: RoleName,
-    virtualContributorID: string,
-    validatePolicyLimits = true
-  ): Promise<IVirtualContributor> {
-    const { virtualContributor, agent } =
-      await this.virtualContributorLookupService.getVirtualContributorAndAgent(
-        virtualContributorID
-      );
-
-    virtualContributor.agent = await this.removeContributorFromRole(
-      roleSet,
-      roleType,
-      agent,
-      RoleSetContributorType.VIRTUAL,
-      validatePolicyLimits
-    );
-
-    // Clean up notifications for this VC when removed from space and all descendant spaces
-    if (roleSet.type === RoleSetType.SPACE && roleType === RoleName.MEMBER) {
-      const space =
-        await this.communityResolverService.getSpaceForRoleSetOrFail(
-          roleSet.id
-        );
-
-      // Delete notifications from the current space
-      await this.inAppNotificationService.deleteAllForContributorVcInSpace(
-        virtualContributorID,
-        space.id
-      );
-
-      // Also delete notifications from all descendant spaces (L1, L2, etc.)
-      const descendantSpaceIDs =
-        await this.spaceLookupService.getAllDescendantSpaceIDs(space.id);
-      if (descendantSpaceIDs.length > 0) {
-        await this.inAppNotificationService.deleteAllForContributorVcInSpaces(
-          virtualContributorID,
-          descendantSpaceIDs
-        );
-      }
-    }
-
-    return virtualContributor;
+    return actorId;
   }
 
   public async isRoleSetAccountMatchingVcAccount(
@@ -1273,130 +1132,75 @@ export class RoleSetService {
     );
   }
 
-  private async validateUserContributorPolicy(
+  private async validateActorPolicyLimits(
     roleSet: IRoleSet,
     roleType: RoleName,
-    action: RoleSetUpdateType
-  ) {
-    const userMembersCount = await this.countContributorsPerRole(
-      roleSet,
-      roleType,
-      RoleSetContributorType.USER
-    );
+    action: RoleSetUpdateType,
+    actorType: ActorType
+  ): Promise<void> {
+    const actorCount = await this.countActorsWithRole(roleSet, roleType, [
+      actorType,
+    ]);
 
     const roleDefinition = await this.getRoleDefinition(roleSet, roleType);
-
-    const userPolicy = roleDefinition.userPolicy;
-
-    switch (action) {
-      case RoleSetUpdateType.ASSIGN: {
-        if (userMembersCount === 0) {
-          break;
-        }
-        if (userMembersCount === userPolicy.maximum) {
-          throw new RoleSetPolicyRoleLimitsException(
-            `Max limit of users reached for role '${roleType}': ${userPolicy.maximum}, cannot assign new user.`,
-            LogContext.COMMUNITY
-          );
-        }
-        break;
-      }
-      case RoleSetUpdateType.REMOVE: {
-        if (userMembersCount === userPolicy.minimum) {
-          throw new RoleSetPolicyRoleLimitsException(
-            `Min limit of users reached for role '${roleType}': ${userPolicy.minimum}, cannot remove user from role on RoleSet: ${roleSet.id}, type: ${roleSet.type}`,
-            LogContext.COMMUNITY
-          );
-        }
-      }
-    }
-  }
-
-  private async validateOrganizationContributorPolicy(
-    roleSet: IRoleSet,
-    roleType: RoleName,
-    action: RoleSetUpdateType
-  ) {
-    const orgMemberCount = await this.countContributorsPerRole(
-      roleSet,
-      roleType,
-      RoleSetContributorType.ORGANIZATION
-    );
-
-    const roleDefinition = await this.getRoleDefinition(roleSet, roleType);
-
-    const organizationPolicy = roleDefinition.organizationPolicy;
+    const policy = this.getPolicyForActorType(roleDefinition, actorType);
 
     if (action === RoleSetUpdateType.ASSIGN) {
-      if (orgMemberCount === organizationPolicy.maximum) {
+      // Skip validation if no actors yet (first assignment always allowed)
+      if (actorCount === 0) {
+        return;
+      }
+      if (actorCount >= policy.maximum) {
         throw new RoleSetPolicyRoleLimitsException(
-          `Max limit of organizations reached for role '${roleType}': ${organizationPolicy.maximum}, cannot assign new organization.`,
+          `Max limit of ${actorType} reached for role '${roleType}': ${policy.maximum}`,
           LogContext.COMMUNITY
         );
       }
     }
 
     if (action === RoleSetUpdateType.REMOVE) {
-      if (orgMemberCount === organizationPolicy.minimum) {
+      if (actorCount <= policy.minimum) {
         throw new RoleSetPolicyRoleLimitsException(
-          `Min limit of organizations reached for role '${roleType}': ${organizationPolicy.minimum}, cannot remove organization.`,
+          `Min limit of ${actorType} reached for role '${roleType}': ${policy.minimum}`,
           LogContext.COMMUNITY
         );
       }
     }
   }
 
-  private async validateContributorPolicyLimits(
-    roleSet: IRoleSet,
-    roleType: RoleName,
-    action: RoleSetUpdateType,
-    contributorType: RoleSetContributorType
-  ) {
-    if (contributorType === RoleSetContributorType.USER)
-      await this.validateUserContributorPolicy(roleSet, roleType, action);
-
-    if (contributorType === RoleSetContributorType.ORGANIZATION)
-      await this.validateOrganizationContributorPolicy(
-        roleSet,
-        roleType,
-        action
-      );
+  private getPolicyForActorType(
+    roleDefinition: IRole,
+    actorType: ActorType
+  ): IActorRolePolicy {
+    switch (actorType) {
+      case ActorType.USER:
+        return roleDefinition.userPolicy;
+      case ActorType.ORGANIZATION:
+        return roleDefinition.organizationPolicy;
+      case ActorType.VIRTUAL:
+        return roleDefinition.virtualContributorPolicy;
+      default:
+        throw new ValidationException(
+          `Unknown actor type: ${actorType}`,
+          LogContext.COMMUNITY
+        );
+    }
   }
 
-  public async assignContributorAgentToRole(
-    roleSet: IRoleSet,
-    roleType: RoleName,
-    agent: IAgent,
-    contributorType: RoleSetContributorType
-  ): Promise<IAgent> {
-    await this.validateContributorPolicyLimits(
-      roleSet,
-      roleType,
-      RoleSetUpdateType.ASSIGN,
-      contributorType
-    );
-
-    const roleCredential = await this.getCredentialForRole(roleSet, roleType);
-
-    return await this.agentService.grantCredentialOrFail({
-      agentID: agent.id,
-      type: roleCredential.type,
-      resourceID: roleCredential.resourceID,
-    });
-  }
-
-  private async removeContributorFromSubspaceAdminImplicitRole(
+  // Actor-based implicit role methods
+  private async removeActorFromSubspaceAdminImplicitRole(
     roleSet: IRoleSet,
     parentRoleSet: IRoleSet,
-    agent: IAgent
-  ): Promise<IAgent> {
+    actorId: string
+  ): Promise<void> {
     this.validateRoleSetType(roleSet, RoleSetType.SPACE);
 
     // Check if an admin anywhere else in the roleSet
     const peerRoleSets = await this.getPeerRoleSets(parentRoleSet, roleSet);
-    const hasAnotherAdminRole = peerRoleSets.some(pc =>
-      this.isInRole(agent, pc, RoleName.ADMIN)
+    const adminRoleChecks = await Promise.all(
+      peerRoleSets.map(pc => this.isInRole(actorId, pc, RoleName.ADMIN))
     );
+    const hasAnotherAdminRole = adminRoleChecks.some(hasRole => hasRole);
 
     if (!hasAnotherAdminRole) {
       const credential = await this.getCredentialSpaceImplicitRole(
@@ -1404,35 +1208,31 @@ export class RoleSetService {
         AuthorizationCredential.SPACE_SUBSPACE_ADMIN
       );
 
-      return await this.agentService.revokeCredential({
-        agentID: agent.id,
+      await this.actorService.revokeCredential(actorId, {
         type: credential.type,
         resourceID: credential.resourceID,
       });
     }
-    return agent;
   }
 
-  private async removeContributorFromAccountAdminImplicitRole(
+  private async removeActorFromAccountAdminImplicitRole(
     roleSet: IRoleSet,
-    agent: IAgent
-  ): Promise<IAgent> {
+    actorId: string
+  ): Promise<void> {
     this.validateRoleSetType(roleSet, RoleSetType.ORGANIZATION);
     // Only two roles, so check if the user has the other one
-    const hasAdminRole = await this.isInRole(agent, roleSet, RoleName.ADMIN);
-    const hasOwnerRole = await this.isInRole(agent, roleSet, RoleName.OWNER);
+    const hasAdminRole = await this.isInRole(actorId, roleSet, RoleName.ADMIN);
+    const hasOwnerRole = await this.isInRole(actorId, roleSet, RoleName.OWNER);
 
     if (!hasAdminRole && !hasOwnerRole) {
       const credential =
         await this.getCredentialForOrganizationImplicitRole(roleSet);
 
-      return await this.agentService.revokeCredential({
-        agentID: agent.id,
+      await this.actorService.revokeCredential(actorId, {
         type: credential.type,
         resourceID: credential.resourceID,
       });
     }
-    return agent;
   }
 
   private validateRoleSetType(roleSet: IRoleSet, roleSetType: RoleSetType) {
@@ -1475,7 +1275,7 @@ export class RoleSetService {
     );
     const organizationID = adminCredential.resourceID;
     const organization =
-      await this.organizationLookupService.getOrganizationOrFail(
+      await this.organizationLookupService.getOrganizationByIdOrFail(
         organizationID
       );
     return {
@@ -1486,82 +1286,12 @@ export class RoleSetService {
 
   public async removeCurrentUserFromRolesInRoleSet(
     roleSet: IRoleSet,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ): Promise<void> {
-    const userRoles = await this.getRolesForAgentInfo(agentInfo, roleSet);
+    const userRoles = await this.getRolesForActorContext(actorContext, roleSet);
     for (const role of userRoles) {
-      await this.removeUserFromRole(roleSet, role, agentInfo.userID);
+      await this.removeActorFromRole(roleSet, role, actorContext.actorId);
     }
-  }
-
-  private async removeContributorFromRole(
-    roleSet: IRoleSet,
-    roleType: RoleName,
-    agent: IAgent,
-    contributorType: RoleSetContributorType,
-    validatePolicyLimits: boolean
-  ): Promise<IAgent> {
-    if (validatePolicyLimits) {
-      await this.validateContributorPolicyLimits(
-        roleSet,
-        roleType,
-        RoleSetUpdateType.REMOVE,
-        contributorType
-      );
-    }
-
-    const roleCredential = await this.getCredentialForRole(roleSet, roleType);
-
-    let updatedAgent: IAgent = await this.agentService.revokeCredential({
-      agentID: agent.id,
-      type: roleCredential.type,
-      resourceID: roleCredential.resourceID,
-    });
-
-    if (roleCredential.type === AuthorizationCredential.SPACE_MEMBER) {
-      updatedAgent = await this.revokeSpaceTreeCredentials(
-        agent,
-        roleCredential.resourceID
-      );
-    }
-
-    return updatedAgent;
-  }
-
-  private async revokeSpaceTreeCredentials(
-    agent: IAgent,
-    spaceId: string
-  ): Promise<IAgent> {
-    const subspaceIDs = await this.getAllSubspaceIds(spaceId);
-    const fullSpaceHierarchyIds = [spaceId, ...subspaceIDs];
-    const credentialsToRevoke = fullSpaceHierarchyIds.flatMap(spaceID => [
-      {
-        type: AuthorizationCredential.SPACE_MEMBER,
-        resourceID: spaceID,
-      },
-      {
-        type: AuthorizationCredential.SPACE_ADMIN,
-        resourceID: spaceID,
-      },
-      {
-        type: AuthorizationCredential.SPACE_LEAD,
-        resourceID: spaceID,
-      },
-      {
-        type: AuthorizationCredential.SPACE_SUBSPACE_ADMIN,
-        resourceID: spaceID,
-      },
-    ]);
-
-    let updatedAgent = agent;
-    for (const credential of credentialsToRevoke) {
-      updatedAgent = await this.agentService.revokeCredential({
-        agentID: agent.id,
-        ...credential,
-      });
-    }
-
-    return updatedAgent;
   }
 
   private async getAllSubspaceIds(spaceId: string): Promise<string[]> {
@@ -1578,9 +1308,9 @@ export class RoleSetService {
     ]);
   }
 
-  public async isMember(agent: IAgent, roleSet: IRoleSet): Promise<boolean> {
-    const cached = await this.roleSetCacheService.getAgentIsMemberFromCache(
-      agent.id,
+  public async isMember(actorId: string, roleSet: IRoleSet): Promise<boolean> {
+    const cached = await this.roleSetCacheService.getActorIsMemberFromCache(
+      actorId,
       roleSet.id
     );
     if (cached) {
@@ -1591,15 +1321,15 @@ export class RoleSetService {
       RoleName.MEMBER
     );
 
-    const validCredential = await this.agentService.hasValidCredential(
-      agent.id,
+    const validCredential = await this.actorService.hasValidCredential(
+      actorId,
       {
         type: membershipCredential.type,
         resourceID: membershipCredential.resourceID,
       }
     );
-    await this.roleSetCacheService.setAgentIsMemberCache(
-      agent.id,
+    await this.roleSetCacheService.setActorIsMemberCache(
+      actorId,
       roleSet.id,
       validCredential
     );
@@ -1608,7 +1338,7 @@ export class RoleSetService {
   }
 
   public async isInRole(
-    agent: IAgent,
+    actorId: string,
     roleSet: IRoleSet,
     role: RoleName
   ): Promise<boolean> {
@@ -1617,8 +1347,8 @@ export class RoleSetService {
       role
     );
 
-    const validCredential = await this.agentService.hasValidCredential(
-      agent.id,
+    const validCredential = await this.actorService.hasValidCredential(
+      actorId,
       {
         type: membershipCredential.type,
         resourceID: membershipCredential.resourceID,
@@ -1628,7 +1358,7 @@ export class RoleSetService {
   }
 
   async isInRoleImplicit(
-    agent: IAgent,
+    actorId: string,
     roleSet: IRoleSet,
     role: RoleSetRoleImplicit
   ): Promise<boolean> {
@@ -1651,8 +1381,8 @@ export class RoleSetService {
         );
     }
 
-    const validCredential = await this.agentService.hasValidCredential(
-      agent.id,
+    const validCredential = await this.actorService.hasValidCredential(
+      actorId,
       {
         type: credential.type,
         resourceID: credential.resourceID,
@@ -1664,16 +1394,17 @@ export class RoleSetService {
   async createApplication(
     applicationData: CreateApplicationInput
   ): Promise<IApplication> {
-    const { user, agent } = await this.userLookupService.getUserAndAgent(
-      applicationData.userID
-    );
+    const userId = applicationData.userId;
+    // Verify the user exists (throws if not found) - applications are user-only
+    await this.userLookupService.getUserByIdOrFail(userId);
+
     const roleSet = await this.getRoleSetOrFail(applicationData.roleSetID, {
       relations: {
         parentRoleSet: true,
       },
     });
 
-    await this.validateApplicationFromUser(user, agent, roleSet);
+    await this.validateApplicationFromActor(userId, roleSet);
 
     const application =
       await this.applicationService.createApplication(applicationData);
@@ -1682,42 +1413,36 @@ export class RoleSetService {
     const savedApplication = await this.applicationService.save(application);
 
     await this.roleSetCacheService.deleteMembershipStatusCache(
-      agent.id,
+      userId,
       roleSet.id
     );
 
     return savedApplication;
   }
 
-  async createInvitationExistingContributor(
+  async createInvitationExistingActor(
     invitationData: CreateInvitationInput
   ): Promise<IInvitation> {
-    const { contributor: contributor, agent } =
-      await this.contributorService.getContributorAndAgent(
-        invitationData.invitedContributorID
-      );
+    const actorId = invitationData.invitedActorId;
+    // Verify the actor exists (throws if not found)
+    await this.actorLookupService.getActorByIdOrFail(actorId);
+
     const roleSet = await this.getRoleSetOrFail(invitationData.roleSetID);
 
-    await this.validateInvitationToExistingContributor(
-      contributor,
-      agent,
-      roleSet
-    );
+    await this.validateInvitationToExistingActor(actorId, roleSet);
 
-    const invitation = await this.invitationService.createInvitation(
-      invitationData,
-      contributor
-    );
+    const invitation =
+      await this.invitationService.createInvitation(invitationData);
     invitation.roleSet = roleSet;
 
     const result = await this.invitationService.save(invitation);
-    // Ensure that the user that is invited has a credential for the invitation
+    // Ensure that the contributor has a credential for the invitation
     if (roleSet.type === RoleSetType.SPACE) {
-      await this.assignSpaceInviteeCredential(agent, roleSet);
+      await this.assignSpaceInviteeCredential(actorId, roleSet);
     }
 
     await this.roleSetCacheService.deleteMembershipStatusCache(
-      agent.id,
+      actorId,
       roleSet.id
     );
 
@@ -1730,7 +1455,7 @@ export class RoleSetService {
     welcomeMessage: string,
     roleSetInvitedToParent: boolean,
     extraRoles: RoleName[],
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ): Promise<IPlatformInvitation> {
     const externalInvitationInput: CreatePlatformInvitationInput = {
       roleSetID: roleSet.id,
@@ -1738,7 +1463,7 @@ export class RoleSetService {
       email,
       roleSetInvitedToParent,
       roleSetExtraRoles: extraRoles,
-      createdBy: agentInfo.userID,
+      createdBy: actorContext.actorId,
     };
     const externalInvitation =
       await this.platformInvitationService.createPlatformInvitation(
@@ -1753,95 +1478,81 @@ export class RoleSetService {
     roleSet: IRoleSet,
     userIDs: string[]
   ): Promise<{ [userID: string]: RoleName[] }> {
-    // Retrieve all agents for the provided user IDs in a single query
-    const usersWithAgents =
-      await this.userLookupService.getUsersWithAgent(userIDs);
-
+    const users = await this.userLookupService.getUsersWithCredentials(userIDs);
     const roleNames = await this.getRoleNames(roleSet);
-
-    // Initialize a result map to store roles for each user
     const userRolesMap: { [userID: string]: RoleName[] } = {};
 
-    // Iterate over each agent and determine their roles
-    for (const { id: userID, agent } of usersWithAgents) {
+    for (const user of users) {
       const roles: RoleName[] = [];
       for (const roleName of roleNames) {
-        if (await this.isInRole(agent, roleSet, roleName)) {
+        // User IS an Actor - user.id is the actorId
+        if (await this.isInRole(user.id, roleSet, roleName)) {
           roles.push(roleName);
         }
       }
-      userRolesMap[userID] = roles;
+      userRolesMap[user.id] = roles;
     }
 
     return userRolesMap;
   }
 
-  private async validateApplicationFromUser(
-    user: IUser,
-    agent: IAgent,
+  private async validateApplicationFromActor(
+    actorId: string,
     roleSet: IRoleSet
   ) {
-    const openApplication = await this.findOpenApplication(user.id, roleSet.id);
+    const openApplication = await this.findOpenApplication(actorId, roleSet.id);
     if (openApplication) {
       throw new RoleSetMembershipException(
-        `Application not possible: An open application (ID: ${openApplication.id}) already exists for contributor ${openApplication.user?.id} on RoleSet: ${roleSet.id}.`,
+        `Application not possible: An open application already exists for actor ${actorId} on RoleSet: ${roleSet.id}.`,
         LogContext.COMMUNITY
       );
     }
 
-    const openInvitation = await this.findOpenInvitation(user.id, roleSet.id);
+    const openInvitation = await this.findOpenInvitation(actorId, roleSet.id);
     if (openInvitation) {
       throw new RoleSetMembershipException(
-        `Application not possible: An open invitation (ID: ${openInvitation.id}) already exists for contributor ${openInvitation.invitedContributorID} (${openInvitation.contributorType}) on RoleSet: ${roleSet.id}.`,
+        `Application not possible: An open invitation already exists for actor ${actorId} on RoleSet: ${roleSet.id}.`,
         LogContext.COMMUNITY
       );
     }
 
-    // Check if the user is already a member; if so do not allow an application
-    const isExistingMember = await this.isMember(agent, roleSet);
+    // Check if the actor is already a member; if so do not allow an application
+    const isExistingMember = await this.isMember(actorId, roleSet);
     if (isExistingMember)
       throw new RoleSetMembershipException(
-        `Application not possible: Contributor ${user.id} is already a member of the RoleSet: ${roleSet.id}.`,
+        `Application not possible: Actor ${actorId} is already a member of the RoleSet: ${roleSet.id}.`,
         LogContext.COMMUNITY
       );
   }
 
-  private async validateInvitationToExistingContributor(
-    contributor: IContributor,
-    agent: IAgent,
+  private async validateInvitationToExistingActor(
+    actorId: string,
     roleSet: IRoleSet
   ) {
-    const openInvitation = await this.findOpenInvitation(
-      contributor.id,
-      roleSet.id
-    );
+    const openInvitation = await this.findOpenInvitation(actorId, roleSet.id);
     if (openInvitation) {
       await this.roleSetCacheService.deleteOpenInvitationFromCache(
-        contributor.id,
+        actorId,
         roleSet.id
       );
       throw new RoleSetMembershipException(
-        `Invitation not possible: An open invitation (ID: ${openInvitation.id}) already exists for contributor ${openInvitation.invitedContributorID} (${openInvitation.contributorType}) on RoleSet: ${roleSet.id}.`,
+        `Invitation not possible: An open invitation already exists for actor ${actorId} on RoleSet: ${roleSet.id}.`,
         LogContext.COMMUNITY
       );
     }
 
-    const openApplication = await this.findOpenApplication(
-      contributor.id,
-      roleSet.id
-    );
+    const openApplication = await this.findOpenApplication(actorId, roleSet.id);
     if (openApplication) {
       throw new RoleSetMembershipException(
-        `Invitation not possible: An open application (ID: ${openApplication.id}) already exists for contributor ${openApplication.user?.id} on RoleSet: ${roleSet.id}.`,
+        `Invitation not possible: An open application already exists for actor ${actorId} on RoleSet: ${roleSet.id}.`,
         LogContext.COMMUNITY
       );
     }
 
-    // Check if the user is already a member; if so do not allow an application
-    const isExistingMember = await this.isMember(agent, roleSet);
+    const isExistingMember = await this.isMember(actorId, roleSet);
     if (isExistingMember)
       throw new RoleSetMembershipException(
-        `Invitation not possible: Contributor ${contributor.id} is already a member of the RoleSet: ${roleSet.id}.`,
+        `Invitation not possible: Actor ${actorId} is already a member of the RoleSet: ${roleSet.id}.`,
         LogContext.COMMUNITY
       );
   }
@@ -1906,7 +1617,7 @@ export class RoleSetService {
     );
 
     const credentialMatches =
-      await this.agentService.countAgentsWithMatchingCredentials({
+      await this.actorService.countActorsWithMatchingCredentials({
         type: membershipCredential.type,
         resourceID: membershipCredential.resourceID,
       });
@@ -1915,18 +1626,18 @@ export class RoleSetService {
   }
 
   async getImplicitRoles(
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     roleSet: IRoleSet
   ): Promise<RoleSetRoleImplicit[]> {
     const result: RoleSetRoleImplicit[] = [];
-    const agent = await this.agentService.getAgentOrFail(agentInfo.agentID);
+    const actor = await this.actorService.getActorOrFail(actorContext.actorId);
 
     const rolesImplicit: RoleSetRoleImplicit[] = Object.values(
       RoleSetRoleImplicit
     ) as RoleSetRoleImplicit[];
     for (const role of rolesImplicit) {
-      const hasAgentRole = await this.isInRoleImplicit(agent, roleSet, role);
-      if (hasAgentRole) {
+      const hasActorRole = await this.isInRoleImplicit(actor.id, roleSet, role);
+      if (hasActorRole) {
         result.push(role);
       }
     }
@@ -2111,7 +1822,7 @@ export class RoleSetService {
 
   public async approveApplication(
     applicationID: string,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ): Promise<void> {
     const application = await this.applicationService.getApplicationOrFail(
       applicationID,
@@ -2127,11 +1838,11 @@ export class RoleSetService {
         LogContext.COMMUNITY
       );
 
-    await this.assignUserToRole(
+    await this.assignActorToRole(
       roleSet,
       RoleName.MEMBER,
       userID,
-      agentInfo,
+      actorContext,
       true
     );
 

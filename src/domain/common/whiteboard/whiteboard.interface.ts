@@ -1,6 +1,6 @@
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { INameable } from '../entity/nameable-entity/nameable.interface';
+import { INameable } from '@domain/common/entity/nameable-entity';
 import { WhiteboardContent } from '../scalars/scalar.whiteboard.content';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
 import { IWhiteboardPreviewSettings } from './whiteboard.preview.settings.interface';

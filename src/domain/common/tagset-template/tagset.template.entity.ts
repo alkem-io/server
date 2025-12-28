@@ -3,7 +3,7 @@ import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.
 import { TagsetTemplateSet } from '@domain/common/tagset-template-set/tagset.template.set.entity';
 import { BaseAlkemioEntity } from '../entity/base-entity';
 import { TagsetType } from '@common/enums/tagset.type';
-import { Tagset } from '../tagset/tagset.entity';
+import { Tagset } from '@domain/common/tagset';
 import { ENUM_LENGTH, SMALL_TEXT_LENGTH } from '@common/constants';
 
 export enum RestrictedTagsetTemplateNames {

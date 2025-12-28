@@ -4,7 +4,7 @@ import { CreateUserInput, UpdateUserInput } from '@domain/community/user/dto';
 import { ValidationException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { validate, ValidationError } from 'class-validator';
-import { AbstractHandler } from './abstract.handler';
+import { AbstractHandler } from '@core/validation';
 import {
   CreateOrganizationInput,
   UpdateOrganizationInput,
@@ -61,15 +61,11 @@ import { ForumCreateDiscussionInput } from '@platform/forum/dto/forum.dto.create
 import { CreateCollaborationOnSpaceInput } from '@domain/space/space/dto/space.dto.create.collaboration';
 import { ApplyForEntryRoleOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.entry.role.apply';
 import { InviteForEntryRoleOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.entry.role.invite';
-import { AssignRoleOnRoleSetToUserInput } from '@domain/access/role-set/dto/role.set.dto.role.assign.user';
-import { AssignRoleOnRoleSetToOrganizationInput } from '@domain/access/role-set/dto/role.set.dto.role.assign.organization';
-import { AssignRoleOnRoleSetToVirtualContributorInput } from '@domain/access/role-set/dto/role.set.dto.role.assign.virtual';
-import { RemoveRoleOnRoleSetFromUserInput } from '@domain/access/role-set/dto/role.set.dto.role.remove.user';
-import { RemoveRoleOnRoleSetFromOrganizationInput } from '@domain/access/role-set/dto/role.set.dto.role.remove.organization';
-import { RemoveRoleOnRoleSetFromVirtualContributorInput } from '@domain/access/role-set/dto/role.set.dto.role.remove.virtual';
+import { AssignRoleOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.role.assign';
+import { RemoveRoleOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.role.remove';
 import { UpdateApplicationFormOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.update.application.form';
 import { JoinAsEntryRoleOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.entry.role.join';
-import { RolesUserInput } from '@services/api/roles/dto/roles.dto.input.user';
+import { RolesActorInput } from '@services/api/roles/dto/roles.dto.input.actor';
 import { InvitationEventInput } from '@domain/access/invitation/dto/invitation.dto.event';
 import { UpdateOrganizationSettingsEntityInput } from '@domain/community/organization-settings/dto/organization.settings.dto.update';
 import { UpdateOrganizationSettingsMembershipInput } from '@domain/community/organization-settings/dto/organization.settings.membership.dto.update';
@@ -113,19 +109,15 @@ export class BaseHandler extends AbstractHandler {
     metatype: Function
   ): Promise<ValidationError[]> {
     const types: Function[] = [
-      AssignRoleOnRoleSetToUserInput,
-      AssignRoleOnRoleSetToOrganizationInput,
-      AssignRoleOnRoleSetToVirtualContributorInput,
+      AssignRoleOnRoleSetInput,
       InvitationEventInput,
       ApplicationEventInput,
       OrganizationVerificationEventInput,
-      RemoveRoleOnRoleSetFromUserInput,
-      RemoveRoleOnRoleSetFromOrganizationInput,
-      RemoveRoleOnRoleSetFromVirtualContributorInput,
+      RemoveRoleOnRoleSetInput,
       UpdateApplicationFormOnRoleSetInput,
       JoinAsEntryRoleOnRoleSetInput,
       ApplyForEntryRoleOnRoleSetInput,
-      RolesUserInput,
+      RolesActorInput,
       InviteForEntryRoleOnRoleSetInput,
       UpdateInnovationFlowInput,
       RoomSendMessageInput,

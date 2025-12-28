@@ -14,7 +14,7 @@ import { VirtualContributorMessageService } from '@domain/communication/virtual.
 import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup.service';
 import { RoomMentionsService } from '@domain/communication/room-mentions/room.mentions.service';
 import { MentionedEntityType } from '@domain/communication/messaging/mention.interface';
-import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
+import { ActorContextService } from '@core/actor-context';
 
 /**
  * Domain service for processing incoming messages from Matrix.
@@ -31,7 +31,7 @@ export class MessageInboxService {
     private readonly virtualContributorLookupService: VirtualContributorLookupService,
     private readonly virtualContributorMessageService: VirtualContributorMessageService,
     private readonly subscriptionPublishService: SubscriptionPublishService,
-    private readonly agentInfoService: AgentInfoService,
+    private readonly actorContextService: ActorContextService,
     private readonly communicationAdapter: CommunicationAdapter,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
@@ -62,15 +62,17 @@ export class MessageInboxService {
         id: payload.message.id,
         message: payload.message.message,
         sender: payload.actorID,
-        senderType: 'user', // Will be refined if sender is VC
         threadID: payload.message.threadID || '',
         timestamp: payload.message.timestamp,
         reactions: [],
       }
     );
 
-    // Check if this is a DIRECT conversation - requires special handling
-    if (room.type === RoomType.CONVERSATION_DIRECT) {
+    // Check if this is a 1:1 conversation (USER_USER or USER_VC) - invoke VC members
+    if (
+      room.type === RoomType.CONVERSATION_DIRECT ||
+      room.type === RoomType.CONVERSATION
+    ) {
       await this.handleDirectConversation(payload, room);
       return;
     }
@@ -79,26 +81,30 @@ export class MessageInboxService {
     const threadID = payload.message.threadID || payload.message.id;
 
     // Check if this thread has an existing VC interaction
-    const vcData = room.vcInteractionsByThread?.[threadID];
+    const threadInteraction = room.vcData?.interactionsByThread?.[threadID];
 
-    if (vcData) {
-      await this.handleExistingThread(payload, room, threadID, vcData);
+    if (threadInteraction) {
+      await this.handleExistingThread(
+        payload,
+        room,
+        threadID,
+        threadInteraction
+      );
     } else {
       await this.handleNewThread(payload, room, threadID);
     }
   }
 
   /**
-   * Handle DIRECT conversation rooms.
+   * Handle 1:1 conversation rooms (USER_USER or USER_VC).
    * Invokes all VC members in the room, excluding the message sender.
-   * Scales to multi-participant conversations.
    */
   private async handleDirectConversation(
     payload: any,
     room: any
   ): Promise<void> {
     this.logger.verbose?.(
-      `Processing DIRECT conversation: roomId=${payload.roomId}`,
+      `Processing 1:1 conversation: roomId=${payload.roomId}, type=${room.type}`,
       LogContext.COMMUNICATION
     );
 
@@ -110,17 +116,18 @@ export class MessageInboxService {
 
     if (otherMembers.length === 0) {
       this.logger.verbose?.(
-        `No other members in DIRECT room ${room.id}, skipping`,
+        `No other members in conversation room ${room.id}, skipping`,
         LogContext.COMMUNICATION
       );
       return;
     }
 
     // Find all VCs among other members
+    // VirtualContributor IS an Actor - actorId = virtualContributor.id
     const vcMembers = [];
     for (const actorID of otherMembers) {
       const vc =
-        await this.virtualContributorLookupService.getVirtualContributorByAgentId(
+        await this.virtualContributorLookupService.getVirtualContributorById(
           actorID
         );
       if (vc) {
@@ -130,14 +137,14 @@ export class MessageInboxService {
 
     if (vcMembers.length === 0) {
       this.logger.verbose?.(
-        `No VC members found in DIRECT room ${room.id}, skipping`,
+        `No VC members found in conversation room ${room.id}, skipping`,
         LogContext.COMMUNICATION
       );
       return;
     }
 
-    // Build AgentInfo from sender
-    const agentInfo = await this.agentInfoService.buildAgentInfoForAgent(
+    // Build ActorContext from sender
+    const actorContext = await this.actorContextService.buildForActor(
       payload.actorID
     );
 
@@ -146,7 +153,7 @@ export class MessageInboxService {
 
     // Invoke all VCs in parallel
     this.logger.verbose?.(
-      `Invoking ${vcMembers.length} VC(s) in DIRECT conversation`,
+      `Invoking ${vcMembers.length} VC(s) in conversation room ${room.id}`,
       LogContext.COMMUNICATION
     );
 
@@ -156,13 +163,9 @@ export class MessageInboxService {
           vcActorID,
           payload.message.message,
           threadID,
-          agentInfo,
+          actorContext,
           '', // contextSpaceID out of scope
-          room,
-          {
-            threadID,
-            virtualContributorID: vcActorID,
-          }
+          room
         )
       )
     );
@@ -189,8 +192,8 @@ export class MessageInboxService {
       LogContext.COMMUNICATION
     );
 
-    // Build AgentInfo from sender
-    const agentInfo = await this.agentInfoService.buildAgentInfoForAgent(
+    // Build ActorContext from sender
+    const actorContext = await this.actorContextService.buildForActor(
       payload.actorID
     );
 
@@ -198,13 +201,9 @@ export class MessageInboxService {
       vcData.virtualContributorActorID,
       payload.message.message,
       threadID,
-      agentInfo,
+      actorContext,
       '', // contextSpaceID out of scope
-      room,
-      {
-        threadID,
-        virtualContributorID: vcData.virtualContributorActorID,
-      }
+      room
     );
   }
 
@@ -234,8 +233,8 @@ export class MessageInboxService {
       return;
     }
 
-    // Build AgentInfo from sender
-    const agentInfo = await this.agentInfoService.buildAgentInfoForAgent(
+    // Build ActorContext from sender
+    const actorContext = await this.actorContextService.buildForActor(
       payload.actorID
     );
 
@@ -244,7 +243,7 @@ export class MessageInboxService {
       vcMentions,
       payload.message.message,
       threadID,
-      agentInfo,
+      actorContext,
       room
     );
   }
@@ -272,7 +271,6 @@ export class MessageInboxService {
         id: payload.reactionId,
         emoji: payload.emoji,
         sender: payload.actorID,
-        senderType: 'user', // Will be refined if sender is VC
         timestamp: payload.timestamp,
       },
       payload.messageId
@@ -302,7 +300,6 @@ export class MessageInboxService {
         id: payload.reactionId,
         emoji: '', // Not needed for delete
         sender: '',
-        senderType: 'user',
         timestamp: Date.now(),
       },
       payload.messageId

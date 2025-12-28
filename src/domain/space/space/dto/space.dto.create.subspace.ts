@@ -1,6 +1,6 @@
 import { UUID } from '@domain/common/scalars';
 import { Field, InputType } from '@nestjs/graphql';
-import { CreateSpaceInput } from './space.dto.create';
+import { CreateSpaceInput } from '@domain/space';
 
 @InputType()
 export class CreateSubspaceInput extends CreateSpaceInput {

@@ -11,7 +11,6 @@ import configuration from '@config/configuration';
 // Domain/API modules that define GraphQL types (initial pass; extend incrementally if parity test reveals gaps)
 import { SpaceModule } from '@domain/space/space/space.module';
 import { ScalarsModule } from '@domain/common/scalars/scalars.module';
-import { AgentModule } from '@domain/agent/agent/agent.module';
 import { RolesModule } from '@services/api/roles/roles.module';
 import { PlatformModule } from '@platform/platform/platform.module';
 import { SearchModule } from '@services/api/search/search.module';
@@ -185,7 +184,6 @@ class SchemaBootstrapStubModule {}
     // Core schema-contributing modules
     ScalarsModule,
     SpaceModule,
-    AgentModule,
     RolesModule,
     PlatformModule,
     PlatformHubModule,

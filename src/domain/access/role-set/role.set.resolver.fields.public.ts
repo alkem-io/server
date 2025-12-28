@@ -8,9 +8,9 @@ import { RoleSet } from './role.set.entity';
 import { RoleName } from '@common/enums/role.name';
 import { IRole } from '../role/role.interface';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { RoleSetRoleImplicit } from '@common/enums/role.set.role.implicit';
-import { RoleSetAgentRolesDataLoader } from './role.set.data.loaders.agent.roles';
+import { RoleSetActorRolesDataLoader } from './role.set.data.loaders.actor.roles';
 import { RoleSetMembershipStatusDataLoader } from './role.set.data.loader.membership.status';
 import { InstrumentResolver } from '@src/apm/decorators';
 
@@ -20,8 +20,8 @@ import { InstrumentResolver } from '@src/apm/decorators';
 export class RoleSetResolverFieldsPublic {
   constructor(
     private roleSetService: RoleSetService,
-    @Inject(RoleSetAgentRolesDataLoader)
-    private readonly agentRolesLoader: RoleSetAgentRolesDataLoader,
+    @Inject(RoleSetActorRolesDataLoader)
+    private readonly actorRolesLoader: RoleSetActorRolesDataLoader,
     @Inject(RoleSetMembershipStatusDataLoader)
     private readonly membershipStatusLoader: RoleSetMembershipStatusDataLoader
   ) {}
@@ -75,11 +75,11 @@ export class RoleSetResolverFieldsPublic {
     description: 'The membership status of the currently logged in user.',
   })
   async myMembershipStatus(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Parent() roleSet: RoleSet
   ): Promise<CommunityMembershipStatus> {
     // Uses the DataLoader to batch load membership statuses
-    return this.membershipStatusLoader.loader.load({ agentInfo, roleSet });
+    return this.membershipStatusLoader.loader.load({ actorContext, roleSet });
   }
 
   @ResolveField('myRoles', () => [RoleName], {
@@ -89,10 +89,10 @@ export class RoleSetResolverFieldsPublic {
   })
   async myRoles(
     @Parent() roleSet: RoleSet,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentUser() actorContext: ActorContext
   ): Promise<RoleName[]> {
-    // Utilize the loader to batch getRolesForAgentInfo calls.
-    return this.agentRolesLoader.loader.load({ agentInfo, roleSet });
+    // Utilize the loader to batch getRolesForActorContext calls.
+    return this.actorRolesLoader.loader.load({ actorContext, roleSet });
   }
 
   @ResolveField('myRolesImplicit', () => [RoleSetRoleImplicit], {
@@ -101,9 +101,9 @@ export class RoleSetResolverFieldsPublic {
       'The implicit roles on this community for the currently logged in user.',
   })
   async myRolesImplicit(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Parent() roleSet: IRoleSet
   ): Promise<RoleSetRoleImplicit[]> {
-    return this.roleSetService.getImplicitRoles(agentInfo, roleSet);
+    return this.roleSetService.getImplicitRoles(actorContext, roleSet);
   }
 }

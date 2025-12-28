@@ -12,7 +12,7 @@ import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.serv
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { CredentialsSearchInput } from '@domain/agent/credential/dto/credentials.dto.search';
+import { CredentialsSearchInput } from '@domain/actor/credential/dto/credentials.dto.search';
 import {
   RelationshipNotFoundException,
   ValidationException,
@@ -24,6 +24,7 @@ import { NotificationEventException } from '@common/exceptions/notification.even
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { IUserSettingsNotificationChannels } from '@domain/community/user-settings/user.settings.notification.channels.interface';
 import { IUser } from '@domain/community/user/user.interface';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 @Injectable()
 export class NotificationRecipientsService {
   constructor(
@@ -31,6 +32,7 @@ export class NotificationRecipientsService {
     private virtualContributorLookupService: VirtualContributorLookupService,
     private spaceLookupService: SpaceLookupService,
     private organizationLookupService: OrganizationLookupService,
+    private actorLookupService: ActorLookupService,
     private authorizationService: AuthorizationService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -129,7 +131,7 @@ export class NotificationRecipientsService {
     );
 
     const triggeredBy = eventData.triggeredBy
-      ? await this.userLookupService.getUserOrFail(eventData.triggeredBy)
+      ? await this.userLookupService.getUserByIdOrFail(eventData.triggeredBy)
       : undefined;
 
     if (!triggeredBy) {
@@ -163,16 +165,15 @@ export class NotificationRecipientsService {
     const recipientsWithNotificationEnabledIDs =
       recipientsWithNotificationEnabled.map(recipient => recipient.id);
     // Need to reload the users to get the full set of credentials for use in authorization evaluation
+    // User IS an Actor - credentials are directly on the entity
     const recipientsWithNotificationEnabledWithCredentials =
-      await this.userLookupService.getUsersByUUID(
+      await this.userLookupService.getUsersByIds(
         recipientsWithNotificationEnabledIDs,
         {
           relations: {
             settings: true,
             profile: true,
-            agent: {
-              credentials: true,
-            },
+            credentials: true,
           },
         }
       );
@@ -195,10 +196,11 @@ export class NotificationRecipientsService {
       );
       recipientsWithPrivilege =
         recipientsWithNotificationEnabledWithCredentials.filter(recipient => {
-          const credentials = recipient.agent.credentials;
+          // User IS an Actor - credentials are directly on the entity
+          const credentials = recipient.credentials;
           if (!credentials) {
             throw new RelationshipNotFoundException(
-              `User ${recipient.id} does not have agent with credentials`,
+              `User ${recipient.id} does not have credentials`,
               LogContext.NOTIFICATIONS
             );
           }
@@ -439,17 +441,9 @@ export class NotificationRecipientsService {
             LogContext.NOTIFICATIONS
           );
         }
-        const organization =
-          await this.organizationLookupService.getOrganizationOrFail(
-            organizationID
-          );
-        if (!organization.authorization) {
-          throw new RelationshipNotFoundException(
-            `Organization does not have an authorization policy: ${organization.id}`,
-            LogContext.NOTIFICATIONS
-          );
-        }
-        return organization.authorization;
+        return this.actorLookupService.getActorAuthorizationOrFail(
+          organizationID
+        );
       }
 
       case NotificationEvent.SPACE_COMMUNICATION_UPDATE:
@@ -470,14 +464,7 @@ export class NotificationRecipientsService {
             LogContext.NOTIFICATIONS
           );
         }
-        const space = await this.spaceLookupService.getSpaceOrFail(entityID);
-        if (!space.authorization) {
-          throw new RelationshipNotFoundException(
-            `Space does not have an authorization policy: ${space.id}`,
-            LogContext.NOTIFICATIONS
-          );
-        }
-        return space.authorization;
+        return this.actorLookupService.getActorAuthorizationOrFail(entityID);
       }
 
       case NotificationEvent.SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT:
@@ -498,14 +485,9 @@ export class NotificationRecipientsService {
             LogContext.NOTIFICATIONS
           );
         }
-        const user = await this.userLookupService.getUserOrFail(targetUserID);
-        if (!user.authorization) {
-          throw new RelationshipNotFoundException(
-            `User does not have an authorization policy: ${user.id}`,
-            LogContext.NOTIFICATIONS
-          );
-        }
-        return user.authorization;
+        return this.actorLookupService.getActorAuthorizationOrFail(
+          targetUserID
+        );
       }
 
       case NotificationEvent.VIRTUAL_CONTRIBUTOR_ADMIN_SPACE_COMMUNITY_INVITATION: {
@@ -516,18 +498,9 @@ export class NotificationRecipientsService {
             LogContext.NOTIFICATIONS
           );
         }
-        const virtualContributor =
-          await this.virtualContributorLookupService.getVirtualContributorOrFail(
-            virtualContributorID
-          );
-        if (!virtualContributor.authorization) {
-          throw new RelationshipNotFoundException(
-            `Virtual Contributor does not have an authorization policy: ${virtualContributor.id}`,
-            LogContext.NOTIFICATIONS
-          );
-        }
-
-        return virtualContributor.authorization;
+        return this.actorLookupService.getActorAuthorizationOrFail(
+          virtualContributorID
+        );
       }
 
       default:
@@ -637,7 +610,7 @@ export class NotificationRecipientsService {
       );
     }
     const virtual =
-      await this.virtualContributorLookupService.getVirtualContributorOrFail(
+      await this.virtualContributorLookupService.getVirtualContributorByIdOrFail(
         virtualContributorID,
         {
           relations: {

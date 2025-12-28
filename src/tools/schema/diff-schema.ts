@@ -40,7 +40,7 @@ import {
   indexSDL,
   DiffContext,
   pushEntry,
-} from '../../schema-contract/diff/diff-core';
+} from '@src/schema-contract/diff/diff-core';
 
 interface Args {
   oldPath: string | null;

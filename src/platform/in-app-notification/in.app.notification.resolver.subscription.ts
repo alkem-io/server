@@ -1,7 +1,7 @@
 import { Resolver, Int } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentUser, TypedSubscription } from '@common/decorators';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import {
   InAppNotificationReceivedSubscriptionPayload,
   InAppNotificationCounterSubscriptionPayload,
@@ -27,8 +27,8 @@ export class InAppNotificationResolverSubscription {
         _variables,
         context
       ) {
-        const agentInfo = context.req.user;
-        return agentInfo?.userID === payload.notification.receiverID;
+        const actorContext = context.req.user;
+        return actorContext?.actorId === payload.notification.receiverID;
       },
       async resolve(
         this: InAppNotificationResolverSubscription,
@@ -43,12 +43,14 @@ export class InAppNotificationResolverSubscription {
       },
     }
   )
-  public async inAppNotificationReceived(@CurrentUser() agentInfo: AgentInfo) {
-    if (!agentInfo.userID) {
+  public async inAppNotificationReceived(
+    @CurrentUser() actorContext: ActorContext
+  ) {
+    if (!actorContext.actorId) {
       throw new ForbiddenException(
         'User could not be resolved',
         LogContext.IN_APP_NOTIFICATION,
-        { agentInfo }
+        { actorContext }
       );
     }
 
@@ -66,8 +68,8 @@ export class InAppNotificationResolverSubscription {
         _variables,
         context
       ) {
-        const agentInfo = context.req.user;
-        return agentInfo?.userID === payload?.receiverID;
+        const actorContext = context.req.user;
+        return actorContext?.actorId === payload?.receiverID;
       },
       async resolve(
         this: InAppNotificationResolverSubscription,
@@ -79,12 +81,14 @@ export class InAppNotificationResolverSubscription {
       },
     }
   )
-  public async notificationsUnreadCount(@CurrentUser() agentInfo: AgentInfo) {
-    if (!agentInfo.userID) {
+  public async notificationsUnreadCount(
+    @CurrentUser() actorContext: ActorContext
+  ) {
+    if (!actorContext.actorId) {
       throw new ForbiddenException(
         'User could not be resolved',
         LogContext.IN_APP_NOTIFICATION,
-        { agentInfo }
+        { actorContext }
       );
     }
 

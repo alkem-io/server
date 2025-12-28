@@ -1,7 +1,7 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser } from '@src/common/decorators';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { MemoService } from './memo.service';
 import { IMemo } from './memo.interface';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -33,13 +33,13 @@ export class MemoResolverMutations {
     description: 'Updates the specified Memo.',
   })
   async updateMemo(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('memoData') memoData: UpdateMemoEntityInput
   ): Promise<IMemo> {
     const memo = await this.memoService.getMemoOrFail(memoData.ID);
     const originalContentPolicy = memo.contentUpdatePolicy;
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       memo.authorization,
       AuthorizationPrivilege.UPDATE,
       `update Memo: ${memo.id}`
@@ -96,12 +96,12 @@ export class MemoResolverMutations {
     description: 'Deletes the specified Memo.',
   })
   async deleteMemo(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('memoData') memoData: DeleteMemoInput
   ): Promise<IMemo> {
     const memo = await this.memoService.getMemoOrFail(memoData.ID);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       memo.authorization,
       AuthorizationPrivilege.DELETE,
       `delete Memo: ${memo.id}`

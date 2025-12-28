@@ -33,7 +33,7 @@ export class CalendarEventResolverFields {
     }
 
     try {
-      return await this.userLookupService.getUserByUUID(createdBy);
+      return await this.userLookupService.getUserById(createdBy);
     } catch (e: unknown) {
       if (e instanceof EntityNotFoundException) {
         this.logger?.warn(

@@ -8,7 +8,7 @@ import { InvitationResolverFields } from './invitation.resolver.fields';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { InvitationAuthorizationService } from './invitation.service.authorization';
 import { InvitationResolverMutations } from './invitation.resolver.mutations';
-import { ContributorModule } from '@domain/community/contributor/contributor.module';
+import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
 import { InvitationLifecycleResolverFields } from './invitation.resolver.fields.lifecycle';
 import { InvitationLifecycleService } from './invitation.service.lifecycle';
 import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
@@ -21,7 +21,7 @@ import { RoleSetCacheModule } from '../role-set/role.set.service.cache.module';
     AuthorizationPolicyModule,
     AuthorizationModule,
     LifecycleModule,
-    ContributorModule,
+    ActorLookupModule,
     VirtualContributorLookupModule,
     UserLookupModule,
     AccountLookupModule,

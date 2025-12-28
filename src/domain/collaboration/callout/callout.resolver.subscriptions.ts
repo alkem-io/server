@@ -1,6 +1,6 @@
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { SubscriptionType } from '@common/enums/subscription.type';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Resolver } from '@nestjs/graphql';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -36,8 +36,8 @@ export class CalloutResolverSubscriptions {
       description:
         'Receive new Update messages on Communities the currently authenticated User is a member of.',
       resolve(this: CalloutResolverSubscriptions, payload, args, context) {
-        const agentInfo = context.req.user;
-        const logMsgPrefix = `[User (${agentInfo.email}) Callout Post Collection] - `;
+        const actorContext = context.req.user;
+        const logMsgPrefix = `[User (${actorContext.actorId}) Callout Post Collection] - `;
         this.logger.verbose?.(
           `${logMsgPrefix} sending out event for Posts on Callout: ${payload.calloutID} `,
           LogContext.SUBSCRIPTIONS
@@ -52,8 +52,8 @@ export class CalloutResolverSubscriptions {
         };
       },
       filter(this: CalloutResolverSubscriptions, payload, variables, context) {
-        const agentInfo = context.req.user;
-        const logMsgPrefix = `[User (${agentInfo.email}) Callout Post Collection] - `;
+        const actorContext = context.req.user;
+        const logMsgPrefix = `[User (${actorContext.actorId}) Callout Post Collection] - `;
         this.logger.verbose?.(
           `${logMsgPrefix} Filtering event '${payload.eventID}'`,
           LogContext.SUBSCRIPTIONS
@@ -69,7 +69,7 @@ export class CalloutResolverSubscriptions {
     }
   )
   async calloutPostCreated(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args({
       name: 'calloutID',
       type: () => UUID,
@@ -78,7 +78,7 @@ export class CalloutResolverSubscriptions {
     })
     calloutID: string
   ) {
-    const logMsgPrefix = `[User (${agentInfo.email}) Callout Post Collection] - `;
+    const logMsgPrefix = `[User (${actorContext.actorId}) Callout Post Collection] - `;
     this.logger.verbose?.(
       `${logMsgPrefix} Subscribing to the Callout of type Post Collection: ${calloutID}`,
       LogContext.SUBSCRIPTIONS
@@ -96,7 +96,7 @@ export class CalloutResolverSubscriptions {
       );
     }
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       callout.authorization,
       AuthorizationPrivilege.READ,
       `subscription to new Posts on Callout: ${callout.id}`

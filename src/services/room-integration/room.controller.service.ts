@@ -67,24 +67,19 @@ export class RoomControllerService {
       return;
     }
     const room = await this.roomLookupService.getRoomOrFail(roomID);
-    await this.roomLookupService.sendMessageReply(
-      room,
-      actorId,
-      {
-        roomID: room.id,
-        message: this.convertResultToMessage(event.response),
-        threadID,
-      },
-      'virtualContributor'
-    );
+    await this.roomLookupService.sendMessageReply(room, actorId, {
+      roomID: room.id,
+      message: this.convertResultToMessage(event.response),
+      threadID,
+    });
 
     const externalThreadId = event.response.threadId;
 
     // Update externalThreadId in JSON column
     if (threadID && externalThreadId) {
-      const vcData = room.vcInteractionsByThread?.[threadID];
-      if (vcData && !vcData.externalThreadId) {
-        vcData.externalThreadId = externalThreadId;
+      const threadInteraction = room.vcData?.interactionsByThread?.[threadID];
+      if (threadInteraction && !threadInteraction.externalThreadId) {
+        threadInteraction.externalThreadId = externalThreadId;
         await this.roomLookupService.save(room);
       }
     }

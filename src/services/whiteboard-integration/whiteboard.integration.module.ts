@@ -7,13 +7,13 @@ import { WhiteboardIntegrationController } from './whiteboard.integration.contro
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
-import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/agent.info.module';
+import { ActorContextModule } from '@core/actor-context';
 
 @Module({
   imports: [
     AuthorizationModule,
     WhiteboardModule,
-    AuthenticationAgentInfoModule,
+    ActorContextModule,
     AuthenticationModule,
     ContributionReporterModule,
     EntityResolverModule,

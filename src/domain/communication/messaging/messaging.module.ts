@@ -10,8 +10,7 @@ import { MessagingResolverMutations } from './messaging.resolver.mutations';
 import { MessagingService } from './messaging.service';
 import { PlatformWellKnownVirtualContributorsModule } from '@platform/platform.well.known.virtual.contributors';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
-import { VirtualContributorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
-import { AgentModule } from '@domain/agent/agent/agent.module';
+import { ActorLookupModule } from '@domain/actor/actor-lookup';
 
 @Module({
   imports: [
@@ -19,8 +18,7 @@ import { AgentModule } from '@domain/agent/agent/agent.module';
     AuthorizationModule,
     ConversationModule,
     UserLookupModule,
-    VirtualContributorLookupModule,
-    AgentModule,
+    ActorLookupModule,
     PlatformWellKnownVirtualContributorsModule,
     ConversationMembershipModule,
     TypeOrmModule.forFeature([Messaging]),

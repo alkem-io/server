@@ -1,7 +1,7 @@
 import { MimeFileType } from '@common/enums/mime.file.type';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { IDocument } from '../document/document.interface';
+import { IDocument } from '@domain/storage/document';
 import { IStorageAggregator } from '../storage-aggregator/storage.aggregator.interface';
 
 @ObjectType('StorageBucket')

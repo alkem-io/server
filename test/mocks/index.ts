@@ -1,5 +1,3 @@
-export * from './agent.service.mock';
-export * from './agent.service.mock';
 export * from './application.service.mock';
 export * from './authorization.policy.service.mock';
 export * from './authorization.service.mock';
@@ -17,6 +15,7 @@ export * from './platform.authorization.service.mock';
 export * from './user.authorization.service.mock';
 export * from './user.group.service.mock';
 export * from './user.service.mock';
+export * from './user.lookup.service.mock';
 export * from './winston.provider.mock';
 export * from './entity.manager.provider.mock';
 export * from './elasticsearch.client.provider.mock';

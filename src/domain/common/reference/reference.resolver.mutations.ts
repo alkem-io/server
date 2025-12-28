@@ -1,6 +1,6 @@
 import { CurrentUser } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { IReference } from '@domain/common/reference/reference.interface';
 import { DeleteReferenceInput } from '@domain/common/reference/dto/reference.dto.delete';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
@@ -34,14 +34,14 @@ export class ReferenceResolverMutations {
     description: 'Updates the specified Reference.',
   })
   async updateReference(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('referenceData') referenceData: UpdateReferenceInput
   ): Promise<IReference> {
     const reference = await this.referenceService.getReferenceOrFail(
       referenceData.ID
     );
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       reference.authorization,
       AuthorizationPrivilege.UPDATE,
       `update Reference: ${reference.id}`
@@ -56,14 +56,14 @@ export class ReferenceResolverMutations {
     description: 'Deletes the specified Reference.',
   })
   async deleteReference(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteReferenceInput
   ): Promise<IReference> {
     const reference = await this.referenceService.getReferenceOrFail(
       deleteData.ID
     );
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       reference.authorization,
       AuthorizationPrivilege.DELETE,
       `delete reference: ${reference.id}`
@@ -76,7 +76,7 @@ export class ReferenceResolverMutations {
       'Create a new Document on the Storage and return the value as part of the returned Reference.',
   })
   async uploadFileOnReference(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('uploadData') uploadData: StorageBucketUploadFileOnReferenceInput,
     @Args({ name: 'file', type: () => GraphQLUpload })
     { createReadStream, filename, mimetype }: FileUpload
@@ -94,7 +94,7 @@ export class ReferenceResolverMutations {
       }
     );
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       reference.authorization,
       AuthorizationPrivilege.UPDATE,
       `reference file upload: ${reference.id}`
@@ -109,7 +109,7 @@ export class ReferenceResolverMutations {
 
     const storageBucket = profile.storageBucket;
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       storageBucket.authorization,
       AuthorizationPrivilege.FILE_UPLOAD,
       `create document on storage: ${storageBucket.id}`
@@ -124,7 +124,7 @@ export class ReferenceResolverMutations {
       readStream,
       filename,
       mimetype,
-      agentInfo.userID
+      actorContext.actorId
     );
     document = await this.documentService.saveDocument(document);
 

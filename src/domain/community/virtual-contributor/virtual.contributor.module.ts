@@ -7,7 +7,6 @@ import { VirtualContributorResolverFields } from './virtual.contributor.resolver
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { VirtualContributorAuthorizationService } from './virtual.contributor.service.authorization';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
-import { AgentModule } from '@domain/agent/agent/agent.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { VirtualContributor } from './virtual.contributor.entity';
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
@@ -25,10 +24,8 @@ import { VirtualContributorSettingsModule } from '../virtual-contributor-setting
 import { VirtualContributorModelCardModule } from '../virtual-contributor-model-card/virtual.contributor.model.card.module';
 import { VirtualContributorPlatformSettingsModule } from '../virtual-contributor-platform-settings';
 import { PlatformWellKnownVirtualContributorsModule } from '@platform/platform.well.known.virtual.contributors';
-
 @Module({
   imports: [
-    AgentModule,
     AuthorizationPolicyModule,
     AuthorizationModule,
     ContributorModule,

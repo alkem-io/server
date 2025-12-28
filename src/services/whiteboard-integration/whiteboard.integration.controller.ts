@@ -8,7 +8,7 @@ import {
   Transport,
 } from '@nestjs/microservices';
 import { ack } from '../util';
-import { UserInfo, WhiteboardIntegrationMessagePattern } from './types';
+import { WhiteboardIntegrationMessagePattern } from './types';
 import { WhiteboardIntegrationService } from './whiteboard.integration.service';
 import { WhiteboardIntegrationEventPattern } from './types/event.pattern';
 import {
@@ -25,7 +25,6 @@ import {
   SaveOutputData,
   FetchOutputData,
 } from './outputs';
-import { randomUUID } from 'node:crypto';
 
 /**
  * Controller exposing the Whiteboard Integration service via message queue.
@@ -50,32 +49,9 @@ export class WhiteboardIntegrationController {
   public async who(
     @Payload() data: WhoInputData,
     @Ctx() context: RmqContext
-  ): Promise<UserInfo> {
+  ): Promise<string> {
     ack(context);
-    return this.integrationService.who(data).then(result => {
-      if (!result.isAnonymous) {
-        const { userID, email } = result;
-        if (result.guestName) {
-          const { guestName } = result;
-          // Sanitize guestName for email local part - use Unicode-aware regex
-          // \p{L} matches any Unicode letter, \p{N} matches any Unicode number
-          const sanitizedName = guestName
-            .toLowerCase()
-            .replace(/[^\p{L}\p{N}-]/gu, '-')
-            .replace(/-+/g, '-')
-            .replace(/^-|-$/g, '')
-            .substring(0, 64);
-          const guestEmail = `${sanitizedName || 'guest'}-guest@alkem.io`;
-          return {
-            id: randomUUID(),
-            email: guestEmail,
-            guestName: guestName,
-          };
-        }
-        return { id: userID, email };
-      }
-      return { id: '', email: '' };
-    });
+    return this.integrationService.who(data);
   }
 
   @EventPattern(WhiteboardIntegrationEventPattern.CONTRIBUTION, Transport.RMQ)

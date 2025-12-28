@@ -1,5 +1,5 @@
 import { CurrentUser } from '@common/decorators';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { Resolver, Mutation } from '@nestjs/graphql';
 import { InAppNotificationAdminService } from './in.app.notification.admin.service';
 import { PruneInAppNotificationAdminResult } from './dto/in.app.notification.admin.dto.prune.result';
@@ -22,10 +22,10 @@ export class InAppNotificationAdminResolverMutations {
       'Prunes InAppNotifications according to the platform defined criteria. The effects of the pruning are returned.',
   })
   async adminInAppNotificationsPrune(
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentUser() actorContext: ActorContext
   ): Promise<PruneInAppNotificationAdminResult> {
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_ADMIN,
       'pruning InApp Notifications'

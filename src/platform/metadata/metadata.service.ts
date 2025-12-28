@@ -1,7 +1,7 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IMetadata } from './metadata.interface';
-import { IServiceMetadata } from './service/service.metadata.interface';
+import { IServiceMetadata } from '@platform/metadata/service';
 
 @Injectable()
 export class MetadataService {

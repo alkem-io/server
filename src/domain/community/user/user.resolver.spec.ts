@@ -6,7 +6,6 @@ import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { MockUserService } from '@test/mocks/user.service.mock';
 import { MockAuthorizationService } from '@test/mocks/authorization.service.mock';
 import { MockAuthorizationPolicyService } from '@test/mocks/authorization.policy.service.mock';
-import { MockAgentService } from '@test/mocks/agent.service.mock';
 import { MockCommunicationAdapter } from '@test/mocks/communication.adapter.mock';
 import { MockUserAuthorizationService } from '@test/mocks/user.authorization.service.mock';
 import { MockNotificationsService } from '@test/mocks/notifications.service.mock';
@@ -24,7 +23,6 @@ describe('UserResolver', () => {
         MockCacheManager,
         MockWinstonProvider,
         MockUserService,
-        MockAgentService,
         MockAuthorizationService,
         MockAuthorizationPolicyService,
         MockPlatformAuthorizationService,

@@ -1,5 +1,5 @@
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { TagsetService } from './tagset.service';
@@ -20,12 +20,12 @@ export class TagsetResolverMutations {
     description: 'Updates the specified Tagset.',
   })
   async updateTagset(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('updateData') updateData: UpdateTagsetInput
   ): Promise<ITagset> {
     const tagset = await this.tagsetService.getTagsetOrFail(updateData.ID);
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       tagset.authorization,
       AuthorizationPrivilege.UPDATE,
       `update tagset: ${tagset.id}`

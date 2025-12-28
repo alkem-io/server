@@ -3,7 +3,7 @@ import { Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser } from '@src/common/decorators';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { InstrumentResolver } from '@src/apm/decorators';
@@ -31,15 +31,15 @@ export class AdminGeoLocationMutations {
     description: 'Updates the GeoLocation data where required on the platform.',
   })
   async adminUpdateGeoLocationData(
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentUser() actorContext: ActorContext
   ): Promise<boolean> {
     const platformPolicy =
       await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       platformPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `Update GeoLocation data: ${agentInfo.email}`
+      `Update GeoLocation data: ${actorContext.actorId}`
     );
 
     if (!this.geoapifyService.isEnabled()) {

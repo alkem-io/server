@@ -1,7 +1,7 @@
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { ActivityFeedQueryArgs } from './activity.feed.query.args';
@@ -29,18 +29,21 @@ export class ActivityFeedResolverQueries {
   public async activityFeed(
     @Args({ nullable: true })
     pagination: PaginationArgs,
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('args', { nullable: true })
     args?: ActivityFeedQueryArgs
   ): Promise<ActivityFeed> {
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
-      `Activity feed query: ${agentInfo.email}`
+      `Activity feed query: ${actorContext.actorId}`
     );
 
-    return this.feedService.getActivityFeed(agentInfo, { ...args, pagination });
+    return this.feedService.getActivityFeed(actorContext, {
+      ...args,
+      pagination,
+    });
   }
 
   @Query(() => [IActivityLogEntry], {
@@ -50,17 +53,17 @@ export class ActivityFeedResolverQueries {
   })
   @Profiling.api
   public async activityFeedGrouped(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('args', { nullable: true })
     args?: ActivityFeedGroupedQueryArgs
   ): Promise<IActivityLogEntry[]> {
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
-      `Activity feed query: ${agentInfo.email}`
+      `Activity feed query: ${actorContext.actorId}`
     );
 
-    return this.feedService.getGroupedActivityFeed(agentInfo, args);
+    return this.feedService.getGroupedActivityFeed(actorContext, args);
   }
 }

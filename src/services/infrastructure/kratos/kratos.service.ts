@@ -21,7 +21,8 @@ import { AuthenticationType } from '@common/enums/authentication.type';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UserIdentityNotFoundException } from '@common/exceptions/user/user.identity.not.found.exception';
 import { AuthenticationService } from '@core/authentication/authentication.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
+import { ActorContextService } from '@core/actor-context';
 import { OryDefaultIdentitySchema } from './types/ory.default.identity.schema';
 import { SessionInvalidReason } from './types/session.invalid.enum';
 
@@ -499,8 +500,9 @@ export class KratosService {
   /* Sets the user into the context field or closes the connection */
   public async authenticate(
     headers: Record<string, string | string[] | undefined>,
-    authService: AuthenticationService
-  ): Promise<AgentInfo> {
+    authService: AuthenticationService,
+    authActorInfoService: ActorContextService
+  ): Promise<ActorContext> {
     const authorization = headers.authorization as string;
 
     try {
@@ -511,11 +513,11 @@ export class KratosService {
           'No Ory Kratos session',
           LogContext.EXCALIDRAW_SERVER
         );
-        return authService.createAgentInfo();
+        return authActorInfoService.createAnonymous();
       }
 
       const oryIdentity = session.identity as OryDefaultIdentitySchema;
-      return authService.createAgentInfo(oryIdentity);
+      return authService.createActorContext(oryIdentity.id, session);
     } catch (e: any) {
       throw new Error(e?.message);
     }
@@ -524,10 +526,15 @@ export class KratosService {
   /* returns the user agent info */
   public async getUserInfo(
     headers: Record<string, string | string[] | undefined>,
-    authService: AuthenticationService
-  ): Promise<AgentInfo> {
+    authService: AuthenticationService,
+    authActorInfoService: ActorContextService
+  ): Promise<ActorContext> {
     try {
-      return await this.authenticate(headers, authService);
+      return await this.authenticate(
+        headers,
+        authService,
+        authActorInfoService
+      );
     } catch (e) {
       const err = e as Error;
       this.logger.error(
@@ -535,7 +542,7 @@ export class KratosService {
         err.stack,
         LogContext.EXCALIDRAW_SERVER
       );
-      return authService.createAgentInfo();
+      return authActorInfoService.createAnonymous();
     }
   }
 

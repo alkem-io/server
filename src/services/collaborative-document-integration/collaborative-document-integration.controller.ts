@@ -10,7 +10,6 @@ import {
 import { ack } from '@services/util';
 import { CollaborativeDocumentIntegrationService } from './collaborative-document-integration.service';
 import {
-  UserInfo,
   CollaborativeDocumentMessagePattern,
   CollaborativeDocumentEventPattern,
 } from './types';
@@ -53,15 +52,13 @@ export class CollaborativeDocumentIntegrationController {
   public async who(
     @Payload() data: WhoInputData,
     @Ctx() context: RmqContext
-  ): Promise<UserInfo> {
+  ): Promise<string> {
     this.logger.verbose?.(
       'Received WHO request',
       LogContext.COLLAB_DOCUMENT_INTEGRATION
     );
     ack(context);
-    return this.integrationService
-      .who(data)
-      .then(({ userID, email }) => ({ id: userID, email }));
+    return this.integrationService.who(data);
   }
 
   @MessagePattern(

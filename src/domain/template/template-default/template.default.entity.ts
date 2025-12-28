@@ -5,7 +5,7 @@ import { TemplateDefaultType } from '@common/enums/template.default.type';
 import { Template } from '../template/template.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { TemplateType } from '@common/enums/template.type';
-import { TemplatesManager } from '../templates-manager/templates.manager.entity';
+import { TemplatesManager } from '@domain/template/templates-manager';
 import { IsEnum } from 'class-validator';
 
 @Entity()

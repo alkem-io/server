@@ -1,6 +1,6 @@
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { StorageBucketService } from './storage.bucket.service';
@@ -31,7 +31,7 @@ export class StorageBucketResolverMutations {
   })
   @Profiling.api
   async uploadFileOnStorageBucket(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('uploadData') uploadData: StorageBucketUploadFileInput,
     @Args({ name: 'file', type: () => GraphQLUpload })
     { createReadStream, filename, mimetype }: FileUpload
@@ -42,7 +42,7 @@ export class StorageBucketResolverMutations {
       );
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       storageBucket.authorization,
       AuthorizationPrivilege.FILE_UPLOAD,
       `create document on storage: ${storageBucket.id}`
@@ -55,7 +55,7 @@ export class StorageBucketResolverMutations {
       readStream,
       filename,
       mimetype,
-      agentInfo.userID,
+      actorContext.actorId,
       uploadData.temporaryLocation
     );
     document = await this.documentService.saveDocument(document);
@@ -78,14 +78,14 @@ export class StorageBucketResolverMutations {
   })
   @Profiling.api
   async deleteStorageBucket(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteStorageBucketInput
   ): Promise<IStorageBucket> {
     const storageBucket =
       await this.storageBucketService.getStorageBucketOrFail(deleteData.ID);
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       storageBucket.authorization,
       AuthorizationPrivilege.DELETE,
       `Delete storage bucket: ${storageBucket.id}`

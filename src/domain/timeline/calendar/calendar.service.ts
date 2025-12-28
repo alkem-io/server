@@ -2,7 +2,7 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { ValidationException } from '@common/exceptions/validation.exception';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -11,7 +11,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
-import { ICalendarEvent } from '../event/event.interface';
+import { ICalendarEvent } from '@domain/timeline/event';
 import { CalendarEventService } from '../event/event.service';
 import { Calendar } from './calendar.entity';
 import { ICalendar } from './calendar.interface';
@@ -168,7 +168,7 @@ export class CalendarService {
 
   public async getCalendarEvents(
     calendar: ICalendar,
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     rootSpaceId?: string
   ): Promise<ICalendarEvent[]> {
     const calendarLoaded = await this.getCalendarOrFail(calendar.id, {
@@ -189,7 +189,9 @@ export class CalendarService {
     }
 
     // First filter the events the current user has READ privilege to
-    return events.filter(event => this.hasAgentAccessToEvent(event, agentInfo));
+    return events.filter(event =>
+      this.hasActorAccessToEvent(event, actorContext)
+    );
   }
 
   public async getCalendarEvent(
@@ -211,12 +213,12 @@ export class CalendarService {
     return event;
   }
 
-  private hasAgentAccessToEvent(
+  private hasActorAccessToEvent(
     event: ICalendarEvent,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ): boolean {
     return this.authorizationService.isAccessGranted(
-      agentInfo,
+      actorContext,
       event.authorization,
       AuthorizationPrivilege.READ
     );
@@ -254,10 +256,10 @@ export class CalendarService {
   public async processActivityCalendarEventCreated(
     calendar: ICalendar,
     calendarEvent: ICalendarEvent,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ) {
     const activityLogInput: ActivityInputCalendarEventCreated = {
-      triggeredBy: agentInfo.userID,
+      triggeredBy: actorContext.actorId,
       calendar: calendar,
       calendarEvent: calendarEvent,
     };
@@ -274,10 +276,7 @@ export class CalendarService {
           name: calendarEvent.profile.displayName,
           space: spaceID,
         },
-        {
-          id: agentInfo.userID,
-          email: agentInfo.email,
-        }
+        actorContext.actorId
       );
     }
   }

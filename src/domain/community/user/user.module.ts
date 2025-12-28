@@ -6,7 +6,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from '@domain/community/user/user.entity';
 import { UserResolverFields } from './user.resolver.fields';
 import { UserResolverMutations } from './user.resolver.mutations';
-import { AgentModule } from '@domain/agent/agent/agent.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { UserAuthorizationService } from './user.service.authorization';
@@ -24,21 +23,22 @@ import { KratosModule } from '@services/infrastructure/kratos/kratos.module';
 import { UserSettingsModule } from '../user-settings/user.settings.module';
 import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
 import { UserLookupModule } from '../user-lookup/user.lookup.module';
-import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/agent.info.module';
+import { ActorContextModule } from '@core/actor-context';
 import { MessagingModule } from '@domain/communication/messaging/messaging.module';
-import { UserAuthenticationLinkModule } from '../user-authentication-link/user.authentication.link.module';
+import { ActorModule } from '@domain/actor/actor/actor.module';
+import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
 
 @Module({
   imports: [
+    ActorModule,
+    ActorLookupModule,
     ProfileModule,
     UserSettingsModule,
     CommunicationAdapterModule,
-    AgentModule,
-    AuthenticationAgentInfoModule,
+    ActorContextModule,
     AccountHostModule,
     AccountLookupModule,
     UserLookupModule,
-    UserAuthenticationLinkModule,
     NamingModule,
     AuthorizationPolicyModule,
     AuthorizationModule,

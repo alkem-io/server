@@ -2,7 +2,7 @@ import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import {
-  AuthorizationAgentPrivilege,
+  AuthorizationActorPrivilege,
   CurrentUser,
 } from '@src/common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
@@ -10,7 +10,7 @@ import { IMessage } from '../message/message.interface';
 import { IRoom } from './room.interface';
 import { RoomService } from './room.service';
 import { IVcInteraction } from '../vc-interaction/vc.interaction.interface';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 
 @Resolver(() => IRoom)
@@ -20,7 +20,7 @@ export class RoomResolverFields {
     private readonly authorizationService: AuthorizationService
   ) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('messages', () => [IMessage], {
     nullable: false,
@@ -38,19 +38,20 @@ export class RoomResolverFields {
   })
   async vcInteractions(
     @Parent() room: IRoom,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentUser() actorContext: ActorContext
   ): Promise<IVcInteraction[]> {
     const reloadedRoom = await this.roomService.getRoomOrFail(room.id);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       reloadedRoom.authorization,
       AuthorizationPrivilege.READ,
       `resolve vc interactions for: ${reloadedRoom.id}`
     );
 
     // Convert JSON map to array of IVcInteraction
-    const vcInteractionsByThread = reloadedRoom.vcInteractionsByThread || {};
-    return Object.entries(vcInteractionsByThread).map(([threadID, data]) => ({
+    const interactionsByThread =
+      reloadedRoom.vcData?.interactionsByThread || {};
+    return Object.entries(interactionsByThread).map(([threadID, data]) => ({
       threadID,
       virtualContributorID: data.virtualContributorActorID,
     }));

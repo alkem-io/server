@@ -5,7 +5,7 @@ import { UpdateOrganizationInput } from '@domain/community/organization/dto';
 import { IUserGroup } from '@domain/community/user-group';
 import { AuthorizationPrivilege } from '@common/enums';
 import { OrganizationAuthorizationService } from './organization.service.authorization';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { OrganizationAuthorizationResetInput } from './dto/organization.dto.reset.authorization';
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -30,14 +30,15 @@ export class OrganizationResolverMutations {
     description: 'Creates a new User Group for the specified Organization.',
   })
   async createGroupOnOrganization(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('groupData') groupData: CreateUserGroupInput
   ): Promise<IUserGroup> {
-    const organization = await this.organizationService.getOrganizationOrFail(
-      groupData.parentID
-    );
+    const organization =
+      await this.organizationService.getOrganizationByIdOrFail(
+        groupData.parentID
+      );
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       organization.authorization,
       AuthorizationPrivilege.CREATE,
       `orgCreateGroup: ${organization.id}`
@@ -57,15 +58,15 @@ export class OrganizationResolverMutations {
     description: 'Updates one of the Setting on an Organization',
   })
   async updateOrganizationSettings(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('settingsData') settingsData: UpdateOrganizationSettingsInput
   ): Promise<IOrganization> {
-    let organization = await this.organizationService.getOrganizationOrFail(
+    let organization = await this.organizationService.getOrganizationByIdOrFail(
       settingsData.organizationID
     );
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       organization.authorization,
       AuthorizationPrivilege.UPDATE,
       `organization settings update: ${organization.id}`
@@ -84,7 +85,7 @@ export class OrganizationResolverMutations {
       );
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
-    return this.organizationService.getOrganizationOrFail(organization.id);
+    return this.organizationService.getOrganizationByIdOrFail(organization.id);
   }
 
   @Mutation(() => IOrganization, {
@@ -92,14 +93,15 @@ export class OrganizationResolverMutations {
   })
   @Profiling.api
   async updateOrganization(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('organizationData') organizationData: UpdateOrganizationInput
   ): Promise<IOrganization> {
-    const organization = await this.organizationService.getOrganizationOrFail(
-      organizationData.ID
-    );
+    const organization =
+      await this.organizationService.getOrganizationByIdOrFail(
+        organizationData.ID
+      );
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       organization.authorization,
       AuthorizationPrivilege.UPDATE,
       `orgUpdate: ${organization.id}`
@@ -114,22 +116,23 @@ export class OrganizationResolverMutations {
   })
   @Profiling.api
   async authorizationPolicyResetOnOrganization(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('authorizationResetData')
     authorizationResetData: OrganizationAuthorizationResetInput
   ): Promise<IOrganization> {
-    const organization = await this.organizationService.getOrganizationOrFail(
-      authorizationResetData.organizationID,
-      {
-        relations: {
-          profile: {
-            storageBucket: true,
+    const organization =
+      await this.organizationService.getOrganizationByIdOrFail(
+        authorizationResetData.organizationID,
+        {
+          relations: {
+            profile: {
+              storageBucket: true,
+            },
           },
-        },
-      }
-    );
+        }
+      );
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       organization.authorization,
       AuthorizationPrivilege.AUTHORIZATION_RESET,
       `reset authorization definition on organization: ${authorizationResetData.organizationID}`
@@ -139,7 +142,7 @@ export class OrganizationResolverMutations {
         organization
       );
     await this.authorizationPolicyService.saveAll(authorizations);
-    return await this.organizationService.getOrganizationOrFail(
+    return await this.organizationService.getOrganizationByIdOrFail(
       organization.id
     );
   }

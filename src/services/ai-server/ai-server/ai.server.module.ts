@@ -8,7 +8,7 @@ import { AiServerResolverMutations } from './ai.server.resolver.mutations';
 import { AiServerResolverQueries } from './ai.server.resolver.queries';
 import { AiServerService } from './ai.server.service';
 import { AiServerAuthorizationService } from './ai.server.service.authorization';
-import { AiPersonaModule } from '../ai-persona/ai.persona.module';
+import { AiPersonaModule } from '@services/ai-server/ai-persona';
 import { AiPersonaEngineAdapterModule } from '../ai-persona-engine-adapter/ai.persona.engine.adapter.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';

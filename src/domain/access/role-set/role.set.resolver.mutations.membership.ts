@@ -2,21 +2,21 @@ import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { RoleSetService } from './role.set.service';
 import { CurrentUser } from '@src/common/decorators';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UpdateApplicationFormOnRoleSetInput } from './dto/role.set.dto.update.application.form';
 import { IRoleSet } from './role.set.interface';
-import { IInvitation } from '../invitation/invitation.interface';
-import { InvitationEventInput } from '../invitation/dto/invitation.dto.event';
-import { ApplicationEventInput } from '../application/dto/application.dto.event';
-import { IApplication } from '../application/application.interface';
+import { IInvitation } from '@domain/access/invitation';
+import { InvitationEventInput } from '@domain/access/invitation';
+import { ApplicationEventInput } from '@domain/access/application';
+import { IApplication } from '@domain/access/application';
 import { RoleName } from '@common/enums/role.name';
 import { RoleSetMembershipException } from '@common/exceptions/role.set.membership.exception';
 import { NotificationInputPlatformInvitation } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.invitation.platform';
 import { ApplicationService } from '../application/application.service';
 import { InvitationService } from '../invitation/invitation.service';
-import { ContributorService } from '@domain/community/contributor/contributor.service';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { RoleSetServiceLifecycleApplication } from './role.set.service.lifecycle.application';
@@ -25,10 +25,7 @@ import { PlatformInvitationService } from '@domain/access/invitation.platform/pl
 import { ApplyForEntryRoleOnRoleSetInput } from './dto/role.set.dto.entry.role.apply';
 import { InviteForEntryRoleOnRoleSetInput } from './dto/role.set.dto.entry.role.invite';
 import { RoleSetInvitationException } from '@common/exceptions/role.set.invitation.exception';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
-import { CreateInvitationInput } from '../invitation/dto/invitation.dto.create';
-import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
+import { CreateInvitationInput } from '@domain/access/invitation';
 import { RoleSetAuthorizationService } from './role.set.service.authorization';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { JoinAsEntryRoleOnRoleSetInput } from './dto/role.set.dto.entry.role.join';
@@ -56,7 +53,7 @@ import { RoleSetCacheService } from './role.set.service.cache';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { RoleSetInvitationResult } from './dto/role.set.invitation.result';
 import { RoleSetInvitationResultType } from '@common/enums/role.set.invitation.result.type';
-import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
+import { ActorType } from '@common/enums/actor.type';
 import { compact } from 'lodash';
 import { NotificationInputCommunityApplication } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.application';
 import { NotificationInputCommunityInvitation } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.invitation';
@@ -88,7 +85,7 @@ export class RoleSetResolverMutationsMembership {
     private roleSetServiceLifecycleInvitation: RoleSetServiceLifecycleInvitation,
     private applicationService: ApplicationService,
     private invitationService: InvitationService,
-    private contributorService: ContributorService,
+    private actorLookupService: ActorLookupService,
     private platformInvitationService: PlatformInvitationService,
     private licenseService: LicenseService,
     private lifecycleService: LifecycleService,
@@ -101,7 +98,7 @@ export class RoleSetResolverMutationsMembership {
       'Join the specified RoleSet using the entry Role, without going through an approval process.',
   })
   async joinRoleSet(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('joinData') joiningData: JoinAsEntryRoleOnRoleSetInput
   ): Promise<IRoleSet> {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
@@ -110,8 +107,8 @@ export class RoleSetResolverMutationsMembership {
     this.validateRoleSetTypeOrFail(roleSet, [RoleSetType.SPACE]);
 
     const membershipStatus =
-      await this.roleSetService.getMembershipStatusByAgentInfo(
-        agentInfo,
+      await this.roleSetService.getMembershipStatusByActorContext(
+        actorContext,
         roleSet
       );
     if (membershipStatus === CommunityMembershipStatus.INVITATION_PENDING) {
@@ -122,17 +119,17 @@ export class RoleSetResolverMutationsMembership {
     }
 
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       roleSet.authorization,
       AuthorizationPrivilege.ROLESET_ENTRY_ROLE_JOIN,
       `join community: ${roleSet.id}`
     );
 
-    await this.roleSetService.assignUserToRole(
+    await this.roleSetService.assignActorToRole(
       roleSet,
       RoleName.MEMBER,
-      agentInfo.userID,
-      agentInfo,
+      actorContext.actorId,
+      actorContext,
       true
     );
 
@@ -143,7 +140,7 @@ export class RoleSetResolverMutationsMembership {
     description: 'Apply to join the specified RoleSet in the entry Role.',
   })
   async applyForEntryRoleOnRoleSet(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('applicationData') applicationData: ApplyForEntryRoleOnRoleSetInput
   ): Promise<IApplication> {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
@@ -157,18 +154,16 @@ export class RoleSetResolverMutationsMembership {
     this.validateRoleSetTypeOrFail(roleSet, [RoleSetType.SPACE]);
 
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       roleSet.authorization,
       AuthorizationPrivilege.ROLESET_ENTRY_ROLE_APPLY,
       `create application RoleSet: ${roleSet.id}`
     );
 
     if (roleSet.parentRoleSet) {
-      const { agent } = await this.userLookupService.getUserAndAgent(
-        agentInfo.userID
-      );
+      // User IS an Actor - actorContext.actorId is the actorId
       const userIsMemberInParent = await this.roleSetService.isInRole(
-        agent,
+        actorContext.actorId,
         roleSet.parentRoleSet,
         RoleName.MEMBER
       );
@@ -183,7 +178,7 @@ export class RoleSetResolverMutationsMembership {
     let application = await this.roleSetService.createApplication({
       roleSetID: roleSet.id,
       questions: applicationData.questions,
-      userID: agentInfo.userID,
+      userId: actorContext.actorId,
     });
 
     application = await this.applicationService.save(application);
@@ -195,7 +190,7 @@ export class RoleSetResolverMutationsMembership {
 
     // Send the notification
     const notificationInput: NotificationInputCommunityApplication = {
-      triggeredBy: agentInfo.userID,
+      triggeredBy: actorContext.actorId,
       community,
       application,
     };
@@ -211,7 +206,7 @@ export class RoleSetResolverMutationsMembership {
       'Invite new Contributors or users by email to join the specified RoleSet in the Entry Role.',
   })
   async inviteForEntryRoleOnRoleSet(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('invitationData')
     invitationData: InviteForEntryRoleOnRoleSetInput
   ): Promise<RoleSetInvitationResult[]> {
@@ -234,7 +229,7 @@ export class RoleSetResolverMutationsMembership {
     this.validateRoleSetTypeOrFail(roleSet, [RoleSetType.SPACE]);
 
     if (
-      invitationData.invitedContributorIDs.length === 0 &&
+      invitationData.invitedActorIds.length === 0 &&
       invitationData.invitedUserEmails.length === 0
     ) {
       throw new RoleSetInvitationException(
@@ -244,61 +239,52 @@ export class RoleSetResolverMutationsMembership {
     }
 
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       roleSet.authorization,
       AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE,
       `create invitation RoleSet: ${roleSet.id}`
     );
 
     const { authorizedToInviteToParentRoleSet } =
-      this.getPrivilegesOnParentRoleSets(roleSet, agentInfo);
+      this.getPrivilegesOnParentRoleSets(roleSet, actorContext);
 
-    const contributors: IContributor[] = [];
-    for (const contributorID of invitationData.invitedContributorIDs) {
-      const contributor =
-        await this.contributorService.getContributorByUuidOrFail(
-          contributorID,
-          {
-            relations: {
-              agent: true,
-            },
-          }
-        );
-      contributors.push(contributor);
-    }
+    // Validate all actors exist and get their types in a single query
+    const actorTypes = await this.actorLookupService.validateActorsAndGetTypes(
+      invitationData.invitedActorIds
+    );
 
     // Check if any of the contributors are VCs and if so check if the entitlement is on
     if (roleSet.type === RoleSetType.SPACE) {
-      for (const contributor of contributors) {
-        if (contributor instanceof VirtualContributor) {
-          this.licenseService.isEntitlementEnabledOrFail(
-            roleSet.license,
-            LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS
-          );
-        }
+      const hasVirtualContributor = [...actorTypes.values()].some(
+        type => type === ActorType.VIRTUAL
+      );
+      if (hasVirtualContributor) {
+        this.licenseService.isEntitlementEnabledOrFail(
+          roleSet.license,
+          LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS
+        );
       }
     }
+
+    // Collect actor IDs to invite
+    const actorIdsToInvite: string[] = [...invitationData.invitedActorIds];
 
     // Loop through the emails provided to see if are existing users or not
     const newUserEmails: string[] = [];
     for (const email of invitationData.invitedUserEmails) {
       // If the user is already registered, then just create a normal invitation
-      const existingUser = await this.userLookupService.getUserByEmail(email, {
-        relations: {
-          agent: true,
-        },
-      });
+      const existingUser = await this.userLookupService.getUserByEmail(email);
       if (existingUser) {
-        contributors.push(existingUser);
+        actorIdsToInvite.push(existingUser.id);
       } else {
         newUserEmails.push(email);
       }
     }
 
-    const invitationResults = await this.inviteContributorsToEntryRole(
+    const invitationResults = await this.inviteActorsToEntryRole(
       roleSet,
-      contributors,
-      agentInfo,
+      actorIdsToInvite,
+      actorContext,
       authorizedToInviteToParentRoleSet,
       invitationData.extraRoles,
       invitationData.welcomeMessage
@@ -311,7 +297,7 @@ export class RoleSetResolverMutationsMembership {
         authorizedToInviteToParentRoleSet,
         invitationData.welcomeMessage,
         invitationData.extraRoles,
-        agentInfo
+        actorContext
       );
     invitationResults.push(...newUserInvitationResults);
 
@@ -334,7 +320,7 @@ export class RoleSetResolverMutationsMembership {
 
     await this.sendNotificationEventsForInvitationsOnSpaceRoleSet(
       roleSet,
-      agentInfo,
+      actorContext,
       invitationResults
     );
 
@@ -347,7 +333,7 @@ export class RoleSetResolverMutationsMembership {
     authorizedToInviteToParentRoleSet: boolean,
     welcomeMessage: string | undefined,
     extraRoles: RoleName[],
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ): Promise<RoleSetInvitationResult[]> {
     const invitationResults: RoleSetInvitationResult[] = [];
     // Rely on check already being made that there is no user with the emails
@@ -388,7 +374,7 @@ export class RoleSetResolverMutationsMembership {
           welcomeMessage || '',
           inviteToParentRoleSet,
           extraRoles,
-          agentInfo
+          actorContext
         );
       const result: RoleSetInvitationResult = {
         type: RoleSetInvitationResultType.INVITED_TO_PLATFORM_AND_ROLE_SET,
@@ -405,7 +391,7 @@ export class RoleSetResolverMutationsMembership {
   async eventOnApplication(
     @Args('eventData')
     eventData: ApplicationEventInput,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentUser() actorContext: ActorContext
   ): Promise<IApplication> {
     let application = await this.applicationService.getApplicationOrFail(
       eventData.applicationID
@@ -413,7 +399,7 @@ export class RoleSetResolverMutationsMembership {
 
     // Assumption is that the user with the GRANT also has UPDATE
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       application.authorization,
       AuthorizationPrivilege.UPDATE,
       `event on application: ${application.id}`
@@ -428,7 +414,7 @@ export class RoleSetResolverMutationsMembership {
       machine: this.roleSetServiceLifecycleApplication.getApplicationMachine(),
       eventName: eventData.eventName,
       lifecycle: application.lifecycle,
-      agentInfo,
+      actorContext,
       authorization: application.authorization,
     });
 
@@ -438,9 +424,7 @@ export class RoleSetResolverMutationsMembership {
       {
         relations: {
           roleSet: true,
-          user: {
-            agent: true,
-          },
+          user: true,
         },
       }
     );
@@ -452,24 +436,24 @@ export class RoleSetResolverMutationsMembership {
     if (applicationState === ApplicationLifecycleState.APPROVING) {
       await this.roleSetService.approveApplication(
         eventData.applicationID,
-        agentInfo
+        actorContext
       );
       await this.lifecycleService.event({
         machine:
           this.roleSetServiceLifecycleApplication.getApplicationMachine(),
         lifecycle: application.lifecycle,
         eventName: ApplicationLifecycleEvent.APPROVED,
-        agentInfo,
+        actorContext,
         authorization: application.authorization,
       });
     }
 
-    if (!application.user || !application.user.agent || !application.roleSet) {
+    if (!application.user || !application.roleSet) {
       this.logger.error(
         {
           message:
             'Unable to invalidate application cache because of missing relations',
-          cause: 'Application user, user agent or role set is null',
+          cause: 'Application user or role set is null',
           applicationID: application.id,
         },
         undefined,
@@ -494,7 +478,7 @@ export class RoleSetResolverMutationsMembership {
 
         const notificationInput: NotificationInputUserSpaceCommunityApplicationDeclined =
           {
-            triggeredBy: agentInfo.userID,
+            triggeredBy: actorContext.actorId,
             userID: application.user.id,
             spaceID: space.id,
           };
@@ -505,17 +489,18 @@ export class RoleSetResolverMutationsMembership {
         );
       }
 
+      // User IS an Actor - user.id is the actorId
       const isMember = applicationState === ApplicationLifecycleState.APPROVED;
       await this.roleSetCacheService.deleteOpenApplicationFromCache(
         application.user.id,
         application.roleSet.id
       );
       await this.roleSetCacheService.deleteMembershipStatusCache(
-        application.user.agent.id,
+        application.user.id,
         application.roleSet.id
       );
-      await this.roleSetCacheService.setAgentIsMemberCache(
-        application.user.agent.id,
+      await this.roleSetCacheService.setActorIsMemberCache(
+        application.user.id,
         application.roleSet.id,
         isMember
       );
@@ -532,7 +517,7 @@ export class RoleSetResolverMutationsMembership {
   async eventOnInvitation(
     @Args('eventData')
     eventData: InvitationEventInput,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentUser() actorContext: ActorContext
   ): Promise<IInvitation> {
     let invitation = await this.invitationService.getInvitationOrFail(
       eventData.invitationID,
@@ -543,7 +528,7 @@ export class RoleSetResolverMutationsMembership {
       }
     );
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       invitation.authorization,
       AuthorizationPrivilege.UPDATE,
       `event on invitation: ${invitation.id}`
@@ -559,7 +544,7 @@ export class RoleSetResolverMutationsMembership {
       machine: this.roleSetServiceLifecycleInvitation.getInvitationMachine(),
       lifecycle: invitation.lifecycle,
       eventName: eventData.eventName,
-      agentInfo,
+      actorContext,
       authorization: invitation.authorization,
     });
 
@@ -579,34 +564,29 @@ export class RoleSetResolverMutationsMembership {
     if (invitationState === InvitationLifecycleState.ACCEPTING) {
       await this.roleSetService.acceptInvitationToRoleSet(
         eventData.invitationID,
-        agentInfo
+        actorContext
       );
       await this.lifecycleService.event({
         machine: this.roleSetServiceLifecycleInvitation.getInvitationMachine(),
         lifecycle: invitation.lifecycle,
         eventName: InvitationLifecycleEvent.ACCEPTED,
-        agentInfo,
+        actorContext,
         authorization: invitation.authorization,
       });
     }
 
-    const invitedContributor = await this.contributorService.getContributor(
-      invitation.invitedContributorID,
-      { relations: { agent: true } }
-    );
+    const invitedActorId = invitation.invitedActorId;
+    const invitedActorType =
+      await this.actorLookupService.getActorTypeById(invitedActorId);
 
-    if (
-      !invitedContributor ||
-      !invitedContributor.agent ||
-      !invitation.roleSet
-    ) {
+    if (!invitedActorType || !invitation.roleSet) {
       this.logger.error(
         {
           message:
             'Unable to invalidate invitation cache because of missing relations',
-          cause: 'Invited Contributor, Contributor Agent or role set is null',
+          cause: 'Invited Contributor or role set is null',
           invitationID: invitation.id,
-          invitedContributorID: invitation.invitedContributorID,
+          invitedActorId,
         },
         undefined,
         LogContext.COMMUNITY
@@ -619,10 +599,7 @@ export class RoleSetResolverMutationsMembership {
 
       // Send notification if invitation was declined/rejected for Virtual Contributor
       if (invitationState === InvitationLifecycleState.REJECTED) {
-        const isVirtualContributor =
-          invitedContributor instanceof VirtualContributor;
-
-        if (isVirtualContributor) {
+        if (invitedActorType === ActorType.VIRTUAL) {
           const community =
             await this.communityResolverService.getCommunityForRoleSet(
               invitation.roleSet.id
@@ -634,9 +611,9 @@ export class RoleSetResolverMutationsMembership {
 
           const notificationInput: NotificationInputVirtualContributorSpaceCommunityInvitationDeclined =
             {
-              triggeredBy: agentInfo.userID, // Who declined the invitation
+              triggeredBy: actorContext.actorId, // Who declined the invitation
               invitationCreatedBy: invitation.createdBy, // Who sent the invitation (recipient)
-              virtualContributorID: invitedContributor.id,
+              virtualContributorID: invitedActorId,
               spaceID: space.id,
             };
 
@@ -649,15 +626,15 @@ export class RoleSetResolverMutationsMembership {
 
       const isMember = invitationState === InvitationLifecycleState.ACCEPTED;
       await this.roleSetCacheService.deleteOpenInvitationFromCache(
-        invitedContributor.id,
+        invitedActorId,
         invitation.roleSet.id
       );
       await this.roleSetCacheService.deleteMembershipStatusCache(
-        invitedContributor.agent.id,
+        invitedActorId,
         invitation.roleSet.id
       );
-      await this.roleSetCacheService.setAgentIsMemberCache(
-        invitedContributor.agent.id,
+      await this.roleSetCacheService.setActorIsMemberCache(
+        invitedActorId,
         invitation.roleSet.id,
         isMember
       );
@@ -670,7 +647,7 @@ export class RoleSetResolverMutationsMembership {
     description: 'Update the Application Form used by this RoleSet.',
   })
   async updateApplicationFormOnRoleSet(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('applicationFormData')
     applicationFormData: UpdateApplicationFormOnRoleSetInput
   ): Promise<IRoleSet> {
@@ -679,7 +656,7 @@ export class RoleSetResolverMutationsMembership {
     );
 
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       roleSet.authorization,
       AuthorizationPrivilege.UPDATE,
       `update roleSet application form: ${roleSet.id}`
@@ -691,29 +668,22 @@ export class RoleSetResolverMutationsMembership {
     );
   }
 
-  private async inviteContributorsToEntryRole(
+  private async inviteActorsToEntryRole(
     roleSet: IRoleSet,
-    contributors: IContributor[],
-    agentInfo: AgentInfo,
+    actorIds: string[],
+    actorContext: ActorContext,
     authorizedToInviteToParentRoleSet: boolean,
     extraRoles: RoleName[],
     welcomeMessage: string | undefined
   ): Promise<RoleSetInvitationResult[]> {
     const invitationResults: RoleSetInvitationResult[] = [];
-    for (const contributor of contributors) {
-      const contributorAgent = contributor.agent;
-      if (!contributorAgent) {
-        throw new EntityNotInitializedException(
-          `Unable to load agent on contributor: ${contributor.id}`,
-          LogContext.COMMUNITY
-        );
-      }
+    for (const actorId of actorIds) {
       let invitedToParent = false;
       // Logic is that the ability to invite to a subspace requires the ability to invite to the
       // parent community if the user is not a member there
       if (roleSet.parentRoleSet) {
         const isMember = await this.roleSetService.isMember(
-          contributor.agent,
+          actorId,
           roleSet.parentRoleSet
         );
         if (!isMember && !authorizedToInviteToParentRoleSet) {
@@ -728,15 +698,15 @@ export class RoleSetResolverMutationsMembership {
 
       const input: CreateInvitationInput = {
         roleSetID: roleSet.id,
-        invitedContributorID: contributor.id,
-        createdBy: agentInfo.userID,
+        invitedActorId: actorId,
+        createdBy: actorContext.actorId,
         invitedToParent: invitedToParent,
         extraRoles: extraRoles,
         welcomeMessage,
       };
 
       const openInvitation = await this.roleSetService.findOpenInvitation(
-        contributor.id,
+        actorId,
         roleSet.id
       );
       if (openInvitation) {
@@ -749,7 +719,7 @@ export class RoleSetResolverMutationsMembership {
       }
 
       const invitation =
-        await this.roleSetService.createInvitationExistingContributor(input);
+        await this.roleSetService.createInvitationExistingActor(input);
 
       const invitationResult: RoleSetInvitationResult = {
         type: RoleSetInvitationResultType.INVITED_TO_ROLE_SET,
@@ -762,7 +732,7 @@ export class RoleSetResolverMutationsMembership {
 
   private getPrivilegesOnParentRoleSets(
     roleSet: IRoleSet,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ): {
     authorizedToInviteToParentRoleSet: boolean;
     authorizedToInviteToGrandParentRoleSet: boolean;
@@ -774,7 +744,7 @@ export class RoleSetResolverMutationsMembership {
       const parentRoleSetAuthorization = roleSet.parentRoleSet.authorization;
       authorizedToInviteToParentRoleSet =
         this.authorizationService.isAccessGranted(
-          agentInfo,
+          actorContext,
           parentRoleSetAuthorization,
           AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE
         );
@@ -783,7 +753,7 @@ export class RoleSetResolverMutationsMembership {
           roleSet.parentRoleSet.parentRoleSet.authorization;
         authorizedToInviteToGrandParentRoleSet =
           this.authorizationService.isAccessGranted(
-            agentInfo,
+            actorContext,
             grantParentRoleSetAuthorization,
             AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE
           );
@@ -797,7 +767,7 @@ export class RoleSetResolverMutationsMembership {
 
   private async sendNotificationEventsForInvitationsOnSpaceRoleSet(
     roleSet: IRoleSet,
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     invitationResults: RoleSetInvitationResult[]
   ) {
     // Only trigger the notifications for now on RoleSets for Spaces
@@ -818,7 +788,7 @@ export class RoleSetResolverMutationsMembership {
             );
           }
           const notificationInput: NotificationInputPlatformInvitation = {
-            triggeredBy: agentInfo.userID,
+            triggeredBy: actorContext.actorId,
             community,
             invitedUserEmail: platformInvitation.email,
             welcomeMessage: platformInvitation.welcomeMessage,
@@ -836,21 +806,27 @@ export class RoleSetResolverMutationsMembership {
               LogContext.ROLES
             );
           }
-          switch (invitation.contributorType) {
-            case RoleSetContributorType.VIRTUAL: {
+          // Derive contributor type from the invited contributor
+          const contributorType =
+            await this.actorLookupService.getActorTypeByIdOrFail(
+              invitation.invitedActorId
+            );
+
+          switch (contributorType) {
+            case ActorType.VIRTUAL: {
               const account =
                 await this.virtualContributorLookupService.getAccountOrFail(
-                  invitation.invitedContributorID
+                  invitation.invitedActorId
                 );
               const accountProvider =
                 await this.accountLookupService.getHostOrFail(account);
 
               const notificationInput: NotificationInputCommunityInvitationVirtualContributor =
                 {
-                  triggeredBy: agentInfo.userID,
+                  triggeredBy: actorContext.actorId,
                   community,
                   invitationID: invitation.id,
-                  invitedContributorID: invitation.invitedContributorID,
+                  invitedActorId: invitation.invitedActorId,
                   accountHost: accountProvider,
                   welcomeMessage: invitation.welcomeMessage,
                 };
@@ -860,13 +836,13 @@ export class RoleSetResolverMutationsMembership {
               );
               break;
             }
-            case RoleSetContributorType.USER: {
+            case ActorType.USER: {
               // Send the notification
               const notificationInput: NotificationInputCommunityInvitation = {
-                triggeredBy: agentInfo.userID,
+                triggeredBy: actorContext.actorId,
                 community,
                 invitationID: invitation.id,
-                invitedContributorID: invitation.invitedContributorID,
+                invitedActorId: invitation.invitedActorId,
                 welcomeMessage: invitation.welcomeMessage,
               };
 
@@ -875,7 +851,7 @@ export class RoleSetResolverMutationsMembership {
               );
               break;
             }
-            case RoleSetContributorType.ORGANIZATION: {
+            case ActorType.ORGANIZATION: {
               // No notifications supported at the moment
               break;
             }

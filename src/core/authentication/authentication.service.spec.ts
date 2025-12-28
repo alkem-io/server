@@ -4,20 +4,18 @@ import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { AuthenticationService } from './authentication.service';
-import { AgentInfoCacheService } from '@core/authentication.agent.info/agent.info.cache.service';
-import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
+import { ActorContextCacheService } from '@core/actor-context';
+import { ActorContextService } from '@core/actor-context';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
-import { AgentService } from '@domain/agent/agent/agent.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { Session } from '@ory/kratos-client';
 import { OryDefaultIdentitySchema } from '@services/infrastructure/kratos/types/ory.default.identity.schema';
-import { NotSupportedException } from '@common/exceptions';
 import ConfigUtils from '@config/config.utils';
 
 describe('AuthenticationService', () => {
   let service: AuthenticationService;
-  let agentInfoCacheService: jest.Mocked<AgentInfoCacheService>;
-  let agentInfoService: jest.Mocked<AgentInfoService>;
+  let actorContextCacheService: jest.Mocked<ActorContextCacheService>;
+  let actorContextService: jest.Mocked<ActorContextService>;
   let kratosService: jest.Mocked<KratosService>;
 
   const mockOryIdentity: OryDefaultIdentitySchema = {
@@ -28,6 +26,9 @@ describe('AuthenticationService', () => {
     schema_url: 'http://test.com/schema',
     state: 'active',
     state_changed_at: '2023-01-01T00:00:00Z',
+    metadata_public: {
+      alkemio_actor_id: 'user-id',
+    },
     traits: {
       accepted_terms: true,
       email: 'test@example.com',
@@ -69,28 +70,13 @@ describe('AuthenticationService', () => {
     identity: mockOryIdentity,
   };
 
-  const mockAgentInfo: AgentInfo = {
+  const mockActorContext: ActorContext = {
     isAnonymous: false,
-    userID: 'user-id',
-    email: 'test@example.com',
-    emailVerified: true,
-    firstName: 'John',
-    lastName: 'Doe',
-    guestName: '',
+    actorId: 'user-id',
+    guestName: undefined,
     credentials: [],
-    agentID: 'agent-id',
-    avatarURL: 'http://example.com/avatar.jpg',
-    authenticationID: 'auth-id',
+    authenticationID: 'test-id',
     expiry: new Date('2023-12-31T23:59:59Z').getTime(),
-  };
-
-  const mockAgentInfoMetadata = {
-    userID: 'user-id',
-    email: 'test@example.com',
-    credentials: [],
-    agentID: 'agent-id',
-    did: 'did:test:123',
-    password: 'test-password',
   };
 
   beforeEach(async () => {
@@ -101,19 +87,18 @@ describe('AuthenticationService', () => {
         if (token === ConfigService) {
           return ConfigServiceMock;
         }
-        if (token === AgentInfoCacheService) {
+        if (token === ActorContextCacheService) {
           return {
-            getAgentInfoFromCache: jest.fn(),
-            setAgentInfoCache: jest.fn(),
+            getByActorId: jest.fn(),
+            setByActorId: jest.fn(),
+            deleteByActorId: jest.fn(),
           };
         }
-        if (token === AgentInfoService) {
+        if (token === ActorContextService) {
           return {
-            createAnonymousAgentInfo: jest.fn(),
-            createGuestAgentInfo: jest.fn(),
-            getAgentInfoMetadata: jest.fn(),
-            populateAgentInfoWithMetadata: jest.fn(),
-            buildAgentInfoFromOryIdentity: jest.fn(),
+            createAnonymous: jest.fn(),
+            createGuest: jest.fn(),
+            populateFromActorId: jest.fn(),
           };
         }
         if (token === KratosService) {
@@ -123,19 +108,14 @@ describe('AuthenticationService', () => {
             tryExtendSession: jest.fn(),
           };
         }
-        if (token === AgentService) {
-          return {
-            getVerifiedCredentials: jest.fn(),
-          };
-        }
 
         return defaultMockerFactory(token);
       })
       .compile();
 
     service = module.get(AuthenticationService);
-    agentInfoCacheService = module.get(AgentInfoCacheService);
-    agentInfoService = module.get(AgentInfoService);
+    actorContextCacheService = module.get(ActorContextCacheService);
+    actorContextService = module.get(ActorContextService);
     kratosService = module.get(KratosService);
   });
 
@@ -147,30 +127,28 @@ describe('AuthenticationService', () => {
     expect(service).toBeDefined();
   });
 
-  describe('getAgentInfo', () => {
-    it('should return anonymous agent info when no session is found and no guest name', async () => {
-      const anonymousAgentInfo = { ...mockAgentInfo, isAnonymous: true };
+  describe('getActorContext', () => {
+    it('should return anonymous context when no session is found and no guest name', async () => {
+      const anonymousContext = { ...mockActorContext, isAnonymous: true };
       kratosService.getSession.mockRejectedValue(new Error('No session'));
-      agentInfoService.createAnonymousAgentInfo.mockReturnValue(
-        anonymousAgentInfo
-      );
+      actorContextService.createAnonymous.mockReturnValue(anonymousContext);
 
-      const result = await service.getAgentInfo({ cookie: 'test-cookie' });
+      const result = await service.getActorContext({ cookie: 'test-cookie' });
 
       expect(kratosService.getSession).toHaveBeenCalledWith(
         undefined,
         'test-cookie'
       );
-      expect(agentInfoService.createAnonymousAgentInfo).toHaveBeenCalled();
-      expect(result).toEqual(anonymousAgentInfo);
+      expect(actorContextService.createAnonymous).toHaveBeenCalled();
+      expect(result).toEqual(anonymousContext);
     });
 
-    it('should return guest agent info when no session is found but guest name is provided', async () => {
-      const guestAgentInfo = { ...mockAgentInfo, guestName: 'Guest User' };
+    it('should return guest context when no session is found but guest name is provided', async () => {
+      const guestContext = { ...mockActorContext, guestName: 'Guest User' };
       kratosService.getSession.mockRejectedValue(new Error('No session'));
-      agentInfoService.createGuestAgentInfo.mockReturnValue(guestAgentInfo);
+      actorContextService.createGuest.mockReturnValue(guestContext);
 
-      const result = await service.getAgentInfo({
+      const result = await service.getActorContext({
         cookie: 'test-cookie',
         guestName: 'Guest User',
       });
@@ -179,22 +157,20 @@ describe('AuthenticationService', () => {
         undefined,
         'test-cookie'
       );
-      expect(agentInfoService.createGuestAgentInfo).toHaveBeenCalledWith(
+      expect(actorContextService.createGuest).toHaveBeenCalledWith(
         'Guest User'
       );
-      expect(result).toEqual(guestAgentInfo);
+      expect(result).toEqual(guestContext);
     });
 
-    it('should return anonymous agent info when session has no identity and no guest name', async () => {
+    it('should return anonymous context when session has no identity and no guest name', async () => {
       const sessionWithoutIdentity = { ...mockSession, identity: undefined };
-      const anonymousAgentInfo = { ...mockAgentInfo, isAnonymous: true };
+      const anonymousContext = { ...mockActorContext, isAnonymous: true };
 
       kratosService.getSession.mockResolvedValue(sessionWithoutIdentity);
-      agentInfoService.createAnonymousAgentInfo.mockReturnValue(
-        anonymousAgentInfo
-      );
+      actorContextService.createAnonymous.mockReturnValue(anonymousContext);
 
-      const result = await service.getAgentInfo({
+      const result = await service.getActorContext({
         authorization: 'Bearer token',
       });
 
@@ -202,18 +178,18 @@ describe('AuthenticationService', () => {
         'Bearer token',
         undefined
       );
-      expect(agentInfoService.createAnonymousAgentInfo).toHaveBeenCalled();
-      expect(result).toEqual(anonymousAgentInfo);
+      expect(actorContextService.createAnonymous).toHaveBeenCalled();
+      expect(result).toEqual(anonymousContext);
     });
 
-    it('should return guest agent info when session has no identity but guest name is provided', async () => {
+    it('should return guest context when session has no identity but guest name is provided', async () => {
       const sessionWithoutIdentity = { ...mockSession, identity: undefined };
-      const guestAgentInfo = { ...mockAgentInfo, guestName: 'Guest User' };
+      const guestContext = { ...mockActorContext, guestName: 'Guest User' };
 
       kratosService.getSession.mockResolvedValue(sessionWithoutIdentity);
-      agentInfoService.createGuestAgentInfo.mockReturnValue(guestAgentInfo);
+      actorContextService.createGuest.mockReturnValue(guestContext);
 
-      const result = await service.getAgentInfo({
+      const result = await service.getActorContext({
         authorization: 'Bearer token',
         guestName: 'Guest User',
       });
@@ -222,17 +198,21 @@ describe('AuthenticationService', () => {
         'Bearer token',
         undefined
       );
-      expect(agentInfoService.createGuestAgentInfo).toHaveBeenCalledWith(
+      expect(actorContextService.createGuest).toHaveBeenCalledWith(
         'Guest User'
       );
-      expect(result).toEqual(guestAgentInfo);
+      expect(result).toEqual(guestContext);
     });
 
-    it('should create agent info when session has valid identity', async () => {
+    it('should create context when session has valid identity with metadata_public', async () => {
       kratosService.getSession.mockResolvedValue(mockSession);
-      jest.spyOn(service, 'createAgentInfo').mockResolvedValue(mockAgentInfo);
+      actorContextCacheService.getByActorId.mockResolvedValue(undefined);
+      actorContextService.populateFromActorId.mockResolvedValue(undefined);
+      actorContextCacheService.setByActorId.mockImplementation(ctx =>
+        Promise.resolve(ctx)
+      );
 
-      const result = await service.getAgentInfo({
+      const result = await service.getActorContext({
         authorization: 'Bearer token',
       });
 
@@ -240,98 +220,92 @@ describe('AuthenticationService', () => {
         'Bearer token',
         undefined
       );
-      expect(service.createAgentInfo).toHaveBeenCalledWith(mockOryIdentity);
-      expect(result).toEqual(mockAgentInfo);
-    });
-  });
-
-  describe('createAgentInfo', () => {
-    it('should return anonymous agent info when no ory identity provided', async () => {
-      const anonymousAgentInfo = { ...mockAgentInfo, isAnonymous: true };
-      agentInfoService.createAnonymousAgentInfo.mockReturnValue(
-        anonymousAgentInfo
+      // Uses actorId from metadata_public.alkemio_actor_id
+      expect(actorContextCacheService.getByActorId).toHaveBeenCalledWith(
+        'user-id'
       );
-
-      const result = await service.createAgentInfo();
-
-      expect(agentInfoService.createAnonymousAgentInfo).toHaveBeenCalled();
-      expect(result).toEqual(anonymousAgentInfo);
+      expect(actorContextService.populateFromActorId).toHaveBeenCalled();
+      expect(result.isAnonymous).toBe(false);
     });
 
-    it('should return cached agent info if available', async () => {
-      const cachedAgentInfo = { ...mockAgentInfo };
-      agentInfoCacheService.getAgentInfoFromCache.mockResolvedValue(
-        cachedAgentInfo
-      );
-
-      const result = await service.createAgentInfo(mockOryIdentity);
-
-      // Cache lookup uses authenticationID (oryIdentity.id), not email
-      expect(agentInfoCacheService.getAgentInfoFromCache).toHaveBeenCalledWith(
-        'test-id'
-      );
-      expect(result).toEqual(cachedAgentInfo);
-    });
-
-    it('should create new agent info when not in cache and no metadata found', async () => {
-      agentInfoCacheService.getAgentInfoFromCache.mockResolvedValue(undefined);
-      agentInfoService.getAgentInfoMetadata.mockResolvedValue(undefined);
-
-      const builtAgentInfo = { ...mockAgentInfo };
-      agentInfoService.buildAgentInfoFromOryIdentity.mockReturnValue(
-        builtAgentInfo
-      );
-
-      const result = await service.createAgentInfo(
-        mockOryIdentity,
-        mockSession
-      );
-
-      expect(agentInfoService.getAgentInfoMetadata).toHaveBeenCalledWith(
-        'test@example.com',
-        { authenticationId: 'auth-id' }
-      );
-      expect(result).toEqual(builtAgentInfo);
-    });
-
-    it('should create complete agent info with metadata and cache it', async () => {
-      agentInfoCacheService.getAgentInfoFromCache.mockResolvedValue(undefined);
-      agentInfoService.getAgentInfoMetadata.mockResolvedValue(
-        mockAgentInfoMetadata
-      );
-
-      const builtAgentInfo = { ...mockAgentInfo };
-      agentInfoService.buildAgentInfoFromOryIdentity.mockReturnValue(
-        builtAgentInfo
-      );
-
-      const result = await service.createAgentInfo(
-        mockOryIdentity,
-        mockSession
-      );
-
-      expect(
-        agentInfoService.populateAgentInfoWithMetadata
-      ).toHaveBeenCalledWith(builtAgentInfo, mockAgentInfoMetadata);
-      expect(agentInfoCacheService.setAgentInfoCache).toHaveBeenCalledWith(
-        builtAgentInfo
-      );
-      expect(result).toEqual(builtAgentInfo);
-    });
-
-    it('should throw NotSupportedException when email is missing', async () => {
-      const invalidOryIdentity = {
+    it('should return anonymous when identity has no alkemio_actor_id in metadata_public', async () => {
+      const identityWithoutActorId = {
         ...mockOryIdentity,
-        traits: { ...mockOryIdentity.traits, email: '' },
+        metadata_public: {},
       };
+      const sessionWithoutActorId = {
+        ...mockSession,
+        identity: identityWithoutActorId,
+      };
+      const anonymousContext = { ...mockActorContext, isAnonymous: true };
 
-      await expect(service.createAgentInfo(invalidOryIdentity)).rejects.toThrow(
-        NotSupportedException
-      );
+      kratosService.getSession.mockResolvedValue(sessionWithoutActorId);
+      actorContextService.createAnonymous.mockReturnValue(anonymousContext);
+
+      const result = await service.getActorContext({
+        authorization: 'Bearer token',
+      });
+
+      expect(actorContextService.createAnonymous).toHaveBeenCalled();
+      expect(result).toEqual(anonymousContext);
     });
   });
 
-  // Note: buildAgentInfoFromOryIdentity tests are now in agent.info.service.spec.ts
+  describe('createActorContext', () => {
+    it('should return anonymous context when no actorId provided', async () => {
+      const anonymousContext = { ...mockActorContext, isAnonymous: true };
+      actorContextService.createAnonymous.mockReturnValue(anonymousContext);
+
+      const result = await service.createActorContext('');
+
+      expect(actorContextService.createAnonymous).toHaveBeenCalled();
+      expect(result).toEqual(anonymousContext);
+    });
+
+    it('should return cached context if available', async () => {
+      const cachedContext = { ...mockActorContext };
+      actorContextCacheService.getByActorId.mockResolvedValue(cachedContext);
+
+      const result = await service.createActorContext('user-id', mockSession);
+
+      expect(actorContextCacheService.getByActorId).toHaveBeenCalledWith(
+        'user-id'
+      );
+      expect(result).toEqual(cachedContext);
+      // Expiry should be updated from session
+      expect(result.expiry).toEqual(new Date('2023-12-31T23:59:59Z').getTime());
+    });
+
+    it('should create new context when not in cache and load credentials', async () => {
+      actorContextCacheService.getByActorId.mockResolvedValue(undefined);
+      actorContextService.populateFromActorId.mockResolvedValue(undefined);
+      actorContextCacheService.setByActorId.mockImplementation(ctx =>
+        Promise.resolve(ctx)
+      );
+
+      const result = await service.createActorContext('user-id', mockSession);
+
+      expect(actorContextCacheService.getByActorId).toHaveBeenCalledWith(
+        'user-id'
+      );
+      expect(actorContextService.populateFromActorId).toHaveBeenCalled();
+      expect(actorContextCacheService.setByActorId).toHaveBeenCalled();
+      expect(result.isAnonymous).toBe(false);
+      expect(result.expiry).toEqual(new Date('2023-12-31T23:59:59Z').getTime());
+    });
+
+    it('should set expiry from session when creating context', async () => {
+      actorContextCacheService.getByActorId.mockResolvedValue(undefined);
+      actorContextService.populateFromActorId.mockResolvedValue(undefined);
+      actorContextCacheService.setByActorId.mockImplementation(ctx =>
+        Promise.resolve(ctx)
+      );
+
+      const result = await service.createActorContext('user-id', mockSession);
+
+      expect(result.expiry).toEqual(new Date('2023-12-31T23:59:59Z').getTime());
+    });
+  });
 
   describe('extendSession', () => {
     it('should extend session successfully', async () => {
@@ -437,36 +411,6 @@ describe('AuthenticationService', () => {
       const result = (service as any).parseEarliestPossibleExtend(123);
 
       expect(result).toBeUndefined();
-    });
-  });
-
-  describe('validateEmail', () => {
-    it('should not throw when email is valid', () => {
-      expect(() =>
-        (service as any).validateEmail(mockOryIdentity)
-      ).not.toThrow();
-    });
-
-    it('should throw NotSupportedException when email is missing', () => {
-      const invalidOryIdentity = {
-        ...mockOryIdentity,
-        traits: { ...mockOryIdentity.traits, email: '' },
-      };
-
-      expect(() => (service as any).validateEmail(invalidOryIdentity)).toThrow(
-        NotSupportedException
-      );
-    });
-
-    it('should throw NotSupportedException when email is undefined', () => {
-      const invalidOryIdentity = {
-        ...mockOryIdentity,
-        traits: { ...mockOryIdentity.traits, email: undefined as any },
-      };
-
-      expect(() => (service as any).validateEmail(invalidOryIdentity)).toThrow(
-        NotSupportedException
-      );
     });
   });
 });

@@ -3,26 +3,23 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { Session } from '@ory/kratos-client';
 import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { AgentInfo } from '../authentication.agent.info/agent.info';
-import { NotSupportedException } from '@common/exceptions';
-import { AgentInfoCacheService } from '@core/authentication.agent.info/agent.info.cache.service';
+import { ActorContext } from '@core/actor-context';
+import { ActorContextCacheService } from '@core/actor-context';
 import ConfigUtils from '@config/config.utils';
 import { AlkemioConfig } from '@src/types';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { OryDefaultIdentitySchema } from '@services/infrastructure/kratos/types/ory.default.identity.schema';
-import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
-import { AgentService } from '@domain/agent/agent/agent.service';
+import { ActorContextService } from '@core/actor-context';
 
 @Injectable()
 export class AuthenticationService {
   private readonly extendSessionMinRemainingTTL: number | undefined; // min time before session expires when it's already allowed to be extended (in milliseconds)
 
   constructor(
-    private agentInfoCacheService: AgentInfoCacheService,
-    private agentInfoService: AgentInfoService,
+    private actorContextCacheService: ActorContextCacheService,
+    private actorContextService: ActorContextService,
     private configService: ConfigService<AlkemioConfig, true>,
     private kratosService: KratosService,
-    private agentService: AgentService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {
     const { earliest_possible_extend } = this.configService.get(
@@ -37,11 +34,21 @@ export class AuthenticationService {
     );
   }
 
-  public async getAgentInfo(opts: {
+  /**
+   * Gets ActorContext by validating a Kratos session via cookie or authorization header.
+   * Used by integration services (collaborative-document, whiteboard, file) that authenticate
+   * via direct session validation rather than pre-parsed JWT tokens.
+   *
+   * This method:
+   * 1. Validates session with Kratos using cookie/authorization
+   * 2. Extracts alkemio_actor_id from session identity metadata_public
+   * 3. Returns ActorContext (or anonymous/guest if no valid session)
+   */
+  public async getActorContext(opts: {
     cookie?: string;
     authorization?: string;
     guestName?: string;
-  }): Promise<AgentInfo> {
+  }): Promise<ActorContext> {
     let session: Session | undefined;
     try {
       session = await this.kratosService.getSession(
@@ -50,7 +57,16 @@ export class AuthenticationService {
       );
       if (session?.identity) {
         const oryIdentity = session.identity as OryDefaultIdentitySchema;
-        return this.createAgentInfo(oryIdentity);
+        const actorId = oryIdentity.metadata_public?.alkemio_actor_id;
+
+        if (actorId) {
+          return this.createActorContext(actorId, session);
+        }
+
+        this.logger.warn?.(
+          'Session identity missing alkemio_actor_id in metadata_public',
+          LogContext.AUTH
+        );
       }
     } catch (error) {
       this.logger.verbose?.(
@@ -60,74 +76,53 @@ export class AuthenticationService {
     }
 
     if (opts.guestName?.trim()) {
-      return this.agentInfoService.createGuestAgentInfo(opts.guestName.trim());
+      return this.actorContextService.createGuest(opts.guestName.trim());
     }
-    return this.agentInfoService.createAnonymousAgentInfo();
+    return this.actorContextService.createAnonymous();
   }
 
   /**
-   * Creates and returns an `AgentInfo` object based on the provided Ory identity and session.
-   *
-   * @param oryIdentity - Optional Ory identity schema containing user traits.
-   * @param session - Optional session information.
-   * @returns A promise that resolves to an `AgentInfo` object.
+   * Creates and returns an `ActorContext` based on the provided actorId.
    *
    * This method performs the following steps:
-   * 1. Validates the provided Ory identity.
-   * 2. Checks for cached agent information using authenticationID (Kratos identity ID).
-   * 3. Builds basic agent information if no cached information is found.
-   * 4. Retrieves additional metadata for the agent.
-   * 5. Populates the agent information with the retrieved metadata.
-   * 6. Caches the agent information using authenticationID as key.
-   */
-  async createAgentInfo(
-    oryIdentity?: OryDefaultIdentitySchema,
-    session?: Session
-  ): Promise<AgentInfo> {
-    if (!oryIdentity) return this.agentInfoService.createAnonymousAgentInfo();
-
-    this.validateEmail(oryIdentity);
-
-    // Use authenticationID (Kratos identity.id) as cache key - stable across email changes
-    const authenticationID = oryIdentity.id;
-    const cachedAgentInfo =
-      await this.agentInfoCacheService.getAgentInfoFromCache(authenticationID);
-    if (cachedAgentInfo) return cachedAgentInfo;
-
-    const agentInfo = this.agentInfoService.buildAgentInfoFromOryIdentity(
-      oryIdentity,
-      { session }
-    );
-
-    const agentInfoMetadata = await this.agentInfoService.getAgentInfoMetadata(
-      agentInfo.email,
-      { authenticationId: agentInfo.authenticationID }
-    );
-    if (!agentInfoMetadata) return agentInfo;
-
-    this.agentInfoService.populateAgentInfoWithMetadata(
-      agentInfo,
-      agentInfoMetadata
-    );
-
-    await this.agentInfoCacheService.setAgentInfoCache(agentInfo);
-    return agentInfo;
-  }
-
-  /**
-   * Validates the email trait of the provided Ory identity.
+   * 1. Checks for cached context using actorId.
+   * 2. Loads credentials from database if not cached.
+   * 3. Caches the result using actorId as key.
    *
-   * @param oryIdentity - The Ory identity schema containing traits to be validated.
-   * @throws NotSupportedException - If the email trait is missing or empty.
+   * @param actorId - The Alkemio actor ID from the JWT token (set by identity resolver)
+   * @param session - Optional Kratos session for expiry information
    */
-  private validateEmail(oryIdentity: OryDefaultIdentitySchema): void {
-    const oryTraits = oryIdentity.traits;
-    if (!oryTraits.email || oryTraits.email.length === 0) {
-      throw new NotSupportedException(
-        'Session without email encountered',
-        LogContext.AUTH
-      );
+  async createActorContext(
+    actorId: string,
+    session?: Session
+  ): Promise<ActorContext> {
+    if (!actorId) {
+      return this.actorContextService.createAnonymous();
     }
+
+    // Check cache first (using actorId as key)
+    const cachedCtx = await this.actorContextCacheService.getByActorId(actorId);
+    if (cachedCtx) {
+      // Update expiry from current session
+      if (session?.expires_at) {
+        cachedCtx.expiry = new Date(session.expires_at).getTime();
+      }
+      return cachedCtx;
+    }
+
+    // Build context with actorId and expiry
+    const ctx = new ActorContext();
+    ctx.isAnonymous = false;
+    if (session?.expires_at) {
+      ctx.expiry = new Date(session.expires_at).getTime();
+    }
+
+    // Load credentials (actorId already known from token)
+    await this.actorContextService.populateFromActorId(ctx, actorId);
+
+    // Cache the result using actorId
+    await this.actorContextCacheService.setByActorId(ctx);
+    return ctx;
   }
 
   public async extendSession(sessionToBeExtended: Session): Promise<void> {

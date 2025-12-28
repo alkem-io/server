@@ -16,9 +16,9 @@ import {
 } from '@common/enums';
 import { AuthenticationException } from '@common/exceptions';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AuthorizationRuleAgentPrivilege } from './authorization.rule.agent.privilege';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { AuthorizationRuleActorPrivilege } from './authorization.rule.actor.privilege';
+import { ActorContext } from '@core/actor-context';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager } from 'typeorm';
@@ -72,7 +72,7 @@ export class GraphqlGuard extends AuthGuard([
  */
   handleRequest(
     err: any,
-    agentInfo: any,
+    actorContext: any,
     info: any,
     _context: any,
     _status?: any
@@ -88,18 +88,18 @@ export class GraphqlGuard extends AuthGuard([
     const graphqlInfo = gqlContext.getInfo();
     const fieldName = graphqlInfo.fieldName;
 
-    // Ensure there is always an AgentInfo
-    let resultAgentInfo = agentInfo;
+    // Ensure there is always an ActorContext
+    let resultActorContext = actorContext;
 
-    if (agentInfo) {
-      this.authorizationService.logAgentInfo(agentInfo);
+    if (actorContext) {
+      this.authorizationService.logActorContext(actorContext);
     } else {
       this.logger.warn?.(
-        `[${this.instanceId}] - AgentInfo NOT present or false: ${agentInfo}`,
+        `[${this.instanceId}] - ActorContext NOT present or false: ${actorContext}`,
         LogContext.AUTH
       );
-      // Create anonymous agent info as fallback
-      resultAgentInfo = this.createAnonymousAgentInfo();
+      // Create anonymous actor context as fallback
+      resultActorContext = this.createAnonymous();
     }
 
     // Apply any rules
@@ -139,7 +139,7 @@ export class GraphqlGuard extends AuthGuard([
               privilege,
               fieldParent,
               fieldName,
-              resultAgentInfo
+              resultActorContext
             );
           });
       } else {
@@ -147,36 +147,36 @@ export class GraphqlGuard extends AuthGuard([
           privilege,
           fieldParent,
           fieldName,
-          resultAgentInfo
+          resultActorContext
         );
       }
     }
 
-    return resultAgentInfo;
+    return resultActorContext;
   }
 
   private executeAuthorizationRule(
     privilege: AuthorizationPrivilege,
     fieldParent: any,
     fieldName: any,
-    resultAgentInfo: any
+    resultActorContext: any
   ) {
-    const rule = new AuthorizationRuleAgentPrivilege(
+    const rule = new AuthorizationRuleActorPrivilege(
       this.authorizationService,
       privilege,
       fieldParent,
       fieldName
     );
-    rule.execute(resultAgentInfo);
+    rule.execute(resultActorContext);
   }
 
-  public createAnonymousAgentInfo(): AgentInfo {
-    const agentInfo = new AgentInfo();
+  public createAnonymous(): ActorContext {
+    const actorContext = new ActorContext();
     const anonymousCredential: ICredentialDefinition = {
       type: AuthorizationCredential.GLOBAL_ANONYMOUS,
       resourceID: '',
     };
-    agentInfo.credentials = [anonymousCredential];
-    return agentInfo;
+    actorContext.credentials = [anonymousCredential];
+    return actorContext;
   }
 }

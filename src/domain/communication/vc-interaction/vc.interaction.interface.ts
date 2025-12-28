@@ -8,7 +8,7 @@ export abstract class IVcInteraction {
   threadID!: string;
 
   @Field(() => String, {
-    description: 'The actor ID (agent.id) of the Virtual Contributor',
+    description: 'The actor ID of the Virtual Contributor',
   })
   virtualContributorID!: string;
 }

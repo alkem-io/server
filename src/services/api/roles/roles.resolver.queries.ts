@@ -1,13 +1,11 @@
 import { Args, Resolver, Query } from '@nestjs/graphql';
 import { CurrentUser } from '@src/common/decorators';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { RolesOrganizationInput } from './dto/roles.dto.input.organization';
-import { RolesVirtualContributorInput } from './dto/roles.dto.input.virtual.contributor';
+import { RolesActorInput } from './dto/roles.dto.input.actor';
 import { RolesService } from './roles.service';
-import { RolesUserInput } from './dto/roles.dto.input.user';
-import { ContributorRoles } from './dto/roles.dto.result.contributor';
+import { ActorRoles } from './dto/roles.dto.result.actor';
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { InstrumentResolver } from '@src/apm/decorators';
 
@@ -20,38 +18,20 @@ export class RolesResolverQueries {
     private platformAuthorizationService: PlatformAuthorizationPolicyService
   ) {}
 
-  @Query(() => ContributorRoles, {
+  @Query(() => ActorRoles, {
     nullable: false,
-    description: 'The roles that that the specified User has.',
+    description: 'The roles that the specified Actor has.',
   })
-  async rolesUser(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('rolesData') rolesData: RolesUserInput
-  ): Promise<ContributorRoles> {
+  async rolesActor(
+    @CurrentUser() actorContext: ActorContext,
+    @Args('rolesData') rolesData: RolesActorInput
+  ): Promise<ActorRoles> {
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
-      `roles user query: ${agentInfo.email}`
+      `roles actor query: ${actorContext.actorId}`
     );
-    return this.rolesServices.getRolesForUser(rolesData);
-  }
-
-  @Query(() => ContributorRoles, {
-    description: 'The roles that the specified Organization has.',
-  })
-  async rolesOrganization(
-    @Args('rolesData') rolesData: RolesOrganizationInput
-  ): Promise<ContributorRoles> {
-    return await this.rolesServices.getRolesForOrganization(rolesData);
-  }
-
-  @Query(() => ContributorRoles, {
-    description: 'The roles that the specified VirtualContributor has.',
-  })
-  async rolesVirtualContributor(
-    @Args('rolesData') rolesData: RolesVirtualContributorInput
-  ): Promise<ContributorRoles> {
-    return await this.rolesServices.getRolesForVirtualContributor(rolesData);
+    return this.rolesServices.getRolesForActor(rolesData);
   }
 }

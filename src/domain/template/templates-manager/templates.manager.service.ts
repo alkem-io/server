@@ -17,7 +17,7 @@ import { CreateTemplatesManagerInput } from './dto/templates.manager.dto.create'
 import { TemplateDefaultService } from '../template-default/template.default.service';
 import { ITemplateDefault } from '../template-default/template.default.interface';
 import { TemplateDefaultType } from '@common/enums/template.default.type';
-import { ITemplatesSet } from '../templates-set/templates.set.interface';
+import { ITemplatesSet } from '@domain/template/templates-set';
 import { ITemplate } from '../template/template.interface';
 
 @Injectable()

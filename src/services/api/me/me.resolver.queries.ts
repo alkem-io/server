@@ -1,5 +1,5 @@
 import { Query, Resolver } from '@nestjs/graphql';
-import { MeQueryResults } from './dto/me.query.results';
+import { MeQueryResults } from '@services/api/me/dto';
 import { InstrumentResolver } from '@src/apm/decorators';
 
 @InstrumentResolver()

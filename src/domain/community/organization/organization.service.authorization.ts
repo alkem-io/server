@@ -24,15 +24,13 @@ import {
   CREDENTIAL_RULE_TYPES_ORGANIZATION_PLATFORM_ADMIN,
 } from '@common/constants';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
-import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
 import { RoleSetAuthorizationService } from '@domain/access/role-set/role.set.service.authorization';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 
 @Injectable()
 export class OrganizationAuthorizationService {
   constructor(
     private organizationService: OrganizationService,
-    private agentAuthorizationService: AgentAuthorizationService,
     private authorizationPolicy: AuthorizationPolicyService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private userGroupAuthorizationService: UserGroupAuthorizationService,
@@ -46,23 +44,22 @@ export class OrganizationAuthorizationService {
   async applyAuthorizationPolicy(
     organizationInput: IOrganization
   ): Promise<IAuthorizationPolicy[]> {
-    const organization = await this.organizationService.getOrganizationOrFail(
-      organizationInput.id,
-      {
-        relations: {
-          storageAggregator: true,
-          profile: true,
-          agent: true,
-          groups: true,
-          verification: true,
-          roleSet: true,
-        },
-      }
-    );
+    const organization =
+      await this.organizationService.getOrganizationByIdOrFail(
+        organizationInput.id,
+        {
+          relations: {
+            storageAggregator: true,
+            profile: true,
+            groups: true,
+            verification: true,
+            roleSet: true,
+          },
+        }
+      );
     if (
       !organization.profile ||
       !organization.storageAggregator ||
-      !organization.agent ||
       !organization.groups ||
       !organization.verification ||
       !organization.roleSet
@@ -135,13 +132,6 @@ export class OrganizationAuthorizationService {
         additionalAdditionalRoleSetCredentialRules
       );
     updatedAuthorizations.push(...roleSetAuthorizations);
-
-    const agentAuthorization =
-      this.agentAuthorizationService.applyAuthorizationPolicy(
-        organization.agent,
-        organization.authorization
-      );
-    updatedAuthorizations.push(agentAuthorization);
 
     for (const group of organization.groups) {
       const groupAuthorizations =

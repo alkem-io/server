@@ -1,15 +1,12 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { IMessage } from '../message/message.interface';
 import { NotificationInputEntityMentions } from '@services/adapters/notification-adapter/dto/user/notification.dto.input.entity.mentions';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { Mention, MentionedEntityType } from '../messaging/mention.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums/logging.context';
-import {
-  EntityNotFoundException,
-  EntityNotInitializedException,
-} from '@common/exceptions';
+import { EntityNotFoundException } from '@common/exceptions';
 import { VirtualContributorMessageService } from '../virtual.contributor.message/virtual.contributor.message.service';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
@@ -61,14 +58,14 @@ export class RoomMentionsService {
   ): Promise<IVcInteraction | undefined> {
     const room = await this.roomLookupService.getRoomOrFail(roomID);
 
-    const vcData = room.vcInteractionsByThread?.[threadID];
-    if (!vcData) {
+    const threadInteraction = room.vcData?.interactionsByThread?.[threadID];
+    if (!threadInteraction) {
       return undefined;
     }
 
     return {
       threadID,
-      virtualContributorID: vcData.virtualContributorActorID,
+      virtualContributorID: threadInteraction.virtualContributorActorID,
     };
   }
 
@@ -76,7 +73,7 @@ export class RoomMentionsService {
     mentions: Mention[],
     message: string,
     threadID: string,
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     room: IRoom
   ) {
     const contextSpaceID = await this.getSpaceIdForRoom(room);
@@ -94,36 +91,28 @@ export class RoomMentionsService {
         LogContext.VIRTUAL_CONTRIBUTOR
       );
       if (!vcInteraction) {
-        // Edge conversion: GraphQL mention (entity UUID) → agent.id for internal flow
+        // Edge conversion: GraphQL mention (entity UUID) → actorId for internal flow
         const virtualContributor =
-          await this.virtualContributorLookupService.getVirtualContributorOrFail(
-            vcMention.contributorID,
-            { relations: { agent: true } }
+          await this.virtualContributorLookupService.getVirtualContributorByIdOrFail(
+            vcMention.contributorID
           );
 
-        if (!virtualContributor.agent) {
-          throw new EntityNotInitializedException(
-            `Agent not initialized for VC: ${vcMention.contributorID}`,
-            LogContext.VIRTUAL_CONTRIBUTOR
-          );
-        }
-
+        // VirtualContributor IS an Actor - vc.id is the actorId
         vcInteraction = await this.roomLookupService.addVcInteractionToRoom({
-          virtualContributorActorID: virtualContributor.agent.id,
+          virtualContributorActorID: virtualContributor.id,
           roomID: room.id,
           threadID: threadID,
         });
       }
 
-      // Use agent.id (unified internal flow) instead of entity UUID
+      // Use actorId (unified internal flow) instead of entity UUID
       await this.virtualContributorMessageService.invokeVirtualContributor(
         vcInteraction.virtualContributorID,
         message,
         threadID,
-        agentInfo,
+        actorContext,
         contextSpaceID,
-        room,
-        vcInteraction
+        room
       );
     }
   }
@@ -132,10 +121,10 @@ export class RoomMentionsService {
     mentions: Mention[],
     room: IRoom,
     message: IMessage,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ) {
     const entityMentionsNotificationInput: NotificationInputEntityMentions = {
-      triggeredBy: agentInfo.userID,
+      triggeredBy: actorContext.actorId,
       roomId: room.id,
       mentions,
       messageID: message.id,

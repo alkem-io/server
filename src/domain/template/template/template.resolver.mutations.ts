@@ -5,7 +5,7 @@ import { TemplateService } from './template.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ITemplate } from './template.interface';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { UpdateTemplateInput } from './dto/template.dto.update';
 import { DeleteTemplateInput } from './dto/template.dto.delete';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -33,7 +33,7 @@ export class TemplateResolverMutations {
     description: 'Updates the specified Template.',
   })
   async updateTemplate(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('updateData')
     updateData: UpdateTemplateInput
   ): Promise<ITemplate> {
@@ -44,7 +44,7 @@ export class TemplateResolverMutations {
       }
     );
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       template.authorization,
       AuthorizationPrivilege.UPDATE,
       `update template: ${template.id}`
@@ -57,7 +57,7 @@ export class TemplateResolverMutations {
       'Updates the specified Space Content Template using the provided Space.',
   })
   async updateTemplateFromSpace(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('updateData')
     updateData: UpdateTemplateFromSpaceInput
   ): Promise<ITemplate> {
@@ -102,7 +102,7 @@ export class TemplateResolverMutations {
       }
     );
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       template.authorization,
       AuthorizationPrivilege.UPDATE,
       `update template: ${template.id}`
@@ -112,7 +112,7 @@ export class TemplateResolverMutations {
       updateData.spaceID
     );
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       space.authorization,
       AuthorizationPrivilege.READ,
       `read source Space for template: ${space.id}`
@@ -120,7 +120,7 @@ export class TemplateResolverMutations {
     const templateUpdated = await this.templateService.updateTemplateFromSpace(
       template,
       updateData,
-      agentInfo
+      actorContext
     );
 
     const authorizations =
@@ -137,7 +137,7 @@ export class TemplateResolverMutations {
     description: 'Deletes the specified Template.',
   })
   async deleteTemplate(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteTemplateInput
   ): Promise<ITemplate> {
     const template = await this.templateService.getTemplateOrFail(
@@ -147,7 +147,7 @@ export class TemplateResolverMutations {
       }
     );
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       template.authorization,
       AuthorizationPrivilege.DELETE,
       `template delete: ${template.id}`

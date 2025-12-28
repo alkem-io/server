@@ -1,7 +1,7 @@
 import { Resolver, Args, Mutation } from '@nestjs/graphql';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AccountAuthorizationResetInput } from './dto/account.dto.reset.authorization';
 import { AccountAuthorizationService } from './account.service.authorization';
@@ -43,7 +43,7 @@ import { VirtualContributorLookupService } from '@domain/community/virtual-contr
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { UpdateBaselineLicensePlanOnAccount } from './dto/account.dto.update.baseline.license.plan';
-import { AccountLicensePlanService } from '../account.license.plan/account.license.plan.service';
+import { AccountLicensePlanService } from '@domain/space/account.license.plan';
 import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
 
 @InstrumentResolver()
@@ -75,7 +75,7 @@ export class AccountResolverMutations {
     description: 'Creates a new Level Zero Space within the specified Account.',
   })
   async createSpace(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('spaceData') spaceData: CreateSpaceOnAccountInput
   ): Promise<ISpace> {
     const account = await this.accountService.getAccountOrFail(
@@ -91,14 +91,14 @@ export class AccountResolverMutations {
 
     await this.validateSoftLicenseLimitOrFail(
       account,
-      agentInfo,
+      actorContext,
       AuthorizationPrivilege.CREATE_SPACE,
       LicenseEntitlementType.ACCOUNT_SPACE_FREE
     );
 
     let space = await this.accountService.createSpaceOnAccount(
       spaceData,
-      agentInfo
+      actorContext
     );
     space = await this.spaceService.save(space);
 
@@ -128,7 +128,7 @@ export class AccountResolverMutations {
     }
 
     const notificationInput: NotificationInputSpaceCreated = {
-      triggeredBy: agentInfo.userID,
+      triggeredBy: actorContext.actorId,
       space,
     };
     await this.notificationPlatformAdapter.platformSpaceCreated(
@@ -142,7 +142,7 @@ export class AccountResolverMutations {
     description: 'Create an Innovation Hub on the specified account',
   })
   async createInnovationHub(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('createData') createData: CreateInnovationHubOnAccountInput
   ): Promise<IInnovationHub> {
     const account = await this.accountService.getAccountOrFail(
@@ -159,7 +159,7 @@ export class AccountResolverMutations {
 
     await this.validateSoftLicenseLimitOrFail(
       account,
-      agentInfo,
+      actorContext,
       AuthorizationPrivilege.CREATE_INNOVATION_HUB,
       LicenseEntitlementType.ACCOUNT_INNOVATION_HUB
     );
@@ -184,7 +184,7 @@ export class AccountResolverMutations {
     description: 'Creates a new VirtualContributor on an Account.',
   })
   async createVirtualContributor(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('virtualContributorData')
     virtualContributorData: CreateVirtualContributorOnAccountInput
   ): Promise<IVirtualContributor> {
@@ -201,14 +201,14 @@ export class AccountResolverMutations {
 
     await this.validateSoftLicenseLimitOrFail(
       account,
-      agentInfo,
+      actorContext,
       AuthorizationPrivilege.CREATE_VIRTUAL_CONTRIBUTOR,
       LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR
     );
 
     const virtual = await this.accountService.createVirtualContributorOnAccount(
       virtualContributorData,
-      agentInfo
+      actorContext
     );
     // Check if avatars etc need to be moved
     // Now the contribution is saved, we can look to move any temporary documents
@@ -228,7 +228,7 @@ export class AccountResolverMutations {
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
     // Reload to ensure the new member credential is loaded
-    return await this.virtualContributorLookupService.getVirtualContributorOrFail(
+    return await this.virtualContributorLookupService.getVirtualContributorByIdOrFail(
       virtual.id
     );
   }
@@ -237,7 +237,7 @@ export class AccountResolverMutations {
     description: 'Creates a new InnovationPack on an Account.',
   })
   async createInnovationPack(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('innovationPackData')
     innovationPackData: CreateInnovationPackOnAccountInput
   ): Promise<IInnovationPack> {
@@ -254,7 +254,7 @@ export class AccountResolverMutations {
 
     await this.validateSoftLicenseLimitOrFail(
       account,
-      agentInfo,
+      actorContext,
       AuthorizationPrivilege.CREATE_INNOVATION_PACK,
       LicenseEntitlementType.ACCOUNT_INNOVATION_PACK
     );
@@ -284,7 +284,7 @@ export class AccountResolverMutations {
     description: 'Reset the Authorization Policy on the specified Account.',
   })
   async authorizationPolicyResetOnAccount(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('authorizationResetData')
     authorizationResetData: AccountAuthorizationResetInput
   ): Promise<IAccount> {
@@ -292,10 +292,10 @@ export class AccountResolverMutations {
       authorizationResetData.accountID
     );
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       account.authorization,
       AuthorizationPrivilege.AUTHORIZATION_RESET,
-      `reset authorization definition on Space: ${agentInfo.email}`
+      `reset authorization definition on Space: ${actorContext.actorId}`
     );
     const accountAuthorizations =
       await this.accountAuthorizationService.applyAuthorizationPolicy(account);
@@ -312,7 +312,7 @@ export class AccountResolverMutations {
       'Reset the License with Entitlements on the specified Account.',
   })
   async licenseResetOnAccount(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('resetData')
     licenseResetData: AccountLicenseResetInput
   ): Promise<IAccount> {
@@ -320,10 +320,10 @@ export class AccountResolverMutations {
       licenseResetData.accountID
     );
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       account.authorization,
       AuthorizationPrivilege.LICENSE_RESET,
-      `reset license definition on Account: ${agentInfo.userID}`
+      `reset license definition on Account: ${actorContext.actorId}`
     );
     const accountLicenses = await this.accountLicenseService.applyLicensePolicy(
       account.id
@@ -336,7 +336,7 @@ export class AccountResolverMutations {
     description: 'Update the baseline License Plan on the specified Account.',
   })
   async updateBaselineLicensePlanOnAccount(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('updateData')
     updateData: UpdateBaselineLicensePlanOnAccount
   ): Promise<IAccount> {
@@ -344,10 +344,10 @@ export class AccountResolverMutations {
       updateData.accountID
     );
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       account.authorization,
       AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE,
-      `update baseline license plan on Account: ${agentInfo.userID}`
+      `update baseline license plan on Account: ${actorContext.actorId}`
     );
     account.baselineLicensePlan =
       this.accountLicensePlanService.updateLicensePlan(
@@ -367,7 +367,7 @@ export class AccountResolverMutations {
     description: 'Transfer the specified InnovationHub to another Account.',
   })
   async transferInnovationHubToAccount(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('transferData') transferData: TransferAccountInnovationHubInput
   ): Promise<IInnovationHub> {
     let innovationHub = await this.innovationHubService.getInnovationHubOrFail(
@@ -387,7 +387,7 @@ export class AccountResolverMutations {
     await this.validateTransferOfAccountResource(
       innovationHub.account,
       targetAccount,
-      agentInfo,
+      actorContext,
       'InnovationHub',
       transferData.innovationHubID
     );
@@ -417,7 +417,7 @@ export class AccountResolverMutations {
     description: 'Transfer the specified Space to another Account.',
   })
   async transferSpaceToAccount(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('transferData') transferData: TransferAccountSpaceInput
   ): Promise<ISpace> {
     let space = await this.spaceService.getSpaceOrFail(transferData.spaceID, {
@@ -434,7 +434,7 @@ export class AccountResolverMutations {
     await this.validateTransferOfAccountResource(
       space.account,
       targetAccount,
-      agentInfo,
+      actorContext,
       'Space',
       transferData.spaceID
     );
@@ -454,7 +454,7 @@ export class AccountResolverMutations {
     description: 'Transfer the specified Innovation Pack to another Account.',
   })
   async transferInnovationPackToAccount(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('transferData') transferData: TransferAccountInnovationPackInput
   ): Promise<IInnovationPack> {
     let innovationPack =
@@ -475,7 +475,7 @@ export class AccountResolverMutations {
     await this.validateTransferOfAccountResource(
       innovationPack.account,
       targetAccount,
-      agentInfo,
+      actorContext,
       'Innovation Pack',
       transferData.innovationPackID
     );
@@ -504,11 +504,11 @@ export class AccountResolverMutations {
       'Transfer the specified Virtual Contributor to another Account.',
   })
   async transferVirtualContributorToAccount(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('transferData') transferData: TransferAccountVirtualContributorInput
   ): Promise<IVirtualContributor> {
     let virtualContributor =
-      await this.virtualContributorLookupService.getVirtualContributorOrFail(
+      await this.virtualContributorLookupService.getVirtualContributorByIdOrFail(
         transferData.virtualContributorID,
         {
           relations: {
@@ -525,7 +525,7 @@ export class AccountResolverMutations {
     await this.validateTransferOfAccountResource(
       virtualContributor.account,
       targetAccount,
-      agentInfo,
+      actorContext,
       'VirtualContributor',
       transferData.virtualContributorID
     );
@@ -544,7 +544,7 @@ export class AccountResolverMutations {
     );
 
     // TODO: check if still needed later
-    return await this.virtualContributorLookupService.getVirtualContributorOrFail(
+    return await this.virtualContributorLookupService.getVirtualContributorByIdOrFail(
       virtualContributor.id
     );
   }
@@ -552,7 +552,7 @@ export class AccountResolverMutations {
   private async validateTransferOfAccountResource(
     currentAccount: IAccount | undefined,
     targetAccount: IAccount,
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     resourceName: string,
     resourceID: string
   ): Promise<void> {
@@ -565,22 +565,22 @@ export class AccountResolverMutations {
 
     // Double authorization check: on Account where InnovationHub is, and where it it being transferred to
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       currentAccount.authorization,
       AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER,
-      `transfer ${resourceName} to another Account: ${agentInfo.email}`
+      `transfer ${resourceName} to another Account: ${actorContext.actorId}`
     );
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       targetAccount.authorization,
       AuthorizationPrivilege.TRANSFER_RESOURCE_ACCEPT,
-      `transfer ${resourceName} to target Account: ${agentInfo.email}`
+      `transfer ${resourceName} to target Account: ${actorContext.actorId}`
     );
   }
 
   private async validateSoftLicenseLimitOrFail(
     account: IAccount,
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     authorizationPrivilege: AuthorizationPrivilege,
     licenseType: LicenseEntitlementType
   ) {
@@ -600,7 +600,7 @@ export class AccountResolverMutations {
     const license = account.license;
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       authorization,
       authorizationPrivilege,
       `create ${licenseType} on account: ${account.id}`
@@ -608,7 +608,7 @@ export class AccountResolverMutations {
     const isEntitlementEnabled =
       await this.licenseService.isEntitlementAvailable(license, licenseType);
     const isPlatformAdmin = this.authorizationService.isAccessGranted(
-      agentInfo,
+      actorContext,
       authorization,
       AuthorizationPrivilege.PLATFORM_ADMIN
     );

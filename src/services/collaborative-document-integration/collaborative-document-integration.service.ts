@@ -3,11 +3,10 @@ import { ConfigService } from '@nestjs/config';
 import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthenticationService } from '@core/authentication/authentication.service';
-import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
+import { ActorContextService } from '@core/actor-context';
 import { AlkemioConfig } from '@src/types';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { MemoService } from '@domain/common/memo';
 import { MemoContributionsInputData } from '@services/collaborative-document-integration/inputs/memo.contributions.input.data';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
@@ -43,7 +42,7 @@ export class CollaborativeDocumentIntegrationService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: WinstonLogger,
     private readonly authorizationService: AuthorizationService,
     private readonly authenticationService: AuthenticationService,
-    private readonly agentInfoService: AgentInfoService,
+    private readonly authActorInfoService: ActorContextService,
     private readonly memoService: MemoService,
     private readonly configService: ConfigService<AlkemioConfig, true>,
     private readonly contributionReporter: ContributionReporterService,
@@ -58,12 +57,12 @@ export class CollaborativeDocumentIntegrationService {
   public async accessGranted(data: AccessGrantedInputData): Promise<boolean> {
     try {
       const memo = await this.memoService.getMemoOrFail(data.documentId);
-      const agentInfo = await this.agentInfoService.buildAgentInfoForUser(
+      const actorContext = await this.authActorInfoService.buildForUser(
         data.userId
       );
 
       return this.authorizationService.isAccessGranted(
-        agentInfo,
+        actorContext,
         memo.authorization,
         data.privilege
       );
@@ -109,8 +108,10 @@ export class CollaborativeDocumentIntegrationService {
     return { read, update, isMultiUser, maxCollaborators };
   }
 
-  public who(data: WhoInputData): Promise<AgentInfo> {
-    return this.authenticationService.getAgentInfo(data.auth);
+  public async who(data: WhoInputData): Promise<string> {
+    const authCtx = await this.authenticationService.getActorContext(data.auth);
+
+    return authCtx.actorId;
   }
 
   public async save({
@@ -176,14 +177,14 @@ export class CollaborativeDocumentIntegrationService {
       );
     const { displayName } = await this.memoService.getProfile(memoId);
 
-    users.forEach(({ id, email }) => {
+    users.forEach(({ id }) => {
       this.contributionReporter.memoContribution(
         {
           id: memoId,
           name: displayName,
           space: levelZeroSpaceID,
         },
-        { id, email }
+        id
       );
     });
   }

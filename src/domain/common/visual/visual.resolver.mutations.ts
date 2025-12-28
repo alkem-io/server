@@ -1,6 +1,6 @@
 import { CurrentUser } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { VisualService } from './visual.service';
@@ -31,14 +31,14 @@ export class VisualResolverMutations {
     description: 'Updates the image URI for the specified Visual.',
   })
   async updateVisual(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('updateData') updateData: UpdateVisualInput
   ): Promise<IVisual> {
     const visual = await this.visualService.getVisualOrFail(
       updateData.visualID
     );
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       visual.authorization,
       AuthorizationPrivilege.UPDATE,
       `visual image update: ${visual.id}`
@@ -50,7 +50,7 @@ export class VisualResolverMutations {
     description: 'Uploads and sets an image for the specified Visual.',
   })
   async uploadImageOnVisual(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('uploadData') uploadData: VisualUploadImageInput,
     @Args({ name: 'file', type: () => GraphQLUpload })
     { createReadStream, filename, mimetype }: FileUpload
@@ -68,7 +68,7 @@ export class VisualResolverMutations {
       }
     );
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       visual.authorization,
       AuthorizationPrivilege.UPDATE,
       `visual image upload: ${visual.id}`
@@ -81,9 +81,9 @@ export class VisualResolverMutations {
       );
 
     const storageBucket = profile.storageBucket;
-    // Also check that the acting agent is allowed to upload
+    // Also check that the actor is allowed to upload
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       storageBucket.authorization,
       AuthorizationPrivilege.FILE_UPLOAD,
       `visual image upload on storage bucket: ${visual.id}`
@@ -96,7 +96,7 @@ export class VisualResolverMutations {
       readStream,
       filename,
       mimetype,
-      agentInfo.userID
+      actorContext.actorId
     );
 
     await this.documentService.saveDocument(visualDocument);

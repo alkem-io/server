@@ -1,10 +1,10 @@
 import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common';
 import { Args, Float, Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { AuthorizationAgentPrivilege } from '@src/common/decorators';
+import { AuthorizationActorPrivilege } from '@src/common/decorators';
 import { RoleSetService } from './role.set.service';
 import { IRoleSet } from './role.set.interface';
-import { IApplication } from '../application/application.interface';
+import { IApplication } from '@domain/access/application';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { UserFilterInput } from '@core/filtering/input-types/user.filter.input';
 import { PaginationArgs } from '@core/pagination/pagination.args';
@@ -15,7 +15,7 @@ import { RoleName } from '@common/enums/role.name';
 import { UserService } from '@domain/community/user/user.service';
 import { IOrganization } from '@domain/community/organization/organization.interface';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
-import { IInvitation } from '../invitation/invitation.interface';
+import { IInvitation } from '@domain/access/invitation';
 import { IPlatformInvitation } from '@domain/access/invitation.platform/platform.invitation.interface';
 import { RoleSetRoleWithParentCredentials } from './dto/role.set.dto.role.with.parent.credentials';
 import { ILicense } from '@domain/common/license/license.interface';
@@ -42,7 +42,7 @@ export class RoleSetResolverFields {
     private virtualContributorLookupService: VirtualContributorLookupService
   ) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('availableUsersForEntryRole', () => PaginatedUsers, {
     nullable: false,
@@ -88,7 +88,7 @@ export class RoleSetResolverFields {
     );
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField(
     'availableVirtualContributorsForEntryRole',
@@ -128,7 +128,7 @@ export class RoleSetResolverFields {
     );
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('availableUsersForElevatedRole', () => PaginatedUsers, {
     nullable: false,
@@ -169,7 +169,7 @@ export class RoleSetResolverFields {
     );
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('usersInRole', () => [IUser], {
     nullable: false,
@@ -198,7 +198,7 @@ export class RoleSetResolverFields {
     return await this.roleSetService.getUsersWithRole(roleSet, role, limit);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('usersInRoles', () => [IUsersInRoles], {
     nullable: false,
@@ -231,7 +231,7 @@ export class RoleSetResolverFields {
     );
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('organizationsInRole', () => [IOrganization], {
     nullable: false,
@@ -246,7 +246,7 @@ export class RoleSetResolverFields {
     return await this.roleSetService.getOrganizationsWithRole(roleSet, role);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('organizationsInRoles', () => [IOrganizationsInRoles], {
     nullable: false,
@@ -269,7 +269,7 @@ export class RoleSetResolverFields {
     );
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('virtualContributorsInRole', () => [IVirtualContributor], {
     nullable: false,
@@ -287,7 +287,7 @@ export class RoleSetResolverFields {
     );
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField(
     'virtualContributorsInRoleInHierarchy',
@@ -309,7 +309,7 @@ export class RoleSetResolverFields {
     );
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField(
     'virtualContributorsInRoles',
@@ -337,7 +337,7 @@ export class RoleSetResolverFields {
     );
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('invitations', () => [IInvitation], {
     nullable: false,
@@ -347,7 +347,7 @@ export class RoleSetResolverFields {
     return await this.roleSetService.getInvitations(roleSet);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('platformInvitations', () => [IPlatformInvitation], {
     nullable: false,
@@ -360,7 +360,7 @@ export class RoleSetResolverFields {
     return await this.roleSetService.getPlatformInvitations(roleSet);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('applications', () => [IApplication], {
     nullable: false,

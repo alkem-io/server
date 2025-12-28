@@ -1,5 +1,5 @@
-import { DataLoaderCreatorLimitOptions } from './data.loader.creator.limit.options';
-import { DataLoaderCreatorPaginationOptions } from './data.loader.creator.pagination.options';
+import { DataLoaderCreatorLimitOptions } from '@core/dataloader/creators';
+import { DataLoaderCreatorPaginationOptions } from '@core/dataloader/creators';
 import { AuthorizationPrivilege } from '@common/enums';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 

@@ -31,7 +31,7 @@ export class OrganizationResolverQueries {
   async organization(
     @Args('ID', { type: () => UUID, nullable: false }) id: string
   ): Promise<IOrganization> {
-    return await this.organizationService.getOrganizationOrFail(id);
+    return await this.organizationService.getOrganizationByIdOrFail(id);
   }
 
   @Query(() => PaginatedOrganization, {

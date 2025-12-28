@@ -7,19 +7,15 @@ import { IOrganization } from '@domain/community/organization';
 import { IUserGroup } from '@domain/community/user-group';
 import { IProfile } from '@domain/common/profile';
 import { CurrentUser } from '@common/decorators';
-import { IAgent } from '@domain/agent/agent';
 import { UUID } from '@domain/common/scalars';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import { IOrganizationVerification } from '../organization-verification/organization.verification.interface';
 import { INVP } from '@domain/common/nvp/nvp.interface';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { Loader } from '@core/dataloader/decorators';
-import {
-  AgentLoaderCreator,
-  ProfileLoaderCreator,
-} from '@core/dataloader/creators';
+import { ProfileLoaderCreator } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { OrganizationStorageAggregatorLoaderCreator } from '@core/dataloader/creators/loader.creators/community/organization.storage.aggregator.loader.creator';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
@@ -41,15 +37,14 @@ export class OrganizationResolverFields {
   })
   async groups(
     @Parent() parent: Organization,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentUser() actorContext: ActorContext
   ): Promise<IUserGroup[]> {
     // Reload to ensure the authorization is loaded
-    const organization = await this.organizationService.getOrganizationOrFail(
-      parent.id
-    );
+    const organization =
+      await this.organizationService.getOrganizationByIdOrFail(parent.id);
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       organization.authorization,
       AuthorizationPrivilege.READ,
       `read user groups on org: ${organization.id}`
@@ -71,17 +66,16 @@ export class OrganizationResolverFields {
     description: 'Group defined on this organization.',
   })
   async group(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Parent() parent: Organization,
     @Args('ID', { type: () => UUID }) groupID: string
   ): Promise<IUserGroup> {
     // Reload to ensure the authorization is loaded
-    const organization = await this.organizationService.getOrganizationOrFail(
-      parent.id
-    );
+    const organization =
+      await this.organizationService.getOrganizationByIdOrFail(parent.id);
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       organization.authorization,
       AuthorizationPrivilege.READ,
       `read single usergroup on org: ${organization.id}`
@@ -118,10 +112,10 @@ export class OrganizationResolverFields {
   })
   async account(
     @Parent() organization: IOrganization,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentUser() actorContext: ActorContext
   ): Promise<IAccount | undefined> {
     const accountVisible = this.authorizationService.isAccessGranted(
-      agentInfo,
+      actorContext,
       organization.authorization,
       AuthorizationPrivilege.UPDATE
     );
@@ -136,9 +130,8 @@ export class OrganizationResolverFields {
     description: 'The Authorization for this Organization.',
   })
   async authorization(@Parent() parent: Organization) {
-    const organization = await this.organizationService.getOrganizationOrFail(
-      parent.id
-    );
+    const organization =
+      await this.organizationService.getOrganizationByIdOrFail(parent.id);
 
     return organization.authorization;
   }
@@ -164,18 +157,6 @@ export class OrganizationResolverFields {
   })
   async verification(@Parent() organization: Organization) {
     return await this.organizationService.getVerification(organization);
-  }
-
-  @ResolveField('agent', () => IAgent, {
-    nullable: false,
-    description: 'The Agent representing this User.',
-  })
-  async agent(
-    @Parent() organization: Organization,
-    @Loader(AgentLoaderCreator, { parentClassRef: Organization })
-    loader: ILoader<IAgent>
-  ): Promise<IAgent> {
-    return loader.load(organization.id);
   }
 
   @ResolveField('storageAggregator', () => IStorageAggregator, {

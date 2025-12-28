@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { AccountHostService } from './account.host.service';
-import { AgentModule } from '@domain/agent/agent/agent.module';
 import { LicenseIssuerModule } from '@platform/licensing/credential-based/license-credential-issuer/license.issuer.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -10,7 +9,6 @@ import { LicensingFrameworkModule } from '@platform/licensing/credential-based/l
 
 @Module({
   imports: [
-    AgentModule,
     LicenseIssuerModule,
     LicensingFrameworkModule,
     LicenseModule,

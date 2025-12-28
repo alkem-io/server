@@ -1,17 +1,17 @@
 import { EntityManager } from 'typeorm';
-import { ICredential } from '@src/domain/agent/credential';
+import { ICredential } from '@domain/actor/credential';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { groupCredentialsByEntity } from './group.credentials.by.entity';
 import { getSpaceRolesForContributorEntityData } from './get.space.roles.for.contributor.entity.data';
 import { getSpaceRolesForContributorQueryResult } from './get.space.roles.for.contributor.query.result';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 
 export const mapSpaceCredentialsToRoles = async (
   entityManager: EntityManager,
   credentials: ICredential[],
   allowedVisibilities: SpaceVisibility[],
-  agentInfo: AgentInfo,
+  actorContext: ActorContext,
   authorizationService: AuthorizationService
 ) => {
   const credentialMap = groupCredentialsByEntity(credentials);
@@ -28,7 +28,7 @@ export const mapSpaceCredentialsToRoles = async (
     credentialMap,
     spaces,
     subspaces,
-    agentInfo,
+    actorContext,
     authorizationService
   );
 };

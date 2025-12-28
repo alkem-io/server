@@ -5,7 +5,7 @@ import { IDiscussion } from './discussion.interface';
 import { DiscussionService } from './discussion.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
-import { RoomAuthorizationService } from '../../domain/communication/room/room.service.authorization';
+import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { CREDENTIAL_RULE_TYPES_UPDATE_FORUM_DISCUSSION } from '@common/constants/authorization/credential.rule.types.constants';

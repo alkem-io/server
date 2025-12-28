@@ -2,7 +2,7 @@ import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { CalloutContributionService } from './callout.contribution.service';
 import { ICalloutContribution } from './callout.contribution.interface';
 import { CalloutContributionMoveService } from './callout.contribution.move.service';
@@ -23,7 +23,7 @@ export class CalloutContributionMoveResolverMutations {
     description: 'Moves the specified Contribution to another Callout.',
   })
   async moveContributionToCallout(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('moveContributionData')
     moveContributionData: MoveCalloutContributionInput
   ): Promise<ICalloutContribution> {
@@ -32,7 +32,7 @@ export class CalloutContributionMoveResolverMutations {
         moveContributionData.contributionID
       );
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       contribution.authorization,
       AuthorizationPrivilege.MOVE_CONTRIBUTION,
       `move contribution: ${contribution.id}`
@@ -47,7 +47,7 @@ export class CalloutContributionMoveResolverMutations {
     description: 'Deletes a contribution.',
   })
   public async deleteContribution(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteContributionInput
   ): Promise<ICalloutContribution> {
     const contribution =
@@ -56,7 +56,7 @@ export class CalloutContributionMoveResolverMutations {
       );
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       contribution.authorization,
       AuthorizationPrivilege.DELETE,
       `move contribution: ${contribution.id}`

@@ -1,7 +1,7 @@
 import { Column, Entity, Generated, ManyToOne, JoinColumn } from 'typeorm';
 import { ENUM_LENGTH } from '@constants/index';
-import { BaseAlkemioEntity } from '../../domain/common/entity/base-entity/base.alkemio.entity';
-import { NotificationEventInAppState } from '../../common/enums/notification.event.in.app.state';
+import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
+import { NotificationEventInAppState } from '@common/enums/notification.event.in.app.state';
 import { IInAppNotification } from './in.app.notification.interface';
 import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { NotificationEvent } from '@common/enums/notification.event';
@@ -14,8 +14,8 @@ import { Invitation } from '@domain/access/invitation/invitation.entity';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { Room } from '@domain/communication/room/room.entity';
-import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { CalendarEvent } from '@domain/timeline/event';
+import { Actor } from '@domain/actor/actor/actor.entity';
 
 @Entity('in_app_notification')
 export class InAppNotification
@@ -202,47 +202,17 @@ export class InAppNotification
   @Column('uuid', {
     nullable: true,
     comment:
-      'FK to Organization - cascade deletes notification when organization contributor is deleted',
+      'FK to Actor - cascade deletes notification when contributor actor is deleted',
   })
-  contributorOrganizationID?: string;
+  contributorActorId?: string;
 
-  @ManyToOne(() => Organization, {
+  @ManyToOne(() => Actor, {
     eager: false,
     cascade: false,
     onDelete: 'CASCADE',
   })
-  @JoinColumn({ name: 'contributorOrganizationID' })
-  contributorOrganization?: Organization;
-
-  @Column('uuid', {
-    nullable: true,
-    comment:
-      'FK to User - cascade deletes notification when user contributor is deleted',
-  })
-  contributorUserID?: string;
-
-  @ManyToOne(() => User, {
-    eager: false,
-    cascade: false,
-    onDelete: 'CASCADE',
-  })
-  @JoinColumn({ name: 'contributorUserID' })
-  contributorUser?: User;
-
-  @Column('uuid', {
-    nullable: true,
-    comment:
-      'FK to VC - cascade deletes notification when VC contributor is deleted',
-  })
-  contributorVcID?: string;
-
-  @ManyToOne(() => VirtualContributor, {
-    eager: false,
-    cascade: false,
-    onDelete: 'CASCADE',
-  })
-  @JoinColumn({ name: 'contributorVcID' })
-  contributorVc?: VirtualContributor;
+  @JoinColumn({ name: 'contributorActorId' })
+  contributorActor?: Actor;
 
   @Column('uuid', {
     nullable: true,

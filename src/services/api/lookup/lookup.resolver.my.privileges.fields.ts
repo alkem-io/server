@@ -33,7 +33,7 @@ import { LookupMyPrivilegesQueryResults } from './dto/lookup.query.my.privileges
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { SpaceAboutService } from '@domain/space/space.about/space.about.service';
@@ -73,7 +73,7 @@ export class LookupMyPrivilegesResolverFields {
   ) {}
 
   private getMyPrivilegesOnAuthorizable(
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     authorizable: IAuthorizable
   ): AuthorizationPrivilege[] {
     if (!authorizable.authorization) {
@@ -82,8 +82,8 @@ export class LookupMyPrivilegesResolverFields {
         LogContext.API
       );
     }
-    return this.authorizationPolicyService.getAgentPrivileges(
-      agentInfo,
+    return this.authorizationPolicyService.getActorPrivileges(
+      actorContext,
       authorizable.authorization
     );
   }
@@ -93,7 +93,7 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified Space',
   })
   async space(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const space = await this.spaceService.getSpace(id, {
@@ -101,7 +101,7 @@ export class LookupMyPrivilegesResolverFields {
     });
     if (!space) return [];
 
-    return this.getMyPrivilegesOnAuthorizable(agentInfo, space);
+    return this.getMyPrivilegesOnAuthorizable(actorContext, space);
   }
 
   @ResolveField(() => [AuthorizationPrivilege], {
@@ -109,14 +109,14 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified Account',
   })
   async account(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const account = await this.accountService.getAccountOrFail(id, {
       relations: { authorization: true },
     });
 
-    return this.getMyPrivilegesOnAuthorizable(agentInfo, account);
+    return this.getMyPrivilegesOnAuthorizable(actorContext, account);
   }
 
   @ResolveField(() => [AuthorizationPrivilege], {
@@ -124,14 +124,14 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified RoleSet',
   })
   async roleSet(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const roleSet = await this.roleSetService.getRoleSetOrFail(id, {
       relations: { authorization: true },
     });
 
-    return this.getMyPrivilegesOnAuthorizable(agentInfo, roleSet);
+    return this.getMyPrivilegesOnAuthorizable(actorContext, roleSet);
   }
 
   @ResolveField(() => [AuthorizationPrivilege], {
@@ -139,14 +139,14 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified Document',
   })
   async document(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const document = await this.documentService.getDocumentOrFail(id, {
       relations: { authorization: true },
     });
 
-    return this.getMyPrivilegesOnAuthorizable(agentInfo, document);
+    return this.getMyPrivilegesOnAuthorizable(actorContext, document);
   }
 
   @ResolveField(() => [AuthorizationPrivilege], {
@@ -154,15 +154,15 @@ export class LookupMyPrivilegesResolverFields {
     description: 'A particular VirtualContributor',
   })
   async virtualContributor(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID, nullable: false }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const virtualContributor =
-      await this.virtualContributorService.getVirtualContributorOrFail(id, {
+      await this.virtualContributorService.getVirtualContributorByIdOrFail(id, {
         relations: { authorization: true },
       });
 
-    return this.getMyPrivilegesOnAuthorizable(agentInfo, virtualContributor);
+    return this.getMyPrivilegesOnAuthorizable(actorContext, virtualContributor);
   }
 
   @ResolveField(() => [AuthorizationPrivilege], {
@@ -170,14 +170,14 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified User',
   })
   async user(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID, nullable: false }) id: string
   ): Promise<AuthorizationPrivilege[]> {
-    const user = await this.userLookupService.getUserOrFail(id, {
+    const user = await this.userLookupService.getUserByIdOrFail(id, {
       relations: { authorization: true },
     });
 
-    return this.getMyPrivilegesOnAuthorizable(agentInfo, user);
+    return this.getMyPrivilegesOnAuthorizable(actorContext, user);
   }
 
   @ResolveField(() => [AuthorizationPrivilege], {
@@ -185,7 +185,7 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified StorageAggregator',
   })
   async storageAggregator(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const storageAggregator =
@@ -193,7 +193,7 @@ export class LookupMyPrivilegesResolverFields {
         relations: { authorization: true },
       });
 
-    return this.getMyPrivilegesOnAuthorizable(agentInfo, storageAggregator);
+    return this.getMyPrivilegesOnAuthorizable(actorContext, storageAggregator);
   }
 
   @ResolveField(() => [AuthorizationPrivilege], {
@@ -201,7 +201,7 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified InnovationPack',
   })
   async innovationPack(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const innovationPack =
@@ -209,7 +209,7 @@ export class LookupMyPrivilegesResolverFields {
         relations: { authorization: true },
       });
 
-    return this.getMyPrivilegesOnAuthorizable(agentInfo, innovationPack);
+    return this.getMyPrivilegesOnAuthorizable(actorContext, innovationPack);
   }
 
   @ResolveField(() => [AuthorizationPrivilege], {
@@ -217,7 +217,7 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified StorageBucket',
   })
   async storageBucket(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const storageBucket =
@@ -225,7 +225,7 @@ export class LookupMyPrivilegesResolverFields {
         relations: { authorization: true },
       });
 
-    return this.getMyPrivilegesOnAuthorizable(agentInfo, storageBucket);
+    return this.getMyPrivilegesOnAuthorizable(actorContext, storageBucket);
   }
 
   @ResolveField(() => [AuthorizationPrivilege], {
@@ -233,7 +233,7 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified InnovationHub',
   })
   async innovationHub(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const innovationHub =
@@ -241,7 +241,7 @@ export class LookupMyPrivilegesResolverFields {
         relations: { authorization: true },
       });
 
-    return this.getMyPrivilegesOnAuthorizable(agentInfo, innovationHub);
+    return this.getMyPrivilegesOnAuthorizable(actorContext, innovationHub);
   }
 
   @ResolveField(() => [AuthorizationPrivilege], {
@@ -249,14 +249,14 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified Application',
   })
   async application(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const application = await this.applicationService.getApplicationOrFail(id, {
       relations: { authorization: true },
     });
 
-    return this.getMyPrivilegesOnAuthorizable(agentInfo, application);
+    return this.getMyPrivilegesOnAuthorizable(actorContext, application);
   }
 
   @ResolveField(() => [AuthorizationPrivilege], {
@@ -264,14 +264,14 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified Invitation',
   })
   async invitation(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const invitation = await this.invitationService.getInvitationOrFail(id, {
       relations: { authorization: true },
     });
 
-    return this.getMyPrivilegesOnAuthorizable(agentInfo, invitation);
+    return this.getMyPrivilegesOnAuthorizable(actorContext, invitation);
   }
 
   @ResolveField(() => [AuthorizationPrivilege], {
@@ -279,14 +279,14 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified Community',
   })
   async community(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const community = await this.communityService.getCommunityOrFail(id, {
       relations: { authorization: true },
     });
 
-    return this.getMyPrivilegesOnAuthorizable(agentInfo, community);
+    return this.getMyPrivilegesOnAuthorizable(actorContext, community);
   }
 
   @ResolveField(() => [AuthorizationPrivilege], {
@@ -294,7 +294,7 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified Collaboration',
   })
   async collaboration(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const collaboration =
@@ -302,7 +302,7 @@ export class LookupMyPrivilegesResolverFields {
         relations: { authorization: true },
       });
 
-    return this.getMyPrivilegesOnAuthorizable(agentInfo, collaboration);
+    return this.getMyPrivilegesOnAuthorizable(actorContext, collaboration);
   }
 
   @ResolveField(() => [AuthorizationPrivilege], {
@@ -310,7 +310,7 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified CalendarEvent',
   })
   async calendarEvent(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const calendarEvent =
@@ -318,7 +318,7 @@ export class LookupMyPrivilegesResolverFields {
         relations: { authorization: true },
       });
 
-    return this.getMyPrivilegesOnAuthorizable(agentInfo, calendarEvent);
+    return this.getMyPrivilegesOnAuthorizable(actorContext, calendarEvent);
   }
 
   @ResolveField(() => [AuthorizationPrivilege], {
@@ -326,14 +326,14 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified Calendar',
   })
   async calendar(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const calendar = await this.calendarService.getCalendarOrFail(id, {
       relations: { authorization: true },
     });
 
-    return this.getMyPrivilegesOnAuthorizable(agentInfo, calendar);
+    return this.getMyPrivilegesOnAuthorizable(actorContext, calendar);
   }
 
   @ResolveField(() => [AuthorizationPrivilege], {
@@ -341,14 +341,14 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified SpaceAbout',
   })
   async spaceAbout(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const context = await this.spaceAboutService.getSpaceAboutOrFail(id, {
       relations: { authorization: true },
     });
 
-    return this.getMyPrivilegesOnAuthorizable(agentInfo, context);
+    return this.getMyPrivilegesOnAuthorizable(actorContext, context);
   }
 
   @ResolveField(() => [AuthorizationPrivilege], {
@@ -356,14 +356,14 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified Whiteboard',
   })
   async whiteboard(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const whiteboard = await this.whiteboardService.getWhiteboardOrFail(id, {
       relations: { authorization: true },
     });
 
-    return this.getMyPrivilegesOnAuthorizable(agentInfo, whiteboard);
+    return this.getMyPrivilegesOnAuthorizable(actorContext, whiteboard);
   }
 
   @ResolveField(() => [AuthorizationPrivilege], {
@@ -371,14 +371,14 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified Profile',
   })
   async profile(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const profile = await this.profileService.getProfileOrFail(id, {
       relations: { authorization: true },
     });
 
-    return this.getMyPrivilegesOnAuthorizable(agentInfo, profile);
+    return this.getMyPrivilegesOnAuthorizable(actorContext, profile);
   }
 
   @ResolveField(() => [AuthorizationPrivilege], {
@@ -386,14 +386,14 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified Callout',
   })
   async callout(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const callout = await this.calloutService.getCalloutOrFail(id, {
       relations: { authorization: true },
     });
 
-    return this.getMyPrivilegesOnAuthorizable(agentInfo, callout);
+    return this.getMyPrivilegesOnAuthorizable(actorContext, callout);
   }
 
   @ResolveField(() => [AuthorizationPrivilege], {
@@ -401,14 +401,14 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified Post',
   })
   async post(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const post = await this.postService.getPostOrFail(id, {
       relations: { authorization: true },
     });
 
-    return this.getMyPrivilegesOnAuthorizable(agentInfo, post);
+    return this.getMyPrivilegesOnAuthorizable(actorContext, post);
   }
 
   @ResolveField(() => [AuthorizationPrivilege], {
@@ -416,14 +416,14 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified Room',
   })
   async room(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const room = await this.roomService.getRoomOrFail(id, {
       relations: { authorization: true },
     });
 
-    return this.getMyPrivilegesOnAuthorizable(agentInfo, room);
+    return this.getMyPrivilegesOnAuthorizable(actorContext, room);
   }
 
   @ResolveField(() => [AuthorizationPrivilege], {
@@ -431,7 +431,7 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified InnovationFlow',
   })
   async innovationFlow(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const innovationFlow =
@@ -439,7 +439,7 @@ export class LookupMyPrivilegesResolverFields {
         relations: { authorization: true },
       });
 
-    return this.getMyPrivilegesOnAuthorizable(agentInfo, innovationFlow);
+    return this.getMyPrivilegesOnAuthorizable(actorContext, innovationFlow);
   }
 
   @ResolveField(() => [AuthorizationPrivilege], {
@@ -447,14 +447,14 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified Template',
   })
   async template(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const template = await this.templateService.getTemplateOrFail(id, {
       relations: { authorization: true },
     });
 
-    return this.getMyPrivilegesOnAuthorizable(agentInfo, template);
+    return this.getMyPrivilegesOnAuthorizable(actorContext, template);
   }
 
   @ResolveField(() => [AuthorizationPrivilege], {
@@ -462,7 +462,7 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified TemplatesSet',
   })
   async templatesSet(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const templatesSet = await this.templatesSetService.getTemplatesSetOrFail(
@@ -470,7 +470,7 @@ export class LookupMyPrivilegesResolverFields {
       { relations: { authorization: true } }
     );
 
-    return this.getMyPrivilegesOnAuthorizable(agentInfo, templatesSet);
+    return this.getMyPrivilegesOnAuthorizable(actorContext, templatesSet);
   }
 
   @ResolveField(() => [AuthorizationPrivilege], {
@@ -478,7 +478,7 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified TemplatesManager',
   })
   async templatesManager(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const templatesManager =
@@ -486,7 +486,7 @@ export class LookupMyPrivilegesResolverFields {
         relations: { authorization: true },
       });
 
-    return this.getMyPrivilegesOnAuthorizable(agentInfo, templatesManager);
+    return this.getMyPrivilegesOnAuthorizable(actorContext, templatesManager);
   }
 
   @ResolveField(() => [AuthorizationPrivilege], {
@@ -494,7 +494,7 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified Community guidelines',
   })
   async communityGuidelines(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const guidelines =
@@ -502,7 +502,7 @@ export class LookupMyPrivilegesResolverFields {
         relations: { authorization: true },
       });
 
-    return this.getMyPrivilegesOnAuthorizable(agentInfo, guidelines);
+    return this.getMyPrivilegesOnAuthorizable(actorContext, guidelines);
   }
 
   @ResolveField(() => [AuthorizationPrivilege], {
@@ -510,13 +510,13 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified License',
   })
   async license(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const license = await this.licenseService.getLicenseOrFail(id, {
       relations: { authorization: true },
     });
 
-    return this.getMyPrivilegesOnAuthorizable(agentInfo, license);
+    return this.getMyPrivilegesOnAuthorizable(actorContext, license);
   }
 }

@@ -1,30 +1,45 @@
 import {
   Column,
-  Entity,
+  ChildEntity,
   Generated,
   JoinColumn,
   ManyToOne,
   OneToOne,
 } from 'typeorm';
 import { IVirtualContributor } from './virtual.contributor.interface';
-import { ContributorBase } from '../contributor/contributor.base.entity';
+import { Actor } from '@domain/actor/actor/actor.entity';
+import { Profile } from '@domain/common/profile/profile.entity';
 import { Account } from '@domain/space/account/account.entity';
 import { SearchVisibility } from '@common/enums/search.visibility';
-import { ENUM_LENGTH, SMALL_TEXT_LENGTH } from '@common/constants';
+import {
+  ENUM_LENGTH,
+  NAMEID_MAX_LENGTH_SCHEMA,
+  SMALL_TEXT_LENGTH,
+} from '@common/constants';
 import { KnowledgeBase } from '@domain/common/knowledge-base/knowledge.base.entity';
 import { IVirtualContributorSettings } from '../virtual-contributor-settings/virtual.contributor.settings.interface';
-import { IVirtualContributorPlatformSettings } from '../virtual-contributor-platform-settings/virtual.contributor.platform.settings.interface';
+import { IVirtualContributorPlatformSettings } from '@domain/community/virtual-contributor-platform-settings';
 import { VirtualContributorInteractionMode } from '@common/enums/virtual.contributor.interaction.mode';
 import { VirtualContributorDataAccessMode } from '@common/enums/virtual.contributor.data.access.mode';
 import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 import { PromptGraphTransformer } from './transformers/prompt.graph.transformer';
 import { PromptGraphDefinition } from './dto/prompt-graph-definition/prompt.graph.definition.dto';
+import { ActorType } from '@common/enums/actor.type';
 
-@Entity()
-export class VirtualContributor
-  extends ContributorBase
-  implements IVirtualContributor
-{
+@ChildEntity(ActorType.VIRTUAL)
+export class VirtualContributor extends Actor implements IVirtualContributor {
+  // Override Actor.profile to be non-optional (required for IVirtualContributor)
+  declare profile: Profile;
+
+  @Column('varchar', {
+    length: NAMEID_MAX_LENGTH_SCHEMA,
+    nullable: false,
+    unique: true,
+  })
+  nameID!: string;
+
+  // VirtualContributor extends Actor - credentials are on Actor.credentials
+
   @Column({
     unique: true,
   })

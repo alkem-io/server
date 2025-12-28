@@ -1,0 +1,235 @@
+# GraphQL Schema Additions: Actor Transformation
+# Feature: 026-actor-transformation
+# Date: 2025-12-27
+# Status: Phase 1 Design
+
+# =============================================================================
+# ENUMS
+# =============================================================================
+
+"""
+The type of Actor - determines which entity table the actor belongs to.
+"""
+enum ActorType {
+  USER
+  ORGANIZATION
+  VIRTUAL_CONTRIBUTOR
+  SPACE
+  ACCOUNT
+}
+
+# =============================================================================
+# INTERFACES
+# =============================================================================
+
+"""
+IActor is the unified interface for all entities that can hold credentials.
+This replaces the previous Agent-based credential system with direct identity.
+The actor ID equals the entity ID (e.g., User.id = Actor.id for that user).
+"""
+interface IActor {
+  """Unique identifier - same as the entity ID (userId, orgId, etc.)"""
+  id: UUID!
+
+  """The type of actor (USER, ORGANIZATION, VIRTUAL_CONTRIBUTOR, SPACE, ACCOUNT)"""
+  type: ActorType!
+
+  """Credentials held by this actor (authorization and license credentials)"""
+  credentials: [Credential!]!
+
+  """Authorization policy for this actor"""
+  authorization: Authorization
+
+  """
+  Profile associated with this actor.
+  Non-null for USER, ORGANIZATION, VIRTUAL_CONTRIBUTOR.
+  Null for SPACE, ACCOUNT (Space uses SpaceAbout instead).
+  """
+  profile: Profile
+}
+
+# =============================================================================
+# TYPE IMPLEMENTATIONS
+# =============================================================================
+
+"""
+User type now implements IActor interface.
+User.id serves as the actor ID for credential operations.
+"""
+type User implements IActor {
+  id: UUID!
+  type: ActorType!
+  credentials: [Credential!]!
+  authorization: Authorization
+  profile: Profile
+
+  # User-specific fields (existing)
+  nameID: NameID!
+  firstName: String!
+  lastName: String!
+  email: String!
+  phone: String
+  # ... other existing User fields
+}
+
+"""
+Organization type now implements IActor interface.
+Organization.id serves as the actor ID for credential operations.
+"""
+type Organization implements IActor {
+  id: UUID!
+  type: ActorType!
+  credentials: [Credential!]!
+  authorization: Authorization
+  profile: Profile
+
+  # Organization-specific fields (existing)
+  nameID: NameID!
+  legalEntityName: String
+  domain: String
+  website: String
+  contactEmail: String
+  # ... other existing Organization fields
+}
+
+"""
+VirtualContributor type now implements IActor interface.
+VirtualContributor.id serves as the actor ID for credential operations.
+"""
+type VirtualContributor implements IActor {
+  id: UUID!
+  type: ActorType!
+  credentials: [Credential!]!
+  authorization: Authorization
+  profile: Profile
+
+  # VirtualContributor-specific fields (existing)
+  nameID: NameID!
+  account: Account
+  # ... other existing VirtualContributor fields
+}
+
+"""
+Space type now implements IActor interface.
+Space.id serves as the actor ID for license credential operations.
+Profile is always null for Space (uses SpaceAbout instead).
+"""
+type Space implements IActor {
+  id: UUID!
+  type: ActorType!
+  credentials: [Credential!]!
+  authorization: Authorization
+  profile: Profile  # Always null for Space
+
+  # Space-specific fields (existing)
+  nameID: NameID!
+  account: Account
+  # ... other existing Space fields
+}
+
+"""
+Account type now implements IActor interface.
+Account.id serves as the actor ID for license credential operations.
+Profile is always null for Account.
+"""
+type Account implements IActor {
+  id: UUID!
+  type: ActorType!
+  credentials: [Credential!]!
+  authorization: Authorization
+  profile: Profile  # Always null for Account
+
+  # Account-specific fields (existing)
+  # ... existing Account fields
+}
+
+# =============================================================================
+# QUERIES
+# =============================================================================
+
+extend type Query {
+  """
+  Retrieve an actor by ID. Returns the appropriate type (User, Organization,
+  VirtualContributor, Space, or Account) based on the actor type.
+  Returns null if no actor exists with the given ID.
+  """
+  actor(id: UUID!): IActor
+
+  """
+  Find all actors that have a specific credential type.
+  Optionally filter by resourceID (e.g., spaceId for SPACE_ADMIN).
+  Returns actors of any type (User, Organization, VirtualContributor, Space, Account).
+  """
+  actorsWithCredential(
+    """The credential type to search for"""
+    credentialType: CredentialType!
+
+    """Optional resource ID to filter credentials (e.g., space ID)"""
+    resourceID: UUID
+  ): [IActor!]!
+}
+
+# =============================================================================
+# INPUT TYPES
+# =============================================================================
+
+"""
+Input for granting a credential to an actor.
+"""
+input GrantCredentialToActorInput {
+  """The actor ID to grant the credential to"""
+  actorId: UUID!
+
+  """The type of credential to grant"""
+  type: CredentialType!
+
+  """The resource this credential applies to (e.g., space ID)"""
+  resourceID: UUID
+}
+
+"""
+Input for revoking a credential from an actor.
+"""
+input RevokeCredentialFromActorInput {
+  """The actor ID to revoke the credential from"""
+  actorId: UUID!
+
+  """The type of credential to revoke"""
+  type: CredentialType!
+
+  """The resource this credential applies to (e.g., space ID)"""
+  resourceID: UUID
+}
+
+# =============================================================================
+# MUTATIONS
+# =============================================================================
+
+extend type Mutation {
+  """
+  Grant a credential to an actor.
+  The actorId must be a valid actor (User, Organization, VirtualContributor, Space, or Account).
+  """
+  grantCredentialToActor(input: GrantCredentialToActorInput!): Credential!
+
+  """
+  Revoke a credential from an actor.
+  """
+  revokeCredentialFromActor(input: RevokeCredentialFromActorInput!): Boolean!
+}
+
+# =============================================================================
+# DEPRECATIONS
+# =============================================================================
+
+# The following types/fields are deprecated and will be removed:
+#
+# - Agent type (replaced by IActor interface)
+# - IContributor interface (replaced by IActor)
+# - User.agent field (credentials now accessed via User.credentials)
+# - Organization.agent field (credentials now accessed via Organization.credentials)
+# - VirtualContributor.agent field (credentials now accessed via VirtualContributor.credentials)
+# - Space.agent field (credentials now accessed via Space.credentials)
+# - Account.agent field (credentials now accessed via Account.credentials)
+#
+# Deprecation schedule: Mark with @deprecated in next release, remove in following release.

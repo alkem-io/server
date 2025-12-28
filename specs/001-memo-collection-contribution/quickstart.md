@@ -294,7 +294,7 @@ private async processActivityMemoCreated(
   contribution: ICalloutContribution,
   memo: IMemo,
   levelZeroSpaceID: string,
-  agentInfo: AgentInfo
+  actorContext: AgentInfo
 ) {
   this.contributionReporter.memoContribution(
     {
@@ -303,8 +303,8 @@ private async processActivityMemoCreated(
       space: levelZeroSpaceID,
     },
     {
-      id: agentInfo.userID,
-      email: agentInfo.email,
+      id: actorContext.userID,
+      email: actorContext.email,
     }
   );
 }
@@ -316,7 +316,7 @@ if (contribution.memo) {
     contribution,
     contribution.memo,
     levelZeroSpaceID,
-    agentInfo
+    actorContext
   );
 }
 ```

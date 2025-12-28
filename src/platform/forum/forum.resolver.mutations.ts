@@ -3,7 +3,7 @@ import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql';
 import { ForumService } from './forum.service';
 import { CurrentUser } from '@src/common/decorators';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { IDiscussion } from '../forum-discussion/discussion.interface';
@@ -45,12 +45,12 @@ export class ForumResolverMutations {
     description: 'Creates a new Discussion as part of this Forum.',
   })
   async createDiscussion(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('createData') createData: ForumCreateDiscussionInput
   ): Promise<IDiscussion> {
     const forum = await this.forumService.getForumOrFail(createData.forumID);
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       forum.authorization,
       AuthorizationPrivilege.CREATE_DISCUSSION,
       `create discussion on forum: ${forum.id}`
@@ -60,7 +60,7 @@ export class ForumResolverMutations {
       const platformAuthorization =
         await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
       await this.authorizationService.grantAccessOrFail(
-        agentInfo,
+        actorContext,
         platformAuthorization,
         AuthorizationPrivilege.PLATFORM_ADMIN,
         `User not authorized to create discussion with ${ForumDiscussionCategory.RELEASES} category.`
@@ -80,8 +80,8 @@ export class ForumResolverMutations {
 
     let discussion = await this.forumService.createDiscussion(
       createData,
-      agentInfo.userID,
-      agentInfo.agentID
+      actorContext.actorId,
+      actorContext.actorId
     );
     discussion = await this.discussionService.save(discussion);
 
@@ -94,7 +94,7 @@ export class ForumResolverMutations {
 
     // Send the notification
     const notificationInput: NotificationInputPlatformForumDiscussionCreated = {
-      triggeredBy: agentInfo.userID,
+      triggeredBy: actorContext.actorId,
       discussion: discussion,
     };
     await this.notificationPlatformAdapter.platformForumDiscussionCreated(

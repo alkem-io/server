@@ -6,27 +6,25 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { IInvitation } from '@domain/access/invitation';
 import { GraphqlGuard } from '@core/authorization';
 import { IUser } from '@domain/community/user/user.interface';
-import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { AuthorizationActorPrivilege, Profiling } from '@src/common/decorators';
+import { IActor } from '@domain/actor/actor/actor.interface';
 
 @Resolver(() => IInvitation)
 export class InvitationResolverFields {
   constructor(private invitationService: InvitationService) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('contributor', () => IContributor, {
+  @ResolveField('contributor', () => IActor, {
     nullable: false,
     description: 'The Contributor who is invited.',
   })
   @Profiling.api
-  async invitedContributor(
-    @Parent() invitation: IInvitation
-  ): Promise<IContributor> {
+  async invitedContributor(@Parent() invitation: IInvitation): Promise<IActor> {
     return await this.invitationService.getInvitedContributor(invitation);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('createdBy', () => IUser, {
     nullable: true,

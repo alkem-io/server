@@ -21,7 +21,7 @@ import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { SearchVisibility } from '@common/enums/search.visibility';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { IActor } from '@domain/actor/actor/actor.interface';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { InnovationPack } from './innovation.pack.entity';
@@ -270,7 +270,7 @@ export class InnovationPackService {
     return await this.templatesSetService.getTemplatesCount(templatesSetId);
   }
 
-  public async getProvider(innovationPackID: string): Promise<IContributor> {
+  public async getProvider(innovationPackID: string): Promise<IActor> {
     const innovationPack = await this.innovationPackRepository.findOne({
       where: { id: innovationPackID },
       relations: {

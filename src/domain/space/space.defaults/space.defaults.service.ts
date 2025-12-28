@@ -1,10 +1,10 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { LogContext } from '@common/enums/logging.context';
 import { subspaceCommunityRoles } from './definitions/subspace.community.roles';
-import { spaceCommunityRoles } from './definitions/space.community.roles';
+import { spaceCommunityRoles } from '@domain/space';
 import { CreateFormInput } from '@domain/common/form/dto/form.dto.create';
 import { subspaceCommunityApplicationForm } from './definitions/subspace.community.role.application.form';
-import { spaceCommunityApplicationForm } from './definitions/space.community.role.application.form';
+import { spaceCommunityApplicationForm } from '@domain/space';
 import { SpaceLevel } from '@common/enums/space.level';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { CreateRoleInput } from '@domain/access/role/dto/role.dto.create';

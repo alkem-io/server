@@ -4,19 +4,21 @@ import {
   Index,
   ManyToOne,
   PrimaryColumn,
+  JoinColumn,
 } from 'typeorm';
 import { IConversationMembership } from './conversation.membership.interface';
 import { Conversation } from '../conversation/conversation.entity';
-import { Agent } from '@domain/agent/agent/agent.entity';
+import { Actor } from '@domain/actor/actor/actor.entity';
 
 @Entity()
 export class ConversationMembership implements IConversationMembership {
   @PrimaryColumn('uuid')
   conversationId!: string;
 
+  // actorId - the actor participating in this conversation
   @Index()
   @PrimaryColumn('uuid')
-  agentId!: string;
+  actorId!: string;
 
   @Index()
   @ManyToOne(() => Conversation, conversation => conversation.memberships, {
@@ -26,12 +28,13 @@ export class ConversationMembership implements IConversationMembership {
   })
   conversation!: Conversation;
 
-  @ManyToOne(() => Agent, {
+  @ManyToOne(() => Actor, {
     eager: false,
     cascade: false,
     onDelete: 'CASCADE',
   })
-  agent!: Agent;
+  @JoinColumn({ name: 'actorId' })
+  actor!: Actor;
 
   @CreateDateColumn()
   createdAt!: Date;

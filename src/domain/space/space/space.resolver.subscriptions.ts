@@ -1,6 +1,6 @@
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { SubscriptionType } from '@common/enums/subscription.type';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Resolver } from '@nestjs/graphql';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -33,8 +33,8 @@ export class SpaceResolverSubscriptions {
     {
       description: 'Receive new Subspaces created on the Space.',
       resolve(this: SpaceResolverSubscriptions, payload, args, context) {
-        const agentInfo = context.req.user;
-        const logMsgPrefix = `[SubspaceCreated subscription] - [${agentInfo.email}] -`;
+        const actorContext = context.req.user;
+        const logMsgPrefix = `[SubspaceCreated subscription] - [${actorContext.actorId}] -`;
         this.logger.verbose?.(
           `${logMsgPrefix} sending out event for created challenge on Space: ${payload.spaceID} `,
           LogContext.SUBSCRIPTIONS
@@ -42,8 +42,8 @@ export class SpaceResolverSubscriptions {
         return payload;
       },
       filter(this: SpaceResolverSubscriptions, payload, variables, context) {
-        const agentInfo = context.req.user;
-        const logMsgPrefix = `[SubspaceCreated subscription] - [${agentInfo.email}] -`;
+        const actorContext = context.req.user;
+        const logMsgPrefix = `[SubspaceCreated subscription] - [${actorContext.actorId}] -`;
         this.logger.verbose?.(
           `${logMsgPrefix} Filtering event '${payload.eventID}'`,
           LogContext.SUBSCRIPTIONS
@@ -59,7 +59,7 @@ export class SpaceResolverSubscriptions {
     }
   )
   async subspaceCreated(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args({
       nullable: false,
     })
@@ -67,14 +67,14 @@ export class SpaceResolverSubscriptions {
   ) {
     const logMsgPrefix = '[SubspaceCreated subscription] -';
     this.logger.verbose?.(
-      `${logMsgPrefix} User ${agentInfo.email} subscribed for new subspace on the following Space: ${args.spaceID}`,
+      `${logMsgPrefix} User ${actorContext.actorId} subscribed for new subspace on the following Space: ${args.spaceID}`,
       LogContext.SUBSCRIPTIONS
     );
     // Validate
     const space = await this.spaceService.getSpaceOrFail(args.spaceID);
 
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       space.authorization,
       AuthorizationPrivilege.READ,
       `subscription to new Subspaces on Space: ${space.id}`

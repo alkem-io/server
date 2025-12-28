@@ -1,4 +1,4 @@
-import { hasOnlyAllowedFields } from './has.only.allowed.fields';
+import { hasOnlyAllowedFields } from '@common/utils';
 
 describe('hasOnlyAllowedFields', () => {
   it('returns true when object contains only allowed fields', () => {

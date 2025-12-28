@@ -5,7 +5,7 @@ import { AccountService } from '@domain/space/account/account.service';
 import { AccountResolverFields } from '@domain/space/account/account.resolver.fields';
 import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { AgentModule } from '@domain/agent/agent/agent.module';
+import { ActorModule } from '@domain/actor/actor/actor.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AccountResolverMutations } from './account.resolver.mutations';
 import { SpaceModule } from '../space/space.module';
@@ -29,13 +29,13 @@ import { LicensingWingbackSubscriptionModule } from '@platform/licensing/wingbac
 import { AccountLookupModule } from '../account.lookup/account.lookup.module';
 import { VirtualContributorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
 import { PlatformTemplatesModule } from '@platform/platform-templates/platform.templates.module';
-import { AccountLicensePlanModule } from '../account.license.plan/account.license.plan.module';
+import { AccountLicensePlanModule } from '@domain/space/account.license.plan';
 
 @Module({
   imports: [
     AccountHostModule,
     AccountLookupModule,
-    AgentModule,
+    ActorModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
     ContributorModule,

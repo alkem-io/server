@@ -7,8 +7,7 @@ import {
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IRoom } from '../room/room.interface';
-import { IVcInteraction } from '../vc-interaction/vc.interaction.interface';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { isInputValidForAction } from '@domain/community/virtual-contributor/dto/utils';
 import { AiServerAdapterInvocationInput } from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.invocation';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
@@ -28,13 +27,14 @@ export class VirtualContributorMessageService {
     virtualContributorActorID: string,
     message: string,
     threadID: string,
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     contextSpaceID: string,
     room: IRoom,
-    vcInteraction: IVcInteraction | undefined = undefined
+    language?: string
   ) {
+    // VirtualContributor IS an Actor - actorId = virtualContributor.id
     const virtualContributor =
-      await this.virtualContributorLookupService.getVirtualContributorByAgentIdOrFail(
+      await this.virtualContributorLookupService.getVirtualContributorByIdOrFail(
         virtualContributorActorID
       );
 
@@ -49,7 +49,7 @@ export class VirtualContributorMessageService {
       virtualContributorID: virtualContributor.id,
       message,
       contextSpaceID,
-      userID: agentInfo.userID,
+      userID: actorContext.actorId,
       resultHandler: {
         action: InvocationResultAction.POST_REPLY,
         roomDetails: {
@@ -58,6 +58,8 @@ export class VirtualContributorMessageService {
           actorId: virtualContributorActorID,
         },
       },
+      // Use explicit language param or fall back to room's language setting
+      language: language ?? room.vcData?.language,
     };
 
     await this.invoke(vcInput);
@@ -67,22 +69,15 @@ export class VirtualContributorMessageService {
     invocationInput: VirtualContributorInvocationInput
   ): Promise<void> {
     const virtualContributor =
-      await this.virtualContributorLookupService.getVirtualContributorOrFail(
+      await this.virtualContributorLookupService.getVirtualContributorByIdOrFail(
         invocationInput.virtualContributorID,
         {
           relations: {
             authorization: true,
-            agent: true,
             profile: true,
           },
         }
       );
-    if (!virtualContributor.agent) {
-      throw new EntityNotInitializedException(
-        `Virtual Contributor Agent not initialized: ${invocationInput.virtualContributorID}`,
-        LogContext.AUTH
-      );
-    }
 
     this.logger.verbose?.(
       `still need to use the context ${invocationInput.contextSpaceID}, ${invocationInput.userID}`,
@@ -98,6 +93,7 @@ export class VirtualContributorMessageService {
       description: virtualContributor.profile.description,
       displayName: virtualContributor.profile.displayName,
       resultHandler: invocationInput.resultHandler,
+      language: invocationInput.language,
     };
 
     // Get external metadata from room's JSON storage if this is a POST_REPLY action
@@ -107,13 +103,13 @@ export class VirtualContributorMessageService {
       const threadID = invocationInput.resultHandler.roomDetails!.threadID;
       const roomID = invocationInput.resultHandler.roomDetails!.roomID;
 
-      // Get room to access vcInteractionsByThread
+      // Get room to access vcData.interactionsByThread
       const room = await this.roomLookupService.getRoomOrFail(roomID);
-      const vcData = room.vcInteractionsByThread?.[threadID];
+      const threadInteraction = room.vcData?.interactionsByThread?.[threadID];
 
-      if (vcData) {
+      if (threadInteraction) {
         aiServerAdapterInvocationInput.externalMetadata = {
-          threadId: vcData.externalThreadId,
+          threadId: threadInteraction.externalThreadId,
         };
       }
     }

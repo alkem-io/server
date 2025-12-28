@@ -1,7 +1,7 @@
 import { Float, Resolver } from '@nestjs/graphql';
 import { CurrentUser } from '@src/common/decorators';
 import { Args, ResolveField } from '@nestjs/graphql';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { MeQueryResults } from '@services/api/me/dto';
 import { IUser } from '@domain/community/user/user.interface';
 import { ForbiddenException, ValidationException } from '@common/exceptions';
@@ -15,7 +15,7 @@ import { NotificationEventsFilterInput } from './dto/me.notification.event.filte
 import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
 import { PaginatedInAppNotifications } from '@core/pagination/paginated.in-app-notification';
 import { PaginationArgs } from '@core/pagination';
-import { MeConversationsResult } from './dto/me.conversations.result';
+import { MeConversationsResult } from '@services/api/me/dto';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 
 @Resolver(() => MeQueryResults)
@@ -31,20 +31,20 @@ export class MeResolverFields {
     description: 'Get all notifications for the logged in user.',
   })
   public async notificationsInApp(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args({ nullable: true }) pagination: PaginationArgs,
     @Args('filter', { nullable: true }) filter?: NotificationEventsFilterInput
   ): Promise<PaginatedInAppNotifications> {
-    if (!agentInfo.userID) {
+    if (!actorContext.actorId) {
       throw new ForbiddenException(
         'User could not be resolved',
         LogContext.IN_APP_NOTIFICATION,
-        { agentInfo }
+        { actorContext }
       );
     }
 
     return await this.inAppNotificationService.getPaginatedNotifications(
-      agentInfo.userID,
+      actorContext.actorId,
       pagination,
       filter
     );
@@ -55,9 +55,9 @@ export class MeResolverFields {
       'The total number of unread notifications for the current authenticated user across all notification types.',
   })
   public async notificationsUnreadCount(
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentUser() actorContext: ActorContext
   ): Promise<number> {
-    if (!agentInfo.userID) {
+    if (!actorContext.actorId) {
       throw new ValidationException(
         'Unable to retrieve unread notifications count; no userID provided.',
         LogContext.IN_APP_NOTIFICATION
@@ -65,15 +65,15 @@ export class MeResolverFields {
     }
     // Always return the total unread count, regardless of any filtering on notifications
     return await this.inAppNotificationService.getRawNotificationsUnreadCount(
-      agentInfo.userID
+      actorContext.actorId
     );
   }
 
   @ResolveField('id', () => String, {
     description: 'The query id',
   })
-  public id(@CurrentUser() agentInfo: AgentInfo): string {
-    return `me-${agentInfo.userID}`;
+  public id(@CurrentUser() actorContext: ActorContext): string {
+    return `me-${actorContext.actorId}`;
   }
 
   @ResolveField(() => IUser, {
@@ -81,19 +81,15 @@ export class MeResolverFields {
     description:
       'The current authenticated User;  null if not yet registered on the platform',
   })
-  async user(@CurrentUser() agentInfo: AgentInfo): Promise<IUser | null> {
-    const { email, userID } = agentInfo;
+  async user(@CurrentUser() actorContext: ActorContext): Promise<IUser | null> {
+    const { actorId, isAnonymous } = actorContext;
 
     // Anonymous / guest requests do not carry identifiers; expose null instead of failing the whole query.
-    if (!email && !userID) {
-      return null;
-    }
-    // When the user is just registered, the agentInfo.userID is still null
-    if (email && !userID) {
+    if (isAnonymous || !actorId) {
       return null;
     }
 
-    return this.userLookupService.getUserOrFail(agentInfo.userID);
+    return this.userLookupService.getUserByIdOrFail(actorId);
   }
 
   @ResolveField('communityInvitationsCount', () => Number, {
@@ -101,7 +97,7 @@ export class MeResolverFields {
       'The number of invitations the current authenticated user can act on.',
   })
   public async communityInvitationsCount(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args({
       name: 'states',
       nullable: true,
@@ -110,14 +106,14 @@ export class MeResolverFields {
     })
     states: string[]
   ): Promise<number> {
-    if (!agentInfo.userID) {
+    if (!actorContext.actorId) {
       throw new ValidationException(
         'Unable to retrieve invitations as no userID provided.',
         LogContext.COMMUNITY
       );
     }
     return this.meService.getCommunityInvitationsCountForUser(
-      agentInfo.userID,
+      actorContext.actorId,
       states
     );
   }
@@ -126,7 +122,7 @@ export class MeResolverFields {
     description: 'The invitations the current authenticated user can act on.',
   })
   public async communityInvitations(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args({
       name: 'states',
       nullable: true,
@@ -135,14 +131,14 @@ export class MeResolverFields {
     })
     states: string[]
   ): Promise<CommunityInvitationResult[]> {
-    if (!agentInfo.userID) {
+    if (!actorContext.actorId) {
       throw new ValidationException(
         'Unable to retrieve invitations as no userID provided.',
         LogContext.COMMUNITY
       );
     }
     return this.meService.getCommunityInvitationsForUser(
-      agentInfo.userID,
+      actorContext.actorId,
       states
     );
   }
@@ -152,7 +148,7 @@ export class MeResolverFields {
       'The community applications current authenticated user can act on.',
   })
   public async communityApplications(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args({
       name: 'states',
       nullable: true,
@@ -161,14 +157,14 @@ export class MeResolverFields {
     })
     states: string[]
   ): Promise<CommunityApplicationResult[]> {
-    if (!agentInfo.userID) {
+    if (!actorContext.actorId) {
       throw new ValidationException(
         'Unable to retrieve applications as no userID provided.',
         LogContext.COMMUNITY
       );
     }
     return this.meService.getCommunityApplicationsForUser(
-      agentInfo.userID,
+      actorContext.actorId,
       states
     );
   }
@@ -177,7 +173,7 @@ export class MeResolverFields {
     description: 'The hierarchy of the Spaces the current user is a member.',
   })
   public spaceMembershipsHierarchical(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args({
       name: 'limit',
       type: () => Float,
@@ -187,23 +183,23 @@ export class MeResolverFields {
     })
     limit: number
   ): Promise<CommunityMembershipResult[]> {
-    return this.meService.getSpaceMembershipsHierarchical(agentInfo, limit);
+    return this.meService.getSpaceMembershipsHierarchical(actorContext, limit);
   }
 
   @ResolveField(() => [CommunityMembershipResult], {
     description: 'The Spaces the current user is a member of as a flat list.',
   })
   public spaceMembershipsFlat(
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentUser() actorContext: ActorContext
   ): Promise<CommunityMembershipResult[]> {
-    return this.meService.getSpaceMembershipsFlat(agentInfo);
+    return this.meService.getSpaceMembershipsFlat(actorContext);
   }
 
   @ResolveField(() => [MySpaceResults], {
     description: 'The Spaces I am contributing to',
   })
   public mySpaces(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args({
       name: 'limit',
       type: () => Float,
@@ -213,7 +209,7 @@ export class MeResolverFields {
     })
     limit: number
   ): Promise<MySpaceResults[]> {
-    return this.meService.getMySpaces(agentInfo, limit);
+    return this.meService.getMySpaces(actorContext, limit);
   }
 
   @ResolveField(() => MeConversationsResult, {
@@ -221,9 +217,9 @@ export class MeResolverFields {
     nullable: false,
   })
   public async conversations(
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentUser() actorContext: ActorContext
   ): Promise<MeConversationsResult> {
-    if (!agentInfo.userID) {
+    if (!actorContext.actorId) {
       throw new ValidationException(
         'Unable to retrieve conversations as no userID provided.',
         LogContext.COMMUNICATION

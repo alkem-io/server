@@ -1,5 +1,5 @@
 import { Profiling, CurrentUser } from '@common/decorators';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
 import { DomainPlatformSettingsService } from './domain.platform.settings.service';
 import { UpdateOrganizationPlatformSettingsInput } from './dto/organization.dto.update.platform.settings';
@@ -23,15 +23,16 @@ export class DomainPlatformSettingsResolverMutations {
   })
   @Profiling.api
   async updateOrganizationPlatformSettings(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('organizationData')
     organizationData: UpdateOrganizationPlatformSettingsInput
   ): Promise<IOrganization> {
-    const organization = await this.organizationService.getOrganizationOrFail(
-      organizationData.organizationID
-    );
+    const organization =
+      await this.organizationService.getOrganizationByIdOrFail(
+        organizationData.organizationID
+      );
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       organization.authorization,
       AuthorizationPrivilege.PLATFORM_ADMIN,
       `organization update platform settings: ${organization.id}`

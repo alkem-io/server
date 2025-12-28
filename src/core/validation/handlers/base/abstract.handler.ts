@@ -1,5 +1,5 @@
 import { ValidationError } from 'class-validator';
-import { Handler } from './handler.interface';
+import { Handler } from '@core/validation';
 
 export abstract class AbstractHandler implements Handler {
   private nextHandler: Handler | undefined;

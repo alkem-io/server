@@ -3,7 +3,7 @@ import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { UpdateTemplateDefaultTemplateInput } from '../template-default/dto/template.default.dto.update';
 import { ITemplateDefault } from '../template-default/template.default.interface';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -30,7 +30,7 @@ export class TemplatesManagerResolverMutations {
     description: 'Updates the specified Template Defaults.',
   })
   async updateTemplateDefault(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('templateDefaultData')
     templateDefaultData: UpdateTemplateDefaultTemplateInput
   ): Promise<ITemplateDefault> {
@@ -61,7 +61,7 @@ export class TemplatesManagerResolverMutations {
     }
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       templateDefault.authorization,
       AuthorizationPrivilege.UPDATE,
       `update templateDefault of type ${templateDefault.type}: ${templateDefault.id}`

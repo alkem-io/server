@@ -1,7 +1,7 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { Resolver, Mutation, Args, Field, ObjectType } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { IAiServer } from './ai.server.interface';
@@ -53,12 +53,12 @@ export class AiServerResolverMutations {
   })
   @Profiling.api
   async cleanupCollections(
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentUser() actorContext: ActorContext
   ): Promise<IMigrateEmbeddingsResponse> {
     const platformAuthorization =
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       platformAuthorization,
       AuthorizationPrivilege.PLATFORM_ADMIN,
       'User not authenticated to migrate embeddings'
@@ -123,14 +123,14 @@ export class AiServerResolverMutations {
     description: 'Reset the Authorization Policy on the specified AiServer.',
   })
   async aiServerAuthorizationPolicyReset(
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentUser() actorContext: ActorContext
   ): Promise<IAiServer> {
     const aiServer = await this.aiServerService.getAiServerOrFail();
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       aiServer.authorization,
       AuthorizationPrivilege.GRANT, // to be auth reset
-      `reset authorization on aiServer: ${agentInfo.email}`
+      `reset authorization on aiServer: ${actorContext.actorId}`
     );
     const authorizations =
       await this.aiServerAuthorizationService.applyAuthorizationPolicy();
@@ -142,13 +142,13 @@ export class AiServerResolverMutations {
     description: 'Creates a new AiPersona on the aiServer.',
   })
   async aiServerCreateAiPersona(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('aiPersonaData')
     aiPersonaData: CreateAiPersonaInput
   ): Promise<IAiPersona> {
     const aiServer = await this.aiServerService.getAiServerOrFail();
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       aiServer.authorization,
       AuthorizationPrivilege.CREATE,
       `create Virtual persona: ${aiPersonaData.engine}`

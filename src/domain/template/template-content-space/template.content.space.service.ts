@@ -18,7 +18,7 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy/authori
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { UpdateTemplateContentSpaceInput } from './dto/template.content.space.dto.update';
 import { ISpaceAbout } from '@domain/space/space.about/space.about.interface';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
@@ -42,7 +42,7 @@ export class TemplateContentSpaceService {
   public async createTemplateContentSpace(
     templateContentSpaceData: CreateTemplateContentSpaceInput,
     storageAggregator: IStorageAggregator,
-    agentInfo?: AgentInfo
+    actorContext?: ActorContext
   ): Promise<ITemplateContentSpace> {
     const templateContentSpace: ITemplateContentSpace =
       TemplateContentSpace.create(templateContentSpaceData);
@@ -63,14 +63,14 @@ export class TemplateContentSpaceService {
       await this.collaborationService.createCollaboration(
         templateContentSpaceData.collaborationData,
         storageAggregator,
-        agentInfo
+        actorContext
       );
 
     for (const subspace of templateContentSpaceData.subspaces) {
       const subspaceContent = await this.createTemplateContentSpace(
         subspace,
         storageAggregator,
-        agentInfo
+        actorContext
       );
       templateContentSpace.subspaces.push(subspaceContent);
     }

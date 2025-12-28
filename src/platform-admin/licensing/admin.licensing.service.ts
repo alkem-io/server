@@ -1,5 +1,4 @@
 import { LogContext } from '@common/enums/logging.context';
-import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AssignLicensePlanToSpace } from './dto/admin.licensing.dto.assign.license.plan.to.space';
@@ -49,23 +48,12 @@ export class AdminLicensingService {
       );
     }
 
-    // Todo: assign the actual credential for the license plan
+    // Space IS an Actor - assign license plan directly using space.id as actorId
     const space = await this.spaceService.getSpaceOrFail(
-      licensePlanData.spaceID,
-      {
-        relations: {
-          agent: true,
-        },
-      }
+      licensePlanData.spaceID
     );
-    if (!space.agent) {
-      throw new EntityNotInitializedException(
-        `Space (${space}) does not have an agent`,
-        LogContext.LICENSE
-      );
-    }
-    space.agent = await this.licenseIssuerService.assignLicensePlan(
-      space.agent,
+    await this.licenseIssuerService.assignLicensePlan(
+      space.id,
       licensePlan,
       space.id
     );
@@ -93,23 +81,12 @@ export class AdminLicensingService {
       );
     }
 
-    // Todo: assign the actual credential for the license plan
+    // Space IS an Actor - revoke license plan directly using space.id as actorId
     const space = await this.spaceService.getSpaceOrFail(
-      licensePlanData.spaceID,
-      {
-        relations: {
-          agent: true,
-        },
-      }
+      licensePlanData.spaceID
     );
-    if (!space.agent) {
-      throw new EntityNotInitializedException(
-        `Account (${space}) does not have an agent`,
-        LogContext.LICENSE
-      );
-    }
-    space.agent = await this.licenseIssuerService.revokeLicensePlan(
-      space.agent,
+    await this.licenseIssuerService.revokeLicensePlan(
+      space.id,
       licensePlan,
       space.id
     );
@@ -136,23 +113,13 @@ export class AdminLicensingService {
         LogContext.LICENSE
       );
     }
-    // Todo: assign the actual credential for the license plan
+
+    // Account IS an Actor - assign license plan directly using account.id as actorId
     const account = await this.accountLookupService.getAccountOrFail(
-      licensePlanData.accountID,
-      {
-        relations: {
-          agent: true,
-        },
-      }
+      licensePlanData.accountID
     );
-    if (!account.agent) {
-      throw new EntityNotInitializedException(
-        `Account (${account}) does not have an agent`,
-        LogContext.LICENSE
-      );
-    }
-    account.agent = await this.licenseIssuerService.assignLicensePlan(
-      account.agent,
+    await this.licenseIssuerService.assignLicensePlan(
+      account.id,
       licensePlan,
       account.id
     );
@@ -180,23 +147,12 @@ export class AdminLicensingService {
       );
     }
 
-    // Todo: assign the actual credential for the license plan
+    // Account IS an Actor - revoke license plan directly using account.id as actorId
     const account = await this.accountLookupService.getAccountOrFail(
-      licensePlanData.accountID,
-      {
-        relations: {
-          agent: true,
-        },
-      }
+      licensePlanData.accountID
     );
-    if (!account.agent) {
-      throw new EntityNotInitializedException(
-        `Account (${account}) does not have an agent`,
-        LogContext.LICENSE
-      );
-    }
-    account.agent = await this.licenseIssuerService.revokeLicensePlan(
-      account.agent,
+    await this.licenseIssuerService.revokeLicensePlan(
+      account.id,
       licensePlan,
       account.id
     );

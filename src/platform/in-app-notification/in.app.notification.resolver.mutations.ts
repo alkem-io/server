@@ -1,7 +1,7 @@
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { NotificationEventInAppState } from '@common/enums/notification.event.in.app.state';
 import { CurrentUser } from '@common/decorators';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { LogContext } from '@common/enums';
 import { ForbiddenException } from '@common/exceptions';
 import { UpdateNotificationStateInput } from './dto/in.app.notification.state.update';
@@ -22,14 +22,14 @@ export class InAppNotificationResolverMutations {
     description: 'Update notification state and return the notification.',
   })
   async updateNotificationState(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('notificationData') notificationData: UpdateNotificationStateInput
   ): Promise<NotificationEventInAppState> {
     const notification =
       await this.inAppNotificationService.getRawNotificationOrFail(
         notificationData.ID
       );
-    if (notification.receiverID !== agentInfo.userID) {
+    if (notification.receiverID !== actorContext.actorId) {
       throw new ForbiddenException(
         'Users can only update their own notifications',
         LogContext.IN_APP_NOTIFICATION,
@@ -45,10 +45,10 @@ export class InAppNotificationResolverMutations {
     // Update counter for the user
     const count =
       await this.inAppNotificationService.getRawNotificationsUnreadCount(
-        agentInfo.userID
+        actorContext.actorId
       );
     await this.subscriptionPublishService.publishInAppNotificationCounter(
-      agentInfo.userID,
+      actorContext.actorId,
       count
     );
 
@@ -60,7 +60,7 @@ export class InAppNotificationResolverMutations {
       'Mark notifications as read. If no filter is provided, marks all user notifications as read. If filter with types is provided, marks only those notification types as read.',
   })
   async markNotificationsAsRead(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('filter', {
       type: () => NotificationEventsFilterInput,
       nullable: true,
@@ -68,7 +68,7 @@ export class InAppNotificationResolverMutations {
     filter?: NotificationEventsFilterInput
   ): Promise<boolean> {
     return this.updateNotificationStates(
-      agentInfo,
+      actorContext,
       NotificationEventInAppState.READ,
       filter
     );
@@ -79,7 +79,7 @@ export class InAppNotificationResolverMutations {
       'Mark notifications as unread. If no filter is provided, marks all user notifications as unread. If filter with types is provided, marks only those notification types as unread.',
   })
   async markNotificationsAsUnread(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('filter', {
       type: () => NotificationEventsFilterInput,
       nullable: true,
@@ -87,14 +87,14 @@ export class InAppNotificationResolverMutations {
     filter?: NotificationEventsFilterInput
   ): Promise<boolean> {
     return this.updateNotificationStates(
-      agentInfo,
+      actorContext,
       NotificationEventInAppState.UNREAD,
       filter
     );
   }
 
   private async updateNotificationStates(
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     state: NotificationEventInAppState,
     filter?: NotificationEventsFilterInput
   ): Promise<boolean> {
@@ -103,7 +103,7 @@ export class InAppNotificationResolverMutations {
     // If filter with types provided, updates only those notification types
     const result =
       await this.inAppNotificationService.bulkUpdateNotificationStateByTypes(
-        agentInfo.userID,
+        actorContext.actorId,
         state,
         filter
       );
@@ -112,10 +112,10 @@ export class InAppNotificationResolverMutations {
     if ((result?.affected ?? 0) > 0) {
       const count =
         await this.inAppNotificationService.getRawNotificationsUnreadCount(
-          agentInfo.userID
+          actorContext.actorId
         );
       await this.subscriptionPublishService.publishInAppNotificationCounter(
-        agentInfo.userID,
+        actorContext.actorId,
         count
       );
     }

@@ -5,7 +5,7 @@ import { IUser } from '@domain/community/user/user.interface';
 import { UserService } from './user.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { UserAuthorizationService } from './user.service.authorization';
 import { UserAuthorizationResetInput } from './dto/user.dto.reset.authorization';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -31,12 +31,12 @@ export class UserResolverMutations {
     description: 'Updates the User.',
   })
   async updateUser(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('userData') userData: UpdateUserInput
   ): Promise<IUser> {
-    const user = await this.userService.getUserOrFail(userData.ID);
+    const user = await this.userService.getUserByIdOrFail(userData.ID);
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       user.authorization,
       AuthorizationPrivilege.UPDATE,
       `userUpdate: ${user.id}`
@@ -48,17 +48,17 @@ export class UserResolverMutations {
     description: 'Updates one of the Setting on a User',
   })
   async updateUserSettings(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('settingsData') settingsData: UpdateUserSettingsInput
   ): Promise<IUser> {
-    let user = await this.userService.getUserOrFail(settingsData.userID, {
+    let user = await this.userService.getUserByIdOrFail(settingsData.userID, {
       relations: {
         settings: true,
       },
     });
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       user.authorization,
       AuthorizationPrivilege.UPDATE,
       `user settings update: ${user.id}`
@@ -75,22 +75,22 @@ export class UserResolverMutations {
       await this.userAuthorizationService.applyAuthorizationPolicy(user.id);
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
-    return this.userService.getUserOrFail(user.id);
+    return this.userService.getUserByIdOrFail(user.id);
   }
 
   @Mutation(() => IUser, {
     description: 'Reset the Authorization policy on the specified User.',
   })
   async authorizationPolicyResetOnUser(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('authorizationResetData')
     authorizationResetData: UserAuthorizationResetInput
   ): Promise<IUser> {
-    const user = await this.userService.getUserOrFail(
+    const user = await this.userService.getUserByIdOrFail(
       authorizationResetData.userID
     );
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       user.authorization,
       AuthorizationPrivilege.AUTHORIZATION_RESET,
       `reset authorization definition on user: ${authorizationResetData.userID}`
@@ -99,7 +99,7 @@ export class UserResolverMutations {
       await this.userAuthorizationService.applyAuthorizationPolicy(user.id);
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
-    return await this.userService.getUserOrFail(user.id);
+    return await this.userService.getUserByIdOrFail(user.id);
   }
 
   @Mutation(() => IUser, {
@@ -107,12 +107,12 @@ export class UserResolverMutations {
       'Update the platform settings, such as nameID, email, for the specified User.',
   })
   async updateUserPlatformSettings(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('updateData') updateData: UpdateUserPlatformSettingsInput
   ): Promise<IUser> {
-    const user = await this.userService.getUserOrFail(updateData.userID);
+    const user = await this.userService.getUserByIdOrFail(updateData.userID);
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       user.authorization,
       AuthorizationPrivilege.PLATFORM_ADMIN,
       `update platform settings on User: ${user.id}`

@@ -10,8 +10,8 @@ import { LogContext } from '@common/enums';
 import { TagsetTemplateSet } from './tagset.template.set.entity';
 import { TagsetTemplateService } from '../tagset-template/tagset.template.service';
 import { ITagsetTemplateSet } from '.';
-import { ITagsetTemplate } from '../tagset-template/tagset.template.interface';
-import { CreateTagsetTemplateInput } from '../tagset-template/dto/tagset.template.dto.create';
+import { ITagsetTemplate } from '@domain/common/tagset-template';
+import { CreateTagsetTemplateInput } from '@domain/common/tagset-template';
 
 @Injectable()
 export class TagsetTemplateSetService {

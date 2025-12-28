@@ -2,7 +2,7 @@ import { Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { ITemplatesManager } from './templates.manager.interface';
 import { TemplateDefault } from '../template-default/template.default.entity';
-import { TemplatesSet } from '../templates-set/templates.set.entity';
+import { TemplatesSet } from '@domain/template/templates-set';
 
 @Entity()
 export class TemplatesManager

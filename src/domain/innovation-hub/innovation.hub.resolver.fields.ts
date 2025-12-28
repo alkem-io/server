@@ -3,14 +3,14 @@ import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface'
 import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.service';
 import { ISpace } from '@domain/space/space/space.interface';
 import { IProfile } from '@domain/common/profile';
-import { AuthorizationAgentPrivilege, Profiling } from '@common/decorators';
+import { AuthorizationActorPrivilege, Profiling } from '@common/decorators';
 import { Loader } from '@core/dataloader/decorators';
 import { ProfileLoaderCreator } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
 import { IAccount } from '@domain/space/account/account.interface';
 import { AccountLoaderCreator } from '@core/dataloader/creators/loader.creators/account/account.loader.creator';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { IActor } from '@domain/actor/actor/actor.interface';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { UseGuards } from '@nestjs/common';
@@ -75,16 +75,14 @@ export class InnovationHubResolverFields {
     return loader.load(innovationHub.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('provider', () => IContributor, {
+  @ResolveField('provider', () => IActor, {
     nullable: false,
     description: 'The InnovationHub provider.',
   })
   @Profiling.api
-  async provider(
-    @Parent() innovationHub: IInnovationHub
-  ): Promise<IContributor> {
+  async provider(@Parent() innovationHub: IInnovationHub): Promise<IActor> {
     return await this.innovationHubService.getProvider(innovationHub.id);
   }
 }

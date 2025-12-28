@@ -1,6 +1,6 @@
 import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import { IDiscussion } from './discussion.interface';
-import { Room } from '../../domain/communication/room/room.entity';
+import { Room } from '@domain/communication/room';
 import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
 import { Forum } from '@platform/forum/forum.entity';
 import { ForumDiscussionPrivacy } from '@common/enums/forum.discussion.privacy';

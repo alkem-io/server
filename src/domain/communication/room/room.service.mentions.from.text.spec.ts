@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { MockWinstonProvider } from '@test/mocks';
-import { MockContributorLookupService } from '@test/mocks/contributor.lookup.service.mock';
+import { MockActorLookupService } from '@test/mocks/actor.lookup.service.mock';
 import { testData } from '@test/utils/test-data';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
@@ -19,7 +19,7 @@ describe('RoomServiceMentions', () => {
       providers: [
         MockWinstonProvider,
         RoomMentionsService,
-        MockContributorLookupService,
+        MockActorLookupService,
       ],
       exports: [RoomMentionsService],
     })

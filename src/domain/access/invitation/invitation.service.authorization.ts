@@ -8,22 +8,21 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { IInvitation } from './invitation.interface';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
-import { ContributorService } from '@domain/community/contributor/contributor.service';
+import { ActorType } from '@common/enums/actor.type';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { CREDENTIAL_RULE_ROLESET_INVITATION } from '@common/constants';
 import { RoleSetMembershipException } from '@common/exceptions/role.set.membership.exception';
 import { Organization } from '@domain/community/organization/organization.entity';
 import { User } from '@domain/community/user/user.entity';
-import { getContributorType } from '@domain/community/contributor/get.contributor.type';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class InvitationAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    private contributorService: ContributorService,
+    private actorLookupService: ActorLookupService,
     private virtualContributorLookupService: VirtualContributorLookupService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
@@ -50,8 +49,8 @@ export class InvitationAuthorizationService {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
     // get the contributor - may be null if orphaned
-    const contributor = await this.contributorService.getContributor(
-      invitation.invitedContributorID
+    const contributor = await this.actorLookupService.getFullActorById(
+      invitation.invitedActorId
     );
 
     if (!contributor) {
@@ -61,7 +60,7 @@ export class InvitationAuthorizationService {
         {
           message: 'Invitation references non-existent contributor',
           invitationId: invitation.id,
-          contributorId: invitation.invitedContributorID,
+          contributorId: invitation.invitedActorId,
         },
         LogContext.COMMUNITY
       );
@@ -70,16 +69,16 @@ export class InvitationAuthorizationService {
 
     // also grant the user privileges to work with their own invitation
     let accountID: string | undefined = undefined;
-    const contributorType = getContributorType(contributor);
+    const contributorType = contributor.type;
     const criterias: ICredentialDefinition[] = [];
     switch (contributorType) {
-      case RoleSetContributorType.USER:
+      case ActorType.USER:
         accountID = (contributor as User).accountID;
         break;
-      case RoleSetContributorType.ORGANIZATION:
+      case ActorType.ORGANIZATION:
         accountID = (contributor as Organization).accountID;
         break;
-      case RoleSetContributorType.VIRTUAL:
+      case ActorType.VIRTUAL:
         const account =
           await this.virtualContributorLookupService.getAccountOrFail(
             contributor.id

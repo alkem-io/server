@@ -1,7 +1,7 @@
 import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
+import { AuthorizationActorPrivilege, Profiling } from '@src/common/decorators';
 import { ForumService } from './forum.service';
 import { AuthorizationPrivilege } from '@common/enums';
 import { IForum } from './forum.interface';
@@ -13,7 +13,7 @@ import { UUID } from '@domain/common/scalars';
 export class ForumResolverFields {
   constructor(private forumService: ForumService) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('discussions', () => [IDiscussion], {
     nullable: true,
@@ -32,7 +32,7 @@ export class ForumResolverFields {
     );
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('discussion', () => IDiscussion, {
     nullable: true,

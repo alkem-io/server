@@ -1,12 +1,12 @@
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { IInnovationHub } from './innovation.hub.interface';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { DeleteInnovationHubInput } from './dto/innovation.hub.dto.delete';
+import { DeleteInnovationHubInput } from '@domain/innovation-hub/dto';
 import { InnovationHubService } from './innovation.hub.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { UpdateInnovationHubInput } from './dto/innovation.hub.dto.update';
+import { UpdateInnovationHubInput } from '@domain/innovation-hub/dto';
 import { InstrumentResolver } from '@src/apm/decorators';
 
 @InstrumentResolver()
@@ -22,13 +22,13 @@ export class InnovationHubResolverMutations {
   })
   @Profiling.api
   async updateInnovationHub(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('updateData') updateData: UpdateInnovationHubInput
   ): Promise<IInnovationHub> {
     const innovationHub =
       await this.innovationHubService.getInnovationHubOrFail(updateData.ID);
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       innovationHub.authorization,
       AuthorizationPrivilege.UPDATE,
       'update innovation hub'
@@ -42,13 +42,13 @@ export class InnovationHubResolverMutations {
   })
   @Profiling.api
   async deleteInnovationHub(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentUser() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteInnovationHubInput
   ): Promise<IInnovationHub> {
     const innovationHub =
       await this.innovationHubService.getInnovationHubOrFail(deleteData.ID);
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       innovationHub.authorization,
       AuthorizationPrivilege.DELETE,
       'delete innovation hub'

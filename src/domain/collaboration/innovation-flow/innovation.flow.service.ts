@@ -20,8 +20,8 @@ import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { UpdateInnovationFlowCurrentStateInput } from './dto/innovation.flow.dto.state.select';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { CreateInnovationFlowStateInput } from '../innovation-flow-state/dto/innovation.flow.state.dto.create';
-import { UpdateInnovationFlowStateInput } from '../innovation-flow-state/dto/innovation.flow.state.dto.update';
+import { CreateInnovationFlowStateInput } from '@domain/collaboration/innovation-flow-state/dto';
+import { UpdateInnovationFlowStateInput } from '@domain/collaboration/innovation-flow-state/dto';
 import { TagsetTemplateService } from '@domain/common/tagset-template/tagset.template.service';
 import { UpdateTagsetTemplateDefinitionInput } from '@domain/common/tagset-template';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
@@ -34,7 +34,7 @@ import { keyBy } from 'lodash';
 import { DeleteStateOnInnovationFlowInput } from './dto/innovation.flow.dto.state.delete';
 import { sortBySortOrder } from '../innovation-flow-state/utils/sortBySortOrder';
 import { CalloutsSetService } from '../callouts-set/callouts.set.service';
-import { Collaboration } from '../collaboration/collaboration.entity';
+import { Collaboration } from '@domain/collaboration/collaboration';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 
 @Injectable()

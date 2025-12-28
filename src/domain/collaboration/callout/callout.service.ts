@@ -12,7 +12,7 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
-import { CreateCalloutInput } from '@domain/collaboration/callout/dto/index';
+import { CreateCalloutInput } from '@domain/collaboration/callout/dto';
 import { limitAndShuffle } from '@common/utils';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { UpdateCalloutVisibilityInput } from './dto/callout.dto.update.visibility';
@@ -212,7 +212,7 @@ export class CalloutService {
     publishedTimestamp?: number
   ): Promise<ICallout> {
     if (publisherID) {
-      const publisher = await this.userLookupService.getUserByUUID(publisherID);
+      const publisher = await this.userLookupService.getUserById(publisherID);
       callout.publishedBy = publisher?.id || '';
     }
 
