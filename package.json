@@ -43,7 +43,7 @@
     "migration:show": "pnpm run typeorm migration:show",
     "migration:validate": "./.scripts/migrations/run_validate_migration.sh",
     "circular-dependencies": "madge --circular dist",
-    "db:reset:alkemio": "./scripts/db/reset-postgres.sh",
+    "db:reset:pg": "./scripts/db/reset-postgres.sh",
     "schema:print": "ts-node -r tsconfig-paths/register src/tools/schema/print-schema.ts schema.graphql",
     "schema:sort": "ts-node -r tsconfig-paths/register src/tools/schema/sort-sdl.ts schema.graphql",
     "schema:diff": "ts-node -r tsconfig-paths/register src/tools/schema/diff-schema.ts --old tmp/prev.schema.graphql --new schema.graphql --out change-report.json --deprecations deprecations.json",
