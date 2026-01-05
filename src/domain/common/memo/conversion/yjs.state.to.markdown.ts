@@ -83,7 +83,14 @@ export const yjsStateToMarkdown = (state: Buffer) => {
             child.type.name === 'bulletList' ||
             child.type.name === 'orderedList'
           ) {
-            nestedLists += serializeNode(child, depth + 1);
+            nestedLists += serializeNode(child, depth + 1, child.type.name);
+          } else {
+            // Handle other node types (images, code blocks, etc.) using renderToMarkdown
+            const otherContent = renderToMarkdown({
+              extensions: [StarterKit, ImageExtension, Highlight, Iframe],
+              content: child,
+            }).trim();
+            itemText += otherContent;
           }
         });
 
