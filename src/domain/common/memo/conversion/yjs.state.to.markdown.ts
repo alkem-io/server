@@ -60,14 +60,15 @@ export const yjsStateToMarkdown = (state: Buffer) => {
 
     switch (node.type.name) {
       case 'bulletList':
-      case 'orderedList':
+      case 'orderedList': {
         let listOutput = '';
         node.content.forEach(child => {
           listOutput += serializeNode(child, depth, node.type.name);
         });
         return listOutput;
+      }
 
-      case 'listItem':
+      case 'listItem': {
         let itemText = '';
         let nestedLists = '';
 
@@ -91,6 +92,7 @@ export const yjsStateToMarkdown = (state: Buffer) => {
           ? `${indent}${bullet} ${itemText}\n`
           : `${indent}${bullet}\n`;
         return mainLine + nestedLists;
+      }
 
       default:
         // Use TipTap's default for other node types
