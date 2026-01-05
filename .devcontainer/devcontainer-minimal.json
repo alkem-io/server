@@ -1,5 +1,5 @@
 {
-  "name": "Alkemio Server (Full Stack)",
+  "name": "Alkemio Server (Minimal)",
   "build": {
     "dockerfile": "Dockerfile",
     "context": ".."
