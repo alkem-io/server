@@ -16,7 +16,7 @@ services:
       - "4000:4000"
     volumes:
       - ..:/workspaces/server:cached
-      - pnpm-store:/root/.local/share/pnpm
+      - pnpm-store:/home/node/.local/share/pnpm
       - storage-data:/workspaces/server/.storage
     command: sleep infinity
     depends_on:

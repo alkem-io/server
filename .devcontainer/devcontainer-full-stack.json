@@ -35,7 +35,6 @@
   },
   "forwardPorts": [4000],
   "postCreateCommand": "pnpm install",
-  "postStartCommand": "pnpm run start:services &",
   "remoteUser": "node",
   "initializeCommand": "mkdir -p ${localWorkspaceFolder}/.storage"
 }
