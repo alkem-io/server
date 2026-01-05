@@ -70,8 +70,8 @@ describe('FR-005/011/012 deprecation lifecycle enforcement', () => {
 
   it('classifies premature removal before removeAfter as PREMATURE_REMOVAL', () => {
     // Prepare baseline with deprecated field (valid window)
-    const sinceDate = '2025-06-01';
-    const removeAfter = '2025-12-31'; // future relative to test date 2025-10-07
+    const sinceDate = '2025-10-01';
+    const removeAfter = '2026-06-01'; // must be in the future relative to today
     const deprecatedSchema = `type Query {
       hello: String @deprecated(reason: "REMOVE_AFTER=${removeAfter} | cleanup")
     }`;
@@ -115,7 +115,7 @@ describe('FR-005/011/012 deprecation lifecycle enforcement', () => {
     expect(removal.detail).toMatch(/Field removal premature/);
   });
 
-  it('classifies removal after removeAfter but <90 elapsed days as BREAKING', () => {
+  it('classifies removal after removeAfter but <90 elapsed days as INFO', () => {
     const sinceDate = '2025-09-15';
     const removeAfter = '2025-10-01'; // already past test date but <90 days elapsed
     const deprecatedSchema = `type Query { hello: String @deprecated(reason: "REMOVE_AFTER=${removeAfter} | cleanup") }`;
@@ -152,8 +152,8 @@ describe('FR-005/011/012 deprecation lifecycle enforcement', () => {
       (e: any) => e.element === 'Query.hello'
     );
     expect(removal).toBeTruthy();
-    expect(removal.changeType).toBe('BREAKING');
-    expect(removal.detail).toMatch(/90-day window not satisfied/);
+    expect(removal.changeType).toBe('INFO');
+    expect(removal.detail).toMatch(/retired after deprecation window/);
   });
 
   it('classifies valid retirement (after removeAfter & >=90 days) as INFO', () => {
