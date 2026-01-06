@@ -14,7 +14,7 @@ spec:
           restartPolicy: Never
           containers:
             - name: alkemio-server
-              image: alkemio/server:v0.129.0
+              image: rg.nl-ams.scw.cloud/alkemio/alkemio-server:latest
               command: ["pnpm", "run", "migration:run"]
               imagePullPolicy: Always
               env:
