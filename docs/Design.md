@@ -19,12 +19,18 @@ graph TD
     subgraph "Kubernetes Cluster"
         Auth[Ory Kratos & Hydra]
 
-        subgraph "Core Application"
-            API["Alkemio Server (NestJS)"]
-            AuthZ[Authorization Forest]
-            Resolvers[GraphQL Resolvers]
-            Services[Domain Services]
-        end
+- GraphQL: for specifying the interactions with the server, using Apollo server
+- Node: for runtime execution - **NB: LTS Node version (14.17.3) is currently used for development, and is required for deployment.**
+- NestJS as a framework
+- TypeScript: for all logic
+- TypeORM: for the orbject relational mapping
+- PostgreSQL: for data persistence
+- docker: for containers
+- docker-compose: for container orchestration
+- passportjs for authentication
+- authentication providers: via one or the support authentication providers (e.g. Ory Kratos)
+- Winston and Nest-Winston for logging
+- Elastic Cloud + Kibana for centralized log management
 
         subgraph "Data Layer"
             Redis["Redis (Cache/Queue)"]

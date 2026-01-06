@@ -3,7 +3,7 @@ import { ICalendarEvent } from './event.interface';
 import { Calendar } from '../calendar/calendar.entity';
 import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
 import { Room } from '@domain/communication/room/room.entity';
-import { ENUM_LENGTH, UUID_LENGTH } from '@common/constants';
+import { ENUM_LENGTH } from '@common/constants';
 import { CalendarEventType } from '@common/enums/calendar.event.type';
 
 @Entity()
@@ -18,7 +18,7 @@ export class CalendarEvent extends NameableEntity implements ICalendarEvent {
   //   onDelete: 'SET NULL',
   // })
   // @JoinColumn()
-  @Column('char', { length: UUID_LENGTH, nullable: false })
+  @Column('uuid', { nullable: false })
   createdBy!: string;
 
   @OneToOne(() => Room, {
@@ -36,7 +36,7 @@ export class CalendarEvent extends NameableEntity implements ICalendarEvent {
   })
   calendar?: Calendar;
 
-  @Column('datetime', { nullable: false })
+  @Column('timestamp', { nullable: false })
   startDate!: Date;
 
   @Column('boolean', { nullable: false })

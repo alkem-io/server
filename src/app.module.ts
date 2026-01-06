@@ -140,16 +140,14 @@ import { InAppNotificationAdminModule } from './platform-admin/in-app-notificati
         const dbOptions = configService.get('storage.database', {
           infer: true,
         });
+
         return {
-          type: 'mysql',
-          insecureAuth: true,
+          type: 'postgres' as const,
           synchronize: false,
           cache: true,
           entities: [join(__dirname, '**', '*.entity.{ts,js}')],
           host: dbOptions.host,
           port: dbOptions.port,
-          timezone: dbOptions.timezone,
-          charset: dbOptions.charset,
           username: dbOptions.username,
           password: dbOptions.password,
           database: dbOptions.database,

@@ -8,6 +8,7 @@ import { DocumentAuthorizationService } from '../document/document.service.autho
 import { FileUpload, GraphQLUpload } from 'graphql-upload';
 import { DocumentService } from '../document/document.service';
 import { StorageBucketUploadFileInput } from './dto/storage.bucket.dto.upload.file';
+import { StorageBucketUploadFileResult } from './dto/storage.bucket.dto.upload.file.result';
 import { IStorageBucket } from './storage.bucket.interface';
 import { DeleteStorageBuckeetInput as DeleteStorageBucketInput } from './dto/storage.bucket.dto.delete';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -24,9 +25,9 @@ export class StorageBucketResolverMutations {
     private documentService: DocumentService
   ) {}
 
-  @Mutation(() => String, {
+  @Mutation(() => StorageBucketUploadFileResult, {
     description:
-      'Create a new Document on the Storage and return the public Url.',
+      'Create a new Document on the Storage and return the ID and public URL.',
   })
   @Profiling.api
   async uploadFileOnStorageBucket(
@@ -34,7 +35,7 @@ export class StorageBucketResolverMutations {
     @Args('uploadData') uploadData: StorageBucketUploadFileInput,
     @Args({ name: 'file', type: () => GraphQLUpload })
     { createReadStream, filename, mimetype }: FileUpload
-  ): Promise<string> {
+  ): Promise<StorageBucketUploadFileResult> {
     const storageBucket =
       await this.storageBucketService.getStorageBucketOrFail(
         uploadData.storageBucketId
@@ -66,7 +67,10 @@ export class StorageBucketResolverMutations {
       );
     await this.authorizationPolicyService.saveAll(documentAuthorizations);
 
-    return this.documentService.getPubliclyAccessibleURL(document);
+    return {
+      id: document.id,
+      url: this.documentService.getPubliclyAccessibleURL(document),
+    };
   }
 
   @Mutation(() => IStorageBucket, {

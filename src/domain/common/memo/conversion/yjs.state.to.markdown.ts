@@ -48,9 +48,72 @@ export const yjsStateToMarkdown = (state: Buffer) => {
   });
   const newDoc = pmDoc.copy(Fragment.fromArray(newContent));
 
-  return renderToMarkdown({
-    extensions: [StarterKit, ImageExtension, /*Link,*/ Highlight, Iframe],
-    content: newDoc,
-    // options,
-  }).trim();
+  // Manually serialize with proper indentation by traversing the tree
+  const serializeNode = (
+    node: ProseMirrorNode,
+    depth = 0,
+    parentType = ''
+  ): string => {
+    // Ordered lists need 4 spaces per level, bullet lists need 2
+    const indentSize = parentType === 'orderedList' ? 4 : 2;
+    const indent = ' '.repeat(depth * indentSize);
+
+    switch (node.type.name) {
+      case 'bulletList':
+      case 'orderedList': {
+        let listOutput = '';
+        node.content.forEach(child => {
+          listOutput += serializeNode(child, depth, node.type.name);
+        });
+        return listOutput;
+      }
+
+      case 'listItem': {
+        let itemText = '';
+        let nestedLists = '';
+
+        node.content.forEach(child => {
+          if (child.type.name === 'paragraph') {
+            const paragraphMarkdown = renderToMarkdown({
+              extensions: [StarterKit, ImageExtension, Highlight, Iframe],
+              content: child,
+            }).trim();
+            itemText += paragraphMarkdown;
+          } else if (
+            child.type.name === 'bulletList' ||
+            child.type.name === 'orderedList'
+          ) {
+            nestedLists += serializeNode(child, depth + 1, child.type.name);
+          } else {
+            // Handle other node types (images, code blocks, etc.) using renderToMarkdown
+            const otherContent = renderToMarkdown({
+              extensions: [StarterKit, ImageExtension, Highlight, Iframe],
+              content: child,
+            }).trim();
+            itemText += otherContent;
+          }
+        });
+
+        const bullet = parentType === 'orderedList' ? '1.' : '-';
+        const mainLine = itemText
+          ? `${indent}${bullet} ${itemText}\n`
+          : `${indent}${bullet}\n`;
+        return mainLine + nestedLists;
+      }
+
+      default:
+        // Use TipTap's default for other node types
+        return renderToMarkdown({
+          extensions: [StarterKit, ImageExtension, Highlight, Iframe],
+          content: node,
+        });
+    }
+  };
+
+  let result = '';
+  newDoc.content.forEach(child => {
+    result += serializeNode(child);
+  });
+
+  return result.trim();
 };

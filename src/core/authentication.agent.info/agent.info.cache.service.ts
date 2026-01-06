@@ -133,10 +133,10 @@ export class AgentInfoCacheService {
   public async getAgentEmail(agentId: string): Promise<string | undefined> {
     const users: { email: string }[] =
       await this.entityManager.connection.query(
-        `SELECT \`u\`.\`email\` FROM \`agent\` as \`a\`
-      RIGHT JOIN \`user\` as \`u\`
-      ON \`u\`.\`agentId\` = \`a\`.\`id\`
-      WHERE \`a\`.\`id\` = ?`,
+        `SELECT "u"."email" FROM "agent" as "a"
+      RIGHT JOIN "user" as "u"
+      ON "u"."agentId" = "a"."id"
+      WHERE "a"."id" = $1`,
         [agentId]
       );
 

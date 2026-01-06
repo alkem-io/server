@@ -67,8 +67,8 @@ export class StorageAggregatorResolverService {
   }
 
   public async getPlatformStorageAggregator(): Promise<IStorageAggregator> {
-    const query = `SELECT \`storageAggregatorId\`
-    FROM \`platform\` LIMIT 1`;
+    const query = `SELECT "storageAggregatorId"
+    FROM "platform" LIMIT 1`;
     const [result]: {
       storageAggregatorId: string;
     }[] = await this.entityManager.connection.query(query);

@@ -187,7 +187,7 @@ export class VirtualContributorService {
 
     virtualContributor = await this.save(virtualContributor);
 
-    const userID = agentInfo ? agentInfo.userID : '';
+    const userID = agentInfo?.userID;
     await this.contributorService.ensureAvatarIsStoredInLocalStorageBucket(
       virtualContributor.profile.id,
       userID
@@ -316,6 +316,29 @@ export class VirtualContributorService {
     ) {
       virtual.knowledgeBase.profile.description =
         virtualContributorData.knowledgeBaseData.profile?.description;
+    }
+
+    if (
+      virtualContributorData.bodyOfKnowledgeType &&
+      virtualContributorData.bodyOfKnowledgeType !== virtual.bodyOfKnowledgeType
+    ) {
+      virtual.bodyOfKnowledgeType = virtualContributorData.bodyOfKnowledgeType;
+    }
+
+    if (
+      virtualContributorData.dataAccessMode &&
+      virtualContributorData.dataAccessMode !== virtual.dataAccessMode
+    ) {
+      virtual.dataAccessMode = virtualContributorData.dataAccessMode;
+    }
+
+    if (virtualContributorData.interactionModes) {
+      virtual.interactionModes = virtualContributorData.interactionModes;
+    }
+
+    if (typeof virtualContributorData.bodyOfKnowledgeDescription === 'string') {
+      virtual.bodyOfKnowledgeDescription =
+        virtualContributorData.bodyOfKnowledgeDescription;
     }
 
     return await this.save(virtual);
@@ -520,7 +543,7 @@ export class VirtualContributorService {
         .createQueryBuilder('virtual_contributor')
         .leftJoinAndSelect('virtual_contributor.agent', 'agent')
         .leftJoinAndSelect('agent.credentials', 'credential')
-        .where('credential.type IN (:credentialsFilter)')
+        .where('credential.type IN (:...credentialsFilter)')
         .setParameters({
           credentialsFilter: credentialsFilter,
         })

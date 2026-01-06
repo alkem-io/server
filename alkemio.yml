@@ -309,35 +309,29 @@ storage:
   file:
     # 20MB
     max_file_size: ${STORAGE_MAX_FILE_SIZE}:20971520
-  # MySQL database configuration for usage by the Alkemio Server.
-  # The authentication method used by Alkemio Server is MySQL Native Password.
+  # Database configuration for usage by the Alkemio Server.
+  # Uses PostgreSQL as the database backend.
   # Note: both schema / database name are used for configuration and they need to have the same value.
   database:
     # Database host.
     host: ${DATABASE_HOST}:localhost
 
-    # MySQL daemon port.
-    port: 3306
+    # Database daemon port.
+    port: ${DATABASE_PORT}:5432
 
-    # MySQL username.
-    username: 'root'
+    # Database username.
+    username: ${DATABASE_USERNAME}:synapse
 
-    # The timezone in which typeorm will interpret the dates. Default is Z for UTC
-    timezone: ${TYPEORM_TIMEZONE}:Z
+    # Database password.
+    password: ${DATABASE_PASSWORD}:synapse
 
-    # MySQL password.
-    password: ${MYSQL_ROOT_PASSWORD}:toor
+    # Database schema / database name.
+    schema: ${DATABASE_NAME}:alkemio
 
-    # MySQL schema / database name.
-    schema: ${MYSQL_DATABASE}:alkemio
+    # Database schema / database name.
+    database: ${DATABASE_NAME}:alkemio
 
-    # MySQL schema / database name.
-    database: ${MYSQL_DATABASE}:alkemio
-
-    # MySQL character set
-    charset: ${MYSQL_CHARSET}:utf8mb4
-
-    # Flag setting whether MySQL operations should be logged to the console.
+    # Flag setting whether database operations should be logged to the console.
     logging: ${ENABLE_ORM_LOGGING}:false
 
   local_storage:

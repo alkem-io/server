@@ -1,19 +1,21 @@
 #!/bin/bash
 
-# Source environment variables from .env file
-source .env
+# Base directory: the location of the script
+BASE_DIR="$(dirname "$(realpath "$0")")"
+
+# Source environment variables from .env file relative to the script's location
+. "$BASE_DIR/.env"
 
 # Set database connection details
-user=root
-password=${MYSQL_ROOT_PASSWORD}
-database=${MYSQL_DATABASE}
-host=localhost # or your MySQL server IP
+user=${POSTGRES_USER}
+password=${POSTGRES_PASSWORD}
+database=${POSTGRES_DB}
+host=${POSTGRES_HOST:-localhost}
+port=${POSTGRES_PORT:-5432}
+container=${POSTGRES_CONTAINER:-alkemio_dev_postgres}
 
 # Folder containing the CSV files
-folder="CSVs"
-
-# Docker container name
-container="alkemio_dev_mysql"
+folder="$BASE_DIR/CSVs"
 
 # Check if CSV files are present
 if [ -z "$(ls -A $folder/*.csv 2>/dev/null)" ]; then
@@ -21,8 +23,8 @@ if [ -z "$(ls -A $folder/*.csv 2>/dev/null)" ]; then
   exit 1
 fi
 
-# Disable foreign key checks
-  docker exec -i $container mysql -u $user -p$password -e "SET foreign_key_checks = 0;"
+# Disable foreign key checks by deferring constraints
+docker exec -i $container psql -U $user -d $database -c "SET session_replication_role = 'replica';"
 
 # Enumerate all CSV files in the folder
 for file in $folder/*.csv
@@ -35,11 +37,14 @@ do
 
   echo "Importing $file into $table..."
 
-  # Run the mysqlimport command in the Docker container
-  docker exec -i $container mysqlimport --ignore-lines=1 --fields-terminated-by=',' --local -u $user -p$password $database /tmp/$file
+  # Get the column names from the table (excluding auto-generated columns)
+  columns=$(docker exec -i $container psql -U $user -d $database -t -c "SELECT column_name FROM information_schema.columns WHERE table_name = '$table' AND table_schema = 'public' AND column_name NOT IN ('createdDate', 'updatedDate', 'version') ORDER BY ordinal_position" | tr -d ' ' | grep -v '^$' | paste -sd ',' -)
+
+  # Import using COPY command
+  cat "$file" | docker exec -i $container psql -U $user -d $database -c "\COPY \"$table\" ($columns) FROM STDIN WITH (FORMAT CSV, DELIMITER ',', QUOTE '\"')"
 done
 
-# Enable foreign key checks
-  docker exec -i $container mysql -u $user -p$password -e "SET foreign_key_checks = 1;"
+# Re-enable foreign key checks
+docker exec -i $container psql -U $user -d $database -c "SET session_replication_role = 'origin';"
 
 echo "All CSV files have been imported."

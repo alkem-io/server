@@ -9,7 +9,7 @@ mutation createAccount($accountData: CreateAccountInput!) {
 {
   "accountData":
   {
-    "hostID": "Eco1Host",
+    "hostID": "eco1host",
     "spaceData": {
       "nameID": "eco1",
       "profileData": {

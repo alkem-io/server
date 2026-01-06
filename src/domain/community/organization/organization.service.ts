@@ -206,7 +206,7 @@ export class OrganizationService {
       );
     }
 
-    const userID = agentInfo ? agentInfo.userID : '';
+    const userID = agentInfo?.userID;
     await this.contributorService.ensureAvatarIsStoredInLocalStorageBucket(
       organization.profile.id,
       userID
@@ -447,7 +447,7 @@ export class OrganizationService {
         .createQueryBuilder('organization')
         .leftJoinAndSelect('organization.agent', 'agent')
         .leftJoinAndSelect('agent.credentials', 'credential')
-        .where('credential.type IN (:credentialsFilter)')
+        .where('credential.type IN (:...credentialsFilter)')
         .setParameters({
           credentialsFilter: credentialsFilter,
         })

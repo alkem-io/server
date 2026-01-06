@@ -11,7 +11,7 @@ import { compressText, decompressText } from '@common/utils/compression.util';
 import { IWhiteboard } from './whiteboard.interface';
 import { NameableEntity } from '../entity/nameable-entity/nameable.entity';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
-import { ENUM_LENGTH, UUID_LENGTH } from '@common/constants';
+import { ENUM_LENGTH } from '@common/constants';
 import { IWhiteboardPreviewSettings } from './whiteboard.preview.settings.interface';
 
 @Entity()
@@ -49,10 +49,10 @@ export class Whiteboard extends NameableEntity implements IWhiteboard {
     }
   }
 
-  @Column('longtext', { nullable: false })
+  @Column('text', { nullable: false })
   content!: string;
 
-  @Column('char', { length: UUID_LENGTH, nullable: true })
+  @Column('uuid', { nullable: true })
   createdBy?: string;
 
   @Column('varchar', {
