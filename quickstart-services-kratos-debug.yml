@@ -386,7 +386,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_matrix_adapter
     hostname: matrix-adapter
-    image: alkemio/matrix-adapter-go:v0.8.2
+    image: alkemio/matrix-adapter-go:v0.8.3-mapping
     platform: linux/amd64
     depends_on:
       - rabbitmq
@@ -399,7 +399,7 @@ services:
       - SYNAPSE_SERVER_NAME
       - MATRIX_AS_TOKEN
       - MATRIX_HS_TOKEN
-#      - MATRIX_BOT_ACTOR_ID
+      #      - MATRIX_BOT_ACTOR_ID
       - LOGGING_CONSOLE_ENABLED
       - LOGGING_LEVEL_CONSOLE=debug
       - ENVIRONMENT=dev
@@ -407,6 +407,12 @@ services:
       - WAIT_HOSTS_TIMEOUT=300
       - WAIT_SLEEP_INTERVAL=30
       - WAIT_HOST_CONNECT_TIMEOUT=30
+      - DATABASE_HOST
+      - DATABASE_PORT
+      - DATABASE_USERNAME
+      - DATABASE_PASSWORD
+      - DATABASE_NAME=alkemio
+      - ACTOR_ID_MAPPER_ENABLED=true
     restart: always
     networks:
       - alkemio_dev_net
