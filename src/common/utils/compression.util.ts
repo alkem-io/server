@@ -12,17 +12,17 @@ const COMPRESSED_STRING_ENCODING = 'base64';
 /**
  * Check if a string appears to be base64 encoded.
  * Base64 strings only contain [A-Za-z0-9+/=] characters.
- * MySQL TO_BASE64() adds newlines every 76 chars, so we allow those too.
+ * Note: Some base64 encoders add newlines every 76 chars, so we allow those too.
  */
 const isBase64 = (value: string): boolean => {
   if (!value || value.length < 4) return false;
-  // Allow newlines (\n, \r) which MySQL TO_BASE64() adds
+  // Allow newlines (\n, \r) which some encoders add
   return /^[A-Za-z0-9+/=\n\r]+$/.test(value);
 };
 
 /**
  * Check if a string appears to be legacy binary-encoded compressed data.
- * Legacy format from MySQL migration starts with 0x78 ('x') which is the zlib header.
+ * Legacy format starts with 0x78 ('x') which is the zlib header.
  */
 const isLegacyBinaryFormat = (value: string): boolean => {
   if (!value || value.length < 2) return false;
@@ -59,7 +59,7 @@ export const decompressText = async (value: string): Promise<string> => {
 
   if (isLegacyBinaryFormat(value) && !isBase64(value)) {
     // Raw binary format - data starts with 'x' (0x78 zlib header)
-    // and contains non-base64 characters. This is legacy MySQL data
+    // and contains non-base64 characters. This is legacy data
     // that was stored as binary and not converted to base64 during export.
     // Interpret each character code as a byte value (latin1 encoding).
     compressedBuffer = Buffer.from(value, 'latin1');
@@ -75,7 +75,7 @@ export const decompressText = async (value: string): Promise<string> => {
       compressedBuffer = decoded;
     } else {
       // Legacy format: base64 of UTF-8 bytes that encode a latin1 string
-      // The original binary data was stored as latin1 in MySQL utf8mb4 column,
+      // The original binary data was stored as latin1 in a utf8mb4 column,
       // which encoded bytes > 0x7F as UTF-8 multi-byte sequences.
       // TO_BASE64 exported those UTF-8 bytes.
       // We need to: decode base64 -> parse UTF-8 -> interpret char codes as bytes

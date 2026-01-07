@@ -58,23 +58,25 @@ export class DocumentAuthorizationService {
 
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    const manageCreatedDocumentPolicy =
-      this.authorizationPolicyService.createCredentialRule(
-        [
-          AuthorizationPrivilege.CREATE,
-          AuthorizationPrivilege.READ,
-          AuthorizationPrivilege.UPDATE,
-          AuthorizationPrivilege.DELETE,
-        ],
-        [
-          {
-            type: AuthorizationCredential.USER_SELF_MANAGEMENT,
-            resourceID: document.createdBy,
-          },
-        ],
-        CREDENTIAL_RULE_DOCUMENT_CREATED_BY
-      );
-    newRules.push(manageCreatedDocumentPolicy);
+    if (document.createdBy) {
+      const manageCreatedDocumentPolicy =
+        this.authorizationPolicyService.createCredentialRule(
+          [
+            AuthorizationPrivilege.CREATE,
+            AuthorizationPrivilege.READ,
+            AuthorizationPrivilege.UPDATE,
+            AuthorizationPrivilege.DELETE,
+          ],
+          [
+            {
+              type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+              resourceID: document.createdBy,
+            },
+          ],
+          CREDENTIAL_RULE_DOCUMENT_CREATED_BY
+        );
+      newRules.push(manageCreatedDocumentPolicy);
+    }
 
     const updatedAuthorization =
       this.authorizationPolicyService.appendCredentialAuthorizationRules(

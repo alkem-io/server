@@ -157,12 +157,13 @@ fi
 configure_aws_cli "$REGION"
 
 # Determine the S3 bucket and path based on the environment
+# Database-specific backup paths (e.g., storage/postgres/backups/alkemio/)
 if [[ "$ENV" == "prod" ]]; then
     S3_BUCKET="alkemio-s3-backups-prod-paris"
-    S3_PATH="s3://$S3_BUCKET/storage/postgres/backups/"
+    S3_PATH="s3://$S3_BUCKET/storage/postgres/backups/$DATABASE/"
 else
     S3_BUCKET="alkemio-s3-backups-dev"
-    S3_PATH="s3://$S3_BUCKET/storage/postgres/backups/$ENV/"
+    S3_PATH="s3://$S3_BUCKET/storage/postgres/backups/$ENV/$DATABASE/"
 fi
 
 echo "Using S3 bucket: $S3_BUCKET"
