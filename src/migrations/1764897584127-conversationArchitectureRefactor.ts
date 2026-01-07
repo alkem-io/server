@@ -247,22 +247,25 @@ export class ConversationArchitectureRefactor1764897584127
     );
     await queryRunner.query(`
       UPDATE room r
-      SET "vcInteractionsByThread" = (
-        SELECT jsonb_object_agg(
-          vi."threadID",
-          jsonb_build_object(
-            'virtualContributorActorID', a.id,
-            'externalThreadId', CASE
-              WHEN vi."externalMetadata" IS NOT NULL AND vi."externalMetadata"::jsonb->>'threadId' IS NOT NULL
-              THEN vi."externalMetadata"::jsonb->>'threadId'
-              ELSE NULL
-            END
+      SET "vcInteractionsByThread" = COALESCE(
+        (
+          SELECT jsonb_object_agg(
+            vi."threadID",
+            jsonb_build_object(
+              'virtualContributorActorID', a.id,
+              'externalThreadId', CASE
+                WHEN vi."externalMetadata" IS NOT NULL AND vi."externalMetadata"::jsonb->>'threadId' IS NOT NULL
+                THEN vi."externalMetadata"::jsonb->>'threadId'
+                ELSE NULL
+              END
+            )
           )
-        )
-        FROM vc_interaction vi
-        JOIN virtual_contributor vc ON vi."virtualContributorID" = vc.id
-        JOIN agent a ON vc."agentId" = a.id
-        WHERE vi."roomId" = r.id
+          FROM vc_interaction vi
+          JOIN virtual_contributor vc ON vi."virtualContributorID" = vc.id
+          JOIN agent a ON vc."agentId" = a.id
+          WHERE vi."roomId" = r.id
+        ),
+        '{}'::jsonb
       )
       WHERE EXISTS (
         SELECT 1 FROM vc_interaction vi WHERE vi."roomId" = r.id
