@@ -51,6 +51,7 @@ import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { CommunityCommunicationService } from '@domain/community/community-communication/community.communication.service';
 import { LicenseService } from '@domain/common/license/license.service';
+import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
 import { LicenseType } from '@common/enums/license.type';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
@@ -82,6 +83,7 @@ export class RoleSetService {
     private aiServerAdapter: AiServerAdapter,
     private communityCommunicationService: CommunityCommunicationService,
     private licenseService: LicenseService,
+    private inAppNotificationService: InAppNotificationService,
     @InjectRepository(RoleSet)
     private roleSetRepository: Repository<RoleSet>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -1108,6 +1110,16 @@ export class RoleSetService {
             communication,
             user
           );
+
+          // Clean up notifications for this user in this space
+          const space =
+            await this.communityResolverService.getSpaceForRoleSetOrFail(
+              roleSet.id
+            );
+          await this.inAppNotificationService.deleteAllForReceiverInSpace(
+            userID,
+            space.id
+          );
         }
         break;
       }
@@ -1116,6 +1128,22 @@ export class RoleSetService {
           await this.removeContributorFromAccountAdminImplicitRole(
             roleSet,
             agent
+          );
+        }
+
+        // Clean up notifications for this user in this organization
+        if (
+          roleType === RoleName.MEMBER ||
+          roleType === RoleName.ADMIN ||
+          roleType === RoleName.OWNER
+        ) {
+          const adminCredential = await this.getCredentialDefinitionForRole(
+            roleSet,
+            RoleName.ADMIN
+          );
+          await this.inAppNotificationService.deleteAllForReceiverInOrganization(
+            userID,
+            adminCredential.resourceID
           );
         }
         break;
@@ -1149,6 +1177,18 @@ export class RoleSetService {
       validatePolicyLimits
     );
 
+    // Clean up notifications for this organization when removed from space
+    if (roleSet.type === RoleSetType.SPACE && roleType === RoleName.MEMBER) {
+      const space =
+        await this.communityResolverService.getSpaceForRoleSetOrFail(
+          roleSet.id
+        );
+      await this.inAppNotificationService.deleteAllForContributorOrganizationInSpace(
+        organizationID,
+        space.id
+      );
+    }
+
     return organization;
   }
 
@@ -1170,6 +1210,18 @@ export class RoleSetService {
       RoleSetContributorType.VIRTUAL,
       validatePolicyLimits
     );
+
+    // Clean up notifications for this VC when removed from space
+    if (roleSet.type === RoleSetType.SPACE && roleType === RoleName.MEMBER) {
+      const space =
+        await this.communityResolverService.getSpaceForRoleSetOrFail(
+          roleSet.id
+        );
+      await this.inAppNotificationService.deleteAllForContributorVcInSpace(
+        virtualContributorID,
+        space.id
+      );
+    }
 
     return virtualContributor;
   }

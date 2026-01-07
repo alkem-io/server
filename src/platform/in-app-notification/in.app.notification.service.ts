@@ -304,6 +304,46 @@ export class InAppNotificationService {
     await this.inAppNotificationRepo.delete({ messageID });
   }
 
+  public async deleteAllForReceiverInSpace(
+    receiverID: string,
+    spaceID: string
+  ): Promise<void> {
+    await this.inAppNotificationRepo.delete({
+      receiverID,
+      spaceID,
+    });
+  }
+
+  public async deleteAllForReceiverInOrganization(
+    receiverID: string,
+    organizationID: string
+  ): Promise<void> {
+    await this.inAppNotificationRepo.delete({
+      receiverID,
+      organizationID,
+    });
+  }
+
+  public async deleteAllForContributorVcInSpace(
+    contributorVcID: string,
+    spaceID: string
+  ): Promise<void> {
+    await this.inAppNotificationRepo.delete({
+      contributorVcID,
+      spaceID,
+    });
+  }
+
+  public async deleteAllForContributorOrganizationInSpace(
+    contributorOrganizationID: string,
+    spaceID: string
+  ): Promise<void> {
+    await this.inAppNotificationRepo.delete({
+      contributorOrganizationID,
+      spaceID,
+    });
+  }
+
   /**
    * Extracts core entity IDs from the notification event for FK population.
    * Only core entities (whose deletion should cascade delete the notification) are extracted.
