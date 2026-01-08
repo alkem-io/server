@@ -153,6 +153,12 @@ import { AuthRemoteEvaluationModule } from '@services/external/auth-remote-evalu
           password: dbOptions.password,
           database: dbOptions.database,
           logging: dbOptions.logging,
+          // Connection pool settings for PostgreSQL
+          extra: {
+            max: dbOptions.pool?.max ?? 50,
+            idleTimeoutMillis: dbOptions.pool?.idle_timeout_ms ?? 30000,
+            connectionTimeoutMillis: dbOptions.pool?.connection_timeout_ms ?? 10000,
+          },
         };
       },
     }),
