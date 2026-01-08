@@ -246,20 +246,30 @@ export class SpaceLookupService {
   }
 
   /**
-   * Recursively gets all descendant space IDs for a given space.
+   * Gets all descendant space IDs for a given space.
    * This includes direct subspaces (L1) and their subspaces (L2), etc.
    * Uses Set for deduplication and includes safety guards against circular references.
    * @param spaceID The parent space ID
-   * @param visited Set of already visited space IDs to prevent circular references
-   * @param maxDepth Maximum recursion depth (default 10 to prevent stack overflow)
-   * @param currentDepth Current recursion depth
    * @returns Array of all descendant space IDs
    */
-  async getAllDescendantSpaceIDs(
+  async getAllDescendantSpaceIDs(spaceID: string): Promise<string[]> {
+    return this.getAllDescendantSpaceIDsRecursive(spaceID, new Set(), 10, 0);
+  }
+
+  /**
+   * Private recursive implementation for getting descendant space IDs.
+   * Internal parameters are hidden from public API to prevent bypassing safety mechanisms.
+   * @param spaceID The current space ID to process
+   * @param visited Set of already visited space IDs to prevent circular references
+   * @param maxDepth Maximum recursion depth (10 to prevent stack overflow)
+   * @param currentDepth Current recursion depth
+   * @returns Array of descendant space IDs from this branch
+   */
+  private async getAllDescendantSpaceIDsRecursive(
     spaceID: string,
-    visited: Set<string> = new Set(),
-    maxDepth: number = 10,
-    currentDepth: number = 0
+    visited: Set<string>,
+    maxDepth: number,
+    currentDepth: number
   ): Promise<string[]> {
     // Safety guard: prevent infinite recursion
     if (currentDepth >= maxDepth) {
@@ -299,7 +309,7 @@ export class SpaceLookupService {
       descendantIDs.add(subspace.id);
 
       // Recursively get subspaces of this subspace
-      const childDescendants = await this.getAllDescendantSpaceIDs(
+      const childDescendants = await this.getAllDescendantSpaceIDsRecursive(
         subspace.id,
         visited,
         maxDepth,
