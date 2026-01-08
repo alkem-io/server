@@ -38,10 +38,10 @@
 
 ### Tasks
 
-- [ ] T001 Add defaultCalloutTemplate relation to InnovationFlowState entity in src/domain/collaboration/innovation-flow-state/innovation.flow.state.entity.ts
-- [ ] T002 [P] Generate database migration using pnpm run migration:generate -n AddDefaultCalloutTemplateToFlowState
-- [ ] T003 Review and modify migration to add idempotent SQL (IF NOT EXISTS clauses) in src/migrations/[timestamp]-AddDefaultCalloutTemplateToFlowState.ts
-- [ ] T004 Test migration locally: run pnpm run migration:run and verify column exists, then test rollback with pnpm run migration:revert
+- [x] T001 Add defaultCalloutTemplate relation to InnovationFlowState entity in src/domain/collaboration/innovation-flow-state/innovation.flow.state.entity.ts
+- [x] T002 [P] Generate database migration using pnpm run migration:generate -n AddDefaultCalloutTemplateToFlowState
+- [x] T003 Review and modify migration to add idempotent SQL (IF NOT EXISTS clauses) in src/migrations/[timestamp]-AddDefaultCalloutTemplateToFlowState.ts
+- [x] T004 Test migration locally: run pnpm run migration:run and verify column exists, then test rollback with pnpm run migration:revert
 
 ---
 
@@ -51,8 +51,8 @@
 
 ### Tasks
 
-- [ ] T005 Add TemplateService dependency injection to InnovationFlowStateService in src/domain/collaboration/innovation-flow-state/innovation.flow.state.service.ts
-- [ ] T006 Add template type validation (must be CALLOUT) in InnovationFlowStateService at src/domain/collaboration/innovation-flow-state/innovation.flow.state.service.ts
+- [x] T005 Add TemplateService dependency injection to InnovationFlowStateService in src/domain/collaboration/innovation-flow-state/innovation.flow.state.service.ts
+- [x] T006 Add template type validation (must be CALLOUT) in InnovationFlowStateService at src/domain/collaboration/innovation-flow-state/innovation.flow.state.service.ts
 
 ---
 
@@ -92,11 +92,11 @@ mutation TestSetTemplate {
 
 ### Tasks
 
-- [ ] T007 [US1] Implement setDefaultCalloutTemplate method in InnovationFlowStateService at src/domain/collaboration/innovation-flow-state/innovation.flow.state.service.ts
-- [ ] T008 [P] [US1] Create SetDefaultCalloutTemplateOnInnovationFlowStateInput DTO in src/domain/collaboration/innovation-flow/dto/innovation.flow.dto.set.default.callout.template.ts
-- [ ] T009 [US1] Add setDefaultCalloutTemplateOnInnovationFlowState mutation resolver in src/domain/collaboration/innovation-flow/innovation.flow.resolver.mutations.ts
-- [ ] T010 [US1] Add authorization check (UPDATE_INNOVATION_FLOW privilege) in mutation resolver at src/domain/collaboration/innovation-flow/innovation.flow.resolver.mutations.ts
-- [ ] T011 [US1] Add structured logging (verbose on success, warning on validation error) in InnovationFlowStateService.setDefaultCalloutTemplate
+- [x] T007 [US1] Implement setDefaultCalloutTemplate method in InnovationFlowStateService at src/domain/collaboration/innovation-flow-state/innovation.flow.state.service.ts
+- [x] T008 [P] [US1] Create SetDefaultCalloutTemplateOnInnovationFlowStateInput DTO in src/domain/collaboration/innovation-flow/dto/innovation.flow.dto.set.default.callout.template.ts
+- [x] T009 [US1] Add setDefaultCalloutTemplateOnInnovationFlowState mutation resolver in src/domain/collaboration/innovation-flow/innovation.flow.resolver.mutations.ts
+- [x] T010 [US1] Add authorization check (UPDATE_INNOVATION_FLOW privilege) in mutation resolver at src/domain/collaboration/innovation-flow/innovation.flow.resolver.mutations.ts
+- [x] T011 [US1] Add structured logging (verbose on success, warning on validation error) in InnovationFlowStateService.setDefaultCalloutTemplate
 - [ ] T012 [US1] Write unit test for setDefaultCalloutTemplate with valid CALLOUT template in src/domain/collaboration/innovation-flow-state/innovation.flow.state.service.spec.ts
 - [ ] T013 [US1] Write unit test for setDefaultCalloutTemplate rejecting non-CALLOUT template in src/domain/collaboration/innovation-flow-state/innovation.flow.state.service.spec.ts
 
@@ -133,10 +133,10 @@ mutation TestRemoveTemplate {
 
 ### Tasks
 
-- [ ] T014 [US2] Implement removeDefaultCalloutTemplate method in InnovationFlowStateService at src/domain/collaboration/innovation-flow-state/innovation.flow.state.service.ts
-- [ ] T015 [P] [US2] Create RemoveDefaultCalloutTemplateOnInnovationFlowStateInput DTO in src/domain/collaboration/innovation-flow/dto/innovation.flow.dto.remove.default.callout.template.ts
-- [ ] T016 [US2] Add removeDefaultCalloutTemplateOnInnovationFlowState mutation resolver in src/domain/collaboration/innovation-flow/innovation.flow.resolver.mutations.ts
-- [ ] T017 [US2] Add authorization check (UPDATE_INNOVATION_FLOW privilege) in remove mutation resolver at src/domain/collaboration/innovation-flow/innovation.flow.resolver.mutations.ts
+- [x] T014 [US2] Implement removeDefaultCalloutTemplate method in InnovationFlowStateService at src/domain/collaboration/innovation-flow-state/innovation.flow.state.service.ts
+- [x] T015 [P] [US2] Create RemoveDefaultCalloutTemplateOnInnovationFlowStateInput DTO in src/domain/collaboration/innovation-flow/dto/innovation.flow.dto.remove.default.callout.template.ts
+- [x] T016 [US2] Add removeDefaultCalloutTemplateOnInnovationFlowState mutation resolver in src/domain/collaboration/innovation-flow/innovation.flow.resolver.mutations.ts
+- [x] T017 [US2] Add authorization check (UPDATE_INNOVATION_FLOW privilege) in remove mutation resolver at src/domain/collaboration/innovation-flow/innovation.flow.resolver.mutations.ts
 - [ ] T018 [US2] Write unit test for removeDefaultCalloutTemplate in src/domain/collaboration/innovation-flow-state/innovation.flow.state.service.spec.ts
 
 ---
@@ -182,8 +182,8 @@ query TestQueryTemplate($spaceID: UUID!) {
 
 ### Tasks
 
-- [ ] T019 [P] [US3] Verify InnovationFlowState GraphQL type auto-generates defaultCalloutTemplate field from entity decorator (no code needed, just verification)
-- [ ] T020 [P] [US3] Create example GraphQL queries showing frontend integration in specs/019-default-post-template-flow/contracts/example-queries.graphql
+- [x] T019 [P] [US3] Verify InnovationFlowState GraphQL type auto-generates defaultCalloutTemplate field from entity decorator (no code needed, just verification)
+- [x] T020 [P] [US3] Create example GraphQL queries showing frontend integration in specs/019-default-post-template-flow/contracts/example-queries.graphql
 
 ---
 
@@ -193,7 +193,7 @@ query TestQueryTemplate($spaceID: UUID!) {
 
 ### Tasks
 
-- [ ] T021 Generate and validate GraphQL schema changes: run pnpm run schema:print && pnpm run schema:sort && pnpm run schema:diff
+- [x] T021 Generate and validate GraphQL schema changes: run pnpm run schema:print && pnpm run schema:sort && pnpm run schema:diff
 
 ---
 
