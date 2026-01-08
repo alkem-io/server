@@ -26,6 +26,7 @@ import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type
 import { ConfigService } from '@nestjs/config';
 import { AlkemioConfig } from '@src/types';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
+import { PolicyInvalidationPublisher } from '@services/external/policy-invalidation';
 
 @Injectable()
 export class AuthorizationPolicyService {
@@ -36,7 +37,8 @@ export class AuthorizationPolicyService {
     private authorizationService: AuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private readonly configService: ConfigService<AlkemioConfig, true>
+    private readonly configService: ConfigService<AlkemioConfig, true>,
+    private readonly policyInvalidationPublisher: PolicyInvalidationPublisher
   ) {
     this.authChunkSize = this.configService.get('authorization.chunk', {
       infer: true,
@@ -188,7 +190,13 @@ export class AuthorizationPolicyService {
   async save(
     authorizationPolicy: IAuthorizationPolicy
   ): Promise<IAuthorizationPolicy> {
-    return this.authorizationPolicyRepository.save(authorizationPolicy);
+    const saved = await this.authorizationPolicyRepository.save(
+      authorizationPolicy as AuthorizationPolicy
+    );
+
+    this.policyInvalidationPublisher.publishPolicyInvalidations([saved.id]);
+
+    return saved;
   }
 
   async saveAll(authorizationPolicies: IAuthorizationPolicy[]): Promise<void> {
@@ -207,6 +215,12 @@ export class AuthorizationPolicyService {
     await this.authorizationPolicyRepository.save(authorizationPolicies, {
       chunk: this.authChunkSize,
     });
+
+    const policyIds = authorizationPolicies
+      .map(p => p?.id)
+      .filter((id): id is string => Boolean(id));
+
+    this.policyInvalidationPublisher.publishPolicyInvalidations(policyIds);
   }
 
   cloneAuthorizationPolicy(

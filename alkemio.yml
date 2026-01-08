@@ -380,7 +380,10 @@ microservices:
   nats:
     # NATS server URL(s) for client connections
     server_url: ${NATS_SERVER_URL}:nats://localhost:4222
-
+  # Policy invalidation messaging configuration (remote authz evaluation)
+  policy_invalidation:
+    # NATS subject to publish policy invalidation messages to
+    subject: ${POLICY_INVALIDATION_SUBJECT}:alkemio.policy.invalidate
   # Auth evaluation service configuration for remote authorization checks
   auth_evaluation:
     # Name of the NATS queue for sending auth evaluation requests

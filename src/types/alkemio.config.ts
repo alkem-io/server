@@ -185,6 +185,11 @@ export type AlkemioConfig = {
       /** NATS server URL(s) for client connections */
       server_url: string;
     };
+    /** Policy invalidation messaging configuration (remote authz evaluation) */
+    policy_invalidation: {
+      /** NATS subject to publish policy invalidation messages to */
+      subject: string;
+    };
     /** Auth evaluation service configuration for remote authorization checks */
     auth_evaluation: {
       /** Name of the NATS queue for sending auth evaluation requests */

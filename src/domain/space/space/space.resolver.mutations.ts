@@ -41,7 +41,7 @@ export class SpaceResolverMutations {
   @Mutation(() => String)
   async remoteTest(@CurrentUser() agentInfo: AgentInfo): Promise<string> {
     const space = await this.spaceService.getSpaceOrFail(
-      '2a9d266c-acc5-4ea8-823e-f396b2be9524'
+      'a5d2357c-9295-4ea9-8c4c-ae262bb15e11'
     );
 
     const result =
