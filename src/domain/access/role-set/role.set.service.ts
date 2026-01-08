@@ -1144,12 +1144,9 @@ export class RoleSetService {
           );
         }
 
-        // Clean up notifications for this user in this organization
-        if (
-          roleType === RoleName.MEMBER ||
-          roleType === RoleName.ADMIN ||
-          roleType === RoleName.OWNER
-        ) {
+        // Clean up notifications only when user is completely removed (MEMBER role)
+        // If only ADMIN or OWNER is removed, user still has access as MEMBER
+        if (roleType === RoleName.MEMBER) {
           const adminCredential = await this.getCredentialDefinitionForRole(
             roleSet,
             RoleName.ADMIN
