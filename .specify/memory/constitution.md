@@ -1,105 +1,73 @@
-<!-- Implements constitution & agents.md. Does not introduce new governance. -->
+# [PROJECT_NAME] Constitution
 
-<!--
-Sync Impact Report
-Version change: 1.0.0 → 2.0.0 (re-balanced observability + testing principles)
-Modified principles: 5. Observability & Operational Readiness (clarified signal expectations), 6. Code Quality with Pragmatic Testing (risk-based guidance)
-Added sections: (none)
-Removed sections: (none)
-Templates requiring updates:
- - .specify/templates/plan-template.md (Constitution Check alignment) ✅
- - .specify/templates/tasks-template.md (testing guidance note) ✅
- - .specify/templates/spec-template.md (no changes required) ✅
-Deferred TODOs: None
--->
-
-# Alkemio Server Engineering Constitution
-
-See also [`agents.md`](../../agents.md) and [`copilot-instructions.md`](../../.github/copilot-instructions.md) for operational guidance derived from this document.
+<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
 
 ## Core Principles
 
-### 1. Domain-Centric Design First
+### [PRINCIPLE_1_NAME]
 
-All core business logic MUST reside in clearly defined domain modules (under `src/domain`). Application services orchestrate domain objects; they MUST NOT embed business rules. Entities, value objects, aggregates, events, and repositories follow explicit contracts. Cross-domain coupling MUST occur only through published domain events or anti-corruption layers. Any PR introducing logic in controllers or resolvers that belongs to the domain MUST refactor before merge.
+<!-- Example: I. Library-First -->
 
-### 2. Modular NestJS Boundaries
+[PRINCIPLE_1_DESCRIPTION]
 
-Each feature set MUST map to a NestJS module with a single, testable purpose. Modules expose only necessary providers; internal helpers remain private. Circular dependencies are forbidden—violations require redesign. Shared utilities live in `src/library` (pure, side‑effect free),`src/common` (infrastructure + cross-cutting concerns) or `src/core` (core application flows like authentication, authorization, middlewares, pagination, filtering, exception handling). Adding a new module requires: purpose statement, public providers list, and dependency justification.
+<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
 
-### 3. GraphQL Schema as Stable Contract
+### [PRINCIPLE_2_NAME]
 
-The GraphQL schema is a public contract. Breaking field removals or type changes REQUIRE deprecation (mark with `@deprecated` and a removal date) and MINOR or MAJOR version review. All mutations MUST validate inputs at DTO layer and surface typed domain errors mapped to GraphQL error codes. Pagination follows the documented pattern (cursor or offset as per `docs/Pagination.md`). No resolver may perform ad-hoc data shaping already represented in the domain model.
+<!-- Example: II. CLI Interface -->
 
-### 4. Explicit Data & Event Flow
+[PRINCIPLE_2_DESCRIPTION]
 
-State changes MUST propagate through domain services emitting events (synchronous in-process or queued for async delivery). Side effects (notifications, indexing, metrics) subscribe to those events—never embedded inline with core logic. Direct repository calls from controllers/resolvers are forbidden. Every write path MUST have: validation → authorization → domain operation → event emission → persistence.
+<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
 
-### 5. Observability & Operational Readiness
+### [PRINCIPLE_3_NAME]
 
-Every new module MUST define structured log contexts and describe the operational signals we actively consume. Instrument only what our observability stack ingests today—do not add orphaned Prometheus metrics or unused dashboards. Health indicators are required only when the module exposes an externally consumed surface; otherwise document why a lightweight runtime check or log hook suffices. Logs use contextual IDs (request, correlation, entity). Silent failure paths are forbidden. Feature flags and license checks MUST log decision points at debug level. Performance-sensitive queries require an inline comment explaining the chosen optimization.
+<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
 
-Exception messages are immutable identifiers: never interpolate dynamic data directly into the `message`. Place contextual variables into the exception `details` payload so they remain queryable without leaking runtime specifics into user-facing strings.
+[PRINCIPLE_3_DESCRIPTION]
 
-### 6. Code Quality with Pragmatic Testing
+<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
 
-Tests exist to defend domain invariants and observable behaviors that matter. Use a risk-based approach: add unit or integration tests when they deliver real signal, skip trivial pass-through coverage, and call out deliberate omissions in the PR when automation is unnecessary. Snapshot or superficial tests are discouraged unless asserting schema output. 100% coverage is NOT required; tests MUST stay maintainable and purposeful. Placeholder or “future we’ll fix it” tests are forbidden.
+### [PRINCIPLE_4_NAME]
 
-### 7. API Consistency & Evolution Discipline
+<!-- Example: IV. Integration Testing -->
 
-Naming conventions: mutations = imperative (`createSpace`), queries = descriptive (`spaceById`), inputs end with `Input`, payload types end with `Result` or domain entity name. Errors map to a constrained set of codes. Pagination and filtering semantics MUST reuse shared input types where feasible. Changes to shared enums or scalar behaviors REQUIRE impact note in PR description.
+[PRINCIPLE_4_DESCRIPTION]
 
-### 8. Secure-by-Design Integration
+<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
 
-All externally sourced input (GraphQL args, headers, file uploads) MUST traverse centralized validation & authorization layers. Secrets and credentials never logged. License and entitlement checks occur before executing mutations that create or expand paid resources. Any new external service integration MUST include timeout, retry policy, and circuit-breaker rationale.
+### [PRINCIPLE_5_NAME]
 
-### 9. Container & Deployment Determinism
+<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
 
-Container images MUST be reproducible: explicit base image tags, no implicit latest pulls at runtime. Build outputs are immutable (no writes to application layer after start). Environment-dependent toggles are provided via config service; dynamic logic may NOT read from process.env directly outside configuration bootstrap. Runtime feature changes rely on database/config services—not redeploys.
+[PRINCIPLE_5_DESCRIPTION]
 
-### 10. Simplicity & Incremental Hardening
+<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
 
-Prefer the simplest viable implementation that satisfies domain constraints. Architectural escalation (caching layers, CQRS, custom infra) requires a written rationale referencing observed constraints—not speculative scale. Remove obsolete code paths within one MINOR release after deprecation window passes.
+## [SECTION_2_NAME]
 
-## Architecture Standards
+<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
 
-1. Directory Layout:
-   - `src/domain/*`: pure domain logic & repositories
-   - `src/services/*`: application service orchestration & API layer helpers
-   - `src/platform/*` & `src/platform-admin/*`: platform-scoped modules
-   - `src/common/*`: cross-cutting, lacking depth (exceptions, utils, constants, enums)
-   - `src/core/*`: core, cross-cutting, abstractions (auth, error-handling, microservices, pagination, filtering)
-   - `src/library/*`: isolated reusable utilities (no Nest DI reliance)
-2. GraphQL schema generation MUST be deterministic and committed when changed. The committed `schema-baseline.graphql` artifact is maintained by the post-merge `schema-baseline` automation, which raises a signed pull request when differences are detected; manual edits require documented rationale and a follow-up automation run.
-3. Migrations MUST be idempotent and tested on a snapshot before prod promotion.
-4. Feature flags & licensing decisions centralize in dedicated services—not scattered conditionals.
-5. Storage aggregators & external service clients implement narrow interfaces consumed by domain services.
+[SECTION_2_CONTENT]
 
-## Engineering Workflow
+<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
 
-1. PRs MUST state: domain impact, schema changes (if any), migration presence, deprecation notices.
-2. Every schema-affecting PR MUST regenerate and diff the schema artifact.
-3. New domain aggregate: provide invariants list & persistence mapping notes.
-4. Rollbacks: any migration altering data shape requires reverse strategy documented inline.
-5. Incident learnings → create or refine a principle or add an Architecture Standard line within 5 business days.
+## [SECTION_3_NAME]
+
+<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+
+[SECTION_3_CONTENT]
+
+<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
 
 ## Governance
 
-Amendments require: proposal PR referencing impacted principles, rationale, and version bump classification. Semantic versioning of this constitution:
+<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-- MAJOR: Removal or redefinition of a principle.
-- MINOR: Addition of a new principle or architecture standard.
-- PATCH: Clarifications without behavioral change.
+[GOVERNANCE_RULES]
 
-Compliance Review:
+<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
 
-- Constitution Check section in planning MUST reference any intentional deviations.
-- Unjustified violations block merge.
-- Deprecated items tracked until removal executed.
+**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
 
-Enforcement:
-
-- Automated lint / CI may enforce schema stability, module boundaries, and logging context presence.
-- Manual review ensures domain purity & testing adequacy.
-
-**Version**: 2.0.0 | **Ratified**: 2025-10-04 | **Last Amended**: 2025-11-11
+<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
