@@ -4264,8 +4264,8 @@ type Mutation {
   Create a new Document on the Storage and return the value as part of the returned Reference.
   """
   uploadFileOnReference(file: Upload!, uploadData: StorageBucketUploadFileOnReferenceInput!): Reference!
-  """Create a new Document on the Storage and return the public Url."""
-  uploadFileOnStorageBucket(file: Upload!, uploadData: StorageBucketUploadFileInput!): String!
+  """Create a new Document on the Storage and return the ID and public URL."""
+  uploadFileOnStorageBucket(file: Upload!, uploadData: StorageBucketUploadFileInput!): StorageBucketUploadFileResult!
   """Uploads and sets an image for the specified Visual."""
   uploadImageOnVisual(file: Upload!, uploadData: VisualUploadImageInput!): Visual!
 }
@@ -6241,6 +6241,13 @@ input StorageBucketUploadFileOnReferenceInput {
   referenceID: String!
 }
 
+type StorageBucketUploadFileResult {
+  """The ID of the uploaded Document."""
+  id: UUID!
+  """The publicly accessible URL for the uploaded file."""
+  url: String!
+}
+
 type StorageConfig {
   """Config for uploading files to Alkemio."""
   file: FileStorageConfig!
@@ -7398,6 +7405,18 @@ input UpdateWhiteboardPreviewSettingsInput {
 """The `Upload` scalar type represents a file upload."""
 scalar Upload
 
+type UrlResolverQueryClosestAncestor {
+  discussionId: UUID
+  innovationHubId: UUID
+  innovationPack: UrlResolverQueryResultInnovationPack
+  organizationId: UUID
+  space: UrlResolverQueryResultSpace
+  type: UrlType!
+  url: String!
+  userId: UUID
+  virtualContributor: UrlResolverQueryResultVirtualContributor
+}
+
 type UrlResolverQueryResultCalendar {
   calendarEventId: UUID
   id: UUID!
@@ -7444,14 +7463,22 @@ type UrlResolverQueryResultVirtualContributor {
 }
 
 type UrlResolverQueryResults {
+  closestAncestor: UrlResolverQueryClosestAncestor
   discussionId: UUID
   innovationHubId: UUID
   innovationPack: UrlResolverQueryResultInnovationPack
   organizationId: UUID
   space: UrlResolverQueryResultSpace
+  state: UrlResolverResultState!
   type: UrlType!
   userId: UUID
   virtualContributor: UrlResolverQueryResultVirtualContributor
+}
+
+enum UrlResolverResultState {
+  Forbidden
+  NotFound
+  Resolved
 }
 
 enum UrlType {

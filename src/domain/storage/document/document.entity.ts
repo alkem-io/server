@@ -23,7 +23,7 @@ export class Document extends AuthorizableEntity implements IDocument {
   // })
   // @JoinColumn()
   @Column('uuid', { nullable: true })
-  createdBy!: string;
+  createdBy?: string;
 
   @ManyToOne(() => StorageBucket, storage => storage.documents, {
     eager: false,

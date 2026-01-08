@@ -310,23 +310,17 @@ storage:
     # 20MB
     max_file_size: ${STORAGE_MAX_FILE_SIZE}:20971520
   # Database configuration for usage by the Alkemio Server.
-  # Supports both Postgres (default) and MySQL (legacy).
+  # Uses PostgreSQL as the database backend.
   # Note: both schema / database name are used for configuration and they need to have the same value.
   database:
-    # Database type: 'postgres' or 'mysql'. Default is postgres.
-    type: ${DATABASE_TYPE}:postgres
-
     # Database host.
     host: ${DATABASE_HOST}:localhost
 
-    # Database daemon port. Default is 5432 for Postgres, 3306 for MySQL.
+    # Database daemon port.
     port: ${DATABASE_PORT}:5432
 
     # Database username.
     username: ${DATABASE_USERNAME}:synapse
-
-    # The timezone in which typeorm will interpret the dates. Default is Z for UTC (MySQL only)
-    timezone: ${TYPEORM_TIMEZONE}:Z
 
     # Database password.
     password: ${DATABASE_PASSWORD}:synapse
@@ -336,9 +330,6 @@ storage:
 
     # Database schema / database name.
     database: ${DATABASE_NAME}:alkemio
-
-    # Character set (MySQL only)
-    charset: ${MYSQL_CHARSET}:utf8mb4
 
     # Flag setting whether database operations should be logged to the console.
     logging: ${ENABLE_ORM_LOGGING}:false

@@ -141,9 +141,9 @@ import { AuthRemoteEvaluationModule } from '@services/external/auth-remote-evalu
         const dbOptions = configService.get('storage.database', {
           infer: true,
         });
-        const dbType = dbOptions.type || 'postgres';
 
-        const commonConfig = {
+        return {
+          type: 'postgres' as const,
           synchronize: false,
           cache: true,
           entities: [join(__dirname, '**', '*.entity.{ts,js}')],
@@ -154,21 +154,6 @@ import { AuthRemoteEvaluationModule } from '@services/external/auth-remote-evalu
           database: dbOptions.database,
           logging: dbOptions.logging,
         };
-
-        if (dbType === 'postgres') {
-          return {
-            ...commonConfig,
-            type: 'postgres' as const,
-          };
-        } else {
-          return {
-            ...commonConfig,
-            type: 'mysql' as const,
-            insecureAuth: true,
-            timezone: dbOptions.timezone,
-            charset: dbOptions.charset,
-          };
-        }
       },
     }),
     WinstonModule.forRootAsync({

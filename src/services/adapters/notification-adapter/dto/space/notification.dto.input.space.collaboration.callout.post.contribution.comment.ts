@@ -12,4 +12,5 @@ export interface NotificationInputCollaborationCalloutPostContributionComment
   contribution: ICalloutContribution;
   room: IRoom;
   commentSent: IMessage;
+  mentionedUserIDs?: string[];
 }
