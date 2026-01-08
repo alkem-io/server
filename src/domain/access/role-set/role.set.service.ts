@@ -1111,15 +1111,28 @@ export class RoleSetService {
             user
           );
 
-          // Clean up notifications for this user in this space
+          // Clean up notifications for this user in this space and all descendant spaces (L1, L2, etc.)
           const space =
             await this.communityResolverService.getSpaceForRoleSetOrFail(
               roleSet.id
             );
+
+          // Delete notifications from the current space
           await this.inAppNotificationService.deleteAllForReceiverInSpace(
             userID,
             space.id
           );
+
+          // Also delete notifications from all descendant spaces (L1, L2, etc.)
+          // since user is automatically removed from those as well
+          const descendantSpaceIDs =
+            await this.spaceLookupService.getAllDescendantSpaceIDs(space.id);
+          if (descendantSpaceIDs.length > 0) {
+            await this.inAppNotificationService.deleteAllForReceiverInSpaces(
+              userID,
+              descendantSpaceIDs
+            );
+          }
         }
         break;
       }
@@ -1177,16 +1190,28 @@ export class RoleSetService {
       validatePolicyLimits
     );
 
-    // Clean up notifications for this organization when removed from space
+    // Clean up notifications for this organization when removed from space and all descendant spaces
     if (roleSet.type === RoleSetType.SPACE && roleType === RoleName.MEMBER) {
       const space =
         await this.communityResolverService.getSpaceForRoleSetOrFail(
           roleSet.id
         );
+
+      // Delete notifications from the current space
       await this.inAppNotificationService.deleteAllForContributorOrganizationInSpace(
         organizationID,
         space.id
       );
+
+      // Also delete notifications from all descendant spaces (L1, L2, etc.)
+      const descendantSpaceIDs =
+        await this.spaceLookupService.getAllDescendantSpaceIDs(space.id);
+      if (descendantSpaceIDs.length > 0) {
+        await this.inAppNotificationService.deleteAllForContributorOrganizationInSpaces(
+          organizationID,
+          descendantSpaceIDs
+        );
+      }
     }
 
     return organization;
@@ -1211,16 +1236,28 @@ export class RoleSetService {
       validatePolicyLimits
     );
 
-    // Clean up notifications for this VC when removed from space
+    // Clean up notifications for this VC when removed from space and all descendant spaces
     if (roleSet.type === RoleSetType.SPACE && roleType === RoleName.MEMBER) {
       const space =
         await this.communityResolverService.getSpaceForRoleSetOrFail(
           roleSet.id
         );
+
+      // Delete notifications from the current space
       await this.inAppNotificationService.deleteAllForContributorVcInSpace(
         virtualContributorID,
         space.id
       );
+
+      // Also delete notifications from all descendant spaces (L1, L2, etc.)
+      const descendantSpaceIDs =
+        await this.spaceLookupService.getAllDescendantSpaceIDs(space.id);
+      if (descendantSpaceIDs.length > 0) {
+        await this.inAppNotificationService.deleteAllForContributorVcInSpaces(
+          virtualContributorID,
+          descendantSpaceIDs
+        );
+      }
     }
 
     return virtualContributor;

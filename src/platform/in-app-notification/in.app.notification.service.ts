@@ -314,6 +314,27 @@ export class InAppNotificationService {
     });
   }
 
+  /**
+   * Deletes all notifications for a receiver in multiple spaces.
+   * This is used when a user is removed from a parent space to clean up
+   * notifications from all child spaces (L1, L2, etc.).
+   * @param receiverID The user ID
+   * @param spaceIDs Array of space IDs
+   */
+  public async deleteAllForReceiverInSpaces(
+    receiverID: string,
+    spaceIDs: string[]
+  ): Promise<void> {
+    if (spaceIDs.length === 0) {
+      return;
+    }
+
+    await this.inAppNotificationRepo.delete({
+      receiverID,
+      spaceID: In(spaceIDs),
+    });
+  }
+
   public async deleteAllForReceiverInOrganization(
     receiverID: string,
     organizationID: string
@@ -334,6 +355,27 @@ export class InAppNotificationService {
     });
   }
 
+  /**
+   * Deletes all notifications for a Virtual Contributor in multiple spaces.
+   * This is used when a VC is removed from a parent space to clean up
+   * notifications from all child spaces (L1, L2, etc.).
+   * @param contributorVcID The Virtual Contributor ID
+   * @param spaceIDs Array of space IDs
+   */
+  public async deleteAllForContributorVcInSpaces(
+    contributorVcID: string,
+    spaceIDs: string[]
+  ): Promise<void> {
+    if (spaceIDs.length === 0) {
+      return;
+    }
+
+    await this.inAppNotificationRepo.delete({
+      contributorVcID,
+      spaceID: In(spaceIDs),
+    });
+  }
+
   public async deleteAllForContributorOrganizationInSpace(
     contributorOrganizationID: string,
     spaceID: string
@@ -341,6 +383,27 @@ export class InAppNotificationService {
     await this.inAppNotificationRepo.delete({
       contributorOrganizationID,
       spaceID,
+    });
+  }
+
+  /**
+   * Deletes all notifications for an Organization in multiple spaces.
+   * This is used when an Organization is removed from a parent space to clean up
+   * notifications from all child spaces (L1, L2, etc.).
+   * @param contributorOrganizationID The Organization ID
+   * @param spaceIDs Array of space IDs
+   */
+  public async deleteAllForContributorOrganizationInSpaces(
+    contributorOrganizationID: string,
+    spaceIDs: string[]
+  ): Promise<void> {
+    if (spaceIDs.length === 0) {
+      return;
+    }
+
+    await this.inAppNotificationRepo.delete({
+      contributorOrganizationID,
+      spaceID: In(spaceIDs),
     });
   }
 

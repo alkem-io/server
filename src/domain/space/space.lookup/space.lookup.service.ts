@@ -244,4 +244,70 @@ export class SpaceLookupService {
     }
     return await this.accountLookupService.getHost(l0Space.account);
   }
+
+  /**
+   * Recursively gets all descendant space IDs for a given space.
+   * This includes direct subspaces (L1) and their subspaces (L2), etc.
+   * Uses Set for deduplication and includes safety guards against circular references.
+   * @param spaceID The parent space ID
+   * @param visited Set of already visited space IDs to prevent circular references
+   * @param maxDepth Maximum recursion depth (default 10 to prevent stack overflow)
+   * @param currentDepth Current recursion depth
+   * @returns Array of all descendant space IDs
+   */
+  async getAllDescendantSpaceIDs(
+    spaceID: string,
+    visited: Set<string> = new Set(),
+    maxDepth: number = 10,
+    currentDepth: number = 0
+  ): Promise<string[]> {
+    // Safety guard: prevent infinite recursion
+    if (currentDepth >= maxDepth) {
+      this.logger.warn(
+        `Max recursion depth (${maxDepth}) reached for space ${spaceID}`,
+        LogContext.SPACES
+      );
+      return [];
+    }
+
+    // Safety guard: prevent circular references
+    if (visited.has(spaceID)) {
+      this.logger.warn(
+        `Circular reference detected for space ${spaceID}`,
+        LogContext.SPACES
+      );
+      return [];
+    }
+
+    visited.add(spaceID);
+
+    const spaceWithSubspaces = await this.getSpaceOrFail(spaceID, {
+      relations: {
+        subspaces: true,
+      },
+    });
+
+    const subspaces = spaceWithSubspaces.subspaces;
+    if (!subspaces || subspaces.length === 0) {
+      return [];
+    }
+
+    const descendantIDs = new Set<string>();
+
+    // Add direct subspaces and recursively get their descendants
+    for (const subspace of subspaces) {
+      descendantIDs.add(subspace.id);
+
+      // Recursively get subspaces of this subspace
+      const childDescendants = await this.getAllDescendantSpaceIDs(
+        subspace.id,
+        visited,
+        maxDepth,
+        currentDepth + 1
+      );
+      childDescendants.forEach(id => descendantIDs.add(id));
+    }
+
+    return Array.from(descendantIDs);
+  }
 }
