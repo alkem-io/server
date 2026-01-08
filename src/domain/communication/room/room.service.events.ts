@@ -61,7 +61,8 @@ export class RoomServiceEvents {
     callout: ICallout,
     room: IRoom,
     message: IMessage,
-    agentInfo: AgentInfo
+    agentInfo: AgentInfo,
+    mentionedUserIDs?: string[]
   ) {
     // Send the notification
     const notificationInput: NotificationInputCollaborationCalloutComment = {
@@ -69,6 +70,7 @@ export class RoomServiceEvents {
       callout,
       comments: room,
       commentSent: message,
+      mentionedUserIDs,
     };
     await this.notificationSpaceAdapter.spaceCollaborationCalloutComment(
       notificationInput
@@ -81,7 +83,8 @@ export class RoomServiceEvents {
     contribution: ICalloutContribution,
     room: IRoom,
     message: IMessage,
-    agentInfo: AgentInfo
+    agentInfo: AgentInfo,
+    mentionedUserIDs?: string[]
   ) {
     // Send the notification
     const notificationInput: NotificationInputCollaborationCalloutPostContributionComment =
@@ -92,6 +95,7 @@ export class RoomServiceEvents {
         contribution,
         room,
         commentSent: message,
+        mentionedUserIDs,
       };
     await this.notificationSpaceAdapter.spaceCollaborationCalloutPostContributionComment(
       notificationInput

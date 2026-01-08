@@ -8,4 +8,5 @@ export interface NotificationInputCollaborationCalloutComment
   callout: ICallout;
   comments: IRoom;
   commentSent: IMessage;
+  mentionedUserIDs?: string[];
 }
