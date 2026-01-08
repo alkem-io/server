@@ -314,11 +314,10 @@ pnpm run migration:revert
 **Error**: `Template must be of type CALLOUT`
 **Fix**: Ensure you're selecting a template with `type: 'CALLOUT'`, not `'POST'` or other types.
 
-**Error**: `Template must belong to same Space as flow state`
-**Fix**: Query templates from the same Space as your flow. Use Library query filtered by Space.
-
 **Error**: `Authorization failed`
 **Fix**: Ensure you're authenticated as a Space admin with `UPDATE_INNOVATION_FLOW` privilege.
+
+**Note**: Templates can be from the space OR platform library - no space boundary restriction.
 
 ### Service Layer Issues
 

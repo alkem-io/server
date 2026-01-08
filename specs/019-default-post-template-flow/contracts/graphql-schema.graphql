@@ -32,7 +32,7 @@ type Mutation {
 
   Validation:
   - Template must exist and be of type CALLOUT
-  - Template must belong to the same Space as the innovation flow
+  - Template can be from space or platform library (no space boundary restriction)
   - Flow state must exist
 
   Returns: The updated InnovationFlowState with defaultCalloutTemplate relation loaded.
@@ -70,7 +70,7 @@ input SetDefaultCalloutTemplateOnInnovationFlowStateInput {
   flowStateID: UUID!
 
   """
-  The ID of the CALLOUT template to set as default. Must be of type CALLOUT and belong to the same Space as the innovation flow.
+  The ID of the CALLOUT template to set as default. Must be of type CALLOUT. Can be from space or platform library.
   """
   templateID: UUID!
 }
@@ -142,5 +142,5 @@ enum TemplateType {
 
 # ERROR CODES USED:
 # - ENTITY_NOT_FOUND: Flow state or template not found
-# - VALIDATION_ERROR: Template is not of type CALLOUT, or belongs to different Space
+# - VALIDATION_ERROR: Template is not of type CALLOUT
 # - FORBIDDEN: User lacks UPDATE_INNOVATION_FLOW privilege

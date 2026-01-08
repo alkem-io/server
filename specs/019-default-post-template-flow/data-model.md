@@ -72,7 +72,7 @@ export class InnovationFlowState
 **Validation Rules**:
 
 1. `defaultCalloutTemplate` must be of type `TemplateType.CALLOUT` (validated in service layer)
-2. `defaultCalloutTemplate` must belong to same Space as InnovationFlow (validated in service layer)
+2. `defaultCalloutTemplate` can be from space or platform library (no space boundary validation)
 3. `defaultCalloutTemplate` is optional (nullable)
 4. On template deletion, foreign key constraint sets field to NULL (no cascade delete)
 
@@ -188,7 +188,6 @@ type InnovationFlowState {
  * Set default CALLOUT template for a flow state
  * @throws EntityNotFoundException if flow state or template not found
  * @throws ValidationException if template is not of type CALLOUT
- * @throws ValidationException if template belongs to different Space
  */
 async setDefaultCalloutTemplate(
   flowStateID: string,
@@ -212,22 +211,12 @@ async setDefaultCalloutTemplate(
     );
   }
 
-  // 3. Validate template belongs to same Space
-  const flowStateSpace = await this.getSpaceForFlowState(flowStateID);
-  const templateSpace = await this.templateService.getSpaceForTemplate(templateID);
-  if (flowStateSpace.id !== templateSpace.id) {
-    throw new ValidationException(
-      'Template must belong to same Space as flow state',
-      LogContext.COLLABORATION,
-      { flowStateID, templateID, flowStateSpaceID: flowStateSpace.id, templateSpaceID: templateSpace.id }
-    );
-  }
-
-  // 4. Set relation and save
+  // 3. Set relation and save
+  // Note: Template can be from space or platform library (no space boundary validation)
   flowState.defaultCalloutTemplate = template;
   await this.innovationFlowStateRepository.save(flowState);
 
-  // 5. Log success
+  // 4. Log success
   this.logger.verbose(
     'Set default CALLOUT template on flow state',
     LogContext.COLLABORATION,
@@ -256,26 +245,6 @@ async removeDefaultCalloutTemplate(
   );
 
   return flowState;
-}
-
-/**
- * Get Space for a flow state (helper method)
- */
-private async getSpaceForFlowState(flowStateID: string): Promise<ISpace> {
-  const flowState = await this.innovationFlowStateRepository.findOne({
-    where: { id: flowStateID },
-    relations: ['innovationFlow', 'innovationFlow.collaboration', 'innovationFlow.collaboration.space'],
-  });
-
-  if (!flowState?.innovationFlow?.collaboration?.space) {
-    throw new EntityNotFoundException(
-      'Space not found for flow state',
-      LogContext.COLLABORATION,
-      { flowStateID }
-    );
-  }
-
-  return flowState.innovationFlow.collaboration.space;
 }
 ```
 
@@ -323,13 +292,12 @@ query GetCalloutWithFlowState($calloutId: UUID!) {
 
 ## Validation Rules Summary
 
-| Rule                               | Layer    | Error Type                | Example                                 |
-| ---------------------------------- | -------- | ------------------------- | --------------------------------------- |
-| Template type must be CALLOUT      | Service  | `ValidationException`     | `{ templateID, templateType: 'POST' }`  |
-| Template must exist                | Service  | `EntityNotFoundException` | `{ templateID }`                        |
-| Flow state must exist              | Service  | `EntityNotFoundException` | `{ flowStateID }`                       |
-| Template must belong to same Space | Service  | `ValidationException`     | `{ flowStateSpaceID, templateSpaceID }` |
-| User must have UPDATE privilege    | Resolver | `ForbiddenException`      | `{ requiredPrivilege: 'UPDATE' }`       |
+| Rule                            | Layer    | Error Type                | Example                                |
+| ------------------------------- | -------- | ------------------------- | -------------------------------------- |
+| Template type must be CALLOUT   | Service  | `ValidationException`     | `{ templateID, templateType: 'POST' }` |
+| Template must exist             | Service  | `EntityNotFoundException` | `{ templateID }`                       |
+| Flow state must exist           | Service  | `EntityNotFoundException` | `{ flowStateID }`                      |
+| User must have UPDATE privilege | Resolver | `ForbiddenException`      | `{ requiredPrivilege: 'UPDATE' }`      |
 
 ---
 
@@ -354,7 +322,7 @@ TemplatesSet                                                 │
 
 - `InnovationFlowState` references `Template` (many-to-one)
 - `Template` is shared across multiple flow states (reusable)
-- `Template` belongs to `TemplatesSet` → `Space` (same Space validation)
+- `Template` can be from space or platform library (no space boundary validation)
 - On template delete: foreign key sets `defaultCalloutTemplate = NULL`
 
 ---
@@ -363,7 +331,7 @@ TemplatesSet                                                 │
 
 1. **Foreign Key Constraint**: `defaultCalloutTemplateId` references `template.id` with `ON DELETE SET NULL`
 2. **Type Constraint**: Enforced in service layer (no database CHECK constraint needed)
-3. **Space Boundary**: Enforced in service layer (template.space === flowState.space)
+3. **Template Source**: No space boundary constraint - templates can be from space or platform library
 4. **Nullability**: Column is nullable (flow states can exist without default template)
 
 ---

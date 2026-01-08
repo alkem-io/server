@@ -90,6 +90,7 @@ _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
 - **Authorization**: Mutations require `UPDATE_INNOVATION_FLOW` privilege (admin-only)
 - **Validation**: Ensure templateID exists, ensure template.type === 'CALLOUT'
+- **Template visibility**: Uses existing platform template visibility rules (space or platform templates)
 - **No secrets**: Configuration data, no credentials involved
 - **No external calls**: Local database operations only
 
@@ -118,6 +119,7 @@ _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 - ✅ GraphQL schema changes remain non-breaking (nullable field, additive mutations)
 - ✅ Template deletion behavior: `ON DELETE SET NULL` ensures referential integrity
 - ✅ Space template creation exclusion: `defaultCalloutTemplateId` not copied to space templates (instance-specific config)
+- ✅ Template source: Can be from space or platform library (no space boundary validation), follows existing template visibility rules
 
 ## Project Structure
 

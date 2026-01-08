@@ -366,7 +366,7 @@ throw new ValidationException(
 **A1**: No. Single template keeps UX simple. Feature spec states "a default post template" (singular).
 
 **Q2: Should we validate template belongs to same Space as flow?**
-**A2**: Yes. Add validation to ensure `template.templatesSet.space === flowState.innovationFlow.collaboration.space`. This prevents cross-space template references.
+**A2**: No. Templates can be from the space OR the platform library. This follows the same pattern as current post creation where users can use templates from space or platform (visible via `platform.library.templates` query). No space boundary validation needed - existing template visibility rules apply.
 
 **Q3: Should removing a template from the library also remove it from flow states?**
 **A3**: No. Database constraint uses `ON DELETE SET NULL`. Flow state keeps functioning (no template pre-fill).

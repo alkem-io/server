@@ -71,6 +71,13 @@ As a Space admin, I want to set a default post template for specific flow steps,
   - This ensures referential integrity without blocking template deletion
   - Flow steps automatically revert to the "no default template" behavior
 
+**Template Source**:
+
+- Templates can be from the Space's template library OR from the platform library (public templates)
+- Same behavior as current post creation: admins can use any template visible to them (space or platform)
+- No restriction that template must belong to same Space - uses existing platform template visibility rules
+- Admins see templates from `platform.library.templates` query (platform-wide) in addition to space templates
+
 **Space Template Creation**:
 
 - When creating a template from a space that has defaultTemplate set for innovation flow states, the resulting space template **does not preserve** those defaultTemplate references
