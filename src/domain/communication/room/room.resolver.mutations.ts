@@ -84,6 +84,11 @@ export class RoomResolverMutations {
       messageData
     );
 
+    // Extract user IDs from mentions to avoid double notifications
+    const mentionedUserIDs = mentions
+      .filter(m => m.contributorType === 'user')
+      .map(m => m.contributorID);
+
     switch (room.type) {
       case RoomType.POST: {
         const { post, callout, contribution } =
@@ -104,7 +109,8 @@ export class RoomResolverMutations {
           contribution,
           room,
           message,
-          agentInfo
+          agentInfo,
+          mentionedUserIDs
         );
 
         this.roomServiceEvents.processActivityPostComment(
@@ -198,7 +204,8 @@ export class RoomResolverMutations {
             callout,
             room,
             message,
-            agentInfo
+            agentInfo,
+            mentionedUserIDs
           );
         }
         break;
