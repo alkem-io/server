@@ -182,7 +182,7 @@ services:
 
   oidc-service:
     container_name: alkemio_dev_oidc_service
-    image: docker.io/alkemio/oidc-service:v0.7.0
+    image: docker.io/alkemio/oidc-service:v0.7.1
     platform: linux/amd64
     depends_on:
       - hydra
@@ -196,6 +196,11 @@ services:
       - OIDC_WEB_BASE_URL=http://localhost:3000
       - OIDC_ALKEMIO_SERVER_URL
       - OIDC_ALKEMIO_IDENTITY_RESOLVE_PATH
+      - DATABASE_HOST
+      - DATABASE_PORT
+      - DATABASE_USERNAME
+      - DATABASE_PASSWORD
+      - DATABASE_NAME=alkemio
     networks:
       - alkemio_dev_net
     ports:
