@@ -10,7 +10,7 @@ export abstract class ICommunication extends IAuthorizable {
   })
   updates!: IRoom;
 
-  spaceID!: string;
+  spaceID?: string;
 
   displayName!: string;
 }
