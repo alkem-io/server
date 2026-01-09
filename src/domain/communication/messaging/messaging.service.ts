@@ -266,6 +266,7 @@ export class MessagingService {
     const queryBuilder = this.conversationMembershipRepository
       .createQueryBuilder('membership')
       .innerJoinAndSelect('membership.conversation', 'conversation')
+      .leftJoinAndSelect('conversation.authorization', 'authorization')
       .where('membership.agentId = :agentId', { agentId })
       .andWhere('conversation.messagingId = :messagingId', { messagingId });
 

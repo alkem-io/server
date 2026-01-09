@@ -365,6 +365,7 @@ export class ConversationService {
         'm1.conversationId = m2.conversationId AND m1.agentId != m2.agentId'
       )
       .innerJoinAndSelect('m1.conversation', 'conversation')
+      .leftJoinAndSelect('conversation.authorization', 'authorization')
       .where('m1.agentId = :agentId1', { agentId1 })
       .andWhere('m2.agentId = :agentId2', { agentId2 })
       .getOne();
