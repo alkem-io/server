@@ -33,6 +33,7 @@ export class InnovationFlowState
     eager: false,
     cascade: false,
     onDelete: 'SET NULL',
+    nullable: true,
   })
   @JoinColumn({ name: 'defaultCalloutTemplateId' })
   defaultCalloutTemplate?: Template;

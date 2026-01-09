@@ -629,7 +629,7 @@ export class InnovationFlowService {
     const innovationFlow = await this.getInnovationFlowOrFail(
       innovationFlowID,
       {
-        relations: { states: true },
+        relations: { states: { defaultCalloutTemplate: true } },
       }
     );
     if (!innovationFlow.states) {

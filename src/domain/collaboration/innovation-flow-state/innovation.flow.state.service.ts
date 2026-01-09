@@ -151,11 +151,9 @@ export class InnovationFlowStateService {
   async removeDefaultCalloutTemplate(
     flowStateID: string
   ): Promise<IInnovationFlowState> {
-    const flowState = await this.getInnovationFlowStateOrFail(flowStateID);
-
-    flowState.defaultCalloutTemplate = undefined;
-    await this.innovationFlowStateRepository.save(
-      flowState as InnovationFlowState
+    await this.innovationFlowStateRepository.update(
+      { id: flowStateID },
+      { defaultCalloutTemplate: null as any }
     );
 
     this.logger.verbose?.(
@@ -163,6 +161,6 @@ export class InnovationFlowStateService {
       LogContext.COLLABORATION
     );
 
-    return flowState;
+    return this.getInnovationFlowStateOrFail(flowStateID);
   }
 }
