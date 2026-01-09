@@ -304,11 +304,6 @@ export class CalloutService {
     if (calloutUpdateData.sortOrder)
       callout.sortOrder = calloutUpdateData.sortOrder;
 
-    // Update the published date if the callout is published
-    if (callout.settings.visibility === CalloutVisibility.PUBLISHED) {
-      callout.publishedDate = new Date();
-    }
-
     return await this.calloutRepository.save(callout);
   }
 
