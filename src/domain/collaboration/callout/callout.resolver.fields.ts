@@ -18,6 +18,7 @@ import { ICalloutContributionDefaults } from '../callout-contribution-defaults/c
 import { IClassification } from '@domain/common/classification/classification.interface';
 import { ContributionsFilterInput } from './dto/contributions.filter';
 import { CalloutContributionsCountOutput } from './dto/callout.contributions.count.dto';
+import { CalloutVisibility } from '@common/enums/callout.visibility';
 
 @Resolver(() => ICallout)
 export class CalloutResolverFields {
@@ -131,23 +132,27 @@ export class CalloutResolverFields {
     @Parent() callout: ICallout,
     @Loader(UserLoaderCreator) loader: ILoader<IUser | null>
   ): Promise<IUser | null> {
-    if (!callout.publishedBy) {
+    if (
+      !callout.publishedBy ||
+      callout.settings.visibility !== CalloutVisibility.PUBLISHED
+    ) {
       return null;
     }
     return loader.load(callout.publishedBy);
   }
 
-  @ResolveField('publishedDate', () => Number, {
+  @ResolveField('publishedDate', () => Date, {
     nullable: true,
-    description: 'The timestamp for the publishing of this Callout.',
+    description: 'The Date of the publishing of this Callout.',
   })
-  async publishedDate(@Parent() callout: ICallout): Promise<number | null> {
-    if (!callout.publishedDate) {
+  async publishedDate(@Parent() callout: ICallout): Promise<Date | null> {
+    if (
+      !callout.publishedDate ||
+      callout.settings.visibility !== CalloutVisibility.PUBLISHED
+    ) {
       return null;
     }
-    const createdDate = callout.publishedDate;
-    const date = new Date(createdDate);
-    return date.getTime();
+    return callout.publishedDate;
   }
 
   @ResolveField('createdBy', () => IUser, {
