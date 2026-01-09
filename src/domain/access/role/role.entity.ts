@@ -19,10 +19,10 @@ export class Role extends BaseAlkemioEntity implements IRole {
   @Column('varchar', { length: ENUM_LENGTH, nullable: false })
   name!: RoleName;
 
-  @Column('json', { nullable: false })
+  @Column('jsonb', { nullable: false })
   credential!: ICredentialDefinition;
 
-  @Column('json', { nullable: false })
+  @Column('jsonb', { nullable: false })
   parentCredentials!: ICredentialDefinition[];
 
   @Column('boolean', { nullable: false })
@@ -31,12 +31,12 @@ export class Role extends BaseAlkemioEntity implements IRole {
   @Column('boolean', { nullable: false })
   requiresSameRoleInParentRoleSet!: boolean;
 
-  @Column('json', { nullable: false })
+  @Column('jsonb', { nullable: false })
   userPolicy!: IContributorRolePolicy;
 
-  @Column('json', { nullable: false })
+  @Column('jsonb', { nullable: false })
   organizationPolicy!: IContributorRolePolicy;
 
-  @Column('json', { nullable: false })
+  @Column('jsonb', { nullable: false })
   virtualContributorPolicy!: IContributorRolePolicy;
 }
