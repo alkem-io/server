@@ -4,7 +4,7 @@ export const pubSubEngineMockFactory = (token: InjectionToken) => {
   return {
     provide: token,
     useValue: {
-      asyncIterator: jest.fn(),
+      asyncIterableIterator: jest.fn(),
       publish: jest.fn(),
       subscribe: jest.fn(),
       unsubscribe: jest.fn(),

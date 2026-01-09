@@ -19,3 +19,4 @@ export const SUBSCRIPTION_ROOM_EVENT = 'alkemio-subscriptions-room-event';
 export const ELASTICSEARCH_CLIENT_PROVIDER = 'elasticsearch-client-provider';
 export const APP_ID = 'app-id';
 export const STORAGE_SERVICE = 'storage-service';
+export const IS_SCHEMA_BOOTSTRAP = 'is-schema-bootstrap';

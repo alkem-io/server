@@ -6,6 +6,13 @@ import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { ConfigService } from '@nestjs/config';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { LoggerService } from '@nestjs/common';
+import {
+  UserAuthenticationLinkOutcome,
+  UserAuthenticationLinkResult,
+  UserAuthenticationLinkMatch,
+} from '@domain/community/user-authentication-link/user.authentication.link.types';
 
 describe('UserService', () => {
   let service: UserService;
@@ -41,3 +48,135 @@ const ConfigServiceMock = {
     kratos_admin_base_url_server: 'mockUrl',
   }),
 };
+
+describe('UserService.createUserFromAgentInfo', () => {
+  const createService = () => {
+    const userAuthenticationLinkServiceMock = {
+      resolveExistingUser: jest.fn(),
+      ensureAuthenticationIdAvailable: jest.fn(),
+    } as {
+      resolveExistingUser: jest.Mock;
+      ensureAuthenticationIdAvailable: jest.Mock;
+    };
+
+    const loggerMock: LoggerService & { verbose: jest.Mock } = {
+      log: jest.fn(),
+      error: jest.fn(),
+      warn: jest.fn(),
+      debug: jest.fn(),
+      verbose: jest.fn(),
+    };
+
+    const service = new UserService(
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      { deleteAgentInfoFromCache: jest.fn() } as any,
+      userAuthenticationLinkServiceMock as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      loggerMock
+    );
+
+    return {
+      service,
+      userAuthenticationLinkServiceMock,
+    };
+  };
+
+  const buildAgentInfo = (overrides: Partial<AgentInfo> = {}) => {
+    const agentInfo = new AgentInfo();
+    agentInfo.email = 'user@example.com';
+    agentInfo.firstName = 'Existing';
+    agentInfo.lastName = 'User';
+    Object.assign(agentInfo, overrides);
+    return agentInfo;
+  };
+
+  it('returns existing user when authentication ID already linked', async () => {
+    const { service, userAuthenticationLinkServiceMock } = createService();
+
+    const agentInfo = buildAgentInfo({
+      authenticationID: 'kratos-identity-001',
+    });
+
+    const resolveResult: UserAuthenticationLinkResult = {
+      user: {
+        id: 'user-1',
+        email: agentInfo.email,
+        authenticationID: agentInfo.authenticationID,
+      } as any,
+      matchedBy: UserAuthenticationLinkMatch.AUTHENTICATION_ID,
+      outcome: UserAuthenticationLinkOutcome.ALREADY_LINKED,
+    };
+
+    userAuthenticationLinkServiceMock.resolveExistingUser.mockResolvedValue(
+      resolveResult
+    );
+
+    const result = await service.createUserFromAgentInfo(agentInfo);
+
+    expect(result).toBe(resolveResult.user);
+    expect(
+      userAuthenticationLinkServiceMock.resolveExistingUser
+    ).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns user when authentication ID is linked during lookup', async () => {
+    const { service, userAuthenticationLinkServiceMock } = createService();
+
+    const agentInfo = buildAgentInfo({
+      authenticationID: 'kratos-identity-002',
+    });
+
+    const resolveResult: UserAuthenticationLinkResult = {
+      user: {
+        id: 'user-2',
+        email: agentInfo.email,
+        authenticationID: agentInfo.authenticationID,
+      } as any,
+      matchedBy: UserAuthenticationLinkMatch.EMAIL,
+      outcome: UserAuthenticationLinkOutcome.LINKED,
+    };
+
+    userAuthenticationLinkServiceMock.resolveExistingUser.mockResolvedValue(
+      resolveResult
+    );
+
+    const result = await service.createUserFromAgentInfo(agentInfo);
+
+    // After refactoring, we no longer cache user entities in UserService
+    // AgentInfo caching uses authenticationID and is handled by AuthenticationService
+    expect(result).toEqual(resolveResult.user);
+  });
+
+  it('falls back to user creation when linking service finds no user', async () => {
+    const { service, userAuthenticationLinkServiceMock } = createService();
+    const agentInfo = buildAgentInfo();
+
+    userAuthenticationLinkServiceMock.resolveExistingUser.mockResolvedValue(
+      null
+    );
+
+    const createUserSpy = jest
+      .spyOn(service, 'createUser')
+      .mockResolvedValue({ id: 'new-user' } as any);
+
+    const result = await service.createUserFromAgentInfo(agentInfo);
+
+    expect(createUserSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ email: agentInfo.email }),
+      agentInfo
+    );
+    expect(result).toEqual({ id: 'new-user' });
+  });
+});

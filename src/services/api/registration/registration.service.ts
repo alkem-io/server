@@ -45,6 +45,13 @@ export class RegistrationService {
         LogContext.COMMUNITY
       );
     }
+
+    if (agentInfo.authenticationID) {
+      this.logger.verbose?.(
+        'Received Kratos authentication ID for registration flow',
+        LogContext.AUTH
+      );
+    }
     // If a user has a valid session, and hence email / names etc set, then they can create a User profile
     const user = await this.userService.createUserFromAgentInfo(agentInfo);
 
