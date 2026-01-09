@@ -7405,6 +7405,18 @@ input UpdateWhiteboardPreviewSettingsInput {
 """The `Upload` scalar type represents a file upload."""
 scalar Upload
 
+type UrlResolverQueryClosestAncestor {
+  discussionId: UUID
+  innovationHubId: UUID
+  innovationPack: UrlResolverQueryResultInnovationPack
+  organizationId: UUID
+  space: UrlResolverQueryResultSpace
+  type: UrlType!
+  url: String!
+  userId: UUID
+  virtualContributor: UrlResolverQueryResultVirtualContributor
+}
+
 type UrlResolverQueryResultCalendar {
   calendarEventId: UUID
   id: UUID!
@@ -7451,14 +7463,22 @@ type UrlResolverQueryResultVirtualContributor {
 }
 
 type UrlResolverQueryResults {
+  closestAncestor: UrlResolverQueryClosestAncestor
   discussionId: UUID
   innovationHubId: UUID
   innovationPack: UrlResolverQueryResultInnovationPack
   organizationId: UUID
   space: UrlResolverQueryResultSpace
+  state: UrlResolverResultState!
   type: UrlType!
   userId: UUID
   virtualContributor: UrlResolverQueryResultVirtualContributor
+}
+
+enum UrlResolverResultState {
+  Forbidden
+  NotFound
+  Resolved
 }
 
 enum UrlType {

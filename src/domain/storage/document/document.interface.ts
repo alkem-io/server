@@ -20,7 +20,7 @@ export abstract class IDocument extends IAuthorizable {
   })
   displayName!: string;
 
-  createdBy!: string;
+  createdBy?: string;
 
   @Field(() => MimeFileType, {
     description: 'Mime type for this Document.',

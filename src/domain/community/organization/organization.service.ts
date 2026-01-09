@@ -206,7 +206,7 @@ export class OrganizationService {
       );
     }
 
-    const userID = agentInfo ? agentInfo.userID : '';
+    const userID = agentInfo?.userID;
     await this.contributorService.ensureAvatarIsStoredInLocalStorageBucket(
       organization.profile.id,
       userID

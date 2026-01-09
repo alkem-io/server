@@ -423,9 +423,11 @@ export class NotificationSpaceAdapter {
       space.id
     );
 
-    // Filter out the sender
+    // Filter out the sender AND users who were already mentioned (to avoid double notifications)
     const recipientsWithoutSender = recipients.emailRecipients.filter(
-      recipient => recipient.id !== eventData.triggeredBy
+      recipient =>
+        recipient.id !== eventData.triggeredBy &&
+        !eventData.mentionedUserIDs?.includes(recipient.id)
     );
     // ALSO only send to the creator of the post
     const recipientCreator = recipientsWithoutSender.filter(
@@ -449,10 +451,13 @@ export class NotificationSpaceAdapter {
     }
 
     // Send in-app notifications
-    // get the creator but only if it not the sender
+    // get the creator but only if it not the sender AND not already mentioned
     const inAppReceiverCreators = recipients.inAppRecipients
       .filter(
-        r => r.id === eventData.post.createdBy && r.id !== eventData.triggeredBy
+        r =>
+          r.id === eventData.post.createdBy &&
+          r.id !== eventData.triggeredBy &&
+          !eventData.mentionedUserIDs?.includes(r.id)
       )
       .map(r => r.id);
 
@@ -497,8 +502,11 @@ export class NotificationSpaceAdapter {
       space.id
     );
     // build notification payload
+    // Filter out sender AND users who were already mentioned (to avoid double notifications)
     const emailRecipientsWithoutSender = recipients.emailRecipients.filter(
-      recipient => recipient.id !== eventData.triggeredBy
+      recipient =>
+        recipient.id !== eventData.triggeredBy &&
+        !eventData.mentionedUserIDs?.includes(recipient.id)
     );
     const payload =
       await this.notificationExternalAdapter.buildSpaceCollaborationCalloutCommentPayload(
@@ -512,8 +520,11 @@ export class NotificationSpaceAdapter {
     this.notificationExternalAdapter.sendExternalNotifications(event, payload);
 
     // Send in-app notifications
+    // Filter out sender AND users who were already mentioned (to avoid double notifications)
     const inAppRecipientsWithoutSender = recipients.inAppRecipients.filter(
-      recipient => recipient.id !== eventData.triggeredBy
+      recipient =>
+        recipient.id !== eventData.triggeredBy &&
+        !eventData.mentionedUserIDs?.includes(recipient.id)
     );
     const inAppReceiverIDs = inAppRecipientsWithoutSender.map(
       recipient => recipient.id
