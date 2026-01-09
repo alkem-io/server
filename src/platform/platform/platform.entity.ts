@@ -12,10 +12,10 @@ import { IPlatformWellKnownVirtualContributors } from '@platform/platform.well.k
 
 @Entity()
 export class Platform extends AuthorizableEntity implements IPlatform {
-  @Column('json', { nullable: false })
+  @Column('jsonb', { nullable: false })
   settings!: IPlatformSettings;
 
-  @Column('json', { nullable: false })
+  @Column('jsonb', { nullable: false })
   wellKnownVirtualContributors!: IPlatformWellKnownVirtualContributors;
 
   @OneToOne(() => Forum, {

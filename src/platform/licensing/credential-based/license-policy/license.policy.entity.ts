@@ -8,6 +8,6 @@ export class LicensePolicy
   extends AuthorizableEntity
   implements ILicensePolicy
 {
-  @Column('json', { nullable: false })
+  @Column('jsonb', { nullable: false })
   credentialRules: ILicensingCredentialBasedPolicyCredentialRule[] = [];
 }
