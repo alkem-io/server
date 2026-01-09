@@ -42,6 +42,12 @@ subscriptions.log
 !.vscode/extensions.json
 !.vscode/mcp.json
 
+# Claude Code
+.claude/settings.local.json
+
+# Overmind socket
+.overmind.sock
+
 # dotenv environment variables file
 .env
 .env.test
@@ -72,6 +78,9 @@ subscriptions.log
 !.scripts/migrations/
 !.scripts/migrations/postgres-convergence/
 !.scripts/migrations/postgres-convergence/**
+!.scripts/overmind/
+!.scripts/overmind/**
+.scripts/overmind/.overmind.sock
 # Exclude CSV exports and generated files from version control
 .scripts/migrations/postgres-convergence/csv_exports/
 .scripts/migrations/postgres-convergence/migration_log.json
