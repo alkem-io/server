@@ -133,7 +133,7 @@ export class RoomControllerService {
     );
     let answer = result.result;
 
-    if (result.sources) {
+    if (result.sources?.length > 0) {
       answer += sourcesLabel ? '\n##### Sources:' : '';
       answer +=
         '\n' +
@@ -143,6 +143,8 @@ export class RoomControllerService {
               `- [${title || uri}](${uri})`
           )
           .join('\n');
+    } else if (sourcesLabel) {
+      answer += '\n&nbsp;\n*Sorry, no sources are available for this response*';
     }
     return answer;
   }
