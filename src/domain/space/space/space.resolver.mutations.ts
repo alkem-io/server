@@ -1,5 +1,5 @@
 import { Inject } from '@nestjs/common';
-import { Resolver, Args, Mutation } from '@nestjs/graphql';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser } from '@src/common/decorators';
 import { SpaceService } from './space.service';
 import { DeleteSpaceInput, UpdateSpaceInput } from '@domain/space/space';
@@ -37,6 +37,22 @@ export class SpaceResolverMutations {
     private spaceLicenseService: SpaceLicenseService,
     private licenseService: LicenseService
   ) {}
+  // TODO: Remove this test mutation once remote evaluation is verified to be working
+  @Mutation(() => String)
+  async remoteTest(@CurrentUser() agentInfo: AgentInfo): Promise<string> {
+    const space = await this.spaceService.getSpaceOrFail(
+      'a5d2357c-9295-4ea9-8c4c-ae262bb15e11'
+    );
+
+    const result =
+      await this.authorizationService.isAccessGrantedRemoteEvaluation(
+        agentInfo.agentID,
+        space.authorization!.id,
+        AuthorizationPrivilege.READ
+      );
+
+    return JSON.stringify(result);
+  }
 
   @Mutation(() => ISpace, {
     description: 'Updates the Space.',
@@ -52,7 +68,8 @@ export class SpaceResolverMutations {
         },
       },
     });
-    await this.authorizationService.grantAccessOrFail(
+
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       space.authorization,
       AuthorizationPrivilege.UPDATE,

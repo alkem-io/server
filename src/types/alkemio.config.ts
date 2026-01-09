@@ -185,6 +185,77 @@ export type AlkemioConfig = {
         invoke_engine_openai_assistant: string;
       };
     };
+    /** NATS messaging configuration */
+    nats: {
+      /** NATS server URL(s) for client connections */
+      server_url: string;
+    };
+    /** Policy invalidation messaging configuration (remote authz evaluation) */
+    policy_invalidation: {
+      /** NATS subject to publish policy invalidation messages to */
+      subject: string;
+    };
+    /** Auth evaluation service configuration for remote authorization checks */
+    auth_evaluation: {
+      /** Name of the NATS queue for sending auth evaluation requests */
+      queue_name: string;
+      /** Circuit breaker configuration for resilience against service failures */
+      circuit_breaker: {
+        /**
+         * Whether circuit breaker functionality is enabled.
+         * When false, requests pass through without circuit protection.
+         * @default true
+         */
+        enabled: boolean;
+        /**
+         * Request timeout in milliseconds.
+         * Requests exceeding this duration are considered failures.
+         */
+        timeout: number;
+        /**
+         * Minimum number of requests within the rolling window before
+         * the circuit breaker can trip. This prevents the circuit from
+         * opening on the very first failure.
+         */
+        failure_threshold: number;
+        /**
+         * Time in milliseconds before circuit transitions from open to half-open.
+         */
+        reset_timeout: number;
+        /**
+         * Percentage of failures within the rolling window that will trip
+         * the circuit. Only evaluated after failure_threshold requests.
+         */
+        error_threshold_percentage: number;
+        /**
+         * Duration of the rolling window in milliseconds for tracking
+         * request success/failure rates.
+         */
+        rolling_count_timeout: number;
+        /**
+         * Number of buckets in the rolling window. Each bucket represents
+         * rolling_count_timeout / rolling_count_buckets milliseconds.
+         */
+        rolling_count_buckets: number;
+      };
+      /** Retry configuration for transient failure handling */
+      retry: {
+        /**
+         * Maximum number of retry attempts before giving up.
+         * Does not include the initial attempt.
+         */
+        max_attempts: number;
+        /**
+         * Base delay in milliseconds for the first retry.
+         */
+        base_delay: number;
+        /**
+         * Multiplier for exponential backoff calculation.
+         * delay = base_delay * (multiplier ^ attempt)
+         */
+        backoff_multiplier: number;
+      };
+    };
   };
   integrations: {
     geo: {

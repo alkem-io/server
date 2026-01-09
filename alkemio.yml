@@ -385,6 +385,52 @@ microservices:
       invoke_engine_guidance: ${RABBITMQ_INVOKE_ENGINE_GUIDANCE}:virtual-contributor-engine-guidance
       invoke_engine_generic: ${RABBITMQ_INVOKE_ENGINE_GENERIC}:virtual-contributor-engine-generic
       invoke_engine_openai_assistant: ${RABBITMQ_INVOKE_ENGINE_OPENAI_ASSISTANT}:virtual-contributor-engine-openai-assistant
+  # NATS messaging configuration
+  nats:
+    # NATS server URL(s) for client connections
+    server_url: ${NATS_SERVER_URL}:nats://localhost:4222
+  # Policy invalidation messaging configuration (remote authz evaluation)
+  policy_invalidation:
+    # NATS subject to publish policy invalidation messages to
+    subject: ${POLICY_INVALIDATION_SUBJECT}:alkemio.policy.invalidate
+  # Auth evaluation service configuration for remote authorization checks
+  auth_evaluation:
+    # Name of the NATS queue for sending auth evaluation requests
+    queue_name: ${AUTH_EVAL_QUEUE_NAME}:auth.evaluate
+    # Circuit breaker configuration for resilience against service failures
+    circuit_breaker:
+      # Whether circuit breaker functionality is enabled.
+      # When false, requests pass through without circuit protection.
+      # @default true
+      enabled: ${AUTH_EVAL_CIRCUIT_BREAKER_ENABLED}:true
+      # Request timeout in milliseconds.
+      # Requests exceeding this duration are considered failures.
+      timeout: ${AUTH_EVAL_TIMEOUT}:5000
+      # Minimum number of requests within the rolling window before
+      # the circuit breaker can trip. This prevents the circuit from
+      # opening on the very first failure.
+      failure_threshold: ${AUTH_EVAL_FAILURE_THRESHOLD}:30
+      # Time in milliseconds before circuit transitions from open to half-open.
+      reset_timeout: ${AUTH_EVAL_RESET_TIMEOUT}:45000
+      # Percentage of failures within the rolling window that will trip
+      # the circuit. Only evaluated after failure_threshold requests.
+      error_threshold_percentage: ${AUTH_EVAL_ERROR_THRESHOLD_PCT}:50
+      # Duration of the rolling window in milliseconds for tracking
+      # request success/failure rates.
+      rolling_count_timeout: ${AUTH_EVAL_ROLLING_COUNT_TIMEOUT}:60000
+      # Number of buckets in the rolling window. Each bucket represents
+      # rolling_count_timeout / rolling_count_buckets milliseconds.
+      rolling_count_buckets: ${AUTH_EVAL_ROLLING_COUNT_BUCKETS}:10
+    # Retry configuration for transient failure handling
+    retry:
+      # Maximum number of retry attempts before giving up.
+      # Does not include the initial attempt.
+      max_attempts: ${AUTH_EVAL_MAX_RETRIES}:5
+      # Base delay in milliseconds for the first retry.
+      base_delay: ${AUTH_EVAL_RETRY_BASE_DELAY}:500
+      # Multiplier for exponential backoff calculation.
+      # delay = base_delay * (multiplier ^ attempt)
+      backoff_multiplier: ${AUTH_EVAL_RETRY_BACKOFF}:1.5
 
 # integrations with 3rd party services
 integrations:

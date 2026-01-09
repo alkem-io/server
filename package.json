@@ -58,8 +58,8 @@
     }
   },
   "dependencies": {
-    "@alkemio/notifications-lib": "0.12.2",
     "@alkemio/matrix-adapter-lib": "^0.6.2",
+    "@alkemio/notifications-lib": "0.12.2",
     "@apollo/server": "^4.10.4",
     "@elastic/elasticsearch": "^8.12.2",
     "@golevelup/nestjs-rabbitmq": "^5.3.0",
@@ -118,6 +118,8 @@
     "markdown-it": "^14.1.0",
     "module-alias": "^2.2.3",
     "nest-winston": "^1.9.7",
+    "nats": "2.29.3",
+    "opossum": "^9.0.0",
     "passport": "^0.7.0",
     "passport-custom": "^1.1.1",
     "passport-jwt": "^4.0.1",
@@ -155,6 +157,7 @@
     "@types/markdown-it": "^14.1.2",
     "@types/module-alias": "^2.0.4",
     "@types/node": "^20.14.10",
+    "@types/opossum": "^8.1.9",
     "@types/passport": "^1.0.17",
     "@types/passport-jwt": "^4.0.1",
     "@types/pg": "^8.15.5",
