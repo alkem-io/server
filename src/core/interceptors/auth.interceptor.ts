@@ -35,11 +35,35 @@ export class AuthInterceptor implements NestInterceptor {
 }
 
 const getRequest = (context: ExecutionContext) => {
-  if (context.getType<ContextType | 'graphql'>() === 'graphql') {
+  const contextType = context.getType<ContextType | 'graphql' | 'rmq'>();
+
+  // Skip RPC contexts (NestJS microservices) - no HTTP request available
+  if (contextType === 'rpc') {
+    return undefined;
+  }
+
+  // Skip RabbitMQ contexts from @golevelup/nestjs-rabbitmq
+  if (contextType === 'rmq') {
+    return undefined;
+  }
+
+  if (contextType === 'graphql') {
     return GqlExecutionContext.create(context).getContext<IGraphQLContext>()
       .req;
   }
-  return context.switchToHttp().getRequest();
+
+  // For HTTP context, verify we have a proper request with headers
+  // This also handles cases where other transports report as 'http' but have no actual request
+  const req = context.switchToHttp().getRequest();
+  if (!req?.headers?.authorization && !req?.headers?.cookie) {
+    // No auth-related headers - likely not a real HTTP request
+    // Check if it looks like an HTTP request at all
+    if (!req?.method || !req?.url) {
+      return undefined;
+    }
+  }
+
+  return req;
 };
 
 // Promisified passport.authenticate

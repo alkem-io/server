@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, OnModuleDestroy, Inject } from '@nestjs/common';
 import {
   RABBITMQ_EXCHANGE_NAME_DIRECT,
   SUBSCRIPTION_ACTIVITY_CREATED,
@@ -10,6 +10,7 @@ import { SubscriptionPublishService } from './subscription.publish.service';
 import { SubscriptionReadService } from './subscription.read.service';
 import { MessagingQueue } from '@common/enums/messaging.queue';
 import { APP_ID_PROVIDER } from '@common/app.id.provider';
+import { PubSubEngine } from 'graphql-subscriptions';
 
 const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
   {
@@ -49,4 +50,36 @@ const subscriptionFactoryProviders = subscriptionConfig.map(
   ],
   exports: [SubscriptionPublishService, SubscriptionReadService],
 })
-export class SubscriptionServiceModule {}
+export class SubscriptionServiceModule implements OnModuleDestroy {
+  constructor(
+    @Inject(SUBSCRIPTION_ACTIVITY_CREATED)
+    private readonly activityCreated: PubSubEngine,
+    @Inject(SUBSCRIPTION_IN_APP_NOTIFICATION_RECEIVED)
+    private readonly notificationReceived: PubSubEngine,
+    @Inject(SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER)
+    private readonly notificationCounter: PubSubEngine
+  ) {}
+
+  async onModuleDestroy() {
+    const pubSubs = [
+      this.activityCreated,
+      this.notificationReceived,
+      this.notificationCounter,
+    ];
+
+    for (const pubSub of pubSubs) {
+      if (pubSub) {
+        if (typeof (pubSub as any).close === 'function') {
+          await (pubSub as any).close();
+        }
+
+        if (
+          (pubSub as any).connection &&
+          typeof (pubSub as any).connection.close === 'function'
+        ) {
+          await (pubSub as any).connection.close();
+        }
+      }
+    }
+  }
+}

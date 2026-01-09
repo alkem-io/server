@@ -21,24 +21,20 @@ import { UserService } from '@domain/community/user/user.service';
 import { MessagingNotEnabledException } from '@common/exceptions/messaging.not.enabled.exception';
 import { LogContext } from '@common/enums/logging.context';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
-import { ConversationsSetService } from '../conversations-set/conversations.set.service';
-import { ConversationsSetAuthorizationService } from '../conversations-set/conversations.set.service.authorization';
 import { ConversationService } from '../conversation/conversation.service';
 
 @InstrumentResolver()
 @Resolver()
 export class CommunicationResolverMutations {
   constructor(
-    private authorizationService: AuthorizationService,
-    private communicationAdapter: CommunicationAdapter,
-    private notificationAdapterSpace: NotificationSpaceAdapter,
-    private notificationUserAdapter: NotificationUserAdapter,
-    private notificationOrganizationAdapter: NotificationOrganizationAdapter,
-    private platformAuthorizationService: PlatformAuthorizationPolicyService,
-    private conversationsSetService: ConversationsSetService,
-    private conversationService: ConversationService,
-    private conversationsSetAuthorizationService: ConversationsSetAuthorizationService,
-    private userService: UserService,
+    private readonly authorizationService: AuthorizationService,
+    private readonly communicationAdapter: CommunicationAdapter,
+    private readonly notificationAdapterSpace: NotificationSpaceAdapter,
+    private readonly notificationUserAdapter: NotificationUserAdapter,
+    private readonly notificationOrganizationAdapter: NotificationOrganizationAdapter,
+    private readonly platformAuthorizationService: PlatformAuthorizationPolicyService,
+    private readonly conversationService: ConversationService,
+    private readonly userService: UserService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 

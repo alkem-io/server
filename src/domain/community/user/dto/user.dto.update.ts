@@ -1,15 +1,10 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { IsOptional, MaxLength } from 'class-validator';
-import { LONG_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@src/common/constants';
+import { SMALL_TEXT_LENGTH } from '@src/common/constants';
 import { UpdateContributorInput } from '@domain/community/contributor/dto/contributor.dto.update';
 
 @InputType()
 export class UpdateUserInput extends UpdateContributorInput {
-  @Field({ nullable: true })
-  @IsOptional()
-  @MaxLength(LONG_TEXT_LENGTH)
-  accountUpn?: string;
-
   @Field({ nullable: true })
   @IsOptional()
   @MaxLength(SMALL_TEXT_LENGTH)

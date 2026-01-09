@@ -102,7 +102,7 @@ export class CalloutResolverSubscriptions {
       `subscription to new Posts on Callout: ${callout.id}`
     );
 
-    return this.subscriptionPostCreated.asyncIterator(
+    return this.subscriptionPostCreated.asyncIterableIterator(
       SubscriptionType.CALLOUT_POST_CREATED
     );
   }

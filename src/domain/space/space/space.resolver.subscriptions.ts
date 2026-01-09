@@ -80,7 +80,7 @@ export class SpaceResolverSubscriptions {
       `subscription to new Subspaces on Space: ${space.id}`
     );
 
-    return this.subspaceCreatedSubscription.asyncIterator(
+    return this.subspaceCreatedSubscription.asyncIterableIterator(
       SubscriptionType.SUBSPACE_CREATED
     );
   }
