@@ -317,6 +317,15 @@ storage:
     # Flag setting whether database operations should be logged to the console.
     logging: ${ENABLE_ORM_LOGGING}:false
 
+    # Connection pool settings for PostgreSQL
+    pool:
+      # Maximum number of connections in the pool
+      max: ${DATABASE_POOL_MAX}:50
+      # Close idle connections after this many milliseconds
+      idle_timeout_ms: ${DATABASE_POOL_IDLE_TIMEOUT_MS}:30000
+      # Timeout for acquiring a connection in milliseconds
+      connection_timeout_ms: ${DATABASE_POOL_CONNECTION_TIMEOUT_MS}:10000
+
   local_storage:
     # Absolute path
     path: ${LOCAL_STORAGE_PATH}:.storage
