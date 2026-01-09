@@ -28,7 +28,7 @@ export class InnovationFlow
   @Column('uuid', { nullable: true })
   currentStateID?: string;
 
-  @Column('json', { nullable: false })
+  @Column('jsonb', { nullable: false })
   settings!: IInnovationFlowSettings;
 
   @OneToOne(() => TagsetTemplate, {

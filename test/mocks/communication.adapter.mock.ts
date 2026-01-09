@@ -7,6 +7,16 @@ export const MockCommunicationAdapter: ValueProvider<
 > = {
   provide: CommunicationAdapter,
   useValue: {
-    startDirectMessagingToUser: jest.fn(),
+    syncActor: jest.fn(),
+    createRoom: jest.fn(),
+    getRoom: jest.fn(),
+    getRoomMembers: jest.fn(),
+    getMessage: jest.fn(),
+    getThreadMessages: jest.fn(),
+    sendMessage: jest.fn(),
+    sendMessageReply: jest.fn(),
+    deleteMessage: jest.fn(),
+    batchAddMember: jest.fn(),
+    batchRemoveMember: jest.fn(),
   },
 };

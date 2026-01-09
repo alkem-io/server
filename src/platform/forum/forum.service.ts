@@ -106,10 +106,7 @@ export class ForumService {
 
     // Trigger a room membership request for the current user that is not awaited
     const room = await this.discussionService.getComments(discussion.id);
-    await this.communicationAdapter.userAddToRooms(
-      [room.externalRoomID],
-      userForumID
-    );
+    await this.communicationAdapter.batchAddMember(userForumID, [room.id]);
 
     return discussion;
   }
@@ -200,7 +197,7 @@ export class ForumService {
 
   async addUserToForums(forum: IForum, forumUserID: string): Promise<boolean> {
     const forumRoomIDs = await this.getRoomsUsed(forum);
-    await this.communicationAdapter.userAddToRooms(forumRoomIDs, forumUserID);
+    await this.communicationAdapter.batchAddMember(forumUserID, forumRoomIDs);
 
     return true;
   }
@@ -210,7 +207,7 @@ export class ForumService {
     const discussions = await this.getDiscussions(forum);
     for (const discussion of discussions) {
       const room = await this.discussionService.getComments(discussion.id);
-      forumRoomIDs.push(room.displayName);
+      forumRoomIDs.push(room.id);
     }
     return forumRoomIDs;
   }
@@ -227,15 +224,21 @@ export class ForumService {
   }
 
   async removeUserFromForums(forum: IForum, user: IUser): Promise<boolean> {
-    // get the list of rooms to add the user to
+    if (!user.agent?.id) {
+      throw new EntityNotInitializedException(
+        `User ${user.id} does not have an agent`,
+        LogContext.PLATFORM_FORUM
+      );
+    }
+    // get the list of rooms to remove the user from
     const forumRoomIDs: string[] = [];
     for (const discussion of await this.getDiscussions(forum)) {
       const room = await this.discussionService.getComments(discussion.id);
-      forumRoomIDs.push(room.externalRoomID);
+      forumRoomIDs.push(room.id);
     }
-    await this.communicationAdapter.removeUserFromRooms(
-      forumRoomIDs,
-      user.communicationID
+    await this.communicationAdapter.batchRemoveMember(
+      user.agent.id,
+      forumRoomIDs
     );
 
     return true;

@@ -25,31 +25,31 @@ export class SubscriptionReadService {
   ) {}
 
   public subscribeToActivities() {
-    return this.activityCreatedSubscription.asyncIterator(
+    return this.activityCreatedSubscription.asyncIterableIterator(
       SubscriptionType.ACTIVITY_CREATED
     );
   }
 
   public subscribeToRoomEvents() {
-    return this.roomEventsSubscription.asyncIterator(
+    return this.roomEventsSubscription.asyncIterableIterator(
       SubscriptionType.ROOM_EVENTS
     );
   }
 
   public subscribeToVirtualContributorUpdated() {
-    return this.subscriptionVirtualContributorUpdated.asyncIterator(
+    return this.subscriptionVirtualContributorUpdated.asyncIterableIterator(
       SubscriptionType.VIRTUAL_CONTRIBUTOR_UPDATED
     );
   }
 
   public subscribeToInAppNotificationReceived() {
-    return this.subscriptionInAppNotificationReceived.asyncIterator(
+    return this.subscriptionInAppNotificationReceived.asyncIterableIterator(
       SubscriptionType.IN_APP_NOTIFICATION_RECEIVED
     );
   }
 
   public subscribeToInAppNotificationCounter() {
-    return this.subscriptionInAppNotificationCounter.asyncIterator(
+    return this.subscriptionInAppNotificationCounter.asyncIterableIterator(
       SubscriptionType.IN_APP_NOTIFICATION_COUNTER
     );
   }
