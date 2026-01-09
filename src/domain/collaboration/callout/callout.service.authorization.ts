@@ -27,6 +27,7 @@ import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { RoleName } from '@common/enums/role.name';
+import { PlatformRolesAccessService } from '@domain/access/platform-roles-access/platform.roles.access.service';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 
 @Injectable()
@@ -37,7 +38,8 @@ export class CalloutAuthorizationService {
     private contributionAuthorizationService: CalloutContributionAuthorizationService,
     private calloutFramingAuthorizationService: CalloutFramingAuthorizationService,
     private roomAuthorizationService: RoomAuthorizationService,
-    private roleSetService: RoleSetService
+    private roleSetService: RoleSetService,
+    private platformRolesAccessService: PlatformRolesAccessService
   ) {}
 
   public async applyAuthorizationPolicy(
@@ -53,15 +55,7 @@ export class CalloutAuthorizationService {
         comments: true,
         contributions: true,
         contributionDefaults: true,
-        calloutsSet: {
-          collaboration: {
-            space: {
-              community: {
-                roleSet: true,
-              },
-            },
-          },
-        },
+        calloutsSet: true,
         framing: {
           profile: true,
           whiteboard: {
@@ -94,7 +88,9 @@ export class CalloutAuthorizationService {
     const parentAuthorizationAdjusted =
       await this.getParentAuthorizationPolicyForCalloutVisibility(
         callout,
-        parentAuthorization
+        platformRolesAccess,
+        parentAuthorization,
+        roleSet
       );
 
     callout.authorization =
@@ -163,7 +159,9 @@ export class CalloutAuthorizationService {
    */
   private async getParentAuthorizationPolicyForCalloutVisibility(
     callout: ICallout,
-    parentAuthorization: IAuthorizationPolicy | undefined
+    platformRolesAccess: IPlatformRolesAccess,
+    parentAuthorization: IAuthorizationPolicy | undefined,
+    roleSet?: IRoleSet
   ): Promise<IAuthorizationPolicy | undefined> {
     // If there is no parent authorization, or the Callout is a Template, or the Callout is not in DRAFT visibility
     // then return the parent unchanged. Templates should always be readable when surfaced (issue #8804).
@@ -198,29 +196,22 @@ export class CalloutAuthorizationService {
     clonedParent.credentialRules = newRules;
 
     // Add in who should READ
-    const criteriasWithReadAccess: ICredentialDefinition[] = [
-      { type: AuthorizationCredential.GLOBAL_ADMIN, resourceID: '' },
-      { type: AuthorizationCredential.GLOBAL_SUPPORT, resourceID: '' },
-    ];
+    const criteriasWithReadAccess: ICredentialDefinition[] =
+      this.platformRolesAccessService.getCredentialsForRolesWithAccess(
+        platformRolesAccess.roles,
+        [AuthorizationPrivilege.READ]
+      );
 
-    if (callout.calloutsSet?.collaboration?.space) {
-      const space = callout.calloutsSet.collaboration.space;
-      if (space.community?.roleSet) {
-        // Get space admin credentials including parent space admins for hierarchical access
-        const spaceAdminCredentials =
-          await this.roleSetService.getCredentialsForRoleWithParents(
-            space.community.roleSet,
-            RoleName.ADMIN
-          );
-        criteriasWithReadAccess.push(...spaceAdminCredentials);
-      } else {
-        // Fallback to just the current space admin if roleSet is not available
-        criteriasWithReadAccess.push({
-          type: AuthorizationCredential.SPACE_ADMIN,
-          resourceID: space.id,
-        });
-      }
+    if (roleSet) {
+      // Get space admin credentials including parent space admins for hierarchical access
+      const spaceAdminCredentials =
+        await this.roleSetService.getCredentialsForRoleWithParents(
+          roleSet,
+          RoleName.ADMIN
+        );
+      criteriasWithReadAccess.push(...spaceAdminCredentials);
     }
+
     if (callout.createdBy) {
       criteriasWithReadAccess.push({
         type: AuthorizationCredential.USER_SELF_MANAGEMENT,

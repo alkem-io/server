@@ -1,4 +1,3 @@
-import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { INameable } from '../entity/nameable-entity/nameable.interface';
 import { WhiteboardContent } from '../scalars/scalar.whiteboard.content';
@@ -33,6 +32,4 @@ export abstract class IWhiteboard extends INameable {
   guestContributionsAllowed!: boolean;
 
   createdBy?: string;
-
-  callout?: ICallout;
 }
