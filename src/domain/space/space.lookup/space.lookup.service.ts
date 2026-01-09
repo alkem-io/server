@@ -274,8 +274,9 @@ export class SpaceLookupService {
     // Safety guard: prevent infinite recursion
     if (currentDepth >= maxDepth) {
       this.logger.warn(
-        `Max recursion depth (${maxDepth}) reached for space ${spaceID}`,
-        LogContext.SPACES
+        'Max recursion depth reached for space',
+        LogContext.SPACES,
+        { maxDepth, spaceID }
       );
       return [];
     }
@@ -283,8 +284,9 @@ export class SpaceLookupService {
     // Safety guard: prevent circular references
     if (visited.has(spaceID)) {
       this.logger.warn(
-        `Circular reference detected for space ${spaceID}`,
-        LogContext.SPACES
+        'Circular reference detected for space',
+        LogContext.SPACES,
+        { spaceID }
       );
       return [];
     }
