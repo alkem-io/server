@@ -148,6 +148,11 @@ export type AlkemioConfig = {
       schema: string;
       database: string;
       logging: boolean;
+      pool?: {
+        max: number;
+        idle_timeout_ms: number;
+        connection_timeout_ms: number;
+      };
     };
     local_storage: {
       path: string;
