@@ -1,5 +1,5 @@
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { CurrentActor, Profiling } from '@src/common/decorators';
 import { IInnovationHub } from './innovation.hub.interface';
 import { ActorContext } from '@core/actor-context';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -22,12 +22,12 @@ export class InnovationHubResolverMutations {
   })
   @Profiling.api
   async updateInnovationHub(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('updateData') updateData: UpdateInnovationHubInput
   ): Promise<IInnovationHub> {
     const innovationHub =
       await this.innovationHubService.getInnovationHubOrFail(updateData.ID);
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       innovationHub.authorization,
       AuthorizationPrivilege.UPDATE,
@@ -42,12 +42,12 @@ export class InnovationHubResolverMutations {
   })
   @Profiling.api
   async deleteInnovationHub(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteInnovationHubInput
   ): Promise<IInnovationHub> {
     const innovationHub =
       await this.innovationHubService.getInnovationHubOrFail(deleteData.ID);
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       innovationHub.authorization,
       AuthorizationPrivilege.DELETE,

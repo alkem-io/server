@@ -239,7 +239,7 @@ export class UserGroupService {
       },
       storageAggregator
     );
-    await groupable.groups?.push(newGroup);
+    groupable.groups?.push(newGroup);
     return newGroup;
   }
 

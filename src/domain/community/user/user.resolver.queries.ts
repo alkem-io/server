@@ -1,4 +1,4 @@
-import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UUID } from '@domain/common/scalars';
@@ -26,7 +26,7 @@ export class UserResolverQueries {
     description: 'The users who have profiles on this platform',
   })
   async users(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args({ nullable: true }) args: UsersQueryArgs
   ): Promise<IUser[]> {
     this.authorizationService.grantAccessOrFail(
@@ -43,7 +43,7 @@ export class UserResolverQueries {
     description: 'The users who have profiles on this platform',
   })
   async usersPaginated(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args({ nullable: true }) pagination: PaginationArgs,
     @Args({
       name: 'withTags',
@@ -68,10 +68,10 @@ export class UserResolverQueries {
     description: 'A particular user, identified by the ID or by email',
   })
   async user(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IUser> {
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,

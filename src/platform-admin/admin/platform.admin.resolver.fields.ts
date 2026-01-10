@@ -1,5 +1,5 @@
 import { Args, Resolver } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { ResolveField } from '@nestjs/graphql';
 import { ActorContext } from '@core/actor-context';
 import { PlatformAdminQueryResults } from './dto/platform.admin.query.results';
@@ -37,7 +37,7 @@ export class PlatformAdminResolverFields {
       'Retrieve all Innovation Hubs on the Platform. This is only available to Platform Admins.',
   })
   async innovationHubs(
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ): Promise<IInnovationHub[]> {
     this.authorizationService.grantAccessOrFail(
       actorContext,
@@ -55,7 +55,7 @@ export class PlatformAdminResolverFields {
       'Retrieve all Innovation Packs on the Platform. This is only available to Platform Admins.',
   })
   async innovationPacks(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('queryData', { type: () => InnovationPacksInput, nullable: true })
     args?: InnovationPacksInput
   ): Promise<IInnovationPack[]> {
@@ -75,7 +75,7 @@ export class PlatformAdminResolverFields {
       'Retrieve all Spaces on the Platform. This is only available to Platform Admins.',
   })
   async spaces(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args() args: SpacesQueryArgs
   ): Promise<ISpace[]> {
     this.authorizationService.grantAccessOrFail(
@@ -94,7 +94,7 @@ export class PlatformAdminResolverFields {
       'Retrieve all Users on the Platform. This is only available to Platform Admins.',
   })
   async users(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args() pagination: PaginationArgs,
     @Args({
       name: 'withTags',
@@ -120,7 +120,7 @@ export class PlatformAdminResolverFields {
       'Retrieve all Organizations on the Platform. This is only available to Platform Admins.',
   })
   async organizations(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args() pagination: PaginationArgs,
     @Args('status', {
       nullable: true,
@@ -149,7 +149,7 @@ export class PlatformAdminResolverFields {
       'Retrieve all Virtual Contributors on the Platform. This is only available to Platform Admins.',
   })
   async virtualContributors(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args() args: ContributorQueryArgs
   ): Promise<IVirtualContributor[]> {
     this.authorizationService.grantAccessOrFail(
@@ -167,7 +167,7 @@ export class PlatformAdminResolverFields {
     description: 'Lookup Communication related information.',
   })
   async communication(
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ): Promise<PlatformAdminCommunicationQueryResults> {
     this.authorizationService.grantAccessOrFail(
       actorContext,
@@ -183,7 +183,7 @@ export class PlatformAdminResolverFields {
     description: 'Lookup Identity related information.',
   })
   async identity(
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ): Promise<PlatformAdminIdentityQueryResults> {
     this.authorizationService.grantAccessOrFail(
       actorContext,

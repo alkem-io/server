@@ -1,7 +1,7 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Resolver, Query } from '@nestjs/graphql';
 import { ActivityLogService } from './activity.log.service';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { CurrentActor, Profiling } from '@src/common/decorators';
 import { ActivityLogInput } from './dto/activity.log.dto.collaboration.input';
 import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -31,12 +31,12 @@ export class ActivityLogResolverQueries {
   })
   @Profiling.api
   async activityLogOnCollaboration(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('queryData', { type: () => ActivityLogInput, nullable: false })
     queryData: ActivityLogInput
   ): Promise<IActivityLogEntry[]> {
     // can actor read users
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
@@ -48,7 +48,7 @@ export class ActivityLogResolverQueries {
         queryData.collaborationID
       );
     // can actor read the collaboration
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       collaboration.authorization,
       AuthorizationPrivilege.READ,

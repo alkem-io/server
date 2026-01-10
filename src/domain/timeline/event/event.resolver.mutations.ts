@@ -1,6 +1,6 @@
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CalendarEventService } from './event.service';
-import { CurrentUser } from '@common/decorators';
+import { CurrentActor } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { ActorContext } from '@core/actor-context';
@@ -21,7 +21,7 @@ export class CalendarEventResolverMutations {
     description: 'Deletes the specified CalendarEvent.',
   })
   async deleteCalendarEvent(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteCalendarEventInput
   ): Promise<ICalendarEvent> {
     const calendarEvent =
@@ -39,7 +39,7 @@ export class CalendarEventResolverMutations {
     description: 'Updates the specified CalendarEvent.',
   })
   async updateCalendarEvent(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('eventData') eventData: UpdateCalendarEventInput
   ): Promise<ICalendarEvent> {
     const calendarEvent =

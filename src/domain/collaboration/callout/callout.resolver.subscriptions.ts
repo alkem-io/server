@@ -1,4 +1,4 @@
-import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { ActorContext } from '@core/actor-context';
 import { Inject, LoggerService } from '@nestjs/common';
@@ -69,7 +69,7 @@ export class CalloutResolverSubscriptions {
     }
   )
   async calloutPostCreated(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args({
       name: 'calloutID',
       type: () => UUID,
@@ -95,7 +95,7 @@ export class CalloutResolverSubscriptions {
         LogContext.SUBSCRIPTIONS
       );
     }
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       callout.authorization,
       AuthorizationPrivilege.READ,

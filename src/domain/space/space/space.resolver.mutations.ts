@@ -1,6 +1,6 @@
 import { Inject } from '@nestjs/common';
 import { Resolver, Args, Mutation } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { SpaceService } from './space.service';
 import { DeleteSpaceInput, UpdateSpaceInput } from '@domain/space/space';
 import { ActorContext } from '@core/actor-context';
@@ -42,7 +42,7 @@ export class SpaceResolverMutations {
     description: 'Updates the Space.',
   })
   async updateSpace(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('spaceData') spaceData: UpdateSpaceInput
   ): Promise<ISpace> {
     const space = await this.spaceService.getSpaceOrFail(spaceData.ID, {
@@ -52,7 +52,7 @@ export class SpaceResolverMutations {
         },
       },
     });
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       space.authorization,
       AuthorizationPrivilege.UPDATE,
@@ -77,7 +77,7 @@ export class SpaceResolverMutations {
     description: 'Deletes the specified Space.',
   })
   async deleteSpace(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteSpaceInput
   ): Promise<ISpace> {
     const space = await this.spaceService.getSpaceOrFail(deleteData.ID);
@@ -95,7 +95,7 @@ export class SpaceResolverMutations {
     description: 'Updates one of the Setting on a Space',
   })
   async updateSpaceSettings(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('settingsData') settingsData: UpdateSpaceSettingsInput
   ): Promise<ISpace> {
     let space = await this.spaceService.getSpaceOrFail(settingsData.spaceID);
@@ -133,7 +133,7 @@ export class SpaceResolverMutations {
       'Update the platform settings, such as nameID, of the specified Space.',
   })
   async updateSpacePlatformSettings(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('updateData') updateData: UpdateSpacePlatformSettingsInput
   ): Promise<ISpace> {
     let space = await this.spaceService.getSpaceOrFail(updateData.spaceID, {
@@ -163,7 +163,7 @@ export class SpaceResolverMutations {
     description: 'Creates a new Subspace within the specified Space.',
   })
   async createSubspace(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('subspaceData') subspaceData: CreateSubspaceInput
   ): Promise<ISpace> {
     const space = await this.spaceService.getSpaceOrFail(subspaceData.spaceID, {
@@ -190,7 +190,7 @@ export class SpaceResolverMutations {
 
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
-    this.activityAdapter.subspaceCreated({
+    void this.activityAdapter.subspaceCreated({
       triggeredBy: actorContext.actorId,
       subspace,
     });
@@ -225,7 +225,7 @@ export class SpaceResolverMutations {
       spaceID: space.id,
       subspace: newSubspace,
     };
-    this.subspaceCreatedSubscription.publish(
+    void this.subspaceCreatedSubscription.publish(
       SubscriptionType.SUBSPACE_CREATED,
       subspaceCreatedEvent
     );

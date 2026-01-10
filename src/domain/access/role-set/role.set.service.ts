@@ -716,7 +716,7 @@ export class RoleSetService {
         await this.communityResolverService.getSpaceForRoleSetOrFail(
           roleSet.id
         );
-      this.aiServerAdapter.ensureContextIsLoaded(space.id);
+      void this.aiServerAdapter.ensureContextIsLoaded(space.id);
     }
 
     return actorId;
@@ -1284,7 +1284,7 @@ export class RoleSetService {
     };
   }
 
-  public async removeCurrentUserFromRolesInRoleSet(
+  public async removeCurrentActorFromRolesInRoleSet(
     roleSet: IRoleSet,
     actorContext: ActorContext
   ): Promise<void> {

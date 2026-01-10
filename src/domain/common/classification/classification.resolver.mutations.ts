@@ -5,7 +5,7 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { ITagset } from '../tagset';
 import { UpdateClassificationSelectTagsetValueInput } from './dto/classification.dto.update.select.tagset.value';
-import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { ClassificationService } from './classification.service';
 
 @InstrumentResolver()
@@ -20,14 +20,14 @@ export class ClassificationResolverMutations {
     description: 'Updates a Tagset on a Classification.',
   })
   async updateClassificationTagset(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('updateData') updateData: UpdateClassificationSelectTagsetValueInput
   ): Promise<ITagset> {
     const classification =
       await this.classificationService.getClassificationOrFail(
         updateData.classificationID
       );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       classification.authorization,
       AuthorizationPrivilege.UPDATE,

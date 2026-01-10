@@ -1,5 +1,5 @@
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -22,7 +22,7 @@ export class LicensePolicyResolverMutations {
     description: 'Deletes the specified LicensePolicy.',
   })
   async adminLicensePolicyDeleteCredentialRule(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteLicensePolicyCredentialRuleInput
   ): Promise<ILicensingCredentialBasedPolicyCredentialRule> {
     const licensePolicy =
@@ -44,7 +44,7 @@ export class LicensePolicyResolverMutations {
     description: 'Updates a CredentialRule on the LicensePolicy.',
   })
   async adminLicensePolicyUpdateCredentialRule(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('updateData') updateData: UpdateLicensePolicyCredentialRuleInput
   ): Promise<ILicensingCredentialBasedPolicyCredentialRule> {
     const licensePolicy =
@@ -64,7 +64,7 @@ export class LicensePolicyResolverMutations {
     description: 'Creates a CredentialRule on the LicensePolicy.',
   })
   async adminLicensePolicyCreateCredentialRule(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('createData') createData: CreateLicensePolicyCredentialRuleInput
   ): Promise<ILicensingCredentialBasedPolicyCredentialRule> {
     const licensePolicy =

@@ -1,4 +1,4 @@
-import { CurrentUser } from '@common/decorators';
+import { CurrentActor } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ActorContext } from '@core/actor-context';
 import { IReference } from '@domain/common/reference/reference.interface';
@@ -34,13 +34,13 @@ export class ReferenceResolverMutations {
     description: 'Updates the specified Reference.',
   })
   async updateReference(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('referenceData') referenceData: UpdateReferenceInput
   ): Promise<IReference> {
     const reference = await this.referenceService.getReferenceOrFail(
       referenceData.ID
     );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       reference.authorization,
       AuthorizationPrivilege.UPDATE,
@@ -56,13 +56,13 @@ export class ReferenceResolverMutations {
     description: 'Deletes the specified Reference.',
   })
   async deleteReference(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteReferenceInput
   ): Promise<IReference> {
     const reference = await this.referenceService.getReferenceOrFail(
       deleteData.ID
     );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       reference.authorization,
       AuthorizationPrivilege.DELETE,
@@ -76,7 +76,7 @@ export class ReferenceResolverMutations {
       'Create a new Document on the Storage and return the value as part of the returned Reference.',
   })
   async uploadFileOnReference(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('uploadData') uploadData: StorageBucketUploadFileOnReferenceInput,
     @Args({ name: 'file', type: () => GraphQLUpload })
     { createReadStream, filename, mimetype }: FileUpload

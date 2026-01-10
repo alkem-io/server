@@ -60,7 +60,7 @@ export class WhiteboardIntegrationController {
     @Ctx() context: RmqContext
   ) {
     ack(context);
-    this.integrationService.contribution(data);
+    void this.integrationService.contribution(data);
   }
 
   @EventPattern(

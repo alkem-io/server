@@ -4,7 +4,7 @@ import { ICredential } from '@domain/actor/credential/credential.interface';
 import { UUID } from '@domain/common/scalars';
 import { CredentialType } from '@common/enums/credential.type';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { CurrentUser } from '@common/decorators';
+import { CurrentActor } from '@common/decorators';
 import { ActorContext } from '@core/actor-context';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
@@ -21,7 +21,7 @@ export class ActorResolverMutations {
     description: 'Grant a credential to an Actor.',
   })
   async grantCredentialToActor(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('actorID', { type: () => UUID }) actorID: string,
     @Args('credentialType', { type: () => CredentialType })
     credentialType: CredentialType,
@@ -29,7 +29,7 @@ export class ActorResolverMutations {
     resourceID?: string
   ): Promise<ICredential> {
     // Granting credentials requires platform admin access
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_ADMIN,
@@ -46,7 +46,7 @@ export class ActorResolverMutations {
     description: 'Revoke a credential from an Actor.',
   })
   async revokeCredentialFromActor(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('actorID', { type: () => UUID }) actorID: string,
     @Args('credentialType', { type: () => CredentialType })
     credentialType: CredentialType,
@@ -54,7 +54,7 @@ export class ActorResolverMutations {
     resourceID?: string
   ): Promise<boolean> {
     // Revoking credentials requires platform admin access
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_ADMIN,

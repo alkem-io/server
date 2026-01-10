@@ -1,5 +1,5 @@
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -41,7 +41,7 @@ export class PlatformRoleResolverMutations {
     description: 'Assigns a User to a role on the Platform.',
   })
   async assignPlatformRoleToUser(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('roleData') roleData: AssignPlatformRoleInput
   ): Promise<IUser> {
     const roleSet = await this.platformService.getRoleSetOrFail();
@@ -86,7 +86,7 @@ export class PlatformRoleResolverMutations {
       await this.resetLicenseForUserAccount(user);
     }
 
-    this.notifyPlatformGlobalRoleChange(
+    void this.notifyPlatformGlobalRoleChange(
       actorContext.actorId,
       user,
       RoleChangeType.ADDED,
@@ -100,7 +100,7 @@ export class PlatformRoleResolverMutations {
     description: 'Removes a User from a Role on the Platform.',
   })
   async removePlatformRoleFromUser(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('roleData') roleData: RemovePlatformRoleInput
   ): Promise<IUser> {
     const roleSet = await this.platformService.getRoleSetOrFail();
@@ -154,7 +154,7 @@ export class PlatformRoleResolverMutations {
       await this.resetLicenseForUserAccount(user);
     }
 
-    this.notifyPlatformGlobalRoleChange(
+    void this.notifyPlatformGlobalRoleChange(
       actorContext.actorId,
       user,
       RoleChangeType.REMOVED,

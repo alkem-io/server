@@ -102,7 +102,7 @@ export class SubscriptionPublishService {
       virtualContributor,
     };
 
-    this.virtualContributorUpdatedSubscription.publish(
+    void this.virtualContributorUpdatedSubscription.publish(
       SubscriptionType.VIRTUAL_CONTRIBUTOR_UPDATED,
       payload
     );

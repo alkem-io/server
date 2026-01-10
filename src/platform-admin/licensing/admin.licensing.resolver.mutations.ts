@@ -1,5 +1,5 @@
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { CurrentActor, Profiling } from '@src/common/decorators';
 import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -38,7 +38,7 @@ export class AdminLicensingResolverMutations {
     description: 'Creates an account in Wingback',
   })
   async createWingbackAccount(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('accountID', { type: () => UUID }) accountID: string
   ): Promise<string> {
     const account = await this.accountService.getAccountOrFail(accountID);
@@ -57,7 +57,7 @@ export class AdminLicensingResolverMutations {
     description: 'Assign the specified LicensePlan to an Account.',
   })
   async assignLicensePlanToAccount(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('planData') planData: AssignLicensePlanToAccount
   ): Promise<IAccount> {
     let licensing: ILicensingFramework | undefined;
@@ -95,7 +95,7 @@ export class AdminLicensingResolverMutations {
   })
   @Profiling.api
   async assignLicensePlanToSpace(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('planData') planData: AssignLicensePlanToSpace
   ): Promise<ISpace> {
     let licensing: ILicensingFramework | undefined;
@@ -133,7 +133,7 @@ export class AdminLicensingResolverMutations {
   })
   @Profiling.api
   async revokeLicensePlanFromAccount(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('planData') planData: RevokeLicensePlanFromAccount
   ): Promise<IAccount> {
     let licensing: ILicensingFramework | undefined;
@@ -172,7 +172,7 @@ export class AdminLicensingResolverMutations {
   })
   @Profiling.api
   async revokeLicensePlanFromSpace(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('planData') planData: RevokeLicensePlanFromSpace
   ): Promise<ISpace> {
     let licensing: ILicensingFramework | undefined;
@@ -209,7 +209,7 @@ export class AdminLicensingResolverMutations {
   })
   @Profiling.api
   async resetLicenseOnAccounts(
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ): Promise<void> {
     const licensing =
       await this.licensingFrameworkService.getDefaultLicensingOrFail();

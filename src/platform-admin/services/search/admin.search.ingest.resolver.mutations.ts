@@ -1,5 +1,5 @@
 import { Mutation, Resolver } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { ActorContext } from '@core/actor-context';
@@ -24,7 +24,7 @@ export class AdminSearchIngestResolverMutations {
       'Ingests new data into Elasticsearch from scratch. This will delete all existing data and ingest new data from the source. This is an admin only operation.',
   })
   async adminSearchIngestFromScratch(
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ) {
     const task = await this.taskService.create();
 
@@ -45,7 +45,7 @@ export class AdminSearchIngestResolverMutations {
       throw e;
     }
     // start it asynchronously
-    this.searchIngestService.ingestFromScratch(task);
+    void this.searchIngestService.ingestFromScratch(task);
     // return the task in the meantime
     return task.id;
   }

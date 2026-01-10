@@ -1,6 +1,6 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { ActorContext } from '@core/actor-context';
@@ -33,7 +33,7 @@ export class AdminSearchContributorsMutations {
       'Update the Avatar on the Profile with the spedified profileID to be stored as a Document.',
   })
   async adminUpdateContributorAvatars(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('profileID', { type: () => UUID }) profileID: string
   ): Promise<IProfile> {
     const platformPolicy =

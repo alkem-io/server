@@ -114,7 +114,7 @@ export class RoomServiceEvents {
         commentSent: message,
         userID: discussion.createdBy,
       };
-    this.notificationPlatformAdapter.platformForumDiscussionComment(
+    void this.notificationPlatformAdapter.platformForumDiscussionComment(
       forumDiscussionCommentNotificationInput
     );
   }
@@ -171,7 +171,7 @@ export class RoomServiceEvents {
       post: post,
       message: message,
     };
-    this.activityAdapter.calloutPostComment(activityLogInput);
+    void this.activityAdapter.calloutPostComment(activityLogInput);
 
     const community =
       await this.communityResolverService.getCommunityFromPostRoomOrFail(
@@ -212,7 +212,7 @@ export class RoomServiceEvents {
       updates: room,
       message: message,
     };
-    this.activityAdapter.updateSent(activityLogInput);
+    void this.activityAdapter.updateSent(activityLogInput);
 
     const community =
       await this.communityResolverService.getCommunityFromUpdatesOrFail(
@@ -258,7 +258,7 @@ export class RoomServiceEvents {
       callout: callout,
       message,
     };
-    this.activityAdapter.calloutCommentCreated(activityLogInput);
+    void this.activityAdapter.calloutCommentCreated(activityLogInput);
 
     const community =
       await this.communityResolverService.getCommunityFromCollaborationCalloutOrFail(

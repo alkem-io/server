@@ -1,6 +1,6 @@
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { NotificationEventInAppState } from '@common/enums/notification.event.in.app.state';
-import { CurrentUser } from '@common/decorators';
+import { CurrentActor } from '@common/decorators';
 import { ActorContext } from '@core/actor-context';
 import { LogContext } from '@common/enums';
 import { ForbiddenException } from '@common/exceptions';
@@ -22,7 +22,7 @@ export class InAppNotificationResolverMutations {
     description: 'Update notification state and return the notification.',
   })
   async updateNotificationState(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('notificationData') notificationData: UpdateNotificationStateInput
   ): Promise<NotificationEventInAppState> {
     const notification =
@@ -60,7 +60,7 @@ export class InAppNotificationResolverMutations {
       'Mark notifications as read. If no filter is provided, marks all user notifications as read. If filter with types is provided, marks only those notification types as read.',
   })
   async markNotificationsAsRead(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('filter', {
       type: () => NotificationEventsFilterInput,
       nullable: true,
@@ -79,7 +79,7 @@ export class InAppNotificationResolverMutations {
       'Mark notifications as unread. If no filter is provided, marks all user notifications as unread. If filter with types is provided, marks only those notification types as unread.',
   })
   async markNotificationsAsUnread(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('filter', {
       type: () => NotificationEventsFilterInput,
       nullable: true,

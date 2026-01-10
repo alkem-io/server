@@ -56,7 +56,10 @@ export class NotificationUserAdapter {
         eventData.userID
       );
 
-    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
+    void this.notificationExternalAdapter.sendExternalNotifications(
+      event,
+      payload
+    );
 
     // Send in-app notifications
     const inAppReceiverIDs = recipients.inAppRecipients.map(
@@ -103,7 +106,10 @@ export class NotificationUserAdapter {
         eventData.welcomeMessage
       );
 
-    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
+    void this.notificationExternalAdapter.sendExternalNotifications(
+      event,
+      payload
+    );
 
     // Send in-app notifications
     const inAppReceiverIDs = recipients.inAppRecipients.map(
@@ -147,7 +153,10 @@ export class NotificationUserAdapter {
         space,
         eventData.actorId
       );
-    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
+    void this.notificationExternalAdapter.sendExternalNotifications(
+      event,
+      payload
+    );
 
     // Send in-app notifications
     const inAppReceiverIDs = recipients.inAppRecipients.map(
@@ -201,7 +210,7 @@ export class NotificationUserAdapter {
           messageDetails
         );
 
-      this.notificationExternalAdapter.sendExternalNotifications(
+      void this.notificationExternalAdapter.sendExternalNotifications(
         event,
         payload
       );
@@ -246,7 +255,7 @@ export class NotificationUserAdapter {
           eventData.receiverID,
           eventData.message
         );
-      this.notificationExternalAdapter.sendExternalNotifications(
+      void this.notificationExternalAdapter.sendExternalNotifications(
         event,
         payload
       );
@@ -302,7 +311,7 @@ export class NotificationUserAdapter {
             messageDetails
           );
 
-        this.notificationExternalAdapter.sendExternalNotifications(
+        void this.notificationExternalAdapter.sendExternalNotifications(
           event,
           payload
         );
@@ -362,7 +371,7 @@ export class NotificationUserAdapter {
           space
         );
 
-      this.notificationExternalAdapter.sendExternalNotifications(
+      void this.notificationExternalAdapter.sendExternalNotifications(
         event,
         payload
       );

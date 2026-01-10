@@ -6,7 +6,7 @@ export const asyncFilter = <T>(
     const booleanArr: Array<Promise<boolean>> = [];
     originalArray.forEach(e => booleanArr.push(predicate(e)));
 
-    Promise.all(booleanArr).then(booleanArr => {
+    void Promise.all(booleanArr).then(booleanArr => {
       const filteredArray = originalArray.filter((e, i) => booleanArr[i]);
       resolve(filteredArray);
     });

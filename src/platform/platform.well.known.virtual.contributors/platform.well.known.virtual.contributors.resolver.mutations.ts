@@ -1,5 +1,5 @@
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
-import { CurrentUser } from '@common/decorators';
+import { CurrentActor } from '@common/decorators';
 import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
@@ -25,11 +25,11 @@ export class PlatformWellKnownVirtualContributorsResolverMutations {
       'Set the mapping of a well-known Virtual Contributor to a specific Virtual Contributor UUID.',
   })
   async setPlatformWellKnownVirtualContributor(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('mappingData')
     mappingData: SetPlatformWellKnownVirtualContributorInput
   ): Promise<IPlatformWellKnownVirtualContributors> {
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_ADMIN,

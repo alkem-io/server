@@ -1,6 +1,6 @@
 import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { CurrentActor, Profiling } from '@src/common/decorators';
 import { IUser } from '@domain/community/user/user.interface';
 import { ActorContext } from '@core/actor-context';
 import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
@@ -58,7 +58,7 @@ export class AdminAuthorizationResolverMutations {
   async grantCredentialToUser(
     @Args('grantCredentialData')
     grantCredentialData: GrantAuthorizationCredentialInput,
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ): Promise<IUser> {
     this.authorizationService.grantAccessOrFail(
       actorContext,
@@ -73,7 +73,7 @@ export class AdminAuthorizationResolverMutations {
       );
 
     // Send the notification
-    this.notifyPlatformGlobalRoleChange(
+    void this.notifyPlatformGlobalRoleChange(
       actorContext.actorId,
       user,
       RoleChangeType.ADDED,
@@ -89,9 +89,9 @@ export class AdminAuthorizationResolverMutations {
   async revokeCredentialFromUser(
     @Args('revokeCredentialData')
     credentialRemoveData: RevokeAuthorizationCredentialInput,
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ): Promise<IUser> {
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
@@ -101,7 +101,7 @@ export class AdminAuthorizationResolverMutations {
       await this.adminAuthorizationService.revokeCredentialFromUser(
         credentialRemoveData
       );
-    this.notifyPlatformGlobalRoleChange(
+    void this.notifyPlatformGlobalRoleChange(
       actorContext.actorId,
       user,
       RoleChangeType.REMOVED,
@@ -117,9 +117,9 @@ export class AdminAuthorizationResolverMutations {
   async grantCredentialToOrganization(
     @Args('grantCredentialData')
     grantCredentialData: GrantOrganizationAuthorizationCredentialInput,
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ): Promise<IOrganization> {
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
@@ -137,9 +137,9 @@ export class AdminAuthorizationResolverMutations {
   async revokeCredentialFromOrganization(
     @Args('revokeCredentialData')
     credentialRemoveData: RevokeOrganizationAuthorizationCredentialInput,
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ): Promise<IOrganization> {
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
@@ -154,7 +154,7 @@ export class AdminAuthorizationResolverMutations {
     description: 'Reset the Authorization Policy on all entities',
   })
   public async authorizationPolicyResetAll(
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ): Promise<string> {
     const platformPolicy =
       await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
@@ -174,7 +174,7 @@ export class AdminAuthorizationResolverMutations {
       'Ensure all access privileges for the platform roles are re-calculated',
   })
   public async authorizationPlatformRolesAccessReset(
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ): Promise<boolean> {
     const platformPolicy =
       await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
@@ -202,7 +202,7 @@ export class AdminAuthorizationResolverMutations {
       'Reset the specified Authorization Policy to global admin privileges',
   })
   public async authorizationPolicyResetToGlobalAdminsAccess(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('authorizationID') authorizationID: string
   ): Promise<IAuthorizationPolicy> {
     const platformPolicy =
@@ -227,7 +227,7 @@ export class AdminAuthorizationResolverMutations {
     description: 'Refresh the Bodies of Knowledge on All VCs',
   })
   public async refreshAllBodiesOfKnowledge(
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ): Promise<boolean> {
     const platformPolicy =
       await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();

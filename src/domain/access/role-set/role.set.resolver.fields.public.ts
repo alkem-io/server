@@ -1,6 +1,6 @@
 import { Inject } from '@nestjs/common';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { RoleSetService } from './role.set.service';
 import { IForm } from '@domain/common/form/form.interface';
 import { IRoleSet } from './role.set.interface';
@@ -75,7 +75,7 @@ export class RoleSetResolverFieldsPublic {
     description: 'The membership status of the currently logged in user.',
   })
   async myMembershipStatus(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Parent() roleSet: RoleSet
   ): Promise<CommunityMembershipStatus> {
     // Uses the DataLoader to batch load membership statuses
@@ -89,7 +89,7 @@ export class RoleSetResolverFieldsPublic {
   })
   async myRoles(
     @Parent() roleSet: RoleSet,
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ): Promise<RoleName[]> {
     // Utilize the loader to batch getRolesForActorContext calls.
     return this.actorRolesLoader.loader.load({ actorContext, roleSet });
@@ -101,7 +101,7 @@ export class RoleSetResolverFieldsPublic {
       'The implicit roles on this community for the currently logged in user.',
   })
   async myRolesImplicit(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Parent() roleSet: IRoleSet
   ): Promise<RoleSetRoleImplicit[]> {
     return this.roleSetService.getImplicitRoles(actorContext, roleSet);

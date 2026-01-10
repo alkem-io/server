@@ -59,7 +59,7 @@ export class TemplatesManagerAuthorizationService {
 
     for (const templateDefault of templatesManager.templateDefaults) {
       const templateDefaultAuthorization =
-        await this.templateDefaultAuthorizationService.applyAuthorizationPolicy(
+        this.templateDefaultAuthorizationService.applyAuthorizationPolicy(
           templateDefault,
           parentAuthorization
         );

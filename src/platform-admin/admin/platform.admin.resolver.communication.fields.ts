@@ -1,6 +1,6 @@
 import { Args, ResolveField, Resolver } from '@nestjs/graphql';
 import { PlatformAdminCommunicationQueryResults } from './dto/platform.admin.query.communication.results';
-import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
@@ -25,7 +25,7 @@ export class PlatformAdminCommunicationResolverFields {
   async adminCommunicationMembership(
     @Args('communicationData', { nullable: false })
     communicationData: CommunicationAdminMembershipInput,
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ): Promise<CommunicationAdminMembershipResult> {
     this.authorizationService.grantAccessOrFail(
       actorContext,
@@ -45,7 +45,7 @@ export class PlatformAdminCommunicationResolverFields {
       'Usage of the messaging platform that are not tied to the domain model.',
   })
   async adminCommunicationOrphanedUsage(
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ): Promise<CommunicationAdminOrphanedUsageResult> {
     this.authorizationService.grantAccessOrFail(
       actorContext,

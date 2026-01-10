@@ -1,4 +1,4 @@
-import { Profiling, CurrentUser } from '@common/decorators';
+import { Profiling, CurrentActor } from '@common/decorators';
 import { ActorContext } from '@core/actor-context';
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
 import { DomainPlatformSettingsService } from './domain.platform.settings.service';
@@ -23,7 +23,7 @@ export class DomainPlatformSettingsResolverMutations {
   })
   @Profiling.api
   async updateOrganizationPlatformSettings(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('organizationData')
     organizationData: UpdateOrganizationPlatformSettingsInput
   ): Promise<IOrganization> {
@@ -31,7 +31,7 @@ export class DomainPlatformSettingsResolverMutations {
       await this.organizationService.getOrganizationByIdOrFail(
         organizationData.organizationID
       );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       organization.authorization,
       AuthorizationPrivilege.PLATFORM_ADMIN,

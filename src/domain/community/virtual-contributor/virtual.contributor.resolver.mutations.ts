@@ -1,7 +1,7 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Resolver, Mutation, ObjectType } from '@nestjs/graphql';
 import { VirtualContributorService } from './virtual.contributor.service';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -36,7 +36,7 @@ export class VirtualContributorResolverMutations {
     description: 'Updates the specified VirtualContributor.',
   })
   async updateVirtualContributor(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('virtualContributorData')
     virtualContributorData: UpdateVirtualContributorInput
   ): Promise<IVirtualContributor> {
@@ -72,7 +72,7 @@ export class VirtualContributorResolverMutations {
     description: 'Updates one of the Setting on an Virtual Contributor',
   })
   async updateVirtualContributorSettings(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('settingsData')
     settingsData: UpdateVirtualContributorSettingsInput
   ): Promise<IVirtualContributor> {
@@ -128,7 +128,7 @@ export class VirtualContributorResolverMutations {
       'Updates platform-level settings of a VirtualContributor (platform admins only).',
   })
   async updateVirtualContributorPlatformSettings(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('settingsData')
     settingsData: UpdateVirtualContributorPlatformSettingsInput
   ): Promise<IVirtualContributor> {
@@ -165,7 +165,7 @@ export class VirtualContributorResolverMutations {
     description: 'Deletes the specified VirtualContributor.',
   })
   async deleteVirtualContributor(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteVirtualContributorInput
   ): Promise<IVirtualContributor> {
     const virtual =
@@ -188,7 +188,7 @@ export class VirtualContributorResolverMutations {
       'Triggers a request to the backing AI Service to refresh the knowledge that is available to it.',
   })
   async refreshVirtualContributorBodyOfKnowledge(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('refreshData')
     refreshData: RefreshVirtualContributorBodyOfKnowledgeInput
   ): Promise<boolean> {

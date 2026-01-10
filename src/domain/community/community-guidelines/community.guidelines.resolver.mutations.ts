@@ -1,5 +1,5 @@
 import { Resolver, Args, Mutation } from '@nestjs/graphql';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { CurrentActor, Profiling } from '@src/common/decorators';
 import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -22,7 +22,7 @@ export class CommunityGuidelinesResolverMutations {
   })
   @Profiling.api
   async updateCommunityGuidelines(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('communityGuidelinesData')
     communityGuidelinesData: UpdateCommunityGuidelinesEntityInput
   ): Promise<ICommunityGuidelines> {
@@ -30,7 +30,7 @@ export class CommunityGuidelinesResolverMutations {
       await this.communityGuidelinesService.getCommunityGuidelinesOrFail(
         communityGuidelinesData.communityGuidelinesID
       );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       communityGuidelines.authorization,
       AuthorizationPrivilege.UPDATE,
@@ -48,7 +48,7 @@ export class CommunityGuidelinesResolverMutations {
   })
   @Profiling.api
   async removeCommunityGuidelinesContent(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('communityGuidelinesData')
     communityGuidelinesData: RemoveCommunityGuidelinesContentInput
   ): Promise<ICommunityGuidelines> {
@@ -56,7 +56,7 @@ export class CommunityGuidelinesResolverMutations {
       await this.communityGuidelinesService.getCommunityGuidelinesOrFail(
         communityGuidelinesData.communityGuidelinesID
       );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       communityGuidelines.authorization,
       AuthorizationPrivilege.UPDATE,

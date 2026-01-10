@@ -4,7 +4,7 @@ import { IActorFull } from './actor.interface';
 import { UUID } from '@domain/common/scalars';
 import { CredentialType } from '@common/enums/credential.type';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { CurrentUser } from '@common/decorators';
+import { CurrentActor } from '@common/decorators';
 import { ActorContext } from '@core/actor-context';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
@@ -22,11 +22,11 @@ export class ActorResolverQueries {
     description: 'Get an Actor by ID. Returns null if not found.',
   })
   async actor(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('id', { type: () => UUID }) id: string
   ): Promise<IActorFull | null> {
     // Check platform-level read access
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ,
@@ -42,14 +42,14 @@ export class ActorResolverQueries {
       'Find all Actors that have a credential matching the specified type and optional resourceID.',
   })
   async actorsWithCredential(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('credentialType', { type: () => CredentialType })
     credentialType: CredentialType,
     @Args('resourceID', { type: () => UUID, nullable: true })
     resourceID?: string
   ): Promise<IActorFull[]> {
     // Check platform-level read access
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ,

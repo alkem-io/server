@@ -12,9 +12,9 @@ import { AlkemioConfig } from '@src/types';
 
 @Injectable()
 export class RequestLoggerMiddleware implements NestMiddleware {
-  private readonly requestFullLogging = false;
-  private readonly requestHeadersLogging = false;
-  private readonly responseHeadersLogging = false;
+  private readonly requestFullLogging: boolean;
+  private readonly requestHeadersLogging: boolean;
+  private readonly responseHeadersLogging: boolean;
   constructor(
     private readonly configService: ConfigService<AlkemioConfig, true>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -23,14 +23,16 @@ export class RequestLoggerMiddleware implements NestMiddleware {
       'monitoring.logging.requests',
       { infer: true }
     );
-    this.requestFullLogging = reqLoggingConfig?.full_logging_enabled;
-    this.requestHeadersLogging = reqLoggingConfig?.headers_logging_enabled;
+    this.requestFullLogging = reqLoggingConfig?.full_logging_enabled ?? false;
+    this.requestHeadersLogging =
+      reqLoggingConfig?.headers_logging_enabled ?? false;
 
     const resLoggingConfig = this.configService.get(
       'monitoring.logging.responses',
       { infer: true }
     );
-    this.responseHeadersLogging = resLoggingConfig?.headers_logging_enabled;
+    this.responseHeadersLogging =
+      resLoggingConfig?.headers_logging_enabled ?? false;
   }
 
   use(req: Request, response: Response, next: NextFunction) {

@@ -1,4 +1,4 @@
-import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { ActorContext } from '@core/actor-context';
 import { Inject, LoggerService } from '@nestjs/common';
@@ -68,7 +68,7 @@ export class ForumResolverSubscriptions {
     },
   })
   async forumDiscussionUpdated(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args({
       name: 'forumID',
       type: () => UUID,
@@ -90,7 +90,7 @@ export class ForumResolverSubscriptions {
     );
 
     const forum = await this.forumService.getForumOrFail(forumID);
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       forum.authorization,
       AuthorizationPrivilege.READ,

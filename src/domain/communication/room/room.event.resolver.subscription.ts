@@ -1,7 +1,7 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Resolver } from '@nestjs/graphql';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { ActorContext } from '@core/actor-context';
 import { LogContext } from '@common/enums/logging.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -64,7 +64,7 @@ export class RoomEventResolverSubscription {
     }
   )
   async roomEvents(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args({ nullable: false }) { roomID }: RoomEventSubscriptionArgs
   ) {
     const logMsgPrefix = `[User (${actorContext.actorId}) Room Events] - `;

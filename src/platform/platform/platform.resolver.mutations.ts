@@ -1,5 +1,5 @@
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { CurrentActor, Profiling } from '@src/common/decorators';
 import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -33,11 +33,11 @@ export class PlatformResolverMutations {
   })
   @Profiling.api
   async authorizationPolicyResetOnPlatform(
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ): Promise<IPlatform> {
     const platformPolicy =
       await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       platformPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN, // TODO: back to authorization reset
@@ -53,7 +53,7 @@ export class PlatformResolverMutations {
     description: 'Updates one of the Setting on the Platform',
   })
   async updatePlatformSettings(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('settingsData') settingsData: UpdatePlatformSettingsInput
   ): Promise<IPlatformSettings> {
     const platform = await this.platformService.getPlatformOrFail();
@@ -65,7 +65,7 @@ export class PlatformResolverMutations {
       `platform settings update: ${JSON.stringify(settingsData.integration)}`
     );
 
-    platform.settings = await this.platformSettingsService.updateSettings(
+    platform.settings = this.platformSettingsService.updateSettings(
       platform.settings,
       settingsData
     );
@@ -78,7 +78,7 @@ export class PlatformResolverMutations {
     description: 'Adds an Iframe Allowed URL to the Platform Settings',
   })
   async addIframeAllowedURL(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('whitelistedURL') whitelistedURL: string
   ): Promise<string[]> {
     const platform = await this.platformService.getPlatformOrFail();
@@ -104,7 +104,7 @@ export class PlatformResolverMutations {
     description: 'Removes an Iframe Allowed URL from the Platform Settings',
   })
   async removeIframeAllowedURL(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('whitelistedURL') whitelistedURL: string
   ): Promise<string[]> {
     const platform = await this.platformService.getPlatformOrFail();
@@ -131,7 +131,7 @@ export class PlatformResolverMutations {
       'Adds a full email address to the platform notification blacklist',
   })
   async addNotificationEmailToBlacklist(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('input') input: NotificationEmailAddressInput
   ): Promise<string[]> {
     const platform = await this.platformService.getPlatformOrFail();
@@ -158,7 +158,7 @@ export class PlatformResolverMutations {
       'Removes an email address from the platform notification blacklist',
   })
   async removeNotificationEmailFromBlacklist(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('input') input: NotificationEmailAddressInput
   ): Promise<string[]> {
     const platform = await this.platformService.getPlatformOrFail();

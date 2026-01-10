@@ -6,7 +6,7 @@ import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common';
 import {
   AuthorizationActorPrivilege,
-  CurrentUser,
+  CurrentActor,
 } from '@src/common/decorators';
 import { Args, Parent, ResolveField } from '@nestjs/graphql';
 import { IDocument } from '@domain/storage/document';
@@ -27,7 +27,7 @@ export class StorageBucketResolverFields {
   })
   async document(
     @Parent() storageBucket: IStorageBucket,
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args({
       name: 'ID',
       nullable: false,
@@ -52,7 +52,7 @@ export class StorageBucketResolverFields {
   })
   async documents(
     @Parent() storageBucket: IStorageBucket,
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args({ nullable: true }) args: StorageBucketArgsDocuments
   ) {
     return await this.storageBucketService.getFilteredDocuments(

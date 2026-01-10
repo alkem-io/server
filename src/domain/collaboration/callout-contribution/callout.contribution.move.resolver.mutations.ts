@@ -1,5 +1,5 @@
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { CurrentUser } from '@common/decorators';
+import { CurrentActor } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { ActorContext } from '@core/actor-context';
@@ -23,7 +23,7 @@ export class CalloutContributionMoveResolverMutations {
     description: 'Moves the specified Contribution to another Callout.',
   })
   async moveContributionToCallout(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('moveContributionData')
     moveContributionData: MoveCalloutContributionInput
   ): Promise<ICalloutContribution> {
@@ -47,7 +47,7 @@ export class CalloutContributionMoveResolverMutations {
     description: 'Deletes a contribution.',
   })
   public async deleteContribution(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteContributionInput
   ): Promise<ICalloutContribution> {
     const contribution =

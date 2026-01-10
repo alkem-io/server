@@ -1,6 +1,6 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { ActorContext } from '@core/actor-context';
 import { MemoService } from './memo.service';
 import { IMemo } from './memo.interface';
@@ -33,7 +33,7 @@ export class MemoResolverMutations {
     description: 'Updates the specified Memo.',
   })
   async updateMemo(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('memoData') memoData: UpdateMemoEntityInput
   ): Promise<IMemo> {
     const memo = await this.memoService.getMemoOrFail(memoData.ID);
@@ -96,7 +96,7 @@ export class MemoResolverMutations {
     description: 'Deletes the specified Memo.',
   })
   async deleteMemo(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('memoData') memoData: DeleteMemoInput
   ): Promise<IMemo> {
     const memo = await this.memoService.getMemoOrFail(memoData.ID);

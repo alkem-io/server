@@ -4,7 +4,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IConversation } from '../conversation/conversation.interface';
 import { ActorContext } from '@core/actor-context';
-import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { MessagingService } from './messaging.service';
@@ -32,7 +32,7 @@ export class MessagingResolverMutations {
     description: 'Create a new Conversation on the Messaging.',
   })
   async createConversation(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('conversationData')
     conversationData: CreateConversationInput
   ): Promise<IConversation> {

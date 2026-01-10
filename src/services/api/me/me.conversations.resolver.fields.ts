@@ -3,7 +3,7 @@ import { MeConversationsResult } from '@services/api/me/dto';
 import { IConversation } from '@domain/communication/conversation/conversation.interface';
 import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
 import { MessagingService } from '@domain/communication/messaging/messaging.service';
-import { CurrentUser } from '@common/decorators';
+import { CurrentActor } from '@common/decorators';
 import { ActorContext } from '@core/actor-context';
 import { ValidationException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
@@ -19,7 +19,7 @@ export class MeConversationsResolverFields {
       'Conversations between users for the current authenticated user.',
   })
   async users(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Parent() _parent: MeConversationsResult
   ): Promise<IConversation[]> {
     if (!actorContext.actorId) {
@@ -41,7 +41,7 @@ export class MeConversationsResolverFields {
       'Conversations between users and virtual contributors for the current authenticated user.',
   })
   async virtualContributors(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Parent() _parent: MeConversationsResult
   ): Promise<IConversation[]> {
     if (!actorContext.actorId) {
@@ -63,7 +63,7 @@ export class MeConversationsResolverFields {
       'Get a conversation with a well-known virtual contributor for the current user.',
   })
   async virtualContributor(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Parent() _parent: MeConversationsResult,
     @Args('wellKnown', { type: () => VirtualContributorWellKnown })
     wellKnown: VirtualContributorWellKnown

@@ -1,6 +1,6 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { ActorContext } from '@core/actor-context';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ConversionService } from './conversion.service';
@@ -60,7 +60,7 @@ export class ConversionResolverMutations {
     description: 'Move an L1 Space up in the hierarchy, to be a L0 Space.',
   })
   async convertSpaceL1ToSpaceL0(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('convertData')
     conversionData: ConvertSpaceL1ToSpaceL0Input
   ): Promise<ISpace> {
@@ -86,7 +86,7 @@ export class ConversionResolverMutations {
     description: 'Move an L2 Space up in the hierarchy, to be a L1 Space.',
   })
   async convertSpaceL2ToSpaceL1(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('convertData')
     conversionData: ConvertSpaceL2ToSpaceL1Input
   ): Promise<ISpace> {
@@ -122,7 +122,7 @@ export class ConversionResolverMutations {
       the exception of Admin role assignments for Users.',
   })
   async convertSpaceL1ToSpaceL2(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('convertData')
     conversionData: ConvertSpaceL1ToSpaceL2Input
   ): Promise<ISpace> {
@@ -155,7 +155,7 @@ export class ConversionResolverMutations {
       'Convert a VC of type ALKEMIO_SPACE to be of type KNOWLEDGE_BASE. All Callouts from the Space currently being used are moved to the Knowledge Base. Note: only allowed for VCs using a Space within the same Account.',
   })
   async convertVirtualContributorToUseKnowledgeBase(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('conversionData')
     conversionData: ConversionVcSpaceToVcKnowledgeBaseInput
   ): Promise<IVirtualContributor> {

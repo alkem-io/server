@@ -1,5 +1,5 @@
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { IAuthorizationPolicy } from './authorization.policy.interface';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { AuthorizationPolicyService } from './authorization.policy.service';
@@ -39,7 +39,7 @@ export class AuthorizationPolicyResolverFields {
       'The privileges granted to the current user based on this Authorization Policy.',
   })
   myPrivileges(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Parent() authorization: IAuthorizationPolicy
   ): AuthorizationPrivilege[] {
     return this.authorizationPolicyService.getActorPrivileges(
@@ -54,7 +54,7 @@ export class AuthorizationPolicyResolverFields {
       'Does the current User have the specified privilege based on this Authorization Policy.',
   })
   hasPrivilege(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Parent() authorization: IAuthorizationPolicy,
     @Args('privilege', { type: () => AuthorizationPrivilege, nullable: false })
     privilege: AuthorizationPrivilege

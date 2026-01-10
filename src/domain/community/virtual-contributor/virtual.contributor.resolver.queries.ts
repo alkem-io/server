@@ -1,6 +1,6 @@
 import { UUID } from '@domain/common/scalars';
 import { Args, Query, Resolver } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { IVirtualContributor } from './virtual.contributor.interface';
 import { VirtualContributorService } from './virtual.contributor.service';
 import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
@@ -26,7 +26,7 @@ export class VirtualContributorResolverQueries {
   })
   async virtualContributors(
     @Args({ nullable: true }) args: ContributorQueryArgs,
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ): Promise<IVirtualContributor[]> {
     const platformPolicy =
       await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();

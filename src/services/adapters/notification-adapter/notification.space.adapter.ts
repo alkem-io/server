@@ -84,7 +84,10 @@ export class NotificationSpaceAdapter {
         space,
         eventData.callout
       );
-    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
+    void this.notificationExternalAdapter.sendExternalNotifications(
+      event,
+      payload
+    );
 
     // Send in-app notifications
     const inAppRecipientsWithoutPublisher = recipients.inAppRecipients.filter(
@@ -149,7 +152,7 @@ export class NotificationSpaceAdapter {
           space,
           eventData.calendarEvent
         );
-      this.notificationExternalAdapter.sendExternalNotifications(
+      void this.notificationExternalAdapter.sendExternalNotifications(
         event,
         payload
       );
@@ -218,7 +221,7 @@ export class NotificationSpaceAdapter {
           eventData.calendarEvent,
           eventData.commentSent
         );
-      this.notificationExternalAdapter.sendExternalNotifications(
+      void this.notificationExternalAdapter.sendExternalNotifications(
         event,
         payload
       );
@@ -287,7 +290,7 @@ export class NotificationSpaceAdapter {
           eventData
         );
 
-      this.notificationExternalAdapter.sendExternalNotifications(
+      void this.notificationExternalAdapter.sendExternalNotifications(
         event,
         payload
       );
@@ -356,7 +359,7 @@ export class NotificationSpaceAdapter {
           space,
           eventData
         );
-      this.notificationExternalAdapter.sendExternalNotifications(
+      void this.notificationExternalAdapter.sendExternalNotifications(
         adminEvent,
         adminPayload
       );
@@ -444,7 +447,7 @@ export class NotificationSpaceAdapter {
           eventData
         );
       // send notification event
-      this.notificationExternalAdapter.sendExternalNotifications(
+      void this.notificationExternalAdapter.sendExternalNotifications(
         event,
         payload
       );
@@ -517,7 +520,10 @@ export class NotificationSpaceAdapter {
         eventData
       );
     // send notification event
-    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
+    void this.notificationExternalAdapter.sendExternalNotifications(
+      event,
+      payload
+    );
 
     // Send in-app notifications
     // Filter out sender AND users who were already mentioned (to avoid double notifications)
@@ -582,7 +588,7 @@ export class NotificationSpaceAdapter {
         space,
         eventData.actorId
       );
-    this.notificationExternalAdapter.sendExternalNotifications(
+    void this.notificationExternalAdapter.sendExternalNotifications(
       adminEvent,
       adminPayload
     );
@@ -634,7 +640,7 @@ export class NotificationSpaceAdapter {
           space
         );
 
-      this.notificationExternalAdapter.sendExternalNotifications(
+      void this.notificationExternalAdapter.sendExternalNotifications(
         event,
         payload
       );
@@ -684,7 +690,7 @@ export class NotificationSpaceAdapter {
         adminRecipients.emailRecipients,
         space
       );
-    this.notificationExternalAdapter.sendExternalNotifications(
+    void this.notificationExternalAdapter.sendExternalNotifications(
       adminEvent,
       adminPayload
     );
@@ -730,7 +736,10 @@ export class NotificationSpaceAdapter {
         eventData.welcomeMessage
       );
 
-    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
+    void this.notificationExternalAdapter.sendExternalNotifications(
+      event,
+      payload
+    );
   }
 
   public async spaceCommunicationMessage(
@@ -766,7 +775,7 @@ export class NotificationSpaceAdapter {
           space,
           eventData.message
         );
-      this.notificationExternalAdapter.sendExternalNotifications(
+      void this.notificationExternalAdapter.sendExternalNotifications(
         eventRecipientsAdmins,
         payloadRecipients
       );
@@ -833,7 +842,7 @@ export class NotificationSpaceAdapter {
         eventData.updates,
         eventData.lastMessage
       );
-    this.notificationExternalAdapter.sendExternalNotifications(
+    void this.notificationExternalAdapter.sendExternalNotifications(
       event,
       notificationsPayload
     );

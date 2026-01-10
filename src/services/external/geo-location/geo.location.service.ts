@@ -65,7 +65,7 @@ export class GeoLocationService {
       );
     }
 
-    this.incrementCacheMetadata(cacheMetadata);
+    void this.incrementCacheMetadata(cacheMetadata);
 
     this.logger.verbose?.(`Getting coordinates for ip: ${ip}`);
     const response = await this.httpService
@@ -98,7 +98,7 @@ export class GeoLocationService {
       `Coordinates for ip: ${ip}: longitude: ${userGeo.longitude} latitude: ${userGeo.latitude}`
     );
 
-    this.cacheManager.set<GeoInformation>(ip, userGeo, {
+    void this.cacheManager.set<GeoInformation>(ip, userGeo, {
       ttl: this.cacheEntryTtl,
     });
 

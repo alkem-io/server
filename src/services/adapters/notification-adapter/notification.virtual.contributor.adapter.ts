@@ -49,7 +49,10 @@ export class NotificationVirtualContributorAdapter {
         eventData.welcomeMessage
       );
 
-    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
+    void this.notificationExternalAdapter.sendExternalNotifications(
+      event,
+      payload
+    );
 
     // Send in-app notifications
     const inAppReceiverIDs = recipients.inAppRecipients.map(

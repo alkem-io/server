@@ -1,7 +1,7 @@
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { SpaceAboutMembership } from './dto/space.about.membership';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
-import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { ActorContext } from '@core/actor-context';
 import { Inject } from '@nestjs/common';
 import { RoleSetMembershipStatusDataLoader } from '@domain/access/role-set/role.set.data.loader.membership.status';
@@ -29,7 +29,7 @@ export class SpaceAboutMembershipResolverFields {
       'The privileges granted to the current user based on the Space membership policy.',
   })
   myPrivileges(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Parent() membership: SpaceAboutMembership
   ): AuthorizationPrivilege[] {
     const authorization = membership.roleSet.authorization;
@@ -72,7 +72,7 @@ export class SpaceAboutMembershipResolverFields {
     description: 'The membership status of the currently logged in user.',
   })
   async myMembershipStatus(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Parent() membership: SpaceAboutMembership
   ): Promise<CommunityMembershipStatus> {
     const roleSet = membership.roleSet;

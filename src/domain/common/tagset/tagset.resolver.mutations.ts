@@ -3,7 +3,7 @@ import { ActorContext } from '@core/actor-context';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { TagsetService } from './tagset.service';
-import { CurrentUser } from '@common/decorators';
+import { CurrentActor } from '@common/decorators';
 import { ITagset } from './tagset.interface';
 import { UpdateTagsetInput } from './dto/tagset.dto.update';
 import { InstrumentResolver } from '@src/apm/decorators';
@@ -20,11 +20,11 @@ export class TagsetResolverMutations {
     description: 'Updates the specified Tagset.',
   })
   async updateTagset(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('updateData') updateData: UpdateTagsetInput
   ): Promise<ITagset> {
     const tagset = await this.tagsetService.getTagsetOrFail(updateData.ID);
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       tagset.authorization,
       AuthorizationPrivilege.UPDATE,

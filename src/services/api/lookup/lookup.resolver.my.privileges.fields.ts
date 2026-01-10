@@ -32,7 +32,7 @@ import { LogContext } from '@common/enums/logging.context';
 import { LookupMyPrivilegesQueryResults } from './dto/lookup.query.my.privileges.results';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { ActorContext } from '@core/actor-context';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
@@ -93,7 +93,7 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified Space',
   })
   async space(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const space = await this.spaceService.getSpace(id, {
@@ -109,7 +109,7 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified Account',
   })
   async account(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const account = await this.accountService.getAccountOrFail(id, {
@@ -124,7 +124,7 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified RoleSet',
   })
   async roleSet(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const roleSet = await this.roleSetService.getRoleSetOrFail(id, {
@@ -139,7 +139,7 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified Document',
   })
   async document(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const document = await this.documentService.getDocumentOrFail(id, {
@@ -154,7 +154,7 @@ export class LookupMyPrivilegesResolverFields {
     description: 'A particular VirtualContributor',
   })
   async virtualContributor(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID, nullable: false }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const virtualContributor =
@@ -170,7 +170,7 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified User',
   })
   async user(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID, nullable: false }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const user = await this.userLookupService.getUserByIdOrFail(id, {
@@ -185,7 +185,7 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified StorageAggregator',
   })
   async storageAggregator(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const storageAggregator =
@@ -201,7 +201,7 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified InnovationPack',
   })
   async innovationPack(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const innovationPack =
@@ -217,7 +217,7 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified StorageBucket',
   })
   async storageBucket(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const storageBucket =
@@ -233,7 +233,7 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified InnovationHub',
   })
   async innovationHub(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const innovationHub =
@@ -249,7 +249,7 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified Application',
   })
   async application(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const application = await this.applicationService.getApplicationOrFail(id, {
@@ -264,7 +264,7 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified Invitation',
   })
   async invitation(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const invitation = await this.invitationService.getInvitationOrFail(id, {
@@ -279,7 +279,7 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified Community',
   })
   async community(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const community = await this.communityService.getCommunityOrFail(id, {
@@ -294,7 +294,7 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified Collaboration',
   })
   async collaboration(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const collaboration =
@@ -310,7 +310,7 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified CalendarEvent',
   })
   async calendarEvent(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const calendarEvent =
@@ -326,7 +326,7 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified Calendar',
   })
   async calendar(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const calendar = await this.calendarService.getCalendarOrFail(id, {
@@ -341,7 +341,7 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified SpaceAbout',
   })
   async spaceAbout(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const context = await this.spaceAboutService.getSpaceAboutOrFail(id, {
@@ -356,7 +356,7 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified Whiteboard',
   })
   async whiteboard(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const whiteboard = await this.whiteboardService.getWhiteboardOrFail(id, {
@@ -371,7 +371,7 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified Profile',
   })
   async profile(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const profile = await this.profileService.getProfileOrFail(id, {
@@ -386,7 +386,7 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified Callout',
   })
   async callout(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const callout = await this.calloutService.getCalloutOrFail(id, {
@@ -401,7 +401,7 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified Post',
   })
   async post(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const post = await this.postService.getPostOrFail(id, {
@@ -416,7 +416,7 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified Room',
   })
   async room(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const room = await this.roomService.getRoomOrFail(id, {
@@ -431,7 +431,7 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified InnovationFlow',
   })
   async innovationFlow(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const innovationFlow =
@@ -447,7 +447,7 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified Template',
   })
   async template(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const template = await this.templateService.getTemplateOrFail(id, {
@@ -462,7 +462,7 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified TemplatesSet',
   })
   async templatesSet(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const templatesSet = await this.templatesSetService.getTemplatesSetOrFail(
@@ -478,7 +478,7 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified TemplatesManager',
   })
   async templatesManager(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const templatesManager =
@@ -494,7 +494,7 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified Community guidelines',
   })
   async communityGuidelines(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const guidelines =
@@ -510,7 +510,7 @@ export class LookupMyPrivilegesResolverFields {
     description: 'Lookup myPrivileges on the specified License',
   })
   async license(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const license = await this.licenseService.getLicenseOrFail(id, {

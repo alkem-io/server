@@ -1,6 +1,6 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { Resolver, Mutation, Args, Field, ObjectType } from '@nestjs/graphql';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { CurrentActor, Profiling } from '@src/common/decorators';
 import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -53,7 +53,7 @@ export class AiServerResolverMutations {
   })
   @Profiling.api
   async cleanupCollections(
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ): Promise<IMigrateEmbeddingsResponse> {
     const platformAuthorization =
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
@@ -123,7 +123,7 @@ export class AiServerResolverMutations {
     description: 'Reset the Authorization Policy on the specified AiServer.',
   })
   async aiServerAuthorizationPolicyReset(
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ): Promise<IAiServer> {
     const aiServer = await this.aiServerService.getAiServerOrFail();
     this.authorizationService.grantAccessOrFail(
@@ -142,7 +142,7 @@ export class AiServerResolverMutations {
     description: 'Creates a new AiPersona on the aiServer.',
   })
   async aiServerCreateAiPersona(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('aiPersonaData')
     aiPersonaData: CreateAiPersonaInput
   ): Promise<IAiPersona> {

@@ -1,4 +1,4 @@
-import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { ActorContext } from '@core/actor-context';
 import { Inject, LoggerService } from '@nestjs/common';
@@ -59,7 +59,7 @@ export class SpaceResolverSubscriptions {
     }
   )
   async subspaceCreated(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args({
       nullable: false,
     })
@@ -73,7 +73,7 @@ export class SpaceResolverSubscriptions {
     // Validate
     const space = await this.spaceService.getSpaceOrFail(args.spaceID);
 
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       space.authorization,
       AuthorizationPrivilege.READ,

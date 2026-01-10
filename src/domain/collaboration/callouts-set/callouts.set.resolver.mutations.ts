@@ -4,7 +4,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ICallout } from '../callout/callout.interface';
 import { ActorContext } from '@core/actor-context';
-import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { CalloutAuthorizationService } from '../callout/callout.service.authorization';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -48,7 +48,7 @@ export class CalloutsSetResolverMutations {
     description: 'Create a new Callout on the CalloutsSet.',
   })
   async createCalloutOnCalloutsSet(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('calloutData') calloutData: CreateCalloutOnCalloutsSetInput
   ): Promise<ICallout> {
     const calloutsSet = await this.calloutsSetService.getCalloutsSetOrFail(
@@ -112,7 +112,7 @@ export class CalloutsSetResolverMutations {
             triggeredBy: actorContext.actorId,
             callout: callout,
           };
-          this.notificationAdapterSpace.spaceCollaborationCalloutPublished(
+          void this.notificationAdapterSpace.spaceCollaborationCalloutPublished(
             notificationInput
           );
         }
@@ -121,7 +121,7 @@ export class CalloutsSetResolverMutations {
           triggeredBy: actorContext.actorId,
           callout: callout,
         };
-        this.activityAdapter.calloutPublished(activityLogInput);
+        void this.activityAdapter.calloutPublished(activityLogInput);
       }
 
       const levelZeroSpaceID =
@@ -147,7 +147,7 @@ export class CalloutsSetResolverMutations {
       'Update the sortOrder field of the supplied Callouts to increase as per the order that they are provided in.',
   })
   async updateCalloutsSortOrder(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('sortOrderData')
     sortOrderData: UpdateCalloutsSortOrderInput
   ): Promise<ICallout[]> {

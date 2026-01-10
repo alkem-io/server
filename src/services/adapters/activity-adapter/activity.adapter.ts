@@ -94,7 +94,10 @@ export class ActivityAdapter {
       visibility: true,
     });
 
-    this.graphqlSubscriptionService.publishActivity(collaborationID, activity);
+    void this.graphqlSubscriptionService.publishActivity(
+      collaborationID,
+      activity
+    );
 
     return true;
   }
@@ -118,7 +121,10 @@ export class ActivityAdapter {
       visibility: true,
     });
 
-    this.graphqlSubscriptionService.publishActivity(collaborationID, activity);
+    void this.graphqlSubscriptionService.publishActivity(
+      collaborationID,
+      activity
+    );
 
     return true;
   }
@@ -161,7 +167,10 @@ export class ActivityAdapter {
       visibility: true,
     });
 
-    this.graphqlSubscriptionService.publishActivity(collaborationID, activity);
+    void this.graphqlSubscriptionService.publishActivity(
+      collaborationID,
+      activity
+    );
 
     return true;
   }
@@ -187,7 +196,10 @@ export class ActivityAdapter {
       visibility: true,
     });
 
-    this.graphqlSubscriptionService.publishActivity(collaborationID, activity);
+    void this.graphqlSubscriptionService.publishActivity(
+      collaborationID,
+      activity
+    );
 
     return true;
   }
@@ -216,7 +228,10 @@ export class ActivityAdapter {
       visibility: true,
     });
 
-    this.graphqlSubscriptionService.publishActivity(collaborationID, activity);
+    void this.graphqlSubscriptionService.publishActivity(
+      collaborationID,
+      activity
+    );
 
     return true;
   }
@@ -241,7 +256,10 @@ export class ActivityAdapter {
       visibility: true,
     });
 
-    this.graphqlSubscriptionService.publishActivity(collaborationID, activity);
+    void this.graphqlSubscriptionService.publishActivity(
+      collaborationID,
+      activity
+    );
 
     return true;
   }
@@ -268,7 +286,10 @@ export class ActivityAdapter {
       visibility: true,
     });
 
-    this.graphqlSubscriptionService.publishActivity(collaborationID, activity);
+    void this.graphqlSubscriptionService.publishActivity(
+      collaborationID,
+      activity
+    );
 
     return true;
   }
@@ -294,7 +315,10 @@ export class ActivityAdapter {
       visibility: true,
     });
 
-    this.graphqlSubscriptionService.publishActivity(collaborationID, activity);
+    void this.graphqlSubscriptionService.publishActivity(
+      collaborationID,
+      activity
+    );
 
     return true;
   }
@@ -324,7 +348,7 @@ export class ActivityAdapter {
       visibility: true,
     });
 
-    this.graphqlSubscriptionService.publishActivity(
+    void this.graphqlSubscriptionService.publishActivity(
       parentEntities.collaborationID,
       activity
     );
@@ -353,7 +377,10 @@ export class ActivityAdapter {
       visibility: true,
     });
 
-    this.graphqlSubscriptionService.publishActivity(collaborationID, activity);
+    void this.graphqlSubscriptionService.publishActivity(
+      collaborationID,
+      activity
+    );
 
     return true;
   }
@@ -379,7 +406,10 @@ export class ActivityAdapter {
       visibility: true,
     });
 
-    this.graphqlSubscriptionService.publishActivity(collaborationID, activity);
+    void this.graphqlSubscriptionService.publishActivity(
+      collaborationID,
+      activity
+    );
 
     return true;
   }
@@ -445,7 +475,10 @@ export class ActivityAdapter {
       visibility: true,
     });
 
-    this.graphqlSubscriptionService.publishActivity(collaborationID, activity);
+    void this.graphqlSubscriptionService.publishActivity(
+      collaborationID,
+      activity
+    );
 
     return true;
   }

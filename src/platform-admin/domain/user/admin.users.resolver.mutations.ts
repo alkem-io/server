@@ -1,6 +1,6 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { ActorContext } from '@core/actor-context';
@@ -29,7 +29,7 @@ export class AdminUsersMutations {
       'Remove the Kratos account associated with the specified User. Note: the Users profile on the platform is not deleted.',
   })
   async adminUserAccountDelete(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('userID', { type: () => UUID }) userID: string
   ): Promise<IUser> {
     const platformPolicy =

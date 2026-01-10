@@ -1,6 +1,6 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { ActorContext } from '@core/actor-context';
@@ -26,7 +26,7 @@ export class LicensingWingbackSubscriptionServiceResolverMutations {
     description: 'Create a test customer on wingback.',
   })
   public async adminWingbackCreateTestCustomer(
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ) {
     const platformPolicy =
       await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
@@ -57,7 +57,7 @@ export class LicensingWingbackSubscriptionServiceResolverMutations {
   })
   public async adminWingbackGetCustomerEntitlements(
     @Args('customerID') customerId: string,
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ) {
     const platformPolicy =
       await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();

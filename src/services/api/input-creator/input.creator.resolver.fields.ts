@@ -1,5 +1,5 @@
 import { Args, Resolver } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { ResolveField } from '@nestjs/graphql';
 import { ActorContext } from '@core/actor-context';
 import { InputCreatorQueryResults } from '@services/api/input-creator/dto';
@@ -37,7 +37,7 @@ export class InputCreatorResolverFields {
     description: 'Create an input based on the provided Community Guidelines',
   })
   async communityGuidelines(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<CreateCommunityGuidelinesInput> {
     const guidelines =
@@ -68,7 +68,7 @@ export class InputCreatorResolverFields {
     description: 'Create an input based on the provided InnovationFlow',
   })
   async innovationFlow(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<CreateInnovationFlowInput> {
     const innovationFlow =
@@ -89,7 +89,7 @@ export class InputCreatorResolverFields {
       `inputCreator InnovationFlow: ${innovationFlow.id}`
     );
 
-    return await this.inputCreatorService.buildCreateInnovationFlowInputFromInnovationFlow(
+    return this.inputCreatorService.buildCreateInnovationFlowInputFromInnovationFlow(
       innovationFlow
     );
   }
@@ -99,7 +99,7 @@ export class InputCreatorResolverFields {
     description: 'Create an input based on the provided Callout',
   })
   async callout(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<CreateCalloutInput> {
     const callout = await this.calloutService.getCalloutOrFail(id);
@@ -120,7 +120,7 @@ export class InputCreatorResolverFields {
     description: 'Create an input based on the provided Whiteboard',
   })
   async whiteboard(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<CreateWhiteboardInput> {
     const whiteboard = await this.whiteboardService.getWhiteboardOrFail(id);
@@ -149,7 +149,7 @@ export class InputCreatorResolverFields {
     description: 'Create an input based on the provided Collaboration',
   })
   async collaboration(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<CreateCollaborationInput> {
     const collaboration =

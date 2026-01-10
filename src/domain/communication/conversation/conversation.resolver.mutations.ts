@@ -4,7 +4,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IConversation } from './conversation.interface';
 import { ActorContext } from '@core/actor-context';
-import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ConversationAuthorizationService } from './conversation.service.authorization';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -36,7 +36,7 @@ export class ConversationResolverMutations {
     description: 'Resets the interaction with the chat engine.',
   })
   async resetConversationVc(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('input') input: ConversationVcResetInput
   ): Promise<IConversation> {
     // Fetch conversation with room relation (needed for reset)
@@ -99,7 +99,7 @@ export class ConversationResolverMutations {
     description: 'User vote if a specific answer is relevant.',
   })
   public async feedbackOnVcAnswerRelevance(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('input')
     { id, relevant, conversationID }: ConversationVcAnswerRelevanceInput
   ): Promise<boolean> {
@@ -153,7 +153,7 @@ export class ConversationResolverMutations {
       'Deletes a Conversation. The Matrix room is only deleted if no reciprocal conversation exists.',
   })
   async deleteConversation(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteConversationInput
   ): Promise<IConversation> {
     const conversation = await this.conversationService.getConversationOrFail(

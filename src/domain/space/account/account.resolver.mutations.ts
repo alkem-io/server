@@ -1,6 +1,6 @@
 import { Resolver, Args, Mutation } from '@nestjs/graphql';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { ActorContext } from '@core/actor-context';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AccountAuthorizationResetInput } from './dto/account.dto.reset.authorization';
@@ -75,7 +75,7 @@ export class AccountResolverMutations {
     description: 'Creates a new Level Zero Space within the specified Account.',
   })
   async createSpace(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('spaceData') spaceData: CreateSpaceOnAccountInput
   ): Promise<ISpace> {
     const account = await this.accountService.getAccountOrFail(
@@ -142,7 +142,7 @@ export class AccountResolverMutations {
     description: 'Create an Innovation Hub on the specified account',
   })
   async createInnovationHub(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('createData') createData: CreateInnovationHubOnAccountInput
   ): Promise<IInnovationHub> {
     const account = await this.accountService.getAccountOrFail(
@@ -184,7 +184,7 @@ export class AccountResolverMutations {
     description: 'Creates a new VirtualContributor on an Account.',
   })
   async createVirtualContributor(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('virtualContributorData')
     virtualContributorData: CreateVirtualContributorOnAccountInput
   ): Promise<IVirtualContributor> {
@@ -237,7 +237,7 @@ export class AccountResolverMutations {
     description: 'Creates a new InnovationPack on an Account.',
   })
   async createInnovationPack(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('innovationPackData')
     innovationPackData: CreateInnovationPackOnAccountInput
   ): Promise<IInnovationPack> {
@@ -284,7 +284,7 @@ export class AccountResolverMutations {
     description: 'Reset the Authorization Policy on the specified Account.',
   })
   async authorizationPolicyResetOnAccount(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('authorizationResetData')
     authorizationResetData: AccountAuthorizationResetInput
   ): Promise<IAccount> {
@@ -312,7 +312,7 @@ export class AccountResolverMutations {
       'Reset the License with Entitlements on the specified Account.',
   })
   async licenseResetOnAccount(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('resetData')
     licenseResetData: AccountLicenseResetInput
   ): Promise<IAccount> {
@@ -336,7 +336,7 @@ export class AccountResolverMutations {
     description: 'Update the baseline License Plan on the specified Account.',
   })
   async updateBaselineLicensePlanOnAccount(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('updateData')
     updateData: UpdateBaselineLicensePlanOnAccount
   ): Promise<IAccount> {
@@ -367,7 +367,7 @@ export class AccountResolverMutations {
     description: 'Transfer the specified InnovationHub to another Account.',
   })
   async transferInnovationHubToAccount(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('transferData') transferData: TransferAccountInnovationHubInput
   ): Promise<IInnovationHub> {
     let innovationHub = await this.innovationHubService.getInnovationHubOrFail(
@@ -417,7 +417,7 @@ export class AccountResolverMutations {
     description: 'Transfer the specified Space to another Account.',
   })
   async transferSpaceToAccount(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('transferData') transferData: TransferAccountSpaceInput
   ): Promise<ISpace> {
     let space = await this.spaceService.getSpaceOrFail(transferData.spaceID, {
@@ -454,7 +454,7 @@ export class AccountResolverMutations {
     description: 'Transfer the specified Innovation Pack to another Account.',
   })
   async transferInnovationPackToAccount(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('transferData') transferData: TransferAccountInnovationPackInput
   ): Promise<IInnovationPack> {
     let innovationPack =
@@ -504,7 +504,7 @@ export class AccountResolverMutations {
       'Transfer the specified Virtual Contributor to another Account.',
   })
   async transferVirtualContributorToAccount(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('transferData') transferData: TransferAccountVirtualContributorInput
   ): Promise<IVirtualContributor> {
     let virtualContributor =

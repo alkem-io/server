@@ -1,6 +1,6 @@
 import { Resolver, Int } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
-import { CurrentUser, TypedSubscription } from '@common/decorators';
+import { CurrentActor, TypedSubscription } from '@common/decorators';
 import { ActorContext } from '@core/actor-context';
 import {
   InAppNotificationReceivedSubscriptionPayload,
@@ -44,7 +44,7 @@ export class InAppNotificationResolverSubscription {
     }
   )
   public async inAppNotificationReceived(
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ) {
     if (!actorContext.actorId) {
       throw new ForbiddenException(
@@ -82,7 +82,7 @@ export class InAppNotificationResolverSubscription {
     }
   )
   public async notificationsUnreadCount(
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ) {
     if (!actorContext.actorId) {
       throw new ForbiddenException(

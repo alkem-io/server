@@ -1,5 +1,5 @@
 import { Resolver, Args, Mutation } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { InnovationFlowService } from './innovation.flow.service';
 import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -37,7 +37,7 @@ export class InnovationFlowResolverMutations {
     description: 'Create a new State on the InnovationFlow.',
   })
   async createStateOnInnovationFlow(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('stateData') stateData: CreateStateOnInnovationFlowInput
   ): Promise<IInnovationFlowState> {
     const innovationFlow =
@@ -78,7 +78,7 @@ export class InnovationFlowResolverMutations {
     description: 'Delete a  State on the InnovationFlow.',
   })
   async deleteStateOnInnovationFlow(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('stateData') stateData: DeleteStateOnInnovationFlowInput
   ): Promise<IInnovationFlowState> {
     const innovationFlow =
@@ -108,7 +108,7 @@ export class InnovationFlowResolverMutations {
     description: 'Updates the InnovationFlow.',
   })
   async updateInnovationFlow(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('innovationFlowData')
     innovationFlowData: UpdateInnovationFlowInput
   ): Promise<IInnovationFlow> {
@@ -116,7 +116,7 @@ export class InnovationFlowResolverMutations {
       await this.innovationFlowService.getInnovationFlowOrFail(
         innovationFlowData.innovationFlowID
       );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       innovationFlow.authorization,
       AuthorizationPrivilege.UPDATE,
@@ -132,7 +132,7 @@ export class InnovationFlowResolverMutations {
     description: 'Updates the InnovationFlow.',
   })
   async updateInnovationFlowCurrentState(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('innovationFlowStateData')
     innovationFlowStateData: UpdateInnovationFlowCurrentStateInput
   ): Promise<IInnovationFlow> {
@@ -156,7 +156,7 @@ export class InnovationFlowResolverMutations {
     description: 'Updates the specified InnovationFlowState.',
   })
   async updateInnovationFlowState(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('stateData')
     innovationFlowStateData: UpdateInnovationFlowStateInput
   ): Promise<IInnovationFlowState> {
@@ -195,7 +195,7 @@ export class InnovationFlowResolverMutations {
       'Update the sortOrder field of the supplied InnovationFlowStates to increase as per the order that they are provided in.',
   })
   async updateInnovationFlowStatesSortOrder(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('sortOrderData')
     sortOrderData: UpdateInnovationFlowStatesSortOrderInput
   ): Promise<IInnovationFlowState[]> {

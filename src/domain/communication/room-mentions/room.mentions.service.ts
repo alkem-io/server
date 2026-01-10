@@ -155,7 +155,7 @@ export class RoomMentionsService {
             roomID: eventData.roomId,
             messageID: eventData.messageID,
           };
-        this.notificationOrganizationAdapter.organizationMention(
+        void this.notificationOrganizationAdapter.organizationMention(
           entityMentionNotificationInput
         );
       }

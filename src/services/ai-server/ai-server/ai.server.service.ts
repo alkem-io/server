@@ -47,7 +47,7 @@ export class AiServerService {
       if (
         isInputValidForAction(event.original, InvocationResultAction.POST_REPLY)
       ) {
-        this.roomControllerService.postReply(event);
+        void this.roomControllerService.postReply(event);
       }
     },
     [InvocationResultAction.POST_MESSAGE]: (event: InvokeEngineResult) => {
@@ -57,7 +57,7 @@ export class AiServerService {
           InvocationResultAction.POST_MESSAGE
         )
       ) {
-        this.roomControllerService.postMessage(event);
+        void this.roomControllerService.postMessage(event);
       }
     },
   };

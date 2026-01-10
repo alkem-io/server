@@ -16,7 +16,7 @@ import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { IPlatformWellKnownVirtualContributors } from '@platform/platform.well.known.virtual.contributors';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
-import { CurrentUser } from '@common/decorators';
+import { CurrentActor } from '@common/decorators';
 import { ActorContext } from '@core/actor-context';
 import { AuthorizationPrivilege } from '@common/enums';
 import { PlatformWellKnownVirtualContributorMapping } from '@platform/platform.well.known.virtual.contributors/dto/platform.well.known.virtual.contributor.dto.mapping';
@@ -133,9 +133,9 @@ export class PlatformResolverFields {
   )
   async wellKnownVirtualContributors(
     @Parent() platform: IPlatform,
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ): Promise<IPlatformWellKnownVirtualContributors> {
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ,

@@ -1,4 +1,4 @@
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { IUser } from '@domain/community/user/user.interface';
 import { AuthorizationPrivilege } from '@common/enums';
@@ -26,9 +26,9 @@ export class AdminAuthorizationResolverQueries {
   async usersWithAuthorizationCredential(
     @Args('credentialsCriteriaData', { nullable: false })
     credentialsCriteriaData: UsersWithAuthorizationCredentialInput,
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ): Promise<IUser[]> {
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,

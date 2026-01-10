@@ -7,7 +7,7 @@ import { UseGuards } from '@nestjs/common';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import {
   AuthorizationActorPrivilege,
-  CurrentUser,
+  CurrentActor,
 } from '@src/common/decorators';
 import { SpaceService } from '@domain/space/space/space.service';
 import { ISpace } from '@domain/space/space/space.interface';
@@ -167,7 +167,7 @@ export class SpaceResolverFields {
   })
   async subspace(
     @Args('NAMEID', { type: () => NameID }) id: string,
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Parent() space: ISpace
   ): Promise<ISpace> {
     const subspace =

@@ -6,7 +6,7 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { IOrganization } from '@domain/community/organization';
 import { IUserGroup } from '@domain/community/user-group';
 import { IProfile } from '@domain/common/profile';
-import { CurrentUser } from '@common/decorators';
+import { CurrentActor } from '@common/decorators';
 import { UUID } from '@domain/common/scalars';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import { IOrganizationVerification } from '../organization-verification/organization.verification.interface';
@@ -37,7 +37,7 @@ export class OrganizationResolverFields {
   })
   async groups(
     @Parent() parent: Organization,
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ): Promise<IUserGroup[]> {
     // Reload to ensure the authorization is loaded
     const organization =
@@ -66,7 +66,7 @@ export class OrganizationResolverFields {
     description: 'Group defined on this organization.',
   })
   async group(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Parent() parent: Organization,
     @Args('ID', { type: () => UUID }) groupID: string
   ): Promise<IUserGroup> {
@@ -112,7 +112,7 @@ export class OrganizationResolverFields {
   })
   async account(
     @Parent() organization: IOrganization,
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ): Promise<IAccount | undefined> {
     const accountVisible = this.authorizationService.isAccessGranted(
       actorContext,

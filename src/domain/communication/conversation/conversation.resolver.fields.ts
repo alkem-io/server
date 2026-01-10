@@ -2,7 +2,7 @@ import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { LoggerService } from '@nestjs/common';
 import { Inject, UseGuards } from '@nestjs/common/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { AuthorizationActorPrivilege, CurrentUser } from '@common/decorators';
+import { AuthorizationActorPrivilege, CurrentActor } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { IRoom } from '@domain/communication/room/room.interface';
@@ -60,7 +60,7 @@ export class ConversationResolverFields {
   })
   async user(
     @Parent() conversation: IConversation,
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ): Promise<IUser | null> {
     return await this.conversationService.getUserFromConversation(
       conversation.id,

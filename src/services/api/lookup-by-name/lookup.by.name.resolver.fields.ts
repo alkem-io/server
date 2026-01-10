@@ -1,5 +1,5 @@
 import { Args, Resolver } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { ResolveField } from '@nestjs/graphql';
 import { ActorContext } from '@core/actor-context';
 import { LookupByNameQueryResults } from '@services/api/lookup-by-name/dto';
@@ -35,7 +35,7 @@ export class LookupByNameResolverFields {
     description: 'Lookup the ID of the specified InnovationHub using a NameID',
   })
   async innovationHub(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('NAMEID', { type: () => NameID }) nameid: string
   ): Promise<string> {
     const innovationHub =
@@ -55,7 +55,7 @@ export class LookupByNameResolverFields {
     description: 'Lookup the ID of the specified InnovationPack using a NameID',
   })
   async innovationPack(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('NAMEID', { type: () => NameID }) nameid: string
   ): Promise<string> {
     const innovationPack =
@@ -75,7 +75,7 @@ export class LookupByNameResolverFields {
     description: 'Lookup a Space using a NameID',
   })
   async space(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('NAMEID', { type: () => NameID }) nameid: string
   ): Promise<ISpace> {
     const space = await this.spaceLookupService.getSpaceByNameIdOrFail(nameid);
@@ -94,7 +94,7 @@ export class LookupByNameResolverFields {
     description: 'Lookup the ID of the specified User using a NameID',
   })
   async user(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('NAMEID', { type: () => NameID }) nameid: string
   ): Promise<string> {
     const user = await this.userLookupService.getUserByNameIdOrFail(nameid);
@@ -128,7 +128,7 @@ export class LookupByNameResolverFields {
       'Lookup the ID of the specified Virtual Contributor using a NameID',
   })
   async virtualContributor(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('NAMEID', { type: () => NameID }) nameid: string
   ): Promise<string> {
     const virtualContributor =
@@ -152,7 +152,7 @@ export class LookupByNameResolverFields {
       'Lookup the ID of the specified Template using a templatesSetId and the template NameID',
   })
   async template(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('templatesSetID', { type: () => UUID }) ID: string,
     @Args('NAMEID', { type: () => NameID }) nameID: string
   ): Promise<string> {

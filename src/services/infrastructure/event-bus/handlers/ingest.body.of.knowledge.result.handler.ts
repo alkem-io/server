@@ -42,13 +42,16 @@ export class IngestBodyOfKnowledgeResultHandler
     );
 
     if (event.result === IngestionResult.SUCCESS) {
-      this.aiServerService.updatePersonaBoKLastUpdated(
+      void this.aiServerService.updatePersonaBoKLastUpdated(
         event.personaId,
         new Date(event.timestamp)
       );
     } else {
       if (event.error?.code === ErrorCode.VECTOR_INSERT) {
-        this.aiServerService.updatePersonaBoKLastUpdated(event.personaId, null);
+        void this.aiServerService.updatePersonaBoKLastUpdated(
+          event.personaId,
+          null
+        );
       }
     }
   }

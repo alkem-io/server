@@ -25,7 +25,7 @@ export class Subscriber implements IMessageSource {
         (letter: string) => `-${letter.toLowerCase()}`
       )}`;
 
-      this.amqpConnection.createSubscriber<string>(
+      void this.amqpConnection.createSubscriber<string>(
         async (message: any) => {
           this.logger.verbose?.(
             `Message from queue ${queue} received`,

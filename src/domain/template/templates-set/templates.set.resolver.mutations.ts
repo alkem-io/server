@@ -5,7 +5,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { TemplatesSetService } from './templates.set.service';
 import { ITemplate } from '../template/template.interface';
 import { ActorContext } from '@core/actor-context';
-import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { TemplateAuthorizationService } from '../template/template.service.authorization';
 import { CreateTemplateOnTemplatesSetInput } from './dto/templates.set.dto.create.template';
@@ -35,7 +35,7 @@ export class TemplatesSetResolverMutations {
     description: 'Creates a new Template on the specified TemplatesSet.',
   })
   async createTemplate(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('templateData')
     templateData: CreateTemplateOnTemplatesSetInput
   ): Promise<ITemplate> {
@@ -67,7 +67,7 @@ export class TemplatesSetResolverMutations {
       'Creates a new Template on the specified TemplatesSet using the provided Space as content.',
   })
   async createTemplateFromSpace(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('templateData')
     templateData: CreateTemplateFromSpaceOnTemplatesSetInput
   ): Promise<ITemplate> {
@@ -109,7 +109,7 @@ export class TemplatesSetResolverMutations {
       'Creates a new Template on the specified TemplatesSet using the provided ContentSpace as content.',
   })
   async createTemplateFromContentSpace(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('templateData')
     templateData: CreateTemplateFromContentSpaceOnTemplatesSetInput
   ): Promise<ITemplate> {

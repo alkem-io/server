@@ -1,6 +1,6 @@
 import { Args, Resolver, Mutation } from '@nestjs/graphql';
 import { OrganizationService } from './organization.service';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { CurrentActor, Profiling } from '@src/common/decorators';
 import { UpdateOrganizationInput } from '@domain/community/organization/dto';
 import { IUserGroup } from '@domain/community/user-group';
 import { AuthorizationPrivilege } from '@common/enums';
@@ -30,14 +30,14 @@ export class OrganizationResolverMutations {
     description: 'Creates a new User Group for the specified Organization.',
   })
   async createGroupOnOrganization(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('groupData') groupData: CreateUserGroupInput
   ): Promise<IUserGroup> {
     const organization =
       await this.organizationService.getOrganizationByIdOrFail(
         groupData.parentID
       );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       organization.authorization,
       AuthorizationPrivilege.CREATE,
@@ -58,7 +58,7 @@ export class OrganizationResolverMutations {
     description: 'Updates one of the Setting on an Organization',
   })
   async updateOrganizationSettings(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('settingsData') settingsData: UpdateOrganizationSettingsInput
   ): Promise<IOrganization> {
     let organization = await this.organizationService.getOrganizationByIdOrFail(
@@ -93,14 +93,14 @@ export class OrganizationResolverMutations {
   })
   @Profiling.api
   async updateOrganization(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('organizationData') organizationData: UpdateOrganizationInput
   ): Promise<IOrganization> {
     const organization =
       await this.organizationService.getOrganizationByIdOrFail(
         organizationData.ID
       );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       organization.authorization,
       AuthorizationPrivilege.UPDATE,
@@ -116,7 +116,7 @@ export class OrganizationResolverMutations {
   })
   @Profiling.api
   async authorizationPolicyResetOnOrganization(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('authorizationResetData')
     authorizationResetData: OrganizationAuthorizationResetInput
   ): Promise<IOrganization> {
@@ -131,7 +131,7 @@ export class OrganizationResolverMutations {
           },
         }
       );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       organization.authorization,
       AuthorizationPrivilege.AUTHORIZATION_RESET,

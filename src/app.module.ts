@@ -256,7 +256,7 @@ import { InAppNotificationAdminModule } from './platform-admin/in-app-notificati
                 const expiry = context.req.user.expiry;
                 // if the session has expired, close the socket
                 if (expiry && expiry < Date.now()) {
-                  (ctx as WebsocketContext).extra.socket.close(
+                  void (ctx as WebsocketContext).extra.socket.close(
                     CloseCode.Unauthorized,
                     'Session expired'
                   );

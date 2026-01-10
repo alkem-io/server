@@ -1,6 +1,6 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Resolver, Mutation } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { ActorContext } from '@core/actor-context';
 import { WhiteboardService } from './whiteboard.service';
 import { IWhiteboard } from './whiteboard.interface';
@@ -43,7 +43,7 @@ export class WhiteboardResolverMutations {
       'Grants or revokes GLOBAL_GUEST permissions for a whiteboard using a single toggle.',
   })
   async updateWhiteboardGuestAccess(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('input') input: UpdateWhiteboardGuestAccessInput
   ): Promise<UpdateWhiteboardGuestAccessResult> {
     const whiteboard =
@@ -85,7 +85,7 @@ export class WhiteboardResolverMutations {
     description: 'Updates the specified Whiteboard.',
   })
   async updateWhiteboard(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('whiteboardData') whiteboardData: UpdateWhiteboardEntityInput
   ): Promise<IWhiteboard> {
     const whiteboard = await this.whiteboardService.getWhiteboardOrFail(
@@ -161,7 +161,7 @@ export class WhiteboardResolverMutations {
     description: 'Deletes the specified Whiteboard.',
   })
   async deleteWhiteboard(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('whiteboardData') whiteboardData: DeleteWhiteboardInput
   ): Promise<IWhiteboard> {
     const whiteboard = await this.whiteboardService.getWhiteboardOrFail(

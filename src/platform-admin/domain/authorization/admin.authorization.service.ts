@@ -64,7 +64,7 @@ export class AdminAuthorizationService {
         userAuthorizationPrivilegesData.authorizationID
       );
 
-    const privileges = await this.authorizationService.getGrantedPrivileges(
+    const privileges = this.authorizationService.getGrantedPrivileges(
       credentials,
       authorizationPolicy
     );

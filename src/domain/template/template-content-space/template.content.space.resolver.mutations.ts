@@ -1,5 +1,5 @@
 import { Resolver, Args, Mutation } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -20,7 +20,7 @@ export class TemplateContentSpaceResolverMutations {
     description: 'Updates the TemplateContentSpace.',
   })
   async updateTemplateContentSpace(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('templateContentSpaceData')
     templateContentSpaceData: UpdateTemplateContentSpaceInput
   ): Promise<ITemplateContentSpace> {

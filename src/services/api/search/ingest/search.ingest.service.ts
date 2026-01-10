@@ -546,7 +546,7 @@ export class SearchIngestService {
       `Found ${total} total results to ingest into ${index}`,
       LogContext.SEARCH_INGEST
     );
-    this.taskService.updateTaskResults(
+    void this.taskService.updateTaskResults(
       task.id,
       `Found ${total} total results to ingest into ${index}`
     );
@@ -625,7 +625,7 @@ export class SearchIngestService {
       } documents errored. ${
         data.length - erroredDocuments.length
       } documents indexed.`;
-      this.taskService.updateTaskErrors(task.id, message);
+      void this.taskService.updateTaskErrors(task.id, message);
       return {
         success: false,
         total: 0,
@@ -634,7 +634,7 @@ export class SearchIngestService {
       };
     } else {
       const message = `[${index}] - ${data.length} documents indexed`;
-      this.taskService.updateTaskResults(task.id, message);
+      void this.taskService.updateTaskResults(task.id, message);
       return {
         success: true,
         total: data.length,

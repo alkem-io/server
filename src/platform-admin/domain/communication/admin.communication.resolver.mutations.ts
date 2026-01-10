@@ -2,7 +2,7 @@ import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import { CurrentUser, Profiling } from '@common/decorators';
+import { CurrentActor, Profiling } from '@common/decorators';
 import { ActorContext } from '@core/actor-context';
 import { CommunicationAdminEnsureAccessInput } from './dto/admin.communication.dto.ensure.access.input';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -39,9 +39,9 @@ export class AdminCommunicationResolverMutations {
   async adminCommunicationEnsureAccessToCommunications(
     @Args('communicationData')
     ensureAccessData: CommunicationAdminEnsureAccessInput,
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ): Promise<boolean> {
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       this.communicationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT,
@@ -59,9 +59,9 @@ export class AdminCommunicationResolverMutations {
   async adminCommunicationRemoveOrphanedRoom(
     @Args('orphanedRoomData')
     orphanedRoomData: CommunicationAdminRemoveOrphanedRoomInput,
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ): Promise<boolean> {
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       this.communicationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT,
@@ -79,9 +79,9 @@ export class AdminCommunicationResolverMutations {
   async adminCommunicationUpdateRoomState(
     @Args('roomStateData')
     roomStateData: CommunicationAdminUpdateRoomStateInput,
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ): Promise<CommunicationRoomResult> {
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       this.communicationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT,

@@ -1,7 +1,7 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { RoleSetService } from './role.set.service';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { ActorContext } from '@core/actor-context';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -98,7 +98,7 @@ export class RoleSetResolverMutationsMembership {
       'Join the specified RoleSet using the entry Role, without going through an approval process.',
   })
   async joinRoleSet(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('joinData') joiningData: JoinAsEntryRoleOnRoleSetInput
   ): Promise<IRoleSet> {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
@@ -118,7 +118,7 @@ export class RoleSetResolverMutationsMembership {
       );
     }
 
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       roleSet.authorization,
       AuthorizationPrivilege.ROLESET_ENTRY_ROLE_JOIN,
@@ -140,7 +140,7 @@ export class RoleSetResolverMutationsMembership {
     description: 'Apply to join the specified RoleSet in the entry Role.',
   })
   async applyForEntryRoleOnRoleSet(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('applicationData') applicationData: ApplyForEntryRoleOnRoleSetInput
   ): Promise<IApplication> {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
@@ -153,7 +153,7 @@ export class RoleSetResolverMutationsMembership {
     );
     this.validateRoleSetTypeOrFail(roleSet, [RoleSetType.SPACE]);
 
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       roleSet.authorization,
       AuthorizationPrivilege.ROLESET_ENTRY_ROLE_APPLY,
@@ -194,7 +194,7 @@ export class RoleSetResolverMutationsMembership {
       community,
       application,
     };
-    await this.notificationAdapterSpace.spaceCommunityApplicationCreated(
+    void this.notificationAdapterSpace.spaceCommunityApplicationCreated(
       notificationInput
     );
 
@@ -206,7 +206,7 @@ export class RoleSetResolverMutationsMembership {
       'Invite new Contributors or users by email to join the specified RoleSet in the Entry Role.',
   })
   async inviteForEntryRoleOnRoleSet(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('invitationData')
     invitationData: InviteForEntryRoleOnRoleSetInput
   ): Promise<RoleSetInvitationResult[]> {
@@ -238,7 +238,7 @@ export class RoleSetResolverMutationsMembership {
       );
     }
 
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       roleSet.authorization,
       AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE,
@@ -391,7 +391,7 @@ export class RoleSetResolverMutationsMembership {
   async eventOnApplication(
     @Args('eventData')
     eventData: ApplicationEventInput,
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ): Promise<IApplication> {
     let application = await this.applicationService.getApplicationOrFail(
       eventData.applicationID
@@ -483,7 +483,7 @@ export class RoleSetResolverMutationsMembership {
             spaceID: space.id,
           };
 
-        await this.notificationUserAdapter.userSpaceCommunityApplicationDeclined(
+        void this.notificationUserAdapter.userSpaceCommunityApplicationDeclined(
           notificationInput,
           space
         );
@@ -517,7 +517,7 @@ export class RoleSetResolverMutationsMembership {
   async eventOnInvitation(
     @Args('eventData')
     eventData: InvitationEventInput,
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ): Promise<IInvitation> {
     let invitation = await this.invitationService.getInvitationOrFail(
       eventData.invitationID,
@@ -617,7 +617,7 @@ export class RoleSetResolverMutationsMembership {
               spaceID: space.id,
             };
 
-          await this.notificationAdapterSpace.spaceAdminVirtualContributorInvitationDeclined(
+          void this.notificationAdapterSpace.spaceAdminVirtualContributorInvitationDeclined(
             notificationInput,
             space
           );
@@ -647,7 +647,7 @@ export class RoleSetResolverMutationsMembership {
     description: 'Update the Application Form used by this RoleSet.',
   })
   async updateApplicationFormOnRoleSet(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('applicationFormData')
     applicationFormData: UpdateApplicationFormOnRoleSetInput
   ): Promise<IRoleSet> {
@@ -655,7 +655,7 @@ export class RoleSetResolverMutationsMembership {
       applicationFormData.roleSetID
     );
 
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       roleSet.authorization,
       AuthorizationPrivilege.UPDATE,
@@ -793,7 +793,7 @@ export class RoleSetResolverMutationsMembership {
             invitedUserEmail: platformInvitation.email,
             welcomeMessage: platformInvitation.welcomeMessage,
           };
-          await this.notificationPlatformAdapter.platformInvitationCreated(
+          void this.notificationPlatformAdapter.platformInvitationCreated(
             notificationInput
           );
           break;
@@ -831,7 +831,7 @@ export class RoleSetResolverMutationsMembership {
                   welcomeMessage: invitation.welcomeMessage,
                 };
 
-              await this.notificationVirtualContributorAdapter.spaceCommunityInvitationVirtualContributorCreated(
+              void this.notificationVirtualContributorAdapter.spaceCommunityInvitationVirtualContributorCreated(
                 notificationInput
               );
               break;
@@ -846,7 +846,7 @@ export class RoleSetResolverMutationsMembership {
                 welcomeMessage: invitation.welcomeMessage,
               };
 
-              await this.notificationUserAdapter.userSpaceCommunityInvitationCreated(
+              void this.notificationUserAdapter.userSpaceCommunityInvitationCreated(
                 notificationInput
               );
               break;

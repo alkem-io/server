@@ -133,4 +133,4 @@ const connectMicroservice = (
   });
 };
 
-bootstrap();
+void bootstrap();

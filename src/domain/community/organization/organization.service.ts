@@ -134,7 +134,7 @@ export class OrganizationService {
       tags: [],
     });
 
-    this.contributorService.addAvatarVisualToContributorProfile(
+    await this.contributorService.addAvatarVisualToContributorProfile(
       organization.profile,
       organizationData.profileData,
       undefined,

@@ -55,7 +55,7 @@ export class MessageInboxService {
     );
 
     // Publish GraphQL subscription - Matrix has confirmed message persistence
-    this.subscriptionPublishService.publishRoomEvent(
+    void this.subscriptionPublishService.publishRoomEvent(
       room,
       MutationType.CREATE,
       {
@@ -264,7 +264,7 @@ export class MessageInboxService {
     const room = await this.roomLookupService.getRoomOrFail(payload.roomId);
 
     // Publish GraphQL subscription - Matrix has confirmed reaction persistence
-    this.subscriptionPublishService.publishRoomEvent(
+    void this.subscriptionPublishService.publishRoomEvent(
       room,
       MutationType.CREATE,
       {
@@ -293,7 +293,7 @@ export class MessageInboxService {
     const room = await this.roomLookupService.getRoomOrFail(payload.roomId);
 
     // Publish GraphQL subscription - Matrix has confirmed reaction removal
-    this.subscriptionPublishService.publishRoomEvent(
+    void this.subscriptionPublishService.publishRoomEvent(
       room,
       MutationType.DELETE,
       {

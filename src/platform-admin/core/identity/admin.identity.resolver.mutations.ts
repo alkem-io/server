@@ -1,5 +1,5 @@
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { ActorContext } from '@core/actor-context';
@@ -22,11 +22,11 @@ export class AdminIdentityResolverMutations {
     description: 'Delete a Kratos identity by ID.',
   })
   async adminIdentityDeleteKratosIdentity(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('kratosIdentityId', { type: () => UUID })
     kratosIdentityId: string
   ): Promise<boolean> {
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_SETTINGS_ADMIN,

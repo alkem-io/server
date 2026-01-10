@@ -1,6 +1,6 @@
 import { Args, Resolver, Mutation } from '@nestjs/graphql';
 import { AiPersonaService } from './ai.persona.service';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
 import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -20,7 +20,7 @@ export class AiPersonaResolverMutations {
     description: 'Updates the specified AI Persona.',
   })
   async aiServerUpdateAiPersona(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('aiPersonaData')
     aiPersonaServiceData: UpdateAiPersonaInput
   ): Promise<IAiPersona> {
@@ -41,7 +41,7 @@ export class AiPersonaResolverMutations {
     description: 'Deletes the specified AiPersona.',
   })
   async aiServerDeleteAiPersona(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteAiPersonaInput
   ): Promise<IAiPersona> {
     const aiPersonaService = await this.aiPersonaService.getAiPersonaOrFail(

@@ -164,7 +164,7 @@ export class VirtualContributorService {
       }
     );
 
-    this.contributorService.addAvatarVisualToContributorProfile(
+    await this.contributorService.addAvatarVisualToContributorProfile(
       virtualContributor.profile,
       virtualContributorData.profileData
     );

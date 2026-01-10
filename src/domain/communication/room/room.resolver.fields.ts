@@ -3,7 +3,7 @@ import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import {
   AuthorizationActorPrivilege,
-  CurrentUser,
+  CurrentActor,
 } from '@src/common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
 import { IMessage } from '../message/message.interface';
@@ -38,7 +38,7 @@ export class RoomResolverFields {
   })
   async vcInteractions(
     @Parent() room: IRoom,
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ): Promise<IVcInteraction[]> {
     const reloadedRoom = await this.roomService.getRoomOrFail(room.id);
     this.authorizationService.grantAccessOrFail(

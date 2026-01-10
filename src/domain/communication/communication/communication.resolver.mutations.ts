@@ -1,7 +1,7 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums';
@@ -42,10 +42,10 @@ export class CommunicationResolverMutations {
     description: 'Send message to multiple Users.',
   })
   async sendMessageToUsers(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('messageData') messageData: CommunicationSendMessageToUsersInput
   ): Promise<boolean> {
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
@@ -92,11 +92,11 @@ export class CommunicationResolverMutations {
     description: 'Send message to an Organization.',
   })
   async sendMessageToOrganization(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('messageData')
     messageData: CommunicationSendMessageToOrganizationInput
   ): Promise<boolean> {
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
@@ -119,11 +119,11 @@ export class CommunicationResolverMutations {
     description: 'Send message to Community Leads.',
   })
   async sendMessageToCommunityLeads(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('messageData')
     messageData: CommunicationSendMessageToCommunityLeadsInput
   ): Promise<boolean> {
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,

@@ -1,5 +1,5 @@
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { Inject } from '@nestjs/common/decorators';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -71,7 +71,7 @@ export class CalloutResolverMutations {
     description: 'Delete a Callout.',
   })
   async deleteCallout(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteCalloutInput
   ): Promise<ICallout> {
     const callout = await this.calloutService.getCalloutOrFail(deleteData.ID);
@@ -88,7 +88,7 @@ export class CalloutResolverMutations {
     description: 'Update a Callout.',
   })
   async updateCallout(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('calloutData') calloutData: UpdateCalloutEntityInput
   ): Promise<ICallout> {
     const callout = await this.calloutService.getCalloutOrFail(calloutData.ID);
@@ -129,7 +129,7 @@ export class CalloutResolverMutations {
     description: 'Update the visibility of the specified Callout.',
   })
   async updateCalloutVisibility(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('calloutData') calloutData: UpdateCalloutVisibilityInput
   ): Promise<ICallout> {
     const callout = await this.calloutService.getCalloutOrFail(
@@ -171,7 +171,7 @@ export class CalloutResolverMutations {
               triggeredBy: actorContext.actorId,
               callout: callout,
             };
-            await this.notificationAdapterSpace.spaceCollaborationCalloutPublished(
+            void this.notificationAdapterSpace.spaceCollaborationCalloutPublished(
               notificationInput
             );
           }
@@ -180,7 +180,7 @@ export class CalloutResolverMutations {
             triggeredBy: actorContext.actorId,
             callout: callout,
           };
-          this.activityAdapter.calloutPublished(activityLogInput);
+          void this.activityAdapter.calloutPublished(activityLogInput);
         }
       }
     }
@@ -211,7 +211,7 @@ export class CalloutResolverMutations {
       'Update the information describing the publishing of the specified Callout.',
   })
   async updateCalloutPublishInfo(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('calloutData') calloutData: UpdateCalloutPublishInfoInput
   ): Promise<ICallout> {
     const callout = await this.calloutService.getCalloutOrFail(
@@ -234,7 +234,7 @@ export class CalloutResolverMutations {
     description: 'Create a new Contribution on the Callout.',
   })
   async createContributionOnCallout(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('contributionData') contributionData: CreateContributionOnCalloutInput
   ): Promise<ICalloutContribution> {
     const callout = await this.calloutService.getCalloutOrFail(
@@ -336,7 +336,7 @@ export class CalloutResolverMutations {
           },
         },
       };
-      this.postCreatedSubscription.publish(
+      void this.postCreatedSubscription.publish(
         SubscriptionType.CALLOUT_POST_CREATED,
         postCreatedEvent
       );
@@ -352,7 +352,7 @@ export class CalloutResolverMutations {
 
       if (contributionData.post && contribution.post) {
         if (callout.settings.visibility === CalloutVisibility.PUBLISHED) {
-          this.processActivityPostCreated(
+          void this.processActivityPostCreated(
             callout,
             contribution,
             contribution.post,
@@ -364,7 +364,7 @@ export class CalloutResolverMutations {
 
       if (contributionData.link && contribution.link) {
         if (callout.settings.visibility === CalloutVisibility.PUBLISHED) {
-          this.processActivityLinkCreated(
+          void this.processActivityLinkCreated(
             callout,
             contribution,
             contribution.link,
@@ -376,7 +376,7 @@ export class CalloutResolverMutations {
 
       if (contributionData.whiteboard && contribution.whiteboard) {
         if (callout.settings.visibility === CalloutVisibility.PUBLISHED) {
-          this.processActivityWhiteboardCreated(
+          void this.processActivityWhiteboardCreated(
             callout,
             contribution,
             contribution.whiteboard,
@@ -388,7 +388,7 @@ export class CalloutResolverMutations {
 
       if (contributionData.memo && contribution.memo) {
         if (callout.settings.visibility === CalloutVisibility.PUBLISHED) {
-          this.processActivityMemoCreated(
+          void this.processActivityMemoCreated(
             callout,
             contribution,
             contribution.memo,
@@ -418,7 +418,7 @@ export class CalloutResolverMutations {
         contributionType: CalloutContributionType.LINK,
         triggeredBy: actorContext.actorId,
       };
-    await this.notificationAdapterSpace.spaceCollaborationCalloutContributionCreated(
+    void this.notificationAdapterSpace.spaceCollaborationCalloutContributionCreated(
       notificationInput
     );
     const activityLogInput: ActivityInputCalloutLinkCreated = {
@@ -426,7 +426,7 @@ export class CalloutResolverMutations {
       link: link,
       callout: callout,
     };
-    this.activityAdapter.calloutLinkCreated(activityLogInput);
+    void this.activityAdapter.calloutLinkCreated(activityLogInput);
 
     this.contributionReporter.calloutLinkCreated(
       {
@@ -452,11 +452,11 @@ export class CalloutResolverMutations {
         contributionType: CalloutContributionType.WHITEBOARD,
         triggeredBy: actorContext.actorId,
       };
-    await this.notificationAdapterSpace.spaceCollaborationCalloutContributionCreated(
+    void this.notificationAdapterSpace.spaceCollaborationCalloutContributionCreated(
       notificationInput
     );
 
-    this.activityAdapter.calloutWhiteboardCreated({
+    void this.activityAdapter.calloutWhiteboardCreated({
       triggeredBy: actorContext.actorId,
       whiteboard: whiteboard,
       callout: callout,
@@ -486,7 +486,7 @@ export class CalloutResolverMutations {
         contributionType: CalloutContributionType.POST,
         triggeredBy: actorContext.actorId,
       };
-    await this.notificationAdapterSpace.spaceCollaborationCalloutContributionCreated(
+    void this.notificationAdapterSpace.spaceCollaborationCalloutContributionCreated(
       notificationInput
     );
 
@@ -495,7 +495,7 @@ export class CalloutResolverMutations {
       post: post,
       callout: callout,
     };
-    this.activityAdapter.calloutPostCreated(activityLogInput);
+    void this.activityAdapter.calloutPostCreated(activityLogInput);
 
     this.contributionReporter.calloutPostCreated(
       {
@@ -521,7 +521,7 @@ export class CalloutResolverMutations {
         contributionType: CalloutContributionType.MEMO,
         triggeredBy: actorContext.actorId,
       };
-    await this.notificationAdapterSpace.spaceCollaborationCalloutContributionCreated(
+    void this.notificationAdapterSpace.spaceCollaborationCalloutContributionCreated(
       notificationInput
     );
 
@@ -530,7 +530,7 @@ export class CalloutResolverMutations {
       memo: memo,
       callout: callout,
     };
-    this.activityAdapter.calloutMemoCreated(activityLogInput);
+    void this.activityAdapter.calloutMemoCreated(activityLogInput);
 
     this.contributionReporter.calloutMemoCreated(
       {
@@ -547,7 +547,7 @@ export class CalloutResolverMutations {
       'Update the sortOrder field of the Contributions of s Callout.',
   })
   async updateContributionsSortOrder(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('sortOrderData')
     sortOrderData: UpdateContributionCalloutsSortOrderInput
   ): Promise<ICalloutContribution[]> {

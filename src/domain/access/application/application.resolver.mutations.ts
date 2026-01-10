@@ -1,5 +1,5 @@
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { IApplication } from '@domain/access/application';
 import { ApplicationService } from '@domain/access/application/application.service';
 import { ActorContext } from '@core/actor-context';
@@ -20,13 +20,13 @@ export class ApplicationResolverMutations {
     description: 'Removes the specified User Application.',
   })
   async deleteUserApplication(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteApplicationInput
   ): Promise<IApplication> {
     const application = await this.applicationService.getApplicationOrFail(
       deleteData.ID
     );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       application.authorization,
       AuthorizationPrivilege.DELETE,

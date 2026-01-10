@@ -1,5 +1,5 @@
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -23,7 +23,7 @@ export class LicensePlanResolverMutations {
     description: 'Deletes the specified LicensePlan.',
   })
   async deleteLicensePlan(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteLicensePlanInput
   ): Promise<ILicensePlan> {
     const licensePlan = await this.licensePlanService.getLicensePlanOrFail(
@@ -42,7 +42,7 @@ export class LicensePlanResolverMutations {
         LogContext.LICENSE
       );
     }
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       licensePlan.licensingFramework.authorization,
       AuthorizationPrivilege.DELETE,
@@ -55,7 +55,7 @@ export class LicensePlanResolverMutations {
     description: 'Updates the LicensePlan.',
   })
   async updateLicensePlan(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('updateData') updateData: UpdateLicensePlanInput
   ): Promise<ILicensePlan> {
     const licensePlan = await this.licensePlanService.getLicensePlanOrFail(
@@ -74,7 +74,7 @@ export class LicensePlanResolverMutations {
         LogContext.LICENSE
       );
     }
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       licensePlan.licensingFramework.authorization,
       AuthorizationPrivilege.UPDATE,

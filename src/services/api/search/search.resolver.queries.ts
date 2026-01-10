@@ -1,5 +1,5 @@
 import { Args, Resolver, Query } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { ActorContext } from '@core/actor-context';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { SearchService } from './search.service';
@@ -16,7 +16,7 @@ export class SearchResolverQueries {
     description: 'Search the platform for terms supplied',
   })
   async search(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('searchData') searchData: SearchInput
   ): Promise<ISearchResults> {
     return this.searchService.search(searchData, actorContext);

@@ -1,6 +1,6 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { CurrentActor, Profiling } from '@src/common/decorators';
 import { IUser } from '@domain/community/user/user.interface';
 import { ActorContext } from '@core/actor-context';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -46,7 +46,7 @@ export class RegistrationResolverMutations {
     description: 'Creates a new User on the platform.',
   })
   async createUser(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('userData') userData: CreateUserInput
   ): Promise<IUser> {
     const authorization =
@@ -88,13 +88,13 @@ export class RegistrationResolverMutations {
     description: 'Creates a new Organization on the platform.',
   })
   async createOrganization(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('organizationData') organizationData: CreateOrganizationInput
   ): Promise<IOrganization> {
     const authorizationPolicy =
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
 
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       authorizationPolicy,
       AuthorizationPrivilege.CREATE_ORGANIZATION,
@@ -139,13 +139,13 @@ export class RegistrationResolverMutations {
   })
   @Profiling.api
   async deleteUser(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteUserInput
   ): Promise<IUser> {
     const user = await this.userService.getUserByIdOrFail(deleteData.ID, {
       relations: { profile: true },
     });
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       user.authorization,
       AuthorizationPrivilege.DELETE,
@@ -170,12 +170,12 @@ export class RegistrationResolverMutations {
     description: 'Deletes the specified Organization.',
   })
   async deleteOrganization(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteOrganizationInput
   ): Promise<IOrganization> {
     const organization =
       await this.organizationService.getOrganizationByIdOrFail(deleteData.ID);
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       organization.authorization,
       AuthorizationPrivilege.DELETE,

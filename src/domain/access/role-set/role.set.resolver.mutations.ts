@@ -1,7 +1,7 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { RoleSetService } from './role.set.service';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { ActorContext } from '@core/actor-context';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -49,7 +49,7 @@ export class RoleSetResolverMutations {
     description: 'Assigns a User to a role in the specified Community.',
   })
   async assignRoleToUser(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('roleData') roleData: AssignRoleOnRoleSetInput
   ): Promise<IUser> {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
@@ -114,7 +114,7 @@ export class RoleSetResolverMutations {
     description: 'Assigns an Organization a Role in the specified Community.',
   })
   async assignRoleToOrganization(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('roleData')
     roleData: AssignRoleOnRoleSetInput
   ): Promise<IOrganization> {
@@ -151,7 +151,7 @@ export class RoleSetResolverMutations {
       'Assigns a Virtual Contributor to a role in the specified Community.',
   })
   async assignRoleToVirtualContributor(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('roleData') roleData: AssignRoleOnRoleSetInput
   ): Promise<IVirtualContributor> {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
@@ -219,7 +219,7 @@ export class RoleSetResolverMutations {
     description: 'Removes a User from a Role in the specified Community.',
   })
   async removeRoleFromUser(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('roleData') roleData: RemoveRoleOnRoleSetInput
   ): Promise<IUser> {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
@@ -302,7 +302,7 @@ export class RoleSetResolverMutations {
       'Removes an Organization from a Role in the specified Community.',
   })
   async removeRoleFromOrganization(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('roleData') roleData: RemoveRoleOnRoleSetInput
   ): Promise<IOrganization> {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
@@ -310,7 +310,7 @@ export class RoleSetResolverMutations {
     );
     this.validateRoleSetTypeOrFail(roleSet, [RoleSetType.SPACE]);
 
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       roleSet.authorization,
       AuthorizationPrivilege.GRANT,
@@ -331,7 +331,7 @@ export class RoleSetResolverMutations {
     description: 'Removes a Virtual from a Role in the specified Community.',
   })
   async removeRoleFromVirtualContributor(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('roleData') roleData: RemoveRoleOnRoleSetInput
   ): Promise<IVirtualContributor> {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
@@ -348,7 +348,7 @@ export class RoleSetResolverMutations {
         roleData.actorId
       );
 
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       extendedAuthorization,
       AuthorizationPrivilege.GRANT,
@@ -371,7 +371,7 @@ export class RoleSetResolverMutations {
       'Assigns a Contributor (User, Organization, or Virtual Contributor) to a role in the specified RoleSet.',
   })
   async assignRole(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('roleData') roleData: AssignRoleOnRoleSetInput
   ): Promise<IActor> {
     // Look up contributor to determine its type (lightweight - only need id, type)
@@ -438,7 +438,7 @@ export class RoleSetResolverMutations {
       'Removes a Contributor (User, Organization, or Virtual Contributor) from a role in the specified RoleSet.',
   })
   async removeRole(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('roleData') roleData: RemoveRoleOnRoleSetInput
   ): Promise<IActor> {
     // Look up contributor to determine its type (lightweight - only need id, type)

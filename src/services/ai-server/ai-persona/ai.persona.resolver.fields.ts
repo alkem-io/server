@@ -1,6 +1,6 @@
 import { Resolver, Parent, ResolveField } from '@nestjs/graphql';
 import { AuthorizationPrivilege } from '@common/enums';
-import { CurrentUser, Profiling } from '@common/decorators';
+import { CurrentActor, Profiling } from '@common/decorators';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { ActorContext } from '@core/actor-context';
@@ -30,7 +30,7 @@ export class AiPersonaResolverFields {
   })
   async promptGraph(
     @Parent() parent: AiPersona,
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ) {
     // Reload to ensure the authorization is loaded
     const aiPersona = await this.aiPersonaServiceService.getAiPersonaOrFail(
@@ -78,7 +78,7 @@ export class AiPersonaResolverFields {
   @Profiling.api
   async authorization(
     @Parent() parent: AiPersona,
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ) {
     // Reload to ensure the authorization is loaded
     const aiPersona = await this.aiPersonaServiceService.getAiPersonaOrFail(
@@ -102,7 +102,7 @@ export class AiPersonaResolverFields {
   @Profiling.api
   async externalConfig(
     @Parent() parent: AiPersona,
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ) {
     // Reload to ensure the authorization is loaded
     const aiPersonaService =

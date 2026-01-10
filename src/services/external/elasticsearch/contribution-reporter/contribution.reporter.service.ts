@@ -37,7 +37,7 @@ export class ContributionReporterService {
   }
 
   public spaceJoined(contribution: ContributionDetails, actorId: string): void {
-    this.createDocument(
+    void this.createDocument(
       {
         type: 'SPACE_JOINED',
         id: contribution.id,
@@ -53,7 +53,7 @@ export class ContributionReporterService {
     contribution: ContributionDetails,
     actorId: string
   ): void {
-    this.createDocument(
+    void this.createDocument(
       {
         type: 'SPACE_CONTENT_EDITED',
         id: contribution.id,
@@ -70,7 +70,7 @@ export class ContributionReporterService {
     contribution: ContributionDetails,
     actorId: string
   ): void {
-    this.createDocument(
+    void this.createDocument(
       {
         type: 'SUBSPACE_CREATED',
         id: contribution.id,
@@ -86,7 +86,7 @@ export class ContributionReporterService {
     contribution: ContributionDetails,
     actorId: string
   ): void {
-    this.createDocument(
+    void this.createDocument(
       {
         type: 'SUBSPACE_CONTENT_EDITED',
         id: contribution.id,
@@ -102,7 +102,7 @@ export class ContributionReporterService {
     contribution: ContributionDetails,
     actorId: string
   ): void {
-    this.createDocument(
+    void this.createDocument(
       {
         type: 'SUBSPACE_JOINED',
         id: contribution.id,
@@ -119,7 +119,7 @@ export class ContributionReporterService {
     contribution: ContributionDetails,
     actorId: string
   ): void {
-    this.createDocument(
+    void this.createDocument(
       {
         type: 'CALLOUT_CREATED',
         id: contribution.id,
@@ -135,7 +135,7 @@ export class ContributionReporterService {
     contribution: ContributionDetails,
     actorId: string
   ): void {
-    this.createDocument(
+    void this.createDocument(
       {
         type: 'CALLOUT_COMMENT_CREATED',
         id: contribution.id,
@@ -151,7 +151,7 @@ export class ContributionReporterService {
     contribution: ContributionDetails,
     actorId: string
   ): void {
-    this.createDocument(
+    void this.createDocument(
       {
         type: 'CALLOUT_POST_CREATED',
         id: contribution.id,
@@ -167,7 +167,7 @@ export class ContributionReporterService {
     contribution: ContributionDetails,
     actorId: string
   ): void {
-    this.createDocument(
+    void this.createDocument(
       {
         type: 'CALLOUT_LINK_CREATED',
         id: contribution.id,
@@ -184,7 +184,7 @@ export class ContributionReporterService {
     contribution: ContributionDetails,
     actorId: string
   ): void {
-    this.createDocument(
+    void this.createDocument(
       {
         type: 'CALLOUT_WHITEBOARD_CREATED',
         id: contribution.id,
@@ -200,7 +200,7 @@ export class ContributionReporterService {
     contribution: ContributionDetails,
     actorId: string
   ): void {
-    this.createDocument(
+    void this.createDocument(
       {
         type: 'CALLOUT_MEMO_CREATED',
         id: contribution.id,
@@ -216,7 +216,7 @@ export class ContributionReporterService {
     contribution: ContributionDetails,
     actorId: string
   ): void {
-    this.createDocument(
+    void this.createDocument(
       {
         type: 'CALLOUT_POST_COMMENT_CREATED',
         id: contribution.id,
@@ -232,7 +232,7 @@ export class ContributionReporterService {
     contribution: ContributionDetails,
     actorId: string
   ): void {
-    this.createDocument(
+    void this.createDocument(
       {
         type: 'CALENDAR_EVENT_CREATED',
         id: contribution.id,
@@ -249,7 +249,7 @@ export class ContributionReporterService {
     contribution: ContributionDetails,
     actorId: string
   ): void {
-    this.createDocument(
+    void this.createDocument(
       {
         type: 'UPDATE_CREATED',
         id: contribution.id,
@@ -265,7 +265,7 @@ export class ContributionReporterService {
     contribution: ContributionDetails,
     actorId: string
   ): void {
-    this.createDocument(
+    void this.createDocument(
       {
         type: 'WHITEBOARD_CONTRIBUTION',
         id: contribution.id,
@@ -281,7 +281,7 @@ export class ContributionReporterService {
     contribution: ContributionDetails,
     actorId: string
   ): void {
-    this.createDocument(
+    void this.createDocument(
       {
         type: 'MEMO_CONTRIBUTION',
         id: contribution.id,

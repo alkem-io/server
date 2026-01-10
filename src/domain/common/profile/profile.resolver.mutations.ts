@@ -1,7 +1,7 @@
 import { IReference } from '@domain/common/reference';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { CurrentActor, Profiling } from '@src/common/decorators';
 import { ProfileService } from './profile.service';
 import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -34,7 +34,7 @@ export class ProfileResolverMutations {
   })
   @Profiling.api
   async createTagsetOnProfile(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('tagsetData') tagsetData: CreateTagsetOnProfileInput
   ): Promise<ITagset> {
     const profile = await this.profileService.getProfileOrFail(
@@ -74,7 +74,7 @@ export class ProfileResolverMutations {
   })
   @Profiling.api
   async createReferenceOnProfile(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('referenceInput') referenceInput: CreateReferenceOnProfileInput
   ): Promise<IReference> {
     const profile = await this.profileService.getProfileOrFail(
@@ -83,7 +83,7 @@ export class ProfileResolverMutations {
         relations: { references: true },
       }
     );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       profile.authorization,
       AuthorizationPrivilege.CREATE,
@@ -103,13 +103,13 @@ export class ProfileResolverMutations {
   })
   @Profiling.api
   async updateProfile(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('profileData') profileData: UpdateProfileDirectInput
   ): Promise<IProfile> {
     const profile = await this.profileService.getProfileOrFail(
       profileData.profileID
     );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       profile.authorization,
       AuthorizationPrivilege.UPDATE,

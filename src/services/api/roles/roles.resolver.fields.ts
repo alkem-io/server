@@ -1,5 +1,5 @@
 import { Parent, Resolver } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { Args, ResolveField } from '@nestjs/graphql';
 import { ActorContext } from '@core/actor-context';
 import { CommunityInvitationForRoleResult } from './dto/roles.dto.result.community.invitation';
@@ -34,7 +34,7 @@ export class RolesResolverFields {
       'Details of Spaces the actor is a member of, with child memberships - if Space is accessible for the current user.',
   })
   public async spaces(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Parent() roles: ActorRoles
   ): Promise<RolesResultSpace[]> {
     return this.rolesService.getSpaceRoles(roles, actorContext);
@@ -45,7 +45,7 @@ export class RolesResolverFields {
       'The invitations for the specified actor; only accessible for platform admins',
   })
   public async invitations(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Parent() roles: ActorRoles,
     @Args({
       name: 'states',
@@ -55,7 +55,7 @@ export class RolesResolverFields {
     })
     states: string[]
   ): Promise<CommunityInvitationForRoleResult[]> {
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_ADMIN,
@@ -73,7 +73,7 @@ export class RolesResolverFields {
       'The applications for the specified actor; only accessible for platform admins',
   })
   public async applications(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Parent() roles: ActorRoles,
     @Args({
       name: 'states',
@@ -83,7 +83,7 @@ export class RolesResolverFields {
     })
     states: string[]
   ): Promise<CommunityApplicationForRoleResult[]> {
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_ADMIN,

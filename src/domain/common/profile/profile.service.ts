@@ -332,8 +332,7 @@ export class ProfileService {
       }
     }
     // If get here then no ref with the same name
-    const newReference =
-      await this.referenceService.createReference(referenceInput);
+    const newReference = this.referenceService.createReference(referenceInput);
     newReference.profile = profile;
 
     return await this.referenceService.save(newReference);

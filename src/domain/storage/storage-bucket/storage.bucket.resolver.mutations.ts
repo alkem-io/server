@@ -1,5 +1,5 @@
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { CurrentActor, Profiling } from '@src/common/decorators';
 import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -31,7 +31,7 @@ export class StorageBucketResolverMutations {
   })
   @Profiling.api
   async uploadFileOnStorageBucket(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('uploadData') uploadData: StorageBucketUploadFileInput,
     @Args({ name: 'file', type: () => GraphQLUpload })
     { createReadStream, filename, mimetype }: FileUpload
@@ -78,7 +78,7 @@ export class StorageBucketResolverMutations {
   })
   @Profiling.api
   async deleteStorageBucket(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteStorageBucketInput
   ): Promise<IStorageBucket> {
     const storageBucket =

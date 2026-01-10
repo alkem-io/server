@@ -1,5 +1,5 @@
 import { Args, Resolver, Query } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { ActorContext } from '@core/actor-context';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -24,7 +24,7 @@ export class NotificationRecipientsResolverQueries {
       'The notificationRecipients for the provided event on the given entity.',
   })
   async notificationRecipients(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('eventData')
     eventData: NotificationRecipientsInput
   ): Promise<NotificationRecipientResult> {

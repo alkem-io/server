@@ -1,5 +1,5 @@
 import { Args, Resolver, Query } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { ActorContext } from '@core/actor-context';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -23,7 +23,7 @@ export class RolesResolverQueries {
     description: 'The roles that the specified Actor has.',
   })
   async rolesActor(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('rolesData') rolesData: RolesActorInput
   ): Promise<ActorRoles> {
     this.authorizationService.grantAccessOrFail(

@@ -10,7 +10,7 @@ import { ActivityCreatedSubscriptionInput } from './dto/subscriptions/activity.l
 import { ActivityCreatedSubscriptionResult } from './dto/subscriptions/activity.created.dto';
 import { TypedSubscription } from '@common/decorators/typed.subscription/typed.subscription.decorator';
 import { LogContext } from '@common/enums/logging.context';
-import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ActivityLogService } from '@services/api/activity-log/activity.log.service';
 import { InstrumentResolver } from '@src/apm/decorators';
@@ -106,7 +106,7 @@ export class ActivityLogResolverSubscriptions {
     },
   })
   async activityCreated(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args({
       nullable: false,
       name: 'input',
@@ -124,7 +124,7 @@ export class ActivityLogResolverSubscriptions {
         input.collaborationID
       );
     // authorize
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       collaboration.authorization,
       AuthorizationPrivilege.READ,

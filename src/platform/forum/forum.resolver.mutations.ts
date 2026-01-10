@@ -2,7 +2,7 @@ import { Inject, LoggerService } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql';
 import { ForumService } from './forum.service';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
@@ -45,11 +45,11 @@ export class ForumResolverMutations {
     description: 'Creates a new Discussion as part of this Forum.',
   })
   async createDiscussion(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('createData') createData: ForumCreateDiscussionInput
   ): Promise<IDiscussion> {
     const forum = await this.forumService.getForumOrFail(createData.forumID);
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       forum.authorization,
       AuthorizationPrivilege.CREATE_DISCUSSION,
@@ -59,7 +59,7 @@ export class ForumResolverMutations {
     if (createData.category === ForumDiscussionCategory.RELEASES) {
       const platformAuthorization =
         await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
-      await this.authorizationService.grantAccessOrFail(
+      this.authorizationService.grantAccessOrFail(
         actorContext,
         platformAuthorization,
         AuthorizationPrivilege.PLATFORM_ADMIN,
@@ -113,7 +113,7 @@ export class ForumResolverMutations {
       `[Discussion updated] - event published: '${eventID}'`,
       LogContext.SUBSCRIPTIONS
     );
-    this.subscriptionDiscussionMessage.publish(
+    void this.subscriptionDiscussionMessage.publish(
       SubscriptionType.FORUM_DISCUSSION_UPDATED,
       subscriptionPayload
     );

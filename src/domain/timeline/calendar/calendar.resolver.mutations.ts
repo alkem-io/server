@@ -1,5 +1,5 @@
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { CurrentActor, Profiling } from '@src/common/decorators';
 import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -32,7 +32,7 @@ export class CalendarResolverMutations {
   })
   @Profiling.api
   async createEventOnCalendar(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('eventData') eventData: CreateCalendarEventOnCalendarInput
   ): Promise<ICalendarEvent> {
     const calendar = await this.calendarService.getCalendarOrFail(

@@ -2,7 +2,7 @@ import { Inject, LoggerService } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Mutation } from '@nestjs/graphql';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { CurrentActor, Profiling } from '@src/common/decorators';
 import { AdminWhiteboardService } from './admin.whiteboard.service';
 import { AdminWhiteboardFilesResult } from './admin.whiteboard.files.result';
 import { AuthorizationPrivilege } from '@common/enums';
@@ -28,7 +28,7 @@ export class AdminWhiteboardResolverMutations {
   })
   @Profiling.api
   async adminUploadFilesFromContentToStorageBucket(
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ) {
     const platformPolicy =
       await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();

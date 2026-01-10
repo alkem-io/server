@@ -1,4 +1,4 @@
-import { CurrentUser } from '@common/decorators';
+import { CurrentActor } from '@common/decorators';
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { ActorContext } from '@core/actor-context';
 import { IUser } from '@domain/community/user/user.interface';
@@ -71,7 +71,7 @@ export class UserResolverFields {
   })
   async email(
     @Parent() user: User,
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ): Promise<string | 'not accessible'> {
     if (
       await this.isAccessGranted(
@@ -91,7 +91,7 @@ export class UserResolverFields {
   })
   async phone(
     @Parent() user: User,
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ): Promise<string | null | 'not accessible'> {
     if (
       await this.isAccessGranted(
@@ -111,7 +111,7 @@ export class UserResolverFields {
   })
   async account(
     @Parent() user: User,
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ): Promise<IAccount | undefined> {
     const accountVisible =
       user.id === actorContext.actorId || // user can see their own account
@@ -179,9 +179,9 @@ export class UserResolverFields {
   })
   async authentication(
     @Parent() user: IUser,
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ): Promise<UserAuthenticationResult> {
-    const isCurrentUser = user.id === actorContext.actorId;
+    const isCurrentActor = user.id === actorContext.actorId;
     const platformAccessGranted = this.authorizationService.isAccessGranted(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
@@ -192,7 +192,7 @@ export class UserResolverFields {
       createdAt: undefined,
       authenticatedAt: undefined,
     };
-    if (isCurrentUser || platformAccessGranted) {
+    if (isCurrentActor || platformAccessGranted) {
       const identity = await this.kratosService.getIdentityByEmail(user.email);
       if (identity) {
         result.methods =

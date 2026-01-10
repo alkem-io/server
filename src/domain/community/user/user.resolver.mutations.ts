@@ -1,6 +1,6 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { IUser } from '@domain/community/user/user.interface';
 import { UserService } from './user.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -31,11 +31,11 @@ export class UserResolverMutations {
     description: 'Updates the User.',
   })
   async updateUser(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('userData') userData: UpdateUserInput
   ): Promise<IUser> {
     const user = await this.userService.getUserByIdOrFail(userData.ID);
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       user.authorization,
       AuthorizationPrivilege.UPDATE,
@@ -48,7 +48,7 @@ export class UserResolverMutations {
     description: 'Updates one of the Setting on a User',
   })
   async updateUserSettings(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('settingsData') settingsData: UpdateUserSettingsInput
   ): Promise<IUser> {
     let user = await this.userService.getUserByIdOrFail(settingsData.userID, {
@@ -82,14 +82,14 @@ export class UserResolverMutations {
     description: 'Reset the Authorization policy on the specified User.',
   })
   async authorizationPolicyResetOnUser(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('authorizationResetData')
     authorizationResetData: UserAuthorizationResetInput
   ): Promise<IUser> {
     const user = await this.userService.getUserByIdOrFail(
       authorizationResetData.userID
     );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       user.authorization,
       AuthorizationPrivilege.AUTHORIZATION_RESET,
@@ -107,11 +107,11 @@ export class UserResolverMutations {
       'Update the platform settings, such as nameID, email, for the specified User.',
   })
   async updateUserPlatformSettings(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('updateData') updateData: UpdateUserPlatformSettingsInput
   ): Promise<IUser> {
     const user = await this.userService.getUserByIdOrFail(updateData.userID);
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       user.authorization,
       AuthorizationPrivilege.PLATFORM_ADMIN,

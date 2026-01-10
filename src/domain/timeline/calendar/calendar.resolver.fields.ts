@@ -4,7 +4,7 @@ import { UseGuards } from '@nestjs/common';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import {
   AuthorizationActorPrivilege,
-  CurrentUser,
+  CurrentActor,
 } from '@src/common/decorators';
 import { ActorContext } from '@core/actor-context';
 import { CalendarService } from './calendar.service';
@@ -28,7 +28,7 @@ export class CalendarResolverFields {
   })
   async event(
     @Parent() calendar: ICalendar,
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args({
       name: 'ID',
       nullable: false,
@@ -48,7 +48,7 @@ export class CalendarResolverFields {
   })
   public async events(
     @Parent() calendar: ICalendar,
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ) {
     const space = await this.calendarService.getSpaceFromCalendarOrFail(
       calendar.id

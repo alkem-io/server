@@ -1,4 +1,4 @@
-export * from './current-user.decorator';
+export * from './current-actor.decorator';
 export * from './profiling.decorator';
 export * from './authorization.actor.privilege';
 export * from './typed.subscription';

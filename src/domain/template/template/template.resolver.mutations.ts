@@ -4,7 +4,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { TemplateService } from './template.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ITemplate } from './template.interface';
-import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { ActorContext } from '@core/actor-context';
 import { UpdateTemplateInput } from './dto/template.dto.update';
 import { DeleteTemplateInput } from './dto/template.dto.delete';
@@ -33,7 +33,7 @@ export class TemplateResolverMutations {
     description: 'Updates the specified Template.',
   })
   async updateTemplate(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('updateData')
     updateData: UpdateTemplateInput
   ): Promise<ITemplate> {
@@ -43,7 +43,7 @@ export class TemplateResolverMutations {
         relations: { profile: true },
       }
     );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       template.authorization,
       AuthorizationPrivilege.UPDATE,
@@ -57,7 +57,7 @@ export class TemplateResolverMutations {
       'Updates the specified Space Content Template using the provided Space.',
   })
   async updateTemplateFromSpace(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('updateData')
     updateData: UpdateTemplateFromSpaceInput
   ): Promise<ITemplate> {
@@ -101,7 +101,7 @@ export class TemplateResolverMutations {
         },
       }
     );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       template.authorization,
       AuthorizationPrivilege.UPDATE,
@@ -137,7 +137,7 @@ export class TemplateResolverMutations {
     description: 'Deletes the specified Template.',
   })
   async deleteTemplate(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteTemplateInput
   ): Promise<ITemplate> {
     const template = await this.templateService.getTemplateOrFail(
@@ -146,7 +146,7 @@ export class TemplateResolverMutations {
         relations: { profile: true },
       }
     );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       template.authorization,
       AuthorizationPrivilege.DELETE,

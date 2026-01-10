@@ -1,4 +1,4 @@
-import { CurrentUser } from '@common/decorators';
+import { CurrentActor } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ActorContext } from '@core/actor-context';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
@@ -31,13 +31,13 @@ export class VisualResolverMutations {
     description: 'Updates the image URI for the specified Visual.',
   })
   async updateVisual(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('updateData') updateData: UpdateVisualInput
   ): Promise<IVisual> {
     const visual = await this.visualService.getVisualOrFail(
       updateData.visualID
     );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       visual.authorization,
       AuthorizationPrivilege.UPDATE,
@@ -50,7 +50,7 @@ export class VisualResolverMutations {
     description: 'Uploads and sets an image for the specified Visual.',
   })
   async uploadImageOnVisual(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('uploadData') uploadData: VisualUploadImageInput,
     @Args({ name: 'file', type: () => GraphQLUpload })
     { createReadStream, filename, mimetype }: FileUpload

@@ -1,5 +1,5 @@
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -20,7 +20,7 @@ export class LicensingFrameworkResolverMutations {
     description: 'Create a new LicensePlan on the Licensing.',
   })
   async createLicensePlan(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('planData') planData: CreateLicensePlanOnLicensingFrameworkInput
   ): Promise<ILicensePlan> {
     const licensing = await this.licensingFrameworkService.getLicensingOrFail(

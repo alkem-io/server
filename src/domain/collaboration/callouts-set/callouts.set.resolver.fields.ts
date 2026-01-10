@@ -5,7 +5,7 @@ import { ICallout } from '../callout/callout.interface';
 import { ICalloutsSet } from './callouts.set.interface';
 import { CalloutsSetService } from './callouts.set.service';
 import { ActorContext } from '@core/actor-context';
-import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { AuthorizationActorPrivilege } from '@common/decorators/authorization.actor.privilege';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { CalloutsSetArgsCallouts } from './dto/callouts.set.args.callouts';
@@ -24,7 +24,7 @@ export class CalloutsSetResolverFields {
   })
   async callouts(
     @Parent() calloutsSet: ICalloutsSet,
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args({ nullable: true }) args: CalloutsSetArgsCallouts
   ) {
     return await this.calloutsSetService.getCalloutsFromCollaboration(
@@ -57,7 +57,7 @@ export class CalloutsSetResolverFields {
   })
   async tags(
     @Parent() calloutsSet: ICalloutsSet,
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args({ nullable: true }) args: CalloutsSetArgsTags
   ): Promise<string[]> {
     const tags = await this.calloutsSetService.getAllTags(

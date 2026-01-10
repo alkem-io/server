@@ -2,7 +2,7 @@ import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { ActorContext } from '@core/actor-context';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { UpdateCollaborationFromSpaceTemplateInput } from './dto/template.applier.dto.update.collaboration';
@@ -35,7 +35,7 @@ export class TemplateApplierResolverMutations {
       'Updates a Collaboration, including InnovationFlow states, using the Space content from the specified Template.',
   })
   async updateCollaborationFromSpaceTemplate(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('updateData')
     updateData: UpdateCollaborationFromSpaceTemplateInput
   ): Promise<ICollaboration> {

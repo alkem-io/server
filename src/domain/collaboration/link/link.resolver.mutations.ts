@@ -3,7 +3,7 @@ import { LinkService } from './link.service';
 import { UpdateLinkInput } from '@domain/collaboration/link/dto/link.dto.update';
 import { DeleteLinkInput } from '@domain/collaboration/link/dto/link.dto.delete';
 import { ILink } from '@domain/collaboration/link/link.interface';
-import { CurrentUser, Profiling } from '@common/decorators';
+import { CurrentActor, Profiling } from '@common/decorators';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { ActorContext } from '@core/actor-context';
@@ -32,13 +32,13 @@ export class LinkResolverMutations {
     description: 'Deletes the specified Link.',
   })
   async deleteLink(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteLinkInput
   ): Promise<ILink> {
     const link = await this.linkService.getLinkOrFail(deleteData.ID, {
       relations: { profile: true },
     });
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       link.authorization,
       AuthorizationPrivilege.DELETE,
@@ -51,11 +51,11 @@ export class LinkResolverMutations {
     description: 'Updates the specified Link.',
   })
   async updateLink(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('linkData') linkData: UpdateLinkInput
   ): Promise<ILink> {
     const link = await this.linkService.getLinkOrFail(linkData.ID);
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       actorContext,
       link.authorization,
       AuthorizationPrivilege.UPDATE,
@@ -70,7 +70,7 @@ export class LinkResolverMutations {
   })
   @Profiling.api
   async uploadFileOnLink(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('uploadData') uploadData: StorageBucketUploadFileOnLinkInput,
     @Args({ name: 'file', type: () => GraphQLUpload })
     { createReadStream, filename, mimetype }: FileUpload

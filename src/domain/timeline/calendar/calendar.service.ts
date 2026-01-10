@@ -263,7 +263,7 @@ export class CalendarService {
       calendar: calendar,
       calendarEvent: calendarEvent,
     };
-    this.activityAdapter.calendarEventCreated(activityLogInput);
+    void this.activityAdapter.calendarEventCreated(activityLogInput);
 
     const spaceID = await this.timelineResolverService.getSpaceIdForCalendar(
       calendar.id

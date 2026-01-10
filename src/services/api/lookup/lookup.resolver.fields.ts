@@ -1,5 +1,5 @@
 import { Args, Resolver } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { ResolveField } from '@nestjs/graphql';
 import { ActorContext } from '@core/actor-context';
 import { LookupQueryResults } from '@services/api/lookup/dto';
@@ -132,7 +132,7 @@ export class LookupResolverFields {
     description: 'Lookup the specified Space',
   })
   async space(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<ISpace> {
     const space = await this.spaceService.getSpaceOrFail(id);
@@ -151,7 +151,7 @@ export class LookupResolverFields {
     description: 'Lookup the specified Account',
   })
   async account(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IAccount> {
     const account = await this.accountService.getAccountOrFail(id);
@@ -170,7 +170,7 @@ export class LookupResolverFields {
     description: 'Lookup the specified Conversation',
   })
   async conversation(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IConversation> {
     const conversation =
@@ -227,7 +227,7 @@ export class LookupResolverFields {
     description: 'Lookup the specified Document',
   })
   async document(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IDocument> {
     const document = await this.documentService.getDocumentOrFail(id);
@@ -246,7 +246,7 @@ export class LookupResolverFields {
     description: 'A particular VirtualContributor',
   })
   async virtualContributor(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID, nullable: false }) id: string
   ): Promise<IVirtualContributor> {
     const virtualContributor =
@@ -265,7 +265,7 @@ export class LookupResolverFields {
     description: 'A particular User',
   })
   async user(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID, nullable: false }) id: string
   ): Promise<IUser> {
     const user = await this.userLookupService.getUserByIdOrFail(id);
@@ -283,7 +283,7 @@ export class LookupResolverFields {
     description: 'Lookup the specified Authorization Policy',
   })
   async authorizationPolicy(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IAuthorizationPolicy> {
     // Note: this is a special case, mostly to track down issues related to authorization policies, so restrict access to platform admins
@@ -311,7 +311,7 @@ export class LookupResolverFields {
     }
   )
   async authorizationPrivilegesForUser(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('userID', { type: () => UUID }) userID: string,
     @Args('authorizationPolicyID', { type: () => UUID })
     authorizationPolicyID: string
@@ -341,7 +341,7 @@ export class LookupResolverFields {
     description: 'Lookup the specified StorageAggregator',
   })
   async storageAggregator(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IStorageAggregator> {
     const document =
@@ -361,7 +361,7 @@ export class LookupResolverFields {
     description: 'Lookup the specified InnovationPack',
   })
   async innovationPack(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IInnovationPack> {
     const innovationPack =
@@ -381,7 +381,7 @@ export class LookupResolverFields {
     description: 'Lookup the specified StorageBucket',
   })
   async storageBucket(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IStorageBucket> {
     const document = await this.storageBucketService.getStorageBucketOrFail(id);
@@ -400,7 +400,7 @@ export class LookupResolverFields {
     description: 'Lookup the specified InnovationHub',
   })
   async innovationHub(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IInnovationHub> {
     const innovationHub =
@@ -420,7 +420,7 @@ export class LookupResolverFields {
     description: 'Lookup the specified Application',
   })
   async application(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IApplication> {
     const application = await this.applicationService.getApplicationOrFail(id);
@@ -439,7 +439,7 @@ export class LookupResolverFields {
     description: 'Lookup the specified Invitation',
   })
   async invitation(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IInvitation> {
     const invitation = await this.invitationService.getInvitationOrFail(id);
@@ -458,7 +458,7 @@ export class LookupResolverFields {
     description: 'Lookup the specified PlatformInvitation',
   })
   async platformInvitation(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IPlatformInvitation> {
     const platformInvitation =
@@ -497,7 +497,7 @@ export class LookupResolverFields {
     description: 'Lookup the specified Collaboration',
   })
   async collaboration(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<ICollaboration> {
     const collaboration =
@@ -511,7 +511,7 @@ export class LookupResolverFields {
     description: 'Lookup the specified CalendarEvent',
   })
   async calendarEvent(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<ICalendarEvent> {
     const calendarEvent =
@@ -531,7 +531,7 @@ export class LookupResolverFields {
     description: 'Lookup the specified CalloutsSet',
   })
   async calloutsSet(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<ICalloutsSet> {
     const calloutsSet = await this.calloutsSetService.getCalloutsSetOrFail(id);
@@ -550,7 +550,7 @@ export class LookupResolverFields {
     description: 'Lookup the specified Calendar',
   })
   async calendar(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<ICalendar> {
     const calendar = await this.calendarService.getCalendarOrFail(id);
@@ -569,7 +569,7 @@ export class LookupResolverFields {
     description: 'Lookup the specified SpaceAbout',
   })
   async about(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<ISpaceAbout> {
     const about = await this.spaceAboutService.getSpaceAboutOrFail(id);
@@ -588,7 +588,7 @@ export class LookupResolverFields {
     description: 'Lookup the specified Whiteboard',
   })
   async whiteboard(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IWhiteboard> {
     const whiteboard = await this.whiteboardService.getWhiteboardOrFail(id);
@@ -607,7 +607,7 @@ export class LookupResolverFields {
     description: 'Lookup the specified Memo',
   })
   async memo(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IMemo> {
     const memo = await this.memoService.getMemoOrFail(id);
@@ -626,7 +626,7 @@ export class LookupResolverFields {
     description: 'Lookup the specified Profile',
   })
   async profile(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IProfile> {
     const profile = await this.profileService.getProfileOrFail(id);
@@ -645,7 +645,7 @@ export class LookupResolverFields {
     description: 'Lookup the specified Callout',
   })
   async callout(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<ICallout> {
     const callout = await this.calloutService.getCalloutOrFail(id);
@@ -664,7 +664,7 @@ export class LookupResolverFields {
     description: 'Lookup the specified CalloutContribution',
   })
   async contribution(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<ICalloutContribution> {
     const contribution =
@@ -684,7 +684,7 @@ export class LookupResolverFields {
     description: 'Lookup the specified Post',
   })
   async post(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IPost> {
     const post = await this.postService.getPostOrFail(id);
@@ -703,7 +703,7 @@ export class LookupResolverFields {
     description: 'Lookup the specified Room',
   })
   async room(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IRoom> {
     const room = await this.roomService.getRoomOrFail(id);
@@ -722,7 +722,7 @@ export class LookupResolverFields {
     description: 'Lookup the specified InnovationFlow',
   })
   async innovationFlow(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IInnovationFlow> {
     const innovationFlow =
@@ -742,7 +742,7 @@ export class LookupResolverFields {
     description: 'Lookup the specified Template',
   })
   async template(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<ITemplate> {
     const template = await this.templateService.getTemplateOrFail(id);
@@ -761,7 +761,7 @@ export class LookupResolverFields {
     description: 'Lookup the specified Space Content Template',
   })
   async templateContentSpace(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<ITemplateContentSpace> {
     const template =
@@ -781,7 +781,7 @@ export class LookupResolverFields {
     description: 'Lookup the specified TemplatesSet',
   })
   async templatesSet(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<ITemplatesSet> {
     const templatesSet =
@@ -801,7 +801,7 @@ export class LookupResolverFields {
     description: 'Lookup the specified TemplatesManager',
   })
   async templatesManager(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<ITemplatesManager> {
     const templatesManager =
@@ -821,7 +821,7 @@ export class LookupResolverFields {
     description: 'Lookup the specified Community guidelines',
   })
   async communityGuidelines(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<ICommunityGuidelines> {
     const guidelines =
@@ -853,7 +853,7 @@ export class LookupResolverFields {
     description: 'Lookup as specific KnowledgeBase',
   })
   async knowledgeBase(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID, nullable: false }) id: string
   ): Promise<IKnowledgeBase> {
     const knowledgeBase =

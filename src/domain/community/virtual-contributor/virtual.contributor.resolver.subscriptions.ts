@@ -1,5 +1,5 @@
 import { Args, Resolver } from '@nestjs/graphql';
-import { CurrentUser, TypedSubscription } from '@src/common/decorators';
+import { CurrentActor, TypedSubscription } from '@src/common/decorators';
 import { VirtualContributorService } from './virtual.contributor.service';
 import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -47,7 +47,7 @@ export class VirtualContributorResolverSubscriptions {
     },
   })
   async virtualContributorUpdated(
-    @CurrentUser() actorContext: ActorContext,
+    @CurrentActor() actorContext: ActorContext,
     @Args({ nullable: false })
     { virtualContributorID }: VirtualContributorUpdatedSubscriptionArgs
   ) {

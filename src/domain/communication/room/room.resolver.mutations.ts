@@ -1,6 +1,6 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { RoomService } from './room.service';
@@ -58,7 +58,7 @@ export class RoomResolverMutations {
   })
   async sendMessageToRoom(
     @Args('messageData') messageData: RoomSendMessageInput,
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ): Promise<IMessage> {
     const room = await this.roomService.getRoomOrFail(messageData.roomID, {
       relations: { authorization: true },
@@ -118,7 +118,7 @@ export class RoomResolverMutations {
           mentionedUserIDs
         );
 
-        this.roomServiceEvents.processActivityPostComment(
+        void this.roomServiceEvents.processActivityPostComment(
           post,
           room,
           message,
@@ -326,7 +326,7 @@ export class RoomResolverMutations {
   })
   async sendMessageReplyToRoom(
     @Args('messageData') messageData: RoomSendMessageReplyInput,
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ): Promise<IMessage> {
     const room = await this.roomService.getRoomOrFail(messageData.roomID);
 
@@ -352,7 +352,7 @@ export class RoomResolverMutations {
       messageData
     );
 
-    this.subscriptionPublishService.publishRoomEvent(
+    void this.subscriptionPublishService.publishRoomEvent(
       room,
       MutationType.CREATE,
       reply
@@ -404,7 +404,7 @@ export class RoomResolverMutations {
         );
 
         if (callout.settings.visibility === CalloutVisibility.PUBLISHED) {
-          this.roomServiceEvents.processActivityCalloutCommentCreated(
+          void this.roomServiceEvents.processActivityCalloutCommentCreated(
             callout,
             reply,
             actorContext
@@ -446,7 +446,7 @@ export class RoomResolverMutations {
   })
   async addReactionToMessageInRoom(
     @Args('reactionData') reactionData: RoomAddReactionToMessageInput,
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ): Promise<IMessageReaction> {
     const room = await this.roomService.getRoomOrFail(reactionData.roomID);
 
@@ -472,7 +472,7 @@ export class RoomResolverMutations {
   })
   async removeMessageOnRoom(
     @Args('messageData') messageData: RoomRemoveMessageInput,
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ): Promise<string> {
     const room = await this.roomService.getRoomOrFail(messageData.roomID);
 
@@ -501,7 +501,7 @@ export class RoomResolverMutations {
       actorContext
     );
 
-    this.subscriptionPublishService.publishRoomEvent(
+    void this.subscriptionPublishService.publishRoomEvent(
       room,
       MutationType.DELETE,
       // send empty data, because the resource is deleted
@@ -523,7 +523,7 @@ export class RoomResolverMutations {
   })
   async removeReactionToMessageInRoom(
     @Args('reactionData') reactionData: RoomRemoveReactionToMessageInput,
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ): Promise<boolean> {
     const room = await this.roomService.getRoomOrFail(reactionData.roomID);
 

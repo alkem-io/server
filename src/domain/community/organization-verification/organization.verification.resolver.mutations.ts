@@ -5,7 +5,7 @@ import { OrganizationVerificationEventInput } from './dto/organization.verificat
 import { IOrganizationVerification } from './organization.verification.interface';
 import { OrganizationVerificationService } from './organization.verification.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LogContext } from '@common/enums/logging.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -32,7 +32,7 @@ export class OrganizationVerificationResolverMutations {
   async eventOnOrganizationVerification(
     @Args('eventData')
     organizationVerificationEventData: OrganizationVerificationEventInput,
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ): Promise<IOrganizationVerification> {
     let organizationVerification =
       await this.organizationVerificationService.getOrganizationVerificationOrFail(

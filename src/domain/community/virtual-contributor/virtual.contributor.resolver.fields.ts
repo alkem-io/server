@@ -5,7 +5,7 @@ import { VirtualContributorService } from './virtual.contributor.service';
 import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { IProfile } from '@domain/common/profile';
-import { AuthorizationActorPrivilege, CurrentUser } from '@common/decorators';
+import { AuthorizationActorPrivilege, CurrentActor } from '@common/decorators';
 import { ActorContext } from '@core/actor-context';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { Loader } from '@core/dataloader/decorators';
@@ -160,7 +160,7 @@ export class VirtualContributorResolverFields {
   })
   async knowledgeBase(
     @Parent() virtualContributor: VirtualContributor,
-    @CurrentUser() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext
   ): Promise<IKnowledgeBase> {
     const knowledgeBase =
       await this.virtualContributorService.getKnowledgeBaseOrFail(
