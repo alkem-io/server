@@ -3,7 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
 import { AlkemioConfig } from '@src/types';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { Space } from '@domain/space/space/space.entity';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
@@ -32,7 +32,7 @@ export class SearchService {
 
   public async search(
     searchData: SearchInput,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ): Promise<ISearchResults> {
     // set default filters if not provided
     // this will ensure straight forward way of processing of the search parameters without much branching
@@ -58,14 +58,14 @@ export class SearchService {
       }
     }
     // search only in the public available data if the user is not authenticated
-    const onlyPublicResults = !agentInfo.email;
+    const onlyPublicResults = actorContext.isAnonymous;
     const searchResults = await this.searchExtractService.search(
       searchData,
       onlyPublicResults
     );
     return this.searchResultService.resolveSearchResults(
       searchResults,
-      agentInfo,
+      actorContext,
       searchData.filters,
       searchData.searchInSpaceFilter
     );

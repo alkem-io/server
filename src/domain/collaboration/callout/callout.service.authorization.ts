@@ -24,7 +24,7 @@ import { CalloutContributionAuthorizationService } from '../callout-contribution
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { RoleName } from '@common/enums/role.name';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';

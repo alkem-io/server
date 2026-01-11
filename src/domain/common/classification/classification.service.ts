@@ -13,7 +13,7 @@ import { IClassification } from '@domain/common/classification/classification.in
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CreateTagsetInput } from '../tagset';
-import { ITagsetTemplate } from '../tagset-template/tagset.template.interface';
+import { ITagsetTemplate } from '@domain/common/tagset-template';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { UpdateClassificationSelectTagsetValueInput } from './dto/classification.dto.update.select.tagset.value';
 import { LogContext } from '@common/enums/logging.context';

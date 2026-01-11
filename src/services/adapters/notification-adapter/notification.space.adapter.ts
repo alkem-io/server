@@ -4,7 +4,7 @@ import { NotificationInputBase } from './dto/notification.dto.input.base';
 import { NotificationInputPlatformInvitation } from './dto/space/notification.dto.input.space.community.invitation.platform';
 import { NotificationExternalAdapter } from '../notification-external-adapter/notification.external.adapter';
 import { NotificationInAppAdapter } from '../notification-in-app-adapter/notification.in.app.adapter';
-import { InAppNotificationPayloadSpaceCommunicationUpdate } from '../../../platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.communication.update';
+import { InAppNotificationPayloadSpaceCommunicationUpdate } from '@platform/in-app-notification-payload/dto/space';
 import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationRecipientResult } from '@services/api/notification-recipients/dto/notification.recipients.dto.result';
@@ -33,7 +33,7 @@ import { InAppNotificationPayloadSpaceCommunityCalendarEvent } from '@platform/i
 import { NotificationInputCommunityCalendarEventComment } from './dto/space/notification.dto.input.space.community.calendar.event.comment';
 import { InAppNotificationPayloadSpaceCommunityCalendarEventComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.calendar.event.comment';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
-import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
+import { ActorType } from '@common/enums/actor.type';
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 
@@ -84,7 +84,10 @@ export class NotificationSpaceAdapter {
         space,
         eventData.callout
       );
-    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
+    void this.notificationExternalAdapter.sendExternalNotifications(
+      event,
+      payload
+    );
 
     // Send in-app notifications
     const inAppRecipientsWithoutPublisher = recipients.inAppRecipients.filter(
@@ -149,7 +152,7 @@ export class NotificationSpaceAdapter {
           space,
           eventData.calendarEvent
         );
-      this.notificationExternalAdapter.sendExternalNotifications(
+      void this.notificationExternalAdapter.sendExternalNotifications(
         event,
         payload
       );
@@ -218,7 +221,7 @@ export class NotificationSpaceAdapter {
           eventData.calendarEvent,
           eventData.commentSent
         );
-      this.notificationExternalAdapter.sendExternalNotifications(
+      void this.notificationExternalAdapter.sendExternalNotifications(
         event,
         payload
       );
@@ -287,7 +290,7 @@ export class NotificationSpaceAdapter {
           eventData
         );
 
-      this.notificationExternalAdapter.sendExternalNotifications(
+      void this.notificationExternalAdapter.sendExternalNotifications(
         event,
         payload
       );
@@ -356,7 +359,7 @@ export class NotificationSpaceAdapter {
           space,
           eventData
         );
-      this.notificationExternalAdapter.sendExternalNotifications(
+      void this.notificationExternalAdapter.sendExternalNotifications(
         adminEvent,
         adminPayload
       );
@@ -444,7 +447,7 @@ export class NotificationSpaceAdapter {
           eventData
         );
       // send notification event
-      this.notificationExternalAdapter.sendExternalNotifications(
+      void this.notificationExternalAdapter.sendExternalNotifications(
         event,
         payload
       );
@@ -517,7 +520,10 @@ export class NotificationSpaceAdapter {
         eventData
       );
     // send notification event
-    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
+    void this.notificationExternalAdapter.sendExternalNotifications(
+      event,
+      payload
+    );
 
     // Send in-app notifications
     // Filter out sender AND users who were already mentioned (to avoid double notifications)
@@ -571,7 +577,7 @@ export class NotificationSpaceAdapter {
       adminEvent,
       eventData,
       space.id,
-      eventData.contributorID
+      eventData.actorId
     );
 
     const adminPayload =
@@ -580,9 +586,9 @@ export class NotificationSpaceAdapter {
         eventData.triggeredBy,
         adminRecipients.emailRecipients,
         space,
-        eventData.contributorID
+        eventData.actorId
       );
-    this.notificationExternalAdapter.sendExternalNotifications(
+    void this.notificationExternalAdapter.sendExternalNotifications(
       adminEvent,
       adminPayload
     );
@@ -596,8 +602,8 @@ export class NotificationSpaceAdapter {
         {
           type: NotificationEventPayload.SPACE_COMMUNITY_CONTRIBUTOR,
           spaceID: space.id,
-          contributorID: eventData.contributorID,
-          contributorType: eventData.contributorType,
+          actorId: eventData.actorId,
+          actorType: eventData.actorType,
         };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
@@ -634,7 +640,7 @@ export class NotificationSpaceAdapter {
           space
         );
 
-      this.notificationExternalAdapter.sendExternalNotifications(
+      void this.notificationExternalAdapter.sendExternalNotifications(
         event,
         payload
       );
@@ -648,8 +654,8 @@ export class NotificationSpaceAdapter {
       const inAppPayload: InAppNotificationPayloadSpaceCommunityContributor = {
         type: NotificationEventPayload.SPACE_COMMUNITY_CONTRIBUTOR,
         spaceID: space.id,
-        contributorID: eventData.virtualContributorID,
-        contributorType: RoleSetContributorType.VIRTUAL,
+        actorId: eventData.virtualContributorID,
+        actorType: ActorType.VIRTUAL,
       };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
@@ -684,7 +690,7 @@ export class NotificationSpaceAdapter {
         adminRecipients.emailRecipients,
         space
       );
-    this.notificationExternalAdapter.sendExternalNotifications(
+    void this.notificationExternalAdapter.sendExternalNotifications(
       adminEvent,
       adminPayload
     );
@@ -730,7 +736,10 @@ export class NotificationSpaceAdapter {
         eventData.welcomeMessage
       );
 
-    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
+    void this.notificationExternalAdapter.sendExternalNotifications(
+      event,
+      payload
+    );
   }
 
   public async spaceCommunicationMessage(
@@ -766,7 +775,7 @@ export class NotificationSpaceAdapter {
           space,
           eventData.message
         );
-      this.notificationExternalAdapter.sendExternalNotifications(
+      void this.notificationExternalAdapter.sendExternalNotifications(
         eventRecipientsAdmins,
         payloadRecipients
       );
@@ -833,7 +842,7 @@ export class NotificationSpaceAdapter {
         eventData.updates,
         eventData.lastMessage
       );
-    this.notificationExternalAdapter.sendExternalNotifications(
+    void this.notificationExternalAdapter.sendExternalNotifications(
       event,
       notificationsPayload
     );

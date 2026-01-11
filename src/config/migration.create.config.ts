@@ -6,5 +6,5 @@ const datasource = new DataSource(typeormCliConfig);
 
 const driver = datasource.driver;
 datasource.driver = fixUUIDColumnType(driver);
-datasource.initialize();
+void datasource.initialize();
 export default datasource;

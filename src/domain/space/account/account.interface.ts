@@ -1,22 +1,33 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { ISpace } from '../space/space.interface';
-import { IAgent } from '@domain/agent/agent/agent.interface';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 import { AccountType } from '@common/enums/account.type';
 import { ILicense } from '@domain/common/license/license.interface';
-import { IAccountLicensePlan } from '../account.license.plan/account.license.plan.interface';
+import { IAccountLicensePlan } from '@domain/space/account.license.plan';
+import { IActor, IActorFull } from '@domain/actor/actor/actor.interface';
+import { NameID } from '@domain/common/scalars';
 
-@ObjectType('Account')
-export class IAccount extends IAuthorizable {
+@ObjectType('Account', {
+  implements: () => [IActorFull],
+})
+export class IAccount extends IActor implements IActorFull {
+  @Field(() => NameID, {
+    nullable: false,
+    description:
+      'A name identifier of the Account, unique within the platform.',
+  })
+  declare nameID: string;
+
+  // Property renamed to accountType to avoid conflict with Actor.type discriminator
+  // Note: GraphQL field name changed from 'type' to 'accountType' for schema compatibility
   @Field(() => AccountType, {
     nullable: true,
-    description: 'A type of entity that this Account is being used with.',
+    description: 'The type of Account (user or organization hosted).',
   })
-  type!: AccountType;
+  accountType!: AccountType;
 
   @Field(() => IAccountLicensePlan, {
     nullable: false,
@@ -25,7 +36,7 @@ export class IAccount extends IAuthorizable {
   })
   baselineLicensePlan!: IAccountLicensePlan;
 
-  agent?: IAgent;
+  // Account extends Actor - credentials are on Actor.credentials
 
   spaces!: ISpace[];
   virtualContributors!: IVirtualContributor[];

@@ -2,12 +2,12 @@ import { Inject, LoggerService } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Mutation } from '@nestjs/graphql';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { CurrentActor, Profiling } from '@src/common/decorators';
 import { AdminWhiteboardService } from './admin.whiteboard.service';
 import { AdminWhiteboardFilesResult } from './admin.whiteboard.files.result';
 import { AuthorizationPrivilege } from '@common/enums';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { InstrumentResolver } from '@src/apm/decorators';
 
@@ -28,19 +28,19 @@ export class AdminWhiteboardResolverMutations {
   })
   @Profiling.api
   async adminUploadFilesFromContentToStorageBucket(
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ) {
     const platformPolicy =
       await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       platformPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `upload files from content to storage: ${agentInfo.email}`
+      `upload files from content to storage: ${actorContext.actorId}`
     );
 
     return this.adminWhiteboardService.uploadFilesFromContentToStorageBucket(
-      agentInfo
+      actorContext
     );
   }
 }

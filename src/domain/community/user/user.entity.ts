@@ -1,6 +1,6 @@
 import {
   Column,
-  Entity,
+  ChildEntity,
   Index,
   JoinColumn,
   OneToOne,
@@ -9,13 +9,31 @@ import {
 } from 'typeorm';
 import { IUser } from '@domain/community/user/user.interface';
 import { Application } from '@domain/access/application/application.entity';
-import { ContributorBase } from '../contributor/contributor.base.entity';
+import { Actor } from '@domain/actor/actor/actor.entity';
+import { Profile } from '@domain/common/profile/profile.entity';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
-import { MID_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@common/constants';
+import {
+  MID_TEXT_LENGTH,
+  NAMEID_MAX_LENGTH_SCHEMA,
+  SMALL_TEXT_LENGTH,
+} from '@common/constants';
 import { UserSettings } from '../user-settings/user.settings.entity';
+import { ActorType } from '@common/enums/actor.type';
 
-@Entity()
-export class User extends ContributorBase implements IUser {
+@ChildEntity(ActorType.USER)
+export class User extends Actor implements IUser {
+  // Override Actor.profile to be non-optional (required for IUser)
+  declare profile: Profile;
+
+  @Column('varchar', {
+    length: NAMEID_MAX_LENGTH_SCHEMA,
+    nullable: false,
+    unique: true,
+  })
+  nameID!: string;
+
+  // User extends Actor - credentials are on Actor.credentials
+
   @Column('uuid', { nullable: false })
   accountID!: string;
 

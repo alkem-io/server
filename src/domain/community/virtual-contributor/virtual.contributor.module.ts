@@ -7,14 +7,12 @@ import { VirtualContributorResolverFields } from './virtual.contributor.resolver
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { VirtualContributorAuthorizationService } from './virtual.contributor.service.authorization';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
-import { AgentModule } from '@domain/agent/agent/agent.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { VirtualContributor } from './virtual.contributor.entity';
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
 import { AiPersonaModule } from '@services/ai-server/ai-persona/ai.persona.module';
 import { AiServerAdapterModule } from '@services/adapters/ai-server-adapter/ai.server.adapter.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
-import { ContributorModule } from '../contributor/contributor.module';
 import { VirtualContributorResolverSubscriptions } from './virtual.contributor.resolver.subscriptions';
 import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
 import { KnowledgeBaseModule } from '@domain/common/knowledge-base/knowledge.base.module';
@@ -25,13 +23,10 @@ import { VirtualContributorSettingsModule } from '../virtual-contributor-setting
 import { VirtualContributorModelCardModule } from '../virtual-contributor-model-card/virtual.contributor.model.card.module';
 import { VirtualContributorPlatformSettingsModule } from '../virtual-contributor-platform-settings';
 import { PlatformWellKnownVirtualContributorsModule } from '@platform/platform.well.known.virtual.contributors';
-
 @Module({
   imports: [
-    AgentModule,
     AuthorizationPolicyModule,
     AuthorizationModule,
-    ContributorModule,
     ProfileModule,
     AiPersonaModule,
     KnowledgeBaseModule,

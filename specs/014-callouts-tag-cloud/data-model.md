@@ -203,7 +203,7 @@ type CalloutsSet {
          ▼
 ┌──────────────────────────────────────────┐
 │ CalloutsSetResolverFields.callouts()     │
-│ - Receives: calloutsSet, args, agentInfo│
+│ - Receives: calloutsSet, args, actorContext│
 │ - Calls: getCalloutsFromCollaboration() │
 └──────────────┬───────────────────────────┘
                │

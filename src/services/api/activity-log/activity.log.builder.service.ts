@@ -30,13 +30,12 @@ import { EntityManager } from 'typeorm';
 import { Space } from '@domain/space/space/space.entity';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { LogContext } from '@common/enums/logging.context';
-import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
-import { getContributorType } from '@domain/community/contributor/get.contributor.type';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 
 export default class ActivityLogBuilderService implements IActivityLogBuilder {
   constructor(
     private readonly activityLogEntryBase: IActivityLogEntry,
-    private readonly contributorLookupService: ContributorLookupService,
+    private readonly actorLookupService: ActorLookupService,
     private readonly calloutService: CalloutService,
     private readonly postService: PostService,
     private readonly whiteboardService: WhiteboardService,
@@ -67,12 +66,11 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
     const community = await this.communityService.getCommunityOrFail(
       rawActivity.parentID
     );
-    const contributorJoining =
-      await this.contributorLookupService.getContributorByUuidOrFail(
-        rawActivity.resourceID
-      );
+    const contributorJoining = await this.actorLookupService.getActorByIdOrFail(
+      rawActivity.resourceID
+    );
 
-    const contributorType = getContributorType(contributorJoining);
+    const contributorType = contributorJoining.type;
     const activityMemberJoined: IActivityLogEntryMemberJoined = {
       ...this.activityLogEntryBase,
       community: community,

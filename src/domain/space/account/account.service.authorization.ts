@@ -27,9 +27,8 @@ import {
   CREDENTIAL_RULE_TYPES_ACCOUNT_RESOURCES_TRANSFER_ACCEPT,
   CREDENTIAL_RULE_TYPES_ACCOUNT_LICENSE_MANAGE,
 } from '@common/constants/authorization/credential.rule.types.constants';
-import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
 import { VirtualContributorAuthorizationService } from '@domain/community/virtual-contributor/virtual.contributor.service.authorization';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { InnovationPackAuthorizationService } from '@library/innovation-pack/innovation.pack.service.authorization';
 import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
@@ -40,7 +39,6 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 export class AccountAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    private agentAuthorizationService: AgentAuthorizationService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private spaceAuthorizationService: SpaceAuthorizationService,
     private virtualContributorAuthorizationService: VirtualContributorAuthorizationService,
@@ -59,7 +57,6 @@ export class AccountAuthorizationService {
       accountInput.id,
       {
         relations: {
-          agent: true,
           spaces: {
             templatesManager: true,
           },
@@ -71,7 +68,7 @@ export class AccountAuthorizationService {
         },
       }
     );
-    if (!account.storageAggregator || !account.agent || !account.license) {
+    if (!account.storageAggregator || !account.license) {
       throw new RelationshipNotFoundException(
         `Unable to load Account with entities at start of auth reset: ${account.id} `,
         LogContext.ACCOUNT
@@ -138,7 +135,6 @@ export class AccountAuthorizationService {
     account: IAccount
   ): Promise<IAuthorizationPolicy[]> {
     if (
-      !account.agent ||
       !account.spaces ||
       !account.virtualContributors ||
       !account.innovationPacks ||
@@ -162,13 +158,6 @@ export class AccountAuthorizationService {
       );
       updatedAuthorizations.push(...spaceAuthorizations);
     }
-
-    const agentAuthorization =
-      this.agentAuthorizationService.applyAuthorizationPolicy(
-        account.agent,
-        account.authorization
-      );
-    updatedAuthorizations.push(agentAuthorization);
 
     const licenseAuthorizations =
       this.licenseAuthorizationService.applyAuthorizationPolicy(

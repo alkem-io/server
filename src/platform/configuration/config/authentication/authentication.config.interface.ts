@@ -1,6 +1,6 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { AuthenticationProviderConfig } from './providers/authentication.provider.config.entity';
-import { IAuthenticationProviderConfig } from './providers/authentication.provider.config.interface';
+import { AuthenticationProviderConfig } from '@platform/configuration';
+import { IAuthenticationProviderConfig } from '@platform/configuration';
 
 @ObjectType('AuthenticationConfig')
 export abstract class IAuthenticationConfig {

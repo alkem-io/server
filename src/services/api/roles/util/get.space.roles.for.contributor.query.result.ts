@@ -4,7 +4,7 @@ import { Space } from '@domain/space/space/space.entity';
 import { RolesResultSpace } from '../dto/roles.dto.result.space';
 import { RolesResultCommunity } from '../dto/roles.dto.result.community';
 import { CredentialMap } from './group.credentials.by.entity';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 
@@ -14,7 +14,7 @@ export const getSpaceRolesForContributorQueryResult = (
   map: CredentialMap,
   spaces: Space[],
   subspaces: Space[],
-  agentInfo: AgentInfo,
+  actorContext: ActorContext,
   authorizationService: AuthorizationService
 ): RolesResultSpace[] => {
   const subspacesByLevelZero = groupBy(subspaces, 'levelZeroSpaceID');
@@ -37,9 +37,9 @@ export const getSpaceRolesForContributorQueryResult = (
       );
       return;
     }
-    // can this agent read this space
+    // can this actor read this space
     const readAccessSpace = authorizationService.isAccessGranted(
-      agentInfo,
+      actorContext,
       space.authorization,
       AuthorizationPrivilege.READ_ABOUT
     );
@@ -66,9 +66,9 @@ export const getSpaceRolesForContributorQueryResult = (
         );
         continue;
       }
-      // can the agent read this subspace?
+      // can the actor read this subspace?
       const readAccessSubspace = authorizationService.isAccessGranted(
-        agentInfo,
+        actorContext,
         subspace.authorization,
         AuthorizationPrivilege.READ_ABOUT
       );

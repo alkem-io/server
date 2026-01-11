@@ -1,6 +1,6 @@
 import {
   Column,
-  Entity,
+  ChildEntity,
   Generated,
   JoinColumn,
   ManyToOne,
@@ -13,17 +13,20 @@ import { Collaboration } from '@domain/collaboration/collaboration/collaboration
 import { Community } from '@domain/community/community/community.entity';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
 import { Account } from '../account/account.entity';
-import { Agent } from '@domain/agent/agent/agent.entity';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { TemplatesManager } from '@domain/template/templates-manager';
 import { License } from '@domain/common/license/license.entity';
 import { SpaceLevel } from '@common/enums/space.level';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
-import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
+import { Actor } from '@domain/actor/actor/actor.entity';
 import { SpaceAbout } from '../space.about';
 import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
-@Entity()
-export class Space extends AuthorizableEntity implements ISpace {
+import { ActorType } from '@common/enums/actor.type';
+
+@ChildEntity(ActorType.SPACE)
+export class Space extends Actor implements ISpace {
+  // Space uses SpaceAbout instead of Profile, so profile will be null
+
   @Column('varchar', { length: NAMEID_MAX_LENGTH_SCHEMA, nullable: false })
   nameID!: string;
 
@@ -76,9 +79,7 @@ export class Space extends AuthorizableEntity implements ISpace {
   @JoinColumn()
   community?: Community;
 
-  @OneToOne(() => Agent, { eager: false, cascade: true, onDelete: 'SET NULL' })
-  @JoinColumn()
-  agent?: Agent;
+  // Space extends Actor - credentials are on Actor.credentials
 
   @Column('jsonb', { nullable: false })
   settings: ISpaceSettings;

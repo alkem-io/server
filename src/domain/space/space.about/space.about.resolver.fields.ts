@@ -10,10 +10,10 @@ import { INVP } from '@domain/common/nvp/nvp.interface';
 import { SpaceAboutService } from './space.about.service';
 import { SpaceLookupService } from '../space.lookup/space.lookup.service';
 import { TemplateContentSpaceLookupService } from '@domain/template/template-content-space/template-content-space.lookup/template-content-space.lookup.service';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { IActor } from '@domain/actor/actor/actor.interface';
 import { SpaceAboutMembership } from '../space.about.membership/dto/space.about.membership';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
-import { AuthorizationAgentPrivilege } from '@common/decorators';
+import { AuthorizationActorPrivilege } from '@common/decorators';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
 import { UseGuards } from '@nestjs/common';
@@ -40,7 +40,7 @@ export class SpaceAboutResolverFields {
     return loader.load(space.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('metrics', () => [INVP], {
     nullable: true,
@@ -50,19 +50,17 @@ export class SpaceAboutResolverFields {
     return await this.spaceAboutService.getMetrics(spaceAbout);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('provider', () => IContributor, {
+  @ResolveField('provider', () => IActor, {
     nullable: true,
     description: 'The Space provider (host).',
   })
-  async provider(
-    @Parent() spaceAbout: ISpaceAbout
-  ): Promise<IContributor | null> {
+  async provider(@Parent() spaceAbout: ISpaceAbout): Promise<IActor | null> {
     return await this.spaceLookupService.getProvider(spaceAbout);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('isContentPublic', () => Boolean, {
     nullable: false,
@@ -90,7 +88,7 @@ export class SpaceAboutResolverFields {
     );
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('membership', () => SpaceAboutMembership, {
     nullable: false,

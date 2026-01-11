@@ -401,7 +401,7 @@ if (memoNameID) {
   }
 
   this.authorizationService.grantAccessOrFail(
-    agentInfo,
+    actorContext,
     contribution.authorization,
     AuthorizationPrivilege.READ,
     `resolving url for memo on callout ${urlPath}`
@@ -1060,7 +1060,7 @@ if (contributionData.memo && contribution.memo) {
     this.processActivityMemoCreated(
       callout,
       contribution,
-      agentInfo
+      actorContext
     );
   }
 }
@@ -1069,13 +1069,13 @@ if (contributionData.memo && contribution.memo) {
 private async processActivityMemoCreated(
   callout: ICallout,
   contribution: ICalloutContribution,
-  agentInfo: AgentInfo
+  actorContext: AgentInfo
 ) {
   const notificationInput: NotificationInputCollaborationCalloutContributionCreated = {
     contribution: contribution,
     callout: callout,
     contributionType: CalloutContributionType.MEMO,
-    triggeredBy: agentInfo.userID,
+    triggeredBy: actorContext.userID,
   };
   await this.notificationAdapterSpace.spaceCollaborationCalloutContributionCreated(
     notificationInput

@@ -4,7 +4,7 @@ import { ProfileModule } from '@domain/common/profile/profile.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
-import { RoomModule } from '../../domain/communication/room/room.module';
+import { RoomModule } from '@domain/communication/room/room.module';
 import { Discussion } from './discussion.entity';
 import { DiscussionResolverFields } from './discussion.resolver.fields';
 import { DiscussionResolverMutations } from './discussion.resolver.mutations';

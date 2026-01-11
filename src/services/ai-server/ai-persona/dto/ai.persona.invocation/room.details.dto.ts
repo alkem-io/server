@@ -14,7 +14,7 @@ export class RoomDetails {
   threadID?: string;
   @Field(() => String, {
     nullable: false,
-    description: 'The actor ID (agent.id) for the VC',
+    description: 'The actor ID for the Virtual Contributor',
   })
   actorId!: string;
 }

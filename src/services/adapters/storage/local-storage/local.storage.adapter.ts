@@ -10,7 +10,7 @@ import {
   LocalStorageDeleteFailedException,
   LocalStorageReadFailedException,
 } from '@common/exceptions/storage';
-import { StorageService } from '../storage.service.interface';
+import { StorageService } from '@services/adapters/storage';
 import { StorageServiceType } from '../storage.service.type';
 import { AlkemioConfig } from '@src/types';
 import { StorageDisabledException } from '@common/exceptions/storage/storage.disabled.exception';

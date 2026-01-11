@@ -1,7 +1,7 @@
 import { EntityManager } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
+import { ActorType } from '@common/enums/actor.type';
 import {
   DataLoaderCreator,
   DataLoaderCreatorBaseOptions,
@@ -13,7 +13,7 @@ import { VirtualContributor } from '@domain/community/virtual-contributor/virtua
 
 @Injectable()
 export class CommunityTypeLoaderCreator
-  implements DataLoaderCreator<{ id: string; type: RoleSetContributorType }>
+  implements DataLoaderCreator<{ id: string; type: ActorType }>
 {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
@@ -27,7 +27,7 @@ export class CommunityTypeLoaderCreator
 
   private async communityTypeInBatch(
     keys: ReadonlyArray<string>
-  ): Promise<{ id: string; type: RoleSetContributorType }[]> {
+  ): Promise<{ id: string; type: ActorType }[]> {
     const result = await this.manager
       .createQueryBuilder()
       .select('user.id')
@@ -43,12 +43,12 @@ export class CommunityTypeLoaderCreator
 
     return result.map(item => {
       if (item instanceof User) {
-        return { id: item.id, type: RoleSetContributorType.USER };
+        return { id: item.id, type: ActorType.USER };
       }
       if (item instanceof Organization) {
-        return { id: item.id, type: RoleSetContributorType.ORGANIZATION };
+        return { id: item.id, type: ActorType.ORGANIZATION };
       }
-      return { id: item.id, type: RoleSetContributorType.VIRTUAL };
+      return { id: item.id, type: ActorType.VIRTUAL };
     });
   }
 }

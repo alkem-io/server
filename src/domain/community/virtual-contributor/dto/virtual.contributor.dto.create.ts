@@ -1,5 +1,5 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { CreateContributorInput } from '@domain/community/contributor/dto/contributor.dto.create';
+import { CreateNameableInput } from '@domain/common/entity/nameable-entity/dto/nameable.dto.create';
 import { CreateAiPersonaInput } from '@services/ai-server/ai-persona/dto/ai.persona.dto.create';
 import { CreateKnowledgeBaseInput } from '@domain/common/knowledge-base/dto';
 import { IsOptional, MaxLength, ValidateNested } from 'class-validator';
@@ -11,7 +11,7 @@ import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.con
 import { VirtualContributorInteractionMode } from '@common/enums/virtual.contributor.interaction.mode';
 
 @InputType()
-export class CreateVirtualContributorInput extends CreateContributorInput {
+export class CreateVirtualContributorInput extends CreateNameableInput {
   @Field(() => CreateAiPersonaInput, {
     nullable: false,
     description: 'The AI Persona to use for this Virtual Contributor.',

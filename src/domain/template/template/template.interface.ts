@@ -1,6 +1,6 @@
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { ITemplatesSet } from '../templates-set/templates.set.interface';
+import { ITemplatesSet } from '@domain/template/templates-set';
 import { TemplateType } from '@common/enums/template.type';
 import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';

@@ -9,7 +9,6 @@ export * from './callout-framing/callout.framing.whiteboard.loader';
 
 export * from './profile.loader.creator';
 export * from './license.loader.creator';
-export * from './agent.loader.creator';
 export * from './authorization.loader.creator';
 export * from './user.loader.creator';
 export * from './user/user.settings.loader.creator';

@@ -56,7 +56,10 @@ export class NotificationPlatformAdapter {
         eventData.role
       );
 
-    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
+    void this.notificationExternalAdapter.sendExternalNotifications(
+      event,
+      payload
+    );
 
     // Send in-app notifications
     const inAppReceiverIDs = recipients.inAppRecipients.map(
@@ -95,7 +98,10 @@ export class NotificationPlatformAdapter {
         recipients.emailRecipients,
         eventData.discussion
       );
-    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
+    void this.notificationExternalAdapter.sendExternalNotifications(
+      event,
+      payload
+    );
 
     // Send in-app notifications
     const inAppReceiverIDs = recipients.inAppRecipients.map(
@@ -156,7 +162,7 @@ export class NotificationPlatformAdapter {
         );
 
       // send notification event
-      this.notificationExternalAdapter.sendExternalNotifications(
+      void this.notificationExternalAdapter.sendExternalNotifications(
         event,
         payload
       );
@@ -220,7 +226,10 @@ export class NotificationPlatformAdapter {
         eventData.welcomeMessage
       );
 
-    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
+    void this.notificationExternalAdapter.sendExternalNotifications(
+      event,
+      payload
+    );
   }
 
   public async platformSpaceCreated(
@@ -239,7 +248,10 @@ export class NotificationPlatformAdapter {
         recipients.emailRecipients,
         eventData.space
       );
-    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
+    void this.notificationExternalAdapter.sendExternalNotifications(
+      event,
+      payload
+    );
 
     // Send in-app notifications
     const inAppReceiverIDs = recipients.inAppRecipients.map(
@@ -277,7 +289,7 @@ export class NotificationPlatformAdapter {
         adminRecipients.emailRecipients,
         eventData.userID
       );
-    this.notificationExternalAdapter.sendExternalNotifications(
+    void this.notificationExternalAdapter.sendExternalNotifications(
       adminEvent,
       adminPayload
     );
@@ -322,7 +334,10 @@ export class NotificationPlatformAdapter {
         eventData.user
       );
 
-    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
+    void this.notificationExternalAdapter.sendExternalNotifications(
+      event,
+      payload
+    );
 
     // Send in-app notifications
     const inAppReceiverIDs = recipients.inAppRecipients.map(

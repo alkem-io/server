@@ -4,36 +4,30 @@ import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions';
 import { Inject } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
+import { IActor } from '@domain/actor/actor/actor.interface';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 
 @Resolver(() => IMessage)
 export class MessageResolverFields {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: WinstonLogger,
-    private contributorLookupService: ContributorLookupService
+    private actorLookupService: ActorLookupService
   ) {}
 
-  @ResolveField('sender', () => IContributor, {
+  @ResolveField('sender', () => IActor, {
     nullable: true,
     description: 'The User or Virtual Contributor that created this Message',
   })
-  async sender(
-    @Parent() message: IMessage
-  ): Promise<IContributor | null | never> {
-    // sender contains the agent ID (actorId from the communication adapter)
-    const senderAgentId = message.sender;
-    if (!senderAgentId) {
+  async sender(@Parent() message: IMessage): Promise<IActor | null | never> {
+    // sender contains the actor ID (actorId from the communication adapter)
+    const senderActorId = message.sender;
+    if (!senderActorId) {
       return null;
     }
 
     try {
-      const sender =
-        await this.contributorLookupService.getContributorByAgentId(
-          senderAgentId,
-          { relations: { profile: true } }
-        );
+      const sender = await this.actorLookupService.getActorById(senderActorId);
 
       return sender;
     } catch (e: unknown) {
@@ -41,7 +35,7 @@ export class MessageResolverFields {
         this.logger?.warn(
           {
             message: 'Sender unable to be resolved when resolving message.',
-            senderAgentId,
+            senderActorId,
             messageId: message.id,
           },
           LogContext.COMMUNICATION

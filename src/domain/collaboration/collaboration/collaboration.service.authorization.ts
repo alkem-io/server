@@ -8,7 +8,7 @@ import { CollaborationService } from '@domain/collaboration/collaboration/collab
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { AuthorizationCredential } from '@common/enums';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import { CREDENTIAL_RULE_COLLABORATION_CONTRIBUTORS } from '@common/constants';
 import { RoleName } from '@common/enums/role.name';
 import { TimelineAuthorizationService } from '@domain/timeline/timeline/timeline.service.authorization';

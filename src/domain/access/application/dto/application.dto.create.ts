@@ -1,6 +1,6 @@
 import { CreateNVPInput } from '@domain/common/nvp';
 export class CreateApplicationInput {
-  userID!: string;
+  userId!: string; // Applications are user-only
 
   roleSetID!: string;
 

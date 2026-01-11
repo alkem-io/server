@@ -10,7 +10,6 @@ import { RolesModule } from '../roles/roles.module';
 import { ActivityLogModule } from '../activity-log/activity.log.module';
 import { ActivityModule } from '@platform/activity/activity.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
-import { ContributorModule } from '@domain/community/contributor/contributor.module';
 import { InAppNotificationModule } from '@platform/in-app-notification/in.app.notification.module';
 import { MessagingModule } from '@domain/communication/messaging/messaging.module';
 import { MeConversationsResolverFields } from './me.conversations.resolver.fields';
@@ -22,7 +21,6 @@ import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.modu
     ApplicationModule,
     InvitationModule,
     UserLookupModule,
-    ContributorModule,
     SpaceModule,
     RolesModule,
     ActivityLogModule,

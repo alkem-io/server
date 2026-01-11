@@ -1,12 +1,8 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UserService } from '@domain/community/user/user.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IUser } from '@domain/community/user/user.interface';
 import { LogContext } from '@common/enums/logging.context';
-import { UserNotVerifiedException } from '@common/exceptions/user/user.not.verified.exception';
-import { getEmailDomain } from '@common/utils';
-import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
 import { IInvitation } from '@domain/access/invitation/invitation.interface';
 import { InvitationAuthorizationService } from '@domain/access/invitation/invitation.service.authorization';
 import { CreateInvitationInput } from '@domain/access/invitation/dto/invitation.dto.create';
@@ -18,10 +14,8 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { AccountService } from '@domain/space/account/account.service';
 import { IOrganization } from '@domain/community/organization';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
-import { RoleName } from '@common/enums/role.name';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
-import { RelationshipNotFoundException } from '@common/exceptions';
 
 export class RegistrationService {
   constructor(
@@ -37,90 +31,6 @@ export class RegistrationService {
     private roleSetService: RoleSetService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
-
-  async registerNewUser(agentInfo: AgentInfo): Promise<IUser> {
-    if (!agentInfo.emailVerified) {
-      throw new UserNotVerifiedException(
-        `User '${agentInfo.email}' not verified`,
-        LogContext.COMMUNITY
-      );
-    }
-
-    if (agentInfo.authenticationID) {
-      this.logger.verbose?.(
-        'Received Kratos authentication ID for registration flow',
-        LogContext.AUTH
-      );
-    }
-    // If a user has a valid session, and hence email / names etc set, then they can create a User profile
-    const user = await this.userService.createUserFromAgentInfo(agentInfo);
-
-    await this.assignUserToOrganizationByDomain(user);
-    return user;
-  }
-
-  async assignUserToOrganizationByDomain(user: IUser): Promise<boolean> {
-    const userEmailDomain = getEmailDomain(user.email);
-
-    const org = await this.organizationLookupService.getOrganizationByDomain(
-      userEmailDomain,
-      {
-        relations: {
-          roleSet: true,
-          verification: true,
-        },
-      }
-    );
-
-    if (!org) {
-      this.logger.verbose?.(
-        `Organization matching user's domain '${userEmailDomain}' not found.`,
-        LogContext.COMMUNITY
-      );
-      return false;
-    }
-
-    const orgSettings = org.settings;
-
-    const orgMatchDomain =
-      orgSettings.membership.allowUsersMatchingDomainToJoin;
-    if (!orgMatchDomain) {
-      this.logger.verbose?.(
-        `Organization '${org.id}' setting 'allowUsersMatchingDomainToJoin is disabled`,
-        LogContext.COMMUNITY
-      );
-      return false;
-    }
-
-    if (!org.verification || !org.roleSet) {
-      throw new RelationshipNotFoundException(
-        `Unable to load roleSet of Verification for Organization for matching user domain ${org.id}`,
-        LogContext.COMMUNITY
-      );
-    }
-    if (
-      org.verification.status !==
-      OrganizationVerificationEnum.VERIFIED_MANUAL_ATTESTATION
-    ) {
-      this.logger.verbose?.(
-        `Organization '${org.id}' not verified`,
-        LogContext.COMMUNITY
-      );
-      return false;
-    }
-
-    await this.roleSetService.assignUserToRole(
-      org.roleSet,
-      RoleName.ASSOCIATE,
-      user.id
-    );
-
-    this.logger.verbose?.(
-      `User ${user.id} successfully added to Organization '${org.id}'`,
-      LogContext.COMMUNITY
-    );
-    return true;
-  }
 
   public async processPendingInvitations(user: IUser): Promise<IInvitation[]> {
     const platformInvitations =
@@ -140,14 +50,14 @@ export class RegistrationService {
       }
 
       const invitationInput: CreateInvitationInput = {
-        invitedContributorID: user.id,
+        invitedActorId: user.id,
         roleSetID: roleSet.id,
         createdBy: platformInvitation.createdBy,
         extraRoles: platformInvitation.roleSetExtraRoles,
         invitedToParent: platformInvitation.roleSetInvitedToParent,
       };
       let invitation =
-        await this.roleSetService.createInvitationExistingContributor(
+        await this.roleSetService.createInvitationExistingActor(
           invitationInput
         );
       invitation.invitedToParent = platformInvitation.roleSetInvitedToParent;
@@ -186,7 +96,7 @@ export class RegistrationService {
       await this.applicationService.deleteApplication({ ID: application.id });
     }
 
-    let user = await this.userService.getUserOrFail(userID);
+    let user = await this.userService.getUserByIdOrFail(userID);
     const account = await this.userService.getAccount(user);
 
     user = await this.userService.deleteUser(deleteData);
@@ -208,7 +118,7 @@ export class RegistrationService {
     }
 
     let organization =
-      await this.organizationLookupService.getOrganizationOrFail(
+      await this.organizationLookupService.getOrganizationByIdOrFail(
         organizationID
       );
     const account = await this.organizationService.getAccount(organization);

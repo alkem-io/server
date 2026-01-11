@@ -10,7 +10,7 @@ import {
 } from 'typeorm';
 import { compressText, decompressText } from '@common/utils/compression.util';
 import { IWhiteboard } from './whiteboard.interface';
-import { NameableEntity } from '../entity/nameable-entity/nameable.entity';
+import { NameableEntity } from '@domain/common/entity/nameable-entity';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
 import { ENUM_LENGTH } from '@common/constants';
 import { CalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.entity';

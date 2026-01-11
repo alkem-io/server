@@ -2,7 +2,7 @@ import { GraphQLError } from 'graphql';
 import { LogContext, AlkemioErrorStatus } from '@common/enums';
 
 export class UserNotRegisteredException extends GraphQLError {
-  private context: LogContext;
+  private readonly context: LogContext;
 
   constructor(message = 'User not registered.') {
     super(message, {

@@ -1,6 +1,6 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { IsEnum } from 'class-validator';
-import { UpdateContributorInput } from '@domain/community/contributor/dto/contributor.dto.update';
+import { UpdateNameableInput } from '@domain/common/entity/nameable-entity/dto/nameable.dto.update';
 import { IsOptional, ValidateNested } from 'class-validator';
 import { SearchVisibility } from '@common/enums/search.visibility';
 import { Type } from 'class-transformer';
@@ -12,7 +12,7 @@ import { MaxLength } from 'class-validator';
 import { LONG_TEXT_LENGTH } from '@common/constants';
 
 @InputType()
-export class UpdateVirtualContributorInput extends UpdateContributorInput {
+export class UpdateVirtualContributorInput extends UpdateNameableInput {
   @Field(() => Boolean, {
     nullable: true,
     description:

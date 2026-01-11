@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { MessageResolverFields } from './message.resolver.fields';
-import { ContributorLookupModule } from '@services/infrastructure/contributor-lookup/contributor.lookup.module';
+import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
 
 @Module({
-  imports: [ContributorLookupModule],
+  imports: [ActorLookupModule],
   providers: [MessageResolverFields],
   exports: [MessageResolverFields],
 })

@@ -5,26 +5,26 @@ import { ApplicationService } from './application.service';
 import { AuthorizationPrivilege } from '@common/enums';
 import { Application, IApplication } from '@domain/access/application';
 import { GraphqlGuard } from '@core/authorization';
-import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
+import { AuthorizationActorPrivilege, Profiling } from '@src/common/decorators';
 import { IQuestion } from '@domain/common/question/question.interface';
-import { IContributor } from '../../community/contributor/contributor.interface';
+import { IActor } from '@domain/actor/actor/actor.interface';
 
 @Resolver(() => IApplication)
 export class ApplicationResolverFields {
   constructor(private applicationService: ApplicationService) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('contributor', () => IContributor, {
+  @ResolveField('contributor', () => IActor, {
     nullable: false,
     description: 'The User for this Application.',
   })
   @Profiling.api
-  async contributor(@Parent() application: Application): Promise<IContributor> {
+  async contributor(@Parent() application: Application): Promise<IActor> {
     return await this.applicationService.getContributor(application.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('questions', () => [IQuestion], {
     nullable: false,

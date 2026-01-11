@@ -96,7 +96,7 @@ interface RpcOptions<T extends CommandTopic> {
  * - Compatible with Watermill-based Go adapter via Direct Reply-To queue
  * - Uses Alkemio UUIDs exclusively (AlkemioActorID, AlkemioRoomID, AlkemioContextID)
  * - No Matrix ID management - adapter handles mapping internally
- * - Unified Actor Pattern: actorId = contributor.agent.id
+ * - Unified Actor Pattern: actorId = contributor.id (contributor IS the actor)
  */
 @Injectable()
 export class CommunicationAdapter {
@@ -620,7 +620,6 @@ export class CommunicationAdapter {
       id: response!.message_id,
       message: sendMessageData.message,
       sender: sendMessageData.actorId,
-      senderType: 'user',
       timestamp: this.parseTimestamp(response!.timestamp),
       threadID: undefined,
       reactions: [],
@@ -632,8 +631,7 @@ export class CommunicationAdapter {
    * Throws on error.
    */
   async sendMessageReply(
-    sendMessageData: CommunicationSendMessageReplyInput,
-    senderType: 'user' | 'virtualContributor'
+    sendMessageData: CommunicationSendMessageReplyInput
   ): Promise<IMessage> {
     const response = await this.sendCommand({
       operation: 'sendMessageReply',
@@ -657,7 +655,6 @@ export class CommunicationAdapter {
       id: response!.message_id,
       message: sendMessageData.message,
       sender: sendMessageData.actorId,
-      senderType,
       timestamp: this.parseTimestamp(response!.timestamp),
       threadID: sendMessageData.threadID,
       reactions: [],
@@ -725,7 +722,6 @@ export class CommunicationAdapter {
       id: response!.reaction_id,
       emoji: reactionData.emoji,
       sender: reactionData.actorId,
-      senderType: 'user',
       timestamp: Date.now(),
     };
   }
@@ -932,14 +928,12 @@ export class CommunicationAdapter {
       id: msg.id,
       message: msg.content,
       sender: msg.sender_actor_id,
-      senderType: 'user' as const,
       timestamp: this.parseTimestamp(msg.timestamp),
       threadID: msg.thread_id,
       reactions: (msg.reactions ?? []).map(r => ({
         id: r.id,
         emoji: r.emoji,
         sender: r.sender_actor_id,
-        senderType: 'user' as const,
         timestamp: this.parseTimestamp(r.timestamp),
       })),
     };

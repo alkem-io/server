@@ -1,7 +1,7 @@
 import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { CurrentActor } from '@src/common/decorators';
+import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { DiscussionService } from './discussion.service';
 import { IDiscussion } from './discussion.interface';
@@ -22,14 +22,14 @@ export class DiscussionResolverMutations {
     description: 'Deletes the specified Discussion.',
   })
   async deleteDiscussion(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteDiscussionInput
   ): Promise<IDiscussion> {
     const discussion = await this.discussionService.getDiscussionOrFail(
       deleteData.ID
     );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
       discussion.authorization,
       AuthorizationPrivilege.DELETE,
       `delete discussion: ${discussion.id}`
@@ -41,7 +41,7 @@ export class DiscussionResolverMutations {
     description: 'Updates the specified Discussion.',
   })
   async updateDiscussion(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('updateData') updateData: UpdateDiscussionInput
   ): Promise<IDiscussion> {
     const discussion = await this.discussionService.getDiscussionOrFail(
@@ -50,8 +50,8 @@ export class DiscussionResolverMutations {
         relations: { profile: true, comments: true },
       }
     );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
       discussion.authorization,
       AuthorizationPrivilege.UPDATE,
       `Update discussion: ${discussion.id}`

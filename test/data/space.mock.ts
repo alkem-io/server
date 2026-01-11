@@ -3,7 +3,6 @@
 import { ISpace } from '@domain/space/space/space.interface';
 import { ISpaceAbout } from '@domain/space/space.about/space.about.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
-import { IAgent } from '@domain/agent/agent/agent.interface';
 import { ICommunity } from '@domain/community/community/community.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
@@ -13,22 +12,13 @@ import { SpaceVisibility } from '@common/enums/space.visibility';
 import { SpaceLevel } from '@common/enums/space.level';
 import { ProfileType } from '@common/enums/profile.type';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { AgentType } from '@common/enums/agent.type';
 import { TagsetType } from '@common/enums/tagset.type';
+import { ActorType } from '@common/enums/actor.type';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { RoleName } from '@common/enums/role.name';
 import { RoleSetType } from '@common/enums/role.set.type';
 
 const now = new Date('2024-01-01T00:00:00.000Z');
-
-const mockAgent: IAgent = {
-  id: 'agent-space-00655835-4d15-4546-801e-1ab80ac3078a',
-  did: 'did:alkemio:space:00655835-4d15-4546-801e-1ab80ac3078a',
-  password: '',
-  type: AgentType.SPACE, // or AgentType.SPACE if required by your codebase
-  createdDate: now,
-  updatedDate: now,
-} as IAgent;
 
 const mockTagset: ITagset = {
   tags: [
@@ -116,10 +106,12 @@ const mockAuthorization: IAuthorizationPolicy = {
 export const spaceData: { space: ISpace } = {
   space: {
     id: '00655835-4d15-4546-801e-1ab80ac3078a',
+    type: ActorType.SPACE,
     nameID: 'un-sdgs',
     rowId: 1,
     about: mockAbout,
-    agent: mockAgent,
+    // Space IS an Actor - credentials are directly on the entity
+    credentials: [],
     platformRolesAccess: {
       roles: [],
     },

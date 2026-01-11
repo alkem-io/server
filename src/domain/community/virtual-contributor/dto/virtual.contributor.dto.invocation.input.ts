@@ -21,7 +21,7 @@ export class RoomDetails {
   threadID!: string;
   @Field(() => String, {
     nullable: false,
-    description: 'The actor ID (agent.id) for the VC',
+    description: 'The actor ID for the Virtual Contributor',
   })
   actorId!: string;
 }
@@ -72,4 +72,10 @@ export class VirtualContributorInvocationInput {
     description: 'What should happen with the result of the VC invocation',
   })
   resultHandler!: ResultHandler;
+
+  @Field(() => String, {
+    nullable: true,
+    description: 'Preferred language for the response',
+  })
+  language?: string;
 }

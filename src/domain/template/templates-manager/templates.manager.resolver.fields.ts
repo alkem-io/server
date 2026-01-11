@@ -4,15 +4,15 @@ import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { TemplatesManagerService } from './templates.manager.service';
 import { ITemplatesManager } from './templates.manager.interface';
 import { ITemplateDefault } from '../template-default/template.default.interface';
-import { AuthorizationAgentPrivilege } from '@common/decorators/authorization.agent.privilege';
+import { AuthorizationActorPrivilege } from '@common/decorators/authorization.actor.privilege';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { ITemplatesSet } from '../templates-set/templates.set.interface';
+import { ITemplatesSet } from '@domain/template/templates-set';
 
 @Resolver(() => ITemplatesManager)
 export class TemplatesManagerResolverFields {
   constructor(private templatesManagerService: TemplatesManagerService) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('templateDefaults', () => [ITemplateDefault], {
     nullable: false,
@@ -26,7 +26,7 @@ export class TemplatesManagerResolverFields {
     );
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('templatesSet', () => ITemplatesSet, {
     nullable: true,

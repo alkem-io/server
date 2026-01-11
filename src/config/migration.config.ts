@@ -2,5 +2,5 @@ import { DataSource } from 'typeorm';
 import { typeormCliConfig } from './typeorm.cli.config.run';
 
 const datasource = new DataSource(typeormCliConfig);
-datasource.initialize();
+void datasource.initialize();
 export default datasource;

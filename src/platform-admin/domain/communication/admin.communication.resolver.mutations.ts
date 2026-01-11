@@ -2,8 +2,8 @@ import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import { CurrentUser, Profiling } from '@common/decorators';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { CurrentActor, Profiling } from '@common/decorators';
+import { ActorContext } from '@core/actor-context';
 import { CommunicationAdminEnsureAccessInput } from './dto/admin.communication.dto.ensure.access.input';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AdminCommunicationService } from './admin.communication.service';
@@ -16,7 +16,7 @@ import { InstrumentResolver } from '@src/apm/decorators';
 @InstrumentResolver()
 @Resolver()
 export class AdminCommunicationResolverMutations {
-  private communicationGlobalAdminPolicy: IAuthorizationPolicy;
+  private readonly communicationGlobalAdminPolicy: IAuthorizationPolicy;
 
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
@@ -39,13 +39,13 @@ export class AdminCommunicationResolverMutations {
   async adminCommunicationEnsureAccessToCommunications(
     @Args('communicationData')
     ensureAccessData: CommunicationAdminEnsureAccessInput,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ): Promise<boolean> {
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
       this.communicationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT,
-      `grant community members access to communications: ${agentInfo.email}`
+      `grant community members access to communications: ${actorContext.actorId}`
     );
     return await this.adminCommunicationService.ensureCommunityAccessToCommunications(
       ensureAccessData
@@ -59,13 +59,13 @@ export class AdminCommunicationResolverMutations {
   async adminCommunicationRemoveOrphanedRoom(
     @Args('orphanedRoomData')
     orphanedRoomData: CommunicationAdminRemoveOrphanedRoomInput,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ): Promise<boolean> {
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
       this.communicationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT,
-      `communications admin remove orphaned room: ${agentInfo.email}`
+      `communications admin remove orphaned room: ${actorContext.actorId}`
     );
     return await this.adminCommunicationService.removeOrphanedRoom(
       orphanedRoomData
@@ -79,13 +79,13 @@ export class AdminCommunicationResolverMutations {
   async adminCommunicationUpdateRoomState(
     @Args('roomStateData')
     roomStateData: CommunicationAdminUpdateRoomStateInput,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ): Promise<CommunicationRoomResult> {
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
       this.communicationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT,
-      `communications admin update join rule on all rooms: ${agentInfo.email}`
+      `communications admin update join rule on all rooms: ${actorContext.actorId}`
     );
     return await this.adminCommunicationService.updateRoomState(
       roomStateData.roomID,

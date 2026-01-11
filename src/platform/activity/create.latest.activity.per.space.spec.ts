@@ -3,7 +3,7 @@ import { IActivity } from './activity.interface';
 import { ActivityEventType } from '@common/enums/activity.event.type';
 import { createLatestActivityPerSpaceMap } from './create.latest.activity.per.space';
 
-const AgentUserId = 'user1';
+const ActorId = 'user1';
 const OtherUserId = 'user2';
 
 // Map<collaborationId, spaceId>, collaborationId can be from any type of journey
@@ -43,27 +43,27 @@ const createTestActivity = (
 };
 
 describe('Test createLatestActivityPerSpaceMap function', () => {
-  it('Latest agent user activity is correctly set from child journey', async () => {
+  it('Latest actor activity is correctly set from child journey', async () => {
     const Activity1 = createTestActivity(
       new Date('2021-01-01'),
-      AgentUserId,
+      ActorId,
       'space1-collaborationId'
     );
     const Activity2 = createTestActivity(
       new Date('2021-01-02'),
-      AgentUserId,
+      ActorId,
       'space1-challenge2-oppotunity1-collaborationId'
     );
     const Activity3 = createTestActivity(
       new Date('2021-01-03'),
-      AgentUserId,
+      ActorId,
       'space1-challenge1-collaborationId'
     );
     const activities = [Activity1, Activity2, Activity3];
     const latestActivitiesPerSpace = createLatestActivityPerSpaceMap(
       activities,
       spaceMembershipCollaborationInfoTestData,
-      AgentUserId
+      ActorId
     );
     expect(latestActivitiesPerSpace.get('space1')?.mylatestActivity).toEqual(
       Activity3
@@ -90,13 +90,13 @@ describe('Test createLatestActivityPerSpaceMap function', () => {
     const latestActivitiesPerSpace = createLatestActivityPerSpaceMap(
       activities,
       spaceMembershipCollaborationInfoTestData,
-      AgentUserId
+      ActorId
     );
     expect(
       latestActivitiesPerSpace.get('space1')?.otherUsersLatestActivity
     ).toEqual(Activity3);
   });
-  it('Both latest activities from agent user and other user are correctly set from child journey', async () => {
+  it('Both latest activities from actor and other user are correctly set from child journey', async () => {
     const Activity1 = createTestActivity(
       new Date('2021-01-01'),
       OtherUserId,
@@ -114,17 +114,17 @@ describe('Test createLatestActivityPerSpaceMap function', () => {
     );
     const Activity4 = createTestActivity(
       new Date('2021-01-01'),
-      AgentUserId,
+      ActorId,
       'space1-collaborationId'
     );
     const Activity5 = createTestActivity(
       new Date('2021-01-02'),
-      AgentUserId,
+      ActorId,
       'space1-challenge2-oppotunity1-collaborationId'
     );
     const Activity6 = createTestActivity(
       new Date('2021-01-03'),
-      AgentUserId,
+      ActorId,
       'space1-challenge1-collaborationId'
     );
     const activities = [
@@ -138,7 +138,7 @@ describe('Test createLatestActivityPerSpaceMap function', () => {
     const latestActivitiesPerSpace = createLatestActivityPerSpaceMap(
       activities,
       spaceMembershipCollaborationInfoTestData,
-      AgentUserId
+      ActorId
     );
     expect(
       latestActivitiesPerSpace.get('space1')?.otherUsersLatestActivity

@@ -327,10 +327,9 @@ export class ConversationArchitectureRefactor1764897584127
       );
 
       // Delete all other orphaned conversations_set records (keep only platform's)
-      await queryRunner.query(
-        `DELETE FROM conversations_set WHERE id != $1`,
-        [platformConversationsSetId]
-      );
+      await queryRunner.query(`DELETE FROM conversations_set WHERE id != $1`, [
+        platformConversationsSetId,
+      ]);
     } else {
       // No conversations exist - delete any orphaned conversations_set records
       // Bootstrap will create a fresh conversations_set for platform

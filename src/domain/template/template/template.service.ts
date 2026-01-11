@@ -40,7 +40,7 @@ import { TemplateContentSpaceService } from '../template-content-space/template.
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { ISpace } from '@domain/space/space/space.interface';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { merge } from 'lodash';
 
 @Injectable()
@@ -289,7 +289,7 @@ export class TemplateService {
   public async updateTemplateFromSpace(
     templateInput: ITemplate,
     templateData: UpdateTemplateFromSpaceInput,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ): Promise<ITemplate> {
     if (
       !templateInput.contentSpace ||
@@ -361,14 +361,14 @@ export class TemplateService {
     await this.updateTemplateContentSubspacesFromSpace(
       templateInput,
       sourceSpace.subspaces,
-      agentInfo
+      actorContext
     );
 
     templateInput.contentSpace = await this.updateTemplateContentSpaceFromSpace(
       sourceSpace,
       templateInput.contentSpace,
       true,
-      agentInfo.userID
+      actorContext.actorId
     );
 
     return await this.getTemplateOrFail(templateInput.id);
@@ -377,7 +377,7 @@ export class TemplateService {
   private async updateTemplateContentSubspacesFromSpace(
     templateInput: ITemplate,
     sourceSpaceSubspaces: ISpace[] | undefined,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ): Promise<void> {
     const currentSubspaces = templateInput.contentSpace?.subspaces ?? [];
     const storageAggregator =
@@ -409,7 +409,7 @@ export class TemplateService {
               subspace.id
             ),
             storageAggregator,
-            agentInfo
+            actorContext
           );
         templateInput.contentSpace?.subspaces?.push(subspaceContent);
       }

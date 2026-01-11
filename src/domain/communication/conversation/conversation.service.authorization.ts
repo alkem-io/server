@@ -10,9 +10,9 @@ import {
 import { EntityNotInitializedException } from '@common/exceptions';
 import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { AgentType } from '@common/enums/agent.type';
+import { ActorType } from '@common/enums/actor.type';
 
 @Injectable()
 export class ConversationAuthorizationService {
@@ -48,18 +48,14 @@ export class ConversationAuthorizationService {
     const memberships =
       await this.conversationService.getConversationMembers(conversationID);
 
-    // Resolve agent IDs to user IDs for authorization
+    // Resolve actor IDs to user IDs for authorization
     // Note: Current authorization system uses USER_SELF_MANAGEMENT credentials
-    // In the future, this should be refactored to use agent-based credentials
+    // User IS an Actor - actorId = userId for users
     const participantUserIDs: string[] = [];
     for (const membership of memberships) {
-      if (membership.agent?.type === AgentType.USER) {
-        const user = await this.userLookupService.getUserByAgentId(
-          membership.agentId
-        );
-        if (user) {
-          participantUserIDs.push(user.id);
-        }
+      if (membership.actor?.type === ActorType.USER) {
+        // User IS an Actor - actorId = userId
+        participantUserIDs.push(membership.actorId);
       }
       // Note: Virtual contributors don't have user IDs, so they won't be included
       // in the authorization rules. This is acceptable since VCs interact via
@@ -68,7 +64,7 @@ export class ConversationAuthorizationService {
 
     // Add READ + CONTRIBUTE access for all user participants
     // T057: Membership grants both read and send message privileges
-    // T058: Structured logging with conversation ID and agent IDs in exception details
+    // T058: Structured logging with conversation ID and actor IDs in exception details
     conversation.authorization.credentialRules.push(
       this.createCredentialRuleParticipantAccess(participantUserIDs)
     );

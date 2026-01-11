@@ -23,7 +23,6 @@ import {
   PaginatedInAppNotifications,
   PaginationArgs,
 } from '@core/pagination';
-import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
 import { InAppNotificationCoreEntityIds } from './in.app.notification.core.entity.ids';
 import { InAppNotificationPayloadPlatformForumDiscussion } from '../in-app-notification-payload/dto/platform';
 import {
@@ -85,11 +84,8 @@ export class InAppNotificationService {
       calloutID: coreEntityIds.calloutID,
       contributionID: coreEntityIds.contributionID,
       roomID: coreEntityIds.roomID,
-      // not a FK but still used for deletion
       messageID: coreEntityIds.messageID,
-      contributorOrganizationID: coreEntityIds.contributorOrganizationID,
-      contributorUserID: coreEntityIds.contributorUserID,
-      contributorVcID: coreEntityIds.contributorVcID,
+      contributorActorId: coreEntityIds.contributorActorId,
       calendarEventID: coreEntityIds.calendarEventID,
     });
   }
@@ -345,25 +341,32 @@ export class InAppNotificationService {
     });
   }
 
-  public async deleteAllForContributorVcInSpace(
-    contributorVcID: string,
+  /**
+   * Deletes all notifications for an Actor (User, Organization, VC) in a space.
+   * This is used when a contributor is removed from a space to clean up
+   * notifications that reference them.
+   * @param actorId The Actor ID (can be User, Organization, or VirtualContributor)
+   * @param spaceID The Space ID
+   */
+  public async deleteAllForContributorActorInSpace(
+    actorId: string,
     spaceID: string
   ): Promise<void> {
     await this.inAppNotificationRepo.delete({
-      contributorVcID,
+      contributorActorId: actorId,
       spaceID,
     });
   }
 
   /**
-   * Deletes all notifications for a Virtual Contributor in multiple spaces.
-   * This is used when a VC is removed from a parent space to clean up
+   * Deletes all notifications for an Actor (User, Organization, VC) in multiple spaces.
+   * This is used when a contributor is removed from a parent space to clean up
    * notifications from all child spaces (L1, L2, etc.).
-   * @param contributorVcID The Virtual Contributor ID
+   * @param actorId The Actor ID (can be User, Organization, or VirtualContributor)
    * @param spaceIDs Array of space IDs
    */
-  public async deleteAllForContributorVcInSpaces(
-    contributorVcID: string,
+  public async deleteAllForContributorActorInSpaces(
+    actorId: string,
     spaceIDs: string[]
   ): Promise<void> {
     if (spaceIDs.length === 0) {
@@ -371,38 +374,7 @@ export class InAppNotificationService {
     }
 
     await this.inAppNotificationRepo.delete({
-      contributorVcID,
-      spaceID: In(spaceIDs),
-    });
-  }
-
-  public async deleteAllForContributorOrganizationInSpace(
-    contributorOrganizationID: string,
-    spaceID: string
-  ): Promise<void> {
-    await this.inAppNotificationRepo.delete({
-      contributorOrganizationID,
-      spaceID,
-    });
-  }
-
-  /**
-   * Deletes all notifications for an Organization in multiple spaces.
-   * This is used when an Organization is removed from a parent space to clean up
-   * notifications from all child spaces (L1, L2, etc.).
-   * @param contributorOrganizationID The Organization ID
-   * @param spaceIDs Array of space IDs
-   */
-  public async deleteAllForContributorOrganizationInSpaces(
-    contributorOrganizationID: string,
-    spaceIDs: string[]
-  ): Promise<void> {
-    if (spaceIDs.length === 0) {
-      return;
-    }
-
-    await this.inAppNotificationRepo.delete({
-      contributorOrganizationID,
+      contributorActorId: actorId,
       spaceID: In(spaceIDs),
     });
   }
@@ -494,20 +466,7 @@ export class InAppNotificationService {
         const typedPayload =
           payload as InAppNotificationPayloadSpaceCommunityContributor;
         result.spaceID = typedPayload.spaceID;
-        // contributor FKs
-        result.contributorOrganizationID =
-          typedPayload.contributorType === RoleSetContributorType.ORGANIZATION
-            ? typedPayload.contributorID
-            : undefined;
-        result.contributorUserID =
-          typedPayload.contributorType === RoleSetContributorType.USER
-            ? typedPayload.contributorID
-            : undefined;
-        result.contributorVcID =
-          typedPayload.contributorType === RoleSetContributorType.VIRTUAL
-            ? typedPayload.contributorID
-            : undefined;
-
+        result.contributorActorId = typedPayload.actorId;
         break;
       }
 
@@ -520,14 +479,13 @@ export class InAppNotificationService {
         break;
       }
 
-      case NotificationEvent.SPACE_ADMIN_VIRTUAL_CONTRIBUTOR_COMMUNITY_INVITATION_DECLINED:
-        result.spaceID = (
-          payload as InAppNotificationPayloadSpaceCommunityContributor
-        ).spaceID;
-        result.contributorVcID = (
-          payload as InAppNotificationPayloadSpaceCommunityContributor
-        ).contributorID;
+      case NotificationEvent.SPACE_ADMIN_VIRTUAL_CONTRIBUTOR_COMMUNITY_INVITATION_DECLINED: {
+        const typedPayload =
+          payload as InAppNotificationPayloadSpaceCommunityContributor;
+        result.spaceID = typedPayload.spaceID;
+        result.contributorActorId = typedPayload.actorId;
         break;
+      }
 
       case NotificationEvent.SPACE_LEAD_COMMUNICATION_MESSAGE:
         result.spaceID = (
@@ -634,7 +592,7 @@ export class InAppNotificationService {
         ).spaceID;
         result.userID = (
           payload as InAppNotificationPayloadSpaceCommunityContributor
-        ).contributorID;
+        ).actorId;
         break;
 
       case NotificationEvent.USER_MESSAGE:
@@ -656,14 +614,13 @@ export class InAppNotificationService {
       // VIRTUAL CONTRIBUTOR NOTIFICATIONS
       // ========================================
 
-      case NotificationEvent.VIRTUAL_CONTRIBUTOR_ADMIN_SPACE_COMMUNITY_INVITATION:
-        result.spaceID = (
-          payload as InAppNotificationPayloadVirtualContributor
-        ).space.id;
-        result.contributorVcID = (
-          payload as InAppNotificationPayloadVirtualContributor
-        ).virtualContributorID;
+      case NotificationEvent.VIRTUAL_CONTRIBUTOR_ADMIN_SPACE_COMMUNITY_INVITATION: {
+        const typedPayload =
+          payload as InAppNotificationPayloadVirtualContributor;
+        result.spaceID = typedPayload.space.id;
+        result.contributorActorId = typedPayload.virtualContributorID;
         break;
+      }
 
       default:
         // Unknown event type - log warning but don't throw

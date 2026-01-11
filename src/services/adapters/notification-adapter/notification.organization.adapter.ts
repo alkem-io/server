@@ -49,7 +49,7 @@ export class NotificationOrganizationAdapter {
           messageDetails
         );
 
-      this.notificationExternalAdapter.sendExternalNotifications(
+      void this.notificationExternalAdapter.sendExternalNotifications(
         event,
         payload
       );
@@ -96,7 +96,7 @@ export class NotificationOrganizationAdapter {
           eventData.message,
           eventData.organizationID
         );
-      this.notificationExternalAdapter.sendExternalNotifications(
+      void this.notificationExternalAdapter.sendExternalNotifications(
         event,
         payload
       );
@@ -139,7 +139,7 @@ export class NotificationOrganizationAdapter {
           eventData.message,
           eventData.organizationID
         );
-      this.notificationExternalAdapter.sendExternalNotifications(
+      void this.notificationExternalAdapter.sendExternalNotifications(
         eventSender,
         payload
       );

@@ -9,12 +9,9 @@ export const meQuery = gql`
         profile {
           displayName
         }
-        agent {
-          did
-          credentials {
-            resourceID
-            type
-          }
+        credentials {
+          resourceID
+          type
         }
       }
       spaceMembershipsFlat {

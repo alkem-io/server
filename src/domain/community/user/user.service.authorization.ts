@@ -5,7 +5,7 @@ import {
   LogContext,
 } from '@common/enums';
 import { IUser } from '@domain/community/user/user.interface';
-import { AgentService } from '@domain/agent/agent/agent.service';
+import { ActorService } from '@domain/actor/actor/actor.service';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import {
@@ -15,7 +15,7 @@ import {
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import {
   CREDENTIAL_RULE_TYPES_USER_AUTHORIZATION_RESET,
   CREDENTIAL_RULE_TYPES_USER_GLOBAL_COMMUNITY_READ,
@@ -27,7 +27,6 @@ import {
   CREDENTIAL_RULE_TYPES_USER_READ_GLOBAL_REGISTERED,
 } from '@common/constants';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
-import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { UserLookupService } from '../user-lookup/user.lookup.service';
 import { UserSettingsAuthorizationService } from '../user-settings/user.settings.service.authorization';
@@ -36,23 +35,21 @@ import { UserSettingsAuthorizationService } from '../user-settings/user.settings
 export class UserAuthorizationService {
   constructor(
     private readonly authorizationPolicyService: AuthorizationPolicyService,
-    private readonly agentAuthorizationService: AgentAuthorizationService,
     private readonly profileAuthorizationService: ProfileAuthorizationService,
     private readonly platformAuthorizationService: PlatformAuthorizationPolicyService,
     private readonly storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
     private readonly userSettingsAuthorizationService: UserSettingsAuthorizationService,
-    private readonly agentService: AgentService,
+    private readonly actorService: ActorService,
     private readonly userLookupService: UserLookupService
   ) {}
 
   async applyAuthorizationPolicy(
     userID: string
   ): Promise<IAuthorizationPolicy[]> {
-    const user = await this.userLookupService.getUserOrFail(userID, {
+    const user = await this.userLookupService.getUserByIdOrFail(userID, {
       loadEagerRelations: false,
       relations: {
         authorization: true,
-        agent: { authorization: true },
         profile: { authorization: true },
         storageAggregator: {
           authorization: true,
@@ -66,11 +63,6 @@ export class UserAuthorizationService {
         id: true,
         authorization:
           this.authorizationPolicyService.authorizationSelectOptions,
-        agent: {
-          id: true,
-          authorization:
-            this.authorizationPolicyService.authorizationSelectOptions,
-        },
         profile: {
           id: true,
           authorization:
@@ -93,15 +85,11 @@ export class UserAuthorizationService {
         },
       },
     });
-    if (
-      !user.agent ||
-      !user.profile ||
-      !user.storageAggregator ||
-      !user.settings
-    )
+    if (!user.profile || !user.storageAggregator || !user.settings)
       throw new RelationshipNotFoundException(
-        `Unable to load agent or profile or preferences or storage for User ${user.id} `,
-        LogContext.COMMUNITY
+        'Unable to load profile, storage or settings for User',
+        LogContext.COMMUNITY,
+        { userId: user.id }
       );
 
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
@@ -143,13 +131,6 @@ export class UserAuthorizationService {
       );
     updatedAuthorizations.push(...profileAuthorizations);
 
-    const agentAuthorization =
-      this.agentAuthorizationService.applyAuthorizationPolicy(
-        user.agent,
-        user.authorization
-      );
-    updatedAuthorizations.push(agentAuthorization);
-
     const settingsAuthorization =
       this.userSettingsAuthorizationService.applyAuthorizationPolicy(
         user.settings,
@@ -171,25 +152,22 @@ export class UserAuthorizationService {
   }
 
   async grantCredentialsAllUsersReceive(userID: string): Promise<IUser> {
-    const { user, agent } =
-      await this.userLookupService.getUserAndAgent(userID);
+    const user = await this.userLookupService.getUserByIdOrFail(userID);
 
-    await this.agentService.grantCredentialOrFail({
+    // User IS an Actor - grant credentials directly to the user (actorId = userID)
+    await this.actorService.grantCredentialOrFail(userID, {
       type: AuthorizationCredential.GLOBAL_REGISTERED,
-      agentID: agent.id,
     });
-    await this.agentService.grantCredentialOrFail({
+    await this.actorService.grantCredentialOrFail(userID, {
       type: AuthorizationCredential.USER_SELF_MANAGEMENT,
-      agentID: agent.id,
       resourceID: userID,
     });
-    await this.agentService.grantCredentialOrFail({
+    await this.actorService.grantCredentialOrFail(userID, {
       type: AuthorizationCredential.ACCOUNT_ADMIN,
-      agentID: agent.id,
       resourceID: user.accountID,
     });
 
-    return await this.userLookupService.getUserOrFail(userID);
+    return await this.userLookupService.getUserByIdOrFail(userID);
   }
 
   private appendGlobalCredentialRules(

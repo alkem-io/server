@@ -1,5 +1,5 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { IBaseAlkemio } from '../entity/base-entity/base.alkemio.interface';
+import { IBaseAlkemio } from '@domain/common/entity/base-entity';
 import { IGeoLocation } from './geolocation.interface';
 
 @ObjectType('Location')

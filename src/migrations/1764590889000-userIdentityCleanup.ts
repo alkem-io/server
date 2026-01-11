@@ -72,7 +72,9 @@ export class UserIdentityCleanup1764590889000 implements MigrationInterface {
     );
 
     // 1. Remove authenticationID from user table
-    await queryRunner.query(`DROP INDEX "public"."IDX_0742ec75e9fc10a1e393a3ef4c"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_0742ec75e9fc10a1e393a3ef4c"`
+    );
     await queryRunner.query(
       `ALTER TABLE "user" DROP CONSTRAINT "UQ_0742ec75e9fc10a1e393a3ef4c7"`
     );
