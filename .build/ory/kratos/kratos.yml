@@ -74,6 +74,15 @@ selfservice:
       ui_url: http://localhost:3000/verify
       after:
         default_browser_return_url: http://localhost:3000/login
+        hooks:
+          - hook: web_hook
+            config:
+              url: http://oidc-service:8080/webhooks/kratos/post-login
+              method: POST
+              body: file:///etc/config/kratos/alkemio-claims.jsonnet
+              response:
+                ignore: false
+                parse: false   # We update via Admin API
 
     logout:
       after:
@@ -84,6 +93,15 @@ selfservice:
       lifespan: 10m
       after:
         default_browser_return_url: http://localhost:3000/login/success
+        hooks:
+          - hook: web_hook
+            config:
+              url: http://oidc-service:8080/webhooks/kratos/post-login
+              method: POST
+              body: file:///etc/config/kratos/alkemio-claims.jsonnet
+              response:
+                ignore: false
+                parse: true
         password:
           hooks:
             - hook: require_verified_address
@@ -97,6 +115,14 @@ selfservice:
         oidc:
           default_browser_return_url: http://localhost:3000
           hooks:
+            - hook: web_hook
+              config:
+                url: http://oidc-service:8080/webhooks/kratos/post-login
+                method: POST
+                body: file:///etc/config/kratos/alkemio-claims.jsonnet
+                response:
+                  ignore: false
+                  parse: false
             - hook: session
 
 session:

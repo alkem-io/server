@@ -89,3 +89,6 @@ tmp/prev.schema.graphql
 
 # SonarQube scanner working directory
 .scannerwork/
+
+# ignore pychache dirs
+**/__pycache__/

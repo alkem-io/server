@@ -1,0 +1,39 @@
+```graphql
+"""
+A user in the Alkemio platform.
+"""
+type User implements Contributor {
+  """The account hosted by this User."""
+  account: Account
+  """The Agent representing this User."""
+  agent: Agent!
+  """Details about the authentication used for this User."""
+  authentication: UserAuthenticationResult
+  """The authorization rules for the Contributor"""
+  authorization: Authorization
+  """The date at which the entity was created."""
+  createdDate: DateTime!
+  """The email address for this User."""
+  email: String!
+  firstName: String!
+  """The ID of the Contributor"""
+  id: UUID!
+  """Can a message be sent to this User."""
+  isContactable: Boolean!
+  lastName: String!
+  """A name identifier of the Contributor, unique within a given scope."""
+  nameID: NameID!
+  """The phone number for this User."""
+  phone: String
+  """The Profile for this User."""
+  profile: Profile!
+  """The settings for this User."""
+  settings: UserSettings!
+  """The StorageAggregator for managing storage buckets in use by this User"""
+  storageAggregator: StorageAggregator
+  """The date at which the entity was last updated."""
+  updatedDate: DateTime!
+}
+
+# REMOVED: accountUpn field was removed.
+```

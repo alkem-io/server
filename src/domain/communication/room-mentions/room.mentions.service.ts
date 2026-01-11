@@ -1,13 +1,15 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IMessage } from '../message/message.interface';
-import { RoomType } from '@common/enums/room.type';
 import { NotificationInputEntityMentions } from '@services/adapters/notification-adapter/dto/user/notification.dto.input.entity.mentions';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { Mention, MentionedEntityType } from '../messaging/mention.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums/logging.context';
-import { EntityNotFoundException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  EntityNotInitializedException,
+} from '@common/exceptions';
 import { VirtualContributorMessageService } from '../virtual.contributor.message/virtual.contributor.message.service';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
@@ -28,14 +30,14 @@ export class RoomMentionsService {
   );
 
   constructor(
-    private notificationUserAdapter: NotificationUserAdapter,
-    private notificationOrganizationAdapter: NotificationOrganizationAdapter,
-    private communityResolverService: CommunityResolverService,
-    private roomLookupService: RoomLookupService,
-    private virtualContributorMessageService: VirtualContributorMessageService,
-    private virtualContributorLookupService: VirtualContributorLookupService,
-    private userLookupService: UserLookupService,
-    private organizationLookupService: OrganizationLookupService,
+    private readonly notificationUserAdapter: NotificationUserAdapter,
+    private readonly notificationOrganizationAdapter: NotificationOrganizationAdapter,
+    private readonly communityResolverService: CommunityResolverService,
+    private readonly roomLookupService: RoomLookupService,
+    private readonly virtualContributorMessageService: VirtualContributorMessageService,
+    private readonly virtualContributorLookupService: VirtualContributorLookupService,
+    private readonly userLookupService: UserLookupService,
+    private readonly organizationLookupService: OrganizationLookupService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -43,7 +45,7 @@ export class RoomMentionsService {
   public async getSpaceIdForRoom(room: IRoom): Promise<string> {
     const community = await this.communityResolverService.getCommunityFromRoom(
       room.id,
-      room.type as RoomType
+      room.type
     );
 
     // The ID of the actual community where the vc is being invoked
@@ -57,19 +59,17 @@ export class RoomMentionsService {
     roomID: string,
     threadID: string
   ): Promise<IVcInteraction | undefined> {
-    const room = await this.roomLookupService.getRoomOrFail(roomID, {
-      relations: {
-        vcInteractions: true,
-      },
-    });
-    if (!room.vcInteractions) {
-      throw new EntityNotFoundException(
-        `Not able to locate interactions for the room: ${roomID}`,
-        LogContext.COMMUNICATION
-      );
+    const room = await this.roomLookupService.getRoomOrFail(roomID);
+
+    const vcData = room.vcInteractionsByThread?.[threadID];
+    if (!vcData) {
+      return undefined;
     }
 
-    return room.vcInteractions.find(i => i.threadID === threadID);
+    return {
+      threadID,
+      virtualContributorID: vcData.virtualContributorActorID,
+    };
   }
 
   public async processVirtualContributorMentions(
@@ -94,15 +94,30 @@ export class RoomMentionsService {
         LogContext.VIRTUAL_CONTRIBUTOR
       );
       if (!vcInteraction) {
+        // Edge conversion: GraphQL mention (entity UUID) → agent.id for internal flow
+        const virtualContributor =
+          await this.virtualContributorLookupService.getVirtualContributorOrFail(
+            vcMention.contributorID,
+            { relations: { agent: true } }
+          );
+
+        if (!virtualContributor.agent) {
+          throw new EntityNotInitializedException(
+            `Agent not initialized for VC: ${vcMention.contributorID}`,
+            LogContext.VIRTUAL_CONTRIBUTOR
+          );
+        }
+
         vcInteraction = await this.roomLookupService.addVcInteractionToRoom({
-          virtualContributorID: vcMention.contributorID,
+          virtualContributorActorID: virtualContributor.agent.id,
           roomID: room.id,
           threadID: threadID,
         });
       }
 
+      // Use agent.id (unified internal flow) instead of entity UUID
       await this.virtualContributorMessageService.invokeVirtualContributor(
-        vcMention.contributorID,
+        vcInteraction.virtualContributorID,
         message,
         threadID,
         agentInfo,

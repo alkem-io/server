@@ -24,6 +24,7 @@ import { VirtualContributorDefaultsModule } from '../virtual-contributor-default
 import { VirtualContributorSettingsModule } from '../virtual-contributor-settings/virtual.contributor.settings.module';
 import { VirtualContributorModelCardModule } from '../virtual-contributor-model-card/virtual.contributor.model.card.module';
 import { VirtualContributorPlatformSettingsModule } from '../virtual-contributor-platform-settings';
+import { PlatformWellKnownVirtualContributorsModule } from '@platform/platform.well.known.virtual.contributors';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { VirtualContributorPlatformSettingsModule } from '../virtual-contributor
     VirtualContributorPlatformSettingsModule,
     VirtualContributorDefaultsModule,
     AccountLookupModule,
+    PlatformWellKnownVirtualContributorsModule,
     TypeOrmModule.forFeature([VirtualContributor]),
     PlatformAuthorizationPolicyModule,
     SubscriptionServiceModule,

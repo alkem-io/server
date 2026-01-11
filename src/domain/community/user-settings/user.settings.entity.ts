@@ -7,12 +7,12 @@ import { IUserSettingsNotification } from './user.settings.notification.interfac
 
 @Entity()
 export class UserSettings extends AuthorizableEntity implements IUserSettings {
-  @Column('json', { nullable: false })
+  @Column('jsonb', { nullable: false })
   communication!: IUserSettingsCommunication;
 
-  @Column('json', { nullable: false })
+  @Column('jsonb', { nullable: false })
   privacy!: IUserSettingsPrivacy;
 
-  @Column('json', { nullable: false })
+  @Column('jsonb', { nullable: false })
   notification!: IUserSettingsNotification;
 }
