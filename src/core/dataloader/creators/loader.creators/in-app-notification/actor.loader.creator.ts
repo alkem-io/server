@@ -13,22 +13,22 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { ActorType } from '@common/enums/actor.type';
 
 @Injectable()
-export class ContributorLoaderCreator implements DataLoaderCreator<IActor> {
+export class ActorLoaderCreator implements DataLoaderCreator<IActor> {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
   public create(
     options?: DataLoaderCreatorBaseOptions<any, any>
   ): ILoader<IActor | null | EntityNotFoundException> {
-    return createBatchLoader(this.contributorsInBatch, {
+    return createBatchLoader(this.actorsInBatch, {
       name: this.constructor.name,
-      loadedTypeName: 'Contributor',
+      loadedTypeName: 'Actor',
       resolveToNull: options?.resolveToNull,
     });
   }
 
   // Query Actor table directly - TypeORM's Class Table Inheritance returns correct child entity instances
   // Actor.type is used to resolve the actual entity type (User, Organization, VirtualContributor)
-  private contributorsInBatch = async (
+  private actorsInBatch = async (
     keys: ReadonlyArray<string>
   ): Promise<IActor[]> => {
     // Query Actor directly - only load contributor types (User, Organization, VirtualContributor)

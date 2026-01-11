@@ -1,2 +1,1 @@
-export * from './contributor.defaults';
-export * from './contributor.module';
+export * from './actor.defaults';

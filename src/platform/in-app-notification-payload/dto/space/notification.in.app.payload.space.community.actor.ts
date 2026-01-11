@@ -4,11 +4,11 @@ import { ObjectType } from '@nestjs/graphql';
 import { NotificationEventPayload } from '@common/enums/notification.event.payload';
 import { ActorType } from '@common/enums/actor.type';
 
-@ObjectType('InAppNotificationPayloadSpaceCommunityContributor', {
+@ObjectType('InAppNotificationPayloadSpaceCommunityActor', {
   implements: () => IInAppNotificationPayload,
 })
-export abstract class InAppNotificationPayloadSpaceCommunityContributor extends InAppNotificationPayloadSpaceBase {
+export abstract class InAppNotificationPayloadSpaceCommunityActor extends InAppNotificationPayloadSpaceBase {
   actorId!: string;
   actorType!: ActorType;
-  declare type: NotificationEventPayload.SPACE_COMMUNITY_CONTRIBUTOR;
+  declare type: NotificationEventPayload.SPACE_COMMUNITY_ACTOR;
 }

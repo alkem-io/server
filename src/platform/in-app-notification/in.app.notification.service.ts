@@ -33,7 +33,7 @@ import {
 import {
   InAppNotificationPayloadSpace,
   InAppNotificationPayloadSpaceCommunityApplication,
-  InAppNotificationPayloadSpaceCommunityContributor,
+  InAppNotificationPayloadSpaceCommunityActor,
   InAppNotificationPayloadSpaceCollaborationCallout,
   InAppNotificationPayloadSpaceCommunicationMessageDirect,
   InAppNotificationPayloadSpaceCommunicationUpdate,
@@ -464,7 +464,7 @@ export class InAppNotificationService {
 
       case NotificationEvent.SPACE_ADMIN_COMMUNITY_NEW_MEMBER: {
         const typedPayload =
-          payload as InAppNotificationPayloadSpaceCommunityContributor;
+          payload as InAppNotificationPayloadSpaceCommunityActor;
         result.spaceID = typedPayload.spaceID;
         result.contributorActorId = typedPayload.actorId;
         break;
@@ -481,7 +481,7 @@ export class InAppNotificationService {
 
       case NotificationEvent.SPACE_ADMIN_VIRTUAL_CONTRIBUTOR_COMMUNITY_INVITATION_DECLINED: {
         const typedPayload =
-          payload as InAppNotificationPayloadSpaceCommunityContributor;
+          payload as InAppNotificationPayloadSpaceCommunityActor;
         result.spaceID = typedPayload.spaceID;
         result.contributorActorId = typedPayload.actorId;
         break;
@@ -588,10 +588,10 @@ export class InAppNotificationService {
 
       case NotificationEvent.USER_SPACE_COMMUNITY_JOINED:
         result.spaceID = (
-          payload as InAppNotificationPayloadSpaceCommunityContributor
+          payload as InAppNotificationPayloadSpaceCommunityActor
         ).spaceID;
         result.userID = (
-          payload as InAppNotificationPayloadSpaceCommunityContributor
+          payload as InAppNotificationPayloadSpaceCommunityActor
         ).actorId;
         break;
 

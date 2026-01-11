@@ -27,7 +27,7 @@ export * from './space/space.collaboration.loader.creator';
 export * from './space/space.about.loader.creator';
 export * from './space/space.community.loader.creator';
 
-export * from './in-app-notification/contributor.loader.creator';
+export * from './in-app-notification/actor.loader.creator';
 export * from './in-app-notification/callout.loader.creator';
 export * from './in-app-notification/space.loader.creator';
 

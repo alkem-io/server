@@ -2,8 +2,8 @@ import { EntityManager } from 'typeorm';
 import { ICredential } from '@domain/actor/credential';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { groupCredentialsByEntity } from './group.credentials.by.entity';
-import { getSpaceRolesForContributorEntityData } from './get.space.roles.for.contributor.entity.data';
-import { getSpaceRolesForContributorQueryResult } from './get.space.roles.for.contributor.query.result';
+import { getSpaceRolesForActorEntityData } from './get.space.roles.for.actor.entity.data';
+import { getSpaceRolesForActorQueryResult } from './get.space.roles.for.actor.query.result';
 import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 
@@ -18,13 +18,13 @@ export const mapSpaceCredentialsToRoles = async (
 
   const spaceIds = Array.from(credentialMap.get('spaces')?.keys() ?? []);
 
-  const { spaces, subspaces } = await getSpaceRolesForContributorEntityData(
+  const { spaces, subspaces } = await getSpaceRolesForActorEntityData(
     entityManager,
     spaceIds, // TODO: this used to merge in the account IDs for some reason, WHY?
     allowedVisibilities
   );
 
-  return getSpaceRolesForContributorQueryResult(
+  return getSpaceRolesForActorQueryResult(
     credentialMap,
     spaces,
     subspaces,

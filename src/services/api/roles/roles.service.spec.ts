@@ -12,7 +12,7 @@ import { SpaceFilterService } from '@services/infrastructure/space-filter/space.
 import { testData } from '@test/utils';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import * as getOrganizationRolesForUserEntityData from './util/get.organization.roles.for.user.entity.data';
-import * as getSpaceRolesForContributorQueryResult from './util/get.space.roles.for.contributor.query.result';
+import * as getSpaceRolesForActorQueryResult from './util/get.space.roles.for.actor.query.result';
 import { MockInvitationService } from '@test/mocks/invitation.service.mock';
 import { MockCommunityResolverService } from '@test/mocks/community.resolver.service.mock';
 import { RolesResultSpace } from './dto/roles.dto.result.space';
@@ -99,8 +99,8 @@ describe('RolesService', () => {
 
       jest
         .spyOn(
-          getSpaceRolesForContributorQueryResult,
-          'getSpaceRolesForContributorQueryResult'
+          getSpaceRolesForActorQueryResult,
+          'getSpaceRolesForActorQueryResult'
         )
         .mockReturnValue(spacesRolesMock);
 

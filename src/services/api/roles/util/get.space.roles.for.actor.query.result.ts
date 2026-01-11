@@ -10,7 +10,7 @@ import { AuthorizationPrivilege, LogContext } from '@common/enums';
 
 const logger = new Logger(LogContext.ROLES);
 
-export const getSpaceRolesForContributorQueryResult = (
+export const getSpaceRolesForActorQueryResult = (
   map: CredentialMap,
   spaces: Space[],
   subspaces: Space[],

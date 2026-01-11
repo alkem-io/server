@@ -1,21 +1,21 @@
 import { Resolver, ResolveField, Parent } from '@nestjs/graphql';
 import { IActor } from '@domain/actor/actor/actor.interface';
 import { ISpace } from '@domain/space/space/space.interface';
-import { ContributorLoaderCreator } from '@core/dataloader/creators/loader.creators/in-app-notification/contributor.loader.creator';
+import { ActorLoaderCreator } from '@core/dataloader/creators/loader.creators/in-app-notification/actor.loader.creator';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Loader } from '@core/dataloader/decorators';
 import { SpaceLoaderCreator } from '@core/dataloader/creators/loader.creators/in-app-notification/space.loader.creator';
-import { InAppNotificationPayloadSpaceCommunityContributor } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.contributor';
+import { InAppNotificationPayloadSpaceCommunityActor } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.actor';
 
-@Resolver(() => InAppNotificationPayloadSpaceCommunityContributor)
-export class InAppNotificationPayloadSpaceCommunityContributorResolverFields {
+@Resolver(() => InAppNotificationPayloadSpaceCommunityActor)
+export class InAppNotificationPayloadSpaceCommunityActorResolverFields {
   @ResolveField(() => IActor, {
     nullable: false,
-    description: 'The Contributor that joined.',
+    description: 'The Actor that joined.',
   })
-  public contributor(
-    @Parent() payload: InAppNotificationPayloadSpaceCommunityContributor,
-    @Loader(ContributorLoaderCreator)
+  public actor(
+    @Parent() payload: InAppNotificationPayloadSpaceCommunityActor,
+    @Loader(ActorLoaderCreator)
     loader: ILoader<IActor>
   ) {
     return loader.load(payload.actorId);
@@ -26,7 +26,7 @@ export class InAppNotificationPayloadSpaceCommunityContributorResolverFields {
     description: 'The Space that was joined.',
   })
   public space(
-    @Parent() payload: InAppNotificationPayloadSpaceCommunityContributor,
+    @Parent() payload: InAppNotificationPayloadSpaceCommunityActor,
     @Loader(SpaceLoaderCreator)
     loader: ILoader<ISpace>
   ) {

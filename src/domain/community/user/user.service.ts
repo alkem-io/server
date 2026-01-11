@@ -34,7 +34,7 @@ import { validateEmail } from '@common/utils';
 import { RoleSetRoleSelectionCredentials } from '../../access/role-set/dto/role.set.dto.role.selection.credentials';
 import { RoleSetRoleWithParentCredentials } from '../../access/role-set/dto/role.set.dto.role.with.parent.credentials';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { contributorDefaults } from '../contributor/contributor.defaults';
+import { actorDefaults } from '../contributor/actor.defaults';
 import { UsersQueryArgs } from './dto/users.query.args';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
@@ -321,7 +321,7 @@ export class UserService {
       result.referencesData = [];
     }
     // Get the template to populate with
-    const referenceTemplates = contributorDefaults.references;
+    const referenceTemplates = actorDefaults.references;
     if (referenceTemplates) {
       for (const referenceTemplate of referenceTemplates) {
         const existingRef = result.referencesData?.find(

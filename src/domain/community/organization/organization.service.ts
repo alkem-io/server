@@ -59,7 +59,7 @@ import { organizationApplicationForm } from './definitions/organization.role.app
 import { ActorType } from '@common/enums/actor.type';
 import { RoleSetType } from '@common/enums/role.set.type';
 import { CreateReferenceInput } from '@domain/common/reference';
-import { contributorDefaults } from '../contributor/contributor.defaults';
+import { actorDefaults } from '../contributor/actor.defaults';
 
 @Injectable()
 export class OrganizationService {
@@ -600,7 +600,7 @@ export class OrganizationService {
 
   private getDefaultContributorProfileReferences(): CreateReferenceInput[] {
     const references: CreateReferenceInput[] = [];
-    const referenceTemplates = contributorDefaults.references;
+    const referenceTemplates = actorDefaults.references;
 
     if (referenceTemplates) {
       for (const referenceTemplate of referenceTemplates) {
