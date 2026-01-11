@@ -1,4 +1,4 @@
-import { IAccountLicensePlan } from '../account.license.plan/account.license.plan.interface';
+import { IAccountLicensePlan } from '@domain/space/account.license.plan';
 
 export const DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN: IAccountLicensePlan = {
   spaceFree: 0,

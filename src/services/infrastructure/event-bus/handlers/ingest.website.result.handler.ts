@@ -46,6 +46,9 @@ export class IngestWebsiteResultHandler
     if (response.timestamp) {
       now = new Date(response.timestamp);
     }
-    this.aiServerService.updatePersonaBoKLastUpdated(original.personaId, now);
+    void this.aiServerService.updatePersonaBoKLastUpdated(
+      original.personaId,
+      now
+    );
   }
 }

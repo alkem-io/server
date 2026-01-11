@@ -7,16 +7,16 @@ import {
 } from 'typeorm';
 import { IConversationMembership } from './conversation.membership.interface';
 import { Conversation } from '../conversation/conversation.entity';
-import { Agent } from '@domain/agent/agent/agent.entity';
 
 @Entity()
 export class ConversationMembership implements IConversationMembership {
   @PrimaryColumn('uuid')
   conversationId!: string;
 
+  // actorId - the actor participating in this conversation
   @Index()
   @PrimaryColumn('uuid')
-  agentId!: string;
+  actorId!: string;
 
   @Index()
   @ManyToOne(() => Conversation, conversation => conversation.memberships, {
@@ -25,13 +25,6 @@ export class ConversationMembership implements IConversationMembership {
     onDelete: 'CASCADE',
   })
   conversation!: Conversation;
-
-  @ManyToOne(() => Agent, {
-    eager: false,
-    cascade: false,
-    onDelete: 'CASCADE',
-  })
-  agent!: Agent;
 
   @CreateDateColumn()
   createdAt!: Date;

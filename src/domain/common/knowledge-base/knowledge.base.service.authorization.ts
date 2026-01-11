@@ -9,7 +9,7 @@ import { LogContext } from '@common/enums/logging.context';
 import { CalloutsSetAuthorizationService } from '@domain/collaboration/callouts-set/callouts.set.service.authorization';
 import { AuthorizationPrivilege } from '@common/enums';
 import { POLICY_RULE_READ_ABOUT } from '@common/constants';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 
 @Injectable()

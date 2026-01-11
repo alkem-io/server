@@ -6,7 +6,7 @@ import { AnyStateMachine, createMachine } from 'xstate';
 
 @Injectable()
 export class ApplicationLifecycleService {
-  private applicationMachineStatesOnly: AnyStateMachine;
+  private readonly applicationMachineStatesOnly: AnyStateMachine;
 
   constructor(private lifecycleService: LifecycleService) {
     this.applicationMachineStatesOnly =

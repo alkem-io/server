@@ -6,6 +6,7 @@ import { sortSpacesByActivity } from './sort.spaces.by.activity';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { ProfileType } from '@common/enums';
 import { AccountType } from '@common/enums/account.type';
+import { ActorType } from '@common/enums/actor.type';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN } from '../account/constants';
@@ -48,6 +49,7 @@ const spaceSettings = {
 const createTestSpace = (id: string): ISpace => {
   return {
     id,
+    type: ActorType.SPACE,
     rowId: 1,
     nameID: 'space1',
     settings: spaceSettings,
@@ -74,12 +76,14 @@ const createTestSpace = (id: string): ISpace => {
     },
     account: {
       id: `account${id}`,
+      nameID: `account-${id}`,
       virtualContributors: [],
       innovationHubs: [],
       innovationPacks: [],
       externalSubscriptionID: '',
       spaces: [],
-      type: AccountType.ORGANIZATION,
+      type: ActorType.ACCOUNT,
+      accountType: AccountType.ORGANIZATION,
       baselineLicensePlan: DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN,
       createdDate: new Date(),
       updatedDate: new Date(),

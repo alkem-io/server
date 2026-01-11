@@ -2,7 +2,7 @@ import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Args, ResolveField, Resolver } from '@nestjs/graphql';
-import { AuthorizationAgentPrivilege } from '@src/common/decorators';
+import { AuthorizationActorPrivilege } from '@src/common/decorators';
 import { ILibrary } from './library.interface';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 import { LibraryService } from './library.service';
@@ -20,7 +20,7 @@ export class LibraryResolverFields {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('innovationPacks', () => [IInnovationPack], {
     nullable: false,
@@ -40,7 +40,7 @@ export class LibraryResolverFields {
     );
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('templates', () => [ITemplateResult], {
     nullable: false,

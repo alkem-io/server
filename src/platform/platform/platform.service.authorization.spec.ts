@@ -13,7 +13,6 @@ import { MessagingAuthorizationService } from '@domain/communication/messaging/m
 import { IPlatform } from './platform.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
-import { LogContext } from '@common/enums';
 import { RoleSetType } from '@common/enums/role.set.type';
 
 describe('PlatformAuthorizationService', () => {
@@ -141,9 +140,7 @@ describe('PlatformAuthorizationService', () => {
       PlatformAuthorizationService
     );
     platformService = module.get(PlatformService);
-    messagingAuthorizationService = module.get(
-      MessagingAuthorizationService
-    );
+    messagingAuthorizationService = module.get(MessagingAuthorizationService);
   });
 
   it('should be defined', () => {
@@ -167,9 +164,9 @@ describe('PlatformAuthorizationService', () => {
 
     it('should cascade authorization to messaging', async () => {
       platformService.getPlatformOrFail.mockResolvedValue(mockPlatform);
-      messagingAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
-        [{ id: 'messaging-auth' } as IAuthorizationPolicy]
-      );
+      messagingAuthorizationService.applyAuthorizationPolicy.mockResolvedValue([
+        { id: 'messaging-auth' } as IAuthorizationPolicy,
+      ]);
 
       await service.applyAuthorizationPolicy();
 
@@ -186,9 +183,9 @@ describe('PlatformAuthorizationService', () => {
       const messagingAuth = {
         id: 'messaging-auth',
       } as IAuthorizationPolicy;
-      messagingAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
-        [messagingAuth]
-      );
+      messagingAuthorizationService.applyAuthorizationPolicy.mockResolvedValue([
+        messagingAuth,
+      ]);
 
       const result = await service.applyAuthorizationPolicy();
 

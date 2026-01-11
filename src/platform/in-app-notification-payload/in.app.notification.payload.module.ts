@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { OrganizationLoaderCreator } from '@core/dataloader/creators';
-import { InAppNotificationPayloadSpaceCollaborationCalloutResolverFields } from './field-resolvers/space/in.app.notification.payload.space.collaboration.callout.resolver.fields';
+import { InAppNotificationPayloadSpaceCollaborationCalloutResolverFields } from '@platform/in-app-notification-payload/field-resolvers';
 import {
   InAppNotificationPayloadOrganizationMessageDirectResolverFields,
   InAppNotificationPayloadOrganizationMessageRoomResolverFields,
@@ -12,7 +12,7 @@ import {
   InAppNotificationPayloadSpaceCommunicationMessageDirectResolverFields,
   InAppNotificationPayloadSpaceCommunicationUpdateResolverFields,
   InAppNotificationPayloadSpaceCommunityApplicationResolverFields,
-  InAppNotificationPayloadSpaceCommunityContributorResolverFields,
+  InAppNotificationPayloadSpaceCommunityActorResolverFields,
   InAppNotificationPayloadSpaceCommunityInvitationPlatformResolverFields,
   InAppNotificationPayloadSpaceCommunityInvitationResolverFields,
   InAppNotificationPayloadSpaceResolverFields,
@@ -36,7 +36,7 @@ import { InAppNotificationPayloadSpaceCommunityCalendarEventCommentResolverField
     InAppNotificationPayloadSpaceResolverFields,
     InAppNotificationPayloadSpaceCommunicationMessageDirectResolverFields,
     InAppNotificationPayloadSpaceCommunicationUpdateResolverFields,
-    InAppNotificationPayloadSpaceCommunityContributorResolverFields,
+    InAppNotificationPayloadSpaceCommunityActorResolverFields,
     InAppNotificationPayloadSpaceCommunityApplicationResolverFields,
     InAppNotificationPayloadSpaceCommunityInvitationResolverFields,
     InAppNotificationPayloadSpaceCommunityInvitationPlatformResolverFields,

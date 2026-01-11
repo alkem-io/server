@@ -4,7 +4,7 @@ import { UserFilterInput } from '@core/filtering/input-types/user.filter.input';
 import { PaginatedOrganization } from '@core/pagination/paginated.organization';
 import { PaginatedUsers } from '@core/pagination/paginated.user';
 import { PaginationArgs } from '@core/pagination/pagination.args';
-import { ContributorQueryArgs } from '@domain/community/contributor/dto/contributor.query.args';
+import { ActorQueryArgs } from '@domain/actor/actor/dto';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { UserService } from '@domain/community/user/user.service';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
@@ -94,9 +94,9 @@ export class PlatformAdminService {
   }
 
   public async getAllVirtualContributors(
-    args?: ContributorQueryArgs
+    args?: ActorQueryArgs
   ): Promise<IVirtualContributor[]> {
-    const query = args ?? new ContributorQueryArgs();
+    const query = args ?? new ActorQueryArgs();
     return await this.virtualContributorService.getVirtualContributors(query);
   }
 }

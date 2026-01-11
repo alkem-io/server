@@ -92,3 +92,4 @@ tmp/prev.schema.graphql
 
 # ignore pychache dirs
 **/__pycache__/
+/temp_notes.txt

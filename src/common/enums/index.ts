@@ -1,3 +1,4 @@
+export * from './actor.type';
 export * from './logging.context';
 export * from './alkemio.error.status';
 export * from './authentication.provider';

@@ -2,7 +2,7 @@ import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { LoggerService } from '@nestjs/common';
 import { Inject, UseGuards } from '@nestjs/common/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { AuthorizationAgentPrivilege, CurrentUser } from '@common/decorators';
+import { AuthorizationActorPrivilege, CurrentActor } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { IRoom } from '@domain/communication/room/room.interface';
@@ -12,8 +12,9 @@ import { IUser } from '@domain/community/user/user.interface';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
-import { AgentType } from '@common/enums/agent.type';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorType } from '@common/enums/actor.type';
+import { ActorContext } from '@core/actor-context';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 
 @Resolver(() => IConversation)
 export class ConversationResolverFields {
@@ -21,10 +22,11 @@ export class ConversationResolverFields {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private readonly conversationService: ConversationService,
-    private readonly virtualContributorLookupService: VirtualContributorLookupService
+    private readonly virtualContributorLookupService: VirtualContributorLookupService,
+    private readonly actorLookupService: ActorLookupService
   ) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('room', () => IRoom, {
     nullable: true,
@@ -36,12 +38,12 @@ export class ConversationResolverFields {
     return await this.conversationService.getRoom(conversation.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('type', () => CommunicationConversationType, {
     nullable: false,
     description:
-      'The type of this Conversation (USER_USER or USER_VC), inferred from member agent types.',
+      'The type of this Conversation (USER_USER or USER_VC), inferred from member actor types.',
   })
   async type(
     @Parent() conversation: IConversation
@@ -51,7 +53,7 @@ export class ConversationResolverFields {
     );
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('user', () => IUser, {
     nullable: true,
@@ -60,20 +62,20 @@ export class ConversationResolverFields {
   })
   async user(
     @Parent() conversation: IConversation,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ): Promise<IUser | null> {
     return await this.conversationService.getUserFromConversation(
       conversation.id,
-      agentInfo.agentID
+      actorContext.actorId
     );
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('virtualContributor', () => IVirtualContributor, {
     nullable: true,
     description:
-      'The virtual contributor participating in this Conversation (only for USER_AGENT conversations).',
+      'The virtual contributor participating in this Conversation (only for USER_VC conversations).',
   })
   async virtualContributor(
     @Parent() conversation: IConversation
@@ -82,17 +84,21 @@ export class ConversationResolverFields {
       conversation.id
     );
 
-    // Find the virtual contributor agent among members
-    const vcMembership = memberships.find(
-      m => m.agent?.type === AgentType.VIRTUAL_CONTRIBUTOR
-    );
+    // Get actor types using cached lookup
+    const actorIds = memberships.map(m => m.actorId);
+    const typeMap =
+      await this.actorLookupService.validateActorsAndGetTypes(actorIds);
 
-    if (!vcMembership?.agentId) {
+    // Find the virtual contributor actor among members
+    const vcActorId = actorIds.find(id => typeMap.get(id) === ActorType.VIRTUAL);
+
+    if (!vcActorId) {
       return null;
     }
 
-    return await this.virtualContributorLookupService.getVirtualContributorByAgentId(
-      vcMembership.agentId
+    // VirtualContributor IS an Actor - actorId = virtualContributorId
+    return await this.virtualContributorLookupService.getVirtualContributorById(
+      vcActorId
     );
   }
 }

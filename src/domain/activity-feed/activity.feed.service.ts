@@ -8,7 +8,7 @@ import { CollaborationService } from '@domain/collaboration/collaboration/collab
 import { ActivityFeed } from '@domain/activity-feed/activity.feed.interface';
 import { ActivityEventType } from '@common/enums/activity.event.type';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { PaginationArgs } from '@core/pagination';
 import { IActivityLogEntry } from '@services/api/activity-log/dto/activity.log.entry.interface';
@@ -46,7 +46,7 @@ export class ActivityFeedService {
   ) {}
 
   public async getActivityFeed(
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     filters?: ActivityFeedFilters
   ): Promise<ActivityFeed> {
     const {
@@ -58,18 +58,18 @@ export class ActivityFeedService {
     } = filters ?? {};
     // get all Spaces the user has credentials for
     const spaceIds = await this.getQualifyingSpaces(
-      agentInfo,
+      actorContext,
       qualifyingSpacesOptions
     );
     // get the collaborations with read access based on the filtered Spaces
     const collaborationIds = await this.getAllAuthorizedCollaborations(
-      agentInfo,
+      actorContext,
       spaceIds
     );
 
     return this.getPaginatedActivity(collaborationIds, {
       types,
-      userID: myActivity ? agentInfo.userID : undefined,
+      userID: myActivity ? actorContext.actorId : undefined,
       visibility: true,
       paginationArgs,
       sort: 'DESC', // the most recent first
@@ -78,7 +78,7 @@ export class ActivityFeedService {
   }
 
   public async getGroupedActivityFeed(
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     filters?: ActivityFeedGroupedFilters
   ): Promise<IActivityLogEntry[]> {
     const {
@@ -89,18 +89,18 @@ export class ActivityFeedService {
     } = filters ?? {};
     // get all Spaces the user has credentials for
     const spaceIds = await this.getQualifyingSpaces(
-      agentInfo,
+      actorContext,
       qualifyingSpacesOptions
     );
     // get the collaborations with read access based on the filtered Spaces
     const collaborationIds = await this.getAllAuthorizedCollaborations(
-      agentInfo,
+      actorContext,
       spaceIds
     );
 
     return this.getGroupedActivity(collaborationIds, {
       types,
-      userID: myActivity ? agentInfo.userID : undefined,
+      userID: myActivity ? actorContext.actorId : undefined,
       visibility: true,
       limit: limit ? limit : undefined,
       sort: 'DESC', // the most recent first
@@ -108,12 +108,12 @@ export class ActivityFeedService {
   }
 
   private async getQualifyingSpaces(
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     options?: Pick<ActivityFeedFilters, 'spaceIds' | 'roles'>
   ) {
     const { spaceIds: spaceIdsFilter, roles: rolesFilter = [] } = options ?? {};
     // get all Spaces the user has credentials for
-    const credentialMap = groupCredentialsByEntity(agentInfo.credentials);
+    const credentialMap = groupCredentialsByEntity(actorContext.credentials);
     const spacesWithCredentials = Array.from(
       credentialMap.get('spaces')?.keys() ?? []
     );
@@ -245,7 +245,7 @@ export class ActivityFeedService {
   }
 
   private async getAllAuthorizedCollaborations(
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     spaceIds: string[]
   ): Promise<string[]> {
     const readableCollaborationIds: string[] = [];
@@ -256,10 +256,10 @@ export class ActivityFeedService {
       let childCollaborations: ICollaboration[] = [];
       try {
         this.authorizationService.grantAccessOrFail(
-          agentInfo,
+          actorContext,
           collaboration.authorization,
           AuthorizationPrivilege.READ,
-          `Collaboration activity query: ${agentInfo.email}`
+          `Collaboration activity query: ${actorContext.actorId}`
         );
         readableCollaborationIds.push(collaboration.id);
       } catch {
@@ -277,7 +277,7 @@ export class ActivityFeedService {
           {
             message:
               'User is not able to read childCollaborations for collaboration',
-            userID: agentInfo.userID,
+            userID: actorContext.actorId,
             collaborationID: collaboration.id,
           },
           LogContext.ACTIVITY_FEED
@@ -289,10 +289,10 @@ export class ActivityFeedService {
         childCollaboration => {
           try {
             return this.authorizationService.grantAccessOrFail(
-              agentInfo,
+              actorContext,
               childCollaboration.authorization,
               AuthorizationPrivilege.READ,
-              `Collaboration activity query: ${agentInfo.email} `
+              `Collaboration activity query: ${actorContext.actorId} `
             );
           } catch {
             return false;

@@ -1,4 +1,4 @@
-import { IServiceMetadata } from './service.metadata.interface';
+import { IServiceMetadata } from '@platform/metadata';
 
 export class ServiceMetadata extends IServiceMetadata {
   name: string;

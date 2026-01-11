@@ -3,7 +3,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { UserService } from '@domain/community/user/user.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { AuthorizationPrivilege } from '@common/enums';
 import { LoggerService } from '@nestjs/common';
 import { AdminIdentityService } from '@src/platform-admin/core/identity/admin.identity.service';
@@ -34,7 +34,7 @@ describe('Platform-admin identity deletion flows', () => {
       deleteIdentityByEmail: jest.fn().mockResolvedValue(undefined),
     } as unknown as KratosService;
     const userService = {
-      getUserOrFail: jest.fn().mockResolvedValue({
+      getUserByIdOrFail: jest.fn().mockResolvedValue({
         id: 'user-1',
         email: 'user@example.com',
         authenticationID: 'kratos-1',
@@ -46,7 +46,7 @@ describe('Platform-admin identity deletion flows', () => {
           authenticationID: null,
         })),
     } as unknown as UserService & {
-      getUserOrFail: jest.Mock;
+      getUserByIdOrFail: jest.Mock;
       clearAuthenticationIDForUser: jest.Mock;
     };
 
@@ -58,13 +58,16 @@ describe('Platform-admin identity deletion flows', () => {
       createLogger()
     );
 
-    const agentInfo = new AgentInfo();
-    agentInfo.email = 'admin@example.com';
+    const actorContext = new ActorContext();
+    actorContext.actorId = 'admin-user-id';
 
-    const result = await resolver.adminUserAccountDelete(agentInfo, 'user-1');
+    const result = await resolver.adminUserAccountDelete(
+      actorContext,
+      'user-1'
+    );
 
     expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
-      agentInfo,
+      actorContext,
       {},
       AuthorizationPrivilege.PLATFORM_ADMIN,
       expect.any(String)

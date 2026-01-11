@@ -1,7 +1,7 @@
 import { MimeFileType } from '@common/enums/mime.file.type';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
-import { Document } from '../document/document.entity';
+import { Document } from '@domain/storage/document';
 import { IStorageBucket } from './storage.bucket.interface';
 import { StorageAggregator } from '../storage-aggregator/storage.aggregator.entity';
 

@@ -1,7 +1,7 @@
 import { ActivityEventType } from '@common/enums/activity.event.type';
 import { IBaseAlkemio } from '@domain/common/entity/base-entity';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { UUID } from '../../domain/common/scalars/scalar.uuid';
+import { UUID } from '@domain/common/scalars';
 
 @ObjectType('Activity')
 export abstract class IActivity extends IBaseAlkemio {

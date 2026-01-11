@@ -22,7 +22,7 @@ import { InvitationAuthorizationService } from '@domain/access/invitation/invita
 import { IRoleSet } from './role.set.interface';
 import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 
 @Injectable()
 export class RoleSetAuthorizationService {

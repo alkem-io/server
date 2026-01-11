@@ -1,5 +1,5 @@
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import { IAuthorizationPolicyRuleCredential } from './authorization.policy.rule.credential.interface';
 
 export class AuthorizationPolicyRuleCredential

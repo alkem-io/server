@@ -4,7 +4,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IUser } from '@domain/community/user/user.interface';
 import { LogContext } from '@common/enums/logging.context';
 import { Loader } from '@core/dataloader/decorators';
-import { IProfile } from '../profile/profile.interface';
+import { IProfile } from '@domain/common/profile';
 import { IMemo } from './memo.interface';
 import {
   ProfileLoaderCreator,

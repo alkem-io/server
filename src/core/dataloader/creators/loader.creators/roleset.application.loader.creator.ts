@@ -1,10 +1,10 @@
 import { EntityManager } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { createTypedSimpleDataLoader } from '../../utils/createTypedSimpleLoader';
+import { createTypedSimpleDataLoader } from '@core/dataloader/utils';
 import { DataLoaderCreator } from '../base/data.loader.creator';
 import { Application, IApplication } from '@domain/access/application';
-import { DataLoaderCreatorOptions } from '../base/data.loader.creator.options';
+import { DataLoaderCreatorOptions } from '@core/dataloader/creators';
 
 @Injectable()
 export class RoleSetApplicationLoaderCreator

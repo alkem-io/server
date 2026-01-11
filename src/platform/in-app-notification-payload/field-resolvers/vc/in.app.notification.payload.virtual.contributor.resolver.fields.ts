@@ -1,9 +1,9 @@
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { InAppNotificationPayloadVirtualContributor } from '../../dto/virtual-contributor/notification.in.app.payload.virtual.contributor';
+import { InAppNotificationPayloadVirtualContributor } from '@platform/in-app-notification-payload/dto/virtual-contributor';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { Loader } from '@core/dataloader/decorators';
 import {
-  ContributorLoaderCreator,
+  ActorLoaderCreator,
   SpaceLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
@@ -16,7 +16,7 @@ export class InAppNotificationPayloadVirtualContributorFieldsResolver {
   })
   async contributor(
     @Parent() payload: InAppNotificationPayloadVirtualContributor,
-    @Loader(ContributorLoaderCreator)
+    @Loader(ActorLoaderCreator)
     loader: ILoader<IVirtualContributor>
   ): Promise<IVirtualContributor> {
     return loader.load(payload.virtualContributorID);

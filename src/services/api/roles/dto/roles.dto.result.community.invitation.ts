@@ -1,7 +1,7 @@
 import { UUID } from '@domain/common/scalars';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { SpaceLevel } from '@common/enums/space.level';
-import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
+import { ActorType } from '@common/enums/actor.type';
 
 @ObjectType()
 export class CommunityInvitationForRoleResult {
@@ -11,15 +11,14 @@ export class CommunityInvitationForRoleResult {
   id: string;
 
   @Field(() => UUID, {
-    description: 'ID for Contrbutor that is being invited to a community',
+    description: 'ID for the Actor being invited to a community',
   })
-  contributorID!: string;
+  actorId!: string;
 
-  @Field(() => RoleSetContributorType, {
-    description:
-      'The Type of the Contrbutor that is being invited to a community',
+  @Field(() => ActorType, {
+    description: 'The Type of the Actor being invited to a community',
   })
-  contributorType!: string;
+  actorType!: ActorType;
 
   @Field(() => UUID, {
     description: 'ID for the community',

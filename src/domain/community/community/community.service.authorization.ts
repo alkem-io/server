@@ -29,7 +29,7 @@ import { RoleSetType } from '@common/enums/role.set.type';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { RoleName } from '@common/enums/role.name';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';

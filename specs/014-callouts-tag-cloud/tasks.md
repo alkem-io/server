@@ -221,12 +221,12 @@ public async getAllTags(
 async tags(
   @Parent() calloutsSet: ICalloutsSet,
   @Args() args: CalloutsSetArgsTags,
-  @CurrentUser() agentInfo: AgentInfo
+  @CurrentUser() actorContext: AgentInfo
 ): Promise<string[]> {
   return this.calloutsSetService.getAllTags(
     calloutsSet.id,
     args.classificationTagsets,
-    agentInfo
+    actorContext
   );
 }
 ```
@@ -368,7 +368,7 @@ private filterCalloutsByClassificationTagsets(
 // In getAllTags() method:
 let availableCallouts = this.filterCalloutsByAuthorization(
   calloutsSetLoaded.callouts,
-  agentInfo
+  actorContext
 );
 
 if (classificationTagsets && classificationTagsets.length > 0) {
@@ -500,7 +500,7 @@ const calloutsSetLoaded = await this.getCalloutsSetOrFail(calloutsSet.id, {
 // In getCalloutsFromCollaboration() method:
 let availableCallouts = this.filterCalloutsByAuthorization(
   calloutsSetLoaded.callouts,
-  agentInfo
+  actorContext
 );
 
 // Apply contribution type filter...

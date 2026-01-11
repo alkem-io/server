@@ -15,13 +15,13 @@ import {
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { IAuthorizationPolicy } from './authorization.policy.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { CredentialsSearchInput } from '@domain/agent/credential/dto/credentials.dto.search';
-import { IAuthorizationPolicyRuleCredential } from '../../../core/authorization/authorization.policy.rule.credential.interface';
+import { CredentialsSearchInput } from '@domain/actor/credential/dto/credentials.dto.search';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { IAuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege.interface';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { ConfigService } from '@nestjs/config';
 import { AlkemioConfig } from '@src/types';
@@ -263,7 +263,7 @@ export class AuthorizationPolicyService {
     const newRule = this.createCredentialRuleUsingTypesOnly(
       [privilege],
       [AuthorizationCredential.GLOBAL_REGISTERED],
-      `Anonymous agent granted '${privilege}' registered access`
+      `Anonymous actor granted '${privilege}' registered access`
     );
     newRule.cascade = cascade;
     auth.credentialRules.push(newRule);
@@ -280,7 +280,7 @@ export class AuthorizationPolicyService {
     const newRule = this.createCredentialRuleUsingTypesOnly(
       [privilege],
       [AuthorizationCredential.GLOBAL_ANONYMOUS],
-      `Anonymous agent granted '${privilege}' anonymous access`
+      `Anonymous actor granted '${privilege}' anonymous access`
     );
     newRule.cascade = cascade;
     auth.credentialRules.push(newRule);
@@ -310,7 +310,7 @@ export class AuthorizationPolicyService {
         AuthorizationCredential.GLOBAL_ANONYMOUS,
         AuthorizationCredential.GLOBAL_REGISTERED,
       ],
-      `Anonymous agent granted '${privilege}' anonymous registered access`
+      `Anonymous actor granted '${privilege}' anonymous registered access`
     );
     newRule.cascade = cascade;
     auth.credentialRules.push(newRule);
@@ -409,14 +409,14 @@ export class AuthorizationPolicyService {
     return authorization.privilegeRules ?? [];
   }
 
-  getAgentPrivileges(
-    agentInfo: AgentInfo,
+  getActorPrivileges(
+    actorContext: ActorContext,
     authorizationPolicy: IAuthorizationPolicy
   ): AuthorizationPrivilege[] {
-    if (!agentInfo || !agentInfo.credentials) return [];
+    if (!actorContext || !actorContext.credentials) return [];
 
     return this.authorizationService.getGrantedPrivileges(
-      agentInfo.credentials,
+      actorContext.credentials,
       authorizationPolicy
     );
   }

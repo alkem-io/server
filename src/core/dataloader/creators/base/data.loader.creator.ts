@@ -3,7 +3,7 @@ import {
   ForbiddenAuthorizationPolicyException,
 } from '@common/exceptions';
 import { ILoader } from '../../loader.interface';
-import { DataLoaderCreatorOptions } from './data.loader.creator.options';
+import { DataLoaderCreatorOptions } from '@core/dataloader/creators';
 
 export interface DataLoaderCreator<TReturn> {
   create(

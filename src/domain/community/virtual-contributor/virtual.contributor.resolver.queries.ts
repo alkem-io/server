@@ -1,10 +1,10 @@
 import { UUID } from '@domain/common/scalars';
 import { Args, Query, Resolver } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { IVirtualContributor } from './virtual.contributor.interface';
 import { VirtualContributorService } from './virtual.contributor.service';
-import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorQueryArgs } from '@domain/actor/actor/dto';
+import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
@@ -25,14 +25,14 @@ export class VirtualContributorResolverQueries {
       'The VirtualContributors on this platform; only accessible to platform admins',
   })
   async virtualContributors(
-    @Args({ nullable: true }) args: ContributorQueryArgs,
-    @CurrentUser() agentInfo: AgentInfo
+    @Args({ nullable: true }) args: ActorQueryArgs,
+    @CurrentActor() actorContext: ActorContext
   ): Promise<IVirtualContributor[]> {
     const platformPolicy =
       await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
 
     const hasAccess = this.authorizationService.isAccessGranted(
-      agentInfo,
+      actorContext,
       platformPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN
     );
@@ -50,6 +50,8 @@ export class VirtualContributorResolverQueries {
   async virtualContributor(
     @Args('ID', { type: () => UUID, nullable: false }) id: string
   ): Promise<IVirtualContributor> {
-    return await this.virtualContributorService.getVirtualContributorOrFail(id);
+    return await this.virtualContributorService.getVirtualContributorByIdOrFail(
+      id
+    );
   }
 }

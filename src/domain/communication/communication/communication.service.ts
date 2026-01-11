@@ -12,7 +12,6 @@ import {
 } from '@domain/communication/communication';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
-import { IUser } from '@domain/community/user/user.interface';
 import { RoomService } from '../room/room.service';
 import { IRoom } from '../room/room.interface';
 import { RoomType } from '@common/enums/room.type';
@@ -131,14 +130,19 @@ export class CommunicationService {
 
   async removeUserFromCommunications(
     communication: ICommunication,
-    user: IUser
+    userId: string
   ): Promise<boolean> {
-    if (!user.agent?.id) {
-      // no agent ID to manage, just return
-      return true;
-    }
     const roomIds = this.getRoomIds(communication);
-    await this.communicationAdapter.batchRemoveMember(user.agent.id, roomIds);
+    await this.communicationAdapter.batchRemoveMember(userId, roomIds);
+    return true;
+  }
+
+  async removeContributorFromCommunications(
+    communication: ICommunication,
+    actorId: string
+  ): Promise<boolean> {
+    const roomIds = this.getRoomIds(communication);
+    await this.communicationAdapter.batchRemoveMember(actorId, roomIds);
     return true;
   }
 }

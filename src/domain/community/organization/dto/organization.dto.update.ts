@@ -1,9 +1,10 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { IsEmail, IsOptional, MaxLength } from 'class-validator';
 import { SMALL_TEXT_LENGTH } from '@src/common/constants';
-import { UpdateContributorInput } from '@domain/community/contributor/dto/contributor.dto.update';
+import { UpdateNameableInput } from '@domain/common/entity/nameable-entity/dto/nameable.dto.update';
+
 @InputType()
-export class UpdateOrganizationInput extends UpdateContributorInput {
+export class UpdateOrganizationInput extends UpdateNameableInput {
   @Field(() => String, { nullable: true })
   @IsOptional()
   @MaxLength(SMALL_TEXT_LENGTH)

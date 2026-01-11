@@ -7,7 +7,7 @@ import { InAppNotificationPayloadSpace } from '@platform/in-app-notification-pay
 import { InAppNotificationPayloadOrganizationMessageDirect } from '@platform/in-app-notification-payload/dto/organization/notification.in.app.payload.organization.message.direct';
 import { InAppNotificationPayloadOrganizationMessageRoom } from '@platform/in-app-notification-payload/dto/organization/notification.in.app.payload.organization.message.room';
 import { InAppNotificationPayloadSpaceCommunityApplication } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.application';
-import { InAppNotificationPayloadSpaceCommunityContributor } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.contributor';
+import { InAppNotificationPayloadSpaceCommunityActor } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.actor';
 import { InAppNotificationPayloadSpaceCommunityInvitation } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.invitation';
 import { InAppNotificationPayloadSpaceCommunicationMessageDirect } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.communication.message.direct';
 import { InAppNotificationPayloadSpaceCollaborationCallout } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout';
@@ -21,9 +21,9 @@ import { InAppNotificationPayloadPlatformUserProfileRemoved } from '@platform/in
 import { InAppNotificationPayloadPlatformGlobalRoleChange } from '@platform/in-app-notification-payload/dto/platform/notification.in.app.payload.platform.global.role.change';
 import { InAppNotificationPayloadSpaceCollaborationCalloutPostComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout.post.comment';
 import { InAppNotificationPayloadVirtualContributor } from '@platform/in-app-notification-payload/dto/virtual-contributor/notification.in.app.payload.virtual.contributor';
-import { InAppNotificationPayloadSpaceCollaborationCalloutComment } from './dto/space/notification.in.app.payload.space.collaboration.callout.comment';
-import { InAppNotificationPayloadSpaceCommunityCalendarEvent } from './dto/space/notification.in.app.payload.space.community.calendar.event';
-import { InAppNotificationPayloadSpaceCommunityCalendarEventComment } from './dto/space/notification.in.app.payload.space.community.calendar.event.comment';
+import { InAppNotificationPayloadSpaceCollaborationCalloutComment } from '@platform/in-app-notification-payload/dto/space';
+import { InAppNotificationPayloadSpaceCommunityCalendarEvent } from '@platform/in-app-notification-payload/dto/space';
+import { InAppNotificationPayloadSpaceCommunityCalendarEventComment } from '@platform/in-app-notification-payload/dto/space';
 
 @InterfaceType('InAppNotificationPayload', {
   isAbstract: true,
@@ -49,8 +49,8 @@ import { InAppNotificationPayloadSpaceCommunityCalendarEventComment } from './dt
         return InAppNotificationPayloadSpace;
       case NotificationEventPayload.SPACE_COMMUNITY_APPLICATION:
         return InAppNotificationPayloadSpaceCommunityApplication;
-      case NotificationEventPayload.SPACE_COMMUNITY_CONTRIBUTOR:
-        return InAppNotificationPayloadSpaceCommunityContributor;
+      case NotificationEventPayload.SPACE_COMMUNITY_ACTOR:
+        return InAppNotificationPayloadSpaceCommunityActor;
       case NotificationEventPayload.SPACE_COMMUNITY_INVITATION:
         return InAppNotificationPayloadSpaceCommunityInvitation;
       case NotificationEventPayload.SPACE_COMMUNITY_INVITATION_USER_PLATFORM:

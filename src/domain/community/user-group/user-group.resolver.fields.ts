@@ -1,7 +1,7 @@
 import { Resolver } from '@nestjs/graphql';
 import { Parent, ResolveField } from '@nestjs/graphql';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
-import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
+import { AuthorizationActorPrivilege, Profiling } from '@src/common/decorators';
 import { IUser } from '@domain/community/user/user.interface';
 import { UserGroup, IUserGroup } from '@domain/community/user-group';
 import { IGroupable } from '@domain/common/interfaces/groupable.interface';
@@ -13,7 +13,7 @@ import { GraphqlGuard } from '@core/authorization';
 export class UserGroupResolverFields {
   constructor(private userGroupService: UserGroupService) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('parent', () => IGroupable, {
     nullable: true,
@@ -24,7 +24,7 @@ export class UserGroupResolverFields {
     return await this.userGroupService.getParent(userGroup);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('members', () => [IUser], {
     nullable: true,

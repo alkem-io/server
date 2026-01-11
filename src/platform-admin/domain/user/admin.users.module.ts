@@ -4,7 +4,6 @@ import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platf
 import { KratosModule } from '@services/infrastructure/kratos/kratos.module';
 import { UserModule } from '@domain/community/user/user.module';
 import { AdminUsersMutations } from './admin.users.resolver.mutations';
-import { AdminAuthenticationIDBackfillModule } from './authentication-id-backfill/authentication-id-backfill.module';
 
 @Module({
   imports: [
@@ -12,7 +11,6 @@ import { AdminAuthenticationIDBackfillModule } from './authentication-id-backfil
     PlatformAuthorizationPolicyModule,
     KratosModule,
     UserModule,
-    AdminAuthenticationIDBackfillModule,
   ],
   providers: [AdminUsersMutations],
   exports: [],

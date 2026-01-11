@@ -20,7 +20,7 @@ import { ISpace } from '@domain/space/space/space.interface';
 import { InAppNotificationPayloadSpaceCommunityInvitation } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.invitation';
 import { NotificationInputCommunityInvitation } from './dto/space/notification.dto.input.space.community.invitation';
 import { NotificationInputCommunityNewMember } from './dto/space/notification.dto.input.space.community.new.member';
-import { InAppNotificationPayloadSpaceCommunityContributor } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.contributor';
+import { InAppNotificationPayloadSpaceCommunityActor } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.actor';
 import { InAppNotificationPayloadSpace } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space';
 import { NotificationInputUserSpaceCommunityApplicationDeclined } from './dto/user/notification.dto.input.user.space.community.application.declined';
 import { MessageDetailsService } from '@domain/communication/message.details/message.details.service';
@@ -56,7 +56,10 @@ export class NotificationUserAdapter {
         eventData.userID
       );
 
-    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
+    void this.notificationExternalAdapter.sendExternalNotifications(
+      event,
+      payload
+    );
 
     // Send in-app notifications
     const inAppReceiverIDs = recipients.inAppRecipients.map(
@@ -90,7 +93,7 @@ export class NotificationUserAdapter {
     const recipients = await this.getNotificationRecipientsUser(
       event,
       eventData,
-      eventData.invitedContributorID
+      eventData.invitedActorId
     );
 
     const payload =
@@ -98,12 +101,15 @@ export class NotificationUserAdapter {
         event,
         eventData.triggeredBy,
         recipients.emailRecipients,
-        eventData.invitedContributorID,
+        eventData.invitedActorId,
         space,
         eventData.welcomeMessage
       );
 
-    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
+    void this.notificationExternalAdapter.sendExternalNotifications(
+      event,
+      payload
+    );
 
     // Send in-app notifications
     const inAppReceiverIDs = recipients.inAppRecipients.map(
@@ -136,7 +142,7 @@ export class NotificationUserAdapter {
     const recipients = await this.getNotificationRecipientsUser(
       event,
       eventData,
-      eventData.contributorID
+      eventData.actorId
     );
 
     const payload =
@@ -145,20 +151,23 @@ export class NotificationUserAdapter {
         eventData.triggeredBy,
         recipients.emailRecipients,
         space,
-        eventData.contributorID
+        eventData.actorId
       );
-    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
+    void this.notificationExternalAdapter.sendExternalNotifications(
+      event,
+      payload
+    );
 
     // Send in-app notifications
     const inAppReceiverIDs = recipients.inAppRecipients.map(
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length > 0) {
-      const inAppPayload: InAppNotificationPayloadSpaceCommunityContributor = {
-        type: NotificationEventPayload.SPACE_COMMUNITY_CONTRIBUTOR,
+      const inAppPayload: InAppNotificationPayloadSpaceCommunityActor = {
+        type: NotificationEventPayload.SPACE_COMMUNITY_ACTOR,
         spaceID: space.id,
-        contributorID: eventData.contributorID,
-        contributorType: eventData.contributorType,
+        actorId: eventData.actorId,
+        actorType: eventData.actorType,
       };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
@@ -201,7 +210,7 @@ export class NotificationUserAdapter {
           messageDetails
         );
 
-      this.notificationExternalAdapter.sendExternalNotifications(
+      void this.notificationExternalAdapter.sendExternalNotifications(
         event,
         payload
       );
@@ -246,7 +255,7 @@ export class NotificationUserAdapter {
           eventData.receiverID,
           eventData.message
         );
-      this.notificationExternalAdapter.sendExternalNotifications(
+      void this.notificationExternalAdapter.sendExternalNotifications(
         event,
         payload
       );
@@ -302,7 +311,7 @@ export class NotificationUserAdapter {
             messageDetails
           );
 
-        this.notificationExternalAdapter.sendExternalNotifications(
+        void this.notificationExternalAdapter.sendExternalNotifications(
           event,
           payload
         );
@@ -362,7 +371,7 @@ export class NotificationUserAdapter {
           space
         );
 
-      this.notificationExternalAdapter.sendExternalNotifications(
+      void this.notificationExternalAdapter.sendExternalNotifications(
         event,
         payload
       );

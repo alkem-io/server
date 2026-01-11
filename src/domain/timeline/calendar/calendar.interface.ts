@@ -1,6 +1,6 @@
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { ObjectType } from '@nestjs/graphql';
-import { ICalendarEvent } from '../event/event.interface';
+import { ICalendarEvent } from '@domain/timeline/event';
 
 @ObjectType('Calendar')
 export abstract class ICalendar extends IAuthorizable {

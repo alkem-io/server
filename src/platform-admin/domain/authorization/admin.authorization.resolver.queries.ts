@@ -1,11 +1,11 @@
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { IUser } from '@domain/community/user/user.interface';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { AdminAuthorizationService } from './admin.authorization.service';
-import { UsersWithAuthorizationCredentialInput } from './dto/authorization.dto.users.with.credential';
+import { UsersWithAuthorizationCredentialInput } from '@src/platform-admin/domain/authorization/dto';
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { InstrumentResolver } from '@src/apm/decorators';
 
@@ -26,13 +26,13 @@ export class AdminAuthorizationResolverQueries {
   async usersWithAuthorizationCredential(
     @Args('credentialsCriteriaData', { nullable: false })
     credentialsCriteriaData: UsersWithAuthorizationCredentialInput,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ): Promise<IUser[]> {
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
-      `authorization query: ${agentInfo.email}`
+      `authorization query: ${actorContext.actorId}`
     );
     return await this.adminAuthorizationService.usersWithCredentials(
       credentialsCriteriaData

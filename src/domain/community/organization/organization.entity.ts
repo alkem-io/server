@@ -1,6 +1,6 @@
 import {
   Column,
-  Entity,
+  ChildEntity,
   Generated,
   JoinColumn,
   OneToMany,
@@ -10,17 +10,28 @@ import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { IOrganization } from './organization.interface';
 import { OrganizationVerification } from '../organization-verification/organization.verification.entity';
-import { ContributorBase } from '../contributor/contributor.base.entity';
+import { Actor } from '@domain/actor/actor/actor.entity';
+import { Profile } from '@domain/common/profile/profile.entity';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
-
+import { NAMEID_MAX_LENGTH_SCHEMA } from '@common/constants';
 import { IOrganizationSettings } from '../organization-settings/organization.settings.interface';
 import { RoleSet } from '@domain/access/role-set/role.set.entity';
+import { ActorType } from '@common/enums/actor.type';
 
-@Entity()
-export class Organization
-  extends ContributorBase
-  implements IOrganization, IGroupable
-{
+@ChildEntity(ActorType.ORGANIZATION)
+export class Organization extends Actor implements IOrganization, IGroupable {
+  // Override Actor.profile to be non-optional (required for IOrganization)
+  declare profile: Profile;
+
+  @Column('varchar', {
+    length: NAMEID_MAX_LENGTH_SCHEMA,
+    nullable: false,
+    unique: true,
+  })
+  nameID!: string;
+
+  // Organization extends Actor - credentials are on Actor.credentials
+
   @Column('uuid', { nullable: false })
   accountID!: string;
 

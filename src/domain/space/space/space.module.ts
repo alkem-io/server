@@ -12,7 +12,7 @@ import { SpaceFilterModule } from '@services/infrastructure/space-filter/space.f
 import { SpaceResolverSubscriptions } from './space.resolver.subscriptions';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
-import { AgentModule } from '@domain/agent/agent/agent.module';
+import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { CommunityModule } from '@domain/community/community/community.module';
@@ -40,7 +40,7 @@ import { SpacePlatformRolesAccessService } from './space.service.platform.roles.
 @Module({
   imports: [
     AccountLookupModule,
-    AgentModule,
+    UserLookupModule,
     AuthorizationPolicyModule,
     AuthorizationModule,
     SpaceAboutModule,

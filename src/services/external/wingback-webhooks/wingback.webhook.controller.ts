@@ -29,7 +29,7 @@ export class WingbackWebhookController {
       `Wingback "v1.contract.change.completed" event received for contract: "${payload.id}"`,
       LogContext.WINGBACK_HOOKS
     );
-    this.handlers.contractChanged(payload);
+    void this.handlers.contractChanged(payload);
   }
   // v1.contract.signature.completed
   @Post('contract/signed')
@@ -39,6 +39,6 @@ export class WingbackWebhookController {
       `Wingback "v1.contract.signature.completed" event received for contract: "${payload.id}"`,
       LogContext.WINGBACK_HOOKS
     );
-    this.handlers.newContract(payload);
+    void this.handlers.newContract(payload);
   }
 }

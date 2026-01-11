@@ -10,9 +10,9 @@ import { IAccount } from './account.interface';
 import { ILicense } from '@domain/common/license/license.interface';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
-import { IAccountLicensePlan } from '../account.license.plan/account.license.plan.interface';
+import { IAccountLicensePlan } from '@domain/space/account.license.plan';
 import { LogContext } from '@common/enums';
-import { AgentService } from '@domain/agent/agent/agent.service';
+import { ActorService } from '@domain/actor/actor/actor.service';
 
 describe('AccountLicenseService', () => {
   let service: AccountLicenseService;
@@ -36,7 +36,7 @@ describe('AccountLicenseService', () => {
         AccountLicenseService,
         { provide: LicenseService, useValue: mockLicenseService },
         { provide: AccountService, useValue: {} },
-        { provide: AgentService, useValue: {} },
+        { provide: ActorService, useValue: {} },
         { provide: SpaceLicenseService, useValue: {} },
         { provide: LicensingCredentialBasedService, useValue: {} },
         { provide: LicensingWingbackSubscriptionService, useValue: {} },
@@ -388,8 +388,9 @@ describe('AccountLicenseService', () => {
   describe('addEntitlementsFromCredentials', () => {
     let mockCredentialBasedService: any;
     let mockWingbackService: any;
-    let mockAgent: any;
+    let mockCredentials: any[];
     let mockLicense: ILicense;
+    const mockAccountId = 'test-account-id';
 
     beforeEach(() => {
       mockCredentialBasedService = {
@@ -403,10 +404,7 @@ describe('AccountLicenseService', () => {
       service['licensingCredentialBasedService'] = mockCredentialBasedService;
       service['licensingWingbackSubscriptionService'] = mockWingbackService;
 
-      mockAgent = {
-        id: 'test-agent',
-        credentials: [],
-      };
+      mockCredentials = [];
 
       mockLicense = {
         id: 'test-license',
@@ -433,7 +431,11 @@ describe('AccountLicenseService', () => {
     it('should fail when license is undefined', async () => {
       // Act & Assert
       await expect(
-        (service as any).addEntitlementsFromCredentials(undefined, mockAgent)
+        (service as any).addEntitlementsFromCredentials(
+          undefined,
+          mockAccountId,
+          mockCredentials
+        )
       ).rejects.toThrow('License with entitlements not found');
     });
 
@@ -449,7 +451,8 @@ describe('AccountLicenseService', () => {
       await expect(
         (service as any).addEntitlementsFromCredentials(
           licenseWithoutEntitlements,
-          mockAgent
+          mockAccountId,
+          mockCredentials
         )
       ).rejects.toThrow('License with entitlements not found');
     });
@@ -481,7 +484,8 @@ describe('AccountLicenseService', () => {
       // Act
       const result = await (service as any).addEntitlementsFromCredentials(
         mockLicense,
-        mockAgent
+        mockAccountId,
+        mockCredentials
       );
 
       // Assert
@@ -492,13 +496,13 @@ describe('AccountLicenseService', () => {
         mockCredentialBasedService.getEntitlementIfGranted
       ).toHaveBeenCalledWith(
         LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
-        mockAgent
+        mockCredentials
       );
       expect(
         mockCredentialBasedService.getEntitlementIfGranted
       ).toHaveBeenCalledWith(
         LicenseEntitlementType.ACCOUNT_INNOVATION_HUB,
-        mockAgent
+        mockCredentials
       );
 
       const virtualContributorEntitlement = result.entitlements!.find(

@@ -558,7 +558,7 @@ userID!: string;  // Changed from userIDs: string[]
    @ResolveField(() => [IConversation])
    async conversations(
      @Parent() user: IUser,
-     @CurrentUser() agentInfo: AgentInfo
+     @CurrentUser() actorContext: AgentInfo
    ): Promise<IConversation[]> {
      const conversationsSet =
        await this.userService.getConversationsSet(user.id);
@@ -583,7 +583,7 @@ userID!: string;  // Changed from userIDs: string[]
    @ResolveField(() => IConversationsSet, { nullable: true })
    async conversationsSet(
      @Parent() user: IUser,
-     @CurrentUser() agentInfo: AgentInfo
+     @CurrentUser() actorContext: AgentInfo
    ): Promise<IConversationsSet | null> {
      // Authorization check
      return await this.userService.getConversationsSet(user.id);

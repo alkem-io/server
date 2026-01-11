@@ -60,8 +60,12 @@ const rabbitMqImport = RabbitMQModule.forRootAsync({
   },
 });
 
-const moduleImports = isSchemaBootstrap ? [CommunicationRpcStubModule] : [rabbitMqImport];
-const moduleExports = isSchemaBootstrap ? [CommunicationRpcStubModule] : [RabbitMQModule];
+const moduleImports = isSchemaBootstrap
+  ? [CommunicationRpcStubModule]
+  : [rabbitMqImport];
+const moduleExports = isSchemaBootstrap
+  ? [CommunicationRpcStubModule]
+  : [RabbitMQModule];
 
 @Global()
 @Module({

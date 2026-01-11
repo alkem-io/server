@@ -11,7 +11,7 @@ import {
   DataLoaderNotProvided,
 } from '@common/exceptions/data-loader';
 import { DATA_LOADER_CTX_INJECT_TOKEN } from '../data.loader.inject.token';
-import { DataLoaderCreator } from '../creators/base/data.loader.creator';
+import { DataLoaderCreator } from '@core/dataloader/creators/base';
 import { DataLoaderContextEntry } from './data.loader.context.entry';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums';

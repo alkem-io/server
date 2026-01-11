@@ -3,7 +3,7 @@ export * from './space/in.app.notification.payload.space.resolver.fields';
 export * from './space/in.app.notification.payload.space.collaboration.callout.resolver.fields';
 export * from './space/in.app.notification.payload.space.collaboration.callout.post.comment.resolver.fields';
 export * from './space/in.app.notification.payload.space.collaboration.callout.comment.resolver.fields';
-export * from './space/in.app.notification.payload.space.community.contributor.resolver.fields';
+export * from './space/in.app.notification.payload.space.community.actor.resolver.fields';
 export * from './space/in.app.notification.payload.space.community.application.resolver.fields';
 export * from './space/in.app.notification.payload.space.community.invitation.resolver.fields';
 export * from './space/in.app.notification.payload.space.community.invitation.platform.resolver.fields';

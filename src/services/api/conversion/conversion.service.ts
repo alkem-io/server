@@ -51,7 +51,6 @@ export class ConversionService {
       conversionData.spaceL1ID,
       {
         relations: {
-          agent: true,
           community: {
             roleSet: true,
           },
@@ -73,8 +72,7 @@ export class ConversionService {
       !spaceL1.collaboration.innovationFlow ||
       !spaceL1.collaboration.innovationFlow.states ||
       !spaceL1.storageAggregator ||
-      !spaceL1.subspaces ||
-      !spaceL1.agent
+      !spaceL1.subspaces
     ) {
       throw new EntityNotInitializedException(
         `Unable to locate all entities on on space L1: ${spaceL1.id}`,
@@ -83,7 +81,6 @@ export class ConversionService {
     }
     const subspacesL1 = spaceL1.subspaces;
     const roleSetL1 = spaceL1.community.roleSet;
-    const agentL1 = spaceL1.agent;
     const storageAggregatorL1 = spaceL1.storageAggregator;
 
     const spaceL0Orig = await this.spaceService.getSpaceOrFail(
@@ -118,7 +115,7 @@ export class ConversionService {
       RoleName.ADMIN
     );
     for (const userAdmin of userAdmins) {
-      await this.roleSetService.removeUserFromRole(
+      await this.roleSetService.removeActorFromRole(
         roleSetL1,
         RoleName.ADMIN,
         userAdmin.id,
@@ -162,16 +159,16 @@ export class ConversionService {
     spaceL1 = await this.spaceService.save(spaceL1);
 
     // Ensure that the license plans for new spaces are applied
-    spaceL1.agent = await this.accountHostService.assignLicensePlansToSpace(
-      agentL1,
+    // Space IS an Actor - assign license plans directly using spaceL1.id as actorId
+    await this.accountHostService.assignLicensePlansToSpace(
       spaceL1.id,
-      account.type
+      account.accountType
     );
     // Need to do the roleset update after
     await this.roleSetService.removeParentRoleSet(roleSetL1.id);
     // and add back in the admins
     for (const userAdmin of userAdmins) {
-      await this.roleSetService.assignUserToRole(
+      await this.roleSetService.assignActorToRole(
         roleSetL1,
         RoleName.ADMIN,
         userAdmin.id
@@ -322,7 +319,7 @@ export class ConversionService {
       RoleName.ADMIN
     );
     for (const userAdmin of userAdmins) {
-      await this.roleSetService.removeUserFromRole(
+      await this.roleSetService.removeActorFromRole(
         roleSetL2,
         RoleName.ADMIN,
         userAdmin.id,
@@ -338,7 +335,7 @@ export class ConversionService {
     );
     // and add back in the admins
     for (const userAdmin of userAdmins) {
-      await this.roleSetService.assignUserToRole(
+      await this.roleSetService.assignActorToRole(
         roleSetL2,
         RoleName.ADMIN,
         userAdmin.id
@@ -420,7 +417,7 @@ export class ConversionService {
     spaceL1 = await this.spaceService.save(spaceL1);
     // and add back in the admins
     for (const userAdmin of spaceCommunityRoles.userAdmins) {
-      await this.roleSetService.assignUserToRole(
+      await this.roleSetService.assignActorToRole(
         roleSetL1,
         RoleName.ADMIN,
         userAdmin.id
@@ -473,7 +470,7 @@ export class ConversionService {
   ) {
     const validatePolicyLimits = false;
     for (const userMember of spaceCommunityRoles.userMembers) {
-      await this.roleSetService.removeUserFromRole(
+      await this.roleSetService.removeActorFromRole(
         roleSet,
         RoleName.MEMBER,
         userMember.id,
@@ -481,7 +478,7 @@ export class ConversionService {
       );
     }
     for (const userLead of spaceCommunityRoles.userLeads) {
-      await this.roleSetService.removeUserFromRole(
+      await this.roleSetService.removeActorFromRole(
         roleSet,
         RoleName.LEAD,
         userLead.id,
@@ -489,7 +486,7 @@ export class ConversionService {
       );
     }
     for (const orgMember of spaceCommunityRoles.orgMembers) {
-      await this.roleSetService.removeOrganizationFromRole(
+      await this.roleSetService.removeActorFromRole(
         roleSet,
         RoleName.MEMBER,
         orgMember.id,
@@ -497,7 +494,7 @@ export class ConversionService {
       );
     }
     for (const orgLead of spaceCommunityRoles.orgLeads) {
-      await this.roleSetService.removeOrganizationFromRole(
+      await this.roleSetService.removeActorFromRole(
         roleSet,
         RoleName.LEAD,
         orgLead.id,
@@ -505,7 +502,7 @@ export class ConversionService {
       );
     }
     for (const vcMember of spaceCommunityRoles.vcMembers) {
-      await this.roleSetService.removeVirtualFromRole(
+      await this.roleSetService.removeActorFromRole(
         roleSet,
         RoleName.MEMBER,
         vcMember.id,

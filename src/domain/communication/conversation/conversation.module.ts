@@ -10,11 +10,11 @@ import { ConversationService } from './conversation.service';
 import { ConversationAuthorizationService } from './conversation.service.authorization';
 import { ConversationResolverFields } from './conversation.resolver.fields';
 import { VirtualContributorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
-import { AiServerAdapterModule } from '@services/adapters/ai-server-adapter/ai.server.adapter.module';
 import { ConversationResolverMutations } from './conversation.resolver.mutations';
 import { GuidanceReporterModule } from '@services/external/elasticsearch/guidance-reporter/guidance.reporter.module';
 import { PlatformWellKnownVirtualContributorsModule } from '@platform/platform.well.known.virtual.contributors';
 import { RoomLookupModule } from '../room-lookup/room.lookup.module';
+import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
 
 @Module({
   imports: [
@@ -24,10 +24,10 @@ import { RoomLookupModule } from '../room-lookup/room.lookup.module';
     RoomLookupModule,
     UserLookupModule,
     VirtualContributorLookupModule,
-    AiServerAdapterModule,
     GuidanceReporterModule,
     PlatformWellKnownVirtualContributorsModule,
     ConversationMembershipModule,
+    ActorLookupModule,
     TypeOrmModule.forFeature([Conversation]),
   ],
   providers: [

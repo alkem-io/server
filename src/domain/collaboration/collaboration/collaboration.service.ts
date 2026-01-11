@@ -11,7 +11,7 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy/authori
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { CreateTagsetTemplateInput } from '@domain/common/tagset-template';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TimelineService } from '@domain/timeline/timeline/timeline.service';
@@ -24,7 +24,7 @@ import { CreateCollaborationInput } from './dto/collaboration.dto.create';
 import { Space } from '@domain/space/space/space.entity';
 import { SpaceLevel } from '@common/enums/space.level';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { CreateInnovationFlowInput } from '../innovation-flow/dto/innovation.flow.dto.create';
+import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto';
 import { LicenseService } from '@domain/common/license/license.service';
 import { LicenseType } from '@common/enums/license.type';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
@@ -52,7 +52,7 @@ export class CollaborationService {
   async createCollaboration(
     collaborationData: CreateCollaborationInput,
     storageAggregator: IStorageAggregator,
-    agentInfo?: AgentInfo
+    actorContext?: ActorContext
   ): Promise<ICollaboration> {
     if (
       !collaborationData.calloutsSetData ||
@@ -145,7 +145,7 @@ export class CollaborationService {
           collaboration.calloutsSet,
           collaborationData.calloutsSetData.calloutsData,
           storageAggregator,
-          agentInfo?.userID
+          actorContext?.actorId
         );
     }
 

@@ -13,8 +13,8 @@ import { Space } from '@domain/space/space/space.entity';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ISpace } from '@domain/space/space/space.interface';
 import { SpaceLevel } from '@common/enums/space.level';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
+import { IActorFull } from '@domain/actor/actor/actor.interface';
+import { ActorType } from '@common/enums/actor.type';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { User } from '@domain/community/user/user.entity';
 import { Organization } from '@domain/community/organization/organization.entity';
@@ -42,7 +42,7 @@ export class UrlGeneratorService {
   FIELD_PROFILE_ID = 'profileId';
   FIELD_ID = 'id';
 
-  private endpoint_cluster: string;
+  private readonly endpoint_cluster: string;
 
   constructor(
     private configService: ConfigService<AlkemioConfig, true>,
@@ -112,7 +112,7 @@ export class UrlGeneratorService {
         );
         return this.createUrlForUserNameID(userEntityInfo.entityNameID);
       }
-      case ProfileType.VIRTUAL_CONTRIBUTOR: {
+      case ProfileType.VIRTUAL: {
         const vcEntityInfo = await this.getNameableEntityInfoForProfileOrFail(
           'virtual_contributor',
           profile.id
@@ -181,21 +181,21 @@ export class UrlGeneratorService {
     return '';
   }
 
-  public createUrlForContributor(contributor: IContributor): string {
-    const type = this.getContributorType(contributor);
+  public createUrlForActor(actor: IActorFull): string {
+    const type = this.getActorType(actor);
     let path: string = UrlPathBase.VIRTUAL_CONTRIBUTOR;
     switch (type) {
-      case RoleSetContributorType.USER:
+      case ActorType.USER:
         path = UrlPathBase.USER;
         break;
-      case RoleSetContributorType.ORGANIZATION:
+      case ActorType.ORGANIZATION:
         path = UrlPathBase.ORGANIZATION;
         break;
-      case RoleSetContributorType.VIRTUAL:
+      case ActorType.VIRTUAL:
         path = UrlPathBase.VIRTUAL_CONTRIBUTOR;
         break;
     }
-    return `${this.endpoint_cluster}/${path}/${contributor.nameID}`;
+    return `${this.endpoint_cluster}/${path}/${actor.nameID}`;
   }
 
   public createUrlForOrganizationNameID(organizationNameID: string): string {
@@ -248,14 +248,12 @@ export class UrlGeneratorService {
     return url;
   }
 
-  private getContributorType(contributor: IContributor) {
-    if (contributor instanceof User) return RoleSetContributorType.USER;
-    if (contributor instanceof Organization)
-      return RoleSetContributorType.ORGANIZATION;
-    if (contributor instanceof VirtualContributor)
-      return RoleSetContributorType.VIRTUAL;
+  private getActorType(actor: IActorFull) {
+    if (actor instanceof User) return ActorType.USER;
+    if (actor instanceof Organization) return ActorType.ORGANIZATION;
+    if (actor instanceof VirtualContributor) return ActorType.VIRTUAL;
     throw new RelationshipNotFoundException(
-      `Unable to determine contributor type for ${contributor.id}`,
+      `Unable to determine actor type for ${actor.id}`,
       LogContext.COMMUNITY
     );
   }

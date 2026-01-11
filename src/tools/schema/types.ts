@@ -2,8 +2,8 @@
 // NOTE: Scaffolding only; implementations deferred per tasks.md
 
 // Import and re-export shared types from schema-contract model
-import type { ClassificationCount } from '../../schema-contract/model/shared-types';
-import { ElementType, ChangeType } from '../../schema-contract/model/types';
+import type { ClassificationCount } from '@src/schema-contract/model';
+import { ElementType, ChangeType } from '@src/schema-contract/model';
 export type { ClassificationCount };
 export { ElementType, ChangeType };
 

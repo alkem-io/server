@@ -5,7 +5,7 @@ export const MockOrganizationLookupService: MockValueProvider<OrganizationLookup
   {
     provide: OrganizationLookupService,
     useValue: {
-      getOrganizationAndAgent: jest.fn(),
+      getOrganizationByIdOrFail: jest.fn(),
       getOrganizationByNameIdOrFail: jest.fn(),
     },
   };

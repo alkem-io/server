@@ -1,0 +1,147 @@
+# Implementation Plan: Actor Transformation
+
+**Branch**: `026-actor-transformation` | **Date**: 2025-12-27 | **Spec**: [spec.md](./spec.md)
+**Input**: Feature specification from `/specs/026-actor-transformation/spec.md`
+
+## Summary
+
+Unify credential-holding entities (User, Organization, VirtualContributor, Space, Account) under a single **Actor** abstraction. This replaces the Agent pattern with a direct identity model where entity ID = actor ID, eliminates ~400 lines of duplicated CRUD logic, and enables proper FK constraints for actor references throughout the codebase.
+
+## Technical Context
+
+**Language/Version**: TypeScript 5.3
+**Primary Dependencies**: NestJS 10, TypeORM 0.3, Apollo Server 4
+**Storage**: PostgreSQL 17.5
+**Testing**: Jest (pnpm test:ci)
+**Target Platform**: Linux server (Node.js 22 LTS)
+**Project Type**: Single NestJS application
+**Performance Goals**: No degradation from current credential operations
+**Constraints**: Zero downtime migration (single production instance)
+**Scale/Scope**: ~3k TypeScript files, 5 actor types, ~15 tables with actor references
+
+## Constitution Check
+
+*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+
+| Principle | Status | Notes |
+|-----------|--------|-------|
+| 1. Domain-Centric Design | ✅ PASS | Actor entity in `src/domain/actor/`, credential logic in domain services |
+| 2. Modular NestJS Boundaries | ✅ PASS | New ActorModule with single purpose; removes ContributorBase reducing coupling |
+| 3. GraphQL Schema as Stable Contract | ⚠️ REVIEW | Adding IActor interface (non-breaking), deprecating Agent-related types |
+| 4. Explicit Data & Event Flow | ✅ PASS | Actor operations via domain services with event emission |
+| 5. Observability & Operational Readiness | ✅ PASS | Structured logging for actor operations, migration validation |
+| 6. Code Quality with Pragmatic Testing | ✅ PASS | Risk-based testing for migration and credential operations |
+| 7. API Consistency & Evolution | ✅ PASS | IActor follows naming conventions, actor(id) query descriptive |
+| 8. Secure-by-Design | ✅ PASS | Authorization policies transferred from Agent to Actor |
+| 9. Container & Deployment Determinism | ✅ PASS | Migration is idempotent, no runtime env changes |
+| 10. Simplicity & Incremental Hardening | ✅ PASS | Reduces complexity by eliminating Agent indirection |
+
+**Schema Change Impact**: New IActor interface exposes existing entities uniformly. No breaking field removals. Agent-related types will be deprecated with removal date.
+
+## Project Structure
+
+### Documentation (this feature)
+
+```text
+specs/026-actor-transformation/
+├── plan.md              # This file
+├── research.md          # Phase 0 output (current state analysis)
+├── data-model.md        # Phase 1 output (Actor entity design)
+├── quickstart.md        # Phase 1 output (implementation guide)
+├── contracts/           # Phase 1 output (GraphQL schema additions)
+└── tasks.md             # Phase 2 output (/speckit.tasks command)
+```
+
+### Source Code (repository root)
+
+```text
+src/
+├── domain/
+│   ├── actor/                    # NEW: Actor domain module
+│   │   ├── actor/
+│   │   │   ├── actor.entity.ts
+│   │   │   ├── actor.service.ts
+│   │   │   ├── actor.resolver.field.ts
+│   │   │   └── actor.module.ts
+│   │   └── credential/           # MOVED from agent/
+│   │       ├── credential.entity.ts
+│   │       ├── credential.service.ts
+│   │       └── credential.module.ts
+│   ├── agent/                    # DEPRECATED: Remove after migration
+│   ├── community/
+│   │   ├── user/                 # UPDATE: Remove agent relationship
+│   │   ├── organization/         # UPDATE: Remove agent relationship
+│   │   ├── virtual-contributor/  # UPDATE: Remove agent relationship
+│   │   └── contributor/          # REMOVE: ContributorBase no longer needed
+│   └── space/
+│       ├── space/                # UPDATE: Remove agent relationship
+│       └── account/              # UPDATE: Remove agent relationship
+├── services/
+│   └── api/                      # UPDATE: Actor resolvers
+└── platform/
+    └── in-app-notification/      # UPDATE: triggeredByID FK to Actor
+
+test/
+├── functional/
+│   └── integration/
+│       └── actor/                # NEW: Actor integration tests
+└── unit/
+    └── domain/
+        └── actor/                # NEW: Actor unit tests
+```
+
+**Structure Decision**: Follows existing NestJS modular architecture. Actor module created under `src/domain/actor/` with credential subdomain. Existing entity files updated in place.
+
+## Complexity Tracking
+
+> No constitution violations requiring justification.
+
+| Aspect | Decision | Rationale |
+|--------|----------|-----------|
+| Class Table Inheritance | Used for Actor → User/Org/VC/Space/Account | Required by spec for ID = entityId pattern |
+| Single Migration | Direct cutover | Single production instance; no phased rollout needed |
+| FK Constraints | Added to createdBy/issuer columns | Resolves circular dependency issues documented in codebase |
+
+---
+
+## Phase 0: Research (Complete)
+
+See [research.md](./research.md) for:
+- Current Agent entity structure and relationships
+- All 5 credential-holding entity types mapped
+- Actor reference columns inventory (createdBy, issuer, triggeredBy)
+- Notification table analysis
+- Services requiring updates
+- Migration complexity assessment
+
+---
+
+## Phase 1: Design (Next)
+
+### Deliverables
+
+1. **data-model.md**: Actor entity TypeORM definition with:
+   - Class Table Inheritance pattern
+   - ActorType enum (USER, ORGANIZATION, VIRTUAL_CONTRIBUTOR, SPACE, ACCOUNT)
+   - profile_id (nullable FK to Profile)
+   - authorization_id (FK to AuthorizationPolicy)
+   - Relationship to Credential (OneToMany)
+
+2. **contracts/actor.graphql**: GraphQL schema additions:
+   - IActor interface definition
+   - ActorType enum
+   - actor(id) query
+   - actorsWithCredential query
+   - Type implementations (User, Organization, VirtualContributor, Space, Account implements IActor)
+
+3. **quickstart.md**: Implementation guide with:
+   - ActorModule setup
+   - Migration steps
+   - Service update checklist
+   - Testing strategy
+
+---
+
+## Phase 2: Tasks (After Design Approval)
+
+Generated via `/speckit.tasks` command after Phase 1 design is approved.

@@ -12,17 +12,19 @@ import {
 import { ISpace } from '@domain/space/space/space.interface';
 import { BaseException } from '@common/exceptions/base.exception';
 import {
+  ActorType,
   AlkemioErrorStatus,
   AuthorizationCredential,
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { IUser } from '@domain/community/user/user.interface';
 import { IOrganization, Organization } from '@domain/community/organization';
 import { Post } from '@domain/collaboration/post';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import {
   ISearchResults,
@@ -31,8 +33,6 @@ import {
   ISearchResultPost,
 } from '../dto/results';
 import { User } from '@domain/community/user/user.entity';
-import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
-import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import { SearchResultType } from '../search.result.type';
 import { calculateSearchCursor } from '@services/api/search/util';
@@ -57,20 +57,19 @@ export class SearchResultService {
     @InjectEntityManager() private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
     private authorizationService: AuthorizationService,
-    private userLookupService: UserLookupService,
-    private organizationLookupService: OrganizationLookupService
+    private actorLookupService: ActorLookupService
   ) {}
 
   /**
    * Resolves search results by authorizing and enriching them with data.
    * @param rawSearchResults The raw search results from the search engine.
-   * @param agentInfo The agent info of the user making the search request.
+   * @param actorContext The actor context of the user making the search request.
    * @param filters Used to filter the end results.
    * @param spaceId The space ID to filter the search results by.
    */
   public async resolveSearchResults(
     rawSearchResults: ISearchResult[],
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     filters: SearchFilterInput[],
     spaceId?: string
   ): Promise<ISearchResults> {
@@ -90,20 +89,26 @@ export class SearchResultService {
       calloutsOfMemos,
     ] = await Promise.all([
       this.getSpaceSearchResults(groupedResults.space ?? [], spaceId),
-      this.getSubspaceSearchResults(groupedResults.subspace ?? [], agentInfo),
+      this.getSubspaceSearchResults(
+        groupedResults.subspace ?? [],
+        actorContext
+      ),
       this.getUserSearchResults(groupedResults.user ?? [], spaceId),
       this.getOrganizationSearchResults(
         groupedResults.organization ?? [],
-        agentInfo,
+        actorContext,
         spaceId
       ),
-      this.getPostSearchResults(groupedResults.post ?? [], agentInfo),
-      this.getCalloutSearchResult(groupedResults.callout ?? [], agentInfo),
+      this.getPostSearchResults(groupedResults.post ?? [], actorContext),
+      this.getCalloutSearchResult(groupedResults.callout ?? [], actorContext),
       this.getWhiteboardAsCalloutSearchResult(
         groupedResults.whiteboard ?? [],
-        agentInfo
+        actorContext
       ),
-      this.getMemoAsCalloutSearchResult(groupedResults.memo ?? [], agentInfo),
+      this.getMemoAsCalloutSearchResult(
+        groupedResults.memo ?? [],
+        actorContext
+      ),
     ]);
     const filtersByCategory = groupBy(filters, 'category') as Record<
       SearchCategory,
@@ -189,7 +194,7 @@ export class SearchResultService {
 
   public async getSubspaceSearchResults(
     rawSearchResults: ISearchResult[],
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ): Promise<ISearchResultSpace[]> {
     if (rawSearchResults.length === 0) {
       return [];
@@ -221,7 +226,7 @@ export class SearchResultService {
 
         if (
           !this.authorizationService.isAccessGranted(
-            agentInfo,
+            actorContext,
             subspace.authorization,
             AuthorizationPrivilege.READ
           )
@@ -297,7 +302,7 @@ export class SearchResultService {
 
   public async getOrganizationSearchResults(
     rawSearchResults: ISearchResult[],
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     spaceId?: string
   ): Promise<ISearchResultOrganization[]> {
     if (rawSearchResults.length === 0) {
@@ -333,7 +338,7 @@ export class SearchResultService {
 
         if (
           !this.authorizationService.isAccessGranted(
-            agentInfo,
+            actorContext,
             org.authorization,
             AuthorizationPrivilege.READ
           )
@@ -351,7 +356,7 @@ export class SearchResultService {
 
   public async getPostSearchResults(
     rawSearchResults: ISearchResult[],
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ): Promise<ISearchResultPost[]> {
     if (rawSearchResults.length === 0) {
       return [];
@@ -367,7 +372,7 @@ export class SearchResultService {
     // find the authorized post first, then get the parents, and map the results
     const authorizedPosts = posts.filter(post =>
       this.authorizationService.isAccessGranted(
-        agentInfo,
+        actorContext,
         post.authorization,
         AuthorizationPrivilege.READ
       )
@@ -403,7 +408,7 @@ export class SearchResultService {
   // the method returns Callouts until the proper search result is returned
   private async getWhiteboardAsCalloutSearchResult(
     rawSearchResults: ISearchResult[],
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ): Promise<ISearchResultCallout[]> {
     if (rawSearchResults.length === 0) {
       return [];
@@ -456,7 +461,7 @@ export class SearchResultService {
     // find the authorized post first, then get the parents, and map the results
     const authorizedCallouts = callouts.filter(callout =>
       this.authorizationService.isAccessGranted(
-        agentInfo,
+        actorContext,
         callout.authorization,
         AuthorizationPrivilege.READ
       )
@@ -498,7 +503,7 @@ export class SearchResultService {
   // the method returns Callouts until the proper search result is returned
   private async getMemoAsCalloutSearchResult(
     rawSearchResults: ISearchResult[],
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ): Promise<ISearchResultCallout[]> {
     if (rawSearchResults.length === 0) {
       return [];
@@ -551,7 +556,7 @@ export class SearchResultService {
     // find the authorized post first, then get the parents, and map the results
     const authorizedCallouts = callouts.filter(callout =>
       this.authorizationService.isAccessGranted(
-        agentInfo,
+        actorContext,
         callout.authorization,
         AuthorizationPrivilege.READ
       )
@@ -595,7 +600,7 @@ export class SearchResultService {
 
   private async getCalloutSearchResult(
     rawSearchResults: ISearchResult[],
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ): Promise<ISearchResultCallout[]> {
     if (rawSearchResults.length === 0) {
       return [];
@@ -644,7 +649,7 @@ export class SearchResultService {
     // find the authorized post first, then get the parents, and map the results
     const authorizedCallouts = callouts.filter(callout =>
       this.authorizationService.isAccessGranted(
-        agentInfo,
+        actorContext,
         callout.authorization,
         AuthorizationPrivilege.READ
       )
@@ -919,48 +924,31 @@ export class SearchResultService {
   }
 
   private async getUsersInSpace(spaceId: string): Promise<string[]> {
-    const usersFilter = [];
-
-    const membersInSpace = await this.userLookupService.usersWithCredential({
-      type: AuthorizationCredential.SPACE_MEMBER,
-      resourceID: spaceId,
-    });
-    usersFilter.push(...membersInSpace.map(user => user.id));
-
-    const adminsInSpace = await this.userLookupService.usersWithCredential({
-      type: AuthorizationCredential.SPACE_ADMIN,
-      resourceID: spaceId,
-    });
-    usersFilter.push(...adminsInSpace.map(user => user.id));
-
-    return usersFilter;
+    const memberIds = await this.actorLookupService.getActorIdsWithCredential(
+      { type: AuthorizationCredential.SPACE_MEMBER, resourceID: spaceId },
+      [ActorType.USER]
+    );
+    const adminIds = await this.actorLookupService.getActorIdsWithCredential(
+      { type: AuthorizationCredential.SPACE_ADMIN, resourceID: spaceId },
+      [ActorType.USER]
+    );
+    return [...memberIds, ...adminIds];
   }
 
   private async getOrganizationsInSpace(spaceId: string): Promise<string[]> {
-    const orgsInSpace = [];
-
-    const membersInSpace =
-      await this.organizationLookupService.organizationsWithCredentials({
-        type: AuthorizationCredential.SPACE_MEMBER,
-        resourceID: spaceId,
-      });
-    orgsInSpace.push(...membersInSpace.map(org => org.id));
-
-    const adminsInSpace =
-      await this.organizationLookupService.organizationsWithCredentials({
-        type: AuthorizationCredential.SPACE_ADMIN,
-        resourceID: spaceId,
-      });
-    orgsInSpace.push(...adminsInSpace.map(org => org.id));
-
-    const leadsInSpace =
-      await this.organizationLookupService.organizationsWithCredentials({
-        type: AuthorizationCredential.SPACE_LEAD,
-        resourceID: spaceId,
-      });
-    orgsInSpace.push(...leadsInSpace.map(org => org.id));
-
-    return orgsInSpace;
+    const memberIds = await this.actorLookupService.getActorIdsWithCredential(
+      { type: AuthorizationCredential.SPACE_MEMBER, resourceID: spaceId },
+      [ActorType.ORGANIZATION]
+    );
+    const adminIds = await this.actorLookupService.getActorIdsWithCredential(
+      { type: AuthorizationCredential.SPACE_ADMIN, resourceID: spaceId },
+      [ActorType.ORGANIZATION]
+    );
+    const leadIds = await this.actorLookupService.getActorIdsWithCredential(
+      { type: AuthorizationCredential.SPACE_LEAD, resourceID: spaceId },
+      [ActorType.ORGANIZATION]
+    );
+    return [...memberIds, ...adminIds, ...leadIds];
   }
 }
 

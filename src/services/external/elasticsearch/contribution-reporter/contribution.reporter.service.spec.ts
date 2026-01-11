@@ -4,6 +4,7 @@ import {
   MockConfigService,
   MockElasticsearchClientProvider,
   MockWinstonProvider,
+  MockUserLookupService,
 } from '@test/mocks';
 
 describe('ContributionReporterService', () => {
@@ -23,6 +24,7 @@ describe('ContributionReporterService', () => {
         MockWinstonProvider,
         MockConfigService,
         MockElasticsearchClientProvider,
+        MockUserLookupService,
       ],
     }).compile();
 

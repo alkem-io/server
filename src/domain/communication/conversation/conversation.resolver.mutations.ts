@@ -3,23 +3,22 @@ import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IConversation } from './conversation.interface';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { ActorContext } from '@core/actor-context';
+import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ConversationAuthorizationService } from './conversation.service.authorization';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ConversationService } from './conversation.service';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { ConversationVcAnswerRelevanceInput } from './dto/conversation.vc.dto.relevance.update';
-import { ConversationVcAskQuestionInput } from './dto/conversation.vc.dto.ask.question.input';
 import { GuidanceReporterService } from '@services/external/elasticsearch/guidance-reporter/guidance.reporter.service';
-import { ConversationVcAskQuestionResult } from './dto/conversation.vc.dto.ask.question.result';
-import { AgentType } from '@common/enums/agent.type';
+import { ActorType } from '@common/enums/actor.type';
 import { ValidationException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { ConversationVcResetInput } from './dto/conversation.vc.dto.reset.input';
 import { DeleteConversationInput } from './dto/conversation.dto.delete';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 
 @InstrumentResolver()
 @Resolver()
@@ -31,75 +30,15 @@ export class ConversationResolverMutations {
     private guidanceReporterService: GuidanceReporterService,
     private conversationAuthorizationService: ConversationAuthorizationService,
     private virtualContributorLookupService: VirtualContributorLookupService,
+    private actorLookupService: ActorLookupService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
-
-  @Mutation(() => ConversationVcAskQuestionResult, {
-    nullable: false,
-    description: 'Ask the chat engine for guidance.',
-  })
-  async askVcQuestion(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('input') input: ConversationVcAskQuestionInput
-  ): Promise<ConversationVcAskQuestionResult> {
-    // Fetch conversation with room relation
-    const conversation = await this.conversationService.getConversationOrFail(
-      input.conversationID,
-      { relations: { room: true } }
-    );
-
-    // Get members once for type check and VC resolution
-    const members = await this.conversationService.getConversationMembers(
-      input.conversationID
-    );
-
-    // Validate type: must be USER_VC
-    const vcMember = members.find(
-      m => m.agent.type === AgentType.VIRTUAL_CONTRIBUTOR
-    );
-    if (!vcMember) {
-      throw new ValidationException(
-        `Conversation is not a USER_VC type: ${conversation.id}`,
-        LogContext.COMMUNICATION_CONVERSATION
-      );
-    }
-
-    // Authorization check
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      conversation.authorization,
-      AuthorizationPrivilege.CONTRIBUTE,
-      `conversation VC ask question: ${agentInfo.email}`
-    );
-
-    // Resolve VC from already-fetched member
-    const vc =
-      await this.virtualContributorLookupService.getVirtualContributorByAgentId(
-        vcMember.agentId,
-        { relations: { agent: true } }
-      );
-    if (!vc) {
-      throw new ValidationException(
-        `Could not resolve virtual contributor for conversation: ${conversation.id}`,
-        LogContext.COMMUNICATION_CONVERSATION
-      );
-    }
-
-    // Call with pre-resolved data
-    return this.conversationService.askQuestion(
-      conversation,
-      vc,
-      input.question,
-      input.language,
-      agentInfo
-    );
-  }
 
   @Mutation(() => IConversation, {
     description: 'Resets the interaction with the chat engine.',
   })
   async resetConversationVc(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('input') input: ConversationVcResetInput
   ): Promise<IConversation> {
     // Fetch conversation with room relation (needed for reset)
@@ -113,11 +52,18 @@ export class ConversationResolverMutations {
       input.conversationID
     );
 
-    // Validate type: must be USER_VC
-    const hasVC = members.some(
-      m => m.agent.type === AgentType.VIRTUAL_CONTRIBUTOR
+    // Get actor types using cached lookup
+    const actorIds = members.map(m => m.actorId);
+    const typeMap =
+      await this.actorLookupService.validateActorsAndGetTypes(actorIds);
+
+    // Find the VC actor ID
+    const vcActorId = actorIds.find(
+      id => typeMap.get(id) === ActorType.VIRTUAL
     );
-    if (!hasVC) {
+
+    // Validate type: must be USER_VC
+    if (!vcActorId) {
       throw new ValidationException(
         `Conversation is not a USER_VC type: ${conversation.id}`,
         LogContext.COMMUNICATION_CONVERSATION
@@ -126,28 +72,17 @@ export class ConversationResolverMutations {
 
     // Authorization check
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       conversation.authorization,
       AuthorizationPrivilege.CONTRIBUTE,
-      `conversation VC reset: ${agentInfo.email}`
+      `conversation VC reset: ${actorContext.actorId}`
     );
-
-    // Get VC's agent ID from already-fetched members
-    const vcMember = members.find(
-      m => m.agent.type === AgentType.VIRTUAL_CONTRIBUTOR
-    );
-    if (!vcMember) {
-      throw new ValidationException(
-        `Conversation does not have a virtual contributor: ${conversation.id}`,
-        LogContext.COMMUNICATION_CONVERSATION
-      );
-    }
 
     // Reset with pre-resolved data (no duplicate queries in service)
     const resetConversation = await this.conversationService.resetConversation(
       conversation,
-      agentInfo.agentID,
-      vcMember.agentId
+      actorContext.actorId,
+      vcActorId
     );
 
     // Update authorization after reset
@@ -166,7 +101,7 @@ export class ConversationResolverMutations {
     description: 'User vote if a specific answer is relevant.',
   })
   public async feedbackOnVcAnswerRelevance(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('input')
     { id, relevant, conversationID }: ConversationVcAnswerRelevanceInput
   ): Promise<boolean> {
@@ -178,11 +113,18 @@ export class ConversationResolverMutations {
     const members =
       await this.conversationService.getConversationMembers(conversationID);
 
-    // Validate type: must be USER_VC
-    const vcMember = members.find(
-      m => m.agent.type === AgentType.VIRTUAL_CONTRIBUTOR
+    // Get actor types using cached lookup
+    const actorIds = members.map(m => m.actorId);
+    const typeMap =
+      await this.actorLookupService.validateActorsAndGetTypes(actorIds);
+
+    // Find the VC actor ID
+    const vcActorId = actorIds.find(
+      id => typeMap.get(id) === ActorType.VIRTUAL
     );
-    if (!vcMember) {
+
+    // Validate type: must be USER_VC
+    if (!vcActorId) {
       throw new ValidationException(
         `Conversation is not a USER_VC type: ${conversation.id}`,
         LogContext.COMMUNICATION_CONVERSATION
@@ -191,16 +133,17 @@ export class ConversationResolverMutations {
 
     // Authorization check
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       conversation.authorization,
       AuthorizationPrivilege.CONTRIBUTE,
-      `conversation VC feedback: ${agentInfo.email}`
+      `conversation VC feedback: ${actorContext.actorId}`
     );
 
     // Resolve VC from already-fetched member
+    // VirtualContributor IS an Actor - vc.id is the actorId
     const vc =
-      await this.virtualContributorLookupService.getVirtualContributorByAgentId(
-        vcMember.agentId
+      await this.virtualContributorLookupService.getVirtualContributorById(
+        vcActorId
       );
     if (!vc) {
       throw new ValidationException(
@@ -221,7 +164,7 @@ export class ConversationResolverMutations {
       'Deletes a Conversation. The Matrix room is only deleted if no reciprocal conversation exists.',
   })
   async deleteConversation(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteConversationInput
   ): Promise<IConversation> {
     const conversation = await this.conversationService.getConversationOrFail(
@@ -235,7 +178,7 @@ export class ConversationResolverMutations {
 
     // Authorization check - user must have delete permission on the conversation
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       conversation.authorization,
       AuthorizationPrivilege.DELETE,
       `delete conversation: ${conversation.id}`

@@ -15,7 +15,7 @@ import { ExcalidrawContent } from '@common/interfaces';
 import { IProfile } from '@domain/common/profile';
 import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
-import { AuthorizationPolicy } from '../authorization-policy/authorization.policy.entity';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { ProfileService } from '../profile/profile.service';
 import { Whiteboard } from './whiteboard.entity';

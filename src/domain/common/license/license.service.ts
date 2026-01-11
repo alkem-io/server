@@ -5,7 +5,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { License } from './license.entity';
 import { CreateLicenseInput } from './dto/license.dto.create';
-import { AuthorizationPolicy } from '../authorization-policy/authorization.policy.entity';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { LicenseEntitlementService } from '../license-entitlement/license.entitlement.service';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';

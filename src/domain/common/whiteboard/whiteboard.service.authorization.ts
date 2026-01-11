@@ -24,7 +24,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { RoleName } from '@common/enums/role.name';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import { WhiteboardGuestAccessService } from './whiteboard.guest-access.service';
 
 const CREDENTIAL_RULE_WHITEBOARD_OWNER_PUBLIC_SHARE =

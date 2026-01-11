@@ -4,7 +4,7 @@ import {
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
-import { IAgent } from '@domain/agent/agent/agent.interface';
+import { ICredential } from '@domain/actor/credential/credential.interface';
 import { LicenseService } from '@domain/common/license/license.service';
 import { ILicense } from '@domain/common/license/license.interface';
 import { LicensingCredentialBasedService } from '@platform/licensing/credential-based/licensing-credential-based-entitlements-engine/licensing.credential.based.service';
@@ -27,13 +27,12 @@ export class SpaceLicenseService {
 
   async applyLicensePolicy(
     spaceID: string,
-    level0SpaceAgent?: IAgent
+    rootSpaceCredentials?: ICredential[]
   ): Promise<ILicense[]> {
+    // Space extends Actor - credentials are on the space directly
     const space = await this.spaceService.getSpaceOrFail(spaceID, {
       relations: {
-        agent: {
-          credentials: true,
-        },
+        credentials: true,
         subspaces: true,
         license: {
           entitlements: true,
@@ -46,7 +45,7 @@ export class SpaceLicenseService {
     });
     if (
       !space.subspaces ||
-      !space.agent ||
+      !space.credentials ||
       !space.license ||
       !space.license.entitlements ||
       !space.community ||
@@ -62,18 +61,15 @@ export class SpaceLicenseService {
 
     // Ensure always applying from a clean state
     space.license = this.licenseService.reset(space.license);
-    const rootLevelSpaceAgent = level0SpaceAgent ?? space.agent;
+    const credentials = rootSpaceCredentials ?? space.credentials;
 
-    space.license = await this.extendLicensePolicy(
-      space.license,
-      rootLevelSpaceAgent
-    );
+    space.license = await this.extendLicensePolicy(space.license, credentials);
 
     updatedLicenses.push(space.license);
 
     if (!space.license.entitlements) {
       throw new RelationshipNotFoundException(
-        `Unable to load license entitlements on Spac: ${space.id} `,
+        `Unable to load license entitlements on Space: ${space.id} `,
         LogContext.ACCOUNT
       );
     }
@@ -93,7 +89,7 @@ export class SpaceLicenseService {
     for (const subspace of space.subspaces) {
       const subspaceLicenses = await this.applyLicensePolicy(
         subspace.id,
-        rootLevelSpaceAgent
+        credentials
       );
       updatedLicenses.push(...subspaceLicenses);
     }
@@ -103,95 +99,93 @@ export class SpaceLicenseService {
 
   private async extendLicensePolicy(
     license: ILicense | undefined,
-    levelZeroSpaceAgent: IAgent
+    credentials: ICredential[]
   ): Promise<ILicense> {
     if (!license || !license.entitlements) {
       throw new EntityNotInitializedException(
-        `License with entitlements not found for Space with agent ${levelZeroSpaceAgent.id}`,
+        'License with entitlements not found for Space',
         LogContext.LICENSE
       );
     }
     for (const entitlement of license.entitlements) {
       switch (entitlement.type) {
         case LicenseEntitlementType.SPACE_FREE:
-          const spaceFree =
+          if (
             await this.licenseEngineService.isEntitlementGranted(
               LicenseEntitlementType.SPACE_FREE,
-              levelZeroSpaceAgent
-            );
-          if (spaceFree) {
+              credentials
+            )
+          ) {
             entitlement.limit = 1;
             entitlement.enabled = true;
           }
           break;
         case LicenseEntitlementType.SPACE_PLUS:
-          const spacePlus =
+          if (
             await this.licenseEngineService.isEntitlementGranted(
               LicenseEntitlementType.SPACE_PLUS,
-              levelZeroSpaceAgent
-            );
-          if (spacePlus) {
+              credentials
+            )
+          ) {
             entitlement.limit = 1;
             entitlement.enabled = true;
           }
           break;
         case LicenseEntitlementType.SPACE_PREMIUM:
-          const spacePremium =
+          if (
             await this.licenseEngineService.isEntitlementGranted(
               LicenseEntitlementType.SPACE_PREMIUM,
-              levelZeroSpaceAgent
-            );
-          if (spacePremium) {
+              credentials
+            )
+          ) {
             entitlement.limit = 1;
             entitlement.enabled = true;
           }
           break;
         case LicenseEntitlementType.SPACE_FLAG_SAVE_AS_TEMPLATE:
-          const saveAsTemplate =
+          if (
             await this.licenseEngineService.isEntitlementGranted(
               LicenseEntitlementType.SPACE_FLAG_SAVE_AS_TEMPLATE,
-              levelZeroSpaceAgent
-            );
-          if (saveAsTemplate) {
+              credentials
+            )
+          ) {
             entitlement.limit = 1;
             entitlement.enabled = true;
           }
           break;
         case LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS:
-          const createVirtualContributor =
+          if (
             await this.licenseEngineService.isEntitlementGranted(
               LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS,
-              levelZeroSpaceAgent
-            );
-          if (createVirtualContributor) {
+              credentials
+            )
+          ) {
             entitlement.limit = 1;
             entitlement.enabled = true;
           }
           break;
         case LicenseEntitlementType.SPACE_FLAG_WHITEBOARD_MULTI_USER:
-          const createWhiteboard =
+          if (
             await this.licenseEngineService.isEntitlementGranted(
               LicenseEntitlementType.SPACE_FLAG_WHITEBOARD_MULTI_USER,
-              levelZeroSpaceAgent
-            );
-          if (createWhiteboard) {
+              credentials
+            )
+          ) {
             entitlement.limit = 1;
             entitlement.enabled = true;
           }
           break;
-
         case LicenseEntitlementType.SPACE_FLAG_MEMO_MULTI_USER:
-          const createMemo =
+          if (
             await this.licenseEngineService.isEntitlementGranted(
               LicenseEntitlementType.SPACE_FLAG_MEMO_MULTI_USER,
-              levelZeroSpaceAgent
-            );
-          if (createMemo) {
+              credentials
+            )
+          ) {
             entitlement.limit = 1;
             entitlement.enabled = true;
           }
           break;
-
         default:
           throw new EntityNotInitializedException(
             `Unknown entitlement type for Space: ${entitlement.type}`,

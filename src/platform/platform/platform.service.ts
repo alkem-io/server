@@ -139,13 +139,6 @@ export class PlatformService {
     return messaging;
   }
 
-  /**
-   * @deprecated Use ensureMessagingCreated instead
-   */
-  async ensureConversationsSetCreated(): Promise<IMessaging> {
-    return this.ensureMessagingCreated();
-  }
-
   async getStorageAggregator(
     platformInput: IPlatform
   ): Promise<IStorageAggregator> {

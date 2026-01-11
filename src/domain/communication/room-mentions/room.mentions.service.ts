@@ -1,15 +1,12 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context';
 import { IMessage } from '../message/message.interface';
 import { NotificationInputEntityMentions } from '@services/adapters/notification-adapter/dto/user/notification.dto.input.entity.mentions';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
-import { Mention, MentionedEntityType } from '../messaging/mention.interface';
+import { Mention, MentionedActorType } from '../messaging/mention.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums/logging.context';
-import {
-  EntityNotFoundException,
-  EntityNotInitializedException,
-} from '@common/exceptions';
+import { EntityNotFoundException } from '@common/exceptions';
 import { VirtualContributorMessageService } from '../virtual.contributor.message/virtual.contributor.message.service';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
@@ -25,7 +22,7 @@ import { NotificationInputOrganizationMention } from '@services/adapters/notific
 @Injectable()
 export class RoomMentionsService {
   MENTION_REGEX_ALL = new RegExp(
-    `\\[@[^\\]]*]\\((http|https):\\/\\/[^)]*\\/(?<type>${MentionedEntityType.USER}|${MentionedEntityType.ORGANIZATION}|${MentionedEntityType.VIRTUAL_CONTRIBUTOR})\\/(?<nameid>[^)]+)\\)`,
+    `\\[@[^\\]]*]\\((http|https):\\/\\/[^)]*\\/(?<type>${MentionedActorType.USER}|${MentionedActorType.ORGANIZATION}|${MentionedActorType.VIRTUAL_CONTRIBUTOR})\\/(?<nameid>[^)]+)\\)`,
     'gm'
   );
 
@@ -61,14 +58,14 @@ export class RoomMentionsService {
   ): Promise<IVcInteraction | undefined> {
     const room = await this.roomLookupService.getRoomOrFail(roomID);
 
-    const vcData = room.vcInteractionsByThread?.[threadID];
-    if (!vcData) {
+    const threadInteraction = room.vcData?.interactionsByThread?.[threadID];
+    if (!threadInteraction) {
       return undefined;
     }
 
     return {
       threadID,
-      virtualContributorID: vcData.virtualContributorActorID,
+      virtualContributorID: threadInteraction.virtualContributorActorID,
     };
   }
 
@@ -76,13 +73,12 @@ export class RoomMentionsService {
     mentions: Mention[],
     message: string,
     threadID: string,
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     room: IRoom
   ) {
     const contextSpaceID = await this.getSpaceIdForRoom(room);
     const vcMentions = mentions.filter(
-      mention =>
-        mention.contributorType === MentionedEntityType.VIRTUAL_CONTRIBUTOR
+      mention => mention.actorType === MentionedActorType.VIRTUAL_CONTRIBUTOR
     );
     // Only the first VC mention starts an interaction
     // check if interaction was not already created instead of hardcoded
@@ -90,40 +86,32 @@ export class RoomMentionsService {
 
     for (const vcMention of vcMentions) {
       this.logger.verbose?.(
-        `got mention for VC: ${vcMention.contributorID}`,
+        `got mention for VC: ${vcMention.actorID}`,
         LogContext.VIRTUAL_CONTRIBUTOR
       );
       if (!vcInteraction) {
-        // Edge conversion: GraphQL mention (entity UUID) → agent.id for internal flow
+        // Edge conversion: GraphQL mention (entity UUID) → actorId for internal flow
         const virtualContributor =
-          await this.virtualContributorLookupService.getVirtualContributorOrFail(
-            vcMention.contributorID,
-            { relations: { agent: true } }
+          await this.virtualContributorLookupService.getVirtualContributorByIdOrFail(
+            vcMention.actorID
           );
 
-        if (!virtualContributor.agent) {
-          throw new EntityNotInitializedException(
-            `Agent not initialized for VC: ${vcMention.contributorID}`,
-            LogContext.VIRTUAL_CONTRIBUTOR
-          );
-        }
-
+        // VirtualContributor IS an Actor - vc.id is the actorId
         vcInteraction = await this.roomLookupService.addVcInteractionToRoom({
-          virtualContributorActorID: virtualContributor.agent.id,
+          virtualContributorActorID: virtualContributor.id,
           roomID: room.id,
           threadID: threadID,
         });
       }
 
-      // Use agent.id (unified internal flow) instead of entity UUID
+      // Use actorId (unified internal flow) instead of entity UUID
       await this.virtualContributorMessageService.invokeVirtualContributor(
         vcInteraction.virtualContributorID,
         message,
         threadID,
-        agentInfo,
+        actorContext,
         contextSpaceID,
-        room,
-        vcInteraction
+        room
       );
     }
   }
@@ -132,10 +120,10 @@ export class RoomMentionsService {
     mentions: Mention[],
     room: IRoom,
     message: IMessage,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ) {
     const entityMentionsNotificationInput: NotificationInputEntityMentions = {
-      triggeredBy: agentInfo.userID,
+      triggeredBy: actorContext.actorId,
       roomId: room.id,
       mentions,
       messageID: message.id,
@@ -147,10 +135,10 @@ export class RoomMentionsService {
     eventData: NotificationInputEntityMentions
   ): Promise<void> {
     for (const mention of eventData.mentions) {
-      if (mention.contributorType == MentionedEntityType.USER) {
+      if (mention.actorType == MentionedActorType.USER) {
         const entityMentionNotificationInput: NotificationInputUserMention = {
           triggeredBy: eventData.triggeredBy,
-          userID: mention.contributorID,
+          userID: mention.actorID,
           roomID: eventData.roomId,
           messageID: eventData.messageID,
         };
@@ -158,15 +146,15 @@ export class RoomMentionsService {
           entityMentionNotificationInput
         );
       }
-      if (mention.contributorType === MentionedEntityType.ORGANIZATION) {
+      if (mention.actorType === MentionedActorType.ORGANIZATION) {
         const entityMentionNotificationInput: NotificationInputOrganizationMention =
           {
             triggeredBy: eventData.triggeredBy,
-            organizationID: mention.contributorID,
+            organizationID: mention.actorID,
             roomID: eventData.roomId,
             messageID: eventData.messageID,
           };
-        this.notificationOrganizationAdapter.organizationMention(
+        void this.notificationOrganizationAdapter.organizationMention(
           entityMentionNotificationInput
         );
       }
@@ -176,41 +164,41 @@ export class RoomMentionsService {
   public async getMentionsFromText(text: string): Promise<Mention[]> {
     const result: Mention[] = [];
     for (const match of text.matchAll(this.MENTION_REGEX_ALL)) {
-      const contributorNamedID = match.groups?.nameid;
-      if (!contributorNamedID) {
+      const actorNamedID = match.groups?.nameid;
+      if (!actorNamedID) {
         throw new EntityNotFoundException(
           `No nameID found in mention: ${match}`,
           LogContext.COMMUNICATION
         );
       }
-      if (match.groups?.type === MentionedEntityType.USER) {
+      if (match.groups?.type === MentionedActorType.USER) {
         const user =
           await this.userLookupService.getUserByNameIdOrFail(
-            contributorNamedID
+            actorNamedID
           );
         result.push({
-          contributorID: user.id,
-          contributorType: MentionedEntityType.USER,
+          actorID: user.id,
+          actorType: MentionedActorType.USER,
         });
-      } else if (match.groups?.type === MentionedEntityType.ORGANIZATION) {
+      } else if (match.groups?.type === MentionedActorType.ORGANIZATION) {
         const organization =
           await this.organizationLookupService.getOrganizationByNameIdOrFail(
-            contributorNamedID
+            actorNamedID
           );
         result.push({
-          contributorID: organization.id,
-          contributorType: MentionedEntityType.ORGANIZATION,
+          actorID: organization.id,
+          actorType: MentionedActorType.ORGANIZATION,
         });
       } else if (
-        match.groups?.type === MentionedEntityType.VIRTUAL_CONTRIBUTOR
+        match.groups?.type === MentionedActorType.VIRTUAL_CONTRIBUTOR
       ) {
         const virtualContributor =
           await this.virtualContributorLookupService.getVirtualContributorByNameIdOrFail(
-            contributorNamedID
+            actorNamedID
           );
         result.push({
-          contributorID: virtualContributor.id,
-          contributorType: MentionedEntityType.VIRTUAL_CONTRIBUTOR,
+          actorID: virtualContributor.id,
+          actorType: MentionedActorType.VIRTUAL_CONTRIBUTOR,
         });
       }
     }

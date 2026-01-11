@@ -1,5 +1,5 @@
 import { LogContext } from '@common/enums';
-import { AlkemioErrorStatus } from '../enums/alkemio.error.status';
+import { AlkemioErrorStatus } from '@common/enums';
 import { BaseException } from './base.exception';
 
 export class NotEnabledException extends BaseException {
