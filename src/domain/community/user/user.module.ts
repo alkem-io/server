@@ -17,7 +17,6 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 import { DocumentModule } from '@domain/storage/document/document.module';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
-import { ContributorModule } from '../contributor/contributor.module';
 import { AccountHostModule } from '@domain/space/account.host/account.host.module';
 import { KratosModule } from '@services/infrastructure/kratos/kratos.module';
 import { UserSettingsModule } from '../user-settings/user.settings.module';
@@ -49,7 +48,6 @@ import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.modul
     StorageBucketModule,
     DocumentModule,
     KratosModule,
-    ContributorModule,
     MessagingModule,
     TypeOrmModule.forFeature([User]),
   ],

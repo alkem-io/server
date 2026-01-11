@@ -20,7 +20,7 @@ import { OrganizationFilterInput } from '@core/filtering/input-types/organizatio
 import { PaginatedOrganization } from '@core/pagination/paginated.organization';
 import { UserFilterInput } from '@core/filtering/input-types/user.filter.input';
 import { PaginatedUsers } from '@core/pagination/paginated.user';
-import { ContributorQueryArgs } from '@domain/community/contributor/dto/contributor.query.args';
+import { ActorQueryArgs } from '@domain/actor/actor/dto';
 import { InnovationPacksInput } from '@library/library/dto/library.dto.innovationPacks.input';
 
 @Resolver(() => PlatformAdminQueryResults)
@@ -150,7 +150,7 @@ export class PlatformAdminResolverFields {
   })
   async virtualContributors(
     @CurrentActor() actorContext: ActorContext,
-    @Args() args: ContributorQueryArgs
+    @Args() args: ActorQueryArgs
   ): Promise<IVirtualContributor[]> {
     this.authorizationService.grantAccessOrFail(
       actorContext,

@@ -11,7 +11,6 @@ import { AccountResolverMutations } from './account.resolver.mutations';
 import { SpaceModule } from '../space/space.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { AccountResolverQueries } from './account.resolver.queries';
-import { ContributorModule } from '@domain/community/contributor/contributor.module';
 import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 import { LicenseIssuerModule } from '@platform/licensing/credential-based/license-credential-issuer/license.issuer.module';
 import { AccountHostModule } from '../account.host/account.host.module';
@@ -38,7 +37,6 @@ import { AccountLicensePlanModule } from '@domain/space/account.license.plan';
     ActorModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
-    ContributorModule,
     StorageAggregatorModule,
     TemporaryStorageModule,
     PlatformAuthorizationPolicyModule,

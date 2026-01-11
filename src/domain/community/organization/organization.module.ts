@@ -15,7 +15,6 @@ import { OrganizationVerificationModule } from '../organization-verification/org
 import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/platform.authorization.policy.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
-import { ContributorModule } from '../contributor/contributor.module';
 import { AccountHostModule } from '@domain/space/account.host/account.host.module';
 import { AvatarCreatorModule } from '@services/external/avatar-creator/avatar.creator.module';
 import { OrganizationSettingsModule } from '../organization-settings/organization.settings.module';
@@ -32,7 +31,6 @@ import { LicenseEntitlementModule } from '@domain/common/license-entitlement/lic
     AuthorizationModule,
     RoleSetModule,
     LicenseEntitlementModule,
-    ContributorModule,
     OrganizationVerificationModule,
     OrganizationLookupModule,
     OrganizationSettingsModule,

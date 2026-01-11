@@ -15,7 +15,7 @@ import { DocumentService } from '@domain/storage/document/document.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
-export class ContributorService {
+export class ProfileAvatarService {
   constructor(
     private profileService: ProfileService,
     private avatarCreatorService: AvatarCreatorService,
@@ -37,7 +37,7 @@ export class ContributorService {
     return url.protocol === 'http:' || url.protocol === 'https:';
   }
 
-  public async addAvatarVisualToContributorProfile(
+  public async addAvatarVisualToProfile(
     profile: IProfile,
     profileData: CreateProfileInput,
     kratosData?: KratosSessionData,

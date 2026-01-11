@@ -13,7 +13,6 @@ import { InvitationModule } from '@domain/access/invitation/invitation.module';
 import { ApplicationModule } from '@domain/access/application/application.module';
 import { RoleModule } from '../role/role.module';
 import { ActorModule } from '@domain/actor/actor/actor.module';
-import { ContributorModule } from '@domain/community/contributor/contributor.module';
 import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { RoleSetEventsService } from './role.set.service.events';
@@ -52,7 +51,6 @@ import { RoleSetResolverMutationsMembership } from './role.set.resolver.mutation
     OrganizationLookupModule,
     SpaceLookupModule,
     VirtualContributorLookupModule,
-    ContributorModule,
     ActorLookupModule,
     RoleModule,
     InvitationModule,

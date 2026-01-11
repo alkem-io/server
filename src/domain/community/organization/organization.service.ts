@@ -31,7 +31,7 @@ import { OrganizationFilterInput } from '@core/filtering';
 import { IPaginatedType } from '@core/pagination/paginated.type';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
 import { CreateUserGroupInput } from '@domain/community/user-group/dto';
-import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
+import { ActorQueryArgs } from '@domain/actor/actor/dto';
 import { Organization } from './organization.entity';
 import { IOrganization } from './organization.interface';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
@@ -41,7 +41,7 @@ import { applyOrganizationFilter } from '@core/filtering/filters/organizationFil
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { IAccount } from '@domain/space/account/account.interface';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
-import { ContributorService } from '../contributor/contributor.service';
+import { ProfileAvatarService } from '@domain/common/profile/profile.avatar.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { AccountType } from '@common/enums/account.type';
 import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
@@ -73,7 +73,7 @@ export class OrganizationService {
     private profileService: ProfileService,
     private namingService: NamingService,
     private storageAggregatorService: StorageAggregatorService,
-    private contributorService: ContributorService,
+    private profileAvatarService: ProfileAvatarService,
     private roleSetService: RoleSetService,
     @InjectRepository(Organization)
     private organizationRepository: Repository<Organization>,
@@ -134,7 +134,7 @@ export class OrganizationService {
       tags: [],
     });
 
-    await this.contributorService.addAvatarVisualToContributorProfile(
+    await this.profileAvatarService.addAvatarVisualToProfile(
       organization.profile,
       organizationData.profileData,
       undefined,
@@ -200,7 +200,7 @@ export class OrganizationService {
     }
 
     const userID = actorContext?.actorId;
-    await this.contributorService.ensureAvatarIsStoredInLocalStorageBucket(
+    await this.profileAvatarService.ensureAvatarIsStoredInLocalStorageBucket(
       organization.profile.id,
       userID
     );
@@ -426,7 +426,7 @@ export class OrganizationService {
     );
   }
 
-  async getOrganizations(args: ContributorQueryArgs): Promise<IOrganization[]> {
+  async getOrganizations(args: ActorQueryArgs): Promise<IOrganization[]> {
     const limit = args.limit;
     const shuffle = args.shuffle || false;
     this.logger.verbose?.(

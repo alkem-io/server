@@ -13,7 +13,7 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CredentialsSearchInput } from '@domain/actor/credential/dto/credentials.dto.search';
 import { ICredential } from '@domain/actor/credential/credential.interface';
-import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
+import { ActorQueryArgs } from '@domain/actor/actor/dto';
 import { VirtualContributor } from './virtual.contributor.entity';
 import { IVirtualContributor } from './virtual.contributor.interface';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
@@ -29,7 +29,7 @@ import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.
 import { SearchVisibility } from '@common/enums/search.visibility';
 import { IAiPersona } from '@services/ai-server/ai-persona/ai.persona.interface';
 import { IActor } from '@domain/actor/actor/actor.interface';
-import { ContributorService } from '../contributor/contributor.service';
+import { ProfileAvatarService } from '@domain/common/profile/profile.avatar.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { Invitation } from '@domain/access/invitation/invitation.entity';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
@@ -53,7 +53,7 @@ export class VirtualContributorService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileService: ProfileService,
-    private contributorService: ContributorService,
+    private profileAvatarService: ProfileAvatarService,
     private communicationAdapter: CommunicationAdapter,
     private aiPersonaService: AiPersonaService,
     private aiServerAdapter: AiServerAdapter,
@@ -164,7 +164,7 @@ export class VirtualContributorService {
       }
     );
 
-    await this.contributorService.addAvatarVisualToContributorProfile(
+    await this.profileAvatarService.addAvatarVisualToProfile(
       virtualContributor.profile,
       virtualContributorData.profileData
     );
@@ -172,7 +172,7 @@ export class VirtualContributorService {
     virtualContributor = await this.save(virtualContributor);
 
     const userID = actorContext?.actorId;
-    await this.contributorService.ensureAvatarIsStoredInLocalStorageBucket(
+    await this.profileAvatarService.ensureAvatarIsStoredInLocalStorageBucket(
       virtualContributor.profile.id,
       userID
     );
@@ -538,7 +538,7 @@ export class VirtualContributorService {
 
   // TODO: move to store
   async getVirtualContributors(
-    args: ContributorQueryArgs = {}
+    args: ActorQueryArgs = {}
   ): Promise<IVirtualContributor[]> {
     const limit = args.limit;
     const shuffle = args.shuffle || false;

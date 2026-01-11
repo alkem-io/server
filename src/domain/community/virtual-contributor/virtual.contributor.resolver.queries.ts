@@ -3,7 +3,7 @@ import { Args, Query, Resolver } from '@nestjs/graphql';
 import { CurrentActor } from '@src/common/decorators';
 import { IVirtualContributor } from './virtual.contributor.interface';
 import { VirtualContributorService } from './virtual.contributor.service';
-import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
+import { ActorQueryArgs } from '@domain/actor/actor/dto';
 import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums';
@@ -25,7 +25,7 @@ export class VirtualContributorResolverQueries {
       'The VirtualContributors on this platform; only accessible to platform admins',
   })
   async virtualContributors(
-    @Args({ nullable: true }) args: ContributorQueryArgs,
+    @Args({ nullable: true }) args: ActorQueryArgs,
     @CurrentActor() actorContext: ActorContext
   ): Promise<IVirtualContributor[]> {
     const platformPolicy =

@@ -6,7 +6,7 @@ import { PlatformAuthorizationPolicyService } from '@platform/authorization/plat
 import { ActorContext } from '@core/actor-context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { ContributorService } from '@domain/community/contributor/contributor.service';
+import { ProfileAvatarService } from '@domain/common/profile/profile.avatar.service';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.bucket.service.authorization';
@@ -22,7 +22,7 @@ export class AdminSearchContributorsMutations {
     private authorizationService: AuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService,
-    private contributorService: ContributorService,
+    private profileAvatarService: ProfileAvatarService,
     private profileService: ProfileService,
     private storageBucketAuthorizationService: StorageBucketAuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService
@@ -46,7 +46,7 @@ export class AdminSearchContributorsMutations {
     );
 
     let profile =
-      await this.contributorService.ensureAvatarIsStoredInLocalStorageBucket(
+      await this.profileAvatarService.ensureAvatarIsStoredInLocalStorageBucket(
         profileID,
         actorContext.actorId
       );

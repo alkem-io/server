@@ -13,7 +13,6 @@ import { CommunicationAdapterModule } from '@services/adapters/communication-ada
 import { AiPersonaModule } from '@services/ai-server/ai-persona/ai.persona.module';
 import { AiServerAdapterModule } from '@services/adapters/ai-server-adapter/ai.server.adapter.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
-import { ContributorModule } from '../contributor/contributor.module';
 import { VirtualContributorResolverSubscriptions } from './virtual.contributor.resolver.subscriptions';
 import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
 import { KnowledgeBaseModule } from '@domain/common/knowledge-base/knowledge.base.module';
@@ -28,7 +27,6 @@ import { PlatformWellKnownVirtualContributorsModule } from '@platform/platform.w
   imports: [
     AuthorizationPolicyModule,
     AuthorizationModule,
-    ContributorModule,
     ProfileModule,
     AiPersonaModule,
     KnowledgeBaseModule,

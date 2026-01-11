@@ -5,7 +5,7 @@ import { OrganizationService } from './organization.service';
 import { PaginationArgs } from '@core/pagination';
 import { OrganizationFilterInput } from '@core/filtering';
 import { PaginatedOrganization } from '@core/pagination/paginated.organization';
-import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
+import { ActorQueryArgs } from '@domain/actor/actor/dto';
 import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
 import { InstrumentResolver } from '@src/apm/decorators';
 
@@ -19,7 +19,7 @@ export class OrganizationResolverQueries {
     description: 'The Organizations on this platform',
   })
   async organizations(
-    @Args({ nullable: true }) args: ContributorQueryArgs
+    @Args({ nullable: true }) args: ActorQueryArgs
   ): Promise<IOrganization[]> {
     return await this.organizationService.getOrganizations(args);
   }

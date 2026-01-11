@@ -12,7 +12,6 @@ import { AccountModule } from '@domain/space/account/account.module';
 import { SearchIngestModule } from '@services/api/search/ingest';
 import { AiServerModule } from '@services/ai-server/ai-server/ai.server.module';
 import { Space } from '@domain/space/space/space.entity';
-import { ContributorModule } from '@domain/community/contributor/contributor.module';
 import { TemplatesSetModule } from '@domain/template/templates-set/templates.set.module';
 import { TemplateDefaultModule } from '@domain/template/template-default/template.default.module';
 import { LicenseModule } from '@domain/common/license/license.module';
@@ -36,7 +35,6 @@ import { RoleSetModule } from '@domain/access/role-set/role.set.module';
     ActorContextModule,
     AuthorizationPolicyModule,
     LicenseModule,
-    ContributorModule,
     SpaceModule,
     OrganizationModule,
     OrganizationLookupModule,

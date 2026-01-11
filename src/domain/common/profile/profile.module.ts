@@ -5,6 +5,7 @@ import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { Profile } from './profile.entity';
 import { ProfileResolverMutations } from './profile.resolver.mutations';
 import { ProfileService } from './profile.service';
+import { ProfileAvatarService } from './profile.avatar.service';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { ProfileAuthorizationService } from './profile.service.authorization';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
@@ -16,6 +17,7 @@ import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.buck
 import { UrlGeneratorModule } from '@services/infrastructure/url-generator';
 import { DocumentModule } from '@domain/storage/document/document.module';
 import { ProfileDocumentsModule } from '@domain/profile-documents/profile.documents.module';
+import { AvatarCreatorModule } from '@services/external/avatar-creator/avatar.creator.module';
 
 @Module({
   imports: [
@@ -31,13 +33,20 @@ import { ProfileDocumentsModule } from '@domain/profile-documents/profile.docume
     ProfileDocumentsModule,
     DocumentModule,
     UrlGeneratorModule,
+    AvatarCreatorModule,
   ],
   providers: [
     ProfileResolverMutations,
     ProfileService,
+    ProfileAvatarService,
     ProfileAuthorizationService,
     ProfileResolverFields,
   ],
-  exports: [ProfileService, ProfileAuthorizationService, ProfileResolverFields],
+  exports: [
+    ProfileService,
+    ProfileAvatarService,
+    ProfileAuthorizationService,
+    ProfileResolverFields,
+  ],
 })
 export class ProfileModule {}

@@ -44,7 +44,7 @@ import { IAccount } from '@domain/space/account/account.interface';
 import { User } from './user.entity';
 import { IUser } from './user.interface';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
-import { ContributorService } from '../contributor/contributor.service';
+import { ProfileAvatarService } from '@domain/common/profile/profile.avatar.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { AccountType } from '@common/enums/account.type';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
@@ -75,7 +75,7 @@ export class UserService {
     private actorLookupService: ActorLookupService,
     private accountHostService: AccountHostService,
     private userSettingsService: UserSettingsService,
-    private contributorService: ContributorService,
+    private profileAvatarService: ProfileAvatarService,
     private kratosService: KratosService,
     private readonly messagingService: MessagingService,
     @InjectRepository(User)
@@ -137,7 +137,7 @@ export class UserService {
       name: TagsetReservedName.KEYWORDS,
       tags: [],
     });
-    await this.contributorService.addAvatarVisualToContributorProfile(
+    await this.profileAvatarService.addAvatarVisualToProfile(
       user.profile,
       userData.profileData,
       kratosData,
@@ -175,7 +175,7 @@ export class UserService {
 
     user = await this.save(user);
 
-    await this.contributorService.ensureAvatarIsStoredInLocalStorageBucket(
+    await this.profileAvatarService.ensureAvatarIsStoredInLocalStorageBucket(
       user.profile.id,
       user.id
     );

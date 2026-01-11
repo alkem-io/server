@@ -1,2 +1,2 @@
-export * from './dto/contributor.dto.create';
-export * from './dto/contributor.dto.update';
+export * from './contributor.defaults';
+export * from './contributor.module';
