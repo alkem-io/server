@@ -20,8 +20,8 @@ export class ApplicationResolverFields {
     description: 'The User for this Application.',
   })
   @Profiling.api
-  async contributor(@Parent() application: Application): Promise<IActor> {
-    return await this.applicationService.getContributor(application.id);
+  async applicant(@Parent() application: Application): Promise<IActor> {
+    return await this.applicationService.getApplicant(application.id);
   }
 
   @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)

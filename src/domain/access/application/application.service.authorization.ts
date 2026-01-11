@@ -35,7 +35,7 @@ export class ApplicationAuthorizationService {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
     // get the user
-    const user = await this.applicationService.getContributor(application.id);
+    const user = await this.applicationService.getApplicant(application.id);
 
     // also grant the user privileges to manage their own application
     // Note: the GRANT privilege iS NOT assigned to the user; that is what is actually used to approve the application

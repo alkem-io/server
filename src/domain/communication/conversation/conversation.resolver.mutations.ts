@@ -18,6 +18,7 @@ import { LogContext } from '@common/enums';
 import { ConversationVcResetInput } from './dto/conversation.vc.dto.reset.input';
 import { DeleteConversationInput } from './dto/conversation.dto.delete';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 
 @InstrumentResolver()
 @Resolver()
@@ -29,6 +30,7 @@ export class ConversationResolverMutations {
     private guidanceReporterService: GuidanceReporterService,
     private conversationAuthorizationService: ConversationAuthorizationService,
     private virtualContributorLookupService: VirtualContributorLookupService,
+    private actorLookupService: ActorLookupService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -50,9 +52,18 @@ export class ConversationResolverMutations {
       input.conversationID
     );
 
+    // Get actor types using cached lookup
+    const actorIds = members.map(m => m.actorId);
+    const typeMap =
+      await this.actorLookupService.validateActorsAndGetTypes(actorIds);
+
+    // Find the VC actor ID
+    const vcActorId = actorIds.find(
+      id => typeMap.get(id) === ActorType.VIRTUAL
+    );
+
     // Validate type: must be USER_VC
-    const hasVC = members.some(m => m.actor?.type === ActorType.VIRTUAL);
-    if (!hasVC) {
+    if (!vcActorId) {
       throw new ValidationException(
         `Conversation is not a USER_VC type: ${conversation.id}`,
         LogContext.COMMUNICATION_CONVERSATION
@@ -67,20 +78,11 @@ export class ConversationResolverMutations {
       `conversation VC reset: ${actorContext.actorId}`
     );
 
-    // Get VC's actor ID from already-fetched members
-    const vcMember = members.find(m => m.actor?.type === ActorType.VIRTUAL);
-    if (!vcMember) {
-      throw new ValidationException(
-        `Conversation does not have a virtual contributor: ${conversation.id}`,
-        LogContext.COMMUNICATION_CONVERSATION
-      );
-    }
-
     // Reset with pre-resolved data (no duplicate queries in service)
     const resetConversation = await this.conversationService.resetConversation(
       conversation,
       actorContext.actorId,
-      vcMember.actorId
+      vcActorId
     );
 
     // Update authorization after reset
@@ -111,9 +113,18 @@ export class ConversationResolverMutations {
     const members =
       await this.conversationService.getConversationMembers(conversationID);
 
+    // Get actor types using cached lookup
+    const actorIds = members.map(m => m.actorId);
+    const typeMap =
+      await this.actorLookupService.validateActorsAndGetTypes(actorIds);
+
+    // Find the VC actor ID
+    const vcActorId = actorIds.find(
+      id => typeMap.get(id) === ActorType.VIRTUAL
+    );
+
     // Validate type: must be USER_VC
-    const vcMember = members.find(m => m.actor?.type === ActorType.VIRTUAL);
-    if (!vcMember) {
+    if (!vcActorId) {
       throw new ValidationException(
         `Conversation is not a USER_VC type: ${conversation.id}`,
         LogContext.COMMUNICATION_CONVERSATION
@@ -132,7 +143,7 @@ export class ConversationResolverMutations {
     // VirtualContributor IS an Actor - vc.id is the actorId
     const vc =
       await this.virtualContributorLookupService.getVirtualContributorById(
-        vcMember.actorId
+        vcActorId
       );
     if (!vc) {
       throw new ValidationException(

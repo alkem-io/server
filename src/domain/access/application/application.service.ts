@@ -113,14 +113,14 @@ export class ApplicationService {
     return await this.applicationRepository.save(application);
   }
 
-  async getContributor(applicationID: string): Promise<IActor> {
+  async getApplicant(applicationID: string): Promise<IActor> {
     const application = await this.getApplicationOrFail(applicationID, {
       relations: { user: true },
     });
     const user = application.user;
     if (!user)
       throw new RelationshipNotFoundException(
-        `Unable to load Contributor for Application ${applicationID} `,
+        `Unable to load Applicant for Application ${applicationID} `,
         LogContext.COMMUNITY
       );
     return user;

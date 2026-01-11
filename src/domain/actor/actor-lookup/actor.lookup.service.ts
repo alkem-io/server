@@ -21,29 +21,44 @@ import {
   CredentialsSearchInput,
   ICredential,
 } from '@domain/actor/credential';
+import { ActorTypeCacheService } from './actor.lookup.service.cache';
 
 @Injectable()
 export class ActorLookupService {
   constructor(
     @InjectEntityManager('default')
-    private entityManager: EntityManager
+    private entityManager: EntityManager,
+    private actorTypeCacheService: ActorTypeCacheService
   ) {}
 
   /**
    * Returns the ActorType for a given actor ID.
-   * Single query to the actor table using the type discriminator column.
+   * Uses cache for performance - actor types are immutable.
    */
   async getActorTypeById(actorId: string): Promise<ActorType | null> {
     if (!isUUID(actorId)) {
       return null;
     }
 
+    // Check cache first
+    const cachedType = await this.actorTypeCacheService.getActorType(actorId);
+    if (cachedType !== undefined) {
+      return cachedType;
+    }
+
+    // Query DB if not in cache
     const actor = await this.entityManager.findOne(Actor, {
       where: { id: actorId },
       select: { type: true },
     });
 
-    return actor?.type ?? null;
+    if (!actor?.type) {
+      return null;
+    }
+
+    // Cache the result
+    await this.actorTypeCacheService.setActorType(actorId, actor.type);
+    return actor.type;
   }
 
   /**
@@ -85,7 +100,7 @@ export class ActorLookupService {
       return null;
     }
 
-    // First get the type to know which table to query
+    // First get the type to know which table to query (uses cache)
     const type = await this.getActorTypeById(actorId);
     if (!type) {
       return null;
@@ -160,7 +175,7 @@ export class ActorLookupService {
 
   /**
    * Validate that all actors exist and return their types.
-   * Single query using WHERE id IN (...).
+   * Uses cache for performance - only queries DB for uncached IDs.
    * Throws if any actor is not found.
    * Use this for batch operations where you need to validate existence and get types.
    */
@@ -182,15 +197,27 @@ export class ActorLookupService {
       );
     }
 
+    // Check cache for all IDs
+    const cachedTypes = await this.actorTypeCacheService.getActorTypes(validIds);
+
+    // Find IDs not in cache
+    const uncachedIds = validIds.filter(id => !cachedTypes.has(id));
+
+    // If all IDs are cached, return immediately
+    if (uncachedIds.length === 0) {
+      return cachedTypes;
+    }
+
+    // Query DB only for uncached IDs
     const actors = await this.entityManager.find(Actor, {
-      where: { id: In(validIds) },
+      where: { id: In(uncachedIds) },
       select: { id: true, type: true },
     });
 
-    // Check if all actors were found
-    if (actors.length !== validIds.length) {
+    // Check if all uncached actors were found
+    if (actors.length !== uncachedIds.length) {
       const foundIds = new Set(actors.map(a => a.id));
-      const missingIds = validIds.filter(id => !foundIds.has(id));
+      const missingIds = uncachedIds.filter(id => !foundIds.has(id));
       throw new EntityNotFoundException(
         'One or more actors not found',
         LogContext.COMMUNITY,
@@ -198,7 +225,16 @@ export class ActorLookupService {
       );
     }
 
-    return new Map(actors.map(a => [a.id, a.type]));
+    // Cache the newly fetched types
+    const newTypes = new Map(actors.map(a => [a.id, a.type]));
+    await this.actorTypeCacheService.setActorTypes(newTypes);
+
+    // Combine cached and newly fetched types
+    for (const [id, type] of newTypes) {
+      cachedTypes.set(id, type);
+    }
+
+    return cachedTypes;
   }
 
   /**

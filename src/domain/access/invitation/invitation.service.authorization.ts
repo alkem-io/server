@@ -48,19 +48,19 @@ export class InvitationAuthorizationService {
   ): Promise<IAuthorizationPolicy> {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    // get the contributor - may be null if orphaned
-    const contributor = await this.actorLookupService.getFullActorById(
+    // get the actor - may be null if orphaned
+    const actor = await this.actorLookupService.getFullActorById(
       invitation.invitedActorId
     );
 
-    if (!contributor) {
-      // Orphaned invitation - contributor no longer exists
+    if (!actor) {
+      // Orphaned invitation - actor no longer exists
       // Log warning and skip adding custom authorization rules
       this.logger.warn(
         {
-          message: 'Invitation references non-existent contributor',
+          message: 'Invitation references non-existent actor',
           invitationId: invitation.id,
-          contributorId: invitation.invitedActorId,
+          actorId: invitation.invitedActorId,
         },
         LogContext.COMMUNITY
       );
@@ -69,26 +69,24 @@ export class InvitationAuthorizationService {
 
     // also grant the user privileges to work with their own invitation
     let accountID: string | undefined = undefined;
-    const contributorType = contributor.type;
+    const actorType = actor.type;
     const criterias: ICredentialDefinition[] = [];
-    switch (contributorType) {
+    switch (actorType) {
       case ActorType.USER:
-        accountID = (contributor as User).accountID;
+        accountID = (actor as User).accountID;
         break;
       case ActorType.ORGANIZATION:
-        accountID = (contributor as Organization).accountID;
+        accountID = (actor as Organization).accountID;
         break;
       case ActorType.VIRTUAL:
         const account =
-          await this.virtualContributorLookupService.getAccountOrFail(
-            contributor.id
-          );
+          await this.virtualContributorLookupService.getAccountOrFail(actor.id);
         accountID = account.id;
         break;
     }
     if (!accountID) {
       throw new RoleSetMembershipException(
-        `Unable to find account for contributor: ${contributor.id}`,
+        `Unable to find account for actor: ${actor.id}`,
         LogContext.ROLES
       );
     }

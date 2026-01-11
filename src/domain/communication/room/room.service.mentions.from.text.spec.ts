@@ -41,8 +41,8 @@ describe('RoomServiceMentions', () => {
       'Hey, [@aleksandar-alex](https://localhost/user/alex123) - this look like you',
       [
         {
-          contributorID: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
-          contributorType: 'user',
+          actorID: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
+          actorType: 'user',
         },
       ],
     ],
@@ -51,8 +51,8 @@ describe('RoomServiceMentions', () => {
       'Hey, [@aleksandar-alex](http://localhost:3000/user/alex) - this look like you',
       [
         {
-          contributorID: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
-          contributorType: 'user',
+          actorID: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
+          actorType: 'user',
         },
       ],
     ],
@@ -60,8 +60,8 @@ describe('RoomServiceMentions', () => {
       'Hey, [@aleksandar-alex](https://localhost:3000/user/alex) - this look like you',
       [
         {
-          contributorID: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
-          contributorType: 'user',
+          actorID: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
+          actorType: 'user',
         },
       ],
     ],
@@ -69,8 +69,8 @@ describe('RoomServiceMentions', () => {
       'Hey, [@aleksandar](http://localhost:3000/user/alex-alex) - this look like you',
       [
         {
-          contributorID: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
-          contributorType: 'user',
+          actorID: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
+          actorType: 'user',
         },
       ],
     ],
@@ -78,8 +78,8 @@ describe('RoomServiceMentions', () => {
       'Hey, [@aleksandar](https://localhost:3000/user/alex-alex) - this look like you',
       [
         {
-          contributorID: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
-          contributorType: 'user',
+          actorID: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
+          actorType: 'user',
         },
       ],
     ],
@@ -88,8 +88,8 @@ describe('RoomServiceMentions', () => {
       'Hey, [@aleksandar-alex](http://localhost:3000/organization/alex) - this look like you',
       [
         {
-          contributorID: '03bb5b07-f134-4074-97b9-1dd7950c7fa4',
-          contributorType: 'organization',
+          actorID: '03bb5b07-f134-4074-97b9-1dd7950c7fa4',
+          actorType: 'organization',
         },
       ],
     ],
@@ -97,8 +97,8 @@ describe('RoomServiceMentions', () => {
       'Hey, [@aleksandar-alex](https://localhost:3000/organization/alex) - this look like you',
       [
         {
-          contributorID: '03bb5b07-f134-4074-97b9-1dd7950c7fa4',
-          contributorType: 'organization',
+          actorID: '03bb5b07-f134-4074-97b9-1dd7950c7fa4',
+          actorType: 'organization',
         },
       ],
     ],
@@ -106,8 +106,8 @@ describe('RoomServiceMentions', () => {
       'Hey, [@aleksandar](http://localhost:3000/organization/alex-alex) - this look like you',
       [
         {
-          contributorID: '03bb5b07-f134-4074-97b9-1dd7950c7fa4',
-          contributorType: 'organization',
+          actorID: '03bb5b07-f134-4074-97b9-1dd7950c7fa4',
+          actorType: 'organization',
         },
       ],
     ],
@@ -115,8 +115,8 @@ describe('RoomServiceMentions', () => {
       'Hey, [@aleksandar](https://localhost:3000/organization/alex-alex) - this look like you',
       [
         {
-          contributorID: '03bb5b07-f134-4074-97b9-1dd7950c7fa4',
-          contributorType: 'organization',
+          actorID: '03bb5b07-f134-4074-97b9-1dd7950c7fa4',
+          actorType: 'organization',
         },
       ],
     ],
@@ -125,8 +125,8 @@ describe('RoomServiceMentions', () => {
       'Hey, [@aleksandar](http://localhost:3000/user/alex) - this look like you',
       [
         {
-          contributorID: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
-          contributorType: 'user',
+          actorID: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
+          actorType: 'user',
         },
       ],
     ],
@@ -134,8 +134,8 @@ describe('RoomServiceMentions', () => {
       'Hey, [@aleksandar](https://localhost:3000/user/alex) - this look like you',
       [
         {
-          contributorID: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
-          contributorType: 'user',
+          actorID: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
+          actorType: 'user',
         },
       ],
     ],
@@ -143,8 +143,8 @@ describe('RoomServiceMentions', () => {
       'Hey, [@aleksandar](http://localhost:3000/organization/alex) - this look like you',
       [
         {
-          contributorID: '03bb5b07-f134-4074-97b9-1dd7950c7fa4',
-          contributorType: 'organization',
+          actorID: '03bb5b07-f134-4074-97b9-1dd7950c7fa4',
+          actorType: 'organization',
         },
       ],
     ],
@@ -152,8 +152,8 @@ describe('RoomServiceMentions', () => {
       'Hey, [@aleksandar](https://localhost:3000/organization/alex) - this look like you',
       [
         {
-          contributorID: '03bb5b07-f134-4074-97b9-1dd7950c7fa4',
-          contributorType: 'organization',
+          actorID: '03bb5b07-f134-4074-97b9-1dd7950c7fa4',
+          actorType: 'organization',
         },
       ],
     ],
@@ -163,12 +163,12 @@ describe('RoomServiceMentions', () => {
         'Hey, [@aleksandar](http://localhost:3000/organization/alex-org) - this look like you',
       [
         {
-          contributorID: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
-          contributorType: 'user',
+          actorID: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
+          actorType: 'user',
         },
         {
-          contributorID: '03bb5b07-f134-4074-97b9-1dd7950c7fa4',
-          contributorType: 'organization',
+          actorID: '03bb5b07-f134-4074-97b9-1dd7950c7fa4',
+          actorType: 'organization',
         },
       ],
     ],
@@ -177,12 +177,12 @@ describe('RoomServiceMentions', () => {
         'Hey, [@aleksandar](https://localhost:3000/organization/alex-org) - this look like you',
       [
         {
-          contributorID: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
-          contributorType: 'user',
+          actorID: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
+          actorType: 'user',
         },
         {
-          contributorID: '03bb5b07-f134-4074-97b9-1dd7950c7fa4',
-          contributorType: 'organization',
+          actorID: '03bb5b07-f134-4074-97b9-1dd7950c7fa4',
+          actorType: 'organization',
         },
       ],
     ],

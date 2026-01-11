@@ -85,7 +85,7 @@ export class RegistrationService {
     const userID = deleteData.ID;
 
     const invitations =
-      await this.invitationService.findInvitationsForContributor(userID);
+      await this.invitationService.findInvitationsForActor(userID);
     for (const invitation of invitations) {
       await this.invitationService.deleteInvitation({ ID: invitation.id });
     }
@@ -110,7 +110,7 @@ export class RegistrationService {
     const organizationID = deleteData.ID;
 
     const invitations =
-      await this.invitationService.findInvitationsForContributor(
+      await this.invitationService.findInvitationsForActor(
         organizationID
       );
     for (const invitation of invitations) {

@@ -138,18 +138,17 @@ export class RolesService {
     userID: string,
     states?: string[]
   ): Promise<IInvitation[]> {
-    // What contributors are managed by this user?
-    const contributorsManagedByUser =
+    // What actors are managed by this user?
+    const actorsManagedByUser =
       await this.actorLookupService.getActorsManagedByUser(userID);
     const invitations: IInvitation[] = [];
-    for (const contributor of contributorsManagedByUser) {
-      const contributorInvitations =
-        await this.invitationService.findInvitationsForContributor(
-          contributor.id,
-          states
-        );
-      if (contributorInvitations) {
-        invitations.push(...contributorInvitations);
+    for (const actor of actorsManagedByUser) {
+      const actorInvitations = await this.invitationService.findInvitationsForActor(
+        actor.id,
+        states
+      );
+      if (actorInvitations) {
+        invitations.push(...actorInvitations);
       }
     }
 

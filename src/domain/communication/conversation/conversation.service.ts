@@ -25,6 +25,7 @@ import { IUser } from '@domain/community/user/user.interface';
 import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
 import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston/dist/winston.constants';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 
 @Injectable()
 export class ConversationService {
@@ -34,6 +35,7 @@ export class ConversationService {
     private userLookupService: UserLookupService,
     private virtualContributorLookupService: VirtualContributorLookupService,
     private platformWellKnownVirtualContributorsService: PlatformWellKnownVirtualContributorsService,
+    private actorLookupService: ActorLookupService,
     @InjectRepository(Conversation)
     private conversationRepository: Repository<Conversation>,
     @InjectRepository(ConversationMembership)
@@ -234,18 +236,17 @@ export class ConversationService {
   }
 
   /**
-   * Get all members of a conversation via the pivot table.   * Performance: Queries are limited to 2 members per conversation by domain constraint.
-   * Consider DataLoader batching for GraphQL resolvers when querying multiple conversations.   * @param conversationId - UUID of the conversation
-   * @returns Array of conversation memberships with actor relationships loaded
+   * Get all members of a conversation via the pivot table.
+   * Performance: Queries are limited to 2 members per conversation by domain constraint.
+   * Consider DataLoader batching for GraphQL resolvers when querying multiple conversations.
+   * @param conversationId - UUID of the conversation
+   * @returns Array of conversation memberships (actorId only, use ActorLookupService for types)
    */
   async getConversationMembers(
     conversationId: string
   ): Promise<IConversationMembership[]> {
     return await this.conversationMembershipRepository.find({
       where: { conversationId },
-      relations: {
-        actor: true,
-      },
     });
   }
 
@@ -315,10 +316,8 @@ export class ConversationService {
 
   /**
    * Infer conversation type from the actor types of its members.
-   * Performance optimization: Uses short-circuit evaluation to check actor.type directly
-   * without loading full user/virtualContributor entities. Actor type is eagerly loaded
-   * by the memberships query, avoiding N+1 queries.
-   * Enforces exactly at most 2 members per conversation (per spec clarification).
+   * Uses ActorLookupService with caching for efficient type lookups.
+   * Enforces at most 2 members per conversation (per spec clarification).
    * @param conversationId - UUID of the conversation
    * @returns USER_USER if both are users, USER_VC if one is a VC
    * @throws ValidationException if conversation doesn't have exactly 2 members
@@ -341,8 +340,12 @@ export class ConversationService {
       );
     }
 
-    // Check if any actor is a virtual contributor using actor.type field
-    const hasVC = members.some(m => m.actor?.type === ActorType.VIRTUAL);
+    // Get actor types using cached lookup
+    const actorIds = members.map(m => m.actorId);
+    const typeMap = await this.actorLookupService.validateActorsAndGetTypes(actorIds);
+
+    // Check if any actor is a virtual contributor
+    const hasVC = actorIds.some(id => typeMap.get(id) === ActorType.VIRTUAL);
 
     return hasVC
       ? CommunicationConversationType.USER_VC
@@ -351,7 +354,7 @@ export class ConversationService {
 
   /**
    * T075: Get the user from a conversation via membership resolution.
-   * Replaces direct access to conversation.actorId (column dropped).
+   * Uses ActorLookupService for type lookups instead of loading actor relation.
    * @param conversationId - UUID of the conversation
    * @param excludeActorId - Optional actor ID to exclude (for finding "the other user")
    * @returns The user if found, null if conversation has no user member (or only excluded user)
@@ -362,10 +365,14 @@ export class ConversationService {
   ): Promise<IUser | null> {
     const members = await this.getConversationMembers(conversationId);
 
+    // Get actor types using cached lookup
+    const actorIds = members.map(m => m.actorId);
+    const typeMap = await this.actorLookupService.validateActorsAndGetTypes(actorIds);
+
     // Find a user member, excluding the specified actor if provided
     const userMember = members.find(
       m =>
-        m.actor?.type === ActorType.USER &&
+        typeMap.get(m.actorId) === ActorType.USER &&
         (!excludeActorId || m.actorId !== excludeActorId)
     );
 

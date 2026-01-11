@@ -265,9 +265,10 @@ export class MessagingService {
     // Filter by type using subquery - O(1) instead of O(n)
     if (typeFilter) {
       // Subquery checks if conversation has a VC member
+      // Join Actor table directly by actorId (no relation needed)
       const vcExistsSubquery = this.conversationMembershipRepository
         .createQueryBuilder('m2')
-        .innerJoin('m2.actor', 'a')
+        .innerJoin('actor', 'a', 'm2.actorId = a.id')
         .where('m2.conversationId = membership.conversationId')
         .andWhere('a.type = :vcType')
         .select('1');

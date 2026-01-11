@@ -95,10 +95,10 @@ export class InvitationService {
         this.logger.error(
           {
             message:
-              'Unable to invalidate membership status cache for Contributor',
-            cause: 'Contributor not found',
+              'Unable to invalidate membership status cache for Actor',
+            cause: 'Actor not found',
             invitationId: invitation.id,
-            contributorId: invitation.invitedActorId,
+            actorId: invitation.invitedActorId,
           },
           undefined,
           LogContext.COMMUNITY
@@ -161,7 +161,7 @@ export class InvitationService {
     return this.invitationLifecycleService.getState(lifecycle);
   }
 
-  async getInvitedContributor(invitation: IInvitation): Promise<IActor> {
+  async getInvitedActor(invitation: IInvitation): Promise<IActor> {
     return this.actorLookupService.getFullActorByIdOrFail(
       invitation.invitedActorId
     );
@@ -180,12 +180,12 @@ export class InvitationService {
   }
 
   async findExistingInvitations(
-    contributorID: string,
+    actorID: string,
     roleSetID: string
   ): Promise<IInvitation[]> {
     const existingInvitations = await this.invitationRepository.find({
       where: {
-        invitedActorId: contributorID,
+        invitedActorId: actorID,
         roleSet: { id: roleSetID },
       },
       relations: { roleSet: true },
@@ -195,13 +195,13 @@ export class InvitationService {
     return [];
   }
 
-  async findInvitationsForContributor(
-    contributorID: string,
+  async findInvitationsForActor(
+    actorID: string,
     states: string[] = []
   ): Promise<IInvitation[]> {
     const findOpts: FindManyOptions<Invitation> = {
       relations: { roleSet: true },
-      where: { invitedActorId: contributorID },
+      where: { invitedActorId: actorID },
     };
 
     if (states.length) {

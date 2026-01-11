@@ -91,8 +91,8 @@ export class RoomResolverMutations {
 
     // Extract user IDs from mentions to avoid double notifications
     const mentionedUserIDs = mentions
-      .filter(m => m.contributorType === 'user')
-      .map(m => m.contributorID);
+      .filter(m => m.actorType === 'user')
+      .map(m => m.actorID);
 
     switch (room.type) {
       case RoomType.POST: {

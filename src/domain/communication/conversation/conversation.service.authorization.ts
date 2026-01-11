@@ -13,6 +13,7 @@ import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authoriz
 import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { ActorType } from '@common/enums/actor.type';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 
 @Injectable()
 export class ConversationAuthorizationService {
@@ -20,7 +21,8 @@ export class ConversationAuthorizationService {
     private conversationService: ConversationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private roomAuthorizationService: RoomAuthorizationService,
-    private userLookupService: UserLookupService
+    private userLookupService: UserLookupService,
+    private actorLookupService: ActorLookupService
   ) {}
 
   public async applyAuthorizationPolicy(
@@ -48,19 +50,20 @@ export class ConversationAuthorizationService {
     const memberships =
       await this.conversationService.getConversationMembers(conversationID);
 
+    // Get actor types using cached lookup
+    const actorIds = memberships.map(m => m.actorId);
+    const typeMap =
+      await this.actorLookupService.validateActorsAndGetTypes(actorIds);
+
     // Resolve actor IDs to user IDs for authorization
     // Note: Current authorization system uses USER_SELF_MANAGEMENT credentials
     // User IS an Actor - actorId = userId for users
-    const participantUserIDs: string[] = [];
-    for (const membership of memberships) {
-      if (membership.actor?.type === ActorType.USER) {
-        // User IS an Actor - actorId = userId
-        participantUserIDs.push(membership.actorId);
-      }
-      // Note: Virtual contributors don't have user IDs, so they won't be included
-      // in the authorization rules. This is acceptable since VCs interact via
-      // the platform's service credentials, not user credentials.
-    }
+    const participantUserIDs: string[] = actorIds.filter(
+      id => typeMap.get(id) === ActorType.USER
+    );
+    // Note: Virtual contributors don't have user IDs, so they won't be included
+    // in the authorization rules. This is acceptable since VCs interact via
+    // the platform's service credentials, not user credentials.
 
     // Add READ + CONTRIBUTE access for all user participants
     // T057: Membership grants both read and send message privileges

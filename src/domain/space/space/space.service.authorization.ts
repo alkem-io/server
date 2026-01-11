@@ -595,7 +595,7 @@ export class SpaceAuthorizationService {
 
     const collaborationSettings = spaceSettings.collaboration;
     if (collaborationSettings.allowMembersToCreateSubspaces) {
-      const criteria = await this.getContributorCriteria(
+      const criteria = await this.getActorCriteria(
         roleSet,
         spaceSettings
       );
@@ -617,7 +617,7 @@ export class SpaceAuthorizationService {
     return authorization;
   }
 
-  private async getContributorCriteria(
+  private async getActorCriteria(
     roleSet: IRoleSet,
     spaceSettings: ISpaceSettings
   ): Promise<ICredentialDefinition[]> {

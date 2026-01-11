@@ -176,39 +176,39 @@ export class CollaborationAuthorizationService {
     return updatedAuthorizations;
   }
 
-  private async getContributorCredentials(
+  private async getActorCredentials(
     roleSet: IRoleSet,
     spaceSettings: ISpaceSettings,
     platformRolesAccess: IPlatformRolesAccess
   ): Promise<ICredentialDefinition[]> {
     // add challenge members
-    let contributorCriterias = await this.roleSetService.getCredentialsForRole(
+    let actorCriterias = await this.roleSetService.getCredentialsForRole(
       roleSet,
       RoleName.MEMBER
     );
     // optionally add space members
     if (spaceSettings.collaboration.inheritMembershipRights) {
-      contributorCriterias =
+      actorCriterias =
         await this.roleSetService.getCredentialsForRoleWithParents(
           roleSet,
           RoleName.MEMBER
         );
     }
 
-    contributorCriterias.push({
+    actorCriterias.push({
       type: AuthorizationCredential.GLOBAL_ADMIN,
       resourceID: '',
     });
 
     // Add platform roles that have UPDATE access (including GLOBAL_SUPPORT if allowPlatformSupportAsAdmin is set)
-    const platformRolesContributorCriterias =
+    const platformRolesActorCriterias =
       this.platformRolesAccessService.getCredentialsForRolesWithAccess(
         platformRolesAccess.roles,
         [AuthorizationPrivilege.UPDATE]
       );
-    contributorCriterias.push(...platformRolesContributorCriterias);
+    actorCriterias.push(...platformRolesActorCriterias);
 
-    return contributorCriterias;
+    return actorCriterias;
   }
 
   private async appendCredentialRules(
@@ -278,18 +278,17 @@ export class CollaborationAuthorizationService {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
     // Who is able to contribute
-    const contributors = await this.getContributorCredentials(
+    const actors = await this.getActorCredentials(
       policy,
       spaceSettings,
       platformRolesAccess
     );
-    const contributorsRule =
-      this.authorizationPolicyService.createCredentialRule(
-        [AuthorizationPrivilege.CONTRIBUTE],
-        contributors,
-        CREDENTIAL_RULE_COLLABORATION_CONTRIBUTORS
-      );
-    newRules.push(contributorsRule);
+    const actorsRule = this.authorizationPolicyService.createCredentialRule(
+      [AuthorizationPrivilege.CONTRIBUTE],
+      actors,
+      CREDENTIAL_RULE_COLLABORATION_CONTRIBUTORS
+    );
+    newRules.push(actorsRule);
 
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,

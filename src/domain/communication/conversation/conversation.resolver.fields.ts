@@ -14,6 +14,7 @@ import { IVirtualContributor } from '@domain/community/virtual-contributor/virtu
 import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
 import { ActorType } from '@common/enums/actor.type';
 import { ActorContext } from '@core/actor-context';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 
 @Resolver(() => IConversation)
 export class ConversationResolverFields {
@@ -21,7 +22,8 @@ export class ConversationResolverFields {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private readonly conversationService: ConversationService,
-    private readonly virtualContributorLookupService: VirtualContributorLookupService
+    private readonly virtualContributorLookupService: VirtualContributorLookupService,
+    private readonly actorLookupService: ActorLookupService
   ) {}
 
   @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
@@ -82,18 +84,21 @@ export class ConversationResolverFields {
       conversation.id
     );
 
-    // Find the virtual contributor actor among members
-    const vcMembership = memberships.find(
-      m => m.actor?.type === ActorType.VIRTUAL
-    );
+    // Get actor types using cached lookup
+    const actorIds = memberships.map(m => m.actorId);
+    const typeMap =
+      await this.actorLookupService.validateActorsAndGetTypes(actorIds);
 
-    if (!vcMembership?.actorId) {
+    // Find the virtual contributor actor among members
+    const vcActorId = actorIds.find(id => typeMap.get(id) === ActorType.VIRTUAL);
+
+    if (!vcActorId) {
       return null;
     }
 
     // VirtualContributor IS an Actor - actorId = virtualContributorId
     return await this.virtualContributorLookupService.getVirtualContributorById(
-      vcMembership.actorId
+      vcActorId
     );
   }
 }

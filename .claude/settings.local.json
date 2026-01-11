@@ -56,7 +56,8 @@
       "mcp__git__git_diff_unstaged",
       "mcp__git__git_log",
       "Bash(npx eslint:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(git add:*)"
     ]
   }
 }

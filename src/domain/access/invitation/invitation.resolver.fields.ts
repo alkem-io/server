@@ -17,11 +17,11 @@ export class InvitationResolverFields {
   @UseGuards(GraphqlGuard)
   @ResolveField('contributor', () => IActor, {
     nullable: false,
-    description: 'The Contributor who is invited.',
+    description: 'The Actor who is invited.',
   })
   @Profiling.api
-  async invitedContributor(@Parent() invitation: IInvitation): Promise<IActor> {
-    return await this.invitationService.getInvitedContributor(invitation);
+  async invitedActor(@Parent() invitation: IInvitation): Promise<IActor> {
+    return await this.invitationService.getInvitedActor(invitation);
   }
 
   @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)

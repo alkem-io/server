@@ -13,7 +13,7 @@ import { CommunicationAdapter } from '@services/adapters/communication-adapter/c
 import { VirtualContributorMessageService } from '@domain/communication/virtual.contributor.message/virtual.contributor.message.service';
 import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup.service';
 import { RoomMentionsService } from '@domain/communication/room-mentions/room.mentions.service';
-import { MentionedEntityType } from '@domain/communication/messaging/mention.interface';
+import { MentionedActorType } from '@domain/communication/messaging/mention.interface';
 import { ActorContextService } from '@core/actor-context';
 
 /**
@@ -222,7 +222,7 @@ export class MessageInboxService {
     );
 
     const vcMentions = mentions.filter(
-      m => m.contributorType === MentionedEntityType.VIRTUAL_CONTRIBUTOR
+      m => m.actorType === MentionedActorType.VIRTUAL_CONTRIBUTOR
     );
 
     if (vcMentions.length === 0) {

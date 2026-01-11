@@ -93,7 +93,7 @@ export class NotificationExternalAdapter {
       space
     );
     const applicantPayload =
-      await this.getContributorPayloadOrFail(triggeredBy);
+      await this.getActorPayloadOrFail(triggeredBy);
     const payload: NotificationEventPayloadSpaceCommunityApplication = {
       applicant: applicantPayload,
       ...spacePayload,
@@ -117,7 +117,7 @@ export class NotificationExternalAdapter {
       space
     );
     const inviteePayload =
-      await this.getContributorPayloadOrFail(invitedUserID);
+      await this.getActorPayloadOrFail(invitedUserID);
     const payload: NotificationEventPayloadSpaceCommunityInvitation = {
       invitee: inviteePayload,
       welcomeMessage,
@@ -143,10 +143,10 @@ export class NotificationExternalAdapter {
       space
     );
 
-    const hostPayload = await this.getContributorPayloadOrFail(accountHost.id);
+    const hostPayload = await this.getActorPayloadOrFail(accountHost.id);
 
     const virtualContributorPayload: ContributorPayload =
-      await this.getContributorPayloadOrFail(virtualContributorID);
+      await this.getActorPayloadOrFail(virtualContributorID);
     const result: NotificationEventPayloadSpaceCommunityInvitationVirtualContributor =
       {
         host: hostPayload,
@@ -172,7 +172,7 @@ export class NotificationExternalAdapter {
     );
 
     const virtualContributorPayload: ContributorPayload =
-      await this.getContributorPayloadOrFail(virtualContributorID);
+      await this.getActorPayloadOrFail(virtualContributorID);
 
     // For declined invitations, we don't need the host payload, so we can reuse the virtual contributor as both
     const result: NotificationEventPayloadSpaceCommunityInvitationVirtualContributor =
@@ -252,7 +252,7 @@ export class NotificationExternalAdapter {
       contributionPayload = {
         id: contribution.post.id,
         type: CalloutContributionType.POST,
-        createdBy: await this.getContributorPayloadOrFail(
+        createdBy: await this.getActorPayloadOrFail(
           contribution.createdBy || contribution.post.createdBy
         ),
         displayName: contribution.post.profile.displayName,
@@ -267,7 +267,7 @@ export class NotificationExternalAdapter {
       contributionPayload = {
         id: contribution.whiteboard.id,
         type: CalloutContributionType.WHITEBOARD,
-        createdBy: await this.getContributorPayloadOrFail(
+        createdBy: await this.getActorPayloadOrFail(
           contribution.createdBy || contribution.whiteboard.createdBy || ''
         ),
         displayName: contribution.whiteboard.profile.displayName,
@@ -278,7 +278,7 @@ export class NotificationExternalAdapter {
       contributionPayload = {
         id: contribution.link.id,
         type: CalloutContributionType.LINK,
-        createdBy: await this.getContributorPayloadOrFail(
+        createdBy: await this.getActorPayloadOrFail(
           contribution.createdBy || ''
         ),
         displayName: contribution.link.profile.displayName,
@@ -289,7 +289,7 @@ export class NotificationExternalAdapter {
       contributionPayload = {
         id: contribution.memo.id,
         type: CalloutContributionType.MEMO,
-        createdBy: await this.getContributorPayloadOrFail(
+        createdBy: await this.getActorPayloadOrFail(
           contribution.createdBy || contribution.memo.createdBy || ''
         ),
         displayName: contribution.memo.profile.displayName,
@@ -433,14 +433,14 @@ export class NotificationExternalAdapter {
           id: post.id,
           displayName: post.profile.displayName,
           description: post.profile.description ?? '',
-          createdBy: await this.getContributorPayloadOrFail(post.createdBy),
+          createdBy: await this.getActorPayloadOrFail(post.createdBy),
           type: CalloutContributionType.POST,
           url: postURL,
         },
       },
       comment: {
         message: messageResult.message,
-        createdBy: await this.getContributorPayloadByActorIdOrFail(
+        createdBy: await this.getActorPayloadByActorId(
           messageResult.sender
         ),
       },
@@ -455,7 +455,7 @@ export class NotificationExternalAdapter {
     triggeredBy: string,
     recipients: IUser[],
     space: ISpace,
-    contributorID: string
+    actorID: string
   ): Promise<NotificationEventPayloadSpaceCommunityContributor> {
     const spacePayload = await this.buildSpacePayload(
       eventType,
@@ -463,7 +463,7 @@ export class NotificationExternalAdapter {
       recipients,
       space
     );
-    const memberPayload = await this.getContributorPayloadOrFail(contributorID);
+    const memberPayload = await this.getActorPayloadOrFail(actorID);
     const payload: NotificationEventPayloadSpaceCommunityContributor = {
       contributor: memberPayload,
       ...spacePayload,
@@ -489,7 +489,7 @@ export class NotificationExternalAdapter {
     const payload: NotificationEventPayloadSpaceCommunicationUpdate = {
       update: {
         id: updates.id,
-        createdBy: await this.getContributorPayloadOrFail(triggeredBy),
+        createdBy: await this.getActorPayloadOrFail(triggeredBy),
         url: 'not used',
       },
       message: lastMessage?.message,
@@ -596,7 +596,7 @@ export class NotificationExternalAdapter {
       recipients,
       space
     );
-    const sender = await this.getContributorPayloadOrFail(triggeredBy);
+    const sender = await this.getActorPayloadOrFail(triggeredBy);
 
     return {
       sender: {
@@ -621,7 +621,7 @@ export class NotificationExternalAdapter {
       recipients,
       space
     );
-    const applicantPayload = await this.getContributorPayloadOrFail(userID);
+    const applicantPayload = await this.getActorPayloadOrFail(userID);
     const payload: NotificationEventPayloadSpaceCommunityApplication = {
       applicant: applicantPayload,
       ...spacePayload,
@@ -712,12 +712,12 @@ export class NotificationExternalAdapter {
       discussion: {
         id: discussion.id,
         displayName: discussion.profile.displayName,
-        createdBy: await this.getContributorPayloadOrFail(discussion.createdBy),
+        createdBy: await this.getActorPayloadOrFail(discussion.createdBy),
         url: discussionURL,
       },
       comment: {
         message: message.message,
-        createdBy: await this.getContributorPayloadByActorIdOrFail(
+        createdBy: await this.getActorPayloadByActorId(
           message.sender
         ),
         url: '',
@@ -745,7 +745,7 @@ export class NotificationExternalAdapter {
       ...basePayload,
       discussion: {
         id: discussion.id,
-        createdBy: await this.getContributorPayloadOrFail(discussion.createdBy),
+        createdBy: await this.getActorPayloadOrFail(discussion.createdBy),
         displayName: discussion.profile.displayName,
         url: discussionURL,
       },
@@ -783,7 +783,7 @@ export class NotificationExternalAdapter {
     organizationID: string,
     messageDetails: MessageDetails
   ): Promise<NotificationEventPayloadOrganizationMessageRoom> {
-    const orgData = await this.getContributorPayloadOrFail(organizationID);
+    const orgData = await this.getActorPayloadOrFail(organizationID);
 
     const basePayload = await this.buildBaseEventPayload(
       eventType,
@@ -816,7 +816,7 @@ export class NotificationExternalAdapter {
       recipients
     );
     const orgContributor =
-      await this.getContributorPayloadOrFail(organizationID);
+      await this.getActorPayloadOrFail(organizationID);
     const payload: NotificationEventPayloadOrganizationMessageDirect = {
       message,
       organization: orgContributor,
@@ -956,70 +956,62 @@ export class NotificationExternalAdapter {
     return result;
   }
 
-  private async getContributorPayloadOrFail(
-    contributorID: string
+  private async getActorPayloadOrFail(
+    actorID: string
   ): Promise<ContributorPayload> {
-    const contributor = await this.actorLookupService.getFullActorById(
-      contributorID,
-      {
-        relations: {
-          profile: true,
-        },
-      }
-    );
+    const actor = await this.actorLookupService.getFullActorById(actorID, {
+      relations: {
+        profile: true,
+      },
+    });
 
-    if (!contributor || !contributor.profile) {
+    if (!actor || !actor.profile) {
       throw new EntityNotFoundException(
-        `Unable to find Contributor with profile for id: ${contributorID}`,
+        `Unable to find Actor with profile for id: ${actorID}`,
         LogContext.COMMUNITY
       );
     }
 
-    const contributorType = contributor.type;
+    const actorType = actor.type;
 
-    const contributorURL =
-      this.urlGeneratorService.createUrlForContributor(contributor);
+    const actorURL = this.urlGeneratorService.createUrlForActor(actor);
     const result: ContributorPayload = {
-      id: contributor.id,
+      id: actor.id,
       profile: {
-        displayName: contributor.profile.displayName,
-        url: contributorURL,
+        displayName: actor.profile.displayName,
+        url: actorURL,
       },
-      type: contributorType,
+      type: actorType,
     };
     return result;
   }
 
-  private async getContributorPayloadByActorIdOrFail(
+  private async getActorPayloadByActorId(
     actorId: string
   ): Promise<ContributorPayload> {
-    const contributor = await this.actorLookupService.getFullActorById(
-      actorId,
-      {
-        relations: {
-          profile: true,
-        },
-      }
-    );
+    const actor = await this.actorLookupService.getFullActorById(actorId, {
+      relations: {
+        profile: true,
+      },
+    });
 
-    if (!contributor || !contributor.profile) {
+    if (!actor || !actor.profile) {
       throw new EntityNotFoundException(
-        `Unable to find Contributor with profile for actor id: ${actorId}`,
+        `Unable to find Actor with profile for actor id: ${actorId}`,
         LogContext.COMMUNITY
       );
     }
 
-    const contributorType = contributor.type;
+    const actorType = actor.type;
 
-    const contributorURL =
-      this.urlGeneratorService.createUrlForContributor(contributor);
+    const actorURL = this.urlGeneratorService.createUrlForActor(actor);
     const result: ContributorPayload = {
-      id: contributor.id,
+      id: actor.id,
       profile: {
-        displayName: contributor.profile.displayName,
-        url: contributorURL,
+        displayName: actor.profile.displayName,
+        url: actorURL,
       },
-      type: contributorType,
+      type: actorType,
     };
     return result;
   }
@@ -1066,10 +1058,10 @@ export class NotificationExternalAdapter {
     return this.configService.get('hosting.endpoint_cluster', { infer: true });
   }
 
-  private async getContributorPayloadOrEmpty(
-    contributorID: string | undefined
+  private async getActorPayloadOrEmpty(
+    actorID: string | undefined
   ): Promise<ContributorPayload> {
-    if (!contributorID) {
+    if (!actorID) {
       return {
         id: '',
         profile: {
@@ -1080,6 +1072,6 @@ export class NotificationExternalAdapter {
       };
     }
 
-    return await this.getContributorPayloadOrFail(contributorID);
+    return await this.getActorPayloadOrFail(actorID);
   }
 }

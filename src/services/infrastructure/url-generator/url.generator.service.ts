@@ -181,8 +181,8 @@ export class UrlGeneratorService {
     return '';
   }
 
-  public createUrlForContributor(contributor: IActorFull): string {
-    const type = this.getContributorType(contributor);
+  public createUrlForActor(actor: IActorFull): string {
+    const type = this.getActorType(actor);
     let path: string = UrlPathBase.VIRTUAL_CONTRIBUTOR;
     switch (type) {
       case ActorType.USER:
@@ -195,7 +195,7 @@ export class UrlGeneratorService {
         path = UrlPathBase.VIRTUAL_CONTRIBUTOR;
         break;
     }
-    return `${this.endpoint_cluster}/${path}/${contributor.nameID}`;
+    return `${this.endpoint_cluster}/${path}/${actor.nameID}`;
   }
 
   public createUrlForOrganizationNameID(organizationNameID: string): string {
@@ -248,12 +248,12 @@ export class UrlGeneratorService {
     return url;
   }
 
-  private getContributorType(contributor: IActorFull) {
-    if (contributor instanceof User) return ActorType.USER;
-    if (contributor instanceof Organization) return ActorType.ORGANIZATION;
-    if (contributor instanceof VirtualContributor) return ActorType.VIRTUAL;
+  private getActorType(actor: IActorFull) {
+    if (actor instanceof User) return ActorType.USER;
+    if (actor instanceof Organization) return ActorType.ORGANIZATION;
+    if (actor instanceof VirtualContributor) return ActorType.VIRTUAL;
     throw new RelationshipNotFoundException(
-      `Unable to determine contributor type for ${contributor.id}`,
+      `Unable to determine actor type for ${actor.id}`,
       LogContext.COMMUNITY
     );
   }

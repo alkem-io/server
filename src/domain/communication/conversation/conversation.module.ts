@@ -14,6 +14,7 @@ import { ConversationResolverMutations } from './conversation.resolver.mutations
 import { GuidanceReporterModule } from '@services/external/elasticsearch/guidance-reporter/guidance.reporter.module';
 import { PlatformWellKnownVirtualContributorsModule } from '@platform/platform.well.known.virtual.contributors';
 import { RoomLookupModule } from '../room-lookup/room.lookup.module';
+import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { RoomLookupModule } from '../room-lookup/room.lookup.module';
     GuidanceReporterModule,
     PlatformWellKnownVirtualContributorsModule,
     ConversationMembershipModule,
+    ActorLookupModule,
     TypeOrmModule.forFeature([Conversation]),
   ],
   providers: [

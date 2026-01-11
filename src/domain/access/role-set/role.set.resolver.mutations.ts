@@ -551,7 +551,7 @@ export class RoleSetResolverMutations {
     actorContext: ActorContext,
     roleSet: IRoleSet,
     role: RoleName,
-    contributorID: string
+    actorID: string
   ): Promise<void> {
     this.validateRoleSetTypeOrFail(roleSet, [RoleSetType.SPACE]);
 
@@ -560,7 +560,7 @@ export class RoleSetResolverMutations {
       const sameAccount =
         await this.roleSetService.isRoleSetAccountMatchingVcAccount(
           roleSet,
-          contributorID
+          actorID
         );
       if (sameAccount) {
         requiredPrivilege =
@@ -591,7 +591,7 @@ export class RoleSetResolverMutations {
     actorContext: ActorContext,
     roleSet: IRoleSet,
     role: RoleName,
-    contributorID: string
+    actorID: string
   ): Promise<void> {
     this.validateRoleSetTypeOrFail(roleSet, [
       RoleSetType.SPACE,
@@ -606,7 +606,7 @@ export class RoleSetResolverMutations {
           extendedAuthorization =
             this.roleSetAuthorizationService.extendAuthorizationPolicyForSelfRemoval(
               roleSet,
-              contributorID
+              actorID
             );
         }
         break;
@@ -615,7 +615,7 @@ export class RoleSetResolverMutations {
           extendedAuthorization =
             this.roleSetAuthorizationService.extendAuthorizationPolicyForSelfRemoval(
               roleSet,
-              contributorID
+              actorID
             );
         }
         break;
@@ -646,14 +646,14 @@ export class RoleSetResolverMutations {
   private async authorizeRemoveVirtualContributor(
     actorContext: ActorContext,
     roleSet: IRoleSet,
-    contributorID: string
+    actorID: string
   ): Promise<void> {
     this.validateRoleSetTypeOrFail(roleSet, [RoleSetType.SPACE]);
 
     const extendedAuthorization =
       await this.roleSetAuthorizationService.extendAuthorizationPolicyForVirtualContributorRemoval(
         roleSet,
-        contributorID
+        actorID
       );
 
     this.authorizationService.grantAccessOrFail(
