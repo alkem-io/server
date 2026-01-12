@@ -1,4 +1,5 @@
 import {
+  Column,
   CreateDateColumn,
   Entity,
   Index,
@@ -35,4 +36,7 @@ export class ConversationMembership implements IConversationMembership {
 
   @CreateDateColumn()
   createdAt!: Date;
+
+  @Column({ type: 'timestamp', nullable: true })
+  lastReadAt?: Date;
 }

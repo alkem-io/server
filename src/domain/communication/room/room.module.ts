@@ -24,6 +24,7 @@ import { InAppNotificationModule } from '@platform/in-app-notification/in.app.no
 import { RoomMentionsModule } from '../room-mentions/room.mentions.module';
 import { RoomLookupModule } from '../room-lookup/room.lookup.module';
 import { VirtualContributorMessageModule } from '../virtual.contributor.message/virtual.contributor.message.module';
+import { ConversationMembershipModule } from '../conversation-membership/conversation.membership.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { VirtualContributorMessageModule } from '../virtual.contributor.message/
     UserLookupModule,
     RoomMentionsModule,
     RoomLookupModule,
+    ConversationMembershipModule,
     TypeOrmModule.forFeature([Room]),
     SubscriptionServiceModule,
     InAppNotificationModule,

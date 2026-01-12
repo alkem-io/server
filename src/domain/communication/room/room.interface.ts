@@ -15,6 +15,9 @@ export abstract class IRoom extends IAuthorizable {
 
   displayName!: string;
 
+  // Timestamp of the last message sent in the room
+  lastMessageAt?: Date;
+
   // Internal storage (JSON column)
   vcInteractionsByThread!: VcInteractionsByThread;
 

@@ -15,6 +15,7 @@ import { InAppNotificationModule } from '@platform/in-app-notification/in.app.no
 import { MessagingModule } from '@domain/communication/messaging/messaging.module';
 import { MeConversationsResolverFields } from './me.conversations.resolver.fields';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
+import { ConversationMembershipModule } from '@domain/communication/conversation-membership/conversation.membership.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.modu
     EntityResolverModule,
     InAppNotificationModule,
     MessagingModule,
+    ConversationMembershipModule,
   ],
   providers: [
     MeService,

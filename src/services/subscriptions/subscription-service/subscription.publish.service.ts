@@ -6,6 +6,7 @@ import {
   SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER,
   SUBSCRIPTION_ROOM_EVENT,
   SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED,
+  SUBSCRIPTION_CONVERSATIONS_UNREAD_COUNT,
 } from '@src/common/constants';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { IActivity } from '@platform/activity';
@@ -17,6 +18,7 @@ import {
   RoomEventSubscriptionPayload,
   VirtualContributorUpdatedSubscriptionPayload,
   InAppNotificationCounterSubscriptionPayload,
+  ConversationsUnreadCountSubscriptionPayload,
 } from './dto';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
@@ -38,6 +40,8 @@ export class SubscriptionPublishService {
     private inAppNotificationReceivedSubscription: TypedPubSubEngine<IInAppNotification>,
     @Inject(SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER)
     private inAppNotificationCounterSubscription: TypedPubSubEngine,
+    @Inject(SUBSCRIPTION_CONVERSATIONS_UNREAD_COUNT)
+    private conversationsUnreadCountSubscription: TypedPubSubEngine,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -132,6 +136,19 @@ export class SubscriptionPublishService {
 
     return this.inAppNotificationCounterSubscription.publish(
       SubscriptionType.IN_APP_NOTIFICATION_COUNTER,
+      payload
+    );
+  }
+
+  public publishConversationsUnreadCount(receiverID: string, count: number) {
+    const payload: ConversationsUnreadCountSubscriptionPayload = {
+      eventID: `conversations-unread-count-${randomInt()}`,
+      receiverID,
+      count,
+    };
+
+    return this.conversationsUnreadCountSubscription.publish(
+      SubscriptionType.CONVERSATIONS_UNREAD_COUNT,
       payload
     );
   }

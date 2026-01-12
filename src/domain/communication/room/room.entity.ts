@@ -18,6 +18,9 @@ export class Room extends AuthorizableEntity implements IRoom {
   @Column()
   displayName!: string;
 
+  @Column({ type: 'timestamp', nullable: true })
+  lastMessageAt?: Date;
+
   @Column('jsonb', { default: {} })
   vcInteractionsByThread!: VcInteractionsByThread;
 

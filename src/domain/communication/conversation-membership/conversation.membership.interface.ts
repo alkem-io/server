@@ -7,4 +7,5 @@ export interface IConversationMembership {
   conversation: IConversation;
   agent: IAgent;
   createdAt: Date;
+  lastReadAt?: Date;
 }

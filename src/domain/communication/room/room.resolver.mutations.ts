@@ -33,6 +33,7 @@ import { InAppNotificationService } from '@platform/in-app-notification/in.app.n
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { MessagingNotEnabledException } from '@common/exceptions/messaging.not.enabled.exception';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
+import { ConversationMembershipService } from '../conversation-membership/conversation.membership.service';
 
 @InstrumentResolver()
 @Resolver()
@@ -49,6 +50,7 @@ export class RoomResolverMutations {
     private inAppNotificationService: InAppNotificationService,
     private userLookupService: UserLookupService,
     private communicationAdapter: CommunicationAdapter,
+    private conversationMembershipService: ConversationMembershipService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -214,8 +216,11 @@ export class RoomResolverMutations {
         // contributors would not be able to see the messages
         break;
       case RoomType.CONVERSATION_DIRECT:
-        // Conversation rooms don't require special event processing i.e. no mentions or other notifications as other
-        // contributors would not be able to see the messages
+        // Publish unread count updates for other members of the conversation
+        await this.publishUnreadCountsForConversation(
+          messageData.roomID,
+          agentInfo.agentID
+        );
         break;
       default:
       // ignore for now, later likely to be an exception
@@ -534,5 +539,56 @@ export class RoomResolverMutations {
 
     // Subscription will be published by MessageInboxService when Matrix echoes the removal
     return isDeleted;
+  }
+
+  /**
+   * Publishes unread count updates for other members of a conversation.
+   * Called when a new message is sent to a CONVERSATION_DIRECT room.
+   */
+  private async publishUnreadCountsForConversation(
+    roomID: string,
+    senderAgentId: string
+  ): Promise<void> {
+    try {
+      // Get the conversation from the room
+      const conversation =
+        await this.roomResolverService.getConversationForRoom(roomID);
+
+      if (!conversation) {
+        return;
+      }
+
+      // Get other members of the conversation (excluding the sender)
+      const otherMemberships =
+        await this.conversationMembershipService.getOtherMemberships(
+          conversation.id,
+          senderAgentId
+        );
+
+      // For each other member, calculate and publish their unread count
+      for (const membership of otherMemberships) {
+        const unreadCount =
+          await this.conversationMembershipService.getUnreadConversationsCount(
+            membership.agentId
+          );
+
+        // Get the user ID from the agent to publish the subscription
+        const user = await this.userLookupService.getUserByAgentId(
+          membership.agentId
+        );
+        if (user) {
+          await this.subscriptionPublishService.publishConversationsUnreadCount(
+            user.id,
+            unreadCount
+          );
+        }
+      }
+    } catch (error) {
+      // Log error but don't fail the message send
+      this.logger.warn?.(
+        `Failed to publish unread counts for conversation: ${error}`,
+        LogContext.COMMUNICATION
+      );
+    }
   }
 }

@@ -20,6 +20,9 @@ import { LogContext } from '@common/enums';
 import { ConversationVcResetInput } from './dto/conversation.vc.dto.reset.input';
 import { DeleteConversationInput } from './dto/conversation.dto.delete';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { ConversationMembershipService } from '../conversation-membership/conversation.membership.service';
+import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
+import { UUID } from '@domain/common/scalars';
 
 @InstrumentResolver()
 @Resolver()
@@ -31,6 +34,8 @@ export class ConversationResolverMutations {
     private guidanceReporterService: GuidanceReporterService,
     private conversationAuthorizationService: ConversationAuthorizationService,
     private virtualContributorLookupService: VirtualContributorLookupService,
+    private conversationMembershipService: ConversationMembershipService,
+    private subscriptionPublishService: SubscriptionPublishService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -242,5 +247,50 @@ export class ConversationResolverMutations {
     );
 
     return await this.conversationService.deleteConversation(conversation.id);
+  }
+
+  @Mutation(() => Boolean, {
+    description:
+      'Marks a conversation as read for the current user, updating the lastReadAt timestamp.',
+  })
+  async markConversationAsRead(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('conversationId', { type: () => UUID }) conversationId: string
+  ): Promise<boolean> {
+    // Fetch conversation to verify it exists and get authorization
+    const conversation = await this.conversationService.getConversationOrFail(
+      conversationId,
+      {
+        relations: {
+          authorization: true,
+        },
+      }
+    );
+
+    // Authorization check - user must have read permission on the conversation
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      conversation.authorization,
+      AuthorizationPrivilege.READ,
+      `mark conversation as read: ${conversation.id}`
+    );
+
+    // Update lastReadAt for this user's membership
+    await this.conversationMembershipService.updateLastReadAt(
+      conversationId,
+      agentInfo.agentID
+    );
+
+    // Recalculate and publish the updated unread count
+    const unreadCount =
+      await this.conversationMembershipService.getUnreadConversationsCount(
+        agentInfo.agentID
+      );
+    await this.subscriptionPublishService.publishConversationsUnreadCount(
+      agentInfo.userID,
+      unreadCount
+    );
+
+    return true;
   }
 }

@@ -12,9 +12,11 @@ import { ConversationResolverFields } from './conversation.resolver.fields';
 import { VirtualContributorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
 import { AiServerAdapterModule } from '@services/adapters/ai-server-adapter/ai.server.adapter.module';
 import { ConversationResolverMutations } from './conversation.resolver.mutations';
+import { ConversationResolverSubscription } from './conversation.resolver.subscription';
 import { GuidanceReporterModule } from '@services/external/elasticsearch/guidance-reporter/guidance.reporter.module';
 import { PlatformWellKnownVirtualContributorsModule } from '@platform/platform.well.known.virtual.contributors';
 import { RoomLookupModule } from '../room-lookup/room.lookup.module';
+import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service/subscription.service.module';
 
 @Module({
   imports: [
@@ -28,6 +30,7 @@ import { RoomLookupModule } from '../room-lookup/room.lookup.module';
     GuidanceReporterModule,
     PlatformWellKnownVirtualContributorsModule,
     ConversationMembershipModule,
+    SubscriptionServiceModule,
     TypeOrmModule.forFeature([Conversation]),
   ],
   providers: [
@@ -35,6 +38,7 @@ import { RoomLookupModule } from '../room-lookup/room.lookup.module';
     ConversationAuthorizationService,
     ConversationResolverFields,
     ConversationResolverMutations,
+    ConversationResolverSubscription,
   ],
   exports: [ConversationService, ConversationAuthorizationService],
 })

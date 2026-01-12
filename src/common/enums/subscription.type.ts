@@ -8,4 +8,5 @@ export enum SubscriptionType {
   VIRTUAL_CONTRIBUTOR_UPDATED = 'virtualContributorUpdated',
   IN_APP_NOTIFICATION_RECEIVED = 'in-app-notification-received',
   IN_APP_NOTIFICATION_COUNTER = 'in-app-notification-counter',
+  CONVERSATIONS_UNREAD_COUNT = 'conversationsUnreadCount',
 }

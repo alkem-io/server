@@ -17,13 +17,15 @@ import { PaginatedInAppNotifications } from '@core/pagination/paginated.in-app-n
 import { PaginationArgs } from '@core/pagination';
 import { MeConversationsResult } from './dto/me.conversations.result';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { ConversationMembershipService } from '@domain/communication/conversation-membership/conversation.membership.service';
 
 @Resolver(() => MeQueryResults)
 export class MeResolverFields {
   constructor(
     private meService: MeService,
     private userLookupService: UserLookupService,
-    private inAppNotificationService: InAppNotificationService
+    private inAppNotificationService: InAppNotificationService,
+    private conversationMembershipService: ConversationMembershipService
   ) {}
 
   @ResolveField('notifications', () => PaginatedInAppNotifications, {
@@ -232,5 +234,23 @@ export class MeResolverFields {
 
     // Return an empty object - the fields will be resolved by MeConversationsResolverFields
     return {} as MeConversationsResult;
+  }
+
+  @ResolveField('conversationsUnreadCount', () => Number, {
+    description:
+      'The number of conversations with unread messages for the current authenticated user.',
+  })
+  public async conversationsUnreadCount(
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<number> {
+    if (!agentInfo.agentID) {
+      throw new ValidationException(
+        'Unable to retrieve unread conversations count; no agentID provided.',
+        LogContext.COMMUNICATION
+      );
+    }
+    return await this.conversationMembershipService.getUnreadConversationsCount(
+      agentInfo.agentID
+    );
   }
 }
