@@ -356,7 +356,9 @@ export class UserService {
     return result;
   }
 
-  async createUserFromAgentInfo(agentInfo: AgentInfo): Promise<IUser> {
+  async createOrLinkUserFromAgentInfo(
+    agentInfo: AgentInfo
+  ): Promise<{ user: IUser; isNew: boolean }> {
     // Extra check that there is valid data + no user with the email
     const email = agentInfo.email;
     if (!email || email.length === 0) {
@@ -371,7 +373,7 @@ export class UserService {
       });
 
     if (resolvedUser) {
-      return resolvedUser.user;
+      return { user: resolvedUser.user, isNew: false };
     }
 
     const userData: CreateUserInput = {
@@ -389,7 +391,8 @@ export class UserService {
       },
     };
 
-    return await this.createUser(userData, agentInfo);
+    const user = await this.createUser(userData, agentInfo);
+    return { user, isNew: true };
   }
 
   async clearAuthenticationIDForUser(user: IUser): Promise<IUser> {

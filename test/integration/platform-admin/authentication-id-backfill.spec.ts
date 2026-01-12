@@ -34,7 +34,7 @@ describe('AdminAuthenticationIDBackfillService (integration)', () => {
 
   const createService = () => {
     const userService = {
-      createUserFromAgentInfo: jest.fn(),
+      createOrLinkUserFromAgentInfo: jest.fn(),
     } as unknown as UserService;
 
     const kratosService = {
@@ -62,7 +62,7 @@ describe('AdminAuthenticationIDBackfillService (integration)', () => {
     return {
       service,
       userService: userService as unknown as {
-        createUserFromAgentInfo: jest.Mock;
+        createOrLinkUserFromAgentInfo: jest.Mock;
       },
       kratosService: kratosService as unknown as {
         getIdentityByEmail: jest.Mock;
@@ -114,9 +114,12 @@ describe('AdminAuthenticationIDBackfillService (integration)', () => {
 
     kratosService.getIdentityByEmail.mockResolvedValue(identity);
 
-    userService.createUserFromAgentInfo.mockResolvedValue({
-      ...user,
-      authenticationID: identity.id,
+    userService.createOrLinkUserFromAgentInfo.mockResolvedValue({
+      user: {
+        ...user,
+        authenticationID: identity.id,
+      },
+      isNew: false,
     });
 
     const result = await service.backfillAuthenticationIDs();
@@ -128,7 +131,7 @@ describe('AdminAuthenticationIDBackfillService (integration)', () => {
       retriedBatches: 0,
     });
     expect(kratosService.getIdentityByEmail).toHaveBeenCalledWith(user.email);
-    expect(userService.createUserFromAgentInfo).toHaveBeenCalledTimes(1);
+    expect(userService.createOrLinkUserFromAgentInfo).toHaveBeenCalledTimes(1);
     // Cache invalidation now uses authenticationID (identity.id), not email
     expect(agentInfoCacheService.deleteAgentInfoFromCache).toHaveBeenCalledWith(
       identity.id
@@ -163,7 +166,7 @@ describe('AdminAuthenticationIDBackfillService (integration)', () => {
       skipped: 1,
       retriedBatches: 0,
     });
-    expect(userService.createUserFromAgentInfo).not.toHaveBeenCalled();
+    expect(userService.createOrLinkUserFromAgentInfo).not.toHaveBeenCalled();
     expect(loggerMock.warn).toHaveBeenCalledWith(
       expect.stringContaining('No Kratos identity found'),
       LogContext.AUTH
