@@ -67,9 +67,9 @@ export class RegistrationService {
 
     // New user - finalize registration
     await this.assignUserToOrganizationByDomain(user);
-    await this.finalizeUserRegistration(user);
+    const finalizedUser = await this.finalizeUserRegistration(user);
 
-    return user;
+    return finalizedUser;
   }
 
   /**

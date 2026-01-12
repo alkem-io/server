@@ -101,11 +101,16 @@ export class UserAuthenticationLinkService {
 
       if (existingKratosIdentity) {
         // Old identity still exists - this is a real conflict
-        const message = `Authentication ID mismatch for user ${existingByEmail.id}: existing ${existingByEmail.authenticationID}, incoming ${authId}`;
-        this.logger.error?.(message, LogContext.AUTH);
+        this.logger.error?.(
+          'Authentication ID mismatch: user already linked to different identity',
+          new Error().stack,
+          LogContext.AUTH
+        );
         if (conflictMode === 'error') {
           throw new UserAlreadyRegisteredException(
-            `User with email: ${email} already registered`
+            'User already registered with different authentication ID',
+            LogContext.AUTH,
+            { email, existingAuthId: existingByEmail.authenticationID, incomingAuthId: authId }
           );
         }
         return {
@@ -171,11 +176,16 @@ export class UserAuthenticationLinkService {
       await this.userLookupService.getUserByAuthenticationID(authenticationId);
 
     if (existingUser && existingUser.id !== currentUserId) {
-      const message = `Authentication ID already linked to user ${existingUser.id}`;
-      this.logger.error?.(message, LogContext.AUTH);
+      this.logger.error?.(
+        'Authentication ID already linked to another user',
+        new Error().stack,
+        LogContext.AUTH
+      );
       if (conflictMode === 'error') {
         throw new UserAlreadyRegisteredException(
-          'Kratos identity already linked to another user'
+          'Kratos identity already linked to another user',
+          LogContext.AUTH,
+          { existingUserId: existingUser.id, authenticationId }
         );
       }
       return false;

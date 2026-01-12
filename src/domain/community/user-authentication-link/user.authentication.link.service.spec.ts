@@ -108,6 +108,7 @@ describe('UserAuthenticationLinkService', () => {
 
     expect(logger.error).toHaveBeenCalledWith(
       expect.stringContaining('Authentication ID mismatch'),
+      expect.any(String),
       LogContext.AUTH
     );
     expect(result?.outcome).toBe(UserAuthenticationLinkOutcome.CONFLICT);
@@ -195,6 +196,7 @@ describe('UserAuthenticationLinkService', () => {
     expect(result?.outcome).toBe(UserAuthenticationLinkOutcome.CONFLICT);
     expect(logger.error).toHaveBeenCalledWith(
       expect.stringContaining('Authentication ID already linked'),
+      expect.any(String),
       LogContext.AUTH
     );
   });
