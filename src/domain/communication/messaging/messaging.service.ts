@@ -224,11 +224,12 @@ export class MessagingService {
    * @returns The platform messaging
    */
   public async getPlatformMessaging(): Promise<IMessaging> {
-    // Query the platform and load the messaging relation
+    // Query the platform and load the messaging relation with authorization
     const platform = await this.entityManager
       .getRepository('Platform')
       .createQueryBuilder('platform')
       .leftJoinAndSelect('platform.messaging', 'messaging')
+      .leftJoinAndSelect('messaging.authorization', 'authorization')
       .getOne();
 
     if (!platform) {
