@@ -53,18 +53,20 @@ export class RegistrationService {
       );
     }
 
-    if (agentInfo.authenticationID) {
+    const { user, isNew } =
+      await this.userService.createOrLinkUserFromAgentInfo(agentInfo);
+
+    if (!isNew) {
+      // User was linked - no finalization needed, they already have credentials
       this.logger.verbose?.(
-        'Received Kratos authentication ID for registration flow',
+        `Existing user ${user.id} linked to authentication ID`,
         LogContext.AUTH
       );
+      return user;
     }
-    // If a user has a valid session, and hence email / names etc set, then they can create a User profile
-    const user = await this.userService.createUserFromAgentInfo(agentInfo);
 
+    // New user - finalize registration
     await this.assignUserToOrganizationByDomain(user);
-
-    // Finalize registration: authorization + pending invitations
     await this.finalizeUserRegistration(user);
 
     return user;
