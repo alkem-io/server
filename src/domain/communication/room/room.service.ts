@@ -105,13 +105,43 @@ export class RoomService {
     return messages;
   }
 
+  /**
+   * FIXME: TEMPORARY WORKAROUND - Remove message using sender's identity instead of admin's.
+   *
+   * Matrix requires moderator/admin privileges to delete other users' messages.
+   * Currently, Alkemio users with DELETE privilege on a Room are not reflected as
+   * moderators in the Matrix room, so we work around this by:
+   *   1. Looking up the original message sender's actorId
+   *   2. Deleting the message AS the sender (impersonation)
+   *
+   * This is a security/audit concern because the deletion appears to come from
+   * the message author rather than the admin who actually performed the action.
+   *
+   * TODO: Implement proper Matrix admin rights reflection so that Alkemio admins
+   * are granted moderator power levels in Matrix rooms. Once implemented:
+   *   - Use the `agentId` parameter (the actual deleting user) instead of sender
+   *   - Remove the `getMessageSenderActor` call
+   *   - The `agentId` param is kept in the signature to avoid interface changes later
+   *
+   * See: docs/matrix-admin-reflection.md for requirements and findings.
+   */
   async removeRoomMessage(
     room: IRoom,
-    actorId: string,
-    messageData: RoomRemoveMessageInput
+    messageData: RoomRemoveMessageInput,
+    _agentId?: string // TODO: Use this once Matrix admin reflection is implemented
   ): Promise<string> {
+    // WORKAROUND: Get the original message sender's actorId - Matrix only allows
+    // the sender or room moderators to delete messages. Since we don't yet
+    // reflect Alkemio admin rights to Matrix power levels, we impersonate the sender.
+    const senderActorId = await this.communicationAdapter.getMessageSenderActor(
+      {
+        alkemioRoomId: room.id,
+        messageId: messageData.messageID,
+      }
+    );
+
     await this.communicationAdapter.deleteMessage({
-      actorId: actorId,
+      actorId: senderActorId, // TODO: Replace with _agentId once Matrix reflection is implemented
       messageId: messageData.messageID,
       roomID: room.id,
     });
@@ -180,14 +210,35 @@ export class RoomService {
     return reaction;
   }
 
+  /**
+   * FIXME: TEMPORARY WORKAROUND - Remove reaction using sender's identity instead of admin's.
+   *
+   * Same issue as removeRoomMessage - Matrix requires appropriate power levels to
+   * remove other users' reactions. We work around this by impersonating the reaction sender.
+   *
+   * Note: Matrix reaction removal semantics may differ from message deletion - needs testing
+   * to confirm whether moderators can even remove others' reactions via standard APIs.
+   *
+   * TODO: Implement proper Matrix admin rights reflection. The `_agentId` param is kept
+   * in the signature to avoid interface changes later.
+   *
+   * See: docs/matrix-admin-reflection.md for requirements and findings.
+   */
   async removeReactionToMessage(
     room: IRoom,
-    actorId: string,
+    _agentId: string, // TODO: Use this once Matrix admin reflection is implemented
     messageData: RoomRemoveReactionToMessageInput
   ): Promise<boolean> {
+    // WORKAROUND: Get the original reaction sender's actorId and impersonate them
+    const senderActorId =
+      await this.communicationAdapter.getReactionSenderActor({
+        alkemioRoomId: room.id,
+        reactionId: messageData.reactionID,
+      });
+
     await this.communicationAdapter.removeReaction({
       alkemioRoomId: room.id,
-      actorId,
+      actorId: senderActorId, // TODO: Replace with _agentId once Matrix reflection is implemented
       reactionId: messageData.reactionID,
     });
 

@@ -471,10 +471,12 @@ export class RoomResolverMutations {
       AuthorizationPrivilege.DELETE,
       `room remove message: ${room.id}`
     );
+    // Pass agentInfo.agentID for future use when Matrix admin reflection is implemented
+    // See: docs/matrix-admin-reflection.md
     const messageID = await this.roomService.removeRoomMessage(
       room,
-      agentInfo.agentID,
-      messageData
+      messageData,
+      agentInfo.agentID
     );
     await this.inAppNotificationService.deleteAllByMessageId(messageID);
     await this.roomServiceEvents.processActivityMessageRemoved(
@@ -526,6 +528,8 @@ export class RoomResolverMutations {
       `room remove reaction: ${room.id}`
     );
 
+    // Pass agentInfo.agentID for future use when Matrix admin reflection is implemented
+    // See: docs/matrix-admin-reflection.md
     const isDeleted = await this.roomService.removeReactionToMessage(
       room,
       agentInfo.agentID,
