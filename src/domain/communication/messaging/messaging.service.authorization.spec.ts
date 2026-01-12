@@ -50,6 +50,13 @@ describe('MessagingAuthorizationService', () => {
   beforeEach(async () => {
     const mockAuthorizationPolicyService = {
       inheritParentAuthorization: jest.fn(),
+      createCredentialRuleUsingTypesOnly: jest.fn().mockReturnValue({
+        name: 'messaging-create-conversation',
+        cascade: false,
+        grantedPrivileges: ['CREATE'],
+        criterias: [],
+      }),
+      appendCredentialAuthorizationRules: jest.fn().mockImplementation(auth => auth),
       saveAll: jest.fn(),
     };
 
@@ -198,6 +205,32 @@ describe('MessagingAuthorizationService', () => {
         conversationAuthorizationService.applyAuthorizationPolicy
       ).not.toHaveBeenCalled();
       expect(result).toHaveLength(1); // Only the set authorization
+    });
+
+    it('should grant CREATE privilege to registered users for creating conversations', async () => {
+      messagingService.getMessagingOrFail.mockResolvedValue(mockMessaging);
+      authorizationPolicyService.inheritParentAuthorization.mockReturnValue(
+        mockMessaging.authorization as IAuthorizationPolicy
+      );
+      conversationAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        [{ id: 'conv-auth-1' } as IAuthorizationPolicy]
+      );
+
+      await service.applyAuthorizationPolicy(
+        mockMessaging,
+        mockParentAuthorization
+      );
+
+      expect(
+        authorizationPolicyService.createCredentialRuleUsingTypesOnly
+      ).toHaveBeenCalledWith(
+        ['create'],
+        ['global-registered'],
+        'messaging-create-conversation'
+      );
+      expect(
+        authorizationPolicyService.appendCredentialAuthorizationRules
+      ).toHaveBeenCalled();
     });
   });
 });
