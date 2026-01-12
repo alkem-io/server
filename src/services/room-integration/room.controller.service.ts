@@ -1,9 +1,7 @@
 import { LogContext } from '@common/enums';
-import { MutationType } from '@common/enums/subscriptions';
 import { Post } from '@domain/collaboration/post/post.entity';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup.service';
-import { VcInteractionService } from '@domain/communication/vc-interaction/vc.interaction.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { RoomDetails } from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.invocation';
 import {
@@ -11,16 +9,13 @@ import {
   InvokeEngineResult,
 } from '@services/infrastructure/event-bus/messages/invoke.engine.result';
 
-import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EntityNotFoundException } from '@common/exceptions';
 
 @Injectable()
 export class RoomControllerService {
   constructor(
-    private roomLookupService: RoomLookupService,
-    private subscriptionPublishService: SubscriptionPublishService,
-    private vcInteractionService: VcInteractionService,
+    private readonly roomLookupService: RoomLookupService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -65,18 +60,18 @@ export class RoomControllerService {
   }
 
   public async postReply(event: InvokeEngineResult) {
-    const { roomID, threadID, communicationID, vcInteractionID }: RoomDetails =
+    const { roomID, threadID, actorId }: RoomDetails =
       event.original.resultHandler.roomDetails!;
 
     if (!threadID) {
       return;
     }
     const room = await this.roomLookupService.getRoomOrFail(roomID);
-    const answerMessage = await this.roomLookupService.sendMessageReply(
+    await this.roomLookupService.sendMessageReply(
       room,
-      communicationID,
+      actorId,
       {
-        roomID: room.externalRoomID,
+        roomID: room.id,
         message: this.convertResultToMessage(event.response),
         threadID,
       },
@@ -85,42 +80,30 @@ export class RoomControllerService {
 
     const externalThreadId = event.response.threadId;
 
-    if (vcInteractionID && externalThreadId) {
-      const vcInteraction =
-        await this.vcInteractionService.getVcInteractionOrFail(vcInteractionID);
-      if (!vcInteraction.externalMetadata.threadId) {
-        vcInteraction.externalMetadata.threadId = externalThreadId;
-        await this.vcInteractionService.save(vcInteraction);
+    // Update externalThreadId in JSON column
+    if (threadID && externalThreadId) {
+      const vcData = room.vcInteractionsByThread?.[threadID];
+      if (vcData && !vcData.externalThreadId) {
+        vcData.externalThreadId = externalThreadId;
+        await this.roomLookupService.save(room);
       }
     }
 
-    this.subscriptionPublishService.publishRoomEvent(
-      room,
-      MutationType.CREATE,
-      answerMessage
-    );
+    // Subscription will fire when Matrix echoes back via MessageInboxService
   }
 
   public async postMessage(event: InvokeEngineResult) {
-    const { roomID, communicationID }: RoomDetails =
+    const { roomID, actorId }: RoomDetails =
       event.original.resultHandler.roomDetails!;
     const response: InvokeEngineResponse = event.response;
     const room = await this.roomLookupService.getRoomOrFail(roomID);
-    const answerMessage = await this.roomLookupService.sendMessage(
-      room,
-      communicationID,
-      {
-        roomID: room.externalRoomID,
-        // this second argument (sourcesLable = true) should be part of the resultHandler and not hardcoded here
-        message: this.convertResultToMessage(response, true),
-      }
-    );
+    await this.roomLookupService.sendMessage(room, actorId, {
+      roomID: room.id,
+      // this second argument (sourcesLable = true) should be part of the resultHandler and not hardcoded here
+      message: this.convertResultToMessage(response, true),
+    });
 
-    this.subscriptionPublishService.publishRoomEvent(
-      room,
-      MutationType.CREATE,
-      answerMessage
-    );
+    // Subscription will fire when Matrix echoes back via MessageInboxService
   }
 
   private convertResultToMessage(

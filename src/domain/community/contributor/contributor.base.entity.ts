@@ -19,9 +19,6 @@ export class ContributorBase
   @JoinColumn()
   agent!: Agent;
 
-  @Column()
-  communicationID: string = '';
-
   constructor() {
     super();
   }

@@ -25,8 +25,21 @@ export class DataLoaderInterceptor implements NestInterceptor {
   ) {}
   // intercept every request and inject the data loader creator in the context
   intercept(context: ExecutionContext, next: CallHandler) {
+    const contextType = context.getType<'http' | 'graphql' | 'rpc' | 'rmq'>();
+
+    // Skip non-GraphQL contexts (RPC, RabbitMQ, HTTP REST, etc.)
+    // DataLoaders are only meaningful for GraphQL query batching
+    if (contextType !== 'graphql') {
+      return next.handle();
+    }
+
     const ctx =
       GqlExecutionContext.create(context).getContext<IGraphQLContext>();
+
+    // Safety check - ensure we have a request object
+    if (!ctx?.req) {
+      return next.handle();
+    }
 
     ctx[DATA_LOADER_CTX_INJECT_TOKEN] = {
       // generate a key to associate each injectable instance with;

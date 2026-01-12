@@ -64,7 +64,7 @@ export class Whiteboard extends NameableEntity implements IWhiteboard {
   })
   contentUpdatePolicy!: ContentUpdatePolicy;
 
-  @Column('json', { nullable: false })
+  @Column('jsonb', { nullable: false })
   previewSettings!: IWhiteboardPreviewSettings;
 
   /**

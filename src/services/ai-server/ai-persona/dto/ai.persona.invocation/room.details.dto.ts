@@ -14,13 +14,7 @@ export class RoomDetails {
   threadID?: string;
   @Field(() => String, {
     nullable: false,
-    description: 'The communicationID for the VC',
+    description: 'The actor ID (agent.id) for the VC',
   })
-  communicationID!: string;
-  @Field(() => String, {
-    nullable: true,
-    description:
-      'The Virtual Contributor interaction part of which is this question',
-  })
-  vcInteractionID?: string | undefined = undefined;
+  actorId!: string;
 }

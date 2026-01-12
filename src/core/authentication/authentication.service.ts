@@ -10,7 +10,6 @@ import ConfigUtils from '@config/config.utils';
 import { AlkemioConfig } from '@src/types';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { OryDefaultIdentitySchema } from '@services/infrastructure/kratos/types/ory.default.identity.schema';
-import { OryTraits } from '@services/infrastructure/kratos/types/ory.traits';
 import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
 import { AgentService } from '@domain/agent/agent/agent.service';
 
@@ -75,13 +74,11 @@ export class AuthenticationService {
    *
    * This method performs the following steps:
    * 1. Validates the provided Ory identity.
-   * 2. Checks for cached agent information based on the email from the Ory identity.
+   * 2. Checks for cached agent information using authenticationID (Kratos identity ID).
    * 3. Builds basic agent information if no cached information is found.
-   * 4. Maps the authentication type from the session.
-   * 5. Retrieves additional metadata for the agent.
-   * 6. Populates the agent information with the retrieved metadata.
-   * 7. Adds verified credentials if enabled.
-   * 8. Caches the agent information.
+   * 4. Retrieves additional metadata for the agent.
+   * 5. Populates the agent information with the retrieved metadata.
+   * 6. Caches the agent information using authenticationID as key.
    */
   async createAgentInfo(
     oryIdentity?: OryDefaultIdentitySchema,
@@ -89,15 +86,22 @@ export class AuthenticationService {
   ): Promise<AgentInfo> {
     if (!oryIdentity) return this.agentInfoService.createAnonymousAgentInfo();
 
-    const oryTraits = this.validateEmail(oryIdentity);
+    this.validateEmail(oryIdentity);
 
-    const cachedAgentInfo = await this.getCachedAgentInfo(oryTraits.email);
+    // Use authenticationID (Kratos identity.id) as cache key - stable across email changes
+    const authenticationID = oryIdentity.id;
+    const cachedAgentInfo =
+      await this.agentInfoCacheService.getAgentInfoFromCache(authenticationID);
     if (cachedAgentInfo) return cachedAgentInfo;
 
-    const agentInfo = this.buildAgentInfoFromOrySession(oryIdentity, session);
+    const agentInfo = this.agentInfoService.buildAgentInfoFromOryIdentity(
+      oryIdentity,
+      { session }
+    );
 
     const agentInfoMetadata = await this.agentInfoService.getAgentInfoMetadata(
-      agentInfo.email
+      agentInfo.email,
+      { authenticationId: agentInfo.authenticationID }
     );
     if (!agentInfoMetadata) return agentInfo;
 
@@ -114,10 +118,9 @@ export class AuthenticationService {
    * Validates the email trait of the provided Ory identity.
    *
    * @param oryIdentity - The Ory identity schema containing traits to be validated.
-   * @returns The validated Ory traits.
    * @throws NotSupportedException - If the email trait is missing or empty.
    */
-  private validateEmail(oryIdentity: OryDefaultIdentitySchema): OryTraits {
+  private validateEmail(oryIdentity: OryDefaultIdentitySchema): void {
     const oryTraits = oryIdentity.traits;
     if (!oryTraits.email || oryTraits.email.length === 0) {
       throw new NotSupportedException(
@@ -125,48 +128,6 @@ export class AuthenticationService {
         LogContext.AUTH
       );
     }
-    return oryTraits;
-  }
-
-  /**
-   * Retrieves the cached agent information for a given email.
-   *
-   * @param email - The email address of the agent.
-   * @returns A promise that resolves to the agent information if found in the cache, or undefined if not found.
-   */
-  private async getCachedAgentInfo(
-    email: string
-  ): Promise<AgentInfo | undefined> {
-    return await this.agentInfoCacheService.getAgentInfoFromCache(email);
-  }
-
-  /**
-   * Builds and returns an `AgentInfo` object based on the provided Ory identity schema and session.
-   *
-   * @param oryIdentity - The Ory identity schema containing user traits and verifiable addresses.
-   * @param session - Optional session object containing session details like expiration time.
-   * @returns An `AgentInfo` object populated with the user's email, name, avatar URL, and session expiry.
-   */
-  private buildAgentInfoFromOrySession(
-    oryIdentity: OryDefaultIdentitySchema,
-    session?: Session
-  ): AgentInfo {
-    const agentInfo = new AgentInfo();
-    const oryTraits = oryIdentity.traits;
-    const isEmailVerified =
-      oryIdentity.verifiable_addresses.find(x => x.via === 'email')?.verified ??
-      false;
-
-    agentInfo.email = oryTraits.email;
-    agentInfo.emailVerified = isEmailVerified;
-    agentInfo.firstName = oryTraits.name.first;
-    agentInfo.lastName = oryTraits.name.last;
-    agentInfo.avatarURL = oryTraits.picture;
-    agentInfo.expiry = session?.expires_at
-      ? new Date(session.expires_at).getTime()
-      : undefined;
-
-    return agentInfo;
   }
 
   public async extendSession(sessionToBeExtended: Session): Promise<void> {
