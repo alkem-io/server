@@ -51,7 +51,7 @@ describe('MessagingAuthorizationService', () => {
     const mockAuthorizationPolicyService = {
       inheritParentAuthorization: jest.fn(),
       createCredentialRuleUsingTypesOnly: jest.fn().mockReturnValue({
-        name: 'messaging-create-conversation',
+        name: 'credentialRuleTypes-messagingCreateConversation',
         cascade: false,
         grantedPrivileges: ['CREATE'],
         criterias: [],
@@ -226,7 +226,7 @@ describe('MessagingAuthorizationService', () => {
       ).toHaveBeenCalledWith(
         ['create'],
         ['global-registered'],
-        'messaging-create-conversation'
+        'credentialRuleTypes-messagingCreateConversation'
       );
       expect(
         authorizationPolicyService.appendCredentialAuthorizationRules

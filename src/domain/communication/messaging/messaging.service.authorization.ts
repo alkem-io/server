@@ -8,12 +8,10 @@ import {
   AuthorizationCredential,
   AuthorizationPrivilege,
 } from '@common/enums';
+import { CREDENTIAL_RULE_TYPES_MESSAGING_CREATE_CONVERSATION } from '@common/constants';
 
 @Injectable()
 export class MessagingAuthorizationService {
-  private static readonly CREDENTIAL_RULE_MESSAGING_CREATE_CONVERSATION =
-    'messaging-create-conversation';
-
   constructor(
     private readonly authorizationPolicyService: AuthorizationPolicyService,
     private readonly messagingService: MessagingService,
@@ -51,7 +49,7 @@ export class MessagingAuthorizationService {
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.CREATE],
         [AuthorizationCredential.GLOBAL_REGISTERED],
-        MessagingAuthorizationService.CREDENTIAL_RULE_MESSAGING_CREATE_CONVERSATION
+        CREDENTIAL_RULE_TYPES_MESSAGING_CREATE_CONVERSATION
       );
     createConversationRule.cascade = false;
 
