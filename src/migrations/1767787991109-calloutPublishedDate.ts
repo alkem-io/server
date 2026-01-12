@@ -14,5 +14,7 @@ export class CalloutPublishedDate1767787991109 implements MigrationInterface {
         `);
   }
 
-  public async down(queryRunner: QueryRunner): Promise<void> {}
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    // No need to revert data changes, it's good to have publishedDate and publishedBy set when a callout is published
+  }
 }
