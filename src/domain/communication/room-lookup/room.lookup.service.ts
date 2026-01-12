@@ -190,7 +190,7 @@ export class RoomLookupService {
     // Keep it as agent ID - the field resolver will handle the lookup
 
     room.messagesCount = room.messagesCount + 1;
-    room.lastMessageAt = new Date();
+    room.lastMessageAt = new Date(message.timestamp);
     await this.roomRepository.save(room);
     return message;
   }
@@ -217,7 +217,7 @@ export class RoomLookupService {
     message.senderType = senderType;
 
     room.messagesCount = room.messagesCount + 1;
-    room.lastMessageAt = new Date();
+    room.lastMessageAt = new Date(message.timestamp);
     await this.roomRepository.save(room);
 
     return message;
