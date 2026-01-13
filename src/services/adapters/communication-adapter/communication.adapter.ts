@@ -350,6 +350,7 @@ export class CommunicationAdapter {
         messages: [],
         displayName: '',
         members: [],
+        messagesCount: 0,
       };
     }
 
@@ -1103,13 +1104,15 @@ export class CommunicationAdapter {
   private convertGetRoomResponseToCommunicationRoomResult(
     response: GetRoomResponse
   ): CommunicationRoomResult {
+    const messages = (response.messages ?? []).map(msg =>
+      this.convertMessageDtoToIMessage(msg)
+    );
     return {
       id: response.alkemio_room_id,
       displayName: response.display_name,
       members: response.member_actor_ids ?? [],
-      messages: (response.messages ?? []).map(msg =>
-        this.convertMessageDtoToIMessage(msg)
-      ),
+      messages,
+      messagesCount: messages.length,
     };
   }
 

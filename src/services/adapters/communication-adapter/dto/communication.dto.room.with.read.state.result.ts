@@ -68,7 +68,7 @@ export class CommunicationRoomWithReadStateResult {
   })
   displayName!: string;
 
-  @Field(() => Number, {
+  @Field(() => Int, {
     nullable: false,
     description: 'The number of messages in the Room.',
   })
