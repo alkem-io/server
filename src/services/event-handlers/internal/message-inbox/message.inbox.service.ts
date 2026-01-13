@@ -7,6 +7,13 @@ import { RoomType } from '@common/enums/room.type';
 import { MessageReceivedEvent } from './message.received.event';
 import { ReactionAddedEvent } from './reaction.added.event';
 import { ReactionRemovedEvent } from './reaction.removed.event';
+import { MessageEditedEvent } from './message.edited.event';
+import { MessageRedactedEvent } from './message.redacted.event';
+import { RoomCreatedEvent } from './room.created.event';
+import { RoomDmRequestedEvent } from './room.dm.requested.event';
+import { RoomMemberLeftEvent } from './room.member.left.event';
+import { RoomMemberUpdatedEvent } from './room.member.updated.event';
+import { RoomReceiptUpdatedEvent } from './room.receipt.updated.event';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
@@ -307,5 +314,161 @@ export class MessageInboxService {
       },
       payload.messageId
     );
+  }
+
+  /**
+   * Handle message edited event from Matrix.
+   * Publishes GraphQL subscription after Matrix confirms the edit.
+   */
+  @OnEvent('message.edited')
+  async handleMessageEdited(event: MessageEditedEvent): Promise<void> {
+    const { payload } = event;
+
+    this.logger.verbose?.(
+      `Processing message edited: roomId=${payload.roomId}, originalMessageId=${payload.originalMessageId}, newMessageId=${payload.newMessageId}`,
+      LogContext.COMMUNICATION
+    );
+
+    const room = await this.roomLookupService.getRoomOrFail(payload.roomId);
+
+    // Publish GraphQL subscription for message update
+    this.subscriptionPublishService.publishRoomEvent(
+      room,
+      MutationType.UPDATE,
+      {
+        id: payload.originalMessageId,
+        message: payload.newContent,
+        sender: payload.senderActorId,
+        senderType: 'user',
+        threadID: payload.threadId || '',
+        timestamp: payload.timestamp,
+        reactions: [],
+      }
+    );
+  }
+
+  /**
+   * Handle message redacted (deleted) event from Matrix.
+   * Publishes GraphQL subscription after Matrix confirms the redaction.
+   */
+  @OnEvent('message.redacted')
+  async handleMessageRedacted(event: MessageRedactedEvent): Promise<void> {
+    const { payload } = event;
+
+    this.logger.verbose?.(
+      `Processing message redacted: roomId=${payload.roomId}, redactedMessageId=${payload.redactedMessageId}`,
+      LogContext.COMMUNICATION
+    );
+
+    const room = await this.roomLookupService.getRoomOrFail(payload.roomId);
+
+    // Publish GraphQL subscription for message deletion
+    this.subscriptionPublishService.publishRoomEvent(
+      room,
+      MutationType.DELETE,
+      {
+        id: payload.redactedMessageId,
+        message: '',
+        sender: payload.redactorActorId,
+        senderType: 'user',
+        threadID: payload.threadId || '',
+        timestamp: payload.timestamp,
+        reactions: [],
+      }
+    );
+  }
+
+  /**
+   * Handle room created event from Matrix.
+   * Currently logs the event - can be extended for additional processing.
+   */
+  @OnEvent('room.created')
+  async handleRoomCreated(event: RoomCreatedEvent): Promise<void> {
+    const { payload } = event;
+
+    this.logger.verbose?.(
+      `Processing room created: roomId=${payload.roomId}, roomType=${payload.roomType}, creator=${payload.creatorActorId}`,
+      LogContext.COMMUNICATION
+    );
+
+    // Currently no additional processing needed - Alkemio initiates room creation
+    // This handler is for tracking/logging purposes and future extensibility
+  }
+
+  /**
+   * Handle DM requested event from Matrix.
+   * Currently logs the event - can be extended for auto-creating conversations.
+   */
+  @OnEvent('room.dm.requested')
+  async handleRoomDmRequested(event: RoomDmRequestedEvent): Promise<void> {
+    const { payload } = event;
+
+    this.logger.verbose?.(
+      `Processing DM requested: initiator=${payload.initiatorActorId}, target=${payload.targetActorId}`,
+      LogContext.COMMUNICATION
+    );
+
+    // TODO: Consider auto-creating Alkemio conversation when DM is requested from Matrix
+    // For now, DMs must be initiated through Alkemio's conversation API
+  }
+
+  /**
+   * Handle room member left event from Matrix.
+   * Currently logs the event - can be extended for membership sync.
+   */
+  @OnEvent('room.member.left')
+  async handleRoomMemberLeft(event: RoomMemberLeftEvent): Promise<void> {
+    const { payload } = event;
+
+    this.logger.verbose?.(
+      `Processing room member left: roomId=${payload.roomId}, actorId=${payload.actorId}, reason=${payload.reason || 'none'}`,
+      LogContext.COMMUNICATION
+    );
+
+    // TODO: Consider syncing membership changes back to Alkemio
+    // Currently membership is managed through Alkemio's conversation membership API
+  }
+
+  /**
+   * Handle room member updated event from Matrix.
+   * Currently logs the event - can be extended for membership sync.
+   */
+  @OnEvent('room.member.updated')
+  async handleRoomMemberUpdated(event: RoomMemberUpdatedEvent): Promise<void> {
+    const { payload } = event;
+
+    this.logger.verbose?.(
+      `Processing room member updated: roomId=${payload.roomId}, memberActorId=${payload.memberActorId}, membership=${payload.membership}`,
+      LogContext.COMMUNICATION
+    );
+
+    // TODO: Consider syncing membership changes back to Alkemio
+    // Currently membership is managed through Alkemio's conversation membership API
+  }
+
+  /**
+   * Handle read receipt updated event from Matrix.
+   * Publishes GraphQL subscription for read status tracking.
+   */
+  @OnEvent('room.receipt.updated')
+  async handleRoomReceiptUpdated(
+    event: RoomReceiptUpdatedEvent
+  ): Promise<void> {
+    const { payload } = event;
+
+    this.logger.verbose?.(
+      `Processing read receipt updated: roomId=${payload.roomId}, actorId=${payload.actorId}, eventId=${payload.eventId}`,
+      LogContext.COMMUNICATION
+    );
+
+    const room = await this.roomLookupService.getRoomOrFail(payload.roomId);
+
+    // Publish GraphQL subscription for read receipt
+    this.subscriptionPublishService.publishRoomReceiptEvent(room, {
+      actorId: payload.actorId,
+      eventId: payload.eventId,
+      threadId: payload.threadId,
+      timestamp: payload.timestamp,
+    });
   }
 }

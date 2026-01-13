@@ -4,6 +4,13 @@ import { BaseSubscriptionPayload } from '@interfaces/index';
 import { MutationType } from '@common/enums/subscriptions';
 import { IRoom } from '@domain/communication/room/room.interface';
 
+export interface ReadReceiptData {
+  actorId: string;
+  eventId: string;
+  threadId?: string;
+  timestamp: number;
+}
+
 export interface RoomEventSubscriptionPayload extends BaseSubscriptionPayload {
   roomID: string;
   room: Partial<IRoom>;
@@ -15,5 +22,9 @@ export interface RoomEventSubscriptionPayload extends BaseSubscriptionPayload {
     type: MutationType;
     messageID?: string;
     data: IMessageReaction | { id: string };
+  };
+  receipt?: {
+    type: MutationType;
+    data: ReadReceiptData;
   };
 }

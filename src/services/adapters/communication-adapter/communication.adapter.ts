@@ -23,6 +23,8 @@ import {
   SetParentRequest,
   BatchAddMemberRequest,
   BatchRemoveMemberRequest,
+  BatchAddSpaceMemberRequest,
+  BatchRemoveSpaceMemberRequest,
   SendMessageRequest,
   DeleteMessageRequest,
   AddReactionRequest,
@@ -32,10 +34,15 @@ import {
   GetReactionRequest,
   GetRoomMembersRequest,
   GetThreadMessagesRequest,
+  GetSpaceRequest,
+  GetUnreadCountsRequest,
+  MarkMessageReadRequest,
   ListRoomsRequest,
   ListSpacesRequest,
+  GetRoomAsUserRequest,
   // Response type for converter helper
   GetRoomResponse,
+  GetRoomAsUserResponse,
   // Room type constants
   RoomTypeCommunity,
   RoomTypeDirect,
@@ -51,6 +58,10 @@ import { stringifyWithoutAuthorizationMetaInfo } from '@common/utils/stringify.u
 import { CommunicationSendMessageReplyInput } from './dto/communications.dto.message.reply';
 import { CommunicationAddReactionToMessageInput } from './dto/communication.dto.add.reaction';
 import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
+import {
+  CommunicationRoomWithReadStateResult,
+  MessageWithReadState,
+} from '@services/adapters/communication-adapter/dto/communication.dto.room.with.read.state.result';
 import { IMessageReaction } from '@domain/communication/message.reaction/message.reaction.interface';
 import { AlkemioConfig } from '@src/types';
 import { CommunicationRemoveReactionToMessageInput } from './dto/communication.dto.remove.reaction';
@@ -354,6 +365,44 @@ export class CommunicationAdapter {
 
     // Response is guaranteed non-null when ensureSuccess: true (throws on failure)
     return this.convertGetRoomResponseToCommunicationRoomResult(response!);
+  }
+
+  /**
+   * Get room content with read state for a specific user.
+   * Returns messages with isRead flag and unread count.
+   */
+  async getRoomAsUser(
+    alkemioRoomId: AlkemioRoomID,
+    actorId: AlkemioActorID
+  ): Promise<CommunicationRoomWithReadStateResult> {
+    if (!this.enabled) {
+      return {
+        id: 'communications-not-enabled',
+        messages: [],
+        displayName: '',
+        members: [],
+        unreadCount: 0,
+      };
+    }
+
+    this.logger.verbose?.(
+      `Getting room as user: roomId=${alkemioRoomId}, actorId=${actorId}`,
+      LogContext.COMMUNICATION
+    );
+
+    const response = await this.sendCommand({
+      operation: 'getRoomAsUser',
+      topic: MatrixAdapterEventType.COMMUNICATION_ROOM_GET_AS_USER,
+      payload: {
+        alkemio_room_id: alkemioRoomId,
+        actor_id: actorId,
+      } satisfies GetRoomAsUserRequest,
+      errorContext: { alkemioRoomId, actorId },
+      ensureSuccess: true,
+    });
+
+    // Response is guaranteed non-null when ensureSuccess: true (throws on failure)
+    return this.convertGetRoomAsUserResponseToResult(response!);
   }
 
   /**
@@ -888,6 +937,161 @@ export class CommunicationAdapter {
     return response!.alkemio_context_ids ?? [];
   }
 
+  /**
+   * Mark a message as read for a specific actor.
+   * Updates read receipts in Matrix.
+   */
+  async markMessageRead(
+    actorId: AlkemioActorID,
+    alkemioRoomId: AlkemioRoomID,
+    messageId: string,
+    threadId?: string
+  ): Promise<void> {
+    if (!this.enabled) return;
+
+    await this.sendCommand({
+      operation: 'markMessageRead',
+      topic: MatrixAdapterEventType.COMMUNICATION_MESSAGE_READ,
+      payload: {
+        actor_id: actorId,
+        alkemio_room_id: alkemioRoomId,
+        message_id: messageId,
+        thread_id: threadId,
+      } satisfies MarkMessageReadRequest,
+      errorContext: { actorId, alkemioRoomId, messageId },
+      ensureSuccess: true,
+    });
+
+    this.logger.verbose?.(
+      `Marked message as read: ${messageId} in room ${alkemioRoomId}`,
+      LogContext.COMMUNICATION
+    );
+  }
+
+  /**
+   * Get unread message counts for a room and optionally specific threads.
+   * Returns room-level unread count and per-thread unread counts.
+   */
+  async getUnreadCounts(
+    actorId: AlkemioActorID,
+    alkemioRoomId: AlkemioRoomID,
+    threadIds?: string[]
+  ): Promise<{
+    roomUnreadCount: number;
+    threadUnreadCounts?: Record<string, number>;
+  }> {
+    if (!this.enabled) return { roomUnreadCount: 0 };
+
+    const response = await this.sendCommand({
+      operation: 'getUnreadCounts',
+      topic: MatrixAdapterEventType.COMMUNICATION_ROOM_UNREAD_COUNTS_GET,
+      payload: {
+        actor_id: actorId,
+        alkemio_room_id: alkemioRoomId,
+        thread_ids: threadIds,
+      } satisfies GetUnreadCountsRequest,
+      errorContext: { actorId, alkemioRoomId },
+      ensureSuccess: true,
+    });
+
+    return {
+      roomUnreadCount: response!.room_unread_count,
+      threadUnreadCounts: response!.thread_unread_counts,
+    };
+  }
+
+  /**
+   * Get details of a Matrix space.
+   * Returns null if space not found.
+   */
+  async getSpace(alkemioContextId: AlkemioContextID): Promise<{
+    contextId: string;
+    displayName: string;
+    topic?: string;
+    avatarUrl?: string;
+    joinRule: string;
+    memberActorIds: string[];
+    parentContextId?: string;
+  } | null> {
+    if (!this.enabled) return null;
+
+    const response = await this.sendCommand({
+      operation: 'getSpace',
+      topic: MatrixAdapterEventType.COMMUNICATION_SPACE_GET,
+      payload: {
+        alkemio_context_id: alkemioContextId,
+      } satisfies GetSpaceRequest,
+      errorContext: { alkemioContextId },
+      onError: 'silent',
+    });
+
+    if (!response) return null;
+
+    return {
+      contextId: response.alkemio_context_id,
+      displayName: response.display_name,
+      topic: response.topic,
+      avatarUrl: response.avatar_url,
+      joinRule: response.join_rule,
+      memberActorIds: response.member_actor_ids,
+      parentContextId: response.parent_context_id,
+    };
+  }
+
+  /**
+   * Add an actor to multiple Matrix spaces.
+   */
+  async batchAddSpaceMember(
+    actorId: AlkemioActorID,
+    contextIds: AlkemioContextID[]
+  ): Promise<boolean> {
+    if (!this.enabled || contextIds.length === 0) return true;
+
+    const response = await this.sendCommand({
+      operation: 'batchAddSpaceMember',
+      topic: MatrixAdapterEventType.COMMUNICATION_SPACE_MEMBER_BATCH_ADD,
+      payload: {
+        actor_id: actorId,
+        alkemio_context_ids: contextIds,
+      } satisfies BatchAddSpaceMemberRequest,
+      errorContext: { actorId, contextCount: contextIds.length },
+      onError: 'boolean',
+    });
+
+    if (!response) {
+      this.logger.warn(
+        'Failed to add actor to spaces - may already be member',
+        LogContext.COMMUNICATION
+      );
+    }
+
+    return response?.success ?? false;
+  }
+
+  /**
+   * Remove an actor from multiple Matrix spaces.
+   */
+  async batchRemoveSpaceMember(
+    actorId: AlkemioActorID,
+    contextIds: AlkemioContextID[],
+    reason?: string
+  ): Promise<boolean> {
+    if (!this.enabled || contextIds.length === 0) return true;
+
+    const response = await this.sendCommand({
+      operation: 'batchRemoveSpaceMember',
+      topic: MatrixAdapterEventType.COMMUNICATION_SPACE_MEMBER_BATCH_REMOVE,
+      payload: {
+        actor_id: actorId,
+        alkemio_context_ids: contextIds,
+        reason,
+      } satisfies BatchRemoveSpaceMemberRequest,
+      errorContext: { actorId, contextCount: contextIds.length },
+    });
+
+    return response?.success ?? false;
+  }
+
   // ============================================================================
   // Private Helpers
   // ============================================================================
@@ -909,6 +1113,59 @@ export class CommunicationAdapter {
       messages: (response.messages ?? []).map(msg =>
         this.convertMessageDtoToIMessage(msg)
       ),
+    };
+  }
+
+  /**
+   * Convert GetRoomAsUserResponse to CommunicationRoomWithReadStateResult.
+   */
+  private convertGetRoomAsUserResponseToResult(
+    response: GetRoomAsUserResponse
+  ): CommunicationRoomWithReadStateResult {
+    return {
+      id: response.alkemio_room_id,
+      displayName: response.display_name,
+      members: response.member_actor_ids ?? [],
+      messages: (response.messages ?? []).map(msg =>
+        this.convertMessageWithReadStateDtoToResult(msg)
+      ),
+      lastReadEventId: response.last_read_event_id,
+      unreadCount: response.unread_count,
+    };
+  }
+
+  /**
+   * Convert a MessageWithReadStateDto from the Go adapter to MessageWithReadState.
+   */
+  private convertMessageWithReadStateDtoToResult(msg: {
+    id: string;
+    content: string;
+    sender_actor_id: string;
+    timestamp: string;
+    thread_id?: string;
+    reactions?: Array<{
+      id: string;
+      emoji: string;
+      sender_actor_id: string;
+      timestamp: string;
+    }>;
+    is_read: boolean;
+  }): MessageWithReadState {
+    return {
+      id: msg.id,
+      message: msg.content,
+      sender: msg.sender_actor_id,
+      senderType: 'user' as const,
+      timestamp: this.parseTimestamp(msg.timestamp),
+      threadID: msg.thread_id,
+      reactions: (msg.reactions ?? []).map(r => ({
+        id: r.id,
+        emoji: r.emoji,
+        sender: r.sender_actor_id,
+        senderType: 'user' as const,
+        timestamp: this.parseTimestamp(r.timestamp),
+      })),
+      isRead: msg.is_read,
     };
   }
 

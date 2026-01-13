@@ -17,6 +17,7 @@ import {
   RoomEventSubscriptionPayload,
   VirtualContributorUpdatedSubscriptionPayload,
   InAppNotificationCounterSubscriptionPayload,
+  ReadReceiptData,
 } from './dto';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
@@ -85,6 +86,31 @@ export class SubscriptionPublishService {
 
     this.logger.verbose?.(
       `Publishing room event: roomID=${room.id}, eventID=${payload.eventID}, type=${type}`,
+      LogContext.SUBSCRIPTIONS
+    );
+
+    return this.roomEventsSubscription.publish(
+      SubscriptionType.ROOM_EVENTS,
+      payload
+    );
+  }
+
+  public publishRoomReceiptEvent(
+    room: IRoom,
+    data: ReadReceiptData
+  ): Promise<void> {
+    const payload: RoomEventSubscriptionPayload = {
+      eventID: `room-event-${randomInt()}`,
+      roomID: room.id,
+      room: room,
+      receipt: {
+        type: MutationType.UPDATE,
+        data,
+      },
+    };
+
+    this.logger.verbose?.(
+      `Publishing room receipt event: roomID=${room.id}, eventID=${payload.eventID}, actorId=${data.actorId}`,
       LogContext.SUBSCRIPTIONS
     );
 

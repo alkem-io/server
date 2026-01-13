@@ -7,11 +7,25 @@ import {
   MessageReceivedPayload,
   ReactionAddedEvent as MatrixReactionAddedEvent,
   ReactionRemovedEvent as MatrixReactionRemovedEvent,
+  MessageEditedEvent as MatrixMessageEditedEvent,
+  MessageRedactedEvent as MatrixMessageRedactedEvent,
+  RoomCreatedEvent as MatrixRoomCreatedEvent,
+  DMRequestedEvent as MatrixDMRequestedEvent,
+  RoomMemberLeftEvent as MatrixRoomMemberLeftEvent,
+  RoomMemberUpdatedEvent as MatrixRoomMemberUpdatedEvent,
+  ReadReceiptUpdatedEvent as MatrixReadReceiptUpdatedEvent,
 } from '@alkemio/matrix-adapter-lib';
 import { RabbitSubscribe, Nack } from '@golevelup/nestjs-rabbitmq';
 import { MessageReceivedEvent } from '@services/event-handlers/internal/message-inbox/message.received.event';
 import { ReactionAddedEvent } from '@services/event-handlers/internal/message-inbox/reaction.added.event';
 import { ReactionRemovedEvent } from '@services/event-handlers/internal/message-inbox/reaction.removed.event';
+import { MessageEditedEvent } from '@services/event-handlers/internal/message-inbox/message.edited.event';
+import { MessageRedactedEvent } from '@services/event-handlers/internal/message-inbox/message.redacted.event';
+import { RoomCreatedEvent } from '@services/event-handlers/internal/message-inbox/room.created.event';
+import { RoomDmRequestedEvent } from '@services/event-handlers/internal/message-inbox/room.dm.requested.event';
+import { RoomMemberLeftEvent } from '@services/event-handlers/internal/message-inbox/room.member.left.event';
+import { RoomMemberUpdatedEvent } from '@services/event-handlers/internal/message-inbox/room.member.updated.event';
+import { RoomReceiptUpdatedEvent } from '@services/event-handlers/internal/message-inbox/room.receipt.updated.event';
 
 /**
  * Boundary service for Matrix Adapter RabbitMQ events.
@@ -150,6 +164,298 @@ export class CommunicationAdapterEventService {
     } catch (error) {
       this.logger.error(
         `Error handling reaction removed event: ${error}`,
+        error instanceof Error ? error.stack : undefined,
+        LogContext.COMMUNICATION
+      );
+      return new Nack(true) as unknown as void;
+    }
+  }
+
+  /**
+   * Receives message edited events from Matrix Adapter via RabbitMQ.
+   *
+   * Publishes internal 'message.edited' event for domain processing.
+   */
+  @RabbitSubscribe({
+    exchange: '',
+    routingKey: '',
+    queue: MatrixAdapterEventType.COMMUNICATION_MESSAGE_EDITED,
+    createQueueIfNotExists: true,
+    queueOptions: {
+      durable: true,
+    },
+  })
+  async onMessageEdited(payload: MatrixMessageEditedEvent): Promise<void> {
+    try {
+      this.logger.verbose?.(
+        `Received message edited event: roomId=${payload.alkemio_room_id}, originalMessageId=${payload.original_message_id}, newMessageId=${payload.new_message_id}`,
+        LogContext.COMMUNICATION
+      );
+
+      this.eventEmitter.emit(
+        'message.edited',
+        new MessageEditedEvent({
+          roomId: payload.alkemio_room_id,
+          senderActorId: payload.sender_actor_id,
+          originalMessageId: payload.original_message_id,
+          newMessageId: payload.new_message_id,
+          newContent: payload.new_content,
+          threadId: payload.thread_id,
+          timestamp: payload.timestamp,
+        })
+      );
+    } catch (error) {
+      this.logger.error(
+        `Error handling message edited event: ${error}`,
+        error instanceof Error ? error.stack : undefined,
+        LogContext.COMMUNICATION
+      );
+      return new Nack(true) as unknown as void;
+    }
+  }
+
+  /**
+   * Receives message redacted (deleted) events from Matrix Adapter via RabbitMQ.
+   *
+   * Publishes internal 'message.redacted' event for domain processing.
+   */
+  @RabbitSubscribe({
+    exchange: '',
+    routingKey: '',
+    queue: MatrixAdapterEventType.COMMUNICATION_MESSAGE_REDACTED,
+    createQueueIfNotExists: true,
+    queueOptions: {
+      durable: true,
+    },
+  })
+  async onMessageRedacted(payload: MatrixMessageRedactedEvent): Promise<void> {
+    try {
+      this.logger.verbose?.(
+        `Received message redacted event: roomId=${payload.alkemio_room_id}, redactedMessageId=${payload.redacted_message_id}`,
+        LogContext.COMMUNICATION
+      );
+
+      this.eventEmitter.emit(
+        'message.redacted',
+        new MessageRedactedEvent({
+          roomId: payload.alkemio_room_id,
+          redactorActorId: payload.redactor_actor_id,
+          redactedMessageId: payload.redacted_message_id,
+          redactionMessageId: payload.redaction_message_id,
+          reason: payload.reason,
+          threadId: payload.thread_id,
+          timestamp: payload.timestamp,
+        })
+      );
+    } catch (error) {
+      this.logger.error(
+        `Error handling message redacted event: ${error}`,
+        error instanceof Error ? error.stack : undefined,
+        LogContext.COMMUNICATION
+      );
+      return new Nack(true) as unknown as void;
+    }
+  }
+
+  /**
+   * Receives room created events from Matrix Adapter via RabbitMQ.
+   *
+   * Publishes internal 'room.created' event for domain processing.
+   */
+  @RabbitSubscribe({
+    exchange: '',
+    routingKey: '',
+    queue: MatrixAdapterEventType.COMMUNICATION_ROOM_CREATED,
+    createQueueIfNotExists: true,
+    queueOptions: {
+      durable: true,
+    },
+  })
+  async onRoomCreated(payload: MatrixRoomCreatedEvent): Promise<void> {
+    try {
+      this.logger.verbose?.(
+        `Received room created event: roomId=${payload.alkemio_room_id}, roomType=${payload.room_type}`,
+        LogContext.COMMUNICATION
+      );
+
+      this.eventEmitter.emit(
+        'room.created',
+        new RoomCreatedEvent({
+          roomId: payload.alkemio_room_id,
+          creatorActorId: payload.creator_actor_id,
+          roomType: payload.room_type,
+          name: payload.name,
+          topic: payload.topic,
+          timestamp: payload.timestamp,
+        })
+      );
+    } catch (error) {
+      this.logger.error(
+        `Error handling room created event: ${error}`,
+        error instanceof Error ? error.stack : undefined,
+        LogContext.COMMUNICATION
+      );
+      return new Nack(true) as unknown as void;
+    }
+  }
+
+  /**
+   * Receives DM requested events from Matrix Adapter via RabbitMQ.
+   *
+   * Publishes internal 'room.dm.requested' event for domain processing.
+   */
+  @RabbitSubscribe({
+    exchange: '',
+    routingKey: '',
+    queue: MatrixAdapterEventType.COMMUNICATION_ROOM_DM_REQUESTED,
+    createQueueIfNotExists: true,
+    queueOptions: {
+      durable: true,
+    },
+  })
+  async onRoomDmRequested(payload: MatrixDMRequestedEvent): Promise<void> {
+    try {
+      this.logger.verbose?.(
+        `Received DM requested event: initiator=${payload.initiator_actor_id}, target=${payload.target_actor_id}`,
+        LogContext.COMMUNICATION
+      );
+
+      this.eventEmitter.emit(
+        'room.dm.requested',
+        new RoomDmRequestedEvent({
+          initiatorActorId: payload.initiator_actor_id,
+          targetActorId: payload.target_actor_id,
+        })
+      );
+    } catch (error) {
+      this.logger.error(
+        `Error handling DM requested event: ${error}`,
+        error instanceof Error ? error.stack : undefined,
+        LogContext.COMMUNICATION
+      );
+      return new Nack(true) as unknown as void;
+    }
+  }
+
+  /**
+   * Receives room member left events from Matrix Adapter via RabbitMQ.
+   *
+   * Publishes internal 'room.member.left' event for domain processing.
+   */
+  @RabbitSubscribe({
+    exchange: '',
+    routingKey: '',
+    queue: MatrixAdapterEventType.COMMUNICATION_ROOM_MEMBER_LEFT,
+    createQueueIfNotExists: true,
+    queueOptions: {
+      durable: true,
+    },
+  })
+  async onRoomMemberLeft(payload: MatrixRoomMemberLeftEvent): Promise<void> {
+    try {
+      this.logger.verbose?.(
+        `Received room member left event: roomId=${payload.alkemio_room_id}, actorId=${payload.actor_id}`,
+        LogContext.COMMUNICATION
+      );
+
+      this.eventEmitter.emit(
+        'room.member.left',
+        new RoomMemberLeftEvent({
+          roomId: payload.alkemio_room_id,
+          actorId: payload.actor_id,
+          reason: payload.reason,
+          timestamp: payload.timestamp,
+        })
+      );
+    } catch (error) {
+      this.logger.error(
+        `Error handling room member left event: ${error}`,
+        error instanceof Error ? error.stack : undefined,
+        LogContext.COMMUNICATION
+      );
+      return new Nack(true) as unknown as void;
+    }
+  }
+
+  /**
+   * Receives room member updated events from Matrix Adapter via RabbitMQ.
+   *
+   * Publishes internal 'room.member.updated' event for domain processing.
+   */
+  @RabbitSubscribe({
+    exchange: '',
+    routingKey: '',
+    queue: MatrixAdapterEventType.COMMUNICATION_ROOM_MEMBER_UPDATED,
+    createQueueIfNotExists: true,
+    queueOptions: {
+      durable: true,
+    },
+  })
+  async onRoomMemberUpdated(
+    payload: MatrixRoomMemberUpdatedEvent
+  ): Promise<void> {
+    try {
+      this.logger.verbose?.(
+        `Received room member updated event: roomId=${payload.alkemio_room_id}, memberActorId=${payload.member_actor_id}, membership=${payload.membership}`,
+        LogContext.COMMUNICATION
+      );
+
+      this.eventEmitter.emit(
+        'room.member.updated',
+        new RoomMemberUpdatedEvent({
+          roomId: payload.alkemio_room_id,
+          memberActorId: payload.member_actor_id,
+          senderActorId: payload.sender_actor_id,
+          membership: payload.membership,
+          timestamp: payload.timestamp,
+        })
+      );
+    } catch (error) {
+      this.logger.error(
+        `Error handling room member updated event: ${error}`,
+        error instanceof Error ? error.stack : undefined,
+        LogContext.COMMUNICATION
+      );
+      return new Nack(true) as unknown as void;
+    }
+  }
+
+  /**
+   * Receives read receipt updated events from Matrix Adapter via RabbitMQ.
+   *
+   * Publishes internal 'room.receipt.updated' event for domain processing.
+   */
+  @RabbitSubscribe({
+    exchange: '',
+    routingKey: '',
+    queue: MatrixAdapterEventType.COMMUNICATION_ROOM_RECEIPT_UPDATED,
+    createQueueIfNotExists: true,
+    queueOptions: {
+      durable: true,
+    },
+  })
+  async onRoomReceiptUpdated(
+    payload: MatrixReadReceiptUpdatedEvent
+  ): Promise<void> {
+    try {
+      this.logger.verbose?.(
+        `Received read receipt updated event: roomId=${payload.alkemio_room_id}, actorId=${payload.actor_id}, eventId=${payload.event_id}`,
+        LogContext.COMMUNICATION
+      );
+
+      this.eventEmitter.emit(
+        'room.receipt.updated',
+        new RoomReceiptUpdatedEvent({
+          roomId: payload.alkemio_room_id,
+          actorId: payload.actor_id,
+          eventId: payload.event_id,
+          threadId: payload.thread_id,
+          timestamp: payload.timestamp,
+        })
+      );
+    } catch (error) {
+      this.logger.error(
+        `Error handling read receipt updated event: ${error}`,
         error instanceof Error ? error.stack : undefined,
         LogContext.COMMUNICATION
       );

@@ -6,6 +6,10 @@ import { IRoom } from '../room/room.interface';
 import { IMessage } from '../message/message.interface';
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
+import {
+  CommunicationRoomWithReadStateResult,
+  MessageWithReadState,
+} from '@services/adapters/communication-adapter/dto/communication.dto.room.with.read.state.result';
 import { FindOneOptions, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { Room } from '../room/room.entity';
@@ -72,6 +76,69 @@ export class RoomLookupService {
     const externalRoom = await this.communicationAdapter.getRoom(room.id);
 
     return await this.populateRoomMessageSenders(externalRoom.messages);
+  }
+
+  /**
+   * Get room content with read state for a specific user.
+   * Returns messages with isRead flag and unread count.
+   */
+  async getRoomAsUser(
+    room: IRoom,
+    actorId: string
+  ): Promise<CommunicationRoomWithReadStateResult> {
+    const externalRoom = await this.communicationAdapter.getRoomAsUser(
+      room.id,
+      actorId
+    );
+
+    // Populate sender types for messages
+    const messagesWithSenders =
+      await this.populateRoomMessageWithReadStateSenders(externalRoom.messages);
+
+    return {
+      ...externalRoom,
+      messages: messagesWithSenders,
+    };
+  }
+
+  /**
+   * Populate sender types for messages with read state.
+   */
+  async populateRoomMessageWithReadStateSenders(
+    messages: MessageWithReadState[]
+  ): Promise<MessageWithReadState[]> {
+    const knownSendersMap = new Map<string, MessageSender>();
+    for (const message of messages) {
+      const agentId = message.sender;
+      let messageSender: MessageSender = { id: agentId, type: 'unknown' };
+      try {
+        messageSender = await this.updateKnownSendersMap(
+          knownSendersMap,
+          agentId
+        );
+      } catch (error) {
+        this.logger.warn?.(
+          {
+            message: 'Unable to identify sender for message.',
+            messageId: message.id,
+            originalError: error,
+          },
+          LogContext.COMMUNICATION
+        );
+      }
+
+      message.senderType = messageSender.type;
+      if (message.reactions) {
+        message.reactions = message.reactions.map(r => ({
+          ...r,
+          senderType: 'user' as const,
+        }));
+      } else {
+        message.reactions = [];
+      }
+    }
+
+    return messages;
   }
 
   public async addVcInteractionToRoom(

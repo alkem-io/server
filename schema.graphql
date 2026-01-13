@@ -11,7 +11,7 @@ A representation of a Lifecycle Definition, based on XState. It is serialized JS
 """
 scalar LifecycleDefinition
 
-"""A decentralized identifier (DID) as per the W3C standard."""
+"""A markdown string."""
 scalar Markdown
 
 """An identifier that originates from the underlying messaging platform."""
@@ -1800,6 +1800,19 @@ type CommunicationAdminRoomResult {
   members: [String!]!
 }
 
+type CommunicationRoomWithReadState {
+  """The display name of the room"""
+  displayName: String!
+  """The identifier of the room"""
+  id: String!
+  """The ID of the last message read by the current user."""
+  lastReadEventId: MessageID
+  """The messages that have been sent to the Room, with read state."""
+  messages: [MessageWithReadState!]!
+  """The number of unread messages for the current user."""
+  unreadCount: Int!
+}
+
 type Community implements Groupable {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -1962,7 +1975,6 @@ type ContributorRoles {
 type Conversation {
   """The authorization rules for the entity"""
   authorization: Authorization
-  conversationsSet: ConversationsSet! @deprecated(reason: "Use messaging instead")
   """The date at which the entity was created."""
   createdDate: DateTime!
   """The ID of the entity"""
@@ -1970,29 +1982,22 @@ type Conversation {
   messaging: Messaging!
   """The room for this Conversation."""
   room: Room
+  """The room for this Conversation with read state for the current user."""
+  roomWithReadState: CommunicationRoomWithReadState
   """
   The type of this Conversation (USER_USER or USER_VC), inferred from member agent types.
   """
   type: CommunicationConversationType!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
-  """The user participating in this Conversation."""
+  """
+  The other user participating in this Conversation (excludes the current user).
+  """
   user: User
   """
   The virtual contributor participating in this Conversation (only for USER_AGENT conversations).
   """
   virtualContributor: VirtualContributor
-}
-
-type ConversationsSet {
-  """The authorization rules for the entity"""
-  authorization: Authorization
-  """The date at which the entity was created."""
-  createdDate: DateTime!
-  """The ID of the entity"""
-  id: UUID!
-  """The date at which the entity was last updated."""
-  updatedDate: DateTime!
 }
 
 type CreateCalloutContributionData {
@@ -3261,6 +3266,22 @@ type MessageParent {
   url: String!
 }
 
+"""A message with read state information for the current user"""
+type MessageWithReadState {
+  """The id for the message event."""
+  id: MessageID!
+  """Whether this message has been read by the current user."""
+  isRead: Boolean!
+  """The message being sent"""
+  message: Markdown!
+  """Reactions on this message"""
+  reactions: [Reaction!]!
+  """The message being replied to"""
+  threadID: String
+  """The server timestamp in UTC"""
+  timestamp: Float!
+}
+
 type Messaging {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -3424,8 +3445,6 @@ type Mutation {
   createContributionOnCallout(contributionData: CreateContributionOnCalloutInput!): CalloutContribution!
   """Create a new Conversation on the Messaging."""
   createConversation(conversationData: CreateConversationInput!): Conversation!
-  """Create a new Conversation on the ConversationsSet."""
-  createConversationOnConversationsSet(conversationData: CreateConversationInput!): Conversation! @deprecated(reason: "Use createConversation instead")
   """Creates a new Discussion as part of this Forum."""
   createDiscussion(createData: ForumCreateDiscussionInput!): Discussion!
   """Create a new CalendarEvent on the Calendar."""
@@ -3546,6 +3565,8 @@ type Mutation {
   joinRoleSet(joinData: JoinAsEntryRoleOnRoleSetInput!): RoleSet!
   """Reset the License with Entitlements on the specified Account."""
   licenseResetOnAccount(resetData: AccountLicenseResetInput!): Account!
+  """Marks a message as read for the current user."""
+  markMessageAsReadInRoom(messageData: RoomMarkMessageReadInput!): Boolean!
   """
   Mark notifications as read. If no filter is provided, marks all user notifications as read. If filter with types is provided, marks only those notification types as read.
   """
@@ -3912,7 +3933,6 @@ type Platform {
   Alkemio configuration. Provides configuration to external services in the Alkemio ecosystem.
   """
   configuration: Config!
-  conversationsSet: ConversationsSet! @deprecated(reason: "Use messaging instead")
   """The date at which the entity was created."""
   createdDate: DateTime!
   """The Forum for the platform"""
@@ -4792,6 +4812,13 @@ type Room {
   messages: [Message!]!
   """The number of messages in the Room."""
   messagesCount: Float!
+  """Unread message counts for the current user in this Room."""
+  unreadCounts(
+    """
+    Optional thread IDs to get per-thread unread counts. If not provided, only room-level count is returned.
+    """
+    threadIds: [String!]
+  ): RoomUnreadCounts!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
   """Virtual Contributor Interactions in this Room."""
@@ -4826,6 +4853,22 @@ type RoomMessageReactionEventSubscriptionResult {
   messageID: String
   """The type of event."""
   type: MutationType!
+}
+
+"""Unread message count for a specific thread in a Room."""
+type RoomThreadUnreadCount {
+  """The number of unread messages in the thread."""
+  count: Int!
+  """The thread ID."""
+  threadId: String!
+}
+
+"""Unread message counts for a Room."""
+type RoomUnreadCounts {
+  """The total number of unread messages in the Room."""
+  roomUnreadCount: Int!
+  """Unread counts per thread, if thread IDs were requested."""
+  threadUnreadCounts: [RoomThreadUnreadCount!]
 }
 
 type SearchResultCallout implements SearchResult {
@@ -5711,8 +5754,6 @@ type UsersInRolesResponse {
 }
 
 type VcInteraction {
-  """The ID of the VC Interaction"""
-  id: ID! @deprecated(reason: "This field is for backward compatibility only and will be removed in a future version.")
   """The thread ID (Matrix message ID) where VC is engaged"""
   threadID: String!
   """The actor ID (agent.id) of the Virtual Contributor"""
@@ -6312,7 +6353,6 @@ input CreateContributionOnCalloutInput {
 }
 
 input CreateConversationInput {
-  type: CommunicationConversationType
   userID: UUID!
   virtualContributorID: UUID
   wellKnownVirtualContributor: VirtualContributorWellKnown
@@ -7092,6 +7132,15 @@ input RoomAddReactionToMessageInput {
   messageID: MessageID!
   """The Room to remove a message from."""
   roomID: UUID!
+}
+
+input RoomMarkMessageReadInput {
+  """The message id that should be marked as read."""
+  messageID: MessageID!
+  """The Room to mark message as read in."""
+  roomID: UUID!
+  """The thread id if the message is in a thread."""
+  threadID: MessageID
 }
 
 input RoomRemoveMessageInput {

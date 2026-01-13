@@ -1,6 +1,6 @@
 import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common';
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import {
   AuthorizationAgentPrivilege,
   CurrentUser,
@@ -12,6 +12,7 @@ import { RoomService } from './room.service';
 import { IVcInteraction } from '../vc-interaction/vc.interaction.interface';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { RoomUnreadCounts } from './dto/room.dto.unread.counts';
 
 @Resolver(() => IRoom)
 export class RoomResolverFields {
@@ -54,5 +55,36 @@ export class RoomResolverFields {
       threadID,
       virtualContributorID: data.virtualContributorActorID,
     }));
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('unreadCounts', () => RoomUnreadCounts, {
+    nullable: false,
+    description: 'Unread message counts for the current user in this Room.',
+  })
+  async unreadCounts(
+    @Parent() room: IRoom,
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('threadIds', {
+      type: () => [String],
+      nullable: true,
+      description:
+        'Optional thread IDs to get per-thread unread counts. If not provided, only room-level count is returned.',
+    })
+    threadIds?: string[]
+  ): Promise<RoomUnreadCounts> {
+    const reloadedRoom = await this.roomService.getRoomOrFail(room.id);
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      reloadedRoom.authorization,
+      AuthorizationPrivilege.READ,
+      `resolve unread counts for: ${reloadedRoom.id}`
+    );
+
+    return this.roomService.getUnreadCounts(
+      reloadedRoom,
+      agentInfo.agentID,
+      threadIds
+    );
   }
 }

@@ -31,6 +31,7 @@ import { ConversationVcAskQuestionResult } from './dto/conversation.vc.dto.ask.q
 import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
 import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
 import { RoomLookupService } from '../room-lookup/room.lookup.service';
+import { CommunicationRoomWithReadStateResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.with.read.state.result';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston/dist/winston.constants';
 
 @Injectable()
@@ -218,6 +219,25 @@ export class ConversationService {
       relations: { room: true },
     });
     return conversation.room;
+  }
+
+  /**
+   * Get room content with read state for a specific user.
+   * Returns messages with isRead flag and unread count.
+   */
+  public async getRoomWithReadState(
+    conversationID: string,
+    actorId: string
+  ): Promise<CommunicationRoomWithReadStateResult | undefined> {
+    const conversation = await this.getConversationOrFail(conversationID, {
+      relations: { room: true },
+    });
+
+    if (!conversation.room) {
+      return undefined;
+    }
+
+    return this.roomLookupService.getRoomAsUser(conversation.room, actorId);
   }
 
   public async getCommentsCount(conversationID: string): Promise<number> {

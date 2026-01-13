@@ -14,6 +14,7 @@ import { RoomType } from '@common/enums/room.type';
 import { RoomRemoveReactionToMessageInput } from './dto/room.dto.remove.message.reaction';
 import { RoomAddReactionToMessageInput } from './dto/room.dto.add.reaction.to.message';
 import { RoomSendMessageReplyInput } from './dto/room.dto.send.message.reply';
+import { RoomMarkMessageReadInput } from './dto/room.dto.mark.message.read';
 import { LogContext } from '@common/enums/logging.context';
 import { RoomServiceEvents } from './room.service.events';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
@@ -538,5 +539,28 @@ export class RoomResolverMutations {
 
     // Subscription will be published by MessageInboxService when Matrix echoes the removal
     return isDeleted;
+  }
+
+  @Mutation(() => Boolean, {
+    description: 'Marks a message as read for the current user.',
+  })
+  async markMessageAsReadInRoom(
+    @Args('messageData') messageData: RoomMarkMessageReadInput,
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<boolean> {
+    const room = await this.roomService.getRoomOrFail(messageData.roomID);
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      room.authorization,
+      AuthorizationPrivilege.READ,
+      `room mark message as read: ${room.id}`
+    );
+
+    return this.roomService.markMessageAsRead(
+      room,
+      agentInfo.agentID,
+      messageData
+    );
   }
 }

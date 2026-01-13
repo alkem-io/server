@@ -14,11 +14,13 @@ import { IMessageReaction } from '../message.reaction/message.reaction.interface
 import { RoomAddReactionToMessageInput } from './dto/room.dto.add.reaction.to.message';
 import { RoomRemoveReactionToMessageInput } from './dto/room.dto.remove.message.reaction';
 import { RoomRemoveMessageInput } from './dto/room.dto.remove.message';
+import { RoomMarkMessageReadInput } from './dto/room.dto.mark.message.read';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { RoomLookupService } from '../room-lookup/room.lookup.service';
 import { CreateRoomInput } from './dto/room.dto.create';
 import { DeleteRoomInput } from './dto/room.dto.delete';
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
+import { RoomUnreadCounts } from './dto/room.dto.unread.counts';
 
 @Injectable()
 export class RoomService {
@@ -284,5 +286,53 @@ export class RoomService {
       await this.contributorLookupService.getUserIdByAgentId(senderActorId);
 
     return userId ?? '';
+  }
+
+  /**
+   * Mark a message as read for a specific user.
+   * Updates read receipts in Matrix.
+   */
+  async markMessageAsRead(
+    room: IRoom,
+    agentId: string,
+    messageData: RoomMarkMessageReadInput
+  ): Promise<boolean> {
+    await this.communicationAdapter.markMessageRead(
+      agentId,
+      room.id,
+      messageData.messageID,
+      messageData.threadID
+    );
+
+    return true;
+  }
+
+  /**
+   * Get unread message counts for a room.
+   * Returns room-level unread count and optionally per-thread unread counts.
+   */
+  async getUnreadCounts(
+    room: IRoom,
+    agentId: string,
+    threadIds?: string[]
+  ): Promise<RoomUnreadCounts> {
+    const result = await this.communicationAdapter.getUnreadCounts(
+      agentId,
+      room.id,
+      threadIds
+    );
+
+    // Convert Record<string, number> to array of RoomThreadUnreadCount
+    const threadUnreadCounts = result.threadUnreadCounts
+      ? Object.entries(result.threadUnreadCounts).map(([threadId, count]) => ({
+          threadId,
+          count,
+        }))
+      : undefined;
+
+    return {
+      roomUnreadCount: result.roomUnreadCount,
+      threadUnreadCounts,
+    };
   }
 }
