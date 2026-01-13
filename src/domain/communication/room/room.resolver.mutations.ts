@@ -532,8 +532,8 @@ export class RoomResolverMutations {
     // See: docs/matrix-admin-reflection.md
     const isDeleted = await this.roomService.removeReactionToMessage(
       room,
-      agentInfo.agentID,
-      reactionData
+      reactionData,
+      agentInfo.agentID
     );
 
     // Subscription will be published by MessageInboxService when Matrix echoes the removal

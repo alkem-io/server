@@ -128,7 +128,7 @@ export class RoomService {
   async removeRoomMessage(
     room: IRoom,
     messageData: RoomRemoveMessageInput,
-    _agentId?: string // TODO: Use this once Matrix admin reflection is implemented
+    _agentId: string // TODO: Use this once Matrix admin reflection is implemented
   ): Promise<string> {
     // WORKAROUND: Get the original message sender's actorId - Matrix only allows
     // the sender or room moderators to delete messages. Since we don't yet
@@ -226,20 +226,20 @@ export class RoomService {
    */
   async removeReactionToMessage(
     room: IRoom,
-    _agentId: string, // TODO: Use this once Matrix admin reflection is implemented
-    messageData: RoomRemoveReactionToMessageInput
+    reactionData: RoomRemoveReactionToMessageInput,
+    _agentId: string // TODO: Use this once Matrix admin reflection is implemented
   ): Promise<boolean> {
     // WORKAROUND: Get the original reaction sender's actorId and impersonate them
     const senderActorId =
       await this.communicationAdapter.getReactionSenderActor({
         alkemioRoomId: room.id,
-        reactionId: messageData.reactionID,
+        reactionId: reactionData.reactionID,
       });
 
     await this.communicationAdapter.removeReaction({
       alkemioRoomId: room.id,
       actorId: senderActorId, // TODO: Replace with _agentId once Matrix reflection is implemented
-      reactionId: messageData.reactionID,
+      reactionId: reactionData.reactionID,
     });
 
     return true;
