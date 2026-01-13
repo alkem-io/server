@@ -22,6 +22,7 @@ export enum MessagingQueue {
   SUBSCRIPTION_IN_APP_NOTIFICATION_RECEIVED = 'alkemio-subscriptions-in-app-notification-received',
   SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER = 'alkemio-subscriptions-in-app-notification-counter',
   SUBSCRIPTION_CONVERSATIONS_UNREAD_COUNT = 'alkemio-subscriptions-conversations-unread-count',
+  SUBSCRIPTION_USER_CONVERSATION_MESSAGE = 'alkemio-subscriptions-user-conversation-message',
   //
   WHITEBOARDS = 'alkemio-whiteboards',
   FILES = 'alkemio-files',

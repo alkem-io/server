@@ -221,6 +221,12 @@ export class RoomResolverMutations {
           messageData.roomID,
           agentInfo.agentID
         );
+        // Publish message event to all conversation members for real-time updates
+        await this.publishMessageForConversation(
+          messageData.roomID,
+          message,
+          MutationType.CREATE
+        );
         break;
       default:
       // ignore for now, later likely to be an exception
@@ -539,6 +545,55 @@ export class RoomResolverMutations {
 
     // Subscription will be published by MessageInboxService when Matrix echoes the removal
     return isDeleted;
+  }
+
+  /**
+   * Publishes a message event to all members of a conversation.
+   * Called when a message is sent/deleted in a CONVERSATION_DIRECT room.
+   */
+  private async publishMessageForConversation(
+    roomID: string,
+    message: IMessage | { id: string },
+    type: MutationType
+  ): Promise<void> {
+    try {
+      // Get the conversation from the room
+      const conversation =
+        await this.roomResolverService.getConversationForRoom(roomID);
+
+      if (!conversation) {
+        return;
+      }
+
+      // Get all members of the conversation
+      const memberships =
+        await this.conversationMembershipService.getOtherMemberships(
+          conversation.id,
+          '' // Empty string to get ALL members
+        );
+
+      // For each member, publish the message event
+      for (const membership of memberships) {
+        const user = await this.userLookupService.getUserByAgentId(
+          membership.agentId
+        );
+        if (user) {
+          await this.subscriptionPublishService.publishUserConversationMessage(
+            user.id,
+            conversation.id,
+            roomID,
+            type,
+            message
+          );
+        }
+      }
+    } catch (error) {
+      // Log error but don't fail the message operation
+      this.logger.warn?.(
+        `Failed to publish message event for conversation: ${error}`,
+        LogContext.COMMUNICATION
+      );
+    }
   }
 
   /**

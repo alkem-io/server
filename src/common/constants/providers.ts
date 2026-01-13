@@ -14,6 +14,8 @@ export const SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER =
   'alkemio-subscriptions-notification-counter';
 export const SUBSCRIPTION_CONVERSATIONS_UNREAD_COUNT =
   'alkemio-subscriptions-conversations-unread-count';
+export const SUBSCRIPTION_USER_CONVERSATION_MESSAGE =
+  'alkemio-subscriptions-user-conversation-message';
 export const AUTH_RESET_SERVICE = 'alkemio-auth-reset';
 export const NOTIFICATIONS_SERVICE = 'alkemio-notifications';
 export const MATRIX_ADAPTER_SERVICE = 'alkemio-matrix-adapter';

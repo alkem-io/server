@@ -6,6 +6,7 @@ import {
   SUBSCRIPTION_ROOM_EVENT,
   SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED,
   SUBSCRIPTION_CONVERSATIONS_UNREAD_COUNT,
+  SUBSCRIPTION_USER_CONVERSATION_MESSAGE,
 } from '@src/common/constants';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { TypedPubSubEngine } from './typed.pub.sub.engine';
@@ -24,7 +25,9 @@ export class SubscriptionReadService {
     @Inject(SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER)
     private subscriptionInAppNotificationCounter: TypedPubSubEngine,
     @Inject(SUBSCRIPTION_CONVERSATIONS_UNREAD_COUNT)
-    private subscriptionConversationsUnreadCount: TypedPubSubEngine
+    private subscriptionConversationsUnreadCount: TypedPubSubEngine,
+    @Inject(SUBSCRIPTION_USER_CONVERSATION_MESSAGE)
+    private subscriptionUserConversationMessage: TypedPubSubEngine
   ) {}
 
   public subscribeToActivities() {
@@ -60,6 +63,12 @@ export class SubscriptionReadService {
   public subscribeToConversationsUnreadCount() {
     return this.subscriptionConversationsUnreadCount.asyncIterableIterator(
       SubscriptionType.CONVERSATIONS_UNREAD_COUNT
+    );
+  }
+
+  public subscribeToUserConversationMessage() {
+    return this.subscriptionUserConversationMessage.asyncIterableIterator(
+      SubscriptionType.USER_CONVERSATION_MESSAGE
     );
   }
 }

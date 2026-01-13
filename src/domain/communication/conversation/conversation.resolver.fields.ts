@@ -14,6 +14,7 @@ import { IVirtualContributor } from '@domain/community/virtual-contributor/virtu
 import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
 import { AgentType } from '@common/enums/agent.type';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ConversationMembershipService } from '../conversation-membership/conversation.membership.service';
 
 @Resolver(() => IConversation)
 export class ConversationResolverFields {
@@ -21,7 +22,8 @@ export class ConversationResolverFields {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private readonly conversationService: ConversationService,
-    private readonly virtualContributorLookupService: VirtualContributorLookupService
+    private readonly virtualContributorLookupService: VirtualContributorLookupService,
+    private readonly conversationMembershipService: ConversationMembershipService
   ) {}
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -94,5 +96,24 @@ export class ConversationResolverFields {
     return await this.virtualContributorLookupService.getVirtualContributorByAgentId(
       vcMembership.agentId
     );
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('lastReadAt', () => Date, {
+    nullable: true,
+    description:
+      'The timestamp when the current user last read this conversation. Null if never read.',
+  })
+  async lastReadAt(
+    @Parent() conversation: IConversation,
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<Date | null> {
+    const membership = await this.conversationMembershipService.getMembership(
+      conversation.id,
+      agentInfo.agentID
+    );
+
+    return membership?.lastReadAt ?? null;
   }
 }

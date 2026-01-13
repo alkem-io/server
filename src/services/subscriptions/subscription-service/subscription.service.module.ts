@@ -5,6 +5,7 @@ import {
   SUBSCRIPTION_IN_APP_NOTIFICATION_RECEIVED,
   SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER,
   SUBSCRIPTION_CONVERSATIONS_UNREAD_COUNT,
+  SUBSCRIPTION_USER_CONVERSATION_MESSAGE,
 } from '@src/common/constants';
 import { subscriptionFactoryProvider } from '@core/microservices/subscription.factory.provider';
 import { SubscriptionPublishService } from './subscription.publish.service';
@@ -29,6 +30,10 @@ const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
   {
     provide: SUBSCRIPTION_CONVERSATIONS_UNREAD_COUNT,
     queueName: MessagingQueue.SUBSCRIPTION_CONVERSATIONS_UNREAD_COUNT,
+  },
+  {
+    provide: SUBSCRIPTION_USER_CONVERSATION_MESSAGE,
+    queueName: MessagingQueue.SUBSCRIPTION_USER_CONVERSATION_MESSAGE,
   },
 ];
 
@@ -64,7 +69,9 @@ export class SubscriptionServiceModule implements OnModuleDestroy {
     @Inject(SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER)
     private readonly notificationCounter: PubSubEngine,
     @Inject(SUBSCRIPTION_CONVERSATIONS_UNREAD_COUNT)
-    private readonly conversationsUnreadCount: PubSubEngine
+    private readonly conversationsUnreadCount: PubSubEngine,
+    @Inject(SUBSCRIPTION_USER_CONVERSATION_MESSAGE)
+    private readonly userConversationMessage: PubSubEngine
   ) {}
 
   async onModuleDestroy() {
@@ -73,6 +80,7 @@ export class SubscriptionServiceModule implements OnModuleDestroy {
       this.notificationReceived,
       this.notificationCounter,
       this.conversationsUnreadCount,
+      this.userConversationMessage,
     ];
 
     for (const pubSub of pubSubs) {

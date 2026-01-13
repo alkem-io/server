@@ -7,6 +7,7 @@ import {
   SUBSCRIPTION_ROOM_EVENT,
   SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED,
   SUBSCRIPTION_CONVERSATIONS_UNREAD_COUNT,
+  SUBSCRIPTION_USER_CONVERSATION_MESSAGE,
 } from '@src/common/constants';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { IActivity } from '@platform/activity';
@@ -19,6 +20,7 @@ import {
   VirtualContributorUpdatedSubscriptionPayload,
   InAppNotificationCounterSubscriptionPayload,
   ConversationsUnreadCountSubscriptionPayload,
+  UserConversationMessageSubscriptionPayload,
 } from './dto';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
@@ -42,6 +44,8 @@ export class SubscriptionPublishService {
     private inAppNotificationCounterSubscription: TypedPubSubEngine,
     @Inject(SUBSCRIPTION_CONVERSATIONS_UNREAD_COUNT)
     private conversationsUnreadCountSubscription: TypedPubSubEngine,
+    @Inject(SUBSCRIPTION_USER_CONVERSATION_MESSAGE)
+    private userConversationMessageSubscription: TypedPubSubEngine,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -149,6 +153,35 @@ export class SubscriptionPublishService {
 
     return this.conversationsUnreadCountSubscription.publish(
       SubscriptionType.CONVERSATIONS_UNREAD_COUNT,
+      payload
+    );
+  }
+
+  public publishUserConversationMessage(
+    receiverID: string,
+    conversationId: string,
+    roomId: string,
+    type: MutationType,
+    message: IMessage | { id: string }
+  ) {
+    const payload: UserConversationMessageSubscriptionPayload = {
+      eventID: `user-conversation-message-${randomInt()}`,
+      receiverID,
+      conversationId,
+      roomId,
+      message: {
+        type,
+        data: message,
+      },
+    };
+
+    this.logger.verbose?.(
+      `Publishing user conversation message: receiverID=${receiverID}, conversationId=${conversationId}, type=${type}`,
+      LogContext.SUBSCRIPTIONS
+    );
+
+    return this.userConversationMessageSubscription.publish(
+      SubscriptionType.USER_CONVERSATION_MESSAGE,
       payload
     );
   }

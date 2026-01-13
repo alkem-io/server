@@ -9,4 +9,5 @@ export enum SubscriptionType {
   IN_APP_NOTIFICATION_RECEIVED = 'in-app-notification-received',
   IN_APP_NOTIFICATION_COUNTER = 'in-app-notification-counter',
   CONVERSATIONS_UNREAD_COUNT = 'conversations-unread-count',
+  USER_CONVERSATION_MESSAGE = 'user-conversation-message',
 }

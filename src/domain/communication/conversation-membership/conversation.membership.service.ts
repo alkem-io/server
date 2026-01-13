@@ -44,6 +44,21 @@ export class ConversationMembershipService {
   }
 
   /**
+   * Gets the membership record for a specific agent in a conversation.
+   */
+  async getMembership(
+    conversationId: string,
+    agentId: string
+  ): Promise<ConversationMembership | null> {
+    return this.conversationMembershipRepository.findOne({
+      where: {
+        conversationId,
+        agentId,
+      },
+    });
+  }
+
+  /**
    * Gets conversation memberships for other participants of a conversation.
    * Used to notify other members when a message is sent.
    */
