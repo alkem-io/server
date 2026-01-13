@@ -7,6 +7,7 @@ import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activ
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
+import { ContributorLookupModule } from '@services/infrastructure/contributor-lookup/contributor.lookup.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { RoomResolverFields } from './room.resolver.fields';
 import { RoomResolverMutations } from './room.resolver.mutations';
@@ -17,7 +18,6 @@ import { RoomServiceEvents } from './room.service.events';
 import { RoomEventResolverSubscription } from './room.event.resolver.subscription';
 import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
 import { MessageModule } from '../message/message.module';
-import { VcInteractionModule } from '../vc-interaction/vc.interaction.module';
 import { VirtualContributorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { InAppNotificationModule } from '@platform/in-app-notification/in.app.notification.module';
@@ -27,7 +27,7 @@ import { VirtualContributorMessageModule } from '../virtual.contributor.message/
 
 @Module({
   imports: [
-    EntityResolverModule,
+    ContributorLookupModule,
     ContributionReporterModule,
     ActivityAdapterModule,
     NotificationAdapterModule,
@@ -35,8 +35,8 @@ import { VirtualContributorMessageModule } from '../virtual.contributor.message/
     AuthorizationPolicyModule,
     NamingModule,
     CommunicationAdapterModule,
+    EntityResolverModule,
     MessageModule,
-    VcInteractionModule,
     VirtualContributorLookupModule,
     VirtualContributorMessageModule,
     UserLookupModule,

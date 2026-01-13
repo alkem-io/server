@@ -60,7 +60,7 @@ export class TemplateContentSpace
   @JoinColumn()
   about!: SpaceAbout;
 
-  @Column('json', { nullable: false })
+  @Column('jsonb', { nullable: false })
   settings!: ISpaceSettings;
 
   @Column('int', { nullable: false })

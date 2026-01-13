@@ -5,6 +5,7 @@ import { CommunicationService } from '@domain/communication/communication/commun
 import { IContributor } from '../contributor/contributor.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston/dist/winston.constants';
 import { ICommunication } from '@domain/communication/communication';
+import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 
 @Injectable()
 export class CommunityCommunicationService {
@@ -17,11 +18,14 @@ export class CommunityCommunicationService {
     communication: ICommunication,
     contributor: IContributor
   ): Promise<void> {
+    if (!contributor.agent?.id) {
+      throw new EntityNotInitializedException(
+        `Contributor ${contributor.id} does not have an agent`,
+        LogContext.COMMUNICATION
+      );
+    }
     this.communicationService
-      .addContributorToCommunications(
-        communication,
-        contributor.communicationID
-      )
+      .addContributorToCommunications(communication, contributor.agent.id)
       .catch(error =>
         this.logger.error(
           {
