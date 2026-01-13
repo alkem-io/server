@@ -153,7 +153,7 @@ export class InnovationFlowStateService {
   ): Promise<IInnovationFlowState> {
     await this.innovationFlowStateRepository.update(
       { id: flowStateID },
-      { defaultCalloutTemplate: null as any }
+      { defaultCalloutTemplate: null }
     );
 
     this.logger.verbose?.(
