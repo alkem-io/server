@@ -69,7 +69,6 @@ export class MessageInboxService {
         id: payload.message.id,
         message: payload.message.message,
         sender: payload.actorID,
-        senderType: 'user', // Will be refined if sender is VC
         threadID: payload.message.threadID || '',
         timestamp: payload.message.timestamp,
         reactions: [],
@@ -279,7 +278,6 @@ export class MessageInboxService {
         id: payload.reactionId,
         emoji: payload.emoji,
         sender: payload.actorID,
-        senderType: 'user', // Will be refined if sender is VC
         timestamp: payload.timestamp,
       },
       payload.messageId
@@ -309,7 +307,6 @@ export class MessageInboxService {
         id: payload.reactionId,
         emoji: '', // Not needed for delete
         sender: '',
-        senderType: 'user',
         timestamp: Date.now(),
       },
       payload.messageId
@@ -344,7 +341,6 @@ export class MessageInboxService {
         id: payload.originalMessageId,
         message: payload.newContent,
         sender: payload.senderActorId,
-        senderType: 'user',
         threadID: payload.threadId || '',
         timestamp: originalMessage.timestamp,
         reactions: originalMessage.reactions ?? [],
@@ -376,7 +372,6 @@ export class MessageInboxService {
         id: payload.redactedMessageId,
         message: '',
         sender: '',
-        senderType: 'unknown',
         timestamp: 0,
         reactions: [],
       }

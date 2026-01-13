@@ -19,9 +19,8 @@ export class MessageWithReadState {
   })
   message!: string;
 
+  // Agent ID of the sender - resolved to Contributor by field resolver
   sender!: string;
-
-  senderType!: 'user' | 'virtualContributor' | 'unknown';
 
   @Field(() => Number, {
     nullable: false,

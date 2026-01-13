@@ -326,8 +326,7 @@ export class RoomResolverMutations {
     const reply = await this.roomLookupService.sendMessageReply(
       room,
       agentInfo.agentID,
-      messageData,
-      'user'
+      messageData
     );
 
     this.subscriptionPublishService.publishRoomEvent(
@@ -494,7 +493,6 @@ export class RoomResolverMutations {
         message: '',
         reactions: [],
         sender: '',
-        senderType: 'user',
         threadID: '',
         timestamp: -1,
       }

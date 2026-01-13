@@ -157,7 +157,7 @@ export class ConversationService {
     if (!conversation)
       throw new EntityNotFoundException(
         'Conversation not found',
-        LogContext.COLLABORATION,
+        LogContext.COMMUNICATION_CONVERSATION,
         { conversationID, options }
       );
     return conversation;

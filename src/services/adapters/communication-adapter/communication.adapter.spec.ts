@@ -299,7 +299,6 @@ describe('CommunicationAdapter', () => {
         id: 'msg-123',
         message: 'Test message',
         sender: 'actor-uuid-456',
-        senderType: 'user',
         timestamp: 1234567890.123,
         threadID: undefined,
         reactions: [],

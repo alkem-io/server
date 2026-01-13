@@ -4,12 +4,7 @@ import { LogContext } from '@common/enums';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { IRoom } from '../room/room.interface';
 import { IMessage } from '../message/message.interface';
-import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
-import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
-import {
-  CommunicationRoomWithReadStateResult,
-  MessageWithReadState,
-} from '@services/adapters/communication-adapter/dto/communication.dto.room.with.read.state.result';
+import { CommunicationRoomWithReadStateResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.with.read.state.result';
 import { FindOneOptions, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { Room } from '../room/room.entity';
@@ -19,32 +14,9 @@ import { CreateVcInteractionInput } from '../vc-interaction/dto/vc.interaction.d
 import { RoomSendMessageReplyInput } from '../room/dto/room.dto.send.message.reply';
 import { RoomSendMessageInput } from '../room/dto/room.dto.send.message';
 
-interface MessageSender {
-  id: string;
-  type: 'user' | 'virtualContributor' | 'unknown';
-}
-
-/**
- * Common interface for message objects that need sender type population.
- * Both IMessage and MessageWithReadState implement this shape.
- */
-interface MessageLike {
-  id: string;
-  sender: string;
-  senderType: 'user' | 'virtualContributor' | 'unknown';
-  reactions?: Array<{
-    id: string;
-    emoji: string;
-    sender: string;
-    senderType: 'user' | 'virtualContributor' | 'unknown';
-    timestamp: number;
-  }>;
-}
-
 export class RoomLookupService {
   constructor(
     private readonly communicationAdapter: CommunicationAdapter,
-    private readonly contributorLookupService: ContributorLookupService,
     @InjectRepository(Room)
     private readonly roomRepository: Repository<Room>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -91,8 +63,7 @@ export class RoomLookupService {
 
   async getMessages(room: IRoom): Promise<IMessage[]> {
     const externalRoom = await this.communicationAdapter.getRoom(room.id);
-
-    return await this.populateRoomMessageSenders(externalRoom.messages);
+    return externalRoom.messages;
   }
 
   /**
@@ -108,24 +79,10 @@ export class RoomLookupService {
       actorId
     );
 
-    // Populate sender types for messages
-    const messagesWithSenders =
-      await this.populateRoomMessageWithReadStateSenders(externalRoom.messages);
-
     return {
       ...externalRoom,
-      messages: messagesWithSenders,
       messagesCount: room.messagesCount,
     };
-  }
-
-  /**
-   * Populate sender types for messages with read state.
-   */
-  async populateRoomMessageWithReadStateSenders(
-    messages: MessageWithReadState[]
-  ): Promise<MessageWithReadState[]> {
-    return this.populateMessageSenderTypes(messages);
   }
 
   public async addVcInteractionToRoom(
@@ -180,63 +137,6 @@ export class RoomLookupService {
     return await this.roomRepository.save(room as Room);
   }
 
-  async populateRoomsMessageSenders(
-    rooms: CommunicationRoomResult[]
-  ): Promise<CommunicationRoomResult[]> {
-    for (const room of rooms) {
-      room.messages = await this.populateRoomMessageSenders(room.messages);
-    }
-
-    return rooms;
-  }
-
-  async populateRoomMessageSenders(messages: IMessage[]): Promise<IMessage[]> {
-    return this.populateMessageSenderTypes(messages);
-  }
-
-  /**
-   * Shared helper to populate sender types for any message-like objects.
-   * Works with both IMessage and MessageWithReadState.
-   */
-  private async populateMessageSenderTypes<T extends MessageLike>(
-    messages: T[]
-  ): Promise<T[]> {
-    const knownSendersMap = new Map<string, MessageSender>();
-    for (const message of messages) {
-      const agentId = message.sender;
-      let messageSender: MessageSender = { id: agentId, type: 'unknown' };
-      try {
-        messageSender = await this.updateKnownSendersMap(
-          knownSendersMap,
-          agentId
-        );
-      } catch (error) {
-        this.logger.warn?.(
-          {
-            message: 'Unable to identify sender for message.',
-            messageId: message.id,
-            originalError: error,
-          },
-          LogContext.COMMUNICATION
-        );
-      }
-
-      // Keep the agent ID in the sender field - the field resolver will handle the lookup
-      message.senderType = messageSender.type;
-      if (message.reactions) {
-        // Reactions also keep their agent IDs - field resolvers handle lookup
-        message.reactions = message.reactions.map(r => ({
-          ...r,
-          senderType: 'user' as const,
-        }));
-      } else {
-        message.reactions = [];
-      }
-    }
-
-    return messages;
-  }
-
   async sendMessage(
     room: IRoom,
     actorId: string,
@@ -249,9 +149,6 @@ export class RoomLookupService {
       roomID: room.id,
     });
 
-    // The message.sender from adapter is already the actorId (agent.id)
-    // Keep it as agent ID - the field resolver will handle the lookup
-
     room.messagesCount = room.messagesCount + 1;
     await this.roomRepository.save(room);
     return message;
@@ -260,70 +157,19 @@ export class RoomLookupService {
   async sendMessageReply(
     room: IRoom,
     actorId: string,
-    messageData: RoomSendMessageReplyInput,
-    senderType: 'user' | 'virtualContributor'
+    messageData: RoomSendMessageReplyInput
   ): Promise<IMessage> {
     // The new adapter uses alkemio room ID and handles membership internally
-    const message = await this.communicationAdapter.sendMessageReply(
-      {
-        actorId: actorId,
-        message: messageData.message,
-        roomID: room.id,
-        threadID: messageData.threadID,
-      },
-      senderType
-    );
-
-    // The message.sender from adapter is already the actorId (agent.id)
-    // Keep it as agent ID - the field resolver will handle the lookup
-    message.senderType = senderType;
+    const message = await this.communicationAdapter.sendMessageReply({
+      actorId: actorId,
+      message: messageData.message,
+      roomID: room.id,
+      threadID: messageData.threadID,
+    });
 
     room.messagesCount = room.messagesCount + 1;
     await this.roomRepository.save(room);
 
     return message;
-  }
-
-  /**
-   * Identifies and returns the message sender information for a given agent ID.
-   *
-   * This method first checks if the sender is already known in the provided map. If not found,
-   * it attempts to resolve the agent ID to either an Alkemio user or virtual contributor
-   * by querying the contributor lookup service. Once identified, the sender information is cached
-   * in the known senders map for future lookups.
-   *
-   * @param knownSendersMap - A map cache containing previously identified message senders
-   * @param agentId - The agent ID to identify (agent.id of the contributor)
-   * @returns A promise that resolves to the MessageSender object containing the sender's ID and type
-   * @throws {Error} When the agent ID cannot be resolved to any known sender type
-   */
-  private async updateKnownSendersMap(
-    knownSendersMap: Map<string, MessageSender>,
-    agentId: string
-  ): Promise<MessageSender> | never {
-    let messageSender = knownSendersMap.get(agentId);
-    if (!messageSender) {
-      const contributor =
-        await this.contributorLookupService.getContributorByAgentId(agentId);
-      if (contributor) {
-        // Determine if it's a user or virtual contributor by checking the type
-        // Users have 'accountID' while VirtualContributors don't at the top level
-        // A more reliable check would be to see if it has User-specific properties
-        const isUser = 'accountID' in contributor;
-        messageSender = {
-          id: contributor.id,
-          type: isUser ? 'user' : 'virtualContributor',
-        };
-        knownSendersMap.set(agentId, messageSender);
-      }
-    }
-    if (!messageSender) {
-      throw new EntityNotFoundException(
-        'Unable to identify sender',
-        LogContext.COMMUNICATION,
-        { agentId }
-      );
-    }
-    return messageSender;
   }
 }

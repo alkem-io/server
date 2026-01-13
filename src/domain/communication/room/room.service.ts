@@ -310,6 +310,12 @@ export class RoomService {
   /**
    * Get unread message counts for a room.
    * Returns room-level unread count and optionally per-thread unread counts.
+   *
+   * @param room - The room to get unread counts for
+   * @param agentId - The agent ID of the requesting user
+   * @param threadIds - Optional thread IDs to get per-thread unread counts.
+   *   - undefined: only room-level count returned, threadUnreadCounts is null
+   *   - empty array or array with IDs: threadUnreadCounts is an array (possibly empty)
    */
   async getUnreadCounts(
     room: IRoom,
@@ -322,13 +328,24 @@ export class RoomService {
       threadIds
     );
 
-    // Convert Record<string, number> to array of RoomThreadUnreadCount
-    const threadUnreadCounts = result.threadUnreadCounts
-      ? Object.entries(result.threadUnreadCounts).map(([threadId, count]) => ({
-          threadId,
-          count,
-        }))
-      : undefined;
+    // Determine threadUnreadCounts based on whether threadIds was provided:
+    // - undefined (not provided): return undefined (null in GraphQL) - not requested
+    // - provided (including empty array): return array (possibly empty) - requested but no matches
+    let threadUnreadCounts:
+      | Array<{ threadId: string; count: number }>
+      | undefined;
+    if (threadIds !== undefined) {
+      // threadIds was provided - convert result to array (empty if no matches)
+      threadUnreadCounts = result.threadUnreadCounts
+        ? Object.entries(result.threadUnreadCounts).map(
+            ([threadId, count]) => ({
+              threadId,
+              count,
+            })
+          )
+        : [];
+    }
+    // else: threadIds was undefined, leave threadUnreadCounts as undefined (null in GraphQL)
 
     return {
       roomUnreadCount: result.roomUnreadCount,
