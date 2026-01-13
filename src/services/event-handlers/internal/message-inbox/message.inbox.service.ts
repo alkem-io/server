@@ -464,7 +464,7 @@ export class MessageInboxService {
     const room = await this.roomLookupService.getRoomOrFail(payload.roomId);
 
     // Publish GraphQL subscription for read receipt
-    await this.subscriptionPublishService.publishRoomReceiptEvent(room, {
+    this.subscriptionPublishService.publishRoomReceiptEvent(room, {
       actorId: payload.actorId,
       eventId: payload.eventId,
       threadId: payload.threadId,
