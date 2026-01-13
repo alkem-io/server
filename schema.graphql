@@ -11,7 +11,7 @@ A representation of a Lifecycle Definition, based on XState. It is serialized JS
 """
 scalar LifecycleDefinition
 
-"""A decentralized identifier (DID) as per the W3C standard."""
+"""A markdown string."""
 scalar Markdown
 
 """An identifier that originates from the underlying messaging platform."""
@@ -1962,7 +1962,6 @@ type ContributorRoles {
 type Conversation {
   """The authorization rules for the entity"""
   authorization: Authorization
-  conversationsSet: ConversationsSet! @deprecated(reason: "Use messaging instead")
   """The date at which the entity was created."""
   createdDate: DateTime!
   """The ID of the entity"""
@@ -1976,23 +1975,14 @@ type Conversation {
   type: CommunicationConversationType!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
-  """The user participating in this Conversation."""
+  """
+  The other user participating in this Conversation (excludes the current user).
+  """
   user: User
   """
   The virtual contributor participating in this Conversation (only for USER_AGENT conversations).
   """
   virtualContributor: VirtualContributor
-}
-
-type ConversationsSet {
-  """The authorization rules for the entity"""
-  authorization: Authorization
-  """The date at which the entity was created."""
-  createdDate: DateTime!
-  """The ID of the entity"""
-  id: UUID!
-  """The date at which the entity was last updated."""
-  updatedDate: DateTime!
 }
 
 type CreateCalloutContributionData {
@@ -3428,8 +3418,6 @@ type Mutation {
   createContributionOnCallout(contributionData: CreateContributionOnCalloutInput!): CalloutContribution!
   """Create a new Conversation on the Messaging."""
   createConversation(conversationData: CreateConversationInput!): Conversation!
-  """Create a new Conversation on the ConversationsSet."""
-  createConversationOnConversationsSet(conversationData: CreateConversationInput!): Conversation! @deprecated(reason: "Use createConversation instead")
   """Creates a new Discussion as part of this Forum."""
   createDiscussion(createData: ForumCreateDiscussionInput!): Discussion!
   """Create a new CalendarEvent on the Calendar."""
@@ -3920,7 +3908,6 @@ type Platform {
   Alkemio configuration. Provides configuration to external services in the Alkemio ecosystem.
   """
   configuration: Config!
-  conversationsSet: ConversationsSet! @deprecated(reason: "Use messaging instead")
   """The date at which the entity was created."""
   createdDate: DateTime!
   """The Forum for the platform"""
@@ -5719,8 +5706,6 @@ type UsersInRolesResponse {
 }
 
 type VcInteraction {
-  """The ID of the VC Interaction"""
-  id: ID! @deprecated(reason: "This field is for backward compatibility only and will be removed in a future version.")
   """The thread ID (Matrix message ID) where VC is engaged"""
   threadID: String!
   """The actor ID (agent.id) of the Virtual Contributor"""
@@ -6146,11 +6131,11 @@ input ConvertSpaceL1ToSpaceL0Input {
 
 input ConvertSpaceL1ToSpaceL2Input {
   """
-  The Space L1 to be the parent of the Space L1 when it is moved to be L2.
+  The Space L1 to be the parent of the Space L1 when it is moved to be L2. 
   """
   parentSpaceL1ID: UUID!
   """
-  The Space L1 to be moved to be a child of another Space L. Both the L1 Space and the parent Space must be in the same L0 Space.
+  The Space L1 to be moved to be a child of another Space L. Both the L1 Space and the parent Space must be in the same L0 Space. 
   """
   spaceL1ID: UUID!
 }
@@ -6320,7 +6305,6 @@ input CreateContributionOnCalloutInput {
 }
 
 input CreateConversationInput {
-  type: CommunicationConversationType
   userID: UUID!
   virtualContributorID: UUID
   wellKnownVirtualContributor: VirtualContributorWellKnown
