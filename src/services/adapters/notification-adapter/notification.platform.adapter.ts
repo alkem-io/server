@@ -149,7 +149,7 @@ export class NotificationPlatformAdapter {
       const payload =
         await this.notificationExternalAdapter.buildPlatformForumCommentCreatedOnDiscussionPayload(
           event,
-          eventData.commentSent.sender,
+          eventData.triggeredBy,
           emailRecipientsWithoutCommenter,
           eventData.discussion,
           eventData.commentSent

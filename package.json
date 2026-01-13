@@ -1,6 +1,6 @@
 {
   "name": "alkemio-server",
-  "version": "0.129.0",
+  "version": "0.130.0",
   "description": "Alkemio server, responsible for managing the shared Alkemio platform",
   "author": "Alkemio Foundation",
   "private": false,
@@ -58,11 +58,11 @@
     }
   },
   "dependencies": {
+    "@alkemio/matrix-adapter-lib": "0.8.2",
     "@alkemio/notifications-lib": "0.12.2",
-    "@alkemio/matrix-adapter-lib": "^0.6.2",
     "@apollo/server": "^4.10.4",
     "@elastic/elasticsearch": "^8.12.2",
-    "@golevelup/nestjs-rabbitmq": "^5.3.0",
+    "@golevelup/nestjs-rabbitmq": "^6.1.0",
     "@hedger/nestjs-encryption": "^0.1.5",
     "@nestjs/apollo": "^12.2.0",
     "@nestjs/axios": "^3.0.2",
@@ -71,6 +71,7 @@
     "@nestjs/config": "^3.2.3",
     "@nestjs/core": "^10.3.10",
     "@nestjs/cqrs": "^10.2.7",
+    "@nestjs/event-emitter": "^3.0.1",
     "@nestjs/graphql": "^12.2.0",
     "@nestjs/jwt": "^10.2.0",
     "@nestjs/microservices": "^10.3.10",
@@ -86,7 +87,7 @@
     "@tiptap/static-renderer": "^3.2.0",
     "@tiptap/y-tiptap": "^3.0.0",
     "ajv": "^8.17.1",
-    "amqplib": "0.10.3",
+    "amqplib": "0.10.9",
     "axios": "^1.12.2",
     "body-parser": "1.20.3",
     "cache-manager-redis-store": "^2.0.0",
@@ -100,10 +101,10 @@
     "dotenv": "16.4.5",
     "elastic-apm-node": "^4.11.0",
     "graphql": "^16.9.0",
-    "graphql-amqp-subscriptions": "^2.0.0",
+    "graphql-amqp-subscriptions": "^3.0.1",
     "graphql-helix": "^1.13.0",
     "graphql-http": "^1.22.3",
-    "graphql-subscriptions": "^2.0.0",
+    "graphql-subscriptions": "^3.0.0",
     "graphql-tag": "^2.12.6",
     "graphql-type-json": "^0.3.2",
     "graphql-upload": "^13.0.0",
@@ -154,7 +155,7 @@
     "@types/lodash": "^4.17.14",
     "@types/markdown-it": "^14.1.2",
     "@types/module-alias": "^2.0.4",
-    "@types/node": "^20.14.10",
+    "@types/node": "^22.0.0",
     "@types/passport": "^1.0.17",
     "@types/passport-jwt": "^4.0.1",
     "@types/pg": "^8.15.5",
@@ -186,11 +187,11 @@
     }
   },
   "engines": {
-    "node": ">=20.9.0",
+    "node": ">=22.0.0",
     "pnpm": ">=9.0.0"
   },
   "packageManager": "pnpm@10.17.1",
   "volta": {
-    "node": "20.15.1"
+    "node": "22.21.1"
   }
 }

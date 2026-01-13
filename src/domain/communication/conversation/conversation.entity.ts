@@ -1,36 +1,31 @@
-import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
+import { Entity, JoinColumn, ManyToOne, OneToMany, OneToOne } from 'typeorm';
 import { IConversation } from './conversation.interface';
 import { Room } from '@domain/communication/room/room.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
-import { ConversationsSet } from '../conversations-set/conversations.set.entity';
-import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
-import { ENUM_LENGTH } from '@common/constants/entity.field.length.constants';
-import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
+import { Messaging } from '../messaging/messaging.entity';
+import { ConversationMembership } from '../conversation-membership/conversation.membership.entity';
 
 @Entity()
 export class Conversation extends AuthorizableEntity implements IConversation {
-  @Column('varchar', { length: ENUM_LENGTH, nullable: false })
-  type!: CommunicationConversationType;
+  // All participant tracking now via ConversationMembership pivot table
+  // Type inferred dynamically via field resolver from member agent types
 
-  @Column('uuid', { nullable: true })
-  userID?: string;
-
-  @Column('uuid', { nullable: true })
-  virtualContributorID?: string;
-
-  @Column('varchar', { length: ENUM_LENGTH, nullable: true })
-  wellKnownVirtualContributor?: VirtualContributorWellKnown;
-
-  @ManyToOne(
-    () => ConversationsSet,
-    conversationsSet => conversationsSet.conversations,
+  @OneToMany(
+    () => ConversationMembership,
+    membership => membership.conversation,
     {
       eager: false,
-      cascade: false,
-      onDelete: 'CASCADE',
+      cascade: true,
     }
   )
-  conversationsSet!: ConversationsSet;
+  memberships!: ConversationMembership[];
+
+  @ManyToOne(() => Messaging, messaging => messaging.conversations, {
+    eager: false,
+    cascade: false,
+    onDelete: 'CASCADE',
+  })
+  messaging!: Messaging;
 
   @OneToOne(() => Room, {
     eager: true,
