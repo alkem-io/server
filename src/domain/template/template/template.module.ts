@@ -1,7 +1,7 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
-import { Module, forwardRef } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Template } from './template.entity';
 import { TemplateResolverMutations } from './template.resolver.mutations';
@@ -26,7 +26,7 @@ import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.modul
     CommunityGuidelinesModule,
     CalloutModule,
     WhiteboardModule,
-    forwardRef(() => InnovationFlowModule),
+    InnovationFlowModule,
     InputCreatorModule,
     StorageAggregatorResolverModule,
     CalloutsSetModule,

@@ -38,5 +38,5 @@ export abstract class IInnovationFlowState extends IAuthorizable {
     description:
       'Default callout template applied to this flow state (nullable, optional).',
   })
-  defaultCalloutTemplate?: ITemplate;
+  defaultCalloutTemplate?: ITemplate | null;
 }
