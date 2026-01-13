@@ -9,6 +9,7 @@ export class RoomDmRequestedEvent {
     public readonly payload: {
       initiatorActorId: string;
       targetActorId: string;
+      timestamp: number;
     }
   ) {}
 }

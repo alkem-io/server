@@ -24,6 +24,23 @@ interface MessageSender {
   type: 'user' | 'virtualContributor' | 'unknown';
 }
 
+/**
+ * Common interface for message objects that need sender type population.
+ * Both IMessage and MessageWithReadState implement this shape.
+ */
+interface MessageLike {
+  id: string;
+  sender: string;
+  senderType: 'user' | 'virtualContributor' | 'unknown';
+  reactions?: Array<{
+    id: string;
+    emoji: string;
+    sender: string;
+    senderType: 'user' | 'virtualContributor' | 'unknown';
+    timestamp: number;
+  }>;
+}
+
 export class RoomLookupService {
   constructor(
     private readonly communicationAdapter: CommunicationAdapter,
@@ -98,6 +115,7 @@ export class RoomLookupService {
     return {
       ...externalRoom,
       messages: messagesWithSenders,
+      messagesCount: room.messagesCount,
     };
   }
 
@@ -107,38 +125,7 @@ export class RoomLookupService {
   async populateRoomMessageWithReadStateSenders(
     messages: MessageWithReadState[]
   ): Promise<MessageWithReadState[]> {
-    const knownSendersMap = new Map<string, MessageSender>();
-    for (const message of messages) {
-      const agentId = message.sender;
-      let messageSender: MessageSender = { id: agentId, type: 'unknown' };
-      try {
-        messageSender = await this.updateKnownSendersMap(
-          knownSendersMap,
-          agentId
-        );
-      } catch (error) {
-        this.logger.warn?.(
-          {
-            message: 'Unable to identify sender for message.',
-            messageId: message.id,
-            originalError: error,
-          },
-          LogContext.COMMUNICATION
-        );
-      }
-
-      message.senderType = messageSender.type;
-      if (message.reactions) {
-        message.reactions = message.reactions.map(r => ({
-          ...r,
-          senderType: 'user' as const,
-        }));
-      } else {
-        message.reactions = [];
-      }
-    }
-
-    return messages;
+    return this.populateMessageSenderTypes(messages);
   }
 
   public async addVcInteractionToRoom(
@@ -204,6 +191,16 @@ export class RoomLookupService {
   }
 
   async populateRoomMessageSenders(messages: IMessage[]): Promise<IMessage[]> {
+    return this.populateMessageSenderTypes(messages);
+  }
+
+  /**
+   * Shared helper to populate sender types for any message-like objects.
+   * Works with both IMessage and MessageWithReadState.
+   */
+  private async populateMessageSenderTypes<T extends MessageLike>(
+    messages: T[]
+  ): Promise<T[]> {
     const knownSendersMap = new Map<string, MessageSender>();
     for (const message of messages) {
       const agentId = message.sender;
@@ -225,13 +222,12 @@ export class RoomLookupService {
       }
 
       // Keep the agent ID in the sender field - the field resolver will handle the lookup
-      // message.sender stays as agentId
       message.senderType = messageSender.type;
       if (message.reactions) {
         // Reactions also keep their agent IDs - field resolvers handle lookup
         message.reactions = message.reactions.map(r => ({
           ...r,
-          senderType: 'user' as const, // Will be resolved by field resolver
+          senderType: 'user' as const,
         }));
       } else {
         message.reactions = [];

@@ -1809,6 +1809,8 @@ type CommunicationRoomWithReadState {
   lastReadEventId: MessageID
   """The messages that have been sent to the Room, with read state."""
   messages: [MessageWithReadState!]!
+  """The number of messages in the Room."""
+  messagesCount: Float!
   """The number of unread messages for the current user."""
   unreadCount: Int!
 }
@@ -3276,6 +3278,8 @@ type MessageWithReadState {
   message: Markdown!
   """Reactions on this message"""
   reactions: [Reaction!]!
+  """The User or Virtual Contributor that created this Message"""
+  sender: Contributor
   """The message being replied to"""
   threadID: String
   """The server timestamp in UTC"""
@@ -4806,6 +4810,8 @@ type Room {
   authorization: Authorization
   """The date at which the entity was created."""
   createdDate: DateTime!
+  """The display name of the Room."""
+  displayName: String!
   """The ID of the entity"""
   id: UUID!
   """Messages in this Room."""

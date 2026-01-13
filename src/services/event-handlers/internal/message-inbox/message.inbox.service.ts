@@ -329,7 +329,12 @@ export class MessageInboxService {
       LogContext.COMMUNICATION
     );
 
-    const room = await this.roomLookupService.getRoomOrFail(payload.roomId);
+    // Fetch original message to preserve reactions and original timestamp
+    const { message: originalMessage, room } =
+      await this.roomLookupService.getMessageInRoom(
+        payload.roomId,
+        payload.originalMessageId
+      );
 
     // Publish GraphQL subscription for message update
     this.subscriptionPublishService.publishRoomEvent(
@@ -341,8 +346,8 @@ export class MessageInboxService {
         sender: payload.senderActorId,
         senderType: 'user',
         threadID: payload.threadId || '',
-        timestamp: payload.timestamp,
-        reactions: [],
+        timestamp: originalMessage.timestamp,
+        reactions: originalMessage.reactions ?? [],
       }
     );
   }
@@ -362,17 +367,17 @@ export class MessageInboxService {
 
     const room = await this.roomLookupService.getRoomOrFail(payload.roomId);
 
-    // Publish GraphQL subscription for message deletion
+    // Publish GraphQL subscription for message deletion with minimal payload
+    // Only the id is needed for DELETE events
     this.subscriptionPublishService.publishRoomEvent(
       room,
       MutationType.DELETE,
       {
         id: payload.redactedMessageId,
         message: '',
-        sender: payload.redactorActorId,
-        senderType: 'user',
-        threadID: payload.threadId || '',
-        timestamp: payload.timestamp,
+        sender: '',
+        senderType: 'unknown',
+        timestamp: 0,
         reactions: [],
       }
     );

@@ -548,7 +548,9 @@ export class RoomResolverMutations {
     @Args('messageData') messageData: RoomMarkMessageReadInput,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<boolean> {
-    const room = await this.roomService.getRoomOrFail(messageData.roomID);
+    const room = await this.roomService.getRoomOrFail(messageData.roomID, {
+      relations: { authorization: true },
+    });
 
     this.authorizationService.grantAccessOrFail(
       agentInfo,

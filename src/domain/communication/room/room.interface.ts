@@ -13,6 +13,9 @@ export abstract class IRoom extends IAuthorizable {
   })
   messagesCount!: number;
 
+  @Field(() => String, {
+    description: 'The display name of the Room.',
+  })
   displayName!: string;
 
   // Internal storage (JSON column)

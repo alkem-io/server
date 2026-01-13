@@ -156,10 +156,9 @@ export class ConversationService {
 
     if (!conversation)
       throw new EntityNotFoundException(
-        `No Conversation found with the given id: ${conversationID}, using options: ${JSON.stringify(
-          options
-        )}`,
-        LogContext.COLLABORATION
+        'Conversation not found',
+        LogContext.COLLABORATION,
+        { conversationID, options }
       );
     return conversation;
   }

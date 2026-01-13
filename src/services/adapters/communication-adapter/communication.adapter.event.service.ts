@@ -64,7 +64,9 @@ export class CommunicationAdapterEventService {
       durable: true,
     },
   })
-  async onMessageReceived(payload: MessageReceivedPayload): Promise<void> {
+  async onMessageReceived(
+    payload: MessageReceivedPayload
+  ): Promise<void | Nack> {
     try {
       this.logger.verbose?.(
         `Received RabbitMQ event: roomId=${payload.roomId}, messageId=${payload.message.id}, actorID=${payload.actorID}`,
@@ -86,7 +88,7 @@ export class CommunicationAdapterEventService {
       );
 
       // Return Nack to reject and requeue
-      return new Nack(true) as unknown as void;
+      return new Nack(true);
     }
   }
 
@@ -104,7 +106,9 @@ export class CommunicationAdapterEventService {
       durable: true,
     },
   })
-  async onReactionAdded(payload: MatrixReactionAddedEvent): Promise<void> {
+  async onReactionAdded(
+    payload: MatrixReactionAddedEvent
+  ): Promise<void | Nack> {
     try {
       this.logger.verbose?.(
         `Received reaction added event: roomId=${payload.alkemio_room_id}, messageId=${payload.message_id}, reactionId=${payload.reaction_id}`,
@@ -128,7 +132,7 @@ export class CommunicationAdapterEventService {
         error instanceof Error ? error.stack : undefined,
         LogContext.COMMUNICATION
       );
-      return new Nack(true) as unknown as void;
+      return new Nack(true);
     }
   }
 
@@ -146,7 +150,9 @@ export class CommunicationAdapterEventService {
       durable: true,
     },
   })
-  async onReactionRemoved(payload: MatrixReactionRemovedEvent): Promise<void> {
+  async onReactionRemoved(
+    payload: MatrixReactionRemovedEvent
+  ): Promise<void | Nack> {
     try {
       this.logger.verbose?.(
         `Received reaction removed event: roomId=${payload.alkemio_room_id}, messageId=${payload.message_id}, reactionId=${payload.reaction_id}`,
@@ -167,7 +173,7 @@ export class CommunicationAdapterEventService {
         error instanceof Error ? error.stack : undefined,
         LogContext.COMMUNICATION
       );
-      return new Nack(true) as unknown as void;
+      return new Nack(true);
     }
   }
 
@@ -185,7 +191,9 @@ export class CommunicationAdapterEventService {
       durable: true,
     },
   })
-  async onMessageEdited(payload: MatrixMessageEditedEvent): Promise<void> {
+  async onMessageEdited(
+    payload: MatrixMessageEditedEvent
+  ): Promise<void | Nack> {
     try {
       this.logger.verbose?.(
         `Received message edited event: roomId=${payload.alkemio_room_id}, originalMessageId=${payload.original_message_id}, newMessageId=${payload.new_message_id}`,
@@ -210,7 +218,7 @@ export class CommunicationAdapterEventService {
         error instanceof Error ? error.stack : undefined,
         LogContext.COMMUNICATION
       );
-      return new Nack(true) as unknown as void;
+      return new Nack(true);
     }
   }
 
@@ -228,7 +236,9 @@ export class CommunicationAdapterEventService {
       durable: true,
     },
   })
-  async onMessageRedacted(payload: MatrixMessageRedactedEvent): Promise<void> {
+  async onMessageRedacted(
+    payload: MatrixMessageRedactedEvent
+  ): Promise<void | Nack> {
     try {
       this.logger.verbose?.(
         `Received message redacted event: roomId=${payload.alkemio_room_id}, redactedMessageId=${payload.redacted_message_id}`,
@@ -253,7 +263,7 @@ export class CommunicationAdapterEventService {
         error instanceof Error ? error.stack : undefined,
         LogContext.COMMUNICATION
       );
-      return new Nack(true) as unknown as void;
+      return new Nack(true);
     }
   }
 
@@ -271,7 +281,7 @@ export class CommunicationAdapterEventService {
       durable: true,
     },
   })
-  async onRoomCreated(payload: MatrixRoomCreatedEvent): Promise<void> {
+  async onRoomCreated(payload: MatrixRoomCreatedEvent): Promise<void | Nack> {
     try {
       this.logger.verbose?.(
         `Received room created event: roomId=${payload.alkemio_room_id}, roomType=${payload.room_type}`,
@@ -295,7 +305,7 @@ export class CommunicationAdapterEventService {
         error instanceof Error ? error.stack : undefined,
         LogContext.COMMUNICATION
       );
-      return new Nack(true) as unknown as void;
+      return new Nack(true);
     }
   }
 
@@ -313,7 +323,9 @@ export class CommunicationAdapterEventService {
       durable: true,
     },
   })
-  async onRoomDmRequested(payload: MatrixDMRequestedEvent): Promise<void> {
+  async onRoomDmRequested(
+    payload: MatrixDMRequestedEvent
+  ): Promise<void | Nack> {
     try {
       this.logger.verbose?.(
         `Received DM requested event: initiator=${payload.initiator_actor_id}, target=${payload.target_actor_id}`,
@@ -325,6 +337,7 @@ export class CommunicationAdapterEventService {
         new RoomDmRequestedEvent({
           initiatorActorId: payload.initiator_actor_id,
           targetActorId: payload.target_actor_id,
+          timestamp: Date.now(),
         })
       );
     } catch (error) {
@@ -333,7 +346,7 @@ export class CommunicationAdapterEventService {
         error instanceof Error ? error.stack : undefined,
         LogContext.COMMUNICATION
       );
-      return new Nack(true) as unknown as void;
+      return new Nack(true);
     }
   }
 
@@ -351,7 +364,9 @@ export class CommunicationAdapterEventService {
       durable: true,
     },
   })
-  async onRoomMemberLeft(payload: MatrixRoomMemberLeftEvent): Promise<void> {
+  async onRoomMemberLeft(
+    payload: MatrixRoomMemberLeftEvent
+  ): Promise<void | Nack> {
     try {
       this.logger.verbose?.(
         `Received room member left event: roomId=${payload.alkemio_room_id}, actorId=${payload.actor_id}`,
@@ -373,7 +388,7 @@ export class CommunicationAdapterEventService {
         error instanceof Error ? error.stack : undefined,
         LogContext.COMMUNICATION
       );
-      return new Nack(true) as unknown as void;
+      return new Nack(true);
     }
   }
 
@@ -393,7 +408,7 @@ export class CommunicationAdapterEventService {
   })
   async onRoomMemberUpdated(
     payload: MatrixRoomMemberUpdatedEvent
-  ): Promise<void> {
+  ): Promise<void | Nack> {
     try {
       this.logger.verbose?.(
         `Received room member updated event: roomId=${payload.alkemio_room_id}, memberActorId=${payload.member_actor_id}, membership=${payload.membership}`,
@@ -416,7 +431,7 @@ export class CommunicationAdapterEventService {
         error instanceof Error ? error.stack : undefined,
         LogContext.COMMUNICATION
       );
-      return new Nack(true) as unknown as void;
+      return new Nack(true);
     }
   }
 
@@ -436,7 +451,7 @@ export class CommunicationAdapterEventService {
   })
   async onRoomReceiptUpdated(
     payload: MatrixReadReceiptUpdatedEvent
-  ): Promise<void> {
+  ): Promise<void | Nack> {
     try {
       this.logger.verbose?.(
         `Received read receipt updated event: roomId=${payload.alkemio_room_id}, actorId=${payload.actor_id}, eventId=${payload.event_id}`,
@@ -459,7 +474,7 @@ export class CommunicationAdapterEventService {
         error instanceof Error ? error.stack : undefined,
         LogContext.COMMUNICATION
       );
-      return new Nack(true) as unknown as void;
+      return new Nack(true);
     }
   }
 }

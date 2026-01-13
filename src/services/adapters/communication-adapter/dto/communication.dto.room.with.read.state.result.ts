@@ -69,6 +69,12 @@ export class CommunicationRoomWithReadStateResult {
   })
   displayName!: string;
 
+  @Field(() => Number, {
+    nullable: false,
+    description: 'The number of messages in the Room.',
+  })
+  messagesCount!: number;
+
   // The communication IDs of the room members
   members!: string[];
 

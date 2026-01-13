@@ -380,6 +380,7 @@ export class CommunicationAdapter {
         id: 'communications-not-enabled',
         messages: [],
         displayName: '',
+        messagesCount: 0,
         members: [],
         unreadCount: 0,
       };
@@ -1122,13 +1123,15 @@ export class CommunicationAdapter {
   private convertGetRoomAsUserResponseToResult(
     response: GetRoomAsUserResponse
   ): CommunicationRoomWithReadStateResult {
+    const messages = (response.messages ?? []).map(msg =>
+      this.convertMessageWithReadStateDtoToResult(msg)
+    );
     return {
       id: response.alkemio_room_id,
       displayName: response.display_name,
       members: response.member_actor_ids ?? [],
-      messages: (response.messages ?? []).map(msg =>
-        this.convertMessageWithReadStateDtoToResult(msg)
-      ),
+      messages,
+      messagesCount: messages.length,
       lastReadEventId: response.last_read_event_id,
       unreadCount: response.unread_count,
     };
