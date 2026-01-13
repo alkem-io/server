@@ -17,9 +17,6 @@
               "password": {
                 "identifier": true
               },
-              "webauthn": {
-                "identifier": true
-              },
               "passkey": {
                 "display_name": true
               }

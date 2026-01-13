@@ -52,17 +52,6 @@ selfservice:
             mapper_url: file:///etc/config/kratos/oidc/oidc.github.jsonnet
             scope:
               - user:email
-    webauthn:
-      enabled: true
-      config:
-        passwordless: true
-        rp:
-          id: localhost
-          display_name: Alkemio
-          origins:
-            - http://localhost:3000
-            - http://localhost:3001
-
     passkey:
       enabled: true
       config:
@@ -125,7 +114,7 @@ selfservice:
         password:
           hooks:
             - hook: require_verified_address
-        webauthn:
+        passkey:
           hooks:
             - hook: require_verified_address
 
