@@ -333,6 +333,14 @@ export class MessageInboxService {
         payload.originalMessageId
       );
 
+    if (!originalMessage) {
+      this.logger.warn(
+        `Cannot publish edit event: original message not found (roomId=${payload.roomId}, messageId=${payload.originalMessageId})`,
+        LogContext.COMMUNICATION
+      );
+      return;
+    }
+
     // Publish GraphQL subscription for message update
     this.subscriptionPublishService.publishRoomEvent(
       room,
