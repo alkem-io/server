@@ -126,8 +126,8 @@ export class AdminAuthenticationIDBackfillService {
       const agentInfo = this.buildAgentInfo(identity, user.email);
 
       try {
-        const updatedUser =
-          await this.userService.createUserFromAgentInfo(agentInfo);
+        const { user: updatedUser } =
+          await this.userService.createOrLinkUserFromAgentInfo(agentInfo);
         if (updatedUser.id !== user.id) {
           outcome.skipped += 1;
           this.logger.warn?.(

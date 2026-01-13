@@ -7,6 +7,7 @@ import { User } from '@domain/community/user/user.entity';
 import { LogContext } from '@common/enums';
 import { UserAlreadyRegisteredException } from '@common/exceptions';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import {
   UserAuthenticationLinkConflictMode,
   UserAuthenticationLinkMatch,
@@ -21,6 +22,7 @@ export class UserAuthenticationLinkService {
     private readonly userLookupService: UserLookupService,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    private readonly kratosService: KratosService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -92,18 +94,37 @@ export class UserAuthenticationLinkService {
       existingByEmail.authenticationID &&
       existingByEmail.authenticationID !== authId
     ) {
-      const message = `Authentication ID mismatch for user ${existingByEmail.id}: existing ${existingByEmail.authenticationID}, incoming ${authId}`;
-      this.logger.error?.(message, LogContext.AUTH);
-      if (conflictMode === 'error') {
-        throw new UserAlreadyRegisteredException(
-          `User with email: ${email} already registered`
+      // Check if the existing authenticationID is still valid in Kratos
+      const existingKratosIdentity = await this.kratosService.getIdentityById(
+        existingByEmail.authenticationID
+      );
+
+      if (existingKratosIdentity) {
+        // Old identity still exists - this is a real conflict
+        this.logger.error?.(
+          'Authentication ID mismatch: user already linked to different identity',
+          new Error().stack,
+          LogContext.AUTH
         );
+        if (conflictMode === 'error') {
+          throw new UserAlreadyRegisteredException(
+            'User already registered with different authentication ID',
+            LogContext.AUTH,
+            { email, existingAuthId: existingByEmail.authenticationID, incomingAuthId: authId }
+          );
+        }
+        return {
+          user: existingByEmail,
+          matchedBy: UserAuthenticationLinkMatch.EMAIL,
+          outcome: UserAuthenticationLinkOutcome.CONFLICT,
+        };
       }
-      return {
-        user: existingByEmail,
-        matchedBy: UserAuthenticationLinkMatch.EMAIL,
-        outcome: UserAuthenticationLinkOutcome.CONFLICT,
-      };
+
+      // Old identity no longer exists in Kratos - allow relinking
+      this.logger.verbose?.(
+        `Old authentication ID ${existingByEmail.authenticationID} no longer exists in Kratos, allowing relink to ${authId}`,
+        LogContext.AUTH
+      );
     }
 
     const availability = await this.checkAuthenticationIdAvailability(
@@ -155,11 +176,16 @@ export class UserAuthenticationLinkService {
       await this.userLookupService.getUserByAuthenticationID(authenticationId);
 
     if (existingUser && existingUser.id !== currentUserId) {
-      const message = `Authentication ID already linked to user ${existingUser.id}`;
-      this.logger.error?.(message, LogContext.AUTH);
+      this.logger.error?.(
+        'Authentication ID already linked to another user',
+        new Error().stack,
+        LogContext.AUTH
+      );
       if (conflictMode === 'error') {
         throw new UserAlreadyRegisteredException(
-          'Kratos identity already linked to another user'
+          'Kratos identity already linked to another user',
+          LogContext.AUTH,
+          { existingUserId: existingUser.id, authenticationId }
         );
       }
       return false;

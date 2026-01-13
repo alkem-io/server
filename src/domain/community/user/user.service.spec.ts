@@ -49,7 +49,7 @@ const ConfigServiceMock = {
   }),
 };
 
-describe('UserService.createUserFromAgentInfo', () => {
+describe('UserService.createOrLinkUserFromAgentInfo', () => {
   const createService = () => {
     const userAuthenticationLinkServiceMock = {
       resolveExistingUser: jest.fn(),
@@ -102,7 +102,7 @@ describe('UserService.createUserFromAgentInfo', () => {
     return agentInfo;
   };
 
-  it('returns existing user when authentication ID already linked', async () => {
+  it('returns existing user with isNew=false when authentication ID already linked', async () => {
     const { service, userAuthenticationLinkServiceMock } = createService();
 
     const agentInfo = buildAgentInfo({
@@ -123,15 +123,16 @@ describe('UserService.createUserFromAgentInfo', () => {
       resolveResult
     );
 
-    const result = await service.createUserFromAgentInfo(agentInfo);
+    const result = await service.createOrLinkUserFromAgentInfo(agentInfo);
 
-    expect(result).toBe(resolveResult.user);
+    expect(result.user).toBe(resolveResult.user);
+    expect(result.isNew).toBe(false);
     expect(
       userAuthenticationLinkServiceMock.resolveExistingUser
     ).toHaveBeenCalledTimes(1);
   });
 
-  it('returns user when authentication ID is linked during lookup', async () => {
+  it('returns user with isNew=false when authentication ID is linked during lookup', async () => {
     const { service, userAuthenticationLinkServiceMock } = createService();
 
     const agentInfo = buildAgentInfo({
@@ -152,14 +153,13 @@ describe('UserService.createUserFromAgentInfo', () => {
       resolveResult
     );
 
-    const result = await service.createUserFromAgentInfo(agentInfo);
+    const result = await service.createOrLinkUserFromAgentInfo(agentInfo);
 
-    // After refactoring, we no longer cache user entities in UserService
-    // AgentInfo caching uses authenticationID and is handled by AuthenticationService
-    expect(result).toEqual(resolveResult.user);
+    expect(result.user).toEqual(resolveResult.user);
+    expect(result.isNew).toBe(false);
   });
 
-  it('falls back to user creation when linking service finds no user', async () => {
+  it('creates new user with isNew=true when linking service finds no user', async () => {
     const { service, userAuthenticationLinkServiceMock } = createService();
     const agentInfo = buildAgentInfo();
 
@@ -171,12 +171,13 @@ describe('UserService.createUserFromAgentInfo', () => {
       .spyOn(service, 'createUser')
       .mockResolvedValue({ id: 'new-user' } as any);
 
-    const result = await service.createUserFromAgentInfo(agentInfo);
+    const result = await service.createOrLinkUserFromAgentInfo(agentInfo);
 
     expect(createUserSpy).toHaveBeenCalledWith(
       expect.objectContaining({ email: agentInfo.email }),
       agentInfo
     );
-    expect(result).toEqual({ id: 'new-user' });
+    expect(result.user).toEqual({ id: 'new-user' });
+    expect(result.isNew).toBe(true);
   });
 });
