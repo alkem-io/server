@@ -101,6 +101,17 @@ export class InnovationFlowStateService {
     return states.map(state => state.displayName);
   }
 
+  async getDefaultCalloutTemplate(
+    flowStateID: string
+  ): Promise<Template | null> {
+    const flowState = await this.innovationFlowStateRepository.findOne({
+      where: { id: flowStateID },
+      relations: ['defaultCalloutTemplate'],
+    });
+
+    return flowState?.defaultCalloutTemplate ?? null;
+  }
+
   async setDefaultCalloutTemplate(
     flowStateID: string,
     templateID: string
@@ -135,7 +146,7 @@ export class InnovationFlowStateService {
       );
     }
 
-    flowState.defaultCalloutTemplate = template;
+    (flowState as InnovationFlowState).defaultCalloutTemplate = template;
     await this.innovationFlowStateRepository.save(
       flowState as InnovationFlowState
     );
@@ -151,10 +162,9 @@ export class InnovationFlowStateService {
   async removeDefaultCalloutTemplate(
     flowStateID: string
   ): Promise<IInnovationFlowState> {
-    await this.innovationFlowStateRepository.update(
-      { id: flowStateID },
-      { defaultCalloutTemplate: null }
-    );
+    await this.innovationFlowStateRepository.update({ id: flowStateID }, {
+      defaultCalloutTemplate: null,
+    } as unknown as Partial<InnovationFlowState>);
 
     this.logger.verbose?.(
       `Removed default callout template from flow state: ${flowStateID}`,
