@@ -111,7 +111,7 @@ http://localhost:3000/graphql
 - [ ] Unit tests (`innovation.flow.state.service.spec.ts`)
   - [ ] Test setting default CALLOUT template (success)
   - [ ] Test setting non-CALLOUT template (validation error)
-  - [ ] Test setting template from different Space (validation error)
+  - [ ] Test setting template from platform library (success - no space boundary restriction)
   - [ ] Test removing default template
 - [ ] Integration tests (`innovation-flow-state.it-spec.ts`)
   - [ ] Test querying flow state with default template
