@@ -165,6 +165,7 @@ export class CommunicationAdapterEventService {
           roomId: payload.alkemio_room_id,
           messageId: payload.message_id,
           reactionId: payload.reaction_id,
+          timestamp: payload.timestamp,
         })
       );
     } catch (error) {
@@ -337,7 +338,7 @@ export class CommunicationAdapterEventService {
         new RoomDmRequestedEvent({
           initiatorActorId: payload.initiator_actor_id,
           targetActorId: payload.target_actor_id,
-          timestamp: Date.now(),
+          timestamp: payload.timestamp,
         })
       );
     } catch (error) {

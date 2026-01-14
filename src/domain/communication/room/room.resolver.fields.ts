@@ -1,6 +1,6 @@
 import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common';
-import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { Args, Int, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import {
   AuthorizationAgentPrivilege,
   CurrentUser,
@@ -86,5 +86,23 @@ export class RoomResolverFields {
       agentInfo.agentID,
       threadIds
     );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('unreadCount', () => Int, {
+    nullable: false,
+    description:
+      'Simple unread message count for the current user. Use unreadCounts for per-thread breakdown.',
+  })
+  async unreadCount(
+    @Parent() room: IRoom,
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<number> {
+    // Use lightweight getUnreadCounts - doesn't fetch messages
+    const result = await this.roomService.getUnreadCounts(
+      room,
+      agentInfo.agentID
+    );
+    return result.roomUnreadCount;
   }
 }

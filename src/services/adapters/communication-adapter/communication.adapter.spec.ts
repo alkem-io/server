@@ -256,7 +256,7 @@ describe('CommunicationAdapter', () => {
     it('should pass actorId as sender_actor_id in payload', async () => {
       const response = createSuccessResponse({
         message_id: 'msg-123',
-        timestamp: '1234567890.123',
+        timestamp: 1234567890123,
       });
       mockAmqpConnection.request.mockResolvedValue(response);
 
@@ -283,7 +283,7 @@ describe('CommunicationAdapter', () => {
     it('should return IMessage with correct structure', async () => {
       const response = createSuccessResponse({
         message_id: 'msg-123',
-        timestamp: '1234567890.123',
+        timestamp: 1234567890123,
       });
       mockAmqpConnection.request.mockResolvedValue(response);
 
@@ -299,7 +299,7 @@ describe('CommunicationAdapter', () => {
         id: 'msg-123',
         message: 'Test message',
         sender: 'actor-uuid-456',
-        timestamp: 1234567890.123,
+        timestamp: 1234567890123,
         threadID: undefined,
         reactions: [],
       });

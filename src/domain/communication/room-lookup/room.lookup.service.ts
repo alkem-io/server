@@ -4,7 +4,7 @@ import { LogContext } from '@common/enums';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { IRoom } from '../room/room.interface';
 import { IMessage } from '../message/message.interface';
-import { CommunicationRoomWithReadStateResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.with.read.state.result';
+import { IRoomWithReadState } from '../room/room.with.read.state.interface';
 import { FindOneOptions, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { Room } from '../room/room.entity';
@@ -71,18 +71,10 @@ export class RoomLookupService {
    * Returns messages with isRead flag and unread count.
    */
   async getRoomAsUser(
-    room: IRoom,
+    roomId: string,
     actorId: string
-  ): Promise<CommunicationRoomWithReadStateResult> {
-    const externalRoom = await this.communicationAdapter.getRoomAsUser(
-      room.id,
-      actorId
-    );
-
-    return {
-      ...externalRoom,
-      messagesCount: room.messagesCount,
-    };
+  ): Promise<IRoomWithReadState> {
+    return this.communicationAdapter.getRoomAsUser(roomId, actorId);
   }
 
   public async addVcInteractionToRoom(
@@ -143,15 +135,11 @@ export class RoomLookupService {
     messageData: RoomSendMessageInput
   ): Promise<IMessage> {
     // The new adapter uses alkemio room ID and handles membership internally
-    const message = await this.communicationAdapter.sendMessage({
+    return this.communicationAdapter.sendMessage({
       actorId: actorId,
       message: messageData.message,
       roomID: room.id,
     });
-
-    room.messagesCount = room.messagesCount + 1;
-    await this.roomRepository.save(room);
-    return message;
   }
 
   async sendMessageReply(
@@ -160,16 +148,11 @@ export class RoomLookupService {
     messageData: RoomSendMessageReplyInput
   ): Promise<IMessage> {
     // The new adapter uses alkemio room ID and handles membership internally
-    const message = await this.communicationAdapter.sendMessageReply({
+    return this.communicationAdapter.sendMessageReply({
       actorId: actorId,
       message: messageData.message,
       roomID: room.id,
       threadID: messageData.threadID,
     });
-
-    room.messagesCount = room.messagesCount + 1;
-    await this.roomRepository.save(room);
-
-    return message;
   }
 }

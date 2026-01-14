@@ -21,7 +21,6 @@ import { MessageModule } from '../message/message.module';
 import { VirtualContributorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { InAppNotificationModule } from '@platform/in-app-notification/in.app.notification.module';
-import { RoomMentionsModule } from '../room-mentions/room.mentions.module';
 import { RoomLookupModule } from '../room-lookup/room.lookup.module';
 import { VirtualContributorMessageModule } from '../virtual.contributor.message/virtual.contributor.message.module';
 
@@ -40,7 +39,6 @@ import { VirtualContributorMessageModule } from '../virtual.contributor.message/
     VirtualContributorLookupModule,
     VirtualContributorMessageModule,
     UserLookupModule,
-    RoomMentionsModule,
     RoomLookupModule,
     TypeOrmModule.forFeature([Room]),
     SubscriptionServiceModule,

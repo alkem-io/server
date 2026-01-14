@@ -93,18 +93,7 @@ export class RoomService {
   }
 
   async getMessages(room: IRoom): Promise<IMessage[]> {
-    const messages = await this.roomLookupService.getMessages(room);
-
-    const messagesCount = messages.length;
-    if (messagesCount != room.messagesCount) {
-      this.logger.warn(
-        `Room (${room.id}) had a comment count of ${room.messagesCount} that is not synced with the messages count of ${messagesCount}`,
-        LogContext.COMMUNICATION
-      );
-      room.messagesCount = messagesCount;
-      await this.save(room);
-    }
-    return messages;
+    return this.roomLookupService.getMessages(room);
   }
 
   /**
@@ -147,8 +136,7 @@ export class RoomService {
       messageId: messageData.messageID,
       roomID: room.id,
     });
-    room.messagesCount = room.messagesCount - 1;
-    await this.save(room);
+
     return messageData.messageID;
   }
 

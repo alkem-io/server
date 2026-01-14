@@ -141,9 +141,7 @@ describe('PlatformAuthorizationService', () => {
       PlatformAuthorizationService
     );
     platformService = module.get(PlatformService);
-    messagingAuthorizationService = module.get(
-      MessagingAuthorizationService
-    );
+    messagingAuthorizationService = module.get(MessagingAuthorizationService);
   });
 
   it('should be defined', () => {
@@ -167,9 +165,9 @@ describe('PlatformAuthorizationService', () => {
 
     it('should cascade authorization to messaging', async () => {
       platformService.getPlatformOrFail.mockResolvedValue(mockPlatform);
-      messagingAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
-        [{ id: 'messaging-auth' } as IAuthorizationPolicy]
-      );
+      messagingAuthorizationService.applyAuthorizationPolicy.mockResolvedValue([
+        { id: 'messaging-auth' } as IAuthorizationPolicy,
+      ]);
 
       await service.applyAuthorizationPolicy();
 
@@ -186,9 +184,9 @@ describe('PlatformAuthorizationService', () => {
       const messagingAuth = {
         id: 'messaging-auth',
       } as IAuthorizationPolicy;
-      messagingAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
-        [messagingAuth]
-      );
+      messagingAuthorizationService.applyAuthorizationPolicy.mockResolvedValue([
+        messagingAuth,
+      ]);
 
       const result = await service.applyAuthorizationPolicy();
 

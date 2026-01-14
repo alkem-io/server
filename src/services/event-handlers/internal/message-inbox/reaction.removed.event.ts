@@ -10,6 +10,7 @@ export class ReactionRemovedEvent {
       roomId: string;
       messageId: string;
       reactionId: string;
+      timestamp: number;
     }
   ) {}
 }

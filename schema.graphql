@@ -1800,21 +1800,6 @@ type CommunicationAdminRoomResult {
   members: [String!]!
 }
 
-type CommunicationRoomWithReadState {
-  """The display name of the room"""
-  displayName: String!
-  """The identifier of the room"""
-  id: String!
-  """The ID of the last message read by the current user."""
-  lastReadEventId: MessageID
-  """The messages that have been sent to the Room, with read state."""
-  messages: [MessageWithReadState!]!
-  """The number of messages in the Room."""
-  messagesCount: Float!
-  """The number of unread messages for the current user."""
-  unreadCount: Int!
-}
-
 type Community implements Groupable {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -1985,7 +1970,7 @@ type Conversation {
   """The room for this Conversation."""
   room: Room
   """The room for this Conversation with read state for the current user."""
-  roomWithReadState: CommunicationRoomWithReadState
+  roomWithReadState: RoomWithReadState
   """
   The type of this Conversation (USER_USER or USER_VC), inferred from member agent types.
   """
@@ -3266,24 +3251,6 @@ type MessageParent {
   id: String!
   """The URL of the parent entity."""
   url: String!
-}
-
-"""A message with read state information for the current user"""
-type MessageWithReadState {
-  """The id for the message event."""
-  id: MessageID!
-  """Whether this message has been read by the current user."""
-  isRead: Boolean!
-  """The message being sent"""
-  message: Markdown!
-  """Reactions on this message"""
-  reactions: [Reaction!]!
-  """The User or Virtual Contributor that created this Message"""
-  sender: Contributor
-  """The message being replied to"""
-  threadID: String
-  """The server timestamp in UTC"""
-  timestamp: Float!
 }
 
 type Messaging {
@@ -4817,7 +4784,11 @@ type Room {
   """Messages in this Room."""
   messages: [Message!]!
   """The number of messages in the Room."""
-  messagesCount: Float!
+  messagesCount: Int!
+  """
+  Simple unread message count for the current user. Use unreadCounts for per-thread breakdown.
+  """
+  unreadCount: Int!
   """Unread message counts for the current user in this Room."""
   unreadCounts(
     """
@@ -4875,6 +4846,21 @@ type RoomUnreadCounts {
   roomUnreadCount: Int!
   """Unread counts per thread, if thread IDs were requested."""
   threadUnreadCounts: [RoomThreadUnreadCount!]
+}
+
+type RoomWithReadState {
+  """The display name of the room"""
+  displayName: String!
+  """The identifier of the room"""
+  id: String!
+  """The ID of the last message read by the current user."""
+  lastReadEventId: MessageID
+  """The messages that have been sent to the Room."""
+  messages: [Message!]!
+  """The number of messages in the Room."""
+  messagesCount: Int!
+  """The number of unread messages for the current user."""
+  unreadCount: Int!
 }
 
 type SearchResultCallout implements SearchResult {

@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@alkemio/matrix-adapter-lib':
-        specifier: 0.8.4-mapping
-        version: 0.8.4-mapping
+        specifier: 0.8.4-mapping2
+        version: 0.8.4-mapping2
       '@alkemio/notifications-lib':
         specifier: 0.12.2
         version: 0.12.2(@types/express@4.17.23)
@@ -367,8 +367,8 @@ packages:
     resolution: {integrity: sha512-Gd7gsI/RLjDgTO42pgcewsirbAr0WCj6Gktiq0pjV1N2ZGSf1dBOEIhMCX+wHPoekCY0qs4EY1puYwBxi8/PQA==}
     engines: {node: '>=16.15.0', npm: '>=8.5.5'}
 
-  '@alkemio/matrix-adapter-lib@0.8.4-mapping':
-    resolution: {integrity: sha512-aCmBP95rLKs7U+wwnun79Gpr7jjdapSFVI+Wfo2tDe8mPTNDZ2Xa/+L+duJpxsTytg4OwcQkxUJmCAPdsMljSA==}
+  '@alkemio/matrix-adapter-lib@0.8.4-mapping2':
+    resolution: {integrity: sha512-WsCGxXoR7PIUvMW9Hnms72T3nYgtKQdRcdrp1khXll3MV5lxwlId3FyjspSfCZXb/2hwKlyOSgZbsq1zonxJIQ==}
     engines: {node: '>=22.x', pnpm: '>=9.x'}
 
   '@alkemio/notifications-lib@0.12.2':
@@ -6180,7 +6180,7 @@ snapshots:
       - encoding
       - supports-color
 
-  '@alkemio/matrix-adapter-lib@0.8.4-mapping': {}
+  '@alkemio/matrix-adapter-lib@0.8.4-mapping2': {}
 
   '@alkemio/notifications-lib@0.12.2(@types/express@4.17.23)':
     dependencies:

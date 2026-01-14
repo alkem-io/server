@@ -58,10 +58,7 @@ import { stringifyWithoutAuthorizationMetaInfo } from '@common/utils/stringify.u
 import { CommunicationSendMessageReplyInput } from './dto/communications.dto.message.reply';
 import { CommunicationAddReactionToMessageInput } from './dto/communication.dto.add.reaction';
 import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
-import {
-  CommunicationRoomWithReadStateResult,
-  MessageWithReadState,
-} from '@services/adapters/communication-adapter/dto/communication.dto.room.with.read.state.result';
+import { IRoomWithReadState } from '@domain/communication/room/room.with.read.state.interface';
 import { IMessageReaction } from '@domain/communication/message.reaction/message.reaction.interface';
 import { AlkemioConfig } from '@src/types';
 import { CommunicationRemoveReactionToMessageInput } from './dto/communication.dto.remove.reaction';
@@ -375,7 +372,7 @@ export class CommunicationAdapter {
   async getRoomAsUser(
     alkemioRoomId: AlkemioRoomID,
     actorId: AlkemioActorID
-  ): Promise<CommunicationRoomWithReadStateResult> {
+  ): Promise<IRoomWithReadState> {
     if (!this.enabled) {
       return {
         id: 'communications-not-enabled',
@@ -671,7 +668,7 @@ export class CommunicationAdapter {
       id: response!.message_id,
       message: sendMessageData.message,
       sender: sendMessageData.actorId,
-      timestamp: this.parseTimestamp(response!.timestamp),
+      timestamp: response!.timestamp,
       threadID: undefined,
       reactions: [],
     };
@@ -706,7 +703,7 @@ export class CommunicationAdapter {
       id: response!.message_id,
       message: sendMessageData.message,
       sender: sendMessageData.actorId,
-      timestamp: this.parseTimestamp(response!.timestamp),
+      timestamp: response!.timestamp,
       threadID: sendMessageData.threadID,
       reactions: [],
     };
@@ -773,7 +770,7 @@ export class CommunicationAdapter {
       id: response!.reaction_id,
       emoji: reactionData.emoji,
       sender: reactionData.actorId,
-      timestamp: Date.now(),
+      timestamp: response!.timestamp,
     };
   }
 
@@ -1117,13 +1114,13 @@ export class CommunicationAdapter {
   }
 
   /**
-   * Convert GetRoomAsUserResponse to CommunicationRoomWithReadStateResult.
+   * Convert GetRoomAsUserResponse to IRoomWithReadState.
    */
   private convertGetRoomAsUserResponseToResult(
     response: GetRoomAsUserResponse
-  ): CommunicationRoomWithReadStateResult {
+  ): IRoomWithReadState {
     const messages = (response.messages ?? []).map(msg =>
-      this.convertMessageWithReadStateDtoToResult(msg)
+      this.convertMessageDtoToIMessage(msg)
     );
     return {
       id: response.alkemio_room_id,
@@ -1137,82 +1134,34 @@ export class CommunicationAdapter {
   }
 
   /**
-   * Convert a MessageWithReadStateDto from the Go adapter to MessageWithReadState.
-   */
-  private convertMessageWithReadStateDtoToResult(msg: {
-    id: string;
-    content: string;
-    sender_actor_id: string;
-    timestamp: string;
-    thread_id?: string;
-    reactions?: Array<{
-      id: string;
-      emoji: string;
-      sender_actor_id: string;
-      timestamp: string;
-    }>;
-    is_read: boolean;
-  }): MessageWithReadState {
-    return {
-      id: msg.id,
-      message: msg.content,
-      sender: msg.sender_actor_id,
-      timestamp: this.parseTimestamp(msg.timestamp),
-      threadID: msg.thread_id,
-      reactions: (msg.reactions ?? []).map(r => ({
-        id: r.id,
-        emoji: r.emoji,
-        sender: r.sender_actor_id,
-        timestamp: this.parseTimestamp(r.timestamp),
-      })),
-      isRead: msg.is_read,
-    };
-  }
-
-  /**
    * Convert a MessageDto from the Go adapter to an IMessage.
    */
   private convertMessageDtoToIMessage(msg: {
     id: string;
     content: string;
     sender_actor_id: string;
-    timestamp: string;
+    timestamp: number;
     thread_id?: string;
     reactions?: Array<{
       id: string;
       emoji: string;
       sender_actor_id: string;
-      timestamp: string;
+      timestamp: number;
     }>;
   }): IMessage {
     return {
       id: msg.id,
       message: msg.content,
       sender: msg.sender_actor_id,
-      timestamp: this.parseTimestamp(msg.timestamp),
+      timestamp: msg.timestamp,
       threadID: msg.thread_id,
       reactions: (msg.reactions ?? []).map(r => ({
         id: r.id,
         emoji: r.emoji,
         sender: r.sender_actor_id,
-        timestamp: this.parseTimestamp(r.timestamp),
+        timestamp: r.timestamp,
       })),
     };
-  }
-
-  /**
-   * Parse timestamp from Go adapter response.
-   * Handles both ISO 8601 strings ("2025-12-04T13:21:19.021Z") and Unix timestamps.
-   */
-  private parseTimestamp(timestamp: string): number {
-    // Try parsing as ISO 8601 date string first
-    const parsed = Date.parse(timestamp);
-    if (!Number.isNaN(parsed)) {
-      return parsed;
-    }
-    // Fall back to parsing as numeric timestamp
-    const numeric = Number.parseFloat(timestamp);
-    return Number.isNaN(numeric) ? Date.now() : numeric;
   }
 
   private logInputPayload(topic: string, payload: unknown): number {

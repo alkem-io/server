@@ -31,7 +31,7 @@ import { ConversationVcAskQuestionResult } from './dto/conversation.vc.dto.ask.q
 import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
 import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
 import { RoomLookupService } from '../room-lookup/room.lookup.service';
-import { CommunicationRoomWithReadStateResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.with.read.state.result';
+import { IRoomWithReadState } from '../room/room.with.read.state.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston/dist/winston.constants';
 
 @Injectable()
@@ -221,13 +221,13 @@ export class ConversationService {
   }
 
   /**
-   * Get room content with read state for a specific user.
-   * Returns messages with isRead flag and unread count.
+   * Get room with full read state for a specific conversation.
+   * Returns all data in one adapter call (eager loading).
    */
   public async getRoomWithReadState(
     conversationID: string,
     actorId: string
-  ): Promise<CommunicationRoomWithReadStateResult | undefined> {
+  ): Promise<IRoomWithReadState | undefined> {
     const conversation = await this.getConversationOrFail(conversationID, {
       relations: { room: true },
     });
@@ -236,13 +236,15 @@ export class ConversationService {
       return undefined;
     }
 
-    return this.roomLookupService.getRoomAsUser(conversation.room, actorId);
+    // Single adapter call returns all read state data
+    return this.roomLookupService.getRoomAsUser(conversation.room.id, actorId);
   }
 
   public async getCommentsCount(conversationID: string): Promise<number> {
     const room = await this.getRoom(conversationID);
     if (!room) return 0;
-    return room.messagesCount;
+    const messages = await this.roomService.getMessages(room);
+    return messages.length;
   }
 
   /**

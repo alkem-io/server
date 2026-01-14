@@ -14,35 +14,41 @@ import { RoomDmRequestedEvent } from './room.dm.requested.event';
 import { RoomMemberLeftEvent } from './room.member.left.event';
 import { RoomMemberUpdatedEvent } from './room.member.updated.event';
 import { RoomReceiptUpdatedEvent } from './room.receipt.updated.event';
-import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
-import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
-import { VirtualContributorMessageService } from '@domain/communication/virtual.contributor.message/virtual.contributor.message.service';
 import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup.service';
-import { RoomMentionsService } from '@domain/communication/room-mentions/room.mentions.service';
-import { MentionedEntityType } from '@domain/communication/messaging/mention.interface';
 import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
+import { RoomServiceEvents } from '@domain/communication/room/room.service.events';
+import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
+import { MessageNotificationService } from './message.notification.service';
+import { VcInvocationService } from './vc.invocation.service';
+import { IMessage } from '@domain/communication/message/message.interface';
 
 /**
- * Domain service for processing incoming messages from Matrix.
+ * Event handler service for Matrix events.
  *
- * Orchestrates the flow:
- * 1) EXISTING THREAD: Check sender ≠ main VC, invoke main VC
- * 2) NEW THREAD: Parse mentions, add first VC, invoke all mentioned
+ * Thin orchestrator that:
+ * - Handles all @OnEvent decorators
+ * - Manages message counts and subscriptions
+ * - Delegates notifications to MessageNotificationService
+ * - Delegates VC invocation to VcInvocationService
  */
 @Injectable()
 export class MessageInboxService {
   constructor(
     private readonly roomLookupService: RoomLookupService,
-    private readonly roomMentionsService: RoomMentionsService,
-    private readonly virtualContributorLookupService: VirtualContributorLookupService,
-    private readonly virtualContributorMessageService: VirtualContributorMessageService,
     private readonly subscriptionPublishService: SubscriptionPublishService,
     private readonly agentInfoService: AgentInfoService,
-    private readonly communicationAdapter: CommunicationAdapter,
+    private readonly roomServiceEvents: RoomServiceEvents,
+    private readonly inAppNotificationService: InAppNotificationService,
+    private readonly messageNotificationService: MessageNotificationService,
+    private readonly vcInvocationService: VcInvocationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
+
+  // ============================================================
+  // MESSAGE EVENTS
+  // ============================================================
 
   @OnEvent('message.received')
   async handleMessageReceived(event: MessageReceivedEvent): Promise<void> {
@@ -53,31 +59,60 @@ export class MessageInboxService {
       LogContext.COMMUNICATION
     );
 
-    // Lookup room
     const room = await this.roomLookupService.getRoomOrFail(payload.roomId);
 
-    this.logger.verbose?.(
-      `Publishing subscription for room: roomId=${room.id}, messageId=${payload.message.id}`,
-      LogContext.COMMUNICATION
-    );
+    // Update message count
+    room.messagesCount = (room.messagesCount ?? 0) + 1;
+    await this.roomLookupService.save(room);
 
-    // Publish GraphQL subscription - Matrix has confirmed message persistence
+    // Build message object
+    const message: IMessage = {
+      id: payload.message.id,
+      message: payload.message.message,
+      sender: payload.actorID,
+      threadID: payload.message.threadID || '',
+      timestamp: payload.message.timestamp,
+      reactions: [],
+    };
+
+    // Publish subscription
     this.subscriptionPublishService.publishRoomEvent(
       room,
       MutationType.CREATE,
-      {
-        id: payload.message.id,
-        message: payload.message.message,
-        sender: payload.actorID,
-        threadID: payload.message.threadID || '',
-        timestamp: payload.message.timestamp,
-        reactions: [],
-      }
+      message
     );
 
-    // Check if this is a DIRECT conversation - requires special handling
+    // Process notifications (skip for conversation rooms)
+    if (
+      room.type !== RoomType.CONVERSATION &&
+      room.type !== RoomType.CONVERSATION_DIRECT
+    ) {
+      const agentInfo = await this.agentInfoService.buildAgentInfoForAgent(
+        payload.actorID
+      );
+
+      await this.messageNotificationService.processMessageNotifications(
+        room,
+        message,
+        agentInfo,
+        payload.message.threadID
+      );
+    }
+
+    // Process VC invocation
+    await this.processVcInvocation(payload, room);
+  }
+
+  /**
+   * Delegate VC invocation based on room type and thread state.
+   */
+  private async processVcInvocation(
+    payload: MessageReceivedEvent['payload'],
+    room: any
+  ): Promise<void> {
+    // Direct conversations have special handling
     if (room.type === RoomType.CONVERSATION_DIRECT) {
-      await this.handleDirectConversation(payload, room);
+      await this.vcInvocationService.processDirectConversation(payload, room);
       return;
     }
 
@@ -88,245 +123,27 @@ export class MessageInboxService {
     const vcData = room.vcInteractionsByThread?.[threadID];
 
     if (vcData) {
-      await this.handleExistingThread(payload, room, threadID, vcData);
-    } else {
-      await this.handleNewThread(payload, room, threadID);
-    }
-  }
-
-  /**
-   * Handle DIRECT conversation rooms.
-   * Invokes all VC members in the room, excluding the message sender.
-   * Scales to multi-participant conversations.
-   */
-  private async handleDirectConversation(
-    payload: any,
-    room: any
-  ): Promise<void> {
-    this.logger.verbose?.(
-      `Processing DIRECT conversation: roomId=${payload.roomId}`,
-      LogContext.COMMUNICATION
-    );
-
-    // Get room members from Matrix (lightweight call - no message history)
-    const members = await this.communicationAdapter.getRoomMembers(room.id);
-
-    // Filter out the sender
-    const otherMembers = members.filter(actorID => actorID !== payload.actorID);
-
-    if (otherMembers.length === 0) {
-      this.logger.verbose?.(
-        `No other members in DIRECT room ${room.id}, skipping`,
-        LogContext.COMMUNICATION
-      );
-      return;
-    }
-
-    // Find all VCs among other members
-    const vcMembers = [];
-    for (const actorID of otherMembers) {
-      const vc =
-        await this.virtualContributorLookupService.getVirtualContributorByAgentId(
-          actorID
-        );
-      if (vc) {
-        vcMembers.push(actorID);
-      }
-    }
-
-    if (vcMembers.length === 0) {
-      this.logger.verbose?.(
-        `No VC members found in DIRECT room ${room.id}, skipping`,
-        LogContext.COMMUNICATION
-      );
-      return;
-    }
-
-    // Build AgentInfo from sender
-    const agentInfo = await this.agentInfoService.buildAgentInfoForAgent(
-      payload.actorID
-    );
-
-    // Use message ID as threadID for DIRECT conversations
-    const threadID = payload.message.id;
-
-    // Invoke all VCs in parallel
-    this.logger.verbose?.(
-      `Invoking ${vcMembers.length} VC(s) in DIRECT conversation`,
-      LogContext.COMMUNICATION
-    );
-
-    await Promise.all(
-      vcMembers.map(vcActorID =>
-        this.virtualContributorMessageService.invokeVirtualContributor(
-          vcActorID,
-          payload.message.message,
-          threadID,
-          agentInfo,
-          '', // contextSpaceID out of scope
-          room,
-          {
-            threadID,
-            virtualContributorID: vcActorID,
-          }
-        )
-      )
-    );
-  }
-
-  private async handleExistingThread(
-    payload: any,
-    room: any,
-    threadID: string,
-    vcData: any
-  ): Promise<void> {
-    // Check if sender is NOT the main VC (avoid infinite loop)
-    if (payload.actorID === vcData.virtualContributorActorID) {
-      this.logger.verbose?.(
-        `Ignoring message from VC itself (actorID=${payload.actorID})`,
-        LogContext.COMMUNICATION
-      );
-      return;
-    }
-
-    // Invoke the main VC for this thread
-    this.logger.verbose?.(
-      `Invoking VC for existing thread: threadID=${threadID}, vcActorID=${vcData.virtualContributorActorID}`,
-      LogContext.COMMUNICATION
-    );
-
-    // Build AgentInfo from sender
-    const agentInfo = await this.agentInfoService.buildAgentInfoForAgent(
-      payload.actorID
-    );
-
-    await this.virtualContributorMessageService.invokeVirtualContributor(
-      vcData.virtualContributorActorID,
-      payload.message.message,
-      threadID,
-      agentInfo,
-      '', // contextSpaceID out of scope
-      room,
-      {
+      await this.vcInvocationService.processExistingThread(
+        payload,
+        room,
         threadID,
-        virtualContributorID: vcData.virtualContributorActorID,
-      }
-    );
-  }
-
-  private async handleNewThread(
-    payload: any,
-    room: any,
-    threadID: string
-  ): Promise<void> {
-    this.logger.verbose?.(
-      `New thread detected: threadID=${threadID}, parsing mentions`,
-      LogContext.COMMUNICATION
-    );
-
-    const mentions = await this.roomMentionsService.getMentionsFromText(
-      payload.message.message
-    );
-
-    const vcMentions = mentions.filter(
-      m => m.contributorType === MentionedEntityType.VIRTUAL_CONTRIBUTOR
-    );
-
-    if (vcMentions.length === 0) {
-      this.logger.verbose?.(
-        'No VC mentions found in new thread, skipping VC invocation',
-        LogContext.COMMUNICATION
+        vcData
       );
-      return;
+    } else {
+      await this.vcInvocationService.processNewThread(payload, room, threadID);
     }
-
-    // Build AgentInfo from sender
-    const agentInfo = await this.agentInfoService.buildAgentInfoForAgent(
-      payload.actorID
-    );
-
-    // Process all VC mentions
-    await this.roomMentionsService.processVirtualContributorMentions(
-      vcMentions,
-      payload.message.message,
-      threadID,
-      agentInfo,
-      room
-    );
   }
 
-  /**
-   * Handle reaction added event from Matrix.
-   * Publishes GraphQL subscription after Matrix confirms the reaction.
-   */
-  @OnEvent('reaction.added')
-  async handleReactionAdded(event: ReactionAddedEvent): Promise<void> {
-    const { payload } = event;
-
-    this.logger.verbose?.(
-      `Processing reaction added: roomId=${payload.roomId}, messageId=${payload.messageId}, reactionId=${payload.reactionId}`,
-      LogContext.COMMUNICATION
-    );
-
-    const room = await this.roomLookupService.getRoomOrFail(payload.roomId);
-
-    // Publish GraphQL subscription - Matrix has confirmed reaction persistence
-    this.subscriptionPublishService.publishRoomEvent(
-      room,
-      MutationType.CREATE,
-      {
-        id: payload.reactionId,
-        emoji: payload.emoji,
-        sender: payload.actorID,
-        timestamp: payload.timestamp,
-      },
-      payload.messageId
-    );
-  }
-
-  /**
-   * Handle reaction removed event from Matrix.
-   * Publishes GraphQL subscription after Matrix confirms the removal.
-   */
-  @OnEvent('reaction.removed')
-  async handleReactionRemoved(event: ReactionRemovedEvent): Promise<void> {
-    const { payload } = event;
-
-    this.logger.verbose?.(
-      `Processing reaction removed: roomId=${payload.roomId}, messageId=${payload.messageId}, reactionId=${payload.reactionId}`,
-      LogContext.COMMUNICATION
-    );
-
-    const room = await this.roomLookupService.getRoomOrFail(payload.roomId);
-
-    // Publish GraphQL subscription - Matrix has confirmed reaction removal
-    this.subscriptionPublishService.publishRoomEvent(
-      room,
-      MutationType.DELETE,
-      {
-        id: payload.reactionId,
-        emoji: '', // Not needed for delete
-        sender: '',
-        timestamp: Date.now(),
-      },
-      payload.messageId
-    );
-  }
-
-  /**
-   * Handle message edited event from Matrix.
-   * Publishes GraphQL subscription after Matrix confirms the edit.
-   */
   @OnEvent('message.edited')
   async handleMessageEdited(event: MessageEditedEvent): Promise<void> {
     const { payload } = event;
 
     this.logger.verbose?.(
-      `Processing message edited: roomId=${payload.roomId}, originalMessageId=${payload.originalMessageId}, newMessageId=${payload.newMessageId}`,
+      `Processing message edited: roomId=${payload.roomId}, originalMessageId=${payload.originalMessageId}`,
       LogContext.COMMUNICATION
     );
 
-    // Fetch original message to preserve reactions and original timestamp
+    // Fetch original message to preserve reactions and timestamp
     const { message: originalMessage, room } =
       await this.roomLookupService.getMessageInRoom(
         payload.roomId,
@@ -341,7 +158,6 @@ export class MessageInboxService {
       return;
     }
 
-    // Publish GraphQL subscription for message update
     this.subscriptionPublishService.publishRoomEvent(
       room,
       MutationType.UPDATE,
@@ -356,10 +172,6 @@ export class MessageInboxService {
     );
   }
 
-  /**
-   * Handle message redacted (deleted) event from Matrix.
-   * Publishes GraphQL subscription after Matrix confirms the redaction.
-   */
   @OnEvent('message.redacted')
   async handleMessageRedacted(event: MessageRedactedEvent): Promise<void> {
     const { payload } = event;
@@ -371,8 +183,27 @@ export class MessageInboxService {
 
     const room = await this.roomLookupService.getRoomOrFail(payload.roomId);
 
-    // Publish GraphQL subscription for message deletion with minimal payload
-    // Only the id is needed for DELETE events
+    // Update message count
+    if (room.messagesCount > 0) {
+      room.messagesCount = room.messagesCount - 1;
+      await this.roomLookupService.save(room);
+    }
+
+    // Delete in-app notifications
+    await this.inAppNotificationService.deleteAllByMessageId(
+      payload.redactedMessageId
+    );
+
+    // Process activity event
+    const agentInfo = await this.agentInfoService.buildAgentInfoForAgent(
+      payload.redactorActorId
+    );
+    await this.roomServiceEvents.processActivityMessageRemoved(
+      payload.redactedMessageId,
+      agentInfo
+    );
+
+    // Publish subscription
     this.subscriptionPublishService.publishRoomEvent(
       room,
       MutationType.DELETE,
@@ -386,10 +217,62 @@ export class MessageInboxService {
     );
   }
 
-  /**
-   * Handle room created event from Matrix.
-   * Currently logs the event - can be extended for additional processing.
-   */
+  // ============================================================
+  // REACTION EVENTS
+  // ============================================================
+
+  @OnEvent('reaction.added')
+  async handleReactionAdded(event: ReactionAddedEvent): Promise<void> {
+    const { payload } = event;
+
+    this.logger.verbose?.(
+      `Processing reaction added: roomId=${payload.roomId}, messageId=${payload.messageId}, reactionId=${payload.reactionId}`,
+      LogContext.COMMUNICATION
+    );
+
+    const room = await this.roomLookupService.getRoomOrFail(payload.roomId);
+
+    this.subscriptionPublishService.publishRoomEvent(
+      room,
+      MutationType.CREATE,
+      {
+        id: payload.reactionId,
+        emoji: payload.emoji,
+        sender: payload.actorID,
+        timestamp: payload.timestamp,
+      },
+      payload.messageId
+    );
+  }
+
+  @OnEvent('reaction.removed')
+  async handleReactionRemoved(event: ReactionRemovedEvent): Promise<void> {
+    const { payload } = event;
+
+    this.logger.verbose?.(
+      `Processing reaction removed: roomId=${payload.roomId}, messageId=${payload.messageId}, reactionId=${payload.reactionId}`,
+      LogContext.COMMUNICATION
+    );
+
+    const room = await this.roomLookupService.getRoomOrFail(payload.roomId);
+
+    this.subscriptionPublishService.publishRoomEvent(
+      room,
+      MutationType.DELETE,
+      {
+        id: payload.reactionId,
+        emoji: '',
+        sender: '',
+        timestamp: payload.timestamp,
+      },
+      payload.messageId
+    );
+  }
+
+  // ============================================================
+  // ROOM EVENTS
+  // ============================================================
+
   @OnEvent('room.created')
   async handleRoomCreated(event: RoomCreatedEvent): Promise<void> {
     const { payload } = event;
@@ -399,14 +282,9 @@ export class MessageInboxService {
       LogContext.COMMUNICATION
     );
 
-    // Currently no additional processing needed - Alkemio initiates room creation
-    // This handler is for tracking/logging purposes and future extensibility
+    // Currently logging only - Alkemio initiates room creation
   }
 
-  /**
-   * Handle DM requested event from Matrix.
-   * Currently logs the event - can be extended for auto-creating conversations.
-   */
   @OnEvent('room.dm.requested')
   async handleRoomDmRequested(event: RoomDmRequestedEvent): Promise<void> {
     const { payload } = event;
@@ -417,13 +295,8 @@ export class MessageInboxService {
     );
 
     // TODO: Consider auto-creating Alkemio conversation when DM is requested from Matrix
-    // For now, DMs must be initiated through Alkemio's conversation API
   }
 
-  /**
-   * Handle room member left event from Matrix.
-   * Currently logs the event - can be extended for membership sync.
-   */
   @OnEvent('room.member.left')
   async handleRoomMemberLeft(event: RoomMemberLeftEvent): Promise<void> {
     const { payload } = event;
@@ -434,13 +307,8 @@ export class MessageInboxService {
     );
 
     // TODO: Consider syncing membership changes back to Alkemio
-    // Currently membership is managed through Alkemio's conversation membership API
   }
 
-  /**
-   * Handle room member updated event from Matrix.
-   * Currently logs the event - can be extended for membership sync.
-   */
   @OnEvent('room.member.updated')
   async handleRoomMemberUpdated(event: RoomMemberUpdatedEvent): Promise<void> {
     const { payload } = event;
@@ -451,13 +319,8 @@ export class MessageInboxService {
     );
 
     // TODO: Consider syncing membership changes back to Alkemio
-    // Currently membership is managed through Alkemio's conversation membership API
   }
 
-  /**
-   * Handle read receipt updated event from Matrix.
-   * Publishes GraphQL subscription for read status tracking.
-   */
   @OnEvent('room.receipt.updated')
   async handleRoomReceiptUpdated(
     event: RoomReceiptUpdatedEvent
@@ -471,7 +334,6 @@ export class MessageInboxService {
 
     const room = await this.roomLookupService.getRoomOrFail(payload.roomId);
 
-    // Publish GraphQL subscription for read receipt
     this.subscriptionPublishService.publishRoomReceiptEvent(room, {
       actorId: payload.actorId,
       eventId: payload.eventId,
