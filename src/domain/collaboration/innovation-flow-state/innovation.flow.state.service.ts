@@ -162,15 +162,18 @@ export class InnovationFlowStateService {
   async removeDefaultCalloutTemplate(
     flowStateID: string
   ): Promise<IInnovationFlowState> {
-    await this.innovationFlowStateRepository.update({ id: flowStateID }, {
-      defaultCalloutTemplate: null,
-    } as unknown as Partial<InnovationFlowState>);
+    const flowState = await this.getInnovationFlowStateOrFail(flowStateID);
+
+    (flowState as InnovationFlowState).defaultCalloutTemplate = undefined;
+    await this.innovationFlowStateRepository.save(
+      flowState as InnovationFlowState
+    );
 
     this.logger.verbose?.(
       `Removed default callout template from flow state: ${flowStateID}`,
       LogContext.COLLABORATION
     );
 
-    return this.getInnovationFlowStateOrFail(flowStateID);
+    return flowState;
   }
 }
