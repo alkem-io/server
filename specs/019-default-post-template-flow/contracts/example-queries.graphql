@@ -322,7 +322,7 @@ mutation SetDefaultCalloutTemplate_TemplateNotFound {
   setDefaultCalloutTemplateOnInnovationFlowState(
     setData: {
       flowStateID: "f8c3a7b2-1234-5678-90ab-cdef12345678"
-      templateID: "non-existent-template-id"
+      templateID: "99999999-9999-9999-9999-999999999999"
     }
   ) {
     id
@@ -335,7 +335,7 @@ mutation SetDefaultCalloutTemplate_TemplateNotFound {
 #     "extensions": {
 #       "code": "ENTITY_NOT_FOUND",
 #       "details": {
-#         "templateID": "non-existent-template-id"
+#         "templateID": "99999999-9999-9999-9999-999999999999"
 #       }
 #     }
 #   }]
@@ -345,7 +345,7 @@ mutation SetDefaultCalloutTemplate_TemplateNotFound {
 mutation SetDefaultCalloutTemplate_FlowStateNotFound {
   setDefaultCalloutTemplateOnInnovationFlowState(
     setData: {
-      flowStateID: "non-existent-flow-state-id"
+      flowStateID: "88888888-8888-8888-8888-888888888888"
       templateID: "a1b2c3d4-5678-90ab-cdef-1234567890ab"
     }
   ) {
@@ -359,7 +359,7 @@ mutation SetDefaultCalloutTemplate_FlowStateNotFound {
 #     "extensions": {
 #       "code": "ENTITY_NOT_FOUND",
 #       "details": {
-#         "flowStateID": "non-existent-flow-state-id"
+#         "flowStateID": "88888888-8888-8888-8888-888888888888"
 #       }
 #     }
 #   }]
@@ -394,7 +394,7 @@ mutation SetDefaultCalloutTemplate_WrongType {
   setDefaultCalloutTemplateOnInnovationFlowState(
     setData: {
       flowStateID: "f8c3a7b2-1234-5678-90ab-cdef12345678"
-      templateID: "post-template-id"
+      templateID: "77777777-7777-7777-7777-777777777777"
     }
   ) {
     id
@@ -407,7 +407,7 @@ mutation SetDefaultCalloutTemplate_WrongType {
 #     "extensions": {
 #       "code": "VALIDATION_ERROR",
 #       "details": {
-#         "templateID": "post-template-id",
+#         "templateID": "77777777-7777-7777-7777-777777777777",
 #         "templateType": "POST"
 #       }
 #     }

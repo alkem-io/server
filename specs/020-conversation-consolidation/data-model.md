@@ -54,11 +54,6 @@
   - FK constraint dropped.
   - Ownership of `conversations_set` moved to `platform`.
 
-### Virtual Contributor (Modified)
-
-- **Table**: `virtual_contributor`
-- **Removed Field**: `wellKnownVirtualContributor` (varchar) - _Note: This column was removed from `conversation` table in this migration._
-
 ### VC Interaction (Removed)
 
 - **Table**: `vc_interaction`

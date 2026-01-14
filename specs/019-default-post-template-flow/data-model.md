@@ -193,17 +193,31 @@ async setDefaultCalloutTemplate(
   flowStateID: string,
   templateID: string,
 ): Promise<IInnovationFlowState> {
-  // 1. Load entities
-  const flowState = await this.getFlowStateOrFail(flowStateID);
-  const template = await this.templateService.getTemplateOrFail(templateID);
+  // 1. Load flow state
+  const flowState = await this.getInnovationFlowStateOrFail(flowStateID);
 
-  // 2. Validate template type
-  if (template.type !== TemplateType.CALLOUT) {
-    this.logger.warning(
-      'Attempt to set non-CALLOUT template as default for flow state',
+  // 2. Fetch template directly (avoids circular dependency with TemplateService)
+  const templates = await this.templateRepository.find({
+    where: { id: templateID },
+  });
+
+  if (!templates || templates.length === 0) {
+    throw new EntityNotFoundException(
+      'Template not found',
       LogContext.COLLABORATION,
-      { flowStateID, templateID, templateType: template.type }
+      { templateID }
     );
+  }
+
+  const template = templates[0];
+
+  // 3. Validate template type
+  if (template.type !== TemplateType.CALLOUT) {
+    this.logger.warn?.(
+      `Attempt to set non-CALLOUT template as default for flow state: ${flowStateID}`,
+      LogContext.COLLABORATION
+    );
+
     throw new ValidationException(
       'Template must be of type CALLOUT',
       LogContext.COLLABORATION,
@@ -211,16 +225,17 @@ async setDefaultCalloutTemplate(
     );
   }
 
-  // 3. Set relation and save
+  // 4. Set relation and save
   // Note: Template can be from space or platform library (no space boundary validation)
-  flowState.defaultCalloutTemplate = template;
-  await this.innovationFlowStateRepository.save(flowState);
+  (flowState as InnovationFlowState).defaultCalloutTemplate = template;
+  await this.innovationFlowStateRepository.save(
+    flowState as InnovationFlowState
+  );
 
-  // 4. Log success
-  this.logger.verbose(
-    'Set default CALLOUT template on flow state',
-    LogContext.COLLABORATION,
-    { flowStateID, templateID }
+  // 5. Log success
+  this.logger.verbose?.(
+    `Set default callout template on flow state: ${flowStateID}`,
+    LogContext.COLLABORATION
   );
 
   return flowState;
@@ -233,18 +248,17 @@ async setDefaultCalloutTemplate(
 async removeDefaultCalloutTemplate(
   flowStateID: string,
 ): Promise<IInnovationFlowState> {
-  const flowState = await this.getFlowStateOrFail(flowStateID);
-
-  flowState.defaultCalloutTemplate = undefined;
-  await this.innovationFlowStateRepository.save(flowState);
-
-  this.logger.verbose(
-    'Removed default CALLOUT template from flow state',
-    LogContext.COLLABORATION,
-    { flowStateID }
+  await this.innovationFlowStateRepository.update(
+    { id: flowStateID },
+    { defaultCalloutTemplate: null } as unknown as Partial<InnovationFlowState>
   );
 
-  return flowState;
+  this.logger.verbose?.(
+    `Removed default callout template from flow state: ${flowStateID}`,
+    LogContext.COLLABORATION
+  );
+
+  return this.getInnovationFlowStateOrFail(flowStateID);
 }
 ```
 
@@ -340,9 +354,11 @@ TemplatesSet                                                 │
 
 **No new indexes required**:
 
-- `defaultCalloutTemplateId` foreign key automatically creates an index (PostgreSQL standard)
+- `defaultCalloutTemplateId` is a foreign key but does not require an explicit index
 - Low cardinality (few flow states per space, ~5-10 typical)
 - Low query frequency (only when admins configure or frontend queries flow state)
+- PostgreSQL automatically indexes the _referenced_ column (`template.id`, already indexed as PK) but not the _referencing_ column
+- If query patterns change and lookups by `defaultCalloutTemplateId` become frequent, add index explicitly
 
 ---
 

@@ -89,11 +89,9 @@ http://localhost:3000/graphql
 - [ ] Modify `InnovationFlowStateService`
   - [ ] Add `setDefaultCalloutTemplate(flowStateID, templateID)` method
   - [ ] Add `removeDefaultCalloutTemplate(flowStateID)` method
-  - [ ] Add `getSpaceForFlowState(flowStateID)` helper method
   - [ ] Add validation: template type must be CALLOUT
-  - [ ] Add validation: template space must match flow state space
   - [ ] Add structured logging (verbose, warning)
-  - [ ] Inject `TemplateService` dependency
+  - [ ] Use `templateRepository.find()` to fetch template (avoid circular dependency)
 
 ### Phase 3: GraphQL Layer
 

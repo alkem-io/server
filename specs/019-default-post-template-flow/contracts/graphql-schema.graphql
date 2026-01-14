@@ -28,7 +28,7 @@ type Mutation {
   """
   Set the default CALLOUT template for an innovation flow state. When set, the frontend can fetch this template to pre-fill the "Add Post" dialog for new posts in this flow step.
 
-  Authorization: Requires UPDATE_INNOVATION_FLOW privilege on the Space.
+  Authorization: Requires UPDATE privilege on the InnovationFlowState.
 
   Validation:
   - Template must exist and be of type CALLOUT
@@ -44,7 +44,7 @@ type Mutation {
   """
   Remove the default CALLOUT template from an innovation flow state. After removal, the "Add Post" dialog will not pre-fill with any template content.
 
-  Authorization: Requires UPDATE_INNOVATION_FLOW privilege on the Space.
+  Authorization: Requires UPDATE privilege on the InnovationFlowState.
 
   Validation:
   - Flow state must exist
