@@ -1,4 +1,4 @@
-version: v1.2.0
+version: v1.3.0
 
 dsn: memory
 
@@ -52,6 +52,15 @@ selfservice:
             mapper_url: file:///etc/config/kratos/oidc/oidc.github.jsonnet
             scope:
               - user:email
+    passkey:
+      enabled: true
+      config:
+        rp:
+          id: localhost
+          display_name: Alkemio
+          origins:
+            - http://localhost:3000
+            - http://localhost:3001
 
   flows:
     error:
@@ -103,6 +112,9 @@ selfservice:
                 ignore: false
                 parse: true
         password:
+          hooks:
+            - hook: require_verified_address
+        passkey:
           hooks:
             - hook: require_verified_address
 
