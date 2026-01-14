@@ -19,6 +19,7 @@ services:
     ports:
       - 8888:8080
       - 8088:8088
+      - 8280:8280
       - 3000:80
       - 5432:5432
       - 8008:8008
@@ -28,6 +29,7 @@ services:
       - 5672:5672
       - 15672:15672
       - 6379:6379
+      - 8188:8188
     networks:
       - alkemio_dev_net
     environment:
@@ -123,7 +125,6 @@ services:
       - HYDRA_ADMIN_URL=http://hydra:4445
       - SYNAPSE_OIDC_CLIENT_ID
       - SYNAPSE_OIDC_CLIENT_SECRET
-      - SYNAPSE_ADMIN_URL
       - SYNAPSE_PUBLIC_URL
     networks:
       - alkemio_dev_net
@@ -179,8 +180,10 @@ services:
         fi
 
   oidc-service:
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_oidc_service
-    image: docker.io/alkemio/oidc-service:v0.6.0
+    image: docker.io/alkemio/oidc-service:v0.7.1
     platform: linux/amd64
     depends_on:
       - hydra
@@ -192,6 +195,13 @@ services:
       - OIDC_KRATOS_PUBLIC_URL
       - OIDC_KRATOS_BROWSER_URL=http://localhost:3000/ory/kratos/public
       - OIDC_WEB_BASE_URL=http://localhost:3000
+      - OIDC_ALKEMIO_SERVER_URL
+      - OIDC_ALKEMIO_IDENTITY_RESOLVE_PATH
+      - DATABASE_HOST
+      - DATABASE_PORT
+      - DATABASE_USERNAME
+      - DATABASE_PASSWORD
+      - DATABASE_NAME=alkemio
     networks:
       - alkemio_dev_net
     ports:
@@ -244,6 +254,7 @@ services:
       - SYNAPSE_HOMESERVER_NAME
       - SYNAPSE_SERVER_URL
       - SYNAPSE_SERVER_SHARED_SECRET
+      - PYTHONPATH=/data/modules
     networks:
       - alkemio_dev_net
     ports:
@@ -366,27 +377,39 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_matrix_adapter
     hostname: matrix-adapter
-    image: alkemio/matrix-adapter:v0.7.2
+    image: alkemio/matrix-adapter-go:v0.8.3-mapping
     platform: linux/amd64
+    depends_on:
+      - rabbitmq
     environment:
       - RABBITMQ_HOST
       - RABBITMQ_USER
       - RABBITMQ_PASSWORD
       - SYNAPSE_HOMESERVER_NAME
       - SYNAPSE_SERVER_URL
-      - SYNAPSE_SERVER_SHARED_SECRET
       - SYNAPSE_SERVER_NAME
+      - MATRIX_AS_TOKEN
+      - MATRIX_HS_TOKEN
+      #      - MATRIX_BOT_ACTOR_ID
       - LOGGING_CONSOLE_ENABLED
-      - LOGGING_LEVEL_CONSOLE
+      - LOGGING_LEVEL_CONSOLE=debug
       - ENVIRONMENT=dev
       - WAIT_HOSTS=host.docker.internal:3000
       - WAIT_HOSTS_TIMEOUT=300
       - WAIT_SLEEP_INTERVAL=30
       - WAIT_HOST_CONNECT_TIMEOUT=30
+      - DATABASE_HOST
+      - DATABASE_PORT
+      - DATABASE_USERNAME
+      - DATABASE_PASSWORD
+      - DATABASE_NAME=alkemio
+      - ACTOR_ID_MAPPER_ENABLED=true
     restart: always
     networks:
       - alkemio_dev_net
-    command: sh -c "/wait && npm run start"
+    ports:
+      - 8280
+    command: sh -c "/wait && /app/matrix-adapter"
 
   redis:
     extra_hosts:

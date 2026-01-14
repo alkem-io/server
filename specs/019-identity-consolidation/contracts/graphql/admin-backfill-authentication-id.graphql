@@ -1,0 +1,24 @@
+```graphql
+# Platform-admin mutation for populating authentication IDs
+
+"""Result payload for the authentication ID backfill mutation."""
+type AdminAuthenticationIDBackfillResult {
+  """Total users examined during the backfill run"""
+  processed: Int!
+  """
+  Batches that initially failed but succeeded after a retry during the run
+  """
+  retriedBatches: Int!
+  """
+  Users skipped because they already had authenticationID or no Kratos identity was found
+  """
+  skipped: Int!
+  """Users whose authenticationID was updated during the run"""
+  updated: Int!
+}
+
+extend type Mutation {
+  """Populate authenticationID for existing users by querying Kratos Admin API"""
+  adminBackfillAuthenticationIDs: AdminAuthenticationIDBackfillResult!
+}
+```

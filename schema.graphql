@@ -3,16 +3,8 @@ A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date
 """
 scalar DateTime
 
-"""A decentralized identifier (DID) as per the W3C standard."""
-scalar DID
-
 """An Emoji."""
 scalar Emoji
-
-"""
-The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
-"""
-scalar JSON
 
 """
 A representation of a Lifecycle Definition, based on XState. It is serialized JSON.
@@ -135,7 +127,7 @@ enum AuthorizationPolicyType {
   COLLABORATION
   COMMUNICATION
   COMMUNICATION_CONVERSATION
-  COMMUNICATION_CONVERSATIONS_SET
+  COMMUNICATION_MESSAGING
   COMMUNITY
   COMMUNITY_GUIDELINES
   DISCUSSION
@@ -569,7 +561,6 @@ enum PlatformFeatureFlagName {
   LANDING_PAGE
   MEMO
   NOTIFICATIONS
-  SSI
   SUBSCRIPTIONS
   WHITEBOARDS
 }
@@ -729,6 +720,12 @@ enum TemplateType {
   POST
   SPACE
   WHITEBOARD
+}
+
+enum UrlResolverResultState {
+  Forbidden
+  NotFound
+  Resolved
 }
 
 enum UrlType {
@@ -1293,6 +1290,21 @@ type ActivityLogEntryUpdateSent implements ActivityLogEntry {
   updates: Room!
 }
 
+type AdminAuthenticationIDBackfillResult {
+  """Total users examined during the backfill run"""
+  processed: Int!
+  """
+  Batches that initially failed but succeeded after a retry during the run
+  """
+  retriedBatches: Int!
+  """
+  Users skipped because they already had authenticationID or no Kratos identity was found
+  """
+  skipped: Int!
+  """Users whose authenticationID was updated during the run"""
+  updated: Int!
+}
+
 type Agent {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -1300,38 +1312,12 @@ type Agent {
   createdDate: DateTime!
   """The Credentials held by this Agent."""
   credentials: [Credential!]
-  """The Decentralized Identifier (DID) for this Agent."""
-  did: DID
   """The ID of the entity"""
   id: UUID!
   """A type of entity that this Agent is being used with."""
   type: AgentType!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
-  """The Verfied Credentials for this Agent."""
-  verifiedCredentials: [VerifiedCredential!]
-}
-
-type AgentBeginVerifiedCredentialOfferOutput {
-  """
-  The token containing the information about issuer, callback endpoint and the credentials offered
-  """
-  jwt: String!
-  """
-  The QR Code Image to be offered on the client for scanning by a mobile wallet
-  """
-  qrCodeImg: String!
-}
-
-type AgentBeginVerifiedCredentialRequestOutput {
-  """
-  The token containing the information about issuer, callback endpoint and the credentials offered
-  """
-  jwt: String!
-  """
-  The QR Code Image to be offered on the client for scanning by a mobile wallet
-  """
-  qrCodeImg: String!
 }
 
 type AiPersona {
@@ -1444,10 +1430,6 @@ type Authorization {
   type: AuthorizationPolicyType
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
-  """
-  The set of verified credential rules that are contained by this Authorization Policy.
-  """
-  verifiedCredentialRules: [AuthorizationPolicyRuleVerifiedCredential!]
 }
 
 type AuthorizationPolicyRuleCredential {
@@ -1461,12 +1443,6 @@ type AuthorizationPolicyRulePrivilege {
   grantedPrivileges: [AuthorizationPrivilege!]!
   name: String
   sourcePrivilege: AuthorizationPrivilege!
-}
-
-type AuthorizationPolicyRuleVerifiedCredential {
-  claimRule: String!
-  credentialName: String!
-  grantedPrivileges: [AuthorizationPrivilege!]!
 }
 
 type Calendar {
@@ -1986,12 +1962,17 @@ type ContributorRoles {
 type Conversation {
   """The authorization rules for the entity"""
   authorization: Authorization
+  conversationsSet: ConversationsSet! @deprecated(reason: "Use messaging instead")
   """The date at which the entity was created."""
   createdDate: DateTime!
   """The ID of the entity"""
   id: UUID!
+  messaging: Messaging!
   """The room for this Conversation."""
   room: Room
+  """
+  The type of this Conversation (USER_USER or USER_VC), inferred from member agent types.
+  """
   type: CommunicationConversationType!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
@@ -2001,7 +1982,17 @@ type Conversation {
   The virtual contributor participating in this Conversation (only for USER_AGENT conversations).
   """
   virtualContributor: VirtualContributor
-  wellKnownVirtualContributor: VirtualContributorWellKnown
+}
+
+type ConversationsSet {
+  """The authorization rules for the entity"""
+  authorization: Authorization
+  """The date at which the entity was created."""
+  createdDate: DateTime!
+  """The ID of the entity"""
+  id: UUID!
+  """The date at which the entity was last updated."""
+  updatedDate: DateTime!
 }
 
 type CreateCalloutContributionData {
@@ -2212,23 +2203,6 @@ type CredentialDefinition {
   resourceID: String!
   """The type for this CredentialDefinition"""
   type: String!
-}
-
-type CredentialMetadataOutput {
-  """
-  A json description of what the claim contains and schema validation definition
-  """
-  context: String!
-  """The purpose of the credential"""
-  description: String!
-  """The display name of the credential"""
-  name: String!
-  """The schema that the credential will be validated against"""
-  schema: String!
-  """The credential types that are associated with this credential"""
-  types: [String!]!
-  """System recognized unique type for the credential"""
-  uniqueType: String!
 }
 
 type Discussion {
@@ -3287,6 +3261,17 @@ type MessageParent {
   url: String!
 }
 
+type Messaging {
+  """The authorization rules for the entity"""
+  authorization: Authorization
+  """The date at which the entity was created."""
+  createdDate: DateTime!
+  """The ID of the entity"""
+  id: UUID!
+  """The date at which the entity was last updated."""
+  updatedDate: DateTime!
+}
+
 type Metadata {
   """Collection of metadata about Alkemio services."""
   services: [ServiceMetadata!]!
@@ -3339,6 +3324,10 @@ type Mutation {
   addNotificationEmailToBlacklist(input: NotificationEmailAddressInput!): [String!]!
   """Add a reaction to a message from the specified Room."""
   addReactionToMessageInRoom(reactionData: RoomAddReactionToMessageInput!): Reaction!
+  """
+  Populate authenticationID for existing users by querying Kratos Admin API
+  """
+  adminBackfillAuthenticationIDs: AdminAuthenticationIDBackfillResult!
   """Ensure all community members are registered for communications."""
   adminCommunicationEnsureAccessToCommunications(communicationData: CommunicationAdminEnsureAccessInput!): Boolean!
   """Remove an orphaned room from messaging platform."""
@@ -3415,12 +3404,6 @@ type Mutation {
   authorizationPolicyResetOnUser(authorizationResetData: UserAuthorizationResetInput!): User!
   """Reset the specified Authorization Policy to global admin privileges"""
   authorizationPolicyResetToGlobalAdminsAccess(authorizationID: String!): Authorization!
-  """Generate Alkemio user credential offer"""
-  beginAlkemioUserVerifiedCredentialOfferInteraction: AgentBeginVerifiedCredentialOfferOutput!
-  """Generate community member credential offer"""
-  beginCommunityMemberVerifiedCredentialOfferInteraction(communityID: String!): AgentBeginVerifiedCredentialOfferOutput!
-  """Generate verified credential share request"""
-  beginVerifiedCredentialRequestInteraction(types: [String!]!): AgentBeginVerifiedCredentialRequestOutput!
   """Deletes collections nameID-..."""
   cleanupCollections: MigrateEmbeddings!
   """Move an L1 Space up in the hierarchy, to be a L0 Space."""
@@ -3439,8 +3422,10 @@ type Mutation {
   createCalloutOnCalloutsSet(calloutData: CreateCalloutOnCalloutsSetInput!): Callout!
   """Create a new Contribution on the Callout."""
   createContributionOnCallout(contributionData: CreateContributionOnCalloutInput!): CalloutContribution!
+  """Create a new Conversation on the Messaging."""
+  createConversation(conversationData: CreateConversationInput!): Conversation!
   """Create a new Conversation on the ConversationsSet."""
-  createConversationOnConversationsSet(conversationData: CreateConversationInput!): Conversation!
+  createConversationOnConversationsSet(conversationData: CreateConversationInput!): Conversation! @deprecated(reason: "Use createConversation instead")
   """Creates a new Discussion as part of this Forum."""
   createDiscussion(createData: ForumCreateDiscussionInput!): Discussion!
   """Create a new CalendarEvent on the Calendar."""
@@ -3927,6 +3912,7 @@ type Platform {
   Alkemio configuration. Provides configuration to external services in the Alkemio ecosystem.
   """
   configuration: Config!
+  conversationsSet: ConversationsSet! @deprecated(reason: "Use messaging instead")
   """The date at which the entity was created."""
   createdDate: DateTime!
   """The Forum for the platform"""
@@ -3946,6 +3932,7 @@ type Platform {
   library: Library!
   """The Licensing in use by the platform."""
   licensingFramework: Licensing!
+  messaging: Messaging
   """Alkemio Services Metadata."""
   metadata: Metadata!
   """The RoleSet for this Platform."""
@@ -4232,13 +4219,6 @@ type Profile {
   visuals: [Visual!]!
 }
 
-type ProfileCredentialVerified {
-  """The email"""
-  userEmail: String!
-  """The vc."""
-  vc: String!
-}
-
 type PromptGraph {
   edges: [PromptGraphEdge!]
   end: String
@@ -4348,8 +4328,6 @@ type Query {
   aiServer: AiServer!
   """Active Spaces only, order by most active in the past X days."""
   exploreSpaces(options: ExploreSpacesInput): [Space!]!
-  """Get supported credential metadata"""
-  getSupportedVerifiedCredentialMetadata: [CredentialMetadataOutput!]!
   """
   Allow creation of inputs based on existing entities in the domain model
   """
@@ -5027,7 +5005,7 @@ type SpaceAbout {
   """The Profile for the Space."""
   profile: Profile!
   """The Space provider (host)."""
-  provider: Contributor!
+  provider: Contributor
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
   """Who should get involved in this challenge"""
@@ -5232,8 +5210,6 @@ type Subscription {
   Counter of unread in-app notifications for the currently authenticated user.
   """
   notificationsUnreadCount: Int!
-  """Received on verified credentials change"""
-  profileVerifiedCredential: ProfileCredentialVerified!
   """Receive Room event"""
   roomEvents(
     """The Room to receive the events from."""
@@ -5457,6 +5433,18 @@ type UpdateWhiteboardGuestAccessResult {
   whiteboard: Whiteboard
 }
 
+type UrlResolverQueryClosestAncestor {
+  discussionId: UUID
+  innovationHubId: UUID
+  innovationPack: UrlResolverQueryResultInnovationPack
+  organizationId: UUID
+  space: UrlResolverQueryResultSpace
+  type: UrlType!
+  url: String!
+  userId: UUID
+  virtualContributor: UrlResolverQueryResultVirtualContributor
+}
+
 type UrlResolverQueryResultCalendar {
   calendarEventId: UUID
   id: UUID!
@@ -5483,11 +5471,13 @@ type UrlResolverQueryResultInnovationPack {
 }
 
 type UrlResolverQueryResults {
+  closestAncestor: UrlResolverQueryClosestAncestor
   discussionId: UUID
   innovationHubId: UUID
   innovationPack: UrlResolverQueryResultInnovationPack
   organizationId: UUID
   space: UrlResolverQueryResultSpace
+  state: UrlResolverResultState!
   type: UrlType!
   userId: UUID
   virtualContributor: UrlResolverQueryResultVirtualContributor
@@ -5516,10 +5506,6 @@ type UrlResolverQueryResultVirtualContributor {
 type User implements Contributor {
   """The account hosted by this User."""
   account: Account
-  """
-  The unique personal identifier (upn) for the account associated with this user profile
-  """
-  accountUpn: String!
   """The Agent representing this User."""
   agent: Agent!
   """Details about the authentication used for this User."""
@@ -5725,39 +5711,12 @@ type UsersInRolesResponse {
 }
 
 type VcInteraction {
-  """The date at which the entity was created."""
-  createdDate: DateTime!
-  """The ID of the entity"""
-  id: UUID!
-  room: Room!
+  """The ID of the VC Interaction"""
+  id: ID! @deprecated(reason: "This field is for backward compatibility only and will be removed in a future version.")
+  """The thread ID (Matrix message ID) where VC is engaged"""
   threadID: String!
-  """The date at which the entity was last updated."""
-  updatedDate: DateTime!
-  virtualContributorID: UUID!
-}
-
-type VerifiedCredential {
-  """The time at which the credential is no longer valid"""
-  claims: [VerifiedCredentialClaim!]!
-  """JSON for the context in the credential"""
-  context: JSON!
-  """The time at which the credential is no longer valid"""
-  expires: String!
-  """The time at which the credential was issued"""
-  issued: String!
-  """The party issuing the VC"""
-  issuer: String!
-  """The name of the VC"""
-  name: String!
-  """The type of VC"""
-  type: String!
-}
-
-type VerifiedCredentialClaim {
-  """The name of the claim"""
-  name: JSON!
-  """The value for the claim"""
-  value: JSON!
+  """The actor ID (agent.id) of the Virtual Contributor"""
+  virtualContributorID: String!
 }
 
 type VirtualContributor implements Contributor {
@@ -5817,6 +5776,10 @@ type VirtualContributor implements Contributor {
   status: VirtualContributorStatus!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
+  """
+  The well-known identifier of this Virtual Contributor, if configured at platform level.
+  """
+  wellKnownVirtualContributor: VirtualContributorWellKnown
 }
 
 type VirtualContributorModelCard {
@@ -6349,7 +6312,7 @@ input CreateContributionOnCalloutInput {
 }
 
 input CreateConversationInput {
-  type: CommunicationConversationType!
+  type: CommunicationConversationType
   userID: UUID!
   virtualContributorID: UUID
   wellKnownVirtualContributor: VirtualContributorWellKnown
@@ -6676,7 +6639,6 @@ input CreateUserGroupInput {
 }
 
 input CreateUserInput {
-  accountUpn: String
   email: String!
   firstName: String
   lastName: String
@@ -7840,7 +7802,6 @@ input UpdateUserGroupInput {
 }
 
 input UpdateUserInput {
-  accountUpn: String
   firstName: String
   ID: UUID!
   lastName: String

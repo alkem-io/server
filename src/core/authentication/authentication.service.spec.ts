@@ -78,9 +78,9 @@ describe('AuthenticationService', () => {
     lastName: 'Doe',
     guestName: '',
     credentials: [],
-    communicationID: 'comm-id',
     agentID: 'agent-id',
     avatarURL: 'http://example.com/avatar.jpg',
+    authenticationID: 'auth-id',
     expiry: new Date('2023-12-31T23:59:59Z').getTime(),
   };
 
@@ -88,7 +88,6 @@ describe('AuthenticationService', () => {
     userID: 'user-id',
     email: 'test@example.com',
     credentials: [],
-    communicationID: 'comm-id',
     agentID: 'agent-id',
     did: 'did:test:123',
     password: 'test-password',
@@ -114,6 +113,7 @@ describe('AuthenticationService', () => {
             createGuestAgentInfo: jest.fn(),
             getAgentInfoMetadata: jest.fn(),
             populateAgentInfoWithMetadata: jest.fn(),
+            buildAgentInfoFromOryIdentity: jest.fn(),
           };
         }
         if (token === KratosService) {
@@ -266,8 +266,9 @@ describe('AuthenticationService', () => {
 
       const result = await service.createAgentInfo(mockOryIdentity);
 
+      // Cache lookup uses authenticationID (oryIdentity.id), not email
       expect(agentInfoCacheService.getAgentInfoFromCache).toHaveBeenCalledWith(
-        'test@example.com'
+        'test-id'
       );
       expect(result).toEqual(cachedAgentInfo);
     });
@@ -277,9 +278,9 @@ describe('AuthenticationService', () => {
       agentInfoService.getAgentInfoMetadata.mockResolvedValue(undefined);
 
       const builtAgentInfo = { ...mockAgentInfo };
-      jest
-        .spyOn(service as any, 'buildAgentInfoFromOrySession')
-        .mockReturnValue(builtAgentInfo);
+      agentInfoService.buildAgentInfoFromOryIdentity.mockReturnValue(
+        builtAgentInfo
+      );
 
       const result = await service.createAgentInfo(
         mockOryIdentity,
@@ -287,7 +288,8 @@ describe('AuthenticationService', () => {
       );
 
       expect(agentInfoService.getAgentInfoMetadata).toHaveBeenCalledWith(
-        'test@example.com'
+        'test@example.com',
+        { authenticationId: 'auth-id' }
       );
       expect(result).toEqual(builtAgentInfo);
     });
@@ -299,9 +301,9 @@ describe('AuthenticationService', () => {
       );
 
       const builtAgentInfo = { ...mockAgentInfo };
-      jest
-        .spyOn(service as any, 'buildAgentInfoFromOrySession')
-        .mockReturnValue(builtAgentInfo);
+      agentInfoService.buildAgentInfoFromOryIdentity.mockReturnValue(
+        builtAgentInfo
+      );
 
       const result = await service.createAgentInfo(
         mockOryIdentity,
@@ -329,53 +331,7 @@ describe('AuthenticationService', () => {
     });
   });
 
-  describe('buildAgentInfoFromOrySession', () => {
-    it('should build agent info correctly from ory session', () => {
-      const result = (service as any).buildAgentInfoFromOrySession(
-        mockOryIdentity,
-        mockSession
-      );
-
-      expect(result).toMatchObject({
-        email: 'test@example.com',
-        emailVerified: true,
-        firstName: 'John',
-        lastName: 'Doe',
-        avatarURL: 'http://example.com/avatar.jpg',
-        expiry: new Date('2023-12-31T23:59:59Z').getTime(),
-      });
-    });
-
-    it('should handle unverified email', () => {
-      const unverifiedOryIdentity = {
-        ...mockOryIdentity,
-        verifiable_addresses: [
-          {
-            ...mockOryIdentity.verifiable_addresses[0],
-            verified: false,
-          },
-        ],
-      };
-
-      const result = (service as any).buildAgentInfoFromOrySession(
-        unverifiedOryIdentity,
-        mockSession
-      );
-
-      expect(result.emailVerified).toBe(false);
-    });
-
-    it('should handle session without expiry', () => {
-      const sessionWithoutExpiry = { ...mockSession, expires_at: undefined };
-
-      const result = (service as any).buildAgentInfoFromOrySession(
-        mockOryIdentity,
-        sessionWithoutExpiry
-      );
-
-      expect(result.expiry).toBeUndefined();
-    });
-  });
+  // Note: buildAgentInfoFromOryIdentity tests are now in agent.info.service.spec.ts
 
   describe('extendSession', () => {
     it('should extend session successfully', async () => {
@@ -485,10 +441,10 @@ describe('AuthenticationService', () => {
   });
 
   describe('validateEmail', () => {
-    it('should return traits when email is valid', () => {
-      const result = (service as any).validateEmail(mockOryIdentity);
-
-      expect(result).toEqual(mockOryIdentity.traits);
+    it('should not throw when email is valid', () => {
+      expect(() =>
+        (service as any).validateEmail(mockOryIdentity)
+      ).not.toThrow();
     });
 
     it('should throw NotSupportedException when email is missing', () => {
@@ -511,34 +467,6 @@ describe('AuthenticationService', () => {
       expect(() => (service as any).validateEmail(invalidOryIdentity)).toThrow(
         NotSupportedException
       );
-    });
-  });
-
-  describe('getCachedAgentInfo', () => {
-    it('should return cached agent info when available', async () => {
-      const cachedAgentInfo = { ...mockAgentInfo };
-      agentInfoCacheService.getAgentInfoFromCache.mockResolvedValue(
-        cachedAgentInfo
-      );
-
-      const result = await (service as any).getCachedAgentInfo(
-        'test@example.com'
-      );
-
-      expect(agentInfoCacheService.getAgentInfoFromCache).toHaveBeenCalledWith(
-        'test@example.com'
-      );
-      expect(result).toEqual(cachedAgentInfo);
-    });
-
-    it('should return undefined when not in cache', async () => {
-      agentInfoCacheService.getAgentInfoFromCache.mockResolvedValue(undefined);
-
-      const result = await (service as any).getCachedAgentInfo(
-        'test@example.com'
-      );
-
-      expect(result).toBeUndefined();
     });
   });
 });
