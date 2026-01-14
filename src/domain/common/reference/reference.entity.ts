@@ -1,9 +1,10 @@
-import { Column, Entity, ManyToOne } from 'typeorm';
+import { Column, Entity, Index, ManyToOne } from 'typeorm';
 import { IReference } from './reference.interface';
 import { Profile } from '@domain/common/profile/profile.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 
 @Entity()
+@Index('IDX_reference_profileId', ['profile'])
 export class Reference extends AuthorizableEntity implements IReference {
   @Column()
   name: string;
