@@ -31,7 +31,6 @@ import { ConversationVcAskQuestionResult } from './dto/conversation.vc.dto.ask.q
 import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
 import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
 import { RoomLookupService } from '../room-lookup/room.lookup.service';
-import { IRoomWithReadState } from '../room/room.with.read.state.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston/dist/winston.constants';
 
 @Injectable()
@@ -218,26 +217,6 @@ export class ConversationService {
       relations: { room: true },
     });
     return conversation.room;
-  }
-
-  /**
-   * Get room with full read state for a specific conversation.
-   * Returns all data in one adapter call (eager loading).
-   */
-  public async getRoomWithReadState(
-    conversationID: string,
-    actorId: string
-  ): Promise<IRoomWithReadState | undefined> {
-    const conversation = await this.getConversationOrFail(conversationID, {
-      relations: { room: true },
-    });
-
-    if (!conversation.room) {
-      return undefined;
-    }
-
-    // Single adapter call returns all read state data
-    return this.roomLookupService.getRoomAsUser(conversation.room.id, actorId);
   }
 
   public async getCommentsCount(conversationID: string): Promise<number> {
@@ -558,5 +537,40 @@ export class ConversationService {
     }
 
     return { users, virtualContributors };
+  }
+
+  /**
+   * Find a conversation by its room ID.
+   * Used for mapping room events to conversation events.
+   * @param roomId - UUID of the room
+   * @returns The conversation if found, null otherwise
+   */
+  async findConversationByRoomId(
+    roomId: string
+  ): Promise<IConversation | null> {
+    return await this.conversationRepository.findOne({
+      where: { room: { id: roomId } },
+      relations: {
+        room: true,
+        authorization: true,
+      },
+    });
+  }
+
+  /**
+   * Get all member agent IDs for a conversation.
+   * Lightweight version of getConversationMembers that returns only IDs.
+   * Used for subscription event filtering.
+   * @param conversationId - UUID of the conversation
+   * @returns Array of agent IDs
+   */
+  async getConversationMemberAgentIds(
+    conversationId: string
+  ): Promise<string[]> {
+    const memberships = await this.conversationMembershipRepository.find({
+      where: { conversationId },
+      select: ['agentId'],
+    });
+    return memberships.map(m => m.agentId);
   }
 }

@@ -4,7 +4,6 @@ import { LogContext } from '@common/enums';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { IRoom } from '../room/room.interface';
 import { IMessage } from '../message/message.interface';
-import { IRoomWithReadState } from '../room/room.with.read.state.interface';
 import { FindOneOptions, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { Room } from '../room/room.entity';
@@ -64,17 +63,6 @@ export class RoomLookupService {
   async getMessages(room: IRoom): Promise<IMessage[]> {
     const externalRoom = await this.communicationAdapter.getRoom(room.id);
     return externalRoom.messages;
-  }
-
-  /**
-   * Get room content with read state for a specific user.
-   * Returns messages with isRead flag and unread count.
-   */
-  async getRoomAsUser(
-    roomId: string,
-    actorId: string
-  ): Promise<IRoomWithReadState> {
-    return this.communicationAdapter.getRoomAsUser(roomId, actorId);
   }
 
   public async addVcInteractionToRoom(

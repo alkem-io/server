@@ -13,12 +13,14 @@ import { IVcInteraction } from '../vc-interaction/vc.interaction.interface';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { RoomUnreadCounts } from './dto/room.dto.unread.counts';
+import { RoomDataLoader } from './room.data.loader';
 
 @Resolver(() => IRoom)
 export class RoomResolverFields {
   constructor(
     private readonly roomService: RoomService,
-    private readonly authorizationService: AuthorizationService
+    private readonly authorizationService: AuthorizationService,
+    private readonly roomDataLoader: RoomDataLoader
   ) {}
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -98,11 +100,17 @@ export class RoomResolverFields {
     @Parent() room: IRoom,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<number> {
-    // Use lightweight getUnreadCounts - doesn't fetch messages
-    const result = await this.roomService.getUnreadCounts(
-      room,
-      agentInfo.agentID
-    );
-    return result.roomUnreadCount;
+    return this.roomDataLoader.loadUnreadCount(room.id, agentInfo.agentID);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('lastMessage', () => IMessage, {
+    nullable: true,
+    description:
+      'The last message sent to the Room. Useful for conversation previews.',
+  })
+  async lastMessage(@Parent() room: IRoom): Promise<IMessage | null> {
+    return this.roomDataLoader.loadLastMessage(room.id);
   }
 }

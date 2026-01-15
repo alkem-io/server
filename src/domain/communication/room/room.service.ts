@@ -296,6 +296,14 @@ export class RoomService {
   }
 
   /**
+   * Get the last message from a room.
+   * Useful for displaying conversation previews without fetching all messages.
+   */
+  async getLastMessage(room: IRoom): Promise<IMessage | null> {
+    return this.communicationAdapter.getLastMessage(room.id);
+  }
+
+  /**
    * Get unread message counts for a room.
    * Returns room-level unread count and optionally per-thread unread counts.
    *

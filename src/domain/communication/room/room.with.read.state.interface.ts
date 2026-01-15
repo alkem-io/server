@@ -1,10 +1,10 @@
 import { Field, Int, ObjectType } from '@nestjs/graphql';
-import { MessageID } from '@domain/common/scalars';
+import { MessageID, UUID } from '@domain/common/scalars';
 import { IMessage } from '../message/message.interface';
 
 @ObjectType('RoomWithReadState')
 export class IRoomWithReadState {
-  @Field(() => String, {
+  @Field(() => UUID, {
     nullable: false,
     description: 'The identifier of the room',
   })

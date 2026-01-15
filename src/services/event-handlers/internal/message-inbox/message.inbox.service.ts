@@ -22,6 +22,8 @@ import { InAppNotificationService } from '@platform/in-app-notification/in.app.n
 import { MessageNotificationService } from './message.notification.service';
 import { VcInvocationService } from './vc.invocation.service';
 import { IMessage } from '@domain/communication/message/message.interface';
+import { ConversationService } from '@domain/communication/conversation/conversation.service';
+import { IRoom } from '@domain/communication/room/room.interface';
 
 /**
  * Event handler service for Matrix events.
@@ -42,6 +44,7 @@ export class MessageInboxService {
     private readonly inAppNotificationService: InAppNotificationService,
     private readonly messageNotificationService: MessageNotificationService,
     private readonly vcInvocationService: VcInvocationService,
+    private readonly conversationService: ConversationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -81,6 +84,14 @@ export class MessageInboxService {
       MutationType.CREATE,
       message
     );
+
+    // Publish conversation events for direct messaging rooms
+    if (
+      room.type === RoomType.CONVERSATION ||
+      room.type === RoomType.CONVERSATION_DIRECT
+    ) {
+      await this.publishConversationEvent(room, message, payload.actorID);
+    }
 
     // Process notifications (skip for conversation rooms)
     if (
@@ -339,6 +350,95 @@ export class MessageInboxService {
       eventId: payload.eventId,
       threadId: payload.threadId,
       timestamp: payload.timestamp,
+    });
+
+    // Publish conversation events for direct messaging rooms
+    if (
+      room.type === RoomType.CONVERSATION ||
+      room.type === RoomType.CONVERSATION_DIRECT
+    ) {
+      await this.publishReadReceiptConversationEvent(room, payload);
+    }
+  }
+
+  // ============================================================
+  // CONVERSATION EVENT HELPERS
+  // ============================================================
+
+  /**
+   * Publish a conversation event when a message is received.
+   * Determines whether to emit CONVERSATION_CREATED (first message) or MESSAGE_RECEIVED.
+   */
+  private async publishConversationEvent(
+    room: IRoom,
+    message: IMessage,
+    senderAgentId: string
+  ): Promise<void> {
+    const conversation =
+      await this.conversationService.findConversationByRoomId(room.id);
+
+    if (!conversation) {
+      this.logger.warn(
+        `Could not find conversation for room ${room.id} - skipping conversation event`,
+        LogContext.COMMUNICATION
+      );
+      return;
+    }
+
+    const memberAgentIds =
+      await this.conversationService.getConversationMemberAgentIds(
+        conversation.id
+      );
+
+    // Check if this is the first message (messagesCount was already incremented to 1)
+    const isFirstMessage = room.messagesCount === 1;
+
+    if (isFirstMessage) {
+      // Get memberships for the event payload
+      const memberships = await this.conversationService.getConversationMembers(
+        conversation.id
+      );
+
+      this.subscriptionPublishService.publishConversationEvent({
+        eventID: `conversation-event-${Math.round(Math.random() * 1000)}`,
+        memberAgentIds,
+        senderAgentId,
+        conversationCreated: {
+          id: conversation.id,
+          roomId: room.id,
+          memberships,
+          message,
+        },
+      });
+    } else {
+      this.subscriptionPublishService.publishConversationEvent({
+        eventID: `conversation-event-${Math.round(Math.random() * 1000)}`,
+        memberAgentIds,
+        senderAgentId,
+        messageReceived: {
+          roomId: room.id,
+          message,
+        },
+      });
+    }
+  }
+
+  /**
+   * Publish a read receipt conversation event.
+   * Only sent to the reader to sync read position across their devices.
+   */
+  private async publishReadReceiptConversationEvent(
+    room: IRoom,
+    payload: RoomReceiptUpdatedEvent['payload']
+  ): Promise<void> {
+    this.subscriptionPublishService.publishConversationEvent({
+      eventID: `conversation-event-${Math.round(Math.random() * 1000)}`,
+      memberAgentIds: [payload.actorId], // Only the reader receives this event
+      senderAgentId: payload.actorId,
+      readReceiptUpdated: {
+        roomId: room.id,
+        lastReadMessageId: payload.eventId,
+      },
     });
   }
 }

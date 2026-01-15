@@ -13,6 +13,7 @@ import { RoomModule } from '@domain/communication/room/room.module';
 import { ContributorLookupModule } from '@services/infrastructure/contributor-lookup/contributor.lookup.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { InAppNotificationModule } from '@platform/in-app-notification/in.app.notification.module';
+import { ConversationModule } from '@domain/communication/conversation/conversation.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { InAppNotificationModule } from '@platform/in-app-notification/in.app.no
     ContributorLookupModule,
     EntityResolverModule,
     InAppNotificationModule,
+    ConversationModule,
   ],
   providers: [
     MessageInboxService,

@@ -1969,8 +1969,6 @@ type Conversation {
   messaging: Messaging!
   """The room for this Conversation."""
   room: Room
-  """The room for this Conversation with read state for the current user."""
-  roomWithReadState: RoomWithReadState
   """
   The type of this Conversation (USER_USER or USER_VC), inferred from member agent types.
   """
@@ -1985,6 +1983,36 @@ type Conversation {
   The virtual contributor participating in this Conversation (only for USER_AGENT conversations).
   """
   virtualContributor: VirtualContributor
+}
+
+"""Event fired when a new conversation is created (first message sent)."""
+type ConversationCreatedEvent {
+  """The conversation entity ID."""
+  id: UUID!
+  """The members of the conversation."""
+  memberships: [ConversationMembership!]
+  """The first message in the conversation."""
+  message: Message!
+  """The room ID associated with the conversation."""
+  roomId: UUID!
+}
+
+"""Payload for conversation subscription events."""
+type ConversationEventSubscriptionResult {
+  """Present when a new conversation is created (first message sent)."""
+  conversationCreated: ConversationCreatedEvent
+  """Present when a new message is received in an existing conversation."""
+  messageReceived: MessageReceivedEvent
+  """Present when a read receipt is updated."""
+  readReceiptUpdated: ReadReceiptUpdatedEvent
+}
+
+"""A membership record for a conversation participant."""
+type ConversationMembership {
+  """The agent ID of the conversation member."""
+  agentId: UUID!
+  """When this member joined the conversation."""
+  createdAt: DateTime!
 }
 
 type CreateCalloutContributionData {
@@ -3253,6 +3281,14 @@ type MessageParent {
   url: String!
 }
 
+"""Event fired when a new message is received in a conversation."""
+type MessageReceivedEvent {
+  """The message that was received."""
+  message: Message!
+  """The room ID where the message was received."""
+  roomId: UUID!
+}
+
 type Messaging {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -4470,6 +4506,14 @@ type Reaction {
   timestamp: Float!
 }
 
+"""Event fired when a read receipt is updated in a conversation."""
+type ReadReceiptUpdatedEvent {
+  """The ID of the last message that was read."""
+  lastReadMessageId: MessageID!
+  """The room ID where the read receipt was updated."""
+  roomId: UUID!
+}
+
 type Reference {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -4781,6 +4825,8 @@ type Room {
   displayName: String!
   """The ID of the entity"""
   id: UUID!
+  """The last message sent to the Room. Useful for conversation previews."""
+  lastMessage: Message
   """Messages in this Room."""
   messages: [Message!]!
   """The number of messages in the Room."""
@@ -4846,21 +4892,6 @@ type RoomUnreadCounts {
   roomUnreadCount: Int!
   """Unread counts per thread, if thread IDs were requested."""
   threadUnreadCounts: [RoomThreadUnreadCount!]
-}
-
-type RoomWithReadState {
-  """The display name of the room"""
-  displayName: String!
-  """The identifier of the room"""
-  id: String!
-  """The ID of the last message read by the current user."""
-  lastReadEventId: MessageID
-  """The messages that have been sent to the Room."""
-  messages: [Message!]!
-  """The number of messages in the Room."""
-  messagesCount: Int!
-  """The number of unread messages for the current user."""
-  unreadCount: Int!
 }
 
 type SearchResultCallout implements SearchResult {
@@ -5234,6 +5265,10 @@ type Subscription {
     """The ID of the Callout to subscribe to."""
     calloutID: UUID!
   ): CalloutPostCreated!
+  """
+  Receive conversation events for the authenticated user. Includes new conversations, messages, and read receipts.
+  """
+  conversationEvents: ConversationEventSubscriptionResult!
   """Receive updates on Discussions"""
   forumDiscussionUpdated(
     """The IDs of the Forum to subscribe to all updates on."""

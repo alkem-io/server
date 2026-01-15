@@ -36,6 +36,9 @@ import {
   GetThreadMessagesRequest,
   GetSpaceRequest,
   GetUnreadCountsRequest,
+  BatchGetUnreadCountsRequest,
+  GetLastMessageRequest,
+  BatchGetLastMessagesRequest,
   MarkMessageReadRequest,
   ListRoomsRequest,
   ListSpacesRequest,
@@ -993,6 +996,83 @@ export class CommunicationAdapter {
       roomUnreadCount: response!.room_unread_count,
       threadUnreadCounts: response!.thread_unread_counts,
     };
+  }
+
+  /**
+   * Get unread message counts for multiple rooms in a single batch request.
+   * More efficient than calling getUnreadCounts for each room individually.
+   */
+  async batchGetUnreadCounts(
+    actorId: AlkemioActorID,
+    alkemioRoomIds: AlkemioRoomID[]
+  ): Promise<Record<string, number>> {
+    if (!this.enabled || alkemioRoomIds.length === 0) return {};
+
+    const response = await this.sendCommand({
+      operation: 'batchGetUnreadCounts',
+      topic: MatrixAdapterEventType.COMMUNICATION_ROOM_BATCH_UNREAD_COUNTS_GET,
+      payload: {
+        actor_id: actorId,
+        alkemio_room_ids: alkemioRoomIds,
+      } satisfies BatchGetUnreadCountsRequest,
+      errorContext: { actorId, roomCount: alkemioRoomIds.length },
+      ensureSuccess: true,
+    });
+
+    return response!.unread_counts ?? {};
+  }
+
+  /**
+   * Get the last message from a room.
+   * Useful for displaying conversation previews without fetching all messages.
+   */
+  async getLastMessage(alkemioRoomId: AlkemioRoomID): Promise<IMessage | null> {
+    if (!this.enabled) return null;
+
+    const response = await this.sendCommand({
+      operation: 'getLastMessage',
+      topic: MatrixAdapterEventType.COMMUNICATION_ROOM_LAST_MESSAGE_GET,
+      payload: {
+        alkemio_room_id: alkemioRoomId,
+      } satisfies GetLastMessageRequest,
+      errorContext: { alkemioRoomId },
+      ensureSuccess: true,
+    });
+
+    if (!response?.message) return null;
+
+    return this.convertMessageDtoToIMessage(response.message);
+  }
+
+  /**
+   * Get last messages for multiple rooms in a single batch request.
+   * More efficient than calling getLastMessage for each room individually.
+   * Useful for populating conversation list previews.
+   */
+  async batchGetLastMessages(
+    alkemioRoomIds: AlkemioRoomID[]
+  ): Promise<Record<string, IMessage | null>> {
+    if (!this.enabled || alkemioRoomIds.length === 0) return {};
+
+    const response = await this.sendCommand({
+      operation: 'batchGetLastMessages',
+      topic: MatrixAdapterEventType.COMMUNICATION_ROOM_BATCH_LAST_MESSAGES_GET,
+      payload: {
+        alkemio_room_ids: alkemioRoomIds,
+      } satisfies BatchGetLastMessagesRequest,
+      errorContext: { roomCount: alkemioRoomIds.length },
+      ensureSuccess: true,
+    });
+
+    const result: Record<string, IMessage | null> = {};
+    const messages = response?.messages ?? {};
+
+    for (const roomId of alkemioRoomIds) {
+      const msgDto = messages[roomId];
+      result[roomId] = msgDto ? this.convertMessageDtoToIMessage(msgDto) : null;
+    }
+
+    return result;
   }
 
   /**

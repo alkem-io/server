@@ -14,7 +14,6 @@ import { IVirtualContributor } from '@domain/community/virtual-contributor/virtu
 import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
 import { AgentType } from '@common/enums/agent.type';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { IRoomWithReadState } from '../room/room.with.read.state.interface';
 
 @Resolver(() => IConversation)
 export class ConversationResolverFields {
@@ -35,23 +34,6 @@ export class ConversationResolverFields {
     @Parent() conversation: IConversation
   ): Promise<IRoom | undefined> {
     return await this.conversationService.getRoom(conversation.id);
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
-  @ResolveField('roomWithReadState', () => IRoomWithReadState, {
-    nullable: true,
-    description:
-      'The room for this Conversation with read state for the current user.',
-  })
-  async roomWithReadState(
-    @Parent() conversation: IConversation,
-    @CurrentUser() agentInfo: AgentInfo
-  ): Promise<IRoomWithReadState | undefined> {
-    return await this.conversationService.getRoomWithReadState(
-      conversation.id,
-      agentInfo.agentID
-    );
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
