@@ -56,7 +56,9 @@ describe('MessagingAuthorizationService', () => {
         grantedPrivileges: ['CREATE'],
         criterias: [],
       }),
-      appendCredentialAuthorizationRules: jest.fn().mockImplementation(auth => auth),
+      appendCredentialAuthorizationRules: jest
+        .fn()
+        .mockImplementation(auth => auth),
       saveAll: jest.fn(),
     };
 
@@ -108,9 +110,7 @@ describe('MessagingAuthorizationService', () => {
 
   describe('applyAuthorizationPolicy', () => {
     it('should inherit authorization from parent', async () => {
-      messagingService.getMessagingOrFail.mockResolvedValue(
-        mockMessaging
-      );
+      messagingService.getMessagingOrFail.mockResolvedValue(mockMessaging);
       authorizationPolicyService.inheritParentAuthorization.mockReturnValue({
         ...mockMessaging.authorization,
         credentialRules: [...mockParentAuthorization.credentialRules],
@@ -133,9 +133,7 @@ describe('MessagingAuthorizationService', () => {
     });
 
     it('should cascade authorization to all conversations', async () => {
-      messagingService.getMessagingOrFail.mockResolvedValue(
-        mockMessaging
-      );
+      messagingService.getMessagingOrFail.mockResolvedValue(mockMessaging);
       authorizationPolicyService.inheritParentAuthorization.mockReturnValue(
         mockMessaging.authorization as IAuthorizationPolicy
       );
@@ -161,9 +159,7 @@ describe('MessagingAuthorizationService', () => {
     });
 
     it('should return updated authorizations for set and conversations', async () => {
-      messagingService.getMessagingOrFail.mockResolvedValue(
-        mockMessaging
-      );
+      messagingService.getMessagingOrFail.mockResolvedValue(mockMessaging);
       const inheritedAuth = {
         ...mockMessaging.authorization,
         credentialRules: [...mockParentAuthorization.credentialRules],
@@ -189,9 +185,7 @@ describe('MessagingAuthorizationService', () => {
         ...mockMessaging,
         conversations: [],
       };
-      messagingService.getMessagingOrFail.mockResolvedValue(
-        emptySet
-      );
+      messagingService.getMessagingOrFail.mockResolvedValue(emptySet);
       authorizationPolicyService.inheritParentAuthorization.mockReturnValue(
         emptySet.authorization as IAuthorizationPolicy
       );

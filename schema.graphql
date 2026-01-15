@@ -11,7 +11,7 @@ A representation of a Lifecycle Definition, based on XState. It is serialized JS
 """
 scalar LifecycleDefinition
 
-"""A decentralized identifier (DID) as per the W3C standard."""
+"""A markdown string."""
 scalar Markdown
 
 """An identifier that originates from the underlying messaging platform."""
@@ -1962,7 +1962,6 @@ type ContributorRoles {
 type Conversation {
   """The authorization rules for the entity"""
   authorization: Authorization
-  conversationsSet: ConversationsSet! @deprecated(reason: "Use messaging instead")
   """The date at which the entity was created."""
   createdDate: DateTime!
   """The ID of the entity"""
@@ -1976,23 +1975,14 @@ type Conversation {
   type: CommunicationConversationType!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
-  """The user participating in this Conversation."""
+  """
+  The other user participating in this Conversation (excludes the current user).
+  """
   user: User
   """
   The virtual contributor participating in this Conversation (only for USER_AGENT conversations).
   """
   virtualContributor: VirtualContributor
-}
-
-type ConversationsSet {
-  """The authorization rules for the entity"""
-  authorization: Authorization
-  """The date at which the entity was created."""
-  createdDate: DateTime!
-  """The ID of the entity"""
-  id: UUID!
-  """The date at which the entity was last updated."""
-  updatedDate: DateTime!
 }
 
 type CreateCalloutContributionData {
@@ -2591,6 +2581,10 @@ type InnovationFlowState {
   authorization: Authorization
   """The date at which the entity was created."""
   createdDate: DateTime!
+  """
+  Default callout template applied to this flow state (nullable, optional).
+  """
+  defaultCalloutTemplate: Template
   """The explanation text to clarify the state."""
   description: Markdown
   """The display name for the State"""
@@ -3424,8 +3418,6 @@ type Mutation {
   createContributionOnCallout(contributionData: CreateContributionOnCalloutInput!): CalloutContribution!
   """Create a new Conversation on the Messaging."""
   createConversation(conversationData: CreateConversationInput!): Conversation!
-  """Create a new Conversation on the ConversationsSet."""
-  createConversationOnConversationsSet(conversationData: CreateConversationInput!): Conversation! @deprecated(reason: "Use createConversation instead")
   """Creates a new Discussion as part of this Forum."""
   createDiscussion(createData: ForumCreateDiscussionInput!): Discussion!
   """Create a new CalendarEvent on the Calendar."""
@@ -3564,6 +3556,8 @@ type Mutation {
   refreshVirtualContributorBodyOfKnowledge(refreshData: RefreshVirtualContributorBodyOfKnowledgeInput!): Boolean!
   """Empties the CommunityGuidelines."""
   removeCommunityGuidelinesContent(communityGuidelinesData: RemoveCommunityGuidelinesContentInput!): CommunityGuidelines!
+  """Remove the default callout template from an InnovationFlowState."""
+  removeDefaultCalloutTemplateOnInnovationFlowState(removeData: RemoveDefaultCalloutTemplateOnInnovationFlowStateInput!): InnovationFlowState!
   """Removes an Iframe Allowed URL from the Platform Settings"""
   removeIframeAllowedURL(whitelistedURL: String!): [String!]!
   """Removes a message."""
@@ -3604,6 +3598,8 @@ type Mutation {
   sendMessageToRoom(messageData: RoomSendMessageInput!): Message!
   """Send message to multiple Users."""
   sendMessageToUsers(messageData: CommunicationSendMessageToUsersInput!): Boolean!
+  """Set the default callout template for an InnovationFlowState."""
+  setDefaultCalloutTemplateOnInnovationFlowState(setData: SetDefaultCalloutTemplateOnInnovationFlowStateInput!): InnovationFlowState!
   """
   Set the mapping of a well-known Virtual Contributor to a specific Virtual Contributor UUID.
   """
@@ -3912,7 +3908,6 @@ type Platform {
   Alkemio configuration. Provides configuration to external services in the Alkemio ecosystem.
   """
   configuration: Config!
-  conversationsSet: ConversationsSet! @deprecated(reason: "Use messaging instead")
   """The date at which the entity was created."""
   createdDate: DateTime!
   """The Forum for the platform"""
@@ -5711,8 +5706,6 @@ type UsersInRolesResponse {
 }
 
 type VcInteraction {
-  """The ID of the VC Interaction"""
-  id: ID! @deprecated(reason: "This field is for backward compatibility only and will be removed in a future version.")
   """The thread ID (Matrix message ID) where VC is engaged"""
   threadID: String!
   """The actor ID (agent.id) of the Virtual Contributor"""
@@ -6312,7 +6305,6 @@ input CreateContributionOnCalloutInput {
 }
 
 input CreateConversationInput {
-  type: CommunicationConversationType
   userID: UUID!
   virtualContributorID: UUID
   wellKnownVirtualContributor: VirtualContributorWellKnown
@@ -7004,6 +6996,10 @@ input RemoveCommunityGuidelinesContentInput {
   communityGuidelinesID: UUID!
 }
 
+input RemoveDefaultCalloutTemplateOnInnovationFlowStateInput {
+  flowStateID: UUID!
+}
+
 input RemovePlatformRoleInput {
   contributorID: UUID!
   role: RoleName!
@@ -7150,6 +7146,11 @@ input SearchInput {
   tagsetNames: [String!]
   """The terms to be searched for within this Space. Max 5."""
   terms: [String!]!
+}
+
+input SetDefaultCalloutTemplateOnInnovationFlowStateInput {
+  flowStateID: UUID!
+  templateID: UUID!
 }
 
 input SetPlatformWellKnownVirtualContributorInput {

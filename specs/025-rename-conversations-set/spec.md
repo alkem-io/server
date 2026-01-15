@@ -21,9 +21,9 @@ The `ConversationsSet` domain entity, database table, and GraphQL container have
 ### Database
 
 - **Migration**: `RenameConversationsSetToMessaging`
-    - Renamed table `conversations_set` to `messaging`.
-    - Renamed column `conversationsSetId` to `messagingId` in `conversation` table.
-    - Updated `authorization_policy` type from `COMMUNICATION_CONVERSATIONS_SET` to `COMMUNICATION_MESSAGING`.
+  - Renamed table `conversations_set` to `messaging`.
+  - Renamed column `conversationsSetId` to `messagingId` in `conversation` table.
+  - Updated `authorization_policy` type from `COMMUNICATION_CONVERSATIONS_SET` to `COMMUNICATION_MESSAGING`.
 
 ### GraphQL API
 

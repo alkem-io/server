@@ -4,6 +4,7 @@
 **Plan**: [specs/020-conversation-consolidation/plan.md](specs/020-conversation-consolidation/plan.md)
 
 ## Phase 1: Matrix Adapter Refactor (Unified Actor)
+
 **Goal**: Simplify the Matrix Adapter to use the Unified Actor pattern and remove legacy ID resolution.
 
 - [x] T001 [021] Rename `senderCommunicationsID` → `actorId` (Agent ID) in adapter DTOs
@@ -17,6 +18,7 @@
 - [x] T009 [021] Remove `externalRoomID` usage from `RoomService`
 
 ## Phase 2: Core Conversation Architecture
+
 **Goal**: Implement the new `ConversationsSet` and `ConversationMembership` model.
 
 - [x] T010 [022/024] Create `ConversationsSet` entity linked to `Platform` (OneToOne)
@@ -26,6 +28,7 @@
 - [x] T014 [024] Implement authorization inheritance (Set inherits from Platform)
 
 ## Phase 3: Schema Cleanup & Migration
+
 **Goal**: Remove legacy columns and enforce the new schema.
 
 - [x] T015 [021/023/024] Create consolidated migration `conversationArchitectureRefactor`
@@ -36,6 +39,7 @@
   - Creates `conversation_membership` table
 
 ## Phase 4: Verification
+
 **Goal**: Ensure the consolidated conversation system works as expected.
 
 - [x] T016 Verify Matrix Adapter connects and syncs actors using `agentId`

@@ -26,8 +26,17 @@ module.exports = defineConfig([
       'tmp/**',
       '**/*.min.js',
       '.env*',
-      '**/.eslint.config.js',
+      'eslint.config.js',
+
       'src/migrations/**',
+      'src/migrations/*.ts',
+      'src/migrations/**/*.ts',
+
+      'schema.graphql',
+
+      'specs/**',
+      '**/*.md',
+      '**/**/*.md',
     ],
   },
   {

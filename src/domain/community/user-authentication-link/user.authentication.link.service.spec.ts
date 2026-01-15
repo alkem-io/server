@@ -50,7 +50,13 @@ describe('UserAuthenticationLinkService', () => {
       logger
     );
 
-    return { service, userLookupService, userRepository, kratosService, logger };
+    return {
+      service,
+      userLookupService,
+      userRepository,
+      kratosService,
+      logger,
+    };
   };
 
   it('returns existing user matched by authentication ID', async () => {
@@ -88,7 +94,8 @@ describe('UserAuthenticationLinkService', () => {
   });
 
   it('logs mismatch and returns conflict outcome when conflictMode is log and old identity exists', async () => {
-    const { service, userLookupService, kratosService, logger } = createService();
+    const { service, userLookupService, kratosService, logger } =
+      createService();
 
     const existingUser = {
       id: 'user-3',
@@ -138,7 +145,13 @@ describe('UserAuthenticationLinkService', () => {
   });
 
   it('allows relinking when old authentication ID no longer exists in Kratos', async () => {
-    const { service, userLookupService, kratosService, userRepository, logger } = createService();
+    const {
+      service,
+      userLookupService,
+      kratosService,
+      userRepository,
+      logger,
+    } = createService();
 
     const existingUser = {
       id: 'user-relink',
@@ -165,7 +178,8 @@ describe('UserAuthenticationLinkService', () => {
   });
 
   it('prefers email lookup when requested even if authentication ID belongs to another user', async () => {
-    const { service, userLookupService, kratosService, logger } = createService();
+    const { service, userLookupService, kratosService, logger } =
+      createService();
 
     const conflictingUser = {
       id: 'user-5',

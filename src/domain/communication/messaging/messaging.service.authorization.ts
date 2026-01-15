@@ -4,10 +4,7 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy/author
 import { ConversationAuthorizationService } from '../conversation/conversation.service.authorization';
 import { IMessaging } from './messaging.interface';
 import { MessagingService } from './messaging.service';
-import {
-  AuthorizationCredential,
-  AuthorizationPrivilege,
-} from '@common/enums';
+import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { CREDENTIAL_RULE_TYPES_MESSAGING_CREATE_CONVERSATION } from '@common/constants';
 
 @Injectable()

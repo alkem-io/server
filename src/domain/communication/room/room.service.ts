@@ -1,7 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository } from 'typeorm';
-import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { Room } from './room.entity';
