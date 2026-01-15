@@ -1,6 +1,7 @@
 import { Field, ObjectType, registerEnumType } from '@nestjs/graphql';
 import { UUID, MessageID } from '@domain/common/scalars';
 import { IMessage } from '@domain/communication/message/message.interface';
+import { IConversation } from '@domain/communication/conversation/conversation.interface';
 
 /**
  * Discriminator enum for conversation events.
@@ -18,46 +19,22 @@ registerEnumType(ConversationEventType, {
   description: 'The type of conversation event.',
 });
 
-@ObjectType('ConversationMembership', {
-  description: 'A membership record for a conversation participant.',
-})
-export class ConversationMembership {
-  @Field(() => UUID, {
-    nullable: false,
-    description: 'The agent ID of the conversation member.',
-  })
-  agentId!: string;
-
-  @Field(() => Date, {
-    nullable: false,
-    description: 'When this member joined the conversation.',
-  })
-  createdAt!: Date;
-}
-
 @ObjectType('ConversationCreatedEvent', {
   description:
-    'Event fired when a new conversation is created (first message sent).',
+    'Event fired when a new conversation is created. Each member receives a personalized event with the other participant resolved via conversation.user or conversation.virtualContributor.',
 })
 export class ConversationCreatedEvent {
-  @Field(() => UUID, { description: 'The conversation entity ID.' })
-  id!: string;
-
-  @Field(() => UUID, {
-    description: 'The room ID associated with the conversation.',
+  @Field(() => IConversation, {
+    description: 'The conversation that was created.',
   })
-  roomId!: string;
-
-  @Field(() => [ConversationMembership], {
-    nullable: true,
-    description: 'The members of the conversation.',
-  })
-  memberships?: ConversationMembership[];
+  conversation!: IConversation;
 
   @Field(() => IMessage, {
-    description: 'The first message in the conversation.',
+    nullable: true,
+    description:
+      'The first message in the conversation. Null when conversation is created without an initial message.',
   })
-  message!: IMessage;
+  message?: IMessage;
 }
 
 @ObjectType('ConversationMessageReceivedEvent', {

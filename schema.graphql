@@ -1993,16 +1993,16 @@ type Conversation {
   virtualContributor: VirtualContributor
 }
 
-"""Event fired when a new conversation is created (first message sent)."""
+"""
+Event fired when a new conversation is created. Each member receives a personalized event with the other participant resolved via conversation.user or conversation.virtualContributor.
+"""
 type ConversationCreatedEvent {
-  """The conversation entity ID."""
-  id: UUID!
-  """The members of the conversation."""
-  memberships: [ConversationMembership!]
-  """The first message in the conversation."""
-  message: Message!
-  """The room ID associated with the conversation."""
-  roomId: UUID!
+  """The conversation that was created."""
+  conversation: Conversation!
+  """
+  The first message in the conversation. Null when conversation is created without an initial message.
+  """
+  message: Message
 }
 
 """Payload for conversation subscription events."""
@@ -2019,14 +2019,6 @@ type ConversationEventSubscriptionResult {
   messageRemoved: ConversationMessageRemovedEvent
   """Present when eventType is READ_RECEIPT_UPDATED."""
   readReceiptUpdated: ConversationReadReceiptUpdatedEvent
-}
-
-"""A membership record for a conversation participant."""
-type ConversationMembership {
-  """The agent ID of the conversation member."""
-  agentId: UUID!
-  """When this member joined the conversation."""
-  createdAt: DateTime!
 }
 
 """Event fired when a new message is received in a conversation."""

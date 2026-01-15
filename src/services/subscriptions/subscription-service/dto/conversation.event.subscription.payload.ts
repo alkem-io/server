@@ -1,15 +1,13 @@
 import { BaseSubscriptionPayload } from '@common/interfaces';
 import { IMessage } from '@domain/communication/message/message.interface';
-import { IConversationMembership } from '@domain/communication/conversation-membership/conversation.membership.interface';
+import { IConversation } from '@domain/communication/conversation/conversation.interface';
 
 export interface ConversationEventSubscriptionPayload
   extends BaseSubscriptionPayload {
   memberAgentIds: string[];
   conversationCreated?: {
-    id: string;
-    roomId: string;
-    memberships?: IConversationMembership[];
-    message: IMessage;
+    conversation: IConversation;
+    message?: IMessage;
   };
   messageReceived?: {
     roomId: string;

@@ -65,9 +65,6 @@ export class MessageInboxService {
 
     const room = await this.roomLookupService.getRoomOrFail(payload.roomId);
 
-    // Check if this will be the first message (before incrementing)
-    const isFirstMessage = (room.messagesCount ?? 0) === 0;
-
     // Atomically increment message count to avoid race conditions
     await this.roomLookupService.incrementMessagesCount(room.id);
 
@@ -89,11 +86,12 @@ export class MessageInboxService {
     );
 
     // Publish conversation events for direct messaging rooms
+    // Note: conversationCreated is fired when conversation is created, not on first message
     if (
       room.type === RoomType.CONVERSATION ||
       room.type === RoomType.CONVERSATION_DIRECT
     ) {
-      await this.publishConversationEvent(room, message, isFirstMessage);
+      await this.publishMessageReceivedConversationEvent(room, message);
     }
 
     // Process notifications (skip for conversation rooms)
@@ -377,20 +375,19 @@ export class MessageInboxService {
   // ============================================================
 
   /**
-   * Publish a conversation event when a message is received.
-   * Emits CONVERSATION_CREATED for first message or MESSAGE_RECEIVED for subsequent messages.
+   * Publish a message received conversation event.
+   * Note: conversationCreated events are fired from MessagingService.createConversation().
    */
-  private async publishConversationEvent(
+  private async publishMessageReceivedConversationEvent(
     room: IRoom,
-    message: IMessage,
-    isFirstMessage: boolean
+    message: IMessage
   ): Promise<void> {
     const conversation =
       await this.conversationService.findConversationByRoomId(room.id);
 
     if (!conversation) {
       this.logger.warn(
-        `Could not find conversation for room ${room.id} - skipping conversation event`,
+        `Could not find conversation for room ${room.id} - skipping message received event`,
         LogContext.COMMUNICATION
       );
       return;
@@ -401,32 +398,14 @@ export class MessageInboxService {
         conversation.id
       );
 
-    if (isFirstMessage) {
-      // Get memberships for the event payload
-      const memberships = await this.conversationService.getConversationMembers(
-        conversation.id
-      );
-
-      this.subscriptionPublishService.publishConversationEvent({
-        eventID: `conversation-event-${randomUUID()}`,
-        memberAgentIds,
-        conversationCreated: {
-          id: conversation.id,
-          roomId: room.id,
-          memberships,
-          message,
-        },
-      });
-    } else {
-      this.subscriptionPublishService.publishConversationEvent({
-        eventID: `conversation-event-${randomUUID()}`,
-        memberAgentIds,
-        messageReceived: {
-          roomId: room.id,
-          message,
-        },
-      });
-    }
+    this.subscriptionPublishService.publishConversationEvent({
+      eventID: `conversation-event-${randomUUID()}`,
+      memberAgentIds,
+      messageReceived: {
+        roomId: room.id,
+        message,
+      },
+    });
   }
 
   /**

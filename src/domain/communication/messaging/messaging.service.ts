@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository, EntityManager } from 'typeorm';
@@ -27,6 +28,7 @@ import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AgentType } from '@common/enums/agent.type';
 import { ConversationAuthorizationService } from '../conversation/conversation.service.authorization';
+import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
 
 @Injectable()
 export class MessagingService {
@@ -44,6 +46,7 @@ export class MessagingService {
     private readonly userLookupService: UserLookupService,
     private readonly virtualContributorLookupService: VirtualContributorLookupService,
     private readonly agentService: AgentService,
+    private readonly subscriptionPublishService: SubscriptionPublishService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -182,6 +185,25 @@ export class MessagingService {
           conversation.id
         );
       await this.authorizationPolicyService.saveAll(authorizations);
+
+      // Fetch full conversation for return value
+      const fullConversation =
+        await this.conversationService.getConversationOrFail(conversation.id, {
+          relations: {
+            authorization: true,
+            room: true,
+          },
+        });
+
+      // Publish conversation created events to each member
+      await this.publishConversationCreatedEvents(
+        fullConversation,
+        conversationData.callerAgentId,
+        invitedAgentId,
+        isUserVc
+      );
+
+      return fullConversation;
     }
 
     return await this.conversationService.getConversationOrFail(
@@ -197,6 +219,88 @@ export class MessagingService {
 
   public async save(messaging: IMessaging): Promise<IMessaging> {
     return await this.messagingRepository.save(messaging as Messaging);
+  }
+
+  /**
+   * Publish conversation created events to each member.
+   * Each member receives a personalized event with the "other user" pre-resolved.
+   *
+   * - USER_USER: Two events, each with _resolvedUser set to the OTHER user
+   * - USER_VC: One event to human user with _resolvedVirtualContributor set
+   */
+  private async publishConversationCreatedEvents(
+    conversation: IConversation,
+    callerAgentId: string,
+    invitedAgentId: string,
+    isUserVc: boolean
+  ): Promise<void> {
+    if (isUserVc) {
+      // USER_VC: Notify human user with VC pre-resolved
+      const vc =
+        await this.virtualContributorLookupService.getVirtualContributorByAgentId(
+          invitedAgentId
+        );
+
+      const conversationForCaller: IConversation = {
+        ...conversation,
+        _resolvedUser: null, // No other user in USER_VC
+        _resolvedVirtualContributor: vc,
+      };
+
+      this.subscriptionPublishService.publishConversationEvent({
+        eventID: `conversation-event-${randomUUID()}`,
+        memberAgentIds: [callerAgentId],
+        conversationCreated: {
+          conversation: conversationForCaller,
+        },
+      });
+
+      this.logger.verbose?.(
+        `Published conversationCreated event (USER_VC) for conversation ${conversation.id} to user agent ${callerAgentId}`,
+        LogContext.COMMUNICATION
+      );
+    } else {
+      // USER_USER: Notify both users, each with the OTHER user pre-resolved
+      const [callerUser, invitedUser] = await Promise.all([
+        this.userLookupService.getUserByAgentId(callerAgentId),
+        this.userLookupService.getUserByAgentId(invitedAgentId),
+      ]);
+
+      // Event for caller: _resolvedUser = invited user (the other person)
+      const conversationForCaller: IConversation = {
+        ...conversation,
+        _resolvedUser: invitedUser,
+        _resolvedVirtualContributor: null,
+      };
+
+      this.subscriptionPublishService.publishConversationEvent({
+        eventID: `conversation-event-${randomUUID()}`,
+        memberAgentIds: [callerAgentId],
+        conversationCreated: {
+          conversation: conversationForCaller,
+        },
+      });
+
+      // Event for invited user: _resolvedUser = caller (the other person)
+      const conversationForInvited: IConversation = {
+        ...conversation,
+        _resolvedUser: callerUser,
+        _resolvedVirtualContributor: null,
+      };
+
+      this.subscriptionPublishService.publishConversationEvent({
+        eventID: `conversation-event-${randomUUID()}`,
+        memberAgentIds: [invitedAgentId],
+        conversationCreated: {
+          conversation: conversationForInvited,
+        },
+      });
+
+      this.logger.verbose?.(
+        `Published conversationCreated events (USER_USER) for conversation ${conversation.id} to both users`,
+        LogContext.COMMUNICATION
+      );
+    }
   }
 
   // T086: Find conversation with well-known VC using efficient membership query
