@@ -122,7 +122,7 @@ export class VcInvocationService {
       LogContext.COMMUNICATION
     );
 
-    await Promise.all(
+    const results = await Promise.allSettled(
       vcMembers.map(vcActorID =>
         this.virtualContributorMessageService.invokeVirtualContributor(
           vcActorID,
@@ -138,6 +138,17 @@ export class VcInvocationService {
         )
       )
     );
+
+    // Log any failed invocations
+    results.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        this.logger.error(
+          `Failed to invoke VC ${vcMembers[index]}: ${result.reason}`,
+          result.reason?.stack,
+          LogContext.COMMUNICATION
+        );
+      }
+    });
   }
 
   /**

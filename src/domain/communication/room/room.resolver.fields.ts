@@ -6,6 +6,7 @@ import {
   CurrentUser,
 } from '@src/common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
+import { MessageID } from '@domain/common/scalars';
 import { IMessage } from '../message/message.interface';
 import { IRoom } from './room.interface';
 import { RoomService } from './room.service';
@@ -68,7 +69,7 @@ export class RoomResolverFields {
     @Parent() room: IRoom,
     @CurrentUser() agentInfo: AgentInfo,
     @Args('threadIds', {
-      type: () => [String],
+      type: () => [MessageID],
       nullable: true,
       description:
         'Optional thread IDs to get per-thread unread counts. If not provided, only room-level count is returned.',

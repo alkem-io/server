@@ -1,10 +1,11 @@
 import { Field, Int, ObjectType } from '@nestjs/graphql';
+import { MessageID } from '@domain/common/scalars';
 
 @ObjectType('RoomThreadUnreadCount', {
   description: 'Unread message count for a specific thread in a Room.',
 })
 export class RoomThreadUnreadCount {
-  @Field(() => String, {
+  @Field(() => MessageID, {
     nullable: false,
     description: 'The thread ID.',
   })

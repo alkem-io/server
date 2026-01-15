@@ -6,7 +6,10 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { SubscriptionReadService } from '@services/subscriptions/subscription-service';
 import { ForbiddenException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { ConversationEventSubscriptionResult } from './dto/subscription';
+import {
+  ConversationEventSubscriptionResult,
+  ConversationEventType,
+} from './dto/subscription';
 import { ConversationEventSubscriptionPayload } from '@services/subscriptions/subscription-service/dto';
 import { InstrumentResolver } from '@src/apm/decorators';
 
@@ -52,11 +55,29 @@ export class ConversationEventResolverSubscription {
         return isMember;
       },
       resolve(payload) {
+        // Determine event type based on which payload field is populated
+        let eventType: ConversationEventType;
+        if (payload.conversationCreated) {
+          eventType = ConversationEventType.CONVERSATION_CREATED;
+        } else if (payload.messageReceived) {
+          eventType = ConversationEventType.MESSAGE_RECEIVED;
+        } else if (payload.messageRemoved) {
+          eventType = ConversationEventType.MESSAGE_REMOVED;
+        } else {
+          eventType = ConversationEventType.READ_RECEIPT_UPDATED;
+        }
+
         return {
+          eventType,
           conversationCreated: payload.conversationCreated,
           messageReceived: payload.messageReceived,
           messageRemoved: payload.messageRemoved,
-          readReceiptUpdated: payload.readReceiptUpdated,
+          readReceiptUpdated: payload.readReceiptUpdated
+            ? {
+                roomId: payload.readReceiptUpdated.roomId,
+                lastReadEventId: payload.readReceiptUpdated.lastReadMessageId,
+              }
+            : undefined,
         };
       },
     }

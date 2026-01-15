@@ -293,6 +293,14 @@ enum ContentUpdatePolicy {
   OWNER
 }
 
+"""The type of conversation event."""
+enum ConversationEventType {
+  CONVERSATION_CREATED
+  MESSAGE_RECEIVED
+  MESSAGE_REMOVED
+  READ_RECEIPT_UPDATED
+}
+
 enum CredentialType {
   ACCOUNT_ADMIN
   ACCOUNT_LICENSE_PLUS
@@ -1999,14 +2007,18 @@ type ConversationCreatedEvent {
 
 """Payload for conversation subscription events."""
 type ConversationEventSubscriptionResult {
-  """Present when a new conversation is created (first message sent)."""
+  """Present when eventType is CONVERSATION_CREATED."""
   conversationCreated: ConversationCreatedEvent
-  """Present when a new message is received in an existing conversation."""
-  messageReceived: MessageReceivedEvent
-  """Present when a message is removed from a conversation."""
-  messageRemoved: MessageRemovedEvent
-  """Present when a read receipt is updated."""
-  readReceiptUpdated: ReadReceiptUpdatedEvent
+  """
+  The type of event. Use this to determine which payload field is populated.
+  """
+  eventType: ConversationEventType!
+  """Present when eventType is MESSAGE_RECEIVED."""
+  messageReceived: ConversationMessageReceivedEvent
+  """Present when eventType is MESSAGE_REMOVED."""
+  messageRemoved: ConversationMessageRemovedEvent
+  """Present when eventType is READ_RECEIPT_UPDATED."""
+  readReceiptUpdated: ConversationReadReceiptUpdatedEvent
 }
 
 """A membership record for a conversation participant."""
@@ -2015,6 +2027,30 @@ type ConversationMembership {
   agentId: UUID!
   """When this member joined the conversation."""
   createdAt: DateTime!
+}
+
+"""Event fired when a new message is received in a conversation."""
+type ConversationMessageReceivedEvent {
+  """The message that was received."""
+  message: Message!
+  """The room ID where the message was received."""
+  roomId: UUID!
+}
+
+"""Event fired when a message is removed from a conversation."""
+type ConversationMessageRemovedEvent {
+  """The ID of the message that was removed."""
+  messageId: MessageID!
+  """The room ID where the message was removed."""
+  roomId: UUID!
+}
+
+"""Event fired when a read receipt is updated in a conversation."""
+type ConversationReadReceiptUpdatedEvent {
+  """The ID of the last read event (message)."""
+  lastReadEventId: MessageID!
+  """The room ID where the read receipt was updated."""
+  roomId: UUID!
 }
 
 type CreateCalloutContributionData {
@@ -3283,22 +3319,6 @@ type MessageParent {
   url: String!
 }
 
-"""Event fired when a new message is received in a conversation."""
-type MessageReceivedEvent {
-  """The message that was received."""
-  message: Message!
-  """The room ID where the message was received."""
-  roomId: UUID!
-}
-
-"""Event fired when a message is removed from a conversation."""
-type MessageRemovedEvent {
-  """The ID of the message that was removed."""
-  messageId: MessageID!
-  """The room ID where the message was removed."""
-  roomId: UUID!
-}
-
 type Messaging {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -4516,14 +4536,6 @@ type Reaction {
   timestamp: Float!
 }
 
-"""Event fired when a read receipt is updated in a conversation."""
-type ReadReceiptUpdatedEvent {
-  """The ID of the last message that was read."""
-  lastReadMessageId: MessageID!
-  """The room ID where the read receipt was updated."""
-  roomId: UUID!
-}
-
 type Reference {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -4850,7 +4862,7 @@ type Room {
     """
     Optional thread IDs to get per-thread unread counts. If not provided, only room-level count is returned.
     """
-    threadIds: [String!]
+    threadIds: [MessageID!]
   ): RoomUnreadCounts!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
@@ -4893,7 +4905,7 @@ type RoomThreadUnreadCount {
   """The number of unread messages in the thread."""
   count: Int!
   """The thread ID."""
-  threadId: String!
+  threadId: MessageID!
 }
 
 """Unread message counts for a Room."""

@@ -1,6 +1,22 @@
-import { Field, ObjectType } from '@nestjs/graphql';
+import { Field, ObjectType, registerEnumType } from '@nestjs/graphql';
 import { UUID, MessageID } from '@domain/common/scalars';
 import { IMessage } from '@domain/communication/message/message.interface';
+
+/**
+ * Discriminator enum for conversation events.
+ * Enables easier client-side consumption without branching on nullable fields.
+ */
+export enum ConversationEventType {
+  CONVERSATION_CREATED = 'CONVERSATION_CREATED',
+  MESSAGE_RECEIVED = 'MESSAGE_RECEIVED',
+  MESSAGE_REMOVED = 'MESSAGE_REMOVED',
+  READ_RECEIPT_UPDATED = 'READ_RECEIPT_UPDATED',
+}
+
+registerEnumType(ConversationEventType, {
+  name: 'ConversationEventType',
+  description: 'The type of conversation event.',
+});
 
 @ObjectType('ConversationMembership', {
   description: 'A membership record for a conversation participant.',
@@ -44,7 +60,7 @@ export class ConversationCreatedEvent {
   message!: IMessage;
 }
 
-@ObjectType('MessageReceivedEvent', {
+@ObjectType('ConversationMessageReceivedEvent', {
   description: 'Event fired when a new message is received in a conversation.',
 })
 export class ConversationMessageReceivedEvent {
@@ -57,7 +73,7 @@ export class ConversationMessageReceivedEvent {
   message!: IMessage;
 }
 
-@ObjectType('MessageRemovedEvent', {
+@ObjectType('ConversationMessageRemovedEvent', {
   description: 'Event fired when a message is removed from a conversation.',
 })
 export class ConversationMessageRemovedEvent {
@@ -72,48 +88,52 @@ export class ConversationMessageRemovedEvent {
   messageId!: string;
 }
 
-@ObjectType('ReadReceiptUpdatedEvent', {
+@ObjectType('ConversationReadReceiptUpdatedEvent', {
   description: 'Event fired when a read receipt is updated in a conversation.',
 })
-export class ReadReceiptUpdatedEvent {
+export class ConversationReadReceiptUpdatedEvent {
   @Field(() => UUID, {
     description: 'The room ID where the read receipt was updated.',
   })
   roomId!: string;
 
   @Field(() => MessageID, {
-    description: 'The ID of the last message that was read.',
+    description: 'The ID of the last read event (message).',
   })
-  lastReadMessageId!: string;
+  lastReadEventId!: string;
 }
 
 @ObjectType('ConversationEventSubscriptionResult', {
   description: 'Payload for conversation subscription events.',
 })
 export class ConversationEventSubscriptionResult {
+  @Field(() => ConversationEventType, {
+    description:
+      'The type of event. Use this to determine which payload field is populated.',
+  })
+  eventType!: ConversationEventType;
+
   @Field(() => ConversationCreatedEvent, {
     nullable: true,
-    description:
-      'Present when a new conversation is created (first message sent).',
+    description: 'Present when eventType is CONVERSATION_CREATED.',
   })
   conversationCreated?: ConversationCreatedEvent;
 
   @Field(() => ConversationMessageReceivedEvent, {
     nullable: true,
-    description:
-      'Present when a new message is received in an existing conversation.',
+    description: 'Present when eventType is MESSAGE_RECEIVED.',
   })
   messageReceived?: ConversationMessageReceivedEvent;
 
   @Field(() => ConversationMessageRemovedEvent, {
     nullable: true,
-    description: 'Present when a message is removed from a conversation.',
+    description: 'Present when eventType is MESSAGE_REMOVED.',
   })
   messageRemoved?: ConversationMessageRemovedEvent;
 
-  @Field(() => ReadReceiptUpdatedEvent, {
+  @Field(() => ConversationReadReceiptUpdatedEvent, {
     nullable: true,
-    description: 'Present when a read receipt is updated.',
+    description: 'Present when eventType is READ_RECEIPT_UPDATED.',
   })
-  readReceiptUpdated?: ReadReceiptUpdatedEvent;
+  readReceiptUpdated?: ConversationReadReceiptUpdatedEvent;
 }
