@@ -117,6 +117,27 @@ export class RoomLookupService {
     return await this.roomRepository.save(room as Room);
   }
 
+  /**
+   * Atomically increment the messages count for a room.
+   * Uses database-level increment to avoid race conditions.
+   */
+  async incrementMessagesCount(roomId: string): Promise<void> {
+    await this.roomRepository.increment({ id: roomId }, 'messagesCount', 1);
+  }
+
+  /**
+   * Atomically decrement the messages count for a room.
+   * Uses raw query to ensure count doesn't go below 0.
+   */
+  async decrementMessagesCount(roomId: string): Promise<void> {
+    await this.roomRepository
+      .createQueryBuilder()
+      .update()
+      .set({ messagesCount: () => 'GREATEST(messagesCount - 1, 0)' })
+      .where('id = :id', { id: roomId })
+      .execute();
+  }
+
   async sendMessage(
     room: IRoom,
     actorId: string,

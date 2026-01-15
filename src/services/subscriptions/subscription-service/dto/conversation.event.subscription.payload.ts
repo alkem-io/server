@@ -5,7 +5,6 @@ import { IConversationMembership } from '@domain/communication/conversation-memb
 export interface ConversationEventSubscriptionPayload
   extends BaseSubscriptionPayload {
   memberAgentIds: string[];
-  senderAgentId: string;
   conversationCreated?: {
     id: string;
     roomId: string;
@@ -15,6 +14,10 @@ export interface ConversationEventSubscriptionPayload
   messageReceived?: {
     roomId: string;
     message: IMessage;
+  };
+  messageRemoved?: {
+    roomId: string;
+    messageId: string;
   };
   readReceiptUpdated?: {
     roomId: string;

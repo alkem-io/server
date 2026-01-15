@@ -55,6 +55,7 @@ export class ConversationEventResolverSubscription {
         return {
           conversationCreated: payload.conversationCreated,
           messageReceived: payload.messageReceived,
+          messageRemoved: payload.messageRemoved,
           readReceiptUpdated: payload.readReceiptUpdated,
         };
       },

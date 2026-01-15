@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -64,9 +65,11 @@ export class MessageInboxService {
 
     const room = await this.roomLookupService.getRoomOrFail(payload.roomId);
 
-    // Update message count
-    room.messagesCount = (room.messagesCount ?? 0) + 1;
-    await this.roomLookupService.save(room);
+    // Check if this will be the first message (before incrementing)
+    const isFirstMessage = (room.messagesCount ?? 0) === 0;
+
+    // Atomically increment message count to avoid race conditions
+    await this.roomLookupService.incrementMessagesCount(room.id);
 
     // Build message object
     const message: IMessage = {
@@ -90,7 +93,7 @@ export class MessageInboxService {
       room.type === RoomType.CONVERSATION ||
       room.type === RoomType.CONVERSATION_DIRECT
     ) {
-      await this.publishConversationEvent(room, message, payload.actorID);
+      await this.publishConversationEvent(room, message, isFirstMessage);
     }
 
     // Process notifications (skip for conversation rooms)
@@ -119,7 +122,7 @@ export class MessageInboxService {
    */
   private async processVcInvocation(
     payload: MessageReceivedEvent['payload'],
-    room: any
+    room: IRoom
   ): Promise<void> {
     // Direct conversations have special handling
     if (room.type === RoomType.CONVERSATION_DIRECT) {
@@ -194,11 +197,8 @@ export class MessageInboxService {
 
     const room = await this.roomLookupService.getRoomOrFail(payload.roomId);
 
-    // Update message count
-    if (room.messagesCount > 0) {
-      room.messagesCount = room.messagesCount - 1;
-      await this.roomLookupService.save(room);
-    }
+    // Atomically decrement message count (safe: won't go below 0)
+    await this.roomLookupService.decrementMessagesCount(room.id);
 
     // Delete in-app notifications
     await this.inAppNotificationService.deleteAllByMessageId(
@@ -214,7 +214,7 @@ export class MessageInboxService {
       agentInfo
     );
 
-    // Publish subscription
+    // Publish room subscription
     this.subscriptionPublishService.publishRoomEvent(
       room,
       MutationType.DELETE,
@@ -226,6 +226,17 @@ export class MessageInboxService {
         reactions: [],
       }
     );
+
+    // Publish conversation event for direct messaging rooms
+    if (
+      room.type === RoomType.CONVERSATION ||
+      room.type === RoomType.CONVERSATION_DIRECT
+    ) {
+      await this.publishMessageRemovedConversationEvent(
+        room,
+        payload.redactedMessageId
+      );
+    }
   }
 
   // ============================================================
@@ -367,12 +378,12 @@ export class MessageInboxService {
 
   /**
    * Publish a conversation event when a message is received.
-   * Determines whether to emit CONVERSATION_CREATED (first message) or MESSAGE_RECEIVED.
+   * Emits CONVERSATION_CREATED for first message or MESSAGE_RECEIVED for subsequent messages.
    */
   private async publishConversationEvent(
     room: IRoom,
     message: IMessage,
-    senderAgentId: string
+    isFirstMessage: boolean
   ): Promise<void> {
     const conversation =
       await this.conversationService.findConversationByRoomId(room.id);
@@ -390,9 +401,6 @@ export class MessageInboxService {
         conversation.id
       );
 
-    // Check if this is the first message (messagesCount was already incremented to 1)
-    const isFirstMessage = room.messagesCount === 1;
-
     if (isFirstMessage) {
       // Get memberships for the event payload
       const memberships = await this.conversationService.getConversationMembers(
@@ -400,9 +408,8 @@ export class MessageInboxService {
       );
 
       this.subscriptionPublishService.publishConversationEvent({
-        eventID: `conversation-event-${Math.round(Math.random() * 1000)}`,
+        eventID: `conversation-event-${randomUUID()}`,
         memberAgentIds,
-        senderAgentId,
         conversationCreated: {
           id: conversation.id,
           roomId: room.id,
@@ -412,15 +419,48 @@ export class MessageInboxService {
       });
     } else {
       this.subscriptionPublishService.publishConversationEvent({
-        eventID: `conversation-event-${Math.round(Math.random() * 1000)}`,
+        eventID: `conversation-event-${randomUUID()}`,
         memberAgentIds,
-        senderAgentId,
         messageReceived: {
           roomId: room.id,
           message,
         },
       });
     }
+  }
+
+  /**
+   * Publish a message removed conversation event.
+   * Notifies all conversation members that a message was deleted.
+   */
+  private async publishMessageRemovedConversationEvent(
+    room: IRoom,
+    messageId: string
+  ): Promise<void> {
+    const conversation =
+      await this.conversationService.findConversationByRoomId(room.id);
+
+    if (!conversation) {
+      this.logger.warn(
+        `Could not find conversation for room ${room.id} - skipping message removed event`,
+        LogContext.COMMUNICATION
+      );
+      return;
+    }
+
+    const memberAgentIds =
+      await this.conversationService.getConversationMemberAgentIds(
+        conversation.id
+      );
+
+    this.subscriptionPublishService.publishConversationEvent({
+      eventID: `conversation-event-${randomUUID()}`,
+      memberAgentIds,
+      messageRemoved: {
+        roomId: room.id,
+        messageId,
+      },
+    });
   }
 
   /**
@@ -432,9 +472,8 @@ export class MessageInboxService {
     payload: RoomReceiptUpdatedEvent['payload']
   ): Promise<void> {
     this.subscriptionPublishService.publishConversationEvent({
-      eventID: `conversation-event-${Math.round(Math.random() * 1000)}`,
+      eventID: `conversation-event-${randomUUID()}`,
       memberAgentIds: [payload.actorId], // Only the reader receives this event
-      senderAgentId: payload.actorId,
       readReceiptUpdated: {
         roomId: room.id,
         lastReadMessageId: payload.eventId,

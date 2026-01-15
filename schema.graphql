@@ -2003,6 +2003,8 @@ type ConversationEventSubscriptionResult {
   conversationCreated: ConversationCreatedEvent
   """Present when a new message is received in an existing conversation."""
   messageReceived: MessageReceivedEvent
+  """Present when a message is removed from a conversation."""
+  messageRemoved: MessageRemovedEvent
   """Present when a read receipt is updated."""
   readReceiptUpdated: ReadReceiptUpdatedEvent
 }
@@ -3286,6 +3288,14 @@ type MessageReceivedEvent {
   """The message that was received."""
   message: Message!
   """The room ID where the message was received."""
+  roomId: UUID!
+}
+
+"""Event fired when a message is removed from a conversation."""
+type MessageRemovedEvent {
+  """The ID of the message that was removed."""
+  messageId: MessageID!
+  """The room ID where the message was removed."""
   roomId: UUID!
 }
 

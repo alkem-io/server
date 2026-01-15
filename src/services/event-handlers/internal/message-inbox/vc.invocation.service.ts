@@ -1,6 +1,10 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InjectEntityManager } from '@nestjs/typeorm';
+import { EntityManager, In } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums';
+import { AgentType } from '@common/enums/agent.type';
+import { Agent } from '@domain/agent/agent/agent.entity';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { VirtualContributorMessageService } from '@domain/communication/virtual.contributor.message/virtual.contributor.message.service';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
@@ -28,10 +32,11 @@ export interface MessagePayload {
 
 /**
  * VC interaction data stored per thread.
+ * Note: threadID is the map key in room.vcInteractionsByThread, not stored in this data.
  */
 export interface VcInteractionData {
   virtualContributorActorID: string;
-  threadID: string;
+  externalThreadId?: string; // AI service thread ID
 }
 
 /**
@@ -50,6 +55,8 @@ export class VcInvocationService {
     private readonly communicationAdapter: CommunicationAdapter,
     private readonly agentInfoService: AgentInfoService,
     private readonly messageNotificationService: MessageNotificationService,
+    @InjectEntityManager()
+    private readonly entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -83,17 +90,15 @@ export class VcInvocationService {
       return;
     }
 
-    // Find all VCs among other members
-    const vcMembers: string[] = [];
-    for (const actorID of otherMembers) {
-      const vc =
-        await this.virtualContributorLookupService.getVirtualContributorByAgentId(
-          actorID
-        );
-      if (vc) {
-        vcMembers.push(actorID);
-      }
-    }
+    // Find all VCs among other members (single query)
+    const vcAgents = await this.entityManager.find(Agent, {
+      where: {
+        id: In(otherMembers),
+        type: AgentType.VIRTUAL_CONTRIBUTOR,
+      },
+      select: ['id'],
+    });
+    const vcMembers = vcAgents.map(a => a.id);
 
     if (vcMembers.length === 0) {
       this.logger.verbose?.(

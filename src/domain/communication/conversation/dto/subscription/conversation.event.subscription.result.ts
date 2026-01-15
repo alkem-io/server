@@ -47,7 +47,7 @@ export class ConversationCreatedEvent {
 @ObjectType('MessageReceivedEvent', {
   description: 'Event fired when a new message is received in a conversation.',
 })
-export class MessageReceivedEvent {
+export class ConversationMessageReceivedEvent {
   @Field(() => UUID, {
     description: 'The room ID where the message was received.',
   })
@@ -55,6 +55,21 @@ export class MessageReceivedEvent {
 
   @Field(() => IMessage, { description: 'The message that was received.' })
   message!: IMessage;
+}
+
+@ObjectType('MessageRemovedEvent', {
+  description: 'Event fired when a message is removed from a conversation.',
+})
+export class ConversationMessageRemovedEvent {
+  @Field(() => UUID, {
+    description: 'The room ID where the message was removed.',
+  })
+  roomId!: string;
+
+  @Field(() => MessageID, {
+    description: 'The ID of the message that was removed.',
+  })
+  messageId!: string;
 }
 
 @ObjectType('ReadReceiptUpdatedEvent', {
@@ -83,12 +98,18 @@ export class ConversationEventSubscriptionResult {
   })
   conversationCreated?: ConversationCreatedEvent;
 
-  @Field(() => MessageReceivedEvent, {
+  @Field(() => ConversationMessageReceivedEvent, {
     nullable: true,
     description:
       'Present when a new message is received in an existing conversation.',
   })
-  messageReceived?: MessageReceivedEvent;
+  messageReceived?: ConversationMessageReceivedEvent;
+
+  @Field(() => ConversationMessageRemovedEvent, {
+    nullable: true,
+    description: 'Present when a message is removed from a conversation.',
+  })
+  messageRemoved?: ConversationMessageRemovedEvent;
 
   @Field(() => ReadReceiptUpdatedEvent, {
     nullable: true,
