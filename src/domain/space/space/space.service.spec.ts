@@ -515,6 +515,7 @@ const getSubspacesMock = (
       nameID: `challenge-${spaceId}.${i}`,
       settings: spaceSettings,
       levelZeroSpaceID: spaceId,
+      sortOrder: i,
       platformRolesAccess: {
         roles: [],
       },
@@ -639,6 +640,7 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
       nameID: `subsubspace-${subsubspaceId}.${i}`,
       settings: spaceSettings,
       levelZeroSpaceID: subsubspaceId,
+      sortOrder: i,
       platformRolesAccess: {
         roles: [],
       },
@@ -769,6 +771,7 @@ const getSpaceMock = ({
     nameID: `space-${id}`,
     settings: settings,
     levelZeroSpaceID: '',
+    sortOrder: 0,
     platformRolesAccess: {
       roles: [],
     },

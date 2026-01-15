@@ -1,3 +1,4 @@
+import { keyBy } from 'lodash';
 import { LogContext } from '@common/enums';
 import {
   EntityNotFoundException,
@@ -17,6 +18,7 @@ import { Space } from './space.entity';
 import { ISpace } from './space.interface';
 import { UpdateSpaceInput } from './dto/space.dto.update';
 import { CreateSubspaceInput } from './dto/space.dto.create.subspace';
+import { UpdateSubspacesSortOrderInput } from './dto/space.dto.update.subspaces.sort.order';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { SpacesQueryArgs } from './dto/space.args.query.spaces';
@@ -134,6 +136,7 @@ export class SpaceService {
     const space: ISpace = Space.create(spaceData);
     // default to demo space
     space.visibility = SpaceVisibility.ACTIVE;
+    space.sortOrder = 0;
 
     space.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.SPACE
@@ -970,14 +973,69 @@ export class SpaceService {
       args?.shuffle
     );
 
-    // Sort the subspaces base on their display name
-    const sortedSubspaces = limitAndShuffled.sort((a, b) =>
-      a.about.profile.displayName.toLowerCase() >
-      b.about.profile.displayName.toLowerCase()
-        ? 1
-        : -1
-    );
+    // Sort the subspaces based on sortOrder, with displayName as tiebreaker
+    const sortedSubspaces = limitAndShuffled.sort((a, b) => {
+      if (a.sortOrder !== b.sortOrder) {
+        return a.sortOrder - b.sortOrder;
+      }
+      return a.about.profile.displayName
+        .toLowerCase()
+        .localeCompare(b.about.profile.displayName.toLowerCase());
+    });
     return sortedSubspaces;
+  }
+
+  public async updateSubspacesSortOrder(
+    space: ISpace,
+    sortOrderData: UpdateSubspacesSortOrderInput
+  ): Promise<ISpace[]> {
+    const spaceLoaded = await this.getSpaceOrFail(space.id, {
+      relations: { subspaces: true },
+    });
+
+    const allSubspaces = spaceLoaded.subspaces;
+    if (!allSubspaces) {
+      throw new EntityNotFoundException(
+        'Space not initialized, no subspaces',
+        LogContext.SPACES,
+        { spaceId: space.id }
+      );
+    }
+
+    const subspacesByID = keyBy(allSubspaces, 'id');
+
+    const sortOrders = sortOrderData.subspaceIDs
+      .map(subspaceId => subspacesByID[subspaceId]?.sortOrder)
+      .filter(sortOrder => sortOrder !== undefined);
+
+    const minimumSortOrder = sortOrders.length > 0 ? Math.min(...sortOrders) : 0;
+    const modifiedSubspaces: ISpace[] = [];
+
+    const subspacesInOrder: ISpace[] = [];
+    let index = 1;
+    for (const subspaceID of sortOrderData.subspaceIDs) {
+      const subspace = subspacesByID[subspaceID];
+      if (!subspace) {
+        throw new EntityNotFoundException(
+          'Subspace not found within parent Space',
+          LogContext.SPACES,
+          { subspaceId: subspaceID, parentSpaceId: space.id }
+        );
+      }
+      subspacesInOrder.push(subspace);
+      const newSortOrder = minimumSortOrder + index;
+      if (subspace.sortOrder !== newSortOrder) {
+        subspace.sortOrder = newSortOrder;
+        modifiedSubspaces.push(subspace);
+      }
+      index++;
+    }
+
+    await Promise.all(
+      modifiedSubspaces.map(async subspace => await this.save(subspace))
+    );
+
+    return subspacesInOrder;
   }
 
   async getSubscriptions(spaceInput: ISpace): Promise<ISpaceSubscription[]> {
@@ -1056,6 +1114,7 @@ export class SpaceService {
           roleSet: true,
         },
         parentSpace: true,
+        subspaces: true,
       },
     });
 
@@ -1130,6 +1189,14 @@ export class SpaceService {
       agentInfo,
       space.platformRolesAccess
     );
+
+    // Calculate sortOrder for new subspace (appears first = lowest sortOrder)
+    if (space.subspaces && space.subspaces.length > 0) {
+      subspace.sortOrder =
+        Math.min(...space.subspaces.map(s => s.sortOrder), 0) - 1;
+    } else {
+      subspace.sortOrder = 0;
+    }
 
     subspace = await this.addSubspaceToSpace(space, subspace);
     subspace = await this.save(subspace);

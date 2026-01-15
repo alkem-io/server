@@ -61,6 +61,12 @@ export class ISpace extends IAuthorizable {
   })
   levelZeroSpaceID!: string;
 
+  @Field(() => Number, {
+    nullable: false,
+    description: 'The sorting order for this Space within its parent.',
+  })
+  sortOrder!: number;
+
   templatesManager?: ITemplatesManager;
   license?: ILicense;
 }
