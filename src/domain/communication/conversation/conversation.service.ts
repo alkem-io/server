@@ -222,8 +222,7 @@ export class ConversationService {
   public async getCommentsCount(conversationID: string): Promise<number> {
     const room = await this.getRoom(conversationID);
     if (!room) return 0;
-    const messages = await this.roomService.getMessages(room);
-    return messages.length;
+    return room.messagesCount;
   }
 
   /**

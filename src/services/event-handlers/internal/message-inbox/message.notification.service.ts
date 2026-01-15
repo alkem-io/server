@@ -10,7 +10,10 @@ import { CommunicationAdapter } from '@services/adapters/communication-adapter/c
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { IMessage } from '@domain/communication/message/message.interface';
-import { Mention } from '@domain/communication/messaging/mention.interface';
+import {
+  Mention,
+  MentionedEntityType,
+} from '@domain/communication/messaging/mention.interface';
 
 /**
  * Service responsible for processing notifications and activity events
@@ -59,7 +62,7 @@ export class MessageNotificationService {
 
     // Extract user IDs from mentions to avoid double notifications
     const mentionedUserIDs = mentions
-      .filter(m => m.contributorType === 'user')
+      .filter(m => m.contributorType === MentionedEntityType.USER)
       .map(m => m.contributorID);
 
     // Process room-type-specific notifications and activities
@@ -127,7 +130,7 @@ export class MessageNotificationService {
           mentionedUserIDs
         );
 
-        this.roomServiceEvents.processActivityPostComment(
+        await this.roomServiceEvents.processActivityPostComment(
           post,
           room,
           message,

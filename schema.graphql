@@ -3240,7 +3240,7 @@ type Message {
   """The User or Virtual Contributor that created this Message"""
   sender: Contributor
   """The message being replied to"""
-  threadID: String
+  threadID: MessageID
   """The server timestamp in UTC"""
   timestamp: Float!
 }
@@ -5782,7 +5782,7 @@ type UsersInRolesResponse {
 
 type VcInteraction {
   """The thread ID (Matrix message ID) where VC is engaged"""
-  threadID: String!
+  threadID: MessageID!
   """The actor ID (agent.id) of the Virtual Contributor"""
   virtualContributorID: String!
 }

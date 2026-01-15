@@ -34,7 +34,7 @@ export class IMessage {
   })
   reactions!: IMessageReaction[];
 
-  @Field(() => String, {
+  @Field(() => MessageID, {
     nullable: true,
     description: 'The message being replied to',
   })

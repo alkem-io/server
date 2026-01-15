@@ -32,6 +32,15 @@ export class ConversationEventResolverSubscription {
       ) {
         const agentInfo = context.req?.user;
 
+        // Guard against missing user context
+        if (!agentInfo) {
+          this.logger.verbose?.(
+            `[Conversation Events] Filtering event ${payload.eventID}: no user context, rejecting`,
+            LogContext.SUBSCRIPTIONS
+          );
+          return false;
+        }
+
         // User must be a member of the conversation
         const isMember = payload.memberAgentIds.includes(agentInfo.agentID);
 
