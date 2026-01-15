@@ -164,7 +164,7 @@ export class InnovationFlowStateService {
   ): Promise<IInnovationFlowState> {
     const flowState = await this.getInnovationFlowStateOrFail(flowStateID);
 
-    (flowState as InnovationFlowState).defaultCalloutTemplate = undefined;
+    (flowState as InnovationFlowState).defaultCalloutTemplate = null;
     await this.innovationFlowStateRepository.save(
       flowState as InnovationFlowState
     );

@@ -36,5 +36,5 @@ export class InnovationFlowState
     nullable: true,
   })
   @JoinColumn({ name: 'defaultCalloutTemplateId' })
-  defaultCalloutTemplate?: Template;
+  defaultCalloutTemplate?: Template | null;
 }
