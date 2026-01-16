@@ -3025,6 +3025,10 @@ type InnovationFlowState {
   authorization: Authorization
   """The date at which the entity was created."""
   createdDate: DateTime!
+  """
+  Default callout template applied to this flow state (nullable, optional).
+  """
+  defaultCalloutTemplate: Template
   """The explanation text to clarify the state."""
   description: Markdown
   """The display name for the State"""
@@ -4123,6 +4127,8 @@ type Mutation {
   refreshVirtualContributorBodyOfKnowledge(refreshData: RefreshVirtualContributorBodyOfKnowledgeInput!): Boolean!
   """Empties the CommunityGuidelines."""
   removeCommunityGuidelinesContent(communityGuidelinesData: RemoveCommunityGuidelinesContentInput!): CommunityGuidelines!
+  """Remove the default callout template from an InnovationFlowState."""
+  removeDefaultCalloutTemplateOnInnovationFlowState(removeData: RemoveDefaultCalloutTemplateOnInnovationFlowStateInput!): InnovationFlowState!
   """Removes an Iframe Allowed URL from the Platform Settings"""
   removeIframeAllowedURL(whitelistedURL: String!): [String!]!
   """Removes a message."""
@@ -4163,6 +4169,8 @@ type Mutation {
   sendMessageToRoom(messageData: RoomSendMessageInput!): Message!
   """Send message to multiple Users."""
   sendMessageToUsers(messageData: CommunicationSendMessageToUsersInput!): Boolean!
+  """Set the default callout template for an InnovationFlowState."""
+  setDefaultCalloutTemplateOnInnovationFlowState(setData: SetDefaultCalloutTemplateOnInnovationFlowStateInput!): InnovationFlowState!
   """
   Set the mapping of a well-known Virtual Contributor to a specific Virtual Contributor UUID.
   """
@@ -5376,6 +5384,10 @@ input RemoveCommunityGuidelinesContentInput {
   communityGuidelinesID: UUID!
 }
 
+input RemoveDefaultCalloutTemplateOnInnovationFlowStateInput {
+  flowStateID: UUID!
+}
+
 input RemovePlatformRoleInput {
   contributorID: UUID!
   role: RoleName!
@@ -5971,6 +5983,11 @@ type ServiceMetadata {
   name: String
   """Version in the format {major.minor.patch} - using SemVer."""
   version: String
+}
+
+input SetDefaultCalloutTemplateOnInnovationFlowStateInput {
+  flowStateID: UUID!
+  templateID: UUID!
 }
 
 input SetPlatformWellKnownVirtualContributorInput {
