@@ -16,8 +16,8 @@ export class IMessageReaction {
   })
   emoji!: string;
 
+  // Agent ID of the sender - resolved to User by field resolver
   sender!: string;
-  senderType!: 'user' | 'virtualContributor';
 
   @Field(() => Number, {
     nullable: false,
