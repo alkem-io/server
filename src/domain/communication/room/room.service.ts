@@ -13,11 +13,13 @@ import { IMessageReaction } from '../message.reaction/message.reaction.interface
 import { RoomAddReactionToMessageInput } from './dto/room.dto.add.reaction.to.message';
 import { RoomRemoveReactionToMessageInput } from './dto/room.dto.remove.message.reaction';
 import { RoomRemoveMessageInput } from './dto/room.dto.remove.message';
+import { RoomMarkMessageReadInput } from './dto/room.dto.mark.message.read';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { RoomLookupService } from '../room-lookup/room.lookup.service';
 import { CreateRoomInput } from './dto/room.dto.create';
 import { DeleteRoomInput } from './dto/room.dto.delete';
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
+import { RoomUnreadCounts } from './dto/room.dto.unread.counts';
 
 @Injectable()
 export class RoomService {
@@ -90,18 +92,7 @@ export class RoomService {
   }
 
   async getMessages(room: IRoom): Promise<IMessage[]> {
-    const messages = await this.roomLookupService.getMessages(room);
-
-    const messagesCount = messages.length;
-    if (messagesCount != room.messagesCount) {
-      this.logger.warn(
-        `Room (${room.id}) had a comment count of ${room.messagesCount} that is not synced with the messages count of ${messagesCount}`,
-        LogContext.COMMUNICATION
-      );
-      room.messagesCount = messagesCount;
-      await this.save(room);
-    }
-    return messages;
+    return this.roomLookupService.getMessages(room);
   }
 
   /**
@@ -144,8 +135,7 @@ export class RoomService {
       messageId: messageData.messageID,
       roomID: room.id,
     });
-    room.messagesCount = room.messagesCount - 1;
-    await this.save(room);
+
     return messageData.messageID;
   }
 
@@ -283,5 +273,78 @@ export class RoomService {
       await this.contributorLookupService.getUserIdByAgentId(senderActorId);
 
     return userId ?? '';
+  }
+
+  /**
+   * Mark a message as read for a specific user.
+   * Updates read receipts in Matrix.
+   */
+  async markMessageAsRead(
+    room: IRoom,
+    agentId: string,
+    messageData: RoomMarkMessageReadInput
+  ): Promise<boolean> {
+    await this.communicationAdapter.markMessageRead(
+      agentId,
+      room.id,
+      messageData.messageID,
+      messageData.threadID
+    );
+
+    return true;
+  }
+
+  /**
+   * Get the last message from a room.
+   * Useful for displaying conversation previews without fetching all messages.
+   */
+  async getLastMessage(room: IRoom): Promise<IMessage | null> {
+    return this.communicationAdapter.getLastMessage(room.id);
+  }
+
+  /**
+   * Get unread message counts for a room.
+   * Returns room-level unread count and optionally per-thread unread counts.
+   *
+   * @param room - The room to get unread counts for
+   * @param agentId - The agent ID of the requesting user
+   * @param threadIds - Optional thread IDs to get per-thread unread counts.
+   *   - undefined: only room-level count returned, threadUnreadCounts is null
+   *   - empty array or array with IDs: threadUnreadCounts is an array (possibly empty)
+   */
+  async getUnreadCounts(
+    room: IRoom,
+    agentId: string,
+    threadIds?: string[]
+  ): Promise<RoomUnreadCounts> {
+    const result = await this.communicationAdapter.getUnreadCounts(
+      agentId,
+      room.id,
+      threadIds
+    );
+
+    // Determine threadUnreadCounts based on whether threadIds was provided:
+    // - undefined (not provided): return undefined (null in GraphQL) - not requested
+    // - provided (including empty array): return array (possibly empty) - requested but no matches
+    let threadUnreadCounts:
+      | Array<{ threadId: string; count: number }>
+      | undefined;
+    if (threadIds !== undefined) {
+      // threadIds was provided - convert result to array (empty if no matches)
+      threadUnreadCounts = result.threadUnreadCounts
+        ? Object.entries(result.threadUnreadCounts).map(
+            ([threadId, count]) => ({
+              threadId,
+              count,
+            })
+          )
+        : [];
+    }
+    // else: threadIds was undefined, leave threadUnreadCounts as undefined (null in GraphQL)
+
+    return {
+      roomUnreadCount: result.roomUnreadCount,
+      threadUnreadCounts,
+    };
   }
 }

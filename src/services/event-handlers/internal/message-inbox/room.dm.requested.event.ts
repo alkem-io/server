@@ -1,15 +1,14 @@
 /**
- * Internal domain event published when a reaction is removed via Matrix Adapter.
+ * Internal domain event published when a DM (direct message) is requested via Matrix Adapter.
  *
  * Published by CommunicationAdapterEventService (boundary)
  * and consumed by MessageInboxService (domain orchestration).
  */
-export class ReactionRemovedEvent {
+export class RoomDmRequestedEvent {
   constructor(
     public readonly payload: {
-      roomId: string;
-      messageId: string;
-      reactionId: string;
+      initiatorActorId: string;
+      targetActorId: string;
       timestamp: number;
     }
   ) {}

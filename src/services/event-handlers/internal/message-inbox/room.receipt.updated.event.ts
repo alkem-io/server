@@ -1,17 +1,16 @@
 /**
- * Internal domain event published when a reaction is added via Matrix Adapter.
+ * Internal domain event published when a read receipt is updated via Matrix Adapter.
  *
  * Published by CommunicationAdapterEventService (boundary)
  * and consumed by MessageInboxService (domain orchestration).
  */
-export class ReactionAddedEvent {
+export class RoomReceiptUpdatedEvent {
   constructor(
     public readonly payload: {
       roomId: string;
-      messageId: string;
-      reactionId: string;
-      emoji: string;
-      actorID: string;
+      actorId: string;
+      eventId: string;
+      threadId?: string;
       timestamp: number;
     }
   ) {}
