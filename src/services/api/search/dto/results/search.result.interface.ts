@@ -9,6 +9,8 @@ import { ISearchResultUser } from './search.result.user';
 import { ISearchResultOrganization } from './search.result.organization';
 import { ISearchResultPost } from './search.result.post';
 import { ISearchResultCallout } from './search.result.callout';
+import { ISearchResultMemo } from './search.result.memo';
+import { ISearchResultWhiteboard } from './search.result.whiteboard';
 import { BaseSearchHit } from '@services/api/search/dto/results/base.search.hit';
 
 @InterfaceType('SearchResult', {
@@ -22,12 +24,14 @@ import { BaseSearchHit } from '@services/api/search/dto/results/base.search.hit'
         return ISearchResultUser;
       case SearchResultType.ORGANIZATION:
         return ISearchResultOrganization;
-      case SearchResultType.POST:
-        return ISearchResultPost;
       case SearchResultType.CALLOUT:
         return ISearchResultCallout;
+      case SearchResultType.POST:
+        return ISearchResultPost;
+      case SearchResultType.MEMO:
+        return ISearchResultMemo;
       case SearchResultType.WHITEBOARD:
-        return ISearchResultCallout;
+        return ISearchResultWhiteboard;
     }
 
     throw new BaseException(

@@ -64,13 +64,13 @@ const getIndexStore = (
       category: SearchCategory.RESPONSES,
     },
     {
-      name: `${indexPattern}whiteboards`,
-      type: SearchResultType.WHITEBOARD,
+      name: `${indexPattern}memos`,
+      type: SearchResultType.MEMO,
       category: SearchCategory.RESPONSES,
     },
     {
-      name: `${indexPattern}memos`,
-      type: SearchResultType.MEMO,
+      name: `${indexPattern}whiteboards`,
+      type: SearchResultType.WHITEBOARD,
       category: SearchCategory.RESPONSES,
     },
   ],
@@ -96,15 +96,14 @@ const getPublicIndexStore = (
       type: SearchResultType.POST,
       category: SearchCategory.RESPONSES,
     },
-    // todo: check if whiteboards should be added to the public results
-    {
-      name: `${indexPattern}whiteboards`,
-      type: SearchResultType.WHITEBOARD,
-      category: SearchCategory.RESPONSES,
-    },
     {
       name: `${indexPattern}memos`,
       type: SearchResultType.MEMO,
+      category: SearchCategory.RESPONSES,
+    },
+    {
+      name: `${indexPattern}whiteboards`,
+      type: SearchResultType.WHITEBOARD,
       category: SearchCategory.RESPONSES,
     },
   ],
