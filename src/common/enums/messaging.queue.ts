@@ -21,6 +21,7 @@ export enum MessagingQueue {
   SUBSCRIPTION_ROOM_EVENT = 'alkemio-subscriptions-room-event',
   SUBSCRIPTION_IN_APP_NOTIFICATION_RECEIVED = 'alkemio-subscriptions-in-app-notification-received',
   SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER = 'alkemio-subscriptions-in-app-notification-counter',
+  SUBSCRIPTION_CONVERSATION_EVENTS = 'alkemio-subscriptions-conversation-events',
   //
   WHITEBOARDS = 'alkemio-whiteboards',
   FILES = 'alkemio-files',

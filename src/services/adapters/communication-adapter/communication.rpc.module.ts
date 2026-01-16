@@ -45,6 +45,12 @@ const rabbitMqImport = RabbitMQModule.forRootAsync({
         // Don't wait for connection - let app start even if RabbitMQ is down
         wait: false,
       },
+      connectionManagerOptions: {
+        // Heartbeat interval in seconds - prevents connection from being considered dead
+        heartbeatIntervalInSeconds: 30,
+        // Time between reconnection attempts
+        reconnectTimeInSeconds: 5,
+      },
       // Enable Direct Reply-To for RPC functionality
       enableDirectReplyTo: true,
       // Default RPC timeout
@@ -60,8 +66,12 @@ const rabbitMqImport = RabbitMQModule.forRootAsync({
   },
 });
 
-const moduleImports = isSchemaBootstrap ? [CommunicationRpcStubModule] : [rabbitMqImport];
-const moduleExports = isSchemaBootstrap ? [CommunicationRpcStubModule] : [RabbitMQModule];
+const moduleImports = isSchemaBootstrap
+  ? [CommunicationRpcStubModule]
+  : [rabbitMqImport];
+const moduleExports = isSchemaBootstrap
+  ? [CommunicationRpcStubModule]
+  : [RabbitMQModule];
 
 @Global()
 @Module({

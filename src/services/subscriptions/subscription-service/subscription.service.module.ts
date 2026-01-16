@@ -4,6 +4,7 @@ import {
   SUBSCRIPTION_ACTIVITY_CREATED,
   SUBSCRIPTION_IN_APP_NOTIFICATION_RECEIVED,
   SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER,
+  SUBSCRIPTION_CONVERSATION_EVENT,
 } from '@src/common/constants';
 import { subscriptionFactoryProvider } from '@core/microservices/subscription.factory.provider';
 import { SubscriptionPublishService } from './subscription.publish.service';
@@ -24,6 +25,10 @@ const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
   {
     provide: SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER,
     queueName: MessagingQueue.SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER,
+  },
+  {
+    provide: SUBSCRIPTION_CONVERSATION_EVENT,
+    queueName: MessagingQueue.SUBSCRIPTION_CONVERSATION_EVENTS,
   },
 ];
 
@@ -57,7 +62,9 @@ export class SubscriptionServiceModule implements OnModuleDestroy {
     @Inject(SUBSCRIPTION_IN_APP_NOTIFICATION_RECEIVED)
     private readonly notificationReceived: PubSubEngine,
     @Inject(SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER)
-    private readonly notificationCounter: PubSubEngine
+    private readonly notificationCounter: PubSubEngine,
+    @Inject(SUBSCRIPTION_CONVERSATION_EVENT)
+    private readonly conversationEvents: PubSubEngine
   ) {}
 
   async onModuleDestroy() {
@@ -65,6 +72,7 @@ export class SubscriptionServiceModule implements OnModuleDestroy {
       this.activityCreated,
       this.notificationReceived,
       this.notificationCounter,
+      this.conversationEvents,
     ];
 
     for (const pubSub of pubSubs) {

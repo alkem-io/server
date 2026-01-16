@@ -21,10 +21,10 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/src/main.js",
-    "start:services": "docker compose -f quickstart-services.yml --env-file .env.docker up --build --force-recreate",
-    "start:services:kratos:debug": "docker compose -f quickstart-services-kratos-debug.yml --env-file .env.docker up --build --force-recreate",
-    "start:services:ai": "docker compose -f quickstart-services-ai.yml --env-file .env.docker up --build --force-recreate",
-    "start:services:ai:debug": "docker compose -f quickstart-services-ai-debug.yml --env-file .env.docker up --build --force-recreate",
+    "start:services": "docker compose -f quickstart-services.yml --env-file .env.docker up --build --force-recreate -d",
+    "start:services:kratos:debug": "docker compose -f quickstart-services-kratos-debug.yml --env-file .env.docker up --build --force-recreate -d",
+    "start:services:ai": "docker compose -f quickstart-services-ai.yml --env-file .env.docker up --build --force-recreate -d",
+    "start:services:ai:debug": "docker compose -f quickstart-services-ai-debug.yml --env-file .env.docker up --build --force-recreate -d",
     "lint": "tsc --noEmit && eslint src/**/*.ts --no-warn-ignored",
     "lint:prod": "tsc --noEmit && cross-env NODE_ENV=production eslint src/**/*.ts --no-warn-ignored",
     "lint:fix": "tsc --noEmit && eslint src/**/*.ts --fix --no-warn-ignored",
@@ -58,7 +58,7 @@
     }
   },
   "dependencies": {
-    "@alkemio/matrix-adapter-lib": "0.8.2",
+    "@alkemio/matrix-adapter-lib": "0.8.4-mapping5",
     "@alkemio/notifications-lib": "0.12.2",
     "@apollo/server": "^4.10.4",
     "@elastic/elasticsearch": "^8.12.2",

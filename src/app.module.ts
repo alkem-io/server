@@ -161,7 +161,8 @@ import { InAppNotificationAdminModule } from './platform-admin/in-app-notificati
           extra: {
             max: dbOptions.pool?.max ?? 50,
             idleTimeoutMillis: dbOptions.pool?.idle_timeout_ms ?? 30000,
-            connectionTimeoutMillis: dbOptions.pool?.connection_timeout_ms ?? 10000,
+            connectionTimeoutMillis:
+              dbOptions.pool?.connection_timeout_ms ?? 10000,
           },
         };
       },
