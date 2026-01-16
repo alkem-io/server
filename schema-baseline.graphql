@@ -1576,6 +1576,66 @@ type Conversation {
   virtualContributor: VirtualContributor
 }
 
+"""
+Event fired when a new conversation is created. Each member receives a personalized event with the other participant resolved via conversation.user or conversation.virtualContributor.
+"""
+type ConversationCreatedEvent {
+  """The conversation that was created."""
+  conversation: Conversation!
+  """
+  The first message in the conversation. Null when conversation is created without an initial message.
+  """
+  message: Message
+}
+
+"""Payload for conversation subscription events."""
+type ConversationEventSubscriptionResult {
+  """Present when eventType is CONVERSATION_CREATED."""
+  conversationCreated: ConversationCreatedEvent
+  """
+  The type of event. Use this to determine which payload field is populated.
+  """
+  eventType: ConversationEventType!
+  """Present when eventType is MESSAGE_RECEIVED."""
+  messageReceived: ConversationMessageReceivedEvent
+  """Present when eventType is MESSAGE_REMOVED."""
+  messageRemoved: ConversationMessageRemovedEvent
+  """Present when eventType is READ_RECEIPT_UPDATED."""
+  readReceiptUpdated: ConversationReadReceiptUpdatedEvent
+}
+
+"""The type of conversation event."""
+enum ConversationEventType {
+  CONVERSATION_CREATED
+  MESSAGE_RECEIVED
+  MESSAGE_REMOVED
+  READ_RECEIPT_UPDATED
+}
+
+"""Event fired when a new message is received in a conversation."""
+type ConversationMessageReceivedEvent {
+  """The message that was received."""
+  message: Message!
+  """The room ID where the message was received."""
+  roomId: UUID!
+}
+
+"""Event fired when a message is removed from a conversation."""
+type ConversationMessageRemovedEvent {
+  """The ID of the message that was removed."""
+  messageId: MessageID!
+  """The room ID where the message was removed."""
+  roomId: UUID!
+}
+
+"""Event fired when a read receipt is updated in a conversation."""
+type ConversationReadReceiptUpdatedEvent {
+  """The ID of the last read event (message)."""
+  lastReadEventId: MessageID!
+  """The room ID where the read receipt was updated."""
+  roomId: UUID!
+}
+
 input ConversationVcAnswerRelevanceInput {
   """The ID of the conversation."""
   conversationID: UUID!
@@ -3748,7 +3808,7 @@ type Message {
   """The User or Virtual Contributor that created this Message"""
   sender: Contributor
   """The message being replied to"""
-  threadID: String
+  threadID: MessageID
   """The server timestamp in UTC"""
   timestamp: Float!
 }
@@ -4109,6 +4169,8 @@ type Mutation {
   joinRoleSet(joinData: JoinAsEntryRoleOnRoleSetInput!): RoleSet!
   """Reset the License with Entitlements on the specified Account."""
   licenseResetOnAccount(resetData: AccountLicenseResetInput!): Account!
+  """Marks a message as read for the current user."""
+  markMessageAsReadInRoom(messageData: RoomMarkMessageReadInput!): Boolean!
   """
   Mark notifications as read. If no filter is provided, marks all user notifications as read. If filter with types is provided, marks only those notification types as read.
   """
@@ -5731,12 +5793,27 @@ type Room {
   authorization: Authorization
   """The date at which the entity was created."""
   createdDate: DateTime!
+  """The display name of the Room."""
+  displayName: String!
   """The ID of the entity"""
   id: UUID!
+  """The last message sent to the Room. Useful for conversation previews."""
+  lastMessage: Message
   """Messages in this Room."""
   messages: [Message!]!
   """The number of messages in the Room."""
-  messagesCount: Float!
+  messagesCount: Int!
+  """
+  Simple unread message count for the current user. Use unreadCounts for per-thread breakdown.
+  """
+  unreadCount: Int!
+  """Unread message counts for the current user in this Room."""
+  unreadCounts(
+    """
+    Optional thread IDs to get per-thread unread counts. If not provided, only room-level count is returned.
+    """
+    threadIds: [MessageID!]
+  ): RoomUnreadCounts!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
   """Virtual Contributor Interactions in this Room."""
@@ -5762,6 +5839,15 @@ type RoomEventSubscriptionResult {
   room: Room!
   """The identifier for the Room on which the event happened."""
   roomID: String!
+}
+
+input RoomMarkMessageReadInput {
+  """The message id that should be marked as read."""
+  messageID: MessageID!
+  """The Room to mark message as read in."""
+  roomID: UUID!
+  """The thread id if the message is in a thread."""
+  threadID: MessageID
 }
 
 """A message event happened in the subscribed room"""
@@ -5810,6 +5896,22 @@ input RoomSendMessageReplyInput {
   roomID: UUID!
   """The message starting the thread being replied to"""
   threadID: MessageID!
+}
+
+"""Unread message count for a specific thread in a Room."""
+type RoomThreadUnreadCount {
+  """The number of unread messages in the thread."""
+  count: Int!
+  """The thread ID."""
+  threadId: MessageID!
+}
+
+"""Unread message counts for a Room."""
+type RoomUnreadCounts {
+  """The total number of unread messages in the Room."""
+  roomUnreadCount: Int!
+  """Unread counts per thread, if thread IDs were requested."""
+  threadUnreadCounts: [RoomThreadUnreadCount!]
 }
 
 """
@@ -6313,6 +6415,10 @@ type Subscription {
     """The ID of the Callout to subscribe to."""
     calloutID: UUID!
   ): CalloutPostCreated!
+  """
+  Receive conversation events for the authenticated user. Includes new conversations, messages, and read receipts.
+  """
+  conversationEvents: ConversationEventSubscriptionResult!
   """Receive updates on Discussions"""
   forumDiscussionUpdated(
     """The IDs of the Forum to subscribe to all updates on."""
@@ -7793,7 +7899,7 @@ input UsersWithAuthorizationCredentialInput {
 
 type VcInteraction {
   """The thread ID (Matrix message ID) where VC is engaged"""
-  threadID: String!
+  threadID: MessageID!
   """The actor ID (agent.id) of the Virtual Contributor"""
   virtualContributorID: String!
 }
