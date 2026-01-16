@@ -1,0 +1,283 @@
+# GraphQL Schema Contract: Template Content Options
+
+## Modified Input Type
+
+```graphql
+"""
+Input for updating a Collaboration from a Space Template, including optional deletion of existing callouts.
+"""
+input UpdateCollaborationFromSpaceTemplateInput {
+  """ID of the Collaboration to be updated"""
+  collaborationID: UUID!
+
+  """The Space Template whose Collaboration that will be used for updates to the target Collaboration"""
+  spaceTemplateID: UUID!
+
+  """
+  Add the Callouts from the Collaboration Template.
+  When false, only the innovation flow structure is updated.
+  Default: false
+  """
+  addCallouts: Boolean = false
+
+  """
+  Delete existing Callouts from the target Collaboration before applying the template.
+  When combined with addCallouts=true, achieves "Replace All" behavior.
+  When used alone (addCallouts=false), deletes existing callouts without adding new ones.
+  Default: false
+  """
+  deleteExistingCallouts: Boolean = false
+}
+```
+
+## Mutation (Unchanged Structure)
+
+```graphql
+type Mutation {
+  """
+  Updates a Collaboration, including InnovationFlow states, using the Space content from the specified Template.
+
+  **Authorization**: Requires UPDATE privilege on the target Collaboration.
+
+  **Behavior Matrix**:
+  - deleteExistingCallouts=false, addCallouts=false: Updates only innovation flow states (Flow Only)
+  - deleteExistingCallouts=false, addCallouts=true: Keeps existing callouts and adds template callouts (Add Template Posts)
+  - deleteExistingCallouts=true, addCallouts=false: Deletes existing callouts only
+  - deleteExistingCallouts=true, addCallouts=true: Deletes existing callouts and adds template callouts (Replace All)
+
+  **Execution Order**:
+  1. Delete existing callouts (if deleteExistingCallouts=true)
+  2. Update innovation flow states (always)
+  3. Add template callouts (if addCallouts=true)
+  4. Apply authorization policies
+
+  **Error Scenarios**:
+  - Template not found → EntityNotFoundException
+  - Collaboration not found → EntityNotFoundException
+  - User lacks UPDATE privilege → ForbiddenException
+  - Callout deletion fails → Error propagated from deletion operation
+  """
+  updateCollaborationFromSpaceTemplate(
+    updateData: UpdateCollaborationFromSpaceTemplateInput!
+  ): Collaboration!
+}
+```
+
+## Example Usage
+
+### Example 1: Replace All (Primary Use Case)
+```graphql
+mutation ReplaceAllContent {
+  updateCollaborationFromSpaceTemplate(
+    updateData: {
+      collaborationID: "collaboration-uuid-here"
+      spaceTemplateID: "template-uuid-here"
+      deleteExistingCallouts: true
+      addCallouts: true
+    }
+  ) {
+    id
+    calloutsSet {
+      callouts {
+        id
+        nameID
+        framing {
+          profile {
+            displayName
+          }
+        }
+      }
+    }
+    innovationFlow {
+      states {
+        displayName
+        sortOrder
+      }
+    }
+  }
+}
+```
+
+### Example 2: Add Template Posts (Existing Behavior)
+```graphql
+mutation AddTemplatePosts {
+  updateCollaborationFromSpaceTemplate(
+    updateData: {
+      collaborationID: "collaboration-uuid-here"
+      spaceTemplateID: "template-uuid-here"
+      deleteExistingCallouts: false
+      addCallouts: true
+    }
+  ) {
+    id
+    calloutsSet {
+      callouts {
+        id
+        nameID
+      }
+    }
+  }
+}
+```
+
+### Example 3: Flow Only (Existing Behavior)
+```graphql
+mutation UpdateFlowOnly {
+  updateCollaborationFromSpaceTemplate(
+    updateData: {
+      collaborationID: "collaboration-uuid-here"
+      spaceTemplateID: "template-uuid-here"
+      deleteExistingCallouts: false
+      addCallouts: false
+    }
+  ) {
+    id
+    innovationFlow {
+      states {
+        displayName
+        sortOrder
+      }
+    }
+  }
+}
+```
+
+### Example 4: Delete Only (New Capability)
+```graphql
+mutation DeleteExistingCallouts {
+  updateCollaborationFromSpaceTemplate(
+    updateData: {
+      collaborationID: "collaboration-uuid-here"
+      spaceTemplateID: "template-uuid-here"
+      deleteExistingCallouts: true
+      addCallouts: false
+    }
+  ) {
+    id
+    calloutsSet {
+      callouts {
+        id
+      }
+    }
+  }
+}
+```
+
+## Backward Compatibility
+
+### Existing Clients (No Changes Required)
+```graphql
+# This mutation continues to work exactly as before
+mutation ExistingBehavior {
+  updateCollaborationFromSpaceTemplate(
+    updateData: {
+      collaborationID: "collaboration-uuid-here"
+      spaceTemplateID: "template-uuid-here"
+      addCallouts: true
+    }
+  ) {
+    id
+  }
+}
+```
+
+**Result**:
+- `deleteExistingCallouts` defaults to `false`
+- Existing callouts are preserved
+- Template callouts are added
+- Identical to pre-feature behavior
+
+## Error Responses
+
+### Authorization Error
+```json
+{
+  "errors": [
+    {
+      "message": "Authorization failed",
+      "extensions": {
+        "code": "FORBIDDEN",
+        "details": {
+          "requiredPrivilege": "UPDATE",
+          "collaborationId": "collaboration-uuid-here"
+        }
+      }
+    }
+  ]
+}
+```
+
+### Template Not Found
+```json
+{
+  "errors": [
+    {
+      "message": "Entity not found",
+      "extensions": {
+        "code": "ENTITY_NOT_FOUND",
+        "details": {
+          "templateId": "invalid-uuid-here"
+        }
+      }
+    }
+  ]
+}
+```
+
+### Deletion Failure
+```json
+{
+  "errors": [
+    {
+      "message": "Failed to delete callout",
+      "extensions": {
+        "code": "INTERNAL_SERVER_ERROR",
+        "details": {
+          "calloutId": "callout-uuid-here",
+          "collaborationId": "collaboration-uuid-here"
+        }
+      }
+    }
+  ]
+}
+```
+
+## Frontend Integration Guidance
+
+### Recommended Option Mapping
+
+Frontend should present three radio button options:
+
+1. **"Replace All Content"**
+   - Description: "Delete all existing posts and replace with template posts"
+   - Warning: "This will permanently delete all existing posts"
+   - Confirmation required: Yes
+   - Parameters: `{deleteExistingCallouts: true, addCallouts: true}`
+
+2. **"Add Template Posts"**
+   - Description: "Keep existing posts and add template posts"
+   - Warning: None
+   - Confirmation required: No
+   - Parameters: `{deleteExistingCallouts: false, addCallouts: true}`
+
+3. **"Update Flow Only"**
+   - Description: "Update innovation flow structure without changing posts"
+   - Warning: None
+   - Confirmation required: No
+   - Parameters: `{deleteExistingCallouts: false, addCallouts: false}`
+
+### Recommended Confirmation Dialog (Replace All)
+
+```text
+⚠️ Replace All Content?
+
+This will permanently delete all existing posts in this SubSpace and replace them with posts from the selected template.
+
+- X existing posts will be deleted
+- Y template posts will be added
+- Innovation flow will be updated
+
+This action cannot be undone.
+
+[Cancel] [Replace All Content]
+```
