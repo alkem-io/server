@@ -6,6 +6,7 @@ import {
   SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER,
   SUBSCRIPTION_ROOM_EVENT,
   SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED,
+  SUBSCRIPTION_CONVERSATION_EVENT,
 } from '@src/common/constants';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { IActivity } from '@platform/activity';
@@ -17,6 +18,8 @@ import {
   RoomEventSubscriptionPayload,
   VirtualContributorUpdatedSubscriptionPayload,
   InAppNotificationCounterSubscriptionPayload,
+  ReadReceiptData,
+  ConversationEventSubscriptionPayload,
 } from './dto';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
@@ -38,6 +41,8 @@ export class SubscriptionPublishService {
     private inAppNotificationReceivedSubscription: TypedPubSubEngine<IInAppNotification>,
     @Inject(SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER)
     private inAppNotificationCounterSubscription: TypedPubSubEngine,
+    @Inject(SUBSCRIPTION_CONVERSATION_EVENT)
+    private conversationEventsSubscription: TypedPubSubEngine<ConversationEventSubscriptionPayload>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -94,6 +99,31 @@ export class SubscriptionPublishService {
     );
   }
 
+  public publishRoomReceiptEvent(
+    room: IRoom,
+    data: ReadReceiptData
+  ): Promise<void> {
+    const payload: RoomEventSubscriptionPayload = {
+      eventID: `room-event-${randomInt()}`,
+      roomID: room.id,
+      room: room,
+      receipt: {
+        type: MutationType.UPDATE,
+        data,
+      },
+    };
+
+    this.logger.verbose?.(
+      `Publishing room receipt event: roomID=${room.id}, eventID=${payload.eventID}, actorId=${data.actorId}`,
+      LogContext.SUBSCRIPTIONS
+    );
+
+    return this.roomEventsSubscription.publish(
+      SubscriptionType.ROOM_EVENTS,
+      payload
+    );
+  }
+
   public publishVirtualContributorUpdated(
     virtualContributor: IVirtualContributor
   ): void {
@@ -132,6 +162,20 @@ export class SubscriptionPublishService {
 
     return this.inAppNotificationCounterSubscription.publish(
       SubscriptionType.IN_APP_NOTIFICATION_COUNTER,
+      payload
+    );
+  }
+
+  public publishConversationEvent(
+    payload: ConversationEventSubscriptionPayload
+  ): Promise<void> {
+    this.logger.verbose?.(
+      `Publishing conversation event: eventID=${payload.eventID}`,
+      LogContext.SUBSCRIPTIONS
+    );
+
+    return this.conversationEventsSubscription.publish(
+      SubscriptionType.CONVERSATION_EVENTS,
       payload
     );
   }

@@ -110,7 +110,11 @@ export class UserAuthenticationLinkService {
           throw new UserAlreadyRegisteredException(
             'User already registered with different authentication ID',
             LogContext.AUTH,
-            { email, existingAuthId: existingByEmail.authenticationID, incomingAuthId: authId }
+            {
+              email,
+              existingAuthId: existingByEmail.authenticationID,
+              incomingAuthId: authId,
+            }
           );
         }
         return {

@@ -67,16 +67,11 @@ export class RoomControllerService {
       return;
     }
     const room = await this.roomLookupService.getRoomOrFail(roomID);
-    await this.roomLookupService.sendMessageReply(
-      room,
-      actorId,
-      {
-        roomID: room.id,
-        message: this.convertResultToMessage(event.response),
-        threadID,
-      },
-      'virtualContributor'
-    );
+    await this.roomLookupService.sendMessageReply(room, actorId, {
+      roomID: room.id,
+      message: this.convertResultToMessage(event.response),
+      threadID,
+    });
 
     const externalThreadId = event.response.threadId;
 

@@ -1,7 +1,7 @@
 /**
  * Internal domain event published when a reaction is added via Matrix Adapter.
  *
- * Published by CommunicationAdapterEventController (boundary)
+ * Published by CommunicationAdapterEventService (boundary)
  * and consumed by MessageInboxService (domain orchestration).
  */
 export class ReactionAddedEvent {
