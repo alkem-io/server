@@ -7,7 +7,6 @@ import {
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IRoom } from '../room/room.interface';
-import { IVcInteraction } from '../vc-interaction/vc.interaction.interface';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { isInputValidForAction } from '@domain/community/virtual-contributor/dto/utils';
 import { AiServerAdapterInvocationInput } from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.invocation';
@@ -30,8 +29,7 @@ export class VirtualContributorMessageService {
     threadID: string,
     agentInfo: AgentInfo,
     contextSpaceID: string,
-    room: IRoom,
-    vcInteraction: IVcInteraction | undefined = undefined
+    room: IRoom
   ) {
     const virtualContributor =
       await this.virtualContributorLookupService.getVirtualContributorByAgentIdOrFail(
