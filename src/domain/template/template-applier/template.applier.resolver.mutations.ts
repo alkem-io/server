@@ -21,18 +21,24 @@ import { InnovationFlowAuthorizationService } from '@domain/collaboration/innova
 @Resolver()
 export class TemplateApplierResolverMutations {
   constructor(
-    private authorizationService: AuthorizationService,
-    private collaborationService: CollaborationService,
-    private calloutsSetAuthorizationService: CalloutsSetAuthorizationService,
-    private innovationFlowAuthorizationService: InnovationFlowAuthorizationService,
-    private templateApplierService: TemplateApplierService,
-    private authorizationPolicyService: AuthorizationPolicyService,
+    private readonly authorizationService: AuthorizationService,
+    private readonly collaborationService: CollaborationService,
+    private readonly calloutsSetAuthorizationService: CalloutsSetAuthorizationService,
+    private readonly innovationFlowAuthorizationService: InnovationFlowAuthorizationService,
+    private readonly templateApplierService: TemplateApplierService,
+    private readonly authorizationPolicyService: AuthorizationPolicyService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   @Mutation(() => ICollaboration, {
     description:
-      'Updates a Collaboration, including InnovationFlow states, using the Space content from the specified Template.',
+      'Updates a Collaboration using the Space content from the specified Template. ' +
+      'Behavior depends on parameter combinations: ' +
+      '(1) Flow Only: deleteExistingCallouts=false, addCallouts=false - updates only InnovationFlow states; ' +
+      '(2) Add Posts: deleteExistingCallouts=false, addCallouts=true - keeps existing and adds template callouts; ' +
+      '(3) Replace All: deleteExistingCallouts=true, addCallouts=true - deletes existing then adds template callouts; ' +
+      '(4) Delete Only: deleteExistingCallouts=true, addCallouts=false - deletes existing callouts. ' +
+      'Execution order: delete (if requested) → update flow states → add (if requested).',
   })
   async updateCollaborationFromSpaceTemplate(
     @CurrentUser() agentInfo: AgentInfo,
