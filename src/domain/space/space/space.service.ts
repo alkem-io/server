@@ -974,7 +974,12 @@ export class SpaceService {
     );
 
     // Sort the subspaces based on sortOrder, with displayName as tiebreaker
-    const sortedSubspaces = limitAndShuffled.sort((a, b) => {
+    // Skip sorting when shuffle is requested to preserve randomization
+    if (args?.shuffle) {
+      return limitAndShuffled;
+    }
+
+    return limitAndShuffled.sort((a, b) => {
       if (a.sortOrder !== b.sortOrder) {
         return a.sortOrder - b.sortOrder;
       }
@@ -982,13 +987,21 @@ export class SpaceService {
         .toLowerCase()
         .localeCompare(b.about.profile.displayName.toLowerCase());
     });
-    return sortedSubspaces;
   }
 
   public async updateSubspacesSortOrder(
     space: ISpace,
     sortOrderData: UpdateSubspacesSortOrderInput
   ): Promise<ISpace[]> {
+    // Validate for duplicate IDs
+    const uniqueIds = new Set(sortOrderData.subspaceIDs);
+    if (uniqueIds.size !== sortOrderData.subspaceIDs.length) {
+      throw new ValidationException(
+        'Duplicate subspace IDs provided',
+        LogContext.SPACES
+      );
+    }
+
     const spaceLoaded = await this.getSpaceOrFail(space.id, {
       relations: { subspaces: true },
     });
@@ -1004,6 +1017,18 @@ export class SpaceService {
 
     const subspacesByID = keyBy(allSubspaces, 'id');
 
+    // Validate all IDs exist before processing (fail fast)
+    const missingIds = sortOrderData.subspaceIDs.filter(
+      id => !subspacesByID[id]
+    );
+    if (missingIds.length > 0) {
+      throw new EntityNotFoundException(
+        'Subspace not found within parent Space',
+        LogContext.SPACES,
+        { missingSubspaceIds: missingIds, parentSpaceId: space.id }
+      );
+    }
+
     const sortOrders = sortOrderData.subspaceIDs
       .map(subspaceId => subspacesByID[subspaceId]?.sortOrder)
       .filter(sortOrder => sortOrder !== undefined);
@@ -1011,19 +1036,14 @@ export class SpaceService {
     const minimumSortOrder = sortOrders.length > 0 ? Math.min(...sortOrders) : 0;
     const modifiedSubspaces: ISpace[] = [];
 
+    // Use step of 10 to avoid collisions with untouched siblings during partial reorder
+    const SORT_ORDER_STEP = 10;
     const subspacesInOrder: ISpace[] = [];
     let index = 1;
     for (const subspaceID of sortOrderData.subspaceIDs) {
       const subspace = subspacesByID[subspaceID];
-      if (!subspace) {
-        throw new EntityNotFoundException(
-          'Subspace not found within parent Space',
-          LogContext.SPACES,
-          { subspaceId: subspaceID, parentSpaceId: space.id }
-        );
-      }
       subspacesInOrder.push(subspace);
-      const newSortOrder = minimumSortOrder + index;
+      const newSortOrder = minimumSortOrder + index * SORT_ORDER_STEP;
       if (subspace.sortOrder !== newSortOrder) {
         subspace.sortOrder = newSortOrder;
         modifiedSubspaces.push(subspace);
