@@ -7380,6 +7380,10 @@ input UpdateCollaborationFromSpaceTemplateInput {
   """ID of the Collaboration to be updated"""
   collaborationID: UUID!
   """
+  Delete existing Callouts before applying template. When combined with addCallouts=true, enables Replace All behavior.
+  """
+  deleteExistingCallouts: Boolean = false
+  """
   The Space Template whose Collaboration that will be used for updates to the target Collaboration
   """
   spaceTemplateID: UUID!
