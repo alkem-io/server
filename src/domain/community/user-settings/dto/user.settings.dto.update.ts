@@ -4,6 +4,7 @@ import { UpdateUserSettingsCommunicationInput } from './user.settings.communicat
 import { ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { UpdateUserSettingsNotificationInput } from './user.settings.notification.dto.update';
+import { UpdateUserSettingsHomeSpaceInput } from './user.settings.home.space.dto.update';
 
 @InputType()
 export class UpdateUserSettingsEntityInput {
@@ -30,4 +31,12 @@ export class UpdateUserSettingsEntityInput {
   @ValidateNested()
   @Type(() => UpdateUserSettingsNotificationInput)
   notification?: UpdateUserSettingsNotificationInput;
+
+  @Field(() => UpdateUserSettingsHomeSpaceInput, {
+    nullable: true,
+    description: 'Settings related to Home Space.',
+  })
+  @ValidateNested()
+  @Type(() => UpdateUserSettingsHomeSpaceInput)
+  homeSpace?: UpdateUserSettingsHomeSpaceInput;
 }

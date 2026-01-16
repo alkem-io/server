@@ -4,6 +4,7 @@ import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { IUserSettingsPrivacy } from './user.settings.privacy.interface';
 import { IUserSettingsCommunication } from './user.settings.communications.interface';
 import { IUserSettingsNotification } from './user.settings.notification.interface';
+import { IUserSettingsHomeSpace } from './user.settings.home.space.interface';
 
 @Entity()
 export class UserSettings extends AuthorizableEntity implements IUserSettings {
@@ -15,4 +16,7 @@ export class UserSettings extends AuthorizableEntity implements IUserSettings {
 
   @Column('jsonb', { nullable: false })
   notification!: IUserSettingsNotification;
+
+  @Column('jsonb', { nullable: false })
+  homeSpace!: IUserSettingsHomeSpace;
 }

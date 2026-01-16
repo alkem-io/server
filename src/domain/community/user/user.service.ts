@@ -303,6 +303,10 @@ export class UserService {
           adminSpaceCommunityInvitation: { email: true, inApp: true },
         },
       },
+      homeSpace: {
+        spaceID: null,
+        autoRedirect: false,
+      },
     };
     return settings;
   }

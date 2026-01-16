@@ -13,6 +13,7 @@ import { MockNotificationsService } from '@test/mocks/notifications.service.mock
 import { MockNotificationPlatformAdapter } from '@test/mocks/notification.platform.adapter.service.mock';
 import { MockPlatformAuthorizationService } from '@test/mocks/platform.authorization.service.mock';
 import { MockEntityManagerProvider } from '@test/mocks';
+import { MockUserSettingsHomeSpaceValidationService } from '@test/mocks/user.settings.home.space.validation.service.mock';
 
 describe('UserResolver', () => {
   let resolver: UserResolverQueries;
@@ -30,6 +31,7 @@ describe('UserResolver', () => {
         MockPlatformAuthorizationService,
         MockCommunicationAdapter,
         MockUserAuthorizationService,
+        MockUserSettingsHomeSpaceValidationService,
         MockNotificationPlatformAdapter,
         MockNotificationsService,
         MockEntityManagerProvider,
