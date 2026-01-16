@@ -329,7 +329,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_matrix_adapter
     hostname: matrix-adapter
-    image: alkemio/matrix-adapter-go:v0.8.4-mapping5
+    image: alkemio/matrix-adapter-go:v0.8.4-mapping6
     platform: linux/amd64
     depends_on:
       - rabbitmq

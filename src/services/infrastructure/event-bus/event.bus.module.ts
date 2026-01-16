@@ -10,6 +10,7 @@ import { Handlers } from './handlers';
 import { AiServerModule } from '@services/ai-server/ai-server/ai.server.module';
 import { RabbitMQConnectionFactory } from './rabbitmq.connection.factory';
 import { RabbitMQConnectionModule } from './rabbitmq.connection.module';
+import { RabbitMQResilienceService } from '@core/microservices/rabbitmq.resilience.service';
 
 @Global()
 @Module({
@@ -46,6 +47,12 @@ import { RabbitMQConnectionModule } from './rabbitmq.connection.module';
         return {
           uri,
           connectionInitOptions: { wait: false },
+          connectionManagerOptions: {
+            // Heartbeat interval in seconds - prevents connection from being considered dead
+            heartbeatIntervalInSeconds: 30,
+            // Time between reconnection attempts
+            reconnectTimeInSeconds: 5,
+          },
           exchanges: [
             {
               name: eventBusConfig.exchange,
@@ -116,6 +123,7 @@ import { RabbitMQConnectionModule } from './rabbitmq.connection.module';
     Subscriber,
     { provide: 'HANDLE_EVENTS', useValue: HandleMessages },
     EventBus,
+    RabbitMQResilienceService,
     ...Handlers,
   ],
   exports: [EventBus],

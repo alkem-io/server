@@ -56,13 +56,9 @@ export class CommunicationAdapterEventService {
    * @param payload - Message details from Matrix Adapter
    */
   @RabbitSubscribe({
-    exchange: '',
-    routingKey: '',
     queue: MatrixAdapterEventType.COMMUNICATION_MESSAGE_RECEIVED,
     createQueueIfNotExists: true,
-    queueOptions: {
-      durable: true,
-    },
+    queueOptions: { durable: true },
   })
   async onMessageReceived(
     payload: MessageReceivedPayload
@@ -98,13 +94,9 @@ export class CommunicationAdapterEventService {
    * Publishes internal 'reaction.added' event for domain processing.
    */
   @RabbitSubscribe({
-    exchange: '',
-    routingKey: '',
     queue: MatrixAdapterEventType.COMMUNICATION_REACTION_ADDED,
     createQueueIfNotExists: true,
-    queueOptions: {
-      durable: true,
-    },
+    queueOptions: { durable: true },
   })
   async onReactionAdded(
     payload: MatrixReactionAddedEvent
@@ -142,13 +134,9 @@ export class CommunicationAdapterEventService {
    * Publishes internal 'reaction.removed' event for domain processing.
    */
   @RabbitSubscribe({
-    exchange: '',
-    routingKey: '',
     queue: MatrixAdapterEventType.COMMUNICATION_REACTION_REMOVED,
     createQueueIfNotExists: true,
-    queueOptions: {
-      durable: true,
-    },
+    queueOptions: { durable: true },
   })
   async onReactionRemoved(
     payload: MatrixReactionRemovedEvent
@@ -184,13 +172,9 @@ export class CommunicationAdapterEventService {
    * Publishes internal 'message.edited' event for domain processing.
    */
   @RabbitSubscribe({
-    exchange: '',
-    routingKey: '',
     queue: MatrixAdapterEventType.COMMUNICATION_MESSAGE_EDITED,
     createQueueIfNotExists: true,
-    queueOptions: {
-      durable: true,
-    },
+    queueOptions: { durable: true },
   })
   async onMessageEdited(
     payload: MatrixMessageEditedEvent
@@ -229,13 +213,9 @@ export class CommunicationAdapterEventService {
    * Publishes internal 'message.redacted' event for domain processing.
    */
   @RabbitSubscribe({
-    exchange: '',
-    routingKey: '',
     queue: MatrixAdapterEventType.COMMUNICATION_MESSAGE_REDACTED,
     createQueueIfNotExists: true,
-    queueOptions: {
-      durable: true,
-    },
+    queueOptions: { durable: true },
   })
   async onMessageRedacted(
     payload: MatrixMessageRedactedEvent
@@ -274,13 +254,9 @@ export class CommunicationAdapterEventService {
    * Publishes internal 'room.created' event for domain processing.
    */
   @RabbitSubscribe({
-    exchange: '',
-    routingKey: '',
     queue: MatrixAdapterEventType.COMMUNICATION_ROOM_CREATED,
     createQueueIfNotExists: true,
-    queueOptions: {
-      durable: true,
-    },
+    queueOptions: { durable: true },
   })
   async onRoomCreated(payload: MatrixRoomCreatedEvent): Promise<void | Nack> {
     try {
@@ -316,13 +292,9 @@ export class CommunicationAdapterEventService {
    * Publishes internal 'room.dm.requested' event for domain processing.
    */
   @RabbitSubscribe({
-    exchange: '',
-    routingKey: '',
     queue: MatrixAdapterEventType.COMMUNICATION_ROOM_DM_REQUESTED,
     createQueueIfNotExists: true,
-    queueOptions: {
-      durable: true,
-    },
+    queueOptions: { durable: true },
   })
   async onRoomDmRequested(
     payload: MatrixDMRequestedEvent
@@ -357,13 +329,9 @@ export class CommunicationAdapterEventService {
    * Publishes internal 'room.member.left' event for domain processing.
    */
   @RabbitSubscribe({
-    exchange: '',
-    routingKey: '',
     queue: MatrixAdapterEventType.COMMUNICATION_ROOM_MEMBER_LEFT,
     createQueueIfNotExists: true,
-    queueOptions: {
-      durable: true,
-    },
+    queueOptions: { durable: true },
   })
   async onRoomMemberLeft(
     payload: MatrixRoomMemberLeftEvent
@@ -399,13 +367,9 @@ export class CommunicationAdapterEventService {
    * Publishes internal 'room.member.updated' event for domain processing.
    */
   @RabbitSubscribe({
-    exchange: '',
-    routingKey: '',
     queue: MatrixAdapterEventType.COMMUNICATION_ROOM_MEMBER_UPDATED,
     createQueueIfNotExists: true,
-    queueOptions: {
-      durable: true,
-    },
+    queueOptions: { durable: true },
   })
   async onRoomMemberUpdated(
     payload: MatrixRoomMemberUpdatedEvent
@@ -442,13 +406,9 @@ export class CommunicationAdapterEventService {
    * Publishes internal 'room.receipt.updated' event for domain processing.
    */
   @RabbitSubscribe({
-    exchange: '',
-    routingKey: '',
     queue: MatrixAdapterEventType.COMMUNICATION_ROOM_RECEIPT_UPDATED,
     createQueueIfNotExists: true,
-    queueOptions: {
-      durable: true,
-    },
+    queueOptions: { durable: true },
   })
   async onRoomReceiptUpdated(
     payload: MatrixReadReceiptUpdatedEvent

@@ -241,13 +241,20 @@ export class MessagingService {
           invitedAgentId
         );
 
+      if (!vc) {
+        this.logger.warn(
+          `Could not resolve virtual contributor for agent ${invitedAgentId} when publishing conversationCreated event`,
+          LogContext.COMMUNICATION
+        );
+      }
+
       const conversationForCaller: IConversation = {
         ...conversation,
         _resolvedUser: null, // No other user in USER_VC
-        _resolvedVirtualContributor: vc,
+        _resolvedVirtualContributor: vc ?? null,
       };
 
-      this.subscriptionPublishService.publishConversationEvent({
+      await this.subscriptionPublishService.publishConversationEvent({
         eventID: `conversation-event-${randomUUID()}`,
         memberAgentIds: [callerAgentId],
         conversationCreated: {
@@ -266,35 +273,50 @@ export class MessagingService {
         this.userLookupService.getUserByAgentId(invitedAgentId),
       ]);
 
+      if (!callerUser) {
+        this.logger.warn(
+          `Could not resolve caller user for agent ${callerAgentId} when publishing conversationCreated event`,
+          LogContext.COMMUNICATION
+        );
+      }
+      if (!invitedUser) {
+        this.logger.warn(
+          `Could not resolve invited user for agent ${invitedAgentId} when publishing conversationCreated event`,
+          LogContext.COMMUNICATION
+        );
+      }
+
       // Event for caller: _resolvedUser = invited user (the other person)
       const conversationForCaller: IConversation = {
         ...conversation,
-        _resolvedUser: invitedUser,
+        _resolvedUser: invitedUser ?? null,
         _resolvedVirtualContributor: null,
       };
-
-      this.subscriptionPublishService.publishConversationEvent({
-        eventID: `conversation-event-${randomUUID()}`,
-        memberAgentIds: [callerAgentId],
-        conversationCreated: {
-          conversation: conversationForCaller,
-        },
-      });
 
       // Event for invited user: _resolvedUser = caller (the other person)
       const conversationForInvited: IConversation = {
         ...conversation,
-        _resolvedUser: callerUser,
+        _resolvedUser: callerUser ?? null,
         _resolvedVirtualContributor: null,
       };
 
-      this.subscriptionPublishService.publishConversationEvent({
-        eventID: `conversation-event-${randomUUID()}`,
-        memberAgentIds: [invitedAgentId],
-        conversationCreated: {
-          conversation: conversationForInvited,
-        },
-      });
+      // Publish both events in parallel
+      await Promise.all([
+        this.subscriptionPublishService.publishConversationEvent({
+          eventID: `conversation-event-${randomUUID()}`,
+          memberAgentIds: [callerAgentId],
+          conversationCreated: {
+            conversation: conversationForCaller,
+          },
+        }),
+        this.subscriptionPublishService.publishConversationEvent({
+          eventID: `conversation-event-${randomUUID()}`,
+          memberAgentIds: [invitedAgentId],
+          conversationCreated: {
+            conversation: conversationForInvited,
+          },
+        }),
+      ]);
 
       this.logger.verbose?.(
         `Published conversationCreated events (USER_USER) for conversation ${conversation.id} to both users`,
