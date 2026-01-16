@@ -67,7 +67,7 @@ export class InAppNotificationResolverSubscription {
         context
       ) {
         const agentInfo = context.req.user;
-        return agentInfo?.userID === payload.receiverID;
+        return agentInfo?.userID === payload?.receiverID;
       },
       async resolve(
         this: InAppNotificationResolverSubscription,
@@ -75,7 +75,7 @@ export class InAppNotificationResolverSubscription {
         _args,
         _context
       ) {
-        return payload.count;
+        return payload?.count;
       },
     }
   )

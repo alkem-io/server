@@ -1,11 +1,10 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import {
   Communication,
@@ -22,11 +21,10 @@ import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type
 @Injectable()
 export class CommunicationService {
   constructor(
-    private roomService: RoomService,
-    private communicationAdapter: CommunicationAdapter,
+    private readonly roomService: RoomService,
+    private readonly communicationAdapter: CommunicationAdapter,
     @InjectRepository(Communication)
-    private communicationRepository: Repository<Communication>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    private readonly communicationRepository: Repository<Communication>
   ) {}
 
   async createCommunication(
@@ -44,7 +42,6 @@ export class CommunicationService {
 
     communication.updates = await this.roomService.createRoom({
       displayName: `${displayName}-Updates`,
-      senderCommunicationID: undefined, // No sender for communication rooms
       type: RoomType.UPDATES,
     });
 
@@ -52,7 +49,7 @@ export class CommunicationService {
   }
 
   async save(communication: ICommunication): Promise<ICommunication> {
-    return await this.communicationRepository.save(communication);
+    return this.communicationRepository.save(communication);
   }
 
   getUpdates(communication: ICommunication): IRoom {
@@ -105,54 +102,43 @@ export class CommunicationService {
 
   async addContributorToCommunications(
     communication: ICommunication,
-    contributorCommunicationID: string
+    contributorActorId: string
   ): Promise<boolean> {
-    if (!contributorCommunicationID || contributorCommunicationID === '') {
-      // no communication ID to manage, just return
+    if (!contributorActorId) {
+      // no actor ID to manage, just return
       return true;
     }
-    const communicationRoomIDs = await this.getRoomsUsed(communication);
-    await this.communicationAdapter.userAddToRooms(
-      communicationRoomIDs,
-      contributorCommunicationID
-    );
-
+    const roomIds = this.getRoomIds(communication);
+    await this.communicationAdapter.batchAddMember(contributorActorId, roomIds);
     return true;
   }
 
-  async getRoomsUsed(communication: ICommunication): Promise<string[]> {
-    const communicationRoomIDs: string[] = [
-      this.getUpdates(communication).externalRoomID,
-    ];
-
-    return communicationRoomIDs;
+  /**
+   * Get all room IDs used by this communication.
+   * Currently only the updates room, but extensible for future room types.
+   */
+  getRoomIds(communication: ICommunication): string[] {
+    return [this.getUpdates(communication).id];
   }
 
   async getCommunicationIDsUsed(): Promise<string[]> {
-    const communicationMatches = await this.communicationRepository
+    const results = await this.communicationRepository
       .createQueryBuilder('communication')
-      .getMany();
-    const communicationIDs: string[] = [];
-    for (const communication of communicationMatches) {
-      communicationIDs.push(communication.id);
-    }
-    return communicationIDs;
+      .select('communication.id', 'id')
+      .getRawMany<{ id: string }>();
+    return results.map(r => r.id);
   }
 
   async removeUserFromCommunications(
     communication: ICommunication,
     user: IUser
   ): Promise<boolean> {
-    // get the list of rooms to add the user to
-    const communicationRoomIDs: string[] = [
-      this.getUpdates(communication).externalRoomID,
-    ];
-
-    await this.communicationAdapter.removeUserFromRooms(
-      communicationRoomIDs,
-      user.communicationID
-    );
-
+    if (!user.agent?.id) {
+      // no agent ID to manage, just return
+      return true;
+    }
+    const roomIds = this.getRoomIds(communication);
+    await this.communicationAdapter.batchRemoveMember(user.agent.id, roomIds);
     return true;
   }
 }

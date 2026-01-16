@@ -43,6 +43,16 @@ url_preview_enabled: false
 enable_registration: true
 enable_registration_without_verification: true
 
+app_service_config_files:
+  - /data/matrix-adapter.yaml
+
+modules_search_paths:
+  - /data
+
+modules:
+  - module: alkemio_room_control.AlkemioRoomControl
+    config: {}
+
 # Password authentication configuration
 # Disabled to enforce SSO-only authentication (FR-001, FR-002)
 #password_config:
@@ -227,9 +237,8 @@ oidc_providers:
     # User attribute mapping (FR-005, FR-007)
     user_mapping_provider:
       config:
-        # Use email localpart (before @) as Matrix user ID (FR-005)
-        # Supports all Kratos authentication methods: password, LinkedIn, Microsoft, GitHub
-        localpart_template: "{{ user.email.split('@')[0] }}"
+        localpart_template: "{{ user.alkemio_actor_id }}"
+
         # Display name from Kratos traits.name.first and traits.name.last (FR-007)
         display_name_template: "{{ user.given_name }} {{ user.family_name }}"
         # Email from Kratos traits.email (FR-007)

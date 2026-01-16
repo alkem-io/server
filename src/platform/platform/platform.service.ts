@@ -18,6 +18,8 @@ import { ReleaseDiscussionOutput } from './dto/release.discussion.dto';
 import { ForumService } from '@platform/forum/forum.service';
 import { IForum } from '@platform/forum/forum.interface';
 import { ForumDiscussionCategory } from '@common/enums/forum.discussion.category';
+import { MessagingService } from '@domain/communication/messaging/messaging.service';
+import { IMessaging } from '@domain/communication/messaging/messaging.interface';
 import { Discussion } from '@platform/forum-discussion/discussion.entity';
 import { ITemplatesManager } from '@domain/template/templates-manager/templates.manager.interface';
 import { ILicensingFramework } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.interface';
@@ -27,6 +29,7 @@ import { IRoleSet } from '@domain/access/role-set';
 export class PlatformService {
   constructor(
     private forumService: ForumService,
+    private readonly messagingService: MessagingService,
     private entityManager: EntityManager,
     @InjectRepository(Platform)
     private platformRepository: Repository<Platform>,
@@ -112,6 +115,8 @@ export class PlatformService {
     });
     const forum = platform.forum;
     if (!forum) {
+      // Forum is a direct child of Platform. Since Platform has no Matrix Space,
+      // Forum becomes a root-level Matrix Space (no parent).
       platform.forum = await this.forumService.createForum(
         Object.values(ForumDiscussionCategory)
       );
@@ -119,6 +124,26 @@ export class PlatformService {
       return platform.forum;
     }
     return forum;
+  }
+
+  async ensureMessagingCreated(): Promise<IMessaging> {
+    const platform = await this.getPlatformOrFail({
+      relations: { messaging: true },
+    });
+    const messaging = platform.messaging;
+    if (!messaging) {
+      platform.messaging = await this.messagingService.createMessaging();
+      await this.savePlatform(platform);
+      return platform.messaging;
+    }
+    return messaging;
+  }
+
+  /**
+   * @deprecated Use ensureMessagingCreated instead
+   */
+  async ensureConversationsSetCreated(): Promise<IMessaging> {
+    return this.ensureMessagingCreated();
   }
 
   async getStorageAggregator(

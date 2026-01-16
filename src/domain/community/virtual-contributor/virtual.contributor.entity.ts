@@ -38,10 +38,10 @@ export class VirtualContributor
   })
   account?: Account;
 
-  @Column('json', { nullable: false })
+  @Column('jsonb', { nullable: false })
   settings!: IVirtualContributorSettings;
 
-  @Column('json', { nullable: false })
+  @Column('jsonb', { nullable: false })
   platformSettings!: IVirtualContributorPlatformSettings;
 
   // Direct reference to AiPersona using aiPersonaID as potentially in a separate server.
@@ -51,7 +51,7 @@ export class VirtualContributor
   @Column('varchar', { nullable: true, length: SMALL_TEXT_LENGTH })
   bodyOfKnowledgeID?: string;
 
-  @Column('json', { nullable: true, transformer: PromptGraphTransformer })
+  @Column('jsonb', { nullable: true, transformer: PromptGraphTransformer })
   promptGraphDefinition?: PromptGraphDefinition;
 
   @Column()

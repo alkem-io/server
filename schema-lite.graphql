@@ -5837,7 +5837,6 @@ input UpdateUserGroupInput {
 
 input UpdateUserInput {
   ID: UUID!
-  accountUpn: String
   firstName: String
   lastName: String
   """
@@ -6127,10 +6126,6 @@ enum UrlType {
 type User implements Contributor {
   """The account hosted by this User."""
   account: Account
-  """
-  The unique personal identifier (upn) for the account associated with this user profile
-  """
-  accountUpn: String!
   """The Agent representing this User."""
   agent: Agent!
   """Details about the authentication used for this User."""

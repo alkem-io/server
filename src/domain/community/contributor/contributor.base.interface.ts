@@ -5,7 +5,4 @@ import { INameable } from '@domain/common/entity/nameable-entity/nameable.interf
 @ObjectType('ContributorBase')
 export abstract class IContributorBase extends INameable {
   agent!: IAgent;
-
-  // the internal communicationID (Matrix) for the user
-  communicationID!: string;
 }

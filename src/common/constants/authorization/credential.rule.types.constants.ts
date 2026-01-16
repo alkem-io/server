@@ -105,3 +105,5 @@ export const CREDENTIAL_RULE_TYPES_FORUM_CONTRIBUTE =
   'credentialRuleTypes-forumContribute';
 export const CREDENTIAL_RULE_TYPES_FORUM_CREATE_DISCUSSION =
   'credentialRuleTypes-forumCreateDiscussion';
+export const CREDENTIAL_RULE_TYPES_MESSAGING_CREATE_CONVERSATION =
+  'credentialRuleTypes-messagingCreateConversation';

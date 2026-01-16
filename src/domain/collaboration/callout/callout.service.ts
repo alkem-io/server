@@ -116,7 +116,6 @@ export class CalloutService {
     if (!callout.isTemplate && callout.settings.framing.commentsEnabled) {
       callout.comments = await this.roomService.createRoom({
         displayName: `callout-comments-${callout.nameID}`,
-        senderCommunicationID: userID,
         type: RoomType.CALLOUT,
       });
     }
@@ -423,7 +422,8 @@ export class CalloutService {
   private async getCommentsCount(calloutID: string): Promise<number> {
     const comments = await this.getComments(calloutID);
     if (!comments) return 0;
-    return comments.messagesCount;
+    const messages = await this.roomService.getMessages(comments);
+    return messages.length;
   }
 
   private async setNameIdOnWhiteboardData(

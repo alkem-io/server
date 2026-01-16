@@ -19,9 +19,8 @@ export class IMessage {
   })
   message!: string;
 
+  // Agent ID of the sender - resolved to Contributor by field resolver
   sender!: string;
-
-  senderType!: 'user' | 'virtualContributor' | 'unknown';
 
   @Field(() => Number, {
     nullable: false,
@@ -35,7 +34,7 @@ export class IMessage {
   })
   reactions!: IMessageReaction[];
 
-  @Field(() => String, {
+  @Field(() => MessageID, {
     nullable: true,
     description: 'The message being replied to',
   })

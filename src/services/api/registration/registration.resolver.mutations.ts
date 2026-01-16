@@ -4,9 +4,7 @@ import { CurrentUser, Profiling } from '@src/common/decorators';
 import { IUser } from '@domain/community/user/user.interface';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
 import { RegistrationService } from './registration.service';
-import { NotificationInputPlatformUserRegistered } from '@services/adapters/notification-adapter/dto/platform/notification.dto.input.platform.user.registered';
 import { UserService } from '@domain/community/user/user.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -28,7 +26,6 @@ import { NotificationPlatformAdapter } from '@services/adapters/notification-ada
 @Resolver()
 export class RegistrationResolverMutations {
   constructor(
-    private userAuthorizationService: UserAuthorizationService,
     private notificationPlatformAdapter: NotificationPlatformAdapter,
     private registrationService: RegistrationService,
     private userService: UserService,
@@ -49,8 +46,10 @@ export class RegistrationResolverMutations {
   async createUserNewRegistration(
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<IUser> {
+    // registerNewUser handles: creation + org assignment + authorization + invitations + notification
     const user = await this.registrationService.registerNewUser(agentInfo);
-    return await this.processCreatedUser(user);
+
+    return await this.userService.getUserOrFail(user.id);
   }
 
   @Mutation(() => IUser, {
@@ -68,30 +67,13 @@ export class RegistrationResolverMutations {
       AuthorizationPrivilege.CREATE,
       `create new User: ${agentInfo.email}`
     );
+
+    // Create the user entity
     const user = await this.userService.createUser(userData);
-    return this.processCreatedUser(user);
-  }
 
-  private async processCreatedUser(userInput: IUser): Promise<IUser> {
-    const user =
-      await this.userAuthorizationService.grantCredentialsAllUsersReceive(
-        userInput.id
-      );
+    // Finalize: authorization + invitations + notification (same path as registerNewUser)
+    await this.registrationService.finalizeUserRegistration(user);
 
-    const userAuthorizations =
-      await this.userAuthorizationService.applyAuthorizationPolicy(user.id);
-    await this.authorizationPolicyService.saveAll(userAuthorizations);
-
-    const userAccount = await this.userService.getAccount(user);
-    const accountAuthorizations =
-      await this.accountAuthorizationService.applyAuthorizationPolicy(
-        userAccount
-      );
-    await this.authorizationPolicyService.saveAll(accountAuthorizations);
-
-    await this.registrationService.processPendingInvitations(user);
-
-    await this.userCreatedEvents(user);
     return await this.userService.getUserOrFail(user.id);
   }
 
@@ -131,17 +113,6 @@ export class RegistrationResolverMutations {
 
     return await this.organizationService.getOrganizationOrFail(
       organization.id
-    );
-  }
-
-  private async userCreatedEvents(user: IUser) {
-    // Send the notification
-    const notificationInput: NotificationInputPlatformUserRegistered = {
-      triggeredBy: user.id,
-      userID: user.id,
-    };
-    await this.notificationPlatformAdapter.platformUserProfileCreated(
-      notificationInput
     );
   }
 

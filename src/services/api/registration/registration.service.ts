@@ -22,12 +22,18 @@ import { RoleName } from '@common/enums/role.name';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { RelationshipNotFoundException } from '@common/exceptions';
+import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
+import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
+import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
+import { NotificationInputPlatformUserRegistered } from '@services/adapters/notification-adapter/dto/platform/notification.dto.input.platform.user.registered';
 
 export class RegistrationService {
   constructor(
     private accountService: AccountService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private userService: UserService,
+    private userAuthorizationService: UserAuthorizationService,
+    private accountAuthorizationService: AccountAuthorizationService,
     private organizationLookupService: OrganizationLookupService,
     private organizationService: OrganizationService,
     private platformInvitationService: PlatformInvitationService,
@@ -35,6 +41,7 @@ export class RegistrationService {
     private invitationService: InvitationService,
     private applicationService: ApplicationService,
     private roleSetService: RoleSetService,
+    private notificationPlatformAdapter: NotificationPlatformAdapter,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -45,11 +52,74 @@ export class RegistrationService {
         LogContext.COMMUNITY
       );
     }
-    // If a user has a valid session, and hence email / names etc set, then they can create a User profile
-    const user = await this.userService.createUserFromAgentInfo(agentInfo);
 
+    const { user, isNew } =
+      await this.userService.createOrLinkUserFromAgentInfo(agentInfo);
+
+    if (!isNew) {
+      // User was linked - no finalization needed, they already have credentials
+      this.logger.verbose?.(
+        `Existing user ${user.id} linked to authentication ID`,
+        LogContext.AUTH
+      );
+      return user;
+    }
+
+    // New user - finalize registration
     await this.assignUserToOrganizationByDomain(user);
-    return user;
+    const finalizedUser = await this.finalizeUserRegistration(user);
+
+    return finalizedUser;
+  }
+
+  /**
+   * Finalizes user registration by applying authorization and processing pending invitations.
+   * This should be called after user entity creation, regardless of the creation path.
+   */
+  public async finalizeUserRegistration(user: IUser): Promise<IUser> {
+    // Grant essential credentials to the user
+    const userWithCredentials =
+      await this.userAuthorizationService.grantCredentialsAllUsersReceive(
+        user.id
+      );
+
+    // Apply and save user authorization policy
+    const userAuthorizations =
+      await this.userAuthorizationService.applyAuthorizationPolicy(
+        userWithCredentials.id
+      );
+    await this.authorizationPolicyService.saveAll(userAuthorizations);
+
+    // Apply and save account authorization policy
+    const userAccount = await this.userService.getAccount(userWithCredentials);
+    const accountAuthorizations =
+      await this.accountAuthorizationService.applyAuthorizationPolicy(
+        userAccount
+      );
+    await this.authorizationPolicyService.saveAll(accountAuthorizations);
+
+    // Process any pending invitations for this user
+    await this.processPendingInvitations(userWithCredentials);
+
+    // Send notification that user profile was created
+    await this.sendUserCreatedNotification(userWithCredentials);
+
+    this.logger.verbose?.(
+      `Finalized registration for user: ${user.id}`,
+      LogContext.AUTH
+    );
+
+    return userWithCredentials;
+  }
+
+  private async sendUserCreatedNotification(user: IUser): Promise<void> {
+    const notificationInput: NotificationInputPlatformUserRegistered = {
+      triggeredBy: user.id,
+      userID: user.id,
+    };
+    await this.notificationPlatformAdapter.platformUserProfileCreated(
+      notificationInput
+    );
   }
 
   async assignUserToOrganizationByDomain(user: IUser): Promise<boolean> {

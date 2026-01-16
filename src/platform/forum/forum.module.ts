@@ -15,6 +15,7 @@ import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platf
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
+import { RoomModule } from '@domain/communication/room/room.module';
 
 @Module({
   imports: [
@@ -27,7 +28,7 @@ import { CommunicationAdapterModule } from '@services/adapters/communication-ada
     PlatformAuthorizationPolicyModule,
     StorageAggregatorResolverModule,
     CommunicationAdapterModule,
-    NamingModule,
+    RoomModule,
     TypeOrmModule.forFeature([Forum]),
   ],
   providers: [

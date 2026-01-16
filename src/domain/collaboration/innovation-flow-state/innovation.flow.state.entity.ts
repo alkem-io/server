@@ -15,7 +15,7 @@ export class InnovationFlowState
   @Column('text', { nullable: true })
   description?: string;
 
-  @Column('json', { nullable: false })
+  @Column('jsonb', { nullable: false })
   settings!: IInnovationFlowStateSettings;
 
   @Column('int', { nullable: false })

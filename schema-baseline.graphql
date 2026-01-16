@@ -529,6 +529,21 @@ input ActivityLogInput {
   types: [ActivityEventType!]
 }
 
+type AdminAuthenticationIDBackfillResult {
+  """Total users examined during the backfill run"""
+  processed: Int!
+  """
+  Batches that initially failed but succeeded after a retry during the run
+  """
+  retriedBatches: Int!
+  """
+  Users skipped because they already had authenticationID or no Kratos identity was found
+  """
+  skipped: Int!
+  """Users whose authenticationID was updated during the run"""
+  updated: Int!
+}
+
 type Agent {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -787,7 +802,7 @@ enum AuthorizationPolicyType {
   COLLABORATION
   COMMUNICATION
   COMMUNICATION_CONVERSATION
-  COMMUNICATION_CONVERSATIONS_SET
+  COMMUNICATION_MESSAGING
   COMMUNITY
   COMMUNITY_GUIDELINES
   DISCUSSION
@@ -1542,18 +1557,23 @@ type Conversation {
   createdDate: DateTime!
   """The ID of the entity"""
   id: UUID!
+  messaging: Messaging!
   """The room for this Conversation."""
   room: Room
+  """
+  The type of this Conversation (USER_USER or USER_VC), inferred from member agent types.
+  """
   type: CommunicationConversationType!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
-  """The user participating in this Conversation."""
+  """
+  The other user participating in this Conversation (excludes the current user).
+  """
   user: User
   """
   The virtual contributor participating in this Conversation (only for USER_AGENT conversations).
   """
   virtualContributor: VirtualContributor
-  wellKnownVirtualContributor: VirtualContributorWellKnown
 }
 
 input ConversationVcAnswerRelevanceInput {
@@ -1857,7 +1877,6 @@ input CreateContributionOnCalloutInput {
 }
 
 input CreateConversationInput {
-  type: CommunicationConversationType!
   userID: UUID!
   virtualContributorID: UUID
   wellKnownVirtualContributor: VirtualContributorWellKnown
@@ -2255,7 +2274,6 @@ input CreateUserGroupInput {
 }
 
 input CreateUserInput {
-  accountUpn: String
   email: String!
   firstName: String
   lastName: String
@@ -3618,7 +3636,7 @@ type LookupQueryResults {
   whiteboard(ID: UUID!): Whiteboard
 }
 
-"""A decentralized identifier (DID) as per the W3C standard."""
+"""A markdown string."""
 scalar Markdown
 
 type MeConversationsResult {
@@ -3770,6 +3788,17 @@ type MessageParent {
   url: String!
 }
 
+type Messaging {
+  """The authorization rules for the entity"""
+  authorization: Authorization
+  """The date at which the entity was created."""
+  createdDate: DateTime!
+  """The ID of the entity"""
+  id: UUID!
+  """The date at which the entity was last updated."""
+  updatedDate: DateTime!
+}
+
 type Metadata {
   """Collection of metadata about Alkemio services."""
   services: [ServiceMetadata!]!
@@ -3856,6 +3885,10 @@ type Mutation {
   addNotificationEmailToBlacklist(input: NotificationEmailAddressInput!): [String!]!
   """Add a reaction to a message from the specified Room."""
   addReactionToMessageInRoom(reactionData: RoomAddReactionToMessageInput!): Reaction!
+  """
+  Populate authenticationID for existing users by querying Kratos Admin API
+  """
+  adminBackfillAuthenticationIDs: AdminAuthenticationIDBackfillResult!
   """Ensure all community members are registered for communications."""
   adminCommunicationEnsureAccessToCommunications(communicationData: CommunicationAdminEnsureAccessInput!): Boolean!
   """Remove an orphaned room from messaging platform."""
@@ -3950,8 +3983,8 @@ type Mutation {
   createCalloutOnCalloutsSet(calloutData: CreateCalloutOnCalloutsSetInput!): Callout!
   """Create a new Contribution on the Callout."""
   createContributionOnCallout(contributionData: CreateContributionOnCalloutInput!): CalloutContribution!
-  """Create a new Conversation on the ConversationsSet."""
-  createConversationOnConversationsSet(conversationData: CreateConversationInput!): Conversation!
+  """Create a new Conversation on the Messaging."""
+  createConversation(conversationData: CreateConversationInput!): Conversation!
   """Creates a new Discussion as part of this Forum."""
   createDiscussion(createData: ForumCreateDiscussionInput!): Discussion!
   """Create a new CalendarEvent on the Calendar."""
@@ -4628,6 +4661,7 @@ type Platform {
   library: Library!
   """The Licensing in use by the platform."""
   licensingFramework: Licensing!
+  messaging: Messaging
   """Alkemio Services Metadata."""
   metadata: Metadata!
   """The RoleSet for this Platform."""
@@ -7152,7 +7186,6 @@ input UpdateUserGroupInput {
 
 input UpdateUserInput {
   ID: UUID!
-  accountUpn: String
   firstName: String
   lastName: String
   """
@@ -7518,10 +7551,6 @@ enum UrlType {
 type User implements Contributor {
   """The account hosted by this User."""
   account: Account
-  """
-  The unique personal identifier (upn) for the account associated with this user profile
-  """
-  accountUpn: String!
   """The Agent representing this User."""
   agent: Agent!
   """Details about the authentication used for this User."""
@@ -7746,15 +7775,10 @@ input UsersWithAuthorizationCredentialInput {
 }
 
 type VcInteraction {
-  """The date at which the entity was created."""
-  createdDate: DateTime!
-  """The ID of the entity"""
-  id: UUID!
-  room: Room!
+  """The thread ID (Matrix message ID) where VC is engaged"""
   threadID: String!
-  """The date at which the entity was last updated."""
-  updatedDate: DateTime!
-  virtualContributorID: UUID!
+  """The actor ID (agent.id) of the Virtual Contributor"""
+  virtualContributorID: String!
 }
 
 type VirtualContributor implements Contributor {
@@ -7814,6 +7838,10 @@ type VirtualContributor implements Contributor {
   status: VirtualContributorStatus!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
+  """
+  The well-known identifier of this Virtual Contributor, if configured at platform level.
+  """
+  wellKnownVirtualContributor: VirtualContributorWellKnown
 }
 
 enum VirtualContributorBodyOfKnowledgeType {

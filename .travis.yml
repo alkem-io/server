@@ -1,7 +1,7 @@
 dist: focal
 language: node_js
 node_js:
-  - v20.15.1
+  - v22.21.1
 env:
   matrix:
     - NODE_OPTIONS="--max-old-space-size=4196"

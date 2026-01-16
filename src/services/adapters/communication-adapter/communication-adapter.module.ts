@@ -1,10 +1,11 @@
 import { Module } from '@nestjs/common';
 import { CommunicationAdapter } from './communication.adapter';
-import { MicroservicesModule } from '@core/microservices/microservices.module';
+import { CommunicationRpcModule } from './communication.rpc.module';
+import { CommunicationAdapterEventService } from './communication.adapter.event.service';
 
 @Module({
-  imports: [MicroservicesModule],
-  providers: [CommunicationAdapter],
+  imports: [CommunicationRpcModule],
+  providers: [CommunicationAdapter, CommunicationAdapterEventService],
   exports: [CommunicationAdapter],
 })
 export class CommunicationAdapterModule {}

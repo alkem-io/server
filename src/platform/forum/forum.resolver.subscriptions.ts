@@ -97,7 +97,7 @@ export class ForumResolverSubscriptions {
       `subscription to discussion updates on: ${forum.id}`
     );
 
-    return this.subscriptionDiscussionUpdated.asyncIterator(
+    return this.subscriptionDiscussionUpdated.asyncIterableIterator(
       SubscriptionType.FORUM_DISCUSSION_UPDATED
     );
   }

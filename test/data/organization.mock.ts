@@ -293,6 +293,5 @@ export const organizationData: { organization: IOrganization } = {
       privacy: { contributionRolesPubliclyVisible: true },
       membership: { allowUsersMatchingDomainToJoin: false },
     },
-    communicationID: 'comm-03bb5b07-f134-4074-97b9-1dd7950c7fa4',
   },
 };

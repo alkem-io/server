@@ -36,7 +36,7 @@ export class Callout extends AuthorizableEntity implements ICallout {
   @JoinColumn()
   framing!: CalloutFraming;
 
-  @Column('json', { nullable: false })
+  @Column('jsonb', { nullable: false })
   settings!: ICalloutSettings;
 
   @OneToOne(() => Classification, {

@@ -324,11 +324,7 @@ export class WhiteboardGuestAccessService {
       whiteboardId,
       userId:
         agentInfo.userID || (agentInfo.isAnonymous ? 'anonymous' : 'unknown'),
-      communicationID:
-        agentInfo.communicationID ||
-        agentInfo.agentID ||
-        agentInfo.userID ||
-        'unknown',
+      actorId: agentInfo.agentID || agentInfo.userID || 'unknown',
       context: LogContext.COLLABORATION,
     };
 

@@ -8,12 +8,18 @@ import { EntityManager } from 'typeorm';
 import { User } from '@domain/community/user/user.entity';
 import { AgentInfoMetadata } from './agent.info.metadata';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { ICredential } from '@domain/agent/credential/credential.interface';
+import { UserAuthenticationLinkService } from '@domain/community/user-authentication-link/user.authentication.link.service';
+import { OryDefaultIdentitySchema } from '@services/infrastructure/kratos/types/ory.default.identity.schema';
+import { Session } from '@ory/kratos-client';
+import { Identity } from '@ory/kratos-client';
+
 @Injectable()
 export class AgentInfoService {
   constructor(
+    private readonly userAuthenticationLinkService: UserAuthenticationLinkService,
     @InjectEntityManager('default')
-    private entityManager: EntityManager,
+    private readonly entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -48,42 +54,45 @@ export class AgentInfoService {
    * Retrieves the agent information metadata for a given email.
    *
    * @param email - The email address of the user whose agent information metadata is to be retrieved.
+   * @param options - Optional parameters.
    * @returns A promise that resolves to the agent information metadata if found, or undefined if the user is not registered.
    * @throws Will log an error message if the user is not registered.
    */
   public async getAgentInfoMetadata(
-    email: string
+    email: string,
+    options?: { authenticationId?: string }
   ): Promise<AgentInfoMetadata | undefined> {
-    try {
-      const user = await this.entityManager.findOneOrFail(User, {
-        where: {
-          email: email,
-        },
+    const agentInfo = new AgentInfo();
+    agentInfo.email = email;
+    if (options?.authenticationId) {
+      agentInfo.authenticationID = options.authenticationId;
+    }
+
+    const resolved =
+      await this.userAuthenticationLinkService.resolveExistingUser(agentInfo, {
         relations: {
           agent: {
             credentials: true,
           },
         },
+        conflictMode: 'log',
       });
-      if (!user || !user.agent || !user.agent.credentials) {
-        throw new EntityNotFoundException(
-          `Unable to load User, Agent or Credentials for User: ${email}`,
-          LogContext.COMMUNITY
-        );
-      }
-      const userAgentInfoMetadata = new AgentInfoMetadata();
-      userAgentInfoMetadata.credentials = user.agent.credentials;
-      userAgentInfoMetadata.agentID = user.agent.id;
-      userAgentInfoMetadata.userID = user.id;
-      userAgentInfoMetadata.communicationID = user.communicationID;
-      return userAgentInfoMetadata;
-    } catch (error) {
-      this.logger.verbose?.(
-        `User not registered: ${email}, ${error}`,
-        LogContext.AUTH
-      );
+
+    const user = resolved?.user;
+    const agent = user?.agent;
+    const credentials = agent?.credentials;
+
+    if (!user || !agent || !credentials) {
+      this.logger.verbose?.(`User not registered: ${email}`, LogContext.AUTH);
       return undefined;
     }
+
+    const userAgentInfoMetadata = new AgentInfoMetadata();
+    userAgentInfoMetadata.credentials = credentials;
+    userAgentInfoMetadata.agentID = agent.id;
+    userAgentInfoMetadata.userID = user.id;
+    userAgentInfoMetadata.authenticationID = user.authenticationID ?? undefined;
+    return userAgentInfoMetadata;
   }
 
   /**
@@ -93,7 +102,7 @@ export class AgentInfoService {
    * @param agentInfoMetadata - The metadata containing information to populate the agent info.
    *
    * @remarks
-   * This method assigns the `agentID`, `userID`, and `communicationID` from `agentInfoMetadata` to `agentInfo`.
+   * This method assigns the `agentID` and `userID` from `agentInfoMetadata` to `agentInfo`.
    * If `agentInfoMetadata` contains credentials, they are also assigned to `agentInfo`.
    * If credentials are not available, a warning is logged.
    */
@@ -103,7 +112,9 @@ export class AgentInfoService {
   ): void {
     agentInfo.agentID = agentInfoMetadata.agentID;
     agentInfo.userID = agentInfoMetadata.userID;
-    agentInfo.communicationID = agentInfoMetadata.communicationID;
+    if (agentInfoMetadata.authenticationID) {
+      agentInfo.authenticationID = agentInfoMetadata.authenticationID;
+    }
 
     if (agentInfoMetadata.credentials) {
       agentInfo.credentials = agentInfoMetadata.credentials;
@@ -141,16 +152,120 @@ export class AgentInfoService {
     let credentials: ICredentialDefinition[] = [];
 
     if (user.agent.credentials.length !== 0) {
-      credentials = user.agent.credentials.map(c => {
-        return {
-          type: c.type,
-          resourceID: c.resourceID,
-        };
-      });
+      credentials = user.agent.credentials.map(
+        (credential: ICredential): ICredentialDefinition => {
+          return {
+            type: credential.type,
+            resourceID: credential.resourceID,
+          };
+        }
+      );
     }
 
     const agentInfo = new AgentInfo();
     agentInfo.credentials = credentials;
+    return agentInfo;
+  }
+
+  /**
+   * Builds an AgentInfo from an Ory Identity schema.
+   * Consolidates logic previously duplicated in AuthenticationService and IdentityResolveService.
+   *
+   * @param identity - The Ory Identity (can be typed OryDefaultIdentitySchema or generic Identity)
+   * @param options - Optional configuration
+   * @param options.session - Ory session for expiry information
+   * @param options.authenticationId - Override authentication ID (defaults to identity.id)
+   * @returns AgentInfo populated with identity data
+   */
+  public buildAgentInfoFromOryIdentity(
+    identity: OryDefaultIdentitySchema | Identity,
+    options?: {
+      session?: Session;
+      authenticationId?: string;
+    }
+  ): AgentInfo {
+    const agentInfo = new AgentInfo();
+    const oryIdentity = identity as OryDefaultIdentitySchema;
+    const traits = (oryIdentity.traits ?? {}) as Record<string, any>;
+
+    // Extract email - try traits.email first, then verifiable_addresses
+    const email =
+      (traits.email as string | undefined) ??
+      oryIdentity.verifiable_addresses?.[0]?.value ??
+      '';
+
+    // Determine email verification status
+    const isEmailVerified = Array.isArray(oryIdentity.verifiable_addresses)
+      ? oryIdentity.verifiable_addresses.some(
+          addr => addr.via === 'email' && addr.verified
+        )
+      : false;
+
+    agentInfo.email = email.toLowerCase();
+    agentInfo.emailVerified = isEmailVerified;
+    agentInfo.firstName = (traits?.name?.first as string) ?? '';
+    agentInfo.lastName = (traits?.name?.last as string) ?? '';
+    agentInfo.avatarURL = (traits?.picture as string) ?? '';
+    agentInfo.authenticationID = options?.authenticationId ?? identity.id;
+
+    // Set session expiry if provided
+    if (options?.session?.expires_at) {
+      agentInfo.expiry = new Date(options.session.expires_at).getTime();
+    }
+
+    return agentInfo;
+  }
+
+  /**
+   * Builds an AgentInfo from an agent ID.
+   * Consolidates logic previously in MessageInboxService.
+   *
+   * @param agentId - The agent's UUID
+   * @param options - Optional configuration
+   * @param options.includeCredentials - Whether to load and include credentials (default: false)
+   * @returns AgentInfo populated with user data, or anonymous AgentInfo if agent is not a user
+   */
+  public async buildAgentInfoForAgent(
+    agentId: string,
+    options?: { includeCredentials?: boolean }
+  ): Promise<AgentInfo> {
+    // Try to find user by agent ID
+    const user = await this.entityManager.findOne(User, {
+      where: { agent: { id: agentId } },
+      relations: options?.includeCredentials
+        ? { agent: { credentials: true } }
+        : { agent: true },
+    });
+
+    if (user?.agent) {
+      const agentInfo = new AgentInfo();
+      agentInfo.userID = user.id;
+      agentInfo.agentID = agentId;
+      agentInfo.email = user.email;
+      agentInfo.firstName = user.firstName;
+      agentInfo.lastName = user.lastName;
+      agentInfo.isAnonymous = false;
+      agentInfo.authenticationID = user.authenticationID || '';
+
+      if (options?.includeCredentials && user.agent.credentials) {
+        agentInfo.credentials = user.agent.credentials.map(
+          (credential: ICredential): ICredentialDefinition => ({
+            type: credential.type,
+            resourceID: credential.resourceID,
+          })
+        );
+      } else {
+        agentInfo.credentials = [];
+      }
+
+      return agentInfo;
+    }
+
+    // Agent is not a user (likely a VC or system), return anonymous
+    const agentInfo = new AgentInfo();
+    agentInfo.agentID = agentId;
+    agentInfo.isAnonymous = true;
+    agentInfo.credentials = [];
     return agentInfo;
   }
 }

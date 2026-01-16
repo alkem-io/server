@@ -12,7 +12,7 @@ import { ActivityModule } from '@platform/activity/activity.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { ContributorModule } from '@domain/community/contributor/contributor.module';
 import { InAppNotificationModule } from '@platform/in-app-notification/in.app.notification.module';
-import { ConversationsSetModule } from '@domain/communication/conversations-set/conversations.set.module';
+import { MessagingModule } from '@domain/communication/messaging/messaging.module';
 import { MeConversationsResolverFields } from './me.conversations.resolver.fields';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 
@@ -29,7 +29,7 @@ import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.modu
     ActivityModule,
     EntityResolverModule,
     InAppNotificationModule,
-    ConversationsSetModule,
+    MessagingModule,
   ],
   providers: [
     MeService,

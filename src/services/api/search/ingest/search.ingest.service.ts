@@ -826,8 +826,6 @@ export class SearchIngestService {
       .then(users =>
         users.map(user => ({
           ...user,
-          accountUpn: undefined,
-          communicationID: undefined,
           email: undefined,
           phone: undefined,
           serviceProfile: undefined,

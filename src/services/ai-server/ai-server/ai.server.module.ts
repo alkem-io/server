@@ -11,7 +11,6 @@ import { AiServerAuthorizationService } from './ai.server.service.authorization'
 import { AiPersonaModule } from '../ai-persona/ai.persona.module';
 import { AiPersonaEngineAdapterModule } from '../ai-persona-engine-adapter/ai.persona.engine.adapter.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
-import { VcInteractionModule } from '@domain/communication/vc-interaction/vc.interaction.module';
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
 import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
@@ -25,7 +24,6 @@ import { RoomIntegrationModule } from '@services/room-integration/room.integrati
     TypeOrmModule.forFeature([AiServer, VirtualContributor]),
     AiPersonaEngineAdapterModule,
     PlatformAuthorizationPolicyModule,
-    VcInteractionModule,
     CommunicationAdapterModule,
     SubscriptionServiceModule,
     RoomIntegrationModule,

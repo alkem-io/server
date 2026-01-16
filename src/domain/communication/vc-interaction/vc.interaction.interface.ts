@@ -1,19 +1,15 @@
-import { IBaseAlkemio } from '@domain/common/entity/base-entity';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { IRoom } from '../room/room.interface';
-import { UUID } from '@domain/common/scalars';
-import { ExternalMetadata } from './vc.interaction.entity';
+import { MessageID } from '@domain/common/scalars';
 
 @ObjectType('VcInteraction')
-export abstract class IVcInteraction extends IBaseAlkemio {
-  @Field(() => IRoom)
-  room!: IRoom;
-
-  @Field(() => String)
+export abstract class IVcInteraction {
+  @Field(() => MessageID, {
+    description: 'The thread ID (Matrix message ID) where VC is engaged',
+  })
   threadID!: string;
 
-  @Field(() => UUID)
+  @Field(() => String, {
+    description: 'The actor ID (agent.id) of the Virtual Contributor',
+  })
   virtualContributorID!: string;
-
-  externalMetadata: ExternalMetadata = {};
 }

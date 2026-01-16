@@ -1,6 +1,6 @@
 import { connect as amqpConnect, ChannelModel, Connection } from 'amqplib';
 import { AMQPPubSub } from 'graphql-amqp-subscriptions';
-import { PubSubEngine } from 'graphql-subscriptions';
+import { PubSubEngine, PubSub } from 'graphql-subscriptions';
 import { LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { LogContext } from '@common/enums';
@@ -10,8 +10,17 @@ export async function subscriptionFactory(
   logger: LoggerService,
   configService: ConfigService<AlkemioConfig, true>,
   exchangeName: string,
-  queueName: string
+  queueName: string,
+  isBootstrap = false
 ): Promise<PubSubEngine | undefined> {
+  if (isBootstrap) {
+    logger.log?.(
+      'Skipping RabbitMQ connection for schema bootstrap',
+      LogContext.SUBSCRIPTIONS
+    );
+    return new PubSub();
+  }
+
   const rabbitMqOptions = configService?.get('microservices.rabbitmq', {
     infer: true,
   });
@@ -64,6 +73,8 @@ export async function subscriptionFactory(
       `Created consumer on queue ${queueName}`,
       LogContext.SUBSCRIPTIONS
     );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (pubSub as any).connection = connection;
     return pubSub;
   } catch (err) {
     logger?.error(

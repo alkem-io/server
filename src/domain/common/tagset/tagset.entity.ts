@@ -1,4 +1,4 @@
-import { Column, Entity, ManyToOne } from 'typeorm';
+import { Column, Entity, Index, ManyToOne } from 'typeorm';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { Profile } from '@domain/common/profile/profile.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
@@ -9,6 +9,7 @@ import { ENUM_LENGTH } from '@common/constants';
 import { Classification } from '../classification/classification.entity';
 
 @Entity()
+@Index('IDX_tagset_profileId', ['profile'])
 export class Tagset extends AuthorizableEntity implements ITagset {
   @Column('varchar', {
     default: TagsetReservedName.DEFAULT,

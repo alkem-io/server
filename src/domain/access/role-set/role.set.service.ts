@@ -51,6 +51,7 @@ import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { CommunityCommunicationService } from '@domain/community/community-communication/community.communication.service';
 import { LicenseService } from '@domain/common/license/license.service';
+import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
 import { LicenseType } from '@common/enums/license.type';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
@@ -82,6 +83,7 @@ export class RoleSetService {
     private aiServerAdapter: AiServerAdapter,
     private communityCommunicationService: CommunityCommunicationService,
     private licenseService: LicenseService,
+    private inAppNotificationService: InAppNotificationService,
     @InjectRepository(RoleSet)
     private roleSetRepository: Repository<RoleSet>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -1108,6 +1110,29 @@ export class RoleSetService {
             communication,
             user
           );
+
+          // Clean up notifications for this user in this space and all descendant spaces (L1, L2, etc.)
+          const space =
+            await this.communityResolverService.getSpaceForRoleSetOrFail(
+              roleSet.id
+            );
+
+          // Delete notifications from the current space
+          await this.inAppNotificationService.deleteAllForReceiverInSpace(
+            userID,
+            space.id
+          );
+
+          // Also delete notifications from all descendant spaces (L1, L2, etc.)
+          // since user is automatically removed from those as well
+          const descendantSpaceIDs =
+            await this.spaceLookupService.getAllDescendantSpaceIDs(space.id);
+          if (descendantSpaceIDs.length > 0) {
+            await this.inAppNotificationService.deleteAllForReceiverInSpaces(
+              userID,
+              descendantSpaceIDs
+            );
+          }
         }
         break;
       }
@@ -1116,6 +1141,19 @@ export class RoleSetService {
           await this.removeContributorFromAccountAdminImplicitRole(
             roleSet,
             agent
+          );
+        }
+
+        // Clean up notifications only when user is completely removed (MEMBER role)
+        // If only ADMIN or OWNER is removed, user still has access as MEMBER
+        if (roleType === RoleName.MEMBER) {
+          const adminCredential = await this.getCredentialDefinitionForRole(
+            roleSet,
+            RoleName.ADMIN
+          );
+          await this.inAppNotificationService.deleteAllForReceiverInOrganization(
+            userID,
+            adminCredential.resourceID
           );
         }
         break;
@@ -1149,6 +1187,30 @@ export class RoleSetService {
       validatePolicyLimits
     );
 
+    // Clean up notifications for this organization when removed from space and all descendant spaces
+    if (roleSet.type === RoleSetType.SPACE && roleType === RoleName.MEMBER) {
+      const space =
+        await this.communityResolverService.getSpaceForRoleSetOrFail(
+          roleSet.id
+        );
+
+      // Delete notifications from the current space
+      await this.inAppNotificationService.deleteAllForContributorOrganizationInSpace(
+        organizationID,
+        space.id
+      );
+
+      // Also delete notifications from all descendant spaces (L1, L2, etc.)
+      const descendantSpaceIDs =
+        await this.spaceLookupService.getAllDescendantSpaceIDs(space.id);
+      if (descendantSpaceIDs.length > 0) {
+        await this.inAppNotificationService.deleteAllForContributorOrganizationInSpaces(
+          organizationID,
+          descendantSpaceIDs
+        );
+      }
+    }
+
     return organization;
   }
 
@@ -1170,6 +1232,30 @@ export class RoleSetService {
       RoleSetContributorType.VIRTUAL,
       validatePolicyLimits
     );
+
+    // Clean up notifications for this VC when removed from space and all descendant spaces
+    if (roleSet.type === RoleSetType.SPACE && roleType === RoleName.MEMBER) {
+      const space =
+        await this.communityResolverService.getSpaceForRoleSetOrFail(
+          roleSet.id
+        );
+
+      // Delete notifications from the current space
+      await this.inAppNotificationService.deleteAllForContributorVcInSpace(
+        virtualContributorID,
+        space.id
+      );
+
+      // Also delete notifications from all descendant spaces (L1, L2, etc.)
+      const descendantSpaceIDs =
+        await this.spaceLookupService.getAllDescendantSpaceIDs(space.id);
+      if (descendantSpaceIDs.length > 0) {
+        await this.inAppNotificationService.deleteAllForContributorVcInSpaces(
+          virtualContributorID,
+          descendantSpaceIDs
+        );
+      }
+    }
 
     return virtualContributor;
   }

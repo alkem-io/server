@@ -1,7 +1,7 @@
 ###############
 # Single-stage build (includes sources & dev tooling for migrations)
 ###############
-FROM node:20.15.1-alpine
+FROM node:22.21.1-alpine
 WORKDIR /usr/src/app
 
 ARG GRAPHQL_ENDPOINT_PORT_ARG=4000

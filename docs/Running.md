@@ -7,7 +7,7 @@ To simplify setting up the Server development environment, a pre-configured dock
 ## Prerequisites:
 
 - Docker and docker-compose installed on x86 architecture\* (so not an ARM-based architecture like Raspberry pi or MacBook with M1 processor)
-- Make sure you're using pnpm @9.0.0 or later. node v20.9.0 is recommended (but it should work with v < 21)
+- Make sure you're using pnpm @9.0.0 or later. node v22.0.0 is recommended (but it should work with v < 23)
 
 \* If you are not on an x86 architecture:
 

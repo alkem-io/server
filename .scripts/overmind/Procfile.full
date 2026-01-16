@@ -1,0 +1,23 @@
+# Alkemio Server Full Development Stack
+# Start with: ~/.local/bin/overmind start -f Procfile.full
+#
+# This starts EVERYTHING including Docker services.
+# Use Procfile.dev if you prefer to manage Docker separately.
+#
+# Commands:
+#   overmind connect <name>  # Attach to process
+#   overmind restart <name>  # Restart process
+#   overmind kill <name>     # Kill process
+#   overmind ps              # Show status
+
+# Docker infrastructure (postgres, kratos, rabbitmq, redis, etc.)
+infra: docker compose -f quickstart-services.yml --env-file .env.docker up --build --force-recreate 2>&1
+
+# TypeScript type checking
+ts: sleep 30 && pnpm exec tsc -w --noEmit --preserveWatchOutput 2>&1
+
+# Jest watch mode
+test: sleep 35 && pnpm test:watch 2>&1
+
+# NestJS app (wait for infra to be ready)
+app: sleep 40 && pnpm start:dev 2>&1

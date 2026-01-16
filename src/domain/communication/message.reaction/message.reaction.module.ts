@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { MessageReactionResolverFields } from './message.reaction.resolver.fields';
-import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
+import { ContributorLookupModule } from '@services/infrastructure/contributor-lookup/contributor.lookup.module';
 
 @Module({
-  imports: [UserLookupModule],
+  imports: [ContributorLookupModule],
   providers: [MessageReactionResolverFields],
   exports: [MessageReactionResolverFields],
 })

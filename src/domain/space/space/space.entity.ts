@@ -80,11 +80,11 @@ export class Space extends AuthorizableEntity implements ISpace {
   @JoinColumn()
   agent?: Agent;
 
-  @Column('json', { nullable: false })
+  @Column('jsonb', { nullable: false })
   settings: ISpaceSettings;
 
   // Calculated field to make the authorization logic clearer
-  @Column('json', { nullable: false })
+  @Column('jsonb', { nullable: false })
   platformRolesAccess!: IPlatformRolesAccess;
 
   @OneToOne(() => StorageAggregator, {

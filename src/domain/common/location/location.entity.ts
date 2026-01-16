@@ -24,6 +24,6 @@ export class Location extends BaseAlkemioEntity implements ILocation {
   @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: true })
   postalCode?: string;
 
-  @Column('json', { nullable: false })
+  @Column('jsonb', { nullable: false })
   geoLocation!: IGeoLocation;
 }

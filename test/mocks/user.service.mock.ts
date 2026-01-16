@@ -6,7 +6,7 @@ export const MockUserService: ValueProvider<PublicPart<UserService>> = {
   provide: UserService,
   useValue: {
     createUser: jest.fn(),
-    createUserFromAgentInfo: jest.fn(),
+    createOrLinkUserFromAgentInfo: jest.fn(),
     deleteUser: jest.fn(),
     save: jest.fn(),
     getUserOrFail: jest.fn(),

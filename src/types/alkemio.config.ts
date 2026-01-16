@@ -64,17 +64,6 @@ export type AlkemioConfig = {
           };
           session_cookie_name: string;
           session_extend_enabled: boolean;
-          session_sync: {
-            enabled: boolean;
-            interval_ms: number;
-            kratos_database: {
-              database: string;
-              host?: string;
-              port?: number;
-              username?: string;
-              password?: string;
-            };
-          };
         };
       };
     };
@@ -114,19 +103,6 @@ export type AlkemioConfig = {
     matrix: {
       connection_retries: number;
       connection_timeout: number;
-      admin_api: {
-        url: string;
-        token?: string;
-      };
-      oidc_provider_id: string;
-      database: {
-        host: string;
-        port: number;
-        username: string;
-        password: string;
-        database: string;
-        ssl: boolean;
-      };
     };
     discussions: {
       enabled: boolean;
@@ -148,6 +124,11 @@ export type AlkemioConfig = {
       schema: string;
       database: string;
       logging: boolean;
+      pool?: {
+        max: number;
+        idle_timeout_ms: number;
+        connection_timeout_ms: number;
+      };
     };
     local_storage: {
       path: string;

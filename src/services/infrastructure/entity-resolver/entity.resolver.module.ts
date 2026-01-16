@@ -1,7 +1,6 @@
 import { User } from '@domain/community/user/user.entity';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { IdentityResolverService } from './identity.resolver.service';
 import { CommunityResolverService } from './community.resolver.service';
 import { Community } from '@domain/community/community/community.entity';
 import { Communication } from '@domain/communication/communication/communication.entity';
@@ -20,14 +19,12 @@ import { UrlGeneratorModule } from '../url-generator';
     TypeOrmModule.forFeature([Communication]),
   ],
   providers: [
-    IdentityResolverService,
     CommunityResolverService,
     TimelineResolverService,
     ContributionResolverService,
     RoomResolverService,
   ],
   exports: [
-    IdentityResolverService,
     CommunityResolverService,
     TimelineResolverService,
     ContributionResolverService,

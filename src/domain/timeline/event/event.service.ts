@@ -121,11 +121,10 @@ export class CalendarEventService {
     const calendarEvent = await this.getCalendarEventOrFail(
       calendarEventData.ID,
       {
-        relations: { profile: true },
+        relations: { profile: true, comments: true },
       }
     );
 
-    // Copy over the received data
     if (calendarEventData.profileData) {
       if (!calendarEvent.profile) {
         throw new EntityNotFoundException(
@@ -133,6 +132,21 @@ export class CalendarEventService {
           LogContext.CALENDAR
         );
       }
+
+      // Sync room name if displayName is changing
+      if (
+        calendarEventData.profileData.displayName &&
+        calendarEvent.comments &&
+        calendarEvent.profile.displayName !==
+          calendarEventData.profileData.displayName
+      ) {
+        const newRoomName = `calendarEvent-comments-${calendarEvent.nameID}`;
+        await this.roomService.updateRoomDisplayName(
+          calendarEvent.comments,
+          newRoomName
+        );
+      }
+
       calendarEvent.profile = await this.profileService.updateProfile(
         calendarEvent.profile,
         calendarEventData.profileData

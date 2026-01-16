@@ -64,7 +64,7 @@ export class InAppNotification
   @JoinColumn({ name: 'receiverID' })
   receiver?: User;
 
-  @Column('json', {
+  @Column('jsonb', {
     nullable: false,
     comment: 'Additional data that is relevant for this Notification.',
   })

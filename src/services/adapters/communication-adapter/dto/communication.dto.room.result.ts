@@ -1,5 +1,5 @@
 import { IMessage } from '@domain/communication/message/message.interface';
-import { Field, ObjectType } from '@nestjs/graphql';
+import { Field, Int, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('CommunicationRoom')
 export class CommunicationRoomResult {
@@ -21,10 +21,17 @@ export class CommunicationRoomResult {
   })
   displayName!: string;
 
+  @Field(() => Int, {
+    nullable: false,
+    description: 'The number of messages in the Room.',
+  })
+  messagesCount!: number;
+
   // The communication IDs of the room members
   members!: string[];
 
   constructor() {
     this.displayName = '';
+    this.messagesCount = 0;
   }
 }

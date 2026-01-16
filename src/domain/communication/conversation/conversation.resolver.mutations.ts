@@ -14,11 +14,12 @@ import { ConversationVcAnswerRelevanceInput } from './dto/conversation.vc.dto.re
 import { ConversationVcAskQuestionInput } from './dto/conversation.vc.dto.ask.question.input';
 import { GuidanceReporterService } from '@services/external/elasticsearch/guidance-reporter/guidance.reporter.service';
 import { ConversationVcAskQuestionResult } from './dto/conversation.vc.dto.ask.question.result';
-import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
+import { AgentType } from '@common/enums/agent.type';
 import { ValidationException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { ConversationVcResetInput } from './dto/conversation.vc.dto.reset.input';
 import { DeleteConversationInput } from './dto/conversation.dto.delete';
+import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 
 @InstrumentResolver()
 @Resolver()
@@ -29,6 +30,7 @@ export class ConversationResolverMutations {
     private conversationService: ConversationService,
     private guidanceReporterService: GuidanceReporterService,
     private conversationAuthorizationService: ConversationAuthorizationService,
+    private virtualContributorLookupService: VirtualContributorLookupService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -40,15 +42,29 @@ export class ConversationResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('input') input: ConversationVcAskQuestionInput
   ): Promise<ConversationVcAskQuestionResult> {
+    // Fetch conversation with room relation
     const conversation = await this.conversationService.getConversationOrFail(
+      input.conversationID,
+      { relations: { room: true } }
+    );
+
+    // Get members once for type check and VC resolution
+    const members = await this.conversationService.getConversationMembers(
       input.conversationID
     );
-    if (conversation.type !== CommunicationConversationType.USER_VC) {
+
+    // Validate type: must be USER_VC
+    const vcMember = members.find(
+      m => m.agent.type === AgentType.VIRTUAL_CONTRIBUTOR
+    );
+    if (!vcMember) {
       throw new ValidationException(
         `Conversation is not a USER_VC type: ${conversation.id}`,
         LogContext.COMMUNICATION_CONVERSATION
       );
     }
+
+    // Authorization check
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       conversation.authorization,
@@ -56,7 +72,27 @@ export class ConversationResolverMutations {
       `conversation VC ask question: ${agentInfo.email}`
     );
 
-    return this.conversationService.askQuestion(input, agentInfo);
+    // Resolve VC from already-fetched member
+    const vc =
+      await this.virtualContributorLookupService.getVirtualContributorByAgentId(
+        vcMember.agentId,
+        { relations: { agent: true } }
+      );
+    if (!vc) {
+      throw new ValidationException(
+        `Could not resolve virtual contributor for conversation: ${conversation.id}`,
+        LogContext.COMMUNICATION_CONVERSATION
+      );
+    }
+
+    // Call with pre-resolved data
+    return this.conversationService.askQuestion(
+      conversation,
+      vc,
+      input.question,
+      input.language,
+      agentInfo
+    );
   }
 
   @Mutation(() => IConversation, {
@@ -66,36 +102,63 @@ export class ConversationResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('input') input: ConversationVcResetInput
   ): Promise<IConversation> {
-    let conversation = await this.conversationService.getConversationOrFail(
+    // Fetch conversation with room relation (needed for reset)
+    const conversation = await this.conversationService.getConversationOrFail(
+      input.conversationID,
+      { relations: { room: true } }
+    );
+
+    // Get members once for both type check and VC resolution
+    const members = await this.conversationService.getConversationMembers(
       input.conversationID
     );
-    if (conversation.type !== CommunicationConversationType.USER_VC) {
+
+    // Validate type: must be USER_VC
+    const hasVC = members.some(
+      m => m.agent.type === AgentType.VIRTUAL_CONTRIBUTOR
+    );
+    if (!hasVC) {
       throw new ValidationException(
         `Conversation is not a USER_VC type: ${conversation.id}`,
         LogContext.COMMUNICATION_CONVERSATION
       );
     }
+
+    // Authorization check
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       conversation.authorization,
       AuthorizationPrivilege.CONTRIBUTE,
       `conversation VC reset: ${agentInfo.email}`
     );
-    conversation =
-      await this.conversationService.resetUserConversationWithAgent(
-        agentInfo,
-        conversation.id
+
+    // Get VC's agent ID from already-fetched members
+    const vcMember = members.find(
+      m => m.agent.type === AgentType.VIRTUAL_CONTRIBUTOR
+    );
+    if (!vcMember) {
+      throw new ValidationException(
+        `Conversation does not have a virtual contributor: ${conversation.id}`,
+        LogContext.COMMUNICATION_CONVERSATION
       );
+    }
+
+    // Reset with pre-resolved data (no duplicate queries in service)
+    const resetConversation = await this.conversationService.resetConversation(
+      conversation,
+      agentInfo.agentID,
+      vcMember.agentId
+    );
+
     // Update authorization after reset
     const authorizations =
       await this.conversationAuthorizationService.applyAuthorizationPolicy(
-        conversation.id,
-        agentInfo.userID!
+        resetConversation.id
       );
     await this.authorizationPolicyService.saveAll(authorizations);
 
     return await this.conversationService.getConversationOrFail(
-      conversation.id
+      resetConversation.id
     );
   }
 
@@ -107,21 +170,26 @@ export class ConversationResolverMutations {
     @Args('input')
     { id, relevant, conversationID }: ConversationVcAnswerRelevanceInput
   ): Promise<boolean> {
+    // Fetch conversation
     const conversation =
       await this.conversationService.getConversationOrFail(conversationID);
-    if (conversation.type !== CommunicationConversationType.USER_VC) {
+
+    // Get members once for type check and VC resolution
+    const members =
+      await this.conversationService.getConversationMembers(conversationID);
+
+    // Validate type: must be USER_VC
+    const vcMember = members.find(
+      m => m.agent.type === AgentType.VIRTUAL_CONTRIBUTOR
+    );
+    if (!vcMember) {
       throw new ValidationException(
         `Conversation is not a USER_VC type: ${conversation.id}`,
         LogContext.COMMUNICATION_CONVERSATION
       );
     }
-    if (!conversation.virtualContributorID) {
-      throw new ValidationException(
-        `Conversation does not have a virtual contributor: ${conversation.id}`,
-        LogContext.COMMUNICATION_CONVERSATION
-      );
-    }
 
+    // Authorization check
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       conversation.authorization,
@@ -129,8 +197,20 @@ export class ConversationResolverMutations {
       `conversation VC feedback: ${agentInfo.email}`
     );
 
+    // Resolve VC from already-fetched member
+    const vc =
+      await this.virtualContributorLookupService.getVirtualContributorByAgentId(
+        vcMember.agentId
+      );
+    if (!vc) {
+      throw new ValidationException(
+        `Could not resolve virtual contributor for conversation: ${conversation.id}`,
+        LogContext.COMMUNICATION_CONVERSATION
+      );
+    }
+
     return this.guidanceReporterService.updateAnswerRelevance(
-      conversation.virtualContributorID,
+      vc.id,
       id,
       relevant
     );

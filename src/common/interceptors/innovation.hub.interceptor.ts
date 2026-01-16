@@ -57,8 +57,20 @@ export class InnovationHubInterceptor implements NestInterceptor {
   }
 
   async intercept(context: ExecutionContext, next: CallHandler) {
+    const contextType = context.getType<'http' | 'graphql' | 'rpc' | 'rmq'>();
+
+    // Skip non-GraphQL contexts (RPC, RabbitMQ, HTTP REST, etc.)
+    if (contextType !== 'graphql') {
+      return next.handle();
+    }
+
     const ctx =
       GqlExecutionContext.create(context).getContext<IGraphQLContext>();
+
+    // Safety check - ensure we have a request object
+    if (!ctx?.req?.headers) {
+      return next.handle();
+    }
 
     const host = ctx.req.headers[this.innovationHubHeader] as
       | string

@@ -31,20 +31,18 @@ import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.aut
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { UserLookupService } from '../user-lookup/user.lookup.service';
 import { UserSettingsAuthorizationService } from '../user-settings/user.settings.service.authorization';
-import { ConversationsSetAuthorizationService } from '@domain/communication/conversations-set/conversations.set.service.authorization';
 
 @Injectable()
 export class UserAuthorizationService {
   constructor(
-    private authorizationPolicyService: AuthorizationPolicyService,
-    private agentAuthorizationService: AgentAuthorizationService,
-    private profileAuthorizationService: ProfileAuthorizationService,
-    private platformAuthorizationService: PlatformAuthorizationPolicyService,
-    private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
-    private userSettingsAuthorizationService: UserSettingsAuthorizationService,
-    private conversationsSetAuthorizationService: ConversationsSetAuthorizationService,
-    private agentService: AgentService,
-    private userLookupService: UserLookupService
+    private readonly authorizationPolicyService: AuthorizationPolicyService,
+    private readonly agentAuthorizationService: AgentAuthorizationService,
+    private readonly profileAuthorizationService: ProfileAuthorizationService,
+    private readonly platformAuthorizationService: PlatformAuthorizationPolicyService,
+    private readonly storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
+    private readonly userSettingsAuthorizationService: UserSettingsAuthorizationService,
+    private readonly agentService: AgentService,
+    private readonly userLookupService: UserLookupService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -61,9 +59,6 @@ export class UserAuthorizationService {
           directStorage: { authorization: true },
         },
         settings: {
-          authorization: true,
-        },
-        conversationsSet: {
           authorization: true,
         },
       },
@@ -91,11 +86,6 @@ export class UserAuthorizationService {
               this.authorizationPolicyService.authorizationSelectOptions,
           },
         },
-        conversationsSet: {
-          id: true,
-          authorization:
-            this.authorizationPolicyService.authorizationSelectOptions,
-        },
         settings: {
           id: true,
           authorization:
@@ -107,11 +97,10 @@ export class UserAuthorizationService {
       !user.agent ||
       !user.profile ||
       !user.storageAggregator ||
-      !user.settings ||
-      !user.conversationsSet
+      !user.settings
     )
       throw new RelationshipNotFoundException(
-        `Unable to load agent or profile or preferences or storage or conversations for User ${user.id} `,
+        `Unable to load agent or profile or preferences or storage for User ${user.id} `,
         LogContext.COMMUNITY
       );
 
@@ -175,13 +164,8 @@ export class UserAuthorizationService {
       );
     updatedAuthorizations.push(...storageAuthorizations);
 
-    const conversationsSetAuthorizations =
-      await this.conversationsSetAuthorizationService.applyAuthorizationPolicy(
-        user.conversationsSet,
-        user.id,
-        user.authorization
-      );
-    updatedAuthorizations.push(...conversationsSetAuthorizations);
+    // Note: Conversations are now managed via the platform Messaging
+    // Authorization is applied on conversations through conversation memberships
 
     return updatedAuthorizations;
   }

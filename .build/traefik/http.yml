@@ -341,6 +341,11 @@ tcp:
         servers:
           - address: 'redis:6379'
 
+    matrix-adapter:
+      loadBalancer:
+        servers:
+          - address: 'matrix-adapter:8280'
+
   routers:
     mysql:
       rule: 'HostSNI(`*`)'
@@ -371,3 +376,9 @@ tcp:
       service: 'redis'
       entryPoints:
         - 'redis'
+
+    matrix-adapter:
+      rule: 'HostSNI(`*`)'
+      service: 'matrix-adapter'
+      entryPoints:
+        - 'matrix-adapter'
