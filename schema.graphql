@@ -4529,7 +4529,7 @@ type RelayPaginatedSpace {
   """The settings for this Space."""
   settings: SpaceSettings!
   """The sorting order for this Space within its parent."""
-  sortOrder: Float!
+  sortOrder: Int!
   """The StorageAggregator in use by this Space"""
   storageAggregator: StorageAggregator!
   """The subscriptions active for this Space."""
@@ -4964,7 +4964,7 @@ type Space {
   """The settings for this Space."""
   settings: SpaceSettings!
   """The sorting order for this Space within its parent."""
-  sortOrder: Float!
+  sortOrder: Int!
   """The StorageAggregator in use by this Space"""
   storageAggregator: StorageAggregator!
   """The subscriptions active for this Space."""

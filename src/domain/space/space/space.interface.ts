@@ -1,4 +1,4 @@
-import { Field, ObjectType } from '@nestjs/graphql';
+import { Field, Int, ObjectType } from '@nestjs/graphql';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { ICollaboration } from '@domain/collaboration/collaboration';
 import { ICommunity } from '@domain/community/community';
@@ -61,7 +61,7 @@ export class ISpace extends IAuthorizable {
   })
   levelZeroSpaceID!: string;
 
-  @Field(() => Number, {
+  @Field(() => Int, {
     nullable: false,
     description: 'The sorting order for this Space within its parent.',
   })

@@ -1031,9 +1031,7 @@ export class SpaceService {
       index++;
     }
 
-    await Promise.all(
-      modifiedSubspaces.map(async subspace => await this.save(subspace))
-    );
+    await this.spaceRepository.save(modifiedSubspaces);
 
     return subspacesInOrder;
   }
