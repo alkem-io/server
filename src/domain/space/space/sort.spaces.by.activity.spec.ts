@@ -56,6 +56,7 @@ const createTestSpace = (id: string): ISpace => {
     platformRolesAccess: {
       roles: [],
     },
+    sortOrder: 0,
     createdDate: new Date(),
     updatedDate: new Date(),
     about: {

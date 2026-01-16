@@ -101,6 +101,9 @@ export class Space extends AuthorizableEntity implements ISpace {
   @Column('int', { nullable: false })
   level!: SpaceLevel;
 
+  @Column('int', { nullable: false })
+  sortOrder!: number;
+
   @Column('varchar', {
     length: ENUM_LENGTH,
     nullable: false,

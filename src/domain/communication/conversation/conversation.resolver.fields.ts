@@ -62,6 +62,11 @@ export class ConversationResolverFields {
     @Parent() conversation: IConversation,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<IUser | null> {
+    // Check for pre-resolved value (used in subscription events for personalized delivery)
+    if (conversation._resolvedUser !== undefined) {
+      return conversation._resolvedUser;
+    }
+
     return await this.conversationService.getUserFromConversation(
       conversation.id,
       agentInfo.agentID
@@ -78,6 +83,11 @@ export class ConversationResolverFields {
   async virtualContributor(
     @Parent() conversation: IConversation
   ): Promise<IVirtualContributor | null> {
+    // Check for pre-resolved value (used in subscription events)
+    if (conversation._resolvedVirtualContributor !== undefined) {
+      return conversation._resolvedVirtualContributor;
+    }
+
     const memberships = await this.conversationService.getConversationMembers(
       conversation.id
     );
