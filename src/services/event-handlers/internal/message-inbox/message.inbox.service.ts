@@ -27,6 +27,16 @@ import { ConversationService } from '@domain/communication/conversation/conversa
 import { IRoom } from '@domain/communication/room/room.interface';
 
 /**
+ * Check if a room is a conversation room (direct messaging).
+ */
+function isConversationRoom(room: IRoom): boolean {
+  return (
+    room.type === RoomType.CONVERSATION ||
+    room.type === RoomType.CONVERSATION_DIRECT
+  );
+}
+
+/**
  * Event handler service for Matrix events.
  *
  * Thin orchestrator that:
@@ -87,18 +97,12 @@ export class MessageInboxService {
 
     // Publish conversation events for direct messaging rooms
     // Note: conversationCreated is fired when conversation is created, not on first message
-    if (
-      room.type === RoomType.CONVERSATION ||
-      room.type === RoomType.CONVERSATION_DIRECT
-    ) {
+    if (isConversationRoom(room)) {
       await this.publishMessageReceivedConversationEvent(room, message);
     }
 
     // Process notifications (skip for conversation rooms)
-    if (
-      room.type !== RoomType.CONVERSATION &&
-      room.type !== RoomType.CONVERSATION_DIRECT
-    ) {
+    if (!isConversationRoom(room)) {
       const agentInfo = await this.agentInfoService.buildAgentInfoForAgent(
         payload.actorID
       );
@@ -122,12 +126,9 @@ export class MessageInboxService {
     payload: MessageReceivedEvent['payload'],
     room: IRoom
   ): Promise<void> {
-    // Conversation rooms (both CONVERSATION and CONVERSATION_DIRECT) use direct VC invocation
+    // Conversation rooms use direct VC invocation
     // This handles USER_VC conversations where the VC should respond to every message
-    if (
-      room.type === RoomType.CONVERSATION_DIRECT ||
-      room.type === RoomType.CONVERSATION
-    ) {
+    if (isConversationRoom(room)) {
       await this.vcInvocationService.processDirectConversation(payload, room);
       return;
     }
@@ -231,10 +232,7 @@ export class MessageInboxService {
     );
 
     // Publish conversation event for direct messaging rooms
-    if (
-      room.type === RoomType.CONVERSATION ||
-      room.type === RoomType.CONVERSATION_DIRECT
-    ) {
+    if (isConversationRoom(room)) {
       await this.publishMessageRemovedConversationEvent(
         room,
         payload.redactedMessageId
@@ -367,10 +365,7 @@ export class MessageInboxService {
     });
 
     // Publish conversation events for direct messaging rooms
-    if (
-      room.type === RoomType.CONVERSATION ||
-      room.type === RoomType.CONVERSATION_DIRECT
-    ) {
+    if (isConversationRoom(room)) {
       await this.publishReadReceiptConversationEvent(room, payload);
     }
   }
