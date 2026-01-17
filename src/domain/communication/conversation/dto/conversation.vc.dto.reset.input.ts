@@ -4,8 +4,7 @@ import { Field, InputType } from '@nestjs/graphql';
 @InputType()
 export class ConversationVcResetInput {
   @Field(() => UUID, {
-    nullable: false,
-    description: 'The ID of the conversation.',
+    description: 'The ID of the Conversation to reset.',
   })
   conversationID!: string;
 }

@@ -163,8 +163,8 @@ export class MessagingService {
       );
     }
 
-    // Create room only for USER_USER conversations
-    const createRoom = !isUserVc;
+    // Always create room - both USER_USER and USER_VC need rooms
+    const createRoom = true;
 
     // createConversation handles existence check via efficient findConversationBetweenAgents query
     const conversation = await this.conversationService.createConversation(

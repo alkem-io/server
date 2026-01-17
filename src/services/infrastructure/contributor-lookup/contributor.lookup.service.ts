@@ -5,6 +5,7 @@ import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { User } from '@domain/community/user/user.entity';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { UNKNOWN_CONTRIBUTOR } from '@domain/community/contributor/unknown.contributor';
 import { EntityNotFoundException } from '@common/exceptions';
 import { AuthorizationCredential, LogContext } from '@common/enums';
 import { Credential, CredentialsSearchInput, ICredential } from '@domain/agent';
@@ -12,6 +13,7 @@ import { VirtualContributor } from '@domain/community/virtual-contributor/virtua
 import { Organization } from '@domain/community/organization/organization.entity';
 import { InvalidUUID } from '@common/exceptions/invalid.uuid';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { SYSTEM_ACTOR_IDS } from '@common/constants/system.actor.ids';
 
 export class ContributorLookupService {
   constructor(
@@ -221,6 +223,11 @@ export class ContributorLookupService {
     agentId: string,
     options?: Omit<FindOneOptions<User>, 'where'>
   ): Promise<IContributor | null> {
+    if (SYSTEM_ACTOR_IDS.has(agentId)) {
+      return null;
+      // return UNKNOWN_CONTRIBUTOR;
+    }
+
     if (!isUUID(agentId)) {
       throw new InvalidUUID(
         'Invalid UUID provided for agent ID!',

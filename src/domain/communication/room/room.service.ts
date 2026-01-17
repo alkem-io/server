@@ -1,7 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository } from 'typeorm';
-import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { Room } from './room.entity';
@@ -190,14 +189,12 @@ export class RoomService {
     actorId: string,
     reactionData: RoomAddReactionToMessageInput
   ): Promise<IMessageReaction> {
-    const reaction = await this.communicationAdapter.addReaction({
+    return await this.communicationAdapter.addReaction({
       alkemioRoomId: room.id,
       actorId,
       messageId: reactionData.messageID,
       emoji: reactionData.emoji,
     });
-
-    return reaction;
   }
 
   /**
@@ -236,35 +233,36 @@ export class RoomService {
   }
 
   async getUserIdForMessage(room: IRoom, messageID: string): Promise<string> {
-    const senderActorId = await this.communicationAdapter.getMessageSenderActor(
-      {
+    return this.getUserIdForSender(room, messageID, () =>
+      this.communicationAdapter.getMessageSenderActor({
         alkemioRoomId: room.id,
         messageId: messageID,
-      }
+      })
     );
-    if (senderActorId === '') {
-      this.logger.error(
-        `Unable to identify sender for ${room.id} - ${messageID}`,
-        undefined,
-        LogContext.COMMUNICATION
-      );
-      return '';
-    }
-    const userId =
-      await this.contributorLookupService.getUserIdByAgentId(senderActorId);
-
-    return userId ?? '';
   }
 
   async getUserIdForReaction(room: IRoom, reactionID: string): Promise<string> {
-    const senderActorId =
-      await this.communicationAdapter.getReactionSenderActor({
+    return this.getUserIdForSender(room, reactionID, () =>
+      this.communicationAdapter.getReactionSenderActor({
         alkemioRoomId: room.id,
         reactionId: reactionID,
-      });
+      })
+    );
+  }
+
+  /**
+   * Generic method to resolve user ID from a sender actor.
+   * Used by getUserIdForMessage and getUserIdForReaction.
+   */
+  private async getUserIdForSender(
+    room: IRoom,
+    entityId: string,
+    getSenderActorId: () => Promise<string>
+  ): Promise<string> {
+    const senderActorId = await getSenderActorId();
     if (senderActorId === '') {
       this.logger.error(
-        `Unable to identify sender for ${room.id} - ${reactionID}`,
+        `Unable to identify sender for ${room.id} - ${entityId}`,
         undefined,
         LogContext.COMMUNICATION
       );
