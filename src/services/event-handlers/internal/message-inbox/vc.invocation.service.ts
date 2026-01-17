@@ -130,11 +130,7 @@ export class VcInvocationService {
           threadID,
           agentInfo,
           '', // contextSpaceID out of scope
-          room,
-          {
-            threadID,
-            virtualContributorID: vcActorID,
-          }
+          room
         )
       )
     );
@@ -187,11 +183,7 @@ export class VcInvocationService {
       threadID,
       agentInfo,
       '', // contextSpaceID out of scope
-      room,
-      {
-        threadID,
-        virtualContributorID: vcData.virtualContributorActorID,
-      }
+      room
     );
   }
 
