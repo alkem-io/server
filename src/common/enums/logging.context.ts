@@ -45,8 +45,6 @@ export enum LogContext {
   GEO = 'geo',
   CALENDAR = 'calendar',
   INNOVATION_HUB = 'innovation-hub',
-  CHAT_GUIDANCE = 'chat-guidance',
-  CHAT_GUIDANCE_REPORTER = 'chat-guidance-reporter',
   TAGSET = 'tagset',
   EXCALIDRAW_SERVER = 'excalidraw-server',
   WHITEBOARD_INTEGRATION = 'whiteboard-integration',

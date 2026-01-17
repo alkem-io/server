@@ -1220,28 +1220,42 @@ export class CommunicationAdapter {
     id: string;
     content: string;
     sender_actor_id: string;
-    timestamp: number;
+    timestamp: number | string;
     thread_id?: string;
     reactions?: Array<{
       id: string;
       emoji: string;
       sender_actor_id: string;
-      timestamp: number;
+      timestamp: number | string;
     }>;
   }): IMessage {
     return {
       id: msg.id,
       message: msg.content,
       sender: msg.sender_actor_id,
-      timestamp: msg.timestamp,
+      timestamp: this.normalizeTimestamp(msg.timestamp),
       threadID: msg.thread_id,
       reactions: (msg.reactions ?? []).map(r => ({
         id: r.id,
         emoji: r.emoji,
         sender: r.sender_actor_id,
-        timestamp: r.timestamp,
+        timestamp: this.normalizeTimestamp(r.timestamp),
       })),
     };
+  }
+
+  /**
+   * Normalize timestamp to Unix milliseconds.
+   * Handles both number (already milliseconds) and ISO date string formats.
+   * This is a defensive workaround for Go adapter returning ISO strings.
+   */
+  private normalizeTimestamp(timestamp: number | string): number {
+    if (typeof timestamp === 'number') {
+      return timestamp;
+    }
+    // Parse ISO date string to Unix milliseconds
+    const parsed = Date.parse(timestamp);
+    return isNaN(parsed) ? 0 : parsed;
   }
 
   private logInputPayload(topic: string, payload: unknown): number {
