@@ -122,12 +122,17 @@ export class MessageInboxService {
     payload: MessageReceivedEvent['payload'],
     room: IRoom
   ): Promise<void> {
-    // Direct conversations have special handling
-    if (room.type === RoomType.CONVERSATION_DIRECT) {
+    // Conversation rooms (both CONVERSATION and CONVERSATION_DIRECT) use direct VC invocation
+    // This handles USER_VC conversations where the VC should respond to every message
+    if (
+      room.type === RoomType.CONVERSATION_DIRECT ||
+      room.type === RoomType.CONVERSATION
+    ) {
       await this.vcInvocationService.processDirectConversation(payload, room);
       return;
     }
 
+    // For other room types (e.g., discussions), use thread-based VC tracking
     // Determine threadID: use existing or message ID as new thread root
     const threadID = payload.message.threadID || payload.message.id;
 
