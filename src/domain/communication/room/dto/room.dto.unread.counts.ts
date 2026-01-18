@@ -1,5 +1,5 @@
-import { Field, Int, ObjectType } from '@nestjs/graphql';
 import { MessageID } from '@domain/common/scalars';
+import { Field, Int, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('RoomThreadUnreadCount', {
   description: 'Unread message count for a specific thread in a Room.',

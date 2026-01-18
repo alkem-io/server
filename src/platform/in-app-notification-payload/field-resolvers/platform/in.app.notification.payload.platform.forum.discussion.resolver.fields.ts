@@ -1,9 +1,9 @@
 import {
-  Resolver,
-  ResolveField,
-  Parent,
-  ObjectType,
   Field,
+  ObjectType,
+  Parent,
+  ResolveField,
+  Resolver,
 } from '@nestjs/graphql';
 import { InAppNotificationPayloadPlatformForumDiscussion } from '@platform/in-app-notification-payload/dto/platform/notification.in.app.payload.platform.forum.discussion';
 

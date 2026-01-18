@@ -1,17 +1,17 @@
+import { MID_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@common/constants';
+import { Application } from '@domain/access/application/application.entity';
+import { IUser } from '@domain/community/user/user.interface';
+import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
 import {
   Column,
   Entity,
+  Generated,
   Index,
   JoinColumn,
-  OneToOne,
   OneToMany,
-  Generated,
+  OneToOne,
 } from 'typeorm';
-import { IUser } from '@domain/community/user/user.interface';
-import { Application } from '@domain/access/application/application.entity';
 import { ContributorBase } from '../contributor/contributor.base.entity';
-import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
-import { MID_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@common/constants';
 import { UserSettings } from '../user-settings/user.settings.entity';
 
 @Entity()
@@ -50,10 +50,14 @@ export class User extends ContributorBase implements IUser {
   @Column({ type: 'boolean', nullable: false })
   serviceProfile!: boolean;
 
-  @OneToMany(() => Application, application => application.id, {
-    eager: false,
-    cascade: false,
-  })
+  @OneToMany(
+    () => Application,
+    application => application.id,
+    {
+      eager: false,
+      cascade: false,
+    }
+  )
   applications?: Application[];
 
   @OneToOne(() => UserSettings, {

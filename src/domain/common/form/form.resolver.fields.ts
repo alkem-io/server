@@ -1,7 +1,7 @@
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { IFormQuestion } from './form.dto.question.interface';
 import { IForm } from './form.interface';
 import { FormService } from './form.service';
-import { IFormQuestion } from './form.dto.question.interface';
 
 @Resolver(() => IForm)
 export class FormResolverFields {

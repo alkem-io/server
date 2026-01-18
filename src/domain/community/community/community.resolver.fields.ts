@@ -1,14 +1,14 @@
-import { GraphqlGuard } from '@core/authorization';
-import { UseGuards } from '@nestjs/common';
-import { Parent, ResolveField, Resolver, Args } from '@nestjs/graphql';
-import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
-import { Community, ICommunity } from '@domain/community/community';
-import { CommunityService } from './community.service';
-import { IUserGroup } from '@domain/community/user-group';
 import { AuthorizationPrivilege } from '@common/enums';
-import { ICommunication } from '@domain/communication/communication/communication.interface';
-import { UUID } from '@domain/common/scalars/scalar.uuid';
+import { GraphqlGuard } from '@core/authorization';
 import { IRoleSet } from '@domain/access/role-set';
+import { UUID } from '@domain/common/scalars/scalar.uuid';
+import { ICommunication } from '@domain/communication/communication/communication.interface';
+import { Community, ICommunity } from '@domain/community/community';
+import { IUserGroup } from '@domain/community/user-group';
+import { UseGuards } from '@nestjs/common';
+import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
+import { CommunityService } from './community.service';
 @Resolver(() => ICommunity)
 export class CommunityResolverFields {
   constructor(private communityService: CommunityService) {}

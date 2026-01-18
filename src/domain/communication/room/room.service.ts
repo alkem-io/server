@@ -1,25 +1,25 @@
+import { LogContext } from '@common/enums';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { RoomType } from '@common/enums/room.type';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, Repository } from 'typeorm';
-import { LogContext } from '@common/enums';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
-import { Room } from './room.entity';
-import { IRoom } from './room.interface';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
-import { IMessage } from '../message/message.interface';
+import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { RoomType } from '@common/enums/room.type';
+import { FindOneOptions, Repository } from 'typeorm';
+import { IMessage } from '../message/message.interface';
 import { IMessageReaction } from '../message.reaction/message.reaction.interface';
-import { RoomAddReactionToMessageInput } from './dto/room.dto.add.reaction.to.message';
-import { RoomRemoveReactionToMessageInput } from './dto/room.dto.remove.message.reaction';
-import { RoomRemoveMessageInput } from './dto/room.dto.remove.message';
-import { RoomMarkMessageReadInput } from './dto/room.dto.mark.message.read';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { RoomLookupService } from '../room-lookup/room.lookup.service';
+import { RoomAddReactionToMessageInput } from './dto/room.dto.add.reaction.to.message';
 import { CreateRoomInput } from './dto/room.dto.create';
 import { DeleteRoomInput } from './dto/room.dto.delete';
-import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
+import { RoomMarkMessageReadInput } from './dto/room.dto.mark.message.read';
+import { RoomRemoveMessageInput } from './dto/room.dto.remove.message';
+import { RoomRemoveReactionToMessageInput } from './dto/room.dto.remove.message.reaction';
 import { RoomUnreadCounts } from './dto/room.dto.unread.counts';
+import { Room } from './room.entity';
+import { IRoom } from './room.interface';
 
 @Injectable()
 export class RoomService {

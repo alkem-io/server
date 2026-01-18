@@ -1,18 +1,18 @@
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import {
+  UserAuthenticationLinkMatch,
+  UserAuthenticationLinkOutcome,
+  UserAuthenticationLinkResult,
+} from '@domain/community/user-authentication-link/user.authentication.link.types';
+import { LoggerService } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
-import { UserService } from './user.service';
-import { User } from './user.entity';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { ConfigService } from '@nestjs/config';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { LoggerService } from '@nestjs/common';
-import {
-  UserAuthenticationLinkOutcome,
-  UserAuthenticationLinkResult,
-  UserAuthenticationLinkMatch,
-} from '@domain/community/user-authentication-link/user.authentication.link.types';
+import { User } from './user.entity';
+import { UserService } from './user.service';
 
 describe('UserService', () => {
   let service: UserService;

@@ -1,15 +1,15 @@
-import { Field, InterfaceType } from '@nestjs/graphql';
-import { UUID } from '@domain/common/scalars';
+import { AlkemioErrorStatus } from '@common/enums';
 import { LogContext } from '@common/enums/logging.context';
 import { BaseException } from '@common/exceptions/base.exception';
-import { AlkemioErrorStatus } from '@common/enums';
+import { UUID } from '@domain/common/scalars';
+import { Field, InterfaceType } from '@nestjs/graphql';
+import { BaseSearchHit } from '@services/api/search/dto/results/base.search.hit';
 import { SearchResultType } from '../../search.result.type';
-import { ISearchResultSpace } from './search.result.space';
-import { ISearchResultUser } from './search.result.user';
+import { ISearchResultCallout } from './search.result.callout';
 import { ISearchResultOrganization } from './search.result.organization';
 import { ISearchResultPost } from './search.result.post';
-import { ISearchResultCallout } from './search.result.callout';
-import { BaseSearchHit } from '@services/api/search/dto/results/base.search.hit';
+import { ISearchResultSpace } from './search.result.space';
+import { ISearchResultUser } from './search.result.user';
 
 @InterfaceType('SearchResult', {
   resolveType(searchResult) {

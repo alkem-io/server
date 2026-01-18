@@ -1,6 +1,6 @@
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { LogContext } from '@common/enums';
 import { UserAlreadyRegisteredException } from '@common/exceptions';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { UserAuthenticationLinkService } from '@domain/community/user-authentication-link/user.authentication.link.service';
 import {
   UserAuthenticationLinkMatch,

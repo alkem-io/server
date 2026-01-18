@@ -1,20 +1,20 @@
 import { AlkemioErrorStatus, LogContext } from '@common/enums';
+import { SessionExpiredException } from '@common/exceptions/session.expired.exception';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config/dist';
 import { PassportStrategy } from '@nestjs/passport';
-import { Strategy, ExtractJwt } from 'passport-jwt';
-import { AuthenticationService } from './authentication.service';
+import { KratosPayload } from '@services/infrastructure/kratos/types/kratos.payload';
+import { OryDefaultIdentitySchema } from '@services/infrastructure/kratos/types/ory.default.identity.schema';
+import { AlkemioConfig } from '@src/types';
 import { passportJwtSecret } from 'jwks-rsa';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { verifyIdentityIfOidcAuth } from './verify.identity.if.oidc.auth';
+import { ExtractJwt, Strategy } from 'passport-jwt';
 import { AgentInfo } from '../authentication.agent.info/agent.info';
-import { SessionExpiredException } from '@common/exceptions/session.expired.exception';
-import { AlkemioConfig } from '@src/types';
-import { OryDefaultIdentitySchema } from '@services/infrastructure/kratos/types/ory.default.identity.schema';
-import { KratosPayload } from '@services/infrastructure/kratos/types/kratos.payload';
-import { AUTH_STRATEGY_OATHKEEPER_JWT } from './strategy.names';
 import { AgentInfoService } from '../authentication.agent.info/agent.info.service';
+import { AuthenticationService } from './authentication.service';
 import { X_GUEST_NAME_HEADER } from './constants';
+import { AUTH_STRATEGY_OATHKEEPER_JWT } from './strategy.names';
+import { verifyIdentityIfOidcAuth } from './verify.identity.if.oidc.auth';
 
 @Injectable()
 export class OryStrategy extends PassportStrategy(

@@ -1,34 +1,34 @@
-import { randomUUID } from 'crypto';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, Repository, EntityManager } from 'typeorm';
+import { LogContext } from '@common/enums';
+import { AgentType } from '@common/enums/agent.type';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
+import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { AgentService } from '@domain/agent/agent/agent.service';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { Messaging } from './messaging.entity';
-import { IMessaging } from './messaging.interface';
-import { ConversationService } from '../conversation/conversation.service';
-import { ConversationMembership } from '../conversation-membership/conversation.membership.entity';
-import { IConversation } from '../conversation/conversation.interface';
-import { ConfigService } from '@nestjs/config';
-import { AlkemioConfig } from '@src/types/alkemio.config';
-import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
-import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
-import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
 import { CreateConversationData } from '@domain/communication/conversation/dto';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { AgentService } from '@domain/agent/agent/agent.service';
-import { AgentType } from '@common/enums/agent.type';
-import { ConversationAuthorizationService } from '../conversation/conversation.service.authorization';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
+import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
+import { AlkemioConfig } from '@src/types/alkemio.config';
+import { randomUUID } from 'crypto';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
+import { IConversation } from '../conversation/conversation.interface';
+import { ConversationService } from '../conversation/conversation.service';
+import { ConversationAuthorizationService } from '../conversation/conversation.service.authorization';
+import { ConversationMembership } from '../conversation-membership/conversation.membership.entity';
+import { Messaging } from './messaging.entity';
+import { IMessaging } from './messaging.interface';
 
 @Injectable()
 export class MessagingService {

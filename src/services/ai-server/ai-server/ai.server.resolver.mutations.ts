@@ -1,28 +1,28 @@
-import { Inject, LoggerService } from '@nestjs/common';
-import { Resolver, Mutation, Args, Field, ObjectType } from '@nestjs/graphql';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { IAiServer } from './ai.server.interface';
-import { AiServerAuthorizationService } from './ai.server.service.authorization';
-import { AiServerService } from './ai.server.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Space } from '@domain/space/space/space.entity';
-import { ChromaClient } from 'chromadb';
+import { Inject, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Args, Field, Mutation, ObjectType, Resolver } from '@nestjs/graphql';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
-import { EntityManager } from 'typeorm';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { AlkemioConfig } from '@src/types';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentUser, Profiling } from '@src/common/decorators';
+import { AlkemioConfig } from '@src/types';
+import { ChromaClient } from 'chromadb';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { EntityManager } from 'typeorm';
 import {
   AiPersonaService,
   CreateAiPersonaInput,
   IAiPersona,
 } from '../ai-persona';
 import { AiPersonaAuthorizationService } from '../ai-persona/ai.persona.service.authorization';
+import { IAiServer } from './ai.server.interface';
+import { AiServerService } from './ai.server.service';
+import { AiServerAuthorizationService } from './ai.server.service.authorization';
 
 @ObjectType('MigrateEmbeddings')
 class IMigrateEmbeddingsResponse {

@@ -1,21 +1,21 @@
-import { Inject, LoggerService } from '@nestjs/common';
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { TemplatesSetService } from './templates.set.service';
-import { ITemplate } from '../template/template.interface';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { TemplateAuthorizationService } from '../template/template.service.authorization';
-import { CreateTemplateOnTemplatesSetInput } from './dto/templates.set.dto.create.template';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { TemplateService } from '../template/template.service';
-import { CreateTemplateFromSpaceOnTemplatesSetInput } from './dto/templates.set.dto.create.template.from.space';
-import { CreateTemplateFromContentSpaceOnTemplatesSetInput } from './dto/templates.set.dto.create.template.from.space.content';
-import { InstrumentResolver } from '@src/apm/decorators';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { TemplateContentSpaceService } from '@domain/template/template-content-space/template.content.space.service';
+import { Inject, LoggerService } from '@nestjs/common';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { InstrumentResolver } from '@src/apm/decorators';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { ITemplate } from '../template/template.interface';
+import { TemplateService } from '../template/template.service';
+import { TemplateAuthorizationService } from '../template/template.service.authorization';
+import { CreateTemplateOnTemplatesSetInput } from './dto/templates.set.dto.create.template';
+import { CreateTemplateFromSpaceOnTemplatesSetInput } from './dto/templates.set.dto.create.template.from.space';
+import { CreateTemplateFromContentSpaceOnTemplatesSetInput } from './dto/templates.set.dto.create.template.from.space.content';
+import { TemplatesSetService } from './templates.set.service';
 
 @InstrumentResolver()
 @Resolver()

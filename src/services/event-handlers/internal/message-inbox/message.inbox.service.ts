@@ -1,30 +1,30 @@
-import { randomUUID } from 'crypto';
+import { LogContext } from '@common/enums';
+import { RoomType } from '@common/enums/room.type';
+import { MutationType } from '@common/enums/subscriptions';
+import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
+import { ConversationService } from '@domain/communication/conversation/conversation.service';
+import { IMessage } from '@domain/communication/message/message.interface';
+import { IRoom } from '@domain/communication/room/room.interface';
+import { RoomServiceEvents } from '@domain/communication/room/room.service.events';
+import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
+import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
+import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
+import { randomUUID } from 'crypto';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LogContext } from '@common/enums';
-import { MutationType } from '@common/enums/subscriptions';
-import { RoomType } from '@common/enums/room.type';
+import { MessageEditedEvent } from './message.edited.event';
+import { MessageNotificationService } from './message.notification.service';
 import { MessageReceivedEvent } from './message.received.event';
+import { MessageRedactedEvent } from './message.redacted.event';
 import { ReactionAddedEvent } from './reaction.added.event';
 import { ReactionRemovedEvent } from './reaction.removed.event';
-import { MessageEditedEvent } from './message.edited.event';
-import { MessageRedactedEvent } from './message.redacted.event';
 import { RoomCreatedEvent } from './room.created.event';
 import { RoomDmRequestedEvent } from './room.dm.requested.event';
 import { RoomMemberLeftEvent } from './room.member.left.event';
 import { RoomMemberUpdatedEvent } from './room.member.updated.event';
 import { RoomReceiptUpdatedEvent } from './room.receipt.updated.event';
-import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
-import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup.service';
-import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
-import { RoomServiceEvents } from '@domain/communication/room/room.service.events';
-import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
-import { MessageNotificationService } from './message.notification.service';
 import { VcInvocationService } from './vc.invocation.service';
-import { IMessage } from '@domain/communication/message/message.interface';
-import { ConversationService } from '@domain/communication/conversation/conversation.service';
-import { IRoom } from '@domain/communication/room/room.interface';
 
 /**
  * Event handler service for Matrix events.

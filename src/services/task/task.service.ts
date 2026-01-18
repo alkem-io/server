@@ -1,11 +1,11 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { randomUUID } from 'crypto';
-import { Cache } from 'cache-manager';
-import { TaskError, TaskResult } from '@services/task/types';
 import { LogContext } from '@common/enums';
 import { TaskStatus } from '@domain/task/dto/task.status.enum';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { TaskError, TaskResult } from '@services/task/types';
+import { Cache } from 'cache-manager';
+import { randomUUID } from 'crypto';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Task } from './task.interface';
 import { TASK_LIST_CACHE_KEY } from './task.list.key';
 

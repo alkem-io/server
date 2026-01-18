@@ -1,12 +1,12 @@
-import { Injectable } from '@nestjs/common';
 import { LogContext } from '@common/enums';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import {
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { Injectable } from '@nestjs/common';
 import { IAiPersona } from './ai.persona.interface';
 
 @Injectable()

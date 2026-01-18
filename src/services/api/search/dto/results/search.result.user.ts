@@ -1,7 +1,7 @@
 import { IUser } from '@domain/community/user/user.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { ISearchResult } from './search.result.interface';
 import { SearchResultBase } from './search.result.base';
+import { ISearchResult } from './search.result.interface';
 
 @ObjectType('SearchResultUser', {
   implements: () => ISearchResult,

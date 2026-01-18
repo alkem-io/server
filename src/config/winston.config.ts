@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import * as winston from 'winston';
-import { utilities as nestWinstonModuleUtilities } from 'nest-winston';
 import { ConfigService } from '@nestjs/config';
-import { FileTransportOptions } from 'winston/lib/winston/transports';
-import * as logform from 'logform';
 import { AlkemioConfig } from '@src/types';
+import * as logform from 'logform';
+import { utilities as nestWinstonModuleUtilities } from 'nest-winston';
+import * as winston from 'winston';
+import { FileTransportOptions } from 'winston/lib/winston/transports';
 
 const LOG_LABEL = 'alkemio-server';
 

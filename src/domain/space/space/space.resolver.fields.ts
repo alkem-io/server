@@ -1,39 +1,39 @@
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { GraphqlGuard } from '@core/authorization';
-import { Space } from '@domain/space/space/space.entity';
+import {
+  AgentLoaderCreator,
+  SpaceAboutLoaderCreator,
+  SpaceCollaborationLoaderCreator,
+  SpaceCommunityLoaderCreator,
+} from '@core/dataloader/creators';
+import { LicenseLoaderCreator } from '@core/dataloader/creators/loader.creators/license.loader.creator';
+import { Loader } from '@core/dataloader/decorators';
+import { ILoader } from '@core/dataloader/loader.interface';
+import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
+import { IAgent } from '@domain/agent/agent';
+import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
+import { ILicense } from '@domain/common/license/license.interface';
+import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
 import { NameID } from '@domain/common/scalars';
 import { ICommunity } from '@domain/community/community';
+import { Space } from '@domain/space/space/space.entity';
+import { ISpace } from '@domain/space/space/space.interface';
+import { SpaceService } from '@domain/space/space/space.service';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { ITemplatesManager } from '@domain/template/templates-manager';
 import { UseGuards } from '@nestjs/common';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import {
   AuthorizationAgentPrivilege,
   CurrentUser,
 } from '@src/common/decorators';
-import { SpaceService } from '@domain/space/space/space.service';
-import { ISpace } from '@domain/space/space/space.interface';
-import { IAgent } from '@domain/agent/agent';
-import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
-import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
-import { Loader } from '@core/dataloader/decorators';
-import {
-  SpaceCollaborationLoaderCreator,
-  SpaceCommunityLoaderCreator,
-  SpaceAboutLoaderCreator,
-  AgentLoaderCreator,
-} from '@core/dataloader/creators';
-import { ILoader } from '@core/dataloader/loader.interface';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
-import { ISpaceSettings } from '../space.settings/space.settings.interface';
 import { IAccount } from '../account/account.interface';
-import { ISpaceSubscription } from './space.license.subscription.interface';
-import { ITemplatesManager } from '@domain/template/templates-manager';
-import { ILicense } from '@domain/common/license/license.interface';
-import { LicenseLoaderCreator } from '@core/dataloader/creators/loader.creators/license.loader.creator';
 import { ISpaceAbout } from '../space.about';
 import { SpaceLookupService } from '../space.lookup/space.lookup.service';
-import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
+import { ISpaceSettings } from '../space.settings/space.settings.interface';
+import { ISpaceSubscription } from './space.license.subscription.interface';
 
 @Resolver(() => ISpace)
 export class SpaceResolverFields {

@@ -1,31 +1,43 @@
-import { Column, Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
+import { ProfileType } from '@common/enums';
+import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
+import { Location } from '@domain/common/location/location.entity';
 import { Reference } from '@domain/common/reference/reference.entity';
 import { Tagset } from '@domain/common/tagset/tagset.entity';
-import { IProfile } from './profile.interface';
 import { Visual } from '@domain/common/visual/visual.entity';
-import { Location } from '@domain/common/location/location.entity';
-import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { StorageBucket } from '@domain/storage/storage-bucket/storage.bucket.entity';
-import { ProfileType } from '@common/enums';
+import { Column, Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
+import { IProfile } from './profile.interface';
 
 @Entity()
 export class Profile extends AuthorizableEntity implements IProfile {
-  @OneToMany(() => Reference, reference => reference.profile, {
-    eager: false,
-    cascade: true,
-  })
+  @OneToMany(
+    () => Reference,
+    reference => reference.profile,
+    {
+      eager: false,
+      cascade: true,
+    }
+  )
   references?: Reference[];
 
-  @OneToMany(() => Tagset, tagset => tagset.profile, {
-    eager: false,
-    cascade: true,
-  })
+  @OneToMany(
+    () => Tagset,
+    tagset => tagset.profile,
+    {
+      eager: false,
+      cascade: true,
+    }
+  )
   tagsets?: Tagset[];
 
-  @OneToMany(() => Visual, visual => visual.profile, {
-    eager: false,
-    cascade: true,
-  })
+  @OneToMany(
+    () => Visual,
+    visual => visual.profile,
+    {
+      eager: false,
+      cascade: true,
+    }
+  )
   visuals?: Visual[];
 
   @Column('text', { nullable: false })

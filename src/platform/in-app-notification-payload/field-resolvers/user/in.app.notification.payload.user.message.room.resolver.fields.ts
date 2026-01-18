@@ -6,7 +6,7 @@ import { MessageDetails } from '@domain/communication/message.details/message.de
 import { MessageDetailsService } from '@domain/communication/message.details/message.details.service';
 import { IUser } from '@domain/community/user/user.interface';
 import { Inject, LoggerService } from '@nestjs/common';
-import { Resolver, ResolveField, Parent } from '@nestjs/graphql';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { InAppNotificationPayloadUserMessageRoom } from '@platform/in-app-notification-payload/dto/user/notification.in.app.payload.user.message.room';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 

@@ -1,15 +1,15 @@
-import { randomUUID } from 'crypto';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { Client as ElasticClient } from '@elastic/elasticsearch';
-import { WriteResponseBase } from '@elastic/elasticsearch/lib/api/types';
-import { ConfigService } from '@nestjs/config';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums';
 import { ELASTICSEARCH_CLIENT_PROVIDER } from '@constants/index';
+import { Client as ElasticClient } from '@elastic/elasticsearch';
+import { WriteResponseBase } from '@elastic/elasticsearch/lib/api/types';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { AlkemioConfig } from '@src/types';
+import { randomUUID } from 'crypto';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { isElasticError, isElasticResponseError } from '../utils';
 import { GuidanceUsage } from './guidance.usage';
 import { GuidanceUsageDocument } from './guidance.usage.document';
-import { AlkemioConfig } from '@src/types';
 
 const isFromAlkemioTeam = (email: string) => /.*@alkem\.io/.test(email);
 
@@ -42,21 +42,17 @@ export class GuidanceReporterService {
     this.indexName = elasticsearch?.indices?.guidance_usage;
   }
 
-  public async logAnswer() // question: string,
-  // guidanceEngineResponse: GuidanceEngineQueryResponse,
-  // userId: string
-  : Promise<string> {
+  // userId: string // guidanceEngineResponse: GuidanceEngineQueryResponse, // question: string,
+  public async logAnswer(): Promise<string> {
     const answerId = randomUUID();
     // this.reportToElastic(question, guidanceEngineResponse, answerId, userId);
 
     return answerId;
   }
 
-  private async reportToElastic() // question: string,
-  // guidanceEngineResponse: GuidanceEngineQueryResponse,
-  // answerId: string,
+  // answerId: string, // guidanceEngineResponse: GuidanceEngineQueryResponse, // question: string,
   // userId: string
-  : Promise<void> {
+  private async reportToElastic(): Promise<void> {
     // const { email } = await this.userService.getUserOrFail(userId);
     // this.reportUsage({
     //   usage: {

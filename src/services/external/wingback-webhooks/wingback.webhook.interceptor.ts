@@ -1,14 +1,14 @@
+import { LogContext } from '@common/enums';
 import {
   CallHandler,
   ExecutionContext,
   Injectable,
   NestInterceptor,
 } from '@nestjs/common';
-import { Observable } from 'rxjs';
 import { ConfigService } from '@nestjs/config';
-import { AlkemioConfig } from '@src/types';
 import { WingbackWebhookUnauthorizedException } from '@services/external/wingback-webhooks/wingback.webhook.unauthorized.exception';
-import { LogContext } from '@common/enums';
+import { AlkemioConfig } from '@src/types';
+import { Observable } from 'rxjs';
 
 @Injectable()
 export class HeaderInterceptor implements NestInterceptor {

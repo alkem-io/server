@@ -1,9 +1,15 @@
-import { Field, InputType } from '@nestjs/graphql';
-import { ArrayMaxSize, IsEnum, IsString, MaxLength } from 'class-validator';
-import { IsOptional, ValidateNested } from 'class-validator';
-import { Type } from 'class-transformer';
-import { LONG_TEXT_LENGTH } from '@src/common/constants';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
+import { Field, InputType } from '@nestjs/graphql';
+import { LONG_TEXT_LENGTH } from '@src/common/constants';
+import { Type } from 'class-transformer';
+import {
+  ArrayMaxSize,
+  IsEnum,
+  IsOptional,
+  IsString,
+  MaxLength,
+  ValidateNested,
+} from 'class-validator';
 import { IExternalConfig } from './external.config';
 
 @InputType()

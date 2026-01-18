@@ -1,16 +1,16 @@
-import { Global, Module, OnModuleInit } from '@nestjs/common';
-import { CqrsModule, EventBus } from '@nestjs/cqrs';
-import { Publisher } from './publisher';
-import { Subscriber } from './subscriber';
+import { RabbitMQResilienceService } from '@core/microservices/rabbitmq.resilience.service';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
+import { Global, Module, OnModuleInit } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { HandleMessages } from './messages';
+import { CqrsModule, EventBus } from '@nestjs/cqrs';
+import { AiServerModule } from '@services/ai-server/ai-server/ai.server.module';
 import { AlkemioConfig } from '@src/types';
 import { Handlers } from './handlers';
-import { AiServerModule } from '@services/ai-server/ai-server/ai.server.module';
+import { HandleMessages } from './messages';
+import { Publisher } from './publisher';
 import { RabbitMQConnectionFactory } from './rabbitmq.connection.factory';
 import { RabbitMQConnectionModule } from './rabbitmq.connection.module';
-import { RabbitMQResilienceService } from '@core/microservices/rabbitmq.resilience.service';
+import { Subscriber } from './subscriber';
 
 @Global()
 @Module({

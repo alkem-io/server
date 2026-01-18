@@ -1,9 +1,9 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { LogContext } from '@common/enums';
 import { RelationshipNotFoundException } from '@common/exceptions';
-import { ILicense } from '@domain/common/license/license.interface';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CollaborationLicenseService } from '@domain/collaboration/collaboration/collaboration.service.license';
+import { ILicense } from '@domain/common/license/license.interface';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { TemplateContentSpaceService } from './template.content.space.service';
 
 @Injectable()

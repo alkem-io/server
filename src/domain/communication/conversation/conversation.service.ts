@@ -1,37 +1,37 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, FindOneOptions, Repository } from 'typeorm';
+import { LogContext } from '@common/enums';
+import { AgentType } from '@common/enums/agent.type';
+import { InvocationOperation } from '@common/enums/ai.persona.invocation.operation';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
+import { RoomType } from '@common/enums/room.type';
+import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { RoomService } from '@domain/communication/room/room.service';
-import { RoomType } from '@common/enums/room.type';
 import { IRoom } from '@domain/communication/room/room.interface';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { Conversation } from './conversation.entity';
-import { IConversation } from './conversation.interface';
-import { ConversationMembership } from '../conversation-membership/conversation.membership.entity';
-import { IConversationMembership } from '../conversation-membership/conversation.membership.interface';
-import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
-import { AgentType } from '@common/enums/agent.type';
-import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
-import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
+import { RoomService } from '@domain/communication/room/room.service';
 import { IUser } from '@domain/community/user/user.interface';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
+import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
+import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 import { InvocationResultAction } from '@services/ai-server/ai-persona/dto';
-import { InvocationOperation } from '@common/enums/ai.persona.invocation.operation';
-import { ConversationVcAskQuestionResult } from './dto/conversation.vc.dto.ask.question.result';
-import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
-import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
-import { RoomLookupService } from '../room-lookup/room.lookup.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston/dist/winston.constants';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
+import { ConversationMembership } from '../conversation-membership/conversation.membership.entity';
+import { IConversationMembership } from '../conversation-membership/conversation.membership.interface';
+import { RoomLookupService } from '../room-lookup/room.lookup.service';
+import { Conversation } from './conversation.entity';
+import { IConversation } from './conversation.interface';
+import { ConversationVcAskQuestionResult } from './dto/conversation.vc.dto.ask.question.result';
 
 @Injectable()
 export class ConversationService {

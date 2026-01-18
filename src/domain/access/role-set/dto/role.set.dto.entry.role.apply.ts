@@ -1,9 +1,9 @@
-import { Field, InputType } from '@nestjs/graphql';
+import { UUID_LENGTH } from '@common/constants';
 import { CreateNVPInput } from '@domain/common/nvp';
 import { UUID } from '@domain/common/scalars';
-import { MaxLength, ValidateNested } from 'class-validator';
+import { Field, InputType } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
-import { UUID_LENGTH } from '@common/constants';
+import { MaxLength, ValidateNested } from 'class-validator';
 
 @InputType()
 export class ApplyForEntryRoleOnRoleSetInput {

@@ -1,6 +1,6 @@
-import { Column, Entity, JoinColumn, OneToOne } from 'typeorm';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
 import { Profile } from '@domain/common/profile/profile.entity';
+import { Column, Entity, JoinColumn, OneToOne } from 'typeorm';
 import { ILink } from './link.interface';
 
 @Entity()

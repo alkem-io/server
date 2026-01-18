@@ -1,6 +1,6 @@
+import { CommunicationModule } from '@domain/communication/communication/communication.module';
 import { Module } from '@nestjs/common';
 import { CommunityCommunicationService } from './community.communication.service';
-import { CommunicationModule } from '@domain/communication/communication/communication.module';
 
 @Module({
   imports: [CommunicationModule],

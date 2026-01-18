@@ -1,6 +1,6 @@
-import { IRelayStylePageInfo } from './relay.style.paginated.type';
 import { Type } from '@nestjs/common';
 import { Field, ObjectType } from '@nestjs/graphql';
+import { IRelayStylePageInfo } from './relay.style.paginated.type';
 
 export interface IPaginatedType<T> {
   total: number;

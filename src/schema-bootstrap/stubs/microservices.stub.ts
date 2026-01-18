@@ -1,8 +1,7 @@
-import { ClientProxy } from '@nestjs/microservices';
 import {
-  NOTIFICATIONS_SERVICE,
-  MATRIX_ADAPTER_SERVICE,
   AUTH_RESET_SERVICE,
+  MATRIX_ADAPTER_SERVICE,
+  NOTIFICATIONS_SERVICE,
   SUBSCRIPTION_CALLOUT_POST_CREATED,
   SUBSCRIPTION_DISCUSSION_UPDATED,
   SUBSCRIPTION_ROOM_EVENT,
@@ -10,6 +9,7 @@ import {
   SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED,
 } from '@common/constants/providers';
 import { Provider } from '@nestjs/common';
+import { ClientProxy } from '@nestjs/microservices';
 import { of } from 'rxjs';
 
 const createNoopClientProxy = (): ClientProxy => {

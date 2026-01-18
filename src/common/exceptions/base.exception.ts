@@ -1,6 +1,6 @@
-import { GraphQLError } from 'graphql';
+import { AlkemioErrorStatus, LogContext } from '@common/enums';
 import { randomUUID } from 'crypto';
-import { LogContext, AlkemioErrorStatus } from '@common/enums';
+import { GraphQLError } from 'graphql';
 import { ExceptionDetails } from './exception.details';
 
 export class BaseException extends GraphQLError {

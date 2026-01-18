@@ -1,11 +1,11 @@
-import { Injectable } from '@nestjs/common';
-import { ICommunication } from '@domain/communication/communication';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import { CommunicationService } from './communication.service';
-import { RoomAuthorizationService } from '../room/room.service.authorization';
-import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { LogContext } from '@common/enums/logging.context';
+import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { ICommunication } from '@domain/communication/communication';
+import { Injectable } from '@nestjs/common';
+import { RoomAuthorizationService } from '../room/room.service.authorization';
+import { CommunicationService } from './communication.service';
 
 @Injectable()
 export class CommunicationAuthorizationService {

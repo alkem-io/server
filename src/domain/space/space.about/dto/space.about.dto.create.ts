@@ -1,10 +1,10 @@
-import { Field, InputType } from '@nestjs/graphql';
-import { IsOptional, MaxLength, ValidateNested } from 'class-validator';
-import { VERY_LONG_TEXT_LENGTH } from '@src/common/constants';
-import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
-import { Type } from 'class-transformer';
+import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { CreateCommunityGuidelinesInput } from '@domain/community/community-guidelines';
+import { Field, InputType } from '@nestjs/graphql';
+import { VERY_LONG_TEXT_LENGTH } from '@src/common/constants';
+import { Type } from 'class-transformer';
+import { IsOptional, MaxLength, ValidateNested } from 'class-validator';
 
 @InputType()
 export class CreateSpaceAboutInput {

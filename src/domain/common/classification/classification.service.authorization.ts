@@ -1,10 +1,10 @@
-import { Injectable } from '@nestjs/common';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { ClassificationService } from './classification.service';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { LogContext } from '@common/enums/logging.context';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { Injectable } from '@nestjs/common';
+import { ClassificationService } from './classification.service';
 
 @Injectable()
 export class ClassificationAuthorizationService {

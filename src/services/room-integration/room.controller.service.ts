@@ -1,6 +1,7 @@
 import { LogContext } from '@common/enums';
-import { Post } from '@domain/collaboration/post/post.entity';
+import { EntityNotFoundException } from '@common/exceptions';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
+import { Post } from '@domain/collaboration/post/post.entity';
 import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { RoomDetails } from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.invocation';
@@ -8,9 +9,7 @@ import {
   InvokeEngineResponse,
   InvokeEngineResult,
 } from '@services/infrastructure/event-bus/messages/invoke.engine.result';
-
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityNotFoundException } from '@common/exceptions';
 
 @Injectable()
 export class RoomControllerService {

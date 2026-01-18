@@ -1,5 +1,5 @@
-import { ClassDecoratorParams, createInstrumentedClassDecorator } from './util';
 import { RESOLVER_NAME_METADATA } from '@nestjs/graphql';
+import { ClassDecoratorParams, createInstrumentedClassDecorator } from './util';
 
 const isEnabled =
   process.env.ENABLE_APM === 'true' && process.env.APM_INSTRUMENT_MODULES

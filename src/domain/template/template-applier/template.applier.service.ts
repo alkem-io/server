@@ -1,16 +1,16 @@
-import { Injectable } from '@nestjs/common';
-import { UpdateCollaborationFromSpaceTemplateInput } from './dto/template.applier.dto.update.collaboration';
-import { TemplateService } from '../template/template.service';
-import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { LogContext } from '@common/enums';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
-import { ITemplateContentSpace } from '../template-content-space/template.content.space.interface';
-import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovation.flow.service';
 import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
+import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
+import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
+import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovation.flow.service';
+import { CreateInnovationFlowStateInput } from '@domain/collaboration/innovation-flow-state/dto/innovation.flow.state.dto.create';
+import { Injectable } from '@nestjs/common';
 import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
-import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
-import { CreateInnovationFlowStateInput } from '@domain/collaboration/innovation-flow-state/dto/innovation.flow.state.dto.create';
+import { TemplateService } from '../template/template.service';
+import { ITemplateContentSpace } from '../template-content-space/template.content.space.interface';
+import { UpdateCollaborationFromSpaceTemplateInput } from './dto/template.applier.dto.update.collaboration';
 
 @Injectable()
 export class TemplateApplierService {

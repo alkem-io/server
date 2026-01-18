@@ -1,25 +1,28 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, Repository, FindManyOptions } from 'typeorm';
-import { IGroupable } from '@src/common/interfaces/groupable.interface';
-import { ProfileService } from '@domain/common/profile/profile.service';
-import { IUser } from '@domain/community/user/user.interface';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import {
   AuthorizationCredential,
   LogContext,
   ProfileType,
 } from '@common/enums';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import {
   EntityNotFoundException,
-  NotSupportedException,
   EntityNotInitializedException,
+  NotSupportedException,
 } from '@common/exceptions';
-import { UserGroup, IUserGroup } from '@domain/community/user-group';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
-import { IProfile } from '@domain/common/profile';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { IProfile } from '@domain/common/profile';
+import { ProfileService } from '@domain/common/profile/profile.service';
+import { IUser } from '@domain/community/user/user.interface';
+import { IUserGroup, UserGroup } from '@domain/community/user-group';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { IGroupable } from '@src/common/interfaces/groupable.interface';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
+import { UserLookupService } from '../user-lookup/user.lookup.service';
 import {
   AssignUserGroupMemberInput,
   CreateUserGroupInput,
@@ -27,9 +30,6 @@ import {
   RemoveUserGroupMemberInput,
   UpdateUserGroupInput,
 } from './dto';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { UserLookupService } from '../user-lookup/user.lookup.service';
 
 @Injectable()
 export class UserGroupService {

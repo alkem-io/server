@@ -1,19 +1,19 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { PlatformAuthorizationService } from './platform.service.authorization';
+import { RoleSetType } from '@common/enums/role.set.type';
+import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { RoleSetAuthorizationService } from '@domain/access/role-set/role.set.service.authorization';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
-import { PlatformService } from './platform.service';
-import { ForumAuthorizationService } from '@platform/forum/forum.service.authorization';
-import { LibraryAuthorizationService } from '@library/library/library.service.authorization';
+import { MessagingAuthorizationService } from '@domain/communication/messaging/messaging.service.authorization';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { TemplatesManagerAuthorizationService } from '@domain/template/templates-manager/templates.manager.service.authorization';
+import { LibraryAuthorizationService } from '@library/library/library.service.authorization';
+import { Test, TestingModule } from '@nestjs/testing';
+import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
+import { ForumAuthorizationService } from '@platform/forum/forum.service.authorization';
 import { LicensingFrameworkAuthorizationService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service.authorization';
-import { RoleSetAuthorizationService } from '@domain/access/role-set/role.set.service.authorization';
-import { MessagingAuthorizationService } from '@domain/communication/messaging/messaging.service.authorization';
 import { IPlatform } from './platform.interface';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
-import { RoleSetType } from '@common/enums/role.set.type';
+import { PlatformService } from './platform.service';
+import { PlatformAuthorizationService } from './platform.service.authorization';
 
 describe('PlatformAuthorizationService', () => {
   let service: PlatformAuthorizationService;

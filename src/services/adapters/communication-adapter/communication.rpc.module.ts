@@ -1,8 +1,8 @@
+import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 import { Global, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
-import { AlkemioConfig } from '@src/types';
 import { CommunicationRpcStubModule } from '@src/schema-bootstrap/stubs/communication-rpc.stub';
+import { AlkemioConfig } from '@src/types';
 
 /**
  * Module that provides AMQP RPC functionality for the Communication Adapter.

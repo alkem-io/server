@@ -1,12 +1,12 @@
-import { Resolver, Mutation, Args } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { LicensingFrameworkService } from './licensing.framework.service';
-import { CreateLicensePlanOnLicensingFrameworkInput } from './dto/licensing.framework.dto.create.license.plan';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { ILicensePlan } from '@platform/licensing/credential-based/license-plan/license.plan.interface';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentUser } from '@src/common/decorators';
+import { CreateLicensePlanOnLicensingFrameworkInput } from './dto/licensing.framework.dto.create.license.plan';
+import { LicensingFrameworkService } from './licensing.framework.service';
 
 @InstrumentResolver()
 @Resolver()

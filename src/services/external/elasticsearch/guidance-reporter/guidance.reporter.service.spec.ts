@@ -1,11 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { GuidanceReporterService } from './guidance.reporter.service';
 import {
   MockConfigService,
   MockElasticsearchClientProvider,
   MockUserService,
   MockWinstonProvider,
 } from '@test/mocks';
+import { GuidanceReporterService } from './guidance.reporter.service';
 
 describe('ContributionReporterService', () => {
   let service: GuidanceReporterService;

@@ -1,9 +1,9 @@
+import { ProfileModule } from '@domain/common/profile/profile.module';
+import { ProfileDocumentsModule } from '@domain/profile-documents/profile.documents.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ProfileModule } from '@domain/common/profile/profile.module';
-import { CalloutContributionDefaultsService } from './callout.contribution.defaults.service';
 import { CalloutContributionDefaults } from './callout.contribution.defaults.entity';
-import { ProfileDocumentsModule } from '@domain/profile-documents/profile.documents.module';
+import { CalloutContributionDefaultsService } from './callout.contribution.defaults.service';
 
 @Module({
   imports: [

@@ -1,20 +1,20 @@
+import { AuthorizationPrivilege } from '@common/enums';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { GraphqlGuard } from '@core/authorization';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { MessageID } from '@domain/common/scalars';
 import { UseGuards } from '@nestjs/common';
 import { Args, Int, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import {
   AuthorizationAgentPrivilege,
   CurrentUser,
 } from '@src/common/decorators';
-import { AuthorizationPrivilege } from '@common/enums';
-import { MessageID } from '@domain/common/scalars';
 import { IMessage } from '../message/message.interface';
-import { IRoom } from './room.interface';
-import { RoomService } from './room.service';
 import { IVcInteraction } from '../vc-interaction/vc.interaction.interface';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { AuthorizationService } from '@core/authorization/authorization.service';
 import { RoomUnreadCounts } from './dto/room.dto.unread.counts';
 import { RoomDataLoader } from './room.data.loader';
+import { IRoom } from './room.interface';
+import { RoomService } from './room.service';
 
 @Resolver(() => IRoom)
 export class RoomResolverFields {

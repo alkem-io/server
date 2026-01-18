@@ -1,15 +1,15 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { ProfileDocumentsService } from './profile.documents.service';
-import { DocumentService } from '@domain/storage/document/document.service';
-import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
-import { uniqueId } from 'lodash';
-import { MimeTypeVisual } from '@common/enums/mime.file.type.visual';
-import { IAuthorizationPolicy } from '../common/authorization-policy';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { MimeTypeVisual } from '@common/enums/mime.file.type.visual';
 import { TagsetType } from '@common/enums/tagset.type';
 import { IDocument } from '@domain/storage/document';
+import { DocumentService } from '@domain/storage/document/document.service';
 import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
+import { Test, TestingModule } from '@nestjs/testing';
+import { uniqueId } from 'lodash';
+import { IAuthorizationPolicy } from '../common/authorization-policy';
+import { ProfileDocumentsService } from './profile.documents.service';
 
 const ALKEMIO_URL = 'https://alkem.io';
 const ALKEMIO_DOCUMENT_URL = `${ALKEMIO_URL}/api/private/rest/storage/document`;

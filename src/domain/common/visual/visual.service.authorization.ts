@@ -1,9 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { POLICY_RULE_VISUAL_UPDATE } from '@common/constants';
 import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
-import { POLICY_RULE_VISUAL_UPDATE } from '@common/constants';
+import { Injectable } from '@nestjs/common';
 import { IVisual } from './visual.interface';
 
 @Injectable()

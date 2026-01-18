@@ -1,15 +1,15 @@
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Inject, LoggerService } from '@nestjs/common';
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@common/decorators/profiling.decorator';
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { IUser } from '@domain/community/user/user.interface';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { ISpace } from '@domain/space/space/space.interface';
+import { Inject, LoggerService } from '@nestjs/common';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ICalendarEvent } from './event.interface';
 import { CalendarEventService } from './event.service';
-import { ISpace } from '@domain/space/space/space.interface';
-import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 
 @Resolver(() => ICalendarEvent)
 export class CalendarEventResolverFields {

@@ -1,9 +1,9 @@
-import * as Y from 'yjs';
-import { MarkdownParser } from 'prosemirror-markdown';
-import markdownIt, { Token } from 'markdown-it';
 import { prosemirrorToYDoc } from '@tiptap/y-tiptap';
-import { markdownSchema } from './markdown.schema';
+import markdownIt, { Token } from 'markdown-it';
+import { MarkdownParser } from 'prosemirror-markdown';
+import * as Y from 'yjs';
 import { newLineReplacement } from './const';
+import { markdownSchema } from './markdown.schema';
 
 /**
  * Converts a markdown string to a Yjs state update, encoded in binary.

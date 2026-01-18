@@ -1,9 +1,9 @@
-import { Field, ObjectType } from '@nestjs/graphql';
-import { IRoom } from '../../domain/communication/room/room.interface';
-import { INameable } from '@domain/common/entity/nameable-entity';
-import { ForumDiscussionPrivacy } from '@common/enums/forum.discussion.privacy';
 import { ForumDiscussionCategory } from '@common/enums/forum.discussion.category';
+import { ForumDiscussionPrivacy } from '@common/enums/forum.discussion.privacy';
+import { INameable } from '@domain/common/entity/nameable-entity';
+import { Field, ObjectType } from '@nestjs/graphql';
 import { IForum } from '@platform/forum/forum.interface';
+import { IRoom } from '../../domain/communication/room/room.interface';
 
 @ObjectType('Discussion')
 export abstract class IDiscussion extends INameable {

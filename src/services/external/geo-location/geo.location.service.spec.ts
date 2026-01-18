@@ -1,20 +1,20 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import {
+  GeoServiceErrorException,
+  GeoServiceNotAvailableException,
+  GeoServiceRequestLimitExceededException,
+} from '@common/exceptions/geo';
 import { HttpService } from '@nestjs/axios';
-import { Cache } from 'cache-manager';
-import { of } from 'rxjs';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Test, TestingModule } from '@nestjs/testing';
 import {
   MockCacheManager,
   MockConfigService,
   MockHttpService,
   MockWinstonProvider,
 } from '@test/mocks';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { asyncToThrow } from '@test/utils';
-import {
-  GeoServiceErrorException,
-  GeoServiceNotAvailableException,
-  GeoServiceRequestLimitExceededException,
-} from '@common/exceptions/geo';
+import { Cache } from 'cache-manager';
+import { of } from 'rxjs';
 import { GeoLocationService } from './geo.location.service';
 import * as isLimitExceededModule from './utils/is.limit.exceeded';
 

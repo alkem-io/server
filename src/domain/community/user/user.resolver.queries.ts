@@ -1,16 +1,16 @@
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AuthorizationPrivilege } from '@common/enums';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { UserFilterInput } from '@core/filtering';
+import { PaginatedUsers, PaginationArgs } from '@core/pagination';
 import { UUID } from '@domain/common/scalars';
 import { Args, Query, Resolver } from '@nestjs/graphql';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { PaginatedUsers, PaginationArgs } from '@core/pagination';
-import { UserService } from './user.service';
-import { IUser } from './user.interface';
-import { UserFilterInput } from '@core/filtering';
+import { InstrumentResolver } from '@src/apm/decorators';
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { UsersQueryArgs } from './dto/users.query.args';
-import { InstrumentResolver } from '@src/apm/decorators';
+import { IUser } from './user.interface';
+import { UserService } from './user.service';
 
 @InstrumentResolver()
 @Resolver(() => IUser)

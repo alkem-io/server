@@ -1,3 +1,5 @@
+import { compressText, decompressText } from '@common/utils/compression.util';
+import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
 import {
   AfterInsert,
   AfterLoad,
@@ -7,8 +9,6 @@ import {
   Column,
   Entity,
 } from 'typeorm';
-import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
-import { compressText, decompressText } from '@common/utils/compression.util';
 import { ICalloutContributionDefaults } from './callout.contribution.defaults.interface';
 
 @Entity()

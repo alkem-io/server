@@ -1,21 +1,21 @@
-import { Inject, LoggerService } from '@nestjs/common';
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { TemplateService } from './template.service';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { ITemplate } from './template.interface';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { UpdateTemplateInput } from './dto/template.dto.update';
-import { DeleteTemplateInput } from './dto/template.dto.delete';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LogContext } from '@common/enums/logging.context';
 import { ValidationException } from '@common/exceptions/validation.exception';
-import { UpdateTemplateFromSpaceInput } from './dto/template.dto.update.from.space';
-import { TemplateAuthorizationService } from './template.service.authorization';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { InstrumentResolver } from '@src/apm/decorators';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
+import { Inject, LoggerService } from '@nestjs/common';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { InstrumentResolver } from '@src/apm/decorators';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { DeleteTemplateInput } from './dto/template.dto.delete';
+import { UpdateTemplateInput } from './dto/template.dto.update';
+import { UpdateTemplateFromSpaceInput } from './dto/template.dto.update.from.space';
+import { ITemplate } from './template.interface';
+import { TemplateService } from './template.service';
+import { TemplateAuthorizationService } from './template.service.authorization';
 
 @InstrumentResolver()
 @Resolver()

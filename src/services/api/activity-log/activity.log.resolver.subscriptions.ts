@@ -1,19 +1,19 @@
-import { Args, Resolver } from '@nestjs/graphql';
-import { Inject, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { SubscriptionReadService } from '@services/subscriptions/subscription-service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { ActivityCreatedSubscriptionPayload } from './dto/subscriptions/activity.log.dto.activity.created.subscription.payload';
-import { ActivityCreatedSubscriptionInput } from './dto/subscriptions/activity.log.activity.created.subscription.input';
-import { ActivityCreatedSubscriptionResult } from './dto/subscriptions/activity.created.dto';
-import { TypedSubscription } from '@common/decorators/typed.subscription/typed.subscription.decorator';
-import { LogContext } from '@common/enums/logging.context';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { TypedSubscription } from '@common/decorators/typed.subscription/typed.subscription.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { LogContext } from '@common/enums/logging.context';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
+import { Inject, LoggerService } from '@nestjs/common';
+import { Args, Resolver } from '@nestjs/graphql';
 import { ActivityLogService } from '@services/api/activity-log/activity.log.service';
+import { SubscriptionReadService } from '@services/subscriptions/subscription-service';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { ActivityCreatedSubscriptionResult } from './dto/subscriptions/activity.created.dto';
+import { ActivityCreatedSubscriptionInput } from './dto/subscriptions/activity.log.activity.created.subscription.input';
+import { ActivityCreatedSubscriptionPayload } from './dto/subscriptions/activity.log.dto.activity.created.subscription.payload';
 
 @InstrumentResolver()
 @Resolver()

@@ -1,53 +1,53 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
+import { LogContext } from '@common/enums';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import {
+  AllCalloutContributionTypes,
+  CalloutContributionType,
+} from '@common/enums/callout.contribution.type';
+import { CalloutFramingType } from '@common/enums/callout.framing.type';
+import { RoomType } from '@common/enums/room.type';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { limitAndShuffle } from '@common/utils';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/index';
-import { limitAndShuffle } from '@common/utils';
-import { NamingService } from '@services/infrastructure/naming/naming.service';
-import { UpdateCalloutVisibilityInput } from './dto/callout.dto.update.visibility';
-import { RoomService } from '@domain/communication/room/room.service';
-import { RoomType } from '@common/enums/room.type';
-import { IRoom } from '@domain/communication/room/room.interface';
-import { ITagsetTemplate } from '@domain/common/tagset-template';
-import { CalloutFramingService } from '../callout-framing/callout.framing.service';
-import { ICalloutFraming } from '../callout-framing/callout.framing.interface';
-import { ICalloutSettings } from '../callout-settings/callout.settings.interface';
-import { CalloutContributionDefaultsService } from '../callout-contribution-defaults/callout.contribution.defaults.service';
-import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
-import { CreateContributionOnCalloutInput } from './dto/callout.dto.create.contribution';
-import { CalloutContributionService } from '../callout-contribution/callout.contribution.service';
-import { CreateWhiteboardInput } from '@domain/common/whiteboard/dto/whiteboard.dto.create';
-import { CreatePostInput } from '../post/dto/post.dto.create';
-import { CreateMemoInput } from '@domain/common/memo/dto/memo.dto.create';
-import { ICalloutContributionDefaults } from '../callout-contribution-defaults/callout.contribution.defaults.interface';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { UpdateCalloutInput } from './dto/callout.dto.update';
-import { UpdateContributionCalloutsSortOrderInput } from '../callout-contribution/dto/callout.contribution.dto.update.callouts.sort.order';
-import { cloneDeep, keyBy, merge } from 'lodash';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
-import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { ClassificationService } from '@domain/common/classification/classification.service';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IClassification } from '@domain/common/classification/classification.interface';
-import {
-  AllCalloutContributionTypes,
-  CalloutContributionType,
-} from '@common/enums/callout.contribution.type';
-import { CalloutFramingType } from '@common/enums/callout.framing.type';
+import { ClassificationService } from '@domain/common/classification/classification.service';
+import { CreateMemoInput } from '@domain/common/memo/dto/memo.dto.create';
+import { ITagsetTemplate } from '@domain/common/tagset-template';
+import { CreateWhiteboardInput } from '@domain/common/whiteboard/dto/whiteboard.dto.create';
+import { IRoom } from '@domain/communication/room/room.interface';
+import { RoomService } from '@domain/communication/room/room.service';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { NamingService } from '@services/infrastructure/naming/naming.service';
+import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
+import { cloneDeep, keyBy, merge } from 'lodash';
+import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
+import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
+import { CalloutContributionService } from '../callout-contribution/callout.contribution.service';
+import { UpdateContributionCalloutsSortOrderInput } from '../callout-contribution/dto/callout.contribution.dto.update.callouts.sort.order';
+import { ICalloutContributionDefaults } from '../callout-contribution-defaults/callout.contribution.defaults.interface';
+import { CalloutContributionDefaultsService } from '../callout-contribution-defaults/callout.contribution.defaults.service';
+import { ICalloutFraming } from '../callout-framing/callout.framing.interface';
+import { CalloutFramingService } from '../callout-framing/callout.framing.service';
 import { DefaultCalloutSettings } from '../callout-settings/callout.settings.default';
+import { ICalloutSettings } from '../callout-settings/callout.settings.interface';
+import { CreatePostInput } from '../post/dto/post.dto.create';
 import { CalloutContributionsCountOutput } from './dto/callout.contributions.count.dto';
+import { CreateContributionOnCalloutInput } from './dto/callout.dto.create.contribution';
+import { UpdateCalloutInput } from './dto/callout.dto.update';
+import { UpdateCalloutVisibilityInput } from './dto/callout.dto.update.visibility';
 
 @Injectable()
 export class CalloutService {

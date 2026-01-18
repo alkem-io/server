@@ -1,9 +1,9 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
-import { CreateUserSettingsPrivacyInput } from './user.settings.privacy.dto.create';
+import { ValidateNested } from 'class-validator';
 import { CreateUserSettingsCommunicationInput } from './user.settings.communications.dto.create';
 import { CreateUserSettingsNotificationInput } from './user.settings.notification.dto.create';
+import { CreateUserSettingsPrivacyInput } from './user.settings.privacy.dto.create';
 
 @InputType()
 export class CreateUserSettingsInput {

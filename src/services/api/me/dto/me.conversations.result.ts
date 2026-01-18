@@ -1,6 +1,6 @@
-import { ObjectType, Field } from '@nestjs/graphql';
-import { IConversation } from '@domain/communication/conversation/conversation.interface';
 import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
+import { IConversation } from '@domain/communication/conversation/conversation.interface';
+import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('MeConversationsResult')
 export class MeConversationsResult {

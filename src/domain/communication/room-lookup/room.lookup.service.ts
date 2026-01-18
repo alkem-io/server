@@ -1,17 +1,17 @@
-import { Inject } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
 import { LogContext } from '@common/enums';
-import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
-import { IRoom } from '../room/room.interface';
-import { IMessage } from '../message/message.interface';
-import { FindOneOptions, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
-import { Room } from '../room/room.entity';
+import { Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { IVcInteraction } from '../vc-interaction/vc.interaction.interface';
-import { CreateVcInteractionInput } from '../vc-interaction/dto/vc.interaction.dto.create';
-import { RoomSendMessageReplyInput } from '../room/dto/room.dto.send.message.reply';
+import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
+import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
+import { FindOneOptions, Repository } from 'typeorm';
+import { IMessage } from '../message/message.interface';
 import { RoomSendMessageInput } from '../room/dto/room.dto.send.message';
+import { RoomSendMessageReplyInput } from '../room/dto/room.dto.send.message.reply';
+import { Room } from '../room/room.entity';
+import { IRoom } from '../room/room.interface';
+import { CreateVcInteractionInput } from '../vc-interaction/dto/vc.interaction.dto.create';
+import { IVcInteraction } from '../vc-interaction/vc.interaction.interface';
 
 export class RoomLookupService {
   constructor(

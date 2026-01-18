@@ -1,41 +1,41 @@
 import { LogContext, ProfileType } from '@common/enums';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { VisualType } from '@common/enums/visual.type';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { InnovationFlow } from './innovation.flow.entity';
-import { IInnovationFlow } from './innovation.flow.interface';
-import { CreateInnovationFlowInput } from './dto/innovation.flow.dto.create';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
-import { VisualType } from '@common/enums/visual.type';
-import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.interface';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { UpdateInnovationFlowCurrentStateInput } from './dto/innovation.flow.dto.state.select';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { CreateInnovationFlowStateInput } from '../innovation-flow-state/dto/innovation.flow.state.dto.create';
-import { UpdateInnovationFlowStateInput } from '../innovation-flow-state/dto/innovation.flow.state.dto.update';
-import { TagsetTemplateService } from '@domain/common/tagset-template/tagset.template.service';
-import { UpdateTagsetTemplateDefinitionInput } from '@domain/common/tagset-template';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
-import { InnovationFlowStateService } from '../innovation-flow-state/innovation.flow.state.service';
-import { IInnovationFlowState } from '../innovation-flow-state/innovation.flow.state.interface';
-import { IInnovationFlowSettings } from '../innovation-flow-settings/innovation.flow.settings.interface';
-import { UpdateInnovationFlowInput } from './dto/innovation.flow.dto.update';
-import { UpdateInnovationFlowStatesSortOrderInput } from './dto/innovation.flow.dto.update.states.sort.order';
+import { UpdateTagsetTemplateDefinitionInput } from '@domain/common/tagset-template';
+import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.interface';
+import { TagsetTemplateService } from '@domain/common/tagset-template/tagset.template.service';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { keyBy } from 'lodash';
-import { DeleteStateOnInnovationFlowInput } from './dto/innovation.flow.dto.state.delete';
-import { sortBySortOrder } from '../innovation-flow-state/utils/sortBySortOrder';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { CalloutsSetService } from '../callouts-set/callouts.set.service';
 import { Collaboration } from '../collaboration/collaboration.entity';
-import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { IInnovationFlowSettings } from '../innovation-flow-settings/innovation.flow.settings.interface';
+import { CreateInnovationFlowStateInput } from '../innovation-flow-state/dto/innovation.flow.state.dto.create';
+import { UpdateInnovationFlowStateInput } from '../innovation-flow-state/dto/innovation.flow.state.dto.update';
+import { IInnovationFlowState } from '../innovation-flow-state/innovation.flow.state.interface';
+import { InnovationFlowStateService } from '../innovation-flow-state/innovation.flow.state.service';
+import { sortBySortOrder } from '../innovation-flow-state/utils/sortBySortOrder';
+import { CreateInnovationFlowInput } from './dto/innovation.flow.dto.create';
+import { DeleteStateOnInnovationFlowInput } from './dto/innovation.flow.dto.state.delete';
+import { UpdateInnovationFlowCurrentStateInput } from './dto/innovation.flow.dto.state.select';
+import { UpdateInnovationFlowInput } from './dto/innovation.flow.dto.update';
+import { UpdateInnovationFlowStatesSortOrderInput } from './dto/innovation.flow.dto.update.states.sort.order';
+import { InnovationFlow } from './innovation.flow.entity';
+import { IInnovationFlow } from './innovation.flow.interface';
 
 @Injectable()
 export class InnovationFlowService {

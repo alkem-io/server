@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { GuidanceReporterService } from './guidance.reporter.service';
 import { ElasticsearchClientProvider } from '../elasticsearch-client';
+import { GuidanceReporterService } from './guidance.reporter.service';
 
 @Module({
   imports: [],

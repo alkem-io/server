@@ -1,14 +1,14 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { ConfigService } from '@nestjs/config';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
-import { CommunicationAdapter } from './communication.adapter';
-import { CommunicationAdapterException } from './communication.adapter.exception';
 import {
-  MatrixAdapterEventType,
   BaseResponse,
+  MatrixAdapterEventType,
 } from '@alkemio/matrix-adapter-lib';
 import { RoomType as AlkemioRoomType } from '@common/enums/room.type';
+import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
+import { ConfigService } from '@nestjs/config';
+import { Test, TestingModule } from '@nestjs/testing';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { CommunicationAdapter } from './communication.adapter';
+import { CommunicationAdapterException } from './communication.adapter.exception';
 import { CommunicationSendMessageInput } from './dto/communication.dto.message.send';
 
 describe('CommunicationAdapter', () => {

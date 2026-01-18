@@ -1,23 +1,23 @@
-import { Inject, LoggerService } from '@nestjs/common';
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { IConversation } from '../conversation/conversation.interface';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { InstrumentResolver } from '@src/apm/decorators';
-import { MessagingService } from './messaging.service';
-import { LogContext } from '@common/enums/logging.context';
-import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import {
-  CreateConversationInput,
-  CreateConversationData,
-} from '@domain/communication/conversation/dto';
-import { MessagingNotEnabledException } from '@common/exceptions/messaging.not.enabled.exception';
 import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
+import { LogContext } from '@common/enums/logging.context';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
+import { MessagingNotEnabledException } from '@common/exceptions/messaging.not.enabled.exception';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import {
+  CreateConversationData,
+  CreateConversationInput,
+} from '@domain/communication/conversation/dto';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { Inject, LoggerService } from '@nestjs/common';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { InstrumentResolver } from '@src/apm/decorators';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { IConversation } from '../conversation/conversation.interface';
+import { MessagingService } from './messaging.service';
 
 @InstrumentResolver()
 @Resolver()

@@ -1,13 +1,12 @@
-import { UseGuards } from '@nestjs/common';
-import { Resolver } from '@nestjs/graphql';
-import { Parent, ResolveField } from '@nestjs/graphql';
-import { ApplicationService } from './application.service';
 import { AuthorizationPrivilege } from '@common/enums';
-import { Application, IApplication } from '@domain/access/application';
 import { GraphqlGuard } from '@core/authorization';
-import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
+import { Application, IApplication } from '@domain/access/application';
 import { IQuestion } from '@domain/common/question/question.interface';
+import { UseGuards } from '@nestjs/common';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
 import { IContributor } from '../../community/contributor/contributor.interface';
+import { ApplicationService } from './application.service';
 
 @Resolver(() => IApplication)
 export class ApplicationResolverFields {

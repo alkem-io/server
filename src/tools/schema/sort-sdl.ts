@@ -10,17 +10,17 @@
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import {
+  DefinitionNode,
+  DocumentNode,
+  EnumTypeDefinitionNode,
+  FieldDefinitionNode,
+  InputObjectTypeDefinitionNode,
+  InputValueDefinitionNode,
+  InterfaceTypeDefinitionNode,
+  ObjectTypeDefinitionNode,
   parse,
   print,
-  DocumentNode,
-  DefinitionNode,
-  ObjectTypeDefinitionNode,
-  InterfaceTypeDefinitionNode,
-  InputObjectTypeDefinitionNode,
-  EnumTypeDefinitionNode,
   UnionTypeDefinitionNode,
-  FieldDefinitionNode,
-  InputValueDefinitionNode,
 } from 'graphql';
 
 type AnyComposite =

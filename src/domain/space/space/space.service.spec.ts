@@ -1,37 +1,37 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { SpaceService } from './space.service';
-import { MockCacheManager } from '@test/mocks/cache-manager.mock';
-import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
-import { Space } from './space.entity';
-import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { AuthorizationPrivilege, ProfileType } from '@common/enums';
+import { AccountType } from '@common/enums/account.type';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { CalloutsSetType } from '@common/enums/callouts.set.type';
+import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
+import { RoleName } from '@common/enums/role.name';
+import { SpaceLevel } from '@common/enums/space.level';
+import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { SpaceVisibility } from '@common/enums/space.visibility';
+import { TagsetType } from '@common/enums/tagset.type';
+import { CalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.entity';
+import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
+import { InnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.entity';
+import { InnovationFlowState } from '@domain/collaboration/innovation-flow-state/innovation.flow.state.entity';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { Profile } from '@domain/common/profile';
-import { SpaceFilterService } from '@services/infrastructure/space-filter/space.filter.service';
-import { MockFunctionMetadata, ModuleMocker } from 'jest-mock';
-import { InnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.entity';
-import { AuthorizationPrivilege, ProfileType } from '@common/enums';
-import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
-import { Account } from '../account/account.entity';
-import { SpaceLevel } from '@common/enums/space.level';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { AccountType } from '@common/enums/account.type';
-import { Repository } from 'typeorm';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
-import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
-import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
-import { CalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.entity';
-import { CalloutsSetType } from '@common/enums/callouts.set.type';
-import { SpaceAbout } from '../space.about';
 import { TagsetTemplate } from '@domain/common/tagset-template';
-import { TagsetType } from '@common/enums/tagset.type';
+import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
+import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { SpaceFilterService } from '@services/infrastructure/space-filter/space.filter.service';
 import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator/url.generator.service.cache';
-import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
-import { InnovationFlowState } from '@domain/collaboration/innovation-flow-state/innovation.flow.state.entity';
+import { MockCacheManager } from '@test/mocks/cache-manager.mock';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
+import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { MockFunctionMetadata, ModuleMocker } from 'jest-mock';
+import { Repository } from 'typeorm';
+import { Account } from '../account/account.entity';
 import { DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN } from '../account/constants';
-import { RoleName } from '@common/enums/role.name';
+import { SpaceAbout } from '../space.about';
+import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
+import { Space } from './space.entity';
+import { SpaceService } from './space.service';
 
 const moduleMocker = new ModuleMocker(global);
 
@@ -454,22 +454,22 @@ describe('SpacesSorting', () => {
 const getEntityMock = <T>() => ({
   createdDate: new Date(),
   updatedDate: new Date(),
-  hasId: function (): boolean {
+  hasId: (): boolean => {
     throw new Error('Function not implemented.');
   },
-  save: function (): Promise<T> {
+  save: (): Promise<T> => {
     throw new Error('Function not implemented.');
   },
-  remove: function (): Promise<T> {
+  remove: (): Promise<T> => {
     throw new Error('Function not implemented.');
   },
-  softRemove: function (): Promise<T> {
+  softRemove: (): Promise<T> => {
     throw new Error('Function not implemented.');
   },
-  recover: function (): Promise<T> {
+  recover: (): Promise<T> => {
     throw new Error('Function not implemented.');
   },
-  reload: function (): Promise<void> {
+  reload: (): Promise<void> => {
     throw new Error('Function not implemented.');
   },
 });

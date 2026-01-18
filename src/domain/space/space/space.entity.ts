@@ -1,3 +1,15 @@
+import { ENUM_LENGTH, NAMEID_MAX_LENGTH_SCHEMA } from '@common/constants';
+import { SpaceLevel } from '@common/enums/space.level';
+import { SpaceVisibility } from '@common/enums/space.visibility';
+import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
+import { Agent } from '@domain/agent/agent/agent.entity';
+import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
+import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
+import { License } from '@domain/common/license/license.entity';
+import { Community } from '@domain/community/community/community.entity';
+import { ISpace } from '@domain/space/space/space.interface';
+import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
+import { TemplatesManager } from '@domain/template/templates-manager';
 import {
   Column,
   Entity,
@@ -7,43 +19,43 @@ import {
   OneToMany,
   OneToOne,
 } from 'typeorm';
-import { ISpace } from '@domain/space/space/space.interface';
-import { ENUM_LENGTH, NAMEID_MAX_LENGTH_SCHEMA } from '@common/constants';
-import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
-import { Community } from '@domain/community/community/community.entity';
-import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
 import { Account } from '../account/account.entity';
-import { Agent } from '@domain/agent/agent/agent.entity';
-import { SpaceVisibility } from '@common/enums/space.visibility';
-import { TemplatesManager } from '@domain/template/templates-manager';
-import { License } from '@domain/common/license/license.entity';
-import { SpaceLevel } from '@common/enums/space.level';
-import { ISpaceSettings } from '../space.settings/space.settings.interface';
-import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { SpaceAbout } from '../space.about';
-import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
+import { ISpaceSettings } from '../space.settings/space.settings.interface';
 @Entity()
 export class Space extends AuthorizableEntity implements ISpace {
   @Column('varchar', { length: NAMEID_MAX_LENGTH_SCHEMA, nullable: false })
   nameID!: string;
 
-  @OneToMany(() => Space, space => space.parentSpace, {
-    eager: false,
-    cascade: false,
-  })
+  @OneToMany(
+    () => Space,
+    space => space.parentSpace,
+    {
+      eager: false,
+      cascade: false,
+    }
+  )
   subspaces?: Space[];
 
-  @ManyToOne(() => Space, space => space.subspaces, {
-    eager: false,
-    cascade: false,
-  })
+  @ManyToOne(
+    () => Space,
+    space => space.subspaces,
+    {
+      eager: false,
+      cascade: false,
+    }
+  )
   parentSpace?: Space;
 
-  @ManyToOne(() => Account, account => account.spaces, {
-    eager: false,
-    cascade: false,
-    onDelete: 'SET NULL',
-  })
+  @ManyToOne(
+    () => Account,
+    account => account.spaces,
+    {
+      eager: false,
+      cascade: false,
+      onDelete: 'SET NULL',
+    }
+  )
   account?: Account;
 
   @Column({

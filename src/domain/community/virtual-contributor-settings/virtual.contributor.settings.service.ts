@@ -1,7 +1,7 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { IVirtualContributorSettings } from './virtual.contributor.settings.interface';
 import { UpdateVirtualContributorSettingsEntityInput } from './dto/virtual.contributor.settings.dto.update';
+import { IVirtualContributorSettings } from './virtual.contributor.settings.interface';
 
 @Injectable()
 export class VirtualContributorSettingsService {

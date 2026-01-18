@@ -1,24 +1,24 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
-import { EntityManager } from 'typeorm';
 import { LogContext } from '@common/enums';
-import { Space } from '@domain/space/space/space.entity';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
-import { ICalendarEvent } from '@domain/timeline/event/event.interface';
-import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
-import { Discussion } from '@platform/forum-discussion/discussion.entity';
-import { CalendarEvent } from '@domain/timeline/event/event.entity';
-import { ICallout } from '@domain/collaboration/callout/callout.interface';
-import { Callout } from '@domain/collaboration/callout/callout.entity';
-import { IPost } from '@domain/collaboration/post/post.interface';
+import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
-import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
-import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
+import { Callout } from '@domain/collaboration/callout/callout.entity';
+import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { ICalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.interface';
+import { IPost } from '@domain/collaboration/post/post.interface';
 import { Conversation } from '@domain/communication/conversation/conversation.entity';
 import { IConversation } from '@domain/communication/conversation/conversation.interface';
+import { Space } from '@domain/space/space/space.entity';
+import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
+import { CalendarEvent } from '@domain/timeline/event/event.entity';
+import { ICalendarEvent } from '@domain/timeline/event/event.interface';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InjectEntityManager } from '@nestjs/typeorm';
+import { Discussion } from '@platform/forum-discussion/discussion.entity';
+import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { EntityManager } from 'typeorm';
 
 @Injectable()
 export class RoomResolverService {

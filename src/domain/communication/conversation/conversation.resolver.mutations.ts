@@ -1,25 +1,25 @@
+import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { LogContext } from '@common/enums';
+import { AgentType } from '@common/enums/agent.type';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { ValidationException } from '@common/exceptions';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { AuthorizationService } from '@core/authorization/authorization.service';
+import { GuidanceReporterService } from '@services/external/elasticsearch/guidance-reporter/guidance.reporter.service';
+import { InstrumentResolver } from '@src/apm/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IConversation } from './conversation.interface';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { CurrentUser } from '@common/decorators/current-user.decorator';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { ConversationAuthorizationService } from './conversation.service.authorization';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ConversationService } from './conversation.service';
-import { InstrumentResolver } from '@src/apm/decorators';
-import { ConversationVcAnswerRelevanceInput } from './dto/conversation.vc.dto.relevance.update';
-import { ConversationVcAskQuestionInput } from './dto/conversation.vc.dto.ask.question.input';
-import { GuidanceReporterService } from '@services/external/elasticsearch/guidance-reporter/guidance.reporter.service';
-import { ConversationVcAskQuestionResult } from './dto/conversation.vc.dto.ask.question.result';
-import { AgentType } from '@common/enums/agent.type';
-import { ValidationException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
-import { ConversationVcResetInput } from './dto/conversation.vc.dto.reset.input';
+import { ConversationAuthorizationService } from './conversation.service.authorization';
 import { DeleteConversationInput } from './dto/conversation.dto.delete';
-import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { ConversationVcAskQuestionInput } from './dto/conversation.vc.dto.ask.question.input';
+import { ConversationVcAskQuestionResult } from './dto/conversation.vc.dto.ask.question.result';
+import { ConversationVcAnswerRelevanceInput } from './dto/conversation.vc.dto.relevance.update';
+import { ConversationVcResetInput } from './dto/conversation.vc.dto.reset.input';
 
 @InstrumentResolver()
 @Resolver()

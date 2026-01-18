@@ -1,9 +1,9 @@
-import { Injectable } from '@nestjs/common';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { TemplatesSetService } from './templates.set.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import { ITemplatesSet } from '.';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { Injectable } from '@nestjs/common';
 import { TemplateAuthorizationService } from '../template/template.service.authorization';
+import { ITemplatesSet } from '.';
+import { TemplatesSetService } from './templates.set.service';
 
 @Injectable()
 export class TemplatesSetAuthorizationService {

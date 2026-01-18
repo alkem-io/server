@@ -1,20 +1,20 @@
-import { Inject, LoggerService } from '@nestjs/common';
-import { Args, Resolver } from '@nestjs/graphql';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { LogContext } from '@common/enums/logging.context';
-import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { TypedSubscription } from '@src/common/decorators';
+import { LogContext } from '@common/enums/logging.context';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import {
   RoomEventSubscriptionArgs,
   RoomEventSubscriptionResult,
 } from '@domain/communication/room/dto/subscription';
+import { Inject, LoggerService } from '@nestjs/common';
+import { Args, Resolver } from '@nestjs/graphql';
 import { SubscriptionReadService } from '@services/subscriptions/subscription-service';
 import { RoomEventSubscriptionPayload } from '@services/subscriptions/subscription-service/dto';
-import { RoomService } from './room.service';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { TypedSubscription } from '@src/common/decorators';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { RoomService } from './room.service';
 
 @InstrumentResolver()
 @Resolver()

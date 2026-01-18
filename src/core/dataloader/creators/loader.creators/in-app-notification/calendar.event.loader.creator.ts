@@ -1,15 +1,15 @@
-import { EntityManager, In } from 'typeorm';
-import { Injectable } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
+import { EntityNotFoundException } from '@common/exceptions';
 import {
   DataLoaderCreator,
   DataLoaderCreatorBaseOptions,
 } from '@core/dataloader/creators/base';
-import { createBatchLoader } from '@core/dataloader/utils';
 import { ILoader } from '@core/dataloader/loader.interface';
+import { createBatchLoader } from '@core/dataloader/utils';
 import { CalendarEvent } from '@domain/timeline/event/event.entity';
-import { EntityNotFoundException } from '@common/exceptions';
 import { ICalendarEvent } from '@domain/timeline/event/event.interface';
+import { Injectable } from '@nestjs/common';
+import { InjectEntityManager } from '@nestjs/typeorm';
+import { EntityManager, In } from 'typeorm';
 
 @Injectable()
 export class CalendarEventLoaderCreator
