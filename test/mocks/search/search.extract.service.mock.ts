@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { ValueProvider } from '@nestjs/common';
 import { PublicPart } from '@test/utils';
 import { SearchExtractService } from '@services/api/search/extract/search.extract.service';
@@ -7,6 +8,6 @@ export const MockSearchExtractService: ValueProvider<
 > = {
   provide: SearchExtractService,
   useValue: {
-    search: jest.fn(),
+    search: vi.fn(),
   },
 };

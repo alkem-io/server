@@ -16,6 +16,7 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "downlevelIteration": true,
+    "types": ["node", "vitest/globals"],
     "paths": {
       "@interfaces/*": ["src/common/interfaces/*"],
       "@domain/*": ["src/domain/*"],
