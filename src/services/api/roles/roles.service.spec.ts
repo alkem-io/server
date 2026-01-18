@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { MockApplicationService } from '@test/mocks/application.service.mock';
 import { MockCommunityService } from '@test/mocks/community.service.mock';
 import { MockOrganizationService } from '@test/mocks/organization.service.mock';
@@ -104,41 +105,39 @@ describe('RolesService', () => {
       }
       spaceRolesMock.subspaces = subspaceRolesMocks;
       const spacesRolesMock: RolesResultSpace[] = [spaceRolesMock];
-      jest.spyOn(userLookupService, 'getUserWithAgent').mockResolvedValue(user);
+      vi.spyOn(userLookupService, 'getUserWithAgent').mockResolvedValue(user);
 
-      jest
-        .spyOn(spaceFilterService, 'getAllowedVisibilities')
-        .mockReturnValue([SpaceVisibility.ACTIVE]);
+      vi.spyOn(spaceFilterService, 'getAllowedVisibilities').mockReturnValue([
+        SpaceVisibility.ACTIVE,
+      ]);
 
-      jest
-        .spyOn(
-          getSpaceRolesForContributorQueryResult,
-          'getSpaceRolesForContributorQueryResult'
-        )
-        .mockReturnValue(spacesRolesMock);
+      vi.spyOn(
+        getSpaceRolesForContributorQueryResult,
+        'getSpaceRolesForContributorQueryResult'
+      ).mockReturnValue(spacesRolesMock);
 
-      jest
-        .spyOn(
-          getOrganizationRolesForUserEntityData,
-          'getOrganizationRolesForUserEntityData'
-        )
-        .mockResolvedValue([testData.organization as Organization]);
+      vi.spyOn(
+        getOrganizationRolesForUserEntityData,
+        'getOrganizationRolesForUserEntityData'
+      ).mockResolvedValue([testData.organization as Organization]);
 
-      jest
-        .spyOn(applicationService, 'findApplicationsForUser')
-        .mockResolvedValue(testData.applications as any);
+      vi.spyOn(applicationService, 'findApplicationsForUser').mockResolvedValue(
+        testData.applications as any
+      );
 
-      jest
-        .spyOn(applicationService, 'isFinalizedApplication')
-        .mockResolvedValue(false);
+      vi.spyOn(
+        applicationService,
+        'isFinalizedApplication'
+      ).mockResolvedValue(false);
 
-      jest
-        .spyOn(applicationService, 'getLifecycleState')
-        .mockResolvedValue('new');
+      vi.spyOn(applicationService, 'getLifecycleState').mockResolvedValue(
+        'new'
+      );
 
-      jest
-        .spyOn(communityResolverService, 'getSpaceForCommunityOrFail')
-        .mockResolvedValue(testData.space);
+      vi.spyOn(
+        communityResolverService,
+        'getSpaceForCommunityOrFail'
+      ).mockResolvedValue(testData.space);
     });
 
     it('Should get user roles', async () => {
@@ -188,12 +187,13 @@ describe('RolesService', () => {
 
   describe('Organization Roles', () => {
     it('Should get organization roles', async () => {
-      jest
-        .spyOn(organizationLookupService, 'getOrganizationAndAgent')
-        .mockResolvedValue({
-          organization: testData.organization,
-          agent: testData.agent,
-        } as any);
+      vi.spyOn(
+        organizationLookupService,
+        'getOrganizationAndAgent'
+      ).mockResolvedValue({
+        organization: testData.organization,
+        agent: testData.agent,
+      } as any);
 
       const roles = await rolesService.getRolesForOrganization({
         organizationID: testData.organization.id,

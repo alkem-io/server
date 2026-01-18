@@ -1,3 +1,4 @@
+import { vi, type Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { SpaceService } from './space.service';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
@@ -9,7 +10,6 @@ import { SpaceVisibility } from '@common/enums/space.visibility';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { Profile } from '@domain/common/profile';
 import { SpaceFilterService } from '@services/infrastructure/space-filter/space.filter.service';
-import { MockFunctionMetadata, ModuleMocker } from 'jest-mock';
 import { InnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.entity';
 import { AuthorizationPrivilege, ProfileType } from '@common/enums';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
@@ -32,8 +32,6 @@ import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platfor
 import { InnovationFlowState } from '@domain/collaboration/innovation-flow-state/innovation.flow.state.entity';
 import { DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN } from '../account/constants';
 import { RoleName } from '@common/enums/role.name';
-
-const moduleMocker = new ModuleMocker(global);
 
 describe('SpaceService', () => {
   let service: SpaceService;
@@ -103,12 +101,12 @@ describe('SpaceService', () => {
 
       // Mock the naming service to return empty reserved nameIDs
       const mockNamingService = {
-        getReservedNameIDsLevelZeroSpaces: jest.fn().mockResolvedValue([]),
+        getReservedNameIDsLevelZeroSpaces: vi.fn().mockResolvedValue([]),
       };
       service['namingService'] = mockNamingService as any;
 
       // Mock the repository to return subspaces
-      jest.spyOn(spaceRepository, 'findOne').mockImplementation(options => {
+      vi.spyOn(spaceRepository, 'findOne').mockImplementation(options => {
         const { where } = options ?? {};
         if (!Array.isArray(where) && where?.id) {
           const result = [mockSpace, mockSubspace].find(
@@ -120,13 +118,12 @@ describe('SpaceService', () => {
         }
         return Promise.resolve(null);
       });
-      jest.spyOn(spaceRepository, 'find').mockResolvedValue([mockSubspace]);
-      jest.spyOn(service, 'save').mockResolvedValue(mockSpace);
+      vi.spyOn(spaceRepository, 'find').mockResolvedValue([mockSubspace]);
+      vi.spyOn(service, 'save').mockResolvedValue(mockSpace);
 
-      // Mock the URL cache service
-      const revokeUrlCacheSpy = jest
-        .spyOn(urlGeneratorCacheService, 'revokeUrlCache')
-        .mockResolvedValue();
+      // Mock the URL cache service - use direct assignment for mock objects
+      const revokeUrlCacheSpy = vi.fn().mockResolvedValue(undefined);
+      urlGeneratorCacheService.revokeUrlCache = revokeUrlCacheSpy;
 
       // Act
       await service.updateSpacePlatformSettings(mockSpace, updateData);
@@ -199,12 +196,12 @@ describe('SpaceService', () => {
 
       // Mock the naming service to return empty reserved nameIDs
       const mockNamingService = {
-        getReservedNameIDsInLevelZeroSpace: jest.fn().mockResolvedValue([]),
+        getReservedNameIDsInLevelZeroSpace: vi.fn().mockResolvedValue([]),
       };
       service['namingService'] = mockNamingService as any;
 
       // Mock the repository to return child subspaces
-      jest.spyOn(spaceRepository, 'findOne').mockImplementation(options => {
+      vi.spyOn(spaceRepository, 'findOne').mockImplementation(options => {
         const { where } = options ?? {};
         if (!Array.isArray(where) && where?.id) {
           const result = [
@@ -218,15 +215,12 @@ describe('SpaceService', () => {
         }
         return Promise.resolve(null);
       });
-      jest
-        .spyOn(spaceRepository, 'find')
-        .mockResolvedValue([mockChildSubspace]);
-      jest.spyOn(service, 'save').mockResolvedValue(mockSubspace);
+      vi.spyOn(spaceRepository, 'find').mockResolvedValue([mockChildSubspace]);
+      vi.spyOn(service, 'save').mockResolvedValue(mockSubspace);
 
-      // Mock the URL cache service
-      const revokeUrlCacheSpy = jest
-        .spyOn(urlGeneratorCacheService, 'revokeUrlCache')
-        .mockResolvedValue();
+      // Mock the URL cache service - use direct assignment for mock objects
+      const revokeUrlCacheSpy = vi.fn().mockResolvedValue(undefined);
+      urlGeneratorCacheService.revokeUrlCache = revokeUrlCacheSpy;
 
       // Act
       await service.updateSpacePlatformSettings(mockSubspace, updateData);
@@ -258,7 +252,7 @@ describe('SpaceService', () => {
         visibility: SpaceVisibility.DEMO, // Only changing visibility, not nameID
       };
 
-      jest.spyOn(spaceRepository, 'findOne').mockImplementation(options => {
+      vi.spyOn(spaceRepository, 'findOne').mockImplementation(options => {
         const { where } = options ?? {};
         if (!Array.isArray(where) && where?.id) {
           const result = [mockSpace].find(space => space.id === where.id);
@@ -268,15 +262,15 @@ describe('SpaceService', () => {
         }
         return Promise.resolve(null);
       });
-      jest.spyOn(service, 'save').mockResolvedValue(mockSpace);
-      jest
-        .spyOn(service, 'updateSpaceVisibilityAllSubspaces' as any)
-        .mockResolvedValue(undefined);
+      vi.spyOn(service, 'save').mockResolvedValue(mockSpace);
+      vi.spyOn(
+        service,
+        'updateSpaceVisibilityAllSubspaces' as any
+      ).mockResolvedValue(undefined);
 
-      // Mock the URL cache service
-      const revokeUrlCacheSpy = jest
-        .spyOn(urlGeneratorCacheService, 'revokeUrlCache')
-        .mockResolvedValue();
+      // Mock the URL cache service - use direct assignment for mock objects
+      const revokeUrlCacheSpy = vi.fn().mockResolvedValue(undefined);
+      urlGeneratorCacheService.revokeUrlCache = revokeUrlCacheSpy;
 
       // Act
       await service.updateSpacePlatformSettings(mockSpace, updateData);
@@ -297,7 +291,7 @@ describe('SpaceService', () => {
         settings: settingsData,
       } as Space;
 
-      jest.spyOn(spaceRepository, 'findOneOrFail').mockResolvedValue(space);
+      vi.spyOn(spaceRepository, 'findOneOrFail').mockResolvedValue(space);
 
       const result = await service.shouldUpdateAuthorizationPolicy(
         spaceId,
@@ -325,7 +319,7 @@ describe('SpaceService', () => {
         settings: originalSettings,
       } as Space;
 
-      jest.spyOn(spaceRepository, 'findOneOrFail').mockResolvedValue(space);
+      vi.spyOn(spaceRepository, 'findOneOrFail').mockResolvedValue(space);
 
       const result = await service.shouldUpdateAuthorizationPolicy(
         spaceId,
@@ -347,7 +341,7 @@ describe('SpaceService', () => {
         settings: originalSettings,
       } as Space;
 
-      jest.spyOn(spaceRepository, 'findOneOrFail').mockResolvedValue(space);
+      vi.spyOn(spaceRepository, 'findOneOrFail').mockResolvedValue(space);
 
       const result = await service.shouldUpdateAuthorizationPolicy(
         spaceId,
@@ -362,9 +356,9 @@ describe('SpaceService', () => {
         collaboration: { allowEventsFromSubspaces: true },
       } as ISpaceSettings;
 
-      jest
-        .spyOn(spaceRepository, 'findOneOrFail')
-        .mockRejectedValue(new Error('Space not found'));
+      vi.spyOn(spaceRepository, 'findOneOrFail').mockRejectedValue(
+        new Error('Space not found')
+      );
 
       await expect(
         service.shouldUpdateAuthorizationPolicy(spaceId, settingsData)
@@ -400,13 +394,11 @@ describe('SpacesSorting', () => {
     })
       .useMocker(injectionToken => {
         // SpaceFilterService should be a real one and not mocked.
-        if (typeof injectionToken === 'function') {
-          const mockMetadata = moduleMocker.getMetadata(
-            injectionToken
-          ) as MockFunctionMetadata<any, any>;
-          if (mockMetadata.name === 'SpaceFilterService') {
-            return filterService;
-          }
+        if (
+          typeof injectionToken === 'function' &&
+          injectionToken.name === 'SpaceFilterService'
+        ) {
+          return filterService;
         }
         // The rest of the dependencies can be mocks
         return defaultMockerFactory(injectionToken);

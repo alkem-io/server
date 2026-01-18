@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PlatformAuthorizationService } from './platform.service.authorization';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -15,11 +16,12 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy/author
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { LogContext } from '@common/enums';
 import { RoleSetType } from '@common/enums/role.set.type';
+import type { Mocked } from 'vitest';
 
 describe('PlatformAuthorizationService', () => {
   let service: PlatformAuthorizationService;
-  let platformService: jest.Mocked<PlatformService>;
-  let messagingAuthorizationService: jest.Mocked<MessagingAuthorizationService>;
+  let platformService: Mocked<PlatformService>;
+  let messagingAuthorizationService: Mocked<MessagingAuthorizationService>;
 
   const mockPlatform: IPlatform = {
     id: 'platform-1',
@@ -43,52 +45,52 @@ describe('PlatformAuthorizationService', () => {
 
   beforeEach(async () => {
     const mockAuthorizationPolicyService = {
-      reset: jest.fn(auth => auth),
-      appendCredentialAuthorizationRules: jest.fn(auth => auth),
-      cloneAuthorizationPolicy: jest.fn(auth => ({ ...auth })),
-      appendCredentialRuleAnonymousRegisteredAccess: jest.fn(auth => auth),
-      createCredentialRuleUsingTypesOnly: jest.fn(() => ({
+      reset: vi.fn(auth => auth),
+      appendCredentialAuthorizationRules: vi.fn(auth => auth),
+      cloneAuthorizationPolicy: vi.fn(auth => ({ ...auth })),
+      appendCredentialRuleAnonymousRegisteredAccess: vi.fn(auth => auth),
+      createCredentialRuleUsingTypesOnly: vi.fn(() => ({
         cascade: false,
       })),
-      createCredentialRule: jest.fn(() => ({
+      createCredentialRule: vi.fn(() => ({
         cascade: false,
       })),
     };
 
     const mockPlatformService = {
-      getPlatformOrFail: jest.fn(),
+      getPlatformOrFail: vi.fn(),
     };
 
     const mockPlatformAuthorizationPolicyService = {
-      inheritRootAuthorizationPolicy: jest.fn(auth => auth),
+      inheritRootAuthorizationPolicy: vi.fn(auth => auth),
     };
 
     const mockForumAuthorizationService = {
-      applyAuthorizationPolicy: jest.fn().mockResolvedValue([]),
+      applyAuthorizationPolicy: vi.fn().mockResolvedValue([]),
     };
 
     const mockLibraryAuthorizationService = {
-      applyAuthorizationPolicy: jest.fn().mockResolvedValue({ id: 'lib-auth' }),
+      applyAuthorizationPolicy: vi.fn().mockResolvedValue({ id: 'lib-auth' }),
     };
 
     const mockStorageAggregatorAuthorizationService = {
-      applyAuthorizationPolicy: jest.fn().mockResolvedValue([]),
+      applyAuthorizationPolicy: vi.fn().mockResolvedValue([]),
     };
 
     const mockTemplatesManagerAuthorizationService = {
-      applyAuthorizationPolicy: jest.fn().mockResolvedValue([]),
+      applyAuthorizationPolicy: vi.fn().mockResolvedValue([]),
     };
 
     const mockLicensingFrameworkAuthorizationService = {
-      applyAuthorizationPolicy: jest.fn().mockResolvedValue([]),
+      applyAuthorizationPolicy: vi.fn().mockResolvedValue([]),
     };
 
     const mockRoleSetAuthorizationService = {
-      applyAuthorizationPolicy: jest.fn().mockResolvedValue([]),
+      applyAuthorizationPolicy: vi.fn().mockResolvedValue([]),
     };
 
     const mockMessagingAuthorizationService = {
-      applyAuthorizationPolicy: jest.fn(),
+      applyAuthorizationPolicy: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
