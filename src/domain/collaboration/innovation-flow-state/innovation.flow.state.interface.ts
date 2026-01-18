@@ -31,4 +31,7 @@ export abstract class IInnovationFlowState extends IAuthorizable {
   sortOrder!: number;
 
   innovationFlow?: IInnovationFlow;
+
+  // Note: defaultCalloutTemplate is defined only on the entity (not interface)
+  // to avoid circular type dependencies with ITemplate. Exposed via resolver.
 }

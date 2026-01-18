@@ -7,13 +7,13 @@
 ## Phase 1: Database Schema & Migration
 
 - [x] **Migration**: `ConversationArchitectureRefactor` (consolidated).
-    -   Create `conversation_membership` table.
-    -   Add `vcInteractionsByThread` to `room`.
-    -   Migrate `vc_interaction` data.
-    -   Drop `vc_interaction` table.
-    -   Add `conversationsSetId` to `platform`.
-    -   Migrate conversations to platform set.
-    -   Drop legacy columns (`userID`, `virtualContributorID`, `type`, `conversationsSetId` on user).
+  - Create `conversation_membership` table.
+  - Add `vcInteractionsByThread` to `room`.
+  - Migrate `vc_interaction` data.
+  - Drop `vc_interaction` table.
+  - Add `conversationsSetId` to `platform`.
+  - Migrate conversations to platform set.
+  - Drop legacy columns (`userID`, `virtualContributorID`, `type`, `conversationsSetId` on user).
 
 ## Phase 2: Domain Model Updates
 

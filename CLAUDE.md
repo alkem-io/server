@@ -75,6 +75,7 @@ SDD is **mandatory** for feature work. Read `.specify/memory/constitution.md` fi
 **Artifacts location:** `specs/<NNN-slug>/`
 
 **Work classification:**
+
 - **Agentic path**: Scoped changes (≤ ~400 LOC with known outcomes)
 - **Full SDD**: Contracts, migrations, or high ambiguity
 
@@ -95,6 +96,7 @@ throw new EntityNotFoundException(
 ### Logging
 
 Winston logger signatures:
+
 - **verbose/warning**: `(message: string | object, context: string)`
 - **error**: `(message: string | object, stacktrace: string, context: string)`
 
@@ -127,6 +129,7 @@ The `schema-baseline.yml` workflow manages `schema-baseline.graphql` on merges t
 ## Testing
 
 Test types and naming:
+
 - **Unit tests**: `*.spec.ts` (in `src/` alongside code)
 - **Integration tests**: `*.it-spec.ts` (in `test/functional/integration/`)
 - **E2E tests**: `*.e2e-spec.ts` (in `test/functional/e2e/`)
@@ -136,6 +139,7 @@ Use a risk-based approach: add tests when they deliver real signal, skip trivial
 ## Environment Setup
 
 Required services (via `pnpm run start:services`):
+
 - PostgreSQL 17.5 (port 5432)
 - RabbitMQ (port 5672)
 - Redis

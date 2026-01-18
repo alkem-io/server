@@ -2641,6 +2641,10 @@ type InnovationFlowState {
   authorization: Authorization
   """The date at which the entity was created."""
   createdDate: DateTime!
+  """
+  Default callout template applied to this flow state (nullable, optional).
+  """
+  defaultCalloutTemplate: Template
   """The explanation text to clarify the state."""
   description: Markdown
   """The display name for the State"""
@@ -3614,6 +3618,8 @@ type Mutation {
   refreshVirtualContributorBodyOfKnowledge(refreshData: RefreshVirtualContributorBodyOfKnowledgeInput!): Boolean!
   """Empties the CommunityGuidelines."""
   removeCommunityGuidelinesContent(communityGuidelinesData: RemoveCommunityGuidelinesContentInput!): CommunityGuidelines!
+  """Remove the default callout template from an InnovationFlowState."""
+  removeDefaultCalloutTemplateOnInnovationFlowState(removeData: RemoveDefaultCalloutTemplateOnInnovationFlowStateInput!): InnovationFlowState!
   """Removes an Iframe Allowed URL from the Platform Settings"""
   removeIframeAllowedURL(whitelistedURL: String!): [String!]!
   """Removes a message."""
@@ -3654,6 +3660,8 @@ type Mutation {
   sendMessageToRoom(messageData: RoomSendMessageInput!): Message!
   """Send message to multiple Users."""
   sendMessageToUsers(messageData: CommunicationSendMessageToUsersInput!): Boolean!
+  """Set the default callout template for an InnovationFlowState."""
+  setDefaultCalloutTemplateOnInnovationFlowState(setData: SetDefaultCalloutTemplateOnInnovationFlowStateInput!): InnovationFlowState!
   """
   Set the mapping of a well-known Virtual Contributor to a specific Virtual Contributor UUID.
   """
@@ -3744,6 +3752,10 @@ type Mutation {
   updateSpacePlatformSettings(updateData: UpdateSpacePlatformSettingsInput!): Space!
   """Updates one of the Setting on a Space"""
   updateSpaceSettings(settingsData: UpdateSpaceSettingsInput!): Space!
+  """
+  Update the sortOrder field of the supplied Subspaces to increase as per the order that they are provided in.
+  """
+  updateSubspacesSortOrder(sortOrderData: UpdateSubspacesSortOrderInput!): [Space!]!
   """Updates the specified Tagset."""
   updateTagset(updateData: UpdateTagsetInput!): Tagset!
   """Updates the specified Template."""
@@ -4578,6 +4590,8 @@ type RelayPaginatedSpace {
   platformAccess: PlatformRolesAccess!
   """The settings for this Space."""
   settings: SpaceSettings!
+  """The sorting order for this Space within its parent."""
+  sortOrder: Int!
   """The StorageAggregator in use by this Space"""
   storageAggregator: StorageAggregator!
   """The subscriptions active for this Space."""
@@ -5042,6 +5056,8 @@ type Space {
   platformAccess: PlatformRolesAccess!
   """The settings for this Space."""
   settings: SpaceSettings!
+  """The sorting order for this Space within its parent."""
+  sortOrder: Int!
   """The StorageAggregator in use by this Space"""
   storageAggregator: StorageAggregator!
   """The subscriptions active for this Space."""
@@ -7085,6 +7101,10 @@ input RemoveCommunityGuidelinesContentInput {
   communityGuidelinesID: UUID!
 }
 
+input RemoveDefaultCalloutTemplateOnInnovationFlowStateInput {
+  flowStateID: UUID!
+}
+
 input RemovePlatformRoleInput {
   contributorID: UUID!
   role: RoleName!
@@ -7240,6 +7260,11 @@ input SearchInput {
   tagsetNames: [String!]
   """The terms to be searched for within this Space. Max 5."""
   terms: [String!]!
+}
+
+input SetDefaultCalloutTemplateOnInnovationFlowStateInput {
+  flowStateID: UUID!
+  templateID: UUID!
 }
 
 input SetPlatformWellKnownVirtualContributorInput {
@@ -7841,6 +7866,12 @@ input UpdateSpaceSettingsPrivacyInput {
   allowPlatformSupportAsAdmin: Boolean
   """"""
   mode: SpacePrivacyMode
+}
+
+input UpdateSubspacesSortOrderInput {
+  spaceID: UUID!
+  """The IDs of the subspaces to update the sort order on"""
+  subspaceIDs: [UUID!]!
 }
 
 input UpdateTagsetInput {

@@ -111,6 +111,7 @@
 - Trust this guide. Only search or explore when information here is missing or demonstrably outdated.
 
 ## Active Technologies
+
 - TypeScript 5.3 on Node.js 20.15.1 (NestJS) + NestJS 10, TypeORM 0.3, Apollo GraphQL 4, Express, Ory Kratos Admin API client (014-kratos-authentication-id-linking)
 - PostgreSQL 17.5 via TypeORM (014-kratos-authentication-id-linking)
 - TypeScript 5.x on Node.js 20 (NestJS server) + NestJS 10, TypeORM 0.3, GraphQL/Apollo Server, PostgreSQL 17.5 (016-drop-account-upn)

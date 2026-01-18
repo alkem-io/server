@@ -714,12 +714,10 @@ update_all_existing_agents() {
         update_agent_file "$Q_FILE" "Amazon Q Developer CLI"
         found_agent=true
     fi
-
     if [[ -f "$BOB_FILE" ]]; then
         update_agent_file "$BOB_FILE" "IBM Bob"
         found_agent=true
     fi
-
     # If no agent files exist, create a default Claude file
     if [[ "$found_agent" == false ]]; then
         log_info "No existing agent files found, creating default Claude file..."

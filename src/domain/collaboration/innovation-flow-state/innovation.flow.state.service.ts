@@ -1,5 +1,9 @@
 import { LogContext } from '@common/enums';
-import { EntityNotFoundException } from '@common/exceptions';
+import { TemplateType } from '@common/enums/template.type';
+import {
+  EntityNotFoundException,
+  ValidationException,
+} from '@common/exceptions';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository } from 'typeorm';
@@ -10,13 +14,17 @@ import { InnovationFlowState } from './innovation.flow.state.entity';
 import { CreateInnovationFlowStateInput } from './dto/innovation.flow.state.dto.create';
 import { IInnovationFlowState } from './innovation.flow.state.interface';
 import { UpdateInnovationFlowStateInput } from './dto/innovation.flow.state.dto.update';
+import { Template } from '@domain/template/template/template.entity';
 
 @Injectable()
 export class InnovationFlowStateService {
   constructor(
     @InjectRepository(InnovationFlowState)
     private innovationFlowStateRepository: Repository<InnovationFlowState>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    @InjectRepository(Template)
+    private templateRepository: Repository<Template>,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {}
 
   async createInnovationFlowState(
@@ -91,5 +99,81 @@ export class InnovationFlowStateService {
 
   public getStateNames(states: IInnovationFlowState[]): string[] {
     return states.map(state => state.displayName);
+  }
+
+  async getDefaultCalloutTemplate(
+    flowStateID: string
+  ): Promise<Template | null> {
+    const flowState = await this.innovationFlowStateRepository.findOne({
+      where: { id: flowStateID },
+      relations: ['defaultCalloutTemplate'],
+    });
+
+    return flowState?.defaultCalloutTemplate ?? null;
+  }
+
+  async setDefaultCalloutTemplate(
+    flowStateID: string,
+    templateID: string
+  ): Promise<IInnovationFlowState> {
+    const flowState = await this.getInnovationFlowStateOrFail(flowStateID);
+
+    // Fetch template directly to avoid circular dependency with TemplateService
+    const templates = await this.templateRepository.find({
+      where: { id: templateID },
+    });
+
+    if (!templates || templates.length === 0) {
+      throw new EntityNotFoundException(
+        'Template not found',
+        LogContext.COLLABORATION,
+        { templateID }
+      );
+    }
+
+    const template = templates[0];
+
+    if (template.type !== TemplateType.CALLOUT) {
+      this.logger.warn?.(
+        `Attempt to set non-CALLOUT template as default for flow state: ${flowStateID}`,
+        LogContext.COLLABORATION
+      );
+
+      throw new ValidationException(
+        'Template must be of type CALLOUT',
+        LogContext.COLLABORATION,
+        { templateID, templateType: template.type }
+      );
+    }
+
+    (flowState as InnovationFlowState).defaultCalloutTemplate = template;
+    await this.innovationFlowStateRepository.save(
+      flowState as InnovationFlowState
+    );
+
+    this.logger.verbose?.(
+      `Set default callout template on flow state: ${flowStateID}`,
+      LogContext.COLLABORATION
+    );
+
+    return flowState;
+  }
+
+  async removeDefaultCalloutTemplate(
+    flowStateID: string
+  ): Promise<IInnovationFlowState> {
+    const flowState = await this.getInnovationFlowStateOrFail(flowStateID);
+
+    (flowState as InnovationFlowState).defaultCalloutTemplate = null;
+    await this.innovationFlowStateRepository.save(
+      flowState as InnovationFlowState
+    );
+
+    this.logger.verbose?.(
+      `Removed default callout template from flow state: ${flowStateID}`,
+      LogContext.COLLABORATION
+    );
+
+    return flowState;
   }
 }

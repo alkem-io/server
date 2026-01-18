@@ -6,6 +6,7 @@
 ## Entities
 
 ### ConversationMembership (New)
+
 - **Table**: `conversation_membership`
 - **Fields**:
   - `conversationId` (uuid, PK, FK -> Conversation).
@@ -20,6 +21,7 @@
   - `IDX_d348791d10e1f31c61d7f5bd2a` on `agentId`.
 
 ### Conversation (Modified)
+
 - **Table**: `conversation`
 - **Removed Fields**:
   - `type` (varchar).
@@ -31,12 +33,14 @@
   - `conversationsSet` (ManyToOne -> ConversationsSet).
 
 ### Room (Modified)
+
 - **Table**: `room`
 - **New Field**: `vcInteractionsByThread` (jsonb, NOT NULL, DEFAULT '{}').
   - Stores aggregated interaction data previously in `vc_interaction` table.
   - Structure: Map of threadID -> { virtualContributorActorID, externalThreadId }.
 
 ### Platform (Modified)
+
 - **Table**: `platform`
 - **New Field**: `conversationsSetId` (uuid).
 - **Constraints**:
@@ -44,22 +48,21 @@
   - `FK_dc8bdff7728d61097c8560ae7a9` -> `conversations_set.id` (ON DELETE CASCADE).
 
 ### User (Modified)
+
 - **Table**: `user`
 - **Removed Field**: `conversationsSetId` (uuid).
   - FK constraint dropped.
   - Ownership of `conversations_set` moved to `platform`.
 
-### Virtual Contributor (Modified)
-- **Table**: `virtual_contributor`
-- **Removed Field**: `wellKnownVirtualContributor` (varchar) - *Note: This column was removed from `conversation` table in this migration.*
-
 ### VC Interaction (Removed)
+
 - **Table**: `vc_interaction`
 - **Status**: Dropped. Data migrated to `room.vcInteractionsByThread`.
 
 ## Database Schema Changes
 
 ### Migration: `ConversationArchitectureRefactor1764897584127`
+
 1.  **Create Table**: `conversation_membership` (with PK, FKs, Indices).
 2.  **Drop Columns from `conversation`**: `type`, `userID`, `virtualContributorID`, `wellKnownVirtualContributor`.
 3.  **Add Column to `room`**: `vcInteractionsByThread` (jsonb).
@@ -70,6 +73,7 @@
 8.  **Drop Column from `user`**: `conversationsSetId` (and associated FK).
 
 ## Matrix Adapter Data Model
+
 - **Actor ID**: Always maps to `Agent.id`.
 - **Room ID**: Always maps to `Room.id` (UUID).
 - **Context ID**: Always maps to `Space.authorization.id`.
