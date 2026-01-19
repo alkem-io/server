@@ -1,8 +1,9 @@
 import { Field, ObjectType } from '@nestjs/graphql';
+import { MessageID } from '@domain/common/scalars';
 
 @ObjectType('VcInteraction')
 export abstract class IVcInteraction {
-  @Field(() => String, {
+  @Field(() => MessageID, {
     description: 'The thread ID (Matrix message ID) where VC is engaged',
   })
   threadID!: string;

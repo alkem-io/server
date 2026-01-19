@@ -111,19 +111,15 @@ export class MicroservicesModule implements OnModuleDestroy {
     ];
 
     for (const pubSub of pubSubs) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       if (pubSub) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if (typeof (pubSub as any).close === 'function') {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           await (pubSub as any).close();
         }
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         if (
           (pubSub as any).connection &&
           typeof (pubSub as any).connection.close === 'function'
         ) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           await (pubSub as any).connection.close();
         }
       }

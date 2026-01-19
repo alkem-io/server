@@ -6,6 +6,7 @@
 ## Entities
 
 ### User (Modified)
+
 - **Table**: `user`
 - **New Field**: `authenticationID: uuid | null`
   - Unique across all users when non-null.
@@ -20,18 +21,22 @@
   - `profile` (OneToOne) – Unchanged.
 
 ### Virtual Contributor (Modified)
+
 - **Table**: `virtual_contributor`
 - **Removed Field**: `communicationID` (varchar): Dropped.
 
 ### Organization (Modified)
+
 - **Table**: `organization`
 - **Removed Field**: `communicationID` (varchar): Dropped.
 
 ### Room (Modified)
+
 - **Table**: `room`
 - **Removed Field**: `externalRoomID` (varchar): Dropped.
 
 ### Identity Resolution (Conceptual)
+
 - **Internal API**: `/rest/internal/identity/resolve`
 - **Input**: `authenticationId` (Kratos UUID)
 - **Output**: `{ userId: string, agentId: string }`
@@ -44,6 +49,7 @@
 ## Database Schema Changes
 
 ### Migration: `UserIdentityCleanup1764590889000`
+
 1.  **Add Column**: `user.authenticationID` (uuid, NULLABLE).
 2.  **Add Constraint**: `UQ_0742ec75e9fc10a1e393a3ef4c7` UNIQUE on `user.authenticationID`.
 3.  **Add Index**: `IDX_0742ec75e9fc10a1e393a3ef4c` on `user.authenticationID`.
@@ -55,6 +61,7 @@
 9.  **Drop Column**: `room.externalRoomID`.
 
 ## Logging & Audit
+
 - **LogContext.AUTH**:
   - Backfill mutation progress.
   - Identity resolution attempts (caller IP, outcome).

@@ -12,6 +12,7 @@ import { PlatformWellKnownVirtualContributorsModule } from '@platform/platform.w
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { VirtualContributorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
+import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { AgentModule } from '@domain/agent/agent/agent.module';
     AgentModule,
     PlatformWellKnownVirtualContributorsModule,
     ConversationMembershipModule,
+    SubscriptionServiceModule,
     TypeOrmModule.forFeature([Messaging]),
   ],
   providers: [

@@ -4,6 +4,7 @@
 **Plan**: [specs/019-identity-consolidation/plan.md](specs/019-identity-consolidation/plan.md)
 
 ## Phase 1: Schema & Data Model Changes
+
 **Goal**: Finalize the user identity schema by adding Kratos linking and removing legacy fields.
 
 - [x] T001 [014/016/017] Create consolidated migration `userIdentityCleanup`
@@ -13,6 +14,7 @@
 - [x] T002 [014] Update `User` entity definition (add `authenticationID`, remove `accountUpn`)
 
 ## Phase 2: Identity Resolution & Linking Logic
+
 **Goal**: Implement the core logic for resolving and linking Kratos identities to Alkemio users.
 
 - [x] T003 [014] Create `UserAuthenticationLinkModule` and Service
@@ -24,12 +26,14 @@
 - [x] T009 [018] Handle "missing agent" scenarios in resolution logic
 
 ## Phase 3: Internal API (Identity Resolve)
+
 **Goal**: Expose identity resolution to internal services (e.g., Matrix Adapter).
 
 - [x] T011 [014/018] Create `/rest/internal/identity/resolve` endpoint returning `{ userId, agentId }`
 - [x] T012 [018] Ensure consistent error responses for unlinked/missing agents
 
 ## Phase 4: Cleanup & Legacy Removal
+
 **Goal**: Remove obsolete services and configuration.
 
 - [x] T013 [017] Delete `src/services/session-sync` module entirely
@@ -39,6 +43,7 @@
 - [x] T017 [016] Update tests to reflect removal of `accountUpn` and Session Sync
 
 ## Phase 5: Verification
+
 **Goal**: Ensure the consolidated identity system works as expected.
 
 - [x] T018 Verify `authenticationID` persistence on new user registration

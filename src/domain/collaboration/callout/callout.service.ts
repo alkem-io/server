@@ -428,7 +428,8 @@ export class CalloutService {
   private async getCommentsCount(calloutID: string): Promise<number> {
     const comments = await this.getComments(calloutID);
     if (!comments) return 0;
-    return comments.messagesCount;
+    const messages = await this.roomService.getMessages(comments);
+    return messages.length;
   }
 
   private async setNameIdOnWhiteboardData(

@@ -8,11 +8,6 @@ export class UserAlreadyRegisteredException extends BaseException {
     context = LogContext.COMMUNITY,
     details?: ExceptionDetails
   ) {
-    super(
-      error,
-      context,
-      AlkemioErrorStatus.USER_ALREADY_REGISTERED,
-      details
-    );
+    super(error, context, AlkemioErrorStatus.USER_ALREADY_REGISTERED, details);
   }
 }
