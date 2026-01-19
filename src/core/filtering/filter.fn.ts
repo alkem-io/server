@@ -1,6 +1,6 @@
 import {
   Brackets,
-  Like,
+  ILike,
   ObjectLiteral,
   SelectQueryBuilder,
   WhereExpressionBuilder,
@@ -38,5 +38,5 @@ const addWhereClause = (
   fieldName: string,
   value: unknown
 ) => {
-  qb.orWhere({ [fieldName]: Like(`%${value}%`) });
+  qb.orWhere({ [fieldName]: ILike(`%${value}%`) });
 };

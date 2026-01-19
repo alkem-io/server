@@ -1,4 +1,4 @@
-import { Like, WhereExpressionBuilder } from 'typeorm';
+import { ILike, WhereExpressionBuilder } from 'typeorm';
 
 /***
  * Applies filtering using the where clause builder of an already existing query.
@@ -27,5 +27,5 @@ const addWhereClause = (
   fieldName: string,
   value: unknown
 ) => {
-  qb.orWhere({ [fieldName]: Like(`%${value}%`) });
+  qb.orWhere({ [fieldName]: ILike(`%${value}%`) });
 };

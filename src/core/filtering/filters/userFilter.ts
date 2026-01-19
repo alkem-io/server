@@ -25,7 +25,7 @@ export const applyUserFilter = <T extends ObjectLiteral>(
         query.leftJoin('user.profile', 'profile');
         // Use the table-qualified column directly instead of alias (PostgreSQL requires quoted identifiers)
         wqb[hasRest ? 'orWhere' : 'where'](
-          `"profile"."displayName" LIKE '%${displayName}%'`
+          `"profile"."displayName" ILIKE '%${displayName}%'`
         );
       }
     })
