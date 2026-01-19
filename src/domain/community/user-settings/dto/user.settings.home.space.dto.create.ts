@@ -1,9 +1,10 @@
+import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { Field, InputType } from '@nestjs/graphql';
 import { IsBoolean, IsOptional, IsUUID } from 'class-validator';
 
 @InputType()
 export class CreateUserSettingsHomeSpaceInput {
-  @Field(() => String, {
+  @Field(() => UUID, {
     nullable: true,
     description: 'The ID of the Space to use as home.',
   })
