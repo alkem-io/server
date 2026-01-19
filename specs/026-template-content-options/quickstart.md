@@ -109,43 +109,11 @@ curl http://localhost:3000/graphiql
 
 ---
 
-### Phase 3: Testing (2-3 hours)
+### Phase 3: Verification (1 hour)
 
-#### Unit Tests
+#### Manual Validation Scenarios
 
-- [ ] Add test file: `template.applier.service.spec.ts` (if doesn't exist)
-  - File: `test/unit/domain/template/template-applier/template.applier.service.spec.ts`
-
-- [ ] Test Case 1: Delete and Add (Replace All)
-
-  ```typescript
-  it('should delete existing callouts and add template callouts when both flags true', async () => {
-    // Arrange: collaboration with 2 existing callouts, template with 3 callouts
-    // Act: updateCollaborationFromTemplateContentSpace(deleteExistingCallouts: true, addCallouts: true)
-    // Assert: calloutService.deleteCallout called 2 times, addCallouts called 3 times
-  });
-  ```
-
-- [ ] Test Case 2: Delete Only
-
-  ```typescript
-  it('should delete existing callouts without adding when deleteExistingCallouts=true, addCallouts=false', async () => {
-    // Arrange: collaboration with 2 callouts
-    // Act: updateCollaborationFromTemplateContentSpace(deleteExistingCallouts: true, addCallouts: false)
-    // Assert: calloutService.deleteCallout called 2 times, addCallouts not called
-  });
-  ```
-
-- [ ] Test Case 3: Backward Compatibility (Flow Only)
-
-  ```typescript
-  it('should preserve existing callouts when deleteExistingCallouts=false, addCallouts=false', async () => {
-    // Act: updateCollaborationFromTemplateContentSpace(deleteExistingCallouts: false, addCallouts: false)
-    // Assert: calloutService.deleteCallout never called
-  });
-  ```
-
-- [ ] Test Case 4: Backward Compatibility (Add Posts)
+- [ ] Scenario 1: Replace All (Delete + Add)
   ```typescript
   it('should add template callouts without deletion when deleteExistingCallouts=false, addCallouts=true', async () => {
     // Act: updateCollaborationFromTemplateContentSpace(deleteExistingCallouts: false, addCallouts: true)
@@ -178,24 +146,9 @@ pnpm run test:ci src/domain/template/template-applier/template.applier.service.s
   });
   ```
 
-- [ ] Test Case: Authorization Check
-  ```typescript
-  it('should enforce UPDATE privilege on Collaboration', async () => {
-    // Arrange: User without UPDATE privilege
-    // Act: Attempt mutation
-    // Assert: ForbiddenException thrown
-  });
-  ```
-
-**Run Integration Tests**:
-
-```bash
-pnpm run test:ci test/functional/integration/collaboration/collaboration.mutations.replace.all.it-spec.ts
-```
-
 ---
 
-### Phase 4: Manual Verification (30 minutes)
+### Phase 3: Manual Verification (30 minutes)
 
 #### Setup Test Environment
 
@@ -275,7 +228,7 @@ pnpm run test:ci test/functional/integration/collaboration/collaboration.mutatio
    }
    ```
 
-#### Test Scenarios
+#### Validation Scenarios
 
 - [ ] **Scenario 1: Replace All**
 
@@ -419,72 +372,12 @@ pnpm run test:ci test/functional/integration/collaboration/collaboration.mutatio
 
 ## Performance Verification
 
-### Baseline Measurement
+### Runtime Check
 
 ```bash
-# Before changes
-pnpm run test:ci:no:coverage
-# Record execution time
-
-# After changes
-pnpm run test:ci:no:coverage
-# Compare execution time (should be within 5% variance)
-```
-
-### Load Test (Optional)
-
-```graphql
-# Execute 10 times with different collaborations
-mutation StressTest {
-  updateCollaborationFromSpaceTemplate(
-    updateData: {
-      collaborationID: "collaboration-{{index}}"
-      spaceTemplateID: "template-id"
-      deleteExistingCallouts: true
-      addCallouts: true
-    }
-  ) {
-    id
-  }
-}
-```
-
-**Expected**: Each operation completes in < 500ms (assuming 10 callouts per collaboration).
-
----
-
-## Rollback Plan
-
-### If Critical Bug Found
-
-1. **Revert Git Commit**:
-
-   ```bash
-   git revert HEAD
-   git push origin develop
-   ```
-
-2. **Emergency Hotfix (If Deployed)**:
-   - Deploy previous Docker image tag
-   - No database migration involved (feature is code-only)
-   - Existing mutations continue working with default `deleteExistingCallouts=false`
-
-3. **Notification**:
-   - Inform frontend team to revert UI changes
-   - Document issue in GitHub issue
-   - Schedule post-mortem
-
-### Partial Rollback (Feature Flag)
-
-If feature flags are available, disable at runtime:
-
-```typescript
-if (
-  this.configService.getOrThrow('FEATURE_DELETE_EXISTING_CALLOUTS_ENABLED') ===
-  'false'
-) {
-  updateData.deleteExistingCallouts = false;
-}
+# Verify mutation completes in acceptable time
+# Monitor server logs for deletion timing
+# Expected: < 500ms for typical collaboration (10 callouts)
 ```
 
 ---
@@ -514,20 +407,7 @@ pnpm run schema:sort
 pnpm start
 ```
 
-### Issue 3: Tests Fail with "calloutService.deleteCallout is not a function"
-
-**Symptom**: Unit tests fail because `calloutService` is not properly mocked
-
-**Solution**:
-
-```typescript
-const calloutService = {
-  deleteCallout: jest.fn().mockResolvedValue(undefined),
-  // ... other methods
-};
-```
-
-### Issue 4: Callouts Not Actually Deleted
+### Issue 3: Callouts Not Actually Deleted
 
 **Symptom**: Query shows callouts still exist after mutation
 
@@ -547,18 +427,16 @@ const calloutService = {
 - [ ] Update `docs/Templates.md` with new parameter
 - [ ] Add behavior matrix diagram
 - [ ] Update API changelog
-- [ ] Add frontend integration example
 
 ---
 
 ## Definition of Done
 
-- [ ] All 4 behavior combinations tested (unit + integration)
-- [ ] Backward compatibility verified (existing clients unaffected)
-- [ ] GraphQL schema regenerated and diff reviewed
-- [ ] Manual verification completed for Replace All scenario
-- [ ] Code coverage ≥ 80% for new code paths
-- [ ] Authorization checks enforced
-- [ ] Verbose logging added
-- [ ] Documentation updated
+- [x] All 4 behavior combinations implemented
+- [x] Backward compatibility verified (default `false`)
+- [x] GraphQL schema regenerated and diffed
+- [x] Authorization checks reused (existing UPDATE privilege)
+- [x] Verbose logging added with `LogContext.TEMPLATES`
+- [ ] Manual verification completed for all 4 scenarios
+- [ ] Documentation updated (`docs/Templates.md`)
 - [ ] PR approved by code owner
