@@ -13,10 +13,10 @@
 #   Ctrl+b d                # Detach from pane
 
 # TypeScript type checking - fast feedback on type errors
-ts: pnpm exec tsc -w --noEmit --preserveWatchOutput 2>&1
+ts: pnpm exec tsc -w --noEmit --preserveWatchOutput 2>&1 | tee -a /tmp/overmind-log.txt
 
 # Jest in watch mode - runs affected tests on file changes
-test: pnpm test:watch 2>&1
+test: pnpm test:watch 2>&1 | tee -a /tmp/overmind-log.txt
 
 # NestJS development server with hot reload
-app: pnpm start:dev 2>&1 | tee ../../tmp/overmind-log.txt
+app: pnpm start:dev 2>&1 | tee -a /tmp/overmind-log.txt
