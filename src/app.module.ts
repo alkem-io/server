@@ -146,6 +146,10 @@ import { InAppNotificationAdminModule } from './platform-admin/in-app-notificati
           infer: true,
         });
 
+        const pgbouncerEnabled = dbOptions.pgbouncer?.enabled ?? false;
+        const statementTimeoutMs =
+          dbOptions.pgbouncer?.statement_timeout_ms ?? 60000;
+
         return {
           type: 'postgres' as const,
           synchronize: false,
@@ -163,6 +167,13 @@ import { InAppNotificationAdminModule } from './platform-admin/in-app-notificati
             idleTimeoutMillis: dbOptions.pool?.idle_timeout_ms ?? 30000,
             connectionTimeoutMillis:
               dbOptions.pool?.connection_timeout_ms ?? 10000,
+            // PgBouncer compatibility: set statement_timeout to prevent
+            // long-running queries from holding pooled connections
+            ...(pgbouncerEnabled && {
+              statement_timeout: statementTimeoutMs,
+              // Disable idle_in_transaction_session_timeout to let PgBouncer manage
+              idle_in_transaction_session_timeout: statementTimeoutMs * 2,
+            }),
           },
         };
       },

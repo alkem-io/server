@@ -326,6 +326,14 @@ storage:
       # Timeout for acquiring a connection in milliseconds
       connection_timeout_ms: ${DATABASE_POOL_CONNECTION_TIMEOUT_MS}:10000
 
+    # PgBouncer compatibility settings
+    # Enable when connecting through PgBouncer in transaction pooling mode
+    pgbouncer:
+      # Set to true when using PgBouncer as connection pooler
+      enabled: ${PGBOUNCER_ENABLED}:false
+      # Statement timeout in milliseconds (prevents long-running queries from holding connections)
+      statement_timeout_ms: ${PGBOUNCER_STATEMENT_TIMEOUT_MS}:60000
+
   local_storage:
     # Absolute path
     path: ${LOCAL_STORAGE_PATH}:.storage
