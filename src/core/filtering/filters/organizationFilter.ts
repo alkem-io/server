@@ -23,10 +23,16 @@ export const applyOrganizationFilter = <T extends ObjectLiteral>(
       if (displayName) {
         const hasRest = Object.keys(rest).length > 0;
         query.leftJoin('organization.profile', 'profile');
-        // Use the table-qualified column directly instead of alias (PostgreSQL requires quoted identifiers)
-        wqb[hasRest ? 'orWhere' : 'where'](
-          `"profile"."displayName" ILIKE '%${displayName}%'`
-        );
+        // Use parameterized query to prevent SQL injection
+        if (hasRest) {
+          wqb.orWhere('profile.displayName ILIKE :orgDisplayName', {
+            orgDisplayName: `%${displayName}%`,
+          });
+        } else {
+          wqb.where('profile.displayName ILIKE :orgDisplayName', {
+            orgDisplayName: `%${displayName}%`,
+          });
+        }
       }
     })
   );
