@@ -261,6 +261,7 @@ const getSpaceRoleResultMock = ({
       rowId: parseInt(id),
       nameID: `space-${id}`,
       levelZeroSpaceID: '',
+      sortOrder: 0,
       about: {
         id,
         profile: {

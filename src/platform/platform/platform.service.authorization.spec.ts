@@ -13,7 +13,6 @@ import { MessagingAuthorizationService } from '@domain/communication/messaging/m
 import { IPlatform } from './platform.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
-import { LogContext } from '@common/enums';
 import { RoleSetType } from '@common/enums/role.set.type';
 
 describe('PlatformAuthorizationService', () => {

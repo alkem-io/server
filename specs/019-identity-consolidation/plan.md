@@ -7,10 +7,10 @@
 ## Phase 1: Database Schema Changes
 
 - [x] **Migration**: Create consolidated migration `userIdentityCleanup`.
-    -   Add `authenticationID` (UUID, unique, nullable).
-    -   Drop `accountUpn`.
-    -   Drop `communicationID` (cleanup from other refactors, included here for consistency if needed, or handled in 020).
-    -   Remove `session_sync` tables (if any).
+  - Add `authenticationID` (UUID, unique, nullable).
+  - Drop `accountUpn`.
+  - Drop `communicationID` (cleanup from other refactors, included here for consistency if needed, or handled in 020).
+  - Remove `session_sync` tables (if any).
 
 ## Phase 2: Core Identity Logic
 
