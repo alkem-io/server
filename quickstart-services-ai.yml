@@ -550,7 +550,7 @@ services:
       - LANGCHAIN_TRACING_V2
       - LANGCHAIN_ENDPOINT
       - LANGCHAIN_API_KEY
-      - LANGCHAIN_PROJECT=virtual-contributor-engine-expert
+      - LANGCHAIN_PROJECT=virtual-contributor-engine-guidance
       - VECTOR_DB_PORT
       - VECTOR_DB_HOST
       - VECTOR_DB_CREDENTIALS
