@@ -2,6 +2,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository } from 'typeorm';
 import { LogContext } from '@common/enums';
+import { ValidationException } from '@common/exceptions';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { Room } from './room.entity';
 import { IRoom } from './room.interface';
@@ -57,15 +58,25 @@ export class RoomService {
   }
 
   async deleteRoom(deleteData: DeleteRoomInput): Promise<IRoom> {
+    if (!deleteData.roomID) {
+      throw new ValidationException(
+        'Cannot delete room: roomID is required',
+        LogContext.COMMUNICATION
+      );
+    }
+
     const room = await this.getRoomOrFail(deleteData.roomID);
+
+    // Capture ID before removal - TypeORM's remove() clears the entity's id field
+    const roomId = room.id;
 
     const result = await this.roomRepository.remove(room as Room);
 
     // Delete from external Matrix server
     // Note: For direct rooms, we still use the standard deleteRoom -
     // the Matrix adapter handles the room type internally
-    await this.communicationAdapter.deleteRoom(room.id);
-    result.id = room.id;
+    await this.communicationAdapter.deleteRoom(roomId);
+    result.id = roomId;
     return result;
   }
 
@@ -129,6 +140,13 @@ export class RoomService {
         messageId: messageData.messageID,
       }
     );
+
+    if (!senderActorId) {
+      throw new ValidationException(
+        'Cannot delete message: unable to identify message sender',
+        LogContext.COMMUNICATION
+      );
+    }
 
     await this.communicationAdapter.deleteMessage({
       actorId: senderActorId, // TODO: Replace with _agentId once Matrix reflection is implemented
@@ -222,6 +240,13 @@ export class RoomService {
         alkemioRoomId: room.id,
         reactionId: reactionData.reactionID,
       });
+
+    if (!senderActorId) {
+      throw new ValidationException(
+        'Cannot remove reaction: unable to identify reaction sender',
+        LogContext.COMMUNICATION
+      );
+    }
 
     await this.communicationAdapter.removeReaction({
       alkemioRoomId: room.id,
