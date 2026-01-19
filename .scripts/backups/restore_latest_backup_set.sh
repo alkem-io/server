@@ -9,12 +9,21 @@
 #   ./restore_latest_backup_set.sh acc false true   # Restore acc, no restart, non-interactive
 #   ./restore_latest_backup_set.sh dev true false   # Restore dev, restart, interactive mode
 
+# Determine the platform (macOS vs. Linux vs. others)
+PLATFORM=$(uname | tr '[:upper:]' '[:lower:]')
+
+# Cross-platform in-place sed helper
+sed_inplace() {
+    if [ "$PLATFORM" == "darwin" ]; then
+        sed -i '' "$@"
+    else
+        sed -i "$@"
+    fi
+}
+
 # Check if yq is installed
 if ! command -v yq &> /dev/null; then
     echo "yq is not installed. Installing now..."
-
-    # Determine the platform (macOS vs. Linux vs. others)
-    PLATFORM=$(uname | tr '[:upper:]' '[:lower:]')
 
     # For macOS, use brew for installation
     if [ "$PLATFORM" == "darwin" ]; then
@@ -75,14 +84,14 @@ esac
 
 # Update the .env.docker file with the new server name
 if grep -q "SYNAPSE_HOMESERVER_NAME" $ENV_FILE_PATH; then
-    sed -i '' "s/^SYNAPSE_HOMESERVER_NAME=.*/SYNAPSE_HOMESERVER_NAME=$SERVER_NAME/" $ENV_FILE_PATH
+    sed_inplace "s/^SYNAPSE_HOMESERVER_NAME=.*/SYNAPSE_HOMESERVER_NAME=$SERVER_NAME/" $ENV_FILE_PATH
 else
     # Ensure that a newline is added before appending the variable
     echo -e "\nSYNAPSE_HOMESERVER_NAME=$SERVER_NAME" >> $ENV_FILE_PATH
 fi
 
 if grep -q "SYNAPSE_SERVER_NAME" $ENV_FILE_PATH; then
-    sed -i '' "s/^SYNAPSE_SERVER_NAME=.*/SYNAPSE_SERVER_NAME=$SERVER_NAME/" $ENV_FILE_PATH
+    sed_inplace "s/^SYNAPSE_SERVER_NAME=.*/SYNAPSE_SERVER_NAME=$SERVER_NAME/" $ENV_FILE_PATH
 else
     # Ensure that a newline is added before appending the variable
     echo -e "\nSYNAPSE_SERVER_NAME=$SERVER_NAME" >> $ENV_FILE_PATH
