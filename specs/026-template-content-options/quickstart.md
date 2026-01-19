@@ -83,8 +83,25 @@ curl http://localhost:3000/graphiql
       LogContext.TEMPLATES
     );
 
-    for (const callout of existingCallouts) {
-      await this.calloutService.deleteCallout(callout.id);
+    // Transaction-safe deletion: wrap entire deletion sequence in a single transaction
+    // to ensure atomicity - either all callouts are deleted or none are
+    try {
+      await this.entityManager.transaction(async transactionalEntityManager => {
+        for (const callout of existingCallouts) {
+          await this.calloutService.deleteCallout(
+            callout.id,
+            transactionalEntityManager
+          );
+        }
+      });
+    } catch (error) {
+      // On failure: transaction auto-rolls back, no partial deletions
+      this.logger.error?.(
+        `Failed to delete callouts from Collaboration: ${collaboration.id}. Transaction rolled back.`,
+        error?.stack,
+        LogContext.TEMPLATES
+      );
+      throw error; // Re-throw to propagate failure to caller
     }
 
     this.logger.verbose?.(
@@ -93,6 +110,8 @@ curl http://localhost:3000/graphiql
     );
   }
   ```
+
+  **Transaction Safety**: The deletion loop is wrapped in a database transaction to ensure atomicity. If any deletion fails, the transaction rolls back and no callouts are deleted (partial-failure prevention). The error is logged with collaboration ID and re-thrown to propagate failure. For production use, verify `deleteCallout()` supports transactional entity manager injection.
 
   **Why This Pattern**: `deleteCallout()` handles all cascade deletion internally (contributions, framing, comments, auth policies). This is the same pattern used throughout the codebase for parent-child deletion scenarios.
 
@@ -109,9 +128,9 @@ curl http://localhost:3000/graphiql
 
 ---
 
-### Phase 3: Verification (1 hour)
+### Phase 3: Verification - Unit Tests (1 hour)
 
-#### Manual Validation Scenarios
+#### Unit Test Scenarios
 
 - [ ] Scenario 1: Replace All (Delete + Add)
   ```typescript
@@ -148,7 +167,7 @@ pnpm run test:ci src/domain/template/template-applier/template.applier.service.s
 
 ---
 
-### Phase 3: Manual Verification (30 minutes)
+### Phase 4: Manual Verification (30 minutes)
 
 #### Setup Test Environment
 

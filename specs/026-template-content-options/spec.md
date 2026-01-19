@@ -77,7 +77,7 @@ A space administrator wants to change only the innovation flow structure (states
 - **FR-007**: System MUST handle authorization checks for callout deletion when `deleteExistingCallouts` is true.
 - **FR-008**: The `deleteExistingCallouts` parameter MUST be optional with a default value of `false` to maintain backward compatibility.
 - **FR-009**: System MUST support the combination where both `deleteExistingCallouts=true` and `addCallouts=true` to achieve the "Replace All" behavior (delete existing, then add template callouts).
-- **FR-010**: System MUST support `deleteExistingCallouts=true` with `addCallouts=false` for scenarios where only deletion is desired without adding template content.
+- **FR-010**: System MUST support deletion-only mode (`deleteExistingCallouts=true`, `addCallouts=false`) where existing callouts are deleted without adding template callouts, while still updating innovation flow states as required by FR-004. This mode follows the same execution order as "Replace All" but omits the callout addition step.
 
 ### Key Entities
 

@@ -37,8 +37,8 @@ export class TemplateApplierResolverMutations {
       '(1) Flow Only: deleteExistingCallouts=false, addCallouts=false - updates only InnovationFlow states; ' +
       '(2) Add Posts: deleteExistingCallouts=false, addCallouts=true - keeps existing and adds template callouts; ' +
       '(3) Replace All: deleteExistingCallouts=true, addCallouts=true - deletes existing then adds template callouts; ' +
-      '(4) Delete Only: deleteExistingCallouts=true, addCallouts=false - deletes existing callouts. ' +
-      'Execution order: delete (if requested) → update flow states → add (if requested).',
+      '(4) Delete Only: deleteExistingCallouts=true, addCallouts=false - deletes existing callouts and updates InnovationFlow states. ' +
+      'Execution order: delete (if requested) → update flow states (always) → add (if requested).',
   })
   async updateCollaborationFromSpaceTemplate(
     @CurrentUser() agentInfo: AgentInfo,

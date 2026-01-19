@@ -99,16 +99,19 @@
 
 ---
 
-## Parallel Example: User Story 1
+## Parallel Execution Example
 
 ```bash
-# After Foundational phase completes, launch all tests for User Story 1 together:
-Task T008: "Create unit test file template.applier.service.spec.ts"
-Task T009: "Write unit test for delete+add behavior"
-Task T010: "Create integration test file collaboration.mutations.replace.all.it-spec.ts"
-Task T011: "Write integration test for replace all scenario"
+# Example: Phase 1 Setup tasks can run in parallel (marked with [P]):
+Task T001 [P]: "Add deleteExistingCallouts field to DTO"
+Task T002 [P]: "Update GraphQL mutation docstring"
 
-# All 4 test tasks (T008-T011) can execute in parallel
+# Example: User Story tasks across phases can also run in parallel:
+Task T010 [P]: "Verify existing addCallouts logic continues to work correctly"
+Task T011 [P]: "Document behavior in quickstart.md"
+Task T012 [P]: "Verify existing flow-only logic continues to work correctly"
+
+# Note: T008-T009 (logging tasks) are sequential within Phase 3 but independent of T010-T012
 ```
 
 ---

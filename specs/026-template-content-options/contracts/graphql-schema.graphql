@@ -42,7 +42,7 @@ type Mutation {
   **Behavior Matrix**:
   - deleteExistingCallouts=false, addCallouts=false: Updates only innovation flow states (Flow Only)
   - deleteExistingCallouts=false, addCallouts=true: Keeps existing callouts and adds template callouts (Add Template Posts)
-  - deleteExistingCallouts=true, addCallouts=false: Deletes existing callouts only
+  - deleteExistingCallouts=true, addCallouts=false: Deletes existing callouts and updates innovation flow states (Delete Only)
   - deleteExistingCallouts=true, addCallouts=true: Deletes existing callouts and adds template callouts (Replace All)
 
   **Execution Order**:
