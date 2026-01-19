@@ -155,10 +155,9 @@ export class ConversationService {
 
     if (!conversation)
       throw new EntityNotFoundException(
-        `No Conversation found with the given id: ${conversationID}, using options: ${JSON.stringify(
-          options
-        )}`,
-        LogContext.COLLABORATION
+        'Conversation not found',
+        LogContext.COMMUNICATION_CONVERSATION,
+        { conversationID, options }
       );
     return conversation;
   }
@@ -537,5 +536,40 @@ export class ConversationService {
     }
 
     return { users, virtualContributors };
+  }
+
+  /**
+   * Find a conversation by its room ID.
+   * Used for mapping room events to conversation events.
+   * @param roomId - UUID of the room
+   * @returns The conversation if found, null otherwise
+   */
+  async findConversationByRoomId(
+    roomId: string
+  ): Promise<IConversation | null> {
+    return await this.conversationRepository.findOne({
+      where: { room: { id: roomId } },
+      relations: {
+        room: true,
+        authorization: true,
+      },
+    });
+  }
+
+  /**
+   * Get all member agent IDs for a conversation.
+   * Lightweight version of getConversationMembers that returns only IDs.
+   * Used for subscription event filtering.
+   * @param conversationId - UUID of the conversation
+   * @returns Array of agent IDs
+   */
+  async getConversationMemberAgentIds(
+    conversationId: string
+  ): Promise<string[]> {
+    const memberships = await this.conversationMembershipRepository.find({
+      where: { conversationId },
+      select: ['agentId'],
+    });
+    return memberships.map(m => m.agentId);
   }
 }
