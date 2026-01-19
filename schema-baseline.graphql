@@ -4323,6 +4323,10 @@ type Mutation {
   updateSpacePlatformSettings(updateData: UpdateSpacePlatformSettingsInput!): Space!
   """Updates one of the Setting on a Space"""
   updateSpaceSettings(settingsData: UpdateSpaceSettingsInput!): Space!
+  """
+  Update the sortOrder field of the supplied Subspaces to increase as per the order that they are provided in.
+  """
+  updateSubspacesSortOrder(sortOrderData: UpdateSubspacesSortOrderInput!): [Space!]!
   """Updates the specified Tagset."""
   updateTagset(updateData: UpdateTagsetInput!): Tagset!
   """Updates the specified Template."""
@@ -5401,6 +5405,8 @@ type RelayPaginatedSpace {
   platformAccess: PlatformRolesAccess!
   """The settings for this Space."""
   settings: SpaceSettings!
+  """The sorting order for this Space within its parent."""
+  sortOrder: Int!
   """The StorageAggregator in use by this Space"""
   storageAggregator: StorageAggregator!
   """The subscriptions active for this Space."""
@@ -6132,6 +6138,8 @@ type Space {
   platformAccess: PlatformRolesAccess!
   """The settings for this Space."""
   settings: SpaceSettings!
+  """The sorting order for this Space within its parent."""
+  sortOrder: Int!
   """The StorageAggregator in use by this Space"""
   storageAggregator: StorageAggregator!
   """The subscriptions active for this Space."""
@@ -7257,6 +7265,12 @@ input UpdateSpaceSettingsPrivacyInput {
   allowPlatformSupportAsAdmin: Boolean
   """"""
   mode: SpacePrivacyMode
+}
+
+input UpdateSubspacesSortOrderInput {
+  spaceID: UUID!
+  """The IDs of the subspaces to update the sort order on"""
+  subspaceIDs: [UUID!]!
 }
 
 input UpdateTagsetInput {
