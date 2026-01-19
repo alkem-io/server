@@ -101,8 +101,8 @@ export class SearchResultService {
       subspaces,
       users,
       organizations,
-      posts,
       callouts,
+      posts,
       whiteboards,
       memos,
     ] = await Promise.all([
@@ -114,8 +114,8 @@ export class SearchResultService {
         agentInfo,
         spaceId
       ),
-      this.getPostSearchResults(groupedResults.post ?? [], agentInfo),
       this.getCalloutSearchResult(groupedResults.callout ?? [], agentInfo),
+      this.getPostSearchResults(groupedResults.post ?? [], agentInfo),
       this.getWhiteboardSearchResults(
         groupedResults.whiteboard ?? [],
         agentInfo
@@ -131,12 +131,18 @@ export class SearchResultService {
       users,
       organizations
     );
+    // callout framings:
+    const framingResults = buildResults(
+      filtersByCategory.framings?.[0],
+      whiteboards.filter(whiteboard => !whiteboard.isContribution),
+      memos.filter(memo => !memo.isContribution)
+    );
     // contributions include posts, whiteboards, and memos
     const contributionResults = buildResults(
-      filtersByCategory.responses?.[0],
+      filtersByCategory.contributions?.[0],
       posts,
-      whiteboards,
-      memos
+      whiteboards.filter(whiteboard => whiteboard.isContribution),
+      memos.filter(memo => memo.isContribution)
     );
     const spaceResults = buildResults(
       filtersByCategory.spaces?.[0],
@@ -151,6 +157,7 @@ export class SearchResultService {
     return {
       contributorResults,
       contributionResults,
+      framingResults,
       spaceResults,
       calloutResults,
     };

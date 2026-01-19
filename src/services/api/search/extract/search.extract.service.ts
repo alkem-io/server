@@ -57,21 +57,33 @@ const getIndexStore = (
       category: SearchCategory.COLLABORATION_TOOLS,
     },
   ],
-  [SearchCategory.RESPONSES]: [
-    {
-      name: `${indexPattern}posts`,
-      type: SearchResultType.POST,
-      category: SearchCategory.RESPONSES,
-    },
+  [SearchCategory.FRAMINGS]: [
     {
       name: `${indexPattern}memos`,
       type: SearchResultType.MEMO,
-      category: SearchCategory.RESPONSES,
+      category: SearchCategory.FRAMINGS,
     },
     {
       name: `${indexPattern}whiteboards`,
       type: SearchResultType.WHITEBOARD,
-      category: SearchCategory.RESPONSES,
+      category: SearchCategory.FRAMINGS,
+    },
+  ],
+  [SearchCategory.CONTRIBUTIONS]: [
+    {
+      name: `${indexPattern}posts`,
+      type: SearchResultType.POST,
+      category: SearchCategory.CONTRIBUTIONS,
+    },
+    {
+      name: `${indexPattern}memos`,
+      type: SearchResultType.MEMO,
+      category: SearchCategory.CONTRIBUTIONS,
+    },
+    {
+      name: `${indexPattern}whiteboards`,
+      type: SearchResultType.WHITEBOARD,
+      category: SearchCategory.CONTRIBUTIONS,
     },
   ],
 });
@@ -90,21 +102,33 @@ const getPublicIndexStore = (
       category: SearchCategory.SPACES,
     },
   ],
-  [SearchCategory.RESPONSES]: [
-    {
-      name: `${indexPattern}posts`,
-      type: SearchResultType.POST,
-      category: SearchCategory.RESPONSES,
-    },
+  [SearchCategory.FRAMINGS]: [
     {
       name: `${indexPattern}memos`,
       type: SearchResultType.MEMO,
-      category: SearchCategory.RESPONSES,
+      category: SearchCategory.FRAMINGS,
     },
     {
       name: `${indexPattern}whiteboards`,
       type: SearchResultType.WHITEBOARD,
-      category: SearchCategory.RESPONSES,
+      category: SearchCategory.FRAMINGS,
+    },
+  ],
+  [SearchCategory.CONTRIBUTIONS]: [
+    {
+      name: `${indexPattern}posts`,
+      type: SearchResultType.POST,
+      category: SearchCategory.CONTRIBUTIONS,
+    },
+    {
+      name: `${indexPattern}memos`,
+      type: SearchResultType.MEMO,
+      category: SearchCategory.CONTRIBUTIONS,
+    },
+    {
+      name: `${indexPattern}whiteboards`,
+      type: SearchResultType.WHITEBOARD,
+      category: SearchCategory.CONTRIBUTIONS,
     },
   ],
 });
@@ -116,7 +140,11 @@ const allowedTypesPerCategory: Record<SearchCategory, SearchResultType[]> = {
     SearchResultType.ORGANIZATION,
   ],
   [SearchCategory.COLLABORATION_TOOLS]: [SearchResultType.CALLOUT],
-  [SearchCategory.RESPONSES]: [
+  [SearchCategory.FRAMINGS]: [
+    SearchResultType.MEMO,
+    SearchResultType.WHITEBOARD,
+  ],
+  [SearchCategory.CONTRIBUTIONS]: [
     SearchResultType.POST,
     SearchResultType.WHITEBOARD,
     SearchResultType.MEMO,

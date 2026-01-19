@@ -18,6 +18,13 @@ export abstract class ISearchResults {
 
   @Field(() => ISearchCategoryResult, {
     nullable: false,
+    description:
+      'The search results callout framings (Whiteboards, Memos as additional content).',
+  })
+  framingResults!: ISearchCategoryResult;
+
+  @Field(() => ISearchCategoryResult, {
+    nullable: false,
     description: 'The search results for Spaces / Subspaces.',
   })
   spaceResults!: ISearchCategoryResult;
