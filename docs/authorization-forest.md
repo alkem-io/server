@@ -8,7 +8,7 @@ Methodology (updated):
 2. For each service, analyzed its `applyAuthorizationPolicy` signature and body.
 3. Classification rules (per current definitive definition):
    - (R) Root: `applyAuthorizationPolicy` does NOT accept a `parentAuthorization` (or never calls `inheritParentAuthorization`) and calls `inheritRootAuthorizationPolicy` (Platform/User/Organization/Account roots).
-   - (E) Edge (non-root internal node): `applyAuthorizationPolicy` accepts a `parentAuthorization` (or receives one), calls `inheritParentAuthorization`, AND invokes at least one child `applyAuthorizationPolicy`.
+   - (E) Edge (non-root internal node): `applyAuthorizationPolicy` accepts a `parentAuthorization` (or receives one), calls `inheritParentAuthorization`, AND  at least one child `applyAuthorizationPolicy`.
    - (L) Leaf: `applyAuthorizationPolicy` accepts/uses `parentAuthorization` (calls `inheritParentAuthorization`) and does NOT invoke any other `applyAuthorizationPolicy` (no children).
 4. Followed propagation to build directed graph; removed prior misclassification of Licensing Framework as root (it is an Edge under Platform).
 
