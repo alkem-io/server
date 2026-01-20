@@ -106,7 +106,7 @@ export class ConversationArchitectureRefactor1764897584127
           c."userID",
           r.id as room_id,
           r."externalRoomID",
-          ROW_NUMBER() OVER (PARTITION BY r."externalRoomID" ORDER BY c.id) as rn
+          ROW_NUMBER() OVER (PARTITION BY r."externalRoomID" ORDER BY r.id) as rn
         FROM conversation c
         JOIN room r ON c."roomId" = r.id
         WHERE c."virtualContributorID" IS NULL
@@ -137,7 +137,7 @@ export class ConversationArchitectureRefactor1764897584127
         SELECT
           c.id as conv_id,
           r."externalRoomID",
-          ROW_NUMBER() OVER (PARTITION BY r."externalRoomID" ORDER BY c.id) as rn
+          ROW_NUMBER() OVER (PARTITION BY r."externalRoomID" ORDER BY r.id) as rn
         FROM conversation c
         JOIN room r ON c."roomId" = r.id
         WHERE c."virtualContributorID" IS NULL
@@ -169,7 +169,7 @@ export class ConversationArchitectureRefactor1764897584127
           c.id as conv_id,
           r.id as room_id,
           r."externalRoomID",
-          ROW_NUMBER() OVER (PARTITION BY r."externalRoomID" ORDER BY c.id) as rn
+          ROW_NUMBER() OVER (PARTITION BY r."externalRoomID" ORDER BY r.id) as rn
         FROM conversation c
         JOIN room r ON c."roomId" = r.id
         WHERE c."virtualContributorID" IS NULL
