@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UpdateCollaborationFromSpaceTemplateInput } from './dto/template.applier.dto.update.collaboration';
 import { TemplateService } from '../template/template.service';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
@@ -7,6 +8,7 @@ import { RelationshipNotFoundException } from '@common/exceptions/relationship.n
 import { ITemplateContentSpace } from '../template-content-space/template.content.space.interface';
 import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovation.flow.service';
 import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
+import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
@@ -15,12 +17,14 @@ import { CreateInnovationFlowStateInput } from '@domain/collaboration/innovation
 @Injectable()
 export class TemplateApplierService {
   constructor(
-    private templateService: TemplateService,
-    private innovationFlowService: InnovationFlowService,
-    private calloutsSetService: CalloutsSetService,
+    private readonly templateService: TemplateService,
+    private readonly innovationFlowService: InnovationFlowService,
+    private readonly calloutsSetService: CalloutsSetService,
+    private readonly calloutService: CalloutService,
     private readonly inputCreatorService: InputCreatorService,
     private readonly storageAggregatorResolverService: StorageAggregatorResolverService,
-    private readonly collaborationService: CollaborationService
+    private readonly collaborationService: CollaborationService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async updateCollaborationFromSpaceTemplate(
@@ -43,10 +47,7 @@ export class TemplateApplierService {
           },
         },
       });
-    if (
-      !templateWithContentSpace.contentSpace ||
-      !templateWithContentSpace.contentSpace.collaboration
-    ) {
+    if (!templateWithContentSpace.contentSpace?.collaboration) {
       throw new RelationshipNotFoundException(
         `Template with ID ${updateData.spaceTemplateID} does not have a Space associated.`,
         LogContext.TEMPLATES
@@ -57,6 +58,7 @@ export class TemplateApplierService {
       targetCollaboration,
       templateWithContentSpace.contentSpace,
       updateData.addCallouts,
+      updateData.deleteExistingCallouts,
       userID
     );
   }
@@ -65,18 +67,38 @@ export class TemplateApplierService {
     targetCollaboration: ICollaboration,
     templateContentSpace: ITemplateContentSpace,
     addCallouts: boolean,
+    deleteExistingCallouts: boolean,
     userID: string
   ): Promise<ICollaboration> {
     const sourceCollaboration = templateContentSpace.collaboration;
     if (
-      !targetCollaboration ||
-      !targetCollaboration.innovationFlow ||
+      !targetCollaboration?.innovationFlow ||
       !targetCollaboration.calloutsSet?.callouts ||
       !sourceCollaboration?.innovationFlow ||
       !sourceCollaboration?.calloutsSet?.callouts
     ) {
       throw new RelationshipNotFoundException(
         `Template cannot be applied on entities not fully loaded space.id:'${targetCollaboration.id}' templateContentSpace.id='${templateContentSpace.id}'`,
+        LogContext.TEMPLATES
+      );
+    }
+
+    // Delete existing callouts if requested (before updating flow states)
+    if (deleteExistingCallouts && targetCollaboration.calloutsSet?.callouts) {
+      const existingCallouts = targetCollaboration.calloutsSet.callouts;
+      this.logger.verbose?.(
+        `Deleting ${existingCallouts.length} existing callouts from collaboration`,
+        LogContext.TEMPLATES
+      );
+
+      for (const callout of existingCallouts) {
+        await this.calloutService.deleteCallout(callout.id);
+      }
+
+      targetCollaboration.calloutsSet.callouts = [];
+
+      this.logger.verbose?.(
+        'Successfully deleted existing callouts',
         LogContext.TEMPLATES
       );
     }
