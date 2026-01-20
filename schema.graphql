@@ -3699,7 +3699,7 @@ type Mutation {
   """Updates a Tagset on a Classification."""
   updateClassificationTagset(updateData: UpdateClassificationSelectTagsetValueInput!): Tagset!
   """
-  Updates a Collaboration, including InnovationFlow states, using the Space content from the specified Template.
+  Updates a Collaboration using the Space content from the specified Template. Behavior depends on parameter combinations: (1) Flow Only: deleteExistingCallouts=false, addCallouts=false - updates only InnovationFlow states; (2) Add Posts: deleteExistingCallouts=false, addCallouts=true - keeps existing and adds template callouts; (3) Replace All: deleteExistingCallouts=true, addCallouts=true - deletes existing then adds template callouts; (4) Delete Only: deleteExistingCallouts=true, addCallouts=false - deletes existing callouts and updates InnovationFlow states. Execution order: delete (if requested) → update flow states (always) → add (if requested).
   """
   updateCollaborationFromSpaceTemplate(updateData: UpdateCollaborationFromSpaceTemplateInput!): Collaboration!
   """Updates the CommunityGuidelines."""
@@ -7502,6 +7502,10 @@ input UpdateCollaborationFromSpaceTemplateInput {
   addCallouts: Boolean = false
   """ID of the Collaboration to be updated"""
   collaborationID: UUID!
+  """
+  Delete existing Callouts before applying template. When combined with addCallouts=true, enables Replace All behavior.
+  """
+  deleteExistingCallouts: Boolean = false
   """
   The Space Template whose Collaboration that will be used for updates to the target Collaboration
   """
