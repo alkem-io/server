@@ -27,7 +27,7 @@ export class AdminCommunicationResolverMutations {
     this.communicationGlobalAdminPolicy =
       this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
         [AuthorizationRoleGlobal.GLOBAL_ADMIN],
-        [AuthorizationPrivilege.GRANT],
+        [AuthorizationPrivilege.GRANT, AuthorizationPrivilege.PLATFORM_ADMIN],
         GLOBAL_POLICY_ADMIN_COMMUNICATION_GRANT
       );
   }
@@ -106,7 +106,7 @@ export class AdminCommunicationResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.communicationGlobalAdminPolicy,
-      AuthorizationPrivilege.GRANT,
+      AuthorizationPrivilege.PLATFORM_ADMIN,
       `communications admin migrate orphaned conversations: ${agentInfo.email}`
     );
     return await this.adminCommunicationService.migrateConversationRooms();
