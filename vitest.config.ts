@@ -1,7 +1,10 @@
-import { resolve } from 'path';
+import { createRequire } from 'module';
+import { dirname, resolve } from 'path';
 import swc from 'unplugin-swc';
 import tsconfigPaths from 'vite-tsconfig-paths';
 import { defineConfig } from 'vitest/config';
+
+const require = createRequire(import.meta.url);
 
 export default defineConfig({
   plugins: [
@@ -14,13 +17,10 @@ export default defineConfig({
     // Resolve CJS dependencies that Vite has trouble with
     alias: {
       'cache-manager': resolve(
-        __dirname,
-        'node_modules/.pnpm/cache-manager@5.7.6/node_modules/cache-manager/dist/index.js'
+        dirname(require.resolve('cache-manager/package.json')),
+        'dist/index.js'
       ),
-      express: resolve(
-        __dirname,
-        'node_modules/.pnpm/express@4.21.2/node_modules/express/index.js'
-      ),
+      express: require.resolve('express'),
     },
     // Ensure single instance of graphql to avoid "Duplicate graphql modules" error
     dedupe: ['graphql'],

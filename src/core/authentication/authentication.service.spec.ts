@@ -354,9 +354,9 @@ describe('AuthenticationService', () => {
   describe('shouldExtendSession', () => {
     beforeEach(() => {
       // Mock the constructor call that sets extendSessionMinRemainingTTL
-      vi
-        .spyOn(service as any, 'parseEarliestPossibleExtend')
-        .mockReturnValue(300000); // 5 minutes
+      vi.spyOn(service as any, 'parseEarliestPossibleExtend').mockReturnValue(
+        300000
+      ); // 5 minutes
       (service as any).extendSessionMinRemainingTTL = 300000;
     });
 

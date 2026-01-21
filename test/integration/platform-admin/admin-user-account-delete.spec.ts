@@ -40,12 +40,10 @@ describe('Platform-admin identity deletion flows', () => {
         email: 'user@example.com',
         authenticationID: 'kratos-1',
       }),
-      clearAuthenticationIDForUser: vi
-        .fn()
-        .mockImplementation(async user => ({
-          ...user,
-          authenticationID: null,
-        })),
+      clearAuthenticationIDForUser: vi.fn().mockImplementation(async user => ({
+        ...user,
+        authenticationID: null,
+      })),
     } as unknown as UserService & {
       getUserOrFail: Mock;
       clearAuthenticationIDForUser: Mock;

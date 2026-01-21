@@ -192,17 +192,13 @@ describe('RoomServiceMentions', () => {
     const organization = testData.organization;
     const virtualContributor = testData.virtualContributor;
     // Direct assignment to avoid proxy issues with vi.spyOn
-    userLookupService.getUserByNameIdOrFail = vi
-      .fn()
-      .mockResolvedValue(user);
+    userLookupService.getUserByNameIdOrFail = vi.fn().mockResolvedValue(user);
 
-    organizationLookupService.getOrganizationByNameIdOrFail = vi
-      .fn()
-      .mockResolvedValue(organization);
+    organizationLookupService.getOrganizationByNameIdOrFail =
+      vi.fn().mockResolvedValue(organization);
 
-    virtualContributorLookupService.getVirtualContributorByNameIdOrFail = vi
-      .fn()
-      .mockResolvedValue(virtualContributor);
+    virtualContributorLookupService.getVirtualContributorByNameIdOrFail =
+      vi.fn().mockResolvedValue(virtualContributor);
 
     const result = await roomMentionsService.getMentionsFromText(text);
     expect(result.length).toBe(expected.length);
