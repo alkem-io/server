@@ -1013,8 +1013,8 @@ type Callout {
   posts: [Post!]
   """The user that published this Callout"""
   publishedBy: User
-  """The timestamp for the publishing of this Callout."""
-  publishedDate: Float
+  """The Date of the publishing of this Callout."""
+  publishedDate: DateTime
   """The Callout Settings associated with this Callout."""
   settings: CalloutSettings!
   """The sorting order for this Callout."""
@@ -1671,11 +1671,11 @@ input ConvertSpaceL1ToSpaceL0Input {
 
 input ConvertSpaceL1ToSpaceL2Input {
   """
-  The Space L1 to be the parent of the Space L1 when it is moved to be L2. 
+  The Space L1 to be the parent of the Space L1 when it is moved to be L2.
   """
   parentSpaceL1ID: UUID!
   """
-  The Space L1 to be moved to be a child of another Space L. Both the L1 Space and the parent Space must be in the same L0 Space. 
+  The Space L1 to be moved to be a child of another Space L. Both the L1 Space and the parent Space must be in the same L0 Space.
   """
   spaceL1ID: UUID!
 }
@@ -4270,7 +4270,7 @@ type Mutation {
   """Updates a Tagset on a Classification."""
   updateClassificationTagset(updateData: UpdateClassificationSelectTagsetValueInput!): Tagset!
   """
-  Updates a Collaboration, including InnovationFlow states, using the Space content from the specified Template.
+  Updates a Collaboration using the Space content from the specified Template. Behavior depends on parameter combinations: (1) Flow Only: deleteExistingCallouts=false, addCallouts=false - updates only InnovationFlow states; (2) Add Posts: deleteExistingCallouts=false, addCallouts=true - keeps existing and adds template callouts; (3) Replace All: deleteExistingCallouts=true, addCallouts=true - deletes existing then adds template callouts; (4) Delete Only: deleteExistingCallouts=true, addCallouts=false - deletes existing callouts and updates InnovationFlow states. Execution order: delete (if requested) → update flow states (always) → add (if requested).
   """
   updateCollaborationFromSpaceTemplate(updateData: UpdateCollaborationFromSpaceTemplateInput!): Collaboration!
   """Updates the CommunityGuidelines."""
@@ -6893,6 +6893,10 @@ input UpdateCollaborationFromSpaceTemplateInput {
   """ID of the Collaboration to be updated"""
   collaborationID: UUID!
   """
+  Delete existing Callouts before applying template. When combined with addCallouts=true, enables Replace All behavior.
+  """
+  deleteExistingCallouts: Boolean = false
+  """
   The Space Template whose Collaboration that will be used for updates to the target Collaboration
   """
   spaceTemplateID: UUID!
@@ -7354,10 +7358,19 @@ input UpdateUserSettingsCommunicationInput {
 input UpdateUserSettingsEntityInput {
   """Settings related to this users Communication preferences."""
   communication: UpdateUserSettingsCommunicationInput
+  """Settings related to Home Space."""
+  homeSpace: UpdateUserSettingsHomeSpaceInput
   """Settings related to this users Notifications preferences."""
   notification: UpdateUserSettingsNotificationInput
   """Settings related to Privacy."""
   privacy: UpdateUserSettingsPrivacyInput
+}
+
+input UpdateUserSettingsHomeSpaceInput {
+  """Automatically redirect to home space instead of the dashboard."""
+  autoRedirect: Boolean
+  """The ID of the Space to use as home. Set to null to clear."""
+  spaceID: UUID
 }
 
 input UpdateUserSettingsInput {
@@ -7765,6 +7778,8 @@ type UserSettings {
   communication: UserSettingsCommunication!
   """The date at which the entity was created."""
   createdDate: DateTime!
+  """The home space settings for this User."""
+  homeSpace: UserSettingsHomeSpace!
   """The ID of the entity"""
   id: UUID!
   """The notification settings for this User."""
@@ -7778,6 +7793,13 @@ type UserSettings {
 type UserSettingsCommunication {
   """Allow Users to send messages to this User."""
   allowOtherUsersToSendMessages: Boolean!
+}
+
+type UserSettingsHomeSpace {
+  """Automatically redirect to home space instead of the dashboard."""
+  autoRedirect: Boolean!
+  """The ID of the Space to use as home. Null if not set."""
+  spaceID: String
 }
 
 type UserSettingsNotification {

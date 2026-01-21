@@ -128,5 +128,9 @@ export const userSettingsData: { userSettings: IUserSettings } = {
         },
       },
     },
+    homeSpace: {
+      spaceID: null,
+      autoRedirect: false,
+    },
   },
 };
