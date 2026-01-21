@@ -27,7 +27,7 @@ export class AdminCommunicationResolverMutations {
     this.communicationGlobalAdminPolicy =
       this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
         [AuthorizationRoleGlobal.GLOBAL_ADMIN],
-        [AuthorizationPrivilege.GRANT],
+        [AuthorizationPrivilege.GRANT, AuthorizationPrivilege.PLATFORM_ADMIN],
         GLOBAL_POLICY_ADMIN_COMMUNICATION_GRANT
       );
   }
