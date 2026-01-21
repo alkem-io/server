@@ -107,7 +107,7 @@ export class ConversationArchitectureRefactor1764897584127
       JOIN "user" u ON c."userID" = u.id
       JOIN (
         SELECT key as wk_name, (value)::uuid as vc_id
-        FROM platform, jsonb_each_text("wellKnownVirtualContributors")
+        FROM platform, json_each_text("wellKnownVirtualContributors")
       ) p ON c."wellKnownVirtualContributor" = p.wk_name
       WHERE c."virtualContributorID" IS NULL
         AND c."wellKnownVirtualContributor" IS NOT NULL
@@ -123,7 +123,7 @@ export class ConversationArchitectureRefactor1764897584127
       FROM conversation c
       JOIN (
         SELECT key as wk_name, (value)::uuid as vc_id
-        FROM platform, jsonb_each_text("wellKnownVirtualContributors")
+        FROM platform, json_each_text("wellKnownVirtualContributors")
       ) p ON c."wellKnownVirtualContributor" = p.wk_name
       JOIN virtual_contributor vc ON vc.id = p.vc_id
       WHERE c."virtualContributorID" IS NULL
