@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
@@ -17,43 +18,44 @@ import { LogContext } from '@common/enums';
 import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import type { Mocked } from 'vitest';
 
 const createResolver = () => {
   const authorizationService = {
-    grantAccessOrFail: jest.fn(),
-  } as unknown as jest.Mocked<AuthorizationService>;
+    grantAccessOrFail: vi.fn(),
+  } as unknown as Mocked<AuthorizationService>;
 
   const authorizationPolicyService = {
-    save: jest.fn(),
-  } as unknown as jest.Mocked<AuthorizationPolicyService>;
+    save: vi.fn(),
+  } as unknown as Mocked<AuthorizationPolicyService>;
 
   const whiteboardService = {
-    getWhiteboardOrFail: jest.fn(),
-  } as unknown as jest.Mocked<WhiteboardService>;
+    getWhiteboardOrFail: vi.fn(),
+  } as unknown as Mocked<WhiteboardService>;
 
   const whiteboardAuthorizationService = {
-    applyAuthorizationPolicy: jest.fn(),
-  } as unknown as jest.Mocked<WhiteboardAuthorizationService>;
+    applyAuthorizationPolicy: vi.fn(),
+  } as unknown as Mocked<WhiteboardAuthorizationService>;
 
   const whiteboardGuestAccessService = {
-    updateGuestAccess: jest.fn(),
-  } as unknown as jest.Mocked<WhiteboardGuestAccessService>;
+    updateGuestAccess: vi.fn(),
+  } as unknown as Mocked<WhiteboardGuestAccessService>;
 
   const communityResolverService = {
-    getCommunityFromWhiteboardOrFail: jest.fn(),
-    getSpaceForCommunityOrFail: jest.fn(),
-  } as unknown as jest.Mocked<CommunityResolverService>;
+    getCommunityFromWhiteboardOrFail: vi.fn(),
+    getSpaceForCommunityOrFail: vi.fn(),
+  } as unknown as Mocked<CommunityResolverService>;
 
   const entityManager = {
-    findOne: jest.fn(),
-    save: jest.fn(),
-  } as unknown as jest.Mocked<EntityManager>;
+    findOne: vi.fn(),
+    save: vi.fn(),
+  } as unknown as Mocked<EntityManager>;
 
   const logger = {
-    verbose: jest.fn(),
-    debug: jest.fn(),
-    warn: jest.fn(),
-  } as unknown as jest.Mocked<LoggerService>;
+    verbose: vi.fn(),
+    debug: vi.fn(),
+    warn: vi.fn(),
+  } as unknown as Mocked<LoggerService>;
 
   const resolver = new WhiteboardResolverMutations(
     authorizationService,

@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ExecutionContext, CallHandler } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -15,7 +16,7 @@ describe('HeaderInterceptor', () => {
         {
           provide: ConfigService,
           useValue: {
-            get: jest.fn().mockReturnValue({
+            get: vi.fn().mockReturnValue({
               name: 'mock-secret-name',
               value: 'mock-secret-value',
             }),
@@ -36,7 +37,7 @@ describe('HeaderInterceptor', () => {
       }),
     } as ExecutionContext;
     const next: CallHandler = {
-      handle: jest.fn().mockReturnValue(of(null)),
+      handle: vi.fn().mockReturnValue(of(null)),
     };
 
     expect(() => interceptor.intercept(context, next)).toThrow(
@@ -53,7 +54,7 @@ describe('HeaderInterceptor', () => {
       }),
     } as ExecutionContext;
     const next: CallHandler = {
-      handle: jest.fn().mockReturnValue(of(null)),
+      handle: vi.fn().mockReturnValue(of(null)),
     };
 
     expect(() => interceptor.intercept(context, next)).toThrow(
@@ -70,7 +71,7 @@ describe('HeaderInterceptor', () => {
       }),
     } as ExecutionContext;
     const next: CallHandler = {
-      handle: jest.fn().mockReturnValue(of(null)),
+      handle: vi.fn().mockReturnValue(of(null)),
     };
 
     expect(() => interceptor.intercept(context, next)).not.toThrow();

@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
@@ -13,6 +14,7 @@ import { LoggerService } from '@nestjs/common';
 import { ForbiddenException } from '@common/exceptions';
 import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
+import type { Mocked } from 'vitest';
 
 describe('WhiteboardGuestAccessService', () => {
   const createAuthorization = () => {
@@ -46,53 +48,53 @@ describe('WhiteboardGuestAccessService', () => {
     } as unknown as ISpace;
   };
 
-  let whiteboardService: jest.Mocked<WhiteboardService>;
-  let authorizationService: jest.Mocked<AuthorizationService>;
-  let authorizationPolicyService: jest.Mocked<AuthorizationPolicyService>;
-  let communityResolverService: jest.Mocked<CommunityResolverService>;
-  let profileAuthService: jest.Mocked<ProfileAuthorizationService>;
-  let logger: jest.Mocked<LoggerService>;
+  let whiteboardService: Mocked<WhiteboardService>;
+  let authorizationService: Mocked<AuthorizationService>;
+  let authorizationPolicyService: Mocked<AuthorizationPolicyService>;
+  let communityResolverService: Mocked<CommunityResolverService>;
+  let profileAuthService: Mocked<ProfileAuthorizationService>;
+  let logger: Mocked<LoggerService>;
   let service: WhiteboardGuestAccessService;
 
   beforeEach(() => {
     whiteboardService = {
-      getWhiteboardOrFail: jest.fn(),
-    } as unknown as jest.Mocked<WhiteboardService>;
+      getWhiteboardOrFail: vi.fn(),
+    } as unknown as Mocked<WhiteboardService>;
 
     authorizationService = {
-      grantAccessOrFail: jest.fn().mockReturnValue(true),
-    } as unknown as jest.Mocked<AuthorizationService>;
+      grantAccessOrFail: vi.fn().mockReturnValue(true),
+    } as unknown as Mocked<AuthorizationService>;
 
     authorizationPolicyService = {
-      save: jest.fn(async auth => auth),
-      saveAll: jest.fn(async auths => auths),
+      save: vi.fn(async auth => auth),
+      saveAll: vi.fn(async auths => auths),
       authorizationSelectOptions: {
         id: true,
         credentialRules: true,
         privilegeRules: true,
       } as any,
-    } as unknown as jest.Mocked<AuthorizationPolicyService>;
+    } as unknown as Mocked<AuthorizationPolicyService>;
 
     communityResolverService = {
-      getCommunityFromWhiteboardOrFail: jest
+      getCommunityFromWhiteboardOrFail: vi
         .fn()
         .mockResolvedValue({ id: 'community-1' }),
-      getSpaceForCommunityOrFail: jest
+      getSpaceForCommunityOrFail: vi
         .fn()
         .mockResolvedValue(createSpace(true)),
-    } as unknown as jest.Mocked<CommunityResolverService>;
+    } as unknown as Mocked<CommunityResolverService>;
 
     profileAuthService = {
-      applyAuthorizationPolicy: jest.fn(),
-    } as unknown as jest.Mocked<ProfileAuthorizationService>;
+      applyAuthorizationPolicy: vi.fn(),
+    } as unknown as Mocked<ProfileAuthorizationService>;
 
     logger = {
-      verbose: jest.fn(),
-      debug: jest.fn(),
-      warn: jest.fn(),
-      error: jest.fn(),
-      log: jest.fn(),
-    } as unknown as jest.Mocked<LoggerService>;
+      verbose: vi.fn(),
+      debug: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      log: vi.fn(),
+    } as unknown as Mocked<LoggerService>;
 
     service = new WhiteboardGuestAccessService(
       whiteboardService,

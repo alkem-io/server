@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { performOverrideEvaluationAsync } from '../../src/tools/schema/override';
 import * as fs from 'node:fs';
 
@@ -7,7 +8,7 @@ describe('override evaluation via GitHub fetch fallback', () => {
   const OLD_ENV = process.env;
 
   beforeEach(() => {
-    jest.resetModules();
+    vi.resetModules();
     process.env = { ...OLD_ENV };
     fs.writeFileSync('CODEOWNERS', '* @alice');
   });
@@ -26,7 +27,7 @@ describe('override evaluation via GitHub fetch fallback', () => {
     process.env.SCHEMA_OVERRIDE_REPO = 'org/repo';
     process.env.SCHEMA_OVERRIDE_PR_NUMBER = '123';
 
-    (global as any).fetch = jest.fn().mockResolvedValue({
+    (global as any).fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => [
         {
@@ -48,7 +49,7 @@ describe('override evaluation via GitHub fetch fallback', () => {
     process.env.SCHEMA_OVERRIDE_REPO = 'org/repo';
     process.env.SCHEMA_OVERRIDE_PR_NUMBER = '123';
 
-    (global as any).fetch = jest.fn().mockResolvedValue({
+    (global as any).fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => [
         {

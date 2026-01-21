@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
@@ -12,6 +13,7 @@ import { WhiteboardIntegrationService } from '@services/whiteboard-integration/w
 import { ConfigService } from '@nestjs/config';
 import { LoggerService } from '@nestjs/common';
 import { AlkemioConfig } from '@src/types';
+import type { Mocked } from 'vitest';
 
 const buildGuestAgentInfo = (guestName: string): AgentInfo => {
   const agentInfo = new AgentInfo();
@@ -21,15 +23,15 @@ const buildGuestAgentInfo = (guestName: string): AgentInfo => {
 
 describe('WhiteboardIntegrationService - guest handling', () => {
   let service: WhiteboardIntegrationService;
-  let whiteboardService: jest.Mocked<WhiteboardService>;
-  let authorizationService: jest.Mocked<AuthorizationService>;
-  let authenticationService: jest.Mocked<AuthenticationService>;
-  let contributionReporter: jest.Mocked<ContributionReporterService>;
-  let communityResolver: jest.Mocked<CommunityResolverService>;
-  let activityAdapter: jest.Mocked<ActivityAdapter>;
-  let agentInfoService: jest.Mocked<AgentInfoService>;
-  let configService: jest.Mocked<ConfigService<AlkemioConfig, true>>;
-  let logger: jest.Mocked<LoggerService>;
+  let whiteboardService: Mocked<WhiteboardService>;
+  let authorizationService: Mocked<AuthorizationService>;
+  let authenticationService: Mocked<AuthenticationService>;
+  let contributionReporter: Mocked<ContributionReporterService>;
+  let communityResolver: Mocked<CommunityResolverService>;
+  let activityAdapter: Mocked<ActivityAdapter>;
+  let agentInfoService: Mocked<AgentInfoService>;
+  let configService: Mocked<ConfigService<AlkemioConfig, true>>;
+  let logger: Mocked<LoggerService>;
 
   const createService = () =>
     new WhiteboardIntegrationService(
@@ -46,51 +48,51 @@ describe('WhiteboardIntegrationService - guest handling', () => {
 
   beforeEach(() => {
     whiteboardService = {
-      getWhiteboardOrFail: jest.fn().mockResolvedValue({
+      getWhiteboardOrFail: vi.fn().mockResolvedValue({
         id: 'whiteboard-1',
         authorization: { id: 'authorization-1' },
       }),
-    } as unknown as jest.Mocked<WhiteboardService>;
+    } as unknown as Mocked<WhiteboardService>;
 
     authorizationService = {
-      isAccessGranted: jest.fn().mockReturnValue(true),
-    } as unknown as jest.Mocked<AuthorizationService>;
+      isAccessGranted: vi.fn().mockReturnValue(true),
+    } as unknown as Mocked<AuthorizationService>;
 
     authenticationService = {
-      getAgentInfo: jest.fn(),
-    } as unknown as jest.Mocked<AuthenticationService>;
+      getAgentInfo: vi.fn(),
+    } as unknown as Mocked<AuthenticationService>;
 
     contributionReporter = {
-      whiteboardContribution: jest.fn(),
-    } as unknown as jest.Mocked<ContributionReporterService>;
+      whiteboardContribution: vi.fn(),
+    } as unknown as Mocked<ContributionReporterService>;
 
     communityResolver = {
-      getCommunityFromWhiteboardOrFail: jest.fn(),
-      getLevelZeroSpaceIdForCommunity: jest.fn(),
-    } as unknown as jest.Mocked<CommunityResolverService>;
+      getCommunityFromWhiteboardOrFail: vi.fn(),
+      getLevelZeroSpaceIdForCommunity: vi.fn(),
+    } as unknown as Mocked<CommunityResolverService>;
 
     activityAdapter = {
-      calloutWhiteboardContentModified: jest.fn(),
-    } as unknown as jest.Mocked<ActivityAdapter>;
+      calloutWhiteboardContentModified: vi.fn(),
+    } as unknown as Mocked<ActivityAdapter>;
 
     agentInfoService = {
-      buildAgentInfoForUser: jest.fn(),
-      createGuestAgentInfo: jest
+      buildAgentInfoForUser: vi.fn(),
+      createGuestAgentInfo: vi
         .fn()
         .mockImplementation(name => buildGuestAgentInfo(name)),
-    } as unknown as jest.Mocked<AgentInfoService>;
+    } as unknown as Mocked<AgentInfoService>;
 
     configService = {
-      get: jest.fn().mockReturnValue(10),
-    } as unknown as jest.Mocked<ConfigService<AlkemioConfig, true>>;
+      get: vi.fn().mockReturnValue(10),
+    } as unknown as Mocked<ConfigService<AlkemioConfig, true>>;
 
     logger = {
-      error: jest.fn(),
-      warn: jest.fn(),
-      verbose: jest.fn(),
-      log: jest.fn(),
-      debug: jest.fn(),
-    } as unknown as jest.Mocked<LoggerService>;
+      error: vi.fn(),
+      warn: vi.fn(),
+      verbose: vi.fn(),
+      log: vi.fn(),
+      debug: vi.fn(),
+    } as unknown as Mocked<LoggerService>;
 
     service = createService();
   });
