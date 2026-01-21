@@ -1,3 +1,4 @@
+import { vi, Mock } from 'vitest';
 import { AdminUsersMutations } from '@src/platform-admin/domain/user/admin.users.resolver.mutations';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
@@ -11,43 +12,41 @@ import { UserLookupService } from '@domain/community/user-lookup/user.lookup.ser
 
 const createLogger = () =>
   ({
-    log: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    verbose: jest.fn(),
-    debug: jest.fn(),
+    log: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    verbose: vi.fn(),
+    debug: vi.fn(),
   }) as unknown as LoggerService;
 
 describe('Platform-admin identity deletion flows', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('clears authentication ID after adminUserAccountDelete executes', async () => {
     const authorizationService = {
-      grantAccessOrFail: jest.fn(),
+      grantAccessOrFail: vi.fn(),
     } as unknown as AuthorizationService;
     const platformAuthorizationPolicyService = {
-      getPlatformAuthorizationPolicy: jest.fn().mockResolvedValue({}),
+      getPlatformAuthorizationPolicy: vi.fn().mockResolvedValue({}),
     } as unknown as PlatformAuthorizationPolicyService;
     const kratosService = {
-      deleteIdentityByEmail: jest.fn().mockResolvedValue(undefined),
+      deleteIdentityByEmail: vi.fn().mockResolvedValue(undefined),
     } as unknown as KratosService;
     const userService = {
-      getUserOrFail: jest.fn().mockResolvedValue({
+      getUserOrFail: vi.fn().mockResolvedValue({
         id: 'user-1',
         email: 'user@example.com',
         authenticationID: 'kratos-1',
       }),
-      clearAuthenticationIDForUser: jest
-        .fn()
-        .mockImplementation(async user => ({
-          ...user,
-          authenticationID: null,
-        })),
+      clearAuthenticationIDForUser: vi.fn().mockImplementation(async user => ({
+        ...user,
+        authenticationID: null,
+      })),
     } as unknown as UserService & {
-      getUserOrFail: jest.Mock;
-      clearAuthenticationIDForUser: jest.Mock;
+      getUserOrFail: Mock;
+      clearAuthenticationIDForUser: Mock;
     };
 
     const resolver = new AdminUsersMutations(
@@ -75,28 +74,28 @@ describe('Platform-admin identity deletion flows', () => {
 
   it('clears authentication ID when deleting Kratos identity by ID', async () => {
     const kratosService = {
-      deleteIdentityById: jest.fn().mockResolvedValue(undefined),
-      getIdentityByEmail: jest.fn(),
+      deleteIdentityById: vi.fn().mockResolvedValue(undefined),
+      getIdentityByEmail: vi.fn(),
     } as unknown as KratosService & {
-      deleteIdentityById: jest.Mock;
+      deleteIdentityById: Mock;
     };
 
     const userLookupService = {
-      getUserByAuthenticationID: jest
+      getUserByAuthenticationID: vi
         .fn()
         .mockResolvedValue({ id: 'user-1', authenticationID: 'kratos-1' }),
-      getUserByEmail: jest.fn(),
+      getUserByEmail: vi.fn(),
     } as unknown as UserLookupService & {
-      getUserByAuthenticationID: jest.Mock;
+      getUserByAuthenticationID: Mock;
     };
 
     const userService = {
-      clearAuthenticationIDForUser: jest.fn().mockResolvedValue({
+      clearAuthenticationIDForUser: vi.fn().mockResolvedValue({
         id: 'user-1',
         authenticationID: null,
       }),
     } as unknown as UserService & {
-      clearAuthenticationIDForUser: jest.Mock;
+      clearAuthenticationIDForUser: Mock;
     };
 
     const service = new AdminIdentityService(

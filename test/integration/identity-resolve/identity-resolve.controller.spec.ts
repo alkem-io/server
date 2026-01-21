@@ -1,3 +1,4 @@
+import { vi, Mock } from 'vitest';
 import {
   INestApplication,
   LoggerService,
@@ -37,18 +38,18 @@ const buildIdentity = (overrides: Partial<Identity> = {}): Identity =>
 describe('IdentityResolveController (REST)', () => {
   let app: INestApplication;
   const registrationService = {
-    registerNewUser: jest.fn(),
+    registerNewUser: vi.fn(),
   } as unknown as RegistrationService;
   const kratosService = {
-    getIdentityById: jest.fn(),
+    getIdentityById: vi.fn(),
   } as unknown as KratosService;
   const userLookupService = {
-    getUserByAuthenticationID: jest.fn(),
-    getUserByEmail: jest.fn(),
-    getUserOrFail: jest.fn(),
+    getUserByAuthenticationID: vi.fn(),
+    getUserByEmail: vi.fn(),
+    getUserOrFail: vi.fn(),
   } as unknown as UserLookupService;
   const agentInfoService = {
-    buildAgentInfoFromOryIdentity: jest
+    buildAgentInfoFromOryIdentity: vi
       .fn()
       .mockImplementation((identity, options) => ({
         authenticationID: options?.authenticationId || identity.id,
@@ -59,23 +60,23 @@ describe('IdentityResolveController (REST)', () => {
       })),
   } as unknown as AgentInfoService;
   const loggerMock: LoggerService & {
-    log: jest.Mock;
-    warn: jest.Mock;
-    error: jest.Mock;
-    verbose: jest.Mock;
-    debug: jest.Mock;
+    log: Mock;
+    warn: Mock;
+    error: Mock;
+    verbose: Mock;
+    debug: Mock;
   } = {
-    log: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    verbose: jest.fn(),
-    debug: jest.fn(),
+    log: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    verbose: vi.fn(),
+    debug: vi.fn(),
   };
 
   const authenticationId = '09d7f4d8-1c4b-4f05-9d50-3ddf2a120001';
 
   beforeEach(async () => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     const moduleRef = await Test.createTestingModule({
       controllers: [IdentityResolveController],
@@ -103,7 +104,7 @@ describe('IdentityResolveController (REST)', () => {
 
   it('returns existing user when authentication ID already linked', async () => {
     (
-      userLookupService.getUserByAuthenticationID as jest.Mock
+      userLookupService.getUserByAuthenticationID as Mock
     ).mockResolvedValueOnce({
       id: 'user-existing',
       authenticationID: authenticationId,
@@ -122,9 +123,9 @@ describe('IdentityResolveController (REST)', () => {
 
   it('returns 404 when Kratos identity cannot be found', async () => {
     (
-      userLookupService.getUserByAuthenticationID as jest.Mock
+      userLookupService.getUserByAuthenticationID as Mock
     ).mockResolvedValueOnce(null);
-    (kratosService.getIdentityById as jest.Mock).mockResolvedValueOnce(
+    (kratosService.getIdentityById as Mock).mockResolvedValueOnce(
       undefined
     );
 
@@ -141,23 +142,23 @@ describe('IdentityResolveController (REST)', () => {
 
   it('creates a new user when identity is unknown', async () => {
     (
-      userLookupService.getUserByAuthenticationID as jest.Mock
+      userLookupService.getUserByAuthenticationID as Mock
     ).mockResolvedValueOnce(null);
-    (userLookupService.getUserByEmail as jest.Mock).mockResolvedValueOnce(null);
+    (userLookupService.getUserByEmail as Mock).mockResolvedValueOnce(null);
 
     const identity = buildIdentity();
-    (kratosService.getIdentityById as jest.Mock).mockResolvedValueOnce(
+    (kratosService.getIdentityById as Mock).mockResolvedValueOnce(
       identity
     );
 
-    (registrationService.registerNewUser as jest.Mock).mockImplementationOnce(
+    (registrationService.registerNewUser as Mock).mockImplementationOnce(
       async agentInfo => ({
         id: 'user-new',
         authenticationID: agentInfo.authenticationID,
       })
     );
 
-    (userLookupService.getUserOrFail as jest.Mock).mockResolvedValueOnce({
+    (userLookupService.getUserOrFail as Mock).mockResolvedValueOnce({
       id: 'user-new',
       agent: { id: 'agent-new' },
     });
@@ -182,7 +183,7 @@ describe('IdentityResolveController (REST)', () => {
 
   it('returns an error when an existing user lacks an agent', async () => {
     (
-      userLookupService.getUserByAuthenticationID as jest.Mock
+      userLookupService.getUserByAuthenticationID as Mock
     ).mockResolvedValueOnce({
       id: 'user-existing',
       authenticationID: authenticationId,
@@ -201,21 +202,21 @@ describe('IdentityResolveController (REST)', () => {
 
   it('returns an error when the newly registered user lacks an agent', async () => {
     (
-      userLookupService.getUserByAuthenticationID as jest.Mock
+      userLookupService.getUserByAuthenticationID as Mock
     ).mockResolvedValueOnce(null);
-    (userLookupService.getUserByEmail as jest.Mock).mockResolvedValueOnce(null);
+    (userLookupService.getUserByEmail as Mock).mockResolvedValueOnce(null);
 
     const identity = buildIdentity();
-    (kratosService.getIdentityById as jest.Mock).mockResolvedValueOnce(
+    (kratosService.getIdentityById as Mock).mockResolvedValueOnce(
       identity
     );
 
-    (registrationService.registerNewUser as jest.Mock).mockResolvedValueOnce({
+    (registrationService.registerNewUser as Mock).mockResolvedValueOnce({
       id: 'user-new',
       authenticationID: authenticationId,
     });
 
-    (userLookupService.getUserOrFail as jest.Mock).mockResolvedValueOnce({
+    (userLookupService.getUserOrFail as Mock).mockResolvedValueOnce({
       id: 'user-new',
       agent: undefined,
     });

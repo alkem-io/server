@@ -1,3 +1,4 @@
+import { vi, type Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserService } from './user.service';
 import { User } from './user.entity';
@@ -44,7 +45,7 @@ describe('UserService', () => {
 });
 
 const ConfigServiceMock = {
-  get: jest.fn().mockReturnValue({
+  get: vi.fn().mockReturnValue({
     kratos_admin_base_url_server: 'mockUrl',
   }),
 };
@@ -52,19 +53,19 @@ const ConfigServiceMock = {
 describe('UserService.createOrLinkUserFromAgentInfo', () => {
   const createService = () => {
     const userAuthenticationLinkServiceMock = {
-      resolveExistingUser: jest.fn(),
-      ensureAuthenticationIdAvailable: jest.fn(),
+      resolveExistingUser: vi.fn(),
+      ensureAuthenticationIdAvailable: vi.fn(),
     } as {
-      resolveExistingUser: jest.Mock;
-      ensureAuthenticationIdAvailable: jest.Mock;
+      resolveExistingUser: Mock;
+      ensureAuthenticationIdAvailable: Mock;
     };
 
-    const loggerMock: LoggerService & { verbose: jest.Mock } = {
-      log: jest.fn(),
-      error: jest.fn(),
-      warn: jest.fn(),
-      debug: jest.fn(),
-      verbose: jest.fn(),
+    const loggerMock: LoggerService & { verbose: Mock } = {
+      log: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn(),
+      verbose: vi.fn(),
     };
 
     const service = new UserService(
@@ -72,7 +73,7 @@ describe('UserService.createOrLinkUserFromAgentInfo', () => {
       {} as any,
       {} as any,
       {} as any,
-      { deleteAgentInfoFromCache: jest.fn() } as any,
+      { deleteAgentInfoFromCache: vi.fn() } as any,
       userAuthenticationLinkServiceMock as any,
       {} as any,
       {} as any,
@@ -167,7 +168,7 @@ describe('UserService.createOrLinkUserFromAgentInfo', () => {
       null
     );
 
-    const createUserSpy = jest
+    const createUserSpy = vi
       .spyOn(service, 'createUser')
       .mockResolvedValue({ id: 'new-user' } as any);
 

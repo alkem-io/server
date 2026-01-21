@@ -49,7 +49,7 @@ Run `./run_validate_migration.sh`.
 The script will do the following:
 
 - Create a backup of your current database
-- Restore a snapshot from the `/db/reference_schema.sql` script
+- Restore a snapshot from a reference schema file (provide a PostgreSQL dump at `/db/reference_schema.sql`)
 - Run migrations
 - Export the migrated data from the tables to CSVs
 - Compare the CSVs to the CSVs in the `/reference_CSVs` folder

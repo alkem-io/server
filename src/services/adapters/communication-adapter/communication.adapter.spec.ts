@@ -1,3 +1,4 @@
+import { vi, type Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -10,14 +11,15 @@ import {
 } from '@alkemio/matrix-adapter-lib';
 import { RoomType as AlkemioRoomType } from '@common/enums/room.type';
 import { CommunicationSendMessageInput } from './dto/communication.dto.message.send';
+import type { Mocked } from 'vitest';
 
 describe('CommunicationAdapter', () => {
   let adapter: CommunicationAdapter;
-  let mockAmqpConnection: jest.Mocked<AmqpConnection>;
+  let mockAmqpConnection: Mocked<AmqpConnection>;
   let mockLogger: {
-    error: jest.Mock;
-    warn: jest.Mock;
-    verbose: jest.Mock;
+    error: Mock;
+    warn: Mock;
+    verbose: Mock;
   };
 
   /**
@@ -49,14 +51,14 @@ describe('CommunicationAdapter', () => {
 
   beforeEach(async () => {
     mockAmqpConnection = {
-      request: jest.fn(),
-      publish: jest.fn(),
-    } as unknown as jest.Mocked<AmqpConnection>;
+      request: vi.fn(),
+      publish: vi.fn(),
+    } as unknown as Mocked<AmqpConnection>;
 
     mockLogger = {
-      error: jest.fn(),
-      warn: jest.fn(),
-      verbose: jest.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      verbose: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -65,7 +67,7 @@ describe('CommunicationAdapter', () => {
         {
           provide: ConfigService,
           useValue: {
-            get: jest.fn().mockReturnValue({ enabled: true }),
+            get: vi.fn().mockReturnValue({ enabled: true }),
           },
         },
         {
@@ -351,15 +353,13 @@ describe('CommunicationAdapter', () => {
           new Error('Connection refused')
         );
 
-        try {
-          await adapter.listRooms();
-          fail('Expected exception to be thrown');
-        } catch (error) {
+        await expect(adapter.listRooms()).rejects.toSatisfy((error: unknown) => {
           expect(error).toBeInstanceOf(CommunicationAdapterException);
           expect((error as CommunicationAdapterException).operation).toBe(
             'listRooms'
           );
-        }
+          return true;
+        });
       });
     });
 
@@ -461,7 +461,7 @@ describe('CommunicationAdapter', () => {
           {
             provide: ConfigService,
             useValue: {
-              get: jest.fn().mockReturnValue({ enabled: false }),
+              get: vi.fn().mockReturnValue({ enabled: false }),
             },
           },
           {

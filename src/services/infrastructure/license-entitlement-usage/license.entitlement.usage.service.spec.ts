@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { LicenseEntitlementUsageService } from './license.entitlement.usage.service';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
@@ -13,10 +14,11 @@ import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { getEntityManagerToken } from '@nestjs/typeorm';
 import { EntityManager } from 'typeorm';
+import type { Mocked } from 'vitest';
 
 describe('LicenseEntitlementUsageService', () => {
   let service: LicenseEntitlementUsageService;
-  let entityManager: jest.Mocked<EntityManager>;
+  let entityManager: Mocked<EntityManager>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -30,11 +32,11 @@ describe('LicenseEntitlementUsageService', () => {
     );
     entityManager = module.get<EntityManager>(
       getEntityManagerToken('default')
-    ) as jest.Mocked<EntityManager>;
+    ) as Mocked<EntityManager>;
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('getEntitlementUsageForAccount', () => {

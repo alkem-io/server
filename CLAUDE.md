@@ -163,3 +163,10 @@ TypeScript path aliases configured in `tsconfig.json`:
 - `@constants/*` → `src/common/constants/*`
 - `@src/*` → `src/*`
 - `@test/*` → `test/*`
+
+## Active Technologies
+- TypeScript 5.3, Node.js 22 LTS (Volta pins 22.21.1) + NestJS 10, @nestjs/testing, ts-jest 29.2.2 → vitest 3.x (027-vitest-migration)
+- N/A (test infrastructure only) (027-vitest-migration)
+
+## Recent Changes
+- 027-vitest-migration: Added TypeScript 5.3, Node.js 22 LTS (Volta pins 22.21.1) + NestJS 10, @nestjs/testing, ts-jest 29.2.2 → vitest 3.x
