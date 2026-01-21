@@ -10,8 +10,6 @@ providers:
 entryPoints:
   web:
     address: ':80'
-  mysql:
-    address: ':3306'
   postgres:
     address: ':5432'
   synapse:
