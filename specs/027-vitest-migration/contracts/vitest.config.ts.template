@@ -66,37 +66,37 @@ export default defineConfig({
 
       // Coverage thresholds (matching current Jest config)
       thresholds: {
-        'src/schema-contract/classify/': {
+        'src/schema-contract/classify/**/*.ts': {
           lines: 90,
           statements: 90,
           functions: 90,
           branches: 85,
         },
-        'src/schema-contract/diff/': {
+        'src/schema-contract/diff/**/*.ts': {
           lines: 85,
           statements: 80,
           functions: 90,
           branches: 75,
         },
-        'src/schema-contract/governance/': {
+        'src/schema-contract/governance/**/*.ts': {
           lines: 75,
           statements: 70,
           functions: 65,
           branches: 60,
         },
-        'src/schema-contract/deprecation/': {
+        'src/schema-contract/deprecation/**/*.ts': {
           lines: 70,
           statements: 70,
           functions: 75,
           branches: 60,
         },
-        'src/schema-contract/model/': {
+        'src/schema-contract/model/**/*.ts': {
           lines: 100,
           statements: 100,
           functions: 100,
           branches: 100,
         },
-        'src/schema-contract/snapshot/': {
+        'src/schema-contract/snapshot/**/*.ts': {
           lines: 50,
           statements: 50,
           functions: 50,

@@ -27,6 +27,7 @@ Use `unplugin-swc` as the transpiler instead of Vitest's default esbuild.
 - SWC is the only next-gen compiler supporting both `legacyDecorator` and `emitDecoratorMetadata`
 
 ### Alternatives Considered
+
 | Alternative | Rejected Because |
 |-------------|------------------|
 | Default esbuild | Does not emit decorator metadata; breaks NestJS DI |
@@ -95,6 +96,7 @@ Use Vitest's `vi.*` API as direct replacements with `globals: true` enabled.
 - `globals: true` maintains Jest-like developer experience with no import changes needed
 
 ### Alternatives Considered
+
 | Alternative | Rejected Because |
 |-------------|------------------|
 | Explicit imports | Requires modifying all 112 test files; can be done later |
@@ -145,6 +147,7 @@ Replace `jest-mock` ModuleMocker with `@golevelup/ts-vitest` for NestJS auto-moc
   - Is specifically designed for NestJS testing scenarios
 
 ### Alternatives Considered
+
 | Alternative | Rejected Because |
 |-------------|------------------|
 | `vitest-mock-extended` | Doesn't handle NestJS DI tokens well |
@@ -193,6 +196,7 @@ Use `vite-tsconfig-paths` plugin to automatically resolve path aliases from `tsc
 - More maintainable than manual `resolve.alias` configuration
 
 ### Alternatives Considered
+
 | Alternative | Rejected Because |
 |-------------|------------------|
 | Manual `resolve.alias` | Requires manual sync with tsconfig.json; error-prone |
@@ -238,6 +242,7 @@ Use `@vitest/coverage-v8` with explicit `include` patterns and lcov reporter.
 - Explicit `include` patterns provide control over coverage scope
 
 ### Alternatives Considered
+
 | Alternative | Rejected Because |
 |-------------|------------------|
 | `@vitest/coverage-istanbul` | Slower; v8 now has feature parity |
@@ -286,6 +291,7 @@ coverage: {
 Target ≥50% faster test execution (soft target per spec).
 
 ### Rationale
+
 Based on industry benchmarks and architectural differences:
 
 | Metric | Jest | Vitest | Expected Improvement |
@@ -319,6 +325,7 @@ Single atomic cutover (one PR) per spec requirements.
 - Rollback via git revert if issues discovered
 
 ### Alternatives Considered
+
 | Alternative | Rejected Because |
 |-------------|------------------|
 | Gradual parallel migration | Spec requires single cutover |
@@ -326,13 +333,15 @@ Single atomic cutover (one PR) per spec requirements.
 
 ### Execution Plan
 
-**Step 1: Configuration Setup**
+#### Step 1: Configuration Setup
+
 1. Create `vitest.config.ts` with all settings
 2. Create `.swcrc` for decorator metadata
 3. Add dev dependencies
 4. Update `package.json` scripts
 
-**Step 2: Automated API Migration**
+#### Step 2: Automated API Migration
+
 Run codemod:
 ```bash
 npx codemod jest/vitest -t "src/**/*.spec.ts" "test/**/*.spec.ts" "contract-tests/**/*.spec.ts"
@@ -342,17 +351,20 @@ Handles:
 - `jest.*` → `vi.*` transformations
 - Import statement updates
 
-**Step 3: Manual Fixes**
+#### Step 3: Manual Fixes
+
 1. Replace `ModuleMocker` usage in `test/utils/default.mocker.factory.ts`
 2. Update mock factory patterns
 3. Fix any module mocking factory returns
 
-**Step 4: Cleanup**
+#### Step 4: Cleanup
+
 1. Remove Jest dependencies: `jest`, `jest-mock`, `ts-jest`, `@types/jest`
 2. Delete `test/config/jest.config*.js` files
 3. Remove Jest-related tsconfig types
 
-**Step 5: Validation**
+#### Step 5: Validation
+
 1. Run full test suite: `pnpm test:ci`
 2. Verify coverage output at `coverage-ci/lcov.info`
 3. Measure performance improvement

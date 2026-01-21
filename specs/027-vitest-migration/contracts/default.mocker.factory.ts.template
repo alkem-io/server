@@ -81,7 +81,7 @@ export const defaultMockerFactory = (token: InjectionToken | undefined) => {
     }
   }
 
-  throw Error(
-    `[Default Mocker] No provider found for token: ${JSON.stringify(token)}`
-  );
+  const error = new Error('[Default Mocker] No provider found for token');
+  (error as { details?: unknown }).details = { token };
+  throw error;
 };
