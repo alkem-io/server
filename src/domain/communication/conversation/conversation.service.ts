@@ -207,40 +207,28 @@ export class ConversationService {
   }
 
   /**
-   * Get the room for a conversation, creating it if it doesn't exist.
-   * This handles legacy conversations created with lazy room creation
-   * where the room was never actually created.
+   * Get the room for a conversation.
+   * Returns undefined if the conversation has no room (legacy conversations).
+   * Run adminCommunicationMigrateOrphanedConversations mutation to create rooms
+   * for legacy conversations before they can be used.
    */
   public async getRoom(conversationID: string): Promise<IRoom | undefined> {
     const conversation = await this.getConversationOrFail(conversationID, {
       relations: { room: true },
     });
-
-    // If room exists, return it
-    if (conversation.room) {
-      return conversation.room;
-    }
-
-    // Room doesn't exist - create it (handles legacy lazy-creation conversations)
-
-    return await this.ensureRoomExists(conversation);
+    return conversation.room;
   }
 
   /**
    * LEGACY MIGRATION: Ensure a conversation has a room, creating one if needed.
    *
-   * This handles orphaned conversations from the earlier "lazy room creation" approach
-   * where USER_VC conversations were created without a Matrix room, and the room was
-   * only created on the first message via the now-removed askVcQuestion mutation.
-   *
-   * If a user never sent a message, the conversation exists but has no room.
-   * This method creates the room on-demand when such a conversation is accessed.
+   * This method is ONLY used by the adminCommunicationMigrateOrphanedConversations
+   * mutation to bulk-create rooms for legacy conversations.
    *
    * Uses pessimistic locking to prevent race conditions where concurrent calls
    * could create multiple rooms for the same conversation.
    *
-   * Can be removed once all legacy conversations have been migrated (i.e., accessed
-   * at least once after this code is deployed).
+   * TODO: Delete this method after migration has been run on all environments.
    */
   public async ensureRoomExists(
     conversation: IConversation
@@ -253,12 +241,11 @@ export class ConversationService {
     // Use transaction with pessimistic lock to prevent race conditions
     return await this.entityManager.transaction(
       async transactionalEntityManager => {
-        // Lock the conversation row and reload with room + authorization relations
+        // 1. Lock the conversation row only (no JOINs = no LEFT JOIN issues with FOR UPDATE)
         const lockedConversation = await transactionalEntityManager.findOne(
           Conversation,
           {
             where: { id: conversation.id },
-            relations: { room: true, authorization: true },
             lock: { mode: 'pessimistic_write' },
           }
         );
@@ -271,9 +258,21 @@ export class ConversationService {
           return undefined;
         }
 
+        // 2. Load relations now that we hold the lock
+        const conversationWithRelations =
+          await transactionalEntityManager.findOne(Conversation, {
+            where: { id: conversation.id },
+            relations: { room: true, authorization: true },
+          });
+
+        if (!conversationWithRelations) {
+          // Shouldn't happen since we just locked it, but handle gracefully
+          return undefined;
+        }
+
         // Re-check after lock: another concurrent call may have created the room
-        if (lockedConversation.room) {
-          return lockedConversation.room;
+        if (conversationWithRelations.room) {
+          return conversationWithRelations.room;
         }
 
         // Get the two members of the conversation
@@ -302,22 +301,22 @@ export class ConversationService {
             RoomType.CONVERSATION_DIRECT
           );
 
-          lockedConversation.room = createdRoom as Room;
+          conversationWithRelations.room = createdRoom as Room;
 
           // Save the conversation within the same transaction
           await transactionalEntityManager.save(
             Conversation,
-            lockedConversation
+            conversationWithRelations
           );
 
           // Apply authorization to the new room
           // The conversation already has authorization rules from its original creation.
           // We cascade those rules to the newly created room.
-          if (lockedConversation.authorization) {
+          if (conversationWithRelations.authorization) {
             let roomAuth =
               this.roomAuthorizationService.applyAuthorizationPolicy(
                 createdRoom,
-                lockedConversation.authorization
+                conversationWithRelations.authorization
               );
             roomAuth =
               this.roomAuthorizationService.allowContributorsToCreateMessages(
@@ -652,5 +651,18 @@ export class ConversationService {
       select: ['agentId'],
     });
     return memberships.map(m => m.agentId);
+  }
+
+  /**
+   * Find all conversations that don't have a room.
+   * Used by admin migration to bulk-create rooms for legacy conversations.
+   * @returns Array of conversations without rooms
+   */
+  async findConversationsWithoutRooms(): Promise<IConversation[]> {
+    return await this.conversationRepository
+      .createQueryBuilder('conversation')
+      .leftJoinAndSelect('conversation.room', 'room')
+      .where('conversation.roomId IS NULL')
+      .getMany();
   }
 }
