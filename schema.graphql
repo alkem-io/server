@@ -5671,6 +5671,8 @@ type UserSettings {
   communication: UserSettingsCommunication!
   """The date at which the entity was created."""
   createdDate: DateTime!
+  """The home space settings for this User."""
+  homeSpace: UserSettingsHomeSpace!
   """The ID of the entity"""
   id: UUID!
   """The notification settings for this User."""
@@ -5684,6 +5686,13 @@ type UserSettings {
 type UserSettingsCommunication {
   """Allow Users to send messages to this User."""
   allowOtherUsersToSendMessages: Boolean!
+}
+
+type UserSettingsHomeSpace {
+  """Automatically redirect to home space instead of the dashboard."""
+  autoRedirect: Boolean!
+  """The ID of the Space to use as home. Null if not set."""
+  spaceID: String
 }
 
 type UserSettingsNotification {
@@ -7959,10 +7968,19 @@ input UpdateUserSettingsCommunicationInput {
 input UpdateUserSettingsEntityInput {
   """Settings related to this users Communication preferences."""
   communication: UpdateUserSettingsCommunicationInput
+  """Settings related to Home Space."""
+  homeSpace: UpdateUserSettingsHomeSpaceInput
   """Settings related to this users Notifications preferences."""
   notification: UpdateUserSettingsNotificationInput
   """Settings related to Privacy."""
   privacy: UpdateUserSettingsPrivacyInput
+}
+
+input UpdateUserSettingsHomeSpaceInput {
+  """Automatically redirect to home space instead of the dashboard."""
+  autoRedirect: Boolean
+  """The ID of the Space to use as home. Set to null to clear."""
+  spaceID: UUID
 }
 
 input UpdateUserSettingsInput {
