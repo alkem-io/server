@@ -27,7 +27,8 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * This migration:
  * 1. Creates conversation_membership pivot table with FKs
  * 2. Migrates conversation participants to conversation_membership:
- *    A) USER_VC conversations: insert user agent + VC agent
+ *    A) USER_VC conversations (direct virtualContributorID): insert user agent + VC agent
+ *    A') USER_VC conversations (wellKnownVirtualContributor): resolve via platform mapping, insert user agent + VC agent
  *    B) USER_USER pairs (share externalRoomID): merge into one, insert both user agents
  *    C) Standalone USER_USER: insert single user agent
  * 3. Drops legacy conversation columns (type, userID, virtualContributorID, wellKnownVirtualContributor)
@@ -95,6 +96,41 @@ export class ConversationArchitectureRefactor1764897584127
     `);
     console.log(
       `[Migration] 2A: Inserted ${userVcVcResult[1] ?? 0} VC agents for USER_VC conversations`
+    );
+
+    // 2A'. USER_VC conversations using wellKnownVirtualContributor (resolved via platform mapping)
+    // User membership first
+    const wellKnownUserResult = await queryRunner.query(`
+      INSERT INTO conversation_membership ("conversationId", "agentId")
+      SELECT c.id, u."agentId"
+      FROM conversation c
+      JOIN "user" u ON c."userID" = u.id
+      JOIN (
+        SELECT key as wk_name, (value)::uuid as vc_id
+        FROM platform, jsonb_each_text("wellKnownVirtualContributors")
+      ) p ON c."wellKnownVirtualContributor" = p.wk_name
+      WHERE c."virtualContributorID" IS NULL
+        AND c."wellKnownVirtualContributor" IS NOT NULL
+    `);
+    console.log(
+      `[Migration] 2A': Inserted ${wellKnownUserResult[1] ?? 0} user agents for wellKnown USER_VC conversations`
+    );
+
+    // VC membership via wellKnownVirtualContributor
+    const wellKnownVcResult = await queryRunner.query(`
+      INSERT INTO conversation_membership ("conversationId", "agentId")
+      SELECT c.id, vc."agentId"
+      FROM conversation c
+      JOIN (
+        SELECT key as wk_name, (value)::uuid as vc_id
+        FROM platform, jsonb_each_text("wellKnownVirtualContributors")
+      ) p ON c."wellKnownVirtualContributor" = p.wk_name
+      JOIN virtual_contributor vc ON vc.id = p.vc_id
+      WHERE c."virtualContributorID" IS NULL
+        AND c."wellKnownVirtualContributor" IS NOT NULL
+    `);
+    console.log(
+      `[Migration] 2A': Inserted ${wellKnownVcResult[1] ?? 0} VC agents for wellKnown USER_VC conversations`
     );
 
     // 2B. USER_USER pairs: find conversations sharing externalRoomID via their rooms
