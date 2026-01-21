@@ -27,6 +27,58 @@ import { LogContext } from '@common/enums/logging.context';
 import { TimelineResolverService } from '@services/infrastructure/entity-resolver/timeline.resolver.service';
 import { ICalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.interface';
 
+/**
+ * FIXME: Activity, Contribution, and Notification Tracking Limited to Users Only
+ *
+ * Current Limitation:
+ * The activity, contribution tracking, and notification systems only support User IDs,
+ * not Contributor IDs. When a VirtualContributor (VC) or Organization triggers an action,
+ * agentInfo.userID is empty ('') because AgentInfoService.buildAgentInfoForAgent()
+ * returns anonymous AgentInfo for non-user agents (see agent.info.service.ts:264-269).
+ *
+ * Technical Details:
+ * - activity.triggeredBy database column expects User UUID (uuid NOT NULL)
+ * - Activity types (IActivityLogEntry, IActivityLogEntryBase) define triggeredBy: IUser
+ * - Notification payloads (BaseEventPayload) expect triggeredBy to be User ID
+ * - ContributionReporter expects user.id and user.email fields
+ * - Empty string ('') fails PostgreSQL UUID validation for activities
+ * - Empty string ('') causes UserService.getUserOrFail() to throw for notifications
+ *
+ * Current Workaround:
+ * Methods in this service guard activity/contribution/notification tracking with
+ * `if (agentInfo.userID)` checks, silently skipping tracking for non-user agents
+ * (VCs, Organizations). Debug logs are emitted when tracking is skipped.
+ *
+ * Impact:
+ * ✅ Prevents database errors for VC/Org actions
+ * ✅ Preserves existing behavior for User actions
+ * ✅ Observable via DEBUG logs
+ * ❌ No activity log entries for VC/Org actions
+ * ❌ No contribution metrics for VC/Org actions
+ * ❌ No notifications sent for VC/Org actions
+ * ❌ Analytics incomplete for non-user contributors
+ *
+ * Proper Fix Requires:
+ * 1. Update activity.triggeredBy column to accept any Contributor UUID (or add discriminator)
+ * 2. Change IActivityLogEntry.triggeredBy from IUser to IContributor
+ * 3. Update IActivityLogEntryBase.triggeredBy from IUser to IContributor
+ * 4. Update ActivityLogService to use ContributorLookupService instead of UserService
+ * 5. Update BaseEventPayload.triggeredBy to use ContributorPayload instead of UserPayload
+ * 6. Update NotificationExternalAdapter.buildBaseEventPayload to use getContributorPayloadOrFail
+ * 7. Update activity log display logic to handle polymorphic contributor types
+ * 8. Update ContributionReporter to accept Contributor payloads instead of User-only
+ * 9. Add GraphQL schema versioning if needed for breaking changes
+ *
+ * Related Files:
+ * - src/core/authentication.agent.info/agent.info.service.ts (buildAgentInfoForAgent)
+ * - src/services/api/activity-log/activity.log.service.ts (getUserOrFail)
+ * - src/services/api/activity-log/dto/activity.log.dto.entry.base.interface.ts
+ * - src/services/api/activity-log/dto/activity.log.entry.interface.ts
+ * - src/platform/activity/activity.entity.ts (triggeredBy column)
+ * - src/services/external/elasticsearch/contribution-reporter (user-specific tracking)
+ * - src/services/adapters/notification-external-adapter/notification.external.adapter.ts
+ */
+
 @Injectable()
 export class RoomServiceEvents {
   constructor(
@@ -47,6 +99,15 @@ export class RoomServiceEvents {
     agentInfo: AgentInfo,
     messageOwnerId: string
   ) {
+    // FIXME: Notification system only tracks User IDs - see file-level comment for details
+    if (!agentInfo.userID) {
+      this.logger.debug?.(
+        `Skipping notification for comment reply: agentInfo.userID is empty (agent: ${agentInfo.agentID})`,
+        LogContext.COMMUNICATION
+      );
+      return;
+    }
+
     // Send the notification
     const notificationInput: NotificationInputCommentReply = {
       triggeredBy: agentInfo.userID,
@@ -64,6 +125,15 @@ export class RoomServiceEvents {
     agentInfo: AgentInfo,
     mentionedUserIDs?: string[]
   ) {
+    // FIXME: Notification system only tracks User IDs - see file-level comment for details
+    if (!agentInfo.userID) {
+      this.logger.debug?.(
+        `Skipping notification for callout comment: agentInfo.userID is empty (agent: ${agentInfo.agentID})`,
+        LogContext.COMMUNICATION
+      );
+      return;
+    }
+
     // Send the notification
     const notificationInput: NotificationInputCollaborationCalloutComment = {
       triggeredBy: agentInfo.userID,
@@ -86,6 +156,15 @@ export class RoomServiceEvents {
     agentInfo: AgentInfo,
     mentionedUserIDs?: string[]
   ) {
+    // FIXME: Notification system only tracks User IDs - see file-level comment for details
+    if (!agentInfo.userID) {
+      this.logger.debug?.(
+        `Skipping notification for post contribution comment: agentInfo.userID is empty (agent: ${agentInfo.agentID})`,
+        LogContext.COMMUNICATION
+      );
+      return;
+    }
+
     // Send the notification
     const notificationInput: NotificationInputCollaborationCalloutPostContributionComment =
       {
@@ -107,6 +186,15 @@ export class RoomServiceEvents {
     message: IMessage,
     agentInfo: AgentInfo
   ) {
+    // FIXME: Notification system only tracks User IDs - see file-level comment for details
+    if (!agentInfo.userID) {
+      this.logger.debug?.(
+        `Skipping notification for forum discussion comment: agentInfo.userID is empty (agent: ${agentInfo.agentID})`,
+        LogContext.COMMUNICATION
+      );
+      return;
+    }
+
     const forumDiscussionCommentNotificationInput: NotificationInputPlatformForumDiscussionComment =
       {
         triggeredBy: agentInfo.userID,
@@ -146,6 +234,15 @@ export class RoomServiceEvents {
       return;
     }
 
+    // FIXME: Notification system only tracks User IDs - see file-level comment for details
+    if (!agentInfo.userID) {
+      this.logger.debug?.(
+        `Skipping notification for calendar event comment: agentInfo.userID is empty (agent: ${agentInfo.agentID})`,
+        LogContext.COMMUNICATION
+      );
+      return;
+    }
+
     // Send the notification
     const notificationInput: NotificationInputCommunityCalendarEventComment = {
       triggeredBy: agentInfo.userID,
@@ -166,12 +263,20 @@ export class RoomServiceEvents {
     message: IMessage,
     agentInfo: AgentInfo
   ) {
-    const activityLogInput: ActivityInputCalloutPostComment = {
-      triggeredBy: agentInfo.userID,
-      post: post,
-      message: message,
-    };
-    this.activityAdapter.calloutPostComment(activityLogInput);
+    // FIXME: Activity system only tracks User IDs - see file-level comment for details
+    if (agentInfo.userID) {
+      const activityLogInput: ActivityInputCalloutPostComment = {
+        triggeredBy: agentInfo.userID,
+        post: post,
+        message: message,
+      };
+      this.activityAdapter.calloutPostComment(activityLogInput);
+    } else {
+      this.logger.debug?.(
+        `Skipping activity creation for post comment: agentInfo.userID is empty (agent: ${agentInfo.agentID})`,
+        LogContext.COMMUNICATION
+      );
+    }
 
     const community =
       await this.communityResolverService.getCommunityFromPostRoomOrFail(
@@ -181,28 +286,45 @@ export class RoomServiceEvents {
       await this.communityResolverService.getLevelZeroSpaceIdForCommunity(
         community.id
       );
-    this.contributionReporter.calloutPostCommentCreated(
-      {
-        id: post.id,
-        name: post.profile.displayName,
-        space: levelZeroSpaceID,
-      },
-      {
-        id: agentInfo.userID,
-        email: agentInfo.email,
-      }
-    );
+
+    // FIXME: Contribution reporter only tracks User IDs - see file-level comment
+    if (agentInfo.userID) {
+      this.contributionReporter.calloutPostCommentCreated(
+        {
+          id: post.id,
+          name: post.profile.displayName,
+          space: levelZeroSpaceID,
+        },
+        {
+          id: agentInfo.userID,
+          email: agentInfo.email,
+        }
+      );
+    } else {
+      this.logger.debug?.(
+        `Skipping contribution reporting for post comment: agentInfo.userID is empty (agent: ${agentInfo.agentID})`,
+        LogContext.COMMUNICATION
+      );
+    }
   }
 
   public async processActivityMessageRemoved(
     messageID: string,
     agentInfo: AgentInfo
   ) {
-    const activityMessageRemoved: ActivityInputMessageRemoved = {
-      triggeredBy: agentInfo.userID,
-      messageID: messageID,
-    };
-    await this.activityAdapter.messageRemoved(activityMessageRemoved);
+    // FIXME: Activity system only tracks User IDs - see file-level comment for details
+    if (agentInfo.userID) {
+      const activityMessageRemoved: ActivityInputMessageRemoved = {
+        triggeredBy: agentInfo.userID,
+        messageID: messageID,
+      };
+      await this.activityAdapter.messageRemoved(activityMessageRemoved);
+    } else {
+      this.logger.debug?.(
+        `Skipping activity creation for message removal: agentInfo.userID is empty (agent: ${agentInfo.agentID})`,
+        LogContext.COMMUNICATION
+      );
+    }
   }
 
   public async processActivityUpdateSent(
@@ -210,12 +332,20 @@ export class RoomServiceEvents {
     message: IMessage,
     agentInfo: AgentInfo
   ) {
-    const activityLogInput: ActivityInputUpdateSent = {
-      triggeredBy: agentInfo.userID,
-      updates: room,
-      message: message,
-    };
-    this.activityAdapter.updateSent(activityLogInput);
+    // FIXME: Activity system only tracks User IDs - see file-level comment for details
+    if (agentInfo.userID) {
+      const activityLogInput: ActivityInputUpdateSent = {
+        triggeredBy: agentInfo.userID,
+        updates: room,
+        message: message,
+      };
+      this.activityAdapter.updateSent(activityLogInput);
+    } else {
+      this.logger.debug?.(
+        `Skipping activity creation for update sent: agentInfo.userID is empty (agent: ${agentInfo.agentID})`,
+        LogContext.COMMUNICATION
+      );
+    }
 
     const community =
       await this.communityResolverService.getCommunityFromUpdatesOrFail(
@@ -226,17 +356,25 @@ export class RoomServiceEvents {
         community.id
       );
 
-    this.contributionReporter.updateCreated(
-      {
-        id: room.id,
-        name: '',
-        space: levelZeroSpaceID,
-      },
-      {
-        id: agentInfo.userID,
-        email: agentInfo.email,
-      }
-    );
+    // FIXME: Contribution reporter only tracks User IDs - see file-level comment
+    if (agentInfo.userID) {
+      this.contributionReporter.updateCreated(
+        {
+          id: room.id,
+          name: '',
+          space: levelZeroSpaceID,
+        },
+        {
+          id: agentInfo.userID,
+          email: agentInfo.email,
+        }
+      );
+    } else {
+      this.logger.debug?.(
+        `Skipping contribution reporting for update: agentInfo.userID is empty (agent: ${agentInfo.agentID})`,
+        LogContext.COMMUNICATION
+      );
+    }
   }
 
   public async processNotificationUpdateSent(
@@ -244,6 +382,15 @@ export class RoomServiceEvents {
     lastMessage: IMessage,
     agentInfo: AgentInfo
   ) {
+    // FIXME: Notification system only tracks User IDs - see file-level comment for details
+    if (!agentInfo.userID) {
+      this.logger.debug?.(
+        `Skipping notification for update sent: agentInfo.userID is empty (agent: ${agentInfo.agentID})`,
+        LogContext.COMMUNICATION
+      );
+      return;
+    }
+
     const notificationInput: NotificationInputUpdateSent = {
       triggeredBy: agentInfo.userID,
       updates: updates,
@@ -259,12 +406,20 @@ export class RoomServiceEvents {
     message: IMessage,
     agentInfo: AgentInfo
   ) {
-    const activityLogInput: ActivityInputCalloutDiscussionComment = {
-      triggeredBy: agentInfo.userID,
-      callout: callout,
-      message,
-    };
-    this.activityAdapter.calloutCommentCreated(activityLogInput);
+    // FIXME: Activity system only tracks User IDs - see file-level comment for details
+    if (agentInfo.userID) {
+      const activityLogInput: ActivityInputCalloutDiscussionComment = {
+        triggeredBy: agentInfo.userID,
+        callout: callout,
+        message,
+      };
+      this.activityAdapter.calloutCommentCreated(activityLogInput);
+    } else {
+      this.logger.debug?.(
+        `Skipping activity creation for callout comment: agentInfo.userID is empty (agent: ${agentInfo.agentID})`,
+        LogContext.COMMUNICATION
+      );
+    }
 
     const community =
       await this.communityResolverService.getCommunityFromCollaborationCalloutOrFail(
@@ -275,16 +430,24 @@ export class RoomServiceEvents {
         community.id
       );
 
-    this.contributionReporter.calloutCommentCreated(
-      {
-        id: callout.id,
-        name: callout.nameID,
-        space: levelZeroSpaceID,
-      },
-      {
-        id: agentInfo.userID,
-        email: agentInfo.email,
-      }
-    );
+    // FIXME: Contribution reporter only tracks User IDs - see file-level comment
+    if (agentInfo.userID) {
+      this.contributionReporter.calloutCommentCreated(
+        {
+          id: callout.id,
+          name: callout.nameID,
+          space: levelZeroSpaceID,
+        },
+        {
+          id: agentInfo.userID,
+          email: agentInfo.email,
+        }
+      );
+    } else {
+      this.logger.debug?.(
+        `Skipping contribution reporting for callout comment: agentInfo.userID is empty (agent: ${agentInfo.agentID})`,
+        LogContext.COMMUNICATION
+      );
+    }
   }
 }

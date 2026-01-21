@@ -24,6 +24,7 @@ import { ContributionReporterModule } from '@services/external/elasticsearch/con
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
 import { CommunityCommunicationModule } from '@domain/community/community-communication/community.communication.module';
+import { InAppNotificationModule } from '@platform/in-app-notification/in.app.notification.module';
 import { RoleSetResolverFieldsPublic } from './role.set.resolver.fields.public';
 import { LicenseModule } from '@domain/common/license/license.module';
 import { RoleSetLicenseService } from './role.set.service.license';
@@ -63,6 +64,7 @@ import { RoleSetResolverMutationsMembership } from './role.set.resolver.mutation
     ActivityAdapterModule,
     LifecycleModule,
     CommunityCommunicationModule,
+    InAppNotificationModule,
     TypeOrmModule.forFeature([RoleSet]),
     RoleSetCacheModule,
   ],

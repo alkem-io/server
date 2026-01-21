@@ -32,7 +32,7 @@ hosting:
 
   # Support for subscriptions enabled or not. These require a WebSocket connection
   subscriptions:
-    enabled: ${SUBSCRIPTIONS_ENABLED}:false
+    enabled: ${SUBSCRIPTIONS_ENABLED}:true
 
   # Support for subscriptions enabled or not. These require a WebSocket connection
   whiteboard_rt:
@@ -207,13 +207,6 @@ identity:
         session_cookie_name: ${KRATOS_SESSION_COOKIE_NAME}:ory_kratos_session
         session_extend_enabled: ${KRATOS_SESSION_EXTEND_ENABLED}:true
 
-        # Kratos session synchronization configuration supporting Matrix Synapse
-        session_sync:
-          enabled: ${SESSION_SYNC_ENABLED}:true
-          interval_ms: ${SESSION_SYNC_INTERVAL_MS}:300000
-          kratos_database:
-            database: ${KRATOS_DB_DATABASE}:kratos
-
 ## monitoring ##
 # This section defines settings used for DevOps - monitoring providers, endpoints, logging configuration.
 monitoring:
@@ -284,18 +277,8 @@ communications:
   enabled: ${COMMUNICATIONS_ENABLED}:true
   matrix:
     connection_retries: ${COMMUNICATIONS_MATRIX_CONNECTION_RETRIES}:5
-    connection_timeout: ${COMMUNICATIONS_MATRIX_CONNECTION_TIMEOUT}:30
-    admin_api:
-      url: ${SYNAPSE_ADMIN_URL}:http://localhost:8008
-      token: ${SYNAPSE_ADMIN_TOKEN}
-    oidc_provider_id: ${SYNAPSE_OIDC_PROVIDER_ID}:oidc-oidc-hydra
-    database:
-      host: ${SYNAPSE_DB_HOST}:localhost
-      port: ${SYNAPSE_DB_PORT}:5432
-      username: ${SYNAPSE_DB_USERNAME}:synapse
-      password: ${SYNAPSE_DB_PASSWORD}:synapse
-      database: ${SYNAPSE_DB_DATABASE}:synapse
-      ssl: ${SYNAPSE_DB_SSL}:false
+    # Timeout in milliseconds for RPC calls to the Matrix adapter
+    connection_timeout: ${COMMUNICATIONS_MATRIX_CONNECTION_TIMEOUT}:30000
   discussions:
     enabled: ${COMMUNICATIONS_DISCUSSIONS_ENABLED}:true
 
@@ -333,6 +316,23 @@ storage:
 
     # Flag setting whether database operations should be logged to the console.
     logging: ${ENABLE_ORM_LOGGING}:false
+
+    # Connection pool settings for PostgreSQL
+    pool:
+      # Maximum number of connections in the pool
+      max: ${DATABASE_POOL_MAX}:50
+      # Close idle connections after this many milliseconds
+      idle_timeout_ms: ${DATABASE_POOL_IDLE_TIMEOUT_MS}:30000
+      # Timeout for acquiring a connection in milliseconds
+      connection_timeout_ms: ${DATABASE_POOL_CONNECTION_TIMEOUT_MS}:10000
+
+    # PgBouncer compatibility settings
+    # Enable when connecting through PgBouncer in transaction pooling mode
+    pgbouncer:
+      # Set to true when using PgBouncer as connection pooler
+      enabled: ${PGBOUNCER_ENABLED}:false
+      # Statement timeout in milliseconds (prevents long-running queries from holding connections)
+      statement_timeout_ms: ${PGBOUNCER_STATEMENT_TIMEOUT_MS}:60000
 
   local_storage:
     # Absolute path

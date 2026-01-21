@@ -5,6 +5,7 @@ import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { User } from '@domain/community/user/user.entity';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { UNKNOWN_CONTRIBUTOR } from '@domain/community/contributor/unknown.contributor';
 import { EntityNotFoundException } from '@common/exceptions';
 import { AuthorizationCredential, LogContext } from '@common/enums';
 import { Credential, CredentialsSearchInput, ICredential } from '@domain/agent';
@@ -12,6 +13,7 @@ import { VirtualContributor } from '@domain/community/virtual-contributor/virtua
 import { Organization } from '@domain/community/organization/organization.entity';
 import { InvalidUUID } from '@common/exceptions/invalid.uuid';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { SYSTEM_ACTOR_IDS } from '@common/constants/system.actor.ids';
 
 export class ContributorLookupService {
   constructor(
@@ -209,6 +211,68 @@ export class ContributorLookupService {
         LogContext.COMMUNITY
       );
     return contributor;
+  }
+
+  /**
+   * Finds a contributor (User, Organization, or VirtualContributor) by their agent ID.
+   * @param agentId The ID of the agent associated with the contributor
+   * @param options Optional TypeORM find options (e.g., relations)
+   * @returns The contributor if found, null otherwise
+   */
+  async getContributorByAgentId(
+    agentId: string,
+    options?: Omit<FindOneOptions<User>, 'where'>
+  ): Promise<IContributor | null> {
+    if (SYSTEM_ACTOR_IDS.has(agentId)) {
+      return null;
+      // return UNKNOWN_CONTRIBUTOR;
+    }
+
+    if (!isUUID(agentId)) {
+      throw new InvalidUUID(
+        'Invalid UUID provided for agent ID!',
+        LogContext.COMMUNITY,
+        {
+          provided: agentId,
+        }
+      );
+    }
+
+    let contributor: IContributor | null = await this.entityManager.findOne(
+      User,
+      {
+        where: { agent: { id: agentId } },
+        ...options,
+      }
+    );
+    contributor ??= await this.entityManager.findOne(Organization, {
+      where: { agent: { id: agentId } },
+      ...options,
+    });
+    contributor ??= await this.entityManager.findOne(VirtualContributor, {
+      where: { agent: { id: agentId } },
+      ...options,
+    });
+
+    return contributor;
+  }
+
+  /**
+   * Finds a User by their agent ID.
+   * @param agentId The ID of the agent associated with the user
+   * @returns The user ID if found, undefined otherwise
+   */
+  async getUserIdByAgentId(agentId: string): Promise<string | undefined> {
+    if (!isUUID(agentId)) {
+      return undefined;
+    }
+
+    const user = await this.entityManager.findOne(User, {
+      where: { agent: { id: agentId } },
+      select: ['id'],
+    });
+
+    return user?.id;
   }
 
   private async getCredentialsByTypeHeldByAgent(

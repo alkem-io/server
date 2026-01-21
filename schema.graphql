@@ -3,23 +3,15 @@ A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date
 """
 scalar DateTime
 
-"""A decentralized identifier (DID) as per the W3C standard."""
-scalar DID
-
 """An Emoji."""
 scalar Emoji
-
-"""
-The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
-"""
-scalar JSON
 
 """
 A representation of a Lifecycle Definition, based on XState. It is serialized JSON.
 """
 scalar LifecycleDefinition
 
-"""A decentralized identifier (DID) as per the W3C standard."""
+"""A markdown string."""
 scalar Markdown
 
 """An identifier that originates from the underlying messaging platform."""
@@ -135,7 +127,7 @@ enum AuthorizationPolicyType {
   COLLABORATION
   COMMUNICATION
   COMMUNICATION_CONVERSATION
-  COMMUNICATION_CONVERSATIONS_SET
+  COMMUNICATION_MESSAGING
   COMMUNITY
   COMMUNITY_GUIDELINES
   DISCUSSION
@@ -299,6 +291,14 @@ enum ContentUpdatePolicy {
   ADMINS
   CONTRIBUTORS
   OWNER
+}
+
+"""The type of conversation event."""
+enum ConversationEventType {
+  CONVERSATION_CREATED
+  MESSAGE_RECEIVED
+  MESSAGE_REMOVED
+  READ_RECEIPT_UPDATED
 }
 
 enum CredentialType {
@@ -569,7 +569,6 @@ enum PlatformFeatureFlagName {
   LANDING_PAGE
   MEMO
   NOTIFICATIONS
-  SSI
   SUBSCRIPTIONS
   WHITEBOARDS
 }
@@ -729,6 +728,12 @@ enum TemplateType {
   POST
   SPACE
   WHITEBOARD
+}
+
+enum UrlResolverResultState {
+  Forbidden
+  NotFound
+  Resolved
 }
 
 enum UrlType {
@@ -1293,6 +1298,21 @@ type ActivityLogEntryUpdateSent implements ActivityLogEntry {
   updates: Room!
 }
 
+type AdminAuthenticationIDBackfillResult {
+  """Total users examined during the backfill run"""
+  processed: Int!
+  """
+  Batches that initially failed but succeeded after a retry during the run
+  """
+  retriedBatches: Int!
+  """
+  Users skipped because they already had authenticationID or no Kratos identity was found
+  """
+  skipped: Int!
+  """Users whose authenticationID was updated during the run"""
+  updated: Int!
+}
+
 type Agent {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -1300,38 +1320,12 @@ type Agent {
   createdDate: DateTime!
   """The Credentials held by this Agent."""
   credentials: [Credential!]
-  """The Decentralized Identifier (DID) for this Agent."""
-  did: DID
   """The ID of the entity"""
   id: UUID!
   """A type of entity that this Agent is being used with."""
   type: AgentType!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
-  """The Verfied Credentials for this Agent."""
-  verifiedCredentials: [VerifiedCredential!]
-}
-
-type AgentBeginVerifiedCredentialOfferOutput {
-  """
-  The token containing the information about issuer, callback endpoint and the credentials offered
-  """
-  jwt: String!
-  """
-  The QR Code Image to be offered on the client for scanning by a mobile wallet
-  """
-  qrCodeImg: String!
-}
-
-type AgentBeginVerifiedCredentialRequestOutput {
-  """
-  The token containing the information about issuer, callback endpoint and the credentials offered
-  """
-  jwt: String!
-  """
-  The QR Code Image to be offered on the client for scanning by a mobile wallet
-  """
-  qrCodeImg: String!
 }
 
 type AiPersona {
@@ -1444,10 +1438,6 @@ type Authorization {
   type: AuthorizationPolicyType
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
-  """
-  The set of verified credential rules that are contained by this Authorization Policy.
-  """
-  verifiedCredentialRules: [AuthorizationPolicyRuleVerifiedCredential!]
 }
 
 type AuthorizationPolicyRuleCredential {
@@ -1461,12 +1451,6 @@ type AuthorizationPolicyRulePrivilege {
   grantedPrivileges: [AuthorizationPrivilege!]!
   name: String
   sourcePrivilege: AuthorizationPrivilege!
-}
-
-type AuthorizationPolicyRuleVerifiedCredential {
-  claimRule: String!
-  credentialName: String!
-  grantedPrivileges: [AuthorizationPrivilege!]!
 }
 
 type Calendar {
@@ -1990,18 +1974,75 @@ type Conversation {
   createdDate: DateTime!
   """The ID of the entity"""
   id: UUID!
+  messaging: Messaging!
   """The room for this Conversation."""
   room: Room
+  """
+  The type of this Conversation (USER_USER or USER_VC), inferred from member agent types.
+  """
   type: CommunicationConversationType!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
-  """The user participating in this Conversation."""
+  """
+  The other user participating in this Conversation (excludes the current user).
+  """
   user: User
   """
   The virtual contributor participating in this Conversation (only for USER_AGENT conversations).
   """
   virtualContributor: VirtualContributor
-  wellKnownVirtualContributor: VirtualContributorWellKnown
+}
+
+"""
+Event fired when a new conversation is created. Each member receives a personalized event with the other participant resolved via conversation.user or conversation.virtualContributor.
+"""
+type ConversationCreatedEvent {
+  """The conversation that was created."""
+  conversation: Conversation!
+  """
+  The first message in the conversation. Null when conversation is created without an initial message.
+  """
+  message: Message
+}
+
+"""Payload for conversation subscription events."""
+type ConversationEventSubscriptionResult {
+  """Present when eventType is CONVERSATION_CREATED."""
+  conversationCreated: ConversationCreatedEvent
+  """
+  The type of event. Use this to determine which payload field is populated.
+  """
+  eventType: ConversationEventType!
+  """Present when eventType is MESSAGE_RECEIVED."""
+  messageReceived: ConversationMessageReceivedEvent
+  """Present when eventType is MESSAGE_REMOVED."""
+  messageRemoved: ConversationMessageRemovedEvent
+  """Present when eventType is READ_RECEIPT_UPDATED."""
+  readReceiptUpdated: ConversationReadReceiptUpdatedEvent
+}
+
+"""Event fired when a new message is received in a conversation."""
+type ConversationMessageReceivedEvent {
+  """The message that was received."""
+  message: Message!
+  """The room ID where the message was received."""
+  roomId: UUID!
+}
+
+"""Event fired when a message is removed from a conversation."""
+type ConversationMessageRemovedEvent {
+  """The ID of the message that was removed."""
+  messageId: MessageID!
+  """The room ID where the message was removed."""
+  roomId: UUID!
+}
+
+"""Event fired when a read receipt is updated in a conversation."""
+type ConversationReadReceiptUpdatedEvent {
+  """The ID of the last read event (message)."""
+  lastReadEventId: MessageID!
+  """The room ID where the read receipt was updated."""
+  roomId: UUID!
 }
 
 type CreateCalloutContributionData {
@@ -2212,23 +2253,6 @@ type CredentialDefinition {
   resourceID: String!
   """The type for this CredentialDefinition"""
   type: String!
-}
-
-type CredentialMetadataOutput {
-  """
-  A json description of what the claim contains and schema validation definition
-  """
-  context: String!
-  """The purpose of the credential"""
-  description: String!
-  """The display name of the credential"""
-  name: String!
-  """The schema that the credential will be validated against"""
-  schema: String!
-  """The credential types that are associated with this credential"""
-  types: [String!]!
-  """System recognized unique type for the credential"""
-  uniqueType: String!
 }
 
 type Discussion {
@@ -3246,21 +3270,9 @@ type Message {
   """The User or Virtual Contributor that created this Message"""
   sender: Contributor
   """The message being replied to"""
-  threadID: String
+  threadID: MessageID
   """The server timestamp in UTC"""
   timestamp: Float!
-}
-
-"""A detailed answer to a question, typically from an AI service."""
-type MessageAnswerQuestion {
-  """Error message if an error occurred"""
-  error: String
-  """The id of the answer; null if an error was returned"""
-  id: String
-  """The original question"""
-  question: String!
-  """Message successfully sent. If false, error will have the reason."""
-  success: Boolean!
 }
 
 """
@@ -3285,6 +3297,17 @@ type MessageParent {
   id: String!
   """The URL of the parent entity."""
   url: String!
+}
+
+type Messaging {
+  """The authorization rules for the entity"""
+  authorization: Authorization
+  """The date at which the entity was created."""
+  createdDate: DateTime!
+  """The ID of the entity"""
+  id: UUID!
+  """The date at which the entity was last updated."""
+  updatedDate: DateTime!
 }
 
 type Metadata {
@@ -3339,6 +3362,10 @@ type Mutation {
   addNotificationEmailToBlacklist(input: NotificationEmailAddressInput!): [String!]!
   """Add a reaction to a message from the specified Room."""
   addReactionToMessageInRoom(reactionData: RoomAddReactionToMessageInput!): Reaction!
+  """
+  Populate authenticationID for existing users by querying Kratos Admin API
+  """
+  adminBackfillAuthenticationIDs: AdminAuthenticationIDBackfillResult!
   """Ensure all community members are registered for communications."""
   adminCommunicationEnsureAccessToCommunications(communicationData: CommunicationAdminEnsureAccessInput!): Boolean!
   """Remove an orphaned room from messaging platform."""
@@ -3385,8 +3412,6 @@ type Mutation {
   aiServerUpdateAiPersona(aiPersonaData: UpdateAiPersonaInput!): AiPersona!
   """Apply to join the specified RoleSet in the entry Role."""
   applyForEntryRoleOnRoleSet(applicationData: ApplyForEntryRoleOnRoleSetInput!): Application!
-  """Ask the chat engine for guidance."""
-  askVcQuestion(input: ConversationVcAskQuestionInput!): MessageAnswerQuestion!
   """Assign the specified LicensePlan to an Account."""
   assignLicensePlanToAccount(planData: AssignLicensePlanToAccount!): Account!
   """Assign the specified LicensePlan to a Space."""
@@ -3415,12 +3440,6 @@ type Mutation {
   authorizationPolicyResetOnUser(authorizationResetData: UserAuthorizationResetInput!): User!
   """Reset the specified Authorization Policy to global admin privileges"""
   authorizationPolicyResetToGlobalAdminsAccess(authorizationID: String!): Authorization!
-  """Generate Alkemio user credential offer"""
-  beginAlkemioUserVerifiedCredentialOfferInteraction: AgentBeginVerifiedCredentialOfferOutput!
-  """Generate community member credential offer"""
-  beginCommunityMemberVerifiedCredentialOfferInteraction(communityID: String!): AgentBeginVerifiedCredentialOfferOutput!
-  """Generate verified credential share request"""
-  beginVerifiedCredentialRequestInteraction(types: [String!]!): AgentBeginVerifiedCredentialRequestOutput!
   """Deletes collections nameID-..."""
   cleanupCollections: MigrateEmbeddings!
   """Move an L1 Space up in the hierarchy, to be a L0 Space."""
@@ -3439,8 +3458,8 @@ type Mutation {
   createCalloutOnCalloutsSet(calloutData: CreateCalloutOnCalloutsSetInput!): Callout!
   """Create a new Contribution on the Callout."""
   createContributionOnCallout(contributionData: CreateContributionOnCalloutInput!): CalloutContribution!
-  """Create a new Conversation on the ConversationsSet."""
-  createConversationOnConversationsSet(conversationData: CreateConversationInput!): Conversation!
+  """Create a new Conversation on the Messaging."""
+  createConversation(conversationData: CreateConversationInput!): Conversation!
   """Creates a new Discussion as part of this Forum."""
   createDiscussion(createData: ForumCreateDiscussionInput!): Discussion!
   """Create a new CalendarEvent on the Calendar."""
@@ -3545,8 +3564,6 @@ type Mutation {
   eventOnInvitation(eventData: InvitationEventInput!): Invitation!
   """Trigger an event on the Organization Verification."""
   eventOnOrganizationVerification(eventData: OrganizationVerificationEventInput!): OrganizationVerification!
-  """User vote if a specific answer is relevant."""
-  feedbackOnVcAnswerRelevance(input: ConversationVcAnswerRelevanceInput!): Boolean!
   """Grants an authorization credential to an Organization."""
   grantCredentialToOrganization(grantCredentialData: GrantOrganizationAuthorizationCredentialInput!): Organization!
   """Grants an authorization credential to a User."""
@@ -3561,6 +3578,8 @@ type Mutation {
   joinRoleSet(joinData: JoinAsEntryRoleOnRoleSetInput!): RoleSet!
   """Reset the License with Entitlements on the specified Account."""
   licenseResetOnAccount(resetData: AccountLicenseResetInput!): Account!
+  """Marks a message as read for the current user."""
+  markMessageAsReadInRoom(messageData: RoomMarkMessageReadInput!): Boolean!
   """
   Mark notifications as read. If no filter is provided, marks all user notifications as read. If filter with types is provided, marks only those notification types as read.
   """
@@ -3597,7 +3616,7 @@ type Mutation {
   removeRoleFromVirtualContributor(roleData: RemoveRoleOnRoleSetFromVirtualContributorInput!): VirtualContributor!
   """Removes the specified User from specified user group"""
   removeUserFromGroup(membershipData: RemoveUserGroupMemberInput!): UserGroup!
-  """Resets the interaction with the chat engine."""
+  """Resets the interaction with the VC by recreating the room."""
   resetConversationVc(input: ConversationVcResetInput!): Conversation!
   """Reset all license plans on Accounts"""
   resetLicenseOnAccounts: Space!
@@ -3946,6 +3965,7 @@ type Platform {
   library: Library!
   """The Licensing in use by the platform."""
   licensingFramework: Licensing!
+  messaging: Messaging
   """Alkemio Services Metadata."""
   metadata: Metadata!
   """The RoleSet for this Platform."""
@@ -4232,13 +4252,6 @@ type Profile {
   visuals: [Visual!]!
 }
 
-type ProfileCredentialVerified {
-  """The email"""
-  userEmail: String!
-  """The vc."""
-  vc: String!
-}
-
 type PromptGraph {
   edges: [PromptGraphEdge!]
   end: String
@@ -4348,8 +4361,6 @@ type Query {
   aiServer: AiServer!
   """Active Spaces only, order by most active in the past X days."""
   exploreSpaces(options: ExploreSpacesInput): [Space!]!
-  """Get supported credential metadata"""
-  getSupportedVerifiedCredentialMetadata: [CredentialMetadataOutput!]!
   """
   Allow creation of inputs based on existing entities in the domain model
   """
@@ -4808,12 +4819,27 @@ type Room {
   authorization: Authorization
   """The date at which the entity was created."""
   createdDate: DateTime!
+  """The display name of the Room."""
+  displayName: String!
   """The ID of the entity"""
   id: UUID!
+  """The last message sent to the Room. Useful for conversation previews."""
+  lastMessage: Message
   """Messages in this Room."""
   messages: [Message!]!
   """The number of messages in the Room."""
-  messagesCount: Float!
+  messagesCount: Int!
+  """
+  Simple unread message count for the current user. Use unreadCounts for per-thread breakdown.
+  """
+  unreadCount: Int!
+  """Unread message counts for the current user in this Room."""
+  unreadCounts(
+    """
+    Optional thread IDs to get per-thread unread counts. If not provided, only room-level count is returned.
+    """
+    threadIds: [MessageID!]
+  ): RoomUnreadCounts!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
   """Virtual Contributor Interactions in this Room."""
@@ -4848,6 +4874,22 @@ type RoomMessageReactionEventSubscriptionResult {
   messageID: String
   """The type of event."""
   type: MutationType!
+}
+
+"""Unread message count for a specific thread in a Room."""
+type RoomThreadUnreadCount {
+  """The number of unread messages in the thread."""
+  count: Int!
+  """The thread ID."""
+  threadId: MessageID!
+}
+
+"""Unread message counts for a Room."""
+type RoomUnreadCounts {
+  """The total number of unread messages in the Room."""
+  roomUnreadCount: Int!
+  """Unread counts per thread, if thread IDs were requested."""
+  threadUnreadCounts: [RoomThreadUnreadCount!]
 }
 
 type SearchResultCallout implements SearchResult {
@@ -5027,7 +5069,7 @@ type SpaceAbout {
   """The Profile for the Space."""
   profile: Profile!
   """The Space provider (host)."""
-  provider: Contributor!
+  provider: Contributor
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
   """Who should get involved in this challenge"""
@@ -5221,6 +5263,10 @@ type Subscription {
     """The ID of the Callout to subscribe to."""
     calloutID: UUID!
   ): CalloutPostCreated!
+  """
+  Receive conversation events for the authenticated user. Includes new conversations, messages, and read receipts.
+  """
+  conversationEvents: ConversationEventSubscriptionResult!
   """Receive updates on Discussions"""
   forumDiscussionUpdated(
     """The IDs of the Forum to subscribe to all updates on."""
@@ -5232,8 +5278,6 @@ type Subscription {
   Counter of unread in-app notifications for the currently authenticated user.
   """
   notificationsUnreadCount: Int!
-  """Received on verified credentials change"""
-  profileVerifiedCredential: ProfileCredentialVerified!
   """Receive Room event"""
   roomEvents(
     """The Room to receive the events from."""
@@ -5457,6 +5501,18 @@ type UpdateWhiteboardGuestAccessResult {
   whiteboard: Whiteboard
 }
 
+type UrlResolverQueryClosestAncestor {
+  discussionId: UUID
+  innovationHubId: UUID
+  innovationPack: UrlResolverQueryResultInnovationPack
+  organizationId: UUID
+  space: UrlResolverQueryResultSpace
+  type: UrlType!
+  url: String!
+  userId: UUID
+  virtualContributor: UrlResolverQueryResultVirtualContributor
+}
+
 type UrlResolverQueryResultCalendar {
   calendarEventId: UUID
   id: UUID!
@@ -5483,11 +5539,13 @@ type UrlResolverQueryResultInnovationPack {
 }
 
 type UrlResolverQueryResults {
+  closestAncestor: UrlResolverQueryClosestAncestor
   discussionId: UUID
   innovationHubId: UUID
   innovationPack: UrlResolverQueryResultInnovationPack
   organizationId: UUID
   space: UrlResolverQueryResultSpace
+  state: UrlResolverResultState!
   type: UrlType!
   userId: UUID
   virtualContributor: UrlResolverQueryResultVirtualContributor
@@ -5516,10 +5574,6 @@ type UrlResolverQueryResultVirtualContributor {
 type User implements Contributor {
   """The account hosted by this User."""
   account: Account
-  """
-  The unique personal identifier (upn) for the account associated with this user profile
-  """
-  accountUpn: String!
   """The Agent representing this User."""
   agent: Agent!
   """Details about the authentication used for this User."""
@@ -5725,39 +5779,10 @@ type UsersInRolesResponse {
 }
 
 type VcInteraction {
-  """The date at which the entity was created."""
-  createdDate: DateTime!
-  """The ID of the entity"""
-  id: UUID!
-  room: Room!
-  threadID: String!
-  """The date at which the entity was last updated."""
-  updatedDate: DateTime!
-  virtualContributorID: UUID!
-}
-
-type VerifiedCredential {
-  """The time at which the credential is no longer valid"""
-  claims: [VerifiedCredentialClaim!]!
-  """JSON for the context in the credential"""
-  context: JSON!
-  """The time at which the credential is no longer valid"""
-  expires: String!
-  """The time at which the credential was issued"""
-  issued: String!
-  """The party issuing the VC"""
-  issuer: String!
-  """The name of the VC"""
-  name: String!
-  """The type of VC"""
-  type: String!
-}
-
-type VerifiedCredentialClaim {
-  """The name of the claim"""
-  name: JSON!
-  """The value for the claim"""
-  value: JSON!
+  """The thread ID (Matrix message ID) where VC is engaged"""
+  threadID: MessageID!
+  """The actor ID (agent.id) of the Virtual Contributor"""
+  virtualContributorID: String!
 }
 
 type VirtualContributor implements Contributor {
@@ -5817,6 +5842,10 @@ type VirtualContributor implements Contributor {
   status: VirtualContributorStatus!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
+  """
+  The well-known identifier of this Virtual Contributor, if configured at platform level.
+  """
+  wellKnownVirtualContributor: VirtualContributorWellKnown
 }
 
 type VirtualContributorModelCard {
@@ -6140,26 +6169,8 @@ input ContributorFilterInput {
   credentials: [AuthorizationCredential!]
 }
 
-input ConversationVcAnswerRelevanceInput {
-  """The ID of the conversation."""
-  conversationID: UUID!
-  """The answer id."""
-  id: String!
-  """Is the answer relevant or not."""
-  relevant: Boolean!
-}
-
-input ConversationVcAskQuestionInput {
-  """The ID of the conversation."""
-  conversationID: UUID!
-  """The language of the answer."""
-  language: String
-  """The question that is being asked."""
-  question: String!
-}
-
 input ConversationVcResetInput {
-  """The ID of the conversation."""
+  """The ID of the Conversation to reset."""
   conversationID: UUID!
 }
 
@@ -6349,7 +6360,6 @@ input CreateContributionOnCalloutInput {
 }
 
 input CreateConversationInput {
-  type: CommunicationConversationType!
   userID: UUID!
   virtualContributorID: UUID
   wellKnownVirtualContributor: VirtualContributorWellKnown
@@ -6676,7 +6686,6 @@ input CreateUserGroupInput {
 }
 
 input CreateUserInput {
-  accountUpn: String
   email: String!
   firstName: String
   lastName: String
@@ -7130,6 +7139,15 @@ input RoomAddReactionToMessageInput {
   messageID: MessageID!
   """The Room to remove a message from."""
   roomID: UUID!
+}
+
+input RoomMarkMessageReadInput {
+  """The message id that should be marked as read."""
+  messageID: MessageID!
+  """The Room to mark message as read in."""
+  roomID: UUID!
+  """The thread id if the message is in a thread."""
+  threadID: MessageID
 }
 
 input RoomRemoveMessageInput {
@@ -7840,7 +7858,6 @@ input UpdateUserGroupInput {
 }
 
 input UpdateUserInput {
-  accountUpn: String
   firstName: String
   ID: UUID!
   lastName: String

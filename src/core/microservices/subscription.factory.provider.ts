@@ -5,7 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { subscriptionFactory } from '@core/microservices/subscription.factory';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AlkemioConfig } from '@src/types';
-import { APP_ID } from '@common/constants';
+import { APP_ID, IS_SCHEMA_BOOTSTRAP } from '@common/constants';
 
 /***
  * Creates a factory provider for a subscription
@@ -24,13 +24,20 @@ export const subscriptionFactoryProvider = (
   useFactory: (
     appId: string,
     logger: LoggerService,
-    configService: ConfigService<AlkemioConfig, true>
+    configService: ConfigService<AlkemioConfig, true>,
+    isBootstrap: boolean
   ) =>
     subscriptionFactory(
       logger,
       configService,
       exchangeName,
-      appId ? `${queueName}-${appId}` : queueName
+      appId ? `${queueName}-${appId}` : queueName,
+      isBootstrap
     ),
-  inject: [APP_ID, WINSTON_MODULE_NEST_PROVIDER, ConfigService],
+  inject: [
+    APP_ID,
+    WINSTON_MODULE_NEST_PROVIDER,
+    ConfigService,
+    { token: IS_SCHEMA_BOOTSTRAP, optional: true },
+  ],
 });

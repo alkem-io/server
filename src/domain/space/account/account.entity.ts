@@ -25,7 +25,7 @@ export class Account extends AuthorizableEntity implements IAccount {
   })
   spaces!: Space[];
 
-  @Column('json', { nullable: false })
+  @Column('jsonb', { nullable: false })
   baselineLicensePlan!: IAccountLicensePlan;
 
   @OneToOne(() => Agent, {

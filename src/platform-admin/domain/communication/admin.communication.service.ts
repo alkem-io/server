@@ -12,10 +12,12 @@ import { CommunicationAdminEnsureAccessInput } from './dto/admin.communication.d
 import { CommunicationAdminOrphanedUsageResult } from './dto/admin.communication.dto.orphaned.usage.result';
 import { CommunicationAdminRoomResult } from './dto/admin.communication.dto.orphaned.room.result';
 import { CommunicationAdminRemoveOrphanedRoomInput } from './dto/admin.communication.dto.remove.orphaned.room';
+import { CommunicationAdminMigrateRoomsResult } from './dto/admin.communication.dto.migrate.rooms.result';
 import { ValidationException } from '@common/exceptions';
 import { RoleName } from '@common/enums/role.name';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { ConversationService } from '@domain/communication/conversation/conversation.service';
 
 @Injectable()
 export class AdminCommunicationService {
@@ -24,6 +26,7 @@ export class AdminCommunicationService {
     private communicationService: CommunicationService,
     private communityService: CommunityService,
     private roleSetService: RoleSetService,
+    private conversationService: ConversationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -73,24 +76,27 @@ export class AdminCommunicationService {
       room.id,
       room.displayName
     );
-    result.roomID = room.externalRoomID;
-    result.members = await this.communicationAdapter.getRoomMembers(
-      room.externalRoomID
-    );
-    // check which ones are missing
+    result.roomID = room.id;
+    // Use getRoomMembers for efficient membership-only lookup (no message history)
+    result.members = await this.communicationAdapter.getRoomMembers(room.id);
+    // check which ones are missing - compare using agent.id (actorId)
     for (const communityMember of communityMembers) {
+      const memberActorId = communityMember.agent?.id;
+      if (!memberActorId) {
+        continue; // skip members without agent
+      }
       const inCommunicationRoom = result.members.find(
-        roomMember => roomMember === communityMember.communicationID
+        roomMember => roomMember === memberActorId
       );
       if (!inCommunicationRoom) {
-        result.missingMembers.push(communityMember.communicationID);
+        result.missingMembers.push(memberActorId);
       }
     }
 
-    // check which ones are extra
+    // check which ones are extra - compare using agent.id (actorId)
     for (const roomMember of result.members) {
       const inCommunity = communityMembers.find(
-        communityMember => communityMember.communicationID === roomMember
+        communityMember => communityMember.agent?.id === roomMember
       );
       if (!inCommunity) {
         result.extraMembers.push(roomMember);
@@ -123,24 +129,30 @@ export class AdminCommunicationService {
       RoleName.MEMBER
     );
     for (const communityMember of communityMembers) {
+      const memberActorId = communityMember.agent?.id;
+      if (!memberActorId) {
+        continue; // skip members without agent
+      }
       await this.communicationService.addContributorToCommunications(
         communication,
-        communityMember.communicationID
+        memberActorId
       );
     }
     return true;
   }
 
-  async updateMatrixRoomState(
+  async updateRoomState(
     roomID: string,
     isPublic: boolean,
-    isWorldVisible: boolean
+    _isWorldVisible: boolean
   ) {
-    return await this.communicationAdapter.updateMatrixRoomState(
+    await this.communicationAdapter.updateRoom(
       roomID,
-      isWorldVisible,
+      undefined,
+      undefined,
       isPublic
     );
+    return await this.communicationAdapter.getRoom(roomID);
   }
 
   async removeOrphanedRoom(
@@ -155,7 +167,7 @@ export class AdminCommunicationService {
         LogContext.COMMUNICATION
       );
     }
-    return await this.communicationAdapter.removeRoom(orphanedRoomID);
+    return await this.communicationAdapter.deleteRoom(orphanedRoomID);
   }
 
   async orphanedUsage(): Promise<CommunicationAdminOrphanedUsageResult> {
@@ -167,24 +179,23 @@ export class AdminCommunicationService {
     const roomsUsed = await this.getRoomsUsed();
 
     // Get all the rooms used in Matrix + filter to only create results for those not used
-    const matrixRooms = await this.communicationAdapter.adminGetAllRooms();
-    for (const matrixRoom of matrixRooms) {
-      const found = roomsUsed.find(roomID => roomID === matrixRoom.id);
+    const matrixRoomIds = await this.communicationAdapter.listRooms();
+    for (const matrixRoomId of matrixRoomIds) {
+      const found = roomsUsed.find(roomID => roomID === matrixRoomId);
       if (!found) {
-        const roomNotUsed = await this.communicationAdapter.getCommunityRoom(
-          matrixRoom.id
-        );
+        const roomNotUsed =
+          await this.communicationAdapter.getRoom(matrixRoomId);
         const roomResult = new CommunicationAdminRoomResult(
           roomNotUsed.id,
           roomNotUsed.displayName
         );
-        roomResult.members = matrixRoom.members;
+        roomResult.members = roomNotUsed.members;
         result.rooms.push(roomResult);
       }
     }
 
     this.logger.verbose?.(
-      `communication admin: found ${roomsUsed.length} rooms used; found ${matrixRooms.length} rooms in Matrix; found ${result.rooms.length} rooms not used`,
+      `communication admin: found ${roomsUsed.length} rooms used; found ${matrixRoomIds.length} rooms in Matrix; found ${result.rooms.length} rooms not used`,
       LogContext.COMMUNICATION
     );
 
@@ -199,9 +210,61 @@ export class AdminCommunicationService {
       const communication =
         await this.communicationService.getCommunicationOrFail(communicationID);
       const communicationRoomsUsed =
-        await this.communicationService.getRoomsUsed(communication);
+        this.communicationService.getRoomIds(communication);
       roomsUsed = roomsUsed.concat(communicationRoomsUsed);
     }
     return roomsUsed;
+  }
+
+  /**
+   * Migrate legacy conversations by creating rooms for those that don't have one.
+   * This handles orphaned conversations from the "lazy room creation" era.
+   * @returns Migration result with counts and any errors encountered
+   */
+  async migrateConversationRooms(): Promise<CommunicationAdminMigrateRoomsResult> {
+    const result = new CommunicationAdminMigrateRoomsResult();
+
+    const conversationsWithoutRooms =
+      await this.conversationService.findConversationsWithoutRooms();
+
+    this.logger.verbose?.(
+      `Found ${conversationsWithoutRooms.length} conversations without rooms to migrate`,
+      LogContext.COMMUNICATION
+    );
+
+    for (const conversation of conversationsWithoutRooms) {
+      try {
+        const room =
+          await this.conversationService.ensureRoomExists(conversation);
+        if (room) {
+          result.migrated++;
+          this.logger.verbose?.(
+            `Migrated conversation ${conversation.id} - created room ${room.id}`,
+            LogContext.COMMUNICATION
+          );
+        } else {
+          result.failed++;
+          result.errors.push(
+            `Conversation ${conversation.id}: room creation returned undefined`
+          );
+        }
+      } catch (error) {
+        result.failed++;
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        result.errors.push(`Conversation ${conversation.id}: ${errorMessage}`);
+        this.logger.warn(
+          `Failed to migrate conversation ${conversation.id}: ${errorMessage}`,
+          LogContext.COMMUNICATION
+        );
+      }
+    }
+
+    this.logger.verbose?.(
+      `Migration complete: ${result.migrated} migrated, ${result.failed} failed`,
+      LogContext.COMMUNICATION
+    );
+
+    return result;
   }
 }
