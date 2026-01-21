@@ -42,6 +42,7 @@ import { calculateSearchCursor } from '@services/api/search/util';
 import { SearchFilterInput } from '@services/api/search/dto/inputs';
 import { SearchCategory } from '@services/api/search/search.category';
 import { isDefined } from '@common/utils';
+import { CalloutsSetType } from '@common/enums/callouts.set.type';
 
 type PostParents = {
   post: Post;
@@ -549,7 +550,10 @@ export class SearchResultService {
     const calloutIds = rawSearchResults.map(hit => hit.result.id);
 
     const callouts = await this.entityManager.find(Callout, {
-      where: { id: In(calloutIds) },
+      where: {
+        id: In(calloutIds),
+        calloutsSet: { type: CalloutsSetType.COLLABORATION },
+      },
       relations: {
         calloutsSet: true,
         framing: {
@@ -734,6 +738,7 @@ export class SearchResultService {
             id: In(postIds),
           },
         },
+        calloutsSet: { type: CalloutsSetType.COLLABORATION },
       },
       relations: {
         contributions: {
@@ -878,6 +883,7 @@ export class SearchResultService {
               id: In(memoIds),
             },
           },
+          calloutsSet: { type: CalloutsSetType.COLLABORATION },
         },
         {
           framing: {
@@ -885,6 +891,7 @@ export class SearchResultService {
               id: In(memoIds),
             },
           },
+          calloutsSet: { type: CalloutsSetType.COLLABORATION },
         },
       ],
       relations: {
@@ -1065,6 +1072,7 @@ export class SearchResultService {
               id: In(whiteboardIds),
             },
           },
+          calloutsSet: { type: CalloutsSetType.COLLABORATION },
         },
         {
           framing: {
@@ -1072,6 +1080,7 @@ export class SearchResultService {
               id: In(whiteboardIds),
             },
           },
+          calloutsSet: { type: CalloutsSetType.COLLABORATION },
         },
       ],
       relations: {
