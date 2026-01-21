@@ -869,8 +869,8 @@ type Callout {
   posts: [Post!]
   """The user that published this Callout"""
   publishedBy: User
-  """The timestamp for the publishing of this Callout."""
-  publishedDate: Float
+  """The date and time when this Callout was published."""
+  publishedDate: DateTime
   """The Callout Settings associated with this Callout."""
   settings: CalloutSettings!
   """The sorting order for this Callout."""
