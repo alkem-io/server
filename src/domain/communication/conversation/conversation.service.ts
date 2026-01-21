@@ -253,12 +253,11 @@ export class ConversationService {
     // Use transaction with pessimistic lock to prevent race conditions
     return await this.entityManager.transaction(
       async transactionalEntityManager => {
-        // Lock the conversation row and reload with room + authorization relations
+        // 1. Lock the conversation row only (no JOINs = no LEFT JOIN issues with FOR UPDATE)
         const lockedConversation = await transactionalEntityManager.findOne(
           Conversation,
           {
             where: { id: conversation.id },
-            relations: { room: true, authorization: true },
             lock: { mode: 'pessimistic_write' },
           }
         );
@@ -271,9 +270,21 @@ export class ConversationService {
           return undefined;
         }
 
+        // 2. Load relations now that we hold the lock
+        const conversationWithRelations =
+          await transactionalEntityManager.findOne(Conversation, {
+            where: { id: conversation.id },
+            relations: { room: true, authorization: true },
+          });
+
+        if (!conversationWithRelations) {
+          // Shouldn't happen since we just locked it, but handle gracefully
+          return undefined;
+        }
+
         // Re-check after lock: another concurrent call may have created the room
-        if (lockedConversation.room) {
-          return lockedConversation.room;
+        if (conversationWithRelations.room) {
+          return conversationWithRelations.room;
         }
 
         // Get the two members of the conversation
@@ -302,22 +313,22 @@ export class ConversationService {
             RoomType.CONVERSATION_DIRECT
           );
 
-          lockedConversation.room = createdRoom as Room;
+          conversationWithRelations.room = createdRoom as Room;
 
           // Save the conversation within the same transaction
           await transactionalEntityManager.save(
             Conversation,
-            lockedConversation
+            conversationWithRelations
           );
 
           // Apply authorization to the new room
           // The conversation already has authorization rules from its original creation.
           // We cascade those rules to the newly created room.
-          if (lockedConversation.authorization) {
+          if (conversationWithRelations.authorization) {
             let roomAuth =
               this.roomAuthorizationService.applyAuthorizationPolicy(
                 createdRoom,
-                lockedConversation.authorization
+                conversationWithRelations.authorization
               );
             roomAuth =
               this.roomAuthorizationService.allowContributorsToCreateMessages(
