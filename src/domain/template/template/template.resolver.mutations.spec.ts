@@ -3,6 +3,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { LoggerService } from '@nestjs/common';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
+import { vi } from 'vitest';
 import { TemplateResolverMutations } from './template.resolver.mutations';
 import { TemplateService } from './template.service';
 import { TemplateAuthorizationService } from './template.service.authorization';
@@ -13,23 +14,23 @@ describe('TemplateResolverMutations', () => {
   beforeEach(() => {
     resolver = new TemplateResolverMutations(
       {
-        grantAccessOrFail: jest.fn(),
+        grantAccessOrFail: vi.fn(),
       } as unknown as AuthorizationService,
       {
-        saveAll: jest.fn(),
+        saveAll: vi.fn(),
       } as unknown as AuthorizationPolicyService,
       {
-        getSpaceOrFail: jest.fn(),
+        getSpaceOrFail: vi.fn(),
       } as unknown as SpaceLookupService,
       {
-        applyAuthorizationPolicy: jest.fn(),
+        applyAuthorizationPolicy: vi.fn(),
       } as unknown as TemplateAuthorizationService,
       {
-        getTemplateOrFail: jest.fn(),
-        updateTemplate: jest.fn(),
-        updateTemplateFromSpace: jest.fn(),
-        delete: jest.fn(),
-        isTemplateInUseInTemplateDefault: jest.fn(),
+        getTemplateOrFail: vi.fn(),
+        updateTemplate: vi.fn(),
+        updateTemplateFromSpace: vi.fn(),
+        delete: vi.fn(),
+        isTemplateInUseInTemplateDefault: vi.fn(),
       } as unknown as TemplateService,
       MockWinstonProvider.useValue as unknown as LoggerService
     );

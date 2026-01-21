@@ -12,11 +12,12 @@ import { getEntityManagerToken } from '@nestjs/typeorm';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { EntityManager } from 'typeorm';
+import { type Mocked, vi } from 'vitest';
 import { LicenseEntitlementUsageService } from './license.entitlement.usage.service';
 
 describe('LicenseEntitlementUsageService', () => {
   let service: LicenseEntitlementUsageService;
-  let entityManager: jest.Mocked<EntityManager>;
+  let entityManager: Mocked<EntityManager>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -30,11 +31,11 @@ describe('LicenseEntitlementUsageService', () => {
     );
     entityManager = module.get<EntityManager>(
       getEntityManagerToken('default')
-    ) as jest.Mocked<EntityManager>;
+    ) as Mocked<EntityManager>;
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('getEntitlementUsageForAccount', () => {

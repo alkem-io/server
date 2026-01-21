@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { ValueProvider } from '@nestjs/common';
 import { PublicPart } from '../utils/public-part';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
@@ -7,10 +8,10 @@ export const MockUserLookupService: ValueProvider<
 > = {
   provide: UserLookupService,
   useValue: {
-    getUserByNameIdOrFail: jest.fn(),
-    getUserByUUID: jest.fn(),
-    getUserOrFail: jest.fn(),
-    isRegisteredUser: jest.fn(),
-    getUserWithAgent: jest.fn(),
+    getUserByNameIdOrFail: vi.fn(),
+    getUserByUUID: vi.fn(),
+    getUserOrFail: vi.fn(),
+    isRegisteredUser: vi.fn(),
+    getUserWithAgent: vi.fn(),
   },
 };

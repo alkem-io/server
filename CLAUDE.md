@@ -178,3 +178,10 @@ Key rules:
 - `noDebugger`: error
 - `noExplicitAny`: off (legacy codebase compatibility)
 - Underscore prefix (`_param`) ignores unused parameters
+
+## Active Technologies
+- TypeScript 5.3, Node.js 22 LTS (Volta pins 22.21.1) + NestJS 10, Vitest 4.x, Biome for linting/formatting
+
+## Recent Changes
+- 028-migrate-biome-linting: Migrated from ESLint + Prettier to Biome for linting and formatting
+- 027-vitest-migration: Migrated from Jest to Vitest for testing

@@ -20,4 +20,11 @@ export class UpdateCollaborationFromSpaceTemplateInput {
     description: 'Add the Callouts from the Collaboration Template',
   })
   addCallouts = false;
+
+  @Field(() => Boolean, {
+    nullable: true,
+    description:
+      'Delete existing Callouts before applying template. When combined with addCallouts=true, enables Replace All behavior.',
+  })
+  deleteExistingCallouts = false;
 }

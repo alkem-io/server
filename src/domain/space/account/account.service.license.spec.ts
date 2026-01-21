@@ -8,6 +8,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { LicensingCredentialBasedService } from '@platform/licensing/credential-based/licensing-credential-based-entitlements-engine/licensing.credential.based.service';
 import { LicensingWingbackSubscriptionService } from '@platform/licensing/wingback-subscription/licensing.wingback.subscription.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
+import { vi } from 'vitest';
 import { IAccountLicensePlan } from '../account.license.plan/account.license.plan.interface';
 import { SpaceLicenseService } from '../space/space.service.license';
 import { IAccount } from './account.interface';
@@ -20,15 +21,15 @@ describe('AccountLicenseService', () => {
 
   beforeEach(async () => {
     const mockLicenseService = {
-      reset: jest.fn().mockImplementation(license => license),
+      reset: vi.fn().mockImplementation(license => license),
     };
 
     mockLogger = {
-      warn: jest.fn(),
-      verbose: jest.fn(),
-      error: jest.fn(),
-      debug: jest.fn(),
-      log: jest.fn(),
+      warn: vi.fn(),
+      verbose: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+      log: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -393,11 +394,11 @@ describe('AccountLicenseService', () => {
 
     beforeEach(() => {
       mockCredentialBasedService = {
-        getEntitlementIfGranted: jest.fn(),
+        getEntitlementIfGranted: vi.fn(),
       };
       mockWingbackService = {
-        getEntitlements: jest.fn(),
-        isEnabled: jest.fn().mockReturnValue(true),
+        getEntitlements: vi.fn(),
+        isEnabled: vi.fn().mockReturnValue(true),
       };
 
       service['licensingCredentialBasedService'] = mockCredentialBasedService;
@@ -524,11 +525,11 @@ describe('AccountLicenseService', () => {
 
     beforeEach(() => {
       mockCredentialBasedService = {
-        getEntitlementIfGranted: jest.fn(),
+        getEntitlementIfGranted: vi.fn(),
       };
       mockWingbackService = {
-        getEntitlements: jest.fn(),
-        isEnabled: jest.fn().mockReturnValue(true),
+        getEntitlements: vi.fn(),
+        isEnabled: vi.fn().mockReturnValue(true),
       };
 
       service['licensingCredentialBasedService'] = mockCredentialBasedService;

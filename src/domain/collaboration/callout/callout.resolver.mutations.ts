@@ -51,20 +51,20 @@ import { UpdateCalloutVisibilityInput } from './dto/callout.dto.update.visibilit
 @Resolver()
 export class CalloutResolverMutations {
   constructor(
-    private communityResolverService: CommunityResolverService,
-    private contributionReporter: ContributionReporterService,
-    private activityAdapter: ActivityAdapter,
-    private notificationAdapterSpace: NotificationSpaceAdapter,
-    private authorizationService: AuthorizationService,
-    private authorizationPolicyService: AuthorizationPolicyService,
-    private calloutService: CalloutService,
-    private calloutAuthorizationService: CalloutAuthorizationService,
-    private roomResolverService: RoomResolverService,
-    private contributionAuthorizationService: CalloutContributionAuthorizationService,
-    private calloutContributionService: CalloutContributionService,
-    private temporaryStorageService: TemporaryStorageService,
+    private readonly communityResolverService: CommunityResolverService,
+    private readonly contributionReporter: ContributionReporterService,
+    private readonly activityAdapter: ActivityAdapter,
+    private readonly notificationAdapterSpace: NotificationSpaceAdapter,
+    private readonly authorizationService: AuthorizationService,
+    private readonly authorizationPolicyService: AuthorizationPolicyService,
+    private readonly calloutService: CalloutService,
+    private readonly calloutAuthorizationService: CalloutAuthorizationService,
+    private readonly roomResolverService: RoomResolverService,
+    private readonly contributionAuthorizationService: CalloutContributionAuthorizationService,
+    private readonly calloutContributionService: CalloutContributionService,
+    private readonly temporaryStorageService: TemporaryStorageService,
     @Inject(SUBSCRIPTION_CALLOUT_POST_CREATED)
-    private postCreatedSubscription: PubSubEngine
+    private readonly postCreatedSubscription: PubSubEngine
   ) {}
 
   @Mutation(() => ICallout, {

@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { defaultMockerFactory } from '@test/utils';
+import { vi } from 'vitest';
 import { AppController } from './app.controller';
 
 describe('AppController', () => {
@@ -17,12 +18,12 @@ describe('AppController', () => {
 
   describe('root', () => {
     it('should return "Hello Alkemio!"', () => {
-      const spy = jest.spyOn(appController, 'getHello');
+      const spy = vi.spyOn(appController, 'getHello');
       spy.mockReturnValue('Hello Alkemio!');
 
       const result = appController.getHello();
 
-      expect(spy).toBeCalledTimes(1);
+      expect(spy).toHaveBeenCalledTimes(1);
       expect(result).toBe('Hello Alkemio!');
     });
   });

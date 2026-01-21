@@ -2,6 +2,7 @@ import { Field, InputType } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
 import { ValidateNested } from 'class-validator';
 import { CreateUserSettingsCommunicationInput } from './user.settings.communications.dto.create';
+import { CreateUserSettingsHomeSpaceInput } from './user.settings.home.space.dto.create';
 import { CreateUserSettingsNotificationInput } from './user.settings.notification.dto.create';
 import { CreateUserSettingsPrivacyInput } from './user.settings.privacy.dto.create';
 
@@ -30,4 +31,12 @@ export class CreateUserSettingsInput {
   @ValidateNested()
   @Type(() => CreateUserSettingsNotificationInput)
   notification?: CreateUserSettingsNotificationInput;
+
+  @Field(() => CreateUserSettingsHomeSpaceInput, {
+    nullable: true,
+    description: 'Settings related to Home Space.',
+  })
+  @ValidateNested()
+  @Type(() => CreateUserSettingsHomeSpaceInput)
+  homeSpace?: CreateUserSettingsHomeSpaceInput;
 }

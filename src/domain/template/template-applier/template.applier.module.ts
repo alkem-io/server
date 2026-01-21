@@ -1,4 +1,5 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { CalloutModule } from '@domain/collaboration/callout/callout.module';
 import { CalloutsSetModule } from '@domain/collaboration/callouts-set/callouts.set.module';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 import { InnovationFlowModule } from '@domain/collaboration/innovation-flow/innovation.flow.module';
@@ -17,6 +18,7 @@ import { TemplateApplierService } from './template.applier.service';
     TemplateModule,
     CollaborationModule,
     CalloutsSetModule,
+    CalloutModule,
     StorageAggregatorResolverModule,
     InnovationFlowModule,
     InputCreatorModule,

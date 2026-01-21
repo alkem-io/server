@@ -1,0 +1,177 @@
+
+> alkemio-server@0.131.1 test:ci:no:coverage /home/vyanakiev/source/alkemio/server
+> jest --forceExit --config ./test/config/jest.config.ci.nocov.js
+
+PASS src/domain/space/space/sort.spaces.by.activity.spec.ts (17.308 s)
+PASS test/schema-contract/diff/enum-lifecycle.spec.ts (18.551 s)
+PASS src/platform/activity/create.latest.activity.per.space.spec.ts (18.796 s)
+PASS src/services/adapters/communication-adapter/communication.adapter.spec.ts (19.204 s)
+PASS test/schema-contract/governance/override.spec.ts
+PASS src/domain/community/user-authentication-link/user.authentication.link.service.spec.ts (21.199 s)
+PASS test/schema-contract/diff/scalar-classification.spec.ts
+PASS src/domain/profile-documents/profile.documents.service.spec.ts (21.771 s)
+PASS src/platform/licensing/credential-based/licensing-framework/licensing.framework.service.authorization.spec.ts
+PASS test/schema-contract/coverage/diff-types.extra.spec.ts
+Change report scaffold written to /tmp/schema-lifecycle-boaXGW/change-report.json
+PASS test/schema-contract/integration/breaking-override.spec.ts
+PASS src/domain/common/whiteboard/whiteboard.guest-access.service.spec.ts (23.538 s)
+PASS test/schema-contract/deprecation/parser.spec.ts
+PASS test/integration/platform-admin/authentication-id-backfill.spec.ts (24.403 s)
+PASS test/integration/platform-admin/admin-user-account-delete.spec.ts (5.738 s)
+PASS src/domain/communication/messaging/messaging.service.authorization.spec.ts (24.447 s)
+PASS test/schema-contract/coverage/governance.reviews.spec.ts
+PASS src/core/authentication.agent.info/agent.info.service.spec.ts
+FAIL test/schema-contract/perf/large-schema.spec.ts
+  ● Large schema diff performance › completes diff under 5000ms
+
+    expect(received).toBeGreaterThan(expected)
+
+    Expected: > 0
+    Received:   0
+
+      55 |     const elapsed = Date.now() - start;
+      56 |     // Basic sanity on volume
+    > 57 |     expect(report.entries.length).toBeGreaterThan(0);
+         |                                   ^
+      58 |     expect(elapsed).toBeLessThan(5000); // 5s budget
+      59 |     console.log(
+      60 |       `Large schema diff time: ${elapsed}ms, entries: ${report.entries.length}`
+
+      at Object.<anonymous> (test/schema-contract/perf/large-schema.spec.ts:57:35)
+
+PASS src/services/external/wingback-webhooks/wingback.webhook.interceptor.spec.ts
+PASS test/schema/override-sync.spec.ts
+PASS test/schema-contract/integration/baseline.spec.ts
+PASS src/common/utils/has-allowed-allowed-fields/has.only.allowed.fields.spec.ts
+PASS test/schema/diff-performance.spec.ts (5.316 s)
+  ● Console
+
+    console.log
+      Performance diff duration: 4436.02ms
+
+      at Object.<anonymous> (test/schema/diff-performance.spec.ts:67:13)
+
+Change report scaffold written to /home/vyanakiev/source/alkemio/server/tmp/perf-change-report.json
+PASS test/schema/override-fetch.spec.ts
+Change report scaffold written to /tmp/schema-lifecycle-boaXGW/change-report.json
+PASS src/common/utils/get-differences/get.diff.spec.ts
+PASS src/domain/common/whiteboard/whiteboard.resolver.mutations.spec.ts (28.635 s)
+PASS test/schema-contract/coverage/governance.codeowners.spec.ts
+PASS src/config/config.utils.spec.ts
+PASS test/schema-contract/coverage/load-baseline.spec.ts
+PASS test/schema/diff-invalid-deprecation.spec.ts (5.498 s)
+unknown format "date-time" ignored in schema at path "#/properties/generatedAt"
+unknown format "date-time" ignored in schema at path "#/properties/generatedAt"
+unknown format "date-time" ignored in schema at path "#/properties/generatedAt"
+unknown format "date-time" ignored in schema at path "#/properties/generatedAt"
+Change report scaffold written to /tmp/schema-lifecycle-boaXGW/change-report.json
+✅ Change Report valid
+✅ Deprecations valid
+PASS test/schema/validate-artifacts.spec.ts
+PASS src/services/whiteboard-integration/whiteboard.integration.service.spec.ts (33.503 s)
+PASS src/domain/community/user/user.resolver.spec.ts (9.051 s)
+PASS src/platform/platform-settings/platform.settings.service.blacklist.spec.ts (16.728 s)
+PASS src/domain/community/user/user.service.spec.ts (33.937 s)
+PASS src/services/infrastructure/naming/naming.service.spec.ts (7.443 s)
+PASS src/services/external/geo-location/geo.location.service.spec.ts (34.121 s)
+PASS src/services/infrastructure/license-entitlement-usage/license.entitlement.usage.service.spec.ts (34.13 s)
+PASS src/core/authentication/authentication.service.spec.ts (34.27 s)
+PASS src/domain/communication/room/room.service.mentions.from.text.spec.ts (34.313 s)
+PASS test/schema-contract/coverage/classify.spec.ts
+PASS src/services/api/roles/roles.service.spec.ts (34.538 s)
+PASS src/services/infrastructure/event-bus/event.bus.mocking.spec.ts (10.939 s)
+PASS src/services/api/search/ingest/search.ingest.service.spec.ts (34.606 s)
+PASS src/domain/template/template/template.resolver.mutations.spec.ts (7.201 s)
+PASS src/platform/platform/platform.service.authorization.spec.ts (34.941 s)
+PASS src/tools/schema/__tests__/deprecation-grace.spec.ts
+PASS src/domain/space/space/space.service.spec.ts (35.097 s)
+PASS test/schema-contract/integration/breaking-block.spec.ts
+PASS src/domain/space/account/account.service.license.spec.ts (35.071 s)
+PASS test/schema/override-eval.spec.ts
+PASS src/services/external/wingback-webhooks/wingback.webhook.controller.spec.ts (10.306 s)
+PASS test/integration/identity-resolve/identity-resolve.controller.spec.ts (36.438 s)
+Change report scaffold written to /tmp/schema-lifecycle-boaXGW/change-report.json
+PASS test/schema/diff-basic.spec.ts (7.231 s)
+PASS test/schema/diff-scalar.spec.ts (17.389 s)
+PASS src/tools/schema/__tests__/lifecycle-window.spec.ts (38.919 s)
+PASS src/domain/communication/communication/communication.resolver.mutations.spec.ts (8.572 s)
+PASS src/platform/licensing/wingback-subscription/licensing.wingback.subscription.service.spec.ts
+PASS test/schema/diff-enum-removal.spec.ts (290.201 s)
+PASS src/services/external/wingback-webhooks/get.contract.validation.pipe.spec.ts (285.726 s)
+PASS test/schema/diff-nullability.spec.ts (292.572 s)
+PASS src/domain/common/lifecycle/lifecycle.service.spec.ts (292.07 s)
+PASS src/platform/forum-discussion/discussion.resolver.mutations.spec.ts (291.586 s)
+PASS src/domain/common/reference/reference.resolver.spec.ts (291.533 s)
+PASS src/domain/common/visual/visual.resolver.spec.ts (291.605 s)
+PASS src/services/external/elasticsearch/guidance-reporter/guidance.reporter.service.spec.ts (291.223 s)
+PASS src/domain/community/community/community.service.spec.ts (292.155 s)
+PASS src/domain/community/organization/organization.service.spec.ts (292.417 s)
+PASS src/domain/collaboration/innovation-flow/innovation.flow.service.spec.ts (292.523 s)
+PASS src/services/api/search/search.service.spec.ts (291.406 s)
+PASS src/domain/access/role-set/role.set.resolver.mutations.spec.ts (291.782 s)
+PASS src/library/innovation-pack/innovation.pack.service.spec.ts (292.601 s)
+PASS src/domain/communication/communication/communication.service.spec.ts (291.504 s)
+PASS src/domain/access/role-set/role.set.service.spec.ts (292.148 s)
+PASS src/services/external/elasticsearch/contribution-reporter/contribution.reporter.service.spec.ts (291.037 s)
+PASS src/core/bootstrap/bootstrap.service.spec.ts (293.576 s)
+PASS src/domain/community/community/community.resolver.mutations.spec.ts (293.468 s)
+PASS test/schema/deprecation-parser.spec.ts
+PASS src/services/infrastructure/naming/generate.name.id.spec.ts
+PASS src/services/adapters/notification-in-app-adapter/notification.in.app.adapter.spec.ts
+PASS src/platform/licensing/credential-based/licensing-credential-based-entitlements-engine/licensing.credential.based.service.spec.ts (291.542 s)
+PASS src/services/auth-reset/publisher/auth-reset.service.spec.ts
+PASS src/core/authorization/authorization.service.spec.ts
+PASS src/domain/common/profile/profile.resolver.spec.ts
+PASS src/app.controller.spec.ts
+PASS src/domain/collaboration/post/post.resolver.spec.ts
+PASS src/platform/platform/platform.resolver.queries.spec.ts
+PASS src/services/api/roles/roles.resolver.queries.spec.ts
+PASS src/domain/storage/document/document.resolver.spec.ts
+PASS test/schema-contract/coverage/registry.spec.ts
+PASS src/domain/community/user-group/user-group.resolver.spec.ts
+PASS src/domain/collaboration/link/link.resolver.spec.ts
+PASS src/common/utils/compression.util.spec.ts
+PASS src/services/auth-reset/subscriber/auth-reset.controller.spec.ts
+PASS src/platform/configuration/config/config.service.spec.ts
+PASS src/services/external/wingback-webhooks/wingback.webhook.service.spec.ts
+PASS src/domain/activity-feed/activity.feed.service.spec.ts
+PASS src/services/task/task.service.spec.ts
+PASS src/platform/metadata/metadata.service.spec.ts
+PASS test/schema/diff-baseline.spec.ts (292.454 s)
+PASS src/domain/community/organization/organization.resolver.spec.ts (293.319 s)
+PASS src/platform/forum/forum.service.spec.ts (8.822 s)
+PASS src/domain/timeline/event/event.resolver.spec.ts (7.917 s)
+PASS src/domain/community/user-group/user-group.service.spec.ts (293.795 s)
+A worker process has failed to exit gracefully and has been force exited. This is likely caused by tests leaking due to improper teardown. Try running with --detectOpenHandles to find leaks. Active timers can also cause this, ensure that .unref() was called on them.
+
+Summary of all failing tests
+FAIL test/schema-contract/perf/large-schema.spec.ts
+  ● Large schema diff performance › completes diff under 5000ms
+
+    expect(received).toBeGreaterThan(expected)
+
+    Expected: > 0
+    Received:   0
+
+      55 |     const elapsed = Date.now() - start;
+      56 |     // Basic sanity on volume
+    > 57 |     expect(report.entries.length).toBeGreaterThan(0);
+         |                                   ^
+      58 |     expect(elapsed).toBeLessThan(5000); // 5s budget
+      59 |     console.log(
+      60 |       `Large schema diff time: ${elapsed}ms, entries: ${report.entries.length}`
+
+      at Object.<anonymous> (test/schema-contract/perf/large-schema.spec.ts:57:35)
+
+
+Test Suites: 1 failed, 104 passed, 105 total
+Tests:       1 failed, 1 skipped, 408 passed, 410 total
+Snapshots:   0 total
+Time:        333.892 s
+Ran all test suites.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?
+ ELIFECYCLE  Command failed with exit code 1.
+
+real	5m34.454s
+user	13m42.662s
+sys	1m20.236s

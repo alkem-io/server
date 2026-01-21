@@ -1,5 +1,6 @@
 import { AuthorizationAgentPrivilege } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
+import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { GraphqlGuard } from '@core/authorization';
 import { UserLoaderCreator } from '@core/dataloader/creators';
 import { Loader } from '@core/dataloader/decorators';
@@ -131,23 +132,27 @@ export class CalloutResolverFields {
     @Parent() callout: ICallout,
     @Loader(UserLoaderCreator) loader: ILoader<IUser | null>
   ): Promise<IUser | null> {
-    if (!callout.publishedBy) {
+    if (
+      !callout.publishedBy ||
+      callout.settings.visibility !== CalloutVisibility.PUBLISHED
+    ) {
       return null;
     }
     return loader.load(callout.publishedBy);
   }
 
-  @ResolveField('publishedDate', () => Number, {
+  @ResolveField('publishedDate', () => Date, {
     nullable: true,
-    description: 'The timestamp for the publishing of this Callout.',
+    description: 'The Date of the publishing of this Callout.',
   })
-  async publishedDate(@Parent() callout: ICallout): Promise<number | null> {
-    if (!callout.publishedDate) {
+  async publishedDate(@Parent() callout: ICallout): Promise<Date | null> {
+    if (
+      !callout.publishedDate ||
+      callout.settings.visibility !== CalloutVisibility.PUBLISHED
+    ) {
       return null;
     }
-    const createdDate = callout.publishedDate;
-    const date = new Date(createdDate);
-    return date.getTime();
+    return callout.publishedDate;
   }
 
   @ResolveField('createdBy', () => IUser, {

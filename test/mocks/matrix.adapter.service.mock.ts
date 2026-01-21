@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { MATRIX_ADAPTER_SERVICE } from '@common/constants';
 import { ValueProvider } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
@@ -7,7 +8,7 @@ export const MockMatrixAdapterService: ValueProvider<PublicPart<ClientProxy>> =
   {
     provide: MATRIX_ADAPTER_SERVICE,
     useValue: {
-      send: jest.fn(),
-      emit: jest.fn(),
+      send: vi.fn(),
+      emit: vi.fn(),
     },
   };

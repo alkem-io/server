@@ -5,6 +5,7 @@ import {
   CalloutContributionType,
 } from '@common/enums/callout.contribution.type';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
+import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { RoomType } from '@common/enums/room.type';
 import {
   EntityNotFoundException,
@@ -81,7 +82,7 @@ export class CalloutService {
     callout.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.CALLOUT
     );
-    callout.createdBy = userID ?? undefined;
+    callout.createdBy = userID;
     callout.contributions = [];
 
     callout.framing = await this.calloutFramingService.createCalloutFraming(
@@ -91,6 +92,11 @@ export class CalloutService {
     );
 
     callout.settings = this.createCalloutSettings(calloutData.settings);
+
+    if (callout.settings.visibility === CalloutVisibility.PUBLISHED) {
+      callout.publishedDate = new Date();
+      callout.publishedBy = userID;
+    }
 
     callout.classification = this.classificationService.createClassification(
       classificationTagsetTemplates,

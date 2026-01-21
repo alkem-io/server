@@ -6,6 +6,7 @@ import { MockWinstonProvider } from '@test/mocks';
 import { MockContributorLookupService } from '@test/mocks/contributor.lookup.service.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { testData } from '@test/utils/test-data';
+import { vi } from 'vitest';
 import { RoomMentionsService } from '../room-mentions/room.mentions.service';
 
 describe('RoomServiceMentions', () => {
@@ -190,19 +191,15 @@ describe('RoomServiceMentions', () => {
     const user = testData.user;
     const organization = testData.organization;
     const virtualContributor = testData.virtualContributor;
-    jest
-      .spyOn(userLookupService, 'getUserByNameIdOrFail')
-      .mockResolvedValue(user);
+    // Direct assignment to avoid proxy issues with vi.spyOn
+    userLookupService.getUserByNameIdOrFail = vi.fn().mockResolvedValue(user);
 
-    jest
-      .spyOn(organizationLookupService, 'getOrganizationByNameIdOrFail')
+    organizationLookupService.getOrganizationByNameIdOrFail = vi
+      .fn()
       .mockResolvedValue(organization);
 
-    jest
-      .spyOn(
-        virtualContributorLookupService,
-        'getVirtualContributorByNameIdOrFail'
-      )
+    virtualContributorLookupService.getVirtualContributorByNameIdOrFail = vi
+      .fn()
       .mockResolvedValue(virtualContributor);
 
     const result = await roomMentionsService.getMentionsFromText(text);

@@ -10,6 +10,7 @@ import { MockNotificationsService } from '@test/mocks/notifications.service.mock
 import { MockPlatformAuthorizationService } from '@test/mocks/platform.authorization.service.mock';
 import { MockUserAuthorizationService } from '@test/mocks/user.authorization.service.mock';
 import { MockUserService } from '@test/mocks/user.service.mock';
+import { MockUserSettingsHomeSpaceValidationService } from '@test/mocks/user.settings.home.space.validation.service.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { UserResolverMutations } from './user.resolver.mutations';
 import { UserResolverQueries } from './user.resolver.queries';
@@ -30,6 +31,7 @@ describe('UserResolver', () => {
         MockPlatformAuthorizationService,
         MockCommunicationAdapter,
         MockUserAuthorizationService,
+        MockUserSettingsHomeSpaceValidationService,
         MockNotificationPlatformAdapter,
         MockNotificationsService,
         MockEntityManagerProvider,
