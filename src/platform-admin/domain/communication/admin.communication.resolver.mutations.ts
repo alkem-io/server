@@ -9,6 +9,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AdminCommunicationService } from './admin.communication.service';
 import { CommunicationAdminRemoveOrphanedRoomInput } from './dto/admin.communication.dto.remove.orphaned.room';
 import { CommunicationAdminUpdateRoomStateInput } from './dto/admin.communication.dto.update.room.state';
+import { CommunicationAdminMigrateRoomsResult } from './dto/admin.communication.dto.migrate.rooms.result';
 import { GLOBAL_POLICY_ADMIN_COMMUNICATION_GRANT } from '@common/constants/authorization/global.policy.constants';
 import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
 import { InstrumentResolver } from '@src/apm/decorators';
@@ -26,7 +27,7 @@ export class AdminCommunicationResolverMutations {
     this.communicationGlobalAdminPolicy =
       this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
         [AuthorizationRoleGlobal.GLOBAL_ADMIN],
-        [AuthorizationPrivilege.GRANT],
+        [AuthorizationPrivilege.GRANT, AuthorizationPrivilege.PLATFORM_ADMIN],
         GLOBAL_POLICY_ADMIN_COMMUNICATION_GRANT
       );
   }
@@ -92,5 +93,22 @@ export class AdminCommunicationResolverMutations {
       roomStateData.isWorldVisible,
       roomStateData.isPublic
     );
+  }
+
+  @Mutation(() => CommunicationAdminMigrateRoomsResult, {
+    description:
+      'Create rooms for legacy conversations that were created without one (from lazy room creation era).',
+  })
+  @Profiling.api
+  async adminCommunicationMigrateOrphanedConversations(
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<CommunicationAdminMigrateRoomsResult> {
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      this.communicationGlobalAdminPolicy,
+      AuthorizationPrivilege.PLATFORM_ADMIN,
+      `communications admin migrate orphaned conversations: ${agentInfo.email}`
+    );
+    return await this.adminCommunicationService.migrateConversationRooms();
   }
 }
