@@ -87,7 +87,7 @@ export class AdminCommunicationResolverMutations {
       AuthorizationPrivilege.GRANT,
       `communications admin update join rule on all rooms: ${agentInfo.email}`
     );
-    return await this.adminCommunicationService.updateMatrixRoomState(
+    return await this.adminCommunicationService.updateRoomState(
       roomStateData.roomID,
       roomStateData.isWorldVisible,
       roomStateData.isPublic

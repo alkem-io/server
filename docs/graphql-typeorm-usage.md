@@ -3,7 +3,7 @@
 For the domain model there are two external interfaces:
 
 - GraphQL which is what clients of the server interact with
-- TypeORM which is used for storing the data in a MySql backend
+- TypeORM which is used for storing the data in a PostgreSQL backend
 
 In choosing how where to define the two interfaces, the following are taken into account:
 

@@ -316,11 +316,6 @@ http:
 
 tcp:
   services:
-    mysql:
-      loadBalancer:
-        servers:
-          - address: 'mysql:3306'
-
     postgres:
       loadBalancer:
         servers:
@@ -341,13 +336,12 @@ tcp:
         servers:
           - address: 'redis:6379'
 
-  routers:
-    mysql:
-      rule: 'HostSNI(`*`)'
-      service: 'mysql'
-      entryPoints:
-        - 'mysql'
+    matrix-adapter:
+      loadBalancer:
+        servers:
+          - address: 'matrix-adapter:8280'
 
+  routers:
     postgres:
       rule: 'HostSNI(`*`)'
       service: 'postgres'
@@ -371,3 +365,9 @@ tcp:
       service: 'redis'
       entryPoints:
         - 'redis'
+
+    matrix-adapter:
+      rule: 'HostSNI(`*`)'
+      service: 'matrix-adapter'
+      entryPoints:
+        - 'matrix-adapter'

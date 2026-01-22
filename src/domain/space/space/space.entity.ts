@@ -80,11 +80,11 @@ export class Space extends AuthorizableEntity implements ISpace {
   @JoinColumn()
   agent?: Agent;
 
-  @Column('json', { nullable: false })
+  @Column('jsonb', { nullable: false })
   settings: ISpaceSettings;
 
   // Calculated field to make the authorization logic clearer
-  @Column('json', { nullable: false })
+  @Column('jsonb', { nullable: false })
   platformRolesAccess!: IPlatformRolesAccess;
 
   @OneToOne(() => StorageAggregator, {
@@ -100,6 +100,9 @@ export class Space extends AuthorizableEntity implements ISpace {
 
   @Column('int', { nullable: false })
   level!: SpaceLevel;
+
+  @Column('int', { nullable: false })
+  sortOrder!: number;
 
   @Column('varchar', {
     length: ENUM_LENGTH,

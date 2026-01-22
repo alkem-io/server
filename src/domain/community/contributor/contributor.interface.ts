@@ -44,9 +44,6 @@ export abstract class IContributor {
   })
   nameID!: string;
 
-  // the internal communicationID (Matrix) for the user
-  communicationID!: string;
-
   @Field(() => IAgent, {
     nullable: false,
     description: 'The Agent for the Contributor.',

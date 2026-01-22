@@ -24,7 +24,7 @@ export class Organization
   @Column('uuid', { nullable: false })
   accountID!: string;
 
-  @Column('json', { nullable: false })
+  @Column('jsonb', { nullable: false })
   settings!: IOrganizationSettings;
 
   @Column({

@@ -6,6 +6,7 @@ import { GraphQLModule } from '@nestjs/graphql';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { ScheduleModule } from '@nestjs/schedule';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { CloseCode } from 'graphql-ws';
 import { ValidationPipe } from '@common/pipes/validation.pipe';
 import configuration from '@config/configuration';
@@ -50,8 +51,9 @@ import { ContributionReporterModule } from '@services/external/elasticsearch/con
 import { DataLoaderInterceptor } from '@core/dataloader/interceptors';
 import { InnovationHubInterceptor } from '@common/interceptors';
 import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.module';
-import { SessionSyncModule } from '@services/session-sync/session-sync.module';
 import { MessageReactionModule } from '@domain/communication/message.reaction/message.reaction.module';
+import { IdentityResolveModule } from '@services/api-rest/identity-resolve/identity-resolve.module';
+
 import {
   HttpExceptionFilter,
   GraphqlExceptionFilter,
@@ -115,6 +117,9 @@ import { InAppNotificationAdminModule } from './platform-admin/in-app-notificati
       isGlobal: true,
       load: [configuration],
     }),
+    EventEmitterModule.forRoot({
+      global: true,
+    }),
     ScheduleModule.forRoot(),
     CacheModule.registerAsync({
       isGlobal: true,
@@ -156,7 +161,8 @@ import { InAppNotificationAdminModule } from './platform-admin/in-app-notificati
           extra: {
             max: dbOptions.pool?.max ?? 50,
             idleTimeoutMillis: dbOptions.pool?.idle_timeout_ms ?? 30000,
-            connectionTimeoutMillis: dbOptions.pool?.connection_timeout_ms ?? 10000,
+            connectionTimeoutMillis:
+              dbOptions.pool?.connection_timeout_ms ?? 10000,
           },
         };
       },
@@ -288,7 +294,6 @@ import { InAppNotificationAdminModule } from './platform-admin/in-app-notificati
     MessageReactionModule,
     NotificationRecipientsModule,
     RegistrationModule,
-    SessionSyncModule,
     ConversionModule,
     LibraryModule,
     PlatformModule,
@@ -299,6 +304,7 @@ import { InAppNotificationAdminModule } from './platform-admin/in-app-notificati
     GeoLocationModule,
     ContributionReporterModule,
     InnovationHubModule,
+    IdentityResolveModule,
     MeModule,
     VirtualContributorModule,
     InputCreatorModule,

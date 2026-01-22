@@ -16,6 +16,9 @@ export const AUTH_RESET_SERVICE = 'alkemio-auth-reset';
 export const NOTIFICATIONS_SERVICE = 'alkemio-notifications';
 export const MATRIX_ADAPTER_SERVICE = 'alkemio-matrix-adapter';
 export const SUBSCRIPTION_ROOM_EVENT = 'alkemio-subscriptions-room-event';
+export const SUBSCRIPTION_CONVERSATION_EVENT =
+  'alkemio-subscriptions-conversation-event';
 export const ELASTICSEARCH_CLIENT_PROVIDER = 'elasticsearch-client-provider';
 export const APP_ID = 'app-id';
 export const STORAGE_SERVICE = 'storage-service';
+export const IS_SCHEMA_BOOTSTRAP = 'is-schema-bootstrap';

@@ -3,7 +3,6 @@ import {
   EntityNotFoundException,
   ForbiddenException,
   RelationshipNotFoundException,
-  UserAlreadyRegisteredException,
   UserRegistrationInvalidEmail,
   ValidationException,
 } from '@common/exceptions';
@@ -18,10 +17,9 @@ import {
   UpdateUserInput,
 } from '@domain/community/user';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
-import { Cache, CachingConfig } from 'cache-manager';
+
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
@@ -61,22 +59,20 @@ import { AgentInfoCacheService } from '@core/authentication.agent.info/agent.inf
 import { VisualType } from '@common/enums/visual.type';
 import { InstrumentService } from '@src/apm/decorators';
 import { CreateUserSettingsInput } from '../user-settings/dto/user.settings.dto.create';
-import { ConversationsSetService } from '@domain/communication/conversations-set/conversations.set.service';
+import { MessagingService } from '@domain/communication/messaging/messaging.service';
 import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
-import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
-import { IConversationsSet } from '@domain/communication/conversations-set/conversations.set.interface';
+import { UserAuthenticationLinkService } from '../user-authentication-link/user.authentication.link.service';
 
 @InstrumentService()
 @Injectable()
 export class UserService {
-  cacheOptions: CachingConfig = { ttl: 300 };
-
   constructor(
     private profileService: ProfileService,
     private communicationAdapter: CommunicationAdapter,
     private namingService: NamingService,
     private agentService: AgentService,
     private agentInfoCacheService: AgentInfoCacheService,
+    private readonly userAuthenticationLinkService: UserAuthenticationLinkService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private storageAggregatorService: StorageAggregatorService,
     private accountLookupService: AccountLookupService,
@@ -85,31 +81,19 @@ export class UserService {
     private userSettingsService: UserSettingsService,
     private contributorService: ContributorService,
     private kratosService: KratosService,
-    private conversationsSetService: ConversationsSetService,
+    private readonly messagingService: MessagingService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService,
-    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache
+    private readonly logger: LoggerService
   ) {}
 
-  private getUserCommunicationIdCacheKey(communicationId: string): string {
-    return `@user:communicationId:${communicationId}`;
-  }
-
-  private async setUserCache(user: IUser) {
-    await this.cacheManager.set(
-      this.getUserCommunicationIdCacheKey(user.email),
-      user,
-      this.cacheOptions
-    );
-  }
-
-  private async clearUserCache(user: IUser) {
-    await this.cacheManager.del(
-      this.getUserCommunicationIdCacheKey(user.communicationID)
-    );
-    await this.agentInfoCacheService.deleteAgentInfoFromCache(user.email);
+  private async invalidateAgentInfoCache(user: IUser): Promise<void> {
+    if (user.authenticationID) {
+      await this.agentInfoCacheService.deleteAgentInfoFromCache(
+        user.authenticationID
+      );
+    }
   }
 
   async createUser(
@@ -128,7 +112,6 @@ export class UserService {
 
     let user: IUser = User.create({
       ...userData,
-      accountUpn: userData.accountUpn ?? userData.email,
     });
     user.authorization = new AuthorizationPolicy(AuthorizationPolicyType.USER);
     user.settings = this.userSettingsService.createUserSettings(
@@ -173,9 +156,17 @@ export class UserService {
     user.agent = await this.agentService.createAgent({
       type: AgentType.USER,
     });
-    const conversationsSet =
-      await this.conversationsSetService.createConversationsSet();
-    user.conversationsSet = conversationsSet;
+
+    // Note: Conversations now belong to the single platform Messaging.
+    // User conversations are tracked via the conversation_membership pivot table.
+
+    const authenticationID = agentInfo?.authenticationID;
+    if (authenticationID) {
+      await this.userAuthenticationLinkService.ensureAuthenticationIdAvailable(
+        authenticationID
+      );
+      user.authenticationID = authenticationID;
+    }
 
     this.logger.verbose?.(
       `Created a new user with email: ${user.email}`,
@@ -194,56 +185,49 @@ export class UserService {
       user.id
     );
     // Reload to ensure have the updated avatar URL
-    user = await this.getUserOrFail(user.id);
+    user = await this.getUserOrFail(user.id, {
+      relations: { agent: true },
+    });
 
-    // all users need to be registered for communications at the absolute beginning
-    // there are cases where a user could be messaged before they actually log-in
-    // which will result in failure in communication (either missing user or unsent messages)
-    // register the user asynchronously - we don't want to block the creation operation
-    const communicationID = await this.communicationAdapter.tryRegisterNewUser(
-      user.email
-    );
+    // Sync the user's agent to the communication adapter
+    // The agent.id is used as the AlkemioActorID for all communication operations
+    const displayName =
+      `${user.firstName} ${user.lastName}`.trim() || user.email;
 
     try {
-      if (!communicationID) {
-        this.logger.warn(
-          `User registration failed on user creation ${user.id}.`
-        );
-        return user;
-      }
-
-      user.communicationID = communicationID;
-
-      await this.save(user);
-      await this.setUserCache(user);
+      await this.communicationAdapter.syncActor(user.agent.id, displayName);
+      this.logger.verbose?.(
+        `Synced user actor to communication adapter: ${user.agent.id}`,
+        LogContext.COMMUNITY
+      );
     } catch (e: any) {
-      this.logger.error(e, e?.stack, LogContext.USER);
+      this.logger.error(
+        `Failed to sync user actor to communication adapter: ${user.agent.id}`,
+        e?.stack,
+        LogContext.COMMUNITY
+      );
+      // Don't throw - user creation should succeed even if sync fails
     }
 
-    await this.setUserCache(user);
-
     // Create a guidance conversation with the well-known chat guidance VC
-    await this.createGuidanceConversation(conversationsSet, user.id);
+    await this.createGuidanceConversation(user.id);
 
     return user;
   }
 
-  private async createGuidanceConversation(
-    conversationSet: IConversationsSet,
-    userID: string
-  ): Promise<void> {
+  private async createGuidanceConversation(userID: string): Promise<void> {
     try {
-      await this.conversationsSetService.createConversationOnConversationsSet(
-        {
-          type: CommunicationConversationType.USER_VC,
-          userID: userID,
-          wellKnownVirtualContributor:
-            VirtualContributorWellKnown.CHAT_GUIDANCE,
-          currentUserID: userID,
-        },
-        conversationSet.id,
-        false
-      );
+      // Get user's agent ID for the new internal API
+      const user = await this.userLookupService.getUserOrFail(userID, {
+        relations: { agent: true },
+      });
+      const callerAgentId = user.agent.id;
+
+      // wellKnownVirtualContributor will be resolved to agent ID by the service
+      await this.messagingService.createConversation({
+        callerAgentId,
+        wellKnownVirtualContributor: VirtualContributorWellKnown.CHAT_GUIDANCE,
+      });
 
       this.logger.verbose?.(
         `Created guidance conversation for user: ${userID}`,
@@ -319,6 +303,10 @@ export class UserService {
           adminSpaceCommunityInvitation: { email: true, inApp: true },
         },
       },
+      homeSpace: {
+        spaceID: null,
+        autoRedirect: false,
+      },
     };
     return settings;
   }
@@ -372,7 +360,9 @@ export class UserService {
     return result;
   }
 
-  async createUserFromAgentInfo(agentInfo: AgentInfo): Promise<IUser> {
+  async createOrLinkUserFromAgentInfo(
+    agentInfo: AgentInfo
+  ): Promise<{ user: IUser; isNew: boolean }> {
     // Extra check that there is valid data + no user with the email
     const email = agentInfo.email;
     if (!email || email.length === 0) {
@@ -381,17 +371,19 @@ export class UserService {
       );
     }
 
-    if (await this.userLookupService.isRegisteredUser(email)) {
-      throw new UserAlreadyRegisteredException(
-        `User with email: ${email} already registered`
-      );
+    const resolvedUser =
+      await this.userAuthenticationLinkService.resolveExistingUser(agentInfo, {
+        conflictMode: 'error',
+      });
+
+    if (resolvedUser) {
+      return { user: resolvedUser.user, isNew: false };
     }
 
     const userData: CreateUserInput = {
       email: email,
       firstName: agentInfo.firstName,
       lastName: agentInfo.lastName,
-      accountUpn: email,
       profileData: {
         visuals: [
           {
@@ -403,7 +395,32 @@ export class UserService {
       },
     };
 
-    return await this.createUser(userData, agentInfo);
+    const user = await this.createUser(userData, agentInfo);
+    return { user, isNew: true };
+  }
+
+  async clearAuthenticationIDForUser(user: IUser): Promise<IUser> {
+    if (!user.authenticationID) {
+      return user;
+    }
+
+    const oldAuthId = user.authenticationID;
+    user.authenticationID = null;
+    const updatedUser = await this.save(user);
+    // Invalidate cache using old authenticationID before it was cleared
+    if (oldAuthId) {
+      await this.agentInfoCacheService.deleteAgentInfoFromCache(oldAuthId);
+    }
+    this.logger.verbose?.(
+      `Cleared authentication ID for user ${updatedUser.id}`,
+      LogContext.AUTH
+    );
+    return updatedUser;
+  }
+
+  async clearAuthenticationIDById(userId: string): Promise<IUser> {
+    const user = await this.getUserOrFail(userId);
+    return this.clearAuthenticationIDForUser(user);
   }
 
   private async validateUserProfileCreationRequest(
@@ -441,7 +458,6 @@ export class UserService {
         agent: true,
         storageAggregator: true,
         settings: true,
-        conversationsSet: true,
       },
     });
 
@@ -450,8 +466,7 @@ export class UserService {
       !user.storageAggregator ||
       !user.agent ||
       !user.authorization ||
-      !user.settings ||
-      !user.conversationsSet
+      !user.settings
     ) {
       throw new RelationshipNotFoundException(
         `User entity missing required child entities when deleting: ${userID}`,
@@ -470,7 +485,7 @@ export class UserService {
     }
     const { id } = user;
 
-    await this.clearUserCache(user);
+    await this.invalidateAgentInfoCache(user);
 
     await this.profileService.deleteProfile(user.profile.id);
 
@@ -482,11 +497,9 @@ export class UserService {
 
     await this.userSettingsService.deleteUserSettings(user.settings.id);
 
-    await this.conversationsSetService.deleteConversationsSet(
-      user.conversationsSet.id
-    );
-
-    // TODO: Get all of the conversations for this user and delete them
+    // Note: Conversations belong to the platform Messaging.
+    // User's conversation memberships are cleaned up via cascade.
+    // TODO: Consider deleting conversations where this user is the only member
 
     if (deleteData.deleteIdentity) {
       await this.kratosService.deleteIdentityByEmail(user.email);
@@ -713,7 +726,7 @@ export class UserService {
     }
 
     const response = await this.save(user);
-    await this.setUserCache(response);
+    await this.invalidateAgentInfoCache(response);
     return response;
   }
 

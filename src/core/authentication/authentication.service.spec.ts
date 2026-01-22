@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
@@ -13,12 +14,13 @@ import { Session } from '@ory/kratos-client';
 import { OryDefaultIdentitySchema } from '@services/infrastructure/kratos/types/ory.default.identity.schema';
 import { NotSupportedException } from '@common/exceptions';
 import ConfigUtils from '@config/config.utils';
+import type { Mocked } from 'vitest';
 
 describe('AuthenticationService', () => {
   let service: AuthenticationService;
-  let agentInfoCacheService: jest.Mocked<AgentInfoCacheService>;
-  let agentInfoService: jest.Mocked<AgentInfoService>;
-  let kratosService: jest.Mocked<KratosService>;
+  let agentInfoCacheService: Mocked<AgentInfoCacheService>;
+  let agentInfoService: Mocked<AgentInfoService>;
+  let kratosService: Mocked<KratosService>;
 
   const mockOryIdentity: OryDefaultIdentitySchema = {
     id: 'test-id',
@@ -78,9 +80,9 @@ describe('AuthenticationService', () => {
     lastName: 'Doe',
     guestName: '',
     credentials: [],
-    communicationID: 'comm-id',
     agentID: 'agent-id',
     avatarURL: 'http://example.com/avatar.jpg',
+    authenticationID: 'auth-id',
     expiry: new Date('2023-12-31T23:59:59Z').getTime(),
   };
 
@@ -88,7 +90,6 @@ describe('AuthenticationService', () => {
     userID: 'user-id',
     email: 'test@example.com',
     credentials: [],
-    communicationID: 'comm-id',
     agentID: 'agent-id',
     did: 'did:test:123',
     password: 'test-password',
@@ -104,28 +105,29 @@ describe('AuthenticationService', () => {
         }
         if (token === AgentInfoCacheService) {
           return {
-            getAgentInfoFromCache: jest.fn(),
-            setAgentInfoCache: jest.fn(),
+            getAgentInfoFromCache: vi.fn(),
+            setAgentInfoCache: vi.fn(),
           };
         }
         if (token === AgentInfoService) {
           return {
-            createAnonymousAgentInfo: jest.fn(),
-            createGuestAgentInfo: jest.fn(),
-            getAgentInfoMetadata: jest.fn(),
-            populateAgentInfoWithMetadata: jest.fn(),
+            createAnonymousAgentInfo: vi.fn(),
+            createGuestAgentInfo: vi.fn(),
+            getAgentInfoMetadata: vi.fn(),
+            populateAgentInfoWithMetadata: vi.fn(),
+            buildAgentInfoFromOryIdentity: vi.fn(),
           };
         }
         if (token === KratosService) {
           return {
-            getSession: jest.fn(),
-            getBearerToken: jest.fn(),
-            tryExtendSession: jest.fn(),
+            getSession: vi.fn(),
+            getBearerToken: vi.fn(),
+            tryExtendSession: vi.fn(),
           };
         }
         if (token === AgentService) {
           return {
-            getVerifiedCredentials: jest.fn(),
+            getVerifiedCredentials: vi.fn(),
           };
         }
 
@@ -140,7 +142,7 @@ describe('AuthenticationService', () => {
   });
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -230,7 +232,7 @@ describe('AuthenticationService', () => {
 
     it('should create agent info when session has valid identity', async () => {
       kratosService.getSession.mockResolvedValue(mockSession);
-      jest.spyOn(service, 'createAgentInfo').mockResolvedValue(mockAgentInfo);
+      vi.spyOn(service, 'createAgentInfo').mockResolvedValue(mockAgentInfo);
 
       const result = await service.getAgentInfo({
         authorization: 'Bearer token',
@@ -266,8 +268,9 @@ describe('AuthenticationService', () => {
 
       const result = await service.createAgentInfo(mockOryIdentity);
 
+      // Cache lookup uses authenticationID (oryIdentity.id), not email
       expect(agentInfoCacheService.getAgentInfoFromCache).toHaveBeenCalledWith(
-        'test@example.com'
+        'test-id'
       );
       expect(result).toEqual(cachedAgentInfo);
     });
@@ -277,9 +280,9 @@ describe('AuthenticationService', () => {
       agentInfoService.getAgentInfoMetadata.mockResolvedValue(undefined);
 
       const builtAgentInfo = { ...mockAgentInfo };
-      jest
-        .spyOn(service as any, 'buildAgentInfoFromOrySession')
-        .mockReturnValue(builtAgentInfo);
+      agentInfoService.buildAgentInfoFromOryIdentity.mockReturnValue(
+        builtAgentInfo
+      );
 
       const result = await service.createAgentInfo(
         mockOryIdentity,
@@ -287,7 +290,8 @@ describe('AuthenticationService', () => {
       );
 
       expect(agentInfoService.getAgentInfoMetadata).toHaveBeenCalledWith(
-        'test@example.com'
+        'test@example.com',
+        { authenticationId: 'auth-id' }
       );
       expect(result).toEqual(builtAgentInfo);
     });
@@ -299,9 +303,9 @@ describe('AuthenticationService', () => {
       );
 
       const builtAgentInfo = { ...mockAgentInfo };
-      jest
-        .spyOn(service as any, 'buildAgentInfoFromOrySession')
-        .mockReturnValue(builtAgentInfo);
+      agentInfoService.buildAgentInfoFromOryIdentity.mockReturnValue(
+        builtAgentInfo
+      );
 
       const result = await service.createAgentInfo(
         mockOryIdentity,
@@ -329,53 +333,7 @@ describe('AuthenticationService', () => {
     });
   });
 
-  describe('buildAgentInfoFromOrySession', () => {
-    it('should build agent info correctly from ory session', () => {
-      const result = (service as any).buildAgentInfoFromOrySession(
-        mockOryIdentity,
-        mockSession
-      );
-
-      expect(result).toMatchObject({
-        email: 'test@example.com',
-        emailVerified: true,
-        firstName: 'John',
-        lastName: 'Doe',
-        avatarURL: 'http://example.com/avatar.jpg',
-        expiry: new Date('2023-12-31T23:59:59Z').getTime(),
-      });
-    });
-
-    it('should handle unverified email', () => {
-      const unverifiedOryIdentity = {
-        ...mockOryIdentity,
-        verifiable_addresses: [
-          {
-            ...mockOryIdentity.verifiable_addresses[0],
-            verified: false,
-          },
-        ],
-      };
-
-      const result = (service as any).buildAgentInfoFromOrySession(
-        unverifiedOryIdentity,
-        mockSession
-      );
-
-      expect(result.emailVerified).toBe(false);
-    });
-
-    it('should handle session without expiry', () => {
-      const sessionWithoutExpiry = { ...mockSession, expires_at: undefined };
-
-      const result = (service as any).buildAgentInfoFromOrySession(
-        mockOryIdentity,
-        sessionWithoutExpiry
-      );
-
-      expect(result.expiry).toBeUndefined();
-    });
-  });
+  // Note: buildAgentInfoFromOryIdentity tests are now in agent.info.service.spec.ts
 
   describe('extendSession', () => {
     it('should extend session successfully', async () => {
@@ -396,9 +354,9 @@ describe('AuthenticationService', () => {
   describe('shouldExtendSession', () => {
     beforeEach(() => {
       // Mock the constructor call that sets extendSessionMinRemainingTTL
-      jest
-        .spyOn(service as any, 'parseEarliestPossibleExtend')
-        .mockReturnValue(300000); // 5 minutes
+      vi.spyOn(service as any, 'parseEarliestPossibleExtend').mockReturnValue(
+        300000
+      ); // 5 minutes
       (service as any).extendSessionMinRemainingTTL = 300000;
     });
 
@@ -461,8 +419,8 @@ describe('AuthenticationService', () => {
     });
     it('should parse HMS string correctly', () => {
       // Mock ConfigUtils.parseHMSString to return 300 seconds (5 minutes)
-      const mockConfigUtils = ConfigUtils as jest.Mocked<typeof ConfigUtils>;
-      mockConfigUtils.parseHMSString = jest.fn().mockReturnValue(300);
+      const mockConfigUtils = ConfigUtils as Mocked<typeof ConfigUtils>;
+      mockConfigUtils.parseHMSString = vi.fn().mockReturnValue(300);
 
       const result = (service as any).parseEarliestPossibleExtend('5m');
 
@@ -470,8 +428,8 @@ describe('AuthenticationService', () => {
     });
 
     it('should return undefined for invalid HMS string', () => {
-      const mockConfigUtils = ConfigUtils as jest.Mocked<typeof ConfigUtils>;
-      mockConfigUtils.parseHMSString = jest.fn().mockReturnValue(undefined);
+      const mockConfigUtils = ConfigUtils as Mocked<typeof ConfigUtils>;
+      mockConfigUtils.parseHMSString = vi.fn().mockReturnValue(undefined);
 
       const result = (service as any).parseEarliestPossibleExtend('invalid');
 
@@ -485,10 +443,10 @@ describe('AuthenticationService', () => {
   });
 
   describe('validateEmail', () => {
-    it('should return traits when email is valid', () => {
-      const result = (service as any).validateEmail(mockOryIdentity);
-
-      expect(result).toEqual(mockOryIdentity.traits);
+    it('should not throw when email is valid', () => {
+      expect(() =>
+        (service as any).validateEmail(mockOryIdentity)
+      ).not.toThrow();
     });
 
     it('should throw NotSupportedException when email is missing', () => {
@@ -513,38 +471,10 @@ describe('AuthenticationService', () => {
       );
     });
   });
-
-  describe('getCachedAgentInfo', () => {
-    it('should return cached agent info when available', async () => {
-      const cachedAgentInfo = { ...mockAgentInfo };
-      agentInfoCacheService.getAgentInfoFromCache.mockResolvedValue(
-        cachedAgentInfo
-      );
-
-      const result = await (service as any).getCachedAgentInfo(
-        'test@example.com'
-      );
-
-      expect(agentInfoCacheService.getAgentInfoFromCache).toHaveBeenCalledWith(
-        'test@example.com'
-      );
-      expect(result).toEqual(cachedAgentInfo);
-    });
-
-    it('should return undefined when not in cache', async () => {
-      agentInfoCacheService.getAgentInfoFromCache.mockResolvedValue(undefined);
-
-      const result = await (service as any).getCachedAgentInfo(
-        'test@example.com'
-      );
-
-      expect(result).toBeUndefined();
-    });
-  });
 });
 
 const ConfigServiceMock = {
-  get: jest.fn().mockImplementation((key: string) => {
+  get: vi.fn().mockImplementation((key: string) => {
     if (key === 'identity.authentication.providers.ory') {
       return {
         kratos_public_base_url_server: 'mockUrl',
