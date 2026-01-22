@@ -4,6 +4,7 @@ import swc from 'unplugin-swc';
 import tsconfigPaths from 'vite-tsconfig-paths';
 import { defineConfig } from 'vitest/config';
 
+// @ts-ignore
 const require = createRequire(import.meta.url);
 
 export default defineConfig({
