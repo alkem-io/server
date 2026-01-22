@@ -2824,10 +2824,14 @@ type ISearchCategoryResult {
 type ISearchResults {
   """The search results for Callouts."""
   calloutResults: ISearchCategoryResult!
-  """The search results for contributions (Posts, Whiteboards etc)."""
+  """The search results for contributions (Posts, Whiteboards, Memos)."""
   contributionResults: ISearchCategoryResult!
   """The search results for contributors (Users, Organizations)."""
   contributorResults: ISearchCategoryResult!
+  """
+  The search results callout framings (Whiteboards, Memos as additional content).
+  """
+  framingResults: ISearchCategoryResult!
   """The search results for Spaces / Subspaces."""
   spaceResults: ISearchCategoryResult!
 }
@@ -5921,12 +5925,13 @@ type RoomUnreadCounts {
 }
 
 """
-The category in which to search. A category may include a couple of entity types, e.g. "responses" include posts, whiteboard, etc.
+The category in which to search. A category may include a couple of entity types, e.g. "contributions" include posts, whiteboard, etc.
 """
 enum SearchCategory {
   COLLABORATION_TOOLS
+  CONTRIBUTIONS
   CONTRIBUTORS
-  RESPONSES
+  FRAMINGS
   SPACES
 }
 
@@ -5984,6 +5989,27 @@ type SearchResultCallout implements SearchResult {
   """The score for this search result; more matches means a higher score."""
   score: Float!
   """The parent Space of the Callout."""
+  space: Space!
+  """The terms that were matched for this result"""
+  terms: [String!]!
+  """The type of returned result for this search."""
+  type: SearchResultType!
+}
+
+type SearchResultMemo implements SearchResult {
+  """The Callout of the Memo."""
+  callout: Callout!
+  """
+  The identifier of the search result. Does not represent the entity in Alkemio.
+  """
+  id: UUID!
+  """Whether the Memo is a contribution (response) or part of the framing."""
+  isContribution: Boolean!
+  """The Memo that was found."""
+  memo: Memo!
+  """The score for this search result; more matches means a higher score."""
+  score: Float!
+  """The Space of the Memo."""
   space: Space!
   """The terms that were matched for this result"""
   terms: [String!]!
@@ -6067,6 +6093,29 @@ type SearchResultUser implements SearchResult {
   type: SearchResultType!
   """The User that was found."""
   user: User!
+}
+
+type SearchResultWhiteboard implements SearchResult {
+  """The Callout of the Whiteboard."""
+  callout: Callout!
+  """
+  The identifier of the search result. Does not represent the entity in Alkemio.
+  """
+  id: UUID!
+  """
+  Whether the Whiteboard is a contribution (response) or part of the framing.
+  """
+  isContribution: Boolean!
+  """The score for this search result; more matches means a higher score."""
+  score: Float!
+  """The Space of the Whiteboard."""
+  space: Space!
+  """The terms that were matched for this result"""
+  terms: [String!]!
+  """The type of returned result for this search."""
+  type: SearchResultType!
+  """The Whiteboard that was found."""
+  whiteboard: Whiteboard!
 }
 
 enum SearchVisibility {
