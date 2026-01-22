@@ -103,13 +103,13 @@ describe('IdentityResolveController (REST)', () => {
   });
 
   it('returns existing user when authentication ID already linked', async () => {
-    (
-      userLookupService.getUserByAuthenticationID as Mock
-    ).mockResolvedValueOnce({
-      id: 'user-existing',
-      authenticationID: authenticationId,
-      agent: { id: 'agent-existing' },
-    });
+    (userLookupService.getUserByAuthenticationID as Mock).mockResolvedValueOnce(
+      {
+        id: 'user-existing',
+        authenticationID: authenticationId,
+        agent: { id: 'agent-existing' },
+      }
+    );
 
     await request(app.getHttpServer())
       .post('/rest/internal/identity/resolve')
@@ -122,12 +122,10 @@ describe('IdentityResolveController (REST)', () => {
   });
 
   it('returns 404 when Kratos identity cannot be found', async () => {
-    (
-      userLookupService.getUserByAuthenticationID as Mock
-    ).mockResolvedValueOnce(null);
-    (kratosService.getIdentityById as Mock).mockResolvedValueOnce(
-      undefined
+    (userLookupService.getUserByAuthenticationID as Mock).mockResolvedValueOnce(
+      null
     );
+    (kratosService.getIdentityById as Mock).mockResolvedValueOnce(undefined);
 
     await request(app.getHttpServer())
       .post('/rest/internal/identity/resolve')
@@ -141,15 +139,13 @@ describe('IdentityResolveController (REST)', () => {
   });
 
   it('creates a new user when identity is unknown', async () => {
-    (
-      userLookupService.getUserByAuthenticationID as Mock
-    ).mockResolvedValueOnce(null);
+    (userLookupService.getUserByAuthenticationID as Mock).mockResolvedValueOnce(
+      null
+    );
     (userLookupService.getUserByEmail as Mock).mockResolvedValueOnce(null);
 
     const identity = buildIdentity();
-    (kratosService.getIdentityById as Mock).mockResolvedValueOnce(
-      identity
-    );
+    (kratosService.getIdentityById as Mock).mockResolvedValueOnce(identity);
 
     (registrationService.registerNewUser as Mock).mockImplementationOnce(
       async agentInfo => ({
@@ -182,13 +178,13 @@ describe('IdentityResolveController (REST)', () => {
   });
 
   it('returns an error when an existing user lacks an agent', async () => {
-    (
-      userLookupService.getUserByAuthenticationID as Mock
-    ).mockResolvedValueOnce({
-      id: 'user-existing',
-      authenticationID: authenticationId,
-      agent: null,
-    });
+    (userLookupService.getUserByAuthenticationID as Mock).mockResolvedValueOnce(
+      {
+        id: 'user-existing',
+        authenticationID: authenticationId,
+        agent: null,
+      }
+    );
 
     const response = await request(app.getHttpServer())
       .post('/rest/internal/identity/resolve')
@@ -196,20 +192,19 @@ describe('IdentityResolveController (REST)', () => {
       .expect(404);
 
     expect(response.body.code).toBe(AlkemioErrorStatus.NO_AGENT_FOR_USER);
+    expect(response.body.numericCode).toBe(30113); // NO_AGENT_FOR_USER -> 30113
     expect(response.body.message).toContain('Agent not found');
     expect(kratosService.getIdentityById).not.toHaveBeenCalled();
   });
 
   it('returns an error when the newly registered user lacks an agent', async () => {
-    (
-      userLookupService.getUserByAuthenticationID as Mock
-    ).mockResolvedValueOnce(null);
+    (userLookupService.getUserByAuthenticationID as Mock).mockResolvedValueOnce(
+      null
+    );
     (userLookupService.getUserByEmail as Mock).mockResolvedValueOnce(null);
 
     const identity = buildIdentity();
-    (kratosService.getIdentityById as Mock).mockResolvedValueOnce(
-      identity
-    );
+    (kratosService.getIdentityById as Mock).mockResolvedValueOnce(identity);
 
     (registrationService.registerNewUser as Mock).mockResolvedValueOnce({
       id: 'user-new',
@@ -227,6 +222,7 @@ describe('IdentityResolveController (REST)', () => {
       .expect(404);
 
     expect(response.body.code).toBe(AlkemioErrorStatus.NO_AGENT_FOR_USER);
+    expect(response.body.numericCode).toBe(30113); // NO_AGENT_FOR_USER -> 30113
     expect(response.body.message).toContain('Agent not found');
     expect(registrationService.registerNewUser).toHaveBeenCalled();
   });

@@ -28,9 +28,9 @@ Repository root structure:
 
 **Purpose**: Create foundational error code infrastructure that all user stories depend on
 
-- [ ] T001 Create ErrorCategory enum in src/common/enums/error.category.ts
-- [ ] T002 [P] Create ErrorCodeEntry interface in src/common/exceptions/error.code.registry.ts
-- [ ] T003 [P] Export ErrorCategory from src/common/enums/index.ts
+- [x] T001 Create ErrorCategory enum in src/common/enums/error.category.ts
+- [x] T002 [P] Create ErrorCodeEntry interface in src/common/exceptions/error.code.registry.ts
+- [x] T003 [P] Export ErrorCategory from src/common/enums/index.ts
 
 ---
 
@@ -40,10 +40,10 @@ Repository root structure:
 
 **⚠️ CRITICAL**: All 72 AlkemioErrorStatus values must be mapped before user stories can deliver value
 
-- [ ] T004 Implement ERROR_CODE_REGISTRY Map in src/common/exceptions/error.code.registry.ts with all 72 error code mappings from research.md
-- [ ] T005 Implement getNumericCode() function with fallback to 99999 in src/common/exceptions/error.code.registry.ts
-- [ ] T006 Implement getErrorCodeEntry() helper function in src/common/exceptions/error.code.registry.ts
-- [ ] T007 Implement validateRegistryCompleteness() validation function in src/common/exceptions/error.code.registry.ts
+- [x] T004 Implement ERROR_CODE_REGISTRY Map in src/common/exceptions/error.code.registry.ts with all 72 error code mappings from research.md
+- [x] T005 Implement getNumericCode() function with fallback to 99999 in src/common/exceptions/error.code.registry.ts
+- [x] T006 Implement getErrorCodeEntry() helper function in src/common/exceptions/error.code.registry.ts
+- [x] T007 Implement validateRegistryCompleteness() validation function in src/common/exceptions/error.code.registry.ts
 
 **Checkpoint**: Error code registry complete with all mappings - user story implementation can now begin
 
@@ -57,10 +57,10 @@ Repository root structure:
 
 ### Implementation for User Story 1
 
-- [ ] T008 [US1] Modify BaseException constructor to call getNumericCode() and add numericCode to extensions in src/common/exceptions/base.exception.ts
-- [ ] T009 [P] [US1] Modify BaseHttpException constructor to add numericCode to extensions in src/common/exceptions/http/base.http.exception.ts
-- [ ] T010 [US1] Add unit test verifying ENTITY_NOT_FOUND returns numericCode 10101 in test/unit/common/exceptions/error.code.registry.spec.ts
-- [ ] T011 [US1] Add unit test verifying FORBIDDEN_POLICY returns numericCode 20104 in test/unit/common/exceptions/error.code.registry.spec.ts
+- [x] T008 [US1] Modify BaseException constructor to call getNumericCode() and add numericCode to extensions in src/common/exceptions/base.exception.ts
+- [x] T009 [P] [US1] Modify BaseHttpException constructor to add numericCode to extensions in src/common/exceptions/http/base.http.exception.ts
+- [x] T010 [US1] Add unit test verifying ENTITY_NOT_FOUND returns numericCode 10101 in src/common/exceptions/error.code.registry.spec.ts
+- [x] T011 [US1] Add unit test verifying FORBIDDEN_POLICY returns numericCode 20104 in src/common/exceptions/error.code.registry.spec.ts
 
 **Checkpoint**: All errors now return numeric codes in GraphQL responses - users can reference codes for support
 
@@ -74,10 +74,10 @@ Repository root structure:
 
 ### Implementation for User Story 2
 
-- [ ] T012 [P] [US2] Add unit test validating all codes have first two digits matching category in test/unit/common/exceptions/error.code.registry.spec.ts
-- [ ] T013 [P] [US2] Add unit test verifying all codes are in valid range 10000-99999 in test/unit/common/exceptions/error.code.registry.spec.ts
-- [ ] T014 [P] [US2] Create error code documentation in docs/error-codes.md with category explanations and complete mapping table
-- [ ] T015 [US2] Add category examples to docs/error-codes.md showing 10xxx=NotFound, 20xxx=Authorization, 30xxx=Validation, 40xxx=Operations, 50xxx=System
+- [x] T012 [P] [US2] Add unit test validating all codes have first two digits matching category in src/common/exceptions/error.code.registry.spec.ts
+- [x] T013 [P] [US2] Add unit test verifying all codes are in valid range 10000-99999 in src/common/exceptions/error.code.registry.spec.ts
+- [x] T014 [P] [US2] Create error code documentation in docs/error-codes.md with category explanations and complete mapping table
+- [x] T015 [US2] Add category examples to docs/error-codes.md showing 10xxx=NotFound, 20xxx=Authorization, 30xxx=Validation, 40xxx=Operations, 50xxx=System
 
 **Checkpoint**: Error codes follow consistent categorization scheme - support can triage by first two digits
 
@@ -91,10 +91,10 @@ Repository root structure:
 
 ### Implementation for User Story 3
 
-- [ ] T016 [P] [US3] Add unit test verifying both code and numericCode are present in BaseException extensions in test/unit/common/exceptions/base.exception.spec.ts
-- [ ] T017 [P] [US3] Add unit test verifying string code unchanged (ENTITY_NOT_FOUND remains "ENTITY_NOT_FOUND") in test/unit/common/exceptions/error.code.registry.spec.ts
-- [ ] T018 [US3] Add integration test triggering ENTITY_NOT_FOUND error via GraphQL and verifying both fields present in test/functional/integration/error-extensions.it-spec.ts
-- [ ] T019 [US3] Document backward compatibility in docs/error-codes.md with before/after JSON examples
+- [x] T016 [P] [US3] Add unit test verifying both code and numericCode are present in BaseException extensions in src/common/exceptions/base.exception.spec.ts
+- [x] T017 [P] [US3] Add unit test verifying string code unchanged (ENTITY_NOT_FOUND remains "ENTITY_NOT_FOUND") in src/common/exceptions/base.exception.spec.ts
+- [x] T018 [US3] Add integration test triggering ENTITY_NOT_FOUND error via REST and verifying both fields present in test/integration/error-handling/error-extensions.spec.ts
+- [x] T019 [US3] Document backward compatibility in docs/error-codes.md with before/after JSON examples
 
 **Checkpoint**: Backward compatibility validated - existing error handling code unaffected by new numeric codes
 
@@ -108,12 +108,12 @@ Repository root structure:
 
 ### Implementation for User Story 4
 
-- [ ] T020 [P] [US4] Add logger initialization function setErrorCodeLogger() in src/common/exceptions/error.code.registry.ts
-- [ ] T021 [P] [US4] Add warning log to getNumericCode() when unmapped status encountered in src/common/exceptions/error.code.registry.ts
-- [ ] T022 [US4] Initialize error code logger in src/main.ts or bootstrap using setErrorCodeLogger()
-- [ ] T023 [US4] Add unit test verifying fallback code 99999 returned for unknown status in test/unit/common/exceptions/error.code.registry.spec.ts
-- [ ] T024 [US4] Add unit test verifying warning logged when fallback used in test/unit/common/exceptions/error.code.registry.spec.ts
-- [ ] T025 [US4] Document fallback behavior and logging in docs/error-codes.md
+- [x] T020 [P] [US4] Add logger initialization function setErrorCodeLogger() in src/common/exceptions/error.code.registry.ts
+- [x] T021 [P] [US4] Add warning log to getNumericCode() when unmapped status encountered in src/common/exceptions/error.code.registry.ts
+- [x] T022 [US4] Initialize error code logger in src/main.ts using setErrorCodeLogger()
+- [x] T023 [US4] Add unit test verifying fallback code 99999 returned for unknown status in src/common/exceptions/error.code.registry.spec.ts
+- [x] T024 [US4] Add unit test verifying warning logged when fallback used in src/common/exceptions/error.code.registry.spec.ts
+- [x] T025 [US4] Document fallback behavior and logging in docs/error-codes.md
 
 **Checkpoint**: All errors traceable - unmapped errors return fallback code with warning for developer awareness
 
@@ -123,13 +123,13 @@ Repository root structure:
 
 **Purpose**: Validation, documentation, and quality improvements across all user stories
 
-- [ ] T026 [P] Add unit test verifying all 72 AlkemioErrorStatus values are mapped (no gaps) in test/unit/common/exceptions/error.code.registry.spec.ts
-- [ ] T027 [P] Add unit test verifying all numeric codes are unique (no duplicates) in test/unit/common/exceptions/error.code.registry.spec.ts
-- [ ] T028 [P] Update docs/error-codes.md with suggested resolution steps for each category
-- [ ] T029 [P] Add examples to docs/error-codes.md showing how frontend can use numeric codes
-- [ ] T030 Run pnpm lint to verify TypeScript compilation and ESLint rules pass
-- [ ] T031 Run pnpm test to verify all unit tests pass
-- [ ] T032 Validate error response format matches quickstart.md examples by triggering sample errors
+- [x] T026 [P] Add unit test verifying all 72 AlkemioErrorStatus values are mapped (no gaps) in src/common/exceptions/error.code.registry.spec.ts
+- [x] T027 [P] Add unit test verifying all numeric codes are unique (no duplicates) in src/common/exceptions/error.code.registry.spec.ts
+- [x] T028 [P] Update docs/error-codes.md with suggested resolution steps for each category
+- [x] T029 [P] Add examples to docs/error-codes.md showing how frontend can use numeric codes
+- [x] T030 Run pnpm lint to verify TypeScript compilation and ESLint rules pass
+- [x] T031 Run pnpm test to verify all unit tests pass
+- [x] T032 Validate error response format matches quickstart.md examples by triggering sample errors
 
 ---
 
