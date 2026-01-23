@@ -181,7 +181,7 @@ export class CommunityResolverService {
 
     const community = await this.communityRepository
       .createQueryBuilder('community')
-      .where('communicationId = :id')
+      .where('"communicationId" = :id')
       .setParameters({ id: `${communication?.id}` })
       .getOne();
 
@@ -247,7 +247,9 @@ export class CommunityResolverService {
         },
       },
       relations: {
-        community: true,
+        community: {
+          roleSet: true,
+        },
       },
     });
     // check for whiteboard in framing
@@ -267,7 +269,9 @@ export class CommunityResolverService {
           },
         },
         relations: {
-          community: true,
+          community: {
+            roleSet: true,
+          },
         },
       });
     }
@@ -455,12 +459,13 @@ export class CommunityResolverService {
       communityType: string;
     }[] = await this.entityManager.connection.query(
       `
-        SELECT \`space\`.\`id\` as \`spaceId\`, \`space\`.\`communityId\` as communityId, 'space' as \`entityType\` FROM \`timeline\`
-        RIGHT JOIN \`space\` on \`timeline\`.\`id\` = \`space\`.\`timelineID\`
-        JOIN \`calendar\` on \`timeline\`.\`calendarId\` = \`calendar\`.\`id\`
-        JOIN \`calendar_event\` on \`calendar\`.\`id\` = \`calendar_event\`.\`calendarId\`
-        WHERE \`calendar_event\`.\`id\` = '${calendarEventId}';
-      `
+        SELECT "space"."id" as "spaceId", "space"."communityId" as "communityId", 'space' as "entityType" FROM "timeline"
+        RIGHT JOIN "space" on "timeline"."id" = "space"."timelineID"
+        JOIN "calendar" on "timeline"."calendarId" = "calendar"."id"
+        JOIN "calendar_event" on "calendar"."id" = "calendar_event"."calendarId"
+        WHERE "calendar_event"."id" = $1
+      `,
+      [calendarEventId]
     );
 
     const community = await this.communityRepository.findOneBy({
@@ -511,6 +516,9 @@ export class CommunityResolverService {
       relations: {
         about: {
           profile: true,
+        },
+        community: {
+          roleSet: true,
         },
       },
     });

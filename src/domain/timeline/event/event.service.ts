@@ -61,10 +61,10 @@ export class CalendarEventService {
     );
     calendarEvent.createdBy = userID;
 
-    calendarEvent.comments = await this.roomService.createRoom(
-      `calendarEvent-comments-${calendarEvent.nameID}`,
-      RoomType.CALENDAR_EVENT
-    );
+    calendarEvent.comments = await this.roomService.createRoom({
+      displayName: `calendarEvent-comments-${calendarEvent.nameID}`,
+      type: RoomType.CALENDAR_EVENT,
+    });
 
     return await this.save(calendarEvent);
   }
@@ -87,7 +87,9 @@ export class CalendarEventService {
       await this.profileService.deleteProfile(calendarEvent.profile.id);
     }
     if (calendarEvent.comments) {
-      await this.roomService.deleteRoom(calendarEvent.comments);
+      await this.roomService.deleteRoom({
+        roomID: calendarEvent.comments.id,
+      });
     }
 
     const result = await this.calendarEventRepository.remove(
@@ -119,11 +121,10 @@ export class CalendarEventService {
     const calendarEvent = await this.getCalendarEventOrFail(
       calendarEventData.ID,
       {
-        relations: { profile: true },
+        relations: { profile: true, comments: true },
       }
     );
 
-    // Copy over the received data
     if (calendarEventData.profileData) {
       if (!calendarEvent.profile) {
         throw new EntityNotFoundException(
@@ -131,6 +132,21 @@ export class CalendarEventService {
           LogContext.CALENDAR
         );
       }
+
+      // Sync room name if displayName is changing
+      if (
+        calendarEventData.profileData.displayName &&
+        calendarEvent.comments &&
+        calendarEvent.profile.displayName !==
+          calendarEventData.profileData.displayName
+      ) {
+        const newRoomName = `calendarEvent-comments-${calendarEvent.nameID}`;
+        await this.roomService.updateRoomDisplayName(
+          calendarEvent.comments,
+          newRoomName
+        );
+      }
+
       calendarEvent.profile = await this.profileService.updateProfile(
         calendarEvent.profile,
         calendarEventData.profileData

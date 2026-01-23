@@ -26,8 +26,17 @@ module.exports = defineConfig([
       'tmp/**',
       '**/*.min.js',
       '.env*',
-      '**/.eslint.config.js',
+      'eslint.config.js',
+
       'src/migrations/**',
+      'src/migrations/*.ts',
+      'src/migrations/**/*.ts',
+
+      'schema.graphql',
+
+      'specs/**',
+      '**/*.md',
+      '**/**/*.md',
     ],
   },
   {
@@ -58,7 +67,7 @@ module.exports = defineConfig([
     ),
 
     rules: {
-      quotes: ['error', 'single'],
+      quotes: ['error', 'single', { avoidEscape: true }],
       'no-console': env(1, 0),
       'no-debugger': env(1, 0),
       '@typescript-eslint/interface-name-prefix': 'off',

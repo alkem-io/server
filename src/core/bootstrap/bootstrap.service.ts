@@ -19,7 +19,6 @@ import {
 } from '@common/constants';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { OrganizationAuthorizationService } from '@domain/community/organization/organization.service.authorization';
-import { AgentService } from '@domain/agent/agent/agent.service';
 import { PlatformService } from '@platform/platform/platform.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { PlatformAuthorizationService } from '@platform/platform/platform.service.authorization';
@@ -52,16 +51,19 @@ import { bootstrapTemplateSpaceContentCalloutsVcKnowledgeBase } from './platform
 import { PlatformTemplatesService } from '@platform/platform-templates/platform.templates.service';
 import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
 import { AdminAuthorizationService } from '@src/platform-admin/domain/authorization/admin.authorization.service';
-import { AiPersonaService } from '@services/ai-server/ai-persona';
 import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 import { VirtualContributorInteractionMode } from '@common/enums/virtual.contributor.interaction.mode';
+import { MessagingService } from '@domain/communication/messaging/messaging.service';
+import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors/platform.well.known.virtual.contributors.service';
+import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
+import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { RoleName } from '@common/enums/role.name';
 
 @Injectable()
 export class BootstrapService {
   constructor(
     private accountService: AccountService,
     private accountAuthorizationService: AccountAuthorizationService,
-    private agentService: AgentService,
     private agentInfoService: AgentInfoService,
     private spaceService: SpaceService,
     private userService: UserService,
@@ -81,7 +83,6 @@ export class BootstrapService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private aiServer: AiServerService,
-    private aiPersonaService: AiPersonaService,
     private aiServerAuthorizationService: AiServerAuthorizationService,
     private templatesSetService: TemplatesSetService,
     private templateDefaultService: TemplateDefaultService,
@@ -89,7 +90,10 @@ export class BootstrapService {
     private accountLicenseService: AccountLicenseService,
     private licenseService: LicenseService,
     private licensingFrameworkService: LicensingFrameworkService,
-    private licensePlanService: LicensePlanService
+    private licensePlanService: LicensePlanService,
+    private readonly messagingService: MessagingService,
+    private platformWellKnownVirtualContributorsService: PlatformWellKnownVirtualContributorsService,
+    private roleSetService: RoleSetService
   ) {}
 
   async bootstrap() {
@@ -109,15 +113,36 @@ export class BootstrapService {
       const anonymousAgentInfo =
         this.agentInfoService.createAnonymousAgentInfo();
 
-      await this.bootstrapUserProfiles();
-      await this.bootstrapLicensePlans();
+      // Order matters:
+      // 1. Infrastructure: Forum, Messaging
+      // 2. Templates (needed for VC creation)
+      // 3. Organization (created without admin first)
+      // 4. Guidance VC (needs organization and templates)
+      // 5. Users (including Admin) - will get guidance conversation created successfully
+      // 6. Link Admin to Organization
+      // 7. License plans
+      // 8. Authorization policies
+      // 9. Space
+
       await this.platformService.ensureForumCreated();
-      await this.ensureAuthorizationsPopulated();
+      await this.ensureMessagingCreated();
       await this.ensurePlatformTemplatesArePresent();
+
+      // Create Org first (without admin if needed)
       await this.ensureOrganizationSingleton();
-      await this.ensureSpaceSingleton(anonymousAgentInfo);
+
+      // Create VC (needs Org)
       await this.ensureGuidanceChat();
-      await this.ensureSsiPopulated();
+
+      // Create Users (including Admin)
+      await this.bootstrapUserProfiles();
+
+      // Ensure Admin is linked to Org
+      await this.ensureAdminUserLinkedToOrganization();
+
+      await this.bootstrapLicensePlans();
+      await this.ensureAuthorizationsPopulated();
+      await this.ensureSpaceSingleton(anonymousAgentInfo);
       // reset auth as last in the actions
       // await this.ensureSpaceNamesInElastic();
     } catch (error: any) {
@@ -128,6 +153,18 @@ export class BootstrapService {
       );
       throw new BootstrapException(error.message, { originalException: error });
     }
+  }
+
+  /**
+   * Ensures the platform Messaging exists.
+   * Creates it if missing (should happen only on fresh deployments).
+   */
+  private async ensureMessagingCreated(): Promise<void> {
+    const messaging = await this.platformService.ensureMessagingCreated();
+    this.logger.verbose?.(
+      `Platform Messaging ensured: ${messaging.id}`,
+      LogContext.BOOTSTRAP
+    );
   }
 
   private async ensurePlatformTemplatesArePresent() {
@@ -275,7 +312,6 @@ export class BootstrapService {
         if (!userExists) {
           const user = await this.userService.createUser({
             email: userData.email,
-            accountUpn: userData.email,
             firstName: userData.firstName,
             lastName: userData.lastName,
             profileData: {
@@ -314,13 +350,6 @@ export class BootstrapService {
       throw new BootstrapException(
         `Unable to create profiles ${error.message}`
       );
-    }
-  }
-
-  async ensureSsiPopulated() {
-    const ssiEnabled = this.configService.get('ssi.enabled', { infer: true });
-    if (ssiEnabled) {
-      await this.agentService.ensureDidsCreated();
     }
   }
 
@@ -364,14 +393,15 @@ export class BootstrapService {
     }
   }
 
-  private async ensureOrganizationSingleton() {
+  private async ensureOrganizationSingleton(agentInfo?: AgentInfo) {
     // create a default host org
     let hostOrganization =
       await this.organizationLookupService.getOrganizationByNameId(
         DEFAULT_HOST_ORG_NAMEID
       );
     if (!hostOrganization) {
-      const adminAgentInfo = await this.getAdminAgentInfo();
+      // If agentInfo is not provided, we create without an admin initially
+      // The admin will be linked later
       hostOrganization = await this.organizationService.createOrganization(
         {
           nameID: DEFAULT_HOST_ORG_NAMEID,
@@ -379,7 +409,7 @@ export class BootstrapService {
             displayName: DEFAULT_HOST_ORG_DISPLAY_NAME,
           },
         },
-        adminAgentInfo
+        agentInfo
       );
       const orgAuthorizations =
         await this.organizationAuthorizationService.applyAuthorizationPolicy(
@@ -401,6 +431,38 @@ export class BootstrapService {
     }
   }
 
+  private async ensureAdminUserLinkedToOrganization() {
+    const adminAgentInfo = await this.getAdminAgentInfo();
+    const hostOrganization =
+      await this.organizationLookupService.getOrganizationByNameIdOrFail(
+        DEFAULT_HOST_ORG_NAMEID
+      );
+
+    const roleSet = await this.organizationService.getRoleSet(hostOrganization);
+
+    // Assign Admin as Associate and Admin
+    await this.roleSetService.assignUserToRole(
+      roleSet,
+      RoleName.ASSOCIATE,
+      adminAgentInfo.userID,
+      adminAgentInfo,
+      false
+    );
+
+    await this.roleSetService.assignUserToRole(
+      roleSet,
+      RoleName.ADMIN,
+      adminAgentInfo.userID,
+      adminAgentInfo,
+      false
+    );
+
+    this.logger.verbose?.(
+      `Ensured Admin user linked to Organization: ${hostOrganization.id}`,
+      LogContext.BOOTSTRAP
+    );
+  }
+
   private async getAdminAgentInfo(): Promise<AgentInfo> {
     const adminUserEmail = 'admin@alkem.io';
     const adminUser = await this.userService.getUserByEmail(adminUserEmail, {
@@ -420,11 +482,11 @@ export class BootstrapService {
       emailVerified: true,
       firstName: adminUser.firstName,
       lastName: adminUser.lastName,
+      guestName: '',
       avatarURL: '',
       credentials: adminUser.agent?.credentials || [],
       agentID: adminUser.agent?.id,
-      verifiedCredentials: [],
-      communicationID: adminUser.communicationID,
+      authenticationID: adminUser.authenticationID ?? '',
     };
   }
 
@@ -480,11 +542,13 @@ export class BootstrapService {
   }
 
   private async ensureGuidanceChat() {
-    const platform = await this.platformService.getPlatformOrFail({
-      relations: { guidanceVirtualContributor: true },
-    });
+    // Check if the CHAT_GUIDANCE well-known VC is configured
+    const wellKnownVCId =
+      await this.platformWellKnownVirtualContributorsService.getVirtualContributorID(
+        VirtualContributorWellKnown.CHAT_GUIDANCE
+      );
 
-    if (!platform.guidanceVirtualContributor?.id) {
+    if (!wellKnownVCId) {
       // Get admin account:
       const hostOrganization =
         await this.organizationLookupService.getOrganizationByNameIdOrFail(
@@ -518,8 +582,11 @@ export class BootstrapService {
         },
       });
 
-      platform.guidanceVirtualContributor = vc;
-      await this.platformService.savePlatform(platform);
+      // Register the VC as the CHAT_GUIDANCE well-known VC
+      await this.platformWellKnownVirtualContributorsService.setMapping(
+        VirtualContributorWellKnown.CHAT_GUIDANCE,
+        vc.id
+      );
     }
   }
 }

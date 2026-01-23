@@ -21,65 +21,22 @@ import { UserService } from '@domain/community/user/user.service';
 import { MessagingNotEnabledException } from '@common/exceptions/messaging.not.enabled.exception';
 import { LogContext } from '@common/enums/logging.context';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
-import { UserSendMessageInput } from '@domain/communication/communication/dto/communication.dto.send.direct.message.user';
+import { ConversationService } from '../conversation/conversation.service';
 
 @InstrumentResolver()
 @Resolver()
 export class CommunicationResolverMutations {
   constructor(
-    private authorizationService: AuthorizationService,
-    private communicationAdapter: CommunicationAdapter,
-    private notificationAdapterSpace: NotificationSpaceAdapter,
-    private notificationUserAdapter: NotificationUserAdapter,
-    private notificationOrganizationAdapter: NotificationOrganizationAdapter,
-    private platformAuthorizationService: PlatformAuthorizationPolicyService,
-    private userService: UserService,
+    private readonly authorizationService: AuthorizationService,
+    private readonly communicationAdapter: CommunicationAdapter,
+    private readonly notificationAdapterSpace: NotificationSpaceAdapter,
+    private readonly notificationUserAdapter: NotificationUserAdapter,
+    private readonly notificationOrganizationAdapter: NotificationOrganizationAdapter,
+    private readonly platformAuthorizationService: PlatformAuthorizationPolicyService,
+    private readonly conversationService: ConversationService,
+    private readonly userService: UserService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
-
-  @Mutation(() => String, {
-    description:
-      'Sends a message on the specified User`s behalf and returns the room id',
-  })
-  async sendMessageToUserDirect(
-    @Args('messageData') messageData: UserSendMessageInput,
-    @CurrentUser() agentInfo: AgentInfo
-  ): Promise<string> {
-    const receivingUser = await this.userService.getUserOrFail(
-      messageData.receivingUserID,
-      {
-        relations: {
-          settings: true,
-        },
-      }
-    );
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      receivingUser.authorization,
-      AuthorizationPrivilege.READ,
-      `user send message: ${receivingUser.id}`
-    );
-
-    // Check if the user is willing to receive messages
-    if (!receivingUser.settings.communication.allowOtherUsersToSendMessages) {
-      throw new MessagingNotEnabledException(
-        'User is not open to receiving messages',
-        LogContext.USER,
-        {
-          userId: receivingUser.id,
-          senderId: agentInfo.userID,
-        }
-      );
-    }
-
-    const message = await this.communicationAdapter.sendMessageToUser({
-      senderCommunicationsID: agentInfo.communicationID,
-      message: messageData.message,
-      receiverCommunicationsID: receivingUser.communicationID,
-    });
-    // TODO: decide what should be the api
-    return message.id;
-  }
 
   @Mutation(() => Boolean, {
     description: 'Send message to multiple Users.',
@@ -123,31 +80,6 @@ export class CommunicationResolverMutations {
       await this.notificationUserAdapter.userToUserMessageDirect(
         notificationInput
       );
-    }
-
-    // To test out the logic
-    if (messageData.receiverIds.length === 1) {
-      if (this.communicationAdapter.directMessageRoomsEnabled) {
-        this.logger.verbose?.(
-          `Sending direct message to user via Matrix ${messageData.receiverIds[0]}`,
-          LogContext.COMMUNICATION
-        );
-        // Send direct message if only one receiver
-        const receiver = await this.userService.getUserOrFail(
-          messageData.receiverIds[0]
-        );
-        if (receiver.id === agentInfo.userID) {
-          this.logger.warn(
-            `skipping sending to oneself: ${agentInfo.userID}`,
-            LogContext.COMMUNICATION
-          );
-        }
-        await this.communicationAdapter.sendMessageToUser({
-          senderCommunicationsID: agentInfo.communicationID,
-          message: messageData.message,
-          receiverCommunicationsID: receiver.communicationID,
-        });
-      }
     }
 
     return true;

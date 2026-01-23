@@ -8,12 +8,10 @@ import { userSettingsData } from './user.settings.mock';
 
 export const userData: { user: IUser } = {
   user: {
-    accountUpn: 'admin@alkem.io',
     firstName: 'admin',
     lastName: 'alkemio',
     email: 'admin@alkem.io',
     phone: '',
-    communicationID: '@admin=alkem.io:alkemio.matrix.host',
     serviceProfile: false,
     id: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
     accountID: '777f82a1-bc7d-486c-85f9-e7ac6e689f4e',
@@ -74,7 +72,6 @@ export const userData: { user: IUser } = {
             cascade: true,
           },
         ],
-        verifiedCredentialRules: [],
         privilegeRules: [],
         id: '2b82dab3-4581-4ff2-88e3-4997afe4f85b',
         createdDate: new Date('2024-01-01T00:00:00.000Z'),
@@ -87,8 +84,6 @@ export const userData: { user: IUser } = {
     rowId: 1,
     agent: {
       type: AgentType.USER,
-      did: '',
-      password: '',
       id: '07c6ec54-524a-4d7f-9f58-a4c50f0c0496',
       authorization: {
         type: AuthorizationPolicyType.AGENT,
@@ -140,7 +135,6 @@ export const userData: { user: IUser } = {
             cascade: true,
           },
         ],
-        verifiedCredentialRules: [],
         privilegeRules: [],
         id: '1b82dab3-4581-4ff2-88e3-4997afe4f85e',
         createdDate: new Date('2024-01-01T00:00:00.000Z'),
@@ -222,7 +216,6 @@ export const userData: { user: IUser } = {
           cascade: true,
         },
       ],
-      verifiedCredentialRules: [],
       privilegeRules: [],
       id: 'afcbcd42-8eae-4696-9ce5-321108016fd7',
       createdDate: new Date('2024-01-01T00:00:00.000Z'),

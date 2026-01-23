@@ -1,0 +1,22 @@
+# Alkemio Server Development Processes
+# Start with: ~/.local/bin/overmind start -f Procfile.dev
+#
+# Prerequisites:
+#   1. Docker services: pnpm run start:services (in separate terminal, or use Procfile.full)
+#   2. Migrations run: pnpm run migration:run
+#
+# Commands:
+#   overmind connect ts     # Attach to TypeScript watcher
+#   overmind connect test   # Attach to Jest (interactive mode)
+#   overmind connect app    # Attach to NestJS server
+#   overmind restart app    # Restart just the app
+#   Ctrl+b d                # Detach from pane
+
+# TypeScript type checking - fast feedback on type errors
+ts: pnpm exec tsc -w --noEmit --preserveWatchOutput 2>&1
+
+# Jest in watch mode - runs affected tests on file changes
+test: pnpm test:watch 2>&1
+
+# NestJS development server with hot reload
+app: pnpm start:dev 2>&1 | tee ../../tmp/overmind-log.txt

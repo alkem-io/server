@@ -10,9 +10,10 @@ import { IVirtualContributor } from './virtual.contributor.interface';
 import { ContributorBase } from '../contributor/contributor.base.entity';
 import { Account } from '@domain/space/account/account.entity';
 import { SearchVisibility } from '@common/enums/search.visibility';
-import { ENUM_LENGTH, SMALL_TEXT_LENGTH, UUID_LENGTH } from '@common/constants';
+import { ENUM_LENGTH, SMALL_TEXT_LENGTH } from '@common/constants';
 import { KnowledgeBase } from '@domain/common/knowledge-base/knowledge.base.entity';
 import { IVirtualContributorSettings } from '../virtual-contributor-settings/virtual.contributor.settings.interface';
+import { IVirtualContributorPlatformSettings } from '../virtual-contributor-platform-settings/virtual.contributor.platform.settings.interface';
 import { VirtualContributorInteractionMode } from '@common/enums/virtual.contributor.interaction.mode';
 import { VirtualContributorDataAccessMode } from '@common/enums/virtual.contributor.data.access.mode';
 import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
@@ -37,17 +38,20 @@ export class VirtualContributor
   })
   account?: Account;
 
-  @Column('json', { nullable: false })
+  @Column('jsonb', { nullable: false })
   settings!: IVirtualContributorSettings;
 
+  @Column('jsonb', { nullable: false })
+  platformSettings!: IVirtualContributorPlatformSettings;
+
   // Direct reference to AiPersona using aiPersonaID as potentially in a separate server.
-  @Column('char', { nullable: false, length: UUID_LENGTH })
+  @Column('uuid', { nullable: false })
   aiPersonaID!: string;
 
   @Column('varchar', { nullable: true, length: SMALL_TEXT_LENGTH })
   bodyOfKnowledgeID?: string;
 
-  @Column('json', { nullable: true, transformer: PromptGraphTransformer })
+  @Column('jsonb', { nullable: true, transformer: PromptGraphTransformer })
   promptGraphDefinition?: PromptGraphDefinition;
 
   @Column()

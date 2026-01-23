@@ -48,6 +48,7 @@ import {
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { DefaultCalloutSettings } from '../callout-settings/callout.settings.default';
 import { CalloutContributionsCountOutput } from './dto/callout.contributions.count.dto';
+import { CalloutVisibility } from '@common/enums/callout.visibility';
 
 @Injectable()
 export class CalloutService {
@@ -81,7 +82,7 @@ export class CalloutService {
     callout.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.CALLOUT
     );
-    callout.createdBy = userID ?? undefined;
+    callout.createdBy = userID;
     callout.contributions = [];
 
     callout.framing = await this.calloutFramingService.createCalloutFraming(
@@ -91,6 +92,11 @@ export class CalloutService {
     );
 
     callout.settings = this.createCalloutSettings(calloutData.settings);
+
+    if (callout.settings.visibility === CalloutVisibility.PUBLISHED) {
+      callout.publishedDate = new Date();
+      callout.publishedBy = userID;
+    }
 
     callout.classification = this.classificationService.createClassification(
       classificationTagsetTemplates,
@@ -114,10 +120,10 @@ export class CalloutService {
     }
 
     if (!callout.isTemplate && callout.settings.framing.commentsEnabled) {
-      callout.comments = await this.roomService.createRoom(
-        `callout-comments-${callout.nameID}`,
-        RoomType.CALLOUT
-      );
+      callout.comments = await this.roomService.createRoom({
+        displayName: `callout-comments-${callout.nameID}`,
+        type: RoomType.CALLOUT,
+      });
     }
 
     return callout;
@@ -288,10 +294,10 @@ export class CalloutService {
       callout.settings.framing.commentsEnabled &&
       !callout.comments
     ) {
-      callout.comments = await this.roomService.createRoom(
-        `callout-comments-${callout.nameID}`,
-        RoomType.CALLOUT
-      );
+      callout.comments = await this.roomService.createRoom({
+        displayName: `callout-comments-${callout.nameID}`,
+        type: RoomType.CALLOUT,
+      });
     }
 
     if (calloutUpdateData.sortOrder)
@@ -332,7 +338,9 @@ export class CalloutService {
     }
 
     if (callout.comments) {
-      await this.roomService.deleteRoom(callout.comments);
+      await this.roomService.deleteRoom({
+        roomID: callout.comments.id,
+      });
     }
 
     await this.contributionDefaultsService.delete(callout.contributionDefaults);
@@ -420,7 +428,8 @@ export class CalloutService {
   private async getCommentsCount(calloutID: string): Promise<number> {
     const comments = await this.getComments(calloutID);
     if (!comments) return 0;
-    return comments.messagesCount;
+    const messages = await this.roomService.getMessages(comments);
+    return messages.length;
   }
 
   private async setNameIdOnWhiteboardData(

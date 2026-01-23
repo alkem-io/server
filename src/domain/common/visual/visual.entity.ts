@@ -1,4 +1,4 @@
-import { Column, Entity, ManyToOne } from 'typeorm';
+import { Column, Entity, Index, ManyToOne } from 'typeorm';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { IVisual } from './visual.interface';
 import { Profile } from '@domain/common/profile/profile.entity';
@@ -7,6 +7,7 @@ import { VISUAL_ALLOWED_TYPES } from './visual.constraints';
 import { MediaGallery } from '../media-gallery/media.gallery.entity';
 
 @Entity()
+@Index('IDX_visual_profileId', ['profile'])
 export class Visual extends AuthorizableEntity implements IVisual {
   @Column()
   name!: string;

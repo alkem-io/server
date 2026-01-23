@@ -1,49 +1,17 @@
-import { UrlType } from '@common/enums/url.type';
-import { UUID } from '@domain/common/scalars';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { UrlResolverQueryResultSpace } from './url.resolver.query.space.result';
-import { UrlResolverQueryResultInnovationPack } from './url.resolver.query.innovation.pack.result';
-import { UrlResolverQueryResultVirtualContributor } from './url.resolver.query.virtual.contributor.result';
+import { UrlResolverQueryClosestAncestor } from './url.resolver.query.closest.ancestor';
+import { UrlResolverResult } from './url.resolver.result';
+import { UrlResolverResultState } from './url.resolver.result.state';
 
 @ObjectType()
-export class UrlResolverQueryResults {
-  @Field(() => UrlType, {
+export class UrlResolverQueryResults extends UrlResolverResult {
+  @Field(() => UrlResolverResultState, {
     nullable: false,
   })
-  type!: UrlType;
+  state!: UrlResolverResultState;
 
-  @Field(() => UrlResolverQueryResultSpace, {
+  @Field(() => UrlResolverQueryClosestAncestor, {
     nullable: true,
   })
-  space?: UrlResolverQueryResultSpace;
-
-  @Field(() => UUID, {
-    nullable: true,
-  })
-  organizationId?: string;
-
-  @Field(() => UUID, {
-    nullable: true,
-  })
-  userId?: string;
-
-  @Field(() => UrlResolverQueryResultVirtualContributor, {
-    nullable: true,
-  })
-  virtualContributor?: UrlResolverQueryResultVirtualContributor;
-
-  @Field(() => UUID, {
-    nullable: true,
-  })
-  discussionId?: string;
-
-  @Field(() => UUID, {
-    nullable: true,
-  })
-  innovationHubId?: string;
-
-  @Field(() => UrlResolverQueryResultInnovationPack, {
-    nullable: true,
-  })
-  innovationPack?: UrlResolverQueryResultInnovationPack;
+  closestAncestor?: UrlResolverQueryClosestAncestor;
 }

@@ -35,14 +35,14 @@ import { UserSettingsAuthorizationService } from '../user-settings/user.settings
 @Injectable()
 export class UserAuthorizationService {
   constructor(
-    private authorizationPolicyService: AuthorizationPolicyService,
-    private agentAuthorizationService: AgentAuthorizationService,
-    private profileAuthorizationService: ProfileAuthorizationService,
-    private platformAuthorizationService: PlatformAuthorizationPolicyService,
-    private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
-    private userSettingsAuthorizationService: UserSettingsAuthorizationService,
-    private agentService: AgentService,
-    private userLookupService: UserLookupService
+    private readonly authorizationPolicyService: AuthorizationPolicyService,
+    private readonly agentAuthorizationService: AgentAuthorizationService,
+    private readonly profileAuthorizationService: ProfileAuthorizationService,
+    private readonly platformAuthorizationService: PlatformAuthorizationPolicyService,
+    private readonly storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
+    private readonly userSettingsAuthorizationService: UserSettingsAuthorizationService,
+    private readonly agentService: AgentService,
+    private readonly userLookupService: UserLookupService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -163,6 +163,9 @@ export class UserAuthorizationService {
         user.authorization
       );
     updatedAuthorizations.push(...storageAuthorizations);
+
+    // Note: Conversations are now managed via the platform Messaging
+    // Authorization is applied on conversations through conversation memberships
 
     return updatedAuthorizations;
   }

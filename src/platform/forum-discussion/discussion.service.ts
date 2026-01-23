@@ -23,9 +23,9 @@ import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type
 export class DiscussionService {
   constructor(
     @InjectRepository(Discussion)
-    private discussionRepository: Repository<Discussion>,
-    private profileService: ProfileService,
-    private roomService: RoomService,
+    private readonly discussionRepository: Repository<Discussion>,
+    private readonly profileService: ProfileService,
+    private readonly roomService: RoomService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -52,10 +52,10 @@ export class DiscussionService {
       AuthorizationPolicyType.DISCUSSION
     );
 
-    discussion.comments = await this.roomService.createRoom(
-      `${communicationDisplayName}-discussion-${discussion.profile.displayName}`,
-      roomType
-    );
+    discussion.comments = await this.roomService.createRoom({
+      displayName: `${communicationDisplayName}-discussion-${discussion.profile.displayName}`,
+      type: roomType,
+    });
 
     discussion.createdBy = userID;
 
@@ -74,8 +74,11 @@ export class DiscussionService {
       await this.profileService.deleteProfile(discussion.profile.id);
     }
 
+    // Delete Room (which is a direct child of Forum Space in Matrix)
     if (discussion.comments) {
-      await this.roomService.deleteRoom(discussion.comments);
+      await this.roomService.deleteRoom({
+        roomID: discussion.comments.id,
+      });
     }
 
     const result = await this.discussionRepository.remove(
@@ -108,6 +111,20 @@ export class DiscussionService {
     updateDiscussionData: UpdateDiscussionInput
   ): Promise<IDiscussion> {
     if (updateDiscussionData.profileData) {
+      // Sync room name if displayName is changing
+      if (
+        updateDiscussionData.profileData.displayName &&
+        discussion.comments &&
+        discussion.profile.displayName !==
+          updateDiscussionData.profileData.displayName
+      ) {
+        const newRoomName = `discussion-${updateDiscussionData.profileData.displayName}`;
+        await this.roomService.updateRoomDisplayName(
+          discussion.comments,
+          newRoomName
+        );
+      }
+
       discussion.profile = await this.profileService.updateProfile(
         discussion.profile,
         updateDiscussionData.profileData

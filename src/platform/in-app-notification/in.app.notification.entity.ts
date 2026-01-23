@@ -1,5 +1,5 @@
 import { Column, Entity, Generated, ManyToOne, JoinColumn } from 'typeorm';
-import { ENUM_LENGTH, UUID_LENGTH } from '@constants/index';
+import { ENUM_LENGTH } from '@constants/index';
 import { BaseAlkemioEntity } from '../../domain/common/entity/base-entity/base.alkemio.entity';
 import { NotificationEventInAppState } from '../../common/enums/notification.event.in.app.state';
 import { IInAppNotification } from './in.app.notification.interface';
@@ -41,18 +41,16 @@ export class InAppNotification
   })
   category!: NotificationEventCategory;
 
-  @Column({ type: 'datetime', comment: 'UTC', nullable: false })
+  @Column({ type: 'timestamp', comment: 'UTC', nullable: false })
   triggeredAt!: Date;
 
-  @Column('char', {
-    length: UUID_LENGTH,
+  @Column('uuid', {
     nullable: true,
     comment: 'The contributor who triggered the event.',
   })
   triggeredByID!: string;
 
-  @Column('char', {
-    length: UUID_LENGTH,
+  @Column('uuid', {
     nullable: false,
     comment: 'The contributor who is the receiver of this notification',
   })
@@ -66,7 +64,7 @@ export class InAppNotification
   @JoinColumn({ name: 'receiverID' })
   receiver?: User;
 
-  @Column('json', {
+  @Column('jsonb', {
     nullable: false,
     comment: 'Additional data that is relevant for this Notification.',
   })
@@ -74,8 +72,7 @@ export class InAppNotification
 
   // Core entity foreign keys - cascade delete when these entities are removed
   // Only the applicable FK will be populated per notification type
-  @Column('char', {
-    length: UUID_LENGTH,
+  @Column('uuid', {
     nullable: true,
     comment: 'FK to Space - cascade deletes notification when space is deleted',
   })
@@ -89,8 +86,7 @@ export class InAppNotification
   @JoinColumn({ name: 'spaceID' })
   space?: Space;
 
-  @Column('char', {
-    length: UUID_LENGTH,
+  @Column('uuid', {
     nullable: true,
     comment:
       'FK to Organization - cascade deletes notification when organization is deleted',
@@ -105,8 +101,7 @@ export class InAppNotification
   @JoinColumn({ name: 'organizationID' })
   organization?: Organization;
 
-  @Column('char', {
-    length: UUID_LENGTH,
+  @Column('uuid', {
     nullable: true,
     comment:
       'FK to User - cascade deletes notification when referenced user is deleted',
@@ -121,8 +116,7 @@ export class InAppNotification
   @JoinColumn({ name: 'userID' })
   user?: User;
 
-  @Column('char', {
-    length: UUID_LENGTH,
+  @Column('uuid', {
     nullable: true,
     comment:
       'FK to Application - cascade deletes notification when application is deleted',
@@ -137,8 +131,7 @@ export class InAppNotification
   @JoinColumn({ name: 'applicationID' })
   application?: Application;
 
-  @Column('char', {
-    length: UUID_LENGTH,
+  @Column('uuid', {
     nullable: true,
     comment:
       'FK to Invitation - cascade deletes notification when invitation is deleted',
@@ -153,8 +146,7 @@ export class InAppNotification
   @JoinColumn({ name: 'invitationID' })
   invitation?: Invitation;
 
-  @Column('char', {
-    length: UUID_LENGTH,
+  @Column('uuid', {
     nullable: true,
     comment:
       'FK to Callout - cascade deletes notification when callout is deleted',
@@ -169,8 +161,7 @@ export class InAppNotification
   @JoinColumn({ name: 'calloutID' })
   callout?: Callout;
 
-  @Column('char', {
-    length: UUID_LENGTH,
+  @Column('uuid', {
     nullable: true,
     comment:
       'FK to Callout Contribution - cascade deletes notification when Contribution is deleted',
@@ -185,8 +176,7 @@ export class InAppNotification
   @JoinColumn({ name: 'contributionID' })
   contribution?: CalloutContribution;
 
-  @Column('char', {
-    length: UUID_LENGTH,
+  @Column('uuid', {
     nullable: true,
     comment:
       'FK to Room - cascade deletes notification when the room is deleted',
@@ -201,7 +191,7 @@ export class InAppNotification
   @JoinColumn({ name: 'roomID' })
   room?: Room;
   // No FK for messageID as they are in another database
-  @Column('char', {
+  @Column('varchar', {
     length: 44,
     nullable: true,
     comment:
@@ -209,8 +199,7 @@ export class InAppNotification
   })
   messageID?: string;
 
-  @Column('char', {
-    length: UUID_LENGTH,
+  @Column('uuid', {
     nullable: true,
     comment:
       'FK to Organization - cascade deletes notification when organization contributor is deleted',
@@ -225,8 +214,7 @@ export class InAppNotification
   @JoinColumn({ name: 'contributorOrganizationID' })
   contributorOrganization?: Organization;
 
-  @Column('char', {
-    length: UUID_LENGTH,
+  @Column('uuid', {
     nullable: true,
     comment:
       'FK to User - cascade deletes notification when user contributor is deleted',
@@ -241,8 +229,7 @@ export class InAppNotification
   @JoinColumn({ name: 'contributorUserID' })
   contributorUser?: User;
 
-  @Column('char', {
-    length: UUID_LENGTH,
+  @Column('uuid', {
     nullable: true,
     comment:
       'FK to VC - cascade deletes notification when VC contributor is deleted',
@@ -257,8 +244,7 @@ export class InAppNotification
   @JoinColumn({ name: 'contributorVcID' })
   contributorVc?: VirtualContributor;
 
-  @Column('char', {
-    length: UUID_LENGTH,
+  @Column('uuid', {
     nullable: true,
     comment:
       'FK to Calendar Event - cascade deletes notification when the calendar event is deleted',

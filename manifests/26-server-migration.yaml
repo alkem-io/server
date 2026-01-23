@@ -14,9 +14,21 @@ spec:
           restartPolicy: Never
           containers:
             - name: alkemio-server
-              image: alkemio.azurecr.io/alkemio-server:latest
-              command: ["npm",  "run", "migration:run"]
-
+              image: rg.nl-ams.scw.cloud/alkemio/alkemio-server:latest
+              command: ["pnpm", "run", "migration:run"]
+              imagePullPolicy: Always
+              env:
+                # Map POSTGRES_USER/PASSWORD to DATABASE_USERNAME/PASSWORD for the server
+                - name: DATABASE_USERNAME
+                  valueFrom:
+                    configMapKeyRef:
+                      name: alkemio-config
+                      key: POSTGRES_USER
+                - name: DATABASE_PASSWORD
+                  valueFrom:
+                    configMapKeyRef:
+                      name: alkemio-config
+                      key: POSTGRES_PASSWORD
               envFrom:
                 - secretRef:
                     name: alkemio-secrets

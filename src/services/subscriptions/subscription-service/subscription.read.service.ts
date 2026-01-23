@@ -5,6 +5,7 @@ import {
   SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER,
   SUBSCRIPTION_ROOM_EVENT,
   SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED,
+  SUBSCRIPTION_CONVERSATION_EVENT,
 } from '@src/common/constants';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { TypedPubSubEngine } from './typed.pub.sub.engine';
@@ -21,36 +22,44 @@ export class SubscriptionReadService {
     @Inject(SUBSCRIPTION_IN_APP_NOTIFICATION_RECEIVED)
     private subscriptionInAppNotificationReceived: TypedPubSubEngine,
     @Inject(SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER)
-    private subscriptionInAppNotificationCounter: TypedPubSubEngine
+    private subscriptionInAppNotificationCounter: TypedPubSubEngine,
+    @Inject(SUBSCRIPTION_CONVERSATION_EVENT)
+    private subscriptionConversationEvents: TypedPubSubEngine
   ) {}
 
   public subscribeToActivities() {
-    return this.activityCreatedSubscription.asyncIterator(
+    return this.activityCreatedSubscription.asyncIterableIterator(
       SubscriptionType.ACTIVITY_CREATED
     );
   }
 
   public subscribeToRoomEvents() {
-    return this.roomEventsSubscription.asyncIterator(
+    return this.roomEventsSubscription.asyncIterableIterator(
       SubscriptionType.ROOM_EVENTS
     );
   }
 
   public subscribeToVirtualContributorUpdated() {
-    return this.subscriptionVirtualContributorUpdated.asyncIterator(
+    return this.subscriptionVirtualContributorUpdated.asyncIterableIterator(
       SubscriptionType.VIRTUAL_CONTRIBUTOR_UPDATED
     );
   }
 
   public subscribeToInAppNotificationReceived() {
-    return this.subscriptionInAppNotificationReceived.asyncIterator(
+    return this.subscriptionInAppNotificationReceived.asyncIterableIterator(
       SubscriptionType.IN_APP_NOTIFICATION_RECEIVED
     );
   }
 
   public subscribeToInAppNotificationCounter() {
-    return this.subscriptionInAppNotificationCounter.asyncIterator(
+    return this.subscriptionInAppNotificationCounter.asyncIterableIterator(
       SubscriptionType.IN_APP_NOTIFICATION_COUNTER
+    );
+  }
+
+  public subscribeToConversationEvents() {
+    return this.subscriptionConversationEvents.asyncIterableIterator(
+      SubscriptionType.CONVERSATION_EVENTS
     );
   }
 }

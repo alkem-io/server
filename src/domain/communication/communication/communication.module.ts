@@ -13,6 +13,9 @@ import { NotificationAdapterModule } from '@services/adapters/notification-adapt
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { UserModule } from '@domain/community/user/user.module';
+import { MessagingModule } from '../messaging/messaging.module';
+import { ConversationModule } from '../conversation/conversation.module';
+import { MessageInboxModule } from '@services/event-handlers/internal/message-inbox/message.inbox.module';
 
 @Module({
   imports: [
@@ -23,7 +26,10 @@ import { UserModule } from '@domain/community/user/user.module';
     CommunicationAdapterModule,
     StorageAggregatorResolverModule,
     PlatformAuthorizationPolicyModule,
+    MessagingModule,
+    ConversationModule,
     UserModule,
+    MessageInboxModule,
     TypeOrmModule.forFeature([Communication]),
   ],
   providers: [

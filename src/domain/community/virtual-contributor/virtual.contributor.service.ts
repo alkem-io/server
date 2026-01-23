@@ -44,6 +44,10 @@ import { VirtualContributorDefaultsService } from '../virtual-contributor-defaul
 import { virtualContributorSettingsDefault } from './definition/virtual.contributor.settings.default';
 import { UpdateVirtualContributorSettingsEntityInput } from '../virtual-contributor-settings';
 import { VirtualContributorSettingsService } from '../virtual-contributor-settings/virtual.contributor.settings.service';
+import {
+  UpdateVirtualContributorPlatformSettingsEntityInput,
+  VirtualContributorPlatformSettingsService,
+} from '../virtual-contributor-platform-settings';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
 import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 
@@ -60,6 +64,7 @@ export class VirtualContributorService {
     private knowledgeBaseService: KnowledgeBaseService,
     private virtualContributorLookupService: VirtualContributorLookupService,
     private virtualContributorSettingsService: VirtualContributorSettingsService,
+    private virtualContributorPlatformSettingsService: VirtualContributorPlatformSettingsService,
     private accountLookupService: AccountLookupService,
     private virtualContributorDefaultsService: VirtualContributorDefaultsService,
     @InjectEntityManager('default')
@@ -102,6 +107,10 @@ export class VirtualContributorService {
     // Pull the settings from a defaults file
     virtualContributor.settings = virtualContributorSettingsDefault;
 
+    virtualContributor.platformSettings = {
+      promptGraphEditingEnabled: false,
+    };
+
     const knowledgeBaseData =
       await this.virtualContributorDefaultsService.createKnowledgeBaseInput(
         virtualContributorData.knowledgeBaseData,
@@ -119,14 +128,6 @@ export class VirtualContributorService {
     const kb = await this.knowledgeBaseService.save(
       virtualContributor.knowledgeBase
     );
-
-    const communicationID = await this.communicationAdapter.tryRegisterNewUser(
-      `virtual-contributor-${virtualContributor.nameID}@alkem.io`
-    );
-
-    if (communicationID) {
-      virtualContributor.communicationID = communicationID;
-    }
 
     if (
       virtualContributorData.bodyOfKnowledgeType ===
@@ -178,7 +179,7 @@ export class VirtualContributorService {
 
     virtualContributor = await this.save(virtualContributor);
 
-    const userID = agentInfo ? agentInfo.userID : '';
+    const userID = agentInfo?.userID;
     await this.contributorService.ensureAvatarIsStoredInLocalStorageBucket(
       virtualContributor.profile.id,
       userID
@@ -186,8 +187,32 @@ export class VirtualContributorService {
 
     // Reload to ensure have the updated avatar URL
     virtualContributor = await this.getVirtualContributorOrFail(
-      virtualContributor.id
+      virtualContributor.id,
+      { relations: { agent: true } }
     );
+
+    // Sync the VC's agent to the communication adapter
+    // The agent.id is used as the AlkemioActorID for all communication operations
+    const displayName =
+      virtualContributor.profile?.displayName || virtualContributor.nameID;
+    try {
+      await this.communicationAdapter.syncActor(
+        virtualContributor.agent.id,
+        displayName
+      );
+      this.logger.verbose?.(
+        `Synced VC actor to communication adapter: ${virtualContributor.agent.id}`,
+        LogContext.COMMUNITY
+      );
+    } catch (e: any) {
+      this.logger.error(
+        `Failed to sync VC actor to communication adapter: ${virtualContributor.agent.id}`,
+        e?.stack,
+        LogContext.COMMUNITY
+      );
+      // Don't throw - VC creation should succeed even if sync fails
+    }
+
     this.logger.verbose?.(
       `Created new virtual with id ${virtualContributor.id}`,
       LogContext.COMMUNITY
@@ -205,6 +230,19 @@ export class VirtualContributorService {
         virtualContributor.settings,
         settingsData
       );
+    return await this.save(virtualContributor);
+  }
+
+  public async updateVirtualContributorPlatformSettings(
+    virtualContributor: IVirtualContributor,
+    settingsData: UpdateVirtualContributorPlatformSettingsEntityInput
+  ): Promise<IVirtualContributor> {
+    virtualContributor.platformSettings =
+      this.virtualContributorPlatformSettingsService.updateSettings(
+        virtualContributor.platformSettings,
+        settingsData
+      );
+
     return await this.save(virtualContributor);
   }
 
@@ -294,6 +332,29 @@ export class VirtualContributorService {
     ) {
       virtual.knowledgeBase.profile.description =
         virtualContributorData.knowledgeBaseData.profile?.description;
+    }
+
+    if (
+      virtualContributorData.bodyOfKnowledgeType &&
+      virtualContributorData.bodyOfKnowledgeType !== virtual.bodyOfKnowledgeType
+    ) {
+      virtual.bodyOfKnowledgeType = virtualContributorData.bodyOfKnowledgeType;
+    }
+
+    if (
+      virtualContributorData.dataAccessMode &&
+      virtualContributorData.dataAccessMode !== virtual.dataAccessMode
+    ) {
+      virtual.dataAccessMode = virtualContributorData.dataAccessMode;
+    }
+
+    if (virtualContributorData.interactionModes) {
+      virtual.interactionModes = virtualContributorData.interactionModes;
+    }
+
+    if (typeof virtualContributorData.bodyOfKnowledgeDescription === 'string') {
+      virtual.bodyOfKnowledgeDescription =
+        virtualContributorData.bodyOfKnowledgeDescription;
     }
 
     return await this.save(virtual);
@@ -498,7 +559,7 @@ export class VirtualContributorService {
         .createQueryBuilder('virtual_contributor')
         .leftJoinAndSelect('virtual_contributor.agent', 'agent')
         .leftJoinAndSelect('agent.credentials', 'credential')
-        .where('credential.type IN (:credentialsFilter)')
+        .where('credential.type IN (:...credentialsFilter)')
         .setParameters({
           credentialsFilter: credentialsFilter,
         })

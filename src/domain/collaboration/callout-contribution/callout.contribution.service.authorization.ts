@@ -3,7 +3,7 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CalloutContributionService } from './callout.contribution.service';
 import { ICalloutContribution } from './callout.contribution.interface';
-import { WhiteboardAuthorizationService } from '@domain/common/whiteboard';
+import { WhiteboardAuthorizationService } from '@domain/common/whiteboard/whiteboard.service.authorization';
 import { PostAuthorizationService } from '../post/post.service.authorization';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { LogContext } from '@common/enums/logging.context';
@@ -21,6 +21,7 @@ import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
 import { PlatformRolesAccessService } from '@domain/access/platform-roles-access/platform.roles.access.service';
+import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { MemoAuthorizationService } from '@domain/common/memo/memo.service.authorization';
 
 @Injectable()
@@ -40,7 +41,8 @@ export class CalloutContributionAuthorizationService {
     contributionID: string,
     parentAuthorization: IAuthorizationPolicy | undefined,
     platformRolesAccess: IPlatformRolesAccess,
-    roleSet?: IRoleSet
+    roleSet?: IRoleSet,
+    spaceSettings?: ISpaceSettings
   ): Promise<IAuthorizationPolicy[]> {
     const contribution =
       await this.contributionService.getCalloutContributionOrFail(
@@ -148,7 +150,8 @@ export class CalloutContributionAuthorizationService {
       const whiteboardAuthorizations =
         await this.whiteboardAuthorizationService.applyAuthorizationPolicy(
           contribution.whiteboard.id,
-          contribution.authorization
+          contribution.authorization,
+          spaceSettings
         );
       updatedAuthorizations.push(...whiteboardAuthorizations);
     }

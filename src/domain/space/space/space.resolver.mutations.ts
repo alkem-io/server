@@ -2,7 +2,11 @@ import { Inject } from '@nestjs/common';
 import { Resolver, Args, Mutation } from '@nestjs/graphql';
 import { CurrentUser } from '@src/common/decorators';
 import { SpaceService } from './space.service';
-import { DeleteSpaceInput, UpdateSpaceInput } from '@domain/space/space';
+import {
+  DeleteSpaceInput,
+  UpdateSpaceInput,
+  UpdateSubspacesSortOrderInput,
+} from '@domain/space/space';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -236,5 +240,25 @@ export class SpaceResolverMutations {
     );
 
     return newSubspace;
+  }
+
+  @Mutation(() => [ISpace], {
+    description:
+      'Update the sortOrder field of the supplied Subspaces to increase as per the order that they are provided in.',
+  })
+  async updateSubspacesSortOrder(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('sortOrderData') sortOrderData: UpdateSubspacesSortOrderInput
+  ): Promise<ISpace[]> {
+    const space = await this.spaceService.getSpaceOrFail(sortOrderData.spaceID);
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      space.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `update subspaces sort order on space: ${space.id}`
+    );
+
+    return this.spaceService.updateSubspacesSortOrder(space, sortOrderData);
   }
 }

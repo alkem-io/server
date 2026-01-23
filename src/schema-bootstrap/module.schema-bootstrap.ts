@@ -26,15 +26,13 @@ import { ContributionMoveModule } from '@domain/collaboration/callout-contributi
 import { GeoLocationModule } from '@services/external/geo-location';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.module';
-import { SsiCredentialFlowModule } from '@services/api-rest/ssi-credential-flow/ssi.credential.flow.module';
-import { StorageAccessModule } from '@services/api-rest/storage-access/storage.access.module';
+import { IdentityResolveModule } from '@services/api-rest/identity-resolve/identity-resolve.module';
 import { MessageModule } from '@domain/communication/message/message.module';
 import { MessageReactionModule } from '@domain/communication/message.reaction/message.reaction.module';
 import { NotificationRecipientsModule } from '@services/api/notification-recipients/notification.recipients.module';
 import { RegistrationModule } from '@services/api/registration/registration.module';
 import { ConversionModule } from '@services/api/conversion/conversion.module';
 import { LibraryModule } from '@library/library/library.module';
-import { ChatGuidanceModule } from '@services/api/chat-guidance/chat.guidance.module';
 import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 import { InputCreatorModule } from '@services/api/input-creator/input.creator.module';
 import { LookupModule } from '@services/api/lookup';
@@ -77,6 +75,8 @@ import { EventBusProviderStubs } from './stubs/event-bus-providers.stub';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EncryptionService } from '@hedger/nestjs-encryption';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+import { IS_SCHEMA_BOOTSTRAP } from '@common/constants';
 
 const STUB_PROVIDERS = [
   CacheStubProvider,
@@ -88,6 +88,10 @@ const STUB_PROVIDERS = [
   SearchStubProvider,
   ...MicroservicesStubProviders,
   ...EventBusProviderStubs,
+  {
+    provide: IS_SCHEMA_BOOTSTRAP,
+    useValue: true,
+  },
   {
     provide: AmqpConnection,
     useValue: {
@@ -168,6 +172,9 @@ class SchemaBootstrapStubModule {}
       isGlobal: true,
       load: [configuration],
     }),
+    EventEmitterModule.forRoot({
+      global: true,
+    }),
     GraphQLModule.forRoot<ApolloDriverConfig>({
       driver: ApolloDriver,
       autoSchemaFile: true,
@@ -205,15 +212,13 @@ class SchemaBootstrapStubModule {}
     GeoLocationModule,
     ContributionReporterModule,
     InnovationHubModule,
-    SsiCredentialFlowModule,
-    StorageAccessModule,
+    IdentityResolveModule,
     MessageModule,
     MessageReactionModule,
     NotificationRecipientsModule,
     RegistrationModule,
     ConversionModule,
     LibraryModule,
-    ChatGuidanceModule,
     VirtualContributorModule,
     InputCreatorModule,
     LookupModule,

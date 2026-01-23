@@ -10,7 +10,6 @@ export const agentData: { agent: IAgent } = {
   agent: {
     id: 'agent-123',
     type: AgentType.USER,
-    did: '',
     credentials: [
       {
         id: 'cred-1',
@@ -20,7 +19,6 @@ export const agentData: { agent: IAgent } = {
         updatedDate: new Date('2024-01-01T00:00:00.000Z'),
       },
     ],
-    password: '',
     authorization: {
       type: AuthorizationPolicyType.AGENT,
       credentialRules: [
@@ -39,7 +37,6 @@ export const agentData: { agent: IAgent } = {
           cascade: true,
         },
       ],
-      verifiedCredentialRules: [],
       privilegeRules: [],
       id: 'auth-1',
       createdDate: new Date('2024-01-01T00:00:00.000Z'),

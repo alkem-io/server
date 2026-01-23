@@ -1,17 +1,17 @@
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { Global, Module } from '@nestjs/common';
+import { Global, Module, OnModuleDestroy, Inject } from '@nestjs/common';
+import { PubSubEngine } from 'graphql-subscriptions';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import {
   NOTIFICATIONS_SERVICE,
   MATRIX_ADAPTER_SERVICE,
   SUBSCRIPTION_CALLOUT_POST_CREATED,
-  WALLET_MANAGEMENT_SERVICE,
-  SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL,
   SUBSCRIPTION_DISCUSSION_UPDATED,
   SUBSCRIPTION_ROOM_EVENT,
   AUTH_RESET_SERVICE,
   SUBSCRIPTION_SUBSPACE_CREATED,
   SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED,
+  IS_SCHEMA_BOOTSTRAP,
 } from '@common/constants/providers';
 import { MessagingQueue } from '@common/enums/messaging.queue';
 import { RABBITMQ_EXCHANGE_NAME_DIRECT } from '@src/common/constants';
@@ -28,10 +28,6 @@ const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
   {
     provide: SUBSCRIPTION_CALLOUT_POST_CREATED,
     queueName: MessagingQueue.SUBSCRIPTION_CALLOUT_POST_CREATED,
-  },
-  {
-    provide: SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL,
-    queueName: MessagingQueue.SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL,
   },
   {
     provide: SUBSCRIPTION_SUBSPACE_CREATED,
@@ -73,23 +69,60 @@ const subscriptionFactoryProviders = subscriptionConfig.map(
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
     },
     {
-      provide: WALLET_MANAGEMENT_SERVICE,
-      useFactory: clientProxyFactory(MessagingQueue.WALLET_MANAGER),
-      inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
-    },
-    {
       provide: AUTH_RESET_SERVICE,
       useFactory: clientProxyFactory(MessagingQueue.AUTH_RESET),
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
+    },
+    {
+      provide: IS_SCHEMA_BOOTSTRAP,
+      useValue: false,
     },
     APP_ID_PROVIDER,
   ],
   exports: [
     ...subscriptionConfig.map(x => x.provide),
     NOTIFICATIONS_SERVICE,
-    WALLET_MANAGEMENT_SERVICE,
     MATRIX_ADAPTER_SERVICE,
     AUTH_RESET_SERVICE,
+    IS_SCHEMA_BOOTSTRAP,
   ],
 })
-export class MicroservicesModule {}
+export class MicroservicesModule implements OnModuleDestroy {
+  constructor(
+    @Inject(SUBSCRIPTION_DISCUSSION_UPDATED)
+    private readonly discussionUpdated: PubSubEngine,
+    @Inject(SUBSCRIPTION_CALLOUT_POST_CREATED)
+    private readonly calloutPostCreated: PubSubEngine,
+    @Inject(SUBSCRIPTION_SUBSPACE_CREATED)
+    private readonly subspaceCreated: PubSubEngine,
+    @Inject(SUBSCRIPTION_ROOM_EVENT)
+    private readonly roomEvent: PubSubEngine,
+    @Inject(SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED)
+    private readonly virtualContributorUpdated: PubSubEngine
+  ) {}
+
+  async onModuleDestroy() {
+    const pubSubs = [
+      this.discussionUpdated,
+      this.calloutPostCreated,
+      this.subspaceCreated,
+      this.roomEvent,
+      this.virtualContributorUpdated,
+    ];
+
+    for (const pubSub of pubSubs) {
+      if (pubSub) {
+        if (typeof (pubSub as any).close === 'function') {
+          await (pubSub as any).close();
+        }
+
+        if (
+          (pubSub as any).connection &&
+          typeof (pubSub as any).connection.close === 'function'
+        ) {
+          await (pubSub as any).connection.close();
+        }
+      }
+    }
+  }
+}

@@ -7,13 +7,6 @@ import { AgentType } from '@common/enums/agent.type';
 
 @Entity()
 export class Agent extends AuthorizableEntity implements IAgent {
-  //todo: replace with output DID that resolves to a string
-  @Column('varchar', { length: 255, nullable: true })
-  did!: string;
-
-  @Column('varchar', { length: 255, nullable: true })
-  password!: string;
-
   @OneToMany(() => Credential, credential => credential.agent, {
     eager: true,
     cascade: true,
@@ -22,10 +15,4 @@ export class Agent extends AuthorizableEntity implements IAgent {
 
   @Column('varchar', { length: ENUM_LENGTH, nullable: true })
   type!: AgentType;
-
-  constructor() {
-    super();
-    this.did = '';
-    this.password = '';
-  }
 }

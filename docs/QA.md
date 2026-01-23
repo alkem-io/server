@@ -3,7 +3,7 @@
 Initial version of integration tests is in place. To run them, look at the prerequisites, below:
 
 - Used frameworks/packages [jest](https://jestjs.io/) and `supertest`
-- Running `MySQL sql server`
+- Running `PostgreSQL` database server
 - Running `Alkemio/Server` service.
 - `LOGGING_CONSOLE_ENABLED=false` can be used to disable logging the exceptions (exceptions are quite verbose and will pollute the test results log).
 - In order to run the unit, integration and end-to-end, navigate to the `/Server` repository, and execute the following command: `pnpm run test:[TEST_TYPE]` where TEST_TYPE is `e2e` for end-to-end, `it` for

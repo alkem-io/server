@@ -160,7 +160,7 @@ export class StorageBucketService {
     buffer: Buffer,
     filename: string,
     mimeType: string,
-    userID: string,
+    userID?: string,
     temporaryLocation = false
   ): Promise<IDocument> {
     const storage = await this.getStorageBucketOrFail(storageBucketId, {
@@ -179,7 +179,7 @@ export class StorageBucketService {
       externalID: externalID,
       displayName: filename,
       size: size,
-      createdBy: userID,
+      createdBy: userID || undefined,
       temporaryLocation: temporaryLocation,
     };
 
@@ -417,7 +417,7 @@ export class StorageBucketService {
   public async ensureAvatarUrlIsDocument(
     avatarURL: string,
     storageBucketId: string,
-    userId: string
+    userId?: string
   ): Promise<IDocument> {
     if (this.documentService.isAlkemioDocumentURL(avatarURL)) {
       const document = await this.documentService.getDocumentFromURL(avatarURL);

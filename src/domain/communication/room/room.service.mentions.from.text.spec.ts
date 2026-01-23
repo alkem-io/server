@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { MockWinstonProvider } from '@test/mocks';
@@ -190,19 +191,15 @@ describe('RoomServiceMentions', () => {
     const user = testData.user;
     const organization = testData.organization;
     const virtualContributor = testData.virtualContributor;
-    jest
-      .spyOn(userLookupService, 'getUserByNameIdOrFail')
-      .mockResolvedValue(user);
+    // Direct assignment to avoid proxy issues with vi.spyOn
+    userLookupService.getUserByNameIdOrFail = vi.fn().mockResolvedValue(user);
 
-    jest
-      .spyOn(organizationLookupService, 'getOrganizationByNameIdOrFail')
+    organizationLookupService.getOrganizationByNameIdOrFail = vi
+      .fn()
       .mockResolvedValue(organization);
 
-    jest
-      .spyOn(
-        virtualContributorLookupService,
-        'getVirtualContributorByNameIdOrFail'
-      )
+    virtualContributorLookupService.getVirtualContributorByNameIdOrFail = vi
+      .fn()
       .mockResolvedValue(virtualContributor);
 
     const result = await roomMentionsService.getMentionsFromText(text);

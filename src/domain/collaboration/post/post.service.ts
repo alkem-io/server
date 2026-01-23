@@ -53,17 +53,17 @@ export class PostService {
     post.authorization = new AuthorizationPolicy(AuthorizationPolicyType.POST);
     post.createdBy = userID;
 
-    post.comments = await this.roomService.createRoom(
-      `post-comments-${post.nameID}`,
-      RoomType.POST
-    );
+    post.comments = await this.roomService.createRoom({
+      displayName: `post-comments-${post.nameID}`,
+      type: RoomType.POST,
+    });
 
     return post;
   }
 
   public async deletePost(postId: string): Promise<IPost> {
     const post = await this.getPostOrFail(postId, {
-      relations: { profile: true },
+      relations: { profile: true, comments: true },
     });
     if (post.authorization) {
       await this.authorizationPolicyService.delete(post.authorization);
@@ -72,7 +72,9 @@ export class PostService {
       await this.profileService.deleteProfile(post.profile.id);
     }
     if (post.comments) {
-      await this.roomService.deleteRoom(post.comments);
+      await this.roomService.deleteRoom({
+        roomID: post.comments.id,
+      });
     }
 
     const result = await this.postRepository.remove(post as Post);
@@ -98,10 +100,8 @@ export class PostService {
 
   public async updatePost(postData: UpdatePostInput): Promise<IPost> {
     const post = await this.getPostOrFail(postData.ID, {
-      relations: { profile: true },
+      relations: { profile: true, comments: true },
     });
-
-    // Copy over the received data
 
     if (postData.profileData) {
       if (!post.profile) {
@@ -110,6 +110,20 @@ export class PostService {
           LogContext.COLLABORATION
         );
       }
+
+      // Sync room name if displayName is changing
+      if (
+        postData.profileData.displayName &&
+        post.comments &&
+        post.profile.displayName !== postData.profileData.displayName
+      ) {
+        const newRoomName = `post-comments-${post.nameID}`;
+        await this.roomService.updateRoomDisplayName(
+          post.comments,
+          newRoomName
+        );
+      }
+
       post.profile = await this.profileService.updateProfile(
         post.profile,
         postData.profileData

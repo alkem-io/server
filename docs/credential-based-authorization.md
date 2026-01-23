@@ -9,7 +9,6 @@ The authorization system is built around a few core components:
 - **`AuthorizationPolicy`**: An entity that represents the set of authorization rules for a specific resource. It contains three types of rules:
   - `credentialRules`: Grants privileges based on the credentials held by an agent.
   - `privilegeRules`: Maps one privilege to another (e.g., granting `READ_ABOUT` if an agent has `READ`).
-  - `verifiedCredentialRules`: Grants privileges based on verified credentials.
 - **`AuthorizationPolicyService`**: A central service responsible for creating, managing, and applying authorization policies. It provides methods for inheritance, rule creation, and policy validation.
 - **`*.service.authorization.ts`**: A pattern of service files dedicated to handling the authorization logic for a specific entity (e.g., `SpaceAuthorizationService`, `LicensingFrameworkAuthorizationService`). These services orchestrate the application of authorization policies.
 
@@ -148,6 +147,10 @@ graph TD
         Check --> Result{Access Granted/Denied};
     end
 ```
+
+### Special Case: Guest Contributions on Whiteboards
+
+Guest contribution controls provide a concrete example of how privilege rules can map higher privileges to specialized capabilities. When a space enables `allowGuestContributions`, every whiteboard in that space appends a privilege rule that maps `AuthorizationPrivilege.GRANT` to `AuthorizationPrivilege.PUBLIC_SHARE`. This mapping is targeted at global administrators who inherit GRANT via upstream policies but do not have a dedicated credential rule on the whiteboard. Space admins and whiteboard owners still obtain PUBLIC_SHARE through their credential rules. Global Support is the lone exception for now—they receive their privileges through the `getAccessPrivilegesForSupport` helper in the space platform roles access service, which respects `allowPlatformSupportAsAdmin` plus guest contribution settings on level-zero spaces until we replace it with a privilege rule. Disabling the setting removes the GRANT→PUBLIC_SHARE mapping, instantly revoking PUBLIC_SHARE for those global actors.
 
 ## Space Authorization
 

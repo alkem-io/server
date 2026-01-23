@@ -2,11 +2,28 @@
 
 This document provides an overview of data management within the Alkemio Server.
 
+## Database Backend
+
+**Alkemio uses PostgreSQL 17.5 as the database backend.**
+
 ## Migrations
 
 Database synchronization is switched off and migrations are applied manually (or with scripts as part of the docker images).
 
-**NB! Migrations use TypeORM CLI. Dependencies and environment variables are not loaded using nestJs - you will need the mySQL configuration in .env file in order to run the migrations locally.**
+**NB! Migrations use TypeORM CLI. Dependencies and environment variables are not loaded using NestJS.**
+
+### PostgreSQL Configuration
+
+You will need the PostgreSQL configuration in your `.env` file:
+
+```
+DATABASE_TYPE=postgres
+DATABASE_HOST=localhost
+DATABASE_PORT=5432
+DATABASE_USERNAME=alkemio
+DATABASE_PASSWORD=alkemio
+DATABASE_NAME=alkemio
+```
 
 Generate new migration with name 'migration_name' after schema change:
 
@@ -34,32 +51,112 @@ pnpm run migration:show
 
 **NB! Running untested migrations automatically may result in a data loss!**
 
-## MySQL Server
+## PostgreSQL Server (Default)
 
-The server used by Alkemio is MySql.
+Alkemio uses PostgreSQL 17.5 as the primary database backend for both the Alkemio application and Ory Kratos identity service.
 
-There is specific configuration for version 8 which needs to be specified if not using the pre-supplied docker setup.
+### Supported PostgreSQL Versions
 
-MySQL version 8 by default use `caching_sha2_password` password validation plugin that is not supported by typeORM. The plugin must be changed to 'mysql_native_password'. It can be done per user or default for the server.
+**Target Version**: PostgreSQL 17.5
 
-If the server is already up and running create new user:
+**Minimum Supported Version**: PostgreSQL 14.x
 
-```sql
-CREATE USER 'nativeuser'@'localhost' IDENTIFIED WITH mysql_native_password BY 'password';
-```
+The Postgres convergence strategy is tested and officially supported on PostgreSQL 17.5. While scripts and migrations maintain compatibility with PostgreSQL 14.x and above, PostgreSQL 17.5 is the recommended and officially supported version for production deployments. This aligns with current cloud provider offerings and maintained PostgreSQL versions.
 
-or alter existing one:
+### Database Structure
 
-```sql
-ALTER USER 'nativeuser'@'localhost' IDENTIFIED WITH mysql_native_password BY 'password';
-```
+The default Docker Compose setup automatically provisions PostgreSQL with the required databases:
 
-For MySQL in docker:
+- `alkemio` - Main application database
+- `kratos` - Ory Kratos identity database
+- `hydra` - Ory Hydra OAuth2 database
+- `synapse` - Matrix Synapse messaging database
+
+For PostgreSQL in docker:
 
 ```bash
-docker run --name some-mysql \
--p 3306:3306 \
--e MYSQL_ROOT_PASSWORD=my-secret-pw \
--d mysql \
---default-authentication-plugin=mysql_native_password
+docker run --name alkemio-postgres \
+-p 5432:5432 \
+-e POSTGRES_USER=alkemio \
+-e POSTGRES_PASSWORD=alkemio \
+-e POSTGRES_DB=alkemio \
+-d postgres:17.5
 ```
+
+### Kratos Identity Schema on PostgreSQL
+
+Ory Kratos, the identity and user management system used by Alkemio, provides official PostgreSQL migration support.
+
+#### Applying Kratos Migrations
+
+**Option 1: Automatic Migration on Container Startup** (Recommended)
+
+The easiest approach is to configure the Kratos container to automatically apply migrations on startup:
+
+```yaml
+# docker-compose.yml or similar
+kratos:
+  image: oryd/kratos:v1.0.0
+  command:
+    - serve
+    - --config
+    - /etc/config/kratos/kratos.yml
+    - migrate
+    - sql
+    - -e
+    - --yes
+  environment:
+    - DSN=postgres://alkemio:alkemio@postgres:5432/kratos?sslmode=disable
+```
+
+**Option 2: Manual Migration**
+
+Apply migrations manually using the Kratos CLI:
+
+```bash
+# Using Docker
+docker exec -it kratos kratos migrate sql -e --yes \
+  --config /etc/config/kratos/kratos.yml
+
+# Or using Kratos binary directly
+kratos migrate sql -e --yes \
+  --config /path/to/kratos.yml
+```
+
+#### Verifying Kratos Schema
+
+After applying migrations, verify the Kratos database schema:
+
+```sql
+-- Check migration status
+SELECT * FROM _kratos_migrations ORDER BY applied_at DESC;
+
+-- Verify core tables exist
+SELECT table_name FROM information_schema.tables
+WHERE table_schema = 'public'
+  AND table_name IN ('identities', 'identity_credentials', 'sessions',
+                     'identity_credential_identifiers', 'session_devices',
+                     'identity_verifiable_addresses', 'identity_recovery_addresses')
+ORDER BY table_name;
+
+-- Check identity count
+SELECT COUNT(*) as identity_count FROM identities;
+```
+
+#### Kratos Configuration for PostgreSQL
+
+Ensure your Kratos configuration (`kratos.yml`) includes the correct DSN:
+
+```yaml
+dsn: postgres://username:password@host:port/database?sslmode=disable
+
+# For production, use secure connections:
+dsn: postgres://username:password@host:port/database?sslmode=require
+```
+
+#### Migration Documentation
+
+For detailed Kratos migration documentation, see:
+
+- Official Kratos Documentation: https://www.ory.sh/docs/kratos/manage-identities/migrations
+- Kratos GitHub: https://github.com/ory/kratos

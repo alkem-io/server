@@ -26,6 +26,9 @@ import { TemplatesManagerModule } from '@domain/template/templates-manager/templ
 import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/agent.info.module';
 import { AdminAuthorizationModule } from '@src/platform-admin/domain/authorization/admin.authorization.module';
 import { AiPersonaModule } from '@services/ai-server/ai-persona';
+import { MessagingModule } from '@domain/communication/messaging/messaging.module';
+import { PlatformWellKnownVirtualContributorsModule } from '@platform/platform.well.known.virtual.contributors/platform.well.known.virtual.contributors.module';
+import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 
 @Module({
   imports: [
@@ -55,6 +58,9 @@ import { AiPersonaModule } from '@services/ai-server/ai-persona';
     TemplateDefaultModule,
     LicensingFrameworkModule,
     LicensePlanModule,
+    MessagingModule,
+    PlatformWellKnownVirtualContributorsModule,
+    RoleSetModule,
   ],
   providers: [BootstrapService],
   exports: [BootstrapService],

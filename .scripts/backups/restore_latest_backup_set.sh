@@ -1,5 +1,14 @@
 #!/bin/bash
 
+# Usage: ./restore_latest_backup_set.sh <environment> [restart_services] [non_interactive]
+# Arguments:
+#   environment      - Environment to restore (acc/dev/sandbox/prod). Default: prod
+#   restart_services - Whether to restart services after restore (true/false). Default: true
+#   non_interactive  - Run without prompts (true/false). Default: true
+# Examples:
+#   ./restore_latest_backup_set.sh acc false true   # Restore acc, no restart, non-interactive
+#   ./restore_latest_backup_set.sh dev true false   # Restore dev, restart, interactive mode
+
 # Check if yq is installed
 if ! command -v yq &> /dev/null; then
     echo "yq is not installed. Installing now..."
@@ -23,7 +32,7 @@ if ! command -v yq &> /dev/null; then
 fi
 
 # Check yq version (only versions >= 4 are supported)
-YQ_VERSION=$(yq --version | awk '{print $4}' | sed 's/v\([0-9]*\).*/\1/')
+YQ_VERSION=$(yq --version | awk '{print $4}' | cut -d. -f1)
 if [[ "$YQ_VERSION" -lt 4 ]]; then
     echo "yq version is lower than 4. Please upgrade yq to version 4 or higher."
     exit 1
@@ -34,6 +43,9 @@ ENV=${1:-prod}
 
 # Optional parameter to restart services (default is true)
 RESTART_SERVICES=${2:-true}
+
+# Optional parameter for non-interactive mode (default is true)
+NON_INTERACTIVE=${3:-true}
 
 # The path to the .env.docker file is the second argument.
 ENV_FILE_PATH=../../.env.docker
@@ -63,14 +75,14 @@ esac
 
 # Update the .env.docker file with the new server name
 if grep -q "SYNAPSE_HOMESERVER_NAME" $ENV_FILE_PATH; then
-    sed -i "s/^SYNAPSE_HOMESERVER_NAME=.*/SYNAPSE_HOMESERVER_NAME=$SERVER_NAME/" $ENV_FILE_PATH
+    sed -i '' "s/^SYNAPSE_HOMESERVER_NAME=.*/SYNAPSE_HOMESERVER_NAME=$SERVER_NAME/" $ENV_FILE_PATH
 else
     # Ensure that a newline is added before appending the variable
     echo -e "\nSYNAPSE_HOMESERVER_NAME=$SERVER_NAME" >> $ENV_FILE_PATH
 fi
 
 if grep -q "SYNAPSE_SERVER_NAME" $ENV_FILE_PATH; then
-    sed -i "s/^SYNAPSE_SERVER_NAME=.*/SYNAPSE_SERVER_NAME=$SERVER_NAME/" $ENV_FILE_PATH
+    sed -i '' "s/^SYNAPSE_SERVER_NAME=.*/SYNAPSE_SERVER_NAME=$SERVER_NAME/" $ENV_FILE_PATH
 else
     # Ensure that a newline is added before appending the variable
     echo -e "\nSYNAPSE_SERVER_NAME=$SERVER_NAME" >> $ENV_FILE_PATH
@@ -84,11 +96,14 @@ yq e ".server_name = \"$SERVER_NAME\"" -i $HOMESERVER_FILE_PATH
 # Path to your existing script
 SCRIPT_PATH='restore_latest_backup.sh'
 
-# Call the existing script for mysql
-bash $SCRIPT_PATH mysql $ENV
+# Call the existing script for alkemio (pass NON_INTERACTIVE mode)
+bash $SCRIPT_PATH alkemio $ENV $NON_INTERACTIVE
 
-# Call the existing script for postgres
-bash $SCRIPT_PATH postgres $ENV
+# Call the existing script for kratos (pass NON_INTERACTIVE mode)
+bash $SCRIPT_PATH kratos $ENV $NON_INTERACTIVE
+
+# Call the existing script for synapse (pass NON_INTERACTIVE mode)
+bash $SCRIPT_PATH synapse $ENV $NON_INTERACTIVE
 
 # Conditionally restart services based on the RESTART_SERVICES flag
 if [[ "$RESTART_SERVICES" == "true" ]]; then
@@ -96,16 +111,16 @@ if [[ "$RESTART_SERVICES" == "true" ]]; then
     # Start services
     pnpm run start:services &
 
-    # Wait for alkemio_dev_mysql container to be up
+    # Wait for alkemio_dev_postgres container to be up
     while true; do
         # Check the status of the container
-        CONTAINER_STATUS=$(docker inspect --format="{{.State.Status}}" alkemio_dev_mysql)
+        CONTAINER_STATUS=$(docker inspect --format="{{.State.Status}}" alkemio_dev_postgres)
 
         # If the container is running, break out of the loop
         if [ "$CONTAINER_STATUS" == "running" ]; then
             break
         else
-            echo "Waiting for alkemio_dev_mysql to start..."
+            echo "Waiting for alkemio_dev_postgres to start..."
         sleep 500
         fi
     done

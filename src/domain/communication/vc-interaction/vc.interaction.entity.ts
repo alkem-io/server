@@ -1,28 +1,13 @@
-import { Column, Entity, ManyToOne } from 'typeorm';
-import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
-import { IVcInteraction } from './vc.interaction.interface';
-import { Room } from '../room/room.entity';
-import { MESSAGEID_LENGTH, UUID_LENGTH } from '@common/constants';
+// VcInteraction data structure - stored as JSON in Room entity
+export type VcInteractionData = {
+  virtualContributorActorID: string; // VC's agent.id
+  externalThreadId?: string; // AI service thread ID
+};
 
+// Type for the JSON column in Room
+export type VcInteractionsByThread = Record<string, VcInteractionData>;
+
+// Still used by AI service DTOs for external thread context
 export type ExternalMetadata = {
   threadId?: string;
 };
-
-@Entity()
-export class VcInteraction extends BaseAlkemioEntity implements IVcInteraction {
-  @ManyToOne(() => Room, room => room.vcInteractions, {
-    eager: false,
-    cascade: false,
-    onDelete: 'CASCADE',
-  })
-  room!: Room;
-
-  @Column('varchar', { length: MESSAGEID_LENGTH, nullable: false })
-  threadID!: string;
-
-  @Column('char', { length: UUID_LENGTH, nullable: false })
-  virtualContributorID!: string;
-
-  @Column('simple-json')
-  externalMetadata: ExternalMetadata = {};
-}

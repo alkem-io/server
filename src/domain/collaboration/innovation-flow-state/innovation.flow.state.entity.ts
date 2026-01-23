@@ -1,8 +1,9 @@
-import { Column, Entity, ManyToOne } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
 import { IInnovationFlowStateSettings } from '../innovation-flow-state-settings/innovation.flow.settings.interface';
 import { IInnovationFlowState } from './innovation.flow.state.interface';
 import { InnovationFlow } from '../innovation-flow/innovation.flow.entity';
+import { Template } from '@domain/template/template/template.entity';
 
 @Entity()
 export class InnovationFlowState
@@ -15,7 +16,7 @@ export class InnovationFlowState
   @Column('text', { nullable: true })
   description?: string;
 
-  @Column('json', { nullable: false })
+  @Column('jsonb', { nullable: false })
   settings!: IInnovationFlowStateSettings;
 
   @Column('int', { nullable: false })
@@ -27,4 +28,13 @@ export class InnovationFlowState
     onDelete: 'CASCADE',
   })
   innovationFlow?: InnovationFlow;
+
+  @ManyToOne(() => Template, {
+    eager: false,
+    cascade: false,
+    onDelete: 'SET NULL',
+    nullable: true,
+  })
+  @JoinColumn({ name: 'defaultCalloutTemplateId' })
+  defaultCalloutTemplate?: Template | null;
 }

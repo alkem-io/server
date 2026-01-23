@@ -5,7 +5,7 @@ import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import { Post } from '../post/post.entity';
 import { Callout } from '../callout/callout.entity';
 import { Link } from '../link/link.entity';
-import { ENUM_LENGTH, UUID_LENGTH } from '@common/constants';
+import { ENUM_LENGTH } from '@common/constants';
 import { Memo } from '@domain/common/memo/memo.entity';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 
@@ -14,7 +14,7 @@ export class CalloutContribution
   extends AuthorizableEntity
   implements ICalloutContribution
 {
-  @Column('char', { length: UUID_LENGTH, nullable: true })
+  @Column('uuid', { nullable: true })
   createdBy?: string;
 
   @Column('varchar', {

@@ -34,6 +34,8 @@ import { NotificationInputCommunityCalendarEventComment } from './dto/space/noti
 import { InAppNotificationPayloadSpaceCommunityCalendarEventComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.calendar.event.comment';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
+import { LogContext } from '@common/enums/logging.context';
+import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 
 @Injectable()
 export class NotificationSpaceAdapter {
@@ -274,16 +276,36 @@ export class NotificationSpaceAdapter {
       recipient => recipient.id !== eventData.triggeredBy
     );
 
-    const payload =
-      await this.notificationExternalAdapter.buildSpaceCollaborationCreatedPayload(
-        event,
-        eventData.triggeredBy,
-        emailRecipientsWithoutCreator,
-        space,
-        eventData
-      );
+    // Build and send external notifications; skip gracefully if entity was deleted
+    try {
+      const payload =
+        await this.notificationExternalAdapter.buildSpaceCollaborationCreatedPayload(
+          event,
+          eventData.triggeredBy,
+          emailRecipientsWithoutCreator,
+          space,
+          eventData
+        );
 
-    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
+      this.notificationExternalAdapter.sendExternalNotifications(
+        event,
+        payload
+      );
+    } catch (error) {
+      if (error instanceof EntityNotFoundException) {
+        this.logger.warn(
+          {
+            message:
+              'Skipping contribution notification; contribution entity was deleted before notification could be sent',
+            contributionId: eventData.contribution.id,
+            calloutId: eventData.callout.id,
+          },
+          LogContext.NOTIFICATIONS
+        );
+      } else {
+        throw error;
+      }
+    }
 
     // Send in-app notifications
     const inAppRecipientsWithoutCreator = recipients.inAppRecipients.filter(
@@ -324,18 +346,35 @@ export class NotificationSpaceAdapter {
         recipient => recipient.id !== eventData.triggeredBy
       );
 
-    const adminPayload =
-      await this.notificationExternalAdapter.buildSpaceCollaborationCreatedPayload(
+    // Build and send admin external notifications; skip gracefully if entity was deleted
+    try {
+      const adminPayload =
+        await this.notificationExternalAdapter.buildSpaceCollaborationCreatedPayload(
+          adminEvent,
+          eventData.triggeredBy,
+          adminEmailRecipientsWithoutCreator,
+          space,
+          eventData
+        );
+      this.notificationExternalAdapter.sendExternalNotifications(
         adminEvent,
-        eventData.triggeredBy,
-        adminEmailRecipientsWithoutCreator,
-        space,
-        eventData
+        adminPayload
       );
-    this.notificationExternalAdapter.sendExternalNotifications(
-      adminEvent,
-      adminPayload
-    );
+    } catch (error) {
+      if (error instanceof EntityNotFoundException) {
+        this.logger.warn(
+          {
+            message:
+              'Skipping admin contribution notification; contribution entity was deleted before notification could be sent',
+            contributionId: eventData.contribution.id,
+            calloutId: eventData.callout.id,
+          },
+          LogContext.NOTIFICATIONS
+        );
+      } else {
+        throw error;
+      }
+    }
 
     // Send admin in-app notifications
     const adminInAppRecipientsWithoutCreator =
@@ -384,9 +423,11 @@ export class NotificationSpaceAdapter {
       space.id
     );
 
-    // Filter out the sender
+    // Filter out the sender AND users who were already mentioned (to avoid double notifications)
     const recipientsWithoutSender = recipients.emailRecipients.filter(
-      recipient => recipient.id !== eventData.triggeredBy
+      recipient =>
+        recipient.id !== eventData.triggeredBy &&
+        !eventData.mentionedUserIDs?.includes(recipient.id)
     );
     // ALSO only send to the creator of the post
     const recipientCreator = recipientsWithoutSender.filter(
@@ -410,10 +451,13 @@ export class NotificationSpaceAdapter {
     }
 
     // Send in-app notifications
-    // get the creator but only if it not the sender
+    // get the creator but only if it not the sender AND not already mentioned
     const inAppReceiverCreators = recipients.inAppRecipients
       .filter(
-        r => r.id === eventData.post.createdBy && r.id !== eventData.triggeredBy
+        r =>
+          r.id === eventData.post.createdBy &&
+          r.id !== eventData.triggeredBy &&
+          !eventData.mentionedUserIDs?.includes(r.id)
       )
       .map(r => r.id);
 
@@ -458,8 +502,11 @@ export class NotificationSpaceAdapter {
       space.id
     );
     // build notification payload
+    // Filter out sender AND users who were already mentioned (to avoid double notifications)
     const emailRecipientsWithoutSender = recipients.emailRecipients.filter(
-      recipient => recipient.id !== eventData.triggeredBy
+      recipient =>
+        recipient.id !== eventData.triggeredBy &&
+        !eventData.mentionedUserIDs?.includes(recipient.id)
     );
     const payload =
       await this.notificationExternalAdapter.buildSpaceCollaborationCalloutCommentPayload(
@@ -473,8 +520,11 @@ export class NotificationSpaceAdapter {
     this.notificationExternalAdapter.sendExternalNotifications(event, payload);
 
     // Send in-app notifications
+    // Filter out sender AND users who were already mentioned (to avoid double notifications)
     const inAppRecipientsWithoutSender = recipients.inAppRecipients.filter(
-      recipient => recipient.id !== eventData.triggeredBy
+      recipient =>
+        recipient.id !== eventData.triggeredBy &&
+        !eventData.mentionedUserIDs?.includes(recipient.id)
     );
     const inAppReceiverIDs = inAppRecipientsWithoutSender.map(
       recipient => recipient.id

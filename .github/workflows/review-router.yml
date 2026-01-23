@@ -43,6 +43,7 @@ jobs:
 
         # 2. Get the PR title
         PR_TITLE=$(jq -r '.pull_request.title' "${GITHUB_EVENT_PATH}")
+        PR_DESCRIPTION=$(jq -r '.pull_request.body // ""' "${GITHUB_EVENT_PATH}")
 
         # 3. Use 'git diff --numstat' to get stats between the base branch and the PR head
         # Format: <lines added>\t<lines removed>\t<file name>
@@ -75,7 +76,7 @@ jobs:
 
         # 5. Execute the Python script with real data
         # We pass the accumulated file paths string as a single, quoted argument
-        JSON_OUTPUT=$(python review_metrics.py "${PR_TITLE}" "${LOC}" "${FILES}" "${CHANGED_PATHS}")
+        JSON_OUTPUT=$(PR_DESCRIPTION="${PR_DESCRIPTION}" python .github/workflows/review_metrics/review_metrics.py "${PR_TITLE}" "${LOC}" "${FILES}" "${CHANGED_PATHS}")
 
         # Extract review_type for conditional step execution
         REVIEW_TYPE=$(echo "${JSON_OUTPUT}" | python -c "import sys, json; print(json.load(sys.stdin).get('review_type', ''))")
@@ -83,8 +84,46 @@ jobs:
         # Make the outputs available to subsequent steps
         echo "metrics_json=${JSON_OUTPUT}" >> $GITHUB_OUTPUT
         echo "review_type=${REVIEW_TYPE}" >> $GITHUB_OUTPUT
+    # 5b. Determine whether the review label changed
+    - name: Determine Review Label State
+      id: review_label_state
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const raw = process.env.metrics_json || '';
+          let data;
+          try { data = JSON.parse(raw); } catch (e) {
+            core.setFailed('Invalid metrics JSON');
+            return;
+          }
+
+          const desired = data.review_type === 'LLM_ONLY'
+            ? 'review/llm-only' : 'review/human-required'
+
+          const { owner, repo } = context.repo;
+          const issue_number = context.issue.number;
+          const labelsResp = await github.rest.issues.listLabelsOnIssue({
+            owner,
+            repo,
+            issue_number,
+            per_page: 100
+          });
+
+          const existing = labelsResp.data
+            .map(label => label.name)
+            .find(name => name === 'review/llm-only' || name === 'review/human-required') || '';
+
+          const changed = Boolean(desired && desired !== existing);
+
+          core.setOutput('desired_label', desired);
+          core.setOutput('current_label', existing);
+          core.setOutput('label_changed', changed ? 'true' : 'false');
+      env:
+        metrics_json: ${{ steps.metrics.outputs.metrics_json }}
     # 6. Post Metrics Comment
     - name: Post Metrics Comment
+      if: steps.review_label_state.outputs.label_changed == 'true'
       uses: actions/github-script@v7
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -139,28 +178,39 @@ jobs:
         metrics_json: ${{ steps.metrics.outputs.metrics_json }}
     # 7. Add Label Based on Review Type
     - name: Add Review Type Label
+      if: steps.review_label_state.outputs.label_changed == 'true'
       uses: actions/github-script@v7
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
-          const raw = process.env.metrics_json || '';
-          let data;
-          try { data = JSON.parse(raw); } catch (e) { return; }
-
-          let label = '';
-          if (data.review_type === 'LLM_ONLY') {
-            label = 'review/llm-only';
-          } else if (data.review_type === 'HUMAN_AUGMENTED_LLM') {
-            label = 'review/human-required';
+          const desired = process.env.desired_label;
+          const current = process.env.current_label;
+          if (!desired) {
+            core.info('No desired review label computed; skipping update.');
+            return;
           }
 
-          if (label) {
-            github.rest.issues.addLabels({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              labels: [label]
-            });
+          if (current) {
+            try {
+              await github.rest.issues.removeLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                name: current
+              });
+            } catch (error) {
+              if (error.status !== 404) {
+                throw error;
+              }
+            }
           }
+
+          await github.rest.issues.addLabels({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+            labels: [desired]
+          });
       env:
-        metrics_json: ${{ steps.metrics.outputs.metrics_json }}
+        desired_label: ${{ steps.review_label_state.outputs.desired_label }}
+        current_label: ${{ steps.review_label_state.outputs.current_label }}

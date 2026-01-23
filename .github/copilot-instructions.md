@@ -5,7 +5,7 @@
 ## Repository Snapshot
 
 - Purpose: NestJS GraphQL server for the Alkemio collaboration platform; exposes `http://localhost:3000/graphql` and orchestrates domain + integration services.
-- Stack: TypeScript, Node 20 LTS (Volta pins 20.15.1), pnpm 10.17.1 via Corepack, NestJS, TypeORM (MySQL), Apollo Server, RabbitMQ queues, Elastic APM, Ory Kratos/Oathkeeper for auth.
+- Stack: TypeScript, Node 22 LTS (Volta pins 22.21.1), pnpm 10.17.1 via Corepack, NestJS, TypeORM (PostgreSQL), Apollo Server, RabbitMQ queues, Elastic APM, Ory Kratos/Oathkeeper for auth.
 - Scale: ~3k TypeScript files; key roots include `src/`, `test/`, `docs/`, `.specify/`, `scripts/`, `specs/00x-*`, `quickstart-*.yml`, `Dockerfile`, `package.json`, `pnpm-lock.yaml`.
 - Docs: `docs/Developing.md`, `docs/Running.md`, `docs/QA.md`, `docs/DataManagement.md`, `docs/Design.md` hold authoritative setup, architecture, QA, and migration guidance. Authorization flows and decision trees live in `docs/authorization-forest.md` and credential semantics in `docs/credential-based-authorization.md`.
 
@@ -18,18 +18,18 @@
 
 ## Environment & Toolchain
 
-- Prerequisites: Node ≥20.9 (Volta config helps), pnpm ≥10.17.1 (`corepack enable && corepack prepare pnpm@10.17.1 --activate`), Docker + Compose, MySQL 8 (with `mysql_native_password`), RabbitMQ, Redis, Ory Kratos/Oathkeeper stack. `.env.docker` feeds compose stacks; local `.env` variables are required for TypeORM CLI.
-- Optional but recommended: jq (used in docs for auth flows), mysql client, mkcert for TLS dev.
+- Prerequisites: Node ≥22.0 (Volta config helps), pnpm ≥10.17.1 (`corepack enable && corepack prepare pnpm@10.17.1 --activate`), Docker + Compose, PostgreSQL 17.5, RabbitMQ, Redis, Ory Kratos/Oathkeeper stack. `.env.docker` feeds compose stacks; local `.env` variables are required for TypeORM CLI.
+- Optional but recommended: jq (used in docs for auth flows), psql client, mkcert for TLS dev.
 - Module resolution uses `tsconfig.json` path aliases (e.g. `@domain/*`, `@services/*`). ESLint is configured via `eslint.config.js` with flat config, Prettier integration, and production-stricter `@typescript-eslint/no-unused-vars`.
 
 ## Coding standards & Team agreements
 
 - When raising exceptions do not include dynamic data (e.g. IDs, email addresses) in messages.
-Include such data as structured properties on the error object instead for logging purposes.
-The property is called `details` of type `ExceptionDetails`, and usually is the third parameter of the exception constructor.
+  Include such data as structured properties on the error object instead for logging purposes.
+  The property is called `details` of type `ExceptionDetails`, and usually is the third parameter of the exception constructor.
 - When logging verbose and warning levels have two arguments - message and context.
-Error has message, stacktrace, context.
-You can log structured data as the message parameter - it accepts string or object.
+  Error has message, stacktrace, context.
+  You can log structured data as the message parameter - it accepts string or object.
 
 ## Bootstrap, Build & Run
 
@@ -37,7 +37,7 @@ You can log structured data as the message parameter - it accepts string or obje
   - `pnpm install` (0.6s when cache warm; respects `pnpm-lock.yaml`). Always run after pulling.
 - Build artifacts:
   - `pnpm build` (passes; outputs to `dist/` and copies `alkemio.yml`).
-- Local runtime without containers requires MySQL, RabbitMQ, Redis, Elastic, Kratos already up. Typical flow:
+- Local runtime without containers requires PostgreSQL, RabbitMQ, Redis, Elastic, Kratos already up. Typical flow:
   1. `pnpm run start:services` to spin dependencies from `quickstart-services.yml` via Docker (maps server graphql endpoint to localhost:3000/graphql; clients still at 3000).
   2. `pnpm run migration:run` once services are healthy to prime schema.
   3. `pnpm start` (or `pnpm start:dev` for hot reload) launches the API on port configured in `config/hosting`. GraphQL Playground available at `/graphiql`.
@@ -71,7 +71,7 @@ You can log structured data as the message parameter - it accepts string or obje
   - `platform/` & `platform-admin/`: platform-scoped modules and admin operations.
 - Tests in `test/` mirror production code (`functional/e2e`, `functional/integration`, `unit`, `config/jest.*`).
 - Specs & plans reside in `specs/00x-*`. Update or create spec artifacts before product changes.
-- Compose files: `quickstart-services*.yml`, `quickstart-wallet-manager.yml` orchestrate dependencies. Docker settings assume `.env.docker` for credentials.
+- Compose files: `quickstart-services*.yml` orchestrate dependencies. Docker settings assume `.env.docker` for credentials.
 - Config & tooling: `nest-cli.json`, `tsconfig*.json`, `eslint.config.js`, `alkemio.yml`, `scripts/schema/*.ts`, `.scripts/tests/*.ts`, `.scripts/migrations/*.sh`.
 
 ## CI & Release Signals
@@ -79,7 +79,7 @@ You can log structured data as the message parameter - it accepts string or obje
 - GitHub Actions:
   - `schema-contract.yml` runs pnpm install, generates schema snapshot (light bootstrap), diffs vs baseline, posts sticky PR comment, and fails on unapproved BREAKING/PREMATURE_REMOVAL issues.
   - `schema-baseline.yml` runs on merges to `develop`, regenerates the baseline snapshot, uploads diff artifacts, and raises a signed pull request with the refreshed `schema-baseline.graphql` when it detects changes (falling back to CODEOWNER notification on failure).
-  - `build-release-docker-hub.yml` builds and publishes Docker images (Node 20 + pnpm caches).
+  - `build-release-docker-hub.yml` builds and publishes Docker images (Node 22 + pnpm caches).
   - `build-deploy-k8s-*.yml` target dev/sandbox/test Hetzner clusters after container build.
   - `trigger-e2e-tests.yml` dispatches downstream full-stack tests.
 - Legacy Travis badge remains in README; GitHub Actions are the authoritative CI. Expect schema gate + build workflows to run on PRs touching `src/**`, schema artifacts, or package manifests.
@@ -103,7 +103,7 @@ You can log structured data as the message parameter - it accepts string or obje
   - Prefer MCP servers supporting **feedback and validation** (e.g., GitHub comments, Context7 evaluation).
   - Use them to cross-check and refine responses before completion.
 - For Git operations, **all commits must be signed**.
-- When running compose, ensure ports 3000/4000/4001/3306/5672 are free; adjust via environment if conflicts arise.
+- When running compose, ensure ports 3000/4000/4001/5432/5672 are free; adjust via environment if conflicts arise.
 - For new GraphQL surface area, align with `docs/Pagination.md`, enforce DTO validation, and emit domain events instead of direct repository writes.
 - Update `schema.graphql` and related artifacts only when schema changes occur; otherwise leave untouched to avoid noisy diffs.
 - Let `schema-baseline.yml` manage `schema-baseline.graphql`; if automation is down, coordinate with CODEOWNERS before pushing manual updates.
@@ -112,12 +112,28 @@ You can log structured data as the message parameter - it accepts string or obje
 
 ## Active Technologies
 
+- TypeScript 5.3 on Node.js 20.15.1 (NestJS) + NestJS 10, TypeORM 0.3, Apollo GraphQL 4, Express, Ory Kratos Admin API client (014-kratos-authentication-id-linking)
+- PostgreSQL 17.5 via TypeORM (014-kratos-authentication-id-linking)
+- TypeScript 5.x on Node.js 20 (NestJS server) + NestJS 10, TypeORM 0.3, GraphQL/Apollo Server, PostgreSQL 17.5 (016-drop-account-upn)
+- PostgreSQL 17.5 via TypeORM entities and migrations (016-drop-account-upn)
+- TypeScript 5.3 on Node.js 20.15.1 (Volta pinned) + NestJS 10 (DI, Scheduler), TypeORM/PostgreSQL, ConfigService, Synapse integration services, Jest for tests (017-drop-session-sync)
+- PostgreSQL 17.5 (application DB) + legacy Kratos DB (read-only references to be removed) (017-drop-session-sync)
+- TypeScript 5.x on Node.js 20 (NestJS server) + NestJS, existing REST controller stack, identity resolution services already used by `/rest/internal/identity/resolve` (018-identity-resolve-agent-id)
+- Existing application database and identity stores (no new storage required) (018-identity-resolve-agent-id)
+- TypeScript 5.3 on Node.js 20.15.1 (Volta-pinned) + NestJS 10.3.10, TypeORM 10.0.2, Apollo Server 4.10.4, GraphQL 16.9.0 (001-conversation-architecture-refactor)
+- PostgreSQL 17.5 with TypeORM entities and migrations (001-conversation-architecture-refactor)
+- TypeScript 5.3 on Node.js 20.15.1 (Volta-pinned) + NestJS 10, TypeORM 0.3.x (023-drop-wellknown-vc-column)
+- PostgreSQL 17.5 (via TypeORM migrations) (023-drop-wellknown-vc-column)
+- TypeScript 5.3, Node.js 20.15.1 + NestJS 10, TypeORM 0.3, PostgreSQL 17.5 (024-conversations-set-inheritance)
+- PostgreSQL 17.5 (via TypeORM) (024-conversations-set-inheritance)
+- TypeScript 5.3, Node.js 20.15.1 + NestJS 10, TypeORM 0.3, Apollo GraphQL 4 (025-rename-conversations-set)
+
 - TypeScript 5.x on Node.js 20 (per repository toolchain) + NestJS server, existing CI runner stack, SonarQube at https://sonarqube.alkem.io (015-sonarqube-analysis)
 - N/A (SonarQube stores analysis; server DB not impacted by this feature) (015-sonarqube-analysis)
 - Winston for logging. Obey the logging signature.
 
 - TypeScript 5.3, Node.js 20.15.1 (Volta-pinned), executed via ts-node + NestJS 10.x, TypeORM 0.3.x, Apollo Server 4.x, GraphQL 16.x, class-validator, class-transformer (013-timeline-comment-notification)
-- MySQL 8.0 with `mysql_native_password` authentication (013-timeline-comment-notification)
+- PostgreSQL 17.5 (013-timeline-comment-notification)
 
 - TypeScript 5.3 (ts-node) executed on Node 20.x via GitHub Actions + pnpm 10.17.1, `actions/checkout@v4`, `actions/setup-node@v4`, `crazy-max/ghaction-import-gpg@v6`, `actions/github-script@v7`, repository schema scripts (`generate-schema.snapshot.ts`, `diff-schema.ts`) (012-generate-schema-baseline)
 - N/A – workflow operates on repository working tree only (012-generate-schema-baseline)

@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: alkemio-server
-          image: alkemio.azurecr.io/alkemio-server:latest
+          image: rg.nl-ams.scw.cloud/alkemio/alkemio-server:latest
           env:
             - name: RABBITMQ_HOST
               valueFrom:
@@ -60,6 +60,16 @@ spec:
                 configMapKeyRef:
                   name: alkemio-config
                   key: SERVER_LOGGING_LEVEL
+            - name: DATABASE_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: alkemio-config
+                  key: POSTGRES_USER
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                configMapKeyRef:
+                  name: alkemio-config
+                  key: POSTGRES_PASSWORD
           envFrom:
             - secretRef:
                 name: alkemio-secrets
