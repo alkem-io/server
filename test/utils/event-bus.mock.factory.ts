@@ -3,6 +3,7 @@
  * These mocks prevent real RabbitMQ connections during test execution.
  */
 
+import { vi } from 'vitest';
 import { Publisher } from '@services/infrastructure/event-bus/publisher';
 import { Subscriber } from '@services/infrastructure/event-bus/subscriber';
 import { RabbitMQConnectionFactory } from '@services/infrastructure/event-bus/rabbitmq.connection.factory';
@@ -11,31 +12,31 @@ import { RabbitMQConnectionFactory } from '@services/infrastructure/event-bus/ra
  * Creates a mock Publisher for use in tests.
  */
 export const createMockPublisher = () => ({
-  connect: jest.fn(),
-  publish: jest.fn(),
+  connect: vi.fn(),
+  publish: vi.fn(),
 });
 
 /**
  * Creates a mock Subscriber for use in tests.
  */
 export const createMockSubscriber = () => ({
-  connect: jest.fn(),
-  bridgeEventsTo: jest.fn(),
+  connect: vi.fn(),
+  bridgeEventsTo: vi.fn(),
 });
 
 /**
  * Creates a mock RabbitMQConnectionFactory for use in tests.
  */
 export const createMockRabbitMQConnectionFactory = () => ({
-  ensureExchange: jest.fn().mockResolvedValue(undefined),
-  connect: jest.fn().mockResolvedValue({
-    createChannel: jest.fn().mockResolvedValue({
-      on: jest.fn(),
-      assertExchange: jest.fn().mockResolvedValue(undefined),
-      deleteExchange: jest.fn().mockResolvedValue(undefined),
-      close: jest.fn().mockResolvedValue(undefined),
+  ensureExchange: vi.fn().mockResolvedValue(undefined),
+  connect: vi.fn().mockResolvedValue({
+    createChannel: vi.fn().mockResolvedValue({
+      on: vi.fn(),
+      assertExchange: vi.fn().mockResolvedValue(undefined),
+      deleteExchange: vi.fn().mockResolvedValue(undefined),
+      close: vi.fn().mockResolvedValue(undefined),
     }),
-    close: jest.fn().mockResolvedValue(undefined),
+    close: vi.fn().mockResolvedValue(undefined),
   }),
 });
 

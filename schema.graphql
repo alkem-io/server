@@ -1552,8 +1552,8 @@ type Callout {
   posts: [Post!]
   """The user that published this Callout"""
   publishedBy: User
-  """The timestamp for the publishing of this Callout."""
-  publishedDate: Float
+  """The Date of the publishing of this Callout."""
+  publishedDate: DateTime
   """The Callout Settings associated with this Callout."""
   settings: CalloutSettings!
   """The sorting order for this Callout."""
@@ -2641,6 +2641,10 @@ type InnovationFlowState {
   authorization: Authorization
   """The date at which the entity was created."""
   createdDate: DateTime!
+  """
+  Default callout template applied to this flow state (nullable, optional).
+  """
+  defaultCalloutTemplate: Template
   """The explanation text to clarify the state."""
   description: Markdown
   """The display name for the State"""
@@ -2775,7 +2779,7 @@ type ISearchCategoryResult {
 type ISearchResults {
   """The search results for Callouts."""
   calloutResults: ISearchCategoryResult!
-  """The search results for contributions (Posts, Whiteboards etc)."""
+  """The search results for contributions (Posts, Whiteboards, Memos)."""
   contributionResults: ISearchCategoryResult!
   """The search results for contributors (Users, Organizations)."""
   contributorResults: ISearchCategoryResult!
@@ -3598,6 +3602,8 @@ type Mutation {
   refreshVirtualContributorBodyOfKnowledge(refreshData: RefreshVirtualContributorBodyOfKnowledgeInput!): Boolean!
   """Empties the CommunityGuidelines."""
   removeCommunityGuidelinesContent(communityGuidelinesData: RemoveCommunityGuidelinesContentInput!): CommunityGuidelines!
+  """Remove the default callout template from an InnovationFlowState."""
+  removeDefaultCalloutTemplateOnInnovationFlowState(removeData: RemoveDefaultCalloutTemplateOnInnovationFlowStateInput!): InnovationFlowState!
   """Removes an Iframe Allowed URL from the Platform Settings"""
   removeIframeAllowedURL(whitelistedURL: String!): [String!]!
   """Removes a message."""
@@ -3638,6 +3644,8 @@ type Mutation {
   sendMessageToRoom(messageData: RoomSendMessageInput!): Message!
   """Send message to multiple Users."""
   sendMessageToUsers(messageData: CommunicationSendMessageToUsersInput!): Boolean!
+  """Set the default callout template for an InnovationFlowState."""
+  setDefaultCalloutTemplateOnInnovationFlowState(setData: SetDefaultCalloutTemplateOnInnovationFlowStateInput!): InnovationFlowState!
   """
   Set the mapping of a well-known Virtual Contributor to a specific Virtual Contributor UUID.
   """
@@ -3675,7 +3683,7 @@ type Mutation {
   """Updates a Tagset on a Classification."""
   updateClassificationTagset(updateData: UpdateClassificationSelectTagsetValueInput!): Tagset!
   """
-  Updates a Collaboration, including InnovationFlow states, using the Space content from the specified Template.
+  Updates a Collaboration using the Space content from the specified Template. Behavior depends on parameter combinations: (1) Flow Only: deleteExistingCallouts=false, addCallouts=false - updates only InnovationFlow states; (2) Add Posts: deleteExistingCallouts=false, addCallouts=true - keeps existing and adds template callouts; (3) Replace All: deleteExistingCallouts=true, addCallouts=true - deletes existing then adds template callouts; (4) Delete Only: deleteExistingCallouts=true, addCallouts=false - deletes existing callouts and updates InnovationFlow states. Execution order: delete (if requested) → update flow states (always) → add (if requested).
   """
   updateCollaborationFromSpaceTemplate(updateData: UpdateCollaborationFromSpaceTemplateInput!): Collaboration!
   """Updates the CommunityGuidelines."""
@@ -3728,6 +3736,10 @@ type Mutation {
   updateSpacePlatformSettings(updateData: UpdateSpacePlatformSettingsInput!): Space!
   """Updates one of the Setting on a Space"""
   updateSpaceSettings(settingsData: UpdateSpaceSettingsInput!): Space!
+  """
+  Update the sortOrder field of the supplied Subspaces to increase as per the order that they are provided in.
+  """
+  updateSubspacesSortOrder(sortOrderData: UpdateSubspacesSortOrderInput!): [Space!]!
   """Updates the specified Tagset."""
   updateTagset(updateData: UpdateTagsetInput!): Tagset!
   """Updates the specified Template."""
@@ -4562,6 +4574,8 @@ type RelayPaginatedSpace {
   platformAccess: PlatformRolesAccess!
   """The settings for this Space."""
   settings: SpaceSettings!
+  """The sorting order for this Space within its parent."""
+  sortOrder: Int!
   """The StorageAggregator in use by this Space"""
   storageAggregator: StorageAggregator!
   """The subscriptions active for this Space."""
@@ -4909,6 +4923,27 @@ type SearchResultCallout implements SearchResult {
   type: SearchResultType!
 }
 
+type SearchResultMemo implements SearchResult {
+  """The Callout of the Memo."""
+  callout: Callout!
+  """
+  The identifier of the search result. Does not represent the entity in Alkemio.
+  """
+  id: UUID!
+  """Whether the Memo is a contribution (response) or part of the framing."""
+  isContribution: Boolean!
+  """The Memo that was found."""
+  memo: Memo!
+  """The score for this search result; more matches means a higher score."""
+  score: Float!
+  """The Space of the Memo."""
+  space: Space!
+  """The terms that were matched for this result"""
+  terms: [String!]!
+  """The type of returned result for this search."""
+  type: SearchResultType!
+}
+
 type SearchResultOrganization implements SearchResult {
   """
   The identifier of the search result. Does not represent the entity in Alkemio.
@@ -4975,6 +5010,29 @@ type SearchResultUser implements SearchResult {
   user: User!
 }
 
+type SearchResultWhiteboard implements SearchResult {
+  """The Callout of the Whiteboard."""
+  callout: Callout!
+  """
+  The identifier of the search result. Does not represent the entity in Alkemio.
+  """
+  id: UUID!
+  """
+  Whether the Whiteboard is a contribution (response) or part of the framing.
+  """
+  isContribution: Boolean!
+  """The score for this search result; more matches means a higher score."""
+  score: Float!
+  """The Space of the Whiteboard."""
+  space: Space!
+  """The terms that were matched for this result"""
+  terms: [String!]!
+  """The type of returned result for this search."""
+  type: SearchResultType!
+  """The Whiteboard that was found."""
+  whiteboard: Whiteboard!
+}
+
 type Sentry {
   """Flag indicating if the client should use Sentry for monitoring."""
   enabled: Boolean!
@@ -5026,6 +5084,8 @@ type Space {
   platformAccess: PlatformRolesAccess!
   """The settings for this Space."""
   settings: SpaceSettings!
+  """The sorting order for this Space within its parent."""
+  sortOrder: Int!
   """The StorageAggregator in use by this Space"""
   storageAggregator: StorageAggregator!
   """The subscriptions active for this Space."""
@@ -5639,6 +5699,8 @@ type UserSettings {
   communication: UserSettingsCommunication!
   """The date at which the entity was created."""
   createdDate: DateTime!
+  """The home space settings for this User."""
+  homeSpace: UserSettingsHomeSpace!
   """The ID of the entity"""
   id: UUID!
   """The notification settings for this User."""
@@ -5652,6 +5714,13 @@ type UserSettings {
 type UserSettingsCommunication {
   """Allow Users to send messages to this User."""
   allowOtherUsersToSendMessages: Boolean!
+}
+
+type UserSettingsHomeSpace {
+  """Automatically redirect to home space instead of the dashboard."""
+  autoRedirect: Boolean!
+  """The ID of the Space to use as home. Null if not set."""
+  spaceID: String
 }
 
 type UserSettingsNotification {
@@ -6186,11 +6255,11 @@ input ConvertSpaceL1ToSpaceL0Input {
 
 input ConvertSpaceL1ToSpaceL2Input {
   """
-  The Space L1 to be the parent of the Space L1 when it is moved to be L2. 
+  The Space L1 to be the parent of the Space L1 when it is moved to be L2.
   """
   parentSpaceL1ID: UUID!
   """
-  The Space L1 to be moved to be a child of another Space L. Both the L1 Space and the parent Space must be in the same L0 Space. 
+  The Space L1 to be moved to be a child of another Space L. Both the L1 Space and the parent Space must be in the same L0 Space.
   """
   spaceL1ID: UUID!
 }
@@ -7051,6 +7120,10 @@ input RemoveCommunityGuidelinesContentInput {
   communityGuidelinesID: UUID!
 }
 
+input RemoveDefaultCalloutTemplateOnInnovationFlowStateInput {
+  flowStateID: UUID!
+}
+
 input RemovePlatformRoleInput {
   contributorID: UUID!
   role: RoleName!
@@ -7206,6 +7279,11 @@ input SearchInput {
   tagsetNames: [String!]
   """The terms to be searched for within this Space. Max 5."""
   terms: [String!]!
+}
+
+input SetDefaultCalloutTemplateOnInnovationFlowStateInput {
+  flowStateID: UUID!
+  templateID: UUID!
 }
 
 input SetPlatformWellKnownVirtualContributorInput {
@@ -7434,6 +7512,10 @@ input UpdateCollaborationFromSpaceTemplateInput {
   addCallouts: Boolean = false
   """ID of the Collaboration to be updated"""
   collaborationID: UUID!
+  """
+  Delete existing Callouts before applying template. When combined with addCallouts=true, enables Replace All behavior.
+  """
+  deleteExistingCallouts: Boolean = false
   """
   The Space Template whose Collaboration that will be used for updates to the target Collaboration
   """
@@ -7809,6 +7891,12 @@ input UpdateSpaceSettingsPrivacyInput {
   mode: SpacePrivacyMode
 }
 
+input UpdateSubspacesSortOrderInput {
+  spaceID: UUID!
+  """The IDs of the subspaces to update the sort order on"""
+  subspaceIDs: [UUID!]!
+}
+
 input UpdateTagsetInput {
   ID: UUID!
   name: String
@@ -7890,10 +7978,19 @@ input UpdateUserSettingsCommunicationInput {
 input UpdateUserSettingsEntityInput {
   """Settings related to this users Communication preferences."""
   communication: UpdateUserSettingsCommunicationInput
+  """Settings related to Home Space."""
+  homeSpace: UpdateUserSettingsHomeSpaceInput
   """Settings related to this users Notifications preferences."""
   notification: UpdateUserSettingsNotificationInput
   """Settings related to Privacy."""
   privacy: UpdateUserSettingsPrivacyInput
+}
+
+input UpdateUserSettingsHomeSpaceInput {
+  """Automatically redirect to home space instead of the dashboard."""
+  autoRedirect: Boolean
+  """The ID of the Space to use as home. Set to null to clear."""
+  spaceID: UUID
 }
 
 input UpdateUserSettingsInput {

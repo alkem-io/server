@@ -1,0 +1,415 @@
+# Example GraphQL Queries and Mutations: Default Callout Template for Flow Steps
+# Feature: 019-default-post-template-flow
+
+# ==============================================================================
+# QUERY: Fetch flow states with default templates
+# ==============================================================================
+
+query GetInnovationFlowWithDefaultTemplates($spaceID: UUID!) {
+  space(ID: $spaceID) {
+    id
+    collaboration {
+      innovationFlow {
+        id
+        currentState {
+          id
+          displayName
+          # Query the new field
+          defaultCalloutTemplate {
+            id
+            type
+            profile {
+              displayName
+              description
+            }
+            callout {
+              contributionDefaults {
+                postDescription
+              }
+            }
+          }
+        }
+        states {
+          id
+          displayName
+          sortOrder
+          # Check which states have default templates
+          defaultCalloutTemplate {
+            id
+            profile {
+              displayName
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+# ==============================================================================
+# MUTATION: Set default CALLOUT template on flow state
+# ==============================================================================
+
+mutation SetDefaultCalloutTemplate($flowStateID: UUID!, $templateID: UUID!) {
+  setDefaultCalloutTemplateOnInnovationFlowState(
+    setData: {
+      flowStateID: $flowStateID
+      templateID: $templateID
+    }
+  ) {
+    id
+    displayName
+    defaultCalloutTemplate {
+      id
+      type
+      profile {
+        displayName
+        description
+      }
+      callout {
+        contributionDefaults {
+          postDescription
+        }
+      }
+    }
+  }
+}
+
+# Example variables:
+# {
+#   "flowStateID": "f8c3a7b2-1234-5678-90ab-cdef12345678",
+#   "templateID": "a1b2c3d4-5678-90ab-cdef-1234567890ab"
+# }
+
+# Expected response (success):
+# {
+#   "data": {
+#     "setDefaultCalloutTemplateOnInnovationFlowState": {
+#       "id": "f8c3a7b2-1234-5678-90ab-cdef12345678",
+#       "displayName": "In Progress",
+#       "defaultCalloutTemplate": {
+#         "id": "a1b2c3d4-5678-90ab-cdef-1234567890ab",
+#         "type": "CALLOUT",
+#         "profile": {
+#           "displayName": "Project Update Callout Template",
+#           "description": "Standard callout template for project status updates"
+#         },
+#         "callout": {
+#           "contributionDefaults": {
+#             "postDescription": "## Status\n\n[Update here]\n\n## Next Steps\n\n[List here]"
+#           }
+#         }
+#       }
+#     }
+#   }
+# }
+
+# Expected error (non-CALLOUT template):
+# {
+#   "errors": [{
+#     "message": "Template must be of type CALLOUT",
+#     "extensions": {
+#       "code": "VALIDATION_ERROR",
+#       "details": {
+#         "templateID": "a1b2c3d4-5678-90ab-cdef-1234567890ab",
+#         "templateType": "POST"
+#       }
+#     }
+#   }]
+# }
+
+# ==============================================================================
+# MUTATION: Remove default CALLOUT template from flow state
+# ==============================================================================
+
+mutation RemoveDefaultCalloutTemplate($flowStateID: UUID!) {
+  removeDefaultCalloutTemplateOnInnovationFlowState(
+    removeData: {
+      flowStateID: $flowStateID
+    }
+  ) {
+    id
+    displayName
+    defaultCalloutTemplate {
+      id
+    }
+  }
+}
+
+# Example variables:
+# {
+#   "flowStateID": "f8c3a7b2-1234-5678-90ab-cdef12345678"
+# }
+
+# Expected response (success):
+# {
+#   "data": {
+#     "removeDefaultCalloutTemplateOnInnovationFlowState": {
+#       "id": "f8c3a7b2-1234-5678-90ab-cdef12345678",
+#       "displayName": "In Progress",
+#       "defaultCalloutTemplate": null
+#     }
+#   }
+# }
+
+# ==============================================================================
+# QUERY: Get available CALLOUT templates for selection
+# ==============================================================================
+
+query GetAvailableCalloutTemplates {
+  library {
+    templates(filter: { types: [CALLOUT] }) {
+      template {
+        id
+        type
+        profile {
+          displayName
+          description
+          tagset {
+            tags
+          }
+        }
+        callout {
+          contributionDefaults {
+            postDescription
+          }
+        }
+      }
+      innovationPack {
+        id
+        profile {
+          displayName
+        }
+      }
+    }
+  }
+}
+
+# Expected response:
+# {
+#   "data": {
+#     "library": {
+#       "templates": [
+#         {
+#           "template": {
+#             "id": "a1b2c3d4-5678-90ab-cdef-1234567890ab",
+#             "type": "CALLOUT",
+#             "profile": {
+#               "displayName": "Project Update Callout Template",
+#               "description": "Standard callout template for project status updates",
+#               "tagset": {
+#                 "tags": ["project", "status", "update"]
+#               }
+#             },
+#             "callout": {
+#               "contributionDefaults": {
+#                 "postDescription": "## Status\n\n[Update here]\n\n## Next Steps\n\n[List here]"
+#               }
+#             }
+#           },
+#           "innovationPack": {
+#             "id": "pack-1",
+#             "profile": {
+#               "displayName": "Project Management Templates"
+#             }
+#           }
+#         }
+#       ]
+#     }
+#   }
+# }
+
+# ==============================================================================
+# QUERY: Frontend integration - fetch callout with flow state default template
+# ==============================================================================
+
+query GetCalloutWithFlowStateTemplate($calloutID: UUID!) {
+  callout(ID: $calloutID) {
+    id
+    nameID
+    collaboration {
+      id
+      innovationFlow {
+        id
+        currentState {
+          id
+          displayName
+          # Frontend uses this to determine if template should be loaded
+          defaultCalloutTemplate {
+            id
+          }
+        }
+      }
+    }
+  }
+}
+
+# Frontend Flow:
+# 1. User navigates to callout (grouped by flow state)
+# 2. Frontend already has currentState.defaultCalloutTemplate.id from query
+# 3. When user clicks "Add Post":
+#    - If defaultCalloutTemplate.id exists:
+#      a. Fetch full template content (separate query or existing mechanism)
+#      b. Pre-fill dialog with template.callout.contributionDefaults.postDescription
+#    - Else: Open empty dialog
+# 4. User edits and submits
+
+# ==============================================================================
+# MUTATION: Create post (unchanged - no template logic in backend)
+# ==============================================================================
+
+mutation CreatePostInFlowStep($calloutID: UUID!, $displayName: String!, $description: String!) {
+  createContributionOnCallout(
+    contributionData: {
+      calloutID: $calloutID
+      type: POST
+      post: {
+        displayName: $displayName
+        description: $description
+        tags: []
+      }
+    }
+  ) {
+    id
+    post {
+      id
+      profile {
+        displayName
+        description
+      }
+    }
+  }
+}
+
+# NOTE: Backend does NOT apply template during this mutation
+# Frontend pre-fills the form before user submits
+# User can edit the pre-filled content before creating
+
+# ==============================================================================
+# INTEGRATION TEST SCENARIO: Full workflow
+# ==============================================================================
+
+# Step 1: Admin queries available CALLOUT templates
+# (Use GetAvailableCalloutTemplates query above)
+
+# Step 2: Admin sets default template on flow state
+# (Use SetDefaultCalloutTemplate mutation above)
+
+# Step 3: Admin verifies the configuration
+# (Use GetInnovationFlowWithDefaultTemplates query above)
+
+# Step 4: Frontend loads callout and detects default template
+# (Use GetCalloutWithFlowStateTemplate query above)
+
+# Step 5: Frontend fetches template content and pre-fills dialog
+# (Existing template loading mechanism)
+
+# Step 6: Member creates a post with pre-filled content
+# (Use CreatePostInFlowStep mutation above)
+
+# Step 7: Admin removes the default template
+# (Use RemoveDefaultCalloutTemplate mutation above)
+
+# Step 8: Member creates another post without pre-fill
+# Expected: Dialog opens empty
+
+# ==============================================================================
+# ERROR SCENARIOS
+# ==============================================================================
+
+# Error 1: Template not found
+mutation SetDefaultCalloutTemplate_TemplateNotFound {
+  setDefaultCalloutTemplateOnInnovationFlowState(
+    setData: {
+      flowStateID: "f8c3a7b2-1234-5678-90ab-cdef12345678"
+      templateID: "99999999-9999-9999-9999-999999999999"
+    }
+  ) {
+    id
+  }
+}
+# Expected error:
+# {
+#   "errors": [{
+#     "message": "Template not found",
+#     "extensions": {
+#       "code": "ENTITY_NOT_FOUND",
+#       "details": {
+#         "templateID": "99999999-9999-9999-9999-999999999999"
+#       }
+#     }
+#   }]
+# }
+
+# Error 2: Flow state not found
+mutation SetDefaultCalloutTemplate_FlowStateNotFound {
+  setDefaultCalloutTemplateOnInnovationFlowState(
+    setData: {
+      flowStateID: "88888888-8888-8888-8888-888888888888"
+      templateID: "a1b2c3d4-5678-90ab-cdef-1234567890ab"
+    }
+  ) {
+    id
+  }
+}
+# Expected error:
+# {
+#   "errors": [{
+#     "message": "Innovation flow state not found",
+#     "extensions": {
+#       "code": "ENTITY_NOT_FOUND",
+#       "details": {
+#         "flowStateID": "88888888-8888-8888-8888-888888888888"
+#       }
+#     }
+#   }]
+# }
+
+# Error 3: Unauthorized (not admin)
+mutation SetDefaultCalloutTemplate_Unauthorized {
+  setDefaultCalloutTemplateOnInnovationFlowState(
+    setData: {
+      flowStateID: "f8c3a7b2-1234-5678-90ab-cdef12345678"
+      templateID: "a1b2c3d4-5678-90ab-cdef-1234567890ab"
+    }
+  ) {
+    id
+  }
+}
+# Expected error (when user lacks UPDATE_INNOVATION_FLOW privilege):
+# {
+#   "errors": [{
+#     "message": "Authorization failed",
+#     "extensions": {
+#       "code": "FORBIDDEN",
+#       "details": {
+#         "requiredPrivilege": "UPDATE"
+#       }
+#     }
+#   }]
+# }
+
+# Error 4: Wrong template type (POST instead of CALLOUT)
+mutation SetDefaultCalloutTemplate_WrongType {
+  setDefaultCalloutTemplateOnInnovationFlowState(
+    setData: {
+      flowStateID: "f8c3a7b2-1234-5678-90ab-cdef12345678"
+      templateID: "77777777-7777-7777-7777-777777777777"
+    }
+  ) {
+    id
+  }
+}
+# Expected error:
+# {
+#   "errors": [{
+#     "message": "Template must be of type CALLOUT",
+#     "extensions": {
+#       "code": "VALIDATION_ERROR",
+#       "details": {
+#         "templateID": "77777777-7777-7777-7777-777777777777",
+#         "templateType": "POST"
+#       }
+#     }
+#   }]
+# }

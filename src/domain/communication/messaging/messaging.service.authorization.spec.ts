@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MessagingAuthorizationService } from './messaging.service.authorization';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -6,12 +7,13 @@ import { ConversationAuthorizationService } from '../conversation/conversation.s
 import { ConversationService } from '../conversation/conversation.service';
 import { IMessaging } from './messaging.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import type { Mocked } from 'vitest';
 
 describe('MessagingAuthorizationService', () => {
   let service: MessagingAuthorizationService;
-  let authorizationPolicyService: jest.Mocked<AuthorizationPolicyService>;
-  let messagingService: jest.Mocked<MessagingService>;
-  let conversationAuthorizationService: jest.Mocked<ConversationAuthorizationService>;
+  let authorizationPolicyService: Mocked<AuthorizationPolicyService>;
+  let messagingService: Mocked<MessagingService>;
+  let conversationAuthorizationService: Mocked<ConversationAuthorizationService>;
 
   const mockMessaging: IMessaging = {
     id: 'messaging-1',
@@ -49,25 +51,25 @@ describe('MessagingAuthorizationService', () => {
 
   beforeEach(async () => {
     const mockAuthorizationPolicyService = {
-      inheritParentAuthorization: jest.fn(),
-      createCredentialRuleUsingTypesOnly: jest.fn().mockReturnValue({
+      inheritParentAuthorization: vi.fn(),
+      createCredentialRuleUsingTypesOnly: vi.fn().mockReturnValue({
         name: 'credentialRuleTypes-messagingCreateConversation',
         cascade: false,
         grantedPrivileges: ['CREATE'],
         criterias: [],
       }),
-      appendCredentialAuthorizationRules: jest
+      appendCredentialAuthorizationRules: vi
         .fn()
         .mockImplementation(auth => auth),
-      saveAll: jest.fn(),
+      saveAll: vi.fn(),
     };
 
     const mockMessagingService = {
-      getMessagingOrFail: jest.fn(),
+      getMessagingOrFail: vi.fn(),
     };
 
     const mockConversationAuthorizationService = {
-      applyAuthorizationPolicy: jest.fn(),
+      applyAuthorizationPolicy: vi.fn(),
     };
 
     const mockConversationService = {};

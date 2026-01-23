@@ -130,6 +130,7 @@ export const spaceData: { space: ISpace } = {
     level: SpaceLevel.L0,
     visibility: SpaceVisibility.ACTIVE,
     levelZeroSpaceID: '00655835-4d15-4546-801e-1ab80ac3078a',
+    sortOrder: 0,
     createdDate: new Date('2024-01-01T00:00:00.000Z'),
     updatedDate: new Date('2024-01-01T00:00:00.000Z'),
     // Add a minimal settings mock for ISpace

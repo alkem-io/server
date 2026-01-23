@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { CREDENTIAL_RULE_LICENSE_MANAGER } from '@common/constants/authorization/credential.rule.constants';
 import { LicensingFrameworkAuthorizationService } from './licensing.framework.service.authorization';
@@ -7,12 +8,13 @@ import { LicensePolicyAuthorizationService } from '@platform/licensing/credentia
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { ILicensingFramework } from './licensing.framework.interface';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import type { Mocked } from 'vitest';
 
 describe('LicensingFrameworkAuthorizationService', () => {
   let service: LicensingFrameworkAuthorizationService;
-  let authorizationPolicyService: jest.Mocked<AuthorizationPolicyService>;
-  let licensingFrameworkService: jest.Mocked<LicensingFrameworkService>;
-  let licensePolicyAuthorizationService: jest.Mocked<LicensePolicyAuthorizationService>;
+  let authorizationPolicyService: Mocked<AuthorizationPolicyService>;
+  let licensingFrameworkService: Mocked<LicensingFrameworkService>;
+  let licensePolicyAuthorizationService: Mocked<LicensePolicyAuthorizationService>;
 
   beforeEach(() => {
     const mockAuthorization = {
@@ -29,30 +31,30 @@ describe('LicensingFrameworkAuthorizationService', () => {
     };
 
     authorizationPolicyService = {
-      reset: jest.fn().mockReturnValue(mockAuthorization),
-      inheritParentAuthorization: jest.fn().mockReturnValue(mockAuthorization),
-      appendCredentialRuleRegisteredAccess: jest
+      reset: vi.fn().mockReturnValue(mockAuthorization),
+      inheritParentAuthorization: vi.fn().mockReturnValue(mockAuthorization),
+      appendCredentialRuleRegisteredAccess: vi
         .fn()
         .mockReturnValue(mockAuthorization),
-      createCredentialRuleUsingTypesOnly: jest
+      createCredentialRuleUsingTypesOnly: vi
         .fn()
         .mockReturnValue(credentialRule),
-      appendCredentialAuthorizationRules: jest
+      appendCredentialAuthorizationRules: vi
         .fn()
         .mockReturnValue(mockAuthorization),
-      appendCredentialRuleAnonymousRegisteredAccess: jest.fn(),
-      appendCredentialAuthorizationRulesWithCriteria: jest.fn(),
-    } as unknown as jest.Mocked<AuthorizationPolicyService>;
+      appendCredentialRuleAnonymousRegisteredAccess: vi.fn(),
+      appendCredentialAuthorizationRulesWithCriteria: vi.fn(),
+    } as unknown as Mocked<AuthorizationPolicyService>;
 
     licensingFrameworkService = {
-      getLicensingOrFail: jest.fn(),
-    } as unknown as jest.Mocked<LicensingFrameworkService>;
+      getLicensingOrFail: vi.fn(),
+    } as unknown as Mocked<LicensingFrameworkService>;
 
     licensePolicyAuthorizationService = {
-      applyAuthorizationPolicy: jest
+      applyAuthorizationPolicy: vi
         .fn()
         .mockReturnValue(mockPolicyAuthorization),
-    } as unknown as jest.Mocked<LicensePolicyAuthorizationService>;
+    } as unknown as Mocked<LicensePolicyAuthorizationService>;
 
     service = new LicensingFrameworkAuthorizationService(
       authorizationPolicyService,

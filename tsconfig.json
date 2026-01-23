@@ -16,6 +16,7 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "downlevelIteration": true,
+    "types": ["node", "vitest/globals"],
     "paths": {
       "@interfaces/*": ["src/common/interfaces/*"],
       "@domain/*": ["src/domain/*"],
@@ -31,5 +32,5 @@
       "@test/*": ["test/*"]
     }
   },
-  "exclude": ["node_modules", "dist", ".build/synapse"]
+  "exclude": ["node_modules", "dist", ".build/synapse", "vitest.config.ts"]
 }
