@@ -7,6 +7,7 @@ import { AdminCommunicationResolverMutations } from './admin.communication.resol
 import { CommunicationModule } from '@domain/communication/communication/communication.module';
 import { CommunityModule } from '@domain/community/community/community.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
+import { ConversationModule } from '@domain/communication/conversation/conversation.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { RoleSetModule } from '@domain/access/role-set/role.set.module';
     RoleSetModule,
     CommunicationModule,
     CommunicationAdapterModule,
+    ConversationModule,
   ],
   providers: [AdminCommunicationService, AdminCommunicationResolverMutations],
   exports: [AdminCommunicationService],

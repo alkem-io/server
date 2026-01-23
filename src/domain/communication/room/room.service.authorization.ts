@@ -102,66 +102,49 @@ export class RoomAuthorizationService {
     room: IRoom,
     messageID: string
   ): Promise<IAuthorizationPolicy> {
-    const newRules: IAuthorizationPolicyRuleCredential[] = [];
-
-    const senderUserID = await this.roomService.getUserIdForMessage(
+    return this.extendAuthorizationPolicyForSender(
       room,
-      messageID
+      () => this.roomService.getUserIdForMessage(room, messageID),
+      CREDENTIAL_RULE_ROOM_MESSAGE_SENDER
     );
-
-    if (senderUserID !== '') {
-      const messageSender =
-        this.authorizationPolicyService.createCredentialRule(
-          [AuthorizationPrivilege.UPDATE, AuthorizationPrivilege.DELETE],
-          [
-            {
-              type: AuthorizationCredential.USER_SELF_MANAGEMENT,
-              resourceID: senderUserID,
-            },
-          ],
-          CREDENTIAL_RULE_ROOM_MESSAGE_SENDER
-        );
-      newRules.push(messageSender);
-    }
-
-    const clonedRoomAuthorization =
-      this.authorizationPolicyService.cloneAuthorizationPolicy(
-        room.authorization
-      );
-
-    const updatedAuthorization =
-      this.authorizationPolicyService.appendCredentialAuthorizationRules(
-        clonedRoomAuthorization,
-        newRules
-      );
-
-    return updatedAuthorization;
   }
 
   async extendAuthorizationPolicyForReactionSender(
     room: IRoom,
     reactionID: string
   ): Promise<IAuthorizationPolicy> {
+    return this.extendAuthorizationPolicyForSender(
+      room,
+      () => this.roomService.getUserIdForReaction(room, reactionID),
+      CREDENTIAL_RULE_ROOM_REACTION_SENDER
+    );
+  }
+
+  /**
+   * Generic method to extend authorization policy for a sender.
+   * Used by extendAuthorizationPolicyForMessageSender and extendAuthorizationPolicyForReactionSender.
+   */
+  private async extendAuthorizationPolicyForSender(
+    room: IRoom,
+    getSenderUserId: () => Promise<string>,
+    credentialRuleLabel: string
+  ): Promise<IAuthorizationPolicy> {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    const senderUserID = await this.roomService.getUserIdForReaction(
-      room,
-      reactionID
-    );
+    const senderUserID = await getSenderUserId();
 
     if (senderUserID !== '') {
-      const reactionSenderRule =
-        this.authorizationPolicyService.createCredentialRule(
-          [AuthorizationPrivilege.UPDATE, AuthorizationPrivilege.DELETE],
-          [
-            {
-              type: AuthorizationCredential.USER_SELF_MANAGEMENT,
-              resourceID: senderUserID,
-            },
-          ],
-          CREDENTIAL_RULE_ROOM_REACTION_SENDER
-        );
-      newRules.push(reactionSenderRule);
+      const senderRule = this.authorizationPolicyService.createCredentialRule(
+        [AuthorizationPrivilege.UPDATE, AuthorizationPrivilege.DELETE],
+        [
+          {
+            type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+            resourceID: senderUserID,
+          },
+        ],
+        credentialRuleLabel
+      );
+      newRules.push(senderRule);
     }
 
     const clonedRoomAuthorization =
@@ -169,12 +152,9 @@ export class RoomAuthorizationService {
         room.authorization
       );
 
-    const updatedAuthorization =
-      this.authorizationPolicyService.appendCredentialAuthorizationRules(
-        clonedRoomAuthorization,
-        newRules
-      );
-
-    return updatedAuthorization;
+    return this.authorizationPolicyService.appendCredentialAuthorizationRules(
+      clonedRoomAuthorization,
+      newRules
+    );
   }
 }

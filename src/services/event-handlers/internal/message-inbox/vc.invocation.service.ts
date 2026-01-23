@@ -84,7 +84,7 @@ export class VcInvocationService {
 
     if (otherMembers.length === 0) {
       this.logger.verbose?.(
-        `No other members in DIRECT room ${room.id}, skipping`,
+        `No other members in room ${room.id}, skipping`,
         LogContext.COMMUNICATION
       );
       return;
@@ -102,7 +102,7 @@ export class VcInvocationService {
 
     if (vcMembers.length === 0) {
       this.logger.verbose?.(
-        `No VC members found in DIRECT room ${room.id}, skipping`,
+        `No VC members found in room ${room.id}, skipping`,
         LogContext.COMMUNICATION
       );
       return;
@@ -118,7 +118,7 @@ export class VcInvocationService {
 
     // Invoke all VCs in parallel
     this.logger.verbose?.(
-      `Invoking ${vcMembers.length} VC(s) in DIRECT conversation`,
+      `Invoking ${vcMembers.length} VC(s) in conversation`,
       LogContext.COMMUNICATION
     );
 
@@ -130,11 +130,7 @@ export class VcInvocationService {
           threadID,
           agentInfo,
           '', // contextSpaceID out of scope
-          room,
-          {
-            threadID,
-            virtualContributorID: vcActorID,
-          }
+          room
         )
       )
     );
@@ -187,11 +183,7 @@ export class VcInvocationService {
       threadID,
       agentInfo,
       '', // contextSpaceID out of scope
-      room,
-      {
-        threadID,
-        virtualContributorID: vcData.virtualContributorActorID,
-      }
+      room
     );
   }
 
