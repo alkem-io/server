@@ -6,6 +6,7 @@ import { GraphQLModule } from '@nestjs/graphql';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { ScheduleModule } from '@nestjs/schedule';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { CloseCode } from 'graphql-ws';
 import { ValidationPipe } from '@common/pipes/validation.pipe';
 import configuration from '@config/configuration';
@@ -50,11 +51,9 @@ import { ContributionReporterModule } from '@services/external/elasticsearch/con
 import { DataLoaderInterceptor } from '@core/dataloader/interceptors';
 import { InnovationHubInterceptor } from '@common/interceptors';
 import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.module';
-import { SessionSyncModule } from '@services/session-sync/session-sync.module';
-import { SsiCredentialFlowController } from '@services/api-rest/ssi-credential-flow/ssi.credential.flow.controller';
-import { SsiCredentialFlowModule } from '@services/api-rest/ssi-credential-flow/ssi.credential.flow.module';
-import { StorageAccessModule } from '@services/api-rest/storage-access/storage.access.module';
 import { MessageReactionModule } from '@domain/communication/message.reaction/message.reaction.module';
+import { IdentityResolveModule } from '@services/api-rest/identity-resolve/identity-resolve.module';
+
 import {
   HttpExceptionFilter,
   GraphqlExceptionFilter,
@@ -118,6 +117,9 @@ import { InAppNotificationAdminModule } from './platform-admin/in-app-notificati
       isGlobal: true,
       load: [configuration],
     }),
+    EventEmitterModule.forRoot({
+      global: true,
+    }),
     ScheduleModule.forRoot(),
     CacheModule.registerAsync({
       isGlobal: true,
@@ -143,20 +145,36 @@ import { InAppNotificationAdminModule } from './platform-admin/in-app-notificati
         const dbOptions = configService.get('storage.database', {
           infer: true,
         });
+
+        const pgbouncerEnabled = dbOptions.pgbouncer?.enabled ?? false;
+        const statementTimeoutMs =
+          dbOptions.pgbouncer?.statement_timeout_ms ?? 60000;
+
         return {
-          type: 'mysql',
-          insecureAuth: true,
+          type: 'postgres' as const,
           synchronize: false,
           cache: true,
           entities: [join(__dirname, '**', '*.entity.{ts,js}')],
           host: dbOptions.host,
           port: dbOptions.port,
-          timezone: dbOptions.timezone,
-          charset: dbOptions.charset,
           username: dbOptions.username,
           password: dbOptions.password,
           database: dbOptions.database,
           logging: dbOptions.logging,
+          // Connection pool settings for PostgreSQL
+          extra: {
+            max: dbOptions.pool?.max ?? 50,
+            idleTimeoutMillis: dbOptions.pool?.idle_timeout_ms ?? 30000,
+            connectionTimeoutMillis:
+              dbOptions.pool?.connection_timeout_ms ?? 10000,
+            // PgBouncer compatibility: set statement_timeout to prevent
+            // long-running queries from holding pooled connections
+            ...(pgbouncerEnabled && {
+              statement_timeout: statementTimeoutMs,
+              // Disable idle_in_transaction_session_timeout to let PgBouncer manage
+              idle_in_transaction_session_timeout: statementTimeoutMs * 2,
+            }),
+          },
         };
       },
     }),
@@ -287,7 +305,6 @@ import { InAppNotificationAdminModule } from './platform-admin/in-app-notificati
     MessageReactionModule,
     NotificationRecipientsModule,
     RegistrationModule,
-    SessionSyncModule,
     ConversionModule,
     LibraryModule,
     PlatformModule,
@@ -298,8 +315,7 @@ import { InAppNotificationAdminModule } from './platform-admin/in-app-notificati
     GeoLocationModule,
     ContributionReporterModule,
     InnovationHubModule,
-    SsiCredentialFlowModule,
-    StorageAccessModule,
+    IdentityResolveModule,
     MeModule,
     VirtualContributorModule,
     InputCreatorModule,
@@ -319,7 +335,7 @@ import { InAppNotificationAdminModule } from './platform-admin/in-app-notificati
     CalloutTransferModule,
     SearchModule,
   ],
-  controllers: [AppController, SsiCredentialFlowController],
+  controllers: [AppController],
   providers: [
     {
       provide: APP_INTERCEPTOR,

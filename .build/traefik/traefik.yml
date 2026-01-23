@@ -10,14 +10,14 @@ providers:
 entryPoints:
   web:
     address: ':80'
-  mysql:
-    address: ':3306'
   postgres:
     address: ':5432'
   synapse:
     address: ':8008'
   synapse-admin:
     address: ':8088'
+  matrix-adapter:
+    address: ':8280'
   kratos-admin-ui:
     address: ':8188'
   mailslurper-client:

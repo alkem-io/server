@@ -9,13 +9,14 @@ import { LicensingFramework } from '@platform/licensing/credential-based/licensi
 import { RoleSet } from '@domain/access/role-set/role.set.entity';
 import { IPlatformSettings } from '@platform/platform-settings/platform.settings.interface';
 import { IPlatformWellKnownVirtualContributors } from '@platform/platform.well.known.virtual.contributors/platform.well.known.virtual.contributors.interface';
+import { Messaging } from '@domain/communication/messaging/messaging.entity';
 
 @Entity()
 export class Platform extends AuthorizableEntity implements IPlatform {
-  @Column('json', { nullable: false })
+  @Column('jsonb', { nullable: false })
   settings!: IPlatformSettings;
 
-  @Column('json', { nullable: false })
+  @Column('jsonb', { nullable: false })
   wellKnownVirtualContributors!: IPlatformWellKnownVirtualContributors;
 
   @OneToOne(() => Forum, {
@@ -65,4 +66,12 @@ export class Platform extends AuthorizableEntity implements IPlatform {
   })
   @JoinColumn()
   roleSet!: RoleSet;
+
+  @OneToOne(() => Messaging, {
+    eager: false,
+    cascade: true,
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn()
+  messaging?: Messaging;
 }

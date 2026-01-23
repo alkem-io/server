@@ -7,35 +7,33 @@ import {
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IRoom } from '../room/room.interface';
-import { IVcInteraction } from '../vc-interaction/vc.interaction.interface';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { isInputValidForAction } from '@domain/community/virtual-contributor/dto/utils';
 import { AiServerAdapterInvocationInput } from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.invocation';
-import { VcInteractionService } from '../vc-interaction/vc.interaction.service';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { RoomLookupService } from '../room-lookup/room.lookup.service';
 
 @Injectable()
 export class VirtualContributorMessageService {
   constructor(
-    private vcInteractionService: VcInteractionService,
+    private roomLookupService: RoomLookupService,
     private virtualContributorLookupService: VirtualContributorLookupService,
     private aiServerAdapter: AiServerAdapter,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   public async invokeVirtualContributor(
-    virtualContributorID: string,
+    virtualContributorActorID: string,
     message: string,
     threadID: string,
     agentInfo: AgentInfo,
     contextSpaceID: string,
-    room: IRoom,
-    vcInteraction: IVcInteraction | undefined = undefined
+    room: IRoom
   ) {
     const virtualContributor =
-      await this.virtualContributorLookupService.getVirtualContributorOrFail(
-        virtualContributorID
+      await this.virtualContributorLookupService.getVirtualContributorByAgentIdOrFail(
+        virtualContributorActorID
       );
 
     if (!virtualContributor.aiPersonaID) {
@@ -55,8 +53,7 @@ export class VirtualContributorMessageService {
         roomDetails: {
           roomID: room.id,
           threadID,
-          communicationID: virtualContributor.communicationID,
-          vcInteractionID: vcInteraction?.id,
+          actorId: virtualContributorActorID,
         },
       },
     };
@@ -101,17 +98,22 @@ export class VirtualContributorMessageService {
       resultHandler: invocationInput.resultHandler,
     };
 
+    // Get external metadata from room's JSON storage if this is a POST_REPLY action
     if (
       isInputValidForAction(invocationInput, InvocationResultAction.POST_REPLY)
     ) {
-      const vcInteraction =
-        await this.vcInteractionService.getVcInteractionOrFail(
-          invocationInput.resultHandler.roomDetails!.vcInteractionID!
-        );
+      const threadID = invocationInput.resultHandler.roomDetails!.threadID;
+      const roomID = invocationInput.resultHandler.roomDetails!.roomID;
 
-      aiServerAdapterInvocationInput.vcInteractionID = vcInteraction.id;
-      aiServerAdapterInvocationInput.externalMetadata =
-        vcInteraction.externalMetadata;
+      // Get room to access vcInteractionsByThread
+      const room = await this.roomLookupService.getRoomOrFail(roomID);
+      const vcData = room.vcInteractionsByThread?.[threadID];
+
+      if (vcData) {
+        aiServerAdapterInvocationInput.externalMetadata = {
+          threadId: vcData.externalThreadId,
+        };
+      }
     }
 
     const response = await this.aiServerAdapter.invoke(

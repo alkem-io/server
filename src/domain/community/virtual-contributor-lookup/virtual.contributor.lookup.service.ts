@@ -2,6 +2,7 @@ import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { isUUID } from 'class-validator';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -52,6 +53,13 @@ export class VirtualContributorLookupService {
     virtualContributorID: string,
     options?: FindOneOptions<VirtualContributor>
   ): Promise<IVirtualContributor> {
+    if (!isUUID(virtualContributorID)) {
+      throw new EntityNotFoundException(
+        `Unable to find VirtualContributor with ID: ${virtualContributorID}`,
+        LogContext.COMMUNITY
+      );
+    }
+
     const virtualContributor: IVirtualContributor | null =
       await this.entityManager.findOne(VirtualContributor, {
         ...options,
@@ -59,9 +67,48 @@ export class VirtualContributorLookupService {
       });
     if (!virtualContributor)
       throw new EntityNotFoundException(
-        `Unable to find VirtualContributor with ID: ${virtualContributorID}`,
+        'Unable to find VirtualContributor with ID',
+        LogContext.COMMUNITY,
+        { virtualContributorID }
+      );
+    return virtualContributor;
+  }
+
+  async getVirtualContributorByAgentId(
+    agentID: string,
+    options?: FindOneOptions<VirtualContributor>
+  ): Promise<IVirtualContributor | null> {
+    const virtualContributor: IVirtualContributor | null =
+      await this.entityManager.findOne(VirtualContributor, {
+        ...options,
+        where: {
+          ...options?.where,
+          agent: {
+            id: agentID,
+          },
+        },
+        relations: {
+          agent: true,
+          ...options?.relations,
+        },
+      });
+    return virtualContributor;
+  }
+
+  async getVirtualContributorByAgentIdOrFail(
+    agentID: string,
+    options?: FindOneOptions<VirtualContributor>
+  ): Promise<IVirtualContributor> {
+    const virtualContributor = await this.getVirtualContributorByAgentId(
+      agentID,
+      options
+    );
+    if (!virtualContributor) {
+      throw new EntityNotFoundException(
+        `Unable to find VirtualContributor with agent ID: ${agentID}`,
         LogContext.COMMUNITY
       );
+    }
     return virtualContributor;
   }
 
@@ -76,8 +123,9 @@ export class VirtualContributorLookupService {
       });
     if (!virtualContributor)
       throw new EntityNotFoundException(
-        `Unable to find VirtualContributor with NameID: ${virtualContributorNameID}`,
-        LogContext.COMMUNITY
+        'Unable to find VirtualContributor with NameID',
+        LogContext.COMMUNITY,
+        { virtualContributorNameID }
       );
     return virtualContributor;
   }
@@ -152,7 +200,7 @@ export class VirtualContributorLookupService {
         qb.expressionMap.wheres && qb.expressionMap.wheres.length > 0;
 
       qb[hasWhere ? 'andWhere' : 'where'](
-        'NOT virtual_contributor.id IN (:memberVirtualContributors)'
+        'NOT virtual_contributor.id IN (:...memberVirtualContributors)'
       ).setParameters({
         memberVirtualContributors: currentEntryRoleVirtualContributors.map(
           virtualContributor => virtualContributor.id

@@ -21,6 +21,10 @@ import {
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { UpdateInnovationFlowStateInput } from '../innovation-flow-state/dto';
+import {
+  RemoveDefaultCalloutTemplateOnInnovationFlowStateInput,
+  SetDefaultCalloutTemplateOnInnovationFlowStateInput,
+} from './dto';
 
 @InstrumentResolver()
 @Resolver()
@@ -234,6 +238,60 @@ export class InnovationFlowResolverMutations {
     return this.innovationFlowService.updateStatesSortOrder(
       innovationFlow.id,
       sortOrderData
+    );
+  }
+
+  @Mutation(() => IInnovationFlowState, {
+    description: 'Set the default callout template for an InnovationFlowState.',
+  })
+  async setDefaultCalloutTemplateOnInnovationFlowState(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('setData')
+    setData: SetDefaultCalloutTemplateOnInnovationFlowStateInput
+  ): Promise<IInnovationFlowState> {
+    const flowState =
+      await this.innovationFlowStateService.getInnovationFlowStateOrFail(
+        setData.flowStateID,
+        { relations: { authorization: true } }
+      );
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      flowState.authorization,
+      AuthorizationPrivilege.UPDATE,
+      'set default callout template on innovation flow state'
+    );
+
+    return this.innovationFlowStateService.setDefaultCalloutTemplate(
+      setData.flowStateID,
+      setData.templateID
+    );
+  }
+
+  @Mutation(() => IInnovationFlowState, {
+    description:
+      'Remove the default callout template from an InnovationFlowState.',
+  })
+  async removeDefaultCalloutTemplateOnInnovationFlowState(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('removeData')
+    removeData: RemoveDefaultCalloutTemplateOnInnovationFlowStateInput
+  ): Promise<IInnovationFlowState> {
+    const flowState =
+      await this.innovationFlowStateService.getInnovationFlowStateOrFail(
+        removeData.flowStateID,
+        { relations: { authorization: true } }
+      );
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      flowState.authorization,
+      AuthorizationPrivilege.UPDATE,
+      'remove default callout template on innovation flow state'
+    );
+
+    return this.innovationFlowStateService.removeDefaultCalloutTemplate(
+      removeData.flowStateID
     );
   }
 }

@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { ValueProvider } from '@nestjs/common';
 import { PublicPart } from '../utils/public-part';
@@ -7,7 +8,7 @@ export const MockAuthorizationService: ValueProvider<
 > = {
   provide: AuthorizationService,
   useValue: {
-    grantAccessOrFail: jest.fn(),
-    isAccessGranted: jest.fn(),
+    grantAccessOrFail: vi.fn(),
+    isAccessGranted: vi.fn(),
   },
 };

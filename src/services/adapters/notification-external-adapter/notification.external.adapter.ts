@@ -441,7 +441,9 @@ export class NotificationExternalAdapter {
       },
       comment: {
         message: messageResult.message,
-        createdBy: await this.getContributorPayloadOrFail(messageResult.sender),
+        createdBy: await this.getContributorPayloadByAgentIdOrFail(
+          messageResult.sender
+        ),
       },
       ...spacePayload,
     };
@@ -716,7 +718,9 @@ export class NotificationExternalAdapter {
       },
       comment: {
         message: message.message,
-        createdBy: await this.getContributorPayloadOrFail(message.sender),
+        createdBy: await this.getContributorPayloadByAgentIdOrFail(
+          message.sender
+        ),
         url: '',
       },
       ...basePayload,
@@ -966,6 +970,38 @@ export class NotificationExternalAdapter {
     if (!contributor || !contributor.profile) {
       throw new EntityNotFoundException(
         `Unable to find Contributor with profile for id: ${contributorID}`,
+        LogContext.COMMUNITY
+      );
+    }
+
+    const contributorType = getContributorType(contributor);
+
+    const contributorURL =
+      this.urlGeneratorService.createUrlForContributor(contributor);
+    const result: ContributorPayload = {
+      id: contributor.id,
+      profile: {
+        displayName: contributor.profile.displayName,
+        url: contributorURL,
+      },
+      type: contributorType,
+    };
+    return result;
+  }
+
+  private async getContributorPayloadByAgentIdOrFail(
+    agentId: string
+  ): Promise<ContributorPayload> {
+    const contributor =
+      await this.contributorLookupService.getContributorByAgentId(agentId, {
+        relations: {
+          profile: true,
+        },
+      });
+
+    if (!contributor || !contributor.profile) {
+      throw new EntityNotFoundException(
+        `Unable to find Contributor with profile for agent id: ${agentId}`,
         LogContext.COMMUNITY
       );
     }

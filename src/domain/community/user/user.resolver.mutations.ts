@@ -14,6 +14,7 @@ import { UpdateUserInput } from './dto';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { UpdateUserSettingsInput } from './dto/user.dto.update.settings';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { UserSettingsHomeSpaceValidationService } from '../user-settings/user.settings.home.space.validation.service';
 
 @InstrumentResolver()
 @Resolver(() => IUser)
@@ -23,6 +24,7 @@ export class UserResolverMutations {
     private authorizationPolicyService: AuthorizationPolicyService,
     private userService: UserService,
     private userAuthorizationService: UserAuthorizationService,
+    private homeSpaceValidationService: UserSettingsHomeSpaceValidationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -63,6 +65,15 @@ export class UserResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `user settings update: ${user.id}`
     );
+
+    // Validate home space access if being set
+    const homeSpaceUpdate = settingsData.settings.homeSpace;
+    if (homeSpaceUpdate?.spaceID) {
+      await this.homeSpaceValidationService.validateSpaceAccess(
+        homeSpaceUpdate.spaceID,
+        agentInfo
+      );
+    }
 
     user = await this.userService.updateUserSettings(
       user,

@@ -1,4 +1,5 @@
-import Ajv from 'ajv';
+import Ajv2020 from 'ajv/dist/2020';
+import addFormats from 'ajv-formats';
 import { readFileSync } from 'fs';
 import path from 'path';
 
@@ -9,7 +10,9 @@ describe('Contract: deprecation-registry.schema.json', () => {
     '../specs/002-schema-contract-diffing/contracts/deprecation-registry.schema.json'
   );
   const schema = JSON.parse(readFileSync(schemaPath, 'utf-8'));
-  const ajv = new Ajv({ strict: true, allErrors: true });
+  // Use Ajv2020 for draft 2020-12 schema support with formats
+  const ajv = new Ajv2020({ strict: true, allErrors: true });
+  addFormats(ajv);
   const validate = ajv.compile(schema);
 
   it('accepts a minimal valid registry object', () => {

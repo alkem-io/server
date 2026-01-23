@@ -17,8 +17,6 @@ export class AgentInfoCacheService {
   constructor(
     @Inject(CACHE_MANAGER)
     private readonly cacheManager: Cache,
-    // @Inject(REDIS_LOCK_SERVICE)
-    // private readonly redisLockService: Redlock,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private configService: ConfigService<AlkemioConfig, true>,
@@ -31,94 +29,68 @@ export class AgentInfoCacheService {
     );
   }
 
+  /**
+   * Retrieves cached AgentInfo by authenticationID (Kratos identity ID).
+   * @param authenticationID - The Kratos identity ID used as cache key
+   */
   public async getAgentInfoFromCache(
-    email: string
+    authenticationID: string
   ): Promise<AgentInfo | undefined> {
     return await this.cacheManager.get<AgentInfo>(
-      this.getAgentInfoCacheKey(email)
+      this.getAgentInfoCacheKey(authenticationID)
     );
   }
 
-  public async deleteAgentInfoFromCache(email: string): Promise<any> {
-    return await this.cacheManager.del(this.getAgentInfoCacheKey(email));
+  /**
+   * Deletes cached AgentInfo by authenticationID.
+   * @param authenticationID - The Kratos identity ID used as cache key
+   */
+  public async deleteAgentInfoFromCache(
+    authenticationID: string
+  ): Promise<any> {
+    return await this.cacheManager.del(
+      this.getAgentInfoCacheKey(authenticationID)
+    );
   }
 
+  /**
+   * Caches AgentInfo using the authenticationID as key.
+   * Only caches if authenticationID is present (authenticated users only).
+   */
   public async setAgentInfoCache(agentInfo: AgentInfo): Promise<AgentInfo> {
-    const cacheKey = this.getAgentInfoCacheKey(agentInfo.email);
+    if (!agentInfo.authenticationID) {
+      // Don't cache users without authenticationID (guests, anonymous, unlinked)
+      return agentInfo;
+    }
+    const cacheKey = this.getAgentInfoCacheKey(agentInfo.authenticationID);
     return await this.cacheManager.set<AgentInfo>(cacheKey, agentInfo, {
       ttl: this.cache_ttl,
     });
   }
 
-  //toDo add redis distributed to lock to make the code thread-safe
-  //https://app.zenspace.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/alkem-io/server/2021
-
-  // public async setAgentInfoCache(
-  //   agentInfo: AgentInfo
-  // ): Promise<AgentInfo | undefined> {
-  //   let updatedAgentInfo: AgentInfo = new AgentInfo();
-  //   const cacheKey = this.getAgentInfoCacheKey(agentInfo.email);
-
-  //   let lock;
-  //   try {
-  //     lock = await this.redisLockService.acquire([`lock:${cacheKey}`], 2000);
-  //   } catch (error) {
-  //     this.logger.verbose?.(
-  //       `Couldn't acquire redis lock: ${error}`,
-  //       LogContext.AUTH
-  //     );
-  //     return undefined;
-  //   }
-
-  //   try {
-  //     updatedAgentInfo = await this.cacheManager.set<AgentInfo>(
-  //       cacheKey,
-  //       agentInfo,
-  //       {
-  //         ttl: this.cache_ttl,
-  //       }
-  //     );
-  //   } catch (error) {
-  //     this.logger.error(`Couldn't update cache: ${error}`, LogContext.AUTH);
-  //     return undefined;
-  //   } finally {
-  //     await lock?.release();
-  //   }
-  // await this.redisLockService.using(
-  //   [cacheKey],
-  //   1000,
-  //   async (signal: RedlockAbortSignal) => {
-  //     if (signal.aborted) {
-  //       throw signal.error;
-  //     }
-
-  //     updatedAgentInfo = await this.cacheManager.set<AgentInfo>(
-  //       cacheKey,
-  //       agentInfo,
-  //       {
-  //         ttl: this.cache_ttl,
-  //       }
-  //     );
-  //   }
-  // );
-  //   return updatedAgentInfo;
-  // }
-
+  /**
+   * Updates cached AgentInfo credentials when an agent's credentials change.
+   * Looks up the user's authenticationID via the agent, then updates the cache.
+   */
   public async updateAgentInfoCache(
     agent: IAgent
   ): Promise<AgentInfo | undefined> {
-    const email = await this.getAgentEmail(agent.id);
+    const authenticationID = await this.getAuthenticationIdForAgent(agent.id);
 
-    if (!email) return undefined;
-
-    const cachedAgentInfo = await this.getAgentInfoFromCache(email);
-    await this.cacheManager.store;
-    if (!cachedAgentInfo) {
+    if (!authenticationID) {
       this.logger.verbose?.(
-        `No user cache found for user ${email}. Skipping cache update!`,
+        `No authenticationID found for agent ${agent.id}. Skipping cache update.`,
         LogContext.AGENT
       );
+      return undefined;
+    }
 
+    const cachedAgentInfo = await this.getAgentInfoFromCache(authenticationID);
+    if (!cachedAgentInfo) {
+      this.logger.verbose?.(
+        'No cache entry found for authenticationID. Skipping cache update.',
+        LogContext.AGENT
+      );
       return undefined;
     }
 
@@ -126,22 +98,31 @@ export class AgentInfoCacheService {
     return await this.setAgentInfoCache(cachedAgentInfo);
   }
 
-  private getAgentInfoCacheKey(email: string): string {
-    return `@agentInfo:email:${email}`;
+  /**
+   * Cache key uses authenticationID (Kratos identity ID) - stable across email changes.
+   */
+  private getAgentInfoCacheKey(authenticationID: string): string {
+    return `@agentInfo:authId:${authenticationID}`;
   }
 
-  public async getAgentEmail(agentId: string): Promise<string | undefined> {
-    const users: { email: string }[] =
+  /**
+   * Looks up the user's authenticationID given an agent ID.
+   * Used when updating cache after credential changes.
+   */
+  private async getAuthenticationIdForAgent(
+    agentId: string
+  ): Promise<string | undefined> {
+    const users: { authenticationID: string | null }[] =
       await this.entityManager.connection.query(
-        `SELECT \`u\`.\`email\` FROM \`agent\` as \`a\`
-      RIGHT JOIN \`user\` as \`u\`
-      ON \`u\`.\`agentId\` = \`a\`.\`id\`
-      WHERE \`a\`.\`id\` = ?`,
+        `SELECT "u"."authenticationID" FROM "agent" as "a"
+        RIGHT JOIN "user" as "u"
+        ON "u"."agentId" = "a"."id"
+        WHERE "a"."id" = $1`,
         [agentId]
       );
 
-    if (!users[0]) return undefined;
+    if (!users[0] || !users[0].authenticationID) return undefined;
 
-    return users[0].email;
+    return users[0].authenticationID;
   }
 }

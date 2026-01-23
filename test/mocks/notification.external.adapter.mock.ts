@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { ValueProvider } from '@nestjs/common';
 import { PublicPart } from '../utils/public-part';
 import { NotificationExternalAdapter } from '@services/adapters/notification-external-adapter/notification.external.adapter';
@@ -7,16 +8,16 @@ export const MockNotificationsPayloadBuilder: ValueProvider<
 > = {
   provide: NotificationExternalAdapter,
   useValue: {
-    buildUserMessageSentNotificationPayload: jest.fn(),
-    buildSpaceCommunityApplicationCreatedNotificationPayload: jest.fn(),
-    buildUserSpaceCommunityApplicationDeclinedPayload: jest.fn(),
-    buildVirtualContributorSpaceCommunityInvitationDeclinedPayload: jest.fn(),
-    buildNotificationPayloadUserSpaceCommunityInvitation: jest.fn(),
-    buildSpaceCollaborationCreatedPayload: jest.fn(),
-    buildSpaceCollaborationCalloutPostContributionCommentPayload: jest.fn(),
-    buildPlatformForumDiscussionCreatedNotificationPayload: jest.fn(),
-    buildSpaceCommunicationUpdateSentNotificationPayload: jest.fn(),
-    buildSpaceCommunityNewMemberPayload: jest.fn(),
-    buildPlatformUserRegisteredNotificationPayload: jest.fn(),
+    buildUserMessageSentNotificationPayload: vi.fn(),
+    buildSpaceCommunityApplicationCreatedNotificationPayload: vi.fn(),
+    buildUserSpaceCommunityApplicationDeclinedPayload: vi.fn(),
+    buildVirtualContributorSpaceCommunityInvitationDeclinedPayload: vi.fn(),
+    buildNotificationPayloadUserSpaceCommunityInvitation: vi.fn(),
+    buildSpaceCollaborationCreatedPayload: vi.fn(),
+    buildSpaceCollaborationCalloutPostContributionCommentPayload: vi.fn(),
+    buildPlatformForumDiscussionCreatedNotificationPayload: vi.fn(),
+    buildSpaceCommunicationUpdateSentNotificationPayload: vi.fn(),
+    buildSpaceCommunityNewMemberPayload: vi.fn(),
+    buildPlatformUserRegisteredNotificationPayload: vi.fn(),
   },
 };

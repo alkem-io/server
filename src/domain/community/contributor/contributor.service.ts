@@ -93,7 +93,7 @@ export class ContributorService {
 
   public async ensureAvatarIsStoredInLocalStorageBucket(
     profileID: string,
-    userID: string
+    userID?: string
   ): Promise<IProfile> {
     const profile = await this.profileService.getProfileOrFail(profileID, {
       relations: {

@@ -70,7 +70,6 @@ export const organizationData: { organization: IOrganization } = {
             cascade: true,
           },
         ],
-        verifiedCredentialRules: [],
         privilegeRules: [],
         id: '2b82dab3-4581-4ff2-88e3-4997afe4f85b',
         createdDate: new Date('2024-01-01T00:00:00.000Z'),
@@ -81,8 +80,6 @@ export const organizationData: { organization: IOrganization } = {
     },
     agent: {
       type: AgentType.ORGANIZATION,
-      did: '',
-      password: '',
       id: '8f5c08b1-444a-42c0-8f48-58b3ddef53b0',
       authorization: {
         type: AuthorizationPolicyType.AGENT,
@@ -172,7 +169,6 @@ export const organizationData: { organization: IOrganization } = {
             cascade: true,
           },
         ],
-        verifiedCredentialRules: [],
         privilegeRules: [],
         id: '28b65c95-a2ff-49aa-a654-a04bad7991aa',
         createdDate: new Date('2024-01-01T00:00:00.000Z'),
@@ -275,7 +271,6 @@ export const organizationData: { organization: IOrganization } = {
           cascade: true,
         },
       ],
-      verifiedCredentialRules: [],
       privilegeRules: [],
       id: '8b4fe82b-6135-4b6b-81de-4fdbde945e18',
       createdDate: new Date('2024-01-01T00:00:00.000Z'),
@@ -298,6 +293,5 @@ export const organizationData: { organization: IOrganization } = {
       privacy: { contributionRolesPubliclyVisible: true },
       membership: { allowUsersMatchingDomainToJoin: false },
     },
-    communicationID: 'comm-03bb5b07-f134-4074-97b9-1dd7950c7fa4',
   },
 };

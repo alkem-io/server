@@ -5,7 +5,6 @@ export enum MessagingQueue {
   VIRTUAL_CONTRIBUTOR_ENGINE_GENERIC = 'virtual-contributor-engine-generic',
   VIRTUAL_CONTRIBUTOR_ENGINE_OPENAI_ASSISTANT = 'virtual-contributor-engine-openai-assistant',
   //
-  WALLET_MANAGER = 'alkemio-wallet-manager',
   NOTIFICATIONS = 'alkemio-notifications',
   MATRIX_ADAPTER = 'alkemio-matrix-adapter',
   //
@@ -22,6 +21,7 @@ export enum MessagingQueue {
   SUBSCRIPTION_ROOM_EVENT = 'alkemio-subscriptions-room-event',
   SUBSCRIPTION_IN_APP_NOTIFICATION_RECEIVED = 'alkemio-subscriptions-in-app-notification-received',
   SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER = 'alkemio-subscriptions-in-app-notification-counter',
+  SUBSCRIPTION_CONVERSATION_EVENTS = 'alkemio-subscriptions-conversation-events',
   //
   WHITEBOARDS = 'alkemio-whiteboards',
   FILES = 'alkemio-files',

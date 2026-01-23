@@ -64,17 +64,6 @@ export type AlkemioConfig = {
           };
           session_cookie_name: string;
           session_extend_enabled: boolean;
-          session_sync: {
-            enabled: boolean;
-            interval_ms: number;
-            kratos_database: {
-              database: string;
-              host?: string;
-              port?: number;
-              username?: string;
-              password?: string;
-            };
-          };
         };
       };
     };
@@ -114,19 +103,6 @@ export type AlkemioConfig = {
     matrix: {
       connection_retries: number;
       connection_timeout: number;
-      admin_api: {
-        url: string;
-        token?: string;
-      };
-      oidc_provider_id: string;
-      database: {
-        host: string;
-        port: number;
-        username: string;
-        password: string;
-        database: string;
-        ssl: boolean;
-      };
     };
     discussions: {
       enabled: boolean;
@@ -143,13 +119,20 @@ export type AlkemioConfig = {
     database: {
       host: string;
       port: number;
-      timezone: string;
       username: string;
       password: string;
       schema: string;
       database: string;
-      charset: string;
       logging: boolean;
+      pool?: {
+        max: number;
+        idle_timeout_ms: number;
+        connection_timeout_ms: number;
+      };
+      pgbouncer?: {
+        enabled: boolean;
+        statement_timeout_ms: number;
+      };
     };
     local_storage: {
       path: string;
@@ -272,66 +255,4 @@ export type AlkemioConfig = {
       history_length: number;
     };
   };
-  ssi: {
-    enabled: boolean;
-    issuer_validation_enabled: boolean;
-    issuers: {
-      alkemio: {
-        enabled: boolean;
-      };
-      sovrhd: {
-        enabled: boolean;
-        endpoint: string;
-        credential_types: Array<{
-          name: string;
-          identifier: string;
-        }>;
-      };
-    };
-    credentials: {
-      the_hague_proof_of_postal_address: SsiCredential<the_hague_proof_of_postal_addressContext>;
-      the_hague_hoplr: SsiCredential<the_hague_hoplrContext>;
-      proof_of_email_address: SsiCredential<proof_of_email_addressContext>;
-      proof_of_community_membership: SsiCredential<proof_of_community_membershipContext>;
-      proof_of_alkemio_membership: SsiCredential<proof_of_alkemio_membershipContext>;
-    };
-  };
-};
-
-type SsiCredential<TContext extends Record<string, string>> = {
-  name: string;
-  issuer: string;
-  description: string;
-  schema: string;
-  types: string[];
-  uniqueType: string;
-  context: TContext;
-};
-
-type the_hague_proof_of_postal_addressContext = {
-  addressLine1: string;
-  addressLine2: string;
-  postalCode: string;
-  city: string;
-  country: string;
-};
-
-type the_hague_hoplrContext = {
-  the_hague_hoplr: string;
-};
-
-type proof_of_email_addressContext = {
-  emailAddress: string;
-};
-
-type proof_of_community_membershipContext = {
-  alkemioUser_userID: string;
-  alkemioUser_email: string;
-  communityMember_communityID: string;
-  communityMember_displayName: string;
-};
-
-type proof_of_alkemio_membershipContext = {
-  alkemioUser_userID: string;
-  alkemioUser_email: string;
 };

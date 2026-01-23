@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { LicensingWingbackSubscriptionService } from './licensing.wingback.subscription.service';
 import { WingbackManager } from '@services/external/wingback';
@@ -14,8 +15,8 @@ describe('LicensingWingbackSubscriptionService', () => {
         {
           provide: WingbackManager,
           useValue: {
-            createCustomer: jest.fn(),
-            getEntitlements: jest.fn(),
+            createCustomer: vi.fn(),
+            getEntitlements: vi.fn(),
           },
         },
       ],

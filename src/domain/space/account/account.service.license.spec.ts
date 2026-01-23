@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AccountLicenseService } from './account.service.license';
 import { LicenseService } from '@domain/common/license/license.service';
@@ -20,15 +21,15 @@ describe('AccountLicenseService', () => {
 
   beforeEach(async () => {
     const mockLicenseService = {
-      reset: jest.fn().mockImplementation(license => license),
+      reset: vi.fn().mockImplementation(license => license),
     };
 
     mockLogger = {
-      warn: jest.fn(),
-      verbose: jest.fn(),
-      error: jest.fn(),
-      debug: jest.fn(),
-      log: jest.fn(),
+      warn: vi.fn(),
+      verbose: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+      log: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -393,11 +394,11 @@ describe('AccountLicenseService', () => {
 
     beforeEach(() => {
       mockCredentialBasedService = {
-        getEntitlementIfGranted: jest.fn(),
+        getEntitlementIfGranted: vi.fn(),
       };
       mockWingbackService = {
-        getEntitlements: jest.fn(),
-        isEnabled: jest.fn().mockReturnValue(true),
+        getEntitlements: vi.fn(),
+        isEnabled: vi.fn().mockReturnValue(true),
       };
 
       service['licensingCredentialBasedService'] = mockCredentialBasedService;
@@ -524,11 +525,11 @@ describe('AccountLicenseService', () => {
 
     beforeEach(() => {
       mockCredentialBasedService = {
-        getEntitlementIfGranted: jest.fn(),
+        getEntitlementIfGranted: vi.fn(),
       };
       mockWingbackService = {
-        getEntitlements: jest.fn(),
-        isEnabled: jest.fn().mockReturnValue(true),
+        getEntitlements: vi.fn(),
+        isEnabled: vi.fn().mockReturnValue(true),
       };
 
       service['licensingCredentialBasedService'] = mockCredentialBasedService;

@@ -1,25 +1,25 @@
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
-import { Column, Entity, ManyToOne } from 'typeorm';
+import { Column, Entity, Index, ManyToOne } from 'typeorm';
 import { IAuthorizationPolicy } from './authorization.policy.interface';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { ENUM_LENGTH } from '@common/constants';
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
-import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 
 @Entity()
+@Index('IDX_authorization_policy_type', ['type'])
+@Index('IDX_authorization_policy_parentAuthorizationPolicyId', [
+  'parentAuthorizationPolicy',
+])
 export class AuthorizationPolicy
   extends BaseAlkemioEntity
   implements IAuthorizationPolicy
 {
-  @Column({ type: 'json', nullable: false })
+  @Column({ type: 'jsonb', nullable: false })
   credentialRules: AuthorizationPolicyRuleCredential[];
 
-  @Column({ type: 'json', nullable: false })
+  @Column({ type: 'jsonb', nullable: false })
   privilegeRules: AuthorizationPolicyRulePrivilege[];
-
-  @Column({ type: 'json', nullable: false })
-  verifiedCredentialRules: AuthorizationPolicyRuleVerifiedCredential[];
 
   @Column('varchar', { length: ENUM_LENGTH, nullable: false })
   type!: AuthorizationPolicyType;
@@ -37,7 +37,6 @@ export class AuthorizationPolicy
   constructor(type: AuthorizationPolicyType) {
     super();
     this.credentialRules = [];
-    this.verifiedCredentialRules = [];
     this.privilegeRules = [];
     this.type = type;
   }

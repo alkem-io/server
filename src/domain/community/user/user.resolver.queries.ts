@@ -1,12 +1,8 @@
 import { CurrentUser } from '@common/decorators/current-user.decorator';
-import { AuthorizationPrivilege, LogContext } from '@common/enums';
-import { AuthenticationException } from '@common/exceptions';
+import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AgentService } from '@domain/agent/agent/agent.service';
-import { CredentialMetadataOutput } from '@domain/agent/verified-credential/dto/verified.credential.dto.metadata';
 import { UUID } from '@domain/common/scalars';
 import { Args, Query, Resolver } from '@nestjs/graphql';
-import { Profiling } from '@src/common/decorators';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { PaginatedUsers, PaginationArgs } from '@core/pagination';
 import { UserService } from './user.service';
@@ -22,15 +18,13 @@ export class UserResolverQueries {
   constructor(
     private authorizationService: AuthorizationService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
-    private userService: UserService,
-    private agentService: AgentService
+    private userService: UserService
   ) {}
 
   @Query(() => [IUser], {
     nullable: false,
     description: 'The users who have profiles on this platform',
   })
-  @Profiling.api
   async users(
     @CurrentUser() agentInfo: AgentInfo,
     @Args({ nullable: true }) args: UsersQueryArgs
@@ -48,7 +42,6 @@ export class UserResolverQueries {
     nullable: false,
     description: 'The users who have profiles on this platform',
   })
-  @Profiling.api
   async usersPaginated(
     @CurrentUser() agentInfo: AgentInfo,
     @Args({ nullable: true }) pagination: PaginationArgs,
@@ -74,7 +67,6 @@ export class UserResolverQueries {
     nullable: false,
     description: 'A particular user, identified by the ID or by email',
   })
-  @Profiling.api
   async user(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
@@ -86,24 +78,5 @@ export class UserResolverQueries {
       `user query: ${agentInfo.email}`
     );
     return await this.userService.getUserOrFail(id);
-  }
-
-  @Query(() => [CredentialMetadataOutput], {
-    nullable: false,
-    description: 'Get supported credential metadata',
-  })
-  @Profiling.api
-  async getSupportedVerifiedCredentialMetadata(
-    @CurrentUser() agentInfo: AgentInfo
-  ): Promise<CredentialMetadataOutput[]> {
-    const userID = agentInfo.userID;
-    if (!userID || userID.length == 0) {
-      throw new AuthenticationException(
-        'Unable to retrieve authenticated user; no identifier',
-        LogContext.RESOLVER_QUERY
-      );
-    }
-
-    return await this.agentService.getSupportedCredentialMetadata();
   }
 }

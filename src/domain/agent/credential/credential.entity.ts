@@ -19,10 +19,10 @@ export class Credential extends BaseAlkemioEntity implements ICredential {
   })
   agent?: Agent;
 
-  @Column('char', { length: UUID_LENGTH, nullable: true })
+  @Column('uuid', { nullable: true })
   issuer!: string;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   expires?: Date;
 
   constructor() {

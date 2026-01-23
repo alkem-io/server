@@ -4,31 +4,20 @@ import { LogContext } from '@common/enums';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { IRoom } from '../room/room.interface';
 import { IMessage } from '../message/message.interface';
-import { IMessageReaction } from '../message.reaction/message.reaction.interface';
-import { IdentityResolverService } from '@services/infrastructure/entity-resolver/identity.resolver.service';
-import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
 import { FindOneOptions, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { Room } from '../room/room.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IVcInteraction } from '../vc-interaction/vc.interaction.interface';
-import { VcInteractionService } from '../vc-interaction/vc.interaction.service';
 import { CreateVcInteractionInput } from '../vc-interaction/dto/vc.interaction.dto.create';
 import { RoomSendMessageReplyInput } from '../room/dto/room.dto.send.message.reply';
 import { RoomSendMessageInput } from '../room/dto/room.dto.send.message';
 
-interface MessageSender {
-  id: string;
-  type: 'user' | 'virtualContributor' | 'unknown';
-}
-
 export class RoomLookupService {
   constructor(
-    private communicationAdapter: CommunicationAdapter,
-    private identityResolverService: IdentityResolverService,
-    private vcInteractionService: VcInteractionService,
+    private readonly communicationAdapter: CommunicationAdapter,
     @InjectRepository(Room)
-    private roomRepository: Repository<Room>,
+    private readonly roomRepository: Repository<Room>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: WinstonLogger
   ) {}
@@ -41,15 +30,8 @@ export class RoomLookupService {
       `Getting messages in thread ${threadID} for room ${room.id}`,
       LogContext.COMMUNICATION
     );
-    const roomResult = await this.communicationAdapter.getCommunityRoom(
-      room.externalRoomID
-    );
-    // First message in the thread provides the threadID, but it itself does not have the threadID set
-    const threadMessages = roomResult.messages.filter(
-      m => m.threadID === threadID || m.id === threadID
-    );
-
-    return threadMessages;
+    // Use getThreadMessages for efficient thread-only lookup (no full room fetch)
+    return this.communicationAdapter.getThreadMessages(room.id, threadID);
   }
 
   public async getMessageInRoom(
@@ -57,16 +39,16 @@ export class RoomLookupService {
     messageID: string
   ): Promise<{ message: IMessage; room: IRoom }> {
     this.logger.verbose?.(
-      `Getting message in thread ${messageID} for room ${roomID}`,
+      `Getting message ${messageID} in room ${roomID}`,
       LogContext.COMMUNICATION
     );
     const room = await this.getRoomOrFail(roomID);
-    const roomResult = await this.communicationAdapter.getRoomMessage(
-      room.externalRoomID,
-      messageID
-    );
-    // First message in the thread provides the threadID, but it itself does not have the threadID set
-    const message = roomResult.messages.find(m => m.id === messageID);
+
+    // Use getMessage() for efficient single-message lookup instead of fetching entire room
+    const message = await this.communicationAdapter.getMessage({
+      alkemioRoomId: room.id,
+      messageId: messageID,
+    });
 
     if (!message) {
       throw new EntityNotFoundException(
@@ -79,50 +61,40 @@ export class RoomLookupService {
   }
 
   async getMessages(room: IRoom): Promise<IMessage[]> {
-    const externalRoom = await this.communicationAdapter.getCommunityRoom(
-      room.externalRoomID
-    );
-
-    return await this.populateRoomMessageSenders(externalRoom.messages);
+    const externalRoom = await this.communicationAdapter.getRoom(room.id);
+    return externalRoom.messages;
   }
 
   public async addVcInteractionToRoom(
     interactionData: CreateVcInteractionInput
   ): Promise<IVcInteraction> {
-    const room = await this.getRoomOrFail(interactionData.roomID, {
-      relations: {
-        vcInteractions: true,
-      },
-    });
-    if (!room.vcInteractions) {
-      throw new EntityNotFoundException(
-        `Not able to locate interactions for the room: ${interactionData.roomID}`,
-        LogContext.COMMUNICATION
-      );
+    const room = await this.getRoomOrFail(interactionData.roomID);
+
+    // Add to JSON map
+    if (!room.vcInteractionsByThread) {
+      room.vcInteractionsByThread = {};
     }
 
-    const interaction =
-      this.vcInteractionService.buildVcInteraction(interactionData);
-    room.vcInteractions.push(interaction);
+    room.vcInteractionsByThread[interactionData.threadID] = {
+      virtualContributorActorID: interactionData.virtualContributorActorID,
+    };
+
     await this.roomRepository.save(room);
-    return interaction;
+
+    return {
+      threadID: interactionData.threadID,
+      virtualContributorID: interactionData.virtualContributorActorID,
+    };
   }
 
   async getVcInteractions(roomID: string): Promise<IVcInteraction[]> {
-    const room = await this.getRoomOrFail(roomID, {
-      relations: {
-        vcInteractions: {
-          room: true,
-        },
-      },
-    });
-    if (!room.vcInteractions) {
-      throw new EntityNotFoundException(
-        `Not able to locate interactions for the room: ${roomID}`,
-        LogContext.COMMUNICATION
-      );
-    }
-    return room.vcInteractions;
+    const room = await this.getRoomOrFail(roomID);
+
+    const vcInteractionsByThread = room.vcInteractionsByThread || {};
+    return Object.entries(vcInteractionsByThread).map(([threadID, data]) => ({
+      threadID,
+      virtualContributorID: data.virtualContributorActorID,
+    }));
   }
 
   async getRoomOrFail(
@@ -141,189 +113,55 @@ export class RoomLookupService {
     return room;
   }
 
-  async populateRoomsMessageSenders(
-    rooms: CommunicationRoomResult[]
-  ): Promise<CommunicationRoomResult[]> {
-    for (const room of rooms) {
-      room.messages = await this.populateRoomMessageSenders(room.messages);
-    }
-
-    return rooms;
+  async save(room: IRoom): Promise<IRoom> {
+    return await this.roomRepository.save(room as Room);
   }
 
-  async populateRoomMessageSenders(messages: IMessage[]): Promise<IMessage[]> {
-    const knownSendersMap = new Map<string, MessageSender>();
-    for (const message of messages) {
-      const matrixUserID = message.sender;
-      let messageSender: MessageSender = { id: 'unknown', type: 'unknown' };
-      try {
-        messageSender = await this.updateKnownSendersMap(
-          knownSendersMap,
-          matrixUserID
-        );
-      } catch (error) {
-        this.logger.warn?.(
-          {
-            message: 'Unable to identify sender for message.',
-            messageId: message.id,
-            originalError: error,
-          },
-          LogContext.COMMUNICATION
-        );
-      }
+  /**
+   * Atomically increment the messages count for a room.
+   * Uses database-level increment to avoid race conditions.
+   */
+  async incrementMessagesCount(roomId: string): Promise<void> {
+    await this.roomRepository.increment({ id: roomId }, 'messagesCount', 1);
+  }
 
-      message.sender = messageSender.id;
-      message.senderType = messageSender.type;
-      if (message.reactions) {
-        message.reactions = await this.populateRoomReactionSenders(
-          message.reactions,
-          knownSendersMap
-        );
-      } else {
-        message.reactions = [];
-      }
-    }
-
-    return messages;
+  /**
+   * Atomically decrement the messages count for a room.
+   * Uses raw query to ensure count doesn't go below 0.
+   */
+  async decrementMessagesCount(roomId: string): Promise<void> {
+    await this.roomRepository
+      .createQueryBuilder()
+      .update()
+      .set({ messagesCount: () => 'GREATEST("messagesCount" - 1, 0)' })
+      .where('id = :id', { id: roomId })
+      .execute();
   }
 
   async sendMessage(
     room: IRoom,
-    communicationUserID: string,
+    actorId: string,
     messageData: RoomSendMessageInput
   ): Promise<IMessage> {
-    // Ensure the user is a member of room and group so can send
-    await this.communicationAdapter.userAddToRooms(
-      [room.externalRoomID],
-      communicationUserID
-    );
-    const alkemioUserID =
-      await this.identityResolverService.getUserIDByCommunicationsID(
-        communicationUserID
-      );
-    const message = await this.communicationAdapter.sendMessageToRoom({
-      senderCommunicationsID: communicationUserID,
+    // The new adapter uses alkemio room ID and handles membership internally
+    return this.communicationAdapter.sendMessage({
+      actorId: actorId,
       message: messageData.message,
-      roomID: room.externalRoomID,
+      roomID: room.id,
     });
-
-    message.sender = alkemioUserID!;
-    room.messagesCount = room.messagesCount + 1;
-    await this.roomRepository.save(room);
-    return message;
   }
 
   async sendMessageReply(
     room: IRoom,
-    communicationUserID: string,
-    messageData: RoomSendMessageReplyInput,
-    senderType: 'user' | 'virtualContributor'
+    actorId: string,
+    messageData: RoomSendMessageReplyInput
   ): Promise<IMessage> {
-    // Ensure the user is a member of room and group so can send
-    await this.communicationAdapter.userAddToRooms(
-      [room.externalRoomID],
-      communicationUserID
-    );
-
-    const alkemioSenderID =
-      senderType === 'virtualContributor'
-        ? await this.identityResolverService.getContributorIDByCommunicationsID(
-            communicationUserID
-          )
-        : await this.identityResolverService.getUserIDByCommunicationsID(
-            communicationUserID
-          );
-    const message = await this.communicationAdapter.sendRoomMessageReply(
-      {
-        senderCommunicationsID: communicationUserID,
-        message: messageData.message,
-        roomID: room.externalRoomID,
-        threadID: messageData.threadID,
-      },
-      senderType
-    );
-
-    message.sender = alkemioSenderID!;
-    message.senderType = senderType;
-
-    room.messagesCount = room.messagesCount + 1;
-    await this.roomRepository.save(room);
-
-    return message;
-  }
-
-  /**
-   * Identifies and returns the message sender information for a given Matrix user ID.
-   *
-   * This method first checks if the sender is already known in the provided map. If not found,
-   * it attempts to resolve the Matrix user ID to either an Alkemio user or virtual contributor
-   * by querying the identity resolver service. Once identified, the sender information is cached
-   * in the known senders map for future lookups.
-   *
-   * @param knownSendersMap - A map cache containing previously identified message senders
-   * @param matrixUserID - The Matrix user ID to identify
-   * @returns A promise that resolves to the MessageSender object containing the sender's ID and type
-   * @throws {Error} When the Matrix user ID cannot be resolved to any known sender type
-   */
-  private async updateKnownSendersMap(
-    knownSendersMap: Map<string, MessageSender>,
-    matrixUserID: string
-  ): Promise<MessageSender> | never {
-    let messageSender = knownSendersMap.get(matrixUserID);
-    if (!messageSender) {
-      const alkemioUserID =
-        await this.identityResolverService.getUserIDByCommunicationsID(
-          matrixUserID
-        );
-      if (alkemioUserID) {
-        messageSender = {
-          id: alkemioUserID,
-          type: 'user',
-        };
-      } else {
-        const virtualContributorID =
-          await this.identityResolverService.getContributorIDByCommunicationsID(
-            matrixUserID
-          );
-        if (virtualContributorID) {
-          messageSender = {
-            id: virtualContributorID,
-            type: 'virtualContributor',
-          };
-        }
-      }
-      if (messageSender) {
-        knownSendersMap.set(matrixUserID, messageSender);
-      }
-    }
-    if (!messageSender) {
-      throw new EntityNotFoundException(
-        'Unable to identify sender',
-        LogContext.COMMUNICATION,
-        { matrixUserID }
-      );
-    }
-    return messageSender;
-  }
-
-  async populateRoomReactionSenders(
-    reactions: IMessageReaction[],
-    knownSendersMap: Map<string, MessageSender>
-  ): Promise<IMessageReaction[]> {
-    for (const reaction of reactions) {
-      const matrixUserID = reaction.sender;
-      try {
-        const reactionSender = await this.updateKnownSendersMap(
-          knownSendersMap,
-          matrixUserID
-        );
-
-        reaction.sender = reactionSender.id;
-      } catch {
-        reaction.sender = 'unknown';
-      }
-    }
-
-    return reactions;
+    // The new adapter uses alkemio room ID and handles membership internally
+    return this.communicationAdapter.sendMessageReply({
+      actorId: actorId,
+      message: messageData.message,
+      roomID: room.id,
+      threadID: messageData.threadID,
+    });
   }
 }

@@ -22,12 +22,17 @@ export const applyOrganizationFilter = <T extends ObjectLiteral>(
 
       if (displayName) {
         const hasRest = Object.keys(rest).length > 0;
-        const alias = 'displayName';
-        query
-          .leftJoin('organization.profile', 'profile')
-          .addSelect('profile.displayName', alias);
-        // does not find the alias if an object is used instead
-        wqb[hasRest ? 'orWhere' : 'where'](`${alias} LIKE '%${displayName}%'`);
+        query.leftJoin('organization.profile', 'profile');
+        // Use parameterized query to prevent SQL injection
+        if (hasRest) {
+          wqb.orWhere('profile.displayName ILIKE :orgDisplayName', {
+            orgDisplayName: `%${displayName}%`,
+          });
+        } else {
+          wqb.where('profile.displayName ILIKE :orgDisplayName', {
+            orgDisplayName: `%${displayName}%`,
+          });
+        }
       }
     })
   );
