@@ -73,12 +73,9 @@ const parseMarkdownViaHtml = (markdown: string): ProseMirrorNode => {
 
   // Also handle escaped &lt;br&gt; (literal "<br>" text that was HTML-escaped)
   // This happens when markdown contains literal "<br>" as cell placeholder text
-  // Use [\s\S] to match any character including newlines
-  html = html.replace(
-    /<(t[dh])>[\s\S]*?&lt;br&gt;[\s\S]*?<\/\1>/g,
-    '<$1></$1>'
-  ); // cells containing &lt;br&gt;
-
+  // Only match cells where &lt;br&gt; is the ONLY content (with optional whitespace)
+  // Using [^<]* instead of [\s\S]*? to prevent matching across cell boundaries
+  html = html.replace(/<(t[dh])>\s*&lt;br&gt;\s*<\/\1>/g, '<$1></$1>');
   // For <br> in non-table content (paragraphs), convert to paragraph breaks
   // This splits <p>text<br>more</p> into <p>text</p><p>more</p>
   html = html.replace(
