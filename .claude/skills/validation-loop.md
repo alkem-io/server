@@ -76,7 +76,6 @@ cd .scripts/overmind
 ```
 
 Prerequisites:
-
 1. Docker services running: `pnpm run start:services`
 2. Migrations applied: `pnpm run migration:run`
 

@@ -49,4 +49,4 @@ git worktree remove "../$REPO_NAME-$ARGUMENTS.branch"
 ```bash
 git branch -d $ARGUMENTS.branch
 ```
-If the branch has unmerged changes and user still wants to delete, use `-D` instead.#
+   If the branch has unmerged changes and user still wants to delete, use `-D` instead.

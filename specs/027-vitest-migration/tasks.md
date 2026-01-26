@@ -114,7 +114,7 @@
 - [X] T028 [P] Delete Jest config files: remove `test/config/jest.config.js`, `test/config/jest.config.ci.js`, `test/config/jest.config.ci.nocov.js` - Deleted
 - [X] T029 [P] Remove `@types/jest` from `tsconfig.json` types array if present - Not present (only added vitest/globals)
 - [X] T030 Measure final performance: run `time pnpm test:ci:no:coverage`, document improvement vs baseline - **23.88s vs 334s baseline = 14x speedup**
-- [X] T027 Run `pnpm lint` to ensure no linting errors introduced - Fixed 3 TypeScript errors, linting passes
+- [X] T031 Run `pnpm lint` to ensure no linting errors introduced - Fixed 3 TypeScript errors, linting passes
 - [X] T032 Run quickstart.md validation: execute steps from `specs/027-vitest-migration/quickstart.md` to verify documented process - All steps verified working
 
 **Checkpoint**: Migration complete. Jest artifacts removed. Performance improvement documented.
