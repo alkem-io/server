@@ -21,22 +21,20 @@ Replace Jest with Vitest as the test runner to achieve faster test execution and
 
 ### Current Test Setup Analysis
 
-| Category              | Count | Location                                           |
-| --------------------- | ----- | -------------------------------------------------- |
-| Unit tests            | 76    | `src/**/*.spec.ts`                                 |
-| Schema/contract tests | 36    | `test/**/*.spec.ts`, `contract-tests/**/*.spec.ts` |
-| Integration/E2E tests | 0     | None found                                         |
-| Snapshot tests        | 0     | None in project                                    |
+| Category | Count | Location |
+|----------|-------|----------|
+| Unit tests | 76 | `src/**/*.spec.ts` |
+| Schema/contract tests | 36 | `test/**/*.spec.ts`, `contract-tests/**/*.spec.ts` |
+| Integration/E2E tests | 0 | None found |
+| Snapshot tests | 0 | None in project |
 
 **Key Jest-specific patterns to migrate:**
-
 - `jest.fn()` / `jest.spyOn()` / `jest.mock()` → `vi.fn()` / `vi.spyOn()` / `vi.mock()`
 - `ModuleMocker` from `jest-mock` → Vitest equivalent or custom implementation
 - Jest config files (`test/config/jest.config*.js`) → `vitest.config.ts`
 - `ts-jest` transformer → Vitest's native TypeScript support
 
 **Path aliases to configure in Vitest:**
-
 - `@interfaces/*` → `src/common/interfaces/*`
 - `@domain/*` → `src/domain/*`
 - `@common/*` → `src/common/*`
@@ -52,20 +50,20 @@ Replace Jest with Vitest as the test runner to achieve faster test execution and
 
 ## Constitution Check
 
-_GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
+*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-| Principle                                 | Status  | Notes                                               |
-| ----------------------------------------- | ------- | --------------------------------------------------- |
-| 1. Domain-Centric Design First            | ✅ PASS | No domain logic changes; test infrastructure only   |
-| 2. Modular NestJS Boundaries              | ✅ PASS | No module boundary changes                          |
-| 3. GraphQL Schema as Stable Contract      | ✅ PASS | No schema changes                                   |
-| 4. Explicit Data & Event Flow             | ✅ PASS | No data flow changes                                |
-| 5. Observability & Operational Readiness  | ✅ PASS | No operational changes                              |
-| 6. Code Quality with Pragmatic Testing    | ✅ PASS | Improves test infrastructure per constitution goals |
-| 7. API Consistency & Evolution Discipline | ✅ PASS | No API changes                                      |
-| 8. Secure-by-Design Integration           | ✅ PASS | No security surface changes                         |
-| 9. Container & Deployment Determinism     | ✅ PASS | No container/deployment changes                     |
-| 10. Simplicity & Incremental Hardening    | ✅ PASS | Single cutover maintains simplicity                 |
+| Principle | Status | Notes |
+|-----------|--------|-------|
+| 1. Domain-Centric Design First | ✅ PASS | No domain logic changes; test infrastructure only |
+| 2. Modular NestJS Boundaries | ✅ PASS | No module boundary changes |
+| 3. GraphQL Schema as Stable Contract | ✅ PASS | No schema changes |
+| 4. Explicit Data & Event Flow | ✅ PASS | No data flow changes |
+| 5. Observability & Operational Readiness | ✅ PASS | No operational changes |
+| 6. Code Quality with Pragmatic Testing | ✅ PASS | Improves test infrastructure per constitution goals |
+| 7. API Consistency & Evolution Discipline | ✅ PASS | No API changes |
+| 8. Secure-by-Design Integration | ✅ PASS | No security surface changes |
+| 9. Container & Deployment Determinism | ✅ PASS | No container/deployment changes |
+| 10. Simplicity & Incremental Hardening | ✅ PASS | Single cutover maintains simplicity |
 
 **Gate Result**: ✅ PASS - No violations. Proceed to Phase 0.
 
@@ -112,27 +110,27 @@ contract-tests/**/*.spec.ts      # UPDATE: jest.* → vi.* (6 files)
 > No Constitution Check violations requiring justification.
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
-| --------- | ---------- | ------------------------------------ |
-| N/A       | N/A        | N/A                                  |
+|-----------|------------|-------------------------------------|
+| N/A | N/A | N/A |
 
 ---
 
 ## Post-Design Constitution Re-check
 
-_Re-evaluated after Phase 1 design completion._
+*Re-evaluated after Phase 1 design completion.*
 
-| Principle                                 | Status  | Post-Design Notes                                        |
-| ----------------------------------------- | ------- | -------------------------------------------------------- |
-| 1. Domain-Centric Design First            | ✅ PASS | Confirmed: No domain logic touched                       |
-| 2. Modular NestJS Boundaries              | ✅ PASS | Confirmed: Test utilities remain in `test/`              |
-| 3. GraphQL Schema as Stable Contract      | ✅ PASS | Confirmed: No schema changes                             |
-| 4. Explicit Data & Event Flow             | ✅ PASS | Confirmed: No data flow changes                          |
-| 5. Observability & Operational Readiness  | ✅ PASS | Confirmed: No logging/metrics changes                    |
-| 6. Code Quality with Pragmatic Testing    | ✅ PASS | Improves: Faster feedback loops, modern tooling          |
-| 7. API Consistency & Evolution Discipline | ✅ PASS | Confirmed: No API changes                                |
-| 8. Secure-by-Design Integration           | ✅ PASS | Confirmed: No security surface changes                   |
-| 9. Container & Deployment Determinism     | ✅ PASS | Confirmed: Dev dependencies only                         |
-| 10. Simplicity & Incremental Hardening    | ✅ PASS | Design uses standard patterns (SWC, vite-tsconfig-paths) |
+| Principle | Status | Post-Design Notes |
+|-----------|--------|-------------------|
+| 1. Domain-Centric Design First | ✅ PASS | Confirmed: No domain logic touched |
+| 2. Modular NestJS Boundaries | ✅ PASS | Confirmed: Test utilities remain in `test/` |
+| 3. GraphQL Schema as Stable Contract | ✅ PASS | Confirmed: No schema changes |
+| 4. Explicit Data & Event Flow | ✅ PASS | Confirmed: No data flow changes |
+| 5. Observability & Operational Readiness | ✅ PASS | Confirmed: No logging/metrics changes |
+| 6. Code Quality with Pragmatic Testing | ✅ PASS | Improves: Faster feedback loops, modern tooling |
+| 7. API Consistency & Evolution Discipline | ✅ PASS | Confirmed: No API changes |
+| 8. Secure-by-Design Integration | ✅ PASS | Confirmed: No security surface changes |
+| 9. Container & Deployment Determinism | ✅ PASS | Confirmed: Dev dependencies only |
+| 10. Simplicity & Incremental Hardening | ✅ PASS | Design uses standard patterns (SWC, vite-tsconfig-paths) |
 
 **Post-Design Gate Result**: ✅ PASS - No violations. Ready for task generation.
 
@@ -140,12 +138,12 @@ _Re-evaluated after Phase 1 design completion._
 
 ## Generated Artifacts
 
-| Artifact      | Status      | Path                                       |
-| ------------- | ----------- | ------------------------------------------ |
-| research.md   | ✅ Complete | `specs/027-vitest-migration/research.md`   |
+| Artifact | Status | Path |
+|----------|--------|------|
+| research.md | ✅ Complete | `specs/027-vitest-migration/research.md` |
 | data-model.md | ✅ Complete | `specs/027-vitest-migration/data-model.md` |
 | quickstart.md | ✅ Complete | `specs/027-vitest-migration/quickstart.md` |
-| contracts/    | ✅ Complete | `specs/027-vitest-migration/contracts/`    |
+| contracts/ | ✅ Complete | `specs/027-vitest-migration/contracts/` |
 
 ### Contracts Directory Contents
 

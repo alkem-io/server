@@ -18,11 +18,9 @@
 ## 1. NestJS + Vitest Integration
 
 ### Decision
-
 Use `unplugin-swc` as the transpiler instead of Vitest's default esbuild.
 
 ### Rationale
-
 - NestJS relies heavily on decorator metadata (`emitDecoratorMetadata`) for dependency injection
 - esbuild has partial decorator support but does NOT support `emitDecoratorMetadata`
 - Without proper metadata emission, `@nestjs/testing`'s `Test.createTestingModule()` fails silently with services becoming `undefined`
@@ -30,29 +28,30 @@ Use `unplugin-swc` as the transpiler instead of Vitest's default esbuild.
 
 ### Alternatives Considered
 
-| Alternative                     | Rejected Because                                   |
-| ------------------------------- | -------------------------------------------------- |
-| Default esbuild                 | Does not emit decorator metadata; breaks NestJS DI |
+| Alternative | Rejected Because |
+|-------------|------------------|
+| Default esbuild | Does not emit decorator metadata; breaks NestJS DI |
 | Explicit `@Inject()` everywhere | Requires extensive code changes to production code |
-| ts-jest style approach          | No direct equivalent in Vitest ecosystem           |
+| ts-jest style approach | No direct equivalent in Vitest ecosystem |
 
 ### Required Configuration
 
 **Packages:**
-
 ```bash
 pnpm add -D vitest @vitest/coverage-v8 unplugin-swc @swc/core vite-tsconfig-paths
 ```
 
 **vitest.config.ts:**
-
 ```typescript
 import swc from 'unplugin-swc';
 import tsconfigPaths from 'vite-tsconfig-paths';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
-  plugins: [swc.vite(), tsconfigPaths()],
+  plugins: [
+    swc.vite(),
+    tsconfigPaths(),
+  ],
   test: {
     globals: true,
     environment: 'node',
@@ -64,7 +63,6 @@ export default defineConfig({
 ```
 
 **.swcrc (required):**
-
 ```json
 {
   "$schema": "https://json.schemastore.org/swcrc",
@@ -90,49 +88,46 @@ export default defineConfig({
 ## 2. Jest API Migration
 
 ### Decision
-
 Use Vitest's `vi.*` API as direct replacements with `globals: true` enabled.
 
 ### Rationale
-
 - Vitest was designed with Jest API compatibility as a primary goal
 - The `vi` namespace mirrors Jest's `jest` namespace almost 1:1
 - `globals: true` maintains Jest-like developer experience with no import changes needed
 
 ### Alternatives Considered
 
-| Alternative      | Rejected Because                                         |
-| ---------------- | -------------------------------------------------------- |
+| Alternative | Rejected Because |
+|-------------|------------------|
 | Explicit imports | Requires modifying all 112 test files; can be done later |
-| Keep Jest        | Misses performance benefits; maintaining legacy tooling  |
+| Keep Jest | Misses performance benefits; maintaining legacy tooling |
 
 ### API Mapping
 
-| Jest                     | Vitest                            |
-| ------------------------ | --------------------------------- |
-| `jest.fn()`              | `vi.fn()`                         |
-| `jest.spyOn()`           | `vi.spyOn()`                      |
-| `jest.mock()`            | `vi.mock()`                       |
-| `jest.clearAllMocks()`   | `vi.clearAllMocks()`              |
-| `jest.resetAllMocks()`   | `vi.resetAllMocks()`              |
-| `jest.restoreAllMocks()` | `vi.restoreAllMocks()`            |
-| `jest.useFakeTimers()`   | `vi.useFakeTimers()`              |
-| `jest.requireActual()`   | `await vi.importActual()` (async) |
+| Jest | Vitest |
+|------|--------|
+| `jest.fn()` | `vi.fn()` |
+| `jest.spyOn()` | `vi.spyOn()` |
+| `jest.mock()` | `vi.mock()` |
+| `jest.clearAllMocks()` | `vi.clearAllMocks()` |
+| `jest.resetAllMocks()` | `vi.resetAllMocks()` |
+| `jest.restoreAllMocks()` | `vi.restoreAllMocks()` |
+| `jest.useFakeTimers()` | `vi.useFakeTimers()` |
+| `jest.requireActual()` | `await vi.importActual()` (async) |
 
 ### Behavioral Differences
 
 1. **`mockReset` behavior**:
    - **Jest**: Replaces mock implementation with empty function returning `undefined`
-   - **Vitest**: Resets to the _original_ implementation
+   - **Vitest**: Resets to the *original* implementation
 
 2. **Module mocking factory return**:
-
    ```typescript
    // Jest
-   jest.mock('./module', () => 'hello');
+   jest.mock('./module', () => 'hello')
 
    // Vitest - must explicitly define exports
-   vi.mock('./module', () => ({ default: 'hello' }));
+   vi.mock('./module', () => ({ default: 'hello' }))
    ```
 
 3. **Mock hoisting**: `vi.mock()` calls are hoisted to the top of the file before imports
@@ -142,11 +137,9 @@ Use Vitest's `vi.*` API as direct replacements with `globals: true` enabled.
 ## 3. ModuleMocker Replacement
 
 ### Decision
-
 Replace `jest-mock` ModuleMocker with `@golevelup/ts-vitest` for NestJS auto-mocking.
 
 ### Rationale
-
 - Vitest does not have a built-in `ModuleMocker` equivalent
 - `@golevelup/ts-vitest` provides `createMock<T>()` that:
   - Works with NestJS's `useMocker()` method
@@ -155,25 +148,22 @@ Replace `jest-mock` ModuleMocker with `@golevelup/ts-vitest` for NestJS auto-moc
 
 ### Alternatives Considered
 
-| Alternative            | Rejected Because                                                 |
-| ---------------------- | ---------------------------------------------------------------- |
-| `vitest-mock-extended` | Doesn't handle NestJS DI tokens well                             |
-| Manual `vi.fn()` mocks | Tedious for large services with many methods                     |
-| `vi.importMock`        | Reimports manual mocks, doesn't create mocks from actual modules |
+| Alternative | Rejected Because |
+|-------------|------------------|
+| `vitest-mock-extended` | Doesn't handle NestJS DI tokens well |
+| Manual `vi.fn()` mocks | Tedious for large services with many methods |
+| `vi.importMock` | Reimports manual mocks, doesn't create mocks from actual modules |
 
 ### Migration Pattern
 
 **Before (Jest):**
-
 ```typescript
 import { MockFunctionMetadata, ModuleMocker } from 'jest-mock';
 const moduleMocker = new ModuleMocker(global);
 
 export const defaultMockerFactory = (token: InjectionToken | undefined) => {
   if (typeof token === 'function') {
-    const mockMetadata = moduleMocker.getMetadata(
-      token
-    ) as MockFunctionMetadata<any, any>;
+    const mockMetadata = moduleMocker.getMetadata(token) as MockFunctionMetadata<any, any>;
     const Mock = moduleMocker.generateFromMetadata(mockMetadata);
     return new Mock();
   }
@@ -182,7 +172,6 @@ export const defaultMockerFactory = (token: InjectionToken | undefined) => {
 ```
 
 **After (Vitest):**
-
 ```typescript
 import { createMock } from '@golevelup/ts-vitest';
 
@@ -199,26 +188,23 @@ export const defaultMockerFactory = (token: InjectionToken | undefined) => {
 ## 4. Path Alias Configuration
 
 ### Decision
-
 Use `vite-tsconfig-paths` plugin to automatically resolve path aliases from `tsconfig.json`.
 
 ### Rationale
-
 - Reads path mappings directly from `tsconfig.json` - no duplication needed
 - Supports all TypeScript path alias features including `baseUrl`
 - More maintainable than manual `resolve.alias` configuration
 
 ### Alternatives Considered
 
-| Alternative            | Rejected Because                                     |
-| ---------------------- | ---------------------------------------------------- |
+| Alternative | Rejected Because |
+|-------------|------------------|
 | Manual `resolve.alias` | Requires manual sync with tsconfig.json; error-prone |
-| Duplicate path config  | Violates DRY principle; maintenance burden           |
+| Duplicate path config | Violates DRY principle; maintenance burden |
 
 ### Implementation
 
 The plugin automatically reads the existing `tsconfig.json` paths:
-
 ```json
 {
   "compilerOptions": {
@@ -248,21 +234,19 @@ No Vitest-specific alias configuration needed.
 ## 5. Coverage Configuration
 
 ### Decision
-
 Use `@vitest/coverage-v8` with explicit `include` patterns and lcov reporter.
 
 ### Rationale
-
 - v8 is faster than Istanbul and produces identical coverage reports since Vitest 3.2.0
 - lcov format is standard for CI/CD tools (SonarQube, Coveralls, etc.)
 - Explicit `include` patterns provide control over coverage scope
 
 ### Alternatives Considered
 
-| Alternative                 | Rejected Because                  |
-| --------------------------- | --------------------------------- |
+| Alternative | Rejected Because |
+|-------------|------------------|
 | `@vitest/coverage-istanbul` | Slower; v8 now has feature parity |
-| No coverage                 | CI requires coverage reporting    |
+| No coverage | CI requires coverage reporting |
 
 ### Configuration
 
@@ -304,29 +288,26 @@ coverage: {
 ## 6. Performance Expectations
 
 ### Decision
-
 Target ≥50% faster test execution (soft target per spec).
 
 ### Rationale
 
 Based on industry benchmarks and architectural differences:
 
-| Metric         | Jest        | Vitest                    | Expected Improvement    |
-| -------------- | ----------- | ------------------------- | ----------------------- |
-| Cold run speed | Baseline    | Up to 4x faster           | 50-75% reduction        |
-| Memory usage   | Higher      | ~33% lower                | Noticeable              |
-| Watch mode     | Full re-run | HMR-based (affected only) | Significantly faster    |
-| TypeScript     | Via ts-jest | Native (SWC)              | No transformer overhead |
+| Metric | Jest | Vitest | Expected Improvement |
+|--------|------|--------|---------------------|
+| Cold run speed | Baseline | Up to 4x faster | 50-75% reduction |
+| Memory usage | Higher | ~33% lower | Noticeable |
+| Watch mode | Full re-run | HMR-based (affected only) | Significantly faster |
+| TypeScript | Via ts-jest | Native (SWC) | No transformer overhead |
 
 ### Key Performance Factors
-
 1. **Architecture**: Vitest reuses Vite's dev server and ESM pipeline vs Jest's isolated Node.js environments
 2. **HMR in Watch Mode**: Only reruns affected tests, not full suite
 3. **Native TypeScript**: No ts-jest transformer overhead (using SWC instead)
 4. **Parallelization**: More efficient worker pool management
 
 ### Caveats
-
 - Performance gains vary by project structure
 - First run may be slower due to cache warm-up
 - The spec accepts any measurable improvement if 50% target not met
@@ -336,21 +317,19 @@ Based on industry benchmarks and architectural differences:
 ## 7. Migration Strategy
 
 ### Decision
-
 Single atomic cutover (one PR) per spec requirements.
 
 ### Rationale
-
 - Spec explicitly requires: "Single cutover in one PR; all tests migrate together"
 - Avoids dual maintenance of Jest and Vitest configurations
 - Rollback via git revert if issues discovered
 
 ### Alternatives Considered
 
-| Alternative                | Rejected Because                         |
-| -------------------------- | ---------------------------------------- |
-| Gradual parallel migration | Spec requires single cutover             |
-| Test-by-test migration     | Spec requires all tests migrate together |
+| Alternative | Rejected Because |
+|-------------|------------------|
+| Gradual parallel migration | Spec requires single cutover |
+| Test-by-test migration | Spec requires all tests migrate together |
 
 ### Execution Plan
 
@@ -364,13 +343,11 @@ Single atomic cutover (one PR) per spec requirements.
 #### Step 2: Automated API Migration
 
 Run codemod:
-
 ```bash
 npx codemod jest/vitest -t "src/**/*.spec.ts" "test/**/*.spec.ts" "contract-tests/**/*.spec.ts"
 ```
 
 Handles:
-
 - `jest.*` → `vi.*` transformations
 - Import statement updates
 
@@ -396,12 +373,12 @@ Handles:
 
 ## Appendix: Files Requiring Manual Attention
 
-| File                                    | Reason                                        |
-| --------------------------------------- | --------------------------------------------- |
-| `test/utils/default.mocker.factory.ts`  | Uses `ModuleMocker` from `jest-mock`          |
-| `test/utils/repository.mock.factory.ts` | May use Jest-specific APIs                    |
-| `package.json`                          | Script and dependency updates                 |
-| Any file with `jest.requireActual()`    | Needs async conversion to `vi.importActual()` |
+| File | Reason |
+|------|--------|
+| `test/utils/default.mocker.factory.ts` | Uses `ModuleMocker` from `jest-mock` |
+| `test/utils/repository.mock.factory.ts` | May use Jest-specific APIs |
+| `package.json` | Script and dependency updates |
+| Any file with `jest.requireActual()` | Needs async conversion to `vi.importActual()` |
 
 ---
 

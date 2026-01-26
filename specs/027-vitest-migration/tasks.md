@@ -25,11 +25,11 @@
 
 **Purpose**: Install dependencies and create configuration files for Vitest
 
-- [x] T001 Record Jest baseline performance: run `time pnpm test:ci:no:coverage` and document result in `specs/027-vitest-migration/baseline.txt`
-- [x] T002 [P] Add Vitest dependencies: run `pnpm add -D vitest @vitest/coverage-v8 unplugin-swc @swc/core vite-tsconfig-paths @golevelup/ts-vitest`
-- [x] T003 [P] Create Vitest configuration from template at `vitest.config.ts`
-- [x] T004 [P] Create SWC configuration from template at `.swcrc`
-- [x] T005 Add Vitest types to `tsconfig.json` compilerOptions.types array
+- [X] T001 Record Jest baseline performance: run `time pnpm test:ci:no:coverage` and document result in `specs/027-vitest-migration/baseline.txt`
+- [X] T002 [P] Add Vitest dependencies: run `pnpm add -D vitest @vitest/coverage-v8 unplugin-swc @swc/core vite-tsconfig-paths @golevelup/ts-vitest`
+- [X] T003 [P] Create Vitest configuration from template at `vitest.config.ts`
+- [X] T004 [P] Create SWC configuration from template at `.swcrc`
+- [X] T005 Add Vitest types to `tsconfig.json` compilerOptions.types array
 
 **Checkpoint**: Configuration files created. Dependencies installed. Ready for test file migration.
 
@@ -41,12 +41,12 @@
 
 **⚠️ CRITICAL**: No test file migration can begin until this phase is complete
 
-- [x] T006 Migrate `test/utils/default.mocker.factory.ts`: replace ModuleMocker with @golevelup/ts-vitest createMock, replace all `jest.fn()` with `vi.fn()`
-- [x] T007 [P] Migrate `test/utils/repository.mock.factory.ts`: replace any `jest.*` calls with `vi.*` equivalents
-- [x] T008 [P] Migrate `test/utils/event-bus.mock.factory.ts`: replace any `jest.*` calls with `vi.*` equivalents
-- [x] T009 [P] Migrate `test/utils/pub.sub.engine.mock.factory.ts`: replace any `jest.*` calls with `vi.*` equivalents
-- [x] T010 Migrate mock providers in `test/mocks/*.ts` (~38 files): replace `jest.fn()` with `vi.fn()` using codemod or search-replace
-- [x] T011 Update `package.json` scripts section: replace Jest commands with Vitest equivalents per `contracts/package.json.diff`
+- [X] T006 Migrate `test/utils/default.mocker.factory.ts`: replace ModuleMocker with @golevelup/ts-vitest createMock, replace all `jest.fn()` with `vi.fn()`
+- [X] T007 [P] Migrate `test/utils/repository.mock.factory.ts`: replace any `jest.*` calls with `vi.*` equivalents
+- [X] T008 [P] Migrate `test/utils/event-bus.mock.factory.ts`: replace any `jest.*` calls with `vi.*` equivalents
+- [X] T009 [P] Migrate `test/utils/pub.sub.engine.mock.factory.ts`: replace any `jest.*` calls with `vi.*` equivalents
+- [X] T010 Migrate mock providers in `test/mocks/*.ts` (~38 files): replace `jest.fn()` with `vi.fn()` using codemod or search-replace
+- [X] T011 Update `package.json` scripts section: replace Jest commands with Vitest equivalents per `contracts/package.json.diff`
 
 **Checkpoint**: Foundation ready - test file migration can now begin.
 
@@ -60,13 +60,13 @@
 
 ### Implementation for User Story 1
 
-- [x] T012 [P] [US1] Run automated codemod on src/ tests: `npx codemod jest/vitest -t "src/**/*.spec.ts"` (~76 files) - Manually migrated with search-replace
-- [x] T013 [P] [US1] Run automated codemod on test/ tests: `npx codemod jest/vitest -t "test/**/*.spec.ts"` (~30 files) - Manually migrated with search-replace
-- [x] T014 [P] [US1] Run automated codemod on contract-tests/: `npx codemod jest/vitest -t "contract-tests/**/*.spec.ts"` (~6 files) - Manually migrated with search-replace
-- [x] T015 [US1] Manual fix: scan for `jest.requireActual()` calls across all test files and convert to `await vi.importActual()` (async conversion required) - No instances found
-- [x] T016 [US1] Manual fix: scan for mock factory return patterns in `vi.mock()` calls and ensure proper export format `{ default: ... }` where needed - Verified no changes needed
-- [x] T017 [US1] Verify test suite passes: run `pnpm test` and fix any failing tests - 415 tests pass, 3 skipped
-- [x] T018 [US1] Verify watch mode works: run `pnpm test:watch`, modify a test file, confirm near-instant re-run - Verified working
+- [X] T012 [P] [US1] Run automated codemod on src/ tests: `npx codemod jest/vitest -t "src/**/*.spec.ts"` (~76 files) - Manually migrated with search-replace
+- [X] T013 [P] [US1] Run automated codemod on test/ tests: `npx codemod jest/vitest -t "test/**/*.spec.ts"` (~30 files) - Manually migrated with search-replace
+- [X] T014 [P] [US1] Run automated codemod on contract-tests/: `npx codemod jest/vitest -t "contract-tests/**/*.spec.ts"` (~6 files) - Manually migrated with search-replace
+- [X] T015 [US1] Manual fix: scan for `jest.requireActual()` calls across all test files and convert to `await vi.importActual()` (async conversion required) - No instances found
+- [X] T016 [US1] Manual fix: scan for mock factory return patterns in `vi.mock()` calls and ensure proper export format `{ default: ... }` where needed - Verified no changes needed
+- [X] T017 [US1] Verify test suite passes: run `pnpm test` and fix any failing tests - 415 tests pass, 3 skipped
+- [X] T018 [US1] Verify watch mode works: run `pnpm test:watch`, modify a test file, confirm near-instant re-run - Verified working
 
 **Checkpoint**: All 112 test files migrated. Tests pass. Watch mode provides fast feedback. US1 complete.
 
@@ -80,10 +80,10 @@
 
 ### Implementation for User Story 2
 
-- [x] T019 [US2] Verify coverage generation: run `pnpm test:ci` and confirm `coverage-ci/lcov.info` is generated - Verified
-- [x] T020 [US2] Verify coverage thresholds: confirm per-directory thresholds from Jest config are enforced in Vitest config - Thresholds configured in vitest.config.ts
-- [x] T021 [US2] Verify CI script compatibility: run full `pnpm test:ci` command including lcov output piping - Verified working
-- [x] T022 [US2] Verify test failure reporting: intentionally fail a test, confirm failure details are clear and actionable - Verified (clear stack traces)
+- [X] T019 [US2] Verify coverage generation: run `pnpm test:ci` and confirm `coverage-ci/lcov.info` is generated - Verified
+- [X] T020 [US2] Verify coverage thresholds: confirm per-directory thresholds from Jest config are enforced in Vitest config - Thresholds configured in vitest.config.ts
+- [X] T021 [US2] Verify CI script compatibility: run full `pnpm test:ci` command including lcov output piping - Verified working
+- [X] T022 [US2] Verify test failure reporting: intentionally fail a test, confirm failure details are clear and actionable - Verified (clear stack traces)
 
 **Checkpoint**: CI pipeline integration complete. Coverage reports generated correctly. US2 complete.
 
@@ -97,10 +97,10 @@
 
 ### Implementation for User Story 3
 
-- [x] T023 [US3] Verify single file execution: run `pnpm vitest run src/services/infrastructure/naming/generate.name.id.spec.ts`, confirm it works - Verified (157ms for single file)
-- [x] T024 [US3] Verify test output readability: run `pnpm test`, confirm output format is clear and readable - Verified (colored output with pass/fail markers)
-- [x] T025 [US3] Verify debug mode works: run `pnpm test:debug`, confirm debugger attaches correctly - Verified (--inspect-brk flag)
-- [x] T026 [US3] Verify path aliases resolve: confirm tests using `@domain/*`, `@services/*`, etc. imports pass - All 415 tests pass using path aliases
+- [X] T023 [US3] Verify single file execution: run `pnpm vitest run src/services/infrastructure/naming/generate.name.id.spec.ts`, confirm it works - Verified (157ms for single file)
+- [X] T024 [US3] Verify test output readability: run `pnpm test`, confirm output format is clear and readable - Verified (colored output with pass/fail markers)
+- [X] T025 [US3] Verify debug mode works: run `pnpm test:debug`, confirm debugger attaches correctly - Verified (--inspect-brk flag)
+- [X] T026 [US3] Verify path aliases resolve: confirm tests using `@domain/*`, `@services/*`, etc. imports pass - All 415 tests pass using path aliases
 
 **Checkpoint**: Developer experience validated. All test commands work as expected. US3 complete.
 
@@ -110,12 +110,12 @@
 
 **Purpose**: Remove Jest artifacts and document the migration
 
-- [x] T027 [P] Remove Jest dependencies: run `pnpm remove jest jest-mock ts-jest @types/jest` - Removed 132 packages
-- [x] T028 [P] Delete Jest config files: remove `test/config/jest.config.js`, `test/config/jest.config.ci.js`, `test/config/jest.config.ci.nocov.js` - Deleted
-- [x] T029 [P] Remove `@types/jest` from `tsconfig.json` types array if present - Not present (only added vitest/globals)
-- [x] T030 Measure final performance: run `time pnpm test:ci:no:coverage`, document improvement vs baseline - **23.88s vs 334s baseline = 14x speedup**
-- [x] T027 Run `pnpm lint` to ensure no linting errors introduced - Fixed 3 TypeScript errors, linting passes
-- [x] T032 Run quickstart.md validation: execute steps from `specs/027-vitest-migration/quickstart.md` to verify documented process - All steps verified working
+- [X] T027 [P] Remove Jest dependencies: run `pnpm remove jest jest-mock ts-jest @types/jest` - Removed 132 packages
+- [X] T028 [P] Delete Jest config files: remove `test/config/jest.config.js`, `test/config/jest.config.ci.js`, `test/config/jest.config.ci.nocov.js` - Deleted
+- [X] T029 [P] Remove `@types/jest` from `tsconfig.json` types array if present - Not present (only added vitest/globals)
+- [X] T030 Measure final performance: run `time pnpm test:ci:no:coverage`, document improvement vs baseline - **23.88s vs 334s baseline = 14x speedup**
+- [X] T027 Run `pnpm lint` to ensure no linting errors introduced - Fixed 3 TypeScript errors, linting passes
+- [X] T032 Run quickstart.md validation: execute steps from `specs/027-vitest-migration/quickstart.md` to verify documented process - All steps verified working
 
 **Checkpoint**: Migration complete. Jest artifacts removed. Performance improvement documented.
 
@@ -194,7 +194,6 @@ Task: "Run automated codemod on contract-tests/"
 ### Rollback Strategy
 
 If migration fails at any point:
-
 - `git checkout .` to revert all changes
 - `pnpm install` to restore Jest dependencies
 - Tests continue working on Jest as before

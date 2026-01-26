@@ -24,13 +24,11 @@ pnpm remove jest jest-mock ts-jest @types/jest
 ### 2. Create Configuration Files
 
 **Create `vitest.config.ts` in repository root:**
-
 ```bash
 cp specs/027-vitest-migration/contracts/vitest.config.ts.template vitest.config.ts
 ```
 
 **Create `.swcrc` in repository root:**
-
 ```bash
 cp specs/027-vitest-migration/contracts/.swcrc.template .swcrc
 ```
@@ -62,7 +60,6 @@ npx codemod jest/vitest -t "src/**/*.spec.ts" "test/**/*.spec.ts" "contract-test
 ### 5. Manual Fixes
 
 Update `test/utils/default.mocker.factory.ts`:
-
 - Replace `ModuleMocker` import with `createMock` from `@golevelup/ts-vitest`
 - Replace `jest.fn()` with `vi.fn()`
 
@@ -71,7 +68,6 @@ See `contracts/default.mocker.factory.ts.template` for reference implementation.
 ### 6. Update TypeScript Config
 
 Add Vitest types to `tsconfig.json`:
-
 ```json
 {
   "compilerOptions": {
@@ -103,14 +99,14 @@ ls -la coverage-ci/lcov.info
 
 ## Commands Reference
 
-| Command                        | Description                         |
-| ------------------------------ | ----------------------------------- |
-| `pnpm test`                    | Run all tests once                  |
-| `pnpm test:watch`              | Run tests in watch mode             |
-| `pnpm test:cov`                | Run tests with coverage             |
-| `pnpm test:ci`                 | CI mode with coverage + lcov output |
-| `pnpm test:ci:no:coverage`     | CI mode without coverage            |
-| `pnpm test -- path/to/spec.ts` | Run specific test file              |
+| Command | Description |
+|---------|-------------|
+| `pnpm test` | Run all tests once |
+| `pnpm test:watch` | Run tests in watch mode |
+| `pnpm test:cov` | Run tests with coverage |
+| `pnpm test:ci` | CI mode with coverage + lcov output |
+| `pnpm test:ci:no:coverage` | CI mode without coverage |
+| `pnpm test -- path/to/spec.ts` | Run specific test file |
 
 ## Troubleshooting
 
@@ -119,7 +115,6 @@ ls -la coverage-ci/lcov.info
 **Cause**: SWC not emitting decorator metadata.
 
 **Solution**: Ensure `.swcrc` exists with:
-
 ```json
 {
   "jsc": {
@@ -136,7 +131,6 @@ ls -la coverage-ci/lcov.info
 **Cause**: `vite-tsconfig-paths` plugin not configured.
 
 **Solution**: Ensure `vitest.config.ts` includes:
-
 ```typescript
 import tsconfigPaths from 'vite-tsconfig-paths';
 
@@ -160,14 +154,12 @@ export default defineConfig({
 ## Performance Measurement
 
 Record baseline before migration:
-
 ```bash
 # Time the current Jest run
 time pnpm test:ci:no:coverage
 ```
 
 Compare after migration:
-
 ```bash
 # Time the Vitest run
 time pnpm test:ci:no:coverage

@@ -8,7 +8,6 @@
 ## Scope
 
 ### In Scope
-
 - Replace Jest test runner with Vitest
 - Rewrite tests to use Vitest idioms where beneficial
 - Test directory restructuring and organization improvements
@@ -17,12 +16,11 @@
 - CI pipeline script updates for Vitest commands
 
 ### Out of Scope
-
 - Adding new tests for previously untested code (unless required for migration validation)
 - Changes to application source code (only test infrastructure)
 - Database or external service test fixtures changes (unless blocking migration)
 
-## User Scenarios & Testing _(mandatory)_
+## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Fast Test Feedback During Development (Priority: P1)
 
@@ -79,7 +77,7 @@ As a developer familiar with the existing test patterns, I want minimal disrupti
 - **TypeScript path aliases**: Must be configured in Vitest config to match `tsconfig.json` aliases
 - **Snapshot testing**: No snapshot tests currently exist. Vitest snapshot support is available for future use; format differs from Jest snapshots.
 
-## Requirements _(mandatory)_
+## Requirements *(mandatory)*
 
 ### Functional Requirements
 
@@ -100,7 +98,7 @@ As a developer familiar with the existing test patterns, I want minimal disrupti
 - **Test Files**: Existing test files across unit, integration, and E2E categories that must continue to function.
 - **Coverage Reports**: Output artifacts that CI systems consume for quality gates.
 
-## Success Criteria _(mandatory)_
+## Success Criteria *(mandatory)*
 
 ### Measurable Outcomes
 
