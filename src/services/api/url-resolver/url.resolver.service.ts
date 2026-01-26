@@ -481,10 +481,9 @@ export class UrlResolverService {
     result.type = UrlType.INNOVATION_HUB;
     const hubMatch = Utils.hubPathMatcher(urlPath);
     if (!hubMatch || !hubMatch.params) {
-      throw new ValidationException(
-        `Invalid URL: ${urlPath}`,
-        LogContext.URL_RESOLVER
-      );
+      throw new ValidationException('Invalid URL', LogContext.URL_RESOLVER, {
+        urlPath,
+      });
     }
     const params = hubMatch.params as {
       innovationHubNameID?: string | string[];
