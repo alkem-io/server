@@ -1,0 +1,146 @@
+# GraphQL Schema Contract: Default Callout Template for Flow Steps
+# Feature: 029-default-post-template-flow
+# Date: 2026-01-08
+
+# ==============================================================================
+# MODIFIED TYPE: InnovationFlowState
+# ==============================================================================
+
+type InnovationFlowState {
+  id: UUID!
+  displayName: String!
+  description: String!
+  sortOrder: Int!
+  settings: InnovationFlowStateSettings!
+
+  # NEW FIELD (nullable, backward compatible)
+  """
+  The default CALLOUT template for this flow step. When set, frontend fetches this template to pre-fill the "Add Post" dialog for new posts created in this flow step.
+  """
+  defaultCalloutTemplate: Template
+}
+
+# ==============================================================================
+# NEW MUTATIONS
+# ==============================================================================
+
+type Mutation {
+  """
+  Set the default CALLOUT template for an innovation flow state. When set, the frontend can fetch this template to pre-fill the "Add Post" dialog for new posts in this flow step.
+
+  Authorization: Requires UPDATE privilege on the InnovationFlowState.
+
+  Validation:
+  - Template must exist and be of type CALLOUT
+  - Template can be from space or platform library (no space boundary restriction)
+  - Flow state must exist
+
+  Returns: The updated InnovationFlowState with defaultCalloutTemplate relation loaded.
+  """
+  setDefaultCalloutTemplateOnInnovationFlowState(
+    setData: SetDefaultCalloutTemplateOnInnovationFlowStateInput!
+  ): InnovationFlowState!
+
+  """
+  Remove the default CALLOUT template from an innovation flow state. After removal, the "Add Post" dialog will not pre-fill with any template content.
+
+  Authorization: Requires UPDATE privilege on the InnovationFlowState.
+
+  Validation:
+  - Flow state must exist
+
+  Returns: The updated InnovationFlowState with defaultCalloutTemplate set to null.
+  """
+  removeDefaultCalloutTemplateOnInnovationFlowState(
+    removeData: RemoveDefaultCalloutTemplateOnInnovationFlowStateInput!
+  ): InnovationFlowState!
+}
+
+# ==============================================================================
+# NEW INPUT TYPES
+# ==============================================================================
+
+"""
+Input for setting a default CALLOUT template on an innovation flow state.
+"""
+input SetDefaultCalloutTemplateOnInnovationFlowStateInput {
+  """
+  The ID of the innovation flow state to configure.
+  """
+  flowStateID: UUID!
+
+  """
+  The ID of the CALLOUT template to set as default. Must be of type CALLOUT. Can be from space or platform library.
+  """
+  templateID: UUID!
+}
+
+"""
+Input for removing the default CALLOUT template from an innovation flow state.
+"""
+input RemoveDefaultCalloutTemplateOnInnovationFlowStateInput {
+  """
+  The ID of the innovation flow state to update.
+  """
+  flowStateID: UUID!
+}
+
+# ==============================================================================
+# EXISTING TYPES (READ ONLY, FOR REFERENCE)
+# ==============================================================================
+
+"""
+A template that can be used to create new content with pre-filled structure.
+"""
+type Template {
+  id: UUID!
+  type: TemplateType!
+  profile: Profile!
+
+  """
+  Callout structure for CALLOUT type templates. Contains contributionDefaults with postDescription.
+  """
+  callout: Callout
+}
+
+"""
+Template types supported by the platform.
+"""
+enum TemplateType {
+  POST
+  CALLOUT
+  WHITEBOARD
+  COMMUNITY_GUIDELINES
+  SPACE
+}
+
+# ==============================================================================
+# SCHEMA IMPACT ANALYSIS
+# ==============================================================================
+
+# BREAKING CHANGES: None
+# - New nullable field on existing type (backward compatible)
+# - New mutations (additive, non-breaking)
+# - No removed fields, no type changes
+
+# DEPRECATIONS: None
+
+# NEW FIELDS:
+# - InnovationFlowState.defaultCalloutTemplate (nullable)
+
+# NEW MUTATIONS:
+# - setDefaultCalloutTemplateOnInnovationFlowState
+# - removeDefaultCalloutTemplateOnInnovationFlowState
+
+# NEW INPUT TYPES:
+# - SetDefaultCalloutTemplateOnInnovationFlowStateInput
+# - RemoveDefaultCalloutTemplateOnInnovationFlowStateInput
+
+# AUTHORIZATION REQUIREMENTS:
+# - UPDATE_INNOVATION_FLOW privilege required for both new mutations
+# - Enforced via @UseGuards(GraphqlGuard) and authorizationService.grantAccessOrFail
+
+# ERROR CODES USED:
+# - ENTITY_NOT_FOUND: Flow state or template not found
+# - VALIDATION_ERROR: Template is not of type CALLOUT
+# - FORBIDDEN: User lacks UPDATE_INNOVATION_FLOW privilege
