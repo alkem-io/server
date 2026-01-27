@@ -1,26 +1,26 @@
-import { Readable } from 'stream';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
-import { EntityNotFoundException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { DeleteDocumentInput } from './dto/document.dto.delete';
-import { UpdateDocumentInput } from './dto/document.dto.update';
-import { CreateDocumentInput } from './dto/document.dto.create';
-import { Document } from './document.entity';
-import { IDocument } from './document.interface';
-import { TagsetService } from '@domain/common/tagset/tagset.service';
-import { StorageService } from '@services/adapters/storage';
-import { ConfigService } from '@nestjs/config';
-import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { STORAGE_SERVICE } from '@common/constants';
+import { LogContext } from '@common/enums';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { EntityNotFoundException } from '@common/exceptions';
 import { DocumentDeleteFailedException } from '@common/exceptions/document/document.delete.failed.exception';
 import { DocumentSaveFailedException } from '@common/exceptions/document/document.save.failed.exception';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { TagsetService } from '@domain/common/tagset/tagset.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
+import { StorageService } from '@services/adapters/storage';
 import { AlkemioConfig } from '@src/types';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { Readable } from 'stream';
+import { FindOneOptions, Repository } from 'typeorm';
+import { Document } from './document.entity';
+import { IDocument } from './document.interface';
+import { CreateDocumentInput } from './dto/document.dto.create';
+import { DeleteDocumentInput } from './dto/document.dto.delete';
+import { UpdateDocumentInput } from './dto/document.dto.update';
 
 @Injectable()
 export class DocumentService {

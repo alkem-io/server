@@ -1,5 +1,5 @@
-import { ArgsType, Field } from '@nestjs/graphql';
 import { UUID } from '@domain/common/scalars';
+import { ArgsType, Field } from '@nestjs/graphql';
 
 @ArgsType()
 export class RoomEventSubscriptionArgs {

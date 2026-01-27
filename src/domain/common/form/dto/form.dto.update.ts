@@ -1,8 +1,8 @@
-import { Field, InputType } from '@nestjs/graphql';
-import { ValidateNested } from 'class-validator';
-import { Type } from 'class-transformer';
-import { UpdateFormQuestionInput } from './form.question.dto.update';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
+import { Field, InputType } from '@nestjs/graphql';
+import { Type } from 'class-transformer';
+import { ValidateNested } from 'class-validator';
+import { UpdateFormQuestionInput } from './form.question.dto.update';
 
 @InputType()
 export class UpdateFormInput {

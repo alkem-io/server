@@ -1,28 +1,28 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
-import { EntityManager, FindOneOptions } from 'typeorm';
-import { IContributor } from './contributor.interface';
-import { User } from '../user/user.entity';
-import { Organization } from '../organization/organization.entity';
+import { LogContext } from '@common/enums/logging.context';
+import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
+import { VisualType } from '@common/enums/visual.type';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums/logging.context';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IAgent } from '@domain/agent/agent/agent.interface';
-import { VirtualContributor } from '../virtual-contributor/virtual.contributor.entity';
-import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
-import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { CreateProfileInput } from '@domain/common/profile/dto';
-import { AvatarCreatorService } from '@services/external/avatar-creator/avatar.creator.service';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
-import { VisualType } from '@common/enums/visual.type';
-import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { DocumentService } from '@domain/storage/document/document.service';
+import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InjectEntityManager } from '@nestjs/typeorm';
+import { AvatarCreatorService } from '@services/external/avatar-creator/avatar.creator.service';
+import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { EntityManager, FindOneOptions } from 'typeorm';
+import { Organization } from '../organization/organization.entity';
+import { User } from '../user/user.entity';
+import { VirtualContributor } from '../virtual-contributor/virtual.contributor.entity';
+import { IContributor } from './contributor.interface';
 import { getContributorType } from './get.contributor.type';
 
 @Injectable()
@@ -58,7 +58,7 @@ export class ContributorService {
     firstName?: string,
     lastName?: string
   ): Promise<void> {
-    let avatarURL: string | undefined = undefined;
+    let avatarURL: string | undefined;
     const avatarUrlFromProfile = profileData.visuals?.find(
       visual => visual.name === VisualType.AVATAR
     )?.uri;

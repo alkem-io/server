@@ -1,27 +1,27 @@
-import { IUserGroup } from '@domain/community/user-group/user-group.interface';
-import { UserGroupService } from '@domain/community/user-group/user-group.service';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { LogContext } from '@common/enums/logging.context';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
-import { CreateUserGroupInput } from '@domain/community/user-group/dto';
-import { Community, ICommunity } from '@domain/community/community';
+import { IRoleSet } from '@domain/access/role-set';
+import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { CommunicationService } from '@domain/communication/communication/communication.service';
 import { ICommunication } from '@domain/communication/communication';
-import { LogContext } from '@common/enums/logging.context';
+import { CommunicationService } from '@domain/communication/communication/communication.service';
+import { Community, ICommunity } from '@domain/community/community';
+import { CreateUserGroupInput } from '@domain/community/user-group/dto';
+import { IUserGroup } from '@domain/community/user-group/user-group.interface';
+import { UserGroupService } from '@domain/community/user-group/user-group.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { CreateCommunityInput } from './dto/community.dto.create';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { RoleSetService } from '@domain/access/role-set/role.set.service';
-import { IRoleSet } from '@domain/access/role-set';
 
 @Injectable()
 export class CommunityService {

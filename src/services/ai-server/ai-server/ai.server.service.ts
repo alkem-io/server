@@ -1,43 +1,43 @@
+import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 import { LogContext } from '@common/enums/logging.context';
+import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
-import { AiServer } from './ai.server.entity';
-import { IAiServer } from './ai.server.interface';
+import { Callout } from '@domain/collaboration/callout/callout.entity';
+import { Post } from '@domain/collaboration/post/post.entity';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { IMessage } from '@domain/communication/message/message.interface';
+import { isInputValidForAction } from '@domain/community/virtual-contributor/dto';
+import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { EventBus } from '@nestjs/cqrs';
+import { InjectRepository } from '@nestjs/typeorm';
 import { AiPersona, IAiPersona } from '@services/ai-server/ai-persona';
-import { AiPersonaService } from '../ai-persona/ai.persona.service';
-import { CreateAiPersonaInput, UpdateAiPersonaInput } from '../ai-persona/dto';
-import { AiPersonaInvocationInput } from '../ai-persona/dto/ai.persona.invocation/ai.persona.invocation.dto.input';
 import {
   IngestBodyOfKnowledge,
   IngestionPurpose,
 } from '@services/infrastructure/event-bus/messages';
-import { EventBus } from '@nestjs/cqrs';
-import { ConfigService } from '@nestjs/config';
+import { IngestWebsite } from '@services/infrastructure/event-bus/messages/ingest.website';
+import { InvokeEngineResult } from '@services/infrastructure/event-bus/messages/invoke.engine.result';
+import { RoomControllerService } from '@services/room-integration/room.controller.service';
+import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
+import { AlkemioConfig } from '@src/types';
 import { ChromaClient } from 'chromadb';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
+import { AiPersonaService } from '../ai-persona/ai.persona.service';
+import { AiPersonaAuthorizationService } from '../ai-persona/ai.persona.service.authorization';
+import { CreateAiPersonaInput, UpdateAiPersonaInput } from '../ai-persona/dto';
+import { AiPersonaInvocationInput } from '../ai-persona/dto/ai.persona.invocation/ai.persona.invocation.dto.input';
+import { InvocationResultAction } from '../ai-persona/dto/ai.persona.invocation/invocation.result.action.dto';
+import { RoomDetails } from '../ai-persona/dto/ai.persona.invocation/room.details.dto';
 import {
   InteractionMessage,
   MessageSenderRole,
 } from '../ai-persona/dto/interaction.message';
-import { AlkemioConfig } from '@src/types';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
-import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
-import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
-import { InvokeEngineResult } from '@services/infrastructure/event-bus/messages/invoke.engine.result';
-import { InvocationResultAction } from '../ai-persona/dto/ai.persona.invocation/invocation.result.action.dto';
-import { RoomDetails } from '../ai-persona/dto/ai.persona.invocation/room.details.dto';
-import { RoomControllerService } from '@services/room-integration/room.controller.service';
-import { IMessage } from '@domain/communication/message/message.interface';
-import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
-import { IngestWebsite } from '@services/infrastructure/event-bus/messages/ingest.website';
-import { Callout } from '@domain/collaboration/callout/callout.entity';
-import { Post } from '@domain/collaboration/post/post.entity';
-import { AiPersonaAuthorizationService } from '../ai-persona/ai.persona.service.authorization';
-import { isInputValidForAction } from '@domain/community/virtual-contributor/dto';
+import { AiServer } from './ai.server.entity';
+import { IAiServer } from './ai.server.interface';
 
 @Injectable()
 export class AiServerService {

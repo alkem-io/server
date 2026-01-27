@@ -1,7 +1,7 @@
-import { Resolver, Parent, ResolveField } from '@nestjs/graphql';
 import { Profiling } from '@common/decorators';
-import { IExternalConfig } from './dto';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AiPersonaService } from './ai.persona.service';
+import { IExternalConfig } from './dto';
 
 @Resolver(() => IExternalConfig)
 export class AiPersonaExternalConfigResolverFields {

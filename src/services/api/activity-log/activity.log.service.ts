@@ -1,29 +1,29 @@
-import { Inject, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { ActivityLogInput } from './dto/activity.log.dto.collaboration.input';
 import { LogContext } from '@common/enums';
-import { ActivityService } from '@src/platform/activity/activity.service';
-import { IActivityLogEntry } from './dto/activity.log.entry.interface';
-import { UserService } from '@domain/community/user/user.service';
 import { ActivityEventType } from '@common/enums/activity.event.type';
-import { CommunityService } from '@domain/community/community/community.service';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
+import { LinkService } from '@domain/collaboration/link/link.service';
 import { PostService } from '@domain/collaboration/post/post.service';
-import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { MemoService } from '@domain/common/memo/memo.service';
-import { IActivity } from '@platform/activity/activity.interface';
+import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { RoomService } from '@domain/communication/room/room.service';
-import { IActivityLogBuilder } from './activity.log.builder.interface';
-import ActivityLogBuilderService from './activity.log.builder.service';
+import { CommunityService } from '@domain/community/community/community.service';
+import { UserService } from '@domain/community/user/user.service';
+import { SpaceService } from '@domain/space/space/space.service';
 import { CalendarService } from '@domain/timeline/calendar/calendar.service';
 import { CalendarEventService } from '@domain/timeline/event/event.service';
-import { SpaceService } from '@domain/space/space/space.service';
-import { LinkService } from '@domain/collaboration/link/link.service';
-import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
-import { EntityManager } from 'typeorm/entity-manager/EntityManager';
+import { Inject, LoggerService } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
+import { IActivity } from '@platform/activity/activity.interface';
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
+import { ActivityService } from '@src/platform/activity/activity.service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { EntityManager } from 'typeorm/entity-manager/EntityManager';
+import { IActivityLogBuilder } from './activity.log.builder.interface';
+import ActivityLogBuilderService from './activity.log.builder.service';
+import { ActivityLogInput } from './dto/activity.log.dto.collaboration.input';
+import { IActivityLogEntry } from './dto/activity.log.entry.interface';
 
 export class ActivityLogService {
   constructor(

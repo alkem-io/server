@@ -1,21 +1,21 @@
-import { Injectable } from '@nestjs/common';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import { DiscussionAuthorizationService } from '../forum-discussion/discussion.service.authorization';
-import {
-  AuthorizationCredential,
-  AuthorizationPrivilege,
-  LogContext,
-} from '@common/enums';
-import { ForumService } from './forum.service';
-import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import {
   CREDENTIAL_RULE_TYPES_FORUM_CONTRIBUTE,
   CREDENTIAL_RULE_TYPES_FORUM_READ,
   POLICY_RULE_FORUM_CREATE,
 } from '@common/constants';
+import {
+  AuthorizationCredential,
+  AuthorizationPrivilege,
+  LogContext,
+} from '@common/enums';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { Injectable } from '@nestjs/common';
+import { DiscussionAuthorizationService } from '../forum-discussion/discussion.service.authorization';
 import { IForum } from './forum.interface';
+import { ForumService } from './forum.service';
 
 @Injectable()
 export class ForumAuthorizationService {

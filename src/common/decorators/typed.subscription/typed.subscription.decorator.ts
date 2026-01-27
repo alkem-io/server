@@ -1,6 +1,6 @@
 import { ReturnTypeFunc, Subscription } from '@nestjs/graphql';
-import { TypedSubscriptionOptions } from './typed.subscription.options';
 import { SubscriptionResolveContext } from './subscription.resolve.context';
+import { TypedSubscriptionOptions } from './typed.subscription.options';
 
 export function TypedSubscription<
   TPayload = unknown,

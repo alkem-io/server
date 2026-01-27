@@ -1,20 +1,20 @@
-import { Field, ObjectType } from '@nestjs/graphql';
-import { IsEnum } from 'class-validator';
-import { IContributorBase } from '../contributor/contributor.base.interface';
-import { IAccount } from '@domain/space/account/account.interface';
-import { IContributor } from '../contributor/contributor.interface';
 import { SearchVisibility } from '@common/enums/search.visibility';
-import { IKnowledgeBase } from '@domain/common/knowledge-base/knowledge.base.interface';
-import { IVirtualContributorSettings } from '../virtual-contributor-settings/virtual.contributor.settings.interface';
-import { Markdown } from '@domain/common/scalars/scalar.markdown';
+import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 import { VirtualContributorDataAccessMode } from '@common/enums/virtual.contributor.data.access.mode';
 import { VirtualContributorInteractionMode } from '@common/enums/virtual.contributor.interaction.mode';
+import { IKnowledgeBase } from '@domain/common/knowledge-base/knowledge.base.interface';
 import { UUID } from '@domain/common/scalars';
-import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
+import { Markdown } from '@domain/common/scalars/scalar.markdown';
+import { IAccount } from '@domain/space/account/account.interface';
 import { ISpace } from '@domain/space/space/space.interface';
-import { PromptGraphDefinition } from './dto/prompt-graph-definition/prompt.graph.definition.dto';
+import { Field, ObjectType } from '@nestjs/graphql';
 import { IAiPersona } from '@services/ai-server/ai-persona';
+import { IsEnum } from 'class-validator';
+import { IContributorBase } from '../contributor/contributor.base.interface';
+import { IContributor } from '../contributor/contributor.interface';
 import { IVirtualContributorPlatformSettings } from '../virtual-contributor-platform-settings/virtual.contributor.platform.settings.interface';
+import { IVirtualContributorSettings } from '../virtual-contributor-settings/virtual.contributor.settings.interface';
+import { PromptGraphDefinition } from './dto/prompt-graph-definition/prompt.graph.definition.dto';
 
 @ObjectType('VirtualContributor', {
   implements: () => [IContributor],

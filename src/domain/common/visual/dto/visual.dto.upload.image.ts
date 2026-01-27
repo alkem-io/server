@@ -1,5 +1,5 @@
 import { ALT_TEXT_LENGTH } from '@common/constants';
-import { InputType, Field } from '@nestjs/graphql';
+import { Field, InputType } from '@nestjs/graphql';
 import { IsOptional, MaxLength } from 'class-validator';
 
 @InputType()

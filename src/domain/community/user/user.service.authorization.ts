@@ -1,34 +1,34 @@
-import { Injectable } from '@nestjs/common';
+import {
+  CREDENTIAL_RULE_TYPES_USER_AUTHORIZATION_RESET,
+  CREDENTIAL_RULE_TYPES_USER_GLOBAL_COMMUNITY_READ,
+  CREDENTIAL_RULE_TYPES_USER_PLATFORM_ADMIN,
+  CREDENTIAL_RULE_TYPES_USER_READ_GLOBAL_REGISTERED,
+  CREDENTIAL_RULE_USER_READ,
+  CREDENTIAL_RULE_USER_READ_PII,
+  CREDENTIAL_RULE_USER_SELF_ADMIN,
+  PRIVILEGE_RULE_READ_USER_SETTINGS,
+} from '@common/constants';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
-import { IUser } from '@domain/community/user/user.interface';
-import { AgentService } from '@domain/agent/agent/agent.service';
-import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import {
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
-import {
-  CREDENTIAL_RULE_TYPES_USER_AUTHORIZATION_RESET,
-  CREDENTIAL_RULE_TYPES_USER_GLOBAL_COMMUNITY_READ,
-  CREDENTIAL_RULE_USER_SELF_ADMIN,
-  CREDENTIAL_RULE_USER_READ_PII,
-  CREDENTIAL_RULE_TYPES_USER_PLATFORM_ADMIN,
-  CREDENTIAL_RULE_USER_READ,
-  PRIVILEGE_RULE_READ_USER_SETTINGS,
-  CREDENTIAL_RULE_TYPES_USER_READ_GLOBAL_REGISTERED,
-} from '@common/constants';
-import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
-import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
+import { AgentService } from '@domain/agent/agent/agent.service';
+import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
+import { IUser } from '@domain/community/user/user.interface';
+import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
+import { Injectable } from '@nestjs/common';
+import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { UserLookupService } from '../user-lookup/user.lookup.service';
 import { UserSettingsAuthorizationService } from '../user-settings/user.settings.service.authorization';
 

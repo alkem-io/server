@@ -1,12 +1,12 @@
-import { Field, InputType } from '@nestjs/graphql';
-import { UUID } from '@domain/common/scalars';
-import { IsEmail, IsOptional, MaxLength } from 'class-validator';
 import {
   LONGER_TEXT_LENGTH,
   MID_TEXT_LENGTH,
   UUID_LENGTH,
 } from '@common/constants';
 import { RoleName } from '@common/enums/role.name';
+import { UUID } from '@domain/common/scalars';
+import { Field, InputType } from '@nestjs/graphql';
+import { IsEmail, IsOptional, MaxLength } from 'class-validator';
 
 @InputType()
 export class InviteForEntryRoleOnRoleSetInput {

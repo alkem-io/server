@@ -1,7 +1,7 @@
-import { Column, Entity } from 'typeorm';
-import { INVP } from '@domain/common/nvp/nvp.interface';
-import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
 import { MID_TEXT_LENGTH } from '@common/constants';
+import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
+import { INVP } from '@domain/common/nvp/nvp.interface';
+import { Column, Entity } from 'typeorm';
 
 @Entity()
 export class NVP extends BaseAlkemioEntity implements INVP {

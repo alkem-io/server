@@ -1,5 +1,5 @@
-import { ObjectType } from '@nestjs/graphql';
 import { NotificationEventPayload } from '@common/enums/notification.event.payload';
+import { ObjectType } from '@nestjs/graphql';
 import { IInAppNotificationPayload } from '../../in.app.notification.payload.interface';
 import { InAppNotificationPayloadSpaceBase } from './notification.in.app.payload.space.base';
 

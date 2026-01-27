@@ -1,8 +1,8 @@
+import { TemplateType } from '@common/enums/template.type';
 import { Float, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { ITemplate } from '../template/template.interface';
-import { TemplatesSetService } from './templates.set.service';
 import { ITemplatesSet } from './templates.set.interface';
-import { TemplateType } from '@common/enums/template.type';
+import { TemplatesSetService } from './templates.set.service';
 
 @Resolver(() => ITemplatesSet)
 export class TemplatesSetResolverFields {

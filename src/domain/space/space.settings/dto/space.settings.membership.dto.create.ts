@@ -1,6 +1,6 @@
-import { Field, InputType } from '@nestjs/graphql';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
+import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
 export class CreateSpaceSettingsMembershipInput {

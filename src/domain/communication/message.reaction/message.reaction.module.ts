@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { MessageReactionResolverFields } from './message.reaction.resolver.fields';
 import { ContributorLookupModule } from '@services/infrastructure/contributor-lookup/contributor.lookup.module';
+import { MessageReactionResolverFields } from './message.reaction.resolver.fields';
 
 @Module({
   imports: [ContributorLookupModule],

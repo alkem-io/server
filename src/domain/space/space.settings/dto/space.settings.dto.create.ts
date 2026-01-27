@@ -1,7 +1,7 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { CreateSpaceSettingsPrivacyInput } from './space.settings.privacy.dto.create';
-import { CreateSpaceSettingsMembershipInput } from './space.settings.membership.dto.create';
 import { CreateSpaceSettingsCollaborationInput } from './space.settings.collaboration.dto.create';
+import { CreateSpaceSettingsMembershipInput } from './space.settings.membership.dto.create';
+import { CreateSpaceSettingsPrivacyInput } from './space.settings.privacy.dto.create';
 
 @InputType()
 export class CreateSpaceSettingsInput {

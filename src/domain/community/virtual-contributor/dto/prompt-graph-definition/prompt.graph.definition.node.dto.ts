@@ -1,4 +1,4 @@
-import { ObjectType, Field } from '@nestjs/graphql';
+import { Field, ObjectType } from '@nestjs/graphql';
 import { PromptGraphDefinitionDataStruct } from './prompt.graph.definition.data.struct.dto';
 
 @ObjectType()

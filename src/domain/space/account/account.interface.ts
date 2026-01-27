@@ -1,14 +1,14 @@
-import { Field, ObjectType } from '@nestjs/graphql';
-import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
-import { ISpace } from '../space/space.interface';
-import { IAgent } from '@domain/agent/agent/agent.interface';
-import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
-import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 import { AccountType } from '@common/enums/account.type';
+import { IAgent } from '@domain/agent/agent/agent.interface';
+import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { ILicense } from '@domain/common/license/license.interface';
+import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
+import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
+import { Field, ObjectType } from '@nestjs/graphql';
 import { IAccountLicensePlan } from '../account.license.plan/account.license.plan.interface';
+import { ISpace } from '../space/space.interface';
 
 @ObjectType('Account')
 export class IAccount extends IAuthorizable {

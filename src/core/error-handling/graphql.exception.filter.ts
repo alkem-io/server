@@ -1,8 +1,8 @@
+import { BaseException } from '@common/exceptions/base.exception';
 import { ArgumentsHost, Catch, Inject, LoggerService } from '@nestjs/common';
 import { GqlExceptionFilter } from '@nestjs/graphql';
 import { GraphQLError } from 'graphql';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { BaseException } from '@common/exceptions/base.exception';
 
 @Catch(GraphQLError)
 export class GraphqlExceptionFilter implements GqlExceptionFilter {

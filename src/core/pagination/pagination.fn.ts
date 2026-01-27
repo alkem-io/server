@@ -1,11 +1,11 @@
-import { SelectQueryBuilder } from 'typeorm';
 import { IBaseAlkemio } from '@src/domain/common/entity/base-entity';
-import { IPaginatedType } from './paginated.type';
+import { SelectQueryBuilder } from 'typeorm';
 import {
   getRelayStylePaginationResults,
-  Paginationable,
   PaginationArgs,
+  Paginationable,
 } from './';
+import { IPaginatedType } from './paginated.type';
 
 export const getPaginationResults = async <
   T extends IBaseAlkemio & Paginationable,

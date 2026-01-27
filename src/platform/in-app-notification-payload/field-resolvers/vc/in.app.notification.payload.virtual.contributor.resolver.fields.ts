@@ -1,13 +1,13 @@
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { InAppNotificationPayloadVirtualContributor } from '../../dto/virtual-contributor/notification.in.app.payload.virtual.contributor';
-import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
-import { Loader } from '@core/dataloader/decorators';
 import {
   ContributorLoaderCreator,
   SpaceLoaderCreator,
 } from '@core/dataloader/creators';
+import { Loader } from '@core/dataloader/decorators';
 import { ILoader } from '@core/dataloader/loader.interface';
+import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { ISpace } from '@domain/space/space/space.interface';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { InAppNotificationPayloadVirtualContributor } from '../../dto/virtual-contributor/notification.in.app.payload.virtual.contributor';
 
 @Resolver(() => InAppNotificationPayloadVirtualContributor)
 export class InAppNotificationPayloadVirtualContributorFieldsResolver {

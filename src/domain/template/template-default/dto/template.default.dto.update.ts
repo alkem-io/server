@@ -1,5 +1,5 @@
-import { InputType, Field } from '@nestjs/graphql';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
+import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
 export class UpdateTemplateDefaultTemplateInput {

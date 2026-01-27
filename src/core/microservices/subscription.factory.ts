@@ -1,10 +1,10 @@
-import { connect as amqpConnect, ChannelModel, Connection } from 'amqplib';
-import { AMQPPubSub } from 'graphql-amqp-subscriptions';
-import { PubSubEngine, PubSub } from 'graphql-subscriptions';
+import { LogContext } from '@common/enums';
 import { LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { LogContext } from '@common/enums';
 import { AlkemioConfig } from '@src/types';
+import { connect as amqpConnect, ChannelModel, Connection } from 'amqplib';
+import { AMQPPubSub } from 'graphql-amqp-subscriptions';
+import { PubSub, PubSubEngine } from 'graphql-subscriptions';
 
 export async function subscriptionFactory(
   logger: LoggerService,

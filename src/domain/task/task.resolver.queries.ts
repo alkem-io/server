@@ -1,10 +1,10 @@
-import { Args, Query, Resolver } from '@nestjs/graphql';
-import { TaskService } from '@services/task/task.service';
-import { ITask } from './dto/';
 import { Profiling } from '@common/decorators';
 import { UUID } from '@domain/common/scalars';
 import { TaskStatus } from '@domain/task/dto/task.status.enum';
+import { Args, Query, Resolver } from '@nestjs/graphql';
+import { TaskService } from '@services/task/task.service';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { ITask } from './dto/';
 
 @InstrumentResolver()
 @Resolver()

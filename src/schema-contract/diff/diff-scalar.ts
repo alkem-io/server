@@ -1,7 +1,7 @@
 import { ScalarTypeDefinitionNode } from 'graphql';
-import { DiffContext, pushEntry, IndexedSchema } from './diff-core';
+import { ChangeType, ElementType } from '../model';
 import { unionKeys } from './cleanup';
-import { ElementType, ChangeType } from '../model';
+import { DiffContext, IndexedSchema, pushEntry } from './diff-core';
 
 const JSON_TYPE_CATEGORIES = new Set([
   'string',

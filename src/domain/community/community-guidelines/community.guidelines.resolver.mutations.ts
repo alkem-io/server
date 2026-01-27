@@ -1,13 +1,13 @@
-import { Resolver, Args, Mutation } from '@nestjs/graphql';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentUser, Profiling } from '@src/common/decorators';
 import { ICommunityGuidelines } from './community.guidelines.interface';
 import { CommunityGuidelinesService } from './community.guidelines.service';
+import { RemoveCommunityGuidelinesContentInput } from './dto/community.guidelines.dto.remove.content';
 import { UpdateCommunityGuidelinesEntityInput } from './dto/community.guidelines.dto.update.entity';
-import { RemoveCommunityGuidelinesContentInput as RemoveCommunityGuidelinesContentInput } from './dto/community.guidelines.dto.remove.content';
-import { InstrumentResolver } from '@src/apm/decorators';
 
 @InstrumentResolver()
 @Resolver()

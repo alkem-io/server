@@ -1,19 +1,19 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { IUserSettings } from './user.settings.interface';
-import { UpdateUserSettingsEntityInput } from './dto/user.settings.dto.update';
-import { CreateUserSettingsInput } from './dto/user.settings.dto.create';
-import { NotificationSettingInput } from './dto/notification.setting.input';
-import { UserSettings } from './user.settings.entity';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { LogContext } from '@common/enums/logging.context';
 import {
   EntityNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums/logging.context';
-import { FindOneOptions, Repository } from 'typeorm';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { FindOneOptions, Repository } from 'typeorm';
+import { NotificationSettingInput } from './dto/notification.setting.input';
+import { CreateUserSettingsInput } from './dto/user.settings.dto.create';
+import { UpdateUserSettingsEntityInput } from './dto/user.settings.dto.update';
+import { UserSettings } from './user.settings.entity';
+import { IUserSettings } from './user.settings.interface';
 
 @Injectable()
 export class UserSettingsService {

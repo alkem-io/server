@@ -1,5 +1,5 @@
-import { Field, InputType, ObjectType } from '@nestjs/graphql';
 import { UUID } from '@domain/common/scalars';
+import { Field, InputType, ObjectType } from '@nestjs/graphql';
 import { IWhiteboard } from '../whiteboard.interface';
 
 @InputType()

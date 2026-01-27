@@ -1,13 +1,12 @@
-import { vi } from 'vitest';
-import { Test, TestingModule } from '@nestjs/testing';
-import { MessagingAuthorizationService } from './messaging.service.authorization';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { MessagingService } from './messaging.service';
-import { ConversationAuthorizationService } from '../conversation/conversation.service.authorization';
-import { ConversationService } from '../conversation/conversation.service';
-import { IMessaging } from './messaging.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import type { Mocked } from 'vitest';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { Test, TestingModule } from '@nestjs/testing';
+import { type Mocked, vi } from 'vitest';
+import { ConversationService } from '../conversation/conversation.service';
+import { ConversationAuthorizationService } from '../conversation/conversation.service.authorization';
+import { IMessaging } from './messaging.interface';
+import { MessagingService } from './messaging.service';
+import { MessagingAuthorizationService } from './messaging.service.authorization';
 
 describe('MessagingAuthorizationService', () => {
   let service: MessagingAuthorizationService;

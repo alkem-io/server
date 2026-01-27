@@ -3,9 +3,9 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
+import { CreateRoleInput } from './dto/role.dto.create';
 import { Role } from './role.entity';
 import { IRole } from './role.interface';
-import { CreateRoleInput } from './dto/role.dto.create';
 
 @Injectable()
 export class RoleService {

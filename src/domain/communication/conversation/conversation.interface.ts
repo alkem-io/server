@@ -1,10 +1,10 @@
-import { ObjectType, Field } from '@nestjs/graphql';
-import { IRoom } from '@domain/communication/room/room.interface';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity/authorizable.interface';
-import { IMessaging } from '../messaging/messaging.interface';
-import { IConversationMembership } from '../conversation-membership/conversation.membership.interface';
+import { IRoom } from '@domain/communication/room/room.interface';
 import { IUser } from '@domain/community/user/user.interface';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
+import { Field, ObjectType } from '@nestjs/graphql';
+import { IConversationMembership } from '../conversation-membership/conversation.membership.interface';
+import { IMessaging } from '../messaging/messaging.interface';
 
 @ObjectType('Conversation')
 export abstract class IConversation extends IAuthorizable {

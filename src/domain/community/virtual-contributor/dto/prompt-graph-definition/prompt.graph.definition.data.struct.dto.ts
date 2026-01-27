@@ -1,4 +1,4 @@
-import { ObjectType, Field } from '@nestjs/graphql';
+import { Field, ObjectType } from '@nestjs/graphql';
 import { PromptGraphDefinitionDataPoint } from './prompt.graph.definition.data.point.dto';
 
 @ObjectType()

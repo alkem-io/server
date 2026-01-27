@@ -1,8 +1,8 @@
-import { Module } from '@nestjs/common';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { UserModule } from '@domain/community/user/user.module';
+import { Module } from '@nestjs/common';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { KratosModule } from '@services/infrastructure/kratos/kratos.module';
-import { UserModule } from '@domain/community/user/user.module';
 import { AdminUsersMutations } from './admin.users.resolver.mutations';
 import { AdminAuthenticationIDBackfillModule } from './authentication-id-backfill/authentication-id-backfill.module';
 

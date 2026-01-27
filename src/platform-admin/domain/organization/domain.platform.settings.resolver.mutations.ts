@@ -1,13 +1,13 @@
-import { Profiling, CurrentUser } from '@common/decorators';
+import { CurrentUser, Profiling } from '@common/decorators';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { Resolver, Mutation, Args } from '@nestjs/graphql';
-import { DomainPlatformSettingsService } from './domain.platform.settings.service';
-import { UpdateOrganizationPlatformSettingsInput } from './dto/organization.dto.update.platform.settings';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IOrganization } from '@domain/community/organization/organization.interface';
 import { OrganizationService } from '@domain/community/organization/organization.service';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { DomainPlatformSettingsService } from './domain.platform.settings.service';
+import { UpdateOrganizationPlatformSettingsInput } from './dto/organization.dto.update.platform.settings';
 
 @InstrumentResolver()
 @Resolver()

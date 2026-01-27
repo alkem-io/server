@@ -1,21 +1,21 @@
-import {
-  BadRequestHttpException,
-  NotFoundHttpException,
-} from '@common/exceptions/http';
 import { AlkemioErrorStatus, LogContext } from '@common/enums';
-import { RegistrationService } from '@services/api/registration/registration.service';
-import { KratosService } from '@services/infrastructure/kratos/kratos.service';
-import { Injectable, Inject, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { IUser } from '@domain/community/user/user.interface';
 import {
   UserAlreadyRegisteredException,
   UserRegistrationInvalidEmail,
 } from '@common/exceptions';
+import {
+  BadRequestHttpException,
+  NotFoundHttpException,
+} from '@common/exceptions/http';
 import { UserNotVerifiedException } from '@common/exceptions/user/user.not.verified.exception';
-import { IdentityResolveRequestMeta } from './types/identity-resolve.request-meta';
 import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
+import { IUser } from '@domain/community/user/user.interface';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { RegistrationService } from '@services/api/registration/registration.service';
+import { KratosService } from '@services/infrastructure/kratos/kratos.service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { IdentityResolveRequestMeta } from './types/identity-resolve.request-meta';
 
 @Injectable()
 export class IdentityResolveService {

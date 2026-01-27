@@ -1,6 +1,6 @@
 import { CalendarEventType } from '@common/enums/calendar.event.type';
 import { UpdateNameableInput } from '@domain/common/entity/nameable-entity/dto/nameable.dto.update';
-import { InputType, Field } from '@nestjs/graphql';
+import { Field, InputType } from '@nestjs/graphql';
 import { MID_TEXT_LENGTH } from '@src/common/constants';
 import { IsDate, IsOptional, MaxLength } from 'class-validator';
 

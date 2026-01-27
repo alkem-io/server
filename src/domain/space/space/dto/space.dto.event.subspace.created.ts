@@ -1,5 +1,5 @@
-import { Field, ObjectType } from '@nestjs/graphql';
 import { UUID } from '@domain/common/scalars';
+import { Field, ObjectType } from '@nestjs/graphql';
 import { ISpace } from '../space.interface';
 
 @ObjectType('SubspaceCreated')

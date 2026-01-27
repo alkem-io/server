@@ -1,3 +1,7 @@
+import { RoleSet } from '@domain/access/role-set/role.set.entity';
+import { UserGroup } from '@domain/community/user-group/user-group.entity';
+import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
+import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import {
   Column,
   Entity,
@@ -6,15 +10,10 @@ import {
   OneToMany,
   OneToOne,
 } from 'typeorm';
-import { IGroupable } from '@src/common/interfaces/groupable.interface';
-import { UserGroup } from '@domain/community/user-group/user-group.entity';
-import { IOrganization } from './organization.interface';
-import { OrganizationVerification } from '../organization-verification/organization.verification.entity';
 import { ContributorBase } from '../contributor/contributor.base.entity';
-import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
-
 import { IOrganizationSettings } from '../organization-settings/organization.settings.interface';
-import { RoleSet } from '@domain/access/role-set/role.set.entity';
+import { OrganizationVerification } from '../organization-verification/organization.verification.entity';
+import { IOrganization } from './organization.interface';
 
 @Entity()
 export class Organization
@@ -33,10 +32,14 @@ export class Organization
   @Generated('increment')
   rowId!: number;
 
-  @OneToMany(() => UserGroup, userGroup => userGroup.organization, {
-    eager: false,
-    cascade: true,
-  })
+  @OneToMany(
+    () => UserGroup,
+    userGroup => userGroup.organization,
+    {
+      eager: false,
+      cascade: true,
+    }
+  )
   groups?: UserGroup[];
 
   @Column()

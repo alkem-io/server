@@ -1,6 +1,6 @@
 import { Brackets, ObjectLiteral, SelectQueryBuilder } from 'typeorm';
-import { OrganizationFilterInput } from '../input-types';
 import { applyFilteringOnWhereExpression } from '../filter.fn.where.expression';
+import { OrganizationFilterInput } from '../input-types';
 
 export const applyOrganizationFilter = <T extends ObjectLiteral>(
   query: SelectQueryBuilder<T>,

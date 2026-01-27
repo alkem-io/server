@@ -1,19 +1,18 @@
-import { Resolver } from '@nestjs/graphql';
-import { IStorageBucket } from './storage.bucket.interface';
-import { StorageBucketService } from './storage.bucket.service';
 import { AuthorizationPrivilege } from '@common/enums';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { GraphqlGuard } from '@core/authorization';
+import { UUID } from '@domain/common/scalars';
 import { UseGuards } from '@nestjs/common';
+import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import {
   AuthorizationAgentPrivilege,
   CurrentUser,
 } from '@src/common/decorators';
-import { Args, Parent, ResolveField } from '@nestjs/graphql';
 import { IDocument } from '../document/document.interface';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { UUID } from '@domain/common/scalars';
 import { StorageBucketArgsDocuments } from './dto/storage.bucket.args.documents';
 import { IStorageBucketParent } from './dto/storage.bucket.dto.parent';
+import { IStorageBucket } from './storage.bucket.interface';
+import { StorageBucketService } from './storage.bucket.service';
 
 @Resolver(() => IStorageBucket)
 export class StorageBucketResolverFields {

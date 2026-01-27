@@ -1,22 +1,22 @@
+import { UUID_LENGTH } from '@common/constants';
+import { SUBSCRIPTION_DISCUSSION_UPDATED } from '@common/constants/providers';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { LogContext } from '@common/enums/logging.context';
 import { SubscriptionType } from '@common/enums/subscription.type';
+import { SubscriptionUserNotAuthenticated } from '@common/exceptions/subscription.user.not.authenticated';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Resolver, Subscription } from '@nestjs/graphql';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { InstrumentResolver } from '@src/apm/decorators';
 import { PubSubEngine } from 'graphql-subscriptions';
-import { LogContext } from '@common/enums/logging.context';
-import { UUID } from '@domain/common/scalars/scalar.uuid';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { SUBSCRIPTION_DISCUSSION_UPDATED } from '@common/constants/providers';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IDiscussion } from '../forum-discussion/discussion.interface';
 import { DiscussionService } from '../forum-discussion/discussion.service';
-import { ForumService } from './forum.service';
 import { ForumDiscussionUpdated } from './dto/forum.dto.event.discussion.updated';
-import { UUID_LENGTH } from '@common/constants';
-import { SubscriptionUserNotAuthenticated } from '@common/exceptions/subscription.user.not.authenticated';
-import { InstrumentResolver } from '@src/apm/decorators';
+import { ForumService } from './forum.service';
 
 @InstrumentResolver()
 @Resolver()

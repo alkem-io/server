@@ -1,18 +1,17 @@
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
-import { AgentInfo } from './agent.info';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { AuthorizationCredential, LogContext } from '@common/enums';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
-import { InjectEntityManager } from '@nestjs/typeorm';
-import { EntityManager } from 'typeorm';
-import { User } from '@domain/community/user/user.entity';
-import { AgentInfoMetadata } from './agent.info.metadata';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { ICredential } from '@domain/agent/credential/credential.interface';
+import { User } from '@domain/community/user/user.entity';
 import { UserAuthenticationLinkService } from '@domain/community/user-authentication-link/user.authentication.link.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InjectEntityManager } from '@nestjs/typeorm';
+import { Identity, Session } from '@ory/kratos-client';
 import { OryDefaultIdentitySchema } from '@services/infrastructure/kratos/types/ory.default.identity.schema';
-import { Session } from '@ory/kratos-client';
-import { Identity } from '@ory/kratos-client';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { EntityManager } from 'typeorm';
+import { AgentInfo } from './agent.info';
+import { AgentInfoMetadata } from './agent.info.metadata';
 
 @Injectable()
 export class AgentInfoService {

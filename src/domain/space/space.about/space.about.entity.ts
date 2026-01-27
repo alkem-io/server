@@ -1,8 +1,8 @@
-import { Column, Entity, JoinColumn, OneToOne } from 'typeorm';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Profile } from '@domain/common/profile/profile.entity';
-import { ISpaceAbout } from './space.about.interface';
 import { CommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.entity';
+import { Column, Entity, JoinColumn, OneToOne } from 'typeorm';
+import { ISpaceAbout } from './space.about.interface';
 
 @Entity()
 export class SpaceAbout extends AuthorizableEntity implements ISpaceAbout {

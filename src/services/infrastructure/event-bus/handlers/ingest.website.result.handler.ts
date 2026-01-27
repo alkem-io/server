@@ -1,9 +1,9 @@
+import { LogContext } from '@common/enums';
+import { Inject, LoggerService } from '@nestjs/common';
 import { EventsHandler, IEventHandler } from '@nestjs/cqrs';
-import { IngestWebsiteResult } from '../messages/ingest.website.result.event';
 import { AiServerService } from '@services/ai-server/ai-server/ai.server.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Inject, LoggerService } from '@nestjs/common';
-import { LogContext } from '@common/enums';
+import { IngestWebsiteResult } from '../messages/ingest.website.result.event';
 import { IngestionResult } from '../messages/types';
 
 @EventsHandler(IngestWebsiteResult)

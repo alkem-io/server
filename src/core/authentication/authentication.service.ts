@@ -1,17 +1,17 @@
-import { ConfigService } from '@nestjs/config';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { Session } from '@ory/kratos-client';
 import { LogContext } from '@common/enums';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { AgentInfo } from '../authentication.agent.info/agent.info';
 import { NotSupportedException } from '@common/exceptions';
-import { AgentInfoCacheService } from '@core/authentication.agent.info/agent.info.cache.service';
 import ConfigUtils from '@config/config.utils';
-import { AlkemioConfig } from '@src/types';
-import { KratosService } from '@services/infrastructure/kratos/kratos.service';
-import { OryDefaultIdentitySchema } from '@services/infrastructure/kratos/types/ory.default.identity.schema';
+import { AgentInfoCacheService } from '@core/authentication.agent.info/agent.info.cache.service';
 import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
 import { AgentService } from '@domain/agent/agent/agent.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { Session } from '@ory/kratos-client';
+import { KratosService } from '@services/infrastructure/kratos/kratos.service';
+import { OryDefaultIdentitySchema } from '@services/infrastructure/kratos/types/ory.default.identity.schema';
+import { AlkemioConfig } from '@src/types';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { AgentInfo } from '../authentication.agent.info/agent.info';
 
 @Injectable()
 export class AuthenticationService {

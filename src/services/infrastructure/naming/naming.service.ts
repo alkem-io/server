@@ -1,18 +1,18 @@
-import { EntityManager, Not, Repository } from 'typeorm';
-import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
-import { Callout } from '@domain/collaboration/callout/callout.entity';
-import { CalendarEvent } from '@domain/timeline/event';
-import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
-import { Space } from '@domain/space/space/space.entity';
+import { RestrictedSpaceNames } from '@common/enums/restricted.space.names';
 import { SpaceLevel } from '@common/enums/space.level';
+import { Callout } from '@domain/collaboration/callout/callout.entity';
+import { Organization } from '@domain/community/organization';
 import { User } from '@domain/community/user/user.entity';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
-import { Organization } from '@domain/community/organization';
+import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
+import { Space } from '@domain/space/space/space.entity';
+import { Template } from '@domain/template/template/template.entity';
+import { CalendarEvent } from '@domain/timeline/event';
+import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
+import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { Discussion } from '@platform/forum-discussion/discussion.entity';
 import { generateNameId } from '@services/infrastructure/naming/generate.name.id';
-import { Template } from '@domain/template/template/template.entity';
-import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
-import { RestrictedSpaceNames } from '@common/enums/restricted.space.names';
+import { EntityManager, Not, Repository } from 'typeorm';
 
 export class NamingService {
   constructor(

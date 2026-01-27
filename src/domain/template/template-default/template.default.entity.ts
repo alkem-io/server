@@ -1,12 +1,12 @@
-import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
-import { ITemplateDefault } from './template.default.interface';
 import { ENUM_LENGTH } from '@common/constants/entity.field.length.constants';
 import { TemplateDefaultType } from '@common/enums/template.default.type';
-import { Template } from '../template/template.entity';
-import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { TemplateType } from '@common/enums/template.type';
-import { TemplatesManager } from '../templates-manager/templates.manager.entity';
+import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { IsEnum } from 'class-validator';
+import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
+import { Template } from '../template/template.entity';
+import { TemplatesManager } from '../templates-manager/templates.manager.entity';
+import { ITemplateDefault } from './template.default.interface';
 
 @Entity()
 export class TemplateDefault

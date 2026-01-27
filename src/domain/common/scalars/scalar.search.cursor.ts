@@ -1,8 +1,8 @@
-import { CustomScalar, Scalar } from '@nestjs/graphql';
-import { Kind, ValueNode } from 'graphql';
-import { tryParseSearchCursor } from '@services/api/search/util';
-import { ValidationException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
+import { ValidationException } from '@common/exceptions';
+import { CustomScalar, Scalar } from '@nestjs/graphql';
+import { tryParseSearchCursor } from '@services/api/search/util';
+import { Kind, ValueNode } from 'graphql';
 
 @Scalar('SearchCursor')
 export class SearchCursor implements CustomScalar<string, string> {

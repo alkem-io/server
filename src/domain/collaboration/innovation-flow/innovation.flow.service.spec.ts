@@ -1,10 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { InnovationFlowService } from './innovation.flow.service';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
-import { InnovationFlow } from './innovation.flow.entity';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { InnovationFlow } from './innovation.flow.entity';
+import { InnovationFlowService } from './innovation.flow.service';
 
 describe('InnovationFlowService', () => {
   let service: InnovationFlowService;

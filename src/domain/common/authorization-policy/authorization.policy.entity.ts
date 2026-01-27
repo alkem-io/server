@@ -1,10 +1,10 @@
+import { ENUM_LENGTH } from '@common/constants';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
+import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
 import { Column, Entity, Index, ManyToOne } from 'typeorm';
 import { IAuthorizationPolicy } from './authorization.policy.interface';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { ENUM_LENGTH } from '@common/constants';
-import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
-import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 
 @Entity()
 @Index('IDX_authorization_policy_type', ['type'])

@@ -1,7 +1,7 @@
-import { InputType, Field } from '@nestjs/graphql';
+import { UpdateProfileInput } from '@domain/common/profile/dto/profile.dto.update';
+import { Field, InputType } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
 import { IsOptional, ValidateNested } from 'class-validator';
-import { UpdateProfileInput } from '@domain/common/profile/dto/profile.dto.update';
 
 @InputType()
 export class UpdateKnowledgeBaseInput {

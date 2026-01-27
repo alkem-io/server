@@ -1,5 +1,20 @@
-import { keyBy } from 'lodash';
+import { UUID_LENGTH } from '@common/constants';
 import { LogContext } from '@common/enums';
+import { AgentType } from '@common/enums/agent.type';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
+import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
+import { LicenseType } from '@common/enums/license.type';
+import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
+import { LicensingCredentialBasedPlanType } from '@common/enums/licensing.credential.based.plan.type';
+import { RoleName } from '@common/enums/role.name';
+import { RoleSetType } from '@common/enums/role.set.type';
+import { SpaceLevel } from '@common/enums/space.level';
+import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
+import { SpaceVisibility } from '@common/enums/space.visibility';
+import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
+import { TemplateDefaultType } from '@common/enums/template.default.type';
+import { TemplateType } from '@common/enums/template.type';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -7,82 +22,67 @@ import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { IAgent } from '@domain/agent/agent';
-import { CreateSpaceInput, DeleteSpaceInput } from '@domain/space/space';
-import { ICommunity } from '@domain/community/community';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { FindManyOptions, FindOneOptions, In, Repository } from 'typeorm';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Space } from './space.entity';
-import { ISpace } from './space.interface';
-import { UpdateSpaceInput } from './dto/space.dto.update';
-import { CreateSubspaceInput } from './dto/space.dto.create.subspace';
-import { UpdateSubspacesSortOrderInput } from './dto/space.dto.update.subspaces.sort.order';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { limitAndShuffle } from '@common/utils/limitAndShuffle';
-import { SpacesQueryArgs } from './dto/space.args.query.spaces';
-import { SpaceVisibility } from '@common/enums/space.visibility';
-import { SpaceFilterService } from '@services/infrastructure/space-filter/space.filter.service';
-import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
-import { InnovationHub, InnovationHubType } from '@domain/innovation-hub/types';
 import { OperationNotAllowedException } from '@common/exceptions/operation.not.allowed.exception';
-import { IPaginatedType } from '@core/pagination/paginated.type';
-import { SpaceFilterInput } from '@services/infrastructure/space-filter/dto/space.filter.dto.input';
+import { getDiff, hasOnlyAllowedFields } from '@common/utils';
+import { limitAndShuffle } from '@common/utils/limitAndShuffle';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { PaginationArgs } from '@core/pagination';
+import { IPaginatedType } from '@core/pagination/paginated.type';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
-import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
+import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
+import { IRoleSet } from '@domain/access/role-set/role.set.interface';
+import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { IAgent } from '@domain/agent/agent';
 import { AgentService } from '@domain/agent/agent/agent.service';
+import { ICalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.interface';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
+import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { ILicense } from '@domain/common/license/license.interface';
+import { LicenseService } from '@domain/common/license/license.service';
+import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
+import { ICommunity } from '@domain/community/community';
 import { CommunityService } from '@domain/community/community/community.service';
 import { CreateCommunityInput } from '@domain/community/community/dto/community.dto.create';
-import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
-import { NamingService } from '@services/infrastructure/naming/naming.service';
-import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
-import { SpaceSettingsService } from '../space.settings/space.settings.service';
-import { UpdateSpaceSettingsEntityInput } from '../space.settings/dto/space.settings.dto.update';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { RoleName } from '@common/enums/role.name';
-import { SpaceLevel } from '@common/enums/space.level';
+import { InnovationHub, InnovationHubType } from '@domain/innovation-hub/types';
+import { CreateSpaceInput, DeleteSpaceInput } from '@domain/space/space';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { AgentType } from '@common/enums/agent.type';
-import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
-import { ISpaceSubscription } from './space.license.subscription.interface';
-import { IAccount } from '../account/account.interface';
-import { LicensingCredentialBasedPlanType } from '@common/enums/licensing.credential.based.plan.type';
-import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
-import { RoleSetService } from '@domain/access/role-set/role.set.service';
-import { IRoleSet } from '@domain/access/role-set/role.set.interface';
-import { ITemplatesManager } from '@domain/template/templates-manager';
-import { Activity } from '@platform/activity';
-import { LicensingFrameworkService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service';
-import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
-import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
-import { LicenseService } from '@domain/common/license/license.service';
-import { LicenseType } from '@common/enums/license.type';
-import { getDiff, hasOnlyAllowedFields } from '@common/utils';
-import { ILicensePlan } from '@platform/licensing/credential-based/license-plan/license.plan.interface';
-import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
-import { ICalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.interface';
-import { RoleSetType } from '@common/enums/role.set.type';
-import { ISpaceAbout } from '../space.about/space.about.interface';
-import { SpaceAboutService } from '../space.about/space.about.service';
-import { ILicense } from '@domain/common/license/license.interface';
-import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
-import { CreateTemplateDefaultInput } from '@domain/template/template-default/dto/template.default.dto.create';
-import { TemplateDefaultType } from '@common/enums/template.default.type';
-import { TemplateType } from '@common/enums/template.type';
-import { CreateTemplatesManagerInput } from '@domain/template/templates-manager/dto/templates.manager.dto.create';
-import { SpaceLookupService } from '../space.lookup/space.lookup.service';
-import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator/url.generator.service.cache';
+import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { ITemplateContentSpace } from '@domain/template/template-content-space/template.content.space.interface';
 import { TemplateContentSpaceService } from '@domain/template/template-content-space/template.content.space.service';
-import { UUID_LENGTH } from '@common/constants';
+import { CreateTemplateDefaultInput } from '@domain/template/template-default/dto/template.default.dto.create';
+import { ITemplatesManager } from '@domain/template/templates-manager';
+import { CreateTemplatesManagerInput } from '@domain/template/templates-manager/dto/templates.manager.dto.create';
+import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Activity } from '@platform/activity';
+import { ILicensePlan } from '@platform/licensing/credential-based/license-plan/license.plan.interface';
+import { LicensingFrameworkService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service';
+import { NamingService } from '@services/infrastructure/naming/naming.service';
+import { SpaceFilterInput } from '@services/infrastructure/space-filter/dto/space.filter.dto.input';
+import { SpaceFilterService } from '@services/infrastructure/space-filter/space.filter.service';
+import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator/url.generator.service.cache';
+import { keyBy } from 'lodash';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { FindManyOptions, FindOneOptions, In, Repository } from 'typeorm';
+import { IAccount } from '../account/account.interface';
+import { ISpaceAbout } from '../space.about/space.about.interface';
+import { SpaceAboutService } from '../space.about/space.about.service';
+import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
+import { SpaceLookupService } from '../space.lookup/space.lookup.service';
+import { UpdateSpaceSettingsEntityInput } from '../space.settings/dto/space.settings.dto.update';
+import { SpaceSettingsService } from '../space.settings/space.settings.service';
+import { SpacesQueryArgs } from './dto/space.args.query.spaces';
+import { CreateSubspaceInput } from './dto/space.dto.create.subspace';
+import { UpdateSpaceInput } from './dto/space.dto.update';
+import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
+import { UpdateSubspacesSortOrderInput } from './dto/space.dto.update.subspaces.sort.order';
+import { Space } from './space.entity';
+import { ISpace } from './space.interface';
+import { ISpaceSubscription } from './space.license.subscription.interface';
 import { SpacePlatformRolesAccessService } from './space.service.platform.roles.access';
-import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
 
 const EXPLORE_SPACES_LIMIT = 30;
 const EXPLORE_SPACES_ACTIVITY_DAYS_OLD = 30;
@@ -934,20 +934,18 @@ export class SpaceService {
   ): Promise<ISpace[]> {
     let spaceWithSubspaces;
     if (args && args.IDs) {
-      {
-        spaceWithSubspaces = await this.getSpaceOrFail(space.id, {
-          relations: {
-            subspaces: {
-              about: {
-                profile: true,
-              },
+      spaceWithSubspaces = await this.getSpaceOrFail(space.id, {
+        relations: {
+          subspaces: {
+            about: {
+              profile: true,
             },
           },
-        });
-        spaceWithSubspaces.subspaces = spaceWithSubspaces.subspaces?.filter(c =>
-          args.IDs?.includes(c.id)
-        );
-      }
+        },
+      });
+      spaceWithSubspaces.subspaces = spaceWithSubspaces.subspaces?.filter(c =>
+        args.IDs?.includes(c.id)
+      );
     } else
       spaceWithSubspaces = await this.getSpaceOrFail(space.id, {
         relations: {
@@ -1033,7 +1031,8 @@ export class SpaceService {
       .map(subspaceId => subspacesByID[subspaceId]?.sortOrder)
       .filter(sortOrder => sortOrder !== undefined);
 
-    const minimumSortOrder = sortOrders.length > 0 ? Math.min(...sortOrders) : 0;
+    const minimumSortOrder =
+      sortOrders.length > 0 ? Math.min(...sortOrders) : 0;
     const modifiedSubspaces: ISpace[] = [];
 
     // Use step of 10 to avoid collisions with untouched siblings during partial reorder

@@ -1,13 +1,13 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { KratosService } from '@services/infrastructure/kratos/kratos.service';
-import { IdentityVerificationStatusFilter } from '@common/enums/identity.verification.status.filter';
-import { Identity } from '@ory/kratos-client';
-import { OryDefaultIdentitySchema } from '@services/infrastructure/kratos/types/ory.default.identity.schema';
 import { LogContext } from '@common/enums';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { KratosIdentityDto } from './dto/kratos.identity.dto';
+import { IdentityVerificationStatusFilter } from '@common/enums/identity.verification.status.filter';
 import { UserService } from '@domain/community/user/user.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { Identity } from '@ory/kratos-client';
+import { KratosService } from '@services/infrastructure/kratos/kratos.service';
+import { OryDefaultIdentitySchema } from '@services/infrastructure/kratos/types/ory.default.identity.schema';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { KratosIdentityDto } from './dto/kratos.identity.dto';
 
 @Injectable()
 export class AdminIdentityService {

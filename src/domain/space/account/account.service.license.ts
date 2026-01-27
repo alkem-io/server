@@ -1,25 +1,25 @@
-import { Inject, Injectable } from '@nestjs/common';
 import { LogContext } from '@common/enums';
-import { AccountService } from './account.service';
+import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
+import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
+import { BaseExceptionInternal } from '@common/exceptions/internal/base.exception.internal';
 import { IAgent } from '@domain/agent/agent/agent.interface';
-import { LicenseService } from '@domain/common/license/license.service';
+import { AgentService } from '@domain/agent/agent/agent.service';
 import { ILicense } from '@domain/common/license/license.interface';
+import { LicenseService } from '@domain/common/license/license.service';
+import { ILicenseEntitlement } from '@domain/common/license-entitlement/license.entitlement.interface';
+import { Inject, Injectable } from '@nestjs/common';
 import { LicensingCredentialBasedService } from '@platform/licensing/credential-based/licensing-credential-based-entitlements-engine/licensing.credential.based.service';
-import { IAccount } from './account.interface';
+import { LicensingGrantedEntitlement } from '@platform/licensing/dto/licensing.dto.granted.entitlement';
+import { LicensingWingbackSubscriptionService } from '@platform/licensing/wingback-subscription/licensing.wingback.subscription.service';
 import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
 import { SpaceLicenseService } from '../space/space.service.license';
-import { LicensingWingbackSubscriptionService } from '@platform/licensing/wingback-subscription/licensing.wingback.subscription.service';
-import { ILicenseEntitlement } from '@domain/common/license-entitlement/license.entitlement.interface';
-import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
-import { LicensingGrantedEntitlement } from '@platform/licensing/dto/licensing.dto.granted.entitlement';
-import { BaseExceptionInternal } from '@common/exceptions/internal/base.exception.internal';
-import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
-import { AgentService } from '@domain/agent/agent/agent.service';
+import { IAccount } from './account.interface';
+import { AccountService } from './account.service';
 
 @Injectable()
 export class AccountLicenseService {

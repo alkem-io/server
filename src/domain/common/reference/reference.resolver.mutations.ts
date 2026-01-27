@@ -1,22 +1,22 @@
 import { CurrentUser } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { IReference } from '@domain/common/reference/reference.interface';
-import { DeleteReferenceInput } from '@domain/common/reference/dto/reference.dto.delete';
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { ReferenceService } from './reference.service';
-import { UpdateReferenceInput } from './dto/reference.dto.update';
-import { Reference } from './reference.entity';
-import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { LogContext } from '@common/enums/logging.context';
-import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
-import { StorageBucketUploadFileOnReferenceInput } from '@domain/storage/storage-bucket/dto/storage.bucket.dto.upload.file.on.reference';
-import { FileUpload, GraphQLUpload } from 'graphql-upload';
+import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { DeleteReferenceInput } from '@domain/common/reference/dto/reference.dto.delete';
+import { IReference } from '@domain/common/reference/reference.interface';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
-import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
+import { StorageBucketUploadFileOnReferenceInput } from '@domain/storage/storage-bucket/dto/storage.bucket.dto.upload.file.on.reference';
+import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { FileUpload, GraphQLUpload } from 'graphql-upload';
+import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
+import { UpdateReferenceInput } from './dto/reference.dto.update';
+import { Reference } from './reference.entity';
+import { ReferenceService } from './reference.service';
 
 @InstrumentResolver()
 @Resolver()

@@ -1,15 +1,15 @@
+import { LogContext } from '@common/enums';
+import {
+  AmqpConnection,
+  AmqpConnectionManager,
+} from '@golevelup/nestjs-rabbitmq';
 import {
   Inject,
   Injectable,
   LoggerService,
   OnModuleInit,
 } from '@nestjs/common';
-import {
-  AmqpConnectionManager,
-  AmqpConnection,
-} from '@golevelup/nestjs-rabbitmq';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LogContext } from '@common/enums';
 
 /**
  * Service that adds resilience to RabbitMQ connections by handling

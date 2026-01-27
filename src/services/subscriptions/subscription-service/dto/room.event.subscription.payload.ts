@@ -1,8 +1,8 @@
-import { IMessageReaction } from '@domain/communication/message.reaction/message.reaction.interface';
-import { IMessage } from '@domain/communication/message/message.interface';
-import { BaseSubscriptionPayload } from '@interfaces/index';
 import { MutationType } from '@common/enums/subscriptions';
+import { IMessage } from '@domain/communication/message/message.interface';
+import { IMessageReaction } from '@domain/communication/message.reaction/message.reaction.interface';
 import { IRoom } from '@domain/communication/room/room.interface';
+import { BaseSubscriptionPayload } from '@interfaces/index';
 
 export interface ReadReceiptData {
   actorId: string;

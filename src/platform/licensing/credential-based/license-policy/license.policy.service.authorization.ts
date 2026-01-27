@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { Injectable } from '@nestjs/common';
 import { ILicensePolicy } from './license.policy.interface';
 
 @Injectable()

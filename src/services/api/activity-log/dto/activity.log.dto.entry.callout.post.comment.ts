@@ -1,5 +1,5 @@
-import { IPost } from '@domain/collaboration/post/post.interface';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
+import { IPost } from '@domain/collaboration/post/post.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IActivityLogEntryBase } from './activity.log.dto.entry.base.interface';
 import { IActivityLogEntry } from './activity.log.entry.interface';
