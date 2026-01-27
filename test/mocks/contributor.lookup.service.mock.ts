@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { ValueProvider } from '@nestjs/common';
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { PublicPart } from '@test/utils/public-part';
@@ -7,6 +8,6 @@ export const MockContributorLookupService: ValueProvider<
 > = {
   provide: ContributorLookupService,
   useValue: {
-    getContributorsManagedByUser: jest.fn(),
+    getContributorsManagedByUser: vi.fn(),
   },
 };

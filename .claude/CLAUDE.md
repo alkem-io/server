@@ -14,17 +14,17 @@
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|------------|
-| Runtime | Node.js 22 LTS (Volta pins 22.21.1) |
-| Package Manager | pnpm 10.17.1 via Corepack |
-| Framework | NestJS 10, TypeORM 0.3, Apollo Server 4 |
-| Language | TypeScript 5.3 |
-| Database | PostgreSQL 17.5 |
-| Messaging | RabbitMQ queues |
-| Auth | Ory Kratos/Oathkeeper |
-| Monitoring | Elastic APM |
-| Logging | Winston |
+| Layer           | Technology                              |
+| --------------- | --------------------------------------- |
+| Runtime         | Node.js 22 LTS (Volta pins 22.21.1)     |
+| Package Manager | pnpm 10.17.1 via Corepack               |
+| Framework       | NestJS 10, TypeORM 0.3, Apollo Server 4 |
+| Language        | TypeScript 5.3                          |
+| Database        | PostgreSQL 17.5                         |
+| Messaging       | RabbitMQ queues                         |
+| Auth            | Ory Kratos/Oathkeeper                   |
+| Monitoring      | Elastic APM                             |
+| Logging         | Winston                                 |
 
 ---
 
@@ -35,6 +35,7 @@
 SDD is **mandatory** for feature work. Read `.specify/memory/constitution.md` first.
 
 **Canonical progression:**
+
 ```
 /spec → /clarify → /plan → /checklist → /tasks → /implement → /stabilize → /done
 ```
@@ -42,6 +43,7 @@ SDD is **mandatory** for feature work. Read `.specify/memory/constitution.md` fi
 **Artifacts location:** `specs/<NNN-slug>/` (plan, spec, checklist, tasks)
 
 **Work classification** (per `agents.md`):
+
 - **Agentic path**: Scoped changes (≤ ~400 LOC with known outcomes)
 - **Full SDD**: Contracts, migrations, or high ambiguity
 
@@ -51,22 +53,24 @@ SDD is **mandatory** for feature work. Read `.specify/memory/constitution.md` fi
 
 ### Prerequisites
 
-| Tool | Version | Notes |
-|------|---------|-------|
-| Node.js | ≥22.0 | Volta config helps |
-| pnpm | ≥10.17.1 | `corepack enable && corepack prepare pnpm@10.17.1 --activate` |
-| Docker + Compose | Latest | Required for services |
-| PostgreSQL | 17.5 | |
-| RabbitMQ | Latest | Message queue |
-| Redis | Latest | Caching |
-| Ory Kratos/Oathkeeper | - | Auth stack |
+| Tool                  | Version  | Notes                                                         |
+| --------------------- | -------- | ------------------------------------------------------------- |
+| Node.js               | ≥22.0    | Volta config helps                                            |
+| pnpm                  | ≥10.17.1 | `corepack enable && corepack prepare pnpm@10.17.1 --activate` |
+| Docker + Compose      | Latest   | Required for services                                         |
+| PostgreSQL            | 17.5     |                                                               |
+| RabbitMQ              | Latest   | Message queue                                                 |
+| Redis                 | Latest   | Caching                                                       |
+| Ory Kratos/Oathkeeper | -        | Auth stack                                                    |
 
 ### Optional Tools
+
 - `jq` - Used in docs for auth flows
 - `psql` client - Direct DB access
 - `mkcert` - TLS dev certificates
 
 ### Configuration Files
+
 - `.env.docker` - Feeds compose stacks
 - `.env` - Local variables for TypeORM CLI
 - `tsconfig.json` - Path aliases (`@domain/*`, `@services/*`)
@@ -84,7 +88,7 @@ SDD is **mandatory** for feature work. Read `.specify/memory/constitution.md` fi
 // Correct
 throw new NotFoundException('Entity not found', undefined, {
   entityId: id,
-  entityType: 'User'
+  entityType: 'User',
 } as ExceptionDetails);
 
 // Incorrect
@@ -93,11 +97,11 @@ throw new NotFoundException(`User ${id} not found`);
 
 ### Logging
 
-| Level | Signature |
-|-------|-----------|
-| Verbose | `(message, context)` |
-| Warning | `(message, context)` |
-| Error | `(message, stacktrace, context)` |
+| Level   | Signature                        |
+| ------- | -------------------------------- |
+| Verbose | `(message, context)`             |
+| Warning | `(message, context)`             |
+| Error   | `(message, stacktrace, context)` |
 
 Message parameter accepts string or object for structured data.
 
@@ -133,16 +137,19 @@ pnpm start
 ### Local Development Flow
 
 1. Start dependencies:
+
    ```bash
    pnpm run start:services  # Uses quickstart-services.yml
    ```
 
 2. Run migrations:
+
    ```bash
    pnpm run migration:run
    ```
 
 3. Start server:
+
    ```bash
    pnpm start:dev
    ```
@@ -207,19 +214,23 @@ pnpm format
 ### Workflow
 
 1. Print schema:
+
    ```bash
    pnpm run schema:print
    ```
 
 2. Sort schema:
+
    ```bash
    pnpm run schema:sort
    ```
 
 3. Diff against baseline:
+
    ```bash
    pnpm run schema:diff
    ```
+
    Requires `tmp/prev.schema.graphql` (fetch from base branch if absent)
 
 4. Review `change-report.json`:
@@ -315,13 +326,13 @@ docs/                    # Documentation
 
 ### GitHub Actions Workflows
 
-| Workflow | Trigger | Purpose |
-|----------|---------|---------|
-| `schema-contract.yml` | PRs | Validates schema changes, posts diff comment |
-| `schema-baseline.yml` | Merge to `develop` | Regenerates baseline, opens PR if changed |
-| `build-release-docker-hub.yml` | Release | Builds and publishes Docker images |
-| `build-deploy-k8s-*.yml` | Deployment | Targets dev/sandbox/test clusters |
-| `trigger-e2e-tests.yml` | Dispatch | Triggers full-stack tests |
+| Workflow                       | Trigger            | Purpose                                      |
+| ------------------------------ | ------------------ | -------------------------------------------- |
+| `schema-contract.yml`          | PRs                | Validates schema changes, posts diff comment |
+| `schema-baseline.yml`          | Merge to `develop` | Regenerates baseline, opens PR if changed    |
+| `build-release-docker-hub.yml` | Release            | Builds and publishes Docker images           |
+| `build-deploy-k8s-*.yml`       | Deployment         | Targets dev/sandbox/test clusters            |
+| `trigger-e2e-tests.yml`        | Dispatch           | Triggers full-stack tests                    |
 
 ### Schema Contract CI
 
@@ -341,6 +352,7 @@ docs/                    # Documentation
 ## Port Configuration
 
 Default ports (adjust via environment if conflicts):
+
 - `3000` - GraphQL API
 - `4000`, `4001` - Additional services
 - `5432` - PostgreSQL
@@ -350,14 +362,14 @@ Default ports (adjust via environment if conflicts):
 
 ## Documentation References
 
-| Topic | File |
-|-------|------|
-| Setup | `docs/Developing.md` |
-| Running | `docs/Running.md` |
-| QA | `docs/QA.md` |
-| Data Management | `docs/DataManagement.md` |
-| Architecture | `docs/Design.md` |
-| Authorization | `docs/authorization-forest.md` |
-| Credentials | `docs/credential-based-authorization.md` |
-| Pagination | `docs/Pagination.md` |
-| Constitution | `.specify/memory/constitution.md` |
+| Topic           | File                                     |
+| --------------- | ---------------------------------------- |
+| Setup           | `docs/Developing.md`                     |
+| Running         | `docs/Running.md`                        |
+| QA              | `docs/QA.md`                             |
+| Data Management | `docs/DataManagement.md`                 |
+| Architecture    | `docs/Design.md`                         |
+| Authorization   | `docs/authorization-forest.md`           |
+| Credentials     | `docs/credential-based-authorization.md` |
+| Pagination      | `docs/Pagination.md`                     |
+| Constitution    | `.specify/memory/constitution.md`        |

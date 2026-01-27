@@ -1,0 +1,108 @@
+/**
+ * Vitest Configuration Template
+ *
+ * This is the target configuration for the Jest to Vitest migration.
+ * Copy to repository root as `vitest.config.ts` during implementation.
+ */
+import swc from 'unplugin-swc';
+import tsconfigPaths from 'vite-tsconfig-paths';
+import { defineConfig } from 'vitest/config';
+
+export default defineConfig({
+  plugins: [
+    // SWC plugin for decorator metadata support (required for NestJS DI)
+    swc.vite(),
+    // Automatically resolve path aliases from tsconfig.json
+    tsconfigPaths(),
+  ],
+  test: {
+    // Enable global test APIs (describe, it, expect, beforeEach, etc.)
+    // This provides Jest-like API without explicit imports
+    globals: true,
+
+    // Test environment
+    environment: 'node',
+
+    // Test file patterns
+    include: ['**/?(*.)+(spec).ts'],
+    exclude: ['**/node_modules/**', '**/dist/**'],
+
+    // Test roots (matching current Jest config)
+    // Note: Vitest uses 'include' patterns instead of 'roots'
+
+    // Automatically clear mock calls before every test
+    clearMocks: true,
+
+    // Test timeout (matching current Jest config: 90 seconds)
+    testTimeout: 90000,
+
+    // Coverage configuration
+    coverage: {
+      provider: 'v8',
+      enabled: false, // Enable via CLI: vitest run --coverage
+      reporter: ['text', 'lcov', 'json'],
+      reportsDirectory: './coverage-ci',
+
+      // Files to include in coverage (matching current Jest config)
+      include: [
+        'src/**/*.service.ts',
+        'src/core/authentication/*.strategy.*',
+        'src/core/authorization/*.guard.*',
+        'src/core/middleware/*.*',
+        'src/core/logging/logging.profiling.decorator.ts',
+        'src/common/error-handling/http.exceptions.filter.ts',
+        'src/schema-contract/**/*.ts',
+        'src/schema-bootstrap/**/*.ts',
+      ],
+
+      // Files to exclude from coverage
+      exclude: [
+        '**/*.spec.ts',
+        '**/*.e2e-spec.ts',
+        '**/*.it-spec.ts',
+        '**/node_modules/**',
+        '**/dist/**',
+      ],
+
+      // Coverage thresholds (matching current Jest config)
+      thresholds: {
+        'src/schema-contract/classify/**/*.ts': {
+          lines: 90,
+          statements: 90,
+          functions: 90,
+          branches: 85,
+        },
+        'src/schema-contract/diff/**/*.ts': {
+          lines: 85,
+          statements: 80,
+          functions: 90,
+          branches: 75,
+        },
+        'src/schema-contract/governance/**/*.ts': {
+          lines: 75,
+          statements: 70,
+          functions: 65,
+          branches: 60,
+        },
+        'src/schema-contract/deprecation/**/*.ts': {
+          lines: 70,
+          statements: 70,
+          functions: 75,
+          branches: 60,
+        },
+        'src/schema-contract/model/**/*.ts': {
+          lines: 100,
+          statements: 100,
+          functions: 100,
+          branches: 100,
+        },
+        'src/schema-contract/snapshot/**/*.ts': {
+          lines: 50,
+          statements: 50,
+          functions: 50,
+          branches: 0,
+        },
+      },
+    },
+  },
+});
