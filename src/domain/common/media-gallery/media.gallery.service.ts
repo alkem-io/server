@@ -2,7 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, FindOneOptions } from 'typeorm';
 import { MediaGallery } from './media.gallery.entity';
-import { CreateMediaGalleryInput, UpdateMediaGalleryInput } from './dto';
+import { CreateMediaGalleryInput } from './dto/media.gallery.dto.create';
+import { UpdateMediaGalleryInput } from './dto/media.gallery.dto.update';
 import { IMediaGallery } from './media.gallery.interface';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
@@ -18,18 +19,13 @@ import { DocumentService } from '@domain/storage/document/document.service';
 import { VisualType } from '@common/enums/visual.type';
 import { DEFAULT_VISUAL_CONSTRAINTS } from '@domain/common/visual/visual.constraints';
 import type { CreateVisualInput } from '@domain/common/visual/dto/visual.dto.create';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { Profile } from '../profile';
 
 type MediaGalleryVisualInput = Partial<
   Pick<
     CreateVisualInput,
-    | 'type'
-    | 'uri'
-    | 'alternativeText'
-    | 'minWidth'
-    | 'maxWidth'
-    | 'minHeight'
-    | 'maxHeight'
-    | 'aspectRatio'
+    'type' | 'minWidth' | 'maxWidth' | 'minHeight' | 'maxHeight' | 'aspectRatio'
   >
 > & { uri?: string };
 
@@ -49,9 +45,7 @@ export class MediaGalleryService {
     storageAggregatorId: string,
     userID?: string
   ): Promise<IMediaGallery> {
-    const mediaGallery = MediaGallery.create({
-      nameID: mediaGalleryData.nameID,
-    });
+    const mediaGallery = MediaGallery.create();
     mediaGallery.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.MEDIA_GALLERY
     );
@@ -61,12 +55,12 @@ export class MediaGalleryService {
     // Note: The storage aggregator is for the profile's storage bucket
     mediaGallery.profile = (await this.profileService.createProfile(
       {
-        displayName: mediaGalleryData.nameID || 'Media Gallery',
+        displayName: 'Media Gallery',
         description: 'Media Gallery',
       },
       ProfileType.CALLOUT_FRAMING,
-      { id: storageAggregatorId } as any
-    )) as any;
+      { id: storageAggregatorId } as IStorageAggregator
+    )) as Profile;
 
     // Create visuals using VisualService - use URI from DTO as-is
     mediaGallery.visuals = await this.createMediaGalleryVisuals(

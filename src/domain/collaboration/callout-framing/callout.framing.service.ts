@@ -209,14 +209,6 @@ export class CalloutFramingService {
     storageAggregator: IStorageAggregator,
     userID?: string
   ) {
-    if (!mediaGalleryData.nameID) {
-      mediaGalleryData.nameID =
-        this.namingService.createNameIdAvoidingReservedNameIDs(
-          'Media Gallery',
-          []
-        );
-    }
-
     calloutFraming.mediaGallery =
       await this.mediaGalleryService.createMediaGallery(
         mediaGalleryData,
@@ -446,14 +438,16 @@ export class CalloutFramingService {
       await this.memoService.deleteMemo(calloutFraming.memo.id);
     }
 
+    if (calloutFraming.mediaGallery) {
+      await this.mediaGalleryService.deleteMediaGallery(
+        calloutFraming.mediaGallery.id
+      );
+    }
+
     if (calloutFraming.authorization) {
       await this.authorizationPolicyService.delete(
         calloutFraming.authorization
       );
-    }
-
-    if (calloutFraming.mediaGallery) {
-      // Assuming cascade delete or we can add explicit delete call if needed later
     }
 
     const result = await this.calloutFramingRepository.remove(

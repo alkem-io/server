@@ -34,16 +34,4 @@ export class CreateVisualInput {
     description: 'Dimensions ratio width / height.',
   })
   aspectRatio!: number;
-
-  @Field(() => String, {
-    nullable: true,
-    description: 'URI for the visual.',
-  })
-  uri?: string;
-
-  @Field(() => String, {
-    nullable: true,
-    description: 'Alternative text for the visual.',
-  })
-  alternativeText?: string;
 }

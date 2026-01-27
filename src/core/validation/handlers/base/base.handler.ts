@@ -106,10 +106,8 @@ import { UpdateUserSettingsNotificationSpaceAdminInput } from '@domain/community
 import { UpdateUserSettingsNotificationSpaceInput } from '@domain/community/user-settings/dto/user.settings.notification.space.dto.update';
 import { NotificationSettingInput } from '@domain/community/user-settings/dto/notification.setting.input';
 import { UpdateCalloutEntityInput } from '@domain/collaboration/callout/dto';
-import {
-  CreateMediaGalleryInput,
-  UpdateMediaGalleryInput,
-} from '@domain/common/media-gallery/dto';
+import { CreateMediaGalleryInput } from '@domain/common/media-gallery/dto/media.gallery.dto.create';
+import { UpdateMediaGalleryInput } from '@domain/common/media-gallery/dto/media.gallery.dto.update';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
