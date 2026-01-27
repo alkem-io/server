@@ -9,7 +9,6 @@ import {
   EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Room } from '@domain/communication/room/room.entity';
@@ -27,7 +26,6 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston/dist/winston.constant
 import { FindOneOptions, Repository } from 'typeorm';
 import { ConversationMembership } from '../conversation-membership/conversation.membership.entity';
 import { IConversationMembership } from '../conversation-membership/conversation.membership.interface';
-import { RoomLookupService } from '../room-lookup/room.lookup.service';
 import { Conversation } from './conversation.entity';
 import { IConversation } from './conversation.interface';
 

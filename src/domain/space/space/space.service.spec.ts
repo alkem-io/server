@@ -25,7 +25,7 @@ import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { Repository } from 'typeorm';
-import { type Mock, vi } from 'vitest';
+import { vi } from 'vitest';
 import { Account } from '../account/account.entity';
 import { DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN } from '../account/constants';
 import { SpaceAbout } from '../space.about';

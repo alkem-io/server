@@ -13,7 +13,6 @@ import { AiServerAdapterInvocationInput } from '@services/adapters/ai-server-ada
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IRoom } from '../room/room.interface';
 import { RoomLookupService } from '../room-lookup/room.lookup.service';
-import { IVcInteraction } from '../vc-interaction/vc.interaction.interface';
 
 @Injectable()
 export class VirtualContributorMessageService {
