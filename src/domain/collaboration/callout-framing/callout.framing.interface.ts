@@ -23,9 +23,5 @@ export abstract class ICalloutFraming extends IAuthorizable {
 
   memo?: IMemo;
 
-  @Field(() => IMediaGallery, {
-    description: 'Media gallery attached to this callout framing.',
-    nullable: true,
-  })
   mediaGallery?: IMediaGallery;
 }

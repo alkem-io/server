@@ -38,7 +38,7 @@ export class VisualService {
     visualInput: CreateVisualInput,
     initialUri?: string
   ): IVisual {
-    if (!visualInput.name) {
+    if (!visualInput.type) {
       throw new ValidationException(
         'Visual type (name) must be provided when creating a visual.',
         LogContext.COMMUNITY
@@ -65,10 +65,6 @@ export class VisualService {
     visual.uri = visualData.uri;
     if (visualData.alternativeText !== undefined) {
       visual.alternativeText = visualData.alternativeText;
-    }
-
-    if (visualData.name) {
-      visual.name = visualData.name;
     }
 
     return await this.visualRepository.save(visual);
@@ -199,7 +195,7 @@ export class VisualService {
   public createVisualBanner(uri?: string): IVisual {
     return this.createVisual(
       {
-        name: VisualType.BANNER,
+        type: VisualType.BANNER,
         ...DEFAULT_VISUAL_CONSTRAINTS[VisualType.BANNER],
       },
       uri
@@ -209,7 +205,7 @@ export class VisualService {
   public createVisualWhiteboardPreview(uri?: string): IVisual {
     return this.createVisual(
       {
-        name: VisualType.WHITEBOARD_PREVIEW,
+        type: VisualType.WHITEBOARD_PREVIEW,
         ...DEFAULT_VISUAL_CONSTRAINTS[VisualType.WHITEBOARD_PREVIEW],
       },
       uri
@@ -219,7 +215,7 @@ export class VisualService {
   public createVisualCard(uri?: string): IVisual {
     return this.createVisual(
       {
-        name: VisualType.CARD,
+        type: VisualType.CARD,
         ...DEFAULT_VISUAL_CONSTRAINTS[VisualType.CARD],
       },
       uri
@@ -229,7 +225,7 @@ export class VisualService {
   public createVisualBannerWide(uri?: string): IVisual {
     return this.createVisual(
       {
-        name: VisualType.BANNER_WIDE,
+        type: VisualType.BANNER_WIDE,
         ...DEFAULT_VISUAL_CONSTRAINTS[VisualType.BANNER_WIDE],
       },
       uri
@@ -239,7 +235,7 @@ export class VisualService {
   public createVisualAvatar(uri?: string): IVisual {
     return this.createVisual(
       {
-        name: VisualType.AVATAR,
+        type: VisualType.AVATAR,
         ...DEFAULT_VISUAL_CONSTRAINTS[VisualType.AVATAR],
       },
       uri
@@ -249,7 +245,7 @@ export class VisualService {
   public createVisualMediaGalleryImage(uri?: string): IVisual {
     return this.createVisual(
       {
-        name: VisualType.MEDIA_GALLERY_IMAGE,
+        type: VisualType.MEDIA_GALLERY_IMAGE,
         ...DEFAULT_VISUAL_CONSTRAINTS[VisualType.MEDIA_GALLERY_IMAGE],
       },
       uri
@@ -259,7 +255,7 @@ export class VisualService {
   public createVisualMediaGalleryVideo(uri?: string): IVisual {
     return this.createVisual(
       {
-        name: VisualType.MEDIA_GALLERY_VIDEO,
+        type: VisualType.MEDIA_GALLERY_VIDEO,
         ...DEFAULT_VISUAL_CONSTRAINTS[VisualType.MEDIA_GALLERY_VIDEO],
       },
       uri

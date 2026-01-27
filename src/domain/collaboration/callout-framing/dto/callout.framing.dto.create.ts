@@ -44,7 +44,7 @@ export class CreateCalloutFramingInput {
 
   @Field(() => CreateMediaGalleryInput, { nullable: true })
   @IsOptional()
-  // @ValidateNested()
+  @ValidateNested()
   @Type(() => CreateMediaGalleryInput)
   mediaGallery?: CreateMediaGalleryInput;
 

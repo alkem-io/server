@@ -8,7 +8,7 @@ export class CreateVisualInput {
     nullable: false,
     description: 'Type of visual to create (e.g. banner, avatar).',
   })
-  name!: VisualType;
+  type!: VisualType;
 
   @Field(() => Number, {
     description: 'Minimum allowed width for the visual.',

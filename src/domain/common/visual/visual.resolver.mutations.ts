@@ -59,20 +59,12 @@ export class VisualResolverMutations {
       uploadData.visualID,
       {
         relations: {
-          authorization: true,
           profile: {
-            authorization: true,
-            storageBucket: {
-              authorization: true,
-            },
+            storageBucket: true,
           },
           mediaGallery: {
-            authorization: true,
             profile: {
-              authorization: true,
-              storageBucket: {
-                authorization: true,
-              },
+              storageBucket: true,
             },
           },
         },

@@ -59,7 +59,7 @@ export class UpdateCalloutFramingInput {
 
   @Field(() => UpdateMediaGalleryInput, { nullable: true })
   @IsOptional()
-  // @ValidateNested()
+  @ValidateNested()
   @Type(() => UpdateMediaGalleryInput)
   mediaGallery?: UpdateMediaGalleryInput;
 }

@@ -7,8 +7,10 @@ import { IMediaGallery } from './media.gallery.interface';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { LogContext } from '@common/enums/logging.context';
 import { ProfileService } from '@domain/common/profile/profile.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Visual } from '@domain/common/visual/visual.entity';
 import { VisualService } from '@domain/common/visual/visual.service';
 import { ProfileType } from '@common/enums/profile.type';
@@ -20,7 +22,7 @@ import type { CreateVisualInput } from '@domain/common/visual/dto/visual.dto.cre
 type MediaGalleryVisualInput = Partial<
   Pick<
     CreateVisualInput,
-    | 'name'
+    | 'type'
     | 'uri'
     | 'alternativeText'
     | 'minWidth'
@@ -38,7 +40,8 @@ export class MediaGalleryService {
     private readonly mediaGalleryRepository: Repository<MediaGallery>,
     private readonly profileService: ProfileService,
     private readonly visualService: VisualService,
-    private readonly documentService: DocumentService
+    private readonly documentService: DocumentService,
+    private readonly authorizationPolicyService: AuthorizationPolicyService
   ) {}
 
   public async createMediaGallery(
@@ -90,6 +93,48 @@ export class MediaGalleryService {
     return await this.mediaGalleryRepository.save(mediaGallery);
   }
 
+  public async deleteMediaGallery(
+    mediaGalleryId: string
+  ): Promise<IMediaGallery> {
+    const mediaGallery = await this.getMediaGalleryOrFail(mediaGalleryId, {
+      relations: {
+        authorization: true,
+        profile: true,
+        visuals: true,
+      },
+    });
+
+    if (!mediaGallery.profile) {
+      throw new RelationshipNotFoundException(
+        `Profile not found on media gallery: '${mediaGallery.id}'`,
+        LogContext.COLLABORATION
+      );
+    }
+
+    if (!mediaGallery.authorization) {
+      throw new RelationshipNotFoundException(
+        `Authorization not found on media gallery: '${mediaGallery.id}'`,
+        LogContext.COLLABORATION
+      );
+    }
+
+    // Delete visuals
+    if (mediaGallery.visuals) {
+      for (const visual of mediaGallery.visuals) {
+        await this.visualService.deleteVisual({ ID: visual.id });
+      }
+    }
+
+    await this.profileService.deleteProfile(mediaGallery.profile.id);
+    await this.authorizationPolicyService.delete(mediaGallery.authorization);
+
+    const deletedMediaGallery = await this.mediaGalleryRepository.remove(
+      mediaGallery as MediaGallery
+    );
+    deletedMediaGallery.id = mediaGalleryId;
+    return deletedMediaGallery;
+  }
+
   public async getMediaGalleryOrFail(
     mediaGalleryID: string,
     options?: FindOneOptions<MediaGallery>
@@ -122,7 +167,7 @@ export class MediaGalleryService {
     visualInput: MediaGalleryVisualInput
   ): Promise<Visual> {
     const resolvedType = await this.resolveMediaGalleryVisualType(
-      visualInput.name,
+      visualInput.type,
       visualInput.uri
     );
     const constraints = DEFAULT_VISUAL_CONSTRAINTS[resolvedType];
@@ -153,7 +198,7 @@ export class MediaGalleryService {
     const visual = this.visualService.createVisual(
       {
         ...(mergedInput as any),
-        name: resolvedType,
+        type: resolvedType,
       },
       visualInput.uri
     ) as Visual;

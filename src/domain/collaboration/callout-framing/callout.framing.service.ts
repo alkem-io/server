@@ -218,11 +218,55 @@ export class CalloutFramingService {
     }
 
     calloutFraming.mediaGallery =
-      (await this.mediaGalleryService.createMediaGallery(
+      await this.mediaGalleryService.createMediaGallery(
         mediaGalleryData,
         storageAggregator.id,
         userID
-      )) as any;
+      );
+  }
+
+  private async deleteInconsistentFramingContent(
+    calloutFraming: ICalloutFraming
+  ) {
+    // If there was a memo before, we delete it
+    if (
+      calloutFraming.memo &&
+      calloutFraming.type !== CalloutFramingType.MEMO
+    ) {
+      await this.memoService.deleteMemo(calloutFraming.memo.id);
+      calloutFraming.memo = undefined;
+    }
+
+    // If there was a media gallery before, we delete it
+    if (
+      calloutFraming.mediaGallery &&
+      calloutFraming.type !== CalloutFramingType.MEDIA_GALLERY
+    ) {
+      await this.mediaGalleryService.deleteMediaGallery(
+        calloutFraming.mediaGallery.id
+      );
+      calloutFraming.mediaGallery = undefined;
+    }
+
+    // If there was a link before, we delete it
+    if (
+      calloutFraming.link &&
+      calloutFraming.type !== CalloutFramingType.LINK
+    ) {
+      await this.linkService.deleteLink(calloutFraming.link.id);
+      calloutFraming.link = undefined;
+    }
+
+    // If there was a whiteboard before, we delete it
+    if (
+      calloutFraming.whiteboard &&
+      calloutFraming.type !== CalloutFramingType.WHITEBOARD
+    ) {
+      await this.whiteboardService.deleteWhiteboard(
+        calloutFraming.whiteboard.id
+      );
+      calloutFraming.whiteboard = undefined;
+    }
   }
 
   public async updateCalloutFraming(
@@ -257,20 +301,9 @@ export class CalloutFramingService {
       calloutFraming.type = calloutFramingData.type;
     }
 
+    await this.deleteInconsistentFramingContent(calloutFraming);
     switch (calloutFraming.type) {
       case CalloutFramingType.WHITEBOARD: {
-        // If there was a memo before, we delete it
-        if (calloutFraming.memo) {
-          await this.memoService.deleteMemo(calloutFraming.memo.id);
-          calloutFraming.memo = undefined;
-        }
-
-        // If there was a link before, we delete it
-        if (calloutFraming.link) {
-          await this.linkService.deleteLink(calloutFraming.link.id);
-          calloutFraming.link = undefined;
-        }
-
         // if there is no content coming with the mutation, we do nothing with the whiteboard
         if (!calloutFramingData.whiteboardContent) {
           return calloutFraming;
@@ -308,21 +341,7 @@ export class CalloutFramingService {
         break;
       }
       case CalloutFramingType.MEMO: {
-        // If there was a whiteboard before, we delete it
-        if (calloutFraming.whiteboard) {
-          await this.whiteboardService.deleteWhiteboard(
-            calloutFraming.whiteboard.id
-          );
-          calloutFraming.whiteboard = undefined;
-        }
-
-        // If there was a link before, we delete it
-        if (calloutFraming.link) {
-          await this.linkService.deleteLink(calloutFraming.link.id);
-          calloutFraming.link = undefined;
-        }
-
-        // if there is no content coming with the mutation, we do nothing with the whiteboard
+        // if there is no content coming with the mutation, we do nothing with the memo
         if (!calloutFramingData.memoContent) {
           return calloutFraming;
         }
@@ -354,20 +373,6 @@ export class CalloutFramingService {
         break;
       }
       case CalloutFramingType.LINK: {
-        // If there was a whiteboard before, we delete it
-        if (calloutFraming.whiteboard) {
-          await this.whiteboardService.deleteWhiteboard(
-            calloutFraming.whiteboard.id
-          );
-          calloutFraming.whiteboard = undefined;
-        }
-
-        // If there was a memo before, we delete it
-        if (calloutFraming.memo) {
-          await this.memoService.deleteMemo(calloutFraming.memo.id);
-          calloutFraming.memo = undefined;
-        }
-
         // Handle LINK type updates
         if (calloutFraming.link && calloutFramingData.link) {
           calloutFraming.link = await this.linkService.updateLink(
@@ -382,26 +387,6 @@ export class CalloutFramingService {
         break;
       }
       case CalloutFramingType.MEDIA_GALLERY: {
-        // If there was a whiteboard before, we delete it
-        if (calloutFraming.whiteboard) {
-          await this.whiteboardService.deleteWhiteboard(
-            calloutFraming.whiteboard.id
-          );
-          calloutFraming.whiteboard = undefined;
-        }
-
-        // If there was a memo before, we delete it
-        if (calloutFraming.memo) {
-          await this.memoService.deleteMemo(calloutFraming.memo.id);
-          calloutFraming.memo = undefined;
-        }
-
-        // If there was a link before, we delete it
-        if (calloutFraming.link) {
-          await this.linkService.deleteLink(calloutFraming.link.id);
-          calloutFraming.link = undefined;
-        }
-
         // Handle MEDIA_GALLERY type updates
         if (calloutFraming.mediaGallery && calloutFramingData.mediaGallery) {
           calloutFraming.mediaGallery =
@@ -421,27 +406,7 @@ export class CalloutFramingService {
       }
       case CalloutFramingType.NONE:
       default: {
-        // if the type is NONE we remove any existing framing content
-        if (calloutFraming.whiteboard) {
-          await this.whiteboardService.deleteWhiteboard(
-            calloutFraming.whiteboard.id
-          );
-          calloutFraming.whiteboard = undefined;
-        }
-        if (calloutFraming.memo) {
-          await this.memoService.deleteMemo(calloutFraming.memo.id);
-          calloutFraming.memo = undefined;
-        }
-        if (calloutFraming.link) {
-          await this.linkService.deleteLink(calloutFraming.link.id);
-          calloutFraming.link = undefined;
-        }
-        if (calloutFraming.mediaGallery) {
-          // TODO: Implement delete in MediaGalleryService if needed
-          // For now just set to undefined, assuming cascade or manual cleanup later
-          // Ideally: await this.mediaGalleryService.delete(calloutFraming.mediaGallery.id);
-          calloutFraming.mediaGallery = undefined;
-        }
+        // if the type is NONE we have already deleted any existing framing content
         break;
       }
     }
