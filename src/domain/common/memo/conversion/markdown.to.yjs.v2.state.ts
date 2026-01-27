@@ -90,8 +90,8 @@ const parseMarkdownViaHtml = (markdown: string): ProseMirrorNode => {
   // Wrap table cell content in paragraphs to match schema expectations
   // The schema expects tableCell to contain block+ content (paragraphs)
   html = html
-    .replace(/<td>([^<]*)<\/td>/g, '<td><p>$1</p></td>')
-    .replace(/<th>([^<]*)<\/th>/g, '<th><p>$1</p></th>')
+    .replace(/<td>([\s\S]*?)<\/td>/g, '<td><p>$1</p></td>')
+    .replace(/<th>([\s\S]*?)<\/th>/g, '<th><p>$1</p></th>')
     // Handle empty cells
     .replace(/<td><p><\/p><\/td>/g, '<td><p></p></td>')
     .replace(/<th><p><\/p><\/th>/g, '<th><p></p></th>');
