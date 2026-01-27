@@ -63,7 +63,7 @@ export class PostService {
 
   public async deletePost(postId: string): Promise<IPost> {
     const post = await this.getPostOrFail(postId, {
-      relations: { profile: true },
+      relations: { profile: true, comments: true },
     });
     if (post.authorization) {
       await this.authorizationPolicyService.delete(post.authorization);

@@ -6,10 +6,12 @@ import { Field, InterfaceType } from '@nestjs/graphql';
 import { BaseSearchHit } from '@services/api/search/dto/results/base.search.hit';
 import { SearchResultType } from '../../search.result.type';
 import { ISearchResultCallout } from './search.result.callout';
+import { ISearchResultMemo } from './search.result.memo';
 import { ISearchResultOrganization } from './search.result.organization';
 import { ISearchResultPost } from './search.result.post';
 import { ISearchResultSpace } from './search.result.space';
 import { ISearchResultUser } from './search.result.user';
+import { ISearchResultWhiteboard } from './search.result.whiteboard';
 
 @InterfaceType('SearchResult', {
   resolveType(searchResult) {
@@ -22,12 +24,14 @@ import { ISearchResultUser } from './search.result.user';
         return ISearchResultUser;
       case SearchResultType.ORGANIZATION:
         return ISearchResultOrganization;
-      case SearchResultType.POST:
-        return ISearchResultPost;
       case SearchResultType.CALLOUT:
         return ISearchResultCallout;
+      case SearchResultType.POST:
+        return ISearchResultPost;
+      case SearchResultType.MEMO:
+        return ISearchResultMemo;
       case SearchResultType.WHITEBOARD:
-        return ISearchResultCallout;
+        return ISearchResultWhiteboard;
     }
 
     throw new BaseException(

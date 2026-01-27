@@ -1,6 +1,6 @@
 {
   "name": "alkemio-server",
-  "version": "0.131.1",
+  "version": "0.131.9",
   "description": "Alkemio server, responsible for managing the shared Alkemio platform",
   "author": "Alkemio Foundation",
   "private": false,
@@ -59,7 +59,7 @@
     }
   },
   "dependencies": {
-    "@alkemio/matrix-adapter-lib": "0.8.4-mapping5",
+    "@alkemio/matrix-adapter-lib": "0.8.4-mapping8",
     "@alkemio/notifications-lib": "0.12.2",
     "@apollo/server": "^4.10.4",
     "@elastic/elasticsearch": "^8.12.2",
@@ -113,6 +113,7 @@
     "helmet": "^4.6.0",
     "i18n-iso-countries": "^7.14.0",
     "image-size": "^1.1.1",
+    "jsdom": "^27.4.0",
     "jwks-rsa": "^2.0.4",
     "jwt-decode": "^3.1.2",
     "lodash": "^4.17.21",
@@ -153,6 +154,7 @@
     "@types/cookie-parser": "^1.4.7",
     "@types/express": "^4.17.21",
     "@types/graphql-upload": "^8.0.11",
+    "@types/jsdom": "^27.0.0",
     "@types/lodash": "^4.17.14",
     "@types/markdown-it": "^14.1.2",
     "@types/module-alias": "^2.0.4",

@@ -1,3 +1,4 @@
+import { SYSTEM_ACTOR_IDS } from '@common/constants/system.actor.ids';
 import { AuthorizationCredential, LogContext } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions';
 import { InvalidUUID } from '@common/exceptions/invalid.uuid';
@@ -221,6 +222,11 @@ export class ContributorLookupService {
     agentId: string,
     options?: Omit<FindOneOptions<User>, 'where'>
   ): Promise<IContributor | null> {
+    if (SYSTEM_ACTOR_IDS.has(agentId)) {
+      return null;
+      // return UNKNOWN_CONTRIBUTOR;
+    }
+
     if (!isUUID(agentId)) {
       throw new InvalidUUID(
         'Invalid UUID provided for agent ID!',

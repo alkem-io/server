@@ -6,11 +6,8 @@ import { VirtualContributorLookupModule } from '@domain/community/virtual-contri
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PlatformWellKnownVirtualContributorsModule } from '@platform/platform.well.known.virtual.contributors';
-import { AiServerAdapterModule } from '@services/adapters/ai-server-adapter/ai.server.adapter.module';
-import { GuidanceReporterModule } from '@services/external/elasticsearch/guidance-reporter/guidance.reporter.module';
 import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
 import { ConversationMembershipModule } from '../conversation-membership/conversation.membership.module';
-import { RoomLookupModule } from '../room-lookup/room.lookup.module';
 import { Conversation } from './conversation.entity';
 import { ConversationResolverFields } from './conversation.resolver.fields';
 import { ConversationResolverMutations } from './conversation.resolver.mutations';
@@ -23,11 +20,8 @@ import { ConversationAuthorizationService } from './conversation.service.authori
     AuthorizationPolicyModule,
     AuthorizationModule,
     RoomModule,
-    RoomLookupModule,
     UserLookupModule,
     VirtualContributorLookupModule,
-    AiServerAdapterModule,
-    GuidanceReporterModule,
     PlatformWellKnownVirtualContributorsModule,
     ConversationMembershipModule,
     SubscriptionServiceModule,

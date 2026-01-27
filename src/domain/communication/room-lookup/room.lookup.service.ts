@@ -133,7 +133,7 @@ export class RoomLookupService {
     await this.roomRepository
       .createQueryBuilder()
       .update()
-      .set({ messagesCount: () => 'GREATEST(messagesCount - 1, 0)' })
+      .set({ messagesCount: () => 'GREATEST("messagesCount" - 1, 0)' })
       .where('id = :id', { id: roomId })
       .execute();
   }

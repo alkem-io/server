@@ -129,6 +129,10 @@ export type AlkemioConfig = {
         idle_timeout_ms: number;
         connection_timeout_ms: number;
       };
+      pgbouncer?: {
+        enabled: boolean;
+        statement_timeout_ms: number;
+      };
     };
     local_storage: {
       path: string;

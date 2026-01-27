@@ -1220,7 +1220,7 @@ export class CommunicationAdapter {
     id: string;
     content: string;
     sender_actor_id: string;
-    timestamp: number;
+    timestamp: number; // Unix milliseconds (contract with matrix-adapter)
     thread_id?: string;
     reactions?: Array<{
       id: string;

@@ -30,8 +30,7 @@ export class VirtualContributorMessageService {
     threadID: string,
     agentInfo: AgentInfo,
     contextSpaceID: string,
-    room: IRoom,
-    _vcInteraction: IVcInteraction | undefined = undefined
+    room: IRoom
   ) {
     const virtualContributor =
       await this.virtualContributorLookupService.getVirtualContributorByAgentIdOrFail(

@@ -3,6 +3,7 @@ import { RoleName } from '@common/enums/role.name';
 import { ValidationException } from '@common/exceptions';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { CommunicationService } from '@domain/communication/communication/communication.service';
+import { ConversationService } from '@domain/communication/conversation/conversation.service';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { CommunityService } from '@domain/community/community/community.service';
 import { IUser } from '@domain/community/user/user.interface';
@@ -12,6 +13,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CommunicationAdminMembershipInput } from './dto';
 import { CommunicationAdminEnsureAccessInput } from './dto/admin.communication.dto.ensure.access.input';
 import { CommunicationAdminMembershipResult } from './dto/admin.communication.dto.membership.result';
+import { CommunicationAdminMigrateRoomsResult } from './dto/admin.communication.dto.migrate.rooms.result';
 import { CommunicationAdminRoomResult } from './dto/admin.communication.dto.orphaned.room.result';
 import { CommunicationAdminOrphanedUsageResult } from './dto/admin.communication.dto.orphaned.usage.result';
 import { CommunicationAdminRemoveOrphanedRoomInput } from './dto/admin.communication.dto.remove.orphaned.room';
@@ -24,6 +26,7 @@ export class AdminCommunicationService {
     private communicationService: CommunicationService,
     private communityService: CommunityService,
     private roleSetService: RoleSetService,
+    private conversationService: ConversationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -211,5 +214,57 @@ export class AdminCommunicationService {
       roomsUsed = roomsUsed.concat(communicationRoomsUsed);
     }
     return roomsUsed;
+  }
+
+  /**
+   * Migrate legacy conversations by creating rooms for those that don't have one.
+   * This handles orphaned conversations from the "lazy room creation" era.
+   * @returns Migration result with counts and any errors encountered
+   */
+  async migrateConversationRooms(): Promise<CommunicationAdminMigrateRoomsResult> {
+    const result = new CommunicationAdminMigrateRoomsResult();
+
+    const conversationsWithoutRooms =
+      await this.conversationService.findConversationsWithoutRooms();
+
+    this.logger.verbose?.(
+      `Found ${conversationsWithoutRooms.length} conversations without rooms to migrate`,
+      LogContext.COMMUNICATION
+    );
+
+    for (const conversation of conversationsWithoutRooms) {
+      try {
+        const room =
+          await this.conversationService.ensureRoomExists(conversation);
+        if (room) {
+          result.migrated++;
+          this.logger.verbose?.(
+            `Migrated conversation ${conversation.id} - created room ${room.id}`,
+            LogContext.COMMUNICATION
+          );
+        } else {
+          result.failed++;
+          result.errors.push(
+            `Conversation ${conversation.id}: room creation returned undefined`
+          );
+        }
+      } catch (error) {
+        result.failed++;
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        result.errors.push(`Conversation ${conversation.id}: ${errorMessage}`);
+        this.logger.warn(
+          `Failed to migrate conversation ${conversation.id}: ${errorMessage}`,
+          LogContext.COMMUNICATION
+        );
+      }
+    }
+
+    this.logger.verbose?.(
+      `Migration complete: ${result.migrated} migrated, ${result.failed} failed`,
+      LogContext.COMMUNICATION
+    );
+
+    return result;
   }
 }

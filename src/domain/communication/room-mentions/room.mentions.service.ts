@@ -122,8 +122,7 @@ export class RoomMentionsService {
         threadID,
         agentInfo,
         contextSpaceID,
-        room,
-        vcInteraction
+        room
       );
     }
   }
