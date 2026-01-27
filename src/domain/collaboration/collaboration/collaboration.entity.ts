@@ -5,7 +5,6 @@ import { Timeline } from '@domain/timeline/timeline/timeline.entity';
 import { InnovationFlow } from '../innovation-flow/innovation.flow.entity';
 import { License } from '@domain/common/license/license.entity';
 import { CalloutsSet } from '../callouts-set/callouts.set.entity';
-import { Space } from '@domain/space/space/space.entity';
 
 @Entity()
 export class Collaboration
@@ -46,7 +45,4 @@ export class Collaboration
   })
   @JoinColumn()
   license?: License;
-
-  @OneToOne(() => Space, space => space.collaboration)
-  space?: Space;
 }
