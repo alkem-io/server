@@ -50,9 +50,7 @@ export const markdownToYjsV2State = (_markdown: string): Uint8Array => {
   }
 
   const ydoc = prosemirrorToYDoc(pmDoc, 'default');
-  const encodedUpdate = Y.encodeStateAsUpdateV2(ydoc);
-
-  return encodedUpdate;
+  return Y.encodeStateAsUpdateV2(ydoc);
 };
 
 /**
