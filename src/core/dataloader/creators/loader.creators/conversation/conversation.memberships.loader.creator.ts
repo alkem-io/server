@@ -5,7 +5,7 @@ import { IConversationMembership } from '@domain/communication/conversation-memb
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import DataLoader from 'dataloader';
-import { EntityManager, In } from 'typeorm';
+import { EntityManager } from 'typeorm';
 
 /**
  * DataLoader creator for batching conversation membership lookups.
@@ -32,10 +32,16 @@ export class ConversationMembershipsLoaderCreator
       return [];
     }
 
-    const memberships = await this.manager.find(ConversationMembership, {
-      where: { conversationId: In([...conversationIds]) },
-      relations: { agent: true },
-    });
+    // Use QueryBuilder for selective column loading - only load agent.id and agent.type
+    const memberships = await this.manager
+      .getRepository(ConversationMembership)
+      .createQueryBuilder('membership')
+      .leftJoin('membership.agent', 'agent')
+      .addSelect(['agent.id', 'agent.type'])
+      .where('membership.conversationId IN (:...conversationIds)', {
+        conversationIds: [...conversationIds],
+      })
+      .getMany();
 
     // Group by conversation ID for O(1) lookup
     const grouped = new Map<string, IConversationMembership[]>();

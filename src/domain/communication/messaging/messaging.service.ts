@@ -108,10 +108,10 @@ export class MessagingService {
   }
 
   public async getConversationsCount(messagingID: string): Promise<number> {
-    const messaging = await this.getMessagingOrFail(messagingID, {
-      relations: { conversations: true },
-    });
-    return messaging.conversations.length;
+    // Use COUNT query instead of loading all conversations
+    return await this.entityManager
+      .getRepository('Conversation')
+      .count({ where: { messaging: { id: messagingID } } });
   }
 
   /**
@@ -350,12 +350,17 @@ export class MessagingService {
    * @returns The platform messaging
    */
   public async getPlatformMessaging(): Promise<IMessaging> {
-    // Query the platform and load the messaging relation with authorization
+    // Query the platform and load the messaging relation with minimal authorization columns
     const platform = await this.entityManager
       .getRepository('Platform')
       .createQueryBuilder('platform')
       .leftJoinAndSelect('platform.messaging', 'messaging')
-      .leftJoinAndSelect('messaging.authorization', 'authorization')
+      .leftJoin('messaging.authorization', 'authorization')
+      .addSelect([
+        'authorization.id',
+        'authorization.credentialRules',
+        'authorization.privilegeRules',
+      ])
       .getOne();
 
     if (!platform) {
@@ -379,7 +384,11 @@ export class MessagingService {
   /**
    * Get all conversations for a specific agent within a messaging container.
    * Uses the pivot table to find conversations where the agent is a member.
-   * Optionally filters by conversation type.
+   * Optionally filters by conversation type using an efficient self-join.
+   *
+   * For type filtering, uses a self-join to find the "other" member and filter
+   * by their agent type. This is more efficient than a correlated subquery.
+   *
    * @param messagingId - UUID of the messaging container (typically platform set)
    * @param agentId - UUID of the agent
    * @param typeFilter - Optional filter for conversation type (USER_USER or USER_VC)
@@ -393,31 +402,51 @@ export class MessagingService {
     const queryBuilder = this.conversationMembershipRepository
       .createQueryBuilder('membership')
       .innerJoinAndSelect('membership.conversation', 'conversation')
-      .leftJoinAndSelect('conversation.authorization', 'authorization')
-      // Eager-load room and its authorization — the query already joins conversations,
-      // just add the room relation to eliminate N queries
-      .leftJoinAndSelect('conversation.room', 'room')
-      .leftJoinAndSelect('room.authorization', 'roomAuthorization')
+      // Only select needed authorization columns (id, credentialRules, privilegeRules)
+      .leftJoin('conversation.authorization', 'authorization')
+      .addSelect([
+        'authorization.id',
+        'authorization.credentialRules',
+        'authorization.privilegeRules',
+      ])
+      // Only select needed room columns (id, messagesCount)
+      .leftJoin('conversation.room', 'room')
+      .addSelect(['room.id', 'room.messagesCount'])
+      // Only select needed room authorization columns
+      .leftJoin('room.authorization', 'roomAuthorization')
+      .addSelect([
+        'roomAuthorization.id',
+        'roomAuthorization.credentialRules',
+        'roomAuthorization.privilegeRules',
+      ])
       .where('membership.agentId = :agentId', { agentId })
       .andWhere('conversation.messagingId = :messagingId', { messagingId });
 
-    // Filter by type using subquery - O(1) instead of O(n)
+    // Filter by type using self-join - more efficient than correlated subquery
+    // Since conversations have exactly 2 members, we join to find the "other" member
+    // and filter by their agent type
     if (typeFilter) {
-      // Subquery checks if conversation has a VC member
-      const vcExistsSubquery = this.conversationMembershipRepository
-        .createQueryBuilder('m2')
-        .innerJoin('m2.agent', 'a')
-        .where('m2.conversationId = membership.conversationId')
-        .andWhere('a.type = :vcType')
-        .select('1');
+      // Self-join to get the other member's agent
+      queryBuilder
+        .innerJoin(
+          'conversation_membership',
+          'otherMembership',
+          'membership.conversationId = otherMembership.conversationId'
+        )
+        .innerJoin('otherMembership.agent', 'otherAgent')
+        .andWhere('otherMembership.agentId != :agentId');
 
       if (typeFilter === CommunicationConversationType.USER_VC) {
-        queryBuilder.andWhere(`EXISTS (${vcExistsSubquery.getQuery()})`);
+        // USER_VC: other member is a virtual contributor
+        queryBuilder.andWhere('otherAgent.type = :vcType', {
+          vcType: AgentType.VIRTUAL_CONTRIBUTOR,
+        });
       } else {
-        // USER_USER: No VC members
-        queryBuilder.andWhere(`NOT EXISTS (${vcExistsSubquery.getQuery()})`);
+        // USER_USER: other member is a user (not a VC)
+        queryBuilder.andWhere('otherAgent.type = :userType', {
+          userType: AgentType.USER,
+        });
       }
-      queryBuilder.setParameter('vcType', AgentType.VIRTUAL_CONTRIBUTOR);
     }
 
     const memberships = await queryBuilder.getMany();

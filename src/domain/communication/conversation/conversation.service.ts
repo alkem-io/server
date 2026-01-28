@@ -287,9 +287,14 @@ export class ConversationService {
   }
 
   public async getCommentsCount(conversationID: string): Promise<number> {
-    const room = await this.getRoom(conversationID);
-    if (!room) return 0;
-    return room.messagesCount;
+    // Direct query for just the messagesCount column - avoids loading full entities
+    const result = await this.conversationRepository
+      .createQueryBuilder('conversation')
+      .leftJoin('conversation.room', 'room')
+      .select('room.messagesCount', 'count')
+      .where('conversation.id = :conversationID', { conversationID })
+      .getRawOne();
+    return result?.count ?? 0;
   }
 
   /**
@@ -320,19 +325,22 @@ export class ConversationService {
   }
 
   /**
-   * Get all members of a conversation via the pivot table.   * Performance: Queries are limited to 2 members per conversation by domain constraint.
-   * Consider DataLoader batching for GraphQL resolvers when querying multiple conversations.   * @param conversationId - UUID of the conversation
-   * @returns Array of conversation memberships with agent relationships loaded
+   * Get all members of a conversation via the pivot table.
+   * Performance: Queries are limited to 2 members per conversation by domain constraint.
+   * Consider DataLoader batching for GraphQL resolvers when querying multiple conversations.
+   * @param conversationId - UUID of the conversation
+   * @returns Array of conversation memberships with agent type loaded
    */
   async getConversationMembers(
     conversationId: string
   ): Promise<IConversationMembership[]> {
-    return await this.conversationMembershipRepository.find({
-      where: { conversationId },
-      relations: {
-        agent: true,
-      },
-    });
+    // Only load agent.id and agent.type - that's all we need for type inference
+    return await this.conversationMembershipRepository
+      .createQueryBuilder('membership')
+      .leftJoin('membership.agent', 'agent')
+      .addSelect(['agent.id', 'agent.type'])
+      .where('membership.conversationId = :conversationId', { conversationId })
+      .getMany();
   }
 
   /**
@@ -353,10 +361,19 @@ export class ConversationService {
 
   /**
    * Find an existing conversation between two agents.
-   * Uses the pivot table to find conversations where both agents are members.
-   * Performance: Self-join on pivot table with indexed foreign keys provides efficient lookups.
-   * Query execution: < 10ms typical for indexed agent_id columns.
-   * @param agentId1 - UUID of first agent
+   * Uses a simple self-join on the pivot table - optimal for 2-member conversations.
+   *
+   * PERFORMANCE NOTE: For best query performance, pass the agent with FEWER
+   * conversations as agentId1 (e.g., the user rather than a VC that has many conversations).
+   * The query planner filters on agentId1 first.
+   *
+   * Generates SQL equivalent to:
+   * SELECT c.* FROM conversation c
+   * JOIN conversation_membership a ON c.id = a.conversationId
+   * JOIN conversation_membership b ON a.conversationId = b.conversationId
+   * WHERE a.agentId = :agentId1 AND b.agentId = :agentId2
+   *
+   * @param agentId1 - UUID of first agent (prefer the one with fewer conversations)
    * @param agentId2 - UUID of second agent
    * @returns The conversation if found, null otherwise
    */
@@ -369,10 +386,16 @@ export class ConversationService {
       .innerJoin(
         'conversation_membership',
         'm2',
-        'm1.conversationId = m2.conversationId AND m1.agentId != m2.agentId'
+        'm1.conversationId = m2.conversationId'
       )
       .innerJoinAndSelect('m1.conversation', 'conversation')
-      .leftJoinAndSelect('conversation.authorization', 'authorization')
+      // Only select needed authorization columns
+      .leftJoin('conversation.authorization', 'authorization')
+      .addSelect([
+        'authorization.id',
+        'authorization.credentialRules',
+        'authorization.privilegeRules',
+      ])
       .where('m1.agentId = :agentId1', { agentId1 })
       .andWhere('m2.agentId = :agentId2', { agentId2 })
       .getOne();
@@ -523,27 +546,39 @@ export class ConversationService {
   }> {
     const members = await this.getConversationMembers(conversationId);
 
-    const users: IUser[] = [];
-    const virtualContributors: IVirtualContributor[] = [];
+    // Separate members by type for parallel lookup
+    const userAgentIds = members
+      .filter(m => m.agent.type === AgentType.USER)
+      .map(m => m.agentId);
+    const vcAgentIds = members
+      .filter(m => m.agent.type === AgentType.VIRTUAL_CONTRIBUTOR)
+      .map(m => m.agentId);
 
-    for (const member of members) {
-      if (member.agent.type === AgentType.USER) {
-        const user = await this.userLookupService.getUserByAgentId(
-          member.agentId,
-          { relations: { agent: true } }
-        );
-        if (user) users.push(user);
-      } else if (member.agent.type === AgentType.VIRTUAL_CONTRIBUTOR) {
-        const vc =
-          await this.virtualContributorLookupService.getVirtualContributorByAgentId(
-            member.agentId,
+    // Parallel lookups instead of sequential
+    const [users, virtualContributors] = await Promise.all([
+      Promise.all(
+        userAgentIds.map(agentId =>
+          this.userLookupService.getUserByAgentId(agentId, {
+            relations: { agent: true },
+          })
+        )
+      ),
+      Promise.all(
+        vcAgentIds.map(agentId =>
+          this.virtualContributorLookupService.getVirtualContributorByAgentId(
+            agentId,
             { relations: { agent: true } }
-          );
-        if (vc) virtualContributors.push(vc);
-      }
-    }
+          )
+        )
+      ),
+    ]);
 
-    return { users, virtualContributors };
+    return {
+      users: users.filter((u): u is IUser => u !== null),
+      virtualContributors: virtualContributors.filter(
+        (vc): vc is IVirtualContributor => vc !== null
+      ),
+    };
   }
 
   /**
@@ -555,13 +590,19 @@ export class ConversationService {
   async findConversationByRoomId(
     roomId: string
   ): Promise<IConversation | null> {
-    return await this.conversationRepository.findOne({
-      where: { room: { id: roomId } },
-      relations: {
-        room: true,
-        authorization: true,
-      },
-    });
+    // Use QueryBuilder for selective column loading
+    return await this.conversationRepository
+      .createQueryBuilder('conversation')
+      .leftJoin('conversation.room', 'room')
+      .addSelect(['room.id', 'room.messagesCount'])
+      .leftJoin('conversation.authorization', 'authorization')
+      .addSelect([
+        'authorization.id',
+        'authorization.credentialRules',
+        'authorization.privilegeRules',
+      ])
+      .where('room.id = :roomId', { roomId })
+      .getOne();
   }
 
   /**
