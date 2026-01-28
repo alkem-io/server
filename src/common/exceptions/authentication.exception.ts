@@ -1,6 +1,6 @@
 import { AlkemioErrorStatus, LogContext } from '@common/enums';
-import { BaseException } from './base.exception';
 import { ExceptionDetails } from '@common/exceptions/exception.details';
+import { BaseException } from './base.exception';
 
 export class AuthenticationException extends BaseException {
   constructor(

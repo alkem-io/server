@@ -1,5 +1,5 @@
-import { ArgsType, Field } from '@nestjs/graphql';
 import { TagsetArgs } from '@domain/common/tagset/dto/tagset.args';
+import { ArgsType, Field } from '@nestjs/graphql';
 
 @ArgsType()
 export class CalloutsSetArgsTags {

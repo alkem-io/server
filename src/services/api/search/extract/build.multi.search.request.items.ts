@@ -1,13 +1,13 @@
-import { groupBy } from 'lodash';
 import {
   MsearchMultisearchBody,
   MsearchMultisearchHeader,
   MsearchRequestItem,
   QueryDslQueryContainer,
 } from '@elastic/elasticsearch/lib/api/types';
-import { parseSearchCursor } from '../util';
+import { groupBy } from 'lodash';
 import { SearchFilterInput } from '../dto/inputs';
 import { SearchCategory } from '../search.category';
+import { parseSearchCursor } from '../util';
 import { SearchIndex } from './search.index';
 
 /**

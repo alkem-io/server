@@ -1,5 +1,5 @@
-import { ObjectType } from '@nestjs/graphql';
 import { Paginate } from '@core/pagination/paginated.type';
+import { ObjectType } from '@nestjs/graphql';
 import { IActivityLogEntry } from '@services/api/activity-log/dto/activity.log.entry.interface';
 
 @ObjectType()

@@ -1,19 +1,19 @@
-import { Args, Resolver, Mutation } from '@nestjs/graphql';
-import { OrganizationService } from './organization.service';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { AuthorizationPrivilege } from '@common/enums';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { UpdateOrganizationInput } from '@domain/community/organization/dto';
 import { IUserGroup } from '@domain/community/user-group';
-import { AuthorizationPrivilege } from '@common/enums';
-import { OrganizationAuthorizationService } from './organization.service.authorization';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { OrganizationAuthorizationResetInput } from './dto/organization.dto.reset.authorization';
-import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { CreateUserGroupInput } from '../user-group/dto';
-import { IOrganization } from './organization.interface';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { UpdateOrganizationSettingsInput } from './dto/organization.dto.update.settings';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentUser, Profiling } from '@src/common/decorators';
+import { CreateUserGroupInput } from '../user-group/dto';
+import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
+import { OrganizationAuthorizationResetInput } from './dto/organization.dto.reset.authorization';
+import { UpdateOrganizationSettingsInput } from './dto/organization.dto.update.settings';
+import { IOrganization } from './organization.interface';
+import { OrganizationService } from './organization.service';
+import { OrganizationAuthorizationService } from './organization.service.authorization';
 
 @InstrumentResolver()
 @Resolver(() => IOrganization)

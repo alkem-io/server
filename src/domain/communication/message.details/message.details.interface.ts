@@ -1,6 +1,6 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { MessageParent } from './message.details.parent.interface';
 import { IRoom } from '../room/room.interface';
+import { MessageParent } from './message.details.parent.interface';
 
 @ObjectType('MessageDetails', {
   description:

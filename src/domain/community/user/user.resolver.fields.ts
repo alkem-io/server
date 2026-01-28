@@ -1,33 +1,33 @@
 import { CurrentUser } from '@common/decorators';
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
+import { AuthenticationType } from '@common/enums/authentication.type';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { IAgent } from '@domain/agent/agent';
-import { IUser } from '@domain/community/user/user.interface';
-import { Inject, LoggerService } from '@nestjs/common';
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { UserService } from './user.service';
-import { IProfile } from '@domain/common/profile/profile.interface';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
-import { UserStorageAggregatorLoaderCreator } from '@core/dataloader/creators/loader.creators/community/user.storage.aggregator.loader.creator';
 import {
   AgentLoaderCreator,
   AuthorizationLoaderCreator,
   ProfileLoaderCreator,
   UserSettingsLoaderCreator,
 } from '@core/dataloader/creators';
-import { ILoader } from '@core/dataloader/loader.interface';
+import { UserStorageAggregatorLoaderCreator } from '@core/dataloader/creators/loader.creators/community/user.storage.aggregator.loader.creator';
 import { Loader } from '@core/dataloader/decorators';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { ILoader } from '@core/dataloader/loader.interface';
+import { IAgent } from '@domain/agent/agent';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { IProfile } from '@domain/common/profile/profile.interface';
+import { IUser } from '@domain/community/user/user.interface';
 import { IAccount } from '@domain/space/account/account.interface';
-import { User } from './user.entity';
-import { AuthenticationType } from '@common/enums/authentication.type';
-import { UserAuthenticationResult } from './dto/roles.dto.authentication.result';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { Inject, LoggerService } from '@nestjs/common';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
-import { IUserSettings } from '../user-settings/user.settings.interface';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { IUserSettings } from '../user-settings/user.settings.interface';
+import { UserAuthenticationResult } from './dto/roles.dto.authentication.result';
+import { User } from './user.entity';
+import { UserService } from './user.service';
 
 @InstrumentResolver()
 @Resolver(() => IUser)

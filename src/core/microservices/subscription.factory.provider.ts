@@ -1,11 +1,11 @@
-import { MessagingQueue } from '@common/enums/messaging.queue';
-import { FactoryProvider, LoggerService } from '@nestjs/common';
-import { PubSubEngine } from 'graphql-subscriptions';
-import { ConfigService } from '@nestjs/config';
-import { subscriptionFactory } from '@core/microservices/subscription.factory';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { AlkemioConfig } from '@src/types';
 import { APP_ID, IS_SCHEMA_BOOTSTRAP } from '@common/constants';
+import { MessagingQueue } from '@common/enums/messaging.queue';
+import { subscriptionFactory } from '@core/microservices/subscription.factory';
+import { FactoryProvider, LoggerService } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { AlkemioConfig } from '@src/types';
+import { PubSubEngine } from 'graphql-subscriptions';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 /***
  * Creates a factory provider for a subscription

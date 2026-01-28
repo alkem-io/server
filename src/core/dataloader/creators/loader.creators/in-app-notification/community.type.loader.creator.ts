@@ -1,15 +1,15 @@
-import { EntityManager } from 'typeorm';
-import { Injectable } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
 import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
 import {
   DataLoaderCreator,
   DataLoaderCreatorBaseOptions,
 } from '@core/dataloader/creators/base';
 import { createBatchLoader } from '@core/dataloader/utils';
-import { User } from '@domain/community/user/user.entity';
 import { Organization } from '@domain/community/organization';
+import { User } from '@domain/community/user/user.entity';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
+import { Injectable } from '@nestjs/common';
+import { InjectEntityManager } from '@nestjs/typeorm';
+import { EntityManager } from 'typeorm';
 
 @Injectable()
 export class CommunityTypeLoaderCreator

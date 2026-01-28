@@ -1,6 +1,6 @@
-import { Field, ObjectType } from '@nestjs/graphql';
 import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
+import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('PlatformWellKnownVirtualContributorMapping')
 export class PlatformWellKnownVirtualContributorMapping {

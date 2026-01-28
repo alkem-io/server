@@ -1,7 +1,7 @@
+import { AlkemioErrorStatus, LogContext } from '@common/enums';
 import { HttpException, HttpStatus } from '@nestjs/common';
-import { LogContext, AlkemioErrorStatus } from '@common/enums';
-import { ExceptionDetails } from '../exception.details';
 import { randomUUID } from 'crypto';
+import { ExceptionDetails } from '../exception.details';
 
 export class BaseHttpException extends HttpException {
   private readonly exceptionName = this.constructor.name;

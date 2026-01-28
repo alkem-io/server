@@ -1,20 +1,20 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, Repository } from 'typeorm';
+import { LogContext } from '@common/enums';
+import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
+import { LicenseType } from '@common/enums/license.type';
 import {
   EntityNotFoundException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { LicenseEntitlementNotSupportedException } from '@common/exceptions/license.entitlement.not.supported';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { LicenseEntitlementUsageService } from '@services/infrastructure/license-entitlement-usage/license.entitlement.usage.service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { FindOneOptions, Repository } from 'typeorm';
+import { ILicense } from '../license/license.interface';
 import { CreateLicenseEntitlementInput } from './dto/license.entitlement.dto.create';
 import { LicenseEntitlement } from './license.entitlement.entity';
 import { ILicenseEntitlement } from './license.entitlement.interface';
-import { LicenseType } from '@common/enums/license.type';
-import { LicenseEntitlementUsageService } from '@services/infrastructure/license-entitlement-usage/license.entitlement.usage.service';
-import { ILicense } from '../license/license.interface';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
-import { LicenseEntitlementNotSupportedException } from '@common/exceptions/license.entitlement.not.supported';
 
 @Injectable()
 export class LicenseEntitlementService {

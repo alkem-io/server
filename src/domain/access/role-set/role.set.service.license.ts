@@ -1,15 +1,15 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { LogContext } from '@common/enums';
+import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import {
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
-import { LicenseService } from '@domain/common/license/license.service';
 import { ILicense } from '@domain/common/license/license.interface';
-import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
+import { LicenseService } from '@domain/common/license/license.service';
+import { ILicenseEntitlement } from '@domain/common/license-entitlement/license.entitlement.interface';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { RoleSetService } from './role.set.service';
-import { ILicenseEntitlement } from '@domain/common/license-entitlement/license.entitlement.interface';
 
 @Injectable()
 export class RoleSetLicenseService {

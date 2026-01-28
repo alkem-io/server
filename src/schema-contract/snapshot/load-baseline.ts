@@ -1,6 +1,6 @@
-import { readFileSync, existsSync } from 'node:fs';
-import { SchemaSnapshot } from '../model';
+import { existsSync, readFileSync } from 'node:fs';
 import { sha256 } from '../diff/diff-core';
+import { SchemaSnapshot } from '../model';
 
 /**
  * Loads the committed snapshot file (schema.graphql by default) if present.

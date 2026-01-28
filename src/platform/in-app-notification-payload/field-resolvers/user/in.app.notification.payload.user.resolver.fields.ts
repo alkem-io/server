@@ -2,7 +2,7 @@ import { UserLoaderCreator } from '@core/dataloader/creators';
 import { Loader } from '@core/dataloader/decorators/data.loader.decorator';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { IUser } from '@domain/community/user/user.interface';
-import { Resolver, ResolveField, Parent } from '@nestjs/graphql';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { InAppNotificationPayloadUser } from '../../dto/user/notification.in.app.payload.user';
 
 @Resolver(() => InAppNotificationPayloadUser)

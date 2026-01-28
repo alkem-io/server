@@ -1,13 +1,13 @@
-import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
+import { ENUM_LENGTH } from '@common/constants';
+import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { ICalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
+import { Memo } from '@domain/common/memo/memo.entity';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
-import { Post } from '../post/post.entity';
+import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import { Callout } from '../callout/callout.entity';
 import { Link } from '../link/link.entity';
-import { ENUM_LENGTH } from '@common/constants';
-import { Memo } from '@domain/common/memo/memo.entity';
-import { CalloutContributionType } from '@common/enums/callout.contribution.type';
+import { Post } from '../post/post.entity';
 
 @Entity()
 export class CalloutContribution
@@ -40,11 +40,15 @@ export class CalloutContribution
   @JoinColumn()
   memo?: Memo;
 
-  @OneToOne(() => Post, post => post.contribution, {
-    eager: false,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
+  @OneToOne(
+    () => Post,
+    post => post.contribution,
+    {
+      eager: false,
+      cascade: true,
+      onDelete: 'SET NULL',
+    }
+  )
   @JoinColumn()
   post?: Post;
 
@@ -56,11 +60,15 @@ export class CalloutContribution
   @JoinColumn()
   link?: Link;
 
-  @ManyToOne(() => Callout, callout => callout.contributions, {
-    eager: false,
-    cascade: false,
-    onDelete: 'CASCADE',
-  })
+  @ManyToOne(
+    () => Callout,
+    callout => callout.contributions,
+    {
+      eager: false,
+      cascade: false,
+      onDelete: 'CASCADE',
+    }
+  )
   callout?: Callout;
 
   @Column('int')

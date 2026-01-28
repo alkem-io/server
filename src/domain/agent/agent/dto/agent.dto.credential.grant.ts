@@ -1,5 +1,5 @@
 import { CreateCredentialInput } from '@domain/agent/credential/dto/credential.dto.create';
-import { InputType, Field } from '@nestjs/graphql';
+import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
 export class GrantCredentialToAgentInput extends CreateCredentialInput {

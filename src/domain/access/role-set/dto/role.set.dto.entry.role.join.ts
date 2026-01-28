@@ -1,7 +1,7 @@
-import { Field, InputType } from '@nestjs/graphql';
-import { UUID } from '@domain/common/scalars';
-import { MaxLength } from 'class-validator';
 import { UUID_LENGTH } from '@common/constants';
+import { UUID } from '@domain/common/scalars';
+import { Field, InputType } from '@nestjs/graphql';
+import { MaxLength } from 'class-validator';
 
 @InputType()
 export class JoinAsEntryRoleOnRoleSetInput {

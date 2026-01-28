@@ -1,7 +1,7 @@
 import { Injectable, Scope } from '@nestjs/common';
+import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import DataLoader from 'dataloader';
 import { IMessage } from '../message/message.interface';
-import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 
 /**
  * Request-scoped DataLoader for batching room communication data requests.

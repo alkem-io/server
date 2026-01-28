@@ -1,11 +1,11 @@
-import { IsOptional, Matches, MaxLength, MinLength } from 'class-validator';
-import { Field, InputType } from '@nestjs/graphql';
-import { SpaceVisibility } from '@common/enums/space.visibility';
-import { UUID } from '@domain/common/scalars';
-import { InnovationHubType } from '@domain/innovation-hub/types';
 import { SUBDOMAIN_LENGTH } from '@common/constants';
+import { SpaceVisibility } from '@common/enums/space.visibility';
 import { SUBDOMAIN_REGEX } from '@core/validation';
 import { CreateNameableInput } from '@domain/common/entity/nameable-entity/dto/nameable.dto.create';
+import { UUID } from '@domain/common/scalars';
+import { InnovationHubType } from '@domain/innovation-hub/types';
+import { Field, InputType } from '@nestjs/graphql';
+import { IsOptional, Matches, MaxLength, MinLength } from 'class-validator';
 
 @InputType()
 export class CreateInnovationHubInput extends CreateNameableInput {

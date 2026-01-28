@@ -1,7 +1,7 @@
-import { EntityManager, In } from 'typeorm';
-import { Space } from '@domain/space/space/space.entity';
-import { SpaceVisibility } from '@common/enums/space.visibility';
 import { SpaceLevel } from '@common/enums/space.level';
+import { SpaceVisibility } from '@common/enums/space.visibility';
+import { Space } from '@domain/space/space/space.entity';
+import { EntityManager, In } from 'typeorm';
 
 export const getSpaceRolesForContributorEntityData = async (
   entityManager: EntityManager,

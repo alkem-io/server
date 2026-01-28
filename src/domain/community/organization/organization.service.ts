@@ -1,7 +1,13 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { LogContext, ProfileType } from '@common/enums';
+import { AccountType } from '@common/enums/account.type';
+import { AgentType } from '@common/enums/agent.type';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
+import { RoleName } from '@common/enums/role.name';
+import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
+import { RoleSetType } from '@common/enums/role.set.type';
+import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -9,60 +15,54 @@ import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { LogContext, ProfileType } from '@common/enums';
+import { limitAndShuffle } from '@common/utils/limitAndShuffle';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { OrganizationFilterInput } from '@core/filtering';
+import { applyOrganizationFilter } from '@core/filtering/filters/organizationFilter';
+import { PaginationArgs } from '@core/pagination';
+import { IPaginatedType } from '@core/pagination/paginated.type';
+import { getPaginationResults } from '@core/pagination/pagination.fn';
+import { CreateRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.create';
+import { IRoleSet } from '@domain/access/role-set/role.set.interface';
+import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { IAgent } from '@domain/agent/agent';
+import { AgentService } from '@domain/agent/agent/agent.service';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { NVP } from '@domain/common/nvp/nvp.entity';
+import { INVP } from '@domain/common/nvp/nvp.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
-import { UserGroupService } from '@domain/community/user-group/user-group.service';
+import { CreateReferenceInput } from '@domain/common/reference';
 import {
   CreateOrganizationInput,
   DeleteOrganizationInput,
   UpdateOrganizationInput,
 } from '@domain/community/organization/dto';
 import { IUserGroup } from '@domain/community/user-group';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy';
-import { IAgent } from '@domain/agent/agent';
-import { AgentService } from '@domain/agent/agent/agent.service';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { OrganizationVerificationService } from '../organization-verification/organization.verification.service';
-import { IOrganizationVerification } from '../organization-verification/organization.verification.interface';
-import { NVP } from '@domain/common/nvp/nvp.entity';
-import { INVP } from '@domain/common/nvp/nvp.interface';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { limitAndShuffle } from '@common/utils/limitAndShuffle';
-import { PaginationArgs } from '@core/pagination';
-import { OrganizationFilterInput } from '@core/filtering';
-import { IPaginatedType } from '@core/pagination/paginated.type';
-import { getPaginationResults } from '@core/pagination/pagination.fn';
-import { CreateUserGroupInput } from '../user-group/dto/user-group.dto.create';
-import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
-import { Organization } from './organization.entity';
-import { IOrganization } from './organization.interface';
-import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { UserGroupService } from '@domain/community/user-group/user-group.service';
+import { IAccount } from '@domain/space/account/account.interface';
+import { AccountHostService } from '@domain/space/account.host/account.host.service';
+import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
-import { applyOrganizationFilter } from '@core/filtering/filters/organizationFilter';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
-import { IAccount } from '@domain/space/account/account.interface';
-import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
-import { AgentType } from '@common/enums/agent.type';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { FindOneOptions, Repository } from 'typeorm';
+import { contributorDefaults } from '../contributor/contributor.defaults';
 import { ContributorService } from '../contributor/contributor.service';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { AccountType } from '@common/enums/account.type';
-import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
+import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
+import { UpdateOrganizationSettingsEntityInput } from '../organization-settings/dto/organization.settings.dto.update';
 import { IOrganizationSettings } from '../organization-settings/organization.settings.interface';
 import { OrganizationSettingsService } from '../organization-settings/organization.settings.service';
-import { UpdateOrganizationSettingsEntityInput } from '../organization-settings/dto/organization.settings.dto.update';
-import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
-import { AccountHostService } from '@domain/space/account.host/account.host.service';
-import { IRoleSet } from '@domain/access/role-set/role.set.interface';
-import { RoleSetService } from '@domain/access/role-set/role.set.service';
-import { organizationRoleDefinitions } from './definitions/organization.role.definitions';
-import { CreateRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.create';
-import { RoleName } from '@common/enums/role.name';
+import { IOrganizationVerification } from '../organization-verification/organization.verification.interface';
+import { OrganizationVerificationService } from '../organization-verification/organization.verification.service';
+import { CreateUserGroupInput } from '../user-group/dto/user-group.dto.create';
 import { organizationApplicationForm } from './definitions/organization.role.application.form';
-import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
-import { RoleSetType } from '@common/enums/role.set.type';
-import { CreateReferenceInput } from '@domain/common/reference';
-import { contributorDefaults } from '../contributor/contributor.defaults';
+import { organizationRoleDefinitions } from './definitions/organization.role.definitions';
+import { Organization } from './organization.entity';
+import { IOrganization } from './organization.interface';
 
 @Injectable()
 export class OrganizationService {

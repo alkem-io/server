@@ -1,13 +1,13 @@
-import { Injectable } from '@nestjs/common';
-import { MessageDetails } from './message.details.interface';
-import { RoomLookupService } from '../room-lookup/room.lookup.service';
-import { RoomType } from '@common/enums/room.type';
-import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
-import { MessageParent } from './message.details.parent.interface';
-import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
-import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { LogContext } from '@common/enums/logging.context';
+import { RoomType } from '@common/enums/room.type';
 import { NotSupportedException } from '@common/exceptions';
+import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { Injectable } from '@nestjs/common';
+import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
+import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
+import { RoomLookupService } from '../room-lookup/room.lookup.service';
+import { MessageDetails } from './message.details.interface';
+import { MessageParent } from './message.details.parent.interface';
 
 @Injectable()
 export class MessageDetailsService {

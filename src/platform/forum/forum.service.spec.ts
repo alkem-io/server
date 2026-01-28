@@ -1,9 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForumService } from './forum.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { Forum } from './forum.entity';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { Forum } from './forum.entity';
+import { ForumService } from './forum.service';
 
 describe('ForumService', () => {
   let service: ForumService;

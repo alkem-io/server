@@ -1,6 +1,6 @@
-import { Field, ObjectType } from '@nestjs/graphql';
-import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { CalloutAllowedContributors } from '@common/enums/callout.allowed.contributors';
+import { CalloutContributionType } from '@common/enums/callout.contribution.type';
+import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('CalloutSettingsContribution')
 export abstract class ICalloutSettingsContribution {

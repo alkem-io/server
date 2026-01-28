@@ -1,7 +1,7 @@
-import { InputType, Field, ObjectType } from '@nestjs/graphql';
-import { IsOptional, ValidateNested } from 'class-validator';
-import { Type } from 'class-transformer';
 import { CreateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.create';
+import { Field, InputType, ObjectType } from '@nestjs/graphql';
+import { Type } from 'class-transformer';
+import { IsOptional, ValidateNested } from 'class-validator';
 
 @InputType()
 @ObjectType('CreateClassificationData')

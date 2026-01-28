@@ -1,33 +1,33 @@
-import { UseGuards } from '@nestjs/common';
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { VirtualContributor } from './virtual.contributor.entity';
-import { VirtualContributorService } from './virtual.contributor.service';
-import { AuthorizationPrivilege } from '@common/enums';
-import { GraphqlGuard } from '@core/authorization';
-import { IProfile } from '@domain/common/profile';
 import { AuthorizationAgentPrivilege, CurrentUser } from '@common/decorators';
-import { IAgent } from '@domain/agent/agent';
+import { AuthorizationPrivilege } from '@common/enums';
+import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
+import { VirtualContributorStatus } from '@common/enums/virtual.contributor.status.enum';
+import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { Loader } from '@core/dataloader/decorators';
+import { GraphqlGuard } from '@core/authorization';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import {
   AccountLoaderCreator,
   AgentLoaderCreator,
   ProfileLoaderCreator,
 } from '@core/dataloader/creators';
+import { Loader } from '@core/dataloader/decorators';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { IVirtualContributor } from './virtual.contributor.interface';
-import { IAccount } from '@domain/space/account/account.interface';
-import { IContributor } from '../contributor/contributor.interface';
-import { VirtualContributorStatus } from '@common/enums/virtual.contributor.status.enum';
+import { IAgent } from '@domain/agent/agent';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IKnowledgeBase } from '@domain/common/knowledge-base/knowledge.base.interface';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { VirtualContributorModelCard } from '../virtual-contributor-model-card/dto/virtual.contributor.model.card.dto.result';
+import { IProfile } from '@domain/common/profile';
+import { IAccount } from '@domain/space/account/account.interface';
+import { UseGuards } from '@nestjs/common';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 import { IAiPersona } from '@services/ai-server/ai-persona';
-import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
-import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
-import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
+import { IContributor } from '../contributor/contributor.interface';
+import { VirtualContributorModelCard } from '../virtual-contributor-model-card/dto/virtual.contributor.model.card.dto.result';
+import { VirtualContributor } from './virtual.contributor.entity';
+import { IVirtualContributor } from './virtual.contributor.interface';
+import { VirtualContributorService } from './virtual.contributor.service';
 
 @Resolver(() => IVirtualContributor)
 export class VirtualContributorResolverFields {
@@ -219,7 +219,7 @@ export class VirtualContributorResolverFields {
         virtualContributor
       );
 
-    if (!!lastUpdated) {
+    if (lastUpdated) {
       return VirtualContributorStatus.READY;
     }
     return VirtualContributorStatus.INITIALIZING;

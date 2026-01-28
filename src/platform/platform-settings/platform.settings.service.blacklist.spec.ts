@@ -1,10 +1,10 @@
 import { EntityNotInitializedException } from '@common/exceptions';
-import { PlatformSettingsService } from '@platform/platform-settings/platform.settings.service';
-import { IPlatformSettings } from '@platform/platform-settings/platform.settings.interface';
-import { IPlatformSettingsIntegration } from '@platform/platform-settings/platform.settings.integrations.interface';
-import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { Test, TestingModule } from '@nestjs/testing';
+import { IPlatformSettingsIntegration } from '@platform/platform-settings/platform.settings.integrations.interface';
+import { IPlatformSettings } from '@platform/platform-settings/platform.settings.interface';
+import { PlatformSettingsService } from '@platform/platform-settings/platform.settings.service';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
+import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 
 describe('PlatformSettingsService - notification email blacklist', () => {
   let service: PlatformSettingsService;
@@ -58,19 +58,19 @@ describe('PlatformSettingsService - notification email blacklist', () => {
       ).toThrow(EntityNotInitializedException);
     });
 
-    it.each(['*', '?'])(
-      'rejects wildcard character %s in email addresses',
-      wildcard => {
-        const settings = createSettings();
+    it.each([
+      '*',
+      '?',
+    ])('rejects wildcard character %s in email addresses', wildcard => {
+      const settings = createSettings();
 
-        expect(() =>
-          service.addNotificationEmailToBlacklistOrFail(
-            settings,
-            `user${wildcard}@example.com`
-          )
-        ).toThrow('Wildcard characters are not allowed in email addresses');
-      }
-    );
+      expect(() =>
+        service.addNotificationEmailToBlacklistOrFail(
+          settings,
+          `user${wildcard}@example.com`
+        )
+      ).toThrow('Wildcard characters are not allowed in email addresses');
+    });
 
     it('prevents duplicate entries regardless of case', () => {
       const settings = createSettings({

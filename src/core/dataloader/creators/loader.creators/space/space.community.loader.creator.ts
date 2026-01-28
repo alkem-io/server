@@ -1,8 +1,8 @@
-import { EntityManager } from 'typeorm';
+import { DataLoaderInitError } from '@common/exceptions/data-loader';
+import { ICommunity } from '@domain/community/community';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { ICommunity } from '@domain/community/community';
-import { DataLoaderInitError } from '@common/exceptions/data-loader';
+import { EntityManager } from 'typeorm';
 import { createTypedRelationDataLoader } from '../../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
 

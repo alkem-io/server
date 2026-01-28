@@ -1,9 +1,9 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import axios, { AxiosResponse } from 'axios';
 import { LogContext } from '@common/enums';
-import replaceSpecialCharacters from 'replace-special-characters';
 import { MimeFileType } from '@common/enums/mime.file.type';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import axios, { AxiosResponse } from 'axios';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import replaceSpecialCharacters from 'replace-special-characters';
 
 export const DEFAULT_AVATAR_SERVICE_URL = 'https://eu.ui-avatars.com/api/';
 @Injectable()

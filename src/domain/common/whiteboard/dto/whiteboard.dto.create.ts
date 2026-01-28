@@ -1,9 +1,9 @@
-import { Field, InputType, ObjectType } from '@nestjs/graphql';
-import { IsOptional, ValidateNested } from 'class-validator';
-import { WhiteboardContent } from '@domain/common/scalars/scalar.whiteboard.content';
 import { CreateProfileInput } from '@domain/common/profile/dto';
-import { Type } from 'class-transformer';
 import { NameID } from '@domain/common/scalars';
+import { WhiteboardContent } from '@domain/common/scalars/scalar.whiteboard.content';
+import { Field, InputType, ObjectType } from '@nestjs/graphql';
+import { Type } from 'class-transformer';
+import { IsOptional, ValidateNested } from 'class-validator';
 import { CreateWhiteboardPreviewSettingsInput } from './whiteboard.preview.settings.dto.create';
 
 @InputType()

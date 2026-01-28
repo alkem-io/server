@@ -1,3 +1,7 @@
+import { INNOVATION_HUB_INJECT_TOKEN } from '@common/constants';
+import { LogContext } from '@common/enums';
+import { DOMAIN_PATTERN, SUBDOMAIN_PATTERN } from '@core/validation';
+import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.service';
 import {
   CallHandler,
   ExecutionContext,
@@ -7,12 +11,8 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GqlExecutionContext } from '@nestjs/graphql';
-import { INNOVATION_HUB_INJECT_TOKEN } from '@common/constants';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LogContext } from '@common/enums';
-import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.service';
-import { DOMAIN_PATTERN, SUBDOMAIN_PATTERN } from '@core/validation';
 import { AlkemioConfig } from '@src/types';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 const SUBDOMAIN_GROUP = 'subdomain';
 
@@ -27,7 +27,7 @@ const SUBDOMAIN_GROUP = 'subdomain';
  https://alkem.io/
  */
 const SUBDOMAIN_REGEX = new RegExp(
-  `https?:\/\/(?<${SUBDOMAIN_GROUP}>${SUBDOMAIN_PATTERN})\\.${DOMAIN_PATTERN}.\\w+`
+  `https?://(?<${SUBDOMAIN_GROUP}>${SUBDOMAIN_PATTERN})\\.${DOMAIN_PATTERN}.\\w+`
 );
 
 /***

@@ -1,9 +1,9 @@
-import { ILifecycle } from '@domain/common/lifecycle/lifecycle.interface';
-import { Field, ObjectType } from '@nestjs/graphql';
-import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
+import { RoleName } from '@common/enums/role.name';
 import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
 import { IRoleSet } from '@domain/access/role-set';
-import { RoleName } from '@common/enums/role.name';
+import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
+import { ILifecycle } from '@domain/common/lifecycle/lifecycle.interface';
+import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('Invitation')
 export class IInvitation extends IAuthorizable {

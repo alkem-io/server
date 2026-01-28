@@ -1,8 +1,8 @@
-import { Field, InputType } from '@nestjs/graphql';
-import { UpdateVirtualContributorPlatformSettingsEntityInput } from '@domain/community/virtual-contributor-platform-settings';
 import { UUID } from '@domain/common/scalars';
-import { ValidateNested } from 'class-validator';
+import { UpdateVirtualContributorPlatformSettingsEntityInput } from '@domain/community/virtual-contributor-platform-settings';
+import { Field, InputType } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
+import { ValidateNested } from 'class-validator';
 
 @InputType()
 export class UpdateVirtualContributorPlatformSettingsInput {

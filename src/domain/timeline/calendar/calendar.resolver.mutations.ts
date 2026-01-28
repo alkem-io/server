@@ -1,18 +1,18 @@
-import { Resolver, Mutation, Args } from '@nestjs/graphql';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { CalendarService } from './calendar.service';
-import { ICalendarEvent } from '../event/event.interface';
-import { CalendarEventAuthorizationService } from '../event/event.service.authorization';
-import { CreateCalendarEventOnCalendarInput } from './dto/calendar.dto.create.event';
-import { CalendarEventService } from '../event/event.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { InstrumentResolver } from '@src/apm/decorators';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { NotificationInputCommunityCalendarEventCreated } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.calendar.event.created';
 import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
 import { TimelineResolverService } from '@services/infrastructure/entity-resolver/timeline.resolver.service';
-import { NotificationInputCommunityCalendarEventCreated } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.calendar.event.created';
+import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentUser, Profiling } from '@src/common/decorators';
+import { ICalendarEvent } from '../event/event.interface';
+import { CalendarEventService } from '../event/event.service';
+import { CalendarEventAuthorizationService } from '../event/event.service.authorization';
+import { CalendarService } from './calendar.service';
+import { CreateCalendarEventOnCalendarInput } from './dto/calendar.dto.create.event';
 
 @InstrumentResolver()
 @Resolver()

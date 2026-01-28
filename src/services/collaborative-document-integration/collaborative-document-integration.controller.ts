@@ -1,4 +1,4 @@
-import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
+import { LogContext } from '@common/enums';
 import { Controller, Inject } from '@nestjs/common';
 import {
   Ctx,
@@ -8,18 +8,14 @@ import {
   Transport,
 } from '@nestjs/microservices';
 import { ack } from '@services/util';
+import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
 import { CollaborativeDocumentIntegrationService } from './collaborative-document-integration.service';
-import {
-  UserInfo,
-  CollaborativeDocumentMessagePattern,
-  CollaborativeDocumentEventPattern,
-} from './types';
 import {
   FetchInputData,
   InfoInputData,
+  MemoContributionsInputData,
   SaveInputData,
   WhoInputData,
-  MemoContributionsInputData,
 } from './inputs';
 import {
   FetchOutputData,
@@ -27,7 +23,11 @@ import {
   InfoOutputData,
   SaveOutputData,
 } from './outputs';
-import { LogContext } from '@common/enums';
+import {
+  CollaborativeDocumentEventPattern,
+  CollaborativeDocumentMessagePattern,
+  UserInfo,
+} from './types';
 
 @Controller()
 export class CollaborativeDocumentIntegrationController {

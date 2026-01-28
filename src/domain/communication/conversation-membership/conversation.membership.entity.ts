@@ -1,3 +1,4 @@
+import { Agent } from '@domain/agent/agent/agent.entity';
 import {
   CreateDateColumn,
   Entity,
@@ -5,9 +6,8 @@ import {
   ManyToOne,
   PrimaryColumn,
 } from 'typeorm';
-import { IConversationMembership } from './conversation.membership.interface';
 import { Conversation } from '../conversation/conversation.entity';
-import { Agent } from '@domain/agent/agent/agent.entity';
+import { IConversationMembership } from './conversation.membership.interface';
 
 @Entity()
 export class ConversationMembership implements IConversationMembership {
@@ -19,11 +19,15 @@ export class ConversationMembership implements IConversationMembership {
   agentId!: string;
 
   @Index()
-  @ManyToOne(() => Conversation, conversation => conversation.memberships, {
-    eager: false,
-    cascade: false,
-    onDelete: 'CASCADE',
-  })
+  @ManyToOne(
+    () => Conversation,
+    conversation => conversation.memberships,
+    {
+      eager: false,
+      cascade: false,
+      onDelete: 'CASCADE',
+    }
+  )
   conversation!: Conversation;
 
   @ManyToOne(() => Agent, {

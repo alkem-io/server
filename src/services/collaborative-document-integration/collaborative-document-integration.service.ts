@@ -1,17 +1,17 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AuthenticationService } from '@core/authentication/authentication.service';
-import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
-import { AlkemioConfig } from '@src/types';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions';
+import { AuthenticationService } from '@core/authentication/authentication.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { MemoService } from '@domain/common/memo';
+import { Inject, Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { MemoContributionsInputData } from '@services/collaborative-document-integration/inputs/memo.contributions.input.data';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { AlkemioConfig } from '@src/types';
+import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
 import {
   FetchInputData,
   InfoInputData,

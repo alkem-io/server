@@ -1,6 +1,6 @@
-import { vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { defaultMockerFactory } from '@test/utils';
+import { vi } from 'vitest';
 import { AppController } from './app.controller';
 
 describe('AppController', () => {

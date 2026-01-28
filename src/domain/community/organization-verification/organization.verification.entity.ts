@@ -1,9 +1,9 @@
+import { ENUM_LENGTH, UUID_LENGTH } from '@common/constants';
+import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
+import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
+import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
 import { Column, Entity, JoinColumn, OneToOne } from 'typeorm';
 import { IOrganizationVerification } from './organization.verification.interface';
-import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
-import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
-import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
-import { ENUM_LENGTH, UUID_LENGTH } from '@common/constants';
 
 @Entity()
 export class OrganizationVerification

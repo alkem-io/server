@@ -1,10 +1,10 @@
-import { EntityManager } from 'typeorm';
+import { Organization } from '@domain/community/organization/organization.entity';
+import { IOrganization } from '@domain/community/organization/organization.interface';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
+import { EntityManager } from 'typeorm';
 import { createTypedSimpleDataLoader } from '../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../base';
-import { IOrganization } from '@domain/community/organization/organization.interface';
-import { Organization } from '@domain/community/organization/organization.entity';
 
 @Injectable()
 export class OrganizationLoaderCreator

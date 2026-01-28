@@ -1,19 +1,19 @@
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { LoggerService } from '@nestjs/common';
-import { Inject, UseGuards } from '@nestjs/common/decorators';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AuthorizationAgentPrivilege, CurrentUser } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
+import { AgentType } from '@common/enums/agent.type';
+import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { GraphqlGuard } from '@core/authorization';
 import { IRoom } from '@domain/communication/room/room.interface';
-import { ConversationService } from './conversation.service';
-import { IConversation } from './conversation.interface';
 import { IUser } from '@domain/community/user/user.interface';
-import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
-import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
-import { AgentType } from '@common/enums/agent.type';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { LoggerService } from '@nestjs/common';
+import { Inject, UseGuards } from '@nestjs/common/decorators';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { IConversation } from './conversation.interface';
+import { ConversationService } from './conversation.service';
 
 @Resolver(() => IConversation)
 export class ConversationResolverFields {

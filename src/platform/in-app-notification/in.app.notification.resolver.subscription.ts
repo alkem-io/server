@@ -1,15 +1,15 @@
-import { Resolver, Int } from '@nestjs/graphql';
-import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentUser, TypedSubscription } from '@common/decorators';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import {
-  InAppNotificationReceivedSubscriptionPayload,
-  InAppNotificationCounterSubscriptionPayload,
-} from '@services/subscriptions/subscription-service/dto';
-import { SubscriptionReadService } from '@services/subscriptions/subscription-service';
-import { ForbiddenException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
+import { ForbiddenException } from '@common/exceptions';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { Int, Resolver } from '@nestjs/graphql';
 import { IInAppNotification } from '@platform/in-app-notification/in.app.notification.interface';
+import { SubscriptionReadService } from '@services/subscriptions/subscription-service';
+import {
+  InAppNotificationCounterSubscriptionPayload,
+  InAppNotificationReceivedSubscriptionPayload,
+} from '@services/subscriptions/subscription-service/dto';
+import { InstrumentResolver } from '@src/apm/decorators';
 
 @InstrumentResolver()
 @Resolver()

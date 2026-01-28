@@ -1,12 +1,12 @@
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
+import { AuthorizationPrivilege } from '@common/enums';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IApplication } from '@domain/access/application';
 import { ApplicationService } from '@domain/access/application/application.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { AuthorizationPrivilege } from '@common/enums';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { DeleteApplicationInput } from './dto/application.dto.delete';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentUser } from '@src/common/decorators';
+import { DeleteApplicationInput } from './dto/application.dto.delete';
 
 @InstrumentResolver()
 @Resolver()

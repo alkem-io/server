@@ -1,19 +1,19 @@
-import { ProfileService } from '@domain/common/profile/profile.service';
-import { Injectable } from '@nestjs/common';
-import { CreateLinkInput } from './dto/link.dto.create';
-import { UpdateLinkInput } from './dto/link.dto.update';
-import { ILink } from './link.interface';
-import { Link } from './link.entity';
+import { ProfileType } from '@common/enums';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { LogContext } from '@common/enums/logging.context';
+import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { IProfile } from '@domain/common/profile/profile.interface';
+import { ProfileService } from '@domain/common/profile/profile.service';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
-import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
-import { LogContext } from '@common/enums/logging.context';
-import { IProfile } from '@domain/common/profile/profile.interface';
-import { ProfileType } from '@common/enums';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { CreateLinkInput } from './dto/link.dto.create';
+import { UpdateLinkInput } from './dto/link.dto.update';
+import { Link } from './link.entity';
+import { ILink } from './link.interface';
 
 @Injectable()
 export class LinkService {

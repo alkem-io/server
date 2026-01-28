@@ -1,8 +1,8 @@
-import { Field, ObjectType } from '@nestjs/graphql';
-import { IStorageBucket } from '../storage-bucket/storage.bucket.interface';
 import { MimeFileType } from '@common/enums/mime.file.type';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
+import { Field, ObjectType } from '@nestjs/graphql';
+import { IStorageBucket } from '../storage-bucket/storage.bucket.interface';
 
 @ObjectType('Document')
 export abstract class IDocument extends IAuthorizable {

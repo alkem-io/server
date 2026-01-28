@@ -1,21 +1,25 @@
-import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
-import { TemplatesSet } from '@domain/template/templates-set/templates.set.entity';
 import { TemplateType } from '@common/enums/template.type';
-import { ITemplate } from './template.interface';
-import { Profile } from '@domain/common/profile/profile.entity';
-import { CommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.entity';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
-import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import { NameableEntity } from '@domain/common/entity/nameable-entity';
+import { Profile } from '@domain/common/profile/profile.entity';
+import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
+import { CommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.entity';
+import { TemplatesSet } from '@domain/template/templates-set/templates.set.entity';
+import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import { TemplateContentSpace } from '../template-content-space/template.content.space.entity';
+import { ITemplate } from './template.interface';
 
 @Entity()
 export class Template extends NameableEntity implements ITemplate {
-  @ManyToOne(() => TemplatesSet, templatesSet => templatesSet.templates, {
-    eager: false,
-    cascade: false,
-    onDelete: 'NO ACTION',
-  })
+  @ManyToOne(
+    () => TemplatesSet,
+    templatesSet => templatesSet.templates,
+    {
+      eager: false,
+      cascade: false,
+      onDelete: 'NO ACTION',
+    }
+  )
   templatesSet?: TemplatesSet;
 
   @OneToOne(() => Profile, {

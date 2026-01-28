@@ -1,14 +1,14 @@
-import { Resolver, Mutation, Args } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentUser } from '@src/common/decorators';
+import { ILicensingCredentialBasedPolicyCredentialRule } from '../licensing-credential-based-entitlements-engine';
+import { CreateLicensePolicyCredentialRuleInput } from './dto/license.policy.dto.credential.rule.create';
 import { DeleteLicensePolicyCredentialRuleInput } from './dto/license.policy.dto.credential.rule.delete';
 import { UpdateLicensePolicyCredentialRuleInput } from './dto/license.policy.dto.credential.rule.update';
 import { LicensePolicyService } from './license.policy.service';
-import { ILicensingCredentialBasedPolicyCredentialRule } from '../licensing-credential-based-entitlements-engine';
-import { CreateLicensePolicyCredentialRuleInput } from './dto/license.policy.dto.credential.rule.create';
 
 @InstrumentResolver()
 @Resolver()

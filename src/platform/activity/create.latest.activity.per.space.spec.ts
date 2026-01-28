@@ -1,6 +1,6 @@
+import { ActivityEventType } from '@common/enums/activity.event.type';
 import { SpaceMembershipCollaborationInfo } from '@services/api/me/space.membership.type';
 import { IActivity } from './activity.interface';
-import { ActivityEventType } from '@common/enums/activity.event.type';
 import { createLatestActivityPerSpaceMap } from './create.latest.activity.per.space';
 
 const AgentUserId = 'user1';

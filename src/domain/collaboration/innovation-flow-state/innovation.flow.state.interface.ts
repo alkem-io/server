@@ -1,8 +1,8 @@
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity/authorizable.interface';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { IInnovationFlowStateSettings } from '../innovation-flow-state-settings/innovation.flow.settings.interface';
 import { IInnovationFlow } from '../innovation-flow/innovation.flow.interface';
+import { IInnovationFlowStateSettings } from '../innovation-flow-state-settings/innovation.flow.settings.interface';
 
 @ObjectType('InnovationFlowState')
 export abstract class IInnovationFlowState extends IAuthorizable {

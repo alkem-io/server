@@ -1,11 +1,11 @@
-import { Injectable } from '@nestjs/common';
-import { ApplicationService } from './application.service';
-import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import { IApplication } from './application.interface';
-import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { CREDENTIAL_RULE_ROLESET_APPLY } from '@common/constants/authorization/credential.rule.constants';
+import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { Injectable } from '@nestjs/common';
+import { IApplication } from './application.interface';
+import { ApplicationService } from './application.service';
 @Injectable()
 export class ApplicationAuthorizationService {
   constructor(

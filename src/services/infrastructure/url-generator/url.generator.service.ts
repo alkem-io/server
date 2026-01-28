@@ -1,41 +1,41 @@
 import { LogContext, ProfileType } from '@common/enums';
+import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
+import { SpaceLevel } from '@common/enums/space.level';
+import { UrlPathBase } from '@common/enums/url.path.base';
+import { UrlPathElement } from '@common/enums/url.path.element';
+import { UrlPathElementSpace } from '@common/enums/url.path.element.space';
 import {
   EntityNotFoundException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
+import { Callout } from '@domain/collaboration/callout/callout.entity';
+import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
+import { CalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.entity';
+import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
+import { Memo } from '@domain/common/memo/memo.entity';
 import { IProfile } from '@domain/common/profile/profile.interface';
+import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
+import { CommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.entity';
+import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { Organization } from '@domain/community/organization/organization.entity';
+import { User } from '@domain/community/user/user.entity';
+import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
+import { Space } from '@domain/space/space/space.entity';
+import { ISpace } from '@domain/space/space/space.interface';
+import { SpaceAbout } from '@domain/space/space.about/space.about.entity';
+import { Template } from '@domain/template/template/template.entity';
+import { TemplateContentSpace } from '@domain/template/template-content-space/template.content.space.entity';
+import { TemplatesManager } from '@domain/template/templates-manager/templates.manager.entity';
+import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager, FindOptionsWhere } from 'typeorm';
-import { Space } from '@domain/space/space/space.entity';
-import { Callout } from '@domain/collaboration/callout/callout.entity';
-import { ISpace } from '@domain/space/space/space.interface';
-import { SpaceLevel } from '@common/enums/space.level';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
-import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
-import { User } from '@domain/community/user/user.entity';
-import { Organization } from '@domain/community/organization/organization.entity';
-import { AlkemioConfig } from '@src/types';
-import { Template } from '@domain/template/template/template.entity';
-import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
-import { CommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.entity';
-import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
-import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
-import { UrlPathElement } from '@common/enums/url.path.element';
-import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
-import { UrlPathBase } from '@common/enums/url.path.base';
-import { UrlGeneratorCacheService } from './url.generator.service.cache';
-import { UrlPathElementSpace } from '@common/enums/url.path.element.space';
 import { Discussion } from '@platform/forum-discussion/discussion.entity';
 import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
-import { SpaceAbout } from '@domain/space/space.about/space.about.entity';
-import { TemplateContentSpace } from '@domain/template/template-content-space/template.content.space.entity';
-import { Memo } from '@domain/common/memo/memo.entity';
-import { CalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.entity';
-import { TemplatesManager } from '@domain/template/templates-manager/templates.manager.entity';
+import { AlkemioConfig } from '@src/types';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { EntityManager, FindOptionsWhere } from 'typeorm';
+import { UrlGeneratorCacheService } from './url.generator.service.cache';
 
 @Injectable()
 export class UrlGeneratorService {
@@ -171,12 +171,13 @@ export class UrlGeneratorService {
       case ProfileType.USER_GROUP:
         // to do: implement and decide what to do with user groups
         return `${this.endpoint_cluster}`;
-      case ProfileType.KNOWLEDGE_BASE:
+      case ProfileType.KNOWLEDGE_BASE: {
         const vc =
           await this.getVirtualContributorFromKnowledgeBaseProfileOrFail(
             profile.id
           );
         return `${this.endpoint_cluster}/${UrlPathBase.VIRTUAL_CONTRIBUTOR}/${vc.nameID}/${UrlPathElement.KNOWLEDGE_BASE}`;
+      }
     }
     return '';
   }

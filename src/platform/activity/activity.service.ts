@@ -1,23 +1,23 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, In, Not, Repository } from 'typeorm';
-import { EntityNotFoundException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
-import { Activity } from './activity.entity';
-import { IActivity } from './activity.interface';
-import { CreateActivityInput } from './dto/activity.dto.create';
-import { ensureMaxLength } from '@common/utils';
 import { SMALL_TEXT_LENGTH } from '@common/constants';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { LogContext } from '@common/enums';
 import { ActivityEventType } from '@common/enums/activity.event.type';
+import { EntityNotFoundException } from '@common/exceptions';
+import { ensureMaxLength } from '@common/utils';
 import { PaginationArgs } from '@core/pagination';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
 import { Collaboration } from '@domain/collaboration/collaboration';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import {
   LatestActivitiesPerSpace,
   SpaceMembershipCollaborationInfo,
 } from '@services/api/me/space.membership.type';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { EntityManager, In, Not, Repository } from 'typeorm';
+import { Activity } from './activity.entity';
+import { IActivity } from './activity.interface';
 import { createLatestActivityPerSpaceMap } from './create.latest.activity.per.space';
+import { CreateActivityInput } from './dto/activity.dto.create';
 
 @Injectable()
 export class ActivityService {

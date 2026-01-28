@@ -1,6 +1,6 @@
-import { InputType, Field, ObjectType } from '@nestjs/graphql';
-import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { CalloutAllowedContributors } from '@common/enums/callout.allowed.contributors';
+import { CalloutContributionType } from '@common/enums/callout.contribution.type';
+import { Field, InputType, ObjectType } from '@nestjs/graphql';
 
 @InputType()
 @ObjectType('CreateCalloutSettingsContributionData')
