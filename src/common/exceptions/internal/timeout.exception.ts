@@ -3,7 +3,11 @@ import { ExceptionDetails } from '@common/exceptions/exception.details';
 import { BaseExceptionInternal } from '@common/exceptions/internal/base.exception.internal';
 
 export class TimeoutException extends BaseExceptionInternal {
-  constructor(error: string, context: LogContext, details?: ExceptionDetails) {
-    super(error, context, details);
+  constructor(
+    message: string,
+    context: LogContext,
+    details?: ExceptionDetails
+  ) {
+    super(message, context, details);
   }
 }

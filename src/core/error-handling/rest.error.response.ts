@@ -6,6 +6,8 @@ export interface RestErrorResponse {
   timestamp: string;
   message: string;
   code: AlkemioErrorStatus;
+  numericCode: number;
+  userMessage: string;
   errorId: string;
   details?: ExceptionDetails;
   context?: LogContext;

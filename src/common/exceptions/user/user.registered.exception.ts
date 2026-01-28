@@ -4,10 +4,15 @@ import { ExceptionDetails } from '../exception.details';
 
 export class UserAlreadyRegisteredException extends BaseException {
   constructor(
-    error: string,
+    message: string,
     context = LogContext.COMMUNITY,
     details?: ExceptionDetails
   ) {
-    super(error, context, AlkemioErrorStatus.USER_ALREADY_REGISTERED, details);
+    super(
+      message,
+      context,
+      AlkemioErrorStatus.USER_ALREADY_REGISTERED,
+      details
+    );
   }
 }

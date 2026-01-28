@@ -4,9 +4,13 @@ import { BaseHttpException } from '@common/exceptions/http';
 import { HttpStatus } from '@nestjs/common';
 
 export class GeoServiceNotAvailableException extends BaseHttpException {
-  constructor(error: string, context: LogContext, details?: ExceptionDetails) {
+  constructor(
+    message: string,
+    context: LogContext,
+    details?: ExceptionDetails
+  ) {
     super(
-      error,
+      message,
       HttpStatus.SERVICE_UNAVAILABLE,
       context,
       AlkemioErrorStatus.GEO_SERVICE_NOT_AVAILABLE,

@@ -54,6 +54,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
     response.status(status).json({
       statusCode: status,
       code: exception.code,
+      numericCode: exception.numericCode,
+      userMessage: exception.userMessage,
       timestamp: new Date().toISOString(),
       message: exception.message,
       errorId: exception.errorId,

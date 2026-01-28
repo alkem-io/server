@@ -4,6 +4,7 @@ export * from './authorization.credential';
 export * from './authorization.credential.global';
 export * from './authorization.privilege';
 export * from './authorization.verified.credential';
+export * from './error.category';
 export * from './logging.context';
 export * from './messaging.queue';
 export * from './profile.type';

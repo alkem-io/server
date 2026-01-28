@@ -1,21 +1,21 @@
-import { vi, Mock } from 'vitest';
+import { AlkemioErrorStatus, LogContext } from '@common/enums';
+import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
+import { HttpExceptionFilter } from '@core/error-handling/http.exception.filter';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import {
   INestApplication,
   LoggerService,
   ValidationPipe as NestValidationPipe,
 } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import request from 'supertest';
+import { Identity } from '@ory/kratos-client';
+import { RegistrationService } from '@services/api/registration/registration.service';
 import { IdentityResolveController } from '@services/api-rest/identity-resolve/identity-resolve.controller';
 import { IdentityResolveService } from '@services/api-rest/identity-resolve/identity-resolve.service';
-import { RegistrationService } from '@services/api/registration/registration.service';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
-import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Identity } from '@ory/kratos-client';
-import { LogContext, AlkemioErrorStatus } from '@common/enums';
-import { HttpExceptionFilter } from '@core/error-handling/http.exception.filter';
+import request from 'supertest';
+import { Mock, vi } from 'vitest';
 
 const buildIdentity = (overrides: Partial<Identity> = {}): Identity =>
   ({
@@ -103,13 +103,13 @@ describe('IdentityResolveController (REST)', () => {
   });
 
   it('returns existing user when authentication ID already linked', async () => {
-    (
-      userLookupService.getUserByAuthenticationID as Mock
-    ).mockResolvedValueOnce({
-      id: 'user-existing',
-      authenticationID: authenticationId,
-      agent: { id: 'agent-existing' },
-    });
+    (userLookupService.getUserByAuthenticationID as Mock).mockResolvedValueOnce(
+      {
+        id: 'user-existing',
+        authenticationID: authenticationId,
+        agent: { id: 'agent-existing' },
+      }
+    );
 
     await request(app.getHttpServer())
       .post('/rest/internal/identity/resolve')
@@ -122,12 +122,10 @@ describe('IdentityResolveController (REST)', () => {
   });
 
   it('returns 404 when Kratos identity cannot be found', async () => {
-    (
-      userLookupService.getUserByAuthenticationID as Mock
-    ).mockResolvedValueOnce(null);
-    (kratosService.getIdentityById as Mock).mockResolvedValueOnce(
-      undefined
+    (userLookupService.getUserByAuthenticationID as Mock).mockResolvedValueOnce(
+      null
     );
+    (kratosService.getIdentityById as Mock).mockResolvedValueOnce(undefined);
 
     await request(app.getHttpServer())
       .post('/rest/internal/identity/resolve')
@@ -141,15 +139,13 @@ describe('IdentityResolveController (REST)', () => {
   });
 
   it('creates a new user when identity is unknown', async () => {
-    (
-      userLookupService.getUserByAuthenticationID as Mock
-    ).mockResolvedValueOnce(null);
+    (userLookupService.getUserByAuthenticationID as Mock).mockResolvedValueOnce(
+      null
+    );
     (userLookupService.getUserByEmail as Mock).mockResolvedValueOnce(null);
 
     const identity = buildIdentity();
-    (kratosService.getIdentityById as Mock).mockResolvedValueOnce(
-      identity
-    );
+    (kratosService.getIdentityById as Mock).mockResolvedValueOnce(identity);
 
     (registrationService.registerNewUser as Mock).mockImplementationOnce(
       async agentInfo => ({
@@ -182,13 +178,13 @@ describe('IdentityResolveController (REST)', () => {
   });
 
   it('returns an error when an existing user lacks an agent', async () => {
-    (
-      userLookupService.getUserByAuthenticationID as Mock
-    ).mockResolvedValueOnce({
-      id: 'user-existing',
-      authenticationID: authenticationId,
-      agent: null,
-    });
+    (userLookupService.getUserByAuthenticationID as Mock).mockResolvedValueOnce(
+      {
+        id: 'user-existing',
+        authenticationID: authenticationId,
+        agent: null,
+      }
+    );
 
     const response = await request(app.getHttpServer())
       .post('/rest/internal/identity/resolve')
@@ -201,15 +197,13 @@ describe('IdentityResolveController (REST)', () => {
   });
 
   it('returns an error when the newly registered user lacks an agent', async () => {
-    (
-      userLookupService.getUserByAuthenticationID as Mock
-    ).mockResolvedValueOnce(null);
+    (userLookupService.getUserByAuthenticationID as Mock).mockResolvedValueOnce(
+      null
+    );
     (userLookupService.getUserByEmail as Mock).mockResolvedValueOnce(null);
 
     const identity = buildIdentity();
-    (kratosService.getIdentityById as Mock).mockResolvedValueOnce(
-      identity
-    );
+    (kratosService.getIdentityById as Mock).mockResolvedValueOnce(identity);
 
     (registrationService.registerNewUser as Mock).mockResolvedValueOnce({
       id: 'user-new',
