@@ -10,6 +10,7 @@ export * from './classification.tagsets.loader.creator';
 export * from './collaboration/collaboration.callouts.set.loader.creator';
 export * from './collaboration/collaboration.timeline.loader.creator';
 export * from './collaboration/knowledge.base.callouts.set.loader.creator';
+export * from './contributor.by.agent.id.loader.creator';
 export * from './in-app-notification/callout.loader.creator';
 export * from './in-app-notification/contributor.loader.creator';
 export * from './in-app-notification/space.loader.creator';
