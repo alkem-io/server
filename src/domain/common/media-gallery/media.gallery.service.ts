@@ -25,7 +25,7 @@ import { Profile } from '../profile';
 type MediaGalleryVisualInput = Partial<
   Pick<
     CreateVisualInput,
-    'type' | 'minWidth' | 'maxWidth' | 'minHeight' | 'maxHeight' | 'aspectRatio'
+    'name' | 'minWidth' | 'maxWidth' | 'minHeight' | 'maxHeight' | 'aspectRatio'
   >
 > & { uri?: string };
 
@@ -161,7 +161,7 @@ export class MediaGalleryService {
     visualInput: MediaGalleryVisualInput
   ): Promise<Visual> {
     const resolvedType = await this.resolveMediaGalleryVisualType(
-      visualInput.type,
+      visualInput.name,
       visualInput.uri
     );
     const constraints = DEFAULT_VISUAL_CONSTRAINTS[resolvedType];
@@ -192,7 +192,7 @@ export class MediaGalleryService {
     const visual = this.visualService.createVisual(
       {
         ...(mergedInput as any),
-        type: resolvedType,
+        name: resolvedType,
       },
       visualInput.uri
     ) as Visual;
