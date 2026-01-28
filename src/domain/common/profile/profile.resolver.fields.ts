@@ -40,9 +40,12 @@ export class ProfileResolverFields {
   @Profiling.api
   async visual(
     @Parent() profile: IProfile,
-    @Args('type', { type: () => VisualType }) type: VisualType
+    @Args('type', { type: () => VisualType }) type: VisualType,
+    @Loader(VisualLoaderCreator, { parentClassRef: Profile })
+    loader: ILoader<IVisual[]>
   ): Promise<IVisual | undefined> {
-    return this.profileService.getVisual(profile, type);
+    const visuals = await loader.load(profile.id);
+    return visuals.find(v => v.name === type);
   }
 
   @ResolveField('visuals', () => [IVisual], {

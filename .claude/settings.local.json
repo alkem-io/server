@@ -5,7 +5,9 @@
       "Bash(pnpm test:*)",
       "Bash(npx tsc:*)",
       "Bash(pnpm exec biome:*)",
-      "Bash(pnpm test:ci:no:coverage:*)"
+      "Bash(pnpm test:ci:no:coverage:*)",
+      "Bash(pnpm lint:fix:*)",
+      "Bash(pnpm build:*)"
     ]
   }
 }
