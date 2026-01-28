@@ -29,10 +29,17 @@ export class MediaGallery1769181629999 implements MigrationInterface {
       `ALTER TABLE "visual" DROP CONSTRAINT "FK_f7d0fd686fb8aec91868c548f62"`
     );
     await queryRunner.query(
+      `ALTER TABLE "callout_framing" DROP CONSTRAINT "REL_471fa4cb18d52aafe50e51dfe1"`
+    );
+    await queryRunner.query(
       `ALTER TABLE "media_gallery" DROP CONSTRAINT "FK_e0ee9bf6142bc19e9eff2638245"`
     );
     await queryRunner.query(
-      `ALTER TABLE "callout_framing" DROP CONSTRAINT "REL_471fa4cb18d52aafe50e51dfe1"`
+      `ALTER TABLE "media_gallery" DROP CONSTRAINT "FK_1f98def29bcf7b12442706430f9"`
+    );
+
+    await queryRunner.query(
+      `ALTER TABLE "media_gallery" DROP CONSTRAINT "REL_e0ee9bf6142bc19e9eff263824"`
     );
     await queryRunner.query(
       `ALTER TABLE "callout_framing" DROP COLUMN "mediaGalleryId"`
