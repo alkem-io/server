@@ -4,9 +4,9 @@
  */
 export enum ErrorCategory {
   NOT_FOUND = 10, // 10xxx - Entity/resource not found
-  AUTHORIZATION = 20, // 20xxx - Auth/permission errors
-  VALIDATION = 30, // 30xxx - Input/state validation
-  OPERATIONS = 40, // 40xxx - Business rule violations
-  SYSTEM = 50, // 50xxx - Infrastructure errors
+  AUTHORIZATION = 11, // 11xxx - Auth/permission errors
+  VALIDATION = 12, // 12xxx - Input/state validation
+  OPERATIONS = 13, // 13xxx - Business rule violations
+  SYSTEM = 14, // 14xxx - Infrastructure errors
   FALLBACK = 99, // 99xxx - Unmapped errors
 }
