@@ -1,6 +1,6 @@
 import { IOrganization } from '@domain/community/organization';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { RolesResult as RolesResult } from './roles.dto.result';
+import { RolesResult } from './roles.dto.result';
 
 @ObjectType()
 export class RolesResultOrganization extends RolesResult {

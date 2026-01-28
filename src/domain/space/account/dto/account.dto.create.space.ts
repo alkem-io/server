@@ -1,6 +1,6 @@
-import { Field, InputType } from '@nestjs/graphql';
-import { CreateSpaceInput } from '@domain/space/space/dto/space.dto.create';
 import { UUID } from '@domain/common/scalars';
+import { CreateSpaceInput } from '@domain/space/space/dto/space.dto.create';
+import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
 export class CreateSpaceOnAccountInput extends CreateSpaceInput {

@@ -1,9 +1,9 @@
 import { LogContext } from '@common/enums';
 import { ValidationException } from '@common/exceptions';
 import { validateExcalidrawContent } from '@core/validation/excalidraw/validateExcalidrawContent';
-import { Scalar, CustomScalar } from '@nestjs/graphql';
-import { Kind, ValueNode } from 'graphql';
+import { CustomScalar, Scalar } from '@nestjs/graphql';
 import { ErrorObject } from 'ajv';
+import { Kind, ValueNode } from 'graphql';
 
 const WHITEBOARD_CONTENT_LENGTH = 8388608;
 

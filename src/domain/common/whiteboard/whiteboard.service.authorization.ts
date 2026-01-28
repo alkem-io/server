@@ -1,31 +1,31 @@
-import { Injectable, Inject, LoggerService } from '@nestjs/common';
+import {
+  CREDENTIAL_RULE_WHITEBOARD_CREATED_BY,
+  POLICY_RULE_WHITEBOARD_CONTENT_UPDATE,
+  POLICY_RULE_WHITEBOARD_GRANT_PUBLIC_SHARE,
+} from '@common/constants';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
+import { RoleName } from '@common/enums/role.name';
+import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
+import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
+import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
-import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
-import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import {
-  CREDENTIAL_RULE_WHITEBOARD_CREATED_BY,
-  POLICY_RULE_WHITEBOARD_CONTENT_UPDATE,
-  POLICY_RULE_WHITEBOARD_GRANT_PUBLIC_SHARE,
-} from '@common/constants';
-import { ProfileAuthorizationService } from '../profile/profile.service.authorization';
-import { IWhiteboard } from './whiteboard.interface';
-import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
-import { WhiteboardService } from './whiteboard.service';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { RoleName } from '@common/enums/role.name';
-import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { ProfileAuthorizationService } from '../profile/profile.service.authorization';
 import { WhiteboardGuestAccessService } from './whiteboard.guest-access.service';
+import { IWhiteboard } from './whiteboard.interface';
+import { WhiteboardService } from './whiteboard.service';
 
 const CREDENTIAL_RULE_WHITEBOARD_OWNER_PUBLIC_SHARE =
   'whiteboard-owner-public-share';
@@ -331,7 +331,7 @@ export class WhiteboardAuthorizationService {
       }
     }
 
-    if (!!spaceSettings?.collaboration?.allowGuestContributions) {
+    if (spaceSettings?.collaboration?.allowGuestContributions) {
       // Guest contributions rely on global admins surfacing with GRANT;
       // this privilege rule exists so those GRANT-only actors inherit PUBLIC_SHARE automatically.
       // (Global Support remains wired through getAccessPrivilegesForSupport until we make it more robust.)

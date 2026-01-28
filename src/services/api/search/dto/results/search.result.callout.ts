@@ -1,8 +1,8 @@
-import { Field, ObjectType } from '@nestjs/graphql';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { ISpace } from '@domain/space/space/space.interface';
-import { ISearchResult } from './search.result.interface';
+import { Field, ObjectType } from '@nestjs/graphql';
 import { SearchResultBase } from './search.result.base';
+import { ISearchResult } from './search.result.interface';
 
 @ObjectType('SearchResultCallout', {
   implements: () => ISearchResult,

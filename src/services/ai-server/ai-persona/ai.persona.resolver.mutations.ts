@@ -1,12 +1,12 @@
-import { Args, Resolver, Mutation } from '@nestjs/graphql';
-import { AiPersonaService } from './ai.persona.service';
-import { CurrentUser } from '@src/common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { IAiPersona } from './ai.persona.interface';
-import { DeleteAiPersonaInput, UpdateAiPersonaInput } from './dto';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentUser } from '@src/common/decorators';
+import { IAiPersona } from './ai.persona.interface';
+import { AiPersonaService } from './ai.persona.service';
+import { DeleteAiPersonaInput, UpdateAiPersonaInput } from './dto';
 
 @InstrumentResolver()
 @Resolver(() => IAiPersona)

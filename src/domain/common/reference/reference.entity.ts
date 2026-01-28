@@ -1,7 +1,7 @@
+import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
+import { Profile } from '@domain/common/profile/profile.entity';
 import { Column, Entity, Index, ManyToOne } from 'typeorm';
 import { IReference } from './reference.interface';
-import { Profile } from '@domain/common/profile/profile.entity';
-import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 
 @Entity()
 @Index('IDX_reference_profileId', ['profile'])
@@ -15,11 +15,15 @@ export class Reference extends AuthorizableEntity implements IReference {
   @Column('text', { nullable: true })
   description?: string;
 
-  @ManyToOne(() => Profile, profile => profile.references, {
-    eager: false,
-    cascade: false,
-    onDelete: 'CASCADE',
-  })
+  @ManyToOne(
+    () => Profile,
+    profile => profile.references,
+    {
+      eager: false,
+      cascade: false,
+      onDelete: 'CASCADE',
+    }
+  )
   profile?: Profile;
 
   constructor(name: string, uri: string, description?: string) {

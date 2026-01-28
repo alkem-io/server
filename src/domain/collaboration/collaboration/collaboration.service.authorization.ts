@@ -1,26 +1,26 @@
-import { Injectable } from '@nestjs/common';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
-import { LogContext } from '@common/enums/logging.context';
-import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
-import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
-import { AuthorizationCredential } from '@common/enums';
-import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { CREDENTIAL_RULE_COLLABORATION_CONTRIBUTORS } from '@common/constants';
+import { AuthorizationCredential } from '@common/enums';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { LogContext } from '@common/enums/logging.context';
 import { RoleName } from '@common/enums/role.name';
-import { TimelineAuthorizationService } from '@domain/timeline/timeline/timeline.service.authorization';
-import { InnovationFlowAuthorizationService } from '../innovation-flow/innovation.flow.service.authorization';
+import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
-import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
-import { IRoleSet } from '@domain/access/role-set';
-import { RoleSetService } from '@domain/access/role-set/role.set.service';
-import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
-import { CalloutsSetAuthorizationService } from '../callouts-set/callouts.set.service.authorization';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
 import { PlatformRolesAccessService } from '@domain/access/platform-roles-access/platform.roles.access.service';
+import { IRoleSet } from '@domain/access/role-set';
+import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
+import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
+import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
+import { TimelineAuthorizationService } from '@domain/timeline/timeline/timeline.service.authorization';
+import { Injectable } from '@nestjs/common';
+import { CalloutsSetAuthorizationService } from '../callouts-set/callouts.set.service.authorization';
+import { InnovationFlowAuthorizationService } from '../innovation-flow/innovation.flow.service.authorization';
 
 @Injectable()
 export class CollaborationAuthorizationService {

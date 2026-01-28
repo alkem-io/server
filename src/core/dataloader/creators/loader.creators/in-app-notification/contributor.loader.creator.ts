@@ -1,18 +1,18 @@
-import { EntityManager, In } from 'typeorm';
-import { Injectable } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
+import { EntityNotFoundException } from '@common/exceptions';
 import {
   DataLoaderCreator,
   DataLoaderCreatorBaseOptions,
 } from '@core/dataloader/creators/base';
-import { createBatchLoader } from '@core/dataloader/utils';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { User } from '@domain/community/user/user.entity';
-import { Organization } from '@domain/community/organization';
-import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
+import { createBatchLoader } from '@core/dataloader/utils';
 import { IContributorBase } from '@domain/community/contributor';
-import { EntityNotFoundException } from '@common/exceptions';
+import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { Organization } from '@domain/community/organization';
+import { User } from '@domain/community/user/user.entity';
+import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
+import { Injectable } from '@nestjs/common';
+import { InjectEntityManager } from '@nestjs/typeorm';
+import { EntityManager, In } from 'typeorm';
 
 @Injectable()
 export class ContributorLoaderCreator

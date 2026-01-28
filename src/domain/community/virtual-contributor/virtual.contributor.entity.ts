@@ -1,3 +1,10 @@
+import { ENUM_LENGTH, SMALL_TEXT_LENGTH } from '@common/constants';
+import { SearchVisibility } from '@common/enums/search.visibility';
+import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
+import { VirtualContributorDataAccessMode } from '@common/enums/virtual.contributor.data.access.mode';
+import { VirtualContributorInteractionMode } from '@common/enums/virtual.contributor.interaction.mode';
+import { KnowledgeBase } from '@domain/common/knowledge-base/knowledge.base.entity';
+import { Account } from '@domain/space/account/account.entity';
 import {
   Column,
   Entity,
@@ -6,19 +13,12 @@ import {
   ManyToOne,
   OneToOne,
 } from 'typeorm';
-import { IVirtualContributor } from './virtual.contributor.interface';
 import { ContributorBase } from '../contributor/contributor.base.entity';
-import { Account } from '@domain/space/account/account.entity';
-import { SearchVisibility } from '@common/enums/search.visibility';
-import { ENUM_LENGTH, SMALL_TEXT_LENGTH } from '@common/constants';
-import { KnowledgeBase } from '@domain/common/knowledge-base/knowledge.base.entity';
-import { IVirtualContributorSettings } from '../virtual-contributor-settings/virtual.contributor.settings.interface';
 import { IVirtualContributorPlatformSettings } from '../virtual-contributor-platform-settings/virtual.contributor.platform.settings.interface';
-import { VirtualContributorInteractionMode } from '@common/enums/virtual.contributor.interaction.mode';
-import { VirtualContributorDataAccessMode } from '@common/enums/virtual.contributor.data.access.mode';
-import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
-import { PromptGraphTransformer } from './transformers/prompt.graph.transformer';
+import { IVirtualContributorSettings } from '../virtual-contributor-settings/virtual.contributor.settings.interface';
 import { PromptGraphDefinition } from './dto/prompt-graph-definition/prompt.graph.definition.dto';
+import { PromptGraphTransformer } from './transformers/prompt.graph.transformer';
+import { IVirtualContributor } from './virtual.contributor.interface';
 
 @Entity()
 export class VirtualContributor
@@ -31,11 +31,15 @@ export class VirtualContributor
   @Generated('increment')
   rowId!: number;
 
-  @ManyToOne(() => Account, account => account.virtualContributors, {
-    eager: false,
-    onDelete: 'SET NULL',
-    nullable: true,
-  })
+  @ManyToOne(
+    () => Account,
+    account => account.virtualContributors,
+    {
+      eager: false,
+      onDelete: 'SET NULL',
+      nullable: true,
+    }
+  )
   account?: Account;
 
   @Column('jsonb', { nullable: false })

@@ -1,17 +1,17 @@
-import { Injectable } from '@nestjs/common';
-import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { RoomService } from './room.service';
-import { IRoom } from './room.interface';
-import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
-import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
   CREDENTIAL_RULE_ROOM_MESSAGE_SENDER,
   CREDENTIAL_RULE_ROOM_REACTION_SENDER,
   POLICY_RULE_ROOM_ADMINS,
   POLICY_RULE_ROOM_CONTRIBUTE,
 } from '@common/constants';
+import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { Injectable } from '@nestjs/common';
+import { IRoom } from './room.interface';
+import { RoomService } from './room.service';
 
 @Injectable()
 export class RoomAuthorizationService {

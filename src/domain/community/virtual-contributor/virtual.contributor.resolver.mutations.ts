@@ -1,23 +1,23 @@
-import { Inject, LoggerService } from '@nestjs/common';
-import { Args, Resolver, Mutation, ObjectType } from '@nestjs/graphql';
-import { VirtualContributorService } from './virtual.contributor.service';
-import { CurrentUser } from '@src/common/decorators';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { RelationshipNotFoundException } from '@common/exceptions';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { IVirtualContributor } from './virtual.contributor.interface';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { Inject, LoggerService } from '@nestjs/common';
+import { Args, Mutation, ObjectType, Resolver } from '@nestjs/graphql';
+import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentUser } from '@src/common/decorators';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import {
   DeleteVirtualContributorInput,
   UpdateVirtualContributorInput,
-  UpdateVirtualContributorSettingsInput,
   UpdateVirtualContributorPlatformSettingsInput,
+  UpdateVirtualContributorSettingsInput,
 } from './dto';
 import { RefreshVirtualContributorBodyOfKnowledgeInput } from './dto/virtual.contributor.dto.refresh.body.of.knowledge';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { IVirtualContributor } from './virtual.contributor.interface';
+import { VirtualContributorService } from './virtual.contributor.service';
 import { VirtualContributorAuthorizationService } from './virtual.contributor.service.authorization';
-import { RelationshipNotFoundException } from '@common/exceptions';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { InstrumentResolver } from '@src/apm/decorators';
 
 @ObjectType('MigrateEmbeddings') // TODO: what is this about?
 @InstrumentResolver()

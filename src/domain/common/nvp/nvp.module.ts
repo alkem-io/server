@@ -1,6 +1,6 @@
+import { NVP } from '@domain/common/nvp/nvp.entity';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { NVP } from '@domain/common/nvp/nvp.entity';
 import { NVPService } from './nvp.service';
 
 @Module({

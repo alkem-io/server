@@ -15,7 +15,7 @@ export const getDiff = <T extends Record<string, any>>(
   const result: Partial<T> = {};
 
   for (const key in obj1) {
-    if (obj1.hasOwnProperty(key) && obj2.hasOwnProperty(key)) {
+    if (Object.hasOwn(obj1, key) && Object.hasOwn(obj2, key)) {
       const value1 = obj1[key];
       const value2 = obj2[key];
 

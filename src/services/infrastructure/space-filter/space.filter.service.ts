@@ -1,5 +1,5 @@
-import { SpaceVisibility } from '@common/enums/space.visibility';
 import { LogContext } from '@common/enums/logging.context';
+import { SpaceVisibility } from '@common/enums/space.visibility';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';

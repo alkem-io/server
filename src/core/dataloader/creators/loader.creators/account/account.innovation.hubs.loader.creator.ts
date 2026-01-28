@@ -1,10 +1,10 @@
-import { EntityManager } from 'typeorm';
+import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
+import { Account } from '@domain/space/account/account.entity';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { Account } from '@domain/space/account/account.entity';
+import { EntityManager } from 'typeorm';
 import { createTypedRelationDataLoader } from '../../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
-import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
 
 @Injectable()
 export class AccountInnovationHubsLoaderCreator

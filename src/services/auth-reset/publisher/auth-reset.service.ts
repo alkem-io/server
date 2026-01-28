@@ -1,17 +1,17 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { EntityManager } from 'typeorm';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { InjectEntityManager } from '@nestjs/typeorm';
-import { ClientProxy } from '@nestjs/microservices';
-import { User } from '@domain/community/user/user.entity';
-import { Organization } from '@domain/community/organization';
 import { AUTH_RESET_SERVICE } from '@common/constants';
 import { AlkemioErrorStatus, LogContext } from '@common/enums';
-import { TaskService } from '@services/task/task.service';
-import { RESET_EVENT_TYPE } from '../reset.event.type';
-import { AuthResetEventPayload } from '../auth-reset.payload.interface';
 import { BaseException } from '@common/exceptions/base.exception';
+import { Organization } from '@domain/community/organization';
+import { User } from '@domain/community/user/user.entity';
 import { Account } from '@domain/space/account/account.entity';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { ClientProxy } from '@nestjs/microservices';
+import { InjectEntityManager } from '@nestjs/typeorm';
+import { TaskService } from '@services/task/task.service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { EntityManager } from 'typeorm';
+import { AuthResetEventPayload } from '../auth-reset.payload.interface';
+import { RESET_EVENT_TYPE } from '../reset.event.type';
 
 @Injectable()
 export class AuthResetService {

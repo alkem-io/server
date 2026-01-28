@@ -1,16 +1,16 @@
-import { Injectable } from '@nestjs/common';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { AiServerService } from './ai.server.service';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { CREDENTIAL_RULE_AI_SERVER_GLOBAL_ADMINS } from '@common/constants/authorization/credential.rule.types.constants';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
-import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
-import { CREDENTIAL_RULE_AI_SERVER_GLOBAL_ADMINS } from '@common/constants/authorization/credential.rule.types.constants';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { Injectable } from '@nestjs/common';
 import { AiPersonaAuthorizationService } from '../ai-persona/ai.persona.service.authorization';
+import { AiServerService } from './ai.server.service';
 
 @Injectable()
 export class AiServerAuthorizationService {

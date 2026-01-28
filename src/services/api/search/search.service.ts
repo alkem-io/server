@@ -1,18 +1,18 @@
-import { EntityManager } from 'typeorm';
-import { Injectable } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
-import { ConfigService } from '@nestjs/config';
-import { AlkemioConfig } from '@src/types';
+import { LogContext } from '@common/enums';
+import { EntityNotFoundException } from '@common/exceptions';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { Space } from '@domain/space/space/space.entity';
-import { EntityNotFoundException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { InjectEntityManager } from '@nestjs/typeorm';
+import { AlkemioConfig } from '@src/types';
+import { EntityManager } from 'typeorm';
+import { SearchFilterInput, SearchInput } from './dto/inputs';
+import { ISearchResults } from './dto/results';
 import { SearchExtractService } from './extract/search.extract.service';
 import { SearchResultService } from './result/search.result.service';
-import { SearchInput, SearchFilterInput } from './dto/inputs';
-import { ISearchResults } from './dto/results';
-import { validateSearchParameters } from './util';
 import { SearchCategory } from './search.category';
+import { validateSearchParameters } from './util';
 
 const DEFAULT_RESULT_SIZE = 4;
 

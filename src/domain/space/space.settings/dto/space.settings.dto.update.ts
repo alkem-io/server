@@ -1,7 +1,7 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { UpdateSpaceSettingsPrivacyInput } from './space.settings.privacy.dto.update';
-import { UpdateSpaceSettingsMembershipInput } from './space.settings.membership.dto.update';
 import { UpdateSpaceSettingsCollaborationInput } from './space.settings.collaboration.dto.update';
+import { UpdateSpaceSettingsMembershipInput } from './space.settings.membership.dto.update';
+import { UpdateSpaceSettingsPrivacyInput } from './space.settings.privacy.dto.update';
 
 @InputType()
 export class UpdateSpaceSettingsEntityInput {

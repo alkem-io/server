@@ -1,15 +1,15 @@
-import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { UseGuards } from '@nestjs/common';
+import { AuthorizationAgentPrivilege } from '@common/decorators/authorization.agent.privilege';
+import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
+import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.interface';
+import { UseGuards } from '@nestjs/common';
+import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { ICallout } from '../callout/callout.interface';
 import { ICalloutsSet } from './callouts.set.interface';
 import { CalloutsSetService } from './callouts.set.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { CurrentUser } from '@common/decorators/current-user.decorator';
-import { AuthorizationAgentPrivilege } from '@common/decorators/authorization.agent.privilege';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { CalloutsSetArgsCallouts } from './dto/callouts.set.args.callouts';
-import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.interface';
 import { CalloutsSetArgsTags } from './dto/callouts.set.args.tags';
 
 @Resolver(() => ICalloutsSet)

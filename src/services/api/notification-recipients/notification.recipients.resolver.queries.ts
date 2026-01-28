@@ -1,13 +1,13 @@
-import { Args, Resolver, Query } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { NotificationRecipientsService } from './notification.recipients.service';
-import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { Args, Query, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentUser } from '@src/common/decorators';
+import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { NotificationRecipientsInput } from './dto/notification.recipients.dto.input';
 import { NotificationRecipientResult } from './dto/notification.recipients.dto.result';
+import { NotificationRecipientsService } from './notification.recipients.service';
 
 @InstrumentResolver()
 @Resolver()

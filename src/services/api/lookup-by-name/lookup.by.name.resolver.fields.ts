@@ -1,20 +1,19 @@
-import { Args, Resolver } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
-import { ResolveField } from '@nestjs/graphql';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { LookupByNameQueryResults } from './dto/lookup.by.name.query.results';
-import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.service';
-import { InnovationPackService } from '@library/innovation-pack/innovation.pack.service';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { NameID, UUID } from '@domain/common/scalars';
-import { TemplateService } from '@domain/template/template/template.service';
-import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
-import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
+import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.service';
 import { ISpace } from '@domain/space/space/space.interface';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
+import { TemplateService } from '@domain/template/template/template.service';
+import { InnovationPackService } from '@library/innovation-pack/innovation.pack.service';
+import { Args, ResolveField, Resolver } from '@nestjs/graphql';
+import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
+import { CurrentUser } from '@src/common/decorators';
+import { LookupByNameQueryResults } from './dto/lookup.by.name.query.results';
 
 @Resolver(() => LookupByNameQueryResults)
 export class LookupByNameResolverFields {

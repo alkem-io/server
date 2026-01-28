@@ -1,3 +1,4 @@
+import { LogContext } from '@common/enums';
 import {
   Body,
   Controller,
@@ -7,12 +8,11 @@ import {
   Post,
   Req,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { IdentityResolveService } from './identity-resolve.service';
 import { IdentityResolveRequestDto } from './dto/identity-resolve.request.dto';
 import { IdentityResolveResponseDto } from './dto/identity-resolve.response.dto';
-import { Request } from 'express';
-import { LogContext } from '@common/enums';
+import { IdentityResolveService } from './identity-resolve.service';
 
 @Controller('/rest/internal/identity')
 export class IdentityResolveController {

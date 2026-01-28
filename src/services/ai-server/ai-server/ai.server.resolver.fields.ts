@@ -1,13 +1,13 @@
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { GraphqlGuard } from '@core/authorization';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { UUID } from '@domain/common/scalars/scalar.uuid';
+import { UseGuards } from '@nestjs/common';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { IAiPersona } from '@services/ai-server/ai-persona';
 import { AuthorizationAgentPrivilege } from '@src/common/decorators';
 import { IAiServer } from './ai.server.interface';
 import { AiServerService } from './ai.server.service';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import { GraphqlGuard } from '@core/authorization';
-import { UseGuards } from '@nestjs/common';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { IAiPersona } from '@services/ai-server/ai-persona';
-import { UUID } from '@domain/common/scalars/scalar.uuid';
 
 @Resolver(() => IAiServer)
 export class AiServerResolverFields {

@@ -1,19 +1,19 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { CREDENTIAL_RULE_USER_GROUP_READ } from '@common/constants/authorization/credential.rule.constants';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
-import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { EntityNotInitializedException } from '@common/exceptions';
-import { IUserGroup, UserGroup } from '@domain/community/user-group';
-import { UserGroupService } from './user-group.service';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { CREDENTIAL_RULE_USER_GROUP_READ } from '@common/constants/authorization/credential.rule.constants';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
+import { IUserGroup, UserGroup } from '@domain/community/user-group';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { UserGroupService } from './user-group.service';
 
 @Injectable()
 export class UserGroupAuthorizationService {

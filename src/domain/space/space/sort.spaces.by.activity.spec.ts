@@ -1,14 +1,14 @@
-import { ActivityEventType } from '@common/enums/activity.event.type';
-import { IActivity } from '@platform/activity/activity.interface';
-import { LatestActivitiesPerSpace } from '@services/api/me/space.membership.type';
-import { ISpace } from './space.interface';
-import { sortSpacesByActivity } from './sort.spaces.by.activity';
-import { SpaceVisibility } from '@common/enums/space.visibility';
 import { ProfileType } from '@common/enums';
 import { AccountType } from '@common/enums/account.type';
+import { ActivityEventType } from '@common/enums/activity.event.type';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
+import { SpaceVisibility } from '@common/enums/space.visibility';
+import { IActivity } from '@platform/activity/activity.interface';
+import { LatestActivitiesPerSpace } from '@services/api/me/space.membership.type';
 import { DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN } from '../account/constants';
+import { sortSpacesByActivity } from './sort.spaces.by.activity';
+import { ISpace } from './space.interface';
 
 const createTestActivity = (createdDate: Date): IActivity => {
   return {

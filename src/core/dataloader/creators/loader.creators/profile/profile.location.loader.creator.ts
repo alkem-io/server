@@ -1,8 +1,8 @@
-import { EntityManager } from 'typeorm';
+import { ILocation } from '@domain/common/location';
+import { Profile } from '@domain/common/profile';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { Profile } from '@domain/common/profile';
-import { ILocation } from '@domain/common/location';
+import { EntityManager } from 'typeorm';
 import { createTypedRelationDataLoader } from '../../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
 

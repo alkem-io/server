@@ -1,20 +1,20 @@
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { LinkService } from './link.service';
-import { UpdateLinkInput } from '@domain/collaboration/link/dto/link.dto.update';
-import { DeleteLinkInput } from '@domain/collaboration/link/dto/link.dto.delete';
-import { ILink } from '@domain/collaboration/link/link.interface';
 import { CurrentUser, Profiling } from '@common/decorators';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { StorageBucketUploadFileOnLinkInput } from '@domain/storage/storage-bucket/dto/storage.bucket.dto.upload.file.on.link';
-import { FileUpload, GraphQLUpload } from 'graphql-upload';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
-import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { DeleteLinkInput } from '@domain/collaboration/link/dto/link.dto.delete';
+import { UpdateLinkInput } from '@domain/collaboration/link/dto/link.dto.update';
+import { ILink } from '@domain/collaboration/link/link.interface';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { StorageBucketUploadFileOnLinkInput } from '@domain/storage/storage-bucket/dto/storage.bucket.dto.upload.file.on.link';
+import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { FileUpload, GraphQLUpload } from 'graphql-upload';
+import { LinkService } from './link.service';
 
 @InstrumentResolver()
 @Resolver()

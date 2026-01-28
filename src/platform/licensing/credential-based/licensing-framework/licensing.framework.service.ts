@@ -3,14 +3,14 @@ import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exc
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { ILicensePlan } from '@platform/licensing/credential-based/license-plan/license.plan.interface';
+import { LicensePlanService } from '@platform/licensing/credential-based/license-plan/license.plan.service';
+import { ILicensePolicy } from '@platform/licensing/credential-based/license-policy/license.policy.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { CreateLicensePlanOnLicensingFrameworkInput } from './dto/licensing.framework.dto.create.license.plan';
 import { LicensingFramework } from './licensing.framework.entity';
 import { ILicensingFramework } from './licensing.framework.interface';
-import { ILicensePlan } from '@platform/licensing/credential-based/license-plan/license.plan.interface';
-import { LicensePlanService } from '@platform/licensing/credential-based/license-plan/license.plan.service';
-import { ILicensePolicy } from '@platform/licensing/credential-based/license-policy/license.policy.interface';
 
 @Injectable()
 export class LicensingFrameworkService {

@@ -1,5 +1,5 @@
-import { BaseOutputData } from './base.output.data';
 import { SaveErrorCodes } from '@services/collaborative-document-integration/types';
+import { BaseOutputData } from './base.output.data';
 
 export class SaveOutputData extends BaseOutputData {
   constructor(public data: SaveContentData | SaveErrorData) {

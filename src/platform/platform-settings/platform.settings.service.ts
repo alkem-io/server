@@ -1,9 +1,9 @@
+import { LogContext } from '@common/enums';
+import { EntityNotInitializedException } from '@common/exceptions';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { IPlatformSettings } from './platform.settings.interface';
 import { UpdatePlatformSettingsInput } from './dto/platform.settings.dto.update';
-import { EntityNotInitializedException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { IPlatformSettings } from './platform.settings.interface';
 
 @Injectable()
 export class PlatformSettingsService {

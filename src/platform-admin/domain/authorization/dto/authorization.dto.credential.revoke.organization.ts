@@ -1,6 +1,6 @@
 import { AuthorizationCredential } from '@common/enums';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
-import { InputType, Field } from '@nestjs/graphql';
+import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
 export class RevokeOrganizationAuthorizationCredentialInput {

@@ -1,10 +1,10 @@
-import { EntityManager } from 'typeorm';
+import { Classification } from '@domain/common/classification/classification.entity';
+import { ITagset } from '@domain/common/tagset';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { ITagset } from '@domain/common/tagset';
+import { EntityManager } from 'typeorm';
 import { createTypedRelationDataLoader } from '../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../base';
-import { Classification } from '@domain/common/classification/classification.entity';
 
 @Injectable()
 export class ClassificationTagsetsLoaderCreator

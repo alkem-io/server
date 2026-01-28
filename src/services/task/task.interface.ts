@@ -1,6 +1,6 @@
-import { TaskResult } from './task.result.interface';
-import { TaskError } from './task.error.interface';
 import { TaskStatus } from '@domain/task/dto';
+import { TaskError } from './task.error.interface';
+import { TaskResult } from './task.result.interface';
 
 export interface Task {
   /**

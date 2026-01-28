@@ -1,13 +1,13 @@
-import { Injectable, Inject, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { User } from '@domain/community/user/user.entity';
 import { LogContext } from '@common/enums';
 import { UserAlreadyRegisteredException } from '@common/exceptions';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { User } from '@domain/community/user/user.entity';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { Repository } from 'typeorm';
 import {
   UserAuthenticationLinkConflictMode,
   UserAuthenticationLinkMatch,

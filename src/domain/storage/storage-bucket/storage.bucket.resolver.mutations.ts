@@ -1,18 +1,18 @@
-import { Resolver, Mutation, Args } from '@nestjs/graphql';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { StorageBucketService } from './storage.bucket.service';
-import { DocumentAuthorizationService } from '../document/document.service.authorization';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentUser, Profiling } from '@src/common/decorators';
 import { FileUpload, GraphQLUpload } from 'graphql-upload';
 import { DocumentService } from '../document/document.service';
+import { DocumentAuthorizationService } from '../document/document.service.authorization';
+import { DeleteStorageBuckeetInput as DeleteStorageBucketInput } from './dto/storage.bucket.dto.delete';
 import { StorageBucketUploadFileInput } from './dto/storage.bucket.dto.upload.file';
 import { StorageBucketUploadFileResult } from './dto/storage.bucket.dto.upload.file.result';
 import { IStorageBucket } from './storage.bucket.interface';
-import { DeleteStorageBuckeetInput as DeleteStorageBucketInput } from './dto/storage.bucket.dto.delete';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { InstrumentResolver } from '@src/apm/decorators';
+import { StorageBucketService } from './storage.bucket.service';
 
 @InstrumentResolver()
 @Resolver()

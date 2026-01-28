@@ -1,14 +1,14 @@
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { NotificationEventInAppState } from '@common/enums/notification.event.in.app.state';
 import { CurrentUser } from '@common/decorators';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { LogContext } from '@common/enums';
+import { NotificationEventInAppState } from '@common/enums/notification.event.in.app.state';
 import { ForbiddenException } from '@common/exceptions';
-import { UpdateNotificationStateInput } from './dto/in.app.notification.state.update';
-import { InstrumentResolver } from '@src/apm/decorators';
-import { InAppNotificationService } from './in.app.notification.service';
-import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { NotificationEventsFilterInput } from '@services/api/me/dto/me.notification.event.filter.dto.input';
+import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
+import { InstrumentResolver } from '@src/apm/decorators';
+import { UpdateNotificationStateInput } from './dto/in.app.notification.state.update';
+import { InAppNotificationService } from './in.app.notification.service';
 
 @InstrumentResolver()
 @Resolver()

@@ -1,28 +1,28 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { NotificationInputPlatformForumDiscussionCreated } from './dto/platform/notification.dto.input.platform.forum.discussion.created';
-import { NotificationInputPlatformUserRegistered } from './dto/platform/notification.dto.input.platform.user.registered';
-import { NotificationInputPlatformUserRemoved } from './dto/platform/notification.dto.input.platform.user.removed';
-import { NotificationInputBase } from './dto/notification.dto.input.base';
-import { NotificationInputPlatformForumDiscussionComment } from './dto/platform/notification.dto.input.platform.forum.discussion.comment';
-import { NotificationInputPlatformInvitation } from './dto/space/notification.dto.input.space.community.invitation.platform';
-import { NotificationInputPlatformGlobalRoleChange } from './dto/platform/notification.dto.input.platform.global.role.change';
-import { NotificationInputSpaceCreated } from './dto/platform/notification.dto.input.platform.space.created';
-import { NotificationExternalAdapter } from '../notification-external-adapter/notification.external.adapter';
-import { NotificationInAppAdapter } from '../notification-in-app-adapter/notification.in.app.adapter';
-import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { NotificationEvent } from '@common/enums/notification.event';
-import { NotificationRecipientResult } from '@services/api/notification-recipients/dto/notification.recipients.dto.result';
-import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
-import { NotificationAdapter } from './notification.adapter';
+import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { NotificationEventPayload } from '@common/enums/notification.event.payload';
-import { InAppNotificationPayloadPlatformGlobalRoleChange } from '@platform/in-app-notification-payload/dto/platform/notification.in.app.payload.platform.global.role.change';
-import { InAppNotificationPayloadUser } from '@platform/in-app-notification-payload/dto/user/notification.in.app.payload.user';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InAppNotificationPayloadPlatformForumDiscussion } from '@platform/in-app-notification-payload/dto/platform/notification.in.app.payload.platform.forum.discussion';
+import { InAppNotificationPayloadPlatformGlobalRoleChange } from '@platform/in-app-notification-payload/dto/platform/notification.in.app.payload.platform.global.role.change';
 import { InAppNotificationPayloadPlatformUserProfileRemoved } from '@platform/in-app-notification-payload/dto/platform/notification.in.app.payload.platform.user.profile.removed';
 import { InAppNotificationPayloadSpace } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space';
-import { NotificationUserAdapter } from './notification.user.adapter';
+import { InAppNotificationPayloadUser } from '@platform/in-app-notification-payload/dto/user/notification.in.app.payload.user';
+import { NotificationRecipientResult } from '@services/api/notification-recipients/dto/notification.recipients.dto.result';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { NotificationExternalAdapter } from '../notification-external-adapter/notification.external.adapter';
+import { NotificationInAppAdapter } from '../notification-in-app-adapter/notification.in.app.adapter';
+import { NotificationInputBase } from './dto/notification.dto.input.base';
+import { NotificationInputPlatformForumDiscussionComment } from './dto/platform/notification.dto.input.platform.forum.discussion.comment';
+import { NotificationInputPlatformForumDiscussionCreated } from './dto/platform/notification.dto.input.platform.forum.discussion.created';
+import { NotificationInputPlatformGlobalRoleChange } from './dto/platform/notification.dto.input.platform.global.role.change';
+import { NotificationInputSpaceCreated } from './dto/platform/notification.dto.input.platform.space.created';
+import { NotificationInputPlatformUserRegistered } from './dto/platform/notification.dto.input.platform.user.registered';
+import { NotificationInputPlatformUserRemoved } from './dto/platform/notification.dto.input.platform.user.removed';
+import { NotificationInputPlatformInvitation } from './dto/space/notification.dto.input.space.community.invitation.platform';
+import { NotificationAdapter } from './notification.adapter';
+import { NotificationUserAdapter } from './notification.user.adapter';
 
 @Injectable()
 export class NotificationPlatformAdapter {

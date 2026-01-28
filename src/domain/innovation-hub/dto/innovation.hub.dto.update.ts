@@ -1,10 +1,10 @@
-import { IsOptional } from 'class-validator';
-import { Field, InputType } from '@nestjs/graphql';
-import { SpaceVisibility } from '@common/enums/space.visibility';
-import { UUID } from '@domain/common/scalars';
-import { UpdateNameableInput } from '@domain/common/entity/nameable-entity';
-import { InnovationHubType } from '../types';
 import { SearchVisibility } from '@common/enums/search.visibility';
+import { SpaceVisibility } from '@common/enums/space.visibility';
+import { UpdateNameableInput } from '@domain/common/entity/nameable-entity';
+import { UUID } from '@domain/common/scalars';
+import { Field, InputType } from '@nestjs/graphql';
+import { IsOptional } from 'class-validator';
+import { InnovationHubType } from '../types';
 
 @InputType()
 export class UpdateInnovationHubInput extends UpdateNameableInput {

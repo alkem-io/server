@@ -1,20 +1,20 @@
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
+import { LogContext } from '@common/enums/logging.context';
+import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { LicenseEntitlementNotAvailableException } from '@common/exceptions/license.entitlement.not.available.exception';
+import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ILicense } from './license.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
-import { License } from './license.entity';
-import { CreateLicenseInput } from './dto/license.dto.create';
 import { AuthorizationPolicy } from '../authorization-policy/authorization.policy.entity';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { LicenseEntitlementService } from '../license-entitlement/license.entitlement.service';
-import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
-import { LogContext } from '@common/enums/logging.context';
-import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { ILicenseEntitlement } from '../license-entitlement/license.entitlement.interface';
-import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
-import { LicenseEntitlementNotAvailableException } from '@common/exceptions/license.entitlement.not.available.exception';
+import { LicenseEntitlementService } from '../license-entitlement/license.entitlement.service';
+import { CreateLicenseInput } from './dto/license.dto.create';
+import { License } from './license.entity';
+import { ILicense } from './license.interface';
 
 @Injectable()
 export class LicenseService {

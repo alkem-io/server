@@ -1,9 +1,9 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { AuthorizationPrivilege } from '@common/enums';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AnyStateMachine, setup } from 'xstate';
 import { applicationLifecycleMachine } from '../application/application.service.lifecycle';
 

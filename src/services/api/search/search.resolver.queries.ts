@@ -1,10 +1,10 @@
-import { Args, Resolver, Query } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { Args, Query, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
-import { SearchService } from './search.service';
+import { CurrentUser } from '@src/common/decorators';
 import { SearchInput } from './dto/inputs';
 import { ISearchResults } from './dto/results';
+import { SearchService } from './search.service';
 
 @InstrumentResolver()
 @Resolver()

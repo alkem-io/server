@@ -1,8 +1,8 @@
-import { Field, ObjectType } from '@nestjs/graphql';
-import { ITemplatesSet } from '@domain/template/templates-set';
-import { INameable } from '@domain/common/entity/nameable-entity/nameable.interface';
 import { SearchVisibility } from '@common/enums/search.visibility';
+import { INameable } from '@domain/common/entity/nameable-entity/nameable.interface';
 import { IAccount } from '@domain/space/account/account.interface';
+import { ITemplatesSet } from '@domain/template/templates-set';
+import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('InnovationPack')
 export abstract class IInnovationPack extends INameable {

@@ -1,13 +1,13 @@
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { PostService } from './post.service';
+import { CurrentUser } from '@common/decorators';
+import { AuthorizationPrivilege } from '@common/enums';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { DeletePostInput } from '@domain/collaboration/post/dto/post.dto.delete';
 import { UpdatePostInput } from '@domain/collaboration/post/dto/post.dto.update';
 import { IPost } from '@domain/collaboration/post/post.interface';
-import { CurrentUser } from '@common/decorators';
-import { AuthorizationPrivilege } from '@common/enums';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { PostService } from './post.service';
 
 @InstrumentResolver()
 @Resolver()

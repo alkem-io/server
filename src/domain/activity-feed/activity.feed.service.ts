@@ -1,24 +1,24 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { intersection } from 'lodash';
-import { IActivity } from '@platform/activity';
-import { ActivityService } from '@platform/activity/activity.service';
-import { ActivityFeedRoles } from '@domain/activity-feed/activity.feed.roles.enum';
-import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
-import { ActivityFeed } from '@domain/activity-feed/activity.feed.interface';
-import { ActivityEventType } from '@common/enums/activity.event.type';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { ActivityEventType } from '@common/enums/activity.event.type';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { PaginationArgs } from '@core/pagination';
-import { IActivityLogEntry } from '@services/api/activity-log/dto/activity.log.entry.interface';
+import { ActivityFeed } from '@domain/activity-feed/activity.feed.interface';
+import { ActivityFeedRoles } from '@domain/activity-feed/activity.feed.roles.enum';
+import { ICollaboration } from '@domain/collaboration/collaboration';
+import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
+import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { IActivity } from '@platform/activity';
+import { ActivityService } from '@platform/activity/activity.service';
 import { ActivityLogService } from '@services/api/activity-log';
+import { IActivityLogEntry } from '@services/api/activity-log/dto/activity.log.entry.interface';
 import {
   CredentialMap,
   groupCredentialsByEntity,
 } from '@services/api/roles/util/group.credentials.by.entity';
-import { ICollaboration } from '@domain/collaboration/collaboration';
-import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
+import { intersection } from 'lodash';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 type ActivityFeedFilters = {
   types?: Array<ActivityEventType>;

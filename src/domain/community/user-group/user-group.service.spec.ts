@@ -1,9 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { UserGroupService } from './user-group.service';
-import { UserGroup } from '.';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { UserGroup } from '.';
+import { UserGroupService } from './user-group.service';
 
 describe('UserGroupService', () => {
   let service: UserGroupService;

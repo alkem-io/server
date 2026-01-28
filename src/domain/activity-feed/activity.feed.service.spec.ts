@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ActivityFeedService } from './activity.feed.service';
-import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { MockWinstonProvider } from '@test/mocks';
+import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { ActivityFeedService } from './activity.feed.service';
 
 describe('ActivityFeedService', () => {
   let service: ActivityFeedService;

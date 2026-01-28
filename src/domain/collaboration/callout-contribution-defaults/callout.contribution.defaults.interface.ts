@@ -1,9 +1,9 @@
-import { Field, ObjectType } from '@nestjs/graphql';
+import { SMALL_TEXT_LENGTH } from '@common/constants';
 import { IBaseAlkemio } from '@domain/common/entity/base-entity';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { WhiteboardContent } from '@domain/common/scalars/scalar.whiteboard.content';
+import { Field, ObjectType } from '@nestjs/graphql';
 import { IsOptional, MaxLength, MinLength } from 'class-validator';
-import { SMALL_TEXT_LENGTH } from '@common/constants';
 
 @ObjectType('CalloutContributionDefaults')
 export abstract class ICalloutContributionDefaults extends IBaseAlkemio {

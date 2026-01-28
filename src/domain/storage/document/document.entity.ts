@@ -1,14 +1,14 @@
-import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
-import { IDocument } from './document.interface';
-import { StorageBucket } from '../storage-bucket/storage.bucket.entity';
-import { MimeFileType } from '@common/enums/mime.file.type';
-import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
-import { Tagset } from '@domain/common/tagset';
 import {
   ENUM_LENGTH,
   MID_TEXT_LENGTH,
   SMALL_TEXT_LENGTH,
 } from '@common/constants';
+import { MimeFileType } from '@common/enums/mime.file.type';
+import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
+import { Tagset } from '@domain/common/tagset';
+import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
+import { StorageBucket } from '../storage-bucket/storage.bucket.entity';
+import { IDocument } from './document.interface';
 
 @Entity()
 export class Document extends AuthorizableEntity implements IDocument {
@@ -25,11 +25,15 @@ export class Document extends AuthorizableEntity implements IDocument {
   @Column('uuid', { nullable: true })
   createdBy?: string;
 
-  @ManyToOne(() => StorageBucket, storage => storage.documents, {
-    eager: false,
-    cascade: false,
-    onDelete: 'CASCADE',
-  })
+  @ManyToOne(
+    () => StorageBucket,
+    storage => storage.documents,
+    {
+      eager: false,
+      cascade: false,
+      onDelete: 'CASCADE',
+    }
+  )
   storageBucket!: StorageBucket;
 
   @OneToOne(() => Tagset, {

@@ -1,12 +1,12 @@
-import { Resolver, Args, Mutation } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
-import { TemplateContentSpaceService } from './template.content.space.service';
-import { ITemplateContentSpace } from './template.content.space.interface';
+import { CurrentUser } from '@src/common/decorators';
 import { UpdateTemplateContentSpaceInput } from './dto/template.content.space.dto.update';
+import { ITemplateContentSpace } from './template.content.space.interface';
+import { TemplateContentSpaceService } from './template.content.space.service';
 
 @InstrumentResolver()
 @Resolver()

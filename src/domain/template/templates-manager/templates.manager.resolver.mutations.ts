@@ -1,20 +1,20 @@
-import { Inject, LoggerService } from '@nestjs/common';
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { UpdateTemplateDefaultTemplateInput } from '../template-default/dto/template.default.dto.update';
-import { ITemplateDefault } from '../template-default/template.default.interface';
+import { LogContext } from '@common/enums';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { TemplateDefaultService } from '../template-default/template.default.service';
 import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums';
-import { TemplateService } from '../template/template.service';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { Inject, LoggerService } from '@nestjs/common';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { TemplateService } from '../template/template.service';
+import { UpdateTemplateDefaultTemplateInput } from '../template-default/dto/template.default.dto.update';
+import { ITemplateDefault } from '../template-default/template.default.interface';
+import { TemplateDefaultService } from '../template-default/template.default.service';
 
 @InstrumentResolver()
 @Resolver()

@@ -1,9 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { CommunicationService } from './communication.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { Communication } from './communication.entity';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { Communication } from './communication.entity';
+import { CommunicationService } from './communication.service';
 
 describe('CommunicationService', () => {
   let service: CommunicationService;
