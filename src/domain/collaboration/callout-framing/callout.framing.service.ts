@@ -53,14 +53,14 @@ export class CalloutFramingService {
     storageAggregator: IStorageAggregator,
     userID?: string
   ): Promise<ICalloutFraming> {
-    const { profile: profileData, tags } = calloutFramingData;
-
     const calloutFraming: ICalloutFraming =
       CalloutFraming.create(calloutFramingData);
 
     calloutFraming.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.CALLOUT_FRAMING
     );
+
+    const { profile: profileData, tags } = calloutFramingData;
 
     const defaultTagset: CreateTagsetInput = {
       name: TagsetReservedName.DEFAULT,

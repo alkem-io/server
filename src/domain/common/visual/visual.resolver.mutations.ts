@@ -83,11 +83,13 @@ export class VisualResolverMutations {
     const storageBucket =
       (visual as Visual).profile?.storageBucket ??
       (visual as Visual).mediaGallery?.storageBucket;
-    if (!storageBucket)
+
+    if (!storageBucket) {
       throw new EntityNotInitializedException(
         `Unable to find profile or storageBucket for Visual: ${visual.id}`,
         LogContext.STORAGE_BUCKET
       );
+    }
 
     const storageBucketAuthorization = storageBucket.authorization;
 
