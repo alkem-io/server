@@ -1,24 +1,23 @@
-import { vi } from 'vitest';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
-import { WhiteboardAuthorizationService } from '@domain/common/whiteboard/whiteboard.service.authorization';
-import { WhiteboardGuestAccessService } from '@domain/common/whiteboard/whiteboard.guest-access.service';
-import { WhiteboardResolverMutations } from '@domain/common/whiteboard/whiteboard.resolver.mutations';
-import { LoggerService } from '@nestjs/common';
-import { EntityManager } from 'typeorm';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { UpdateWhiteboardGuestAccessInput } from '@domain/common/whiteboard/dto/whiteboard.dto.guest-access.toggle';
-import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
+import { LogContext } from '@common/enums';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import {
   EntityNotFoundException,
   ForbiddenException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums';
 import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { UpdateWhiteboardGuestAccessInput } from '@domain/common/whiteboard/dto/whiteboard.dto.guest-access.toggle';
+import { WhiteboardGuestAccessService } from '@domain/common/whiteboard/whiteboard.guest-access.service';
+import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
+import { WhiteboardResolverMutations } from '@domain/common/whiteboard/whiteboard.resolver.mutations';
+import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
+import { WhiteboardAuthorizationService } from '@domain/common/whiteboard/whiteboard.service.authorization';
+import { LoggerService } from '@nestjs/common';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
-import type { Mocked } from 'vitest';
+import { EntityManager } from 'typeorm';
+import { type Mocked, vi } from 'vitest';
 
 const createResolver = () => {
   const authorizationService = {

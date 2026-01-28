@@ -1,19 +1,23 @@
+import { LONGER_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@common/constants';
+import { RoleName } from '@common/enums/role.name';
+import { RoleSet } from '@domain/access/role-set/role.set.entity';
+import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Column, Entity, ManyToOne } from 'typeorm';
 import { IPlatformInvitation } from './platform.invitation.interface';
-import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
-import { LONGER_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@common/constants';
-import { RoleSet } from '@domain/access/role-set/role.set.entity';
-import { RoleName } from '@common/enums/role.name';
 @Entity()
 export class PlatformInvitation
   extends AuthorizableEntity
   implements IPlatformInvitation
 {
-  @ManyToOne(() => RoleSet, roleSet => roleSet.platformInvitations, {
-    eager: false,
-    cascade: false,
-    onDelete: 'CASCADE',
-  })
+  @ManyToOne(
+    () => RoleSet,
+    roleSet => roleSet.platformInvitations,
+    {
+      eager: false,
+      cascade: false,
+      onDelete: 'CASCADE',
+    }
+  )
   roleSet?: RoleSet;
 
   @Column('boolean', { default: false })

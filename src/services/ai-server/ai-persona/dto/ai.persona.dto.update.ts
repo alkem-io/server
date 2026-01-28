@@ -1,8 +1,8 @@
-import { Field, InputType } from '@nestjs/graphql';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 import { UpdateBaseAlkemioInput } from '@domain/common/entity/base-entity';
-import { IExternalConfig } from './external.config';
+import { Field, InputType } from '@nestjs/graphql';
 import { PromptGraph } from '@services/ai-server/prompt-graph/dto/prompt.graph.dto';
+import { IExternalConfig } from './external.config';
 
 @InputType()
 export class UpdateAiPersonaInput extends UpdateBaseAlkemioInput {

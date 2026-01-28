@@ -1,11 +1,11 @@
 import { FieldDefinitionNode, TypeNode } from 'graphql';
-import { DiffContext, pushEntry, IndexedSchema } from './diff-core';
-import { unionKeys } from './cleanup';
-import { ElementType, ChangeType } from '../model';
 import {
   getDeprecationDirective,
   parseDeprecationReason,
 } from '../deprecation/parser';
+import { ChangeType, ElementType } from '../model';
+import { unionKeys } from './cleanup';
+import { DiffContext, IndexedSchema, pushEntry } from './diff-core';
 
 function printTypeNode(node: TypeNode): string {
   switch (node.kind) {

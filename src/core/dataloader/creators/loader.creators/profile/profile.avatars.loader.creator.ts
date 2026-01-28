@@ -1,9 +1,9 @@
-import { EntityManager } from 'typeorm';
-import { Injectable } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
+import { createTypedRelationDataLoader } from '@core/dataloader/utils';
 import { Profile } from '@domain/common/profile';
 import { IVisual } from '@domain/common/visual';
-import { createTypedRelationDataLoader } from '@core/dataloader/utils';
+import { Injectable } from '@nestjs/common';
+import { InjectEntityManager } from '@nestjs/typeorm';
+import { EntityManager } from 'typeorm';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
 
 @Injectable()

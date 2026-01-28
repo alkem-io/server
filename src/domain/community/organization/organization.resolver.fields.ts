@@ -1,31 +1,30 @@
-import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { Organization } from './organization.entity';
-import { OrganizationService } from './organization.service';
-import { AuthorizationPrivilege } from '@common/enums';
-
-import { IOrganization } from '@domain/community/organization';
-import { IUserGroup } from '@domain/community/user-group';
-import { IProfile } from '@domain/common/profile';
 import { CurrentUser } from '@common/decorators';
-import { IAgent } from '@domain/agent/agent';
-import { UUID } from '@domain/common/scalars';
-import { UserGroupService } from '@domain/community/user-group/user-group.service';
-import { IOrganizationVerification } from '../organization-verification/organization.verification.interface';
-import { INVP } from '@domain/common/nvp/nvp.interface';
+import { AuthorizationPrivilege } from '@common/enums';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { Loader } from '@core/dataloader/decorators';
 import {
   AgentLoaderCreator,
   ProfileLoaderCreator,
 } from '@core/dataloader/creators';
-import { ILoader } from '@core/dataloader/loader.interface';
 import { OrganizationStorageAggregatorLoaderCreator } from '@core/dataloader/creators/loader.creators/community/organization.storage.aggregator.loader.creator';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { IAccount } from '@domain/space/account/account.interface';
-import { IOrganizationSettings } from '../organization-settings/organization.settings.interface';
+import { Loader } from '@core/dataloader/decorators';
+import { ILoader } from '@core/dataloader/loader.interface';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
+import { IAgent } from '@domain/agent/agent';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { INVP } from '@domain/common/nvp/nvp.interface';
+import { IProfile } from '@domain/common/profile';
+import { UUID } from '@domain/common/scalars';
+import { IOrganization } from '@domain/community/organization';
+import { IUserGroup } from '@domain/community/user-group';
+import { UserGroupService } from '@domain/community/user-group/user-group.service';
+import { IAccount } from '@domain/space/account/account.interface';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { IOrganizationSettings } from '../organization-settings/organization.settings.interface';
+import { IOrganizationVerification } from '../organization-verification/organization.verification.interface';
+import { Organization } from './organization.entity';
+import { OrganizationService } from './organization.service';
 
 @Resolver(() => IOrganization)
 export class OrganizationResolverFields {

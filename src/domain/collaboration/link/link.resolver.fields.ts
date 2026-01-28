@@ -1,11 +1,11 @@
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { IProfile } from '@domain/common/profile/profile.interface';
-import { ILink } from './link.interface';
 import { Profiling } from '@common/decorators';
-import { Loader } from '@core/dataloader/decorators';
-import { Link } from './link.entity';
 import { ProfileLoaderCreator } from '@core/dataloader/creators';
+import { Loader } from '@core/dataloader/decorators';
 import { ILoader } from '@core/dataloader/loader.interface';
+import { IProfile } from '@domain/common/profile/profile.interface';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { Link } from './link.entity';
+import { ILink } from './link.interface';
 
 @Resolver(() => ILink)
 export class LinkResolverFields {

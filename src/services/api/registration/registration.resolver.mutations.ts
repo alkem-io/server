@@ -1,26 +1,26 @@
-import { Inject, LoggerService } from '@nestjs/common';
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { CurrentUser, Profiling } from '@src/common/decorators';
-import { IUser } from '@domain/community/user/user.interface';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { RegistrationService } from './registration.service';
-import { UserService } from '@domain/community/user/user.service';
-import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { NotificationInputPlatformUserRemoved } from '@services/adapters/notification-adapter/dto/platform/notification.dto.input.platform.user.removed';
-import { DeleteUserInput } from '@domain/community/user/dto/user.dto.delete';
-import { CreateUserInput } from '@domain/community/user/dto/user.dto.create';
-import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CreateOrganizationInput } from '@domain/community/organization/dto/organization.dto.create';
+import { DeleteOrganizationInput } from '@domain/community/organization/dto/organization.dto.delete';
 import { IOrganization } from '@domain/community/organization/organization.interface';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { OrganizationAuthorizationService } from '@domain/community/organization/organization.service.authorization';
+import { CreateUserInput } from '@domain/community/user/dto/user.dto.create';
+import { DeleteUserInput } from '@domain/community/user/dto/user.dto.delete';
+import { IUser } from '@domain/community/user/user.interface';
+import { UserService } from '@domain/community/user/user.service';
 import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { DeleteOrganizationInput } from '@domain/community/organization/dto/organization.dto.delete';
-import { InstrumentResolver } from '@src/apm/decorators';
+import { Inject, LoggerService } from '@nestjs/common';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
+import { NotificationInputPlatformUserRemoved } from '@services/adapters/notification-adapter/dto/platform/notification.dto.input.platform.user.removed';
 import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
+import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentUser, Profiling } from '@src/common/decorators';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { RegistrationService } from './registration.service';
 
 @InstrumentResolver()
 @Resolver()

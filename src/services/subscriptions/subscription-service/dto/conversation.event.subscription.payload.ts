@@ -1,6 +1,6 @@
 import { BaseSubscriptionPayload } from '@common/interfaces';
-import { IMessage } from '@domain/communication/message/message.interface';
 import { IConversation } from '@domain/communication/conversation/conversation.interface';
+import { IMessage } from '@domain/communication/message/message.interface';
 
 export interface ConversationEventSubscriptionPayload
   extends BaseSubscriptionPayload {

@@ -1,6 +1,7 @@
 import { LogContext } from '@common/enums';
-import { Post } from '@domain/collaboration/post/post.entity';
+import { EntityNotFoundException } from '@common/exceptions';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
+import { Post } from '@domain/collaboration/post/post.entity';
 import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { RoomDetails } from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.invocation';
@@ -8,9 +9,7 @@ import {
   InvokeEngineResponse,
   InvokeEngineResult,
 } from '@services/infrastructure/event-bus/messages/invoke.engine.result';
-
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityNotFoundException } from '@common/exceptions';
 
 @Injectable()
 export class RoomControllerService {
@@ -111,7 +110,7 @@ export class RoomControllerService {
     );
     let answer = result.result;
 
-    if (result.sources) {
+    if (result.sources?.length > 0) {
       answer += sourcesLabel ? '\n##### Sources:' : '';
       answer +=
         '\n' +
@@ -121,6 +120,8 @@ export class RoomControllerService {
               `- [${title || uri}](${uri})`
           )
           .join('\n');
+    } else if (sourcesLabel) {
+      answer += '\n&nbsp;\n*Sorry, no sources are available for this response*';
     }
     return answer;
   }

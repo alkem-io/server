@@ -1,5 +1,5 @@
-import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
+import { Module } from '@nestjs/common';
 import { GeoLocationService } from '@services/external/geo-location/geo.location.service';
 
 @Module({

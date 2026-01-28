@@ -1,8 +1,8 @@
-import { InputType, Field } from '@nestjs/graphql';
-import { NameID } from '@domain/common/scalars';
 import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
-import { ValidateNested } from 'class-validator';
+import { NameID } from '@domain/common/scalars';
+import { Field, InputType } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
+import { ValidateNested } from 'class-validator';
 
 @InputType()
 export class CreateNameableInput {

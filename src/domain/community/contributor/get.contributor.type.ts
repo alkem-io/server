@@ -1,7 +1,7 @@
 import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
-import { VirtualContributor } from '../virtual-contributor/virtual.contributor.entity';
-import { User } from '../user/user.entity';
 import { Organization } from '../organization/organization.entity';
+import { User } from '../user/user.entity';
+import { VirtualContributor } from '../virtual-contributor/virtual.contributor.entity';
 import { IContributor } from './contributor.interface';
 
 export const getContributorType = (

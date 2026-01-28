@@ -1,100 +1,99 @@
-import { MiddlewareConsumer, Module } from '@nestjs/common';
-import { CacheModule } from '@nestjs/cache-manager';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { APP_FILTER, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
-import { GraphQLModule } from '@nestjs/graphql';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
-import { ScheduleModule } from '@nestjs/schedule';
-import { EventEmitterModule } from '@nestjs/event-emitter';
-import { CloseCode } from 'graphql-ws';
+import { APP_ID_PROVIDER } from '@common/app.id.provider';
+import { InnovationHubInterceptor } from '@common/interceptors';
 import { ValidationPipe } from '@common/pipes/validation.pipe';
 import configuration from '@config/configuration';
 import {
   configQuery,
-  spacesQuery,
   meQuery,
   platformMetadataQuery,
+  spacesQuery,
 } from '@config/graphql';
 import { AuthenticationModule } from '@core/authentication/authentication.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { BootstrapModule } from '@core/bootstrap/bootstrap.module';
+import { LoaderCreatorModule } from '@core/dataloader/creators/loader.creator.module';
+import { DataLoaderInterceptor } from '@core/dataloader/interceptors';
+import {
+  GraphqlExceptionFilter,
+  HttpExceptionFilter,
+  UnhandledExceptionFilter,
+} from '@core/error-handling';
+import { AuthInterceptor } from '@core/interceptors';
 import { RequestLoggerMiddleware } from '@core/middleware/request.logger.middleware';
+import { ActivityFeedModule } from '@domain/activity-feed';
 import { AgentModule } from '@domain/agent/agent/agent.module';
-import { SpaceModule } from '@domain/space/space/space.module';
+import { ContributionMoveModule } from '@domain/collaboration/callout-contribution/callout.contribution.move.module';
+import { CalloutTransferModule } from '@domain/collaboration/callout-transfer/callout.transfer.module';
 import { ScalarsModule } from '@domain/common/scalars/scalars.module';
-import { AdminCommunicationModule } from '@src/platform-admin/domain/communication/admin.communication.module';
+import { MessageModule } from '@domain/communication/message/message.module';
+import { MessageReactionModule } from '@domain/communication/message.reaction/message.reaction.module';
+import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
+import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.module';
+import { SpaceModule } from '@domain/space/space/space.module';
+import { TaskGraphqlModule } from '@domain/task/task.module';
+import { TemplateApplierModule } from '@domain/template/template-applier/template.applier.module';
+import { Cipher, EncryptionModule } from '@hedger/nestjs-encryption';
+import { LibraryModule } from '@library/library/library.module';
+import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
+import { CacheModule } from '@nestjs/cache-manager';
+import { MiddlewareConsumer, Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { APP_FILTER, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+import { GraphQLModule } from '@nestjs/graphql';
+import { ScheduleModule } from '@nestjs/schedule';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { LicensingWingbackSubscriptionModule } from '@platform/licensing/wingback-subscription/licensing.wingback.subscription.module';
+import { PlatformModule } from '@platform/platform/platform.module';
+import { PlatformHubModule } from '@platform/platform.hub/platform.hub.module';
+import { PlatformRoleModule } from '@platform/platform-role/platform.role.module';
+import { ActivityLogModule } from '@services/api/activity-log/activity.log.module';
+import { ConversionModule } from '@services/api/conversion/conversion.module';
+import { InputCreatorModule } from '@services/api/input-creator/input.creator.module';
+import { LookupModule } from '@services/api/lookup';
+import { LookupByNameModule } from '@services/api/lookup-by-name';
+import { MeModule } from '@services/api/me';
+import { NotificationRecipientsModule } from '@services/api/notification-recipients/notification.recipients.module';
+import { RegistrationModule } from '@services/api/registration/registration.module';
+import { RolesModule } from '@services/api/roles/roles.module';
+import { SearchModule } from '@services/api/search/search.module';
+import { UrlResolverModule } from '@services/api/url-resolver/url.resolver.module';
+import { IdentityResolveModule } from '@services/api-rest/identity-resolve/identity-resolve.module';
+import { AuthResetSubscriberModule } from '@services/auth-reset/subscriber/auth-reset.subscriber.module';
+import { CollaborativeDocumentIntegrationModule } from '@services/collaborative-document-integration';
+import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
+import { GeoLocationModule } from '@services/external/geo-location';
+import { WingbackManagerModule } from '@services/external/wingback/wingback.manager.module';
+import { WingbackWebhookModule } from '@services/external/wingback-webhooks';
+import { FileIntegrationModule } from '@services/file-integration';
+import { EventBusModule } from '@services/infrastructure/event-bus/event.bus.module';
+import { WhiteboardIntegrationModule } from '@services/whiteboard-integration/whiteboard.integration.module';
 import { AppController } from '@src/app.controller';
 import { WinstonConfigService } from '@src/config/winston.config';
-import { MetadataModule } from '@src/platform/metadata/metadata.module';
+import { SessionExtendMiddleware } from '@src/core/middleware';
 import { KonfigModule } from '@src/platform/configuration/config/config.module';
-import { print } from 'graphql/language/printer';
-import { WinstonModule } from 'nest-winston';
-import { join } from 'path';
+import { MetadataModule } from '@src/platform/metadata/metadata.module';
+import { AdminCommunicationModule } from '@src/platform-admin/domain/communication/admin.communication.module';
+import { DomainPlatformSettingsModule } from '@src/platform-admin/domain/organization/domain.platform.settings.module';
+import { AdminUsersModule } from '@src/platform-admin/domain/user/admin.users.module';
+import { AdminLicensingModule } from '@src/platform-admin/licensing/admin.licensing.module';
+import { AdminContributorsModule } from '@src/platform-admin/services/avatars/admin.avatar.module';
+import { AdminGeoLocationModule } from '@src/platform-admin/services/geolocation/admin.geolocation.module';
 import {
   AlkemioConfig,
   ConnectionContext,
   SubscriptionsTransportWsWebsocket,
   WebsocketContext,
 } from '@src/types';
-import { RegistrationModule } from '@services/api/registration/registration.module';
-import { RolesModule } from '@services/api/roles/roles.module';
 import * as redisStore from 'cache-manager-redis-store';
-import { ConversionModule } from '@services/api/conversion/conversion.module';
-import { SessionExtendMiddleware } from '@src/core/middleware';
-import { ActivityLogModule } from '@services/api/activity-log/activity.log.module';
-import { MessageModule } from '@domain/communication/message/message.module';
-import { LibraryModule } from '@library/library/library.module';
-import { GeoLocationModule } from '@services/external/geo-location';
-import { PlatformModule } from '@platform/platform/platform.module';
-import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
-import { DataLoaderInterceptor } from '@core/dataloader/interceptors';
-import { InnovationHubInterceptor } from '@common/interceptors';
-import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.module';
-import { MessageReactionModule } from '@domain/communication/message.reaction/message.reaction.module';
-import { IdentityResolveModule } from '@services/api-rest/identity-resolve/identity-resolve.module';
-
-import {
-  HttpExceptionFilter,
-  GraphqlExceptionFilter,
-  UnhandledExceptionFilter,
-} from '@core/error-handling';
-import { MeModule } from '@services/api/me';
-import { LookupModule } from '@services/api/lookup';
-import { AuthResetSubscriberModule } from '@services/auth-reset/subscriber/auth-reset.subscriber.module';
-import { APP_ID_PROVIDER } from '@common/app.id.provider';
-import { ContributionMoveModule } from '@domain/collaboration/callout-contribution/callout.contribution.move.module';
-import { TaskGraphqlModule } from '@domain/task/task.module';
-import { ActivityFeedModule } from '@domain/activity-feed';
-import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
-import { EventBusModule } from '@services/infrastructure/event-bus/event.bus.module';
-import { WhiteboardIntegrationModule } from '@services/whiteboard-integration/whiteboard.integration.module';
-import { DomainPlatformSettingsModule } from '@src/platform-admin/domain/organization/domain.platform.settings.module';
-import { FileIntegrationModule } from '@services/file-integration';
-import { CollaborativeDocumentIntegrationModule } from '@services/collaborative-document-integration';
-import { AdminLicensingModule } from '@src/platform-admin/licensing/admin.licensing.module';
-import { LookupByNameModule } from '@services/api/lookup-by-name';
-import { PlatformHubModule } from '@platform/platform.hub/platform.hub.module';
-import { AdminContributorsModule } from '@src/platform-admin/services/avatars/admin.avatar.module';
-import { InputCreatorModule } from '@services/api/input-creator/input.creator.module';
-import { TemplateApplierModule } from '@domain/template/template-applier/template.applier.module';
-import { LoaderCreatorModule } from '@core/dataloader/creators/loader.creator.module';
-import { Cipher, EncryptionModule } from '@hedger/nestjs-encryption';
-import { AdminUsersModule } from '@src/platform-admin/domain/user/admin.users.module';
-import { LicensingWingbackSubscriptionModule } from '@platform/licensing/wingback-subscription/licensing.wingback.subscription.module';
-import { WingbackManagerModule } from '@services/external/wingback/wingback.manager.module';
-import { PlatformRoleModule } from '@platform/platform-role/platform.role.module';
-import { WingbackWebhookModule } from '@services/external/wingback-webhooks';
-import { UrlResolverModule } from '@services/api/url-resolver/url.resolver.module';
-import { CalloutTransferModule } from '@domain/collaboration/callout-transfer/callout.transfer.module';
-import { SearchModule } from '@services/api/search/search.module';
+import { print } from 'graphql/language/printer';
+import { CloseCode } from 'graphql-ws';
+import { WinstonModule } from 'nest-winston';
+import { join } from 'path';
 import { ApmApolloPlugin } from './apm/plugins';
-import { AuthInterceptor } from '@core/interceptors';
-import { AdminGeoLocationModule } from '@src/platform-admin/services/geolocation/admin.geolocation.module';
-import { AdminSearchIngestModule } from './platform-admin/services/search/admin.search.ingest.module';
 import { PlatformAdminModule } from './platform-admin/admin/platform.admin.module';
-import { NotificationRecipientsModule } from '@services/api/notification-recipients/notification.recipients.module';
 import { InAppNotificationAdminModule } from './platform-admin/in-app-notification/in.app.notification.admin.module';
+import { AdminSearchIngestModule } from './platform-admin/services/search/admin.search.ingest.module';
 
 @Module({
   imports: [
@@ -146,6 +145,10 @@ import { InAppNotificationAdminModule } from './platform-admin/in-app-notificati
           infer: true,
         });
 
+        const pgbouncerEnabled = dbOptions.pgbouncer?.enabled ?? false;
+        const statementTimeoutMs =
+          dbOptions.pgbouncer?.statement_timeout_ms ?? 60000;
+
         return {
           type: 'postgres' as const,
           synchronize: false,
@@ -163,6 +166,13 @@ import { InAppNotificationAdminModule } from './platform-admin/in-app-notificati
             idleTimeoutMillis: dbOptions.pool?.idle_timeout_ms ?? 30000,
             connectionTimeoutMillis:
               dbOptions.pool?.connection_timeout_ms ?? 10000,
+            // PgBouncer compatibility: set statement_timeout to prevent
+            // long-running queries from holding pooled connections
+            ...(pgbouncerEnabled && {
+              statement_timeout: statementTimeoutMs,
+              // Disable idle_in_transaction_session_timeout to let PgBouncer manage
+              idle_in_transaction_session_timeout: statementTimeoutMs * 2,
+            }),
           },
         };
       },

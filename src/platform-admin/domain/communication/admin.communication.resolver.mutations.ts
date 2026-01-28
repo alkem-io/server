@@ -1,17 +1,18 @@
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import { CurrentUser, Profiling } from '@common/decorators';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { CommunicationAdminEnsureAccessInput } from './dto/admin.communication.dto.ensure.access.input';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AdminCommunicationService } from './admin.communication.service';
-import { CommunicationAdminRemoveOrphanedRoomInput } from './dto/admin.communication.dto.remove.orphaned.room';
-import { CommunicationAdminUpdateRoomStateInput } from './dto/admin.communication.dto.update.room.state';
 import { GLOBAL_POLICY_ADMIN_COMMUNICATION_GRANT } from '@common/constants/authorization/global.policy.constants';
+import { CurrentUser, Profiling } from '@common/decorators';
+import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { AdminCommunicationService } from './admin.communication.service';
+import { CommunicationAdminEnsureAccessInput } from './dto/admin.communication.dto.ensure.access.input';
+import { CommunicationAdminMigrateRoomsResult } from './dto/admin.communication.dto.migrate.rooms.result';
+import { CommunicationAdminRemoveOrphanedRoomInput } from './dto/admin.communication.dto.remove.orphaned.room';
+import { CommunicationAdminUpdateRoomStateInput } from './dto/admin.communication.dto.update.room.state';
 
 @InstrumentResolver()
 @Resolver()
@@ -26,7 +27,7 @@ export class AdminCommunicationResolverMutations {
     this.communicationGlobalAdminPolicy =
       this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
         [AuthorizationRoleGlobal.GLOBAL_ADMIN],
-        [AuthorizationPrivilege.GRANT],
+        [AuthorizationPrivilege.GRANT, AuthorizationPrivilege.PLATFORM_ADMIN],
         GLOBAL_POLICY_ADMIN_COMMUNICATION_GRANT
       );
   }
@@ -92,5 +93,22 @@ export class AdminCommunicationResolverMutations {
       roomStateData.isWorldVisible,
       roomStateData.isPublic
     );
+  }
+
+  @Mutation(() => CommunicationAdminMigrateRoomsResult, {
+    description:
+      'Create rooms for legacy conversations that were created without one (from lazy room creation era).',
+  })
+  @Profiling.api
+  async adminCommunicationMigrateOrphanedConversations(
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<CommunicationAdminMigrateRoomsResult> {
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      this.communicationGlobalAdminPolicy,
+      AuthorizationPrivilege.PLATFORM_ADMIN,
+      `communications admin migrate orphaned conversations: ${agentInfo.email}`
+    );
+    return await this.adminCommunicationService.migrateConversationRooms();
   }
 }

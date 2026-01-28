@@ -1,14 +1,14 @@
-import { UUID } from '@domain/common/scalars';
-import { Args, Query, Resolver } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
-import { IVirtualContributor } from './virtual.contributor.interface';
-import { VirtualContributorService } from './virtual.contributor.service';
-import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
+import { AuthorizationPrivilege } from '@common/enums';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AuthorizationPrivilege } from '@common/enums';
+import { UUID } from '@domain/common/scalars';
+import { Args, Query, Resolver } from '@nestjs/graphql';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentUser } from '@src/common/decorators';
+import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
+import { IVirtualContributor } from './virtual.contributor.interface';
+import { VirtualContributorService } from './virtual.contributor.service';
 
 @InstrumentResolver()
 @Resolver()

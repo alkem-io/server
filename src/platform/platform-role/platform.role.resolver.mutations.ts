@@ -1,27 +1,27 @@
-import { Resolver, Mutation, Args } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
+import { RoleChangeType } from '@alkemio/notifications-lib';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
+import { RoleName } from '@common/enums/role.name';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { RoleChangeType } from '@alkemio/notifications-lib';
+import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { RoleSetAuthorizationService } from '@domain/access/role-set/role.set.service.authorization';
+import { AgentService } from '@domain/agent/agent/agent.service';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { LicenseService } from '@domain/common/license/license.service';
 import { IUser } from '@domain/community/user/user.interface';
-import { NotificationInputPlatformGlobalRoleChange } from '@services/adapters/notification-adapter/dto/platform/notification.dto.input.platform.global.role.change';
-import { RoleName } from '@common/enums/role.name';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { AccountService } from '@domain/space/account/account.service';
 import { AccountLicenseService } from '@domain/space/account/account.service.license';
-import { LicenseService } from '@domain/common/license/license.service';
-import { AgentService } from '@domain/agent/agent/agent.service';
-import { RoleSetService } from '@domain/access/role-set/role.set.service';
-import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
-import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
-import { RoleSetAuthorizationService } from '@domain/access/role-set/role.set.service.authorization';
-import { RemovePlatformRoleInput } from './dto/platform.role.dto.remove';
-import { AssignPlatformRoleInput } from './dto/platform.role.dto.assign';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { PlatformService } from '@platform/platform/platform.service';
-import { InstrumentResolver } from '@src/apm/decorators';
+import { NotificationInputPlatformGlobalRoleChange } from '@services/adapters/notification-adapter/dto/platform/notification.dto.input.platform.global.role.change';
 import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
+import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentUser } from '@src/common/decorators';
+import { AssignPlatformRoleInput } from './dto/platform.role.dto.assign';
+import { RemovePlatformRoleInput } from './dto/platform.role.dto.remove';
 
 @InstrumentResolver()
 @Resolver()

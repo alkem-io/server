@@ -1,10 +1,10 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { groupCredentialsByEntity } from '@services/api/roles/util/group.credentials.by.entity';
-import { ValidationException } from '@common/exceptions';
 import { LogContext } from '@common/enums/logging.context';
+import { ValidationException } from '@common/exceptions';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { groupCredentialsByEntity } from '@services/api/roles/util/group.credentials.by.entity';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class UserSettingsHomeSpaceValidationService {

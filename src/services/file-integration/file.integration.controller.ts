@@ -6,11 +6,11 @@ import {
   RmqContext,
   Transport,
 } from '@nestjs/microservices';
+import { ack } from '../util';
 import { FileIntegrationService } from './file.integration.service';
-import { FileMessagePatternEnum } from './types/message.pattern';
 import { FileInfoInputData } from './inputs';
 import { FileInfoOutputData, HealthCheckOutputData } from './outputs';
-import { ack } from '../util';
+import { FileMessagePatternEnum } from './types/message.pattern';
 
 @Controller()
 export class FileIntegrationController {

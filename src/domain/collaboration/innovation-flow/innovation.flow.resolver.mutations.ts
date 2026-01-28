@@ -1,30 +1,30 @@
-import { Resolver, Args, Mutation } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
-import { InnovationFlowService } from './innovation.flow.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { AuthorizationService } from '@core/authorization/authorization.service';
+import { LogContext } from '@common/enums';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { IInnovationFlow } from './innovation.flow.interface';
-import { UpdateInnovationFlowCurrentStateInput } from './dto/innovation.flow.dto.state.select';
-import { InstrumentResolver } from '@src/apm/decorators';
-import { UpdateInnovationFlowInput } from './dto/innovation.flow.dto.update';
-import { IInnovationFlowState } from '../innovation-flow-state/innovation.flow.state.interface';
-import { CreateStateOnInnovationFlowInput } from './dto/innovation.flow.dto.state.create';
-import { InnovationFlowStateAuthorizationService } from '../innovation-flow-state/innovation.flow.state.service.authorization';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { InnovationFlowStateService } from '../innovation-flow-state/innovation.flow.state.service';
-import { UpdateInnovationFlowStatesSortOrderInput } from './dto/innovation.flow.dto.update.states.sort.order';
-import { DeleteStateOnInnovationFlowInput } from './dto/innovation.flow.dto.state.delete';
 import {
   EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentUser } from '@src/common/decorators';
 import { UpdateInnovationFlowStateInput } from '../innovation-flow-state/dto';
+import { IInnovationFlowState } from '../innovation-flow-state/innovation.flow.state.interface';
+import { InnovationFlowStateService } from '../innovation-flow-state/innovation.flow.state.service';
+import { InnovationFlowStateAuthorizationService } from '../innovation-flow-state/innovation.flow.state.service.authorization';
 import {
   RemoveDefaultCalloutTemplateOnInnovationFlowStateInput,
   SetDefaultCalloutTemplateOnInnovationFlowStateInput,
 } from './dto';
+import { CreateStateOnInnovationFlowInput } from './dto/innovation.flow.dto.state.create';
+import { DeleteStateOnInnovationFlowInput } from './dto/innovation.flow.dto.state.delete';
+import { UpdateInnovationFlowCurrentStateInput } from './dto/innovation.flow.dto.state.select';
+import { UpdateInnovationFlowInput } from './dto/innovation.flow.dto.update';
+import { UpdateInnovationFlowStatesSortOrderInput } from './dto/innovation.flow.dto.update.states.sort.order';
+import { IInnovationFlow } from './innovation.flow.interface';
+import { InnovationFlowService } from './innovation.flow.service';
 
 @InstrumentResolver()
 @Resolver()

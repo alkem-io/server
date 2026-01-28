@@ -1,22 +1,21 @@
-import { Float, Resolver } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
-import { Args, ResolveField } from '@nestjs/graphql';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { MeQueryResults } from '@services/api/me/dto';
-import { IUser } from '@domain/community/user/user.interface';
-import { ForbiddenException, ValidationException } from '@common/exceptions';
-import { MeService } from './me.service';
 import { LogContext } from '@common/enums';
-import { MySpaceResults } from './dto/my.journeys.results';
-import { CommunityInvitationResult } from './dto/me.invitation.result';
+import { ForbiddenException, ValidationException } from '@common/exceptions';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { PaginationArgs } from '@core/pagination';
+import { PaginatedInAppNotifications } from '@core/pagination/paginated.in-app-notification';
+import { IUser } from '@domain/community/user/user.interface';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { Args, Float, ResolveField, Resolver } from '@nestjs/graphql';
+import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
+import { MeQueryResults } from '@services/api/me/dto';
+import { CurrentUser } from '@src/common/decorators';
 import { CommunityApplicationResult } from './dto/me.application.result';
+import { MeConversationsResult } from './dto/me.conversations.result';
+import { CommunityInvitationResult } from './dto/me.invitation.result';
 import { CommunityMembershipResult } from './dto/me.membership.result';
 import { NotificationEventsFilterInput } from './dto/me.notification.event.filter.dto.input';
-import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
-import { PaginatedInAppNotifications } from '@core/pagination/paginated.in-app-notification';
-import { PaginationArgs } from '@core/pagination';
-import { MeConversationsResult } from './dto/me.conversations.result';
-import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { MySpaceResults } from './dto/my.journeys.results';
+import { MeService } from './me.service';
 
 @Resolver(() => MeQueryResults)
 export class MeResolverFields {

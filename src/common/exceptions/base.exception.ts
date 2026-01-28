@@ -1,8 +1,8 @@
-import { GraphQLError } from 'graphql';
+import { AlkemioErrorStatus, LogContext } from '@common/enums';
 import { randomUUID } from 'crypto';
-import { LogContext, AlkemioErrorStatus } from '@common/enums';
-import { ExceptionDetails } from './exception.details';
+import { GraphQLError } from 'graphql';
 import { getErrorCodeEntry } from './error.code.registry';
+import { ExceptionDetails } from './exception.details';
 
 export class BaseException extends GraphQLError {
   private readonly exceptionName = this.constructor.name;

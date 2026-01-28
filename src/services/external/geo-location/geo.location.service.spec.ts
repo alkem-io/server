@@ -1,21 +1,21 @@
-import { vi } from 'vitest';
-import { Test, TestingModule } from '@nestjs/testing';
+import {
+  GeoServiceErrorException,
+  GeoServiceNotAvailableException,
+  GeoServiceRequestLimitExceededException,
+} from '@common/exceptions/geo';
 import { HttpService } from '@nestjs/axios';
-import { Cache } from 'cache-manager';
-import { of } from 'rxjs';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Test, TestingModule } from '@nestjs/testing';
 import {
   MockCacheManager,
   MockConfigService,
   MockHttpService,
   MockWinstonProvider,
 } from '@test/mocks';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { asyncToThrow } from '@test/utils';
-import {
-  GeoServiceErrorException,
-  GeoServiceNotAvailableException,
-  GeoServiceRequestLimitExceededException,
-} from '@common/exceptions/geo';
+import { Cache } from 'cache-manager';
+import { of } from 'rxjs';
+import { vi } from 'vitest';
 import { GeoLocationService } from './geo.location.service';
 import * as isLimitExceededModule from './utils/is.limit.exceeded';
 
@@ -90,9 +90,9 @@ describe('GeoLocationService', () => {
       )
     );
 
-    vi
-      .spyOn(isLimitExceededModule, 'isLimitExceeded')
-      .mockReturnValueOnce(true);
+    vi.spyOn(isLimitExceededModule, 'isLimitExceeded').mockReturnValueOnce(
+      true
+    );
 
     await asyncToThrow(
       geoLocationService.getGeo('ip'),
@@ -110,9 +110,9 @@ describe('GeoLocationService', () => {
       calls: 0,
     }));
 
-    vi
-      .spyOn(isLimitExceededModule, 'isLimitExceeded')
-      .mockReturnValueOnce(false);
+    vi.spyOn(isLimitExceededModule, 'isLimitExceeded').mockReturnValueOnce(
+      false
+    );
 
     vi.spyOn(httpService, 'get').mockReturnValueOnce(of(undefined) as any);
 
@@ -125,9 +125,9 @@ describe('GeoLocationService', () => {
     const spy = vi.spyOn(cacheService, 'get');
     spy.mockResolvedValueOnce(undefined);
 
-    vi
-      .spyOn(httpService, 'get')
-      .mockReturnValueOnce(of(new Error('test error')) as any);
+    vi.spyOn(httpService, 'get').mockReturnValueOnce(
+      of(new Error('test error')) as any
+    );
 
     await asyncToThrow(
       geoLocationService.getGeo('ip'),
@@ -143,9 +143,9 @@ describe('GeoLocationService', () => {
       calls: 0,
     });
     // isLimitExceeded
-    vi
-      .spyOn(isLimitExceededModule, 'isLimitExceeded')
-      .mockReturnValueOnce(false);
+    vi.spyOn(isLimitExceededModule, 'isLimitExceeded').mockReturnValueOnce(
+      false
+    );
     // http response
     vi.spyOn(httpService, 'get').mockReturnValueOnce(
       of({

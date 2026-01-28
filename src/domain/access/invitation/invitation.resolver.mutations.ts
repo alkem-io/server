@@ -1,12 +1,12 @@
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPrivilege } from '@common/enums';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { DeleteInvitationInput } from './dto/invitation.dto.delete';
-import { InvitationService } from './invitation.service';
-import { IInvitation } from './invitation.interface';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentUser } from '@src/common/decorators';
+import { DeleteInvitationInput } from './dto/invitation.dto.delete';
+import { IInvitation } from './invitation.interface';
+import { InvitationService } from './invitation.service';
 
 @InstrumentResolver()
 @Resolver()

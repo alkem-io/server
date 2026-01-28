@@ -1,10 +1,10 @@
-import { Field, InputType } from '@nestjs/graphql';
-import { MaxLength, ValidateNested } from 'class-validator';
-import { LONG_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@src/common/constants';
-import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { UpdateInnovationFlowStateSettingsInput } from '@domain/collaboration/innovation-flow-state-settings/dto/innovation.flow.state.settings.dto.update';
-import { Type } from 'class-transformer';
 import { UUID } from '@domain/common/scalars';
+import { Markdown } from '@domain/common/scalars/scalar.markdown';
+import { Field, InputType } from '@nestjs/graphql';
+import { LONG_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@src/common/constants';
+import { Type } from 'class-transformer';
+import { MaxLength, ValidateNested } from 'class-validator';
 
 @InputType()
 export class UpdateInnovationFlowStateInput {

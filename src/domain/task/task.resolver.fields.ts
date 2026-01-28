@@ -1,6 +1,6 @@
+import { Profiling } from '@common/decorators';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { ITask } from './dto/';
-import { Profiling } from '@common/decorators';
 
 @Resolver(() => ITask)
 export class TaskResolverFields {

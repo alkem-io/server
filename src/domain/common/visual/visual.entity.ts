@@ -1,9 +1,9 @@
-import { Column, Entity, Index, ManyToOne } from 'typeorm';
-import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
-import { IVisual } from './visual.interface';
-import { Profile } from '@domain/common/profile/profile.entity';
 import { ALT_TEXT_LENGTH, URI_LENGTH } from '@common/constants';
+import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
+import { Profile } from '@domain/common/profile/profile.entity';
+import { Column, Entity, Index, ManyToOne } from 'typeorm';
 import { VISUAL_ALLOWED_TYPES } from './visual.constraints';
+import { IVisual } from './visual.interface';
 
 @Entity()
 @Index('IDX_visual_profileId', ['profile'])
@@ -35,11 +35,15 @@ export class Visual extends AuthorizableEntity implements IVisual {
   @Column('varchar', { length: ALT_TEXT_LENGTH, nullable: true })
   alternativeText?: string;
 
-  @ManyToOne(() => Profile, profile => profile.visuals, {
-    eager: false,
-    cascade: false,
-    onDelete: 'CASCADE',
-  })
+  @ManyToOne(
+    () => Profile,
+    profile => profile.visuals,
+    {
+      eager: false,
+      cascade: false,
+      onDelete: 'CASCADE',
+    }
+  )
   profile?: Profile;
 
   constructor() {

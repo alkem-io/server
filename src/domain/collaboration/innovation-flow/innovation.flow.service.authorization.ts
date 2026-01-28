@@ -1,15 +1,15 @@
-import { Injectable } from '@nestjs/common';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { IInnovationFlow } from './innovation.flow.interface';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
-import { AuthorizationPrivilege, LogContext } from '@common/enums';
-import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { PRIVILEGE_RULE_TYPES_INNOVATION_FLOW_UPDATE } from '@common/constants/authorization/policy.rule.constants';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
-import { InnovationFlowService } from './innovation.flow.service';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
+import { Injectable } from '@nestjs/common';
 import { InnovationFlowStateAuthorizationService } from '../innovation-flow-state/innovation.flow.state.service.authorization';
+import { IInnovationFlow } from './innovation.flow.interface';
+import { InnovationFlowService } from './innovation.flow.service';
 
 @Injectable()
 export class InnovationFlowAuthorizationService {

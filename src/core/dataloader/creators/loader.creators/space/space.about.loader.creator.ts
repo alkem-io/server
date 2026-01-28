@@ -1,10 +1,10 @@
-import { EntityManager } from 'typeorm';
+import { DataLoaderInitError } from '@common/exceptions/data-loader';
+import { ISpaceAbout } from '@domain/space/space.about';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { DataLoaderInitError } from '@common/exceptions/data-loader';
+import { EntityManager } from 'typeorm';
 import { createTypedRelationDataLoader } from '../../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
-import { ISpaceAbout } from '@domain/space/space.about';
 
 @Injectable()
 export class SpaceAboutLoaderCreator implements DataLoaderCreator<ISpaceAbout> {

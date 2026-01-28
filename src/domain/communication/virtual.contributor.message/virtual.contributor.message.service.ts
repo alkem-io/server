@@ -1,18 +1,17 @@
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { isInputValidForAction } from '@domain/community/virtual-contributor/dto/utils';
 import {
   InvocationResultAction,
   VirtualContributorInvocationInput,
 } from '@domain/community/virtual-contributor/dto/virtual.contributor.dto.invocation.input';
+import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
+import { AiServerAdapterInvocationInput } from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.invocation';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IRoom } from '../room/room.interface';
-import { IVcInteraction } from '../vc-interaction/vc.interaction.interface';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { isInputValidForAction } from '@domain/community/virtual-contributor/dto/utils';
-import { AiServerAdapterInvocationInput } from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.invocation';
-import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
-import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { RoomLookupService } from '../room-lookup/room.lookup.service';
 
 @Injectable()
@@ -30,8 +29,7 @@ export class VirtualContributorMessageService {
     threadID: string,
     agentInfo: AgentInfo,
     contextSpaceID: string,
-    room: IRoom,
-    _vcInteraction: IVcInteraction | undefined = undefined
+    room: IRoom
   ) {
     const virtualContributor =
       await this.virtualContributorLookupService.getVirtualContributorByAgentIdOrFail(

@@ -1,4 +1,5 @@
 import { LogContext } from '@common/enums';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -8,19 +9,18 @@ import { Agent, CreateAgentInput, IAgent } from '@domain/agent/agent';
 import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
+import { AlkemioConfig } from '@src/types';
 import { Cache } from 'cache-manager';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
-import { CredentialService } from '../credential/credential.service';
-import { RevokeCredentialInput } from './dto/agent.dto.credential.revoke';
 import { AgentInfoCacheService } from '../../../core/authentication.agent.info/agent.info.cache.service';
+import { CredentialService } from '../credential/credential.service';
 import { GrantCredentialToAgentInput } from './dto/agent.dto.credential.grant';
-import { AlkemioConfig } from '@src/types';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { RevokeCredentialInput } from './dto/agent.dto.credential.revoke';
 
 @Injectable()
 export class AgentService {

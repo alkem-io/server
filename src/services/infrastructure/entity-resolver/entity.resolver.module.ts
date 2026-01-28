@@ -1,14 +1,14 @@
+import { Communication } from '@domain/communication/communication/communication.entity';
+import { Community } from '@domain/community/community/community.entity';
 import { User } from '@domain/community/user/user.entity';
+import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { CommunityResolverService } from './community.resolver.service';
-import { Community } from '@domain/community/community/community.entity';
-import { Communication } from '@domain/communication/communication/communication.entity';
-import { TimelineResolverService } from './timeline.resolver.service';
-import { ContributionResolverService } from './contribution.resolver.service';
-import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
-import { RoomResolverService } from './room.resolver.service';
 import { UrlGeneratorModule } from '../url-generator';
+import { CommunityResolverService } from './community.resolver.service';
+import { ContributionResolverService } from './contribution.resolver.service';
+import { RoomResolverService } from './room.resolver.service';
+import { TimelineResolverService } from './timeline.resolver.service';
 
 @Module({
   imports: [

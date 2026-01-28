@@ -1,8 +1,8 @@
-import { Field, ObjectType } from '@nestjs/graphql';
-import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { RoleName } from '@common/enums/role.name';
-import { IPlatform } from '@platform/platform/platform.interface';
 import { IRoleSet } from '@domain/access/role-set';
+import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
+import { Field, ObjectType } from '@nestjs/graphql';
+import { IPlatform } from '@platform/platform/platform.interface';
 
 @ObjectType('PlatformInvitation')
 export class IPlatformInvitation extends IAuthorizable {

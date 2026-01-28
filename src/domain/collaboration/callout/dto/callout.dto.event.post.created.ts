@@ -1,5 +1,5 @@
-import { IPost } from '@src/domain/collaboration/post/post.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
+import { IPost } from '@src/domain/collaboration/post/post.interface';
 
 @ObjectType('CalloutPostCreated')
 export class CalloutPostCreated {

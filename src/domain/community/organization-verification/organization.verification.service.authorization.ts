@@ -1,15 +1,18 @@
-import { Injectable } from '@nestjs/common';
-import { AuthorizationCredential, LogContext } from '@common/enums';
-import { AuthorizationPrivilege } from '@common/enums';
+import {
+  CREDENTIAL_RULE_ORGANIZATION_VERIFICATION_ADMIN,
+  CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMINS_ALL,
+} from '@common/constants';
+import {
+  AuthorizationCredential,
+  AuthorizationPrivilege,
+  LogContext,
+} from '@common/enums';
+import { EntityNotInitializedException } from '@common/exceptions';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { EntityNotInitializedException } from '@common/exceptions';
+import { Injectable } from '@nestjs/common';
 import { IOrganizationVerification } from './organization.verification.interface';
-import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import {
-  CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMINS_ALL,
-  CREDENTIAL_RULE_ORGANIZATION_VERIFICATION_ADMIN,
-} from '@common/constants';
 
 @Injectable()
 export class OrganizationVerificationAuthorizationService {

@@ -1,5 +1,5 @@
-import { Field, InputType } from '@nestjs/graphql';
 import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
+import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
 export class RoleSetRoleWithParentCredentials {

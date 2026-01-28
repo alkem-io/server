@@ -1,9 +1,9 @@
-import { NotificationEventInAppState } from '@common/enums/notification.event.in.app.state';
-import { NotificationEventCategory } from '@common/enums/notification.event.category';
-import { IBaseAlkemio } from '@domain/common/entity/base-entity';
 import { NotificationEvent } from '@common/enums/notification.event';
-import { IInAppNotificationPayload } from '@platform/in-app-notification-payload/in.app.notification.payload.interface';
+import { NotificationEventCategory } from '@common/enums/notification.event.category';
+import { NotificationEventInAppState } from '@common/enums/notification.event.in.app.state';
+import { IBaseAlkemio } from '@domain/common/entity/base-entity';
 import { Field, ObjectType } from '@nestjs/graphql';
+import { IInAppNotificationPayload } from '@platform/in-app-notification-payload/in.app.notification.payload.interface';
 
 @ObjectType('InAppNotification')
 export class IInAppNotification extends IBaseAlkemio {

@@ -1,8 +1,8 @@
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
+import { ILink } from '@domain/collaboration/link/link.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IActivityLogEntryBase } from './activity.log.dto.entry.base.interface';
 import { IActivityLogEntry } from './activity.log.entry.interface';
-import { ILink } from '@domain/collaboration/link/link.interface';
 
 @ObjectType('ActivityLogEntryCalloutLinkCreated', {
   implements: () => [IActivityLogEntry],

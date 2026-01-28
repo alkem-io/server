@@ -1,8 +1,8 @@
-import { Column, Entity, JoinColumn, OneToOne } from 'typeorm';
-import { ICommunication } from '@domain/communication/communication/communication.interface';
-import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
-import { Room } from '../room/room.entity';
 import { UUID_LENGTH } from '@common/constants';
+import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
+import { ICommunication } from '@domain/communication/communication/communication.interface';
+import { Column, Entity, JoinColumn, OneToOne } from 'typeorm';
+import { Room } from '../room/room.entity';
 
 @Entity()
 export class Communication

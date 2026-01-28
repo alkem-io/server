@@ -1,3 +1,15 @@
+import { LogContext, MessagingQueue } from '@common/enums';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { LicenseService } from '@domain/common/license/license.service';
+import { OrganizationService } from '@domain/community/organization/organization.service';
+import { OrganizationAuthorizationService } from '@domain/community/organization/organization.service.authorization';
+import { OrganizationLicenseService } from '@domain/community/organization/organization.service.license';
+import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
+import { UserService } from '@domain/community/user/user.service';
+import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
+import { AccountService } from '@domain/space/account/account.service';
+import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
+import { AccountLicenseService } from '@domain/space/account/account.service.license';
 import { Controller, Inject, LoggerService } from '@nestjs/common';
 import {
   Ctx,
@@ -6,26 +18,14 @@ import {
   RmqContext,
   Transport,
 } from '@nestjs/microservices';
+import { PlatformAuthorizationService } from '@platform/platform/platform.service.authorization';
+import { PlatformLicenseService } from '@platform/platform/platform.service.license';
+import { AiServerAuthorizationService } from '@services/ai-server/ai-server/ai.server.service.authorization';
+import { TaskService } from '@services/task/task.service';
 import { Channel, Message } from 'amqplib';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LogContext, MessagingQueue } from '@common/enums';
-import { PlatformAuthorizationService } from '@platform/platform/platform.service.authorization';
-import { OrganizationService } from '@domain/community/organization/organization.service';
-import { OrganizationAuthorizationService } from '@domain/community/organization/organization.service.authorization';
-import { UserService } from '@domain/community/user/user.service';
-import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
-import { RESET_EVENT_TYPE } from '../reset.event.type';
-import { TaskService } from '@services/task/task.service';
 import { AuthResetEventPayload } from '../auth-reset.payload.interface';
-import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
-import { AccountService } from '@domain/space/account/account.service';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { AccountLicenseService } from '@domain/space/account/account.service.license';
-import { LicenseService } from '@domain/common/license/license.service';
-import { AiServerAuthorizationService } from '@services/ai-server/ai-server/ai.server.service.authorization';
-import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
-import { OrganizationLicenseService } from '@domain/community/organization/organization.service.license';
-import { PlatformLicenseService } from '@platform/platform/platform.service.license';
+import { RESET_EVENT_TYPE } from '../reset.event.type';
 
 const MAX_RETRIES = 5;
 const RETRY_HEADER = 'x-retry-count';

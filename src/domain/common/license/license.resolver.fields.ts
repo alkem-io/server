@@ -1,8 +1,8 @@
+import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { ILicenseEntitlement } from '../license-entitlement/license.entitlement.interface';
 import { ILicense } from './license.interface';
 import { LicenseService } from './license.service';
-import { ILicenseEntitlement } from '../license-entitlement/license.entitlement.interface';
-import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 
 @Resolver(() => ILicense)
 export class LicenseResolverFields {

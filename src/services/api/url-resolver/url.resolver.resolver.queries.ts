@@ -1,9 +1,9 @@
-import { Args, Query, Resolver } from '@nestjs/graphql';
-import { UrlResolverQueryResults } from './dto/url.resolver.query.results';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
-import { UrlResolverService } from './url.resolver.service';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { Args, Query, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { UrlResolverQueryResults } from './dto/url.resolver.query.results';
+import { UrlResolverService } from './url.resolver.service';
 
 @InstrumentResolver()
 @Resolver()

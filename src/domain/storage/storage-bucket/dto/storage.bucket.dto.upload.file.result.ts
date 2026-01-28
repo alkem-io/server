@@ -1,5 +1,5 @@
-import { Field, ObjectType } from '@nestjs/graphql';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
+import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('StorageBucketUploadFileResult')
 export class StorageBucketUploadFileResult {

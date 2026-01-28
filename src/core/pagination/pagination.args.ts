@@ -1,5 +1,5 @@
-import { ArgsType, Int, Field } from '@nestjs/graphql';
 import { UUID } from '@domain/common/scalars';
+import { ArgsType, Field, Int } from '@nestjs/graphql';
 
 @ArgsType()
 export class PaginationArgs {

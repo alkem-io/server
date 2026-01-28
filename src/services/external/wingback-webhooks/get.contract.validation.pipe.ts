@@ -1,7 +1,7 @@
-import { ValidationError } from 'class-validator';
-import { BadRequestHttpException } from '@common/exceptions/http';
 import { LogContext } from '@common/enums';
+import { BadRequestHttpException } from '@common/exceptions/http';
 import { ValidationPipe } from '@nestjs/common';
+import { ValidationError } from 'class-validator';
 
 export const getContractValidationPipe = () => {
   const exceptionFactory = (errors: ValidationError[]) => {

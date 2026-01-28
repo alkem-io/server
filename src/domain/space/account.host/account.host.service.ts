@@ -1,26 +1,26 @@
-import { Injectable, Inject, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { IAccount } from '../account/account.interface';
-import { AgentService } from '@domain/agent/agent/agent.service';
-import { ILicensePlan } from '@platform/licensing/credential-based/license-plan/license.plan.interface';
-import { LicenseIssuerService } from '@platform/licensing/credential-based/license-credential-issuer/license.issuer.service';
-import { Account } from '../account/account.entity';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
-import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
+import { AccountType } from '@common/enums/account.type';
 import { AgentType } from '@common/enums/agent.type';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { AccountType } from '@common/enums/account.type';
-import { IAgent } from '@domain/agent/agent/agent.interface';
-import { LicenseService } from '@domain/common/license/license.service';
-import { LicenseType } from '@common/enums/license.type';
-import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
+import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
+import { LicenseType } from '@common/enums/license.type';
+import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
+import { IAgent } from '@domain/agent/agent/agent.interface';
+import { AgentService } from '@domain/agent/agent/agent.service';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { LicenseService } from '@domain/common/license/license.service';
+import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { LicenseIssuerService } from '@platform/licensing/credential-based/license-credential-issuer/license.issuer.service';
+import { ILicensePlan } from '@platform/licensing/credential-based/license-plan/license.plan.interface';
 import { LicensingFrameworkService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service';
-import { IAccountLicensePlan } from '../account.license.plan/account.license.plan.interface';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { Repository } from 'typeorm';
+import { Account } from '../account/account.entity';
+import { IAccount } from '../account/account.interface';
 import { DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN } from '../account/constants';
+import { IAccountLicensePlan } from '../account.license.plan/account.license.plan.interface';
 
 @Injectable()
 export class AccountHostService {

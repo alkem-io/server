@@ -1,7 +1,7 @@
 import { Entity, OneToMany } from 'typeorm';
+import { BaseAlkemioEntity } from '../entity/base-entity';
 import { TagsetTemplate } from '../tagset-template/tagset.template.entity';
 import { ITagsetTemplateSet } from './tagset.template.set.interface';
-import { BaseAlkemioEntity } from '../entity/base-entity';
 
 @Entity()
 export class TagsetTemplateSet

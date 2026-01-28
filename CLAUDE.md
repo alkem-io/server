@@ -22,9 +22,10 @@ pnpm start              # Production mode
 pnpm start:dev          # Hot reload
 pnpm start:services     # Start dependencies via Docker Compose
 
-# Lint
-pnpm lint               # tsc --noEmit + ESLint
-pnpm lint:fix           # Auto-fix ESLint issues
+# Lint (uses Biome)
+pnpm lint               # tsc --noEmit + biome check
+pnpm lint:fix           # Auto-fix with biome check --write
+pnpm format             # Format with biome format --write
 
 # Tests
 pnpm test:ci            # CI tests with coverage (~2-3 min)
@@ -164,9 +165,23 @@ TypeScript path aliases configured in `tsconfig.json`:
 - `@src/*` → `src/*`
 - `@test/*` → `test/*`
 
+## Linting and Formatting
+
+The project uses **Biome** for linting and formatting (replaced ESLint + Prettier).
+
+- Configuration: `biome.json` at repository root
+- Inline ignore: `// biome-ignore lint/rule-name: reason`
+- VS Code extension: `biomejs.biome`
+
+Key rules:
+- `noConsole`: error (use Winston logger instead)
+- `noDebugger`: error
+- `noExplicitAny`: off (legacy codebase compatibility)
+- Underscore prefix (`_param`) ignores unused parameters
+
 ## Active Technologies
-- TypeScript 5.3, Node.js 22 LTS (Volta pins 22.21.1) + NestJS 10, @nestjs/testing, ts-jest 29.2.2 → vitest 3.x (027-vitest-migration)
-- N/A (test infrastructure only) (027-vitest-migration)
+- TypeScript 5.3, Node.js 22 LTS (Volta pins 22.21.1) + NestJS 10, Vitest 4.x, Biome for linting/formatting
 
 ## Recent Changes
-- 027-vitest-migration: Added TypeScript 5.3, Node.js 22 LTS (Volta pins 22.21.1) + NestJS 10, @nestjs/testing, ts-jest 29.2.2 → vitest 3.x
+- 028-migrate-biome-linting: Migrated from ESLint + Prettier to Biome for linting and formatting
+- 027-vitest-migration: Migrated from Jest to Vitest for testing

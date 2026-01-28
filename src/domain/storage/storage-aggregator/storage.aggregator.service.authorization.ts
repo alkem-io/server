@@ -1,11 +1,11 @@
-import { Injectable } from '@nestjs/common';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { StorageAggregatorService } from './storage.aggregator.service';
-import { IStorageAggregator } from './storage.aggregator.interface';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
-import { StorageBucketAuthorizationService } from '../storage-bucket/storage.bucket.service.authorization';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { Injectable } from '@nestjs/common';
+import { StorageBucketAuthorizationService } from '../storage-bucket/storage.bucket.service.authorization';
+import { IStorageAggregator } from './storage.aggregator.interface';
+import { StorageAggregatorService } from './storage.aggregator.service';
 
 @Injectable()
 export class StorageAggregatorAuthorizationService {

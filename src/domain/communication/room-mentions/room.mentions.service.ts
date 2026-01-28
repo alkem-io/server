@@ -1,26 +1,26 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { IMessage } from '../message/message.interface';
-import { NotificationInputEntityMentions } from '@services/adapters/notification-adapter/dto/user/notification.dto.input.entity.mentions';
-import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
-import { Mention, MentionedEntityType } from '../messaging/mention.interface';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums/logging.context';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
 } from '@common/exceptions';
-import { VirtualContributorMessageService } from '../virtual.contributor.message/virtual.contributor.message.service';
-import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
-import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
-import { IRoom } from '../room/room.interface';
-import { IVcInteraction } from '../vc-interaction/vc.interaction.interface';
-import { RoomLookupService } from '../room-lookup/room.lookup.service';
-import { NotificationInputUserMention } from '@services/adapters/notification-adapter/dto/user/notification.dto.input.user.mention';
-import { NotificationUserAdapter } from '@services/adapters/notification-adapter/notification.user.adapter';
-import { NotificationOrganizationAdapter } from '@services/adapters/notification-adapter/notification.organization.adapter';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { NotificationInputOrganizationMention } from '@services/adapters/notification-adapter/dto/organization/notification.dto.input.organization.mention';
+import { NotificationInputEntityMentions } from '@services/adapters/notification-adapter/dto/user/notification.dto.input.entity.mentions';
+import { NotificationInputUserMention } from '@services/adapters/notification-adapter/dto/user/notification.dto.input.user.mention';
+import { NotificationOrganizationAdapter } from '@services/adapters/notification-adapter/notification.organization.adapter';
+import { NotificationUserAdapter } from '@services/adapters/notification-adapter/notification.user.adapter';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { IMessage } from '../message/message.interface';
+import { Mention, MentionedEntityType } from '../messaging/mention.interface';
+import { IRoom } from '../room/room.interface';
+import { RoomLookupService } from '../room-lookup/room.lookup.service';
+import { IVcInteraction } from '../vc-interaction/vc.interaction.interface';
+import { VirtualContributorMessageService } from '../virtual.contributor.message/virtual.contributor.message.service';
 
 @Injectable()
 export class RoomMentionsService {
@@ -122,8 +122,7 @@ export class RoomMentionsService {
         threadID,
         agentInfo,
         contextSpaceID,
-        room,
-        vcInteraction
+        room
       );
     }
   }
