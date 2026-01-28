@@ -77,8 +77,8 @@ describe('ErrorStatusMetadata', () => {
       expect(computeNumericCode(FALLBACK_METADATA)).toBe(99999);
     });
 
-    it('should have a user message with errorId placeholder', () => {
-      expect(FALLBACK_METADATA.userMessage).toContain('{{errorId}}');
+    it('should have a user message i18n key', () => {
+      expect(FALLBACK_METADATA.userMessage).toBe('userMessages.fallback');
     });
   });
 });

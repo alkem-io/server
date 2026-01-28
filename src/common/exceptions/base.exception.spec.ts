@@ -139,9 +139,7 @@ describe('BaseException', () => {
       );
 
       expect(exception.extensions?.numericCode).toBe(99999);
-      expect(exception.extensions?.userMessage).toBe(
-        'An unexpected error occurred. Reference: {{errorId}}'
-      );
+      expect(exception.extensions?.userMessage).toBe('userMessages.fallback');
     });
   });
 });
