@@ -40,8 +40,8 @@ dynamic_thumbnails: false
 
 url_preview_enabled: false
 
-enable_registration: true
-enable_registration_without_verification: true
+enable_registration: false
+enable_registration_without_verification: false
 
 app_service_config_files:
   - /data/matrix-adapter.yaml
@@ -55,8 +55,8 @@ modules:
 
 # Password authentication configuration
 # Disabled to enforce SSO-only authentication (FR-001, FR-002)
-#password_config:
-#  enabled: false
+password_config:
+  enabled: false
 
 # Optional account validity configuration. This allows for accounts to be denied
 # any request after a given period.
@@ -161,7 +161,7 @@ account_validity:
 # If set, allows registration of standard or admin accounts by anyone who
 # has the shared secret, even if registration is otherwise disabled.
 #
-registration_shared_secret: n#P.uIl8IDOYPR-fiLzDoFw9ZPvTIlYg7*F9*~eaDZFK#;.KRg
+#registration_shared_secret: n#P.uIl8IDOYPR-fiLzDoFw9ZPvTIlYg7*F9*~eaDZFK#;.KRg
 
 # Set the number of bcrypt rounds used to generate password hash.
 # Larger numbers increase the work factor needed to generate the hash.
