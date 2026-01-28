@@ -23,7 +23,7 @@ describe('BaseException', () => {
       );
 
       expect(exception.extensions?.code).toBe('FORBIDDEN_POLICY');
-      expect(exception.extensions?.numericCode).toBe(20104);
+      expect(exception.extensions?.numericCode).toBe(11104);
     });
 
     it('should include errorId in extensions', () => {
@@ -64,6 +64,32 @@ describe('BaseException', () => {
   });
 
   describe('numeric code mapping', () => {
+    it('should map NOT_FOUND category codes correctly', () => {
+      const exception = new BaseException(
+        'Entity not found',
+        LogContext.COMMUNITY,
+        AlkemioErrorStatus.ENTITY_NOT_FOUND
+      );
+
+      expect(exception.extensions?.numericCode).toBe(10101);
+      expect(
+        Math.floor((exception.extensions?.numericCode as number) / 1000)
+      ).toBe(10);
+    });
+
+    it('should map AUTHORIZATION category codes correctly', () => {
+      const exception = new BaseException(
+        'Access denied',
+        LogContext.AUTH,
+        AlkemioErrorStatus.FORBIDDEN
+      );
+
+      expect(exception.extensions?.numericCode).toBe(11103);
+      expect(
+        Math.floor((exception.extensions?.numericCode as number) / 1000)
+      ).toBe(11);
+    });
+
     it('should map VALIDATION category codes correctly', () => {
       const exception = new BaseException(
         'Invalid input',
@@ -71,10 +97,10 @@ describe('BaseException', () => {
         AlkemioErrorStatus.BAD_USER_INPUT
       );
 
-      expect(exception.extensions?.numericCode).toBe(30101);
+      expect(exception.extensions?.numericCode).toBe(12101);
       expect(
         Math.floor((exception.extensions?.numericCode as number) / 1000)
-      ).toBe(30);
+      ).toBe(12);
     });
 
     it('should map OPERATIONS category codes correctly', () => {
@@ -84,10 +110,10 @@ describe('BaseException', () => {
         AlkemioErrorStatus.CALLOUT_CLOSED
       );
 
-      expect(exception.extensions?.numericCode).toBe(40102);
+      expect(exception.extensions?.numericCode).toBe(13109);
       expect(
         Math.floor((exception.extensions?.numericCode as number) / 1000)
-      ).toBe(40);
+      ).toBe(13);
     });
 
     it('should map SYSTEM category codes correctly', () => {
@@ -97,10 +123,25 @@ describe('BaseException', () => {
         AlkemioErrorStatus.BOOTSTRAP_FAILED
       );
 
-      expect(exception.extensions?.numericCode).toBe(50101);
+      expect(exception.extensions?.numericCode).toBe(14101);
       expect(
         Math.floor((exception.extensions?.numericCode as number) / 1000)
-      ).toBe(50);
+      ).toBe(14);
+    });
+  });
+
+  describe('fallback behavior', () => {
+    it('should use fallback metadata for UNSPECIFIED status', () => {
+      const exception = new BaseException(
+        'Test error',
+        LogContext.COMMUNITY,
+        AlkemioErrorStatus.UNSPECIFIED
+      );
+
+      expect(exception.extensions?.numericCode).toBe(99999);
+      expect(exception.extensions?.userMessage).toBe(
+        'An unexpected error occurred. Reference: {{errorId}}'
+      );
     });
   });
 });

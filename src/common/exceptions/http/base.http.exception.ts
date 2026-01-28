@@ -1,7 +1,10 @@
 import { AlkemioErrorStatus, LogContext } from '@common/enums';
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import { getErrorCodeEntry } from '../error.code.registry';
+import {
+  computeNumericCode,
+  getMetadataForStatus,
+} from '../error.status.metadata';
 import { ExceptionDetails } from '../exception.details';
 
 export class BaseHttpException extends HttpException {
@@ -19,10 +22,9 @@ export class BaseHttpException extends HttpException {
   ) {
     super(message, statusCode);
     this.name = this.constructor.name;
-    const entry =
-      getErrorCodeEntry(code) ??
-      getErrorCodeEntry(AlkemioErrorStatus.UNSPECIFIED)!;
-    this.numericCode = entry.numericCode;
-    this.userMessage = entry.userMessage;
+
+    const metadata = getMetadataForStatus(code);
+    this.numericCode = computeNumericCode(metadata);
+    this.userMessage = metadata.userMessage;
   }
 }

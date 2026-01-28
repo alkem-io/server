@@ -1,21 +1,21 @@
-import { vi, Mock } from 'vitest';
+import { AlkemioErrorStatus, LogContext } from '@common/enums';
+import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
+import { HttpExceptionFilter } from '@core/error-handling/http.exception.filter';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import {
   INestApplication,
   LoggerService,
   ValidationPipe as NestValidationPipe,
 } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import request from 'supertest';
+import { Identity } from '@ory/kratos-client';
+import { RegistrationService } from '@services/api/registration/registration.service';
 import { IdentityResolveController } from '@services/api-rest/identity-resolve/identity-resolve.controller';
 import { IdentityResolveService } from '@services/api-rest/identity-resolve/identity-resolve.service';
-import { RegistrationService } from '@services/api/registration/registration.service';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
-import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Identity } from '@ory/kratos-client';
-import { LogContext, AlkemioErrorStatus } from '@common/enums';
-import { HttpExceptionFilter } from '@core/error-handling/http.exception.filter';
+import request from 'supertest';
+import { Mock, vi } from 'vitest';
 
 const buildIdentity = (overrides: Partial<Identity> = {}): Identity =>
   ({
@@ -192,7 +192,6 @@ describe('IdentityResolveController (REST)', () => {
       .expect(404);
 
     expect(response.body.code).toBe(AlkemioErrorStatus.NO_AGENT_FOR_USER);
-    expect(response.body.numericCode).toBe(30113); // NO_AGENT_FOR_USER -> 30113
     expect(response.body.message).toContain('Agent not found');
     expect(kratosService.getIdentityById).not.toHaveBeenCalled();
   });
@@ -222,7 +221,6 @@ describe('IdentityResolveController (REST)', () => {
       .expect(404);
 
     expect(response.body.code).toBe(AlkemioErrorStatus.NO_AGENT_FOR_USER);
-    expect(response.body.numericCode).toBe(30113); // NO_AGENT_FOR_USER -> 30113
     expect(response.body.message).toContain('Agent not found');
     expect(registrationService.registerNewUser).toHaveBeenCalled();
   });

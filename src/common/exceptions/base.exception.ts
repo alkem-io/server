@@ -1,7 +1,10 @@
 import { AlkemioErrorStatus, LogContext } from '@common/enums';
 import { randomUUID } from 'crypto';
 import { GraphQLError } from 'graphql';
-import { getErrorCodeEntry } from './error.code.registry';
+import {
+  computeNumericCode,
+  getMetadataForStatus,
+} from './error.status.metadata';
 import { ExceptionDetails } from './exception.details';
 
 export class BaseException extends GraphQLError {
@@ -13,15 +16,15 @@ export class BaseException extends GraphQLError {
     public details?: ExceptionDetails,
     public errorId: string = randomUUID()
   ) {
-    const entry =
-      getErrorCodeEntry(code) ??
-      getErrorCodeEntry(AlkemioErrorStatus.UNSPECIFIED)!;
+    const metadata = getMetadataForStatus(code);
+    const numericCode = computeNumericCode(metadata);
+
     super(message, {
       extensions: {
         // this needs to be set, since graphql automatically chooses a default code
         code: String(code),
-        numericCode: entry.numericCode,
-        userMessage: entry.userMessage,
+        numericCode,
+        userMessage: metadata.userMessage,
         errorId,
         details,
       },
