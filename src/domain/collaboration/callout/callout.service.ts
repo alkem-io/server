@@ -79,7 +79,6 @@ export class CalloutService {
     }
 
     const callout: ICallout = Callout.create(calloutData);
-
     callout.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.CALLOUT
     );
@@ -244,6 +243,7 @@ export class CalloutService {
           whiteboard: true,
           link: true,
           memo: true,
+          mediaGallery: true,
         },
         classification: {
           tagsets: true,

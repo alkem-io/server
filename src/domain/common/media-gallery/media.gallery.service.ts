@@ -64,17 +64,17 @@ export class MediaGalleryService {
     const visualInput = {
       ...DEFAULT_VISUAL_CONSTRAINTS[visualType],
       name: visualType,
+      mediaGallery: mediaGallery,
     };
 
     const visual = await this.visualService.createVisual(visualInput);
+    await this.visualService.saveVisual(visual);
 
     if (!mediaGallery.visuals) {
       mediaGallery.visuals = [];
     }
 
     mediaGallery.visuals.push(visual as Visual);
-    await this.mediaGalleryRepository.save(mediaGallery);
-
     return visual;
   }
 
