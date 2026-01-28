@@ -30,6 +30,10 @@ export const innovationHubPathMatcher = match(
   `/${UrlPathBase.INNOVATION_HUBS}/:innovationHubNameID{/*path}`
 );
 
+export const hubPathMatcher = match(
+  `/${UrlPathBase.HUB}/:innovationHubNameID{/${UrlPathElement.SETTINGS}}{/*path}`
+);
+
 export function getPathElements(url: string): string[] {
   const parsedUrl = new URL(url);
   const pathElements = parsedUrl.pathname.split('/').filter(Boolean);
