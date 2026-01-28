@@ -1,13 +1,13 @@
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { CalendarEventService } from './event.service';
 import { CurrentUser } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
-import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { ICalendarEvent } from './event.interface';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { InstrumentResolver } from '@src/apm/decorators';
 import { DeleteCalendarEventInput } from './dto/event.dto.delete';
 import { UpdateCalendarEventInput } from './dto/event.dto.update';
-import { InstrumentResolver } from '@src/apm/decorators';
+import { ICalendarEvent } from './event.interface';
+import { CalendarEventService } from './event.service';
 
 @InstrumentResolver()
 @Resolver()

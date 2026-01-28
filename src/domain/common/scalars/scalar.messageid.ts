@@ -1,7 +1,7 @@
 import { MESSAGEID_LENGTH } from '@common/constants';
 import { LogContext } from '@common/enums';
 import { ValidationException } from '@common/exceptions';
-import { Scalar, CustomScalar } from '@nestjs/graphql';
+import { CustomScalar, Scalar } from '@nestjs/graphql';
 import { Kind, ValueNode } from 'graphql';
 
 // Example message: $MTsIq1lb2j-QiOPl7Y69Oo6d83vHR8AAantEcLzYJAE

@@ -1,25 +1,24 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-
-import { FindOneOptions, Repository } from 'typeorm';
-import { Tagset } from './tagset.entity';
-import { ITagset } from './tagset.interface';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { TagsetType } from '@common/enums/tagset.type';
 import {
   EntityNotFoundException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
+import { TagsetNotFoundException } from '@common/exceptions/tagset.not.found.exception';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { CreateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.create';
 import { UpdateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.update';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { FindOneOptions, Repository } from 'typeorm';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
-import { TagsetType } from '@common/enums/tagset.type';
 import { ITagsetTemplate } from '../tagset-template';
-import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { TagsetNotFoundException } from '@common/exceptions/tagset.not.found.exception';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { Tagset } from './tagset.entity';
+import { ITagset } from './tagset.interface';
 
 @Injectable()
 export class TagsetService {
@@ -75,7 +74,7 @@ export class TagsetService {
       case TagsetType.FREEFORM:
         break;
       case TagsetType.SELECT_ONE:
-      case TagsetType.SELECT_MANY:
+      case TagsetType.SELECT_MANY: {
         const tagsetTemplate = tagset.tagsetTemplate;
         if (!tagsetTemplate) {
           throw new EntityNotFoundException(
@@ -93,6 +92,7 @@ export class TagsetService {
           }
         }
         this.validateForAllowedValues(tags, tagsetTemplate.allowedValues);
+      }
     }
 
     this.updateTagsetValues(tagset, tagsetData);

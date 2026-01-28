@@ -1,9 +1,9 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { Query, Resolver } from '@nestjs/graphql';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { AccountService } from './account.service';
-import { IAccount } from './account.interface';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { IAccount } from './account.interface';
+import { AccountService } from './account.service';
 
 @InstrumentResolver()
 @Resolver()

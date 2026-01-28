@@ -1,3 +1,4 @@
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
@@ -10,7 +11,6 @@ import { ICalendar } from '../calendar/calendar.interface';
 import { CalendarService } from '../calendar/calendar.service';
 import { Timeline } from './timeline.entity';
 import { ITimeline } from './timeline.interface';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class TimelineService {

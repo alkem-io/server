@@ -1,8 +1,8 @@
 #!/usr/bin/env npx ts-node
 // Validates change-report.json and deprecations.json against JSON Schemas
 import { readFileSync } from 'node:fs';
-import Ajv from 'ajv';
 import path from 'node:path';
+import Ajv from 'ajv';
 
 const ajv = new Ajv({ allErrors: true, strict: false });
 

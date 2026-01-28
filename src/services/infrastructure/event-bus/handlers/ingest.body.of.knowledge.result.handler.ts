@@ -1,14 +1,14 @@
+import { LogContext } from '@common/enums';
+import { Inject, LoggerService } from '@nestjs/common';
 import { EventsHandler, IEventHandler } from '@nestjs/cqrs';
+import { AiServerService } from '@services/ai-server/ai-server/ai.server.service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IngestBodyOfKnowledgeResult } from '../messages/ingest.body.of.knowledge.result.event';
 import {
   ErrorCode,
-  IngestionResult,
   IngestionPurpose,
+  IngestionResult,
 } from '../messages/types';
-import { AiServerService } from '@services/ai-server/ai-server/ai.server.service';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Inject, LoggerService } from '@nestjs/common';
-import { LogContext } from '@common/enums';
 
 @EventsHandler(IngestBodyOfKnowledgeResult)
 export class IngestBodyOfKnowledgeResultHandler

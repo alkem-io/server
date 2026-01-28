@@ -1,15 +1,15 @@
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { IProfile } from '@domain/common/profile/profile.interface';
-import { ICalloutFraming } from './callout.framing.interface';
-import { Loader } from '@core/dataloader/decorators';
-import { CalloutFraming } from './callout.framing.entity';
 import { ProfileLoaderCreator } from '@core/dataloader/creators';
+import { Loader } from '@core/dataloader/decorators';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { CalloutFramingService } from './callout.framing.service';
-import { IWhiteboard } from '@domain/common/whiteboard/types';
 import { ILink } from '@domain/collaboration/link/link.interface';
-import { IMemo } from '@domain/common/memo/types';
 import { IMediaGallery } from '@domain/common/media-gallery/media.gallery.interface';
+import { IMemo } from '@domain/common/memo/types';
+import { IProfile } from '@domain/common/profile/profile.interface';
+import { IWhiteboard } from '@domain/common/whiteboard/types';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { CalloutFraming } from './callout.framing.entity';
+import { ICalloutFraming } from './callout.framing.interface';
+import { CalloutFramingService } from './callout.framing.service';
 
 @Resolver(() => ICalloutFraming)
 export class CalloutFramingResolverFields {

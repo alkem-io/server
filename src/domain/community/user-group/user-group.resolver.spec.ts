@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { UserGroupResolverMutations } from './user-group.resolver.mutations';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { UserGroupResolverMutations } from './user-group.resolver.mutations';
 
 describe('UserGroupResolverMutations', () => {
   let resolver: UserGroupResolverMutations;

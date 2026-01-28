@@ -1,11 +1,11 @@
+import { AuthorizationPrivilege } from '@common/enums';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { IAuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege.interface';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { CurrentUser } from '@src/common/decorators';
-import { IAuthorizationPolicy } from './authorization.policy.interface';
 import { IAuthorizationPolicyRuleCredential } from '../../../core/authorization/authorization.policy.rule.credential.interface';
+import { IAuthorizationPolicy } from './authorization.policy.interface';
 import { AuthorizationPolicyService } from './authorization.policy.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { AuthorizationPrivilege } from '@common/enums';
-import { IAuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege.interface';
 
 @Resolver(() => IAuthorizationPolicy)
 export class AuthorizationPolicyResolverFields {

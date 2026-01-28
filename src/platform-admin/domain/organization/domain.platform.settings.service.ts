@@ -1,8 +1,8 @@
+import { IOrganization } from '@domain/community/organization';
+import { OrganizationService } from '@domain/community/organization/organization.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { IOrganization } from '@domain/community/organization';
 import { UpdateOrganizationPlatformSettingsInput } from './dto/organization.dto.update.platform.settings';
-import { OrganizationService } from '@domain/community/organization/organization.service';
 
 @Injectable()
 export class DomainPlatformSettingsService {

@@ -1,10 +1,10 @@
-import { vi, type Mock } from 'vitest';
 import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
 import {
   UserAuthenticationLinkMatch,
   UserAuthenticationLinkOutcome,
   UserAuthenticationLinkResult,
 } from '@domain/community/user-authentication-link/user.authentication.link.types';
+import { type Mock, vi } from 'vitest';
 
 describe('AgentInfoService', () => {
   const email = 'user@example.com';

@@ -1,15 +1,15 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { LogContext } from '@common/enums';
-import { RelationshipNotFoundException } from '@common/exceptions';
-import { ILicense } from '@domain/common/license/license.interface';
-import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { RoleSetLicenseService } from '@domain/access/role-set/role.set.service.license';
-import { OrganizationLookupService } from '../organization-lookup/organization.lookup.service';
-import { ILicenseEntitlement } from '@domain/common/license-entitlement/license.entitlement.interface';
 import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
+import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
+import { RelationshipNotFoundException } from '@common/exceptions';
+import { RoleSetLicenseService } from '@domain/access/role-set/role.set.service.license';
+import { ILicense } from '@domain/common/license/license.interface';
 import { CreateLicenseEntitlementInput } from '@domain/common/license-entitlement/dto/license.entitlement.dto.create';
+import { ILicenseEntitlement } from '@domain/common/license-entitlement/license.entitlement.interface';
 import { LicenseEntitlementService } from '@domain/common/license-entitlement/license.entitlement.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { OrganizationLookupService } from '../organization-lookup/organization.lookup.service';
 
 @Injectable()
 export class OrganizationLicenseService {

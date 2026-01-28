@@ -1,3 +1,18 @@
+import { LogContext } from '@common/enums';
+import { NotificationEvent } from '@common/enums/notification.event';
+import { NotificationEventInAppState } from '@common/enums/notification.event.in.app.state';
+import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
+import { EntityNotFoundException } from '@common/exceptions';
+import {
+  getPaginationResults,
+  PaginatedInAppNotifications,
+  PaginationArgs,
+} from '@core/pagination';
+import { Injectable } from '@nestjs/common';
+import { Inject } from '@nestjs/common/decorators';
+import { InjectRepository } from '@nestjs/typeorm';
+import { InAppNotification } from '@platform/in-app-notification/in.app.notification.entity';
+import { NotificationEventsFilterInput } from '@services/api/me/dto/me.notification.event.filter.dto.input';
 import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
 import {
   Brackets,
@@ -7,49 +22,34 @@ import {
   Repository,
   UpdateResult,
 } from 'typeorm';
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Inject } from '@nestjs/common/decorators';
-import { InAppNotification } from '@platform/in-app-notification/in.app.notification.entity';
-import { NotificationEventInAppState } from '@common/enums/notification.event.in.app.state';
-import { EntityNotFoundException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
-import { NotificationEvent } from '@common/enums/notification.event';
-import { NotificationEventsFilterInput } from '@services/api/me/dto/me.notification.event.filter.dto.input';
-import { CreateInAppNotificationInput } from './dto/in.app.notification.create';
-import { IInAppNotification } from './in.app.notification.interface';
 import {
-  getPaginationResults,
-  PaginatedInAppNotifications,
-  PaginationArgs,
-} from '@core/pagination';
-import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
-import { InAppNotificationCoreEntityIds } from './in.app.notification.core.entity.ids';
+  InAppNotificationPayloadOrganizationMessageDirect,
+  InAppNotificationPayloadOrganizationMessageRoom,
+} from '../in-app-notification-payload/dto/organization';
 import { InAppNotificationPayloadPlatformForumDiscussion } from '../in-app-notification-payload/dto/platform';
+import {
+  InAppNotificationPayloadSpace,
+  InAppNotificationPayloadSpaceCollaborationCallout,
+  InAppNotificationPayloadSpaceCollaborationCalloutComment,
+  InAppNotificationPayloadSpaceCollaborationCalloutPostComment,
+  InAppNotificationPayloadSpaceCommunicationMessageDirect,
+  InAppNotificationPayloadSpaceCommunicationUpdate,
+  InAppNotificationPayloadSpaceCommunityApplication,
+  InAppNotificationPayloadSpaceCommunityCalendarEvent,
+  InAppNotificationPayloadSpaceCommunityCalendarEventComment,
+  InAppNotificationPayloadSpaceCommunityContributor,
+  InAppNotificationPayloadSpaceCommunityInvitation,
+  InAppNotificationPayloadSpaceCommunityInvitationPlatform,
+} from '../in-app-notification-payload/dto/space';
 import {
   InAppNotificationPayloadUser,
   InAppNotificationPayloadUserMessageDirect,
   InAppNotificationPayloadUserMessageRoom,
 } from '../in-app-notification-payload/dto/user';
-import {
-  InAppNotificationPayloadSpace,
-  InAppNotificationPayloadSpaceCommunityApplication,
-  InAppNotificationPayloadSpaceCommunityContributor,
-  InAppNotificationPayloadSpaceCollaborationCallout,
-  InAppNotificationPayloadSpaceCommunicationMessageDirect,
-  InAppNotificationPayloadSpaceCommunicationUpdate,
-  InAppNotificationPayloadSpaceCommunityCalendarEvent,
-  InAppNotificationPayloadSpaceCommunityCalendarEventComment,
-  InAppNotificationPayloadSpaceCollaborationCalloutComment,
-  InAppNotificationPayloadSpaceCollaborationCalloutPostComment,
-  InAppNotificationPayloadSpaceCommunityInvitationPlatform,
-  InAppNotificationPayloadSpaceCommunityInvitation,
-} from '../in-app-notification-payload/dto/space';
-import {
-  InAppNotificationPayloadOrganizationMessageDirect,
-  InAppNotificationPayloadOrganizationMessageRoom,
-} from '../in-app-notification-payload/dto/organization';
 import { InAppNotificationPayloadVirtualContributor } from '../in-app-notification-payload/dto/virtual-contributor';
+import { CreateInAppNotificationInput } from './dto/in.app.notification.create';
+import { InAppNotificationCoreEntityIds } from './in.app.notification.core.entity.ids';
+import { IInAppNotification } from './in.app.notification.interface';
 
 @Injectable()
 export class InAppNotificationService {

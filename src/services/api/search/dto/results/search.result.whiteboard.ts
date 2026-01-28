@@ -1,9 +1,9 @@
-import { ISpace } from '@domain/space/space/space.interface';
-import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
+import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
+import { ISpace } from '@domain/space/space/space.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { ISearchResult } from './search.result.interface';
 import { SearchResultBase } from './search.result.base';
+import { ISearchResult } from './search.result.interface';
 
 @ObjectType('SearchResultWhiteboard', {
   implements: () => ISearchResult,

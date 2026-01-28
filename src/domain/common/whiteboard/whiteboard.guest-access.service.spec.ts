@@ -1,20 +1,20 @@
-import { vi } from 'vitest';
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
-import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
-import { WhiteboardGuestAccessService } from '@domain/common/whiteboard/whiteboard.guest-access.service';
-import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
-import { ISpace } from '@domain/space/space/space.interface';
-import { LoggerService } from '@nestjs/common';
 import { ForbiddenException } from '@common/exceptions';
 import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
+import { WhiteboardGuestAccessService } from '@domain/common/whiteboard/whiteboard.guest-access.service';
+import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
+import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
+import { ISpace } from '@domain/space/space/space.interface';
+import { LoggerService } from '@nestjs/common';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import type { Mocked } from 'vitest';
+import { vi } from 'vitest';
 
 describe('WhiteboardGuestAccessService', () => {
   const createAuthorization = () => {

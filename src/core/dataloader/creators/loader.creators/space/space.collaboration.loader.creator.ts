@@ -1,10 +1,10 @@
-import { EntityManager } from 'typeorm';
+import { DataLoaderInitError } from '@common/exceptions/data-loader';
+import { ICollaboration } from '@domain/collaboration/collaboration';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { ICollaboration } from '@domain/collaboration/collaboration';
+import { EntityManager } from 'typeorm';
 import { createTypedRelationDataLoader } from '../../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
-import { DataLoaderInitError } from '@common/exceptions/data-loader';
 
 @Injectable()
 export class SpaceCollaborationLoaderCreator

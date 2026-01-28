@@ -1,8 +1,8 @@
-import { InputType, Field } from '@nestjs/graphql';
-import { ValidateNested } from 'class-validator';
-import { Type } from 'class-transformer';
 import { UpdateFormInput } from '@domain/common/form/dto/form.dto.update';
 import { UUID } from '@domain/common/scalars';
+import { Field, InputType } from '@nestjs/graphql';
+import { Type } from 'class-transformer';
+import { ValidateNested } from 'class-validator';
 
 @InputType()
 export class UpdateApplicationFormOnRoleSetInput {

@@ -1,8 +1,8 @@
+import { ICalendar } from '@domain/timeline/calendar/calendar.interface';
+import { ICalendarEvent } from '@domain/timeline/event/event.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IActivityLogEntryBase } from './activity.log.dto.entry.base.interface';
 import { IActivityLogEntry } from './activity.log.entry.interface';
-import { ICalendar } from '@domain/timeline/calendar/calendar.interface';
-import { ICalendarEvent } from '@domain/timeline/event/event.interface';
 
 @ObjectType('ActivityLogEntryCalendarEventCreated', {
   implements: () => [IActivityLogEntry],

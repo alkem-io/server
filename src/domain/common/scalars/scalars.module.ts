@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
-import { UUID } from './scalar.uuid';
-import { NameID } from './scalar.nameid';
+import { Emoji } from './scalar.emoji';
+import { LifecycleDefinitionScalar } from './scalar.lifecycle.definition';
 import { Markdown } from './scalar.markdown';
 import { MessageID } from './scalar.messageid';
-import { LifecycleDefinitionScalar } from './scalar.lifecycle.definition';
-import { Emoji } from './scalar.emoji';
-import { WhiteboardContent } from './scalar.whiteboard.content';
+import { NameID } from './scalar.nameid';
 import { SearchCursor } from './scalar.search.cursor';
+import { UUID } from './scalar.uuid';
+import { WhiteboardContent } from './scalar.whiteboard.content';
 
 @Module({
   imports: [],

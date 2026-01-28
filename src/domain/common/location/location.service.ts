@@ -1,13 +1,13 @@
+import { LogContext } from '@common/enums';
+import { EntityNotInitializedException } from '@common/exceptions';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { GeoapifyService } from '@services/external/geoapify/geoapify.service';
 import { Repository } from 'typeorm';
+import { CreateLocationInput, UpdateLocationInput } from './dto';
+import { IGeoLocation } from './geolocation.interface';
 import { Location } from './location.entity';
 import { ILocation } from './location.interface';
-import { CreateLocationInput, UpdateLocationInput } from './dto';
-import { EntityNotInitializedException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
-import { GeoapifyService } from '@services/external/geoapify/geoapify.service';
-import { IGeoLocation } from './geolocation.interface';
 
 @Injectable()
 export class LocationService {

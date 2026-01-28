@@ -1,12 +1,12 @@
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { LogContext } from '@common/enums';
-import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
-import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
-import { CreateInAppNotificationInput } from '@platform/in-app-notification/dto/in.app.notification.create';
-import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { NotificationEvent } from '@common/enums/notification.event';
+import { NotificationEventCategory } from '@common/enums/notification.event.category';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { CreateInAppNotificationInput } from '@platform/in-app-notification/dto/in.app.notification.create';
+import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
 import { IInAppNotificationPayload } from '@platform/in-app-notification-payload/in.app.notification.payload.interface';
+import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class NotificationInAppAdapter {

@@ -1,12 +1,12 @@
-import { InputType, Field, ObjectType } from '@nestjs/graphql';
-import { IsOptional, ValidateNested } from 'class-validator';
-import { Type } from 'class-transformer';
+import { CalloutFramingType } from '@common/enums/callout.framing.type';
+import { CreateLinkInput } from '@domain/collaboration/link/dto/link.dto.create';
+import { CreateMediaGalleryInput } from '@domain/common/media-gallery/dto/media.gallery.dto.create';
+import { CreateMemoInput } from '@domain/common/memo/types';
 import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
 import { CreateWhiteboardInput } from '@domain/common/whiteboard/types';
-import { CreateLinkInput } from '@domain/collaboration/link/dto/link.dto.create';
-import { CreateMemoInput } from '@domain/common/memo/types';
-import { CalloutFramingType } from '@common/enums/callout.framing.type';
-import { CreateMediaGalleryInput } from '@domain/common/media-gallery/dto/media.gallery.dto.create';
+import { Field, InputType, ObjectType } from '@nestjs/graphql';
+import { Type } from 'class-transformer';
+import { IsOptional, ValidateNested } from 'class-validator';
 
 @InputType()
 @ObjectType('CreateCalloutFramingData')

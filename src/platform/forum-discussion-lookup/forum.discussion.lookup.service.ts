@@ -1,11 +1,11 @@
-import { EntityManager, FindOneOptions } from 'typeorm';
-import { InjectEntityManager } from '@nestjs/typeorm';
-import { Inject, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
+import { EntityNotFoundException } from '@common/exceptions';
+import { Inject, LoggerService } from '@nestjs/common';
+import { InjectEntityManager } from '@nestjs/typeorm';
 import { Discussion } from '@platform/forum-discussion/discussion.entity';
 import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { EntityManager, FindOneOptions } from 'typeorm';
 
 export class ForumDiscussionLookupService {
   constructor(

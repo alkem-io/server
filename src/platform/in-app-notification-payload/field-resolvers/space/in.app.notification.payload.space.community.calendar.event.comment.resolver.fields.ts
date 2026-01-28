@@ -1,11 +1,11 @@
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { ICalendarEvent } from '@domain/timeline/event/event.interface';
-import { InAppNotificationPayloadSpaceCommunityCalendarEventComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.calendar.event.comment';
-import { ILoader } from '@core/dataloader/loader.interface';
-import { Loader } from '@core/dataloader/decorators';
 import { CalendarEventLoaderCreator } from '@core/dataloader/creators/loader.creators/in-app-notification/calendar.event.loader.creator';
-import { ISpace } from '@domain/space/space/space.interface';
 import { SpaceLoaderCreator } from '@core/dataloader/creators/loader.creators/in-app-notification/space.loader.creator';
+import { Loader } from '@core/dataloader/decorators';
+import { ILoader } from '@core/dataloader/loader.interface';
+import { ISpace } from '@domain/space/space/space.interface';
+import { ICalendarEvent } from '@domain/timeline/event/event.interface';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { InAppNotificationPayloadSpaceCommunityCalendarEventComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.calendar.event.comment';
 
 @Resolver(() => InAppNotificationPayloadSpaceCommunityCalendarEventComment)
 export class InAppNotificationPayloadSpaceCommunityCalendarEventCommentResolverFields {

@@ -1,3 +1,10 @@
+import { LogContext } from '@common/enums';
+import { AuthenticationException } from '@common/exceptions';
+import {
+  AUTH_STRATEGY_OATHKEEPER_API_TOKEN,
+  AUTH_STRATEGY_OATHKEEPER_JWT,
+} from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import {
   CallHandler,
   ContextType,
@@ -5,17 +12,10 @@ import {
   Injectable,
   NestInterceptor,
 } from '@nestjs/common';
-import passport from 'passport';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { AuthenticationException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
-import { Observable } from 'rxjs';
 import { GqlExecutionContext } from '@nestjs/graphql';
-import {
-  AUTH_STRATEGY_OATHKEEPER_API_TOKEN,
-  AUTH_STRATEGY_OATHKEEPER_JWT,
-} from '@core/authentication';
 import { IncomingMessage } from 'http';
+import passport from 'passport';
+import { Observable } from 'rxjs';
 
 @Injectable()
 export class AuthInterceptor implements NestInterceptor {

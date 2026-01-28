@@ -1,13 +1,13 @@
-import { InputType, Field } from '@nestjs/graphql';
-import { Type } from 'class-transformer';
-import { IsOptional, ValidateNested } from 'class-validator';
-import { UpdateProfileInput } from '@domain/common/profile/dto/profile.dto.update';
-import { WhiteboardContent } from '@domain/common/scalars/scalar.whiteboard.content';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { UpdateLinkInput } from '@domain/collaboration/link/dto';
-import { Markdown } from '@domain/common/scalars/scalar.markdown';
-import { UpdateWhiteboardPreviewSettingsInput } from '@domain/common/whiteboard/types';
 import { UpdateMediaGalleryInput } from '@domain/common/media-gallery/dto/media.gallery.dto.update';
+import { UpdateProfileInput } from '@domain/common/profile/dto/profile.dto.update';
+import { Markdown } from '@domain/common/scalars/scalar.markdown';
+import { WhiteboardContent } from '@domain/common/scalars/scalar.whiteboard.content';
+import { UpdateWhiteboardPreviewSettingsInput } from '@domain/common/whiteboard/types';
+import { Field, InputType } from '@nestjs/graphql';
+import { Type } from 'class-transformer';
+import { IsOptional, ValidateNested } from 'class-validator';
 
 @InputType()
 export class UpdateCalloutFramingInput {

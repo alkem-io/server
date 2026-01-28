@@ -1,37 +1,37 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { LogContext, ProfileType } from '@common/enums';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { VisualType } from '@common/enums/visual.type';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
   NotSupportedException,
   ValidationException,
 } from '@common/exceptions';
-import { LogContext, ProfileType } from '@common/enums';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { ILocation, LocationService } from '@domain/common/location';
+import { Profile } from '@domain/common/profile/profile.entity';
+import { IProfile } from '@domain/common/profile/profile.interface';
 import { IReference } from '@domain/common/reference/reference.interface';
 import { ReferenceService } from '@domain/common/reference/reference.service';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
-import { Profile } from '@domain/common/profile/profile.entity';
-import { IProfile } from '@domain/common/profile/profile.interface';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { VisualService } from '@domain/common/visual/visual.service';
 import { IVisual } from '@domain/common/visual/visual.interface';
-import { CreateProfileInput, UpdateProfileInput } from './dto';
-import { CreateReferenceOnProfileInput } from './dto/profile.dto.create.reference';
-import { ILocation, LocationService } from '@domain/common/location';
-import { VisualType } from '@common/enums/visual.type';
+import { VisualService } from '@domain/common/visual/visual.service';
+import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { DEFAULT_AVATAR_SERVICE_URL } from '@services/external/avatar-creator/avatar.creator.service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { FindOneOptions, Repository } from 'typeorm';
+import { CreateReferenceInput } from '../reference';
 import { CreateTagsetInput } from '../tagset';
 import { ITagsetTemplate } from '../tagset-template/tagset.template.interface';
-import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { CreateProfileInput, UpdateProfileInput } from './dto';
+import { CreateReferenceOnProfileInput } from './dto/profile.dto.create.reference';
 import { CreateVisualOnProfileInput } from './dto/profile.dto.create.visual';
-import { CreateReferenceInput } from '../reference';
-import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
-import { DEFAULT_AVATAR_SERVICE_URL } from '@services/external/avatar-creator/avatar.creator.service';
 
 @Injectable()
 export class ProfileService {

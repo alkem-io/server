@@ -1,8 +1,8 @@
-import { Column, JoinColumn, OneToOne } from 'typeorm';
-import { Agent } from '@domain/agent/agent/agent.entity';
-import { IContributorBase } from './contributor.base.interface';
-import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
 import { NAMEID_MAX_LENGTH_SCHEMA } from '@common/constants';
+import { Agent } from '@domain/agent/agent/agent.entity';
+import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
+import { Column, JoinColumn, OneToOne } from 'typeorm';
+import { IContributorBase } from './contributor.base.interface';
 
 export class ContributorBase
   extends NameableEntity

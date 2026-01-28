@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Channel, ChannelModel, connect as amqpConnect } from 'amqplib';
+import { connect as amqpConnect, Channel, ChannelModel } from 'amqplib';
 
 /**
  * Factory for creating RabbitMQ connections.

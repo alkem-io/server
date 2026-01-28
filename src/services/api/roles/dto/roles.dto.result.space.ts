@@ -1,6 +1,6 @@
+import { SpaceVisibility } from '@common/enums/space.visibility';
 import { ISpace } from '@domain/space/space/space.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { SpaceVisibility } from '@common/enums/space.visibility';
 import { RolesResultCommunity } from './roles.dto.result.community';
 
 @ObjectType()

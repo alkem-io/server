@@ -1,16 +1,16 @@
-import { EntityManager, FindOneOptions } from 'typeorm';
-import { InjectEntityManager } from '@nestjs/typeorm';
-import { Inject, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { LogContext } from '@common/enums';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { IAgent } from '@domain/agent/agent/agent.interface';
+import { CredentialsSearchInput } from '@domain/agent/credential/dto/credentials.dto.search';
+import { Inject, LoggerService } from '@nestjs/common';
+import { InjectEntityManager } from '@nestjs/typeorm';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { EntityManager, FindOneOptions } from 'typeorm';
 import { Organization } from '../organization/organization.entity';
 import { IOrganization } from '../organization/organization.interface';
-import { CredentialsSearchInput } from '@domain/agent/credential/dto/credentials.dto.search';
-import { IAgent } from '@domain/agent/agent/agent.interface';
 
 export class OrganizationLookupService {
   constructor(

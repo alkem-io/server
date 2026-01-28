@@ -1,11 +1,11 @@
-import { Injectable } from '@nestjs/common';
-import { ITimeline } from './timeline.interface';
-import { TimelineService } from './timeline.service';
+import { LogContext } from '@common/enums/logging.context';
+import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { Injectable } from '@nestjs/common';
 import { CalendarAuthorizationService } from '../calendar/calendar.service.authorization';
-import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
-import { LogContext } from '@common/enums/logging.context';
+import { ITimeline } from './timeline.interface';
+import { TimelineService } from './timeline.service';
 
 @Injectable()
 export class TimelineAuthorizationService {

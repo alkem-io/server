@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
-import { TemplateContentSpaceLookupService } from './template-content-space.lookup.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TemplateContentSpace } from '../template.content.space.entity';
+import { TemplateContentSpaceLookupService } from './template-content-space.lookup.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([TemplateContentSpace])],

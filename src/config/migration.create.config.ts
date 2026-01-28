@@ -1,6 +1,6 @@
 import { DataSource } from 'typeorm';
-import { typeormCliConfig } from './typeorm.cli.config';
 import fixUUIDColumnType from './fix.uuid.column.type';
+import { typeormCliConfig } from './typeorm.cli.config';
 
 const datasource = new DataSource(typeormCliConfig);
 

@@ -1,18 +1,18 @@
+import { LogContext } from '@common/enums';
+import { RoomType } from '@common/enums/room.type';
+import { EntityNotFoundException } from '@common/exceptions';
+import { Collaboration } from '@domain/collaboration/collaboration';
+import { ILicense } from '@domain/common/license/license.interface';
+import { Communication } from '@domain/communication/communication/communication.entity';
+import { ICommunication } from '@domain/communication/communication/communication.interface';
+import { Community, ICommunity } from '@domain/community/community';
+import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
+import { IAccount } from '@domain/space/account/account.interface';
+import { Space } from '@domain/space/space/space.entity';
+import { ISpace } from '@domain/space/space/space.interface';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, FindOneOptions, Repository } from 'typeorm';
-import { Community, ICommunity } from '@domain/community/community';
-import { EntityNotFoundException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
-import { Communication } from '@domain/communication/communication/communication.entity';
-import { Space } from '@domain/space/space/space.entity';
-import { ISpace } from '@domain/space/space/space.interface';
-import { RoomType } from '@common/enums/room.type';
-import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
-import { IAccount } from '@domain/space/account/account.interface';
-import { ICommunication } from '@domain/communication/communication/communication.interface';
-import { ILicense } from '@domain/common/license/license.interface';
-import { Collaboration } from '@domain/collaboration/collaboration';
 
 @Injectable()
 export class CommunityResolverService {

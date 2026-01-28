@@ -1,5 +1,5 @@
-import { EntityManager, FindManyOptions, In } from 'typeorm';
 import { Organization } from '@src/domain/community/organization';
+import { EntityManager, FindManyOptions, In } from 'typeorm';
 
 export const getOrganizationRolesForUserEntityData = (
   entityManager: EntityManager,

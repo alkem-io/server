@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { TaskService } from './task.service';
 import { MockCacheManager, MockWinstonProvider } from '@test/mocks';
+import { TaskService } from './task.service';
 
 describe('TaskService', () => {
   let service: TaskService;

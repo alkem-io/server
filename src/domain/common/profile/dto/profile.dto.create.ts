@@ -1,16 +1,16 @@
-import { InputType, Field, ObjectType } from '@nestjs/graphql';
+import { CreateLocationInput } from '@domain/common/location/dto';
+import { CreateReferenceInput } from '@domain/common/reference';
+import { Markdown } from '@domain/common/scalars/scalar.markdown';
+import { CreateTagsetInput } from '@domain/common/tagset';
+import { Field, InputType, ObjectType } from '@nestjs/graphql';
+import { HUGE_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@src/common/constants';
+import { Type } from 'class-transformer';
 import {
   IsOptional,
   MaxLength,
   MinLength,
   ValidateNested,
 } from 'class-validator';
-import { HUGE_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@src/common/constants';
-import { CreateReferenceInput } from '@domain/common/reference';
-import { CreateLocationInput } from '@domain/common/location/dto';
-import { Type } from 'class-transformer';
-import { Markdown } from '@domain/common/scalars/scalar.markdown';
-import { CreateTagsetInput } from '@domain/common/tagset';
 import { CreateVisualOnProfileInput } from './profile.dto.create.visual';
 
 @InputType()

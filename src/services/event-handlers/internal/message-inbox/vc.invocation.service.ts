@@ -1,19 +1,19 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
-import { EntityManager, In } from 'typeorm';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums';
 import { AgentType } from '@common/enums/agent.type';
-import { Agent } from '@domain/agent/agent/agent.entity';
-import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
-import { VirtualContributorMessageService } from '@domain/communication/virtual.contributor.message/virtual.contributor.message.service';
-import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
-import { IRoom } from '@domain/communication/room/room.interface';
+import { Agent } from '@domain/agent/agent/agent.entity';
 import {
-  MentionedEntityType,
   Mention,
+  MentionedEntityType,
 } from '@domain/communication/messaging/mention.interface';
+import { IRoom } from '@domain/communication/room/room.interface';
+import { VirtualContributorMessageService } from '@domain/communication/virtual.contributor.message/virtual.contributor.message.service';
+import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InjectEntityManager } from '@nestjs/typeorm';
+import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { EntityManager, In } from 'typeorm';
 import { MessageNotificationService } from './message.notification.service';
 
 /**

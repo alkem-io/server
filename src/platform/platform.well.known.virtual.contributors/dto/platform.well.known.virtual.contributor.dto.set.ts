@@ -1,6 +1,6 @@
-import { Field, InputType } from '@nestjs/graphql';
 import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
 import { UUID } from '@domain/common/scalars';
+import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
 export class SetPlatformWellKnownVirtualContributorInput {

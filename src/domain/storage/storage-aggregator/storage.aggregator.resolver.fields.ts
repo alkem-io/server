@@ -1,13 +1,12 @@
-import { Resolver } from '@nestjs/graphql';
-import { IStorageAggregator } from './storage.aggregator.interface';
-import { StorageAggregatorService } from './storage.aggregator.service';
 import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationAgentPrivilege } from '@src/common/decorators';
-import { Parent, ResolveField } from '@nestjs/graphql';
-import { IStorageAggregatorParent } from './dto/storage.aggregator.dto.parent';
 import { IStorageBucket } from '../storage-bucket/storage.bucket.interface';
+import { IStorageAggregatorParent } from './dto/storage.aggregator.dto.parent';
+import { IStorageAggregator } from './storage.aggregator.interface';
+import { StorageAggregatorService } from './storage.aggregator.service';
 
 @Resolver(() => IStorageAggregator)
 export class StorageAggregatorResolverFields {

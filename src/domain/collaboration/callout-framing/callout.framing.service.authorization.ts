@@ -1,15 +1,15 @@
-import { Injectable } from '@nestjs/common';
+import { LogContext } from '@common/enums/logging.context';
+import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
-import { CalloutFramingService } from './callout.framing.service';
-import { ICalloutFraming } from './callout.framing.interface';
-import { WhiteboardAuthorizationService } from '@domain/common/whiteboard/whiteboard.service.authorization';
-import { MemoAuthorizationService } from '@domain/common/memo/memo.service.authorization';
 import { MediaGalleryAuthorizationService } from '@domain/common/media-gallery/media.gallery.service.authorization';
-import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
-import { LogContext } from '@common/enums/logging.context';
+import { MemoAuthorizationService } from '@domain/common/memo/memo.service.authorization';
+import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
+import { WhiteboardAuthorizationService } from '@domain/common/whiteboard/whiteboard.service.authorization';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
+import { Injectable } from '@nestjs/common';
+import { ICalloutFraming } from './callout.framing.interface';
+import { CalloutFramingService } from './callout.framing.service';
 
 @Injectable()
 export class CalloutFramingAuthorizationService {

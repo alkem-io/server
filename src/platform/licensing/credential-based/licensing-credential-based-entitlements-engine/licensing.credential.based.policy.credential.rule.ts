@@ -1,6 +1,6 @@
 import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
-import { ILicensingCredentialBasedPolicyCredentialRule } from './licensing.credential.based.policy.credential.rule.interface';
 import { LicensingGrantedEntitlement } from '@platform/licensing/dto/licensing.dto.granted.entitlement';
+import { ILicensingCredentialBasedPolicyCredentialRule } from './licensing.credential.based.policy.credential.rule.interface';
 
 export class LicensingCredentialBasedPolicyCredentialRule
   implements ILicensingCredentialBasedPolicyCredentialRule

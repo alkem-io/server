@@ -1,13 +1,12 @@
-import { UseGuards } from '@nestjs/common';
-import { Resolver } from '@nestjs/graphql';
-import { Parent, ResolveField } from '@nestjs/graphql';
-import { InvitationService } from './invitation.service';
 import { AuthorizationPrivilege } from '@common/enums';
-import { IInvitation } from '@domain/access/invitation';
 import { GraphqlGuard } from '@core/authorization';
-import { IUser } from '@domain/community/user/user.interface';
-import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
+import { IInvitation } from '@domain/access/invitation';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { IUser } from '@domain/community/user/user.interface';
+import { UseGuards } from '@nestjs/common';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
+import { InvitationService } from './invitation.service';
 
 @Resolver(() => IInvitation)
 export class InvitationResolverFields {

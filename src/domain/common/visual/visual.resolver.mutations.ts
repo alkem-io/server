@@ -1,20 +1,20 @@
 import { CurrentUser } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { VisualService } from './visual.service';
-import { IVisual } from './visual.interface';
-import { UpdateVisualInput } from './dto/visual.dto.update';
-import { VisualUploadImageInput } from './dto/visual.dto.upload.image';
-import { FileUpload, GraphQLUpload } from 'graphql-upload';
-import { Visual } from './visual.entity';
-import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { LogContext } from '@common/enums/logging.context';
+import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
-import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { FileUpload, GraphQLUpload } from 'graphql-upload';
+import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
+import { UpdateVisualInput } from './dto/visual.dto.update';
+import { VisualUploadImageInput } from './dto/visual.dto.upload.image';
+import { Visual } from './visual.entity';
+import { IVisual } from './visual.interface';
+import { VisualService } from './visual.service';
 
 @InstrumentResolver()
 @Resolver()

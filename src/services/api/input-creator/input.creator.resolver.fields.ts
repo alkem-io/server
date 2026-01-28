@@ -1,24 +1,23 @@
-import { Args, Resolver } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
-import { ResolveField } from '@nestjs/graphql';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { InputCreatorQueryResults } from './dto/input.creator.query.results';
-import { UUID } from '@domain/common/scalars/scalar.uuid';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { CommunityGuidelinesService } from '@domain/community/community-guidelines/community.guidelines.service';
-import { InputCreatorService } from './input.creator.service';
-import { CreateCommunityGuidelinesInput } from '@domain/community/community-guidelines/dto/community.guidelines.dto.create';
-import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
-import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovation.flow.service';
-import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
-import { CalloutService } from '@domain/collaboration/callout/callout.service';
-import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto/innovation.flow.dto.create';
-import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
-import { CreateWhiteboardInput } from '@domain/common/whiteboard/dto/whiteboard.dto.create';
-import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { LogContext } from '@common/enums';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { CalloutService } from '@domain/collaboration/callout/callout.service';
+import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
+import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
+import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto/innovation.flow.dto.create';
+import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovation.flow.service';
+import { UUID } from '@domain/common/scalars/scalar.uuid';
+import { CreateWhiteboardInput } from '@domain/common/whiteboard/dto/whiteboard.dto.create';
+import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
+import { CommunityGuidelinesService } from '@domain/community/community-guidelines/community.guidelines.service';
+import { CreateCommunityGuidelinesInput } from '@domain/community/community-guidelines/dto/community.guidelines.dto.create';
+import { Args, ResolveField, Resolver } from '@nestjs/graphql';
+import { CurrentUser } from '@src/common/decorators';
+import { InputCreatorQueryResults } from './dto/input.creator.query.results';
+import { InputCreatorService } from './input.creator.service';
 
 @Resolver(() => InputCreatorQueryResults)
 export class InputCreatorResolverFields {

@@ -1,12 +1,3 @@
-import { Injectable } from '@nestjs/common';
-import { AuthorizationCredential, LogContext } from '@common/enums';
-import { AuthorizationPrivilege } from '@common/enums';
-import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { RelationshipNotFoundException } from '@common/exceptions';
-import { VirtualContributorService } from './virtual.contributor.service';
-import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
   CREDENTIAL_RULE_ACCOUNT_ADMIN_MANAGE,
   CREDENTIAL_RULE_TYPES_VC_GLOBAL_COMMUNITY_READ,
@@ -14,14 +5,26 @@ import {
   CREDENTIAL_RULE_VIRTUAL_CONTRIBUTOR_PLATFORM_SETTINGS,
   POLICY_RULE_READ_ABOUT,
 } from '@common/constants';
-import { IVirtualContributor } from './virtual.contributor.interface';
-import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
-import { KnowledgeBaseAuthorizationService } from '@domain/common/knowledge-base/knowledge.base.service.authorization';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
-import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
+import {
+  AuthorizationCredential,
+  AuthorizationPrivilege,
+  LogContext,
+} from '@common/enums';
 import { SearchVisibility } from '@common/enums/search.visibility';
-import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
+import { RelationshipNotFoundException } from '@common/exceptions';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { KnowledgeBaseAuthorizationService } from '@domain/common/knowledge-base/knowledge.base.service.authorization';
+import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { IAccount } from '@domain/space/account/account.interface';
+import { Injectable } from '@nestjs/common';
+import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
+import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
+import { IVirtualContributor } from './virtual.contributor.interface';
+import { VirtualContributorService } from './virtual.contributor.service';
 
 @Injectable()
 export class VirtualContributorAuthorizationService {
@@ -159,14 +162,15 @@ export class VirtualContributorAuthorizationService {
     const credentialCriteriasWithAccess: ICredentialDefinition[] = [];
 
     switch (searchVisibility) {
-      case SearchVisibility.PUBLIC:
+      case SearchVisibility.PUBLIC: {
         // PUBLIC visibility: accessible to anonymous and registered users globally
         const globalAnonymousRegistered =
           this.authorizationPolicyService.getCredentialDefinitionsAnonymousRegistered();
         credentialCriteriasWithAccess.push(...globalAnonymousRegistered);
         break;
+      }
 
-      case SearchVisibility.ACCOUNT:
+      case SearchVisibility.ACCOUNT: {
         // ACCOUNT visibility: only accessible within the scope of the account
         const accountSpaceMemberCredentials =
           this.getAccountSpaceMemberCredentials(account);
@@ -174,6 +178,7 @@ export class VirtualContributorAuthorizationService {
           credentialCriteriasWithAccess.push(...accountSpaceMemberCredentials);
         }
         break;
+      }
 
       case SearchVisibility.HIDDEN:
         // HIDDEN visibility: no additional global access credentials

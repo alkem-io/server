@@ -1,33 +1,33 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, Repository } from 'typeorm';
+import { LogContext } from '@common/enums';
+import { AgentType } from '@common/enums/agent.type';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
+import { RoomType } from '@common/enums/room.type';
+import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { Room } from '@domain/communication/room/room.entity';
+import { IRoom } from '@domain/communication/room/room.interface';
 import { RoomService } from '@domain/communication/room/room.service';
 import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
-import { RoomType } from '@common/enums/room.type';
-import { IRoom } from '@domain/communication/room/room.interface';
-import { Room } from '@domain/communication/room/room.entity';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { Conversation } from './conversation.entity';
-import { IConversation } from './conversation.interface';
-import { ConversationMembership } from '../conversation-membership/conversation.membership.entity';
-import { IConversationMembership } from '../conversation-membership/conversation.membership.interface';
-import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
-import { AgentType } from '@common/enums/agent.type';
-import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
-import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { IUser } from '@domain/community/user/user.interface';
-import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
+import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston/dist/winston.constants';
+import { FindOneOptions, Repository } from 'typeorm';
+import { ConversationMembership } from '../conversation-membership/conversation.membership.entity';
+import { IConversationMembership } from '../conversation-membership/conversation.membership.interface';
+import { Conversation } from './conversation.entity';
+import { IConversation } from './conversation.interface';
 
 @Injectable()
 export class ConversationService {

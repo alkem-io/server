@@ -1,17 +1,17 @@
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { IUserGroup } from './user-group.interface';
-import { UserGroupService } from './user-group.service';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { AuthorizationPrivilege } from '@common/enums';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import {
   AssignUserGroupMemberInput,
   DeleteUserGroupInput,
   RemoveUserGroupMemberInput,
   UpdateUserGroupInput,
 } from '@domain/community/user-group/dto';
-import { AuthorizationPrivilege } from '@common/enums';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentUser, Profiling } from '@src/common/decorators';
+import { IUserGroup } from './user-group.interface';
+import { UserGroupService } from './user-group.service';
 
 @InstrumentResolver()
 @Resolver()

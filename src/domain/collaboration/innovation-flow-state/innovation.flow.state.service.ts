@@ -1,20 +1,20 @@
 import { LogContext } from '@common/enums';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { TemplateType } from '@common/enums/template.type';
 import {
   EntityNotFoundException,
   ValidationException,
 } from '@common/exceptions';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { Template } from '@domain/template/template/template.entity';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { InnovationFlowState } from './innovation.flow.state.entity';
+import { FindOneOptions, Repository } from 'typeorm';
 import { CreateInnovationFlowStateInput } from './dto/innovation.flow.state.dto.create';
-import { IInnovationFlowState } from './innovation.flow.state.interface';
 import { UpdateInnovationFlowStateInput } from './dto/innovation.flow.state.dto.update';
-import { Template } from '@domain/template/template/template.entity';
+import { InnovationFlowState } from './innovation.flow.state.entity';
+import { IInnovationFlowState } from './innovation.flow.state.interface';
 
 @Injectable()
 export class InnovationFlowStateService {

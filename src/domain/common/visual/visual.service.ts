@@ -1,28 +1,28 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, Repository } from 'typeorm';
+import { LogContext } from '@common/enums';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { VisualType } from '@common/enums/visual.type';
 import {
   EntityNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums';
-import { UpdateVisualInput } from '@domain/common/visual/dto/visual.dto.update';
-import { CreateVisualInput } from '@domain/common/visual/dto/visual.dto.create';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy';
-import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
+import { StorageUploadFailedException } from '@common/exceptions/storage/storage.upload.failed.exception';
 import { getImageDimensions, streamToBuffer } from '@common/utils';
-import { Visual } from './visual.entity';
-import { IVisual } from './visual.interface';
-import { DeleteVisualInput } from './dto/visual.dto.delete';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
-import { Readable } from 'stream';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { CreateVisualInput } from '@domain/common/visual/dto/visual.dto.create';
+import { UpdateVisualInput } from '@domain/common/visual/dto/visual.dto.update';
 import { IDocument } from '@domain/storage/document/document.interface';
 import { DocumentService } from '@domain/storage/document/document.service';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
-import { StorageUploadFailedException } from '@common/exceptions/storage/storage.upload.failed.exception';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { VisualType } from '@common/enums/visual.type';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Readable } from 'stream';
+import { FindOneOptions, Repository } from 'typeorm';
+import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
+import { DeleteVisualInput } from './dto/visual.dto.delete';
 import { DEFAULT_VISUAL_CONSTRAINTS } from './visual.constraints';
+import { Visual } from './visual.entity';
+import { IVisual } from './visual.interface';
 
 @Injectable()
 export class VisualService {

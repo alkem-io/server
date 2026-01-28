@@ -1,13 +1,13 @@
-import { Resolver, ResolveField, Parent, Args } from '@nestjs/graphql';
-import { MeConversationsResult } from './dto/me.conversations.result';
-import { IConversation } from '@domain/communication/conversation/conversation.interface';
-import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
-import { MessagingService } from '@domain/communication/messaging/messaging.service';
 import { CurrentUser } from '@common/decorators';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { ValidationException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
+import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
+import { ValidationException } from '@common/exceptions';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { IConversation } from '@domain/communication/conversation/conversation.interface';
+import { MessagingService } from '@domain/communication/messaging/messaging.service';
+import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { MeConversationsResult } from './dto/me.conversations.result';
 
 @Resolver(() => MeConversationsResult)
 export class MeConversationsResolverFields {

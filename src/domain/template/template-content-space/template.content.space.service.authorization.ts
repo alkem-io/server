@@ -1,11 +1,11 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { LogContext } from '@common/enums';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { CollaborationAuthorizationService } from '@domain/collaboration/collaboration/collaboration.service.authorization';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { SpaceAboutAuthorizationService } from '@domain/space/space.about/space.about.service.authorization';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { TemplateContentSpaceService } from './template.content.space.service';
 
 @Injectable()

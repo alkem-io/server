@@ -1,17 +1,17 @@
-import { Injectable } from '@nestjs/common';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import { ITemplate } from './template.interface';
-import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
-import { CommunityGuidelinesAuthorizationService } from '@domain/community/community-guidelines/community.guidelines.service.authorization';
-import { TemplateType } from '@common/enums/template.type';
-import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
-import { TemplateService } from './template.service';
 import { LogContext } from '@common/enums/logging.context';
-import { CalloutAuthorizationService } from '@domain/collaboration/callout/callout.service.authorization';
-import { WhiteboardAuthorizationService } from '@domain/common/whiteboard/whiteboard.service.authorization';
+import { TemplateType } from '@common/enums/template.type';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { CalloutAuthorizationService } from '@domain/collaboration/callout/callout.service.authorization';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
+import { WhiteboardAuthorizationService } from '@domain/common/whiteboard/whiteboard.service.authorization';
+import { CommunityGuidelinesAuthorizationService } from '@domain/community/community-guidelines/community.guidelines.service.authorization';
+import { Injectable } from '@nestjs/common';
 import { TemplateContentSpaceAuthorizationService } from '../template-content-space/template.content.space.service.authorization';
+import { ITemplate } from './template.interface';
+import { TemplateService } from './template.service';
 
 @Injectable()
 export class TemplateAuthorizationService {

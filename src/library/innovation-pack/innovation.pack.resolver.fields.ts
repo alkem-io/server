@@ -1,17 +1,17 @@
 import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
-import { UseGuards } from '@nestjs/common';
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { AuthorizationAgentPrivilege } from '@src/common/decorators';
-import { ITemplatesSet } from '@domain/template/templates-set';
-import { IInnovationPack } from './innovation.pack.interface';
-import { InnovationPackService } from './innovation.pack.service';
-import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileLoaderCreator } from '@core/dataloader/creators';
 import { Loader } from '@core/dataloader/decorators';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { InnovationPack } from './innovation.pack.entity';
+import { IProfile } from '@domain/common/profile/profile.interface';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { ITemplatesSet } from '@domain/template/templates-set';
+import { UseGuards } from '@nestjs/common';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { AuthorizationAgentPrivilege } from '@src/common/decorators';
+import { InnovationPack } from './innovation.pack.entity';
+import { IInnovationPack } from './innovation.pack.interface';
+import { InnovationPackService } from './innovation.pack.service';
 
 @Resolver(() => IInnovationPack)
 export class InnovationPackResolverFields {

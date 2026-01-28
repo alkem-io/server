@@ -1,18 +1,3 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
-import { EntityManager, In } from 'typeorm';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { groupBy, intersection, orderBy } from 'lodash';
-import { Space } from '@domain/space/space/space.entity';
-import {
-  ISearchResult,
-  ISearchResultCallout,
-  ISearchResultSpace,
-  ISearchResultMemo,
-  ISearchResultWhiteboard,
-} from '../dto/results';
-import { ISpace } from '@domain/space/space/space.interface';
-import { BaseException } from '@common/exceptions/base.exception';
 import {
   AlkemioErrorStatus,
   AuthorizationCredential,
@@ -20,29 +5,42 @@ import {
   LogContext,
 } from '@common/enums';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
-import { IUser } from '@domain/community/user/user.interface';
-import { IOrganization, Organization } from '@domain/community/organization';
+import { CalloutsSetType } from '@common/enums/callouts.set.type';
+import { BaseException } from '@common/exceptions/base.exception';
+import { isDefined } from '@common/utils';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { Post } from '@domain/collaboration/post';
 import { Memo } from '@domain/common/memo/memo.entity';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
-import { Callout } from '@domain/collaboration/callout/callout.entity';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import {
-  ISearchResults,
-  ISearchResultOrganization,
-  ISearchResultUser,
-  ISearchResultPost,
-} from '../dto/results';
-import { User } from '@domain/community/user/user.entity';
+import { IOrganization, Organization } from '@domain/community/organization';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
+import { User } from '@domain/community/user/user.entity';
+import { IUser } from '@domain/community/user/user.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { SearchResultType } from '../search.result.type';
-import { calculateSearchCursor } from '@services/api/search/util';
+import { Space } from '@domain/space/space/space.entity';
+import { ISpace } from '@domain/space/space/space.interface';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InjectEntityManager } from '@nestjs/typeorm';
 import { SearchFilterInput } from '@services/api/search/dto/inputs';
 import { SearchCategory } from '@services/api/search/search.category';
-import { isDefined } from '@common/utils';
-import { CalloutsSetType } from '@common/enums/callouts.set.type';
+import { calculateSearchCursor } from '@services/api/search/util';
+import { groupBy, intersection, orderBy } from 'lodash';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { EntityManager, In } from 'typeorm';
+import {
+  ISearchResult,
+  ISearchResultCallout,
+  ISearchResultMemo,
+  ISearchResultOrganization,
+  ISearchResultPost,
+  ISearchResultSpace,
+  ISearchResults,
+  ISearchResultUser,
+  ISearchResultWhiteboard,
+} from '../dto/results';
+import { SearchResultType } from '../search.result.type';
 
 type PostParents = {
   post: Post;

@@ -1,3 +1,8 @@
+import { SpaceLevel } from '@common/enums/space.level';
+import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
+import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
+import { SpaceAbout } from '@domain/space/space.about/space.about.entity';
+import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import {
   Column,
   Entity,
@@ -7,12 +12,7 @@ import {
   OneToMany,
   OneToOne,
 } from 'typeorm';
-import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
-import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
-import { SpaceAbout } from '@domain/space/space.about/space.about.entity';
 import { ITemplateContentSpace } from './template.content.space.interface';
-import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
-import { SpaceLevel } from '@common/enums/space.level';
 @Entity()
 export class TemplateContentSpace
   extends AuthorizableEntity

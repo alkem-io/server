@@ -1,17 +1,17 @@
-import { Inject, LoggerService } from '@nestjs/common';
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
-import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
+import { UserIdentityDeletionException } from '@common/exceptions';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
-import { KratosService } from '@services/infrastructure/kratos/kratos.service';
-import { UserService } from '@domain/community/user/user.service';
 import { IUser } from '@domain/community/user/user.interface';
-import { UserIdentityDeletionException } from '@common/exceptions';
+import { UserService } from '@domain/community/user/user.service';
+import { Inject, LoggerService } from '@nestjs/common';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
+import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentUser } from '@src/common/decorators';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @InstrumentResolver()
 @Resolver()

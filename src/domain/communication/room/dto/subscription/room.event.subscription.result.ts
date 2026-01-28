@@ -1,7 +1,7 @@
 import { Field, ObjectType } from '@nestjs/graphql';
+import { IRoom } from '../../room.interface';
 import { RoomMessageEventSubscriptionResult } from './room.message.event.subscription.result';
 import { RoomMessageReactionEventSubscriptionResult } from './room.message.reaction.event.subscription.result';
-import { IRoom } from '../../room.interface';
 
 @ObjectType('RoomEventSubscriptionResult', {
   description: 'The event happened in the subscribed room',

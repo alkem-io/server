@@ -1,5 +1,5 @@
-import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
 import { Field, ObjectType } from '@nestjs/graphql';
+import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
 
 @ObjectType('DirectRoom')
 export class DirectRoomResult extends CommunicationRoomResult {

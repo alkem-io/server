@@ -1,6 +1,6 @@
 import { IEvent } from '@nestjs/cqrs';
-import { IngestionResult, IngestError } from './types';
 import { IngestWebsite } from './ingest.website';
+import { IngestError, IngestionResult } from './types';
 
 export class IngestWebsiteResponse {
   constructor(

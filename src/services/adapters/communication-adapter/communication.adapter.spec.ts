@@ -1,17 +1,16 @@
-import { vi, type Mock } from 'vitest';
-import { Test, TestingModule } from '@nestjs/testing';
-import { ConfigService } from '@nestjs/config';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
-import { CommunicationAdapter } from './communication.adapter';
-import { CommunicationAdapterException } from './communication.adapter.exception';
 import {
-  MatrixAdapterEventType,
   BaseResponse,
+  MatrixAdapterEventType,
 } from '@alkemio/matrix-adapter-lib';
 import { RoomType as AlkemioRoomType } from '@common/enums/room.type';
+import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
+import { ConfigService } from '@nestjs/config';
+import { Test, TestingModule } from '@nestjs/testing';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { type Mock, type Mocked, vi } from 'vitest';
+import { CommunicationAdapter } from './communication.adapter';
+import { CommunicationAdapterException } from './communication.adapter.exception';
 import { CommunicationSendMessageInput } from './dto/communication.dto.message.send';
-import type { Mocked } from 'vitest';
 
 describe('CommunicationAdapter', () => {
   let adapter: CommunicationAdapter;

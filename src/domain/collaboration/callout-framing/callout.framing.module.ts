@@ -1,18 +1,18 @@
-import { ProfileModule } from '@domain/common/profile/profile.module';
-import { MediaGalleryModule } from '@domain/common/media-gallery/media.gallery.module';
-import { Module } from '@nestjs/common';
-import { CalloutFramingService } from './callout.framing.service';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { CalloutFraming } from './callout.framing.entity';
-import { CalloutFramingAuthorizationService } from './callout.framing.service.authorization';
-import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { CalloutFramingResolverFields } from './callout.framing.resolver.fields';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
-import { WhiteboardModule } from '@domain/common/whiteboard';
 import { LinkModule } from '@domain/collaboration/link/link.module';
+import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
+import { MediaGalleryModule } from '@domain/common/media-gallery/media.gallery.module';
 import { MemoModule } from '@domain/common/memo';
-import { NamingModule } from '@services/infrastructure/naming/naming.module';
+import { ProfileModule } from '@domain/common/profile/profile.module';
 import { TagsetModule } from '@domain/common/tagset/tagset.module';
+import { WhiteboardModule } from '@domain/common/whiteboard';
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { NamingModule } from '@services/infrastructure/naming/naming.module';
+import { CalloutFraming } from './callout.framing.entity';
+import { CalloutFramingResolverFields } from './callout.framing.resolver.fields';
+import { CalloutFramingService } from './callout.framing.service';
+import { CalloutFramingAuthorizationService } from './callout.framing.service.authorization';
 
 @Module({
   imports: [

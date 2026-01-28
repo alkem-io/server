@@ -1,5 +1,5 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { IsArray, ArrayNotEmpty, IsUrl, IsEmail } from 'class-validator';
+import { ArrayNotEmpty, IsArray, IsEmail, IsUrl } from 'class-validator';
 
 @InputType()
 export class UpdatePlatformSettingsIntegrationInput {
