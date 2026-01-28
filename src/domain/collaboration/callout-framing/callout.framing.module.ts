@@ -1,6 +1,7 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { LinkModule } from '@domain/collaboration/link/link.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
+import { MediaGalleryModule } from '@domain/common/media-gallery/media.gallery.module';
 import { MemoModule } from '@domain/common/memo';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { TagsetModule } from '@domain/common/tagset/tagset.module';
@@ -22,6 +23,7 @@ import { CalloutFramingAuthorizationService } from './callout.framing.service.au
     WhiteboardModule,
     LinkModule,
     MemoModule,
+    MediaGalleryModule,
     NamingModule,
     TypeOrmModule.forFeature([CalloutFraming]),
   ],

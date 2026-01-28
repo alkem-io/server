@@ -30,8 +30,9 @@ export const CREDENTIAL_RULE_COLLABORATION_CONTRIBUTORS =
   'credentialRule-collaborationContributors';
 export const CREDENTIAL_RULE_RELATION_CREATED_BY =
   'credentialRule-relationCreatedBy';
-export const CREDENTIAL_RULE_WHITEBOARD_CREATED_BY =
-  'credentialRule-whiteboardCreatedBy';
+export const CREDENTIAL_RULE_WHITEBOARD_CREATED_BY = 'whiteboard-created-by';
+export const CREDENTIAL_RULE_MEDIA_GALLERY_CREATED_BY =
+  'media-gallery-created-by';
 export const CREDENTIAL_RULE_WHITEBOARD_RT_ACCESS =
   'credentialRule-whiteboardRtAccess'; // todo
 export const CREDENTIAL_RULE_MEMO_CREATED_BY = 'credentialRule-memoCreatedBy';

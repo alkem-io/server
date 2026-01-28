@@ -17,6 +17,7 @@ export enum AuthorizationPolicyType {
   POST = 'post',
   WHITEBOARD = 'whiteboard',
   MEMO = 'memo',
+  MEDIA_GALLERY = 'media-gallery',
   KNOWLEDGE_BASE = 'knowledge-base',
   PROFILE = 'profile',
   CLASSIFICATION = 'classification',

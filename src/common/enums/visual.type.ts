@@ -8,6 +8,8 @@ export enum VisualType {
   WHITEBOARD_PREVIEW = 'whiteboardPreview',
   CARD = 'card',
   BANNER_WIDE = 'bannerWide',
+  MEDIA_GALLERY_IMAGE = 'mediaGalleryImage',
+  MEDIA_GALLERY_VIDEO = 'mediaGalleryVideo',
 }
 
 registerEnumType(VisualType, {

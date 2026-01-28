@@ -11,6 +11,8 @@ import { CreateLinkInput } from '@domain/collaboration/link/dto/link.dto.create'
 import { LinkService } from '@domain/collaboration/link/link.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { IMediaGallery } from '@domain/common/media-gallery/media.gallery.interface';
+import { MediaGalleryService } from '@domain/common/media-gallery/media.gallery.service';
 import { MemoService } from '@domain/common/memo/memo.service';
 import { CreateMemoInput, IMemo } from '@domain/common/memo/types';
 import { IProfile } from '@domain/common/profile/profile.interface';
@@ -41,6 +43,7 @@ export class CalloutFramingService {
     private memoService: MemoService,
     private namingService: NamingService,
     private tagsetService: TagsetService,
+    private mediaGalleryService: MediaGalleryService,
     @InjectRepository(CalloutFraming)
     private calloutFramingRepository: Repository<CalloutFraming>
   ) {}
@@ -127,6 +130,14 @@ export class CalloutFramingService {
       }
     }
 
+    if (calloutFraming.type === CalloutFramingType.MEDIA_GALLERY) {
+      await this.createNewMediaGalleryInCalloutFraming(
+        calloutFraming,
+        storageAggregator,
+        userID
+      );
+    }
+
     return calloutFraming;
   }
 
@@ -183,6 +194,62 @@ export class CalloutFramingService {
     );
   }
 
+  private async createNewMediaGalleryInCalloutFraming(
+    calloutFraming: ICalloutFraming,
+    storageAggregator: IStorageAggregator,
+    userID?: string
+  ) {
+    calloutFraming.mediaGallery =
+      await this.mediaGalleryService.createMediaGallery(
+        storageAggregator,
+        userID
+      );
+  }
+
+  private async deleteInconsistentFramingContent(
+    calloutFraming: ICalloutFraming
+  ) {
+    // If there was a memo before, we delete it
+    if (
+      calloutFraming.memo &&
+      calloutFraming.type !== CalloutFramingType.MEMO
+    ) {
+      await this.memoService.deleteMemo(calloutFraming.memo.id);
+      calloutFraming.memo = undefined;
+    }
+
+    // If there was a media gallery before, we delete it
+    if (
+      calloutFraming.mediaGallery &&
+      calloutFraming.type !== CalloutFramingType.MEDIA_GALLERY
+    ) {
+      await this.mediaGalleryService.deleteMediaGallery(
+        calloutFraming.mediaGallery.id
+      );
+      calloutFraming.mediaGallery = undefined;
+    }
+
+    // If there was a link before, we delete it
+    if (
+      calloutFraming.link &&
+      calloutFraming.type !== CalloutFramingType.LINK
+    ) {
+      await this.linkService.deleteLink(calloutFraming.link.id);
+      calloutFraming.link = undefined;
+    }
+
+    // If there was a whiteboard before, we delete it
+    if (
+      calloutFraming.whiteboard &&
+      calloutFraming.type !== CalloutFramingType.WHITEBOARD
+    ) {
+      await this.whiteboardService.deleteWhiteboard(
+        calloutFraming.whiteboard.id
+      );
+      calloutFraming.whiteboard = undefined;
+    }
+  }
+
   public async updateCalloutFraming(
     calloutFraming: ICalloutFraming,
     calloutFramingData: UpdateCalloutFramingInput,
@@ -215,20 +282,9 @@ export class CalloutFramingService {
       calloutFraming.type = calloutFramingData.type;
     }
 
+    await this.deleteInconsistentFramingContent(calloutFraming);
     switch (calloutFraming.type) {
       case CalloutFramingType.WHITEBOARD: {
-        // If there was a memo before, we delete it
-        if (calloutFraming.memo) {
-          await this.memoService.deleteMemo(calloutFraming.memo.id);
-          calloutFraming.memo = undefined;
-        }
-
-        // If there was a link before, we delete it
-        if (calloutFraming.link) {
-          await this.linkService.deleteLink(calloutFraming.link.id);
-          calloutFraming.link = undefined;
-        }
-
         // if there is no content coming with the mutation, we do nothing with the whiteboard
         if (!calloutFramingData.whiteboardContent) {
           return calloutFraming;
@@ -266,21 +322,7 @@ export class CalloutFramingService {
         break;
       }
       case CalloutFramingType.MEMO: {
-        // If there was a whiteboard before, we delete it
-        if (calloutFraming.whiteboard) {
-          await this.whiteboardService.deleteWhiteboard(
-            calloutFraming.whiteboard.id
-          );
-          calloutFraming.whiteboard = undefined;
-        }
-
-        // If there was a link before, we delete it
-        if (calloutFraming.link) {
-          await this.linkService.deleteLink(calloutFraming.link.id);
-          calloutFraming.link = undefined;
-        }
-
-        // if there is no content coming with the mutation, we do nothing with the whiteboard
+        // if there is no content coming with the mutation, we do nothing with the memo
         if (!calloutFramingData.memoContent) {
           return calloutFraming;
         }
@@ -312,20 +354,6 @@ export class CalloutFramingService {
         break;
       }
       case CalloutFramingType.LINK: {
-        // If there was a whiteboard before, we delete it
-        if (calloutFraming.whiteboard) {
-          await this.whiteboardService.deleteWhiteboard(
-            calloutFraming.whiteboard.id
-          );
-          calloutFraming.whiteboard = undefined;
-        }
-
-        // If there was a memo before, we delete it
-        if (calloutFraming.memo) {
-          await this.memoService.deleteMemo(calloutFraming.memo.id);
-          calloutFraming.memo = undefined;
-        }
-
         // Handle LINK type updates
         if (calloutFraming.link && calloutFramingData.link) {
           calloutFraming.link = await this.linkService.updateLink(
@@ -339,23 +367,20 @@ export class CalloutFramingService {
         }
         break;
       }
+      case CalloutFramingType.MEDIA_GALLERY: {
+        // Media gallery updates are done through media gallery service/mutations or visual mutations
+        if (!calloutFraming.mediaGallery) {
+          await this.createNewMediaGalleryInCalloutFraming(
+            calloutFraming,
+            storageAggregator,
+            userID
+          );
+        }
+        break;
+      }
       case CalloutFramingType.NONE:
       default: {
-        // if the type is NONE we remove any existing framing content
-        if (calloutFraming.whiteboard) {
-          await this.whiteboardService.deleteWhiteboard(
-            calloutFraming.whiteboard.id
-          );
-          calloutFraming.whiteboard = undefined;
-        }
-        if (calloutFraming.memo) {
-          await this.memoService.deleteMemo(calloutFraming.memo.id);
-          calloutFraming.memo = undefined;
-        }
-        if (calloutFraming.link) {
-          await this.linkService.deleteLink(calloutFraming.link.id);
-          calloutFraming.link = undefined;
-        }
+        // if the type is NONE we have already deleted any existing framing content
         break;
       }
     }
@@ -373,6 +398,7 @@ export class CalloutFramingService {
           whiteboard: true,
           link: true,
           memo: true,
+          mediaGallery: true,
         },
       }
     );
@@ -392,6 +418,12 @@ export class CalloutFramingService {
 
     if (calloutFraming.memo) {
       await this.memoService.deleteMemo(calloutFraming.memo.id);
+    }
+
+    if (calloutFraming.mediaGallery) {
+      await this.mediaGalleryService.deleteMediaGallery(
+        calloutFraming.mediaGallery.id
+      );
     }
 
     if (calloutFraming.authorization) {
@@ -496,5 +528,22 @@ export class CalloutFramingService {
     }
 
     return calloutFraming.memo;
+  }
+
+  public async getMediaGallery(
+    calloutFramingInput: ICalloutFraming,
+    relations?: FindOptionsRelations<ICalloutFraming>
+  ): Promise<IMediaGallery | null> {
+    const calloutFraming = await this.getCalloutFramingOrFail(
+      calloutFramingInput.id,
+      {
+        relations: { mediaGallery: true, ...relations },
+      }
+    );
+    if (!calloutFraming.mediaGallery) {
+      return null;
+    }
+
+    return calloutFraming.mediaGallery;
   }
 }

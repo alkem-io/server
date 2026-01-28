@@ -1,6 +1,7 @@
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { ILink } from '@domain/collaboration/link/link.interface';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity/authorizable.interface';
+import { IMediaGallery } from '@domain/common/media-gallery/media.gallery.interface';
 import { IMemo } from '@domain/common/memo/memo.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
@@ -21,4 +22,6 @@ export abstract class ICalloutFraming extends IAuthorizable {
   link?: ILink;
 
   memo?: IMemo;
+
+  mediaGallery?: IMediaGallery;
 }

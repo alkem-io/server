@@ -246,6 +246,12 @@ export class ProfileService {
         case VisualType.BANNER_WIDE:
           visual = this.visualService.createVisualBannerWide();
           break;
+        case VisualType.MEDIA_GALLERY_IMAGE:
+          visual = this.visualService.createVisualMediaGalleryImage();
+          break;
+        case VisualType.MEDIA_GALLERY_VIDEO:
+          visual = this.visualService.createVisualMediaGalleryVideo();
+          break;
 
         default:
           throw new NotSupportedException(

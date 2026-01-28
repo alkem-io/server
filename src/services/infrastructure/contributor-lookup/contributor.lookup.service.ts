@@ -224,7 +224,6 @@ export class ContributorLookupService {
   ): Promise<IContributor | null> {
     if (SYSTEM_ACTOR_IDS.has(agentId)) {
       return null;
-      // return UNKNOWN_CONTRIBUTOR;
     }
 
     if (!isUUID(agentId)) {
