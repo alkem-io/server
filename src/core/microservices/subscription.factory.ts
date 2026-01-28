@@ -73,7 +73,7 @@ export async function subscriptionFactory(
       `Created consumer on queue ${queueName}`,
       LogContext.SUBSCRIPTIONS
     );
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     (pubSub as any).connection = connection;
     return pubSub;
   } catch (err) {

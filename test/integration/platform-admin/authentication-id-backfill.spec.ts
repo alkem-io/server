@@ -1,3 +1,4 @@
+import { vi, Mock } from 'vitest';
 import { AdminAuthenticationIDBackfillService } from '@src/platform-admin/domain/user/authentication-id-backfill/authentication-id-backfill.service';
 import { UserService } from '@domain/community/user/user.service';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
@@ -9,46 +10,46 @@ import { LogContext } from '@common/enums';
 
 const createQueryBuilder = () => {
   const builder = {
-    orderBy: jest.fn().mockReturnThis(),
-    skip: jest.fn().mockReturnThis(),
-    take: jest.fn().mockReturnThis(),
-    getMany: jest.fn(),
+    orderBy: vi.fn().mockReturnThis(),
+    skip: vi.fn().mockReturnThis(),
+    take: vi.fn().mockReturnThis(),
+    getMany: vi.fn(),
   };
   return builder;
 };
 
 describe('AdminAuthenticationIDBackfillService (integration)', () => {
   const loggerMock: LoggerService & {
-    log: jest.Mock;
-    warn: jest.Mock;
-    error: jest.Mock;
-    verbose: jest.Mock;
-    debug: jest.Mock;
+    log: Mock;
+    warn: Mock;
+    error: Mock;
+    verbose: Mock;
+    debug: Mock;
   } = {
-    log: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    verbose: jest.fn(),
-    debug: jest.fn(),
+    log: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    verbose: vi.fn(),
+    debug: vi.fn(),
   };
 
   const createService = () => {
     const userService = {
-      createOrLinkUserFromAgentInfo: jest.fn(),
+      createOrLinkUserFromAgentInfo: vi.fn(),
     } as unknown as UserService;
 
     const kratosService = {
-      getIdentityByEmail: jest.fn(),
+      getIdentityByEmail: vi.fn(),
     } as unknown as KratosService;
 
     const agentInfoCacheService = {
-      deleteAgentInfoFromCache: jest.fn(),
+      deleteAgentInfoFromCache: vi.fn(),
     } as unknown as AgentInfoCacheService;
 
     const queryBuilder = createQueryBuilder();
 
     const entityManager = {
-      createQueryBuilder: jest.fn().mockReturnValue(queryBuilder),
+      createQueryBuilder: vi.fn().mockReturnValue(queryBuilder),
     } as unknown as EntityManager;
 
     const service = new AdminAuthenticationIDBackfillService(
@@ -62,20 +63,20 @@ describe('AdminAuthenticationIDBackfillService (integration)', () => {
     return {
       service,
       userService: userService as unknown as {
-        createOrLinkUserFromAgentInfo: jest.Mock;
+        createOrLinkUserFromAgentInfo: Mock;
       },
       kratosService: kratosService as unknown as {
-        getIdentityByEmail: jest.Mock;
+        getIdentityByEmail: Mock;
       },
       agentInfoCacheService: agentInfoCacheService as unknown as {
-        deleteAgentInfoFromCache: jest.Mock;
+        deleteAgentInfoFromCache: Mock;
       },
       queryBuilder,
     };
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('backfills authentication IDs when Kratos identities exist', async () => {
