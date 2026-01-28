@@ -1,7 +1,7 @@
 # Data Model: 5-Digit Numeric Error Code System
 
 **Date**: 2026-01-22
-**Feature**: 001-error-codes
+**Feature**: 032-error-codes
 
 ## Overview
 

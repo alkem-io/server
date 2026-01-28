@@ -1,7 +1,7 @@
 # Implementation Plan: 5-Digit Numeric Error Code System
 
 **Branch**: `001-error-codes` | **Date**: 2026-01-22 | **Spec**: [spec.md](./spec.md)
-**Input**: Feature specification from `/specs/001-error-codes/spec.md`
+**Input**: Feature specification from `/specs/032-error-codes/spec.md`
 **GitHub Issue**: https://github.com/alkem-io/server/issues/5714
 
 ## Summary
@@ -44,7 +44,7 @@ _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 ### Documentation (this feature)
 
 ```text
-specs/001-error-codes/
+specs/032-error-codes/
 ├── spec.md              # Feature specification
 ├── plan.md              # This file
 ├── research.md          # Phase 0 output

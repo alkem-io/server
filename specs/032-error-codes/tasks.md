@@ -1,6 +1,6 @@
 # Tasks: 5-Digit Numeric Error Code System
 
-**Input**: Design documents from `/specs/001-error-codes/`
+**Input**: Design documents from `/specs/032-error-codes/`
 **Prerequisites**: plan.md, spec.md, research.md, data-model.md
 **Branch**: `001-error-codes`
 
