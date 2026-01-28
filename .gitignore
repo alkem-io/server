@@ -96,4 +96,3 @@ tmp/prev.schema.graphql
 # ignore pychache dirs
 **/__pycache__/
 
-.claude/settings.local.json
