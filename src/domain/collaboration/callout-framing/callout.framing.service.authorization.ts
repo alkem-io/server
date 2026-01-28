@@ -34,10 +34,18 @@ export class CalloutFramingAuthorizationService {
           loadEagerRelations: false,
           relations: {
             authorization: true,
-            profile: true,
-            whiteboard: true,
-            memo: true,
-            mediaGallery: true,
+            profile: {
+              authorization: true,
+            },
+            whiteboard: {
+              authorization: true,
+            },
+            memo: {
+              authorization: true,
+            },
+            mediaGallery: {
+              authorization: true,
+            },
           },
           select: {
             id: true,

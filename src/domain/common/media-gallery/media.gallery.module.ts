@@ -1,25 +1,27 @@
+import { AuthorizationModule } from '@core/authorization';
+import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
+import { VisualModule } from '@domain/common/visual/visual.module';
+import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MediaGallery } from './media.gallery.entity';
+import { MediaGalleryResolverFields } from './media.gallery.resolver.fields';
+import { MediaGalleryResolverMutations } from './media.gallery.resolver.mutations';
 import { MediaGalleryService } from './media.gallery.service';
 import { MediaGalleryAuthorizationService } from './media.gallery.service.authorization';
-import { MediaGalleryResolverFields } from './media.gallery.resolver.fields';
-import { AuthorizationPolicyModule } from '../authorization-policy/authorization.policy.module';
-import { ProfileModule } from '../profile/profile.module';
-import { VisualModule } from '../visual/visual.module';
-import { DocumentModule } from '@domain/storage/document/document.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([MediaGallery]),
+    AuthorizationModule,
     AuthorizationPolicyModule,
-    ProfileModule,
+    StorageBucketModule,
     VisualModule,
-    DocumentModule,
   ],
   providers: [
     MediaGalleryService,
     MediaGalleryResolverFields,
+    MediaGalleryResolverMutations,
     MediaGalleryAuthorizationService,
   ],
   exports: [

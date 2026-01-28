@@ -60,11 +60,13 @@ export class VisualResolverMutations {
       {
         relations: {
           profile: {
-            storageBucket: true,
+            storageBucket: {
+              authorization: true,
+            },
           },
           mediaGallery: {
-            profile: {
-              storageBucket: true,
+            storageBucket: {
+              authorization: true,
             },
           },
         },
@@ -76,15 +78,17 @@ export class VisualResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `visual image upload: ${visual.id}`
     );
-    const profile =
-      (visual as Visual).profile ?? (visual as Visual).mediaGallery?.profile;
-    if (!profile || !profile.storageBucket)
+
+    const profile = (visual as Visual).profile;
+    const storageBucket =
+      (visual as Visual).profile?.storageBucket ??
+      (visual as Visual).mediaGallery?.storageBucket;
+    if (!storageBucket)
       throw new EntityNotInitializedException(
         `Unable to find profile or storageBucket for Visual: ${visual.id}`,
         LogContext.STORAGE_BUCKET
       );
 
-    const storageBucket = profile.storageBucket;
     const storageBucketAuthorization = storageBucket.authorization;
 
     if (!storageBucketAuthorization) {
@@ -108,7 +112,7 @@ export class VisualResolverMutations {
     } else {
       const fallbackAuthorization =
         (visual as Visual).mediaGallery?.authorization ??
-        profile.authorization ??
+        profile?.authorization ??
         visual.authorization;
 
       if (!fallbackAuthorization) {

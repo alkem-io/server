@@ -1,6 +1,5 @@
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { CreateLinkInput } from '@domain/collaboration/link/dto/link.dto.create';
-import { CreateMediaGalleryInput } from '@domain/common/media-gallery/dto/media.gallery.dto.create';
 import { CreateMemoInput } from '@domain/common/memo/types';
 import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
 import { CreateWhiteboardInput } from '@domain/common/whiteboard/types';
@@ -41,12 +40,6 @@ export class CreateCalloutFramingInput {
   @ValidateNested()
   @Type(() => CreateMemoInput)
   memo?: CreateMemoInput;
-
-  @Field(() => CreateMediaGalleryInput, { nullable: true })
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => CreateMediaGalleryInput)
-  mediaGallery?: CreateMediaGalleryInput;
 
   @Field(() => [String], { nullable: true })
   @IsOptional()

@@ -34,8 +34,6 @@ import {
   UpdateLinkInput,
 } from '@domain/collaboration/link/dto';
 import { UpdatePostInput } from '@domain/collaboration/post/dto/post.dto.update';
-import { CreateMediaGalleryInput } from '@domain/common/media-gallery/dto/media.gallery.dto.create';
-import { UpdateMediaGalleryInput } from '@domain/common/media-gallery/dto/media.gallery.dto.update';
 import {
   CreateTagsetOnProfileInput,
   UpdateProfileInput,
@@ -207,8 +205,6 @@ export class BaseHandler extends AbstractHandler {
       SendMessageOnCalloutInput,
       CreateCalloutOnCalloutsSetInput,
       UpdateBaselineLicensePlanOnAccount,
-      CreateMediaGalleryInput,
-      UpdateMediaGalleryInput,
     ];
 
     if (types.includes(metatype)) {

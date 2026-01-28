@@ -1,24 +1,26 @@
-import { Injectable } from '@nestjs/common';
+import { CREDENTIAL_RULE_MEDIA_GALLERY_CREATED_BY } from '@common/constants';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { RelationshipNotFoundException } from '@common/exceptions';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { CREDENTIAL_RULE_MEDIA_GALLERY_CREATED_BY } from '@common/constants';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.bucket.service.authorization';
+import { Injectable } from '@nestjs/common';
+import { VisualAuthorizationService } from '../visual/visual.service.authorization';
 import { IMediaGallery } from './media.gallery.interface';
 import { MediaGalleryService } from './media.gallery.service';
-import { VisualAuthorizationService } from '../visual/visual.service.authorization';
-import { RelationshipNotFoundException } from '@common/exceptions';
 
 @Injectable()
 export class MediaGalleryAuthorizationService {
   constructor(
     private readonly authorizationPolicyService: AuthorizationPolicyService,
     private readonly mediaGalleryService: MediaGalleryService,
+    private readonly storageBucketAuthorizationService: StorageBucketAuthorizationService,
     private readonly visualAuthorizationService: VisualAuthorizationService
   ) {}
 
@@ -35,12 +37,36 @@ export class MediaGalleryAuthorizationService {
           visuals: {
             authorization: true,
           },
+          storageBucket: {
+            authorization: true,
+            documents: {
+              authorization: true,
+              tagset: {
+                authorization: true,
+              },
+            },
+          },
         },
         select: {
           id: true,
           createdBy: true,
           authorization:
             this.authorizationPolicyService.authorizationSelectOptions,
+          storageBucket: {
+            id: true,
+            authorization:
+              this.authorizationPolicyService.authorizationSelectOptions,
+            documents: {
+              id: true,
+              authorization:
+                this.authorizationPolicyService.authorizationSelectOptions,
+              tagset: {
+                id: true,
+                authorization:
+                  this.authorizationPolicyService.authorizationSelectOptions,
+              },
+            },
+          },
           visuals: {
             id: true,
             authorization:
@@ -50,9 +76,9 @@ export class MediaGalleryAuthorizationService {
       }
     );
 
-    if (!mediaGallery.visuals) {
+    if (!mediaGallery.storageBucket) {
       throw new RelationshipNotFoundException(
-        `Unable to load MediaGallery visuals for auth reset: ${mediaGalleryID}`,
+        `Unable to load MediaGallery StorageBucket for auth reset: ${mediaGalleryID}`,
         LogContext.COLLABORATION
       );
     }
@@ -67,7 +93,15 @@ export class MediaGalleryAuthorizationService {
     mediaGallery.authorization = this.appendCredentialRules(mediaGallery);
     updatedAuthorizations.push(mediaGallery.authorization);
 
-    for (const visual of mediaGallery.visuals) {
+    const storageBucketAuthorizationPolicies =
+      await this.storageBucketAuthorizationService.applyAuthorizationPolicy(
+        mediaGallery.storageBucket,
+        mediaGallery.authorization
+      );
+
+    updatedAuthorizations.push(...storageBucketAuthorizationPolicies);
+
+    for (const visual of mediaGallery.visuals ?? []) {
       visual.authorization =
         this.visualAuthorizationService.applyAuthorizationPolicy(
           visual,

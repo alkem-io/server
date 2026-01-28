@@ -1,18 +1,30 @@
-import { Entity, OneToMany, Column } from 'typeorm';
-import { IMediaGallery } from './media.gallery.interface';
-import { Visual } from '@domain/common/visual/visual.entity';
-
 import { UUID_LENGTH } from '@common/constants';
-import { NameableEntity } from '../entity/nameable-entity';
+import { Visual } from '@domain/common/visual/visual.entity';
+import { StorageBucket } from '@domain/storage/storage-bucket/storage.bucket.entity';
+import { Column, Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
+import { AuthorizableEntity } from '../entity/authorizable-entity';
+import { IMediaGallery } from './media.gallery.interface';
 
 @Entity()
-export class MediaGallery extends NameableEntity implements IMediaGallery {
-  @Column('char', { length: UUID_LENGTH, nullable: true })
+export class MediaGallery extends AuthorizableEntity implements IMediaGallery {
+  @Column('uuid', { nullable: true })
   createdBy?: string;
 
-  @OneToMany(() => Visual, visual => visual.mediaGallery, {
+  @OneToMany(
+    () => Visual,
+    visual => visual.mediaGallery,
+    {
+      eager: false,
+      cascade: true,
+    }
+  )
+  visuals!: Visual[];
+
+  @OneToOne(() => StorageBucket, {
     eager: false,
     cascade: true,
+    onDelete: 'SET NULL',
   })
-  visuals!: Visual[];
+  @JoinColumn()
+  storageBucket?: StorageBucket;
 }

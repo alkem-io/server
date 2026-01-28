@@ -11,7 +11,6 @@ import { CreateLinkInput } from '@domain/collaboration/link/dto/link.dto.create'
 import { LinkService } from '@domain/collaboration/link/link.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { CreateMediaGalleryInput } from '@domain/common/media-gallery/dto/media.gallery.dto.create';
 import { IMediaGallery } from '@domain/common/media-gallery/media.gallery.interface';
 import { MediaGalleryService } from '@domain/common/media-gallery/media.gallery.service';
 import { MemoService } from '@domain/common/memo/memo.service';
@@ -54,14 +53,14 @@ export class CalloutFramingService {
     storageAggregator: IStorageAggregator,
     userID?: string
   ): Promise<ICalloutFraming> {
+    const { profile: profileData, tags } = calloutFramingData;
+
     const calloutFraming: ICalloutFraming =
       CalloutFraming.create(calloutFramingData);
 
     calloutFraming.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.CALLOUT_FRAMING
     );
-
-    const { profile: profileData, tags } = calloutFramingData;
 
     const defaultTagset: CreateTagsetInput = {
       name: TagsetReservedName.DEFAULT,
@@ -132,19 +131,11 @@ export class CalloutFramingService {
     }
 
     if (calloutFraming.type === CalloutFramingType.MEDIA_GALLERY) {
-      if (calloutFramingData.mediaGallery) {
-        await this.createNewMediaGalleryInCalloutFraming(
-          calloutFraming,
-          calloutFramingData.mediaGallery,
-          storageAggregator,
-          userID
-        );
-      } else {
-        throw new ValidationException(
-          'Callout Framing of type MEDIA_GALLERY requires media gallery data.',
-          LogContext.COLLABORATION
-        );
-      }
+      await this.createNewMediaGalleryInCalloutFraming(
+        calloutFraming,
+        storageAggregator,
+        userID
+      );
     }
 
     return calloutFraming;
@@ -205,14 +196,12 @@ export class CalloutFramingService {
 
   private async createNewMediaGalleryInCalloutFraming(
     calloutFraming: ICalloutFraming,
-    mediaGalleryData: CreateMediaGalleryInput,
     storageAggregator: IStorageAggregator,
     userID?: string
   ) {
     calloutFraming.mediaGallery =
       await this.mediaGalleryService.createMediaGallery(
-        mediaGalleryData,
-        storageAggregator.id,
+        storageAggregator,
         userID
       );
   }
@@ -379,17 +368,10 @@ export class CalloutFramingService {
         break;
       }
       case CalloutFramingType.MEDIA_GALLERY: {
-        // Handle MEDIA_GALLERY type updates
-        if (calloutFraming.mediaGallery && calloutFramingData.mediaGallery) {
-          calloutFraming.mediaGallery =
-            await this.mediaGalleryService.updateMediaGallery(
-              calloutFraming.mediaGallery.id,
-              calloutFramingData.mediaGallery
-            );
-        } else if (calloutFramingData.mediaGallery) {
+        // Media gallery updates are done through media gallery service/mutations or visual mutations
+        if (!calloutFraming.mediaGallery) {
           await this.createNewMediaGalleryInCalloutFraming(
             calloutFraming,
-            calloutFramingData.mediaGallery as unknown as CreateMediaGalleryInput,
             storageAggregator,
             userID
           );

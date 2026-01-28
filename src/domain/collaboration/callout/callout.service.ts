@@ -78,7 +78,9 @@ export class CalloutService {
       calloutData.sortOrder = 10;
     }
 
-    const callout: ICallout = Callout.create(calloutData);
+    const { framing, ...calloutDataWithoutFraming } = calloutData;
+    const callout: ICallout = Callout.create(calloutDataWithoutFraming);
+
     callout.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.CALLOUT
     );
