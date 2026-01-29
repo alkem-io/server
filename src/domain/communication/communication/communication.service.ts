@@ -1,22 +1,22 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { LogContext } from '@common/enums';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { RoomType } from '@common/enums/room.type';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums';
-import { FindOneOptions, Repository } from 'typeorm';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import {
   Communication,
   ICommunication,
 } from '@domain/communication/communication';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy';
-import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { IUser } from '@domain/community/user/user.interface';
-import { RoomService } from '../room/room.service';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
+import { FindOneOptions, Repository } from 'typeorm';
 import { IRoom } from '../room/room.interface';
-import { RoomType } from '@common/enums/room.type';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { RoomService } from '../room/room.service';
 
 @Injectable()
 export class CommunicationService {

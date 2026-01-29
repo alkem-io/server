@@ -1,5 +1,6 @@
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
+import { IMessaging } from '@domain/communication/messaging/messaging.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { ITemplatesManager } from '@domain/template/templates-manager/templates.manager.interface';
 import { ILibrary } from '@library/library/library.interface';
@@ -8,9 +9,8 @@ import { IConfig } from '@platform/configuration/config/config.interface';
 import { IForum } from '@platform/forum';
 import { ILicensingFramework } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.interface';
 import { IMetadata } from '@platform/metadata/metadata.interface';
-import { IPlatformSettings } from '@platform/platform-settings/platform.settings.interface';
 import { IPlatformWellKnownVirtualContributors } from '@platform/platform.well.known.virtual.contributors/platform.well.known.virtual.contributors.interface';
-import { IMessaging } from '@domain/communication/messaging/messaging.interface';
+import { IPlatformSettings } from '@platform/platform-settings/platform.settings.interface';
 
 @ObjectType('Platform')
 export abstract class IPlatform extends IAuthorizable {

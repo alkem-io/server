@@ -1,8 +1,8 @@
-import { LogContext, AlkemioErrorStatus } from '@common/enums';
+import { AlkemioErrorStatus, LogContext } from '@common/enums';
 import { BaseException } from './base.exception';
 
 export class NotSupportedException extends BaseException {
-  constructor(error: string, context: LogContext) {
-    super(error, context, AlkemioErrorStatus.NOT_SUPPORTED);
+  constructor(message: string, context: LogContext) {
+    super(message, context, AlkemioErrorStatus.NOT_SUPPORTED);
   }
 }

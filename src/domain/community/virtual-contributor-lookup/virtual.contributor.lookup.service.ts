@@ -1,21 +1,21 @@
-import { EntityManager, FindOneOptions, Repository } from 'typeorm';
-import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
-import { Inject, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { isUUID } from 'class-validator';
+import { LogContext } from '@common/enums';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { IPaginatedType } from '@core/pagination/paginated.type';
+import { PaginationArgs } from '@core/pagination/pagination.args';
+import { getPaginationResults } from '@core/pagination/pagination.fn';
+import { RoleSetRoleWithParentCredentials } from '@domain/access/role-set/dto/role.set.dto.role.with.parent.credentials';
 import { CredentialsSearchInput, IAgent } from '@domain/agent';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { IAccount } from '@domain/space/account/account.interface';
-import { PaginationArgs } from '@core/pagination/pagination.args';
-import { RoleSetRoleWithParentCredentials } from '@domain/access/role-set/dto/role.set.dto.role.with.parent.credentials';
-import { IPaginatedType } from '@core/pagination/paginated.type';
-import { getPaginationResults } from '@core/pagination/pagination.fn';
+import { Inject, LoggerService } from '@nestjs/common';
+import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
+import { isUUID } from 'class-validator';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 
 export class VirtualContributorLookupService {
   constructor(

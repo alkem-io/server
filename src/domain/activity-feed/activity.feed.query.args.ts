@@ -1,6 +1,6 @@
-import { Field, InputType } from '@nestjs/graphql';
 import { ActivityEventType } from '@common/enums/activity.event.type';
 import { UUID } from '@domain/common/scalars';
+import { Field, InputType } from '@nestjs/graphql';
 import { ActivityFeedRoles } from './activity.feed.roles.enum';
 
 @InputType()

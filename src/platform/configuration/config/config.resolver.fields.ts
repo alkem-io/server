@@ -1,11 +1,10 @@
-import {
-  VisualConstraints,
-  DEFAULT_VISUAL_CONSTRAINTS,
-} from '@domain/common/visual/visual.constraints';
-import { Args, ResolveField } from '@nestjs/graphql';
-import { Resolver } from '@nestjs/graphql';
-import { IConfig } from './config.interface';
 import { VisualType } from '@common/enums/visual.type';
+import {
+  DEFAULT_VISUAL_CONSTRAINTS,
+  VisualConstraints,
+} from '@domain/common/visual/visual.constraints';
+import { Args, ResolveField, Resolver } from '@nestjs/graphql';
+import { IConfig } from './config.interface';
 
 @Resolver(() => IConfig)
 export class ConfigurationResolverFields {

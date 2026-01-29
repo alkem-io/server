@@ -1,6 +1,6 @@
-import { Field, InputType } from '@nestjs/graphql';
 import { NotificationEventInAppState } from '@common/enums/notification.event.in.app.state';
 import { UUID } from '@domain/common/scalars';
+import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
 export abstract class UpdateNotificationStateInput {

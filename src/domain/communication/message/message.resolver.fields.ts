@@ -1,11 +1,11 @@
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { IMessage } from './message.interface';
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions';
-import { Inject } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { Inject } from '@nestjs/common';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
+import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
+import { IMessage } from './message.interface';
 
 @Resolver(() => IMessage)
 export class MessageResolverFields {

@@ -1,8 +1,8 @@
-import { Field, ObjectType } from '@nestjs/graphql';
-import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { SpaceLevel } from '@common/enums/space.level';
+import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
 import { ISpaceAbout } from '@domain/space/space.about';
+import { Field, ObjectType } from '@nestjs/graphql';
 
 // Class to return the set of information that a user that is invited / had an application for a Space
 // needs to see to be able to make a decision

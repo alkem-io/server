@@ -1,13 +1,13 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { WingbackContractPayload } from './types';
-import { WingbackManager } from '@services/external/wingback';
-import { InjectEntityManager } from '@nestjs/typeorm';
-import { EntityManager } from 'typeorm';
-import { Account } from '@domain/space/account/account.entity';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { AccountLicenseService } from '@domain/space/account/account.service.license';
-import { LicenseService } from '@domain/common/license/license.service';
 import { LogContext } from '@common/enums';
+import { LicenseService } from '@domain/common/license/license.service';
+import { Account } from '@domain/space/account/account.entity';
+import { AccountLicenseService } from '@domain/space/account/account.service.license';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InjectEntityManager } from '@nestjs/typeorm';
+import { WingbackManager } from '@services/external/wingback';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { EntityManager } from 'typeorm';
+import { WingbackContractPayload } from './types';
 
 @Injectable()
 export class WingbackWebhookService {

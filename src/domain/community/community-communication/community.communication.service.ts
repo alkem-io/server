@@ -1,11 +1,11 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { LogContext } from '@common/enums';
-import { IUser } from '../user/user.interface';
-import { CommunicationService } from '@domain/communication/communication/communication.service';
-import { IContributor } from '../contributor/contributor.interface';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston/dist/winston.constants';
-import { ICommunication } from '@domain/communication/communication';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
+import { ICommunication } from '@domain/communication/communication';
+import { CommunicationService } from '@domain/communication/communication/communication.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston/dist/winston.constants';
+import { IContributor } from '../contributor/contributor.interface';
+import { IUser } from '../user/user.interface';
 
 @Injectable()
 export class CommunityCommunicationService {

@@ -1,20 +1,20 @@
+import { createHash, randomUUID } from 'crypto';
 import {
-  parse,
   DocumentNode,
-  ObjectTypeDefinitionNode,
   EnumTypeDefinitionNode,
-  ScalarTypeDefinitionNode,
   Kind,
+  ObjectTypeDefinitionNode,
+  parse,
+  ScalarTypeDefinitionNode,
 } from 'graphql';
 import {
   ChangeEntry,
-  DeprecationEntry,
-  ClassificationCount,
   ChangeReport,
-  ElementType,
   ChangeType,
+  ClassificationCount,
+  DeprecationEntry,
+  ElementType,
 } from '../model';
-import { randomUUID, createHash } from 'crypto';
 
 export interface IndexedSchema {
   doc: DocumentNode;

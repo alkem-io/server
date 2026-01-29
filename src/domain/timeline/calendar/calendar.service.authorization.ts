@@ -1,11 +1,11 @@
-import { Injectable } from '@nestjs/common';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { CalendarService } from './calendar.service';
-import { ICalendar } from './calendar.interface';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { CalendarEventAuthorizationService } from '../event/event.service.authorization';
-import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { LogContext } from '@common/enums/logging.context';
+import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { Injectable } from '@nestjs/common';
+import { CalendarEventAuthorizationService } from '../event/event.service.authorization';
+import { ICalendar } from './calendar.interface';
+import { CalendarService } from './calendar.service';
 
 @Injectable()
 export class CalendarAuthorizationService {

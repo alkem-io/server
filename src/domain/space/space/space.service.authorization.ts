@@ -1,45 +1,45 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import {
+  CREDENTIAL_RULE_MEMBER_CREATE_SUBSPACE,
+  CREDENTIAL_RULE_SPACE_ADMIN_DELETE_SUBSPACE,
+  CREDENTIAL_RULE_SPACE_ADMINS,
+  CREDENTIAL_RULE_SPACE_MEMBERS_READ,
+  CREDENTIAL_RULE_TYPES_GLOBAL_SPACE_READ,
+  CREDENTIAL_RULE_TYPES_SPACE_PLATFORM_SETTINGS,
+  POLICY_RULE_READ_ABOUT,
+  POLICY_RULE_SPACE_CREATE_SUBSPACE,
+} from '@common/constants';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
+import { RoleName } from '@common/enums/role.name';
+import { SpaceLevel } from '@common/enums/space.level';
+import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
+import { SpaceVisibility } from '@common/enums/space.visibility';
+import { EntityNotFoundException } from '@common/exceptions';
+import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
+import { PlatformRolesAccessService } from '@domain/access/platform-roles-access/platform.roles.access.service';
+import { IRoleSet } from '@domain/access/role-set';
+import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { CollaborationAuthorizationService } from '@domain/collaboration/collaboration/collaboration.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { ISpace } from './space.interface';
-import { SpaceVisibility } from '@common/enums/space.visibility';
-import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
 import { CommunityAuthorizationService } from '@domain/community/community/community.service.authorization';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
-import { CollaborationAuthorizationService } from '@domain/collaboration/collaboration/collaboration.service.authorization';
-import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
-import { RoleName } from '@common/enums/role.name';
-import {
-  POLICY_RULE_SPACE_CREATE_SUBSPACE,
-  CREDENTIAL_RULE_SPACE_MEMBERS_READ,
-  CREDENTIAL_RULE_SPACE_ADMINS,
-  CREDENTIAL_RULE_MEMBER_CREATE_SUBSPACE,
-  CREDENTIAL_RULE_SPACE_ADMIN_DELETE_SUBSPACE,
-  CREDENTIAL_RULE_TYPES_SPACE_PLATFORM_SETTINGS,
-  CREDENTIAL_RULE_TYPES_GLOBAL_SPACE_READ,
-  POLICY_RULE_READ_ABOUT,
-} from '@common/constants';
-import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
-import { SpaceLevel } from '@common/enums/space.level';
-import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
-import { RoleSetService } from '@domain/access/role-set/role.set.service';
-import { IRoleSet } from '@domain/access/role-set';
-import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { TemplatesManagerAuthorizationService } from '@domain/template/templates-manager/templates.manager.service.authorization';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
-import { EntityNotFoundException } from '@common/exceptions';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { SpaceAboutAuthorizationService } from '../space.about/space.about.service.authorization';
 import { SpaceLookupService } from '../space.lookup/space.lookup.service';
-import { TemplatesManagerAuthorizationService } from '@domain/template/templates-manager/templates.manager.service.authorization';
-import { PlatformRolesAccessService } from '@domain/access/platform-roles-access/platform.roles.access.service';
-import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
+import { ISpace } from './space.interface';
 
 @Injectable()
 export class SpaceAuthorizationService {
@@ -503,7 +503,7 @@ export class SpaceAuthorizationService {
         newRules.push(rule);
         break;
       }
-      case SpacePrivacyMode.PRIVATE:
+      case SpacePrivacyMode.PRIVATE: {
         const rule = this.authorizationPolicyService.createCredentialRule(
           [AuthorizationPrivilege.READ_ABOUT],
           credentialCriteriasWithAccess,
@@ -512,6 +512,7 @@ export class SpaceAuthorizationService {
         rule.cascade = false;
         newRules.push(rule);
         break;
+      }
     }
 
     if (parentSpaceRoleSet) {

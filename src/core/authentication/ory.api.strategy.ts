@@ -1,18 +1,18 @@
-import { Injectable, Inject, LoggerService } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { PassportStrategy } from '@nestjs/passport';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Strategy } from 'passport-custom';
 import { LogContext } from '@common/enums';
 import { ApiRestrictedAccessException } from '@common/exceptions/auth';
-import { AuthenticationService } from './authentication.service';
-import { verifyIdentityIfOidcAuth } from './verify.identity.if.oidc.auth';
-import { IncomingMessage } from 'http';
-import { AlkemioConfig } from '@src/types';
-import { OryDefaultIdentitySchema } from '@services/infrastructure/kratos/types/ory.default.identity.schema';
-import { KratosService } from '@services/infrastructure/kratos/kratos.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { PassportStrategy } from '@nestjs/passport';
 import { Session } from '@ory/kratos-client';
+import { KratosService } from '@services/infrastructure/kratos/kratos.service';
+import { OryDefaultIdentitySchema } from '@services/infrastructure/kratos/types/ory.default.identity.schema';
+import { AlkemioConfig } from '@src/types';
+import { IncomingMessage } from 'http';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { Strategy } from 'passport-custom';
+import { AuthenticationService } from './authentication.service';
 import { AUTH_STRATEGY_OATHKEEPER_API_TOKEN } from './strategy.names';
+import { verifyIdentityIfOidcAuth } from './verify.identity.if.oidc.auth';
 
 @Injectable()
 export class OryApiStrategy extends PassportStrategy(

@@ -1,9 +1,9 @@
+import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
 import { ICommunity } from '@domain/community/community';
+import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IActivityLogEntryBase } from './activity.log.dto.entry.base.interface';
 import { IActivityLogEntry } from './activity.log.entry.interface';
-import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
 
 @ObjectType('ActivityLogEntryMemberJoined', {
   implements: () => [IActivityLogEntry],

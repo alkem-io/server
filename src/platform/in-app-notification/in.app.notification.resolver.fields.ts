@@ -1,11 +1,11 @@
-import { Resolver, ResolveField, Parent } from '@nestjs/graphql';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { Loader } from '@core/dataloader/decorators';
 import { ContributorLoaderCreator } from '@core/dataloader/creators/loader.creators/in-app-notification/contributor.loader.creator';
+import { Loader } from '@core/dataloader/decorators';
 import { ILoader } from '@core/dataloader/loader.interface';
+import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { Inject, LoggerService } from '@nestjs/common';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { IInAppNotification } from '@platform/in-app-notification/in.app.notification.interface';
 import { IInAppNotificationPayload } from '@platform/in-app-notification-payload/in.app.notification.payload.interface';
-import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Resolver(() => IInAppNotification)

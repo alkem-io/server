@@ -1,7 +1,7 @@
+import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
+import { SpaceLevel } from '@common/enums/space.level';
 import { UUID } from '@domain/common/scalars';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { SpaceLevel } from '@common/enums/space.level';
-import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
 
 @ObjectType()
 export class CommunityInvitationForRoleResult {

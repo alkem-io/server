@@ -1,9 +1,9 @@
-import { Field, ObjectType } from '@nestjs/graphql';
-import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
-import { IAiServer } from '../ai-server/ai.server.interface';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
-import { IExternalConfig } from './dto/external.config';
+import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
+import { Field, ObjectType } from '@nestjs/graphql';
+import { IAiServer } from '../ai-server/ai.server.interface';
 import { PromptGraph } from '../prompt-graph/dto/prompt.graph.dto';
+import { IExternalConfig } from './dto/external.config';
 
 @ObjectType('AiPersona')
 export abstract class IAiPersona extends IAuthorizable {

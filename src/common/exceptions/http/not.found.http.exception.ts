@@ -1,6 +1,6 @@
 import { AlkemioErrorStatus, LogContext } from '@common/enums';
-import { BaseHttpException } from './base.http.exception';
 import { HttpStatus } from '@nestjs/common';
+import { BaseHttpException } from './base.http.exception';
 
 export class NotFoundHttpException extends BaseHttpException {
   constructor(message: string, context: LogContext, code?: AlkemioErrorStatus) {

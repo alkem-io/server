@@ -1,29 +1,29 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { NotificationRecipientsInput } from './dto/notification.recipients.dto.input';
-import { NotificationRecipientResult } from './dto/notification.recipients.dto.result';
-import { NotificationEvent } from '@common/enums/notification.event';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
-import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
-import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { CredentialsSearchInput } from '@domain/agent/credential/dto/credentials.dto.search';
+import { NotificationEvent } from '@common/enums/notification.event';
 import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import { IUserSettingsNotification } from '@domain/community/user-settings/user.settings.notification.interface';
 import { NotificationEventException } from '@common/exceptions/notification.event.exception';
-import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
-import { IUserSettingsNotificationChannels } from '@domain/community/user-settings/user.settings.notification.channels.interface';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { CredentialsSearchInput } from '@domain/agent/credential/dto/credentials.dto.search';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { IUser } from '@domain/community/user/user.interface';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { IUserSettingsNotificationChannels } from '@domain/community/user-settings/user.settings.notification.channels.interface';
+import { IUserSettingsNotification } from '@domain/community/user-settings/user.settings.notification.interface';
+import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { NotificationRecipientsInput } from './dto/notification.recipients.dto.input';
+import { NotificationRecipientResult } from './dto/notification.recipients.dto.result';
 @Injectable()
 export class NotificationRecipientsService {
   constructor(
@@ -312,7 +312,7 @@ export class NotificationRecipientsService {
   }> {
     // 1. Depending on the event type, get a) the candidate list of recipients b) the privilege required per recipient c) whether inApp is enabled or not
     // 2. Filter the candidate list based on the privilege required
-    let privilegeRequired: AuthorizationPrivilege | undefined = undefined;
+    let privilegeRequired: AuthorizationPrivilege | undefined;
     let credentialCriteria: CredentialsSearchInput[] = [];
     switch (eventType) {
       case NotificationEvent.PLATFORM_FORUM_DISCUSSION_CREATED: {

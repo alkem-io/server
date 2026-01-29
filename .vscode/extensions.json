@@ -1,8 +1,7 @@
 {
   "recommendations": [
     "EditorConfig.EditorConfig",
-    "dbaeumer.vscode-eslint",
-    "esbenp.prettier-vscode",
+    "biomejs.biome",
     "sonarsource.sonarlint-vscode",
     "coderabbit.coderabbit-vscode"
   ]

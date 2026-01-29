@@ -1,16 +1,16 @@
-import { Args, Query, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { PaginationArgs } from '@core/pagination';
+import { Args, Query, Resolver } from '@nestjs/graphql';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
+import { IActivityLogEntry } from '@services/api/activity-log/dto/activity.log.entry.interface';
+import { InstrumentResolver } from '@src/apm/decorators';
+import { ActivityFeedGroupedQueryArgs } from './activity.feed.grouped.query.args';
+import { ActivityFeed } from './activity.feed.interface';
 import { ActivityFeedQueryArgs } from './activity.feed.query.args';
 import { ActivityFeedService } from './activity.feed.service';
-import { ActivityFeed } from './activity.feed.interface';
-import { PaginationArgs } from '@core/pagination';
-import { IActivityLogEntry } from '@services/api/activity-log/dto/activity.log.entry.interface';
-import { ActivityFeedGroupedQueryArgs } from './activity.feed.grouped.query.args';
-import { InstrumentResolver } from '@src/apm/decorators';
 
 @InstrumentResolver()
 @Resolver()

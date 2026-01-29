@@ -1,12 +1,12 @@
-import { Injectable } from '@nestjs/common';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { TemplatesManagerService } from './templates.manager.service';
+import { LogContext } from '@common/enums';
+import { RelationshipNotFoundException } from '@common/exceptions';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import { ITemplatesManager } from '.';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { Injectable } from '@nestjs/common';
 import { TemplateDefaultAuthorizationService } from '../template-default/template.default.service.authorization';
 import { TemplatesSetAuthorizationService } from '../templates-set/templates.set.service.authorization';
-import { RelationshipNotFoundException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { ITemplatesManager } from '.';
+import { TemplatesManagerService } from './templates.manager.service';
 
 @Injectable()
 export class TemplatesManagerAuthorizationService {

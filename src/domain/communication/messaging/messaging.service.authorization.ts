@@ -1,11 +1,11 @@
-import { Injectable } from '@nestjs/common';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { CREDENTIAL_RULE_TYPES_MESSAGING_CREATE_CONVERSATION } from '@common/constants';
+import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { Injectable } from '@nestjs/common';
 import { ConversationAuthorizationService } from '../conversation/conversation.service.authorization';
 import { IMessaging } from './messaging.interface';
 import { MessagingService } from './messaging.service';
-import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
-import { CREDENTIAL_RULE_TYPES_MESSAGING_CREATE_CONVERSATION } from '@common/constants';
 
 @Injectable()
 export class MessagingAuthorizationService {

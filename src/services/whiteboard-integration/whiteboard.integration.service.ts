@@ -1,13 +1,17 @@
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { WhiteboardService } from '@domain/common/whiteboard';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { AuthenticationService } from '@core/authentication/authentication.service';
-import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { WhiteboardService } from '@domain/common/whiteboard';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { FetchInputData } from '@services/whiteboard-integration/inputs/fetch.input.data';
+import { AlkemioConfig } from '@src/types';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { ContributionReporterService } from '../external/elasticsearch/contribution-reporter';
 import {
   AccessGrantedInputData,
   ContentModifiedInputData,
@@ -16,9 +20,6 @@ import {
   SaveInputData,
   WhoInputData,
 } from './inputs';
-import { ContributionReporterService } from '../external/elasticsearch/contribution-reporter';
-import { InfoOutputData } from './outputs/info.output.data';
-import { AlkemioConfig } from '@src/types';
 import {
   FetchContentData,
   FetchErrorData,
@@ -27,8 +28,7 @@ import {
   SaveErrorData,
   SaveOutputData,
 } from './outputs';
-import { FetchInputData } from '@services/whiteboard-integration/inputs/fetch.input.data';
-import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
+import { InfoOutputData } from './outputs/info.output.data';
 
 @Injectable()
 export class WhiteboardIntegrationService {

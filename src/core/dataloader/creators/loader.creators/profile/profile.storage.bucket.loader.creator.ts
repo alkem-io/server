@@ -1,10 +1,10 @@
-import { EntityManager } from 'typeorm';
+import { Profile } from '@domain/common/profile';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { Profile } from '@domain/common/profile';
+import { EntityManager } from 'typeorm';
 import { createTypedRelationDataLoader } from '../../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 
 @Injectable()
 export class ProfileStorageBucketLoaderCreator

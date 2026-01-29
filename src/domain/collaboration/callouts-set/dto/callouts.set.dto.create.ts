@@ -1,5 +1,5 @@
-import { InputType, Field, ObjectType } from '@nestjs/graphql';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto';
+import { Field, InputType, ObjectType } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
 import { IsOptional, ValidateNested } from 'class-validator';
 

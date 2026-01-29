@@ -1,6 +1,6 @@
+import { SpaceLevel } from '@common/enums/space.level';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { RolesResult } from './roles.dto.result';
-import { SpaceLevel } from '@common/enums/space.level';
 
 @ObjectType()
 export class RolesResultCommunity extends RolesResult {

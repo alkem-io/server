@@ -1,72 +1,72 @@
-import { Inject, LoggerService } from '@nestjs/common';
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { RoleSetService } from './role.set.service';
-import { CurrentUser } from '@src/common/decorators';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { UpdateApplicationFormOnRoleSetInput } from './dto/role.set.dto.update.application.form';
-import { IRoleSet } from './role.set.interface';
-import { IInvitation } from '../invitation/invitation.interface';
-import { InvitationEventInput } from '../invitation/dto/invitation.dto.event';
-import { ApplicationEventInput } from '../application/dto/application.dto.event';
-import { IApplication } from '../application/application.interface';
-import { RoleName } from '@common/enums/role.name';
-import { RoleSetMembershipException } from '@common/exceptions/role.set.membership.exception';
-import { NotificationInputPlatformInvitation } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.invitation.platform';
-import { ApplicationService } from '../application/application.service';
-import { InvitationService } from '../invitation/invitation.service';
-import { ContributorService } from '@domain/community/contributor/contributor.service';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
-import { RoleSetServiceLifecycleApplication } from './role.set.service.lifecycle.application';
-import { RoleSetServiceLifecycleInvitation } from './role.set.service.lifecycle.invitation';
-import { PlatformInvitationService } from '@domain/access/invitation.platform/platform.invitation.service';
-import { ApplyForEntryRoleOnRoleSetInput } from './dto/role.set.dto.entry.role.apply';
-import { InviteForEntryRoleOnRoleSetInput } from './dto/role.set.dto.entry.role.invite';
-import { RoleSetInvitationException } from '@common/exceptions/role.set.invitation.exception';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
-import { CreateInvitationInput } from '../invitation/dto/invitation.dto.create';
-import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
-import { RoleSetAuthorizationService } from './role.set.service.authorization';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
-import { JoinAsEntryRoleOnRoleSetInput } from './dto/role.set.dto.entry.role.join';
-import { LicenseService } from '@domain/common/license/license.service';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
-import {
-  InvitationLifecycleEvent,
-  InvitationLifecycleState,
-} from '../invitation/invitation.service.lifecycle';
-import {
-  ApplicationLifecycleEvent,
-  ApplicationLifecycleState,
-} from '../application/application.service.lifecycle';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
-import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
-import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
-import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { RoleName } from '@common/enums/role.name';
+import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
+import { RoleSetInvitationResultType } from '@common/enums/role.set.invitation.result.type';
 import { RoleSetType } from '@common/enums/role.set.type';
 import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { RoleSetCacheService } from './role.set.service.cache';
-import { InstrumentResolver } from '@src/apm/decorators';
-import { RoleSetInvitationResult } from './dto/role.set.invitation.result';
-import { RoleSetInvitationResultType } from '@common/enums/role.set.invitation.result.type';
-import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
-import { compact } from 'lodash';
+import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
+import { RoleSetInvitationException } from '@common/exceptions/role.set.invitation.exception';
+import { RoleSetMembershipException } from '@common/exceptions/role.set.membership.exception';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { PlatformInvitationService } from '@domain/access/invitation.platform/platform.invitation.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { LicenseService } from '@domain/common/license/license.service';
+import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
+import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { ContributorService } from '@domain/community/contributor/contributor.service';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
+import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
+import { Inject, LoggerService } from '@nestjs/common';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { NotificationInputCommunityApplication } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.application';
 import { NotificationInputCommunityInvitation } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.invitation';
+import { NotificationInputPlatformInvitation } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.invitation.platform';
 import { NotificationInputCommunityInvitationVirtualContributor } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.invitation.vc';
-import { NotificationInputUserSpaceCommunityApplicationDeclined } from '@services/adapters/notification-adapter/dto/user/notification.dto.input.user.space.community.application.declined';
 import { NotificationInputVirtualContributorSpaceCommunityInvitationDeclined } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.invitation.vc.declined';
-import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
+import { NotificationInputUserSpaceCommunityApplicationDeclined } from '@services/adapters/notification-adapter/dto/user/notification.dto.input.user.space.community.application.declined';
 import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
-import { NotificationVirtualContributorAdapter } from '@services/adapters/notification-adapter/notification.virtual.contributor.adapter';
+import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
 import { NotificationUserAdapter } from '@services/adapters/notification-adapter/notification.user.adapter';
+import { NotificationVirtualContributorAdapter } from '@services/adapters/notification-adapter/notification.virtual.contributor.adapter';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentUser } from '@src/common/decorators';
+import { compact } from 'lodash';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { IApplication } from '../application/application.interface';
+import { ApplicationService } from '../application/application.service';
+import {
+  ApplicationLifecycleEvent,
+  ApplicationLifecycleState,
+} from '../application/application.service.lifecycle';
+import { ApplicationEventInput } from '../application/dto/application.dto.event';
+import { CreateInvitationInput } from '../invitation/dto/invitation.dto.create';
+import { InvitationEventInput } from '../invitation/dto/invitation.dto.event';
+import { IInvitation } from '../invitation/invitation.interface';
+import { InvitationService } from '../invitation/invitation.service';
+import {
+  InvitationLifecycleEvent,
+  InvitationLifecycleState,
+} from '../invitation/invitation.service.lifecycle';
+import { ApplyForEntryRoleOnRoleSetInput } from './dto/role.set.dto.entry.role.apply';
+import { InviteForEntryRoleOnRoleSetInput } from './dto/role.set.dto.entry.role.invite';
+import { JoinAsEntryRoleOnRoleSetInput } from './dto/role.set.dto.entry.role.join';
+import { UpdateApplicationFormOnRoleSetInput } from './dto/role.set.dto.update.application.form';
+import { RoleSetInvitationResult } from './dto/role.set.invitation.result';
+import { IRoleSet } from './role.set.interface';
+import { RoleSetService } from './role.set.service';
+import { RoleSetAuthorizationService } from './role.set.service.authorization';
+import { RoleSetCacheService } from './role.set.service.cache';
+import { RoleSetServiceLifecycleApplication } from './role.set.service.lifecycle.application';
+import { RoleSetServiceLifecycleInvitation } from './role.set.service.lifecycle.invitation';
 
 @InstrumentResolver()
 @Resolver()

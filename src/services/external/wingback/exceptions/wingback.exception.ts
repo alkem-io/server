@@ -1,11 +1,11 @@
-import { BaseExceptionInternal } from '@common/exceptions/internal/base.exception.internal';
 import { LogContext } from '@common/enums';
 import { ExceptionDetails } from '@common/exceptions/exception.details';
+import { BaseExceptionInternal } from '@common/exceptions/internal/base.exception.internal';
 import { WingbackError } from '@services/external/wingback/types/wingback.type.error';
 
 export class WingbackException extends BaseExceptionInternal {
   constructor(
-    public readonly error: string,
+    public readonly message: string,
     public readonly context: LogContext,
     public readonly status?: number,
     public readonly statusText?: string,
@@ -15,7 +15,7 @@ export class WingbackException extends BaseExceptionInternal {
       data?: WingbackError;
     }
   ) {
-    super(error, context, details);
+    super(message, context, details);
   }
 }
 

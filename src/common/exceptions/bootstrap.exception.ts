@@ -1,11 +1,11 @@
 import { AlkemioErrorStatus, LogContext } from '@common/enums';
-import { BaseException } from './base.exception';
 import { ExceptionDetails } from '@common/exceptions/exception.details';
+import { BaseException } from './base.exception';
 
 export class BootstrapException extends BaseException {
-  constructor(error: string, details?: ExceptionDetails) {
+  constructor(message: string, details?: ExceptionDetails) {
     super(
-      error,
+      message,
       LogContext.BOOTSTRAP,
       AlkemioErrorStatus.BOOTSTRAP_FAILED,
       details

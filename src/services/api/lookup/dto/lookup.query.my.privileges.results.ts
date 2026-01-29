@@ -1,5 +1,5 @@
-import { ObjectType } from '@nestjs/graphql';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { ObjectType } from '@nestjs/graphql';
 
 @ObjectType()
 export class LookupMyPrivilegesQueryResults {

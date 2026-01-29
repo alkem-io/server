@@ -1,21 +1,21 @@
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { Inject, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Profiling } from '@src/common/decorators';
-import { IUser } from '@domain/community/user/user.interface';
 import { LogContext } from '@common/enums/logging.context';
-import { Loader } from '@core/dataloader/decorators';
-import { IProfile } from '../profile/profile.interface';
-import { IWhiteboard } from './whiteboard.interface';
+import { EntityNotInitializedException } from '@common/exceptions';
 import {
   ProfileLoaderCreator,
   UserLoaderCreator,
 } from '@core/dataloader/creators';
+import { Loader } from '@core/dataloader/decorators';
 import { ILoader } from '@core/dataloader/loader.interface';
+import { IUser } from '@domain/community/user/user.interface';
+import { Inject, LoggerService } from '@nestjs/common';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { Profiling } from '@src/common/decorators';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { IProfile } from '../profile/profile.interface';
 import { Whiteboard } from './whiteboard.entity';
-import { WhiteboardService } from './whiteboard.service';
 import { WhiteboardGuestAccessService } from './whiteboard.guest-access.service';
-import { EntityNotInitializedException } from '@common/exceptions';
+import { IWhiteboard } from './whiteboard.interface';
+import { WhiteboardService } from './whiteboard.service';
 
 @Resolver(() => IWhiteboard)
 export class WhiteboardResolverFields {

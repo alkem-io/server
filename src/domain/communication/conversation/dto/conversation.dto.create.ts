@@ -1,6 +1,6 @@
-import { Field, InputType, ObjectType } from '@nestjs/graphql';
-import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
+import { UUID } from '@domain/common/scalars/scalar.uuid';
+import { Field, InputType, ObjectType } from '@nestjs/graphql';
 
 /**
  * GraphQL input for creating a conversation.

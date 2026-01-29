@@ -1,7 +1,7 @@
-import { Field, ObjectType, registerEnumType } from '@nestjs/graphql';
-import { UUID, MessageID } from '@domain/common/scalars';
-import { IMessage } from '@domain/communication/message/message.interface';
+import { MessageID, UUID } from '@domain/common/scalars';
 import { IConversation } from '@domain/communication/conversation/conversation.interface';
+import { IMessage } from '@domain/communication/message/message.interface';
+import { Field, ObjectType, registerEnumType } from '@nestjs/graphql';
 
 /**
  * Discriminator enum for conversation events.

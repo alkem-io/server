@@ -1,7 +1,7 @@
+import { IRoom } from '@domain/communication/room/room.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IActivityLogEntryBase } from './activity.log.dto.entry.base.interface';
 import { IActivityLogEntry } from './activity.log.entry.interface';
-import { IRoom } from '@domain/communication/room/room.interface';
 
 @ObjectType('ActivityLogEntryUpdateSent', {
   implements: () => [IActivityLogEntry],

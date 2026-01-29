@@ -1,8 +1,8 @@
 import { Field, InputType } from '@nestjs/graphql';
+import { Type } from 'class-transformer';
 import { ValidateNested } from 'class-validator';
 import { CreateUserSettingsNotificationChannelsInput } from './user.settings.notification.dto.channels.create';
 import { CreateUserSettingsNotificationSpaceAdminInput } from './user.settings.notification.space.admin.dto.create';
-import { Type } from 'class-transformer';
 
 @InputType()
 export class CreateUserSettingsNotificationSpaceInput {

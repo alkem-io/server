@@ -1,13 +1,13 @@
-import { Field, ObjectType } from '@nestjs/graphql';
-import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
-import { IForm } from '@domain/common/form/form.interface';
-import { IPlatformInvitation } from '@domain/access/invitation.platform/platform.invitation.interface';
+import { RoleName } from '@common/enums/role.name';
+import { RoleSetType } from '@common/enums/role.set.type';
 import { IApplication } from '@domain/access/application/application.interface';
 import { IInvitation } from '@domain/access/invitation/invitation.interface';
-import { IRole } from '../role/role.interface';
-import { RoleName } from '@common/enums/role.name';
+import { IPlatformInvitation } from '@domain/access/invitation.platform/platform.invitation.interface';
+import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
+import { IForm } from '@domain/common/form/form.interface';
 import { ILicense } from '@domain/common/license/license.interface';
-import { RoleSetType } from '@common/enums/role.set.type';
+import { Field, ObjectType } from '@nestjs/graphql';
+import { IRole } from '../role/role.interface';
 
 @ObjectType('RoleSet')
 export abstract class IRoleSet extends IAuthorizable {

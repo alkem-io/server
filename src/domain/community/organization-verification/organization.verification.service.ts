@@ -1,16 +1,16 @@
-import { Injectable } from '@nestjs/common';
+import { LogContext } from '@common/enums';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
-import { OrganizationVerification } from './organization.verification.entity';
+import { EntityNotFoundException } from '@common/exceptions';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
-import { IOrganizationVerification } from './organization.verification.interface';
-import { CreateOrganizationVerificationInput } from './dto/organization.verification.dto.create';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository } from 'typeorm';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy';
-import { EntityNotFoundException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { CreateOrganizationVerificationInput } from './dto/organization.verification.dto.create';
+import { OrganizationVerification } from './organization.verification.entity';
+import { IOrganizationVerification } from './organization.verification.interface';
 
 @Injectable()
 export class OrganizationVerificationService {

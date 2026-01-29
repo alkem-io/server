@@ -1,17 +1,17 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { LogContext } from '@common/enums';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import {
   EntityNotInitializedException,
   ForbiddenException,
 } from '@common/exceptions';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import { LogContext } from '@common/enums';
-import { IAuthorizationPolicyRuleCredential } from './authorization.policy.rule.credential.interface';
 import { AuthorizationInvalidPolicyException } from '@common/exceptions/authorization.invalid.policy.exception';
 import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { IAuthorizationPolicyRuleCredential } from './authorization.policy.rule.credential.interface';
 
 @Injectable()
 export class AuthorizationService {

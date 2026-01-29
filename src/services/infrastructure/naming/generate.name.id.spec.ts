@@ -1,4 +1,4 @@
-import { vi, type MockInstance } from 'vitest';
+import { type MockInstance, vi } from 'vitest';
 import { generateNameId } from './generate.name.id';
 import { generateTestData } from './generate.name.id.test.data';
 

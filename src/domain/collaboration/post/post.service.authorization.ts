@@ -1,26 +1,26 @@
-import { Injectable } from '@nestjs/common';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
-import { IPost } from './post.interface';
+import {
+  CREDENTIAL_RULE_POST_ADMINS_MOVE,
+  CREDENTIAL_RULE_POST_CREATED_BY,
+} from '@common/constants';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
-import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import {
-  CREDENTIAL_RULE_POST_CREATED_BY,
-  CREDENTIAL_RULE_POST_ADMINS_MOVE,
-} from '@common/constants';
-import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
-import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
 import { RoleName } from '@common/enums/role.name';
+import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
-import { IRoleSet } from '@domain/access/role-set/role.set.interface';
-import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
 import { PlatformRolesAccessService } from '@domain/access/platform-roles-access/platform.roles.access.service';
+import { IRoleSet } from '@domain/access/role-set/role.set.interface';
+import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
+import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
+import { Injectable } from '@nestjs/common';
+import { IPost } from './post.interface';
 
 @Injectable()
 export class PostAuthorizationService {

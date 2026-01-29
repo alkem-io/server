@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { MockEntityManagerProvider } from '@test/mocks';
 import { MockSearchExtractService } from '@test/mocks/search/search.extract.service.mock';
 import { MockSearchResultsService } from '@test/mocks/search/search.result.service.mock';
-import { MockEntityManagerProvider } from '@test/mocks';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { SearchService } from './search.service';
 

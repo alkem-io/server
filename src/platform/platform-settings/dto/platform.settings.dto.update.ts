@@ -1,7 +1,7 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { UpdatePlatformSettingsIntegrationInput } from './platform.settings.integration.dto.update';
-import { ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
+import { ValidateNested } from 'class-validator';
+import { UpdatePlatformSettingsIntegrationInput } from './platform.settings.integration.dto.update';
 
 @InputType()
 export class UpdatePlatformSettingsInput {

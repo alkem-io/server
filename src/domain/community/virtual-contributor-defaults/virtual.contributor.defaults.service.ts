@@ -1,9 +1,9 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
-import { CreateKnowledgeBaseInput } from '@domain/common/knowledge-base/dto/knowledge.base.dto.create';
-import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
+import { CreateKnowledgeBaseInput } from '@domain/common/knowledge-base/dto/knowledge.base.dto.create';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { NamingService } from '@services/infrastructure/naming/naming.service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class VirtualContributorDefaultsService {

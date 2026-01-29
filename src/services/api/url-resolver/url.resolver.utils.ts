@@ -1,5 +1,5 @@
-import { UrlPathElement } from '@common/enums/url.path.element';
 import { UrlPathBase } from '@common/enums/url.path.base';
+import { UrlPathElement } from '@common/enums/url.path.element';
 import { match } from 'path-to-regexp';
 
 export const spacePathMatcher = match(

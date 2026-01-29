@@ -1,28 +1,28 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { EncryptionService } from '@hedger/nestjs-encryption';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { AiPersonaEngineAdapter } from '@services/ai-server/ai-persona-engine-adapter/ai.persona.engine.adapter';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { FindOneOptions, Repository } from 'typeorm';
+import { AiPersonaEngineAdapterInvocationInput } from '../ai-persona-engine-adapter/dto/ai.persona.engine.adapter.dto.invocation.input';
+import { IAiServer } from '../ai-server/ai.server.interface';
+import graphJson from '../prompt-graph/config/prompt.graph.expert.json';
 import { AiPersona } from './ai.persona.entity';
 import { IAiPersona } from './ai.persona.interface';
 import {
+  AiPersonaInvocationInput,
   CreateAiPersonaInput,
   DeleteAiPersonaInput,
-  UpdateAiPersonaInput,
-  AiPersonaInvocationInput,
   InteractionMessage,
+  UpdateAiPersonaInput,
 } from './dto';
-import { LogContext } from '@common/enums/logging.context';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { AiPersonaEngineAdapter } from '@services/ai-server/ai-persona-engine-adapter/ai.persona.engine.adapter';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { IExternalConfig } from './dto/external.config';
-import { EncryptionService } from '@hedger/nestjs-encryption';
-import { AiPersonaEngineAdapterInvocationInput } from '../ai-persona-engine-adapter/dto/ai.persona.engine.adapter.dto.invocation.input';
-import { IAiServer } from '../ai-server/ai.server.interface';
-import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
-import graphJson from '../prompt-graph/config/prompt.graph.expert.json';
 
 @Injectable()
 export class AiPersonaService {

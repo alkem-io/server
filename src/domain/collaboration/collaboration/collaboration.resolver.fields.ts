@@ -1,19 +1,19 @@
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { Profiling } from '@src/common/decorators';
+import {
+  CollaborationCalloutsSetLoaderCreator,
+  CollaborationTimelineLoaderCreator,
+  LicenseLoaderCreator,
+} from '@core/dataloader/creators';
+import { Loader } from '@core/dataloader/decorators';
+import { ILoader } from '@core/dataloader/loader.interface';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
-import { Loader } from '@core/dataloader/decorators';
-import {
-  CollaborationTimelineLoaderCreator,
-  CollaborationCalloutsSetLoaderCreator,
-  LicenseLoaderCreator,
-} from '@core/dataloader/creators';
-import { ILoader } from '@core/dataloader/loader.interface';
-import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
-import { IInnovationFlow } from '../innovation-flow/innovation.flow.interface';
 import { ILicense } from '@domain/common/license/license.interface';
+import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { Profiling } from '@src/common/decorators';
 import { ICalloutsSet } from '../callouts-set/callouts.set.interface';
+import { IInnovationFlow } from '../innovation-flow/innovation.flow.interface';
 
 @Resolver(() => ICollaboration)
 export class CollaborationResolverFields {

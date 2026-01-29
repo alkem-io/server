@@ -1,4 +1,18 @@
 import {
+  AuthorizationCredential,
+  AuthorizationPrivilege,
+  LogContext,
+} from '@common/enums';
+import { AuthenticationException } from '@common/exceptions';
+import {
+  AUTH_STRATEGY_OATHKEEPER_API_TOKEN,
+  AUTH_STRATEGY_OATHKEEPER_JWT,
+} from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import {
   ContextType,
   ExecutionContext,
   Inject,
@@ -6,26 +20,12 @@ import {
   LoggerService,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { AuthGuard } from '@nestjs/passport';
 import { GqlExecutionContext } from '@nestjs/graphql';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import {
-  AuthorizationCredential,
-  AuthorizationPrivilege,
-  LogContext,
-} from '@common/enums';
-import { AuthenticationException } from '@common/exceptions';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AuthorizationRuleAgentPrivilege } from './authorization.rule.agent.privilege';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthGuard } from '@nestjs/passport';
 import { InjectEntityManager } from '@nestjs/typeorm';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EntityManager } from 'typeorm';
-import {
-  AUTH_STRATEGY_OATHKEEPER_API_TOKEN,
-  AUTH_STRATEGY_OATHKEEPER_JWT,
-} from '@core/authentication';
+import { AuthorizationRuleAgentPrivilege } from './authorization.rule.agent.privilege';
 
 @Injectable()
 export class GraphqlGuard extends AuthGuard([

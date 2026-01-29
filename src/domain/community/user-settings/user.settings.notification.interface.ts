@@ -1,6 +1,6 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { IUserSettingsNotificationPlatform } from './user.settings.notification.platform.interface';
 import { IUserSettingsNotificationOrganization } from './user.settings.notification.organization.interface';
+import { IUserSettingsNotificationPlatform } from './user.settings.notification.platform.interface';
 import { IUserSettingsNotificationSpace } from './user.settings.notification.space.interface';
 import { IUserSettingsNotificationUser } from './user.settings.notification.user.interface';
 import { IUserSettingsNotificationVirtualContributor } from './user.settings.notification.virtual.contributor.interface';
