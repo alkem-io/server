@@ -14,6 +14,8 @@ export class MediaGallery1769181629999 implements MigrationInterface {
 
     await queryRunner.query(`ALTER TABLE "visual" ADD CONSTRAINT "FK_f7d0fd686fb8aec91868c548f62" FOREIGN KEY ("mediaGalleryId") REFERENCES "media_gallery"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
 
+    await queryRunner.query(`ALTER TABLE "visual" ADD "sortOrder" integer`);
+
     await queryRunner.query(`ALTER TABLE "callout_framing" ADD "mediaGalleryId" uuid`);
 
     await queryRunner.query(`ALTER TABLE "callout_framing" ADD CONSTRAINT "REL_471fa4cb18d52aafe50e51dfe1" UNIQUE ("mediaGalleryId")`);
@@ -43,6 +45,9 @@ export class MediaGallery1769181629999 implements MigrationInterface {
     );
     await queryRunner.query(
       `ALTER TABLE "callout_framing" DROP COLUMN "mediaGalleryId"`
+    );
+    await queryRunner.query(
+      `ALTER TABLE "visual" DROP COLUMN "sortOrder"`
     );
     await queryRunner.query(
       `ALTER TABLE "visual" DROP COLUMN "mediaGalleryId"`

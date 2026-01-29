@@ -58,6 +58,9 @@ export class Visual extends AuthorizableEntity implements IVisual {
   )
   mediaGallery?: MediaGallery;
 
+  @Column('int', { nullable: true })
+  sortOrder?: number;
+
   constructor() {
     super();
     this.allowedTypes = [...VISUAL_ALLOWED_TYPES];

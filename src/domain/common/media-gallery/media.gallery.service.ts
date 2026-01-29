@@ -55,16 +55,30 @@ export class MediaGalleryService {
 
   public async addVisualToMediaGallery(
     mediaGalleryId: string,
-    visualType: VisualType
+    visualType: VisualType,
+    sortOrder?: number
   ): Promise<IVisual> {
     const mediaGallery = await this.getMediaGalleryOrFail(mediaGalleryId, {
       relations: { visuals: true },
     });
 
+    // Calculate the next sort order
+    if (sortOrder === undefined) {
+      if (mediaGallery.visuals && mediaGallery.visuals.length > 0) {
+        const maxSortOrder = Math.max(
+          ...mediaGallery.visuals.map(v => v.sortOrder ?? 0)
+        );
+        sortOrder = maxSortOrder + 1;
+      } else {
+        sortOrder = 1;
+      }
+    }
+
     const visualInput = {
       ...DEFAULT_VISUAL_CONSTRAINTS[visualType],
       name: visualType,
       mediaGallery: mediaGallery,
+      sortOrder: sortOrder,
     };
 
     const visual = await this.visualService.createVisual(visualInput);
@@ -163,6 +177,16 @@ export class MediaGalleryService {
         LogContext.COLLABORATION
       );
     }
+
+    // Sort visuals by sortOrder ascending
+    if (mediaGallery.visuals && mediaGallery.visuals.length > 0) {
+      mediaGallery.visuals.sort((a, b) => {
+        const aSortOrder = a.sortOrder ?? Number.MAX_SAFE_INTEGER;
+        const bSortOrder = b.sortOrder ?? Number.MAX_SAFE_INTEGER;
+        return aSortOrder - bSortOrder;
+      });
+    }
+
     return mediaGallery;
   }
 }

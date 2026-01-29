@@ -45,7 +45,8 @@ export class MediaGalleryResolverMutations {
 
     const visual = await this.mediaGalleryService.addVisualToMediaGallery(
       addData.mediaGalleryID,
-      addData.visualType
+      addData.visualType,
+      addData.sortOrder
     );
 
     const updatedAuthorizations: IAuthorizationPolicy[] = [];

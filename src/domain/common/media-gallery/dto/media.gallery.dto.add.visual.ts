@@ -13,4 +13,10 @@ export class AddVisualToMediaGalleryInput {
       'The type of visual to add (e.g. MEDIA_GALLERY_IMAGE, MEDIA_GALLERY_VIDEO).',
   })
   visualType!: VisualType;
+
+  @Field(() => Number, {
+    description: 'The sort order of the visual within the media gallery.',
+    nullable: true,
+  })
+  sortOrder?: number;
 }
