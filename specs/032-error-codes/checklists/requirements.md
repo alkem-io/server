@@ -34,4 +34,4 @@
 - All items passed validation
 - The preliminary numeric code mapping tables are included as reference material from the user, not implementation details
 - The spec is ready for `/speckit.clarify` or `/speckit.plan`
-- The 73 existing error codes will need complete mapping during implementation planning
+- The 71 existing error codes will need complete mapping during implementation planning

@@ -2,11 +2,11 @@
 
 **Branch**: `001-error-codes` | **Date**: 2026-01-22 | **Spec**: [spec.md](./spec.md)
 **Input**: Feature specification from `/specs/032-error-codes/spec.md`
-**GitHub Issue**: https://github.com/alkem-io/server/issues/5714
+**GitHub Issue**: [#5714](https://github.com/alkem-io/server/issues/5714)
 
 ## Summary
 
-Implement a 5-digit numeric error code system that augments the existing `AlkemioErrorStatus` string-based error codes. The system adds a `numericCode` field to GraphQL error extensions while preserving backward compatibility with the existing `code` field. Error codes are categorized by first two digits (10=NotFound, 20=Authorization, 30=Validation, 40=Operations, 50=System, 99=Fallback), with 1000 codes available per category.
+Implement a 5-digit numeric error code system that augments the existing `AlkemioErrorStatus` string-based error codes. The system adds a `numericCode` field to GraphQL error extensions while preserving backward compatibility with the existing `code` field. Error codes are categorized by first two digits (10=NotFound, 11=Authorization, 12=Validation, 13=Operations, 14=System, 99=Fallback), with 1000 codes available per category.
 
 ## Technical Context
 
@@ -18,7 +18,7 @@ Implement a 5-digit numeric error code system that augments the existing `Alkemi
 **Project Type**: NestJS monolith server
 **Performance Goals**: No measurable impact - error code lookup is O(1) Map access
 **Constraints**: Zero breaking changes to existing API consumers
-**Scale/Scope**: 72 existing error codes to map, ~50 exception classes to update
+**Scale/Scope**: 71 existing error codes to map, ~50 exception classes to update
 
 ## Constitution Check
 
@@ -66,21 +66,14 @@ src/
 │   │   ├── alkemio.error.status.ts      # Existing - unchanged
 │   │   └── error.category.ts            # NEW - category enum
 │   ├── exceptions/
-│   │   ├── base.exception.ts            # MODIFY - add numericCode to extensions
-│   │   ├── error.code.registry.ts       # NEW - mapping registry
+│   │   ├── base.exception.ts            # MODIFY - add numericCode/userMessage to extensions
+│   │   ├── error.status.metadata.ts     # NEW - metadata mapping
+│   │   ├── error.status.metadata.spec.ts # NEW - metadata tests
 │   │   └── http/
 │   │       └── base.http.exception.ts   # MODIFY - add numericCode support
-│   └── constants/
-│       └── error.codes.ts               # NEW - complete code mapping table
 
 docs/
 └── error-codes.md                       # NEW - error code documentation for support/frontend
-
-test/
-└── unit/
-    └── common/
-        └── exceptions/
-            └── error.code.registry.spec.ts  # NEW - registry tests
 ```
 
 **Structure Decision**: Changes are localized to `src/common/` following the existing exception infrastructure pattern. The error code registry is a pure utility with no NestJS DI requirements, making it suitable for `src/common/` rather than a separate module.

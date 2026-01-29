@@ -18,37 +18,37 @@ Enumeration of error categories determined by the first two digits of the numeri
 ```typescript
 export enum ErrorCategory {
   NOT_FOUND = 10, // 10xxx - Entity/resource not found
-  AUTHORIZATION = 20, // 20xxx - Auth/permission errors
-  VALIDATION = 30, // 30xxx - Input/state validation
-  OPERATIONS = 40, // 40xxx - Business rule violations
-  SYSTEM = 50, // 50xxx - Infrastructure errors
+  AUTHORIZATION = 11, // 11xxx - Auth/permission errors
+  VALIDATION = 12, // 12xxx - Input/state validation
+  OPERATIONS = 13, // 13xxx - Business rule violations
+  SYSTEM = 14, // 14xxx - Infrastructure errors
   FALLBACK = 99, // 99xxx - Unmapped errors
 }
 ```
 
-### ErrorCodeEntry
+### ErrorMetadata
 
 Complete metadata for a single error code mapping.
 
 ```typescript
-export interface ErrorCodeEntry {
-  /** 5-digit numeric code (10000-99999) */
-  numericCode: number;
-
-  /** Category derived from first two digits */
+export interface ErrorMetadata {
+  /** Category prefix (10 - 99) */
   category: ErrorCategory;
 
-  /** User-friendly message template. {{message}} and {{errorId}} are placeholders */
+  /** Specific code within category (100 - 999) */
+  specificCode: number;
+
+  /** i18n translation key for user-friendly message */
   userMessage: string;
 }
 ```
 
-### ErrorCodeRegistry
+### STATUS_METADATA
 
 The complete mapping from string codes to numeric codes.
 
 ```typescript
-export type ErrorCodeRegistry = ReadonlyMap<AlkemioErrorStatus, ErrorCodeEntry>;
+const STATUS_METADATA: Record<AlkemioErrorStatus, ErrorMetadata>;
 ```
 
 ---
@@ -59,25 +59,25 @@ export type ErrorCodeRegistry = ReadonlyMap<AlkemioErrorStatus, ErrorCodeEntry>;
 ┌─────────────────────────────────────────────────────────────────────┐
 │                        AlkemioErrorStatus                           │
 │                    (existing enum - unchanged)                      │
-│                        72 string values                             │
+│                        71 string values                             │
 └───────────────────────────────┬─────────────────────────────────────┘
                                 │
                                 │ 1:1 mapping
                                 ▼
 ┌─────────────────────────────────────────────────────────────────────┐
-│                       ERROR_CODE_REGISTRY                           │
-│                    Map<AlkemioErrorStatus, ErrorCodeEntry>          │
-│                          72 entries                                 │
+│                         STATUS_METADATA                             │
+│                    Record<AlkemioErrorStatus, ErrorMetadata>        │
+│                          71 entries                                 │
 └───────────────────────────────┬─────────────────────────────────────┘
                                 │
                                 │ lookup
                                 ▼
 ┌─────────────────────────────────────────────────────────────────────┐
-│                         ErrorCodeEntry                              │
-│  ┌─────────────┬──────────────┬─────────────────┐                  │
-│  │ numericCode │   category   │   userMessage   │                  │
-│  │   number    │ ErrorCategory│     string      │                  │
-│  └─────────────┴──────────────┴─────────────────┘                  │
+│                         ErrorMetadata                               │
+│  ┌──────────────┬──────────────┬─────────────────┐                 │
+│  │   category   │ specificCode │   userMessage   │                 │
+│  │ ErrorCategory│    number    │  string (i18n)  │                 │
+│  └──────────────┴──────────────┴─────────────────┘                 │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -85,29 +85,29 @@ export type ErrorCodeRegistry = ReadonlyMap<AlkemioErrorStatus, ErrorCodeEntry>;
 
 ## Validation Rules
 
-| Field       | Rule                                 | Example                  |
-| ----------- | ------------------------------------ | ------------------------ |
-| numericCode | Must be 5 digits: 10000 ≤ x ≤ 99999  | 10101, 20104, 99999      |
-| numericCode | First two digits must match category | 10 for NOT_FOUND         |
-| numericCode | Must be unique across all entries    | No duplicates            |
-| userMessage | May contain {{message}} placeholder  | "{{message}}"            |
-| userMessage | May contain {{errorId}} placeholder  | "Reference: {{errorId}}" |
+| Field        | Rule                                       | Example                      |
+| ------------ | ------------------------------------------ | ---------------------------- |
+| category     | Must be valid ErrorCategory enum value     | 10, 11, 12, 13, 14, 99       |
+| specificCode | Must be 100-999                            | 101, 102, 999                |
+| numericCode  | Computed: category * 1000 + specificCode   | 10101, 11104, 99999          |
+| numericCode  | Must be unique across all entries          | No duplicates                |
+| userMessage  | Must be i18n key (no dynamic data)         | "userMessages.notFound.entity"|
 
 ---
 
 ## Code Capacity by Category
 
-| Category      | First 2 Digits | Capacity                                                     | Allocated  |
-| ------------- | -------------- | ------------------------------------------------------------ | ---------- |
-| NOT_FOUND     | 10             | 1,000                                                        | 10         |
-| AUTHORIZATION | 20             | 1,000                                                        | 15         |
-| VALIDATION    | 30             | 1,000                                                        | 14         |
-| OPERATIONS    | 40             | 1,000                                                        | 12         |
-| SYSTEM        | 50             | 1,000                                                        | 19         |
-| FALLBACK      | 99             | 1,000                                                        | 1          |
-| **Total**     | -              | **6,000** (used) / **90,000** (available with 90 categories) | **71 + 1** |
+| Category      | First 2 Digits | Capacity | Allocated |
+| ------------- | -------------- | -------- | --------- |
+| NOT_FOUND     | 10             | 1,000    | 10        |
+| AUTHORIZATION | 11             | 1,000    | 16        |
+| VALIDATION    | 12             | 1,000    | 13        |
+| OPERATIONS    | 13             | 1,000    | 13        |
+| SYSTEM        | 14             | 1,000    | 18        |
+| FALLBACK      | 99             | 1,000    | 1         |
+| **Total**     | -              | 6,000    | **71**    |
 
-Note: First two digits = category (10-99). Last three digits = specific code (000-999).
+Note: First two digits = category (10-14, 99). Last three digits = specific code (100-999).
 
 ---
 
@@ -121,7 +121,7 @@ N/A - Error codes are immutable compile-time constants. No state transitions.
 
 ### BaseException (Modified)
 
-The `BaseException` class will call `getNumericCode()` during construction to populate the `numericCode` field in GraphQL extensions.
+The `BaseException` class will call `getMetadataForStatus()` and `computeNumericCode()` during construction to populate the `numericCode` and `userMessage` fields in GraphQL extensions.
 
 ```typescript
 // Before
@@ -132,9 +132,12 @@ extensions: {
 }
 
 // After
+const metadata = getMetadataForStatus(code);
+const numericCode = computeNumericCode(metadata);
 extensions: {
   code: String(code),
-  numericCode: getNumericCode(code),  // NEW
+  numericCode,                   // NEW
+  userMessage: metadata.userMessage,  // NEW - i18n key
   errorId,
   details,
 }

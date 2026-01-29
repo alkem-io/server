@@ -4,7 +4,7 @@
 **Prerequisites**: plan.md, spec.md, research.md, data-model.md
 **Branch**: `001-error-codes`
 
-**Tests**: Not explicitly requested in specification - test tasks not included.
+**Tests**: Test tasks are included where specified (T010-T013, T016-T018, T023-T024, T026-T027).
 
 **Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
 
@@ -29,7 +29,7 @@ Repository root structure:
 **Purpose**: Create foundational error code infrastructure that all user stories depend on
 
 - [x] T001 Create ErrorCategory enum in src/common/enums/error.category.ts
-- [x] T002 [P] Create ErrorCodeEntry interface in src/common/exceptions/error.code.registry.ts
+- [x] T002 [P] Create ErrorMetadata interface in src/common/exceptions/error.status.metadata.ts
 - [x] T003 [P] Export ErrorCategory from src/common/enums/index.ts
 
 ---
@@ -38,12 +38,12 @@ Repository root structure:
 
 **Purpose**: Complete error code registry mapping - MUST be complete before ANY user story implementation
 
-**⚠️ CRITICAL**: All 72 AlkemioErrorStatus values must be mapped before user stories can deliver value
+**⚠️ CRITICAL**: All 71 AlkemioErrorStatus values must be mapped before user stories can deliver value
 
-- [x] T004 Implement ERROR_CODE_REGISTRY Map in src/common/exceptions/error.code.registry.ts with all 72 error code mappings from research.md
-- [x] T005 Implement getNumericCode() function with fallback to 99999 in src/common/exceptions/error.code.registry.ts
-- [x] T006 Implement getErrorCodeEntry() helper function in src/common/exceptions/error.code.registry.ts
-- [x] T007 Implement validateRegistryCompleteness() validation function in src/common/exceptions/error.code.registry.ts
+- [x] T004 Implement ERROR_CODE_REGISTRY Map in src/common/exceptions/error.status.metadata.ts with all 71 error code mappings from research.md
+- [x] T005 Implement computeNumericCode() function and FALLBACK_METADATA in src/common/exceptions/error.status.metadata.ts
+- [x] T006 Implement getMetadataForStatus() helper function in src/common/exceptions/error.status.metadata.ts
+- [x] T007 Implement validateRegistryCompleteness() validation function in src/common/exceptions/error.status.metadata.ts
 
 **Checkpoint**: Error code registry complete with all mappings - user story implementation can now begin
 
@@ -57,10 +57,10 @@ Repository root structure:
 
 ### Implementation for User Story 1
 
-- [x] T008 [US1] Modify BaseException constructor to call getNumericCode() and add numericCode to extensions in src/common/exceptions/base.exception.ts
+- [x] T008 [US1] Modify BaseException constructor to call getMetadataForStatus()/computeNumericCode() and add numericCode/userMessage to extensions in src/common/exceptions/base.exception.ts
 - [x] T009 [P] [US1] Modify BaseHttpException constructor to add numericCode to extensions in src/common/exceptions/http/base.http.exception.ts
-- [x] T010 [US1] Add unit test verifying ENTITY_NOT_FOUND returns numericCode 10101 in src/common/exceptions/error.code.registry.spec.ts
-- [x] T011 [US1] Add unit test verifying FORBIDDEN_POLICY returns numericCode 20104 in src/common/exceptions/error.code.registry.spec.ts
+- [x] T010 [US1] Add unit test verifying ENTITY_NOT_FOUND returns numericCode 10101 in src/common/exceptions/error.status.metadata.spec.ts
+- [x] T011 [US1] Add unit test verifying FORBIDDEN_POLICY returns numericCode 11104 in src/common/exceptions/error.status.metadata.spec.ts
 
 **Checkpoint**: All errors now return numeric codes in GraphQL responses - users can reference codes for support
 
@@ -70,14 +70,14 @@ Repository root structure:
 
 **Goal**: Support teams can identify error category from first two digits of error code for fast triage
 
-**Independent Test**: Examine multiple error codes across categories (10101, 20104, 30101, 40102, 50110) and verify first two digits match category (10=NotFound, 20=Auth, 30=Validation, 40=Operations, 50=System)
+**Independent Test**: Examine multiple error codes across categories (10101, 11104, 12101, 13109, 14101) and verify first two digits match category (10=NotFound, 11=Auth, 12=Validation, 13=Operations, 14=System)
 
 ### Implementation for User Story 2
 
-- [x] T012 [P] [US2] Add unit test validating all codes have first two digits matching category in src/common/exceptions/error.code.registry.spec.ts
-- [x] T013 [P] [US2] Add unit test verifying all codes are in valid range 10000-99999 in src/common/exceptions/error.code.registry.spec.ts
+- [x] T012 [P] [US2] Add unit test validating all codes have first two digits matching category in src/common/exceptions/error.status.metadata.spec.ts
+- [x] T013 [P] [US2] Add unit test verifying all codes are in valid range 10000-99999 in src/common/exceptions/error.status.metadata.spec.ts
 - [x] T014 [P] [US2] Create error code documentation in docs/error-codes.md with category explanations and complete mapping table
-- [x] T015 [US2] Add category examples to docs/error-codes.md showing 10xxx=NotFound, 20xxx=Authorization, 30xxx=Validation, 40xxx=Operations, 50xxx=System
+- [x] T015 [US2] Add category examples to docs/error-codes.md showing 10xxx=NotFound, 11xxx=Authorization, 12xxx=Validation, 13xxx=Operations, 14xxx=System
 
 **Checkpoint**: Error codes follow consistent categorization scheme - support can triage by first two digits
 
@@ -108,11 +108,11 @@ Repository root structure:
 
 ### Implementation for User Story 4
 
-- [x] T020 [P] [US4] Add logger initialization function setErrorCodeLogger() in src/common/exceptions/error.code.registry.ts
-- [x] T021 [P] [US4] Add warning log to getNumericCode() when unmapped status encountered in src/common/exceptions/error.code.registry.ts
+- [x] T020 [P] [US4] Add logger initialization function setErrorCodeLogger() in src/common/exceptions/error.status.metadata.ts
+- [x] T021 [P] [US4] Add warning log to getMetadataForStatus() when unmapped status encountered in src/common/exceptions/error.status.metadata.ts
 - [x] T022 [US4] Initialize error code logger in src/main.ts using setErrorCodeLogger()
-- [x] T023 [US4] Add unit test verifying fallback code 99999 returned for unknown status in src/common/exceptions/error.code.registry.spec.ts
-- [x] T024 [US4] Add unit test verifying warning logged when fallback used in src/common/exceptions/error.code.registry.spec.ts
+- [x] T023 [US4] Add unit test verifying fallback code 99999 returned for unknown status in src/common/exceptions/error.status.metadata.spec.ts
+- [x] T024 [US4] Add unit test verifying warning logged when fallback used in src/common/exceptions/error.status.metadata.spec.ts
 - [x] T025 [US4] Document fallback behavior and logging in docs/error-codes.md
 
 **Checkpoint**: All errors traceable - unmapped errors return fallback code with warning for developer awareness
@@ -123,8 +123,8 @@ Repository root structure:
 
 **Purpose**: Validation, documentation, and quality improvements across all user stories
 
-- [x] T026 [P] Add unit test verifying all 72 AlkemioErrorStatus values are mapped (no gaps) in src/common/exceptions/error.code.registry.spec.ts
-- [x] T027 [P] Add unit test verifying all numeric codes are unique (no duplicates) in src/common/exceptions/error.code.registry.spec.ts
+- [x] T026 [P] Add unit test verifying all 71 AlkemioErrorStatus values are mapped (no gaps) in src/common/exceptions/error.status.metadata.spec.ts
+- [x] T027 [P] Add unit test verifying all numeric codes are unique (no duplicates) in src/common/exceptions/error.status.metadata.spec.ts
 - [x] T028 [P] Update docs/error-codes.md with suggested resolution steps for each category
 - [x] T029 [P] Add examples to docs/error-codes.md showing how frontend can use numeric codes
 - [x] T030 Run pnpm lint to verify TypeScript compilation and ESLint rules pass
@@ -186,7 +186,7 @@ Task: "Create error code documentation in docs/error-codes.md with category expl
 ### MVP First (User Stories 1 & 2 Only)
 
 1. Complete Phase 1: Setup
-2. Complete Phase 2: Foundational (CRITICAL - all 72 codes mapped)
+2. Complete Phase 2: Foundational (CRITICAL - all 71 codes mapped)
 3. Complete Phase 3: User Story 1 (numeric codes in responses)
 4. Complete Phase 4: User Story 2 (category validation + docs)
 5. **STOP and VALIDATE**: Test errors return numeric codes, verify categorization
@@ -220,7 +220,7 @@ With multiple developers:
 - [P] tasks = different files, no dependencies
 - [Story] label maps task to specific user story for traceability
 - Each user story should be independently completable and testable
-- Phase 2 (Foundational) is critical - all 72 error codes must be mapped before user stories deliver value
+- Phase 2 (Foundational) is critical - all 71 error codes must be mapped before user stories deliver value
 - Zero breaking changes required - existing `code` field remains unchanged
 - Numeric codes are compile-time constants - no database changes
 - Commit after each task or logical group
