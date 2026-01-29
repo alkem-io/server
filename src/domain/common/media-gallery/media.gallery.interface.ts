@@ -10,10 +10,10 @@ export class IMediaGallery extends IAuthorizable {
   createdBy?: string;
 
   @Field(() => [IVisual], {
-    nullable: true,
+    nullable: false,
     description: 'The visuals contained in this media gallery.',
   })
-  visuals?: IVisual[];
+  visuals!: IVisual[];
 
   @Field(() => IStorageBucket, {
     nullable: true,
