@@ -9,7 +9,6 @@ import { DEFAULT_VISUAL_CONSTRAINTS } from '@domain/common/visual/visual.constra
 import { Visual } from '@domain/common/visual/visual.entity';
 import { VisualService } from '@domain/common/visual/visual.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { StorageBucket } from '@domain/storage/storage-bucket/storage.bucket.entity';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -82,7 +81,7 @@ export class MediaGalleryService {
     };
 
     const visual = await this.visualService.createVisual(visualInput);
-    await this.visualService.saveVisual(visual);
+    await this.saveVisual(visual);
 
     if (!mediaGallery.visuals) {
       mediaGallery.visuals = [];
@@ -90,6 +89,10 @@ export class MediaGalleryService {
 
     mediaGallery.visuals.push(visual as Visual);
     return visual;
+  }
+
+  public async saveVisual(visual: IVisual): Promise<IVisual> {
+    return this.visualService.saveVisual(visual);
   }
 
   public async deleteVisualFromMediaGallery(

@@ -1,4 +1,5 @@
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
+import { VisualType } from '@common/enums/visual.type';
 import { CreateLinkInput } from '@domain/collaboration/link/dto/link.dto.create';
 import { CreateMemoInput } from '@domain/common/memo/types';
 import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
@@ -44,4 +45,14 @@ export class CreateCalloutFramingInput {
   @Field(() => [String], { nullable: true })
   @IsOptional()
   tags?: string[];
+
+  // Don't expose in the GraphQL schema
+  // Used to create associated MediaGallery and Visuals from templates, but it's not sendable from the clients
+  // Clients add and remove visuals through separate mutations after creation
+  mediaGallery?: {
+    visuals?: {
+      name: VisualType;
+      uri: string;
+    }[];
+  };
 }

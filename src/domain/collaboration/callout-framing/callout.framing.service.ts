@@ -19,9 +19,11 @@ import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { CreateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.create';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
+import { IVisual } from '@domain/common/visual';
 import { CreateWhiteboardInput } from '@domain/common/whiteboard/types';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
+import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -38,6 +40,7 @@ export class CalloutFramingService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileService: ProfileService,
+    private profileDocumentsService: ProfileDocumentsService,
     private whiteboardService: WhiteboardService,
     private linkService: LinkService,
     private memoService: MemoService,
@@ -133,6 +136,7 @@ export class CalloutFramingService {
     if (calloutFraming.type === CalloutFramingType.MEDIA_GALLERY) {
       await this.createNewMediaGalleryInCalloutFraming(
         calloutFraming,
+        calloutFramingData.mediaGallery?.visuals,
         storageAggregator,
         userID
       );
@@ -196,6 +200,9 @@ export class CalloutFramingService {
 
   private async createNewMediaGalleryInCalloutFraming(
     calloutFraming: ICalloutFraming,
+    visuals:
+      | { name: VisualType; uri: string; sortOrder?: number }[]
+      | undefined,
     storageAggregator: IStorageAggregator,
     userID?: string
   ) {
@@ -204,6 +211,29 @@ export class CalloutFramingService {
         storageAggregator,
         userID
       );
+    if (
+      visuals &&
+      visuals.length > 0 &&
+      calloutFraming.mediaGallery.storageBucket
+    ) {
+      for (const visualData of visuals) {
+        const newUrl =
+          await this.profileDocumentsService.reuploadFileOnStorageBucket(
+            visualData.uri,
+            calloutFraming.mediaGallery.storageBucket
+          );
+        if (newUrl) {
+          const visual = await this.mediaGalleryService.addVisualToMediaGallery(
+            calloutFraming.mediaGallery.id,
+            visualData.name,
+            visualData.sortOrder
+          );
+          visual.uri = newUrl;
+          calloutFraming.mediaGallery.visuals.push(visual);
+          await this.mediaGalleryService.saveVisual(visual);
+        }
+      }
+    }
   }
 
   private async deleteInconsistentFramingContent(
@@ -372,6 +402,7 @@ export class CalloutFramingService {
         if (!calloutFraming.mediaGallery) {
           await this.createNewMediaGalleryInCalloutFraming(
             calloutFraming,
+            [],
             storageAggregator,
             userID
           );

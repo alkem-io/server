@@ -1,3 +1,4 @@
+import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { LogContext } from '@common/enums/logging.context';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
@@ -45,6 +46,9 @@ export class CalloutFramingAuthorizationService {
             },
             mediaGallery: {
               authorization: true,
+              storageBucket: {
+                authorization: true,
+              },
             },
           },
           select: {
@@ -62,6 +66,7 @@ export class CalloutFramingAuthorizationService {
             },
             mediaGallery: {
               id: true,
+              storageBucket: { id: true },
             },
           },
         }
@@ -108,7 +113,10 @@ export class CalloutFramingAuthorizationService {
       updatedAuthorizations.push(...memoAuthorizations);
     }
 
-    if (calloutFraming.mediaGallery) {
+    if (
+      calloutFraming.type === CalloutFramingType.MEDIA_GALLERY &&
+      calloutFraming.mediaGallery
+    ) {
       const mediaGalleryAuthorizations =
         await this.mediaGalleryAuthorizationService.applyAuthorizationPolicy(
           calloutFraming.mediaGallery.id,

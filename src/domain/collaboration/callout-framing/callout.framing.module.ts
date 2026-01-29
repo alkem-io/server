@@ -6,6 +6,7 @@ import { MemoModule } from '@domain/common/memo';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { WhiteboardModule } from '@domain/common/whiteboard';
+import { ProfileDocumentsModule } from '@domain/profile-documents/profile.documents.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
@@ -19,6 +20,7 @@ import { CalloutFramingAuthorizationService } from './callout.framing.service.au
     AuthorizationModule,
     AuthorizationPolicyModule,
     ProfileModule,
+    ProfileDocumentsModule,
     TagsetModule,
     WhiteboardModule,
     LinkModule,
