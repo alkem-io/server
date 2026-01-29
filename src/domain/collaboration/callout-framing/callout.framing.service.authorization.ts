@@ -113,16 +113,15 @@ export class CalloutFramingAuthorizationService {
       updatedAuthorizations.push(...memoAuthorizations);
     }
 
-    if (
-      calloutFraming.type === CalloutFramingType.MEDIA_GALLERY &&
-      calloutFraming.mediaGallery
-    ) {
-      const mediaGalleryAuthorizations =
-        await this.mediaGalleryAuthorizationService.applyAuthorizationPolicy(
-          calloutFraming.mediaGallery.id,
-          calloutFraming.authorization
-        );
-      updatedAuthorizations.push(...mediaGalleryAuthorizations);
+    if (calloutFraming.type === CalloutFramingType.MEDIA_GALLERY) {
+      if (calloutFraming.mediaGallery) {
+        const mediaGalleryAuthorizations =
+          await this.mediaGalleryAuthorizationService.applyAuthorizationPolicy(
+            calloutFraming.mediaGallery.id,
+            calloutFraming.authorization
+          );
+        updatedAuthorizations.push(...mediaGalleryAuthorizations);
+      }
     }
 
     return updatedAuthorizations;
