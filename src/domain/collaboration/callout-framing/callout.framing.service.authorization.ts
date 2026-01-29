@@ -53,6 +53,7 @@ export class CalloutFramingAuthorizationService {
           },
           select: {
             id: true,
+            type: true,
             authorization:
               this.authorizationPolicyService.authorizationSelectOptions,
             profile: {

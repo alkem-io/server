@@ -136,7 +136,7 @@ export class CalloutFramingService {
     if (calloutFraming.type === CalloutFramingType.MEDIA_GALLERY) {
       await this.createNewMediaGalleryInCalloutFraming(
         calloutFraming,
-        [], //!! calloutFramingData.mediaGallery?.visuals,
+        calloutFramingData.mediaGallery?.visuals,
         storageAggregator,
         userID
       );

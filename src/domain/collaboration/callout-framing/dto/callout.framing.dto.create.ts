@@ -49,11 +49,10 @@ export class CreateCalloutFramingInput {
   // Don't expose in the GraphQL schema
   // Used to create associated MediaGallery and Visuals from templates, but it's not sendable from the clients
   // Clients add and remove visuals through separate mutations after creation
-  /* //!! mediaGallery?: {
+  mediaGallery?: {
     visuals?: {
       name: VisualType;
       uri: string;
     }[];
   };
-  */
 }
