@@ -1,4 +1,3 @@
-import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { LogContext } from '@common/enums/logging.context';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
@@ -35,25 +34,15 @@ export class CalloutFramingAuthorizationService {
           loadEagerRelations: false,
           relations: {
             authorization: true,
-            profile: {
-              authorization: true,
-            },
-            whiteboard: {
-              authorization: true,
-            },
-            memo: {
-              authorization: true,
-            },
+            profile: true,
+            whiteboard: true,
+            memo: true,
             mediaGallery: {
-              authorization: true,
-              storageBucket: {
-                authorization: true,
-              },
+              storageBucket: true,
             },
           },
           select: {
             id: true,
-            type: true,
             authorization:
               this.authorizationPolicyService.authorizationSelectOptions,
             profile: {
