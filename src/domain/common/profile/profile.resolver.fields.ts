@@ -1,4 +1,3 @@
-import { Profiling } from '@common/decorators';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { IVisual } from '@domain/common/visual/visual.interface';
 import { IReference } from '@domain/common/reference/reference.interface';
@@ -22,14 +21,12 @@ import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.in
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TagsetType } from '@common/enums/tagset.type';
 import { ProfileStorageBucketLoaderCreator } from '@core/dataloader/creators/loader.creators/profile/profile.storage.bucket.loader.creator';
-import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator';
 
 @Resolver(() => IProfile)
 export class ProfileResolverFields {
   constructor(
     private profileService: ProfileService,
-    private authorizationService: AuthorizationService,
     private urlGeneratorService: UrlGeneratorService
   ) {}
 
@@ -37,12 +34,14 @@ export class ProfileResolverFields {
     nullable: true,
     description: 'A particular type of visual for this Profile.',
   })
-  @Profiling.api
   async visual(
     @Parent() profile: IProfile,
-    @Args('type', { type: () => VisualType }) type: VisualType
+    @Args('type', { type: () => VisualType }) type: VisualType,
+    @Loader(VisualLoaderCreator, { parentClassRef: Profile })
+    loader: ILoader<IVisual[]>
   ): Promise<IVisual | undefined> {
-    return this.profileService.getVisual(profile, type);
+    const visuals = await loader.load(profile.id);
+    return visuals.find(v => v.name === type);
   }
 
   @ResolveField('visuals', () => [IVisual], {
