@@ -320,8 +320,10 @@ export class ConversationService {
   }
 
   /**
-   * Get all members of a conversation via the pivot table.   * Performance: Queries are limited to 2 members per conversation by domain constraint.
-   * Consider DataLoader batching for GraphQL resolvers when querying multiple conversations.   * @param conversationId - UUID of the conversation
+   * Get all members of a conversation via the pivot table.
+   * Performance: Queries are limited to 2 members per conversation by domain constraint.
+   * Consider DataLoader batching for GraphQL resolvers when querying multiple conversations.
+   * @param conversationId - UUID of the conversation
    * @returns Array of conversation memberships with agent relationships loaded
    */
   async getConversationMembers(
