@@ -397,6 +397,7 @@ export class MessagingService {
       // Eager-load room — the query already joins conversations,
       // just add the room relation to eliminate N queries
       .leftJoinAndSelect('conversation.room', 'room')
+      .leftJoinAndSelect('room.authorization', 'roomAuthorization')
       .where('membership.agentId = :agentId', { agentId })
       .andWhere('conversation.messagingId = :messagingId', { messagingId });
 
