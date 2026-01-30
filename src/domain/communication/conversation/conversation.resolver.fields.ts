@@ -1,10 +1,5 @@
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { LoggerService } from '@nestjs/common';
-import { Inject, UseGuards } from '@nestjs/common/decorators';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { AuthorizationAgentPrivilege, CurrentUser } from '@common/decorators';
-import { AuthorizationPrivilege } from '@common/enums';
-import { GraphqlGuard } from '@core/authorization';
+import { CurrentUser } from '@common/decorators';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { ConversationService } from './conversation.service';
 import { IConversation } from './conversation.interface';
@@ -24,14 +19,8 @@ import { IContributor } from '@domain/community/contributor/contributor.interfac
 
 @Resolver(() => IConversation)
 export class ConversationResolverFields {
-  constructor(
-    @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService,
-    private readonly conversationService: ConversationService
-  ) {}
+  constructor(private readonly conversationService: ConversationService) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
   @ResolveField('room', () => IRoom, {
     nullable: true,
     description: 'The room for this Conversation.',
@@ -46,8 +35,6 @@ export class ConversationResolverFields {
     return await this.conversationService.getRoom(conversation.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
   @ResolveField('type', () => CommunicationConversationType, {
     nullable: false,
     description:
@@ -63,8 +50,6 @@ export class ConversationResolverFields {
     return this.conversationService.inferConversationType(memberships);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
   @ResolveField('user', () => IUser, {
     nullable: true,
     description:
@@ -101,8 +86,6 @@ export class ConversationResolverFields {
     return contributor as IUser | null;
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
   @ResolveField('virtualContributor', () => IVirtualContributor, {
     nullable: true,
     description:
