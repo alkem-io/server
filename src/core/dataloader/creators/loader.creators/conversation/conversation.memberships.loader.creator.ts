@@ -33,8 +33,17 @@ export class ConversationMembershipsLoaderCreator
     }
 
     const memberships = await this.manager.find(ConversationMembership, {
+      loadEagerRelations: false,
       where: { conversationId: In([...conversationIds]) },
       relations: { agent: true },
+      select: {
+        conversationId: true,
+        agentId: true,
+        agent: {
+          id: true,
+          type: true,
+        },
+      },
     });
 
     // Group by conversation ID for O(1) lookup

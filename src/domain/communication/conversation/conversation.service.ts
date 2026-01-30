@@ -329,10 +329,17 @@ export class ConversationService {
   async getConversationMembers(
     conversationId: string
   ): Promise<IConversationMembership[]> {
-    return await this.conversationMembershipRepository.find({
+    return this.conversationMembershipRepository.find({
+      loadEagerRelations: false,
       where: { conversationId },
-      relations: {
-        agent: true,
+      relations: { agent: true },
+      select: {
+        conversationId: true,
+        agentId: true,
+        agent: {
+          id: true,
+          type: true,
+        },
       },
     });
   }
