@@ -264,7 +264,7 @@ export class KratosService {
     email: string
   ): Promise<Identity | undefined> {
     const { data: identity } = await this.kratosIdentityClient.listIdentities({
-      credentialsIdentifier: email,
+      credentialsIdentifier: email.toLowerCase(),
       includeCredential: ['password', 'oidc'],
     });
     if (!identity || identity.length === 0) {
