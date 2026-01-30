@@ -434,8 +434,8 @@ export class UserService {
         `User profile with the specified email (${userData.email}) already exists`,
         LogContext.COMMUNITY
       );
-    // Trim values to remove space issues
-    userData.email = userData.email.trim();
+    // Normalize email: trim whitespace and lowercase for case-insensitive matching
+    userData.email = userData.email.trim().toLowerCase();
     return true;
   }
 
@@ -553,7 +553,7 @@ export class UserService {
     }
 
     return this.userRepository.findOne({
-      where: { email: email },
+      where: { email: email.toLowerCase() },
       ...options,
     });
   }
@@ -745,18 +745,18 @@ export class UserService {
     }
 
     if (updateData.email) {
-      if (updateData.email !== user.email) {
-        const userCheck = await this.userLookupService.isRegisteredUser(
-          updateData.email
-        );
+      const normalizedEmail = updateData.email.trim().toLowerCase();
+      if (normalizedEmail !== user.email) {
+        const userCheck =
+          await this.userLookupService.isRegisteredUser(normalizedEmail);
         if (userCheck) {
           throw new ValidationException(
-            `User profile with the specified email (${updateData.email}) already exists`,
+            `User profile with the specified email (${normalizedEmail}) already exists`,
             LogContext.COMMUNITY
           );
         }
 
-        user.email = updateData.email;
+        user.email = normalizedEmail;
       }
     }
 
