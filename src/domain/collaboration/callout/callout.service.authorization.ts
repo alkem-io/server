@@ -18,6 +18,7 @@ import {
   POLICY_RULE_CALLOUT_CREATE,
   POLICY_RULE_CALLOUT_CONTRIBUTE,
 } from '@common/constants';
+import { ClassificationAuthorizationService } from '@domain/common/classification/classification.service.authorization';
 import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
 import { CalloutFramingAuthorizationService } from '../callout-framing/callout.framing.service.authorization';
 import { CalloutContributionAuthorizationService } from '../callout-contribution/callout.contribution.service.authorization';
@@ -34,6 +35,7 @@ export class CalloutAuthorizationService {
   constructor(
     private calloutService: CalloutService,
     private authorizationPolicyService: AuthorizationPolicyService,
+    private classificationAuthorizationService: ClassificationAuthorizationService,
     private contributionAuthorizationService: CalloutContributionAuthorizationService,
     private calloutFramingAuthorizationService: CalloutFramingAuthorizationService,
     private roomAuthorizationService: RoomAuthorizationService,
@@ -53,6 +55,7 @@ export class CalloutAuthorizationService {
         comments: true,
         contributions: true,
         contributionDefaults: true,
+        classification: true,
         calloutsSet: {
           collaboration: {
             space: {
@@ -146,6 +149,15 @@ export class CalloutAuthorizationService {
           commentsAuthorization
         );
       updatedAuthorizations.push(commentsAuthorization);
+    }
+
+    if (callout.classification) {
+      const classificationAuthorizations =
+        await this.classificationAuthorizationService.applyAuthorizationPolicy(
+          callout.classification.id,
+          callout.authorization
+        );
+      updatedAuthorizations.push(...classificationAuthorizations);
     }
 
     return updatedAuthorizations;
