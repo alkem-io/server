@@ -9,19 +9,25 @@ import { IRoom } from '@domain/communication/room/room.interface';
 import { ConversationService } from './conversation.service';
 import { IConversation } from './conversation.interface';
 import { IUser } from '@domain/community/user/user.interface';
-import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
 import { AgentType } from '@common/enums/agent.type';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import {
+  ContributorByAgentIdLoaderCreator,
+  ConversationMembershipsLoaderCreator,
+} from '@core/dataloader/creators/loader.creators';
+import { Loader } from '@core/dataloader/decorators/data.loader.decorator';
+import { ILoader } from '@core/dataloader/loader.interface';
+import { IConversationMembership } from '@domain/communication/conversation-membership/conversation.membership.interface';
+import { IContributor } from '@domain/community/contributor/contributor.interface';
 
 @Resolver(() => IConversation)
 export class ConversationResolverFields {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private readonly conversationService: ConversationService,
-    private readonly virtualContributorLookupService: VirtualContributorLookupService
+    private readonly conversationService: ConversationService
   ) {}
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -33,6 +39,10 @@ export class ConversationResolverFields {
   async room(
     @Parent() conversation: IConversation
   ): Promise<IRoom | undefined> {
+    // Use eager-loaded room if available
+    if (conversation.room !== undefined) {
+      return conversation.room;
+    }
     return await this.conversationService.getRoom(conversation.id);
   }
 
@@ -44,11 +54,13 @@ export class ConversationResolverFields {
       'The type of this Conversation (USER_USER or USER_VC), inferred from member agent types.',
   })
   async type(
-    @Parent() conversation: IConversation
+    @Parent() conversation: IConversation,
+    @Loader(ConversationMembershipsLoaderCreator)
+    convoMembershipsLoader: ILoader<IConversationMembership[]>
   ): Promise<CommunicationConversationType> {
-    return await this.conversationService.inferConversationType(
-      conversation.id
-    );
+    const memberships = await convoMembershipsLoader.load(conversation.id);
+
+    return this.conversationService.inferConversationType(memberships);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -60,17 +72,33 @@ export class ConversationResolverFields {
   })
   async user(
     @Parent() conversation: IConversation,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentUser() agentInfo: AgentInfo,
+    @Loader(ConversationMembershipsLoaderCreator)
+    convoMembershipsLoader: ILoader<IConversationMembership[]>,
+    @Loader(ContributorByAgentIdLoaderCreator, { resolveToNull: true })
+    contributorByAgentLoader: ILoader<IContributor | null>
   ): Promise<IUser | null> {
     // Check for pre-resolved value (used in subscription events for personalized delivery)
     if (conversation._resolvedUser !== undefined) {
       return conversation._resolvedUser;
     }
 
-    return await this.conversationService.getUserFromConversation(
-      conversation.id,
-      agentInfo.agentID
+    const memberships = await convoMembershipsLoader.load(conversation.id);
+
+    // Find a user member, excluding the current user's agent
+    const userMembership = memberships.find(
+      m => m.agent?.type === AgentType.USER && m.agentId !== agentInfo.agentID
     );
+
+    if (!userMembership) {
+      return null;
+    }
+
+    // Use the contributor loader to batch load the user
+    const contributor = await contributorByAgentLoader.load(
+      userMembership.agentId
+    );
+    return contributor as IUser | null;
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -81,16 +109,18 @@ export class ConversationResolverFields {
       'The virtual contributor participating in this Conversation (only for USER_AGENT conversations).',
   })
   async virtualContributor(
-    @Parent() conversation: IConversation
+    @Parent() conversation: IConversation,
+    @Loader(ConversationMembershipsLoaderCreator)
+    convoMembershipsLoader: ILoader<IConversationMembership[]>,
+    @Loader(ContributorByAgentIdLoaderCreator, { resolveToNull: true })
+    contributorByAgentLoader: ILoader<IContributor | null>
   ): Promise<IVirtualContributor | null> {
     // Check for pre-resolved value (used in subscription events)
     if (conversation._resolvedVirtualContributor !== undefined) {
       return conversation._resolvedVirtualContributor;
     }
 
-    const memberships = await this.conversationService.getConversationMembers(
-      conversation.id
-    );
+    const memberships = await convoMembershipsLoader.load(conversation.id);
 
     // Find the virtual contributor agent among members
     const vcMembership = memberships.find(
@@ -101,8 +131,10 @@ export class ConversationResolverFields {
       return null;
     }
 
-    return await this.virtualContributorLookupService.getVirtualContributorByAgentId(
+    // Use the contributor loader to batch load the virtual contributor
+    const contributor = await contributorByAgentLoader.load(
       vcMembership.agentId
     );
+    return contributor as IVirtualContributor | null;
   }
 }

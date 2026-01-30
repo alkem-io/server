@@ -426,30 +426,28 @@ export class ConversationService {
    * without loading full user/virtualContributor entities. Agent type is eagerly loaded
    * by the memberships query, avoiding N+1 queries.
    * Enforces exactly at most 2 members per conversation (per spec clarification).
-   * @param conversationId - UUID of the conversation
    * @returns USER_USER if both are users, USER_VC if one is a VC
    * @throws ValidationException if conversation doesn't have exactly 2 members
+   * @param memberships
    */
   async inferConversationType(
-    conversationId: string
+    memberships: IConversationMembership[]
   ): Promise<CommunicationConversationType> {
-    const members = await this.getConversationMembers(conversationId);
-
-    if (members.length > 2) {
+    if (memberships.length > 2) {
       throw new ValidationException(
         'Conversation must have exactly 2 members',
         LogContext.COMMUNICATION,
         {
           details: {
-            conversationId,
-            memberCount: members.length,
+            conversationId: memberships[0]?.conversationId,
+            memberCount: memberships.length,
           },
         }
       );
     }
 
     // Check if any agent is a virtual contributor using agent.type field
-    const hasVC = members.some(
+    const hasVC = memberships.some(
       m => m.agent.type === AgentType.VIRTUAL_CONTRIBUTOR
     );
 

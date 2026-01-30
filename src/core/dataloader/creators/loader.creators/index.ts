@@ -25,6 +25,8 @@ export * from './collaboration/collaboration.callouts.set.loader.creator';
 export * from './collaboration/knowledge.base.callouts.set.loader.creator';
 export * from './collaboration/contributor.by.agent.id.loader.creator';
 
+export * from './conversation/conversation.memberships.loader.creator';
+
 export * from './space/space.collaboration.loader.creator';
 export * from './space/space.about.loader.creator';
 export * from './space/space.community.loader.creator';
