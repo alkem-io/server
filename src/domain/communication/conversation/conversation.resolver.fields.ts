@@ -46,6 +46,8 @@ export class ConversationResolverFields {
     return await this.conversationService.getRoom(conversation.id);
   }
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('type', () => CommunicationConversationType, {
     nullable: false,
     description:
@@ -53,9 +55,7 @@ export class ConversationResolverFields {
   })
   async type(
     @Parent() conversation: IConversation,
-    @Loader(ConversationMembershipsLoaderCreator, {
-      checkParentPrivilege: AuthorizationPrivilege.READ,
-    })
+    @Loader(ConversationMembershipsLoaderCreator)
     convoMembershipsLoader: ILoader<IConversationMembership[]>
   ): Promise<CommunicationConversationType> {
     const memberships = await convoMembershipsLoader.load(conversation.id);
@@ -63,6 +63,8 @@ export class ConversationResolverFields {
     return this.conversationService.inferConversationType(memberships);
   }
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('user', () => IUser, {
     nullable: true,
     description:
@@ -73,10 +75,7 @@ export class ConversationResolverFields {
     @CurrentUser() agentInfo: AgentInfo,
     @Loader(ConversationMembershipsLoaderCreator)
     convoMembershipsLoader: ILoader<IConversationMembership[]>,
-    @Loader(ContributorByAgentIdLoaderCreator, {
-      resolveToNull: true,
-      checkParentPrivilege: AuthorizationPrivilege.READ,
-    })
+    @Loader(ContributorByAgentIdLoaderCreator, { resolveToNull: true })
     contributorByAgentLoader: ILoader<IContributor | null>
   ): Promise<IUser | null> {
     // Check for pre-resolved value (used in subscription events for personalized delivery)
@@ -102,6 +101,8 @@ export class ConversationResolverFields {
     return contributor as IUser | null;
   }
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('virtualContributor', () => IVirtualContributor, {
     nullable: true,
     description:
@@ -111,10 +112,7 @@ export class ConversationResolverFields {
     @Parent() conversation: IConversation,
     @Loader(ConversationMembershipsLoaderCreator)
     convoMembershipsLoader: ILoader<IConversationMembership[]>,
-    @Loader(ContributorByAgentIdLoaderCreator, {
-      resolveToNull: true,
-      checkParentPrivilege: AuthorizationPrivilege.READ,
-    })
+    @Loader(ContributorByAgentIdLoaderCreator, { resolveToNull: true })
     contributorByAgentLoader: ILoader<IContributor | null>
   ): Promise<IVirtualContributor | null> {
     // Check for pre-resolved value (used in subscription events)

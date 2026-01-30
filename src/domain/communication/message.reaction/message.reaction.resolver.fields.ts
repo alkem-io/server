@@ -34,7 +34,7 @@ export class MessageReactionResolverFields {
     // Look up contributor by agent ID - reactions are only from users per schema
     const sender = await loader.load(messageReaction.sender);
 
-    if (!sender === null) {
+    if (sender === null) {
       this.logger?.warn(
         {
           message:
