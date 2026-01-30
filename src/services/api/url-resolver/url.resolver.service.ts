@@ -252,6 +252,8 @@ export class UrlResolverService {
         return await this.populateAdminResult(result, urlPath);
       case UrlPathBase.INNOVATION_HUBS:
         return await this.populateInnovationHubResult(result, urlPath);
+      case UrlPathBase.HUB:
+        return await this.populateHubResult(result, urlPath);
       case UrlPathBase.INNOVATION_LIBRARY:
         result.type = UrlType.INNOVATION_LIBRARY;
         return result;
@@ -460,6 +462,43 @@ export class UrlResolverService {
         {
           urlPath,
         }
+      );
+    }
+
+    const innovationHub =
+      await this.innovationHubService.getInnovationHubByNameIdOrFail(
+        innovationHubNameID
+      );
+    result.innovationHubId = innovationHub.id;
+
+    return result;
+  }
+
+  private async populateHubResult(
+    result: UrlResolverQueryResults,
+    urlPath: string
+  ): Promise<UrlResolverQueryResults> {
+    result.type = UrlType.INNOVATION_HUB;
+    const hubMatch = Utils.hubPathMatcher(urlPath);
+    if (!hubMatch || !hubMatch.params) {
+      throw new ValidationException('Invalid URL', LogContext.URL_RESOLVER, {
+        urlPath,
+      });
+    }
+    const params = hubMatch.params as {
+      innovationHubNameID?: string | string[];
+      path?: string | string[];
+    };
+
+    const innovationHubNameID = Utils.getMatchedResultAsString(
+      params.innovationHubNameID
+    );
+
+    if (!innovationHubNameID) {
+      throw new ValidationException(
+        'Unable to resolve innovation hub from URL',
+        LogContext.URL_RESOLVER,
+        { urlPath }
       );
     }
 
