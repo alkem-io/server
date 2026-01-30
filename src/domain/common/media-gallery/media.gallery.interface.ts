@@ -13,7 +13,7 @@ export class IMediaGallery extends IAuthorizable {
     nullable: false,
     description: 'The visuals contained in this media gallery.',
   })
-  visuals!: IVisual[];
+  visuals?: IVisual[];
 
   @Field(() => IStorageBucket, {
     nullable: true,

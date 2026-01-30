@@ -114,10 +114,6 @@ export class MediaGalleryService {
 
     await this.visualService.deleteVisual({ ID: visualId });
 
-    mediaGallery.visuals =
-      mediaGallery.visuals?.filter(v => v.id !== visualId) || [];
-    await this.mediaGalleryRepository.save(mediaGallery);
-
     return visual;
   }
 

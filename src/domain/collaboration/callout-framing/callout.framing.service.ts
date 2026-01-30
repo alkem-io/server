@@ -216,6 +216,9 @@ export class CalloutFramingService {
       visuals.length > 0 &&
       calloutFraming.mediaGallery.storageBucket
     ) {
+      if (!calloutFraming.mediaGallery.visuals) {
+        calloutFraming.mediaGallery.visuals = [];
+      }
       for (const visualData of visuals) {
         const newUrl =
           await this.profileDocumentsService.reuploadFileOnStorageBucket(

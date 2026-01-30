@@ -18,7 +18,7 @@ export class MediaGallery extends AuthorizableEntity implements IMediaGallery {
       cascade: true,
     }
   )
-  visuals!: Visual[];
+  visuals?: Visual[];
 
   @OneToOne(() => StorageBucket, {
     eager: false,
