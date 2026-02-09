@@ -5,6 +5,7 @@ export enum CalloutFramingType {
   WHITEBOARD = 'whiteboard',
   LINK = 'link',
   MEMO = 'memo',
+  MEDIA_GALLERY = 'media_gallery',
 }
 
 registerEnumType(CalloutFramingType, {

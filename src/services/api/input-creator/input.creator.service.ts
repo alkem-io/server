@@ -90,6 +90,9 @@ export class InputCreatorService {
           memo: {
             profile: true,
           },
+          mediaGallery: {
+            visuals: true,
+          },
         },
       },
     });
@@ -456,6 +459,14 @@ export class InputCreatorService {
         : undefined,
       memo: calloutFraming.memo
         ? this.buildCreateMemoInputFromMemo(calloutFraming.memo)
+        : undefined,
+      mediaGallery: calloutFraming.mediaGallery?.visuals
+        ? {
+            visuals: calloutFraming.mediaGallery.visuals.map(visual => ({
+              name: validateAndConvertVisualTypeName(visual.name),
+              uri: visual.uri,
+            })),
+          }
         : undefined,
     };
   }

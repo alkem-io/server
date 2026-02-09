@@ -40,4 +40,7 @@ export abstract class IVisual extends IAuthorizable {
 
   @Field(() => String, { nullable: true })
   alternativeText?: string;
+
+  @Field(() => Number, { nullable: true })
+  sortOrder?: number;
 }

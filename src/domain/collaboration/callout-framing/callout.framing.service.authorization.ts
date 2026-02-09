@@ -2,6 +2,7 @@ import { LogContext } from '@common/enums/logging.context';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { MediaGalleryAuthorizationService } from '@domain/common/media-gallery/media.gallery.service.authorization';
 import { MemoAuthorizationService } from '@domain/common/memo/memo.service.authorization';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { WhiteboardAuthorizationService } from '@domain/common/whiteboard/whiteboard.service.authorization';
@@ -17,7 +18,8 @@ export class CalloutFramingAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService,
     private whiteboardAuthorizationService: WhiteboardAuthorizationService,
-    private memoAuthorizationService: MemoAuthorizationService
+    private memoAuthorizationService: MemoAuthorizationService,
+    private mediaGalleryAuthorizationService: MediaGalleryAuthorizationService
   ) {}
 
   public async applyAuthorizationPolicy(
@@ -35,6 +37,9 @@ export class CalloutFramingAuthorizationService {
             profile: true,
             whiteboard: true,
             memo: true,
+            mediaGallery: {
+              storageBucket: true,
+            },
           },
           select: {
             id: true,
@@ -48,6 +53,10 @@ export class CalloutFramingAuthorizationService {
             },
             memo: {
               id: true,
+            },
+            mediaGallery: {
+              id: true,
+              storageBucket: { id: true },
             },
           },
         }
@@ -92,6 +101,15 @@ export class CalloutFramingAuthorizationService {
           calloutFraming.authorization
         );
       updatedAuthorizations.push(...memoAuthorizations);
+    }
+
+    if (calloutFraming.mediaGallery) {
+      const mediaGalleryAuthorizations =
+        await this.mediaGalleryAuthorizationService.applyAuthorizationPolicy(
+          calloutFraming.mediaGallery.id,
+          calloutFraming.authorization
+        );
+      updatedAuthorizations.push(...mediaGalleryAuthorizations);
     }
 
     return updatedAuthorizations;
