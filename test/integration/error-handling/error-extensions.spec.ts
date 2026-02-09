@@ -1,17 +1,17 @@
-import { vi, Mock } from 'vitest';
+import { AlkemioErrorStatus, LogContext } from '@common/enums';
+import { NotFoundHttpException } from '@common/exceptions/http';
+import { HttpExceptionFilter } from '@core/error-handling/http.exception.filter';
 import {
-  INestApplication,
-  LoggerService,
   Controller,
   Get,
   HttpStatus,
+  INestApplication,
+  LoggerService,
 } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import request from 'supertest';
-import { AlkemioErrorStatus, LogContext } from '@common/enums';
-import { HttpExceptionFilter } from '@core/error-handling/http.exception.filter';
-import { NotFoundHttpException } from '@common/exceptions/http';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import request from 'supertest';
+import { Mock, vi } from 'vitest';
 
 @Controller('test')
 class TestController {

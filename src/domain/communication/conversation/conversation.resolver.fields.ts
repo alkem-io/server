@@ -1,31 +1,26 @@
-import { AuthorizationAgentPrivilege, CurrentUser } from '@common/decorators';
-import { AuthorizationPrivilege } from '@common/enums';
+import { CurrentUser } from '@common/decorators';
 import { AgentType } from '@common/enums/agent.type';
 import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { GraphqlGuard } from '@core/authorization';
+import {
+  ContributorByAgentIdLoaderCreator,
+  ConversationMembershipsLoaderCreator,
+} from '@core/dataloader/creators/loader.creators';
+import { Loader } from '@core/dataloader/decorators/data.loader.decorator';
+import { ILoader } from '@core/dataloader/loader.interface';
+import { IConversationMembership } from '@domain/communication/conversation-membership/conversation.membership.interface';
 import { IRoom } from '@domain/communication/room/room.interface';
+import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { IUser } from '@domain/community/user/user.interface';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
-import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
-import { LoggerService } from '@nestjs/common';
-import { Inject, UseGuards } from '@nestjs/common/decorators';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IConversation } from './conversation.interface';
 import { ConversationService } from './conversation.service';
 
 @Resolver(() => IConversation)
 export class ConversationResolverFields {
-  constructor(
-    @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService,
-    private readonly conversationService: ConversationService,
-    private readonly virtualContributorLookupService: VirtualContributorLookupService
-  ) {}
+  constructor(private readonly conversationService: ConversationService) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
   @ResolveField('room', () => IRoom, {
     nullable: true,
     description: 'The room for this Conversation.',
@@ -33,26 +28,28 @@ export class ConversationResolverFields {
   async room(
     @Parent() conversation: IConversation
   ): Promise<IRoom | undefined> {
+    // Use eager-loaded room if available
+    if (conversation.room !== undefined) {
+      return conversation.room;
+    }
     return await this.conversationService.getRoom(conversation.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
   @ResolveField('type', () => CommunicationConversationType, {
     nullable: false,
     description:
       'The type of this Conversation (USER_USER or USER_VC), inferred from member agent types.',
   })
   async type(
-    @Parent() conversation: IConversation
+    @Parent() conversation: IConversation,
+    @Loader(ConversationMembershipsLoaderCreator)
+    convoMembershipsLoader: ILoader<IConversationMembership[]>
   ): Promise<CommunicationConversationType> {
-    return await this.conversationService.inferConversationType(
-      conversation.id
-    );
+    const memberships = await convoMembershipsLoader.load(conversation.id);
+
+    return this.conversationService.inferConversationType(memberships);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
   @ResolveField('user', () => IUser, {
     nullable: true,
     description:
@@ -60,37 +57,53 @@ export class ConversationResolverFields {
   })
   async user(
     @Parent() conversation: IConversation,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentUser() agentInfo: AgentInfo,
+    @Loader(ConversationMembershipsLoaderCreator)
+    convoMembershipsLoader: ILoader<IConversationMembership[]>,
+    @Loader(ContributorByAgentIdLoaderCreator, { resolveToNull: true })
+    contributorByAgentLoader: ILoader<IContributor | null>
   ): Promise<IUser | null> {
     // Check for pre-resolved value (used in subscription events for personalized delivery)
     if (conversation._resolvedUser !== undefined) {
       return conversation._resolvedUser;
     }
 
-    return await this.conversationService.getUserFromConversation(
-      conversation.id,
-      agentInfo.agentID
+    const memberships = await convoMembershipsLoader.load(conversation.id);
+
+    // Find a user member, excluding the current user's agent
+    const userMembership = memberships.find(
+      m => m.agent?.type === AgentType.USER && m.agentId !== agentInfo.agentID
     );
+
+    if (!userMembership) {
+      return null;
+    }
+
+    // Use the contributor loader to batch load the user
+    const contributor = await contributorByAgentLoader.load(
+      userMembership.agentId
+    );
+    return contributor as IUser | null;
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
   @ResolveField('virtualContributor', () => IVirtualContributor, {
     nullable: true,
     description:
       'The virtual contributor participating in this Conversation (only for USER_AGENT conversations).',
   })
   async virtualContributor(
-    @Parent() conversation: IConversation
+    @Parent() conversation: IConversation,
+    @Loader(ConversationMembershipsLoaderCreator)
+    convoMembershipsLoader: ILoader<IConversationMembership[]>,
+    @Loader(ContributorByAgentIdLoaderCreator, { resolveToNull: true })
+    contributorByAgentLoader: ILoader<IContributor | null>
   ): Promise<IVirtualContributor | null> {
     // Check for pre-resolved value (used in subscription events)
     if (conversation._resolvedVirtualContributor !== undefined) {
       return conversation._resolvedVirtualContributor;
     }
 
-    const memberships = await this.conversationService.getConversationMembers(
-      conversation.id
-    );
+    const memberships = await convoMembershipsLoader.load(conversation.id);
 
     // Find the virtual contributor agent among members
     const vcMembership = memberships.find(
@@ -101,8 +114,10 @@ export class ConversationResolverFields {
       return null;
     }
 
-    return await this.virtualContributorLookupService.getVirtualContributorByAgentId(
+    // Use the contributor loader to batch load the virtual contributor
+    const contributor = await contributorByAgentLoader.load(
       vcMembership.agentId
     );
+    return contributor as IVirtualContributor | null;
   }
 }
