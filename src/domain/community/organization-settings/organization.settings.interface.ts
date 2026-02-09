@@ -1,6 +1,6 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { IOrganizationSettingsPrivacy } from './organization.settings.privacy.interface';
 import { IOrganizationSettingsMembership } from './organization.settings.membership.interface';
+import { IOrganizationSettingsPrivacy } from './organization.settings.privacy.interface';
 
 @ObjectType('OrganizationSettings')
 export abstract class IOrganizationSettings {

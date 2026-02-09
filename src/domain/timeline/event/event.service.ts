@@ -1,29 +1,29 @@
+import { LogContext, ProfileType } from '@common/enums';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { RoomType } from '@common/enums/room.type';
+import { SpaceLevel } from '@common/enums/space.level';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { EntityNotFoundException } from '@common/exceptions';
+import { Collaboration } from '@domain/collaboration/collaboration';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { IProfile } from '@domain/common/profile/profile.interface';
+import { ProfileService } from '@domain/common/profile/profile.service';
+import { RoomService } from '@domain/communication/room/room.service';
+import { Space } from '@domain/space/space/space.entity';
+import { ISpace } from '@domain/space/space/space.interface';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { Calendar } from '@domain/timeline/calendar/calendar.entity';
+import { Timeline } from '@domain/timeline/timeline/timeline.entity';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, In, Repository } from 'typeorm';
-import { EntityNotFoundException } from '@common/exceptions';
-import { LogContext, ProfileType } from '@common/enums';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { CreateCalendarEventInput } from './dto/event.dto.create';
 import { DeleteCalendarEventInput } from './dto/event.dto.delete';
 import { UpdateCalendarEventInput } from './dto/event.dto.update';
-import { CreateCalendarEventInput } from './dto/event.dto.create';
 import { CalendarEvent } from './event.entity';
 import { ICalendarEvent } from './event.interface';
-import { ProfileService } from '@domain/common/profile/profile.service';
-import { IProfile } from '@domain/common/profile/profile.interface';
-import { RoomService } from '@domain/communication/room/room.service';
-import { RoomType } from '@common/enums/room.type';
-import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { ISpace } from '@domain/space/space/space.interface';
-import { Calendar } from '@domain/timeline/calendar/calendar.entity';
-import { Timeline } from '@domain/timeline/timeline/timeline.entity';
-import { Collaboration } from '@domain/collaboration/collaboration';
-import { Space } from '@domain/space/space/space.entity';
-import { SpaceLevel } from '@common/enums/space.level';
 
 @Injectable()
 export class CalendarEventService {

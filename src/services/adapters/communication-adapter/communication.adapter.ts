@@ -1,72 +1,72 @@
-import { LogContext } from '@common/enums';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { CommunicationDeleteMessageInput } from './dto/communication.dto.message.delete';
-import { IMessage } from '@domain/communication/message/message.interface';
-import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import {
+  AddReactionRequest,
+  AlkemioActorID,
+  AlkemioContextID,
+  // ID type aliases
+  AlkemioRoomID,
+  BatchAddMemberRequest,
+  BatchAddSpaceMemberRequest,
+  BatchGetLastMessagesRequest,
+  BatchGetUnreadCountsRequest,
+  BatchRemoveMemberRequest,
+  BatchRemoveSpaceMemberRequest,
   // Type-safe command registry types
   CommandTopic,
-  RequestFor,
-  ResponseFor,
-  // Event types (topics)
-  MatrixAdapterEventType,
-  // Request types (used with `satisfies` for payload validation)
-  SyncActorRequest,
   CreateRoomRequest,
-  UpdateRoomRequest,
-  DeleteRoomRequest,
   CreateSpaceRequest,
-  UpdateSpaceRequest,
-  DeleteSpaceRequest,
-  SetParentRequest,
-  BatchAddMemberRequest,
-  BatchRemoveMemberRequest,
-  BatchAddSpaceMemberRequest,
-  BatchRemoveSpaceMemberRequest,
-  SendMessageRequest,
   DeleteMessageRequest,
-  AddReactionRequest,
-  RemoveReactionRequest,
-  GetRoomRequest,
+  DeleteRoomRequest,
+  DeleteSpaceRequest,
+  GetLastMessageRequest,
   GetMessageRequest,
   GetReactionRequest,
-  GetRoomMembersRequest,
-  GetThreadMessagesRequest,
-  GetSpaceRequest,
-  GetUnreadCountsRequest,
-  BatchGetUnreadCountsRequest,
-  GetLastMessageRequest,
-  BatchGetLastMessagesRequest,
-  MarkMessageReadRequest,
-  ListRoomsRequest,
-  ListSpacesRequest,
   GetRoomAsUserRequest,
+  GetRoomAsUserResponse,
+  GetRoomMembersRequest,
+  GetRoomRequest,
   // Response type for converter helper
   GetRoomResponse,
-  GetRoomAsUserResponse,
+  GetSpaceRequest,
+  GetThreadMessagesRequest,
+  GetUnreadCountsRequest,
+  ListRoomsRequest,
+  ListSpacesRequest,
+  MarkMessageReadRequest,
+  // Event types (topics)
+  MatrixAdapterEventType,
+  RemoveReactionRequest,
+  RequestFor,
+  ResponseFor,
+  RoomType,
   // Room type constants
   RoomTypeCommunity,
   RoomTypeDirect,
-  // ID type aliases
-  AlkemioRoomID,
-  AlkemioActorID,
-  AlkemioContextID,
-  RoomType,
+  SendMessageRequest,
+  SetParentRequest,
+  // Request types (used with `satisfies` for payload validation)
+  SyncActorRequest,
+  UpdateRoomRequest,
+  UpdateSpaceRequest,
 } from '@alkemio/matrix-adapter-lib';
-import { CommunicationSendMessageInput } from './dto/communication.dto.message.send';
+import { LogContext } from '@common/enums';
+import { RoomType as AlkemioRoomType } from '@common/enums/room.type';
 import { getRandomId } from '@common/utils/random.id.generator.util';
 import { stringifyWithoutAuthorizationMetaInfo } from '@common/utils/stringify.util';
-import { CommunicationSendMessageReplyInput } from './dto/communications.dto.message.reply';
-import { CommunicationAddReactionToMessageInput } from './dto/communication.dto.add.reaction';
-import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
-import { IRoomWithReadState } from '@domain/communication/room/room.with.read.state.interface';
+import { IMessage } from '@domain/communication/message/message.interface';
 import { IMessageReaction } from '@domain/communication/message.reaction/message.reaction.interface';
+import { IRoomWithReadState } from '@domain/communication/room/room.with.read.state.interface';
+import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
 import { AlkemioConfig } from '@src/types';
-import { CommunicationRemoveReactionToMessageInput } from './dto/communication.dto.remove.reaction';
-import { RoomType as AlkemioRoomType } from '@common/enums/room.type';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CommunicationAdapterException } from './communication.adapter.exception';
+import { CommunicationAddReactionToMessageInput } from './dto/communication.dto.add.reaction';
+import { CommunicationDeleteMessageInput } from './dto/communication.dto.message.delete';
+import { CommunicationSendMessageInput } from './dto/communication.dto.message.send';
+import { CommunicationRemoveReactionToMessageInput } from './dto/communication.dto.remove.reaction';
+import { CommunicationSendMessageReplyInput } from './dto/communications.dto.message.reply';
 
 /**
  * Options for RPC command execution.

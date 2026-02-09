@@ -1,27 +1,27 @@
-import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { IVisual } from '@domain/common/visual/visual.interface';
-import { IReference } from '@domain/common/reference/reference.interface';
-import { ITagset } from '@domain/common/tagset/tagset.interface';
-import { ILocation } from '@domain/common/location/location.interface';
+import { LogContext } from '@common/enums';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { TagsetType } from '@common/enums/tagset.type';
 import { VisualType } from '@common/enums/visual.type';
 import { EntityNotFoundException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
-import { IProfile } from './profile.interface';
-import { Profile } from '@domain/common/profile/profile.entity';
-import { ProfileService } from '@domain/common/profile/profile.service';
-import { ILoader } from '@core/dataloader/loader.interface';
-import { Loader } from '@core/dataloader/decorators/data.loader.decorator';
 import {
   ProfileLocationLoaderCreator,
   ProfileReferencesLoaderCreator,
+  ProfileStorageBucketLoaderCreator,
   ProfileTagsetsLoaderCreator,
   VisualLoaderCreator,
 } from '@core/dataloader/creators';
+import { Loader } from '@core/dataloader/decorators/data.loader.decorator';
+import { ILoader } from '@core/dataloader/loader.interface';
+import { ILocation } from '@domain/common/location/location.interface';
+import { Profile } from '@domain/common/profile/profile.entity';
+import { ProfileService } from '@domain/common/profile/profile.service';
+import { IReference } from '@domain/common/reference/reference.interface';
+import { ITagset } from '@domain/common/tagset/tagset.interface';
+import { IVisual } from '@domain/common/visual/visual.interface';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
-import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { TagsetType } from '@common/enums/tagset.type';
-import { ProfileStorageBucketLoaderCreator } from '@core/dataloader/creators/loader.creators/profile/profile.storage.bucket.loader.creator';
+import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator';
+import { IProfile } from './profile.interface';
 
 @Resolver(() => IProfile)
 export class ProfileResolverFields {

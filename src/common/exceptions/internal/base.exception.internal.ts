@@ -1,5 +1,5 @@
-import { randomUUID } from 'crypto';
 import { LogContext } from '@common/enums';
+import { randomUUID } from 'crypto';
 import { ExceptionDetails } from '../exception.details';
 
 export class BaseExceptionInternal extends Error {

@@ -1,10 +1,10 @@
-import { EntityManager } from 'typeorm';
+import { Collaboration } from '@domain/collaboration/collaboration';
+import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
+import { EntityManager } from 'typeorm';
 import { createTypedRelationDataLoader } from '../../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
-import { Collaboration } from '@domain/collaboration/collaboration';
 
 @Injectable()
 export class CollaborationTimelineLoaderCreator

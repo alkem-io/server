@@ -1,7 +1,7 @@
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { IRole } from './role.interface';
-import { IContributorRolePolicy } from './contributor.role.policy.interface';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { IContributorRolePolicy } from './contributor.role.policy.interface';
+import { IRole } from './role.interface';
 
 @Resolver(() => IRole)
 export class RoleResolverFields {

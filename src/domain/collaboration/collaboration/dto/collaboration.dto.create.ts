@@ -1,8 +1,8 @@
-import { InputType, Field, ObjectType } from '@nestjs/graphql';
+import { CreateCalloutsSetInput } from '@domain/collaboration/callouts-set/dto/callouts.set.dto.create';
 import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto';
+import { Field, InputType, ObjectType } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
 import { IsOptional, ValidateNested } from 'class-validator';
-import { CreateCalloutsSetInput } from '@domain/collaboration/callouts-set/dto/callouts.set.dto.create';
 
 @InputType()
 @ObjectType('CreateCollaborationData')

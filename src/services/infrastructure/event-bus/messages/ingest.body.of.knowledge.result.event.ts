@@ -1,6 +1,6 @@
 import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 import { IEvent } from '@nestjs/cqrs';
-import { IngestionResult, IngestionPurpose, IngestError } from './types';
+import { IngestError, IngestionPurpose, IngestionResult } from './types';
 
 export class IngestBodyOfKnowledgeResult implements IEvent {
   constructor(

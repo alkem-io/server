@@ -1,8 +1,8 @@
-import { vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
-import { LicensingWingbackSubscriptionService } from './licensing.wingback.subscription.service';
 import { WingbackManager } from '@services/external/wingback';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
+import { vi } from 'vitest';
+import { LicensingWingbackSubscriptionService } from './licensing.wingback.subscription.service';
 
 describe('LicensingWingbackSubscriptionService', () => {
   let service: LicensingWingbackSubscriptionService;

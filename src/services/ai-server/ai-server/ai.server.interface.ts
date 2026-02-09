@@ -1,5 +1,5 @@
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
-import { ObjectType, Field } from '@nestjs/graphql';
+import { Field, ObjectType } from '@nestjs/graphql';
 import { IAiPersona } from '../ai-persona/ai.persona.interface';
 
 @ObjectType('AiServer')

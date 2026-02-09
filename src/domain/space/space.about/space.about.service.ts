@@ -1,36 +1,36 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, Repository } from 'typeorm';
+import { LogContext, ProfileType } from '@common/enums';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { VisualType } from '@common/enums/visual.type';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
-import { LogContext, ProfileType } from '@common/enums';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { UpdateSpaceAboutInput } from './dto/space.about.dto.update';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { ProfileService } from '@domain/common/profile/profile.service';
-import { SpaceAbout } from './space.about.entity';
-import { CreateSpaceAboutInput } from './dto/space.about.dto.create';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
-import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { VisualType } from '@common/enums/visual.type';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { ISpaceAbout } from './space.about.interface';
-import { INVP } from '@domain/common/nvp/nvp.interface';
-import { NVP } from '@domain/common/nvp/nvp.entity';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
-import { SpaceLookupService } from '../space.lookup/space.lookup.service';
-import { ICommunity } from '@domain/community/community/community.interface';
-import { CommunityGuidelinesService } from '@domain/community/community-guidelines/community.guidelines.service';
-import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
-import { CreateCommunityGuidelinesInput } from '@domain/community/community-guidelines';
-import { DEFAULT_VISUAL_CONSTRAINTS } from '@domain/common/visual/visual.constraints';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { NVP } from '@domain/common/nvp/nvp.entity';
+import { INVP } from '@domain/common/nvp/nvp.interface';
 import { CreateVisualOnProfileInput } from '@domain/common/profile/dto/profile.dto.create.visual';
-import { IVisual } from '@domain/common/visual';
+import { ProfileService } from '@domain/common/profile/profile.service';
 import { CreateTagsetInput, ITagset } from '@domain/common/tagset';
+import { IVisual } from '@domain/common/visual';
+import { DEFAULT_VISUAL_CONSTRAINTS } from '@domain/common/visual/visual.constraints';
+import { ICommunity } from '@domain/community/community/community.interface';
+import { CreateCommunityGuidelinesInput } from '@domain/community/community-guidelines';
+import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
+import { CommunityGuidelinesService } from '@domain/community/community-guidelines/community.guidelines.service';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
+import { FindOneOptions, Repository } from 'typeorm';
+import { SpaceLookupService } from '../space.lookup/space.lookup.service';
+import { CreateSpaceAboutInput } from './dto/space.about.dto.create';
+import { UpdateSpaceAboutInput } from './dto/space.about.dto.update';
+import { SpaceAbout } from './space.about.entity';
+import { ISpaceAbout } from './space.about.interface';
 
 @Injectable()
 export class SpaceAboutService {

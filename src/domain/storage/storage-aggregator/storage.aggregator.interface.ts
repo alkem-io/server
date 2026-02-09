@@ -1,7 +1,7 @@
+import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IStorageBucket } from '../storage-bucket/storage.bucket.interface';
-import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 
 @ObjectType('StorageAggregator')
 export abstract class IStorageAggregator extends IAuthorizable {

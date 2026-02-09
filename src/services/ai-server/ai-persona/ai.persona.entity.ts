@@ -1,18 +1,22 @@
-import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
-import { IAiPersona } from './ai.persona.interface';
-import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
-import { AiServer } from '../ai-server/ai.server.entity';
-import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 import { ENUM_LENGTH } from '@common/constants';
-import { IExternalConfig } from './dto/external.config';
+import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
+import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
+import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
+import { AiServer } from '../ai-server/ai.server.entity';
 import { PromptGraph } from '../prompt-graph/dto/prompt.graph.dto';
+import { IAiPersona } from './ai.persona.interface';
+import { IExternalConfig } from './dto/external.config';
 import { PromptGraphTransformer } from './transformers/prompt.graph.transformer';
 
 @Entity()
 export class AiPersona extends AuthorizableEntity implements IAiPersona {
-  @ManyToOne(() => AiServer, aiServer => aiServer.aiPersonas, {
-    eager: true,
-  })
+  @ManyToOne(
+    () => AiServer,
+    aiServer => aiServer.aiPersonas,
+    {
+      eager: true,
+    }
+  )
   @JoinColumn()
   aiServer?: AiServer;
 

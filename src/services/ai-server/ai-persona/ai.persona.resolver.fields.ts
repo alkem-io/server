@@ -1,16 +1,16 @@
-import { Resolver, Parent, ResolveField } from '@nestjs/graphql';
-import { AuthorizationPrivilege } from '@common/enums';
 import { CurrentUser, Profiling } from '@common/decorators';
+import { AuthorizationPrivilege } from '@common/enums';
+import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
-import { IExternalConfig } from './dto';
-import { IAiPersona } from './ai.persona.interface';
-import { AiPersonaService } from './ai.persona.service';
-import { AiPersona } from './ai.persona.entity';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import graphJson from '../prompt-graph/config/prompt.graph.expert.json';
 import { PromptGraph } from '../prompt-graph/dto/prompt.graph.dto';
+import { AiPersona } from './ai.persona.entity';
+import { IAiPersona } from './ai.persona.interface';
+import { AiPersonaService } from './ai.persona.service';
+import { IExternalConfig } from './dto';
 
 const EXTERNALY_CONFIGURABLE_ENGINES = [
   AiPersonaEngine.GENERIC_OPENAI,

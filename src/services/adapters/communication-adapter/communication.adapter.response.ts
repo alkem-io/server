@@ -1,14 +1,14 @@
 import {
   BaseResponse,
-  ErrorResponse,
-  ErrorCode,
+  ErrCodeActorNotFound,
+  ErrCodeInternalError,
   ErrCodeInvalidParam,
+  ErrCodeMatrixError,
+  ErrCodeNotAllowed,
   ErrCodeRoomNotFound,
   ErrCodeSpaceNotFound,
-  ErrCodeActorNotFound,
-  ErrCodeMatrixError,
-  ErrCodeInternalError,
-  ErrCodeNotAllowed,
+  ErrorCode,
+  ErrorResponse,
 } from '@alkemio/matrix-adapter-lib';
 
 /**

@@ -1,5 +1,5 @@
-import { Field, ObjectType } from '@nestjs/graphql';
 import { MessageID } from '@domain/common/scalars';
+import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('VcInteraction')
 export abstract class IVcInteraction {

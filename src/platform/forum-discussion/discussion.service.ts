@@ -1,23 +1,23 @@
+import { LogContext, ProfileType } from '@common/enums';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { RoomType } from '@common/enums/room.type';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { EntityNotFoundException } from '@common/exceptions';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { IProfile } from '@domain/common/profile/profile.interface';
+import { ProfileService } from '@domain/common/profile/profile.service';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { ForumCreateDiscussionInput } from '@platform/forum/dto/forum.dto.create.discussion';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
-import { EntityNotFoundException } from '@common/exceptions';
-import { LogContext, ProfileType } from '@common/enums';
+import { IRoom } from '../../domain/communication/room/room.interface';
+import { RoomService } from '../../domain/communication/room/room.service';
 import { Discussion } from './discussion.entity';
 import { IDiscussion } from './discussion.interface';
-import { UpdateDiscussionInput } from './dto/discussion.dto.update';
 import { DeleteDiscussionInput } from './dto/discussion.dto.delete';
-import { RoomService } from '../../domain/communication/room/room.service';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
-import { ProfileService } from '@domain/common/profile/profile.service';
-import { IRoom } from '../../domain/communication/room/room.interface';
-import { RoomType } from '@common/enums/room.type';
-import { IProfile } from '@domain/common/profile/profile.interface';
-import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { ForumCreateDiscussionInput } from '@platform/forum/dto/forum.dto.create.discussion';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { UpdateDiscussionInput } from './dto/discussion.dto.update';
 
 @Injectable()
 export class DiscussionService {

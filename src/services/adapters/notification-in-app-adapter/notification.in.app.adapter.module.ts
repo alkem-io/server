@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
-import { NotificationInAppAdapter } from './notification.in.app.adapter';
-import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
 import { InAppNotificationModule } from '@platform/in-app-notification/in.app.notification.module';
+import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
+import { NotificationInAppAdapter } from './notification.in.app.adapter';
 
 @Module({
   imports: [InAppNotificationModule, SubscriptionServiceModule],

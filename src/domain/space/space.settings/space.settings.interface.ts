@@ -1,7 +1,7 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { ISpaceSettingsPrivacy } from './space.settings.privacy.interface';
-import { ISpaceSettingsMembership } from './space.settings.membership.interface';
 import { ISpaceSettingsCollaboration } from './space.settings.collaboration.interface';
+import { ISpaceSettingsMembership } from './space.settings.membership.interface';
+import { ISpaceSettingsPrivacy } from './space.settings.privacy.interface';
 
 @ObjectType('SpaceSettings')
 export abstract class ISpaceSettings {

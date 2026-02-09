@@ -1,6 +1,6 @@
 import { Query, Resolver } from '@nestjs/graphql';
-import { MeQueryResults } from './dto/me.query.results';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { MeQueryResults } from './dto/me.query.results';
 
 @InstrumentResolver()
 @Resolver()

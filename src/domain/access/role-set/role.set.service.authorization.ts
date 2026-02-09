@@ -1,28 +1,28 @@
-import { Injectable } from '@nestjs/common';
-import { RoleSetService } from './role.set.service';
+import {
+  CREDENTIAL_RULE_ROLESET_SELF_REMOVAL,
+  CREDENTIAL_RULE_ROLESET_VIRTUAL_CONTRIBUTOR_REMOVAL,
+  CREDENTIAL_RULE_TYPES_ROLESET_ENTRY_ROLE_ASSIGN,
+  POLICY_RULE_COMMUNITY_INVITE_MEMBER,
+} from '@common/constants';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import {
-  CREDENTIAL_RULE_ROLESET_SELF_REMOVAL,
-  POLICY_RULE_COMMUNITY_INVITE_MEMBER,
-  CREDENTIAL_RULE_ROLESET_VIRTUAL_CONTRIBUTOR_REMOVAL,
-  CREDENTIAL_RULE_TYPES_ROLESET_ENTRY_ROLE_ASSIGN,
-} from '@common/constants';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
-import { PlatformInvitationAuthorizationService } from '@domain/access/invitation.platform/platform.invitation.service.authorization';
 import { ApplicationAuthorizationService } from '@domain/access/application/application.service.authorization';
 import { InvitationAuthorizationService } from '@domain/access/invitation/invitation.service.authorization';
-import { IRoleSet } from './role.set.interface';
+import { PlatformInvitationAuthorizationService } from '@domain/access/invitation.platform/platform.invitation.service.authorization';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { Injectable } from '@nestjs/common';
+import { IRoleSet } from './role.set.interface';
+import { RoleSetService } from './role.set.service';
 
 @Injectable()
 export class RoleSetAuthorizationService {

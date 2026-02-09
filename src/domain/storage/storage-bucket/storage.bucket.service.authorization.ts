@@ -1,16 +1,16 @@
-import { Injectable } from '@nestjs/common';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { IStorageBucket } from './storage.bucket.interface';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { DocumentAuthorizationService } from '../document/document.service.authorization';
-import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
-import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import {
-  POLICY_RULE_STORAGE_BUCKET_UPDATER_FILE_UPLOAD,
   POLICY_RULE_PLATFORM_DELETE,
   POLICY_RULE_STORAGE_BUCKET_CONTRIBUTOR_FILE_UPLOAD,
+  POLICY_RULE_STORAGE_BUCKET_UPDATER_FILE_UPLOAD,
 } from '@common/constants';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { Injectable } from '@nestjs/common';
+import { DocumentAuthorizationService } from '../document/document.service.authorization';
+import { IStorageBucket } from './storage.bucket.interface';
 
 @Injectable()
 export class StorageBucketAuthorizationService {

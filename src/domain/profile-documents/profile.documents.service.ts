@@ -1,13 +1,13 @@
-import { Injectable } from '@nestjs/common';
 import { LogContext } from '@common/enums';
-import { DocumentService } from '@domain/storage/document/document.service';
-import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
-import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
 } from '@common/exceptions';
+import { DocumentService } from '@domain/storage/document/document.service';
+import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
+import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class ProfileDocumentsService {

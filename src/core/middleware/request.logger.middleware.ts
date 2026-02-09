@@ -1,14 +1,14 @@
-import {
-  Injectable,
-  NestMiddleware,
-  LoggerService,
-  Inject,
-} from '@nestjs/common';
-import { Request, Response, NextFunction } from 'express';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { ConfigService } from '@nestjs/config';
 import { LogContext } from '@common/enums';
+import {
+  Inject,
+  Injectable,
+  LoggerService,
+  NestMiddleware,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { AlkemioConfig } from '@src/types';
+import { NextFunction, Request, Response } from 'express';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class RequestLoggerMiddleware implements NestMiddleware {

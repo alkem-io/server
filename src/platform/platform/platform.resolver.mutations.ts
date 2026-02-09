@@ -1,20 +1,20 @@
-import { Resolver, Mutation, Args } from '@nestjs/graphql';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { IPlatform } from './platform.interface';
-import { PlatformAuthorizationService } from './platform.service.authorization';
-import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { PlatformService } from './platform.service';
-import { IPlatformSettings } from '@platform/platform-settings/platform.settings.interface';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import {
-  UpdatePlatformSettingsInput,
   NotificationEmailAddressInput,
+  UpdatePlatformSettingsInput,
 } from '@platform/platform-settings';
+import { IPlatformSettings } from '@platform/platform-settings/platform.settings.interface';
 import { PlatformSettingsService } from '@platform/platform-settings/platform.settings.service';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentUser, Profiling } from '@src/common/decorators';
+import { IPlatform } from './platform.interface';
+import { PlatformService } from './platform.service';
+import { PlatformAuthorizationService } from './platform.service.authorization';
 
 @InstrumentResolver()
 @Resolver()

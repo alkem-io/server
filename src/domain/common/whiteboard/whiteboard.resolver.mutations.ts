@@ -1,28 +1,28 @@
-import { Inject, LoggerService } from '@nestjs/common';
-import { Args, Resolver, Mutation } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { WhiteboardService } from './whiteboard.service';
-import { IWhiteboard } from './whiteboard.interface';
-import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { UpdateWhiteboardEntityInput } from './types';
-import { DeleteWhiteboardInput } from './dto/whiteboard.dto.delete';
-import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
-import { WhiteboardAuthorizationService } from './whiteboard.service.authorization';
-import { CalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.entity';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
-import { EntityManager } from 'typeorm';
+import { CalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.entity';
+import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
+import { Inject, LoggerService } from '@nestjs/common';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { InjectEntityManager } from '@nestjs/typeorm';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { InstrumentResolver } from '@src/apm/decorators';
-import { WhiteboardGuestAccessService } from './whiteboard.guest-access.service';
+import { CurrentUser } from '@src/common/decorators';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { EntityManager } from 'typeorm';
+import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
+import { DeleteWhiteboardInput } from './dto/whiteboard.dto.delete';
 import {
   UpdateWhiteboardGuestAccessInput,
   UpdateWhiteboardGuestAccessResult,
 } from './dto/whiteboard.dto.guest-access.toggle';
-import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
-import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
+import { UpdateWhiteboardEntityInput } from './types';
+import { WhiteboardGuestAccessService } from './whiteboard.guest-access.service';
+import { IWhiteboard } from './whiteboard.interface';
+import { WhiteboardService } from './whiteboard.service';
+import { WhiteboardAuthorizationService } from './whiteboard.service.authorization';
 
 @InstrumentResolver()
 @Resolver(() => IWhiteboard)

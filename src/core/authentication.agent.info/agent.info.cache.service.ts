@@ -1,15 +1,15 @@
 import { LogContext } from '@common/enums/logging.context';
-import { AgentInfo } from './agent.info';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectEntityManager } from '@nestjs/typeorm';
+import { AlkemioConfig } from '@src/types';
 import { Cache } from 'cache-manager';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 import { EntityManager } from 'typeorm';
 import { IAgent, ICredential } from '../../domain/agent';
-import { AlkemioConfig } from '@src/types';
+import { AgentInfo } from './agent.info';
 @Injectable()
 export class AgentInfoCacheService {
   private readonly cache_ttl: number;

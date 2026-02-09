@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { IVirtualContributorPlatformSettings } from './virtual.contributor.platform.settings.interface';
 import { UpdateVirtualContributorPlatformSettingsEntityInput } from './dto/virtual.contributor.platform.settings.dto.update';
+import { IVirtualContributorPlatformSettings } from './virtual.contributor.platform.settings.interface';
 
 @Injectable()
 export class VirtualContributorPlatformSettingsService {

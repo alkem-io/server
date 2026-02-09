@@ -1,30 +1,30 @@
-import { Inject } from '@nestjs/common';
-import { Resolver, Args, Mutation } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
-import { SpaceService } from './space.service';
+import { SUBSCRIPTION_SUBSPACE_CREATED } from '@common/constants/providers';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { SubscriptionType } from '@common/enums/subscription.type';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { LicenseService } from '@domain/common/license/license.service';
 import {
   DeleteSpaceInput,
   UpdateSpaceInput,
   UpdateSubspacesSortOrderInput,
 } from '@domain/space/space';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { SpaceAuthorizationService } from './space.service.authorization';
-import { ISpace } from './space.interface';
-import { CreateSubspaceInput } from './dto/space.dto.create.subspace';
-import { SubspaceCreatedPayload } from './dto/space.subspace.created.payload';
-import { SubscriptionType } from '@common/enums/subscription.type';
-import { PubSubEngine } from 'graphql-subscriptions';
+import { Inject } from '@nestjs/common';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
-import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
-import { SUBSCRIPTION_SUBSPACE_CREATED } from '@common/constants/providers';
-import { UpdateSpaceSettingsInput } from './dto/space.dto.update.settings';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { SpaceLicenseService } from './space.service.license';
-import { LicenseService } from '@domain/common/license/license.service';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentUser } from '@src/common/decorators';
+import { PubSubEngine } from 'graphql-subscriptions';
+import { CreateSubspaceInput } from './dto/space.dto.create.subspace';
+import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
+import { UpdateSpaceSettingsInput } from './dto/space.dto.update.settings';
+import { SubspaceCreatedPayload } from './dto/space.subspace.created.payload';
+import { ISpace } from './space.interface';
+import { SpaceService } from './space.service';
+import { SpaceAuthorizationService } from './space.service.authorization';
+import { SpaceLicenseService } from './space.service.license';
 
 @InstrumentResolver()
 @Resolver()

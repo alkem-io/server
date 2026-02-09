@@ -1,6 +1,6 @@
-import { ArgsType, Field } from '@nestjs/graphql';
-import { UUID } from '@domain/common/scalars';
 import { UUID_LENGTH } from '@common/constants';
+import { UUID } from '@domain/common/scalars';
+import { ArgsType, Field } from '@nestjs/graphql';
 import { MaxLength } from 'class-validator';
 
 @ArgsType()

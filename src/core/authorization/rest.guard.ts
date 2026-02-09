@@ -1,13 +1,13 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums/logging.context';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { ForbiddenHttpException } from '@common/exceptions/http';
 import {
   AUTH_STRATEGY_OATHKEEPER_API_TOKEN,
   AUTH_STRATEGY_OATHKEEPER_JWT,
 } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class RestGuard extends AuthGuard([

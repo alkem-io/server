@@ -1,14 +1,13 @@
-import { vi } from 'vitest';
-import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { CREDENTIAL_RULE_LICENSE_MANAGER } from '@common/constants/authorization/credential.rule.constants';
-import { LicensingFrameworkAuthorizationService } from './licensing.framework.service.authorization';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { LicensingFrameworkService } from './licensing.framework.service';
-import { LicensePolicyAuthorizationService } from '@platform/licensing/credential-based/license-policy/license.policy.service.authorization';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { ILicensingFramework } from './licensing.framework.interface';
+import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import type { Mocked } from 'vitest';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { LicensePolicyAuthorizationService } from '@platform/licensing/credential-based/license-policy/license.policy.service.authorization';
+import { type Mocked, vi } from 'vitest';
+import { ILicensingFramework } from './licensing.framework.interface';
+import { LicensingFrameworkService } from './licensing.framework.service';
+import { LicensingFrameworkAuthorizationService } from './licensing.framework.service.authorization';
 
 describe('LicensingFrameworkAuthorizationService', () => {
   let service: LicensingFrameworkAuthorizationService;

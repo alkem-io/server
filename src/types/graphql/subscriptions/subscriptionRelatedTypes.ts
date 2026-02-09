@@ -1,6 +1,6 @@
-import { IncomingMessage, ServerResponse } from 'http';
-import { Context, WebSocket as GraphqlWsWebSocket } from 'graphql-ws';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { Context, WebSocket as GraphqlWsWebSocket } from 'graphql-ws';
+import { IncomingMessage, ServerResponse } from 'http';
 
 export type SubscriptionsTransportWsWebsocket = {
   upgradeReq: IncomingMessage;

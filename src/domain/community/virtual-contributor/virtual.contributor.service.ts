@@ -1,55 +1,55 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
-import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
-import { EntityManager, FindOneOptions, Repository } from 'typeorm';
+import { LogContext, ProfileType } from '@common/enums';
+import { AgentType } from '@common/enums/agent.type';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { SearchVisibility } from '@common/enums/search.visibility';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { LogContext, ProfileType } from '@common/enums';
-import { ProfileService } from '@domain/common/profile/profile.service';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { limitAndShuffle } from '@common/utils/limitAndShuffle';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { Invitation } from '@domain/access/invitation/invitation.entity';
 import { IAgent } from '@domain/agent/agent';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CredentialsSearchInput } from '@domain/agent/credential/dto/credentials.dto.search';
-import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
-import { VirtualContributor } from './virtual.contributor.entity';
-import { IVirtualContributor } from './virtual.contributor.interface';
-import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { CreateVirtualContributorInput } from './dto/virtual.contributor.dto.create';
-import { UpdateVirtualContributorInput } from './dto/virtual.contributor.dto.update';
-import { limitAndShuffle } from '@common/utils/limitAndShuffle';
-import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
-import { AiPersonaService } from '@services/ai-server/ai-persona/ai.persona.service';
-import { CreateAiPersonaInput } from '@services/ai-server/ai-persona/dto';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
-import { SearchVisibility } from '@common/enums/search.visibility';
-import { IAiPersona } from '@services/ai-server/ai-persona/ai.persona.interface';
-import { IContributor } from '../contributor/contributor.interface';
-import { AgentType } from '@common/enums/agent.type';
-import { ContributorService } from '../contributor/contributor.service';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { Invitation } from '@domain/access/invitation/invitation.entity';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IKnowledgeBase } from '@domain/common/knowledge-base/knowledge.base.interface';
 import { KnowledgeBaseService } from '@domain/common/knowledge-base/knowledge.base.service';
+import { ProfileService } from '@domain/common/profile/profile.service';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
-import { VirtualContributorLookupService } from '../virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { Inject, Injectable } from '@nestjs/common';
+import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
+import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
+import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
+import { IAiPersona } from '@services/ai-server/ai-persona/ai.persona.interface';
+import { AiPersonaService } from '@services/ai-server/ai-persona/ai.persona.service';
+import { CreateAiPersonaInput } from '@services/ai-server/ai-persona/dto';
+import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
+import { IContributor } from '../contributor/contributor.interface';
+import { ContributorService } from '../contributor/contributor.service';
+import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
 import { VirtualContributorDefaultsService } from '../virtual-contributor-defaults/virtual.contributor.defaults.service';
-import { virtualContributorSettingsDefault } from './definition/virtual.contributor.settings.default';
-import { UpdateVirtualContributorSettingsEntityInput } from '../virtual-contributor-settings';
-import { VirtualContributorSettingsService } from '../virtual-contributor-settings/virtual.contributor.settings.service';
+import { VirtualContributorLookupService } from '../virtual-contributor-lookup/virtual.contributor.lookup.service';
 import {
   UpdateVirtualContributorPlatformSettingsEntityInput,
   VirtualContributorPlatformSettingsService,
 } from '../virtual-contributor-platform-settings';
-import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
-import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
+import { UpdateVirtualContributorSettingsEntityInput } from '../virtual-contributor-settings';
+import { VirtualContributorSettingsService } from '../virtual-contributor-settings/virtual.contributor.settings.service';
+import { virtualContributorSettingsDefault } from './definition/virtual.contributor.settings.default';
+import { CreateVirtualContributorInput } from './dto/virtual.contributor.dto.create';
+import { UpdateVirtualContributorInput } from './dto/virtual.contributor.dto.update';
+import { VirtualContributor } from './virtual.contributor.entity';
+import { IVirtualContributor } from './virtual.contributor.interface';
 
 @Injectable()
 export class VirtualContributorService {

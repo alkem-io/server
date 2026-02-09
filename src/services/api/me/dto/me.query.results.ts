@@ -1,9 +1,9 @@
-import { ObjectType } from '@nestjs/graphql';
-import { IUser } from '@domain/community/user/user.interface';
-import { IInvitation } from '@domain/access/invitation';
 import { IApplication } from '@domain/access/application';
-import { CommunityMembershipResult } from './me.membership.result';
+import { IInvitation } from '@domain/access/invitation';
+import { IUser } from '@domain/community/user/user.interface';
+import { ObjectType } from '@nestjs/graphql';
 import { MeConversationsResult } from './me.conversations.result';
+import { CommunityMembershipResult } from './me.membership.result';
 
 @ObjectType()
 export class MeQueryResults {

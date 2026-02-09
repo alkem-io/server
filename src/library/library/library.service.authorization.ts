@@ -1,8 +1,8 @@
-import { Injectable } from '@nestjs/common';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { ILibrary } from './library.interface';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { Injectable } from '@nestjs/common';
+import { ILibrary } from './library.interface';
 
 @Injectable()
 export class LibraryAuthorizationService {

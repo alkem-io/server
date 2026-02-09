@@ -1,29 +1,29 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { LogContext } from '@common/enums/logging.context';
-import { subspaceCommunityRoles } from './definitions/subspace.community.roles';
-import { spaceCommunityRoles } from './definitions/space.community.roles';
-import { CreateFormInput } from '@domain/common/form/dto/form.dto.create';
-import { subspaceCommunityApplicationForm } from './definitions/subspace.community.role.application.form';
-import { spaceCommunityApplicationForm } from './definitions/space.community.role.application.form';
 import { SpaceLevel } from '@common/enums/space.level';
-import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
-import { CreateRoleInput } from '@domain/access/role/dto/role.dto.create';
-import { CreateCollaborationOnSpaceInput } from '../space/dto/space.dto.create.collaboration';
-import { TemplateService } from '@domain/template/template/template.service';
-import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
 import { TemplateDefaultType } from '@common/enums/template.default.type';
 import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { ITemplatesManager } from '@domain/template/templates-manager';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
+import { CreateRoleInput } from '@domain/access/role/dto/role.dto.create';
 import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
-import { PlatformTemplatesService } from '@platform/platform-templates/platform.templates.service';
-import { ITemplate } from '@domain/template/template/template.interface';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
-import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
+import { CreateFormInput } from '@domain/common/form/dto/form.dto.create';
+import { ITemplate } from '@domain/template/template/template.interface';
+import { TemplateService } from '@domain/template/template/template.service';
 import { ITemplateContentSpace } from '@domain/template/template-content-space/template.content.space.interface';
+import { ITemplatesManager } from '@domain/template/templates-manager';
+import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { PlatformTemplatesService } from '@platform/platform-templates/platform.templates.service';
+import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { CreateCollaborationOnSpaceInput } from '../space/dto/space.dto.create.collaboration';
+import { spaceCommunityApplicationForm } from './definitions/space.community.role.application.form';
+import { spaceCommunityRoles } from './definitions/space.community.roles';
+import { subspaceCommunityApplicationForm } from './definitions/subspace.community.role.application.form';
+import { subspaceCommunityRoles } from './definitions/subspace.community.roles';
 
 @Injectable()
 export class SpaceDefaultsService {
@@ -144,7 +144,7 @@ export class SpaceDefaultsService {
     spaceL0TemplatesManager?: ITemplatesManager
   ): Promise<string> {
     // First get the template to augment the provided data with
-    let templateWithSpaceContent: ITemplate | undefined = undefined;
+    let templateWithSpaceContent: ITemplate | undefined;
 
     if (spaceTemplateID) {
       templateWithSpaceContent =

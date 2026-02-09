@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { ContributionReporterService } from './contribution.reporter.service';
 import { ElasticsearchClientProvider } from '../elasticsearch-client';
+import { ContributionReporterService } from './contribution.reporter.service';
 
 @Module({
   providers: [ContributionReporterService, ElasticsearchClientProvider],

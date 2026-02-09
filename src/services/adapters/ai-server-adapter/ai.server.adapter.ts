@@ -1,16 +1,16 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { AiServerAdapterInvocationInput } from './dto/ai.server.adapter.dto.invocation';
-import { AiServerService } from '@services/ai-server/ai-server/ai.server.service';
-import { IAiPersona } from '@services/ai-server/ai-persona/ai.persona.interface';
-import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 import { LogContext } from '@common/enums';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
+import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import {
   CreateAiPersonaInput,
   UpdateAiPersonaInput,
 } from '@services/ai-server/ai-persona';
+import { IAiPersona } from '@services/ai-server/ai-persona/ai.persona.interface';
+import { AiServerService } from '@services/ai-server/ai-server/ai.server.service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { AiServerAdapterInvocationInput } from './dto/ai.server.adapter.dto.invocation';
 
 @Injectable()
 export class AiServerAdapter {

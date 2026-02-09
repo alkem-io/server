@@ -1,7 +1,7 @@
 import { Query, Resolver } from '@nestjs/graphql';
+import { InstrumentResolver } from '@src/apm/decorators';
 import { IPlatform } from './platform.interface';
 import { PlatformService } from './platform.service';
-import { InstrumentResolver } from '@src/apm/decorators';
 
 @InstrumentResolver()
 @Resolver(() => IPlatform)

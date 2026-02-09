@@ -1,6 +1,6 @@
 import { SearchResultType } from '../../search.result.type';
-import { ISearchResult } from './search.result.interface';
 import { BaseSearchHit } from './base.search.hit';
+import { ISearchResult } from './search.result.interface';
 
 /**
  * A mixin, providing all the properties of ISearchResult in a class

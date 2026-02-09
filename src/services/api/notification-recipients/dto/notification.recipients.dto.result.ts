@@ -1,5 +1,5 @@
-import { Field, ObjectType } from '@nestjs/graphql';
 import { IUser } from '@domain/community/user/user.interface';
+import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType()
 export class NotificationRecipientResult {

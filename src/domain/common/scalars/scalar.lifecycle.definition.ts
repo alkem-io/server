@@ -1,9 +1,9 @@
 import { LogContext } from '@common/enums';
 import { ValidationException } from '@common/exceptions';
-import { Scalar, CustomScalar } from '@nestjs/graphql';
-import { Kind, ValueNode } from 'graphql';
 import { validateMachineDefinition } from '@core/validation/xstate/validateMachineDefinition';
+import { CustomScalar, Scalar } from '@nestjs/graphql';
 import { ErrorObject } from 'ajv';
+import { Kind, ValueNode } from 'graphql';
 
 export const LIFECYCLE_DEFINITION_LENGTH = 8388608;
 

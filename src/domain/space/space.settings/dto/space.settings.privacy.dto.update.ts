@@ -1,5 +1,5 @@
-import { Field, InputType } from '@nestjs/graphql';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
+import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
 export class UpdateSpaceSettingsPrivacyInput {

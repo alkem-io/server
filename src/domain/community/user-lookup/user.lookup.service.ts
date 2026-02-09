@@ -1,18 +1,18 @@
-import { EntityManager, FindOneOptions, In, FindManyOptions } from 'typeorm';
-import { InjectEntityManager } from '@nestjs/typeorm';
-import { Inject, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { isUUID } from 'class-validator';
+import { LogContext } from '@common/enums';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums';
-import { User } from '../user/user.entity';
-import { IUser } from '../user/user.interface';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { ICredential } from '@domain/agent/credential/credential.interface';
 import { CredentialsSearchInput } from '@domain/agent/credential/dto/credentials.dto.search';
+import { Inject, LoggerService } from '@nestjs/common';
+import { InjectEntityManager } from '@nestjs/typeorm';
+import { isUUID } from 'class-validator';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { EntityManager, FindManyOptions, FindOneOptions, In } from 'typeorm';
+import { User } from '../user/user.entity';
+import { IUser } from '../user/user.interface';
 
 export class UserLookupService {
   constructor(

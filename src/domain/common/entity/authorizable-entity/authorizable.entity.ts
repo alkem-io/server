@@ -1,6 +1,6 @@
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
 import { JoinColumn, OneToOne } from 'typeorm';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IAuthorizable } from './authorizable.interface';
 
 export abstract class AuthorizableEntity

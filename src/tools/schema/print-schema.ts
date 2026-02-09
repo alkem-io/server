@@ -8,21 +8,20 @@ import 'reflect-metadata';
 import { writeFileSync } from 'node:fs';
 import { NestFactory } from '@nestjs/core';
 import { GraphQLSchemaHost } from '@nestjs/graphql';
-import { printSchema } from 'graphql';
+import { DocumentNode, parse, print, printSchema } from 'graphql';
 import { AppModule } from '../../app.module';
-import { parse, print, DocumentNode } from 'graphql';
 // Reuse sorting by invoking the logic in sort-sdl via an internal function copy to avoid circular import.
 
 // Minimal inline sorter (mirrors logic in sort-sdl.ts but scoped locally to avoid execution cost of re-reading file)
 import {
   DefinitionNode,
-  ObjectTypeDefinitionNode,
-  InterfaceTypeDefinitionNode,
-  InputObjectTypeDefinitionNode,
   EnumTypeDefinitionNode,
-  UnionTypeDefinitionNode,
   FieldDefinitionNode,
+  InputObjectTypeDefinitionNode,
   InputValueDefinitionNode,
+  InterfaceTypeDefinitionNode,
+  ObjectTypeDefinitionNode,
+  UnionTypeDefinitionNode,
 } from 'graphql';
 
 type AnyComposite =

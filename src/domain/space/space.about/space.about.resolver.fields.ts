@@ -1,24 +1,24 @@
-import { IProfile } from '@domain/common/profile/profile.interface';
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { ISpace } from '../space/space.interface';
+import { AuthorizationAgentPrivilege } from '@common/decorators';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
+import { EntityNotFoundException } from '@common/exceptions';
+import { GraphqlGuard } from '@core/authorization';
 import { ProfileLoaderCreator } from '@core/dataloader/creators/loader.creators/profile.loader.creator';
 import { Loader } from '@core/dataloader/decorators/data.loader.decorator';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { ISpaceAbout } from './space.about.interface';
-import { SpaceAbout } from './space.about.entity';
 import { INVP } from '@domain/common/nvp/nvp.interface';
-import { SpaceAboutService } from './space.about.service';
-import { SpaceLookupService } from '../space.lookup/space.lookup.service';
-import { TemplateContentSpaceLookupService } from '@domain/template/template-content-space/template-content-space.lookup/template-content-space.lookup.service';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { SpaceAboutMembership } from '../space.about.membership/dto/space.about.membership';
-import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
-import { AuthorizationAgentPrivilege } from '@common/decorators';
-import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { IProfile } from '@domain/common/profile/profile.interface';
 import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
+import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { TemplateContentSpaceLookupService } from '@domain/template/template-content-space/template-content-space.lookup/template-content-space.lookup.service';
 import { UseGuards } from '@nestjs/common';
-import { GraphqlGuard } from '@core/authorization';
-import { EntityNotFoundException } from '@common/exceptions';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { ISpace } from '../space/space.interface';
+import { SpaceAboutMembership } from '../space.about.membership/dto/space.about.membership';
+import { SpaceLookupService } from '../space.lookup/space.lookup.service';
+import { SpaceAbout } from './space.about.entity';
+import { ISpaceAbout } from './space.about.interface';
+import { SpaceAboutService } from './space.about.service';
 
 @Resolver(() => ISpaceAbout)
 export class SpaceAboutResolverFields {

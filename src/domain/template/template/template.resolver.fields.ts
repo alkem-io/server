@@ -1,16 +1,16 @@
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { ITemplate } from './template.interface';
-import { TemplateService } from './template.service';
 import { TemplateType } from '@common/enums/template.type';
-import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
-import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
+import { ProfileLoaderCreator } from '@core/dataloader/creators';
+import { Loader } from '@core/dataloader/decorators';
+import { ILoader } from '@core/dataloader/loader.interface';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { IProfile } from '@domain/common/profile';
-import { Loader } from '@core/dataloader/decorators';
-import { ProfileLoaderCreator } from '@core/dataloader/creators';
-import { Template } from './template.entity';
-import { ILoader } from '@core/dataloader/loader.interface';
+import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
+import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { ITemplateContentSpace } from '../template-content-space/template.content.space.interface';
+import { Template } from './template.entity';
+import { ITemplate } from './template.interface';
+import { TemplateService } from './template.service';
 
 @Resolver(() => ITemplate)
 export class TemplateResolverFields {

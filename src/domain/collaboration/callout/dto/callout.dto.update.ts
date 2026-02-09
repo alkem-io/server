@@ -1,11 +1,11 @@
-import { Field, InputType } from '@nestjs/graphql';
-import { NameID } from '@domain/common/scalars/scalar.nameid';
 import { UpdateCalloutContributionDefaultsInput } from '@domain/collaboration/callout-contribution-defaults/dto';
-import { Type } from 'class-transformer';
-import { ValidateNested } from 'class-validator';
 import { UpdateCalloutFramingInput } from '@domain/collaboration/callout-framing/dto/callout.framing.dto.update';
 import { UpdateCalloutSettingsInput } from '@domain/collaboration/callout-settings/dto';
 import { UpdateClassificationInput } from '@domain/common/classification/dto/classification.dto.update';
+import { NameID } from '@domain/common/scalars/scalar.nameid';
+import { Field, InputType } from '@nestjs/graphql';
+import { Type } from 'class-transformer';
+import { ValidateNested } from 'class-validator';
 
 @InputType()
 export class UpdateCalloutInput {

@@ -5,8 +5,8 @@
 
 import { Provider } from '@nestjs/common';
 import { Publisher } from '@services/infrastructure/event-bus/publisher';
-import { Subscriber } from '@services/infrastructure/event-bus/subscriber';
 import { RabbitMQConnectionFactory } from '@services/infrastructure/event-bus/rabbitmq.connection.factory';
+import { Subscriber } from '@services/infrastructure/event-bus/subscriber';
 
 /**
  * Stub Publisher that doesn't connect to RabbitMQ.
