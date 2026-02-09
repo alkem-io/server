@@ -1,5 +1,5 @@
-import { Field, ObjectType } from '@nestjs/graphql';
 import { SearchCursor } from '@domain/common/scalars';
+import { Field, ObjectType } from '@nestjs/graphql';
 import { ISearchResult } from './search.result.interface';
 
 @ObjectType()

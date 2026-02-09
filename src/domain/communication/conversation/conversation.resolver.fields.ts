@@ -1,12 +1,6 @@
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { CurrentUser } from '@common/decorators';
-import { IRoom } from '@domain/communication/room/room.interface';
-import { ConversationService } from './conversation.service';
-import { IConversation } from './conversation.interface';
-import { IUser } from '@domain/community/user/user.interface';
-import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
-import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
 import { AgentType } from '@common/enums/agent.type';
+import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import {
   ContributorByAgentIdLoaderCreator,
@@ -15,7 +9,13 @@ import {
 import { Loader } from '@core/dataloader/decorators/data.loader.decorator';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { IConversationMembership } from '@domain/communication/conversation-membership/conversation.membership.interface';
+import { IRoom } from '@domain/communication/room/room.interface';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { IUser } from '@domain/community/user/user.interface';
+import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { IConversation } from './conversation.interface';
+import { ConversationService } from './conversation.service';
 
 @Resolver(() => IConversation)
 export class ConversationResolverFields {

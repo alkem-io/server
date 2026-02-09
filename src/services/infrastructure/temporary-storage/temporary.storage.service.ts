@@ -1,12 +1,12 @@
-import { Inject, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums/logging.context';
+import { CreateContributionOnCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create.contribution';
+import { CreateCalloutOnCalloutsSetInput } from '@domain/collaboration/callouts-set/dto/callouts.set.dto.create.callout';
+import { CreateVirtualContributorOnAccountInput } from '@domain/space/account/dto/account.dto.create.virtual.contributor';
 import { IDocument } from '@domain/storage/document/document.interface';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
-import { CreateContributionOnCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create.contribution';
-import { CreateVirtualContributorOnAccountInput } from '@domain/space/account/dto/account.dto.create.virtual.contributor';
-import { CreateCalloutOnCalloutsSetInput } from '@domain/collaboration/callouts-set/dto/callouts.set.dto.create.callout';
+import { Inject, LoggerService } from '@nestjs/common';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 export type temporaryDocumentDTO =
   | CreateContributionOnCalloutInput
@@ -54,7 +54,7 @@ export class TemporaryStorageService {
     const escapedDocumentBaseUrlPth = this.escapeRegExp(documentBaseURlPath);
 
     // Find all instances in the serializedJSON that match this URL path base
-    const regex = new RegExp(`(${escapedDocumentBaseUrlPth}\/)(.{0,36})`, 'g');
+    const regex = new RegExp(`(${escapedDocumentBaseUrlPth}/)(.{0,36})`, 'g');
     const matches = [...jsonString.matchAll(regex)];
     const results: IDocument[] = [];
     for (const match of matches) {

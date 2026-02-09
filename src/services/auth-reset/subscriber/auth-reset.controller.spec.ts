@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AuthResetController } from './auth-reset.controller';
 import { MockSpaceService, MockWinstonProvider } from '@test/mocks';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { AuthResetController } from './auth-reset.controller';
 
 describe('AuthResetController', () => {
   let controller: AuthResetController;

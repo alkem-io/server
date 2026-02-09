@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
-import { isElasticResponseError } from './is.elastic.response.error';
 import { isElasticError } from './is.elastic.error';
+import { isElasticResponseError } from './is.elastic.response.error';
 
 export type HandledElasticError = {
   message: string;

@@ -1,15 +1,15 @@
+import { RoleSet } from '@domain/access/role-set/role.set.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
+import { Messaging } from '@domain/communication/messaging/messaging.entity';
+import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
+import { TemplatesManager } from '@domain/template/templates-manager/templates.manager.entity';
 import { Library } from '@library/library/library.entity';
+import { Forum } from '@platform/forum/forum.entity';
+import { LicensingFramework } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.entity';
+import { IPlatformWellKnownVirtualContributors } from '@platform/platform.well.known.virtual.contributors/platform.well.known.virtual.contributors.interface';
+import { IPlatformSettings } from '@platform/platform-settings/platform.settings.interface';
 import { Column, Entity, JoinColumn, OneToOne } from 'typeorm';
 import { IPlatform } from './platform.interface';
-import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
-import { Forum } from '@platform/forum/forum.entity';
-import { TemplatesManager } from '@domain/template/templates-manager/templates.manager.entity';
-import { LicensingFramework } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.entity';
-import { RoleSet } from '@domain/access/role-set/role.set.entity';
-import { IPlatformSettings } from '@platform/platform-settings/platform.settings.interface';
-import { IPlatformWellKnownVirtualContributors } from '@platform/platform.well.known.virtual.contributors/platform.well.known.virtual.contributors.interface';
-import { Messaging } from '@domain/communication/messaging/messaging.entity';
 
 @Entity()
 export class Platform extends AuthorizableEntity implements IPlatform {

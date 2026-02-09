@@ -1,12 +1,14 @@
-import * as Y from 'yjs';
-import { MarkdownParser } from 'prosemirror-markdown';
-import markdownIt, { Token } from 'markdown-it';
-import { DOMParser as ProseMirrorDOMParser } from 'prosemirror-model';
-import { JSDOM } from 'jsdom';
 import { prosemirrorToYDoc } from '@tiptap/y-tiptap';
-import { markdownSchema } from './markdown.schema';
+import { JSDOM } from 'jsdom';
+import markdownIt, { Token } from 'markdown-it';
+import { MarkdownParser } from 'prosemirror-markdown';
+import {
+  DOMParser as ProseMirrorDOMParser,
+  Node as ProseMirrorNode,
+} from 'prosemirror-model';
+import * as Y from 'yjs';
 import { newLineReplacement } from './const';
-import { Node as ProseMirrorNode } from 'prosemirror-model';
+import { markdownSchema } from './markdown.schema';
 
 /**
 

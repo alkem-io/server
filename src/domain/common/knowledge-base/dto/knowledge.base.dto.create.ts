@@ -1,8 +1,8 @@
-import { InputType, Field, ObjectType } from '@nestjs/graphql';
-import { ValidateNested } from 'class-validator';
-import { Type } from 'class-transformer';
-import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
 import { CreateCalloutsSetInput } from '@domain/collaboration/callouts-set/dto/callouts.set.dto.create';
+import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
+import { Field, InputType, ObjectType } from '@nestjs/graphql';
+import { Type } from 'class-transformer';
+import { ValidateNested } from 'class-validator';
 
 @InputType()
 @ObjectType('CreateKnowledgeBaseData')

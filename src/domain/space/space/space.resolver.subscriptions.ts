@@ -1,20 +1,20 @@
+import { SUBSCRIPTION_SUBSPACE_CREATED } from '@common/constants/providers';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { TypedSubscription } from '@common/decorators/typed.subscription/typed.subscription.decorator';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { LogContext } from '@common/enums/logging.context';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Resolver } from '@nestjs/graphql';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { PubSubEngine } from 'graphql-subscriptions';
-import { LogContext } from '@common/enums/logging.context';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { TypedSubscription } from '@common/decorators/typed.subscription/typed.subscription.decorator';
-import { SpaceService } from './space.service';
-import { SubspaceCreatedPayload } from './dto/space.subspace.created.payload';
-import { SubspaceCreatedArgs } from './dto/space.subspace.created.args';
-import { SubspaceCreated as SubspaceCreated } from './dto/space.dto.event.subspace.created';
-import { SUBSCRIPTION_SUBSPACE_CREATED } from '@common/constants/providers';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { PubSubEngine } from 'graphql-subscriptions';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { SubspaceCreated } from './dto/space.dto.event.subspace.created';
+import { SubspaceCreatedArgs } from './dto/space.subspace.created.args';
+import { SubspaceCreatedPayload } from './dto/space.subspace.created.payload';
+import { SpaceService } from './space.service';
 
 @InstrumentResolver()
 @Resolver()

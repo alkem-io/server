@@ -1,12 +1,12 @@
-import { vi } from 'vitest';
+import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { Test, TestingModule } from '@nestjs/testing';
-import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { MockWinstonProvider } from '@test/mocks';
 import { MockContributorLookupService } from '@test/mocks/contributor.lookup.service.mock';
+import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { testData } from '@test/utils/test-data';
-import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
-import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
+import { vi } from 'vitest';
 import { RoomMentionsService } from '../room-mentions/room.mentions.service';
 
 describe('RoomServiceMentions', () => {
@@ -194,11 +194,13 @@ describe('RoomServiceMentions', () => {
     // Direct assignment to avoid proxy issues with vi.spyOn
     userLookupService.getUserByNameIdOrFail = vi.fn().mockResolvedValue(user);
 
-    organizationLookupService.getOrganizationByNameIdOrFail =
-      vi.fn().mockResolvedValue(organization);
+    organizationLookupService.getOrganizationByNameIdOrFail = vi
+      .fn()
+      .mockResolvedValue(organization);
 
-    virtualContributorLookupService.getVirtualContributorByNameIdOrFail =
-      vi.fn().mockResolvedValue(virtualContributor);
+    virtualContributorLookupService.getVirtualContributorByNameIdOrFail = vi
+      .fn()
+      .mockResolvedValue(virtualContributor);
 
     const result = await roomMentionsService.getMentionsFromText(text);
     expect(result.length).toBe(expected.length);

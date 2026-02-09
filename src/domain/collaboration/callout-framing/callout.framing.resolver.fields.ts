@@ -1,14 +1,15 @@
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { IProfile } from '@domain/common/profile/profile.interface';
-import { ICalloutFraming } from './callout.framing.interface';
-import { Loader } from '@core/dataloader/decorators';
-import { CalloutFraming } from './callout.framing.entity';
 import { ProfileLoaderCreator } from '@core/dataloader/creators';
+import { Loader } from '@core/dataloader/decorators';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { CalloutFramingService } from './callout.framing.service';
-import { IWhiteboard } from '@domain/common/whiteboard/types';
 import { ILink } from '@domain/collaboration/link/link.interface';
+import { IMediaGallery } from '@domain/common/media-gallery/media.gallery.interface';
 import { IMemo } from '@domain/common/memo/types';
+import { IProfile } from '@domain/common/profile/profile.interface';
+import { IWhiteboard } from '@domain/common/whiteboard/types';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { CalloutFraming } from './callout.framing.entity';
+import { ICalloutFraming } from './callout.framing.interface';
+import { CalloutFramingService } from './callout.framing.service';
 
 @Resolver(() => ICalloutFraming)
 export class CalloutFramingResolverFields {
@@ -50,5 +51,15 @@ export class CalloutFramingResolverFields {
   })
   memo(@Parent() calloutFraming: ICalloutFraming): Promise<IMemo | null> {
     return this.calloutFramingService.getMemo(calloutFraming);
+  }
+
+  @ResolveField('mediaGallery', () => IMediaGallery, {
+    nullable: true,
+    description: 'The media gallery associated with the callout framing',
+  })
+  async mediaGallery(
+    @Parent() calloutFraming: ICalloutFraming
+  ): Promise<IMediaGallery | null> {
+    return this.calloutFramingService.getMediaGallery(calloutFraming);
   }
 }

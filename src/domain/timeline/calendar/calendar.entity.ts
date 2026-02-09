@@ -5,9 +5,13 @@ import { ICalendar } from './calendar.interface';
 
 @Entity()
 export class Calendar extends AuthorizableEntity implements ICalendar {
-  @OneToMany(() => CalendarEvent, event => event.calendar, {
-    eager: true,
-    cascade: true,
-  })
+  @OneToMany(
+    () => CalendarEvent,
+    event => event.calendar,
+    {
+      eager: true,
+      cascade: true,
+    }
+  )
   events?: CalendarEvent[];
 }

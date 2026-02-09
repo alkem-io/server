@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { AiServerAdapter } from './ai.server.adapter';
 import { AiServerModule } from '@services/ai-server/ai-server/ai.server.module';
+import { AiServerAdapter } from './ai.server.adapter';
 
 @Module({
   imports: [AiServerModule],

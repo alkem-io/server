@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getEventBusMockProviders } from '@test/utils';
 import { Publisher } from './publisher';
-import { Subscriber } from './subscriber';
 import { RabbitMQConnectionFactory } from './rabbitmq.connection.factory';
+import { Subscriber } from './subscriber';
 
 describe('EventBus Mocking', () => {
   let module: TestingModule;

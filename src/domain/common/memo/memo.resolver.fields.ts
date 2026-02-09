@@ -1,19 +1,19 @@
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { Inject, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { IUser } from '@domain/community/user/user.interface';
 import { LogContext } from '@common/enums/logging.context';
-import { Loader } from '@core/dataloader/decorators';
-import { IProfile } from '../profile/profile.interface';
-import { IMemo } from './memo.interface';
 import {
   ProfileLoaderCreator,
   UserLoaderCreator,
 } from '@core/dataloader/creators';
+import { Loader } from '@core/dataloader/decorators';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { Memo } from './memo.entity';
-import { MemoService } from './memo.service';
+import { IUser } from '@domain/community/user/user.interface';
+import { Inject, LoggerService } from '@nestjs/common';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { IProfile } from '../profile/profile.interface';
 import { Markdown } from '../scalars/scalar.markdown';
+import { Memo } from './memo.entity';
+import { IMemo } from './memo.interface';
+import { MemoService } from './memo.service';
 
 @Resolver(() => IMemo)
 export class MemoResolverFields {

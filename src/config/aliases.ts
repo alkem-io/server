@@ -1,6 +1,6 @@
+import fs from 'fs';
 import moduleAlias from 'module-alias';
 import path from 'path';
-import fs from 'fs';
 
 const distPath = path.resolve(__dirname, '..', '..', 'dist');
 const rootPath = fs.existsSync(path.join(distPath, 'core'))

@@ -1,16 +1,16 @@
-import { Field, InterfaceType } from '@nestjs/graphql';
-import { RelationshipNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { UUID, NameID } from '@domain/common/scalars';
-import { IUser } from '../user/user.interface';
-import { IOrganization } from '../organization/organization.interface';
-import { VirtualContributor } from '../virtual-contributor/virtual.contributor.entity';
-import { IProfile } from '@domain/common/profile/profile.interface';
+import { RelationshipNotFoundException } from '@common/exceptions';
 import { IAgent } from '@domain/agent/agent/agent.interface';
-import { IVirtualContributor } from '../virtual-contributor/virtual.contributor.interface';
-import { User } from '../user/user.entity';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { IProfile } from '@domain/common/profile/profile.interface';
+import { NameID, UUID } from '@domain/common/scalars';
+import { Field, InterfaceType } from '@nestjs/graphql';
 import { Organization } from '../organization/organization.entity';
+import { IOrganization } from '../organization/organization.interface';
+import { User } from '../user/user.entity';
+import { IUser } from '../user/user.interface';
+import { VirtualContributor } from '../virtual-contributor/virtual.contributor.entity';
+import { IVirtualContributor } from '../virtual-contributor/virtual.contributor.interface';
 
 @InterfaceType('Contributor', {
   resolveType(contributor) {

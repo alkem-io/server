@@ -1,7 +1,7 @@
+import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
+import { Profile } from '@domain/common/profile/profile.entity';
 import { Entity, JoinColumn, OneToOne } from 'typeorm';
 import { ICommunityGuidelines } from './community.guidelines.interface';
-import { Profile } from '@domain/common/profile/profile.entity';
-import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
 
 @Entity()
 export class CommunityGuidelines

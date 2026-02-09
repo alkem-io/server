@@ -1,39 +1,39 @@
+import { ProfileType } from '@common/enums';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LogContext } from '@common/enums/logging.context';
+import {
+  DEFAULT_ALLOWED_MIME_TYPES,
+  MimeFileType,
+} from '@common/enums/mime.file.type';
+import { MimeTypeVisual } from '@common/enums/mime.file.type.visual';
+import { VisualType } from '@common/enums/visual.type';
+import { ValidationException } from '@common/exceptions';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { StorageUploadFailedException } from '@common/exceptions/storage/storage.upload.failed.exception';
+import { streamToBuffer } from '@common/utils';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { Profile } from '@domain/common/profile/profile.entity';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { AvatarCreatorService } from '@services/external/avatar-creator/avatar.creator.service';
+import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { Readable } from 'stream';
 import { FindOneOptions, Repository } from 'typeorm';
-import { IDocument } from '../document/document.interface';
 import { Document } from '../document/document.entity';
+import { IDocument } from '../document/document.interface';
 import { DocumentService } from '../document/document.service';
+import { CreateDocumentInput } from '../document/dto/document.dto.create';
+import { StorageBucketArgsDocuments } from './dto/storage.bucket.args.documents';
+import { CreateStorageBucketInput } from './dto/storage.bucket.dto.create';
+import { IStorageBucketParent } from './dto/storage.bucket.dto.parent';
 import { StorageBucket } from './storage.bucket.entity';
 import { IStorageBucket } from './storage.bucket.interface';
-import { StorageBucketArgsDocuments } from './dto/storage.bucket.args.documents';
-import {
-  DEFAULT_ALLOWED_MIME_TYPES,
-  MimeFileType,
-} from '@common/enums/mime.file.type';
-import { CreateDocumentInput } from '../document/dto/document.dto.create';
-import { Readable } from 'stream';
-import { ValidationException } from '@common/exceptions';
-import { streamToBuffer } from '@common/utils';
-import { CreateStorageBucketInput } from './dto/storage.bucket.dto.create';
-import { Profile } from '@domain/common/profile/profile.entity';
-import { IStorageBucketParent } from './dto/storage.bucket.dto.parent';
-import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
-import { ProfileType } from '@common/enums';
-import { StorageUploadFailedException } from '@common/exceptions/storage/storage.upload.failed.exception';
-import { MimeTypeVisual } from '@common/enums/mime.file.type.visual';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { AvatarCreatorService } from '@services/external/avatar-creator/avatar.creator.service';
-import { VisualType } from '@common/enums/visual.type';
 @Injectable()
 export class StorageBucketService {
   DEFAULT_MAX_ALLOWED_FILE_SIZE = 15728640;
@@ -195,8 +195,7 @@ export class StorageBucketService {
       if (docByExternalId) {
         return docByExternalId;
       }
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (e) {
+    } catch (_e) {
       /* just consume */
     }
 

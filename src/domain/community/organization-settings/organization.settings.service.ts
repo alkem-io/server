@@ -1,7 +1,7 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { IOrganizationSettings } from './organization.settings.interface';
 import { UpdateOrganizationSettingsEntityInput } from './dto/organization.settings.dto.update';
+import { IOrganizationSettings } from './organization.settings.interface';
 
 @Injectable()
 export class OrganizationSettingsService {

@@ -1,19 +1,19 @@
-import { Injectable } from '@nestjs/common';
-import { RoomType } from '@common/enums/room.type';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
-import { RoomServiceEvents } from '@domain/communication/room/room.service.events';
-import { RoomMentionsService } from '@domain/communication/room-mentions/room.mentions.service';
-import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
-import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
-import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
+import { RoomType } from '@common/enums/room.type';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { IRoom } from '@domain/communication/room/room.interface';
 import { IMessage } from '@domain/communication/message/message.interface';
 import {
   Mention,
   MentionedEntityType,
 } from '@domain/communication/messaging/mention.interface';
+import { IRoom } from '@domain/communication/room/room.interface';
+import { RoomServiceEvents } from '@domain/communication/room/room.service.events';
+import { RoomMentionsService } from '@domain/communication/room-mentions/room.mentions.service';
+import { Injectable } from '@nestjs/common';
+import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
+import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
+import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
 
 /**
  * Service responsible for processing notifications and activity events

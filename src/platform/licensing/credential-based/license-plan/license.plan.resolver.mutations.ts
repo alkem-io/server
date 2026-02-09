@@ -1,15 +1,15 @@
-import { Resolver, Mutation, Args } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { LogContext } from '@common/enums/logging.context';
+import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { ILicensePlan } from '@platform/licensing/credential-based/license-plan/license.plan.interface';
 import { LicensePlanService } from '@platform/licensing/credential-based/license-plan/license.plan.service';
-import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
-import { LogContext } from '@common/enums/logging.context';
+import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentUser } from '@src/common/decorators';
 import { DeleteLicensePlanInput } from './dto/license.plan.dto.delete';
 import { UpdateLicensePlanInput } from './dto/license.plan.dto.update';
-import { InstrumentResolver } from '@src/apm/decorators';
 
 @InstrumentResolver()
 @Resolver()

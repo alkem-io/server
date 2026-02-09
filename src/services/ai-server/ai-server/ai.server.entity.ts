@@ -5,9 +5,13 @@ import { IAiServer } from './ai.server.interface';
 
 @Entity()
 export class AiServer extends AuthorizableEntity implements IAiServer {
-  @OneToMany(() => AiPersona, aiPersona => aiPersona.aiServer, {
-    eager: false,
-    cascade: true,
-  })
+  @OneToMany(
+    () => AiPersona,
+    aiPersona => aiPersona.aiServer,
+    {
+      eager: false,
+      cascade: true,
+    }
+  )
   aiPersonas!: AiPersona[];
 }

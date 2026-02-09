@@ -1,15 +1,15 @@
-import { EntityManager, FindOptionsRelations } from 'typeorm';
-import { InjectEntityManager } from '@nestjs/typeorm';
-import { Inject, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { LogContext } from '@common/enums';
+import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import {
   EntityNotFoundException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums';
-import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { Account } from '@domain/space/account/account.entity';
 import { ISpace } from '@domain/space/space/space.interface';
+import { Inject, LoggerService } from '@nestjs/common';
+import { InjectEntityManager } from '@nestjs/typeorm';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { EntityManager, FindOptionsRelations } from 'typeorm';
 
 /**
  * Priority order for space entitlements (highest to lowest priority).

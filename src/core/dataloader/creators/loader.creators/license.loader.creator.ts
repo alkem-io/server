@@ -1,11 +1,11 @@
-import { EntityManager } from 'typeorm';
+import { DataLoaderInitError } from '@common/exceptions/data-loader';
+import { License } from '@domain/common/license/license.entity';
+import { ILicense } from '@domain/common/license/license.interface';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { DataLoaderInitError } from '@common/exceptions/data-loader';
+import { EntityManager } from 'typeorm';
 import { createTypedRelationDataLoader } from '../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../base';
-import { ILicense } from '@domain/common/license/license.interface';
-import { License } from '@domain/common/license/license.entity';
 
 @Injectable()
 export class LicenseLoaderCreator implements DataLoaderCreator<ILicense> {

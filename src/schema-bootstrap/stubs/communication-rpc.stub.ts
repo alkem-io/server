@@ -4,8 +4,9 @@
  * Replaces the real RabbitMQ connection with a no-op stub to allow
  * GraphQL schema generation without requiring infrastructure dependencies.
  */
-import { Global, Module, Provider } from '@nestjs/common';
+
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
+import { Global, Module, Provider } from '@nestjs/common';
 
 /**
  * Creates a stub AmqpConnection that mimics the real AmqpConnection interface

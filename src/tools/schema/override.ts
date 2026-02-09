@@ -23,7 +23,7 @@
 // - Distinguish multiple approvals; select first valid.
 // - Collect per-entry override marking (currently aggregated at report level).
 
-import { readFileSync, existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { fetchGitHubReviews } from './override-fetch';
 
 export interface ReviewInput {

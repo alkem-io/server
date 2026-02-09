@@ -1,15 +1,15 @@
-import { Injectable } from '@nestjs/common';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { IInnovationHub } from './types';
-import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
-import { LogContext } from '@common/enums/logging.context';
-import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { CREDENTIAL_RULE_TYPES_INNOVATION_HUBS } from '@common/constants/authorization/credential.rule.types.constants';
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { LogContext } from '@common/enums/logging.context';
+import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
+import { Injectable } from '@nestjs/common';
 import { InnovationHubService } from './innovation.hub.service';
+import { IInnovationHub } from './types';
 
 @Injectable()
 export class InnovationHubAuthorizationService {

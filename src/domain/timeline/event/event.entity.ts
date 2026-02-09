@@ -1,10 +1,10 @@
-import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
-import { ICalendarEvent } from './event.interface';
-import { Calendar } from '../calendar/calendar.entity';
-import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
-import { Room } from '@domain/communication/room/room.entity';
 import { ENUM_LENGTH } from '@common/constants';
 import { CalendarEventType } from '@common/enums/calendar.event.type';
+import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
+import { Room } from '@domain/communication/room/room.entity';
+import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
+import { Calendar } from '../calendar/calendar.entity';
+import { ICalendarEvent } from './event.interface';
 
 @Entity()
 export class CalendarEvent extends NameableEntity implements ICalendarEvent {
@@ -29,11 +29,15 @@ export class CalendarEvent extends NameableEntity implements ICalendarEvent {
   @JoinColumn()
   comments!: Room;
 
-  @ManyToOne(() => Calendar, calendar => calendar.events, {
-    eager: false,
-    cascade: false,
-    onDelete: 'CASCADE',
-  })
+  @ManyToOne(
+    () => Calendar,
+    calendar => calendar.events,
+    {
+      eager: false,
+      cascade: false,
+      onDelete: 'CASCADE',
+    }
+  )
   calendar?: Calendar;
 
   @Column('timestamp', { nullable: false })

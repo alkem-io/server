@@ -1,4 +1,11 @@
 import { LogContext, ProfileType } from '@common/enums';
+import { AccountType } from '@common/enums/account.type';
+import { AgentType } from '@common/enums/agent.type';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
+import { VisualType } from '@common/enums/visual.type';
 import {
   EntityNotFoundException,
   ForbiddenException,
@@ -7,61 +14,53 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { FormatNotSupportedException } from '@common/exceptions/format.not.supported.exception';
+import { validateEmail } from '@common/utils';
+import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AgentInfoCacheService } from '@core/authentication.agent.info/agent.info.cache.service';
+import { applyUserFilter } from '@core/filtering/filters';
+import { UserFilterInput } from '@core/filtering/input-types';
+import { PaginationArgs } from '@core/pagination';
+import { IPaginatedType } from '@core/pagination/paginated.type';
+import { getPaginationResults } from '@core/pagination/pagination.fn';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
+import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
+import { MessagingService } from '@domain/communication/messaging/messaging.service';
 import {
   CreateUserInput,
   DeleteUserInput,
   UpdateUserInput,
 } from '@domain/community/user';
+import { IAccount } from '@domain/space/account/account.interface';
+import { AccountHostService } from '@domain/space/account.host/account.host.service';
+import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
-
+import { KratosService } from '@services/infrastructure/kratos/kratos.service';
+import { NamingService } from '@services/infrastructure/naming/naming.service';
+import { InstrumentService } from '@src/apm/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
-import { NamingService } from '@services/infrastructure/naming/naming.service';
-import { limitAndShuffle } from '@common/utils/limitAndShuffle';
-import { IProfile } from '@domain/common/profile/profile.interface';
-import { PaginationArgs } from '@core/pagination';
-import { applyUserFilter } from '@core/filtering/filters';
-import { UserFilterInput } from '@core/filtering/input-types';
-import { getPaginationResults } from '@core/pagination/pagination.fn';
-import { IPaginatedType } from '@core/pagination/paginated.type';
-import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
-import { validateEmail } from '@common/utils';
 import { RoleSetRoleSelectionCredentials } from '../../access/role-set/dto/role.set.dto.role.selection.credentials';
 import { RoleSetRoleWithParentCredentials } from '../../access/role-set/dto/role.set.dto.role.with.parent.credentials';
-import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { contributorDefaults } from '../contributor/contributor.defaults';
-import { UsersQueryArgs } from './dto/users.query.args';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
+import { ContributorService } from '../contributor/contributor.service';
+import { UserAuthenticationLinkService } from '../user-authentication-link/user.authentication.link.service';
+import { UserLookupService } from '../user-lookup/user.lookup.service';
+import { CreateUserSettingsInput } from '../user-settings/dto/user.settings.dto.create';
+import { UpdateUserSettingsEntityInput } from '../user-settings/dto/user.settings.dto.update';
+import { UserSettingsService } from '../user-settings/user.settings.service';
 import { UpdateUserPlatformSettingsInput } from './dto/user.dto.update.platform.settings';
-import { IAccount } from '@domain/space/account/account.interface';
+import { UsersQueryArgs } from './dto/users.query.args';
 import { User } from './user.entity';
 import { IUser } from './user.interface';
-import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
-import { AgentType } from '@common/enums/agent.type';
-import { ContributorService } from '../contributor/contributor.service';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { AccountType } from '@common/enums/account.type';
-import { KratosService } from '@services/infrastructure/kratos/kratos.service';
-import { UserSettingsService } from '../user-settings/user.settings.service';
-import { UpdateUserSettingsEntityInput } from '../user-settings/dto/user.settings.dto.update';
-import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
-import { AccountHostService } from '@domain/space/account.host/account.host.service';
-import { UserLookupService } from '../user-lookup/user.lookup.service';
-import { AgentInfoCacheService } from '@core/authentication.agent.info/agent.info.cache.service';
-import { VisualType } from '@common/enums/visual.type';
-import { InstrumentService } from '@src/apm/decorators';
-import { CreateUserSettingsInput } from '../user-settings/dto/user.settings.dto.create';
-import { MessagingService } from '@domain/communication/messaging/messaging.service';
-import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
-import { UserAuthenticationLinkService } from '../user-authentication-link/user.authentication.link.service';
 
 @InstrumentService()
 @Injectable()

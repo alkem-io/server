@@ -1,17 +1,17 @@
-import { Injectable } from '@nestjs/common';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { CREDENTIAL_RULE_TYPES_UPDATE_FORUM_DISCUSSION } from '@common/constants/authorization/credential.rule.types.constants';
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { ForumDiscussionPrivacy } from '@common/enums/forum.discussion.privacy';
+import { LogContext } from '@common/enums/logging.context';
+import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
+import { Injectable } from '@nestjs/common';
+import { RoomAuthorizationService } from '../../domain/communication/room/room.service.authorization';
 import { IDiscussion } from './discussion.interface';
 import { DiscussionService } from './discussion.service';
-import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
-import { RoomAuthorizationService } from '../../domain/communication/room/room.service.authorization';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { AuthorizationCredential } from '@common/enums/authorization.credential';
-import { CREDENTIAL_RULE_TYPES_UPDATE_FORUM_DISCUSSION } from '@common/constants/authorization/credential.rule.types.constants';
-import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
-import { LogContext } from '@common/enums/logging.context';
-import { ForumDiscussionPrivacy } from '@common/enums/forum.discussion.privacy';
 
 @Injectable()
 export class DiscussionAuthorizationService {

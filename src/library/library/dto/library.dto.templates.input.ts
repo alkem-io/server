@@ -1,5 +1,5 @@
-import { Field, InputType } from '@nestjs/graphql';
 import { TemplateType } from '@common/enums/template.type';
+import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
 export class LibraryTemplatesFilterInput {

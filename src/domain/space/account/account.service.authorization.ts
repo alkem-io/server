@@ -1,40 +1,40 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import {
+  CREDENTIAL_RULE_PLATFORM_CREATE_INNOVATION_PACK,
+  CREDENTIAL_RULE_PLATFORM_CREATE_SPACE,
+  CREDENTIAL_RULE_PLATFORM_CREATE_VC,
+  CREDENTIAL_RULE_TYPES_ACCOUNT_CHILD_ENTITIES,
+  CREDENTIAL_RULE_TYPES_ACCOUNT_LICENSE_MANAGE,
+  CREDENTIAL_RULE_TYPES_ACCOUNT_MANAGE,
+  CREDENTIAL_RULE_TYPES_ACCOUNT_MANAGE_GLOBAL_ROLES,
+  CREDENTIAL_RULE_TYPES_ACCOUNT_RESOURCES_MANAGE,
+  CREDENTIAL_RULE_TYPES_ACCOUNT_RESOURCES_TRANSFER_ACCEPT,
+  CREDENTIAL_RULE_TYPES_GLOBAL_SPACE_READ,
+} from '@common/constants/authorization/credential.rule.types.constants';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
-import { AccountService } from './account.service';
 import {
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { IAccount } from './account.interface';
-import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
-import { SpaceAuthorizationService } from '../space/space.service.authorization';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import {
-  CREDENTIAL_RULE_PLATFORM_CREATE_SPACE,
-  CREDENTIAL_RULE_PLATFORM_CREATE_VC,
-  CREDENTIAL_RULE_TYPES_ACCOUNT_MANAGE_GLOBAL_ROLES,
-  CREDENTIAL_RULE_TYPES_ACCOUNT_CHILD_ENTITIES,
-  CREDENTIAL_RULE_TYPES_ACCOUNT_MANAGE,
-  CREDENTIAL_RULE_TYPES_ACCOUNT_RESOURCES_MANAGE,
-  CREDENTIAL_RULE_TYPES_GLOBAL_SPACE_READ,
-  CREDENTIAL_RULE_PLATFORM_CREATE_INNOVATION_PACK,
-  CREDENTIAL_RULE_TYPES_ACCOUNT_RESOURCES_TRANSFER_ACCEPT,
-  CREDENTIAL_RULE_TYPES_ACCOUNT_LICENSE_MANAGE,
-} from '@common/constants/authorization/credential.rule.types.constants';
 import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
-import { VirtualContributorAuthorizationService } from '@domain/community/virtual-contributor/virtual.contributor.service.authorization';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
+import { VirtualContributorAuthorizationService } from '@domain/community/virtual-contributor/virtual.contributor.service.authorization';
+import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { InnovationPackAuthorizationService } from '@library/innovation-pack/innovation.pack.service.authorization';
-import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
-import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { SpaceAuthorizationService } from '../space/space.service.authorization';
+import { IAccount } from './account.interface';
+import { AccountService } from './account.service';
 
 @Injectable()
 export class AccountAuthorizationService {

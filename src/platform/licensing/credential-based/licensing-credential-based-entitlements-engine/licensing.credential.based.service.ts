@@ -1,17 +1,17 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { LogContext } from '@common/enums';
+import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import {
   EntityNotFoundException,
   ForbiddenException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums';
-import { ILicensePolicy } from '@platform/licensing/credential-based/license-policy/license.policy.interface';
 import { ForbiddenLicensePolicyException } from '@common/exceptions/forbidden.license.policy.exception';
 import { IAgent, ICredential } from '@domain/agent';
-import { ILicensingCredentialBasedPolicyCredentialRule } from './licensing.credential.based.policy.credential.rule.interface';
-import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { ILicensePolicy } from '@platform/licensing/credential-based/license-policy/license.policy.interface';
 import { LicensingGrantedEntitlement } from '@platform/licensing/dto/licensing.dto.granted.entitlement';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LicensePolicyService } from '../license-policy/license.policy.service';
+import { ILicensingCredentialBasedPolicyCredentialRule } from './licensing.credential.based.policy.credential.rule.interface';
 
 @Injectable()
 export class LicensingCredentialBasedService {

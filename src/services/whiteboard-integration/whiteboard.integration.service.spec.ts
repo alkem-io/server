@@ -1,19 +1,19 @@
-import { vi } from 'vitest';
 import { AuthorizationPrivilege } from '@common/enums';
+import { AuthenticationService } from '@core/authentication/authentication.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
-import { AuthenticationService } from '@core/authentication/authentication.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { WhiteboardService } from '@domain/common/whiteboard';
+import { LoggerService } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { AccessGrantedInputData } from '@services/whiteboard-integration/inputs';
 import { WhiteboardIntegrationService } from '@services/whiteboard-integration/whiteboard.integration.service';
-import { ConfigService } from '@nestjs/config';
-import { LoggerService } from '@nestjs/common';
 import { AlkemioConfig } from '@src/types';
 import type { Mocked } from 'vitest';
+import { vi } from 'vitest';
 
 const buildGuestAgentInfo = (guestName: string): AgentInfo => {
   const agentInfo = new AgentInfo();

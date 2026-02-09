@@ -1,8 +1,8 @@
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { IApplication } from './application.interface';
 import { ILifecycleFields } from '@domain/common/lifecycle/lifecycle.fields.interface';
-import { ApplicationLifecycleService } from './application.service.lifecycle';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { IApplication } from './application.interface';
+import { ApplicationLifecycleService } from './application.service.lifecycle';
 
 @InstrumentResolver()
 @Resolver(() => IApplication)

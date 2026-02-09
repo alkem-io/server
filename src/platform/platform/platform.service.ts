@@ -1,8 +1,19 @@
+import { ForumDiscussionCategory } from '@common/enums/forum.discussion.category';
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { IRoleSet } from '@domain/access/role-set';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { IMessaging } from '@domain/communication/messaging/messaging.interface';
+import { MessagingService } from '@domain/communication/messaging/messaging.service';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { ITemplatesManager } from '@domain/template/templates-manager/templates.manager.interface';
 import { ILibrary } from '@library/library/library.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { IForum } from '@platform/forum/forum.interface';
+import { ForumService } from '@platform/forum/forum.service';
+import { Discussion } from '@platform/forum-discussion/discussion.entity';
+import { ILicensingFramework } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import {
   EntityManager,
@@ -10,20 +21,9 @@ import {
   FindOptionsRelations,
   Repository,
 } from 'typeorm';
+import { ReleaseDiscussionOutput } from './dto/release.discussion.dto';
 import { Platform } from './platform.entity';
 import { IPlatform } from './platform.interface';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { ReleaseDiscussionOutput } from './dto/release.discussion.dto';
-import { ForumService } from '@platform/forum/forum.service';
-import { IForum } from '@platform/forum/forum.interface';
-import { ForumDiscussionCategory } from '@common/enums/forum.discussion.category';
-import { MessagingService } from '@domain/communication/messaging/messaging.service';
-import { IMessaging } from '@domain/communication/messaging/messaging.interface';
-import { Discussion } from '@platform/forum-discussion/discussion.entity';
-import { ITemplatesManager } from '@domain/template/templates-manager/templates.manager.interface';
-import { ILicensingFramework } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.interface';
-import { IRoleSet } from '@domain/access/role-set';
 
 @Injectable()
 export class PlatformService {

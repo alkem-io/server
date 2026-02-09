@@ -1,26 +1,26 @@
-import { ProfileService } from '@domain/common/profile/profile.service';
-import { Injectable } from '@nestjs/common';
-import { CreateKnowledgeBaseInput } from './dto/knowledge.base.dto.create';
-import { UpdateKnowledgeBaseInput } from './dto/knowledge.base.dto.update';
-import { IKnowledgeBase } from './knowledge.base.interface';
-import { KnowledgeBase } from './knowledge.base.entity';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
-import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
-import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
-import { LogContext } from '@common/enums/logging.context';
-import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileType } from '@common/enums';
-import { CreateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.create';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { CalloutsSetType } from '@common/enums/callouts.set.type';
+import { LogContext } from '@common/enums/logging.context';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TagsetType } from '@common/enums/tagset.type';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
+import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { ICalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.interface';
-import { CalloutsSetType } from '@common/enums/callouts.set.type';
+import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { IProfile } from '@domain/common/profile/profile.interface';
+import { ProfileService } from '@domain/common/profile/profile.service';
+import { CreateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.create';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { TagsetService } from '../tagset/tagset.service';
+import { CreateKnowledgeBaseInput } from './dto/knowledge.base.dto.create';
+import { UpdateKnowledgeBaseInput } from './dto/knowledge.base.dto.update';
+import { KnowledgeBase } from './knowledge.base.entity';
+import { IKnowledgeBase } from './knowledge.base.interface';
 
 @Injectable()
 export class KnowledgeBaseService {

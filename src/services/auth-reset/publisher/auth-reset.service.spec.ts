@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import {
-  MockEntityManagerProvider,
   MockAuthResetService,
+  MockEntityManagerProvider,
   MockWinstonProvider,
 } from '@test/mocks';
 import { MockTaskService } from '@test/mocks/task.service.mock';

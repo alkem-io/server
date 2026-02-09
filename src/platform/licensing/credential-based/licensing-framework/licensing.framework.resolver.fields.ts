@@ -2,11 +2,11 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { ILicensePlan } from '@platform/licensing/credential-based/license-plan/license.plan.interface';
+import { ILicensePolicy } from '@platform/licensing/credential-based/license-policy';
 import { AuthorizationAgentPrivilege } from '@src/common/decorators';
 import { ILicensingFramework } from './licensing.framework.interface';
 import { LicensingFrameworkService } from './licensing.framework.service';
-import { ILicensePlan } from '@platform/licensing/credential-based/license-plan/license.plan.interface';
-import { ILicensePolicy } from '@platform/licensing/credential-based/license-policy';
 
 @Resolver(() => ILicensingFramework)
 export class LicensingFrameworkResolverFields {

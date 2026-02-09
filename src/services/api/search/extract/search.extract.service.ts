@@ -1,27 +1,27 @@
-import { intersectionWith } from 'lodash';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { Client as ElasticClient } from '@elastic/elasticsearch';
-import { ELASTICSEARCH_CLIENT_PROVIDER } from '@constants/index';
 import { LogContext } from '@common/enums';
-import { BaseSearchHit, ISearchResult } from '../dto/results';
-import { SearchFilterInput, SearchInput } from '../dto/inputs';
-import { buildSearchQuery } from './build.search.query';
-import { SearchResultType } from '../search.result.type';
-import { AlkemioConfig } from '@src/types';
-import { getIndexPattern } from '@services/api/search/ingest/get.index.pattern';
+import { isDefined } from '@common/utils';
+import { ELASTICSEARCH_CLIENT_PROVIDER } from '@constants/index';
+import { Client as ElasticClient } from '@elastic/elasticsearch';
 import {
   ErrorResponseBase,
   MsearchMultiSearchItem,
   MsearchResponse,
   MsearchResponseItem,
 } from '@elastic/elasticsearch/lib/api/types';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { getIndexPattern } from '@services/api/search/ingest/get.index.pattern';
 import { isElasticError } from '@services/external/elasticsearch/utils';
+import { AlkemioConfig } from '@src/types';
+import { intersectionWith } from 'lodash';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { SearchFilterInput, SearchInput } from '../dto/inputs';
+import { BaseSearchHit, ISearchResult } from '../dto/results';
 import { SearchCategory } from '../search.category';
-import { SearchIndex } from './search.index';
+import { SearchResultType } from '../search.result.type';
 import { buildMultiSearchRequestItems } from './build.multi.search.request.items';
-import { isDefined } from '@common/utils';
+import { buildSearchQuery } from './build.search.query';
+import { SearchIndex } from './search.index';
 
 const getIndexStore = (
   indexPattern: string

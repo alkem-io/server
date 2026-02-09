@@ -1,6 +1,6 @@
-import { Field, ObjectType } from '@nestjs/graphql';
-import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { VisualType } from '@common/enums/visual.type';
+import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
+import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('Visual')
 export abstract class IVisual extends IAuthorizable {
@@ -40,4 +40,7 @@ export abstract class IVisual extends IAuthorizable {
 
   @Field(() => String, { nullable: true })
   alternativeText?: string;
+
+  @Field(() => Number, { nullable: true })
+  sortOrder?: number;
 }

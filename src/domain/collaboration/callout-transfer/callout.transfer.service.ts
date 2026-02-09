@@ -1,22 +1,22 @@
-import { Injectable } from '@nestjs/common';
+import { LogContext } from '@common/enums';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import {
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ProfileService } from '@domain/common/profile/profile.service';
+import { TagsetService } from '@domain/common/tagset/tagset.service';
+import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
-import { CalloutService } from '../callout/callout.service';
-import { ProfileService } from '@domain/common/profile/profile.service';
-import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { TagsetService } from '@domain/common/tagset/tagset.service';
-import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.interface';
-import { ICallout } from '../callout/callout.interface';
+import { Injectable } from '@nestjs/common';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
-import { CalloutsSetService } from '../callouts-set/callouts.set.service';
+import { ICallout } from '../callout/callout.interface';
+import { CalloutService } from '../callout/callout.service';
 import { ICalloutsSet } from '../callouts-set/callouts.set.interface';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { CalloutsSetService } from '../callouts-set/callouts.set.service';
 
 @Injectable()
 export class CalloutTransferService {

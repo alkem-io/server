@@ -1,8 +1,8 @@
-import { Field, ObjectType } from '@nestjs/graphql';
-import { TaskResult } from '@services/task/task.result.interface';
-import { TaskError } from '@services/task/task.error.interface';
 import { UUID } from '@domain/common/scalars';
 import { TaskStatus } from '@domain/task/dto/task.status.enum';
+import { Field, ObjectType } from '@nestjs/graphql';
+import { TaskError } from '@services/task/task.error.interface';
+import { TaskResult } from '@services/task/task.result.interface';
 
 @ObjectType('Task')
 export abstract class ITask {

@@ -1,3 +1,8 @@
+import { ENUM_LENGTH } from '@common/constants';
+import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
+import { compressText, decompressText } from '@common/utils/compression.util';
+import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
+import { CalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.entity';
 import {
   AfterInsert,
   AfterLoad,
@@ -8,13 +13,8 @@ import {
   Entity,
   OneToOne,
 } from 'typeorm';
-import { compressText, decompressText } from '@common/utils/compression.util';
-import { IWhiteboard } from './whiteboard.interface';
 import { NameableEntity } from '../entity/nameable-entity/nameable.entity';
-import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
-import { ENUM_LENGTH } from '@common/constants';
-import { CalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.entity';
-import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
+import { IWhiteboard } from './whiteboard.interface';
 import { IWhiteboardPreviewSettings } from './whiteboard.preview.settings.interface';
 
 @Entity()
@@ -73,9 +73,13 @@ export class Whiteboard extends NameableEntity implements IWhiteboard {
    */
   guestContributionsAllowed = false;
 
-  @OneToOne(() => CalloutFraming, framing => framing.whiteboard, {
-    nullable: true,
-  })
+  @OneToOne(
+    () => CalloutFraming,
+    framing => framing.whiteboard,
+    {
+      nullable: true,
+    }
+  )
   framing?: CalloutFraming;
 
   @OneToOne(

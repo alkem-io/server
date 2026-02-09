@@ -1,5 +1,5 @@
-import { Field, ObjectType } from '@nestjs/graphql';
 import { Type } from '@nestjs/common';
+import { Field, ObjectType } from '@nestjs/graphql';
 
 /***
  * @see https://relay.dev/graphql/connections.htm#sec-Edge-Types

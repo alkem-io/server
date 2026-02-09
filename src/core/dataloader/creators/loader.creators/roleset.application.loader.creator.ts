@@ -1,9 +1,9 @@
-import { EntityManager } from 'typeorm';
+import { Application, IApplication } from '@domain/access/application';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
+import { EntityManager } from 'typeorm';
 import { createTypedSimpleDataLoader } from '../../utils/createTypedSimpleLoader';
 import { DataLoaderCreator } from '../base/data.loader.creator';
-import { Application, IApplication } from '@domain/access/application';
 import { DataLoaderCreatorOptions } from '../base/data.loader.creator.options';
 
 @Injectable()

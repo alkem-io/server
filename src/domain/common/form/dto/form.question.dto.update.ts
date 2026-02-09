@@ -1,6 +1,6 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { MaxLength } from 'class-validator';
 import { MID_TEXT_LENGTH } from '@src/common/constants';
+import { MaxLength } from 'class-validator';
 
 @InputType()
 export class UpdateFormQuestionInput {

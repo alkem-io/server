@@ -1,9 +1,3 @@
-import { LogContext } from '@common/enums';
-import {
-  EntityNotFoundException,
-  RelationshipNotFoundException,
-} from '@common/exceptions';
-import { Inject, Injectable } from '@nestjs/common';
 import {
   BaseEventPayload,
   ContributorPayload,
@@ -15,6 +9,7 @@ import {
   NotificationEventPayloadPlatformUserRegistration,
   NotificationEventPayloadPlatformUserRemoved,
   NotificationEventPayloadSpace,
+  NotificationEventPayloadSpaceCalendarEvent,
   NotificationEventPayloadSpaceCollaborationCallout,
   NotificationEventPayloadSpaceCommunicationMessageDirect,
   NotificationEventPayloadSpaceCommunicationUpdate,
@@ -23,37 +18,42 @@ import {
   NotificationEventPayloadSpaceCommunityInvitation,
   NotificationEventPayloadSpaceCommunityInvitationPlatform,
   NotificationEventPayloadSpaceCommunityInvitationVirtualContributor,
-  NotificationEventPayloadSpaceCalendarEvent,
   NotificationEventPayloadUserMessageDirect,
   NotificationEventPayloadUserMessageRoom,
   NotificationEventPayloadUserMessageRoomReply,
   RoleChangeType,
 } from '@alkemio/notifications-lib';
-import { ICallout } from '@domain/collaboration/callout/callout.interface';
-import { IMessage } from '@domain/communication/message/message.interface';
-import { IUser } from '@domain/community/user/user.interface';
-import { ConfigService } from '@nestjs/config/dist/config.service';
-import { IRoom } from '@domain/communication/room/room.interface';
-import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
-import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
-import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { AlkemioConfig } from '@src/types';
-import { ClientProxy } from '@nestjs/microservices';
+import { UserPayload } from '@alkemio/notifications-lib/dist/dto/user.payload';
 import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
+import { LogContext } from '@common/enums';
+import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
-import { ISpace } from '@domain/space/space/space.interface';
-import { UserPayload } from '@alkemio/notifications-lib/dist/dto/user.payload';
-import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { NotificationInputCommentReply } from '../notification-adapter/dto/space/notification.dto.input.space.communication.user.comment.reply';
-import { CalloutContributionType } from '@common/enums/callout.contribution.type';
-import { NotificationInputCollaborationCalloutContributionCreated } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.contribution.created';
-import { NotificationInputCollaborationCalloutComment } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.comment';
-import { NotificationInputCollaborationCalloutPostContributionComment } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.post.contribution.comment';
+import {
+  EntityNotFoundException,
+  RelationshipNotFoundException,
+} from '@common/exceptions';
+import { ICallout } from '@domain/collaboration/callout/callout.interface';
+import { IMessage } from '@domain/communication/message/message.interface';
 import { MessageDetails } from '@domain/communication/message.details/message.details.interface';
-import { ICalendarEvent } from '@domain/timeline/event/event.interface';
+import { IRoom } from '@domain/communication/room/room.interface';
+import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { getContributorType } from '@domain/community/contributor/get.contributor.type';
+import { IUser } from '@domain/community/user/user.interface';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { ISpace } from '@domain/space/space/space.interface';
+import { ICalendarEvent } from '@domain/timeline/event/event.interface';
+import { Inject, Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config/dist/config.service';
+import { ClientProxy } from '@nestjs/microservices';
+import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
+import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
+import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
+import { AlkemioConfig } from '@src/types';
+import { NotificationInputCollaborationCalloutComment } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.comment';
+import { NotificationInputCollaborationCalloutContributionCreated } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.contribution.created';
+import { NotificationInputCollaborationCalloutPostContributionComment } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.post.contribution.comment';
+import { NotificationInputCommentReply } from '../notification-adapter/dto/space/notification.dto.input.space.communication.user.comment.reply';
 
 interface CalloutContributionPayload {
   id: string;

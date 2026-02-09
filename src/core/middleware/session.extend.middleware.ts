@@ -1,3 +1,5 @@
+import { getSessionFromJwt } from '@common/utils';
+import { AuthenticationService } from '@core/authentication/authentication.service';
 import {
   Inject,
   Injectable,
@@ -5,13 +7,11 @@ import {
   NestMiddleware,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Request, Response, NextFunction } from 'express';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { AuthenticationService } from '@core/authentication/authentication.service';
-import { LogContext } from '@src/common/enums';
-import { getSessionFromJwt } from '@common/utils';
 import { Configuration, FrontendApi, Session } from '@ory/kratos-client';
+import { LogContext } from '@src/common/enums';
 import { AlkemioConfig } from '@src/types';
+import { NextFunction, Request, Response } from 'express';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class SessionExtendMiddleware implements NestMiddleware {

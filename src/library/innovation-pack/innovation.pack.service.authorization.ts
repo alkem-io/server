@@ -1,16 +1,16 @@
-import { Injectable } from '@nestjs/common';
-import { InnovationPackService } from './innovation.pack.service';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { IInnovationPack } from './innovation.pack.interface';
-import { TemplatesSetAuthorizationService } from '@domain/template/templates-set/templates.set.service.authorization';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
+import { LogContext } from '@common/enums';
 import {
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
+import { TemplatesSetAuthorizationService } from '@domain/template/templates-set/templates.set.service.authorization';
+import { Injectable } from '@nestjs/common';
+import { IInnovationPack } from './innovation.pack.interface';
+import { InnovationPackService } from './innovation.pack.service';
 
 @Injectable()
 export class InnovationPackAuthorizationService {

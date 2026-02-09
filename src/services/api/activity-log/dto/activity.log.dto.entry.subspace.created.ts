@@ -1,7 +1,7 @@
+import { ISpace } from '@domain/space/space/space.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IActivityLogEntryBase } from './activity.log.dto.entry.base.interface';
 import { IActivityLogEntry } from './activity.log.entry.interface';
-import { ISpace } from '@domain/space/space/space.interface';
 
 @ObjectType('ActivityLogEntrySubspaceCreated', {
   implements: () => [IActivityLogEntry],
