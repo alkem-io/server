@@ -320,17 +320,26 @@ export class ConversationService {
   }
 
   /**
-   * Get all members of a conversation via the pivot table.   * Performance: Queries are limited to 2 members per conversation by domain constraint.
-   * Consider DataLoader batching for GraphQL resolvers when querying multiple conversations.   * @param conversationId - UUID of the conversation
+   * Get all members of a conversation via the pivot table.
+   * Performance: Queries are limited to 2 members per conversation by domain constraint.
+   * Consider DataLoader batching for GraphQL resolvers when querying multiple conversations.
+   * @param conversationId - UUID of the conversation
    * @returns Array of conversation memberships with agent relationships loaded
    */
   async getConversationMembers(
     conversationId: string
   ): Promise<IConversationMembership[]> {
-    return await this.conversationMembershipRepository.find({
+    return this.conversationMembershipRepository.find({
+      loadEagerRelations: false,
       where: { conversationId },
-      relations: {
-        agent: true,
+      relations: { agent: true },
+      select: {
+        conversationId: true,
+        agentId: true,
+        agent: {
+          id: true,
+          type: true,
+        },
       },
     });
   }
@@ -424,30 +433,28 @@ export class ConversationService {
    * without loading full user/virtualContributor entities. Agent type is eagerly loaded
    * by the memberships query, avoiding N+1 queries.
    * Enforces exactly at most 2 members per conversation (per spec clarification).
-   * @param conversationId - UUID of the conversation
    * @returns USER_USER if both are users, USER_VC if one is a VC
    * @throws ValidationException if conversation doesn't have exactly 2 members
+   * @param memberships
    */
   async inferConversationType(
-    conversationId: string
+    memberships: IConversationMembership[]
   ): Promise<CommunicationConversationType> {
-    const members = await this.getConversationMembers(conversationId);
-
-    if (members.length > 2) {
+    if (memberships.length > 2) {
       throw new ValidationException(
         'Conversation must have exactly 2 members',
         LogContext.COMMUNICATION,
         {
           details: {
-            conversationId,
-            memberCount: members.length,
+            conversationId: memberships[0]?.conversationId,
+            memberCount: memberships.length,
           },
         }
       );
     }
 
     // Check if any agent is a virtual contributor using agent.type field
-    const hasVC = members.some(
+    const hasVC = memberships.some(
       m => m.agent.type === AgentType.VIRTUAL_CONTRIBUTOR
     );
 
