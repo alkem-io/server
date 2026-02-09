@@ -1,44 +1,15 @@
 import { CreateFormInput } from '@domain/common/form/dto/form.dto.create';
 
 export const spaceCommunityApplicationForm: CreateFormInput = {
-  description: '',
+  description: 'Welcome, thank you for your interest!',
   questions: [
     {
-      question: 'What makes you want to join?',
-      required: true,
+      question:
+        "If you have a specific idea for how you'd like to contribute, please share it below.",
+      required: false,
       maxLength: 500,
       explanation: '',
       sortOrder: 1,
-    },
-    {
-      question: 'Any particular role or contribution that you have in mind?',
-      required: false,
-      maxLength: 500,
-      explanation: '',
-      sortOrder: 2,
-    },
-    {
-      question:
-        'Through which user,organization or medium have you become acquainted with this community?',
-      required: false,
-      maxLength: 500,
-      explanation: '',
-      sortOrder: 3,
-    },
-    {
-      question: 'Anything fun you want to tell us about yourself?!',
-      required: false,
-      maxLength: 500,
-      explanation: '',
-      sortOrder: 4,
-    },
-    {
-      question:
-        'Do you already want to join a Challenge? If so, please provide the name(s).',
-      required: false,
-      maxLength: 500,
-      explanation: '',
-      sortOrder: 5,
     },
   ],
 };
