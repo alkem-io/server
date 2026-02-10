@@ -85,7 +85,7 @@ export class UserLookupService {
   ): Promise<IUser | null> {
     const user: IUser | null = await this.entityManager.findOne(User, {
       where: {
-        email: email,
+        email: email.toLowerCase(),
       },
       ...options,
     });

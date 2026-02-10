@@ -2,6 +2,7 @@ import { ProfileLoaderCreator } from '@core/dataloader/creators';
 import { Loader } from '@core/dataloader/decorators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { ILink } from '@domain/collaboration/link/link.interface';
+import { IMediaGallery } from '@domain/common/media-gallery/media.gallery.interface';
 import { IMemo } from '@domain/common/memo/types';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { IWhiteboard } from '@domain/common/whiteboard/types';
@@ -50,5 +51,15 @@ export class CalloutFramingResolverFields {
   })
   memo(@Parent() calloutFraming: ICalloutFraming): Promise<IMemo | null> {
     return this.calloutFramingService.getMemo(calloutFraming);
+  }
+
+  @ResolveField('mediaGallery', () => IMediaGallery, {
+    nullable: true,
+    description: 'The media gallery associated with the callout framing',
+  })
+  async mediaGallery(
+    @Parent() calloutFraming: ICalloutFraming
+  ): Promise<IMediaGallery | null> {
+    return this.calloutFramingService.getMediaGallery(calloutFraming);
   }
 }
