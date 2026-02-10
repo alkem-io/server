@@ -529,6 +529,17 @@ input ActivityLogInput {
   types: [ActivityEventType!]
 }
 
+input AddVisualToMediaGalleryInput {
+  """The ID of the media gallery."""
+  mediaGalleryID: String!
+  """The sort order of the visual within the media gallery."""
+  sortOrder: Float
+  """
+  The type of visual to add (e.g. MEDIA_GALLERY_IMAGE, MEDIA_GALLERY_VIDEO).
+  """
+  visualType: VisualType!
+}
+
 type AdminAuthenticationIDBackfillResult {
   """Total users examined during the backfill run"""
   processed: Int!
@@ -820,6 +831,7 @@ enum AuthorizationPolicyType {
   LICENSE_POLICY
   LICENSING
   LINK
+  MEDIA_GALLERY
   MEMO
   ORGANIZATION
   ORGANIZATION_VERIFICATION
@@ -1094,6 +1106,8 @@ type CalloutFraming {
   id: UUID!
   """The Link for framing the associated Callout."""
   link: Link
+  """The media gallery associated with the callout framing"""
+  mediaGallery: MediaGallery
   """The Memo for framing the associated Callout."""
   memo: Memo
   """The Profile for framing the associated Callout."""
@@ -1110,6 +1124,7 @@ type CalloutFraming {
 
 enum CalloutFramingType {
   LINK
+  MEDIA_GALLERY
   MEMO
   NONE
   WHITEBOARD
@@ -2571,6 +2586,13 @@ input DeleteVirtualContributorInput {
   ID: UUID!
 }
 
+input DeleteVisualFromMediaGalleryInput {
+  """The ID of the media gallery."""
+  mediaGalleryID: String!
+  """The ID of the visual to delete."""
+  visualID: String!
+}
+
 input DeleteWhiteboardInput {
   ID: UUID!
 }
@@ -3765,6 +3787,22 @@ type MeQueryResults {
   user: User
 }
 
+type MediaGallery {
+  """The authorization rules for the entity"""
+  authorization: Authorization
+  createdBy: String
+  """The date at which the entity was created."""
+  createdDate: DateTime!
+  """The ID of the entity"""
+  id: UUID!
+  """The storage bucket associated with this media gallery."""
+  storageBucket: StorageBucket
+  """The date at which the entity was last updated."""
+  updatedDate: DateTime!
+  """The visuals contained in this media gallery."""
+  visuals: [Visual!]!
+}
+
 type Memo {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -3932,6 +3970,8 @@ type Mutation {
   addNotificationEmailToBlacklist(input: NotificationEmailAddressInput!): [String!]!
   """Add a reaction to a message from the specified Room."""
   addReactionToMessageInRoom(reactionData: RoomAddReactionToMessageInput!): Reaction!
+  """Adds a new visual to the specified media gallery."""
+  addVisualToMediaGallery(addData: AddVisualToMediaGalleryInput!): Visual!
   """
   Populate authenticationID for existing users by querying Kratos Admin API
   """
@@ -4130,6 +4170,8 @@ type Mutation {
   deleteUserGroup(deleteData: DeleteUserGroupInput!): UserGroup!
   """Deletes the specified VirtualContributor."""
   deleteVirtualContributor(deleteData: DeleteVirtualContributorInput!): VirtualContributor!
+  """Deletes a visual from the specified media gallery."""
+  deleteVisualFromMediaGallery(deleteData: DeleteVisualFromMediaGalleryInput!): Visual!
   """Deletes the specified Whiteboard."""
   deleteWhiteboard(whiteboardData: DeleteWhiteboardInput!): Whiteboard!
   """Trigger an event on the Application."""
@@ -8142,6 +8184,7 @@ type Visual {
   """Minimum width resolution."""
   minWidth: Float!
   name: VisualType!
+  sortOrder: Float
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
   uri: String!
@@ -8167,6 +8210,8 @@ enum VisualType {
   BANNER
   BANNER_WIDE
   CARD
+  MEDIA_GALLERY_IMAGE
+  MEDIA_GALLERY_VIDEO
   WHITEBOARD_PREVIEW
 }
 
