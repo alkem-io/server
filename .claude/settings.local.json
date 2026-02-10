@@ -4,6 +4,9 @@
       "Bash(pnpm lint:*)",
       "Bash(pnpm test:*)",
       "Bash(pnpm build:*)"
+      "Bash(npx biome check:*)",
+      "Bash(npx biome:*)",
+      "Bash(npx vitest:*)"
     ]
   }
 }
