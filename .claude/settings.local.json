@@ -6,7 +6,8 @@
       "Bash(pnpm build:*)"
       "Bash(npx biome check:*)",
       "Bash(npx biome:*)",
-      "Bash(npx vitest:*)"
+      "Bash(npx vitest:*)",
+      "Bash(.scripts/register-user.sh:*)"
     ]
   }
 }
