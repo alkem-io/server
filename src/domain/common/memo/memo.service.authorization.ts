@@ -1,22 +1,22 @@
-import { Injectable } from '@nestjs/common';
+import {
+  CREDENTIAL_RULE_MEMO_CREATED_BY,
+  POLICY_RULE_MEMO_CONTENT_UPDATE,
+} from '@common/constants';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
+import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
+import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
-import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
-import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import {
-  CREDENTIAL_RULE_MEMO_CREATED_BY,
-  POLICY_RULE_MEMO_CONTENT_UPDATE,
-} from '@common/constants';
+import { Injectable } from '@nestjs/common';
 import { ProfileAuthorizationService } from '../profile/profile.service.authorization';
 import { IMemo } from './memo.interface';
-import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { MemoService } from './memo.service';
 
 @Injectable()

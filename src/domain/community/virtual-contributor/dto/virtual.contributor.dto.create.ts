@@ -1,14 +1,13 @@
-import { Field, InputType } from '@nestjs/graphql';
-import { CreateContributorInput } from '@domain/community/contributor/dto/contributor.dto.create';
-import { CreateAiPersonaInput } from '@services/ai-server/ai-persona/dto/ai.persona.dto.create';
-import { CreateKnowledgeBaseInput } from '@domain/common/knowledge-base/dto';
-import { IsOptional, MaxLength, ValidateNested } from 'class-validator';
-import { IsEnum } from 'class-validator';
-import { Type } from 'class-transformer';
-import { VirtualContributorDataAccessMode } from '@common/enums/virtual.contributor.data.access.mode';
 import { SMALL_TEXT_LENGTH } from '@common/constants';
 import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
+import { VirtualContributorDataAccessMode } from '@common/enums/virtual.contributor.data.access.mode';
 import { VirtualContributorInteractionMode } from '@common/enums/virtual.contributor.interaction.mode';
+import { CreateKnowledgeBaseInput } from '@domain/common/knowledge-base/dto';
+import { CreateContributorInput } from '@domain/community/contributor/dto/contributor.dto.create';
+import { Field, InputType } from '@nestjs/graphql';
+import { CreateAiPersonaInput } from '@services/ai-server/ai-persona/dto/ai.persona.dto.create';
+import { Type } from 'class-transformer';
+import { IsEnum, IsOptional, MaxLength, ValidateNested } from 'class-validator';
 
 @InputType()
 export class CreateVirtualContributorInput extends CreateContributorInput {

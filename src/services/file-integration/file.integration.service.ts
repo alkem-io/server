@@ -1,11 +1,11 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { AuthenticationService } from '@core/authentication/authentication.service';
-import { StorageService } from '@services/adapters/storage';
-import { AuthorizationService } from '@core/authorization/authorization.service';
 import { STORAGE_SERVICE } from '@common/constants';
-import { DocumentService } from '@domain/storage/document/document.service';
-import { IDocument } from '@domain/storage/document';
 import { AuthorizationPrivilege } from '@common/enums';
+import { AuthenticationService } from '@core/authentication/authentication.service';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { IDocument } from '@domain/storage/document';
+import { DocumentService } from '@domain/storage/document/document.service';
+import { Inject, Injectable } from '@nestjs/common';
+import { StorageService } from '@services/adapters/storage';
 import { FileInfoInputData } from './inputs';
 import { FileInfoOutputData, ReadOutputErrorCode } from './outputs';
 

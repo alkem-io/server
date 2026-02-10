@@ -1,17 +1,17 @@
 import { LogContext } from '@common/enums';
+import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import {
   EntityNotFoundException,
   NotSupportedException,
 } from '@common/exceptions';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator/url.generator.service.cache';
 import { Repository } from 'typeorm';
 import { Callout } from '../callout/callout.entity';
 import { CalloutContribution } from './callout.contribution.entity';
-import { CalloutContributionService } from './callout.contribution.service';
 import { ICalloutContribution } from './callout.contribution.interface';
-import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator/url.generator.service.cache';
-import { CalloutContributionType } from '@common/enums/callout.contribution.type';
+import { CalloutContributionService } from './callout.contribution.service';
 
 @Injectable()
 export class CalloutContributionMoveService {

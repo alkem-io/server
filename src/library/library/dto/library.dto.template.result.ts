@@ -1,6 +1,6 @@
-import { Field, ObjectType } from '@nestjs/graphql';
 import { ITemplate } from '@domain/template/template/template.interface';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
+import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('TemplateResult')
 export abstract class ITemplateResult {

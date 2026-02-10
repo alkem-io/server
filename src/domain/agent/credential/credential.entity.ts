@@ -1,8 +1,8 @@
-import { Column, Entity, ManyToOne } from 'typeorm';
-import { ICredential } from '@domain/agent/credential/credential.interface';
-import { Agent } from '@domain/agent/agent/agent.entity';
-import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
 import { ENUM_LENGTH, UUID_LENGTH } from '@common/constants';
+import { Agent } from '@domain/agent/agent/agent.entity';
+import { ICredential } from '@domain/agent/credential/credential.interface';
+import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
+import { Column, Entity, ManyToOne } from 'typeorm';
 
 @Entity()
 export class Credential extends BaseAlkemioEntity implements ICredential {
@@ -12,11 +12,15 @@ export class Credential extends BaseAlkemioEntity implements ICredential {
   @Column('varchar', { length: ENUM_LENGTH, nullable: false })
   type!: string;
 
-  @ManyToOne(() => Agent, agent => agent.credentials, {
-    eager: false,
-    cascade: false,
-    onDelete: 'CASCADE',
-  })
+  @ManyToOne(
+    () => Agent,
+    agent => agent.credentials,
+    {
+      eager: false,
+      cascade: false,
+      onDelete: 'CASCADE',
+    }
+  )
   agent?: Agent;
 
   @Column('uuid', { nullable: true })

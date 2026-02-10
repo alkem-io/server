@@ -1,10 +1,10 @@
-import { EntityManager } from 'typeorm';
+import { User } from '@domain/community/user/user.entity';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
+import { EntityManager } from 'typeorm';
 import { createTypedRelationDataLoader } from '../../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { User } from '@domain/community/user/user.entity';
 
 @Injectable()
 export class UserStorageAggregatorLoaderCreator

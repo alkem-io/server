@@ -1,16 +1,16 @@
-import { Resolver, ResolveField, Parent } from '@nestjs/graphql';
-import { ISpace } from '@domain/space/space/space.interface';
-import { ILoader } from '@core/dataloader/loader.interface';
-import { Loader } from '@core/dataloader/decorators';
+import { LogContext } from '@common/enums/logging.context';
+import { CalloutLoaderCreator } from '@core/dataloader/creators';
 import { SpaceLoaderCreator } from '@core/dataloader/creators/loader.creators/in-app-notification/space.loader.creator';
+import { Loader } from '@core/dataloader/decorators';
+import { ILoader } from '@core/dataloader/loader.interface';
+import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { MessageDetails } from '@domain/communication/message.details/message.details.interface';
 import { MessageDetailsService } from '@domain/communication/message.details/message.details.service';
-import { ICallout } from '@domain/collaboration/callout/callout.interface';
-import { CalloutLoaderCreator } from '@core/dataloader/creators';
-import { InAppNotificationPayloadSpaceCollaborationCalloutComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout.comment';
-import { LogContext } from '@common/enums/logging.context';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { ISpace } from '@domain/space/space/space.interface';
 import { Inject, LoggerService } from '@nestjs/common';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { InAppNotificationPayloadSpaceCollaborationCalloutComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout.comment';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Resolver(() => InAppNotificationPayloadSpaceCollaborationCalloutComment)
 export class InAppNotificationPayloadSpaceCollaborationCalloutCommentResolverFields {

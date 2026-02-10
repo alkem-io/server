@@ -1,30 +1,30 @@
-import { Inject, LoggerService } from '@nestjs/common';
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { ICallout } from '../callout/callout.interface';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { CalloutAuthorizationService } from '../callout/callout.service.authorization';
+import { CalloutVisibility } from '@common/enums/callout.visibility';
+import { CalloutsSetType } from '@common/enums/callouts.set.type';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
+import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { Inject, LoggerService } from '@nestjs/common';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
+import { ActivityInputCalloutPublished } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.published';
+import { NotificationInputCalloutPublished } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.published';
+import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
+import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter/contribution.reporter.service';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
+import { TemporaryStorageService } from '@services/infrastructure/temporary-storage/temporary.storage.service';
+import { InstrumentResolver } from '@src/apm/decorators';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { ICallout } from '../callout/callout.interface';
 import { CalloutService } from '../callout/callout.service';
+import { CalloutAuthorizationService } from '../callout/callout.service.authorization';
 import { CalloutsSetService } from './callouts.set.service';
 import { CreateCalloutOnCalloutsSetInput } from './dto/callouts.set.dto.create.callout';
-import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
-import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter/contribution.reporter.service';
-import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
-import { TemporaryStorageService } from '@services/infrastructure/temporary-storage/temporary.storage.service';
-import { CalloutVisibility } from '@common/enums/callout.visibility';
-import { NotificationInputCalloutPublished } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.published';
-import { ActivityInputCalloutPublished } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.published';
 import { UpdateCalloutsSortOrderInput } from './dto/callouts.set.dto.update.callouts.sort.order';
-import { IRoleSet } from '@domain/access/role-set/role.set.interface';
-import { CalloutsSetType } from '@common/enums/callouts.set.type';
-import { InstrumentResolver } from '@src/apm/decorators';
-import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
-import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
-import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
 
 @InstrumentResolver()
 @Resolver()
@@ -81,11 +81,11 @@ export class CalloutsSetResolverMutations {
       destinationStorageBucket
     );
 
-    let roleSet: IRoleSet | undefined = undefined;
+    let roleSet: IRoleSet | undefined;
     let platformRolesAccess: IPlatformRolesAccess = {
       roles: [],
     };
-    let spaceSettings = undefined;
+    let spaceSettings;
     if (calloutsSet.type === CalloutsSetType.COLLABORATION) {
       const roleSetAndSettings =
         await this.roomResolverService.getRoleSetAndSettingsForCollaborationCalloutsSet(

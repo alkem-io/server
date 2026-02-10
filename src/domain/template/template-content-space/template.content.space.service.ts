@@ -1,31 +1,31 @@
 import { LogContext } from '@common/enums';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
+import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
+import { LicenseType } from '@common/enums/license.type';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, Repository } from 'typeorm';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { SpaceAboutService } from '@domain/space/space.about/space.about.service';
-import { TemplateContentSpace } from './template.content.space.entity';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
-import { CreateTemplateContentSpaceInput } from './dto/template.content.space.dto.create';
-import { ITemplateContentSpace } from './template.content.space.interface';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { UpdateTemplateContentSpaceInput } from './dto/template.content.space.dto.update';
-import { ISpaceAbout } from '@domain/space/space.about/space.about.interface';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
-import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
+import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ILicense } from '@domain/common/license/license.interface';
 import { LicenseService } from '@domain/common/license/license.service';
-import { LicenseType } from '@common/enums/license.type';
 import { CreateSpaceAboutInput } from '@domain/space/space.about';
+import { ISpaceAbout } from '@domain/space/space.about/space.about.interface';
+import { SpaceAboutService } from '@domain/space/space.about/space.about.service';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { FindOneOptions, Repository } from 'typeorm';
+import { CreateTemplateContentSpaceInput } from './dto/template.content.space.dto.create';
+import { UpdateTemplateContentSpaceInput } from './dto/template.content.space.dto.update';
+import { TemplateContentSpace } from './template.content.space.entity';
+import { ITemplateContentSpace } from './template.content.space.interface';
 
 @Injectable()
 export class TemplateContentSpaceService {

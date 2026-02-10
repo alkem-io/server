@@ -1,3 +1,3 @@
-export { IngestionResult } from './ingestion.result';
+export { ErrorCode, IngestError } from './ingest.error';
 export { IngestionPurpose } from './ingestion.purpose';
-export { IngestError, ErrorCode } from './ingest.error';
+export { IngestionResult } from './ingestion.result';

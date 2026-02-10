@@ -4,7 +4,7 @@
  *   <pattern> <owner1> <owner2> ...
  * Comments (#) and blank lines ignored. Patterns kept verbatim; no advanced gitignore matching yet.
  */
-import { readFileSync, existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 
 export interface CodeOwnerEntry {
   pattern: string;

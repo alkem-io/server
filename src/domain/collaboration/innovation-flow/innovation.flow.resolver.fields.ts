@@ -1,15 +1,15 @@
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { IInnovationFlow } from './innovation.flow.interface';
-import { IProfile } from '@domain/common/profile/profile.interface';
+import { AuthorizationAgentPrivilege } from '@common/decorators/authorization.agent.privilege';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { ProfileLoaderCreator } from '@core/dataloader/creators';
 import { Loader } from '@core/dataloader/decorators';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { InnovationFlow } from './innovation.flow.entity';
-import { AuthorizationAgentPrivilege } from '@common/decorators/authorization.agent.privilege';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { IProfile } from '@domain/common/profile/profile.interface';
 import { UseGuards } from '@nestjs/common';
-import { GraphqlGuard } from '@core/authorization/graphql.guard';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { IInnovationFlowState } from '../innovation-flow-state/innovation.flow.state.interface';
+import { InnovationFlow } from './innovation.flow.entity';
+import { IInnovationFlow } from './innovation.flow.interface';
 import { InnovationFlowService } from './innovation.flow.service';
 
 @Resolver(() => IInnovationFlow)

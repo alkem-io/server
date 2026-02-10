@@ -1,12 +1,12 @@
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { IMessage } from './message.interface';
 import { LogContext } from '@common/enums/logging.context';
-import { Inject } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { ContributorByAgentIdLoaderCreator } from '@core/dataloader/creators/loader.creators';
 import { Loader } from '@core/dataloader/decorators/data.loader.decorator';
 import { ILoader } from '@core/dataloader/loader.interface';
+import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { Inject } from '@nestjs/common';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
+import { IMessage } from './message.interface';
 
 @Resolver(() => IMessage)
 export class MessageResolverFields {

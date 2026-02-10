@@ -1,4 +1,5 @@
 import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
+import { SpaceLevel } from '@common/enums/space.level';
 import { OrganizationFilterInput } from '@core/filtering/input-types/organization.filter.input';
 import { UserFilterInput } from '@core/filtering/input-types/user.filter.input';
 import { PaginatedOrganization } from '@core/pagination/paginated.organization';
@@ -21,7 +22,6 @@ import { LibraryService } from '@library/library/library.service';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager, In } from 'typeorm';
-import { SpaceLevel } from '@common/enums/space.level';
 
 @Injectable()
 export class PlatformAdminService {

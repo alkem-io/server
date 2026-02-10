@@ -1,13 +1,13 @@
+import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
+import { UUID } from '@domain/common/scalars';
 import { UseGuards } from '@nestjs/common';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
-import { ForumService } from './forum.service';
-import { AuthorizationPrivilege } from '@common/enums';
-import { IForum } from './forum.interface';
 import { IDiscussion } from '../forum-discussion/discussion.interface';
 import { DiscussionsInput } from './dto/forum.dto.discussions.input';
-import { UUID } from '@domain/common/scalars';
+import { IForum } from './forum.interface';
+import { ForumService } from './forum.service';
 
 @Resolver(() => IForum)
 export class ForumResolverFields {

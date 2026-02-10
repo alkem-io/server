@@ -1,11 +1,8 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
-import { ISpace } from './space.interface';
-import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { RoleName } from '@common/enums/role.name';
 import { SpaceLevel } from '@common/enums/space.level';
-import { ISpaceSettings } from '../space.settings/space.settings.interface';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
+import { SpaceVisibility } from '@common/enums/space.visibility';
 import {
   EntityNotFoundException,
   RelationshipNotFoundException,
@@ -13,7 +10,10 @@ import {
 import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
 import { IPlatformAccessRole } from '@domain/access/platform-roles-access/platform.roles.access.role.interface';
 import { PlatformRolesAccessService } from '@domain/access/platform-roles-access/platform.roles.access.service';
-import { SpaceVisibility } from '@common/enums/space.visibility';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { ISpaceSettings } from '../space.settings/space.settings.interface';
+import { ISpace } from './space.interface';
 
 @Injectable()
 export class SpacePlatformRolesAccessService {

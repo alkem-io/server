@@ -1,5 +1,5 @@
+import { AlkemioErrorStatus, LogContext } from '@common/enums';
 import { GraphQLError } from 'graphql';
-import { LogContext, AlkemioErrorStatus } from '@common/enums';
 
 export class UserNotRegisteredException extends GraphQLError {
   private context: LogContext;

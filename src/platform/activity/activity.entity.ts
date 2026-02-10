@@ -1,12 +1,12 @@
-import { Column, Entity, Generated } from 'typeorm';
-import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
-import { IActivity } from './activity.interface';
 import {
   MESSAGEID_LENGTH,
   MID_TEXT_LENGTH,
   SMALL_TEXT_LENGTH,
 } from '@common/constants';
 import { ActivityEventType } from '@common/enums/activity.event.type';
+import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
+import { Column, Entity, Generated } from 'typeorm';
+import { IActivity } from './activity.interface';
 
 @Entity()
 export class Activity extends BaseAlkemioEntity implements IActivity {

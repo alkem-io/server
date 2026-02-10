@@ -1,9 +1,9 @@
-import { Resolver, ResolveField, Parent } from '@nestjs/graphql';
-import { ILoader } from '@core/dataloader/loader.interface';
-import { Loader } from '@core/dataloader/decorators';
-import { InAppNotificationPayloadOrganizationMessageRoom } from '@platform/in-app-notification-payload/dto/organization/notification.in.app.payload.organization.message.room';
 import { OrganizationLoaderCreator } from '@core/dataloader/creators/loader.creators/organization.loader.creator';
+import { Loader } from '@core/dataloader/decorators';
+import { ILoader } from '@core/dataloader/loader.interface';
 import { IOrganization } from '@domain/community/organization/organization.interface';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { InAppNotificationPayloadOrganizationMessageRoom } from '@platform/in-app-notification-payload/dto/organization/notification.in.app.payload.organization.message.room';
 @Resolver(() => InAppNotificationPayloadOrganizationMessageRoom)
 export class InAppNotificationPayloadOrganizationMessageRoomResolverFields {
   @ResolveField(() => IOrganization, {

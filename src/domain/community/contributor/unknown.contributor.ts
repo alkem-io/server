@@ -1,7 +1,7 @@
-import { IContributor } from './contributor.interface';
+import { DELETED_ACTOR_ID } from '@common/constants/system.actor.ids';
 import { ProfileType } from '@common/enums';
 import { AgentType } from '@common/enums/agent.type';
-import { DELETED_ACTOR_ID } from '@common/constants/system.actor.ids';
+import { IContributor } from './contributor.interface';
 
 const EPOCH = new Date(0);
 

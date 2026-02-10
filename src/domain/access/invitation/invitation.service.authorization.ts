@@ -1,23 +1,23 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { CREDENTIAL_RULE_ROLESET_INVITATION } from '@common/constants';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import { IInvitation } from './invitation.interface';
-import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
-import { ContributorService } from '@domain/community/contributor/contributor.service';
-import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
-import { CREDENTIAL_RULE_ROLESET_INVITATION } from '@common/constants';
 import { RoleSetMembershipException } from '@common/exceptions/role.set.membership.exception';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { ContributorService } from '@domain/community/contributor/contributor.service';
+import { getContributorType } from '@domain/community/contributor/get.contributor.type';
 import { Organization } from '@domain/community/organization/organization.entity';
 import { User } from '@domain/community/user/user.entity';
-import { getContributorType } from '@domain/community/contributor/get.contributor.type';
+import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { IInvitation } from './invitation.interface';
 
 @Injectable()
 export class InvitationAuthorizationService {
@@ -69,7 +69,7 @@ export class InvitationAuthorizationService {
     }
 
     // also grant the user privileges to work with their own invitation
-    let accountID: string | undefined = undefined;
+    let accountID: string | undefined;
     const contributorType = getContributorType(contributor);
     const criterias: ICredentialDefinition[] = [];
     switch (contributorType) {
@@ -79,13 +79,14 @@ export class InvitationAuthorizationService {
       case RoleSetContributorType.ORGANIZATION:
         accountID = (contributor as Organization).accountID;
         break;
-      case RoleSetContributorType.VIRTUAL:
+      case RoleSetContributorType.VIRTUAL: {
         const account =
           await this.virtualContributorLookupService.getAccountOrFail(
             contributor.id
           );
         accountID = account.id;
         break;
+      }
     }
     if (!accountID) {
       throw new RoleSetMembershipException(

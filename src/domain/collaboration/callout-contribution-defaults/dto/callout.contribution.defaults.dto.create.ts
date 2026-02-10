@@ -1,8 +1,8 @@
-import { InputType, Field, ObjectType } from '@nestjs/graphql';
-import { IsOptional, MaxLength, MinLength } from 'class-validator';
+import { SMALL_TEXT_LENGTH } from '@common/constants';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { WhiteboardContent } from '@domain/common/scalars/scalar.whiteboard.content';
-import { SMALL_TEXT_LENGTH } from '@common/constants';
+import { Field, InputType, ObjectType } from '@nestjs/graphql';
+import { IsOptional, MaxLength, MinLength } from 'class-validator';
 
 @InputType()
 @ObjectType('CreateCalloutContributionDefaultsData')

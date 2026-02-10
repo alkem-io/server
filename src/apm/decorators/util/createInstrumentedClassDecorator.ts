@@ -1,5 +1,5 @@
-import { instrumentMethod } from './instrument.method';
 import { copyMetadata } from './copy.metadata';
+import { instrumentMethod } from './instrument.method';
 
 export type ClassDecoratorParams = {
   /**

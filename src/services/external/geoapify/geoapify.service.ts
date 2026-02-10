@@ -1,14 +1,14 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { HttpService } from '@nestjs/axios';
-import { ConfigService } from '@nestjs/config';
 import { LogContext } from '@common/enums';
-import { GeoLocation } from './geo.location';
-import { GeoapifyGeocodeResponse } from './geoapify.geocode.response';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { HttpService } from '@nestjs/axios';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { AlkemioConfig } from '@src/types';
-import { firstValueFrom } from 'rxjs';
 import countries from 'i18n-iso-countries';
 import enLocale from 'i18n-iso-countries/langs/en.json';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { firstValueFrom } from 'rxjs';
+import { GeoLocation } from './geo.location';
+import { GeoapifyGeocodeResponse } from './geoapify.geocode.response';
 
 countries.registerLocale(enLocale);
 

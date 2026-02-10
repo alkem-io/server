@@ -1,13 +1,13 @@
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { CurrentUser, Profiling } from '@src/common/decorators';
-import { IInnovationHub } from './innovation.hub.interface';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { DeleteInnovationHubInput } from './dto/innovation.hub.dto.delete';
-import { InnovationHubService } from './innovation.hub.service';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { UpdateInnovationHubInput } from './dto/innovation.hub.dto.update';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentUser, Profiling } from '@src/common/decorators';
+import { DeleteInnovationHubInput } from './dto/innovation.hub.dto.delete';
+import { UpdateInnovationHubInput } from './dto/innovation.hub.dto.update';
+import { IInnovationHub } from './innovation.hub.interface';
+import { InnovationHubService } from './innovation.hub.service';
 
 @InstrumentResolver()
 @Resolver()

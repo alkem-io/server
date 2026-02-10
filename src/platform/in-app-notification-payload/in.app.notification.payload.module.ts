@@ -1,17 +1,20 @@
-import { Module } from '@nestjs/common';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { OrganizationLoaderCreator } from '@core/dataloader/creators';
-import { InAppNotificationPayloadSpaceCollaborationCalloutResolverFields } from './field-resolvers/space/in.app.notification.payload.space.collaboration.callout.resolver.fields';
+import { CalendarEventLoaderCreator } from '@core/dataloader/creators/loader.creators/in-app-notification/calendar.event.loader.creator';
+import { MessageDetailsModule } from '@domain/communication/message.details/message.details.module';
+import { Module } from '@nestjs/common';
 import {
   InAppNotificationPayloadOrganizationMessageDirectResolverFields,
   InAppNotificationPayloadOrganizationMessageRoomResolverFields,
   InAppNotificationPayloadPlatformForumDiscussionResolverFields,
   InAppNotificationPayloadPlatformGlobalRoleChangeResolverFields,
   InAppNotificationPayloadPlatformUserProfileRemovedResolverFields,
+  InAppNotificationPayloadSpaceCollaborationCalloutCommentResolverFields,
   InAppNotificationPayloadSpaceCollaborationCalloutPostCommentResolverFields,
   InAppNotificationPayloadSpaceCommunicationMessageDirectResolverFields,
   InAppNotificationPayloadSpaceCommunicationUpdateResolverFields,
   InAppNotificationPayloadSpaceCommunityApplicationResolverFields,
+  InAppNotificationPayloadSpaceCommunityCalendarEventResolverFields,
   InAppNotificationPayloadSpaceCommunityContributorResolverFields,
   InAppNotificationPayloadSpaceCommunityInvitationPlatformResolverFields,
   InAppNotificationPayloadSpaceCommunityInvitationResolverFields,
@@ -19,11 +22,8 @@ import {
   InAppNotificationPayloadUserMessageDirectResolverFields,
   InAppNotificationPayloadUserMessageRoomResolverFields,
   InAppNotificationPayloadVirtualContributorFieldsResolver,
-  InAppNotificationPayloadSpaceCollaborationCalloutCommentResolverFields,
-  InAppNotificationPayloadSpaceCommunityCalendarEventResolverFields,
 } from './field-resolvers';
-import { MessageDetailsModule } from '@domain/communication/message.details/message.details.module';
-import { CalendarEventLoaderCreator } from '@core/dataloader/creators/loader.creators/in-app-notification/calendar.event.loader.creator';
+import { InAppNotificationPayloadSpaceCollaborationCalloutResolverFields } from './field-resolvers/space/in.app.notification.payload.space.collaboration.callout.resolver.fields';
 import { InAppNotificationPayloadSpaceCommunityCalendarEventCommentResolverFields } from './field-resolvers/space/in.app.notification.payload.space.community.calendar.event.comment.resolver.fields';
 
 @Module({

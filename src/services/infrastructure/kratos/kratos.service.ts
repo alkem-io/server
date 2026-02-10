@@ -1,12 +1,16 @@
+import { LogContext } from '@common/enums';
+import { AuthenticationType } from '@common/enums/authentication.type';
 import {
   BearerTokenNotFoundException,
   LoginFlowException,
   LoginFlowInitializeException,
   SessionExtendException,
 } from '@common/exceptions/auth';
+import { UserIdentityNotFoundException } from '@common/exceptions/user/user.identity.not.found.exception';
+import { AuthenticationService } from '@core/authentication/authentication.service';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { AlkemioConfig } from '@src/types';
 import {
   Configuration,
   FrontendApi,
@@ -14,14 +18,10 @@ import {
   IdentityApi,
   Session,
 } from '@ory/kratos-client';
-import jwt_decode from 'jwt-decode';
 import { KratosPayload } from '@services/infrastructure/kratos/types/kratos.payload';
-import { LogContext } from '@common/enums';
-import { AuthenticationType } from '@common/enums/authentication.type';
+import { AlkemioConfig } from '@src/types';
+import jwt_decode from 'jwt-decode';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { UserIdentityNotFoundException } from '@common/exceptions/user/user.identity.not.found.exception';
-import { AuthenticationService } from '@core/authentication/authentication.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { OryDefaultIdentitySchema } from './types/ory.default.identity.schema';
 import { SessionInvalidReason } from './types/session.invalid.enum';
 
@@ -606,8 +606,7 @@ export class KratosService {
       );
 
       return latestDate;
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (error) {
+    } catch (_error) {
       return undefined;
     }
   }
@@ -683,15 +682,13 @@ export class KratosService {
 
     try {
       return this.getSessionFromJwt(token);
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (e) {
+    } catch (_e) {
       // ...
     }
 
     try {
       return this.getSessionFromApiToken(kratosClient, token);
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (e) {
+    } catch (_e) {
       // ...
     }
 

@@ -1,31 +1,31 @@
-import { Injectable } from '@nestjs/common';
-import { CreateCalloutContributionInput } from './dto/callout.contribution.dto.create';
-import { ICalloutContribution } from './callout.contribution.interface';
-import { CalloutContribution } from './callout.contribution.entity';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
-import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
-import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
-import { LogContext } from '@common/enums/logging.context';
-import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
-import { IWhiteboard } from '@domain/common/whiteboard/types';
-import { PostService } from '../post/post.service';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { IPost } from '../post';
-import { MemoService } from '@domain/common/memo/memo.service';
-import { IMemo } from '@domain/common/memo/memo.interface';
-import { ICalloutSettingsContribution } from '../callout-settings/callout.settings.contribution.interface';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
+import { LogContext } from '@common/enums/logging.context';
 import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { LinkService } from '../link/link.service';
-import { ILink } from '../link/link.interface';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { IMemo } from '@domain/common/memo/memo.interface';
+import { MemoService } from '@domain/common/memo/memo.service';
 import { IProfile } from '@domain/common/profile/profile.interface';
+import { IWhiteboard } from '@domain/common/whiteboard/types';
+import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
+import { ICalloutSettingsContribution } from '../callout-settings/callout.settings.contribution.interface';
+import { ILink } from '../link/link.interface';
+import { LinkService } from '../link/link.service';
+import { IPost } from '../post';
+import { PostService } from '../post/post.service';
+import { CalloutContribution } from './callout.contribution.entity';
+import { ICalloutContribution } from './callout.contribution.interface';
+import { CreateCalloutContributionInput } from './dto/callout.contribution.dto.create';
 
 @Injectable()
 export class CalloutContributionService {

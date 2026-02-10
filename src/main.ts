@@ -4,22 +4,20 @@ import helmet from 'helmet';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AppModule } from './app.module';
 import './config/aliases';
+import { MessagingQueue } from '@common/enums';
+import { INestApplication } from '@nestjs/common';
+import { MicroserviceOptions, Transport } from '@nestjs/microservices';
+import { AlkemioConfig } from '@src/types';
+import { json } from 'body-parser';
+import { useContainer } from 'class-validator';
+import cookieParser from 'cookie-parser';
+import { Request, Response } from 'express';
+import { renderGraphiQL } from 'graphql-helix';
+import { graphqlUploadExpress } from 'graphql-upload';
+// biome-ignore lint/correctness/noUnusedImports: apmAgent import has side effects that initialize APM
+import { apmAgent } from './apm';
 import { BootstrapService } from './core/bootstrap/bootstrap.service';
 import { faviconMiddleware } from './core/middleware/favicon.middleware';
-import { useContainer } from 'class-validator';
-import { graphqlUploadExpress } from 'graphql-upload';
-import { MessagingQueue } from '@common/enums';
-import { json } from 'body-parser';
-import cookieParser from 'cookie-parser';
-import { MicroserviceOptions, Transport } from '@nestjs/microservices';
-import { INestApplication } from '@nestjs/common';
-import { AlkemioConfig } from '@src/types';
-import { renderGraphiQL } from 'graphql-helix';
-import { Request, Response } from 'express';
-
-// this is used - it needs to start before the app
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { apmAgent } from './apm';
 
 const bootstrap = async () => {
   const app = await NestFactory.create(AppModule, {

@@ -1,8 +1,8 @@
-import { Field, InputType } from '@nestjs/graphql';
 import { UpdateProfileInput } from '@domain/common/profile/dto';
-import { IsOptional, ValidateNested } from 'class-validator';
-import { Type } from 'class-transformer';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
+import { Field, InputType } from '@nestjs/graphql';
+import { Type } from 'class-transformer';
+import { IsOptional, ValidateNested } from 'class-validator';
 
 @InputType()
 export class UpdateInnovationFlowInput {

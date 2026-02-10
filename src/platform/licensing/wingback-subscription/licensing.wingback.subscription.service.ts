@@ -1,20 +1,20 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums';
-import { WingbackManager } from '@services/external/wingback/wingback.manager';
-import {
-  WingbackFeature,
-  WingbackTypedFeature,
-} from '@services/external/wingback/types/wingback.type.feature';
-import {
-  isWingbackFeaturePerUnit,
-  WingbackFeatureDetailPerUnit,
-} from '@services/external/wingback/types/entitlement-details/wingback.feature.detail.per.unit';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import {
   WingbackFeatureMapping,
   WingbackFeatureNames,
 } from '@platform/licensing/wingback-subscription/wingback.constants';
+import {
+  isWingbackFeaturePerUnit,
+  WingbackFeatureDetailPerUnit,
+} from '@services/external/wingback/types/entitlement-details/wingback.feature.detail.per.unit';
 import { CreateWingbackCustomer } from '@services/external/wingback/types/wingback.type.create.customer';
+import {
+  WingbackFeature,
+  WingbackTypedFeature,
+} from '@services/external/wingback/types/wingback.type.feature';
+import { WingbackManager } from '@services/external/wingback/wingback.manager';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LicensingGrantedEntitlement } from '../dto/licensing.dto.granted.entitlement';
 
 @Injectable()

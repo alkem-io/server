@@ -1,18 +1,18 @@
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { IConversation } from '@domain/communication/conversation/conversation.interface';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { ConversationService } from '@domain/communication/conversation/conversation.service';
-import { ConversationAuthorizationService } from '@domain/communication/conversation/conversation.service.authorization';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { InstrumentResolver } from '@src/apm/decorators';
-import { DeleteConversationInput } from '@domain/communication/conversation/dto/conversation.dto.delete';
-import { ConversationVcResetInput } from '@domain/communication/conversation/dto/conversation.vc.dto.reset.input';
-import { AgentType } from '@common/enums/agent.type';
-import { ValidationException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
+import { AgentType } from '@common/enums/agent.type';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { ValidationException } from '@common/exceptions';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { InstrumentResolver } from '@src/apm/decorators';
+import { IConversation } from './conversation.interface';
+import { ConversationService } from './conversation.service';
+import { ConversationAuthorizationService } from './conversation.service.authorization';
+import { DeleteConversationInput } from './dto/conversation.dto.delete';
+import { ConversationVcResetInput } from './dto/conversation.vc.dto.reset.input';
 
 @InstrumentResolver()
 @Resolver()

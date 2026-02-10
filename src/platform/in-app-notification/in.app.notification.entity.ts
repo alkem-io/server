@@ -1,21 +1,21 @@
-import { Column, Entity, Generated, ManyToOne, JoinColumn } from 'typeorm';
-import { ENUM_LENGTH } from '@constants/index';
-import { BaseAlkemioEntity } from '../../domain/common/entity/base-entity/base.alkemio.entity';
-import { NotificationEventInAppState } from '../../common/enums/notification.event.in.app.state';
-import { IInAppNotification } from './in.app.notification.interface';
-import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { NotificationEvent } from '@common/enums/notification.event';
-import { IInAppNotificationPayload } from '../in-app-notification-payload/in.app.notification.payload.interface';
-import { Space } from '@domain/space/space/space.entity';
-import { Organization } from '@domain/community/organization/organization.entity';
-import { User } from '@domain/community/user/user.entity';
+import { NotificationEventCategory } from '@common/enums/notification.event.category';
+import { ENUM_LENGTH } from '@constants/index';
 import { Application } from '@domain/access/application/application.entity';
 import { Invitation } from '@domain/access/invitation/invitation.entity';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { Room } from '@domain/communication/room/room.entity';
+import { Organization } from '@domain/community/organization/organization.entity';
+import { User } from '@domain/community/user/user.entity';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
+import { Space } from '@domain/space/space/space.entity';
 import { CalendarEvent } from '@domain/timeline/event';
+import { Column, Entity, Generated, JoinColumn, ManyToOne } from 'typeorm';
+import { NotificationEventInAppState } from '../../common/enums/notification.event.in.app.state';
+import { BaseAlkemioEntity } from '../../domain/common/entity/base-entity/base.alkemio.entity';
+import { IInAppNotificationPayload } from '../in-app-notification-payload/in.app.notification.payload.interface';
+import { IInAppNotification } from './in.app.notification.interface';
 
 @Entity('in_app_notification')
 export class InAppNotification

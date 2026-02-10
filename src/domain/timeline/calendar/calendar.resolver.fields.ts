@@ -1,17 +1,17 @@
 import { AuthorizationPrivilege } from '@common/enums';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { GraphqlGuard } from '@core/authorization';
+import { UUID } from '@domain/common/scalars';
+import { SpaceSettingsService } from '@domain/space/space.settings/space.settings.service';
 import { UseGuards } from '@nestjs/common';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import {
   AuthorizationAgentPrivilege,
   CurrentUser,
 } from '@src/common/decorators';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { CalendarService } from './calendar.service';
-import { UUID } from '@domain/common/scalars';
-import { SpaceSettingsService } from '@domain/space/space.settings/space.settings.service';
 import { ICalendarEvent } from '../event/event.interface';
 import { ICalendar } from './calendar.interface';
+import { CalendarService } from './calendar.service';
 
 @Resolver(() => ICalendar)
 export class CalendarResolverFields {

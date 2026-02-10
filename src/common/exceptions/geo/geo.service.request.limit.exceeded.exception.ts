@@ -1,10 +1,10 @@
-import { BaseException } from '@common/exceptions/base.exception';
 import { AlkemioErrorStatus, LogContext } from '@common/enums';
+import { BaseException } from '@common/exceptions/base.exception';
 
 export class GeoServiceRequestLimitExceededException extends BaseException {
-  constructor(error: string, context: LogContext) {
+  constructor(message: string, context: LogContext) {
     super(
-      error,
+      message,
       context,
       AlkemioErrorStatus.GEO_SERVICE_REQUEST_LIMIT_EXCEEDED
     );

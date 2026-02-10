@@ -1,17 +1,17 @@
-import { Module, OnModuleDestroy, Inject } from '@nestjs/common';
+import { APP_ID_PROVIDER } from '@common/app.id.provider';
+import { MessagingQueue } from '@common/enums/messaging.queue';
+import { subscriptionFactoryProvider } from '@core/microservices/subscription.factory.provider';
+import { Inject, Module, OnModuleDestroy } from '@nestjs/common';
 import {
   RABBITMQ_EXCHANGE_NAME_DIRECT,
   SUBSCRIPTION_ACTIVITY_CREATED,
-  SUBSCRIPTION_IN_APP_NOTIFICATION_RECEIVED,
-  SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER,
   SUBSCRIPTION_CONVERSATION_EVENT,
+  SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER,
+  SUBSCRIPTION_IN_APP_NOTIFICATION_RECEIVED,
 } from '@src/common/constants';
-import { subscriptionFactoryProvider } from '@core/microservices/subscription.factory.provider';
+import { PubSubEngine } from 'graphql-subscriptions';
 import { SubscriptionPublishService } from './subscription.publish.service';
 import { SubscriptionReadService } from './subscription.read.service';
-import { MessagingQueue } from '@common/enums/messaging.queue';
-import { APP_ID_PROVIDER } from '@common/app.id.provider';
-import { PubSubEngine } from 'graphql-subscriptions';
 
 const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
   {

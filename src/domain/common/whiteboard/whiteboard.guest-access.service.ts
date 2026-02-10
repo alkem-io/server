@@ -1,25 +1,25 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { WhiteboardService } from './whiteboard.service';
-import { IWhiteboard } from './whiteboard.interface';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
-import { IAuthorizationPolicy } from '../authorization-policy';
-import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
-import { ISpace } from '@domain/space/space/space.interface';
 import {
   EntityNotInitializedException,
   ForbiddenException,
 } from '@common/exceptions';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { ISpace } from '@domain/space/space/space.interface';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { IAuthorizationPolicy } from '../authorization-policy';
+import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { ProfileAuthorizationService } from '../profile/profile.service.authorization';
+import { IWhiteboard } from './whiteboard.interface';
+import { WhiteboardService } from './whiteboard.service';
 
 const PUBLIC_RULE_NAME = 'public-access';
 const GRANTED_GUEST_PRIVILEGES: AuthorizationPrivilege[] = [

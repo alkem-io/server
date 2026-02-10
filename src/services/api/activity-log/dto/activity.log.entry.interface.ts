@@ -1,22 +1,22 @@
-import { Field, InterfaceType } from '@nestjs/graphql';
-import { UUID } from '@domain/common/scalars';
-import { RelationshipNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { ActivityEventType } from '@common/enums/activity.event.type';
+import { RelationshipNotFoundException } from '@common/exceptions';
+import { UUID } from '@domain/common/scalars';
 import { IUser } from '@domain/community/user/user.interface';
-import { IActivityLogEntryMemberJoined } from './activity.log.dto.entry.member.joined.interface';
-import { IActivityLogEntryCalloutPublished } from './activity.log.dto.entry.callout.published';
-import { IActivityLogEntryCalloutPostCreated } from './activity.log.dto.entry.callout.post.created';
-import { IActivityLogEntryCalloutWhiteboardCreated } from './activity.log.dto.entry.callout.whiteboard.created';
+import { ISpace } from '@domain/space/space/space.interface';
+import { Field, InterfaceType } from '@nestjs/graphql';
+import { IActivityLogEntryCalendarEventCreated } from './activity.log.dto.entry.calendar.event.created';
+import { IActivityLogEntryCalloutDiscussionComment } from './activity.log.dto.entry.callout.discussion.comment';
+import { IActivityLogEntryCalloutLinkCreated } from './activity.log.dto.entry.callout.link.created';
 import { IActivityLogEntryCalloutMemoCreated } from './activity.log.dto.entry.callout.memo.created';
 import { IActivityLogEntryCalloutPostComment } from './activity.log.dto.entry.callout.post.comment';
-import { IActivityLogEntryCalloutDiscussionComment } from './activity.log.dto.entry.callout.discussion.comment';
+import { IActivityLogEntryCalloutPostCreated } from './activity.log.dto.entry.callout.post.created';
+import { IActivityLogEntryCalloutPublished } from './activity.log.dto.entry.callout.published';
+import { IActivityLogEntryCalloutWhiteboardContentModified } from './activity.log.dto.entry.callout.whiteboard.content.modified';
+import { IActivityLogEntryCalloutWhiteboardCreated } from './activity.log.dto.entry.callout.whiteboard.created';
+import { IActivityLogEntryMemberJoined } from './activity.log.dto.entry.member.joined.interface';
 import { IActivityLogEntrySubspaceCreated } from './activity.log.dto.entry.subspace.created';
 import { IActivityLogEntryUpdateSent } from './activity.log.dto.entry.update.sent';
-import { IActivityLogEntryCalendarEventCreated } from './activity.log.dto.entry.calendar.event.created';
-import { IActivityLogEntryCalloutLinkCreated } from './activity.log.dto.entry.callout.link.created';
-import { IActivityLogEntryCalloutWhiteboardContentModified } from './activity.log.dto.entry.callout.whiteboard.content.modified';
-import { ISpace } from '@domain/space/space/space.interface';
 
 @InterfaceType('ActivityLogEntry', {
   resolveType(activityLogEntry) {

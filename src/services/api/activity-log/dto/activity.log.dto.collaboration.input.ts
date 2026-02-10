@@ -1,6 +1,6 @@
+import { ActivityEventType } from '@common/enums/activity.event.type';
 import { UUID } from '@domain/common/scalars';
 import { Field, Float, InputType } from '@nestjs/graphql';
-import { ActivityEventType } from '@common/enums/activity.event.type';
 
 @InputType()
 export class ActivityLogInput {

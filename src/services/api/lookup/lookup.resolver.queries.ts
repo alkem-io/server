@@ -1,7 +1,7 @@
-import { Query, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@common/decorators';
-import { LookupQueryResults } from './dto/lookup.query.results';
+import { Query, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { LookupQueryResults } from './dto/lookup.query.results';
 
 @InstrumentResolver()
 @Resolver()

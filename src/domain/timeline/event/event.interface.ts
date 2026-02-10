@@ -1,9 +1,9 @@
-import { Field, ObjectType } from '@nestjs/graphql';
-import { ICalendar } from '../calendar/calendar.interface';
 import { CalendarEventType } from '@common/enums/calendar.event.type';
 import { INameable } from '@domain/common/entity/nameable-entity/nameable.interface';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { ISpace } from '@domain/space/space/space.interface';
+import { Field, ObjectType } from '@nestjs/graphql';
+import { ICalendar } from '../calendar/calendar.interface';
 
 @ObjectType('CalendarEvent')
 export abstract class ICalendarEvent extends INameable {

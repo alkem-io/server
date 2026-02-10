@@ -1,12 +1,12 @@
-import { IUserGroup } from '@domain/community/user-group/user-group.interface';
-import { Field, ObjectType } from '@nestjs/graphql';
+import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { IGroupable } from '@domain/common/interfaces/groupable.interface';
-import { IOrganizationVerification } from '../organization-verification/organization.verification.interface';
+import { IUserGroup } from '@domain/community/user-group/user-group.interface';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { Field, ObjectType } from '@nestjs/graphql';
 import { IContributorBase } from '../contributor/contributor.base.interface';
 import { IContributor } from '../contributor/contributor.interface';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IOrganizationSettings } from '../organization-settings/organization.settings.interface';
-import { IRoleSet } from '@domain/access/role-set/role.set.interface';
+import { IOrganizationVerification } from '../organization-verification/organization.verification.interface';
 
 @ObjectType('Organization', {
   implements: () => [IGroupable, IContributor],

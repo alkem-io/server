@@ -1,5 +1,5 @@
-import { Field, InputType } from '@nestjs/graphql';
 import { SpaceVisibility } from '@common/enums/space.visibility';
+import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
 export class SpaceFilterInput {

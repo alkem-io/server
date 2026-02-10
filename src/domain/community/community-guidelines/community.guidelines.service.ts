@@ -1,22 +1,22 @@
+import { LogContext, ProfileType } from '@common/enums';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { TagsetType } from '@common/enums/tagset.type';
+import { VisualType } from '@common/enums/visual.type';
+import { EntityNotFoundException } from '@common/exceptions';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { IProfile } from '@domain/common/profile/profile.interface';
+import { ProfileService } from '@domain/common/profile/profile.service';
+import { CreateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.create';
+import { TagsetService } from '@domain/common/tagset/tagset.service';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { CommunityGuidelines } from './community.guidelines.entity';
 import { ICommunityGuidelines } from './community.guidelines.interface';
-import { UpdateCommunityGuidelinesInput } from './dto/community.guidelines.dto.update';
 import { CreateCommunityGuidelinesInput } from './dto/community.guidelines.dto.create';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
-import { IProfile } from '@domain/common/profile/profile.interface';
-import { ProfileService } from '@domain/common/profile/profile.service';
-import { VisualType } from '@common/enums/visual.type';
-import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { LogContext, ProfileType } from '@common/enums';
-import { EntityNotFoundException } from '@common/exceptions';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { TagsetType } from '@common/enums/tagset.type';
-import { CreateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.create';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { TagsetService } from '@domain/common/tagset/tagset.service';
+import { UpdateCommunityGuidelinesInput } from './dto/community.guidelines.dto.update';
 
 @Injectable()
 export class CommunityGuidelinesService {

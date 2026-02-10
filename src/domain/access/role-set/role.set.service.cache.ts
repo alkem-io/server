@@ -1,12 +1,12 @@
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
+import { RoleName } from '@common/enums/role.name';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Injectable, Inject } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AlkemioConfig } from '@src/types';
 import { Cache } from 'cache-manager';
-import { IInvitation } from '../invitation';
-import { RoleName } from '@common/enums/role.name';
 import { IApplication } from '../application';
+import { IInvitation } from '../invitation';
 
 @Injectable()
 export class RoleSetCacheService {

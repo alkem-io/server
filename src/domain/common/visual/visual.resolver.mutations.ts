@@ -1,20 +1,20 @@
 import { CurrentUser } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { VisualService } from './visual.service';
-import { IVisual } from './visual.interface';
-import { UpdateVisualInput } from './dto/visual.dto.update';
-import { VisualUploadImageInput } from './dto/visual.dto.upload.image';
-import { FileUpload, GraphQLUpload } from 'graphql-upload';
-import { Visual } from './visual.entity';
-import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { LogContext } from '@common/enums/logging.context';
+import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
-import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { FileUpload, GraphQLUpload } from 'graphql-upload';
+import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
+import { UpdateVisualInput } from './dto/visual.dto.update';
+import { VisualUploadImageInput } from './dto/visual.dto.upload.image';
+import { Visual } from './visual.entity';
+import { IVisual } from './visual.interface';
+import { VisualService } from './visual.service';
 
 @InstrumentResolver()
 @Resolver()
@@ -64,6 +64,11 @@ export class VisualResolverMutations {
               authorization: true,
             },
           },
+          mediaGallery: {
+            storageBucket: {
+              authorization: true,
+            },
+          },
         },
       }
     );
@@ -73,21 +78,59 @@ export class VisualResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `visual image upload: ${visual.id}`
     );
+
     const profile = (visual as Visual).profile;
-    if (!profile || !profile.storageBucket)
+    const storageBucket =
+      (visual as Visual).profile?.storageBucket ??
+      (visual as Visual).mediaGallery?.storageBucket;
+
+    if (!storageBucket) {
       throw new EntityNotInitializedException(
         `Unable to find profile or storageBucket for Visual: ${visual.id}`,
         LogContext.STORAGE_BUCKET
       );
+    }
 
-    const storageBucket = profile.storageBucket;
-    // Also check that the acting agent is allowed to upload
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      storageBucket.authorization,
-      AuthorizationPrivilege.FILE_UPLOAD,
-      `visual image upload on storage bucket: ${visual.id}`
+    const storageBucketAuthorization = storageBucket.authorization;
+
+    if (!storageBucketAuthorization) {
+      throw new EntityNotInitializedException(
+        `Authorization not initialized on storage bucket: ${storageBucket.id}`,
+        LogContext.STORAGE_BUCKET
+      );
+    }
+
+    const hasCredentialRules = Boolean(
+      storageBucketAuthorization?.credentialRules?.length
     );
+
+    if (hasCredentialRules) {
+      this.authorizationService.grantAccessOrFail(
+        agentInfo,
+        storageBucketAuthorization,
+        AuthorizationPrivilege.FILE_UPLOAD,
+        `visual image upload on storage bucket: ${visual.id}`
+      );
+    } else {
+      const fallbackAuthorization =
+        (visual as Visual).mediaGallery?.authorization ??
+        profile?.authorization ??
+        visual.authorization;
+
+      if (!fallbackAuthorization) {
+        throw new EntityNotInitializedException(
+          `Unable to determine authorization policy for visual upload: ${visual.id}`,
+          LogContext.STORAGE_BUCKET
+        );
+      }
+
+      this.authorizationService.grantAccessOrFail(
+        agentInfo,
+        fallbackAuthorization,
+        AuthorizationPrivilege.UPDATE,
+        `visual image upload via fallback authorization: ${visual.id}`
+      );
+    }
     const readStream = createReadStream();
 
     const visualDocument = await this.visualService.uploadImageOnVisual(

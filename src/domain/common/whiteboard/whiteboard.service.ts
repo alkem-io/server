@@ -1,32 +1,32 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
+import { LogContext, ProfileType } from '@common/enums';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
+import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { VisualType } from '@common/enums/visual.type';
+import { WhiteboardPreviewMode } from '@common/enums/whiteboard.preview.mode';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
-import { LogContext, ProfileType } from '@common/enums';
-import { VisualType } from '@common/enums/visual.type';
-import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
 import { ExcalidrawContent } from '@common/interfaces';
 import { IProfile } from '@domain/common/profile';
 import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { AuthorizationPolicy } from '../authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
+import { LicenseService } from '../license/license.service';
 import { ProfileService } from '../profile/profile.service';
-import { Whiteboard } from './whiteboard.entity';
-import { IWhiteboard } from './whiteboard.interface';
 import { CreateWhiteboardInput } from './dto/whiteboard.dto.create';
 import { UpdateWhiteboardInput } from './dto/whiteboard.dto.update';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { LicenseService } from '../license/license.service';
-import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { WhiteboardPreviewMode } from '@common/enums/whiteboard.preview.mode';
+import { Whiteboard } from './whiteboard.entity';
+import { IWhiteboard } from './whiteboard.interface';
 
 @Injectable()
 export class WhiteboardService {

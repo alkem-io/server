@@ -2,7 +2,7 @@
  * Supports reading review metadata from environment variables or a JSON file.
  * Shape: [{ reviewer: string; body: string; state?: string }]
  */
-import { readFileSync, existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 
 export interface ReviewRecord {
   reviewer: string;

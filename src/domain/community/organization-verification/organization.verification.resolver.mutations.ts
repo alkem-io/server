@@ -1,18 +1,18 @@
-import { Inject, LoggerService } from '@nestjs/common';
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { OrganizationVerificationEventInput } from './dto/organization.verification.dto.event';
-import { IOrganizationVerification } from './organization.verification.interface';
-import { OrganizationVerificationService } from './organization.verification.service';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LogContext } from '@common/enums/logging.context';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { LifecycleEventInput } from '@domain/common/lifecycle/dto/lifecycle.dto.event';
-import { OrganizationVerificationLifecycleService } from './organization.verification.service.lifecycle';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
+import { Inject, LoggerService } from '@nestjs/common';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { OrganizationVerificationEventInput } from './dto/organization.verification.dto.event';
+import { IOrganizationVerification } from './organization.verification.interface';
+import { OrganizationVerificationService } from './organization.verification.service';
+import { OrganizationVerificationLifecycleService } from './organization.verification.service.lifecycle';
 
 @InstrumentResolver()
 @Resolver(() => IOrganizationVerification)

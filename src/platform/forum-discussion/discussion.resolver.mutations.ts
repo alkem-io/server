@@ -1,14 +1,13 @@
-import { Resolver } from '@nestjs/graphql';
-import { Args, Mutation } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { DiscussionService } from './discussion.service';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentUser } from '@src/common/decorators';
 import { IDiscussion } from './discussion.interface';
+import { DiscussionService } from './discussion.service';
 import { DeleteDiscussionInput } from './dto/discussion.dto.delete';
 import { UpdateDiscussionInput } from './dto/discussion.dto.update';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { InstrumentResolver } from '@src/apm/decorators';
 
 @InstrumentResolver()
 @Resolver()

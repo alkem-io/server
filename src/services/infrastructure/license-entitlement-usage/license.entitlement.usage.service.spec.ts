@@ -1,20 +1,19 @@
-import { vi } from 'vitest';
-import { Test, TestingModule } from '@nestjs/testing';
-import { LicenseEntitlementUsageService } from './license.entitlement.usage.service';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
-import { Account } from '@domain/space/account/account.entity';
-import { ISpace } from '@domain/space/space/space.interface';
-import { ILicenseEntitlement } from '@domain/common/license-entitlement/license.entitlement.interface';
-import { ILicense } from '@domain/common/license/license.interface';
 import {
   EntityNotFoundException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
+import { ILicense } from '@domain/common/license/license.interface';
+import { ILicenseEntitlement } from '@domain/common/license-entitlement/license.entitlement.interface';
+import { Account } from '@domain/space/account/account.entity';
+import { ISpace } from '@domain/space/space/space.interface';
+import { Test, TestingModule } from '@nestjs/testing';
+import { getEntityManagerToken } from '@nestjs/typeorm';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { getEntityManagerToken } from '@nestjs/typeorm';
 import { EntityManager } from 'typeorm';
-import type { Mocked } from 'vitest';
+import { type Mocked, vi } from 'vitest';
+import { LicenseEntitlementUsageService } from './license.entitlement.usage.service';
 
 describe('LicenseEntitlementUsageService', () => {
   let service: LicenseEntitlementUsageService;

@@ -1,49 +1,49 @@
 import { LogContext } from '@common/enums';
+import { AccountType } from '@common/enums/account.type';
+import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
+import { MAX_SPACE_LEVEL, SpaceLevel } from '@common/enums/space.level';
+import { TemplateDefaultType } from '@common/enums/template.default.type';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Account } from './account.entity';
-import { IAccount } from './account.interface';
-import { AgentService } from '@domain/agent/agent/agent.service';
-import { SpaceService } from '../space/space.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { ISpace } from '../space/space.interface';
-import { CreateVirtualContributorOnAccountInput } from './dto/account.dto.create.virtual.contributor';
-import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
-import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
-import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
-import { CreateSpaceOnAccountInput } from './dto/account.dto.create.space';
-import { CreateInnovationHubOnAccountInput } from './dto/account.dto.create.innovation.hub';
-import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
-import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.service';
-import { MAX_SPACE_LEVEL, SpaceLevel } from '@common/enums/space.level';
-import { InnovationPackService } from '@library/innovation-pack/innovation.pack.service';
-import { CreateInnovationPackOnAccountInput } from './dto/account.dto.create.innovation.pack';
-import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { NamingService } from '@services/infrastructure/naming/naming.service';
-import { InnovationPackAuthorizationService } from '@library/innovation-pack/innovation.pack.service.authorization';
-import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { AccountHostService } from '../account.host/account.host.service';
-import { IAccountSubscription } from './account.license.subscription.interface';
-import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
-import { LicenseService } from '@domain/common/license/license.service';
-import { InstrumentService } from '@src/apm/decorators';
-import { AccountType } from '@common/enums/account.type';
-import { AccountLookupService } from '../account.lookup/account.lookup.service';
-import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
-import { PlatformTemplatesService } from '@platform/platform-templates/platform.templates.service';
-import { TemplateDefaultType } from '@common/enums/template.default.type';
 import { IRoleSet } from '@domain/access/role-set';
 import { IAgent } from '@domain/agent';
+import { AgentService } from '@domain/agent/agent/agent.service';
+import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { LicenseService } from '@domain/common/license/license.service';
+import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
+import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
+import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
+import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.service';
+import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
+import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
+import { InnovationPackService } from '@library/innovation-pack/innovation.pack.service';
+import { InnovationPackAuthorizationService } from '@library/innovation-pack/innovation.pack.service.authorization';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { PlatformTemplatesService } from '@platform/platform-templates/platform.templates.service';
+import { NamingService } from '@services/infrastructure/naming/naming.service';
+import { InstrumentService } from '@src/apm/decorators';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
+import { AccountHostService } from '../account.host/account.host.service';
+import { AccountLookupService } from '../account.lookup/account.lookup.service';
+import { ISpace } from '../space/space.interface';
+import { SpaceService } from '../space/space.service';
+import { Account } from './account.entity';
+import { IAccount } from './account.interface';
+import { IAccountSubscription } from './account.license.subscription.interface';
+import { CreateInnovationHubOnAccountInput } from './dto/account.dto.create.innovation.hub';
+import { CreateInnovationPackOnAccountInput } from './dto/account.dto.create.innovation.pack';
+import { CreateSpaceOnAccountInput } from './dto/account.dto.create.space';
+import { CreateVirtualContributorOnAccountInput } from './dto/account.dto.create.virtual.contributor';
 
 @InstrumentService()
 @Injectable()

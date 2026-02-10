@@ -1,12 +1,12 @@
-import { LogContext, AlkemioErrorStatus } from '@common/enums';
+import { AlkemioErrorStatus, LogContext } from '@common/enums';
 import { BaseException } from '../base.exception';
 
 export class UserIdentityNotFoundException extends BaseException {
   constructor(
-    error: string,
+    message: string,
     context = LogContext.COMMUNITY,
     code?: AlkemioErrorStatus
   ) {
-    super(error, context, code ?? AlkemioErrorStatus.USER_IDENTITY_NOT_FOUND);
+    super(message, context, code ?? AlkemioErrorStatus.USER_IDENTITY_NOT_FOUND);
   }
 }

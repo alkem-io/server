@@ -1,18 +1,18 @@
+import { NotificationEvent } from '@common/enums/notification.event';
+import { NotificationEventCategory } from '@common/enums/notification.event.category';
+import { NotificationEventPayload } from '@common/enums/notification.event.payload';
+import { MessageDetailsService } from '@domain/communication/message.details/message.details.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InAppNotificationPayloadOrganizationMessageDirect } from '@platform/in-app-notification-payload/dto/organization/notification.in.app.payload.organization.message.direct';
+import { InAppNotificationPayloadOrganizationMessageRoom } from '@platform/in-app-notification-payload/dto/organization/notification.in.app.payload.organization.message.room';
+import { NotificationRecipientResult } from '@services/api/notification-recipients/dto/notification.recipients.dto.result';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { NotificationInputBase } from './dto/notification.dto.input.base';
 import { NotificationExternalAdapter } from '../notification-external-adapter/notification.external.adapter';
 import { NotificationInAppAdapter } from '../notification-in-app-adapter/notification.in.app.adapter';
-import { NotificationEventCategory } from '@common/enums/notification.event.category';
-import { NotificationEvent } from '@common/enums/notification.event';
-import { NotificationRecipientResult } from '@services/api/notification-recipients/dto/notification.recipients.dto.result';
-import { NotificationAdapter } from './notification.adapter';
-import { NotificationEventPayload } from '@common/enums/notification.event.payload';
-import { InAppNotificationPayloadOrganizationMessageDirect } from '@platform/in-app-notification-payload/dto/organization/notification.in.app.payload.organization.message.direct';
-import { NotificationInputOrganizationMessage } from './dto/organization/notification.input.organization.message';
-import { InAppNotificationPayloadOrganizationMessageRoom } from '@platform/in-app-notification-payload/dto/organization/notification.in.app.payload.organization.message.room';
+import { NotificationInputBase } from './dto/notification.dto.input.base';
 import { NotificationInputOrganizationMention } from './dto/organization/notification.dto.input.organization.mention';
-import { MessageDetailsService } from '@domain/communication/message.details/message.details.service';
+import { NotificationInputOrganizationMessage } from './dto/organization/notification.input.organization.message';
+import { NotificationAdapter } from './notification.adapter';
 
 @Injectable()
 export class NotificationOrganizationAdapter {

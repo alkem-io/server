@@ -1,15 +1,14 @@
-import { Inject, LoggerService } from '@nestjs/common';
-import { Resolver } from '@nestjs/graphql';
-import { Mutation } from '@nestjs/graphql';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { CurrentUser, Profiling } from '@src/common/decorators';
-import { AdminWhiteboardService } from './admin.whiteboard.service';
-import { AdminWhiteboardFilesResult } from './admin.whiteboard.files.result';
 import { AuthorizationPrivilege } from '@common/enums';
-import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { Inject, LoggerService } from '@nestjs/common';
+import { Mutation, Resolver } from '@nestjs/graphql';
+import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentUser, Profiling } from '@src/common/decorators';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { AdminWhiteboardFilesResult } from './admin.whiteboard.files.result';
+import { AdminWhiteboardService } from './admin.whiteboard.service';
 
 @InstrumentResolver()
 @Resolver()

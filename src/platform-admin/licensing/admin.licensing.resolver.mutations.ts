@@ -1,24 +1,24 @@
-import { Resolver, Mutation, Args } from '@nestjs/graphql';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { AssignLicensePlanToSpace } from './dto/admin.licensing.dto.assign.license.plan.to.space';
-import { AdminLicensingService } from './admin.licensing.service';
-import { RevokeLicensePlanFromSpace } from './dto/admin.licensing.dto.revoke.license.plan.from.space';
-import { ISpace } from '@domain/space/space/space.interface';
-import { IAccount } from '@domain/space/account/account.interface';
-import { AssignLicensePlanToAccount } from './dto/admin.licensing.dto.assign.license.plan.to.account';
-import { RevokeLicensePlanFromAccount } from './dto/admin.licensing.dto.revoke.license.plan.from.account';
-import { AccountLicenseService } from '@domain/space/account/account.service.license';
 import { LicenseService } from '@domain/common/license/license.service';
-import { LicensingFrameworkService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service';
-import { ILicensingFramework } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.interface';
-import { SpaceLicenseService } from '@domain/space/space/space.service.license';
-import { SpaceService } from '@domain/space/space/space.service';
-import { AccountService } from '@domain/space/account/account.service';
 import { UUID } from '@domain/common/scalars';
+import { IAccount } from '@domain/space/account/account.interface';
+import { AccountService } from '@domain/space/account/account.service';
+import { AccountLicenseService } from '@domain/space/account/account.service.license';
+import { ISpace } from '@domain/space/space/space.interface';
+import { SpaceService } from '@domain/space/space/space.service';
+import { SpaceLicenseService } from '@domain/space/space/space.service.license';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { ILicensingFramework } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.interface';
+import { LicensingFrameworkService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentUser, Profiling } from '@src/common/decorators';
+import { AdminLicensingService } from './admin.licensing.service';
+import { AssignLicensePlanToAccount } from './dto/admin.licensing.dto.assign.license.plan.to.account';
+import { AssignLicensePlanToSpace } from './dto/admin.licensing.dto.assign.license.plan.to.space';
+import { RevokeLicensePlanFromAccount } from './dto/admin.licensing.dto.revoke.license.plan.from.account';
+import { RevokeLicensePlanFromSpace } from './dto/admin.licensing.dto.revoke.license.plan.from.space';
 
 @InstrumentResolver()
 @Resolver()

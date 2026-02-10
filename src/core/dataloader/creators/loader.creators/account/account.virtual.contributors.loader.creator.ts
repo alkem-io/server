@@ -1,10 +1,10 @@
-import { EntityManager } from 'typeorm';
+import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
+import { Account } from '@domain/space/account/account.entity';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { Account } from '@domain/space/account/account.entity';
+import { EntityManager } from 'typeorm';
 import { createTypedRelationDataLoader } from '../../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
-import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 
 @Injectable()
 export class AccountVirtualContributorsLoaderCreator

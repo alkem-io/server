@@ -1,67 +1,67 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
+import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
+import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
+import { LicenseType } from '@common/enums/license.type';
+import { LogContext } from '@common/enums/logging.context';
+import { RoleName } from '@common/enums/role.name';
+import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
+import { RoleSetRoleImplicit } from '@common/enums/role.set.role.implicit';
+import { RoleSetType } from '@common/enums/role.set.type';
+import { RoleSetUpdateType } from '@common/enums/role.set.update.type';
 import {
-  RoleSetPolicyRoleLimitsException,
   EntityNotFoundException,
   EntityNotInitializedException,
   RelationshipNotFoundException,
+  RoleSetPolicyRoleLimitsException,
   ValidationException,
 } from '@common/exceptions';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Not, Repository } from 'typeorm';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { LogContext } from '@common/enums/logging.context';
-import { IForm } from '@domain/common/form/form.interface';
-import { FormService } from '@domain/common/form/form.service';
-import { UpdateFormInput } from '@domain/common/form/dto/form.dto.update';
-import { CreateRoleSetInput } from './dto/role.set.dto.create';
-import { PlatformInvitationService } from '@domain/access/invitation.platform/platform.invitation.service';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { RoleSetMembershipException } from '@common/exceptions/role.set.membership.exception';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { ApplicationService } from '@domain/access/application/application.service';
 import { InvitationService } from '@domain/access/invitation/invitation.service';
-import { RoleSet } from './role.set.entity';
-import { IRoleSet } from './role.set.interface';
-import { RoleService } from '../role/role.service';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
-import { IRole } from '../role/role.interface';
-import { AuthorizationCredential } from '@common/enums/authorization.credential';
-import { AgentService } from '@domain/agent/agent/agent.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { IInvitation } from '../invitation/invitation.interface';
-import { IUser } from '@domain/community/user/user.interface';
-import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
-import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { RoleSetRoleImplicit } from '@common/enums/role.set.role.implicit';
-import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
-import { RoleName } from '@common/enums/role.name';
-import { IApplication } from '../application/application.interface';
-import { IOrganization } from '@domain/community/organization/organization.interface';
+import { CreatePlatformInvitationInput } from '@domain/access/invitation.platform/dto/platform.invitation.dto.create';
+import { IPlatformInvitation } from '@domain/access/invitation.platform/platform.invitation.interface';
+import { PlatformInvitationService } from '@domain/access/invitation.platform/platform.invitation.service';
 import { IAgent } from '@domain/agent/agent/agent.interface';
-import { RoleSetUpdateType } from '@common/enums/role.set.update.type';
-import { RoleSetMembershipException } from '@common/exceptions/role.set.membership.exception';
+import { AgentService } from '@domain/agent/agent/agent.service';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { UpdateFormInput } from '@domain/common/form/dto/form.dto.update';
+import { IForm } from '@domain/common/form/form.interface';
+import { FormService } from '@domain/common/form/form.service';
+import { LicenseService } from '@domain/common/license/license.service';
+import { CommunityCommunicationService } from '@domain/community/community-communication/community.communication.service';
+import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { ContributorService } from '@domain/community/contributor/contributor.service';
+import { IOrganization } from '@domain/community/organization/organization.interface';
+import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
+import { IUser } from '@domain/community/user/user.interface';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
+import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { ISpace } from '@domain/space/space/space.interface';
+import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
+import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { FindOneOptions, Not, Repository } from 'typeorm';
+import { IApplication } from '../application/application.interface';
 import { CreateApplicationInput } from '../application/dto/application.dto.create';
 import { CreateInvitationInput } from '../invitation/dto/invitation.dto.create';
-import { IPlatformInvitation } from '@domain/access/invitation.platform/platform.invitation.interface';
-import { CreatePlatformInvitationInput } from '@domain/access/invitation.platform/dto/platform.invitation.dto.create';
-import { ContributorService } from '@domain/community/contributor/contributor.service';
-import { RoleSetEventsService } from './role.set.service.events';
-import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
-import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
-import { CommunityCommunicationService } from '@domain/community/community-communication/community.communication.service';
-import { LicenseService } from '@domain/common/license/license.service';
-import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
-import { LicenseType } from '@common/enums/license.type';
-import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
-import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
-import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
-import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
-import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { RoleSetType } from '@common/enums/role.set.type';
+import { IInvitation } from '../invitation/invitation.interface';
+import { IRole } from '../role/role.interface';
+import { RoleService } from '../role/role.service';
+import { CreateRoleSetInput } from './dto/role.set.dto.create';
+import { RoleSet } from './role.set.entity';
+import { IRoleSet } from './role.set.interface';
 import { RoleSetCacheService } from './role.set.service.cache';
-import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
-import { ISpace } from '@domain/space/space/space.interface';
+import { RoleSetEventsService } from './role.set.service.events';
 
 @Injectable()
 export class RoleSetService {
@@ -1632,7 +1632,7 @@ export class RoleSetService {
     roleSet: IRoleSet,
     role: RoleSetRoleImplicit
   ): Promise<boolean> {
-    let credential: ICredentialDefinition | undefined = undefined;
+    let credential: ICredentialDefinition | undefined;
     switch (role) {
       case RoleSetRoleImplicit.SUBSPACE_ADMIN:
         credential = await this.getCredentialSpaceImplicitRole(
@@ -1692,7 +1692,7 @@ export class RoleSetService {
   async createInvitationExistingContributor(
     invitationData: CreateInvitationInput
   ): Promise<IInvitation> {
-    const { contributor: contributor, agent } =
+    const { contributor, agent } =
       await this.contributorService.getContributorAndAgent(
         invitationData.invitedContributorID
       );

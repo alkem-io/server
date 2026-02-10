@@ -1,12 +1,12 @@
-import { Resolver, ResolveField, Parent } from '@nestjs/graphql';
-import { ISpace } from '@domain/space/space/space.interface';
-import { ICallout } from '@domain/collaboration/callout/callout.interface';
-import { Loader } from '@core/dataloader/decorators';
 import {
   CalloutLoaderCreator,
   SpaceLoaderCreator,
 } from '@core/dataloader/creators';
+import { Loader } from '@core/dataloader/decorators';
 import { ILoader } from '@core/dataloader/loader.interface';
+import { ICallout } from '@domain/collaboration/callout/callout.interface';
+import { ISpace } from '@domain/space/space/space.interface';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { InAppNotificationPayloadSpaceCollaborationCallout } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout';
 
 @Resolver(() => InAppNotificationPayloadSpaceCollaborationCallout)

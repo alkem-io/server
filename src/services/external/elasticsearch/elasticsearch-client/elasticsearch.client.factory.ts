@@ -1,9 +1,9 @@
+import { LogContext } from '@common/enums';
+import { Client } from '@elastic/elasticsearch';
 import { LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Client } from '@elastic/elasticsearch';
-import fs from 'fs';
 import { AlkemioConfig } from '@src/types';
-import { LogContext } from '@common/enums';
+import fs from 'fs';
 
 export const elasticSearchClientFactory = async (
   logger: LoggerService,
