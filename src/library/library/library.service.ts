@@ -31,9 +31,10 @@ export class LibraryService {
   ) {}
 
   async getLibraryOrFail(options?: FindOneOptions<Library>): Promise<ILibrary> {
-    const library = (
-      await this.libraryRepository.find({ take: 1, ...options })
-    )?.[0];
+    const library = await this.libraryRepository.findOne({
+      where: {},
+      ...options,
+    });
     if (!library)
       throw new EntityNotFoundException(
         'No Library found!',

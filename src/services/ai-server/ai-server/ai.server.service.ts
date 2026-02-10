@@ -360,9 +360,10 @@ export class AiServerService {
     options?: FindOneOptions<AiServer>
   ): Promise<IAiServer | never> {
     let aiServer: IAiServer | null = null;
-    aiServer = (
-      await this.aiServerRepository.find({ take: 1, ...options })
-    )?.[0];
+    aiServer = await this.aiServerRepository.findOne({
+      where: {},
+      ...options,
+    });
 
     if (!aiServer) {
       throw new EntityNotFoundException(
