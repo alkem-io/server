@@ -1,5 +1,4 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
-import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.module';
 import { Module } from '@nestjs/common';
 import { ActivityModule } from '@platform/activity/activity.module';
@@ -12,7 +11,6 @@ import { ActivityFeedService } from './activity.feed.service';
   imports: [
     AuthorizationModule,
     PlatformAuthorizationPolicyModule,
-    CollaborationModule,
     SpaceLookupModule,
     ActivityModule,
     ActivityLogModule,
