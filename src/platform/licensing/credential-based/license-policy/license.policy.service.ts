@@ -43,9 +43,9 @@ export class LicensePolicyService {
   // in all contexts
   public async getDefaultLicensePolicyOrFail(): Promise<ILicensePolicy> {
     let licensePolicy: ILicensePolicy | null = null;
-    licensePolicy = (
-      await this.entityManager.find(LicensePolicy, { take: 1 })
-    )?.[0];
+    licensePolicy = await this.entityManager.findOne(LicensePolicy, {
+      where: {},
+    });
 
     if (!licensePolicy) {
       throw new EntityNotFoundException(

@@ -2,6 +2,7 @@ import { ALT_TEXT_LENGTH, URI_LENGTH } from '@common/constants';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Profile } from '@domain/common/profile/profile.entity';
 import { Column, Entity, Index, ManyToOne } from 'typeorm';
+import { MediaGallery } from '../media-gallery/media.gallery.entity';
 import { VISUAL_ALLOWED_TYPES } from './visual.constraints';
 import { IVisual } from './visual.interface';
 
@@ -45,6 +46,20 @@ export class Visual extends AuthorizableEntity implements IVisual {
     }
   )
   profile?: Profile;
+
+  @ManyToOne(
+    () => MediaGallery,
+    mediaGallery => mediaGallery.visuals,
+    {
+      eager: false,
+      cascade: false,
+      onDelete: 'CASCADE',
+    }
+  )
+  mediaGallery?: MediaGallery;
+
+  @Column('int', { nullable: true })
+  sortOrder?: number;
 
   constructor() {
     super();

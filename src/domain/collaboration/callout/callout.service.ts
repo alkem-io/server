@@ -243,6 +243,7 @@ export class CalloutService {
           whiteboard: true,
           link: true,
           memo: true,
+          mediaGallery: true,
         },
         classification: {
           tagsets: true,

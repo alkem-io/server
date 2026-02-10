@@ -407,7 +407,6 @@ services:
     restart: always
     networks:
       - alkemio_dev_net
-    command: sh -c "/wait && npm run start"
 
   matrix-adapter:
     extra_hosts:
@@ -510,7 +509,7 @@ services:
       - LOCAL_STORAGE_PATH
     restart: always
     volumes:
-      - ${PWD}/.storage:${LOCAL_STORAGE_PATH}
+      - ${PWD}/.storage:${LOCAL_STORAGE_PATH}:ro
     networks:
       - alkemio_dev_net
     ports:

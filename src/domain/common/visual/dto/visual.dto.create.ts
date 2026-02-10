@@ -1,5 +1,7 @@
+import { VisualType } from '@common/enums/visual.type';
+
 export class CreateVisualInput {
-  name!: string;
+  name!: VisualType;
 
   minWidth!: number;
 
