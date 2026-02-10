@@ -1,5 +1,17 @@
 {
   "permissions": {
-    "allow": ["Bash(pnpm lint:*)", "Bash(pnpm test:*)"]
+    "allow": [
+      "Bash(pnpm lint:*)",
+      "Bash(pnpm test:*)",
+      "Bash(npx biome check:*)",
+      "Bash(npx biome:*)",
+      "Bash(npx vitest:*)",
+      "Curl(http://localhost:3000/ory/kratos/public/health/alive)",
+      "Curl(http://localhost:3000/ory/kratos/public/self-service/registration/api)",
+      "Curl(http://localhost:3000/ory/kratos/public/self-service/registration*)",
+      "Curl(http://localhost:3000/ory/kratos/public/self-service/verification*)",
+      "Curl( http://localhost:4437/mail)",
+      "Bash(curl:*)"
+    ]
   }
 }
