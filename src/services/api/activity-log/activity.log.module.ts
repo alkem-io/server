@@ -9,6 +9,7 @@ import { WhiteboardModule } from '@domain/common/whiteboard/whiteboard.module';
 import { RoomModule } from '@domain/communication/room/room.module';
 import { CommunityModule } from '@domain/community/community/community.module';
 import { UserModule } from '@domain/community/user/user.module';
+import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { SpaceModule } from '@domain/space/space/space.module';
 import { CalendarModule } from '@domain/timeline/calendar/calendar.module';
 import { CalendarEventModule } from '@domain/timeline/event/event.module';
@@ -30,6 +31,7 @@ import { ActivityLogService } from './activity.log.service';
     ActivityModule,
     CollaborationModule,
     UserModule,
+    UserLookupModule,
     ContributorLookupModule,
     CommunityModule,
     CalloutModule,

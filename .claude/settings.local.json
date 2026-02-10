@@ -1,5 +1,11 @@
 {
   "permissions": {
-    "allow": ["Bash(pnpm lint:*)", "Bash(pnpm test:*)"]
+    "allow": [
+      "Bash(pnpm lint:*)",
+      "Bash(pnpm test:*)",
+      "Bash(npx biome check:*)",
+      "Bash(npx biome:*)",
+      "Bash(npx vitest:*)"
+    ]
   }
 }
