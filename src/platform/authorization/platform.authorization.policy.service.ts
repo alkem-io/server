@@ -28,14 +28,12 @@ export class PlatformAuthorizationPolicyService {
   }
 
   public async getPlatformAuthorizationPolicy(): Promise<IAuthorizationPolicy> {
-    const platform = (
-      await this.platformRepository.find({
-        take: 1,
-        relations: {
-          authorization: true,
-        },
-      })
-    )?.[0];
+    const platform = await this.platformRepository.findOne({
+      where: {},
+      relations: {
+        authorization: true,
+      },
+    });
 
     if (!platform || !platform.authorization) {
       throw new EntityNotFoundException(
