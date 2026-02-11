@@ -35,7 +35,7 @@ If action is "remove":
 2. If confirmed, **FIRST** find and close any tmux pane running in that worktree directory (must happen BEFORE removing worktree):
 
 ```bash
-tmux list-panes -a -F '#{pane_id} #{pane_current_path}' | grep "$REPO_NAME-$ARGUMENTS" | awk '{print $1}' | xargs -I{} tmux kill-pane -t {}
+tmux list-panes -a -F '#{pane_id} #{pane_current_path}' | grep -F -- "$REPO_NAME-$ARGUMENTS" | awk '{print $1}' | xargs -I{} tmux kill-pane -t {}
 ```
 
 3. **THEN** remove the worktree:
