@@ -296,15 +296,15 @@ export class MeService {
       Array.from(credentialMap.get('spaces')?.keys() ?? [])
     );
 
+    const activityLogs =
+      await this.activityLogService.convertRawActivityToResults(rawActivities);
+
     const mySpaceResults: MySpaceResults[] = [];
-
-    for (const rawActivity of rawActivities) {
-      const activityLog =
-        await this.activityLogService.convertRawActivityToResult(rawActivity);
-
+    for (let i = 0; i < rawActivities.length; i++) {
+      const activityLog = activityLogs[i];
       if (!activityLog?.space) {
         this.logger.warn(
-          `Unable to process activity entry ${rawActivity.id} because it does not have a journey.`,
+          `Unable to process activity entry ${rawActivities[i].id} because it does not have a journey.`,
           LogContext.ACTIVITY
         );
         continue;
