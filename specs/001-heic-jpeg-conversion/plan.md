@@ -7,12 +7,12 @@
 
 ## Summary
 
-iPhone users uploading HEIC/HEIF images experience failures because the platform does not accept these formats. This plan introduces an image conversion layer in the upload pipeline that detects HEIC/HEIF uploads, converts them to JPEG using `sharp` (libvips-based), and stores the converted image. The conversion hooks into `VisualService.uploadImageOnVisual()` — the single entry point for all visual uploads (avatar, banner, card, etc.) — and into `StorageBucketService` for generic file uploads. Non-HEIC formats pass through unchanged.
+iPhone users uploading HEIC/HEIF images experience failures because the platform does not accept these formats. This plan introduces an image conversion layer in the upload pipeline that detects HEIC/HEIF uploads, converts them to JPEG using `heic-convert` (pure JavaScript/WASM HEIC decoder), and stores the converted image. The conversion hooks into `VisualService.uploadImageOnVisual()` — the single entry point for all visual uploads (avatar, banner, card, etc.) — and into `StorageBucketService` for generic file uploads. Non-HEIC formats pass through unchanged.
 
 ## Technical Context
 
 **Language/Version**: TypeScript 5.3 on Node.js 22.21.1 (Volta-pinned)
-**Primary Dependencies**: NestJS 10, TypeORM 0.3, `graphql-upload` 13, `image-size` 1.1, **new: `sharp` ≥0.34** (Apache-2.0, libvips-based)
+**Primary Dependencies**: NestJS 10, TypeORM 0.3, `graphql-upload` 13, `image-size` 1.1, **new: `heic-convert` ^2.1.0** (ISC license, pure JavaScript/WASM HEIC→JPEG converter), **new: `@types/heic-convert`** (TypeScript declarations)
 **Storage**: Local filesystem via `LocalStorageAdapter` (content-addressed, SHA-hashed filenames)
 **Testing**: Vitest (unit), Jest CI (integration)
 **Target Platform**: Linux server (Docker Node 22), macOS dev
@@ -32,10 +32,10 @@ _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 | 3. GraphQL Schema as Stable Contract | ✅ Pass | No GraphQL schema changes. Existing `uploadImageOnVisual` mutation signature unchanged; HEIC acceptance is a backend behavior change. MIME type enums are internal, not in GraphQL schema. |
 | 4. Explicit Data & Event Flow | ✅ Pass | Conversion occurs within the existing upload pipeline (validate → convert → store). No new events needed — existing upload success/failure flows apply. |
 | 5. Observability & Operational Readiness | ✅ Pass | Conversion events logged with structured context (source format, target format, file size, conversion time). Uses existing `LogContext` patterns. |
-| 6. Code Quality with Pragmatic Testing | ✅ Pass | Unit tests for conversion service (mock sharp); integration test for upload pipeline with HEIC fixture. Risk-based: testing actual conversion output, not mocking internals. |
+| 6. Code Quality with Pragmatic Testing | ✅ Pass | Unit tests for conversion service (mock heic-convert); integration test for upload pipeline with HEIC fixture. Risk-based: testing actual conversion output, not mocking internals. |
 | 7. API Consistency & Evolution | ✅ Pass | No API surface change. |
 | 8. Secure-by-Design Integration | ✅ Pass | HEIC input passes through existing centralized validation. 25MB size limit enforced before conversion. sharp processes buffers in memory only. |
-| 9. Container & Deployment Determinism | ✅ Pass | sharp ships prebuilt binaries via `@img/sharp-*` platform packages. Dockerfile uses explicit Node 22 base. No runtime dynamic install. |
+| 9. Container & Deployment Determinism | ✅ Pass | `heic-convert` is pure JavaScript/WASM — no native binaries, no platform-specific packages. Dockerfile uses explicit Node 22 base. No runtime dynamic install. |
 | 10. Simplicity & Incremental Hardening | ✅ Pass | Simplest viable: detect HEIC → convert buffer → replace mime/filename → continue existing pipeline. No caching, queuing, or async processing added. |
 
 ## Project Structure
@@ -64,7 +64,7 @@ src/
 │   │   ├── mime.file.type.visual.ts       # Add HEIC/HEIF MIME types
 │   │   └── mime.file.type.ts              # Re-exports (no change needed if visual enum auto-included)
 │   └── utils/
-│       └── image.util.ts                  # Update to use sharp for dimensions (replaces image-size for HEIC)
+│       └── image.util.ts                  # No change — image-size works on converted JPEG buffer
 ├── domain/
 │   └── common/
 │       └── visual/

@@ -1,6 +1,6 @@
 # Quickstart: HEIC to JPEG Image Conversion
 
-**Feature**: 001-heic-jpeg-conversion  
+**Feature**: 001-heic-jpeg-conversion
 **Date**: 2026-02-11
 
 ## Prerequisites
@@ -15,7 +15,7 @@
 # 1. Switch to feature branch
 git checkout 001-heic-jpeg-conversion
 
-# 2. Install dependencies (including new sharp package)
+# 2. Install dependencies (including new heic-convert package)
 pnpm install
 
 # 3. Start backing services
@@ -73,7 +73,7 @@ curl -s -I "http://localhost:3000/api/private/rest/storage/document/<document-id
 
 | Issue | Solution |
 | --- | --- |
-| `sharp` install fails | Ensure Node 22 is active (`node -v`). sharp ships prebuilt binaries — no system deps needed. If behind a proxy, set `SHARP_IGNORE_GLOBAL_LIBVIPS=1`. |
+| `sharp` install fails | Not applicable — `heic-convert` is pure JavaScript/WASM with no native dependencies. If install fails, check Node.js version (`node -v`) and pnpm cache (`pnpm store prune`). |
 | HEIC upload rejected with "not in allowed mime types" | Existing Visual entities in DB may have stale `allowedTypes`. Check if the code-level fix in `validateMimeType` is in place, or run the data migration. |
-| Converted image appears rotated | Verify `autoOrient: true` is set in the sharp constructor options within `ImageConversionService`. |
+| Converted image appears rotated | `heic-convert` preserves EXIF orientation metadata. Modern browsers handle EXIF orientation natively. If the serving client does not respect EXIF, consider adding server-side rotation via `sharp` post-processing on the JPEG buffer. |
 | Out of memory on large HEIC files | The 25MB upload limit should prevent this. Check if `storage.file.max_file_size` in `alkemio.yml` is set correctly. |

@@ -1,6 +1,6 @@
 # Data Model: HEIC to JPEG Image Conversion
 
-**Feature**: 001-heic-jpeg-conversion  
+**Feature**: 001-heic-jpeg-conversion
 **Date**: 2026-02-11
 
 ## Overview
@@ -94,7 +94,7 @@ Stream to Buffer
     │
     ▼
 ImageConversionService.convertIfNeeded(buffer, mimeType, fileName)
-    │  ├─ HEIC detected → sharp(buffer).jpeg({ quality: 90 }).toBuffer()
+    │  ├─ HEIC detected → convert({ buffer, format: 'JPEG', quality: 1 }) via heic-convert
     │  │                   → return { buffer: jpegBuffer, mimeType: 'image/jpeg', fileName: 'photo.jpg' }
     │  └─ Not HEIC → return unchanged { buffer, mimeType, fileName }
     │

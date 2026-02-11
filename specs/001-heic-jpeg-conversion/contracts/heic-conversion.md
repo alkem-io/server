@@ -1,6 +1,6 @@
 # Contract: HEIC Image Conversion
 
-**Feature**: 001-heic-jpeg-conversion  
+**Feature**: 001-heic-jpeg-conversion
 **Date**: 2026-02-11
 
 ## GraphQL Schema Impact
@@ -40,7 +40,7 @@ interface ImageConversionResult {
 interface IImageConversionService {
   /**
    * Converts HEIC/HEIF images to JPEG. Non-HEIC images pass through unchanged.
-   * 
+   *
    * @param buffer - Raw image file buffer
    * @param mimeType - Declared MIME type from upload
    * @param fileName - Original filename
@@ -60,10 +60,9 @@ interface IImageConversionService {
 
 | Parameter | Value | Rationale |
 | --- | --- | --- |
-| JPEG quality | 90 | Balances quality preservation (FR-004: ≥85%) with reasonable file size |
-| Auto-orient | true | Corrects EXIF orientation to prevent rotated output |
-| Metadata | preserved | Retains EXIF (date, camera info), ICC profile per FR-005 |
-| Pages extracted | 1 (first/primary) | Multi-frame containers: only primary still image per clarification |
+| JPEG quality | 1.0 (heic-convert scale 0–1, equivalent to ~100%) | `heic-convert` uses a 0–1 quality scale; 1.0 produces highest quality JPEG output. Can be tuned down later if file sizes are too large. |
+| Metadata | preserved | `heic-convert` preserves EXIF metadata (orientation, date, camera info) in the JPEG output by default per FR-005 |
+| Pages extracted | main image only | `convert()` extracts main image; `convert.all()` available but not used per clarification |
 
 ### Error Contract
 
@@ -72,7 +71,7 @@ interface IImageConversionService {
 | Corrupted HEIC file | `ValidationException` | "Failed to convert HEIC image" |
 | HEIC exceeds 25MB | `ValidationException` | "File size exceeds the maximum allowed size of 25MB for HEIC uploads" |
 | Unsupported HEIC codec | `ValidationException` | "Unsupported HEIC format variant" |
-| sharp processing failure | `StorageUploadFailedException` | "Upload on visual failed!" (existing pattern) |
+| heic-convert processing failure | `StorageUploadFailedException` | "Upload on visual failed!" (existing pattern) |
 
 Error details (file size, original MIME type, conversion duration) are placed in the exception `details` payload per coding standards — never in the message string.
 
@@ -98,14 +97,17 @@ HEIC files are **never** stored in their original format. After conversion:
 
 ## Dependency Contract
 
-### sharp (new dependency)
+### heic-convert (new dependency)
 
 | Property | Value |
 | --- | --- |
-| Package | `sharp` |
-| Version | `^0.34.0` |
-| License | Apache-2.0 |
+| Package | `heic-convert` |
+| Version | `^2.1.0` |
+| License | ISC |
 | Type | Production dependency |
-| Native binaries | Prebuilt via `@img/sharp-*` optional dependencies |
-| Docker compatibility | linux-x64 glibc (matches Node 22 Docker base) |
-| macOS dev | Prebuilt darwin-arm64 and darwin-x64 available |
+| Native binaries | None — pure JavaScript/WASM |
+| Docker compatibility | All platforms (no native deps) |
+| macOS dev | Works on all architectures |
+| TypeScript types | `@types/heic-convert` (separate dev dependency) |
+| Weekly downloads | ~314k |
+| Unpacked size | 7.92 kB (core); ~3 MB including libheif-js WASM dependency |

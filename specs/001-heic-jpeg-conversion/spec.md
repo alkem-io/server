@@ -1,8 +1,8 @@
 # Feature Specification: HEIC to JPEG Image Conversion
 
-**Feature Branch**: `001-heic-jpeg-conversion`  
-**Created**: 2026-02-11  
-**Status**: Draft  
+**Feature Branch**: `001-heic-jpeg-conversion`
+**Created**: 2026-02-11
+**Status**: Draft
 **Input**: User description: "Add support for heic (iphone image formats) when uploading images from iphones. As they lack support we need to make sure that we convert the images to jpeg before saving them and making them available through the files-service."
 
 ## Clarifications

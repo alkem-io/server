@@ -1,7 +1,7 @@
 # Specification Quality Checklist: HEIC to JPEG Image Conversion
 
-**Purpose**: Validate specification completeness and quality before proceeding to planning  
-**Created**: 2026-02-11  
+**Purpose**: Validate specification completeness and quality before proceeding to planning
+**Created**: 2026-02-11
 **Feature**: [spec.md](../spec.md)
 
 ## Content Quality

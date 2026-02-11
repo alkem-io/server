@@ -17,7 +17,7 @@
 
 **Purpose**: Install new dependency and register provider
 
-- [ ] T001 Install `sharp` as a production dependency via `pnpm add sharp` and verify lockfile updates in `package.json` and `pnpm-lock.yaml`
+- [ ] T001 Install `heic-convert` as a production dependency and `@types/heic-convert` as a dev dependency via `pnpm add heic-convert && pnpm add -D @types/heic-convert` and verify lockfile updates in `package.json` and `pnpm-lock.yaml`
 - [ ] T002 [P] Add HEIC and HEIF entries to `MimeTypeVisual` enum in `src/common/enums/mime.file.type.visual.ts` — add `HEIC = 'image/heic'` and `HEIF = 'image/heif'`
 - [ ] T003 [P] Add `'image/heic'` and `'image/heif'` to `VISUAL_ALLOWED_TYPES` array in `src/domain/common/visual/visual.constraints.ts`
 
@@ -32,9 +32,9 @@
 - [ ] T004 Create `ImageConversionService` in `src/domain/common/visual/image.conversion.service.ts` implementing the interface from `contracts/heic-conversion.md`:
   - Define `HEIC_MIME_TYPES` and `HEIC_FILE_EXTENSIONS` constants
   - Implement `isHeicFormat(mimeType: string, fileName: string): boolean` — checks MIME type against `HEIC_MIME_TYPES` and file extension against `HEIC_FILE_EXTENSIONS`
-  - Implement `convertIfNeeded(buffer: Buffer, mimeType: string, fileName: string): Promise<ImageConversionResult>` — if HEIC detected, convert via `sharp(buffer, { autoOrient: true }).keepMetadata().jpeg({ quality: 90, mozjpeg: true }).toBuffer()`, update MIME type to `image/jpeg`, change file extension to `.jpg`, return `{ buffer, mimeType, fileName, converted: true }`; otherwise return inputs unchanged with `converted: false`
+  - Implement `convertIfNeeded(buffer: Buffer, mimeType: string, fileName: string): Promise<ImageConversionResult>` — if HEIC detected, convert via `convert({ buffer, format: 'JPEG', quality: 1 })` using `heic-convert`, update MIME type to `image/jpeg`, change file extension to `.jpg`, return `{ buffer, mimeType, fileName, converted: true }`; otherwise return inputs unchanged with `converted: false`
   - Implement 25MB size validation for HEIC uploads (FR-014) — throw `ValidationException` with static message and file size in `details` payload
-  - Wrap sharp errors in `ValidationException` with static message pattern ("Failed to convert HEIC image") and original error in `details` per coding standards
+  - Wrap heic-convert errors in `ValidationException` with static message pattern ("Failed to convert HEIC image") and original error in `details` per coding standards
   - Inject NestJS `Logger` and log conversion events at verbose level: source MIME, target MIME, original size, converted size, conversion duration (FR-008)
   - Use `@Injectable()` decorator for NestJS DI
 - [ ] T005 Register `ImageConversionService` as a provider in `src/domain/common/visual/visual.module.ts`
@@ -44,8 +44,8 @@
   - Test `isHeicFormat()` returns false for `image/jpeg`, `image/png`, etc.
   - Test `convertIfNeeded()` passes through non-HEIC buffers unchanged with `converted: false`
   - Test `convertIfNeeded()` rejects HEIC files exceeding 25MB with `ValidationException`
-  - Test `convertIfNeeded()` converts HEIC buffer and returns `mimeType: 'image/jpeg'`, `fileName` ending in `.jpg`, `converted: true` (use a real small HEIC fixture or mock sharp)
-  - Test `convertIfNeeded()` wraps sharp errors in `ValidationException` with details payload
+  - Test `convertIfNeeded()` converts HEIC buffer and returns `mimeType: 'image/jpeg'`, `fileName` ending in `.jpg`, `converted: true` (use a real small HEIC fixture or mock heic-convert)
+  - Test `convertIfNeeded()` wraps heic-convert errors in `ValidationException` with details payload
 
 **Checkpoint**: `ImageConversionService` is complete, tested, and registered — ready for integration
 
@@ -101,10 +101,10 @@
 
 - [ ] T011 [US3] Verify error handling in `ImageConversionService.convertIfNeeded()` in `src/domain/common/visual/image.conversion.service.ts`:
   - Confirm sharp errors (e.g., `Input buffer contains unsupported image format`) are caught and wrapped in `ValidationException` with a static message and structured `details` (original error message, file size, MIME type, filename)
-  - Confirm the `ValidationException` propagates correctly through `VisualService.uploadImageOnVisual()` try/catch → the existing `StorageUploadFailedException` wrapping in the catch block handles it
+  - Confirm the `ValidationException` propagates correctly through `VisualService.uploadImageOnVisual()` try/catch — the existing `StorageUploadFailedException` wrapping in the catch block handles it
   - Ensure error logging at warning level includes the original error stack trace and structured context (LogContext.STORAGE_BUCKET or LogContext.COMMUNITY)
 - [ ] T012 [US3] Add unit tests for error scenarios in `src/domain/common/visual/__tests__/image.conversion.service.spec.ts`:
-  - Test: corrupted HEIC buffer (mock sharp to throw) → `ValidationException` thrown with correct message and details
+  - Test: corrupted HEIC buffer (mock heic-convert to throw) → `ValidationException` thrown with correct message and details
   - Test: HEIC file exactly at 25MB boundary → accepted
   - Test: HEIC file at 25MB + 1 byte → rejected with `ValidationException`
   - Test: conversion failure does not affect subsequent conversion calls (service remains stateless)
@@ -117,7 +117,7 @@
 
 **Purpose**: Documentation, validation, and cleanup
 
-- [ ] T013 [P] Verify Docker build succeeds with sharp dependency — run `docker build -t alkemio-server-heic-test .` and confirm no native compilation errors
+- [ ] T013 [P] Verify Docker build succeeds with heic-convert dependency — run `docker build -t alkemio-server-heic-test .` and confirm no native compilation errors (heic-convert is pure JS/WASM, no native deps expected)
 - [ ] T014 [P] Run full lint pass `pnpm lint` and fix any issues introduced by the changes
 - [ ] T015 [P] Run existing test suite `pnpm run test:ci:no:coverage` to confirm no regressions
 - [ ] T016 Run quickstart.md validation — follow the steps in `specs/001-heic-jpeg-conversion/quickstart.md` to verify end-to-end operation
