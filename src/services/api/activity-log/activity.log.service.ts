@@ -7,7 +7,11 @@ import { MemoService } from '@domain/common/memo/memo.service';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { RoomService } from '@domain/communication/room/room.service';
 import { CommunityService } from '@domain/community/community/community.service';
+import { IUser } from '@domain/community/user/user.interface';
 import { UserService } from '@domain/community/user/user.service';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { Space } from '@domain/space/space/space.entity';
+import { ISpace } from '@domain/space/space/space.interface';
 import { SpaceService } from '@domain/space/space/space.service';
 import { CalendarService } from '@domain/timeline/calendar/calendar.service';
 import { CalendarEventService } from '@domain/timeline/event/event.service';
@@ -19,7 +23,7 @@ import { CommunityResolverService } from '@services/infrastructure/entity-resolv
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { ActivityService } from '@src/platform/activity/activity.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager } from 'typeorm/entity-manager/EntityManager';
+import { EntityManager, In } from 'typeorm';
 import { IActivityLogBuilder } from './activity.log.builder.interface';
 import ActivityLogBuilderService from './activity.log.builder.service';
 import { ActivityLogInput } from './dto/activity.log.dto.collaboration.input';
@@ -29,6 +33,7 @@ export class ActivityLogService {
   constructor(
     private activityService: ActivityService,
     private userService: UserService,
+    private userLookupService: UserLookupService,
     private contributorLookupService: ContributorLookupService,
     private communityResolverService: CommunityResolverService,
     private calloutService: CalloutService,
@@ -84,13 +89,47 @@ export class ActivityLogService {
   public async convertRawActivityToResults(
     rawActivities: IActivity[]
   ): Promise<(IActivityLogEntry | undefined)[]> {
+    if (rawActivities.length === 0) {
+      return [];
+    }
+
+    // Collect unique IDs for batch loading
+    const collaborationIds = [
+      ...new Set(rawActivities.map(a => a.collaborationID)),
+    ];
+    const userIds = [
+      ...new Set(rawActivities.map(a => a.triggeredBy).filter(Boolean)),
+    ];
+
+    // Batch-load all spaces by collaboration ID (1 query instead of 2P)
+    const spaces = await this.entityManager.find(Space, {
+      where: { collaboration: { id: In(collaborationIds) } },
+      relations: {
+        collaboration: true,
+        about: { profile: true },
+        community: true,
+      },
+    });
+    const spaceByCollabId = new Map<string, ISpace>(
+      spaces.map(s => [s.collaboration!.id, s])
+    );
+
+    // Batch-load all users (1 query instead of P)
+    const users = await this.userLookupService.getUsersByUUID(userIds);
+    const userById = new Map<string, IUser>(users.map(u => [u.id, u]));
+
+    // Convert each item using pre-loaded maps
     return Promise.all(
-      rawActivities.map(x => this.convertRawActivityToResult(x))
+      rawActivities.map(x =>
+        this.convertRawActivityToResult(x, spaceByCollabId, userById)
+      )
     );
   }
 
   public async convertRawActivityToResult(
-    rawActivity: IActivity
+    rawActivity: IActivity,
+    spaceByCollabId?: Map<string, ISpace>,
+    userById?: Map<string, IUser>
   ): Promise<IActivityLogEntry | undefined> {
     try {
       // Work around for community member joined without parentID set
@@ -101,29 +140,25 @@ export class ActivityLogService {
         return undefined;
       }
 
-      const userTriggeringActivity = await this.userService.getUserOrFail(
-        rawActivity.triggeredBy
-      );
+      // Use pre-loaded user or fall back to individual query
+      const userTriggeringActivity =
+        userById?.get(rawActivity.triggeredBy) ??
+        (await this.userService.getUserOrFail(rawActivity.triggeredBy));
 
-      const parentDetails = await this.getParentDetailsByCollaboration(
-        rawActivity.collaborationID
-      );
-
-      if (!parentDetails) {
-        throw new Error(
-          `Unable to resolve parent details of ${rawActivity.collaborationID}`
-        );
-      }
-
+      // Use pre-loaded space or fall back to individual query
       const space =
-        await this.communityResolverService.getSpaceForCollaborationOrFail(
+        spaceByCollabId?.get(rawActivity.collaborationID) ??
+        (await this.communityResolverService.getSpaceForCollaborationOrFail(
           rawActivity.collaborationID,
           {
             relations: {
+              about: { profile: true },
               community: true,
             },
           }
-        );
+        ));
+
+      const parentDisplayName = space.about.profile.displayName;
 
       const activityLogEntryBase: IActivityLogEntry = {
         id: rawActivity.id,
@@ -133,7 +168,7 @@ export class ActivityLogService {
         description: rawActivity.description,
         collaborationID: rawActivity.collaborationID,
         child: rawActivity.child,
-        parentDisplayName: parentDetails.displayName,
+        parentDisplayName,
         space,
       };
       const activityBuilder: IActivityLogBuilder =
@@ -150,8 +185,7 @@ export class ActivityLogService {
           this.linkService,
           this.calendarService,
           this.calendarEventService,
-          this.urlGeneratorService,
-          this.entityManager
+          this.urlGeneratorService
         );
       const activityType = rawActivity.type as ActivityEventType;
       return await activityBuilder[activityType](rawActivity);
@@ -162,19 +196,5 @@ export class ActivityLogService {
         LogContext.ACTIVITY
       );
     }
-  }
-
-  private async getParentDetailsByCollaboration(
-    collaborationID: string
-  ): Promise<{ nameID: string; displayName: string } | undefined> {
-    const space =
-      await this.communityResolverService.getSpaceForCollaborationOrFail(
-        collaborationID
-      );
-
-    return {
-      displayName: space.about.profile.displayName,
-      nameID: space.nameID,
-    };
   }
 }

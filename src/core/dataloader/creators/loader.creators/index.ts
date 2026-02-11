@@ -30,6 +30,7 @@ export * from './profile/profile.tagsets.loader.creator';
 export * from './profile.loader.creator';
 export * from './roleset.application.loader.creator';
 export * from './space/space.about.loader.creator';
+export * from './space/space.by.space.about.id.loader.creator';
 export * from './space/space.collaboration.loader.creator';
 export * from './space/space.community.loader.creator';
 export * from './user/user.settings.loader.creator';

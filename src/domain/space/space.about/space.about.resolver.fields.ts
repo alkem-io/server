@@ -4,6 +4,7 @@ import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { EntityNotFoundException } from '@common/exceptions';
 import { GraphqlGuard } from '@core/authorization';
 import { ProfileLoaderCreator } from '@core/dataloader/creators/loader.creators/profile.loader.creator';
+import { SpaceBySpaceAboutIdLoaderCreator } from '@core/dataloader/creators/loader.creators/space/space.by.space.about.id.loader.creator';
 import { Loader } from '@core/dataloader/decorators/data.loader.decorator';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { INVP } from '@domain/common/nvp/nvp.interface';
@@ -68,20 +69,23 @@ export class SpaceAboutResolverFields {
     nullable: false,
     description: 'Is the content of this Space visible to non-Members?.',
   })
-  async isContentPublic(@Parent() spaceAbout: ISpaceAbout): Promise<boolean> {
+  async isContentPublic(
+    @Parent() spaceAbout: ISpaceAbout,
+    @Loader(SpaceBySpaceAboutIdLoaderCreator)
+    loader: ILoader<ISpace | null>
+  ): Promise<boolean> {
     const spaceAboutId = spaceAbout.id;
-    const space =
-      await this.spaceLookupService.getSpaceForSpaceAbout(spaceAboutId);
+    const space = await loader.load(spaceAboutId);
     if (space) {
       return space.settings.privacy.mode === SpacePrivacyMode.PUBLIC;
-    } else {
-      const spaceTemplate =
-        await this.templateContentSpaceLookupService.getTemplateContentSpaceForSpaceAbout(
-          spaceAboutId
-        );
-      if (spaceTemplate) {
-        return spaceTemplate?.settings.privacy.mode === SpacePrivacyMode.PUBLIC;
-      }
+    }
+    // Fallback for TemplateContentSpace (not a regular Space)
+    const spaceTemplate =
+      await this.templateContentSpaceLookupService.getTemplateContentSpaceForSpaceAbout(
+        spaceAboutId
+      );
+    if (spaceTemplate) {
+      return spaceTemplate.settings.privacy.mode === SpacePrivacyMode.PUBLIC;
     }
     throw new EntityNotFoundException(
       'Unable to find Space or TemplateContentSpace for the about',
