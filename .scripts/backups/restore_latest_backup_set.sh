@@ -9,20 +9,29 @@
 #   ./restore_latest_backup_set.sh acc false true   # Restore acc, no restart, non-interactive
 #   ./restore_latest_backup_set.sh dev true false   # Restore dev, restart, interactive mode
 
+# Determine the platform (macOS vs. Linux vs. others)
+PLATFORM=$(uname | tr '[:upper:]' '[:lower:]')
+
+# Cross-platform in-place sed helper
+sed_inplace() {
+    if [ "$PLATFORM" = "darwin" ]; then
+        sed -i '' "$@"
+    else
+        sed -i "$@"
+    fi
+}
+
 # Check if yq is installed
 if ! command -v yq &> /dev/null; then
     echo "yq is not installed. Installing now..."
 
-    # Determine the platform (macOS vs. Linux vs. others)
-    PLATFORM=$(uname | tr '[:upper:]' '[:lower:]')
-
     # For macOS, use brew for installation
-    if [ "$PLATFORM" == "darwin" ]; then
+    if [ "$PLATFORM" = "darwin" ]; then
     # For macOS, download the macOS binary for yq
         sudo wget https://github.com/mikefarah/yq/releases/download/v4.34.2/yq_darwin_amd64 -O /usr/local/bin/yq &&\
         chmod +x /usr/local/bin/yq
     # For Linux, use apt to install yq
-    elif [ "$PLATFORM" == "linux" ]; then
+    elif [ "$PLATFORM" = "linux" ]; then
         wget https://github.com/mikefarah/yq/releases/download/v4.34.2/yq_linux_amd64 -O /usr/bin/yq &&\
         chmod +x /usr/bin/yq
     else
@@ -75,14 +84,14 @@ esac
 
 # Update the .env.docker file with the new server name
 if grep -q "SYNAPSE_HOMESERVER_NAME" $ENV_FILE_PATH; then
-    sed -i '' "s/^SYNAPSE_HOMESERVER_NAME=.*/SYNAPSE_HOMESERVER_NAME=$SERVER_NAME/" $ENV_FILE_PATH
+    sed_inplace "s/^SYNAPSE_HOMESERVER_NAME=.*/SYNAPSE_HOMESERVER_NAME=$SERVER_NAME/" $ENV_FILE_PATH
 else
     # Ensure that a newline is added before appending the variable
     echo -e "\nSYNAPSE_HOMESERVER_NAME=$SERVER_NAME" >> $ENV_FILE_PATH
 fi
 
 if grep -q "SYNAPSE_SERVER_NAME" $ENV_FILE_PATH; then
-    sed -i '' "s/^SYNAPSE_SERVER_NAME=.*/SYNAPSE_SERVER_NAME=$SERVER_NAME/" $ENV_FILE_PATH
+    sed_inplace "s/^SYNAPSE_SERVER_NAME=.*/SYNAPSE_SERVER_NAME=$SERVER_NAME/" $ENV_FILE_PATH
 else
     # Ensure that a newline is added before appending the variable
     echo -e "\nSYNAPSE_SERVER_NAME=$SERVER_NAME" >> $ENV_FILE_PATH
@@ -117,7 +126,7 @@ if [[ "$RESTART_SERVICES" == "true" ]]; then
         CONTAINER_STATUS=$(docker inspect --format="{{.State.Status}}" alkemio_dev_postgres)
 
         # If the container is running, break out of the loop
-        if [ "$CONTAINER_STATUS" == "running" ]; then
+        if [ "$CONTAINER_STATUS" = "running" ]; then
             break
         else
             echo "Waiting for alkemio_dev_postgres to start..."
