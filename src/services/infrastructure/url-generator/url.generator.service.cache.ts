@@ -1,6 +1,6 @@
 import { LogContext } from '@common/enums/logging.context';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Injectable, Inject, LoggerService } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { Cache, CachingConfig } from 'cache-manager';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 

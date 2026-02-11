@@ -1,17 +1,17 @@
-import { Inject, LoggerService } from '@nestjs/common';
-import { Args, Resolver, Query } from '@nestjs/graphql';
-import { ActivityLogService } from './activity.log.service';
-import { CurrentUser, Profiling } from '@src/common/decorators';
-import { ActivityLogInput } from './dto/activity.log.dto.collaboration.input';
+import { LogContext } from '@common/enums';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
-import { IActivityLogEntry } from './dto/activity.log.entry.interface';
+import { Inject, LoggerService } from '@nestjs/common';
+import { Args, Query, Resolver } from '@nestjs/graphql';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
-import { LogContext } from '@common/enums';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentUser, Profiling } from '@src/common/decorators';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { ActivityLogService } from './activity.log.service';
+import { ActivityLogInput } from './dto/activity.log.dto.collaboration.input';
+import { IActivityLogEntry } from './dto/activity.log.entry.interface';
 
 @InstrumentResolver()
 @Resolver()

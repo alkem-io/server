@@ -1,3 +1,10 @@
+import { AuthorizationPrivilege } from '@common/enums';
+import {
+  DataLoaderCreatorInitError,
+  DataLoaderNotProvided,
+} from '@common/exceptions/data-loader';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import {
   CallHandler,
   ExecutionContext,
@@ -6,16 +13,9 @@ import {
 } from '@nestjs/common';
 import { ContextIdFactory, ModuleRef } from '@nestjs/core';
 import { GqlExecutionContext } from '@nestjs/graphql';
-import {
-  DataLoaderCreatorInitError,
-  DataLoaderNotProvided,
-} from '@common/exceptions/data-loader';
-import { DATA_LOADER_CTX_INJECT_TOKEN } from '../data.loader.inject.token';
 import { DataLoaderCreator } from '../creators/base/data.loader.creator';
+import { DATA_LOADER_CTX_INJECT_TOKEN } from '../data.loader.inject.token';
 import { DataLoaderContextEntry } from './data.loader.context.entry';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AuthorizationPrivilege } from '@common/enums';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 
 @Injectable()
 export class DataLoaderInterceptor implements NestInterceptor {

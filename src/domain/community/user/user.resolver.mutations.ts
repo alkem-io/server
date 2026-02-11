@@ -1,19 +1,20 @@
-import { Inject, LoggerService } from '@nestjs/common';
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
-import { IUser } from '@domain/community/user/user.interface';
-import { UserService } from './user.service';
-import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { UserAuthorizationService } from './user.service.authorization';
-import { UserAuthorizationResetInput } from './dto/user.dto.reset.authorization';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { UpdateUserPlatformSettingsInput } from './dto/user.dto.update.platform.settings';
-import { UpdateUserInput } from './dto';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { UpdateUserSettingsInput } from './dto/user.dto.update.settings';
+import { IUser } from '@domain/community/user/user.interface';
+import { Inject, LoggerService } from '@nestjs/common';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentUser } from '@src/common/decorators';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { UserSettingsHomeSpaceValidationService } from '../user-settings/user.settings.home.space.validation.service';
+import { UpdateUserInput } from './dto';
+import { UserAuthorizationResetInput } from './dto/user.dto.reset.authorization';
+import { UpdateUserPlatformSettingsInput } from './dto/user.dto.update.platform.settings';
+import { UpdateUserSettingsInput } from './dto/user.dto.update.settings';
+import { UserService } from './user.service';
+import { UserAuthorizationService } from './user.service.authorization';
 
 @InstrumentResolver()
 @Resolver(() => IUser)
@@ -23,6 +24,7 @@ export class UserResolverMutations {
     private authorizationPolicyService: AuthorizationPolicyService,
     private userService: UserService,
     private userAuthorizationService: UserAuthorizationService,
+    private homeSpaceValidationService: UserSettingsHomeSpaceValidationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -63,6 +65,15 @@ export class UserResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `user settings update: ${user.id}`
     );
+
+    // Validate home space access if being set
+    const homeSpaceUpdate = settingsData.settings.homeSpace;
+    if (homeSpaceUpdate?.spaceID) {
+      await this.homeSpaceValidationService.validateSpaceAccess(
+        homeSpaceUpdate.spaceID,
+        agentInfo
+      );
+    }
 
     user = await this.userService.updateUserSettings(
       user,

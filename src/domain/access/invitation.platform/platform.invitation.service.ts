@@ -1,25 +1,25 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { LogContext } from '@common/enums';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { RoleName } from '@common/enums/role.name';
+import { RoleSetType } from '@common/enums/role.set.type';
 import {
   EntityNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { RoleSetMembershipException } from '@common/exceptions/role.set.membership.exception';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { IPlatformInvitation } from './platform.invitation.interface';
-import { PlatformInvitation } from './platform.invitation.entity';
+import { IUser } from '@domain/community/user/user.interface';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { FindOneOptions, Repository } from 'typeorm';
+import { IRoleSet } from '../role-set/role.set.interface';
 import { CreatePlatformInvitationInput } from './dto/platform.invitation.dto.create';
 import { DeletePlatformInvitationInput } from './dto/platform.invitation.dto.delete';
-import { IUser } from '@domain/community/user/user.interface';
-import { RoleName } from '@common/enums/role.name';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { IRoleSet } from '../role-set/role.set.interface';
-import { RoleSetType } from '@common/enums/role.set.type';
-import { RoleSetMembershipException } from '@common/exceptions/role.set.membership.exception';
+import { PlatformInvitation } from './platform.invitation.entity';
+import { IPlatformInvitation } from './platform.invitation.interface';
 
 @Injectable()
 export class PlatformInvitationService {
@@ -52,6 +52,9 @@ export class PlatformInvitationService {
         }
       }
     }
+    platformInvitationData.email = platformInvitationData.email
+      .trim()
+      .toLowerCase();
     const platformInvitation: IPlatformInvitation = PlatformInvitation.create(
       platformInvitationData
     );
@@ -126,7 +129,7 @@ export class PlatformInvitationService {
   ): Promise<IPlatformInvitation[]> {
     const existingPlatformInvitations =
       await this.platformInvitationRepository.find({
-        where: { email: email },
+        where: { email: email.toLowerCase() },
         relations: { roleSet: true },
       });
 
@@ -142,7 +145,7 @@ export class PlatformInvitationService {
     const existingPlatformInvitations =
       await this.platformInvitationRepository.find({
         where: {
-          email: email,
+          email: email.toLowerCase(),
           roleSet: {
             id: roleSetID,
           },

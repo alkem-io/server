@@ -1,19 +1,19 @@
-import { randomUUID } from 'crypto';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { LogContext } from '@common/enums';
+import { ELASTICSEARCH_CLIENT_PROVIDER } from '@constants/index';
 import { Client as ElasticClient } from '@elastic/elasticsearch';
 import { WriteResponseBase } from '@elastic/elasticsearch/lib/api/types';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { AlkemioConfig } from '@src/types';
+import { randomUUID } from 'crypto';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LogContext } from '@common/enums';
-import { isElasticError, isElasticResponseError } from '../utils';
+import { BaseContribution } from '../events';
 import {
   AuthorDetails,
   ContributionDetails,
   ContributionDocument,
 } from '../types';
-import { BaseContribution } from '../events';
-import { ELASTICSEARCH_CLIENT_PROVIDER } from '@constants/index';
-import { AlkemioConfig } from '@src/types';
+import { isElasticError, isElasticResponseError } from '../utils';
 
 const isFromAlkemioTeam = (email: string) => /.*@alkem\.io/.test(email);
 

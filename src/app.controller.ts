@@ -1,14 +1,14 @@
+import { LogContext } from '@common/enums';
 import { RestEndpoint } from '@common/enums/rest.endpoint';
 import { Controller, Get, Inject, LoggerService, Req } from '@nestjs/common';
-import { Request } from 'express';
+import { ConfigService } from '@nestjs/config';
 import {
   GeoInformation,
   GeoLocationService,
 } from '@services/external/geo-location';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LogContext } from '@common/enums';
-import { ConfigService } from '@nestjs/config';
 import { AlkemioConfig } from '@src/types';
+import { Request } from 'express';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Controller('/rest')
 export class AppController {

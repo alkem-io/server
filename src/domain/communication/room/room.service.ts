@@ -1,25 +1,26 @@
+import { LogContext } from '@common/enums';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { RoomType } from '@common/enums/room.type';
+import { ValidationException } from '@common/exceptions';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, Repository } from 'typeorm';
-import { LogContext } from '@common/enums';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
-import { Room } from './room.entity';
-import { IRoom } from './room.interface';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
-import { IMessage } from '../message/message.interface';
+import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { RoomType } from '@common/enums/room.type';
+import { FindOneOptions, Repository } from 'typeorm';
+import { IMessage } from '../message/message.interface';
 import { IMessageReaction } from '../message.reaction/message.reaction.interface';
-import { RoomAddReactionToMessageInput } from './dto/room.dto.add.reaction.to.message';
-import { RoomRemoveReactionToMessageInput } from './dto/room.dto.remove.message.reaction';
-import { RoomRemoveMessageInput } from './dto/room.dto.remove.message';
-import { RoomMarkMessageReadInput } from './dto/room.dto.mark.message.read';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { RoomLookupService } from '../room-lookup/room.lookup.service';
+import { RoomAddReactionToMessageInput } from './dto/room.dto.add.reaction.to.message';
 import { CreateRoomInput } from './dto/room.dto.create';
 import { DeleteRoomInput } from './dto/room.dto.delete';
-import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
+import { RoomMarkMessageReadInput } from './dto/room.dto.mark.message.read';
+import { RoomRemoveMessageInput } from './dto/room.dto.remove.message';
+import { RoomRemoveReactionToMessageInput } from './dto/room.dto.remove.message.reaction';
 import { RoomUnreadCounts } from './dto/room.dto.unread.counts';
+import { Room } from './room.entity';
+import { IRoom } from './room.interface';
 
 @Injectable()
 export class RoomService {
@@ -57,15 +58,25 @@ export class RoomService {
   }
 
   async deleteRoom(deleteData: DeleteRoomInput): Promise<IRoom> {
+    if (!deleteData.roomID) {
+      throw new ValidationException(
+        'Cannot delete room: roomID is required',
+        LogContext.COMMUNICATION
+      );
+    }
+
     const room = await this.getRoomOrFail(deleteData.roomID);
+
+    // Capture ID before removal - TypeORM's remove() clears the entity's id field
+    const roomId = room.id;
 
     const result = await this.roomRepository.remove(room as Room);
 
     // Delete from external Matrix server
     // Note: For direct rooms, we still use the standard deleteRoom -
     // the Matrix adapter handles the room type internally
-    await this.communicationAdapter.deleteRoom(room.id);
-    result.id = room.id;
+    await this.communicationAdapter.deleteRoom(roomId);
+    result.id = roomId;
     return result;
   }
 
@@ -130,6 +141,13 @@ export class RoomService {
       }
     );
 
+    if (!senderActorId) {
+      throw new ValidationException(
+        'Cannot delete message: unable to identify message sender',
+        LogContext.COMMUNICATION
+      );
+    }
+
     await this.communicationAdapter.deleteMessage({
       actorId: senderActorId, // TODO: Replace with _agentId once Matrix reflection is implemented
       messageId: messageData.messageID,
@@ -189,14 +207,12 @@ export class RoomService {
     actorId: string,
     reactionData: RoomAddReactionToMessageInput
   ): Promise<IMessageReaction> {
-    const reaction = await this.communicationAdapter.addReaction({
+    return await this.communicationAdapter.addReaction({
       alkemioRoomId: room.id,
       actorId,
       messageId: reactionData.messageID,
       emoji: reactionData.emoji,
     });
-
-    return reaction;
   }
 
   /**
@@ -225,6 +241,13 @@ export class RoomService {
         reactionId: reactionData.reactionID,
       });
 
+    if (!senderActorId) {
+      throw new ValidationException(
+        'Cannot remove reaction: unable to identify reaction sender',
+        LogContext.COMMUNICATION
+      );
+    }
+
     await this.communicationAdapter.removeReaction({
       alkemioRoomId: room.id,
       actorId: senderActorId, // TODO: Replace with _agentId once Matrix reflection is implemented
@@ -235,35 +258,36 @@ export class RoomService {
   }
 
   async getUserIdForMessage(room: IRoom, messageID: string): Promise<string> {
-    const senderActorId = await this.communicationAdapter.getMessageSenderActor(
-      {
+    return this.getUserIdForSender(room, messageID, () =>
+      this.communicationAdapter.getMessageSenderActor({
         alkemioRoomId: room.id,
         messageId: messageID,
-      }
+      })
     );
-    if (senderActorId === '') {
-      this.logger.error(
-        `Unable to identify sender for ${room.id} - ${messageID}`,
-        undefined,
-        LogContext.COMMUNICATION
-      );
-      return '';
-    }
-    const userId =
-      await this.contributorLookupService.getUserIdByAgentId(senderActorId);
-
-    return userId ?? '';
   }
 
   async getUserIdForReaction(room: IRoom, reactionID: string): Promise<string> {
-    const senderActorId =
-      await this.communicationAdapter.getReactionSenderActor({
+    return this.getUserIdForSender(room, reactionID, () =>
+      this.communicationAdapter.getReactionSenderActor({
         alkemioRoomId: room.id,
         reactionId: reactionID,
-      });
+      })
+    );
+  }
+
+  /**
+   * Generic method to resolve user ID from a sender actor.
+   * Used by getUserIdForMessage and getUserIdForReaction.
+   */
+  private async getUserIdForSender(
+    room: IRoom,
+    entityId: string,
+    getSenderActorId: () => Promise<string>
+  ): Promise<string> {
+    const senderActorId = await getSenderActorId();
     if (senderActorId === '') {
       this.logger.error(
-        `Unable to identify sender for ${room.id} - ${reactionID}`,
+        `Unable to identify sender for ${room.id} - ${entityId}`,
         undefined,
         LogContext.COMMUNICATION
       );

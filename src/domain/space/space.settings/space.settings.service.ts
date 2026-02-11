@@ -1,7 +1,7 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { ISpaceSettings } from './space.settings.interface';
 import { UpdateSpaceSettingsEntityInput } from './dto/space.settings.dto.update';
+import { ISpaceSettings } from './space.settings.interface';
 
 @Injectable()
 export class SpaceSettingsService {

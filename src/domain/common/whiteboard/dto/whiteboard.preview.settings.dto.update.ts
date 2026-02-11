@@ -1,8 +1,8 @@
 import { WhiteboardPreviewMode } from '@common/enums/whiteboard.preview.mode';
 import { Field, InputType } from '@nestjs/graphql';
+import { Type } from 'class-transformer';
 import { IsOptional, ValidateNested } from 'class-validator';
 import { WhiteboardPreviewCoordinatesInput } from './whiteboard.preview.settings.coordinates.dto';
-import { Type } from 'class-transformer';
 
 @InputType()
 export class UpdateWhiteboardPreviewSettingsInput {

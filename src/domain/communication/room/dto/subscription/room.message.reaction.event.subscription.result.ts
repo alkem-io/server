@@ -1,6 +1,6 @@
-import { Field, ObjectType } from '@nestjs/graphql';
 import { MutationType } from '@common/enums/subscriptions';
 import { IMessageReaction } from '@domain/communication/message.reaction/message.reaction.interface';
+import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('RoomMessageReactionEventSubscriptionResult', {
   description: 'A message reaction event happened in the subscribed room',

@@ -1,23 +1,23 @@
+import { LogContext, ProfileType } from '@common/enums';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { RoomType } from '@common/enums/room.type';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { VisualType } from '@common/enums/visual.type';
+import { EntityNotFoundException } from '@common/exceptions';
+import { Post } from '@domain/collaboration/post/post.entity';
+import { IPost } from '@domain/collaboration/post/post.interface';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { IProfile } from '@domain/common/profile/profile.interface';
+import { ProfileService } from '@domain/common/profile/profile.service';
+import { RoomService } from '@domain/communication/room/room.service';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
-import { EntityNotFoundException } from '@common/exceptions';
-import { LogContext, ProfileType } from '@common/enums';
-import { IPost } from '@domain/collaboration/post/post.interface';
-import { Post } from '@domain/collaboration/post/post.entity';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { UpdatePostInput } from './dto/post.dto.update';
 import { CreatePostInput } from './dto/post.dto.create';
-import { IProfile } from '@domain/common/profile/profile.interface';
-import { ProfileService } from '@domain/common/profile/profile.service';
-import { VisualType } from '@common/enums/visual.type';
-import { RoomService } from '@domain/communication/room/room.service';
-import { RoomType } from '@common/enums/room.type';
-import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { UpdatePostInput } from './dto/post.dto.update';
 
 @Injectable()
 export class PostService {
@@ -63,7 +63,7 @@ export class PostService {
 
   public async deletePost(postId: string): Promise<IPost> {
     const post = await this.getPostOrFail(postId, {
-      relations: { profile: true },
+      relations: { profile: true, comments: true },
     });
     if (post.authorization) {
       await this.authorizationPolicyService.delete(post.authorization);

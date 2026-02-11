@@ -1,6 +1,6 @@
 import { ICalendar } from '@domain/timeline/calendar/calendar.interface';
-import { ActivityInputBase } from './activity.dto.input.base';
 import { ICalendarEvent } from '@domain/timeline/event';
+import { ActivityInputBase } from './activity.dto.input.base';
 
 export class ActivityInputCalendarEventCreated extends ActivityInputBase {
   calendarEvent!: ICalendarEvent;

@@ -1,15 +1,15 @@
-import { randomUUID } from 'crypto';
+import { AlkemioErrorStatus } from '@common/enums';
 import {
-  ExceptionFilter,
+  ArgumentsHost,
   Catch,
+  ExceptionFilter,
   Inject,
   LoggerService,
-  ArgumentsHost,
 } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { GraphQLError } from 'graphql';
 import { ContextTypeWithGraphQL } from '@src/types/context.type';
-import { AlkemioErrorStatus } from '@common/enums';
+import { randomUUID } from 'crypto';
+import { GraphQLError } from 'graphql';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Catch(Error)
 export class UnhandledExceptionFilter implements ExceptionFilter {

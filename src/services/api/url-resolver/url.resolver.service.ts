@@ -1,36 +1,36 @@
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { UrlResolverQueryResults } from './dto/url.resolver.query.results';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { UrlPathBase } from '@common/enums/url.path.base';
+import { UrlPathElement } from '@common/enums/url.path.element';
+import { UrlType } from '@common/enums/url.type';
 import {
-  RelationshipNotFoundException,
-  ValidationException,
   EntityNotFoundException,
   ForbiddenException,
+  RelationshipNotFoundException,
+  ValidationException,
 } from '@common/exceptions';
 import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
-import { AuthorizationPrivilege, LogContext } from '@common/enums';
-import { UrlPathElement } from '@common/enums/url.path.element';
-import { ForumDiscussionLookupService } from '@platform/forum-discussion-lookup/forum.discussion.lookup.service';
-import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
-import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
-import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { ISpace } from '@domain/space/space/space.interface';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { InjectEntityManager } from '@nestjs/typeorm';
-import { EntityManager, EntityNotFoundError } from 'typeorm';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
-import { UrlType } from '@common/enums/url.type';
-import { UrlResolverQueryResultSpace } from './dto/url.resolver.query.space.result';
-import { InnovationPackService } from '@library/innovation-pack/innovation.pack.service';
-import { UrlResolverQueryResultCalloutsSet } from './dto/url.resolver.query.callouts.set.result';
+import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.service';
-import { UrlPathBase } from '@common/enums/url.path.base';
-import { UrlResolverException } from './url.resolver.exception';
+import { ISpace } from '@domain/space/space/space.interface';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
+import { InnovationPackService } from '@library/innovation-pack/innovation.pack.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InjectEntityManager } from '@nestjs/typeorm';
+import { ForumDiscussionLookupService } from '@platform/forum-discussion-lookup/forum.discussion.lookup.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { EntityManager, EntityNotFoundError } from 'typeorm';
+import { UrlResolverQueryResultCalloutsSet } from './dto/url.resolver.query.callouts.set.result';
+import { UrlResolverQueryResults } from './dto/url.resolver.query.results';
+import { UrlResolverQueryResultSpace } from './dto/url.resolver.query.space.result';
 import { UrlResolverResultState } from './dto/url.resolver.result.state';
+import { UrlResolverException } from './url.resolver.exception';
 import * as Utils from './url.resolver.utils';
 
 @Injectable()
@@ -252,6 +252,8 @@ export class UrlResolverService {
         return await this.populateAdminResult(result, urlPath);
       case UrlPathBase.INNOVATION_HUBS:
         return await this.populateInnovationHubResult(result, urlPath);
+      case UrlPathBase.HUB:
+        return await this.populateHubResult(result, urlPath);
       case UrlPathBase.INNOVATION_LIBRARY:
         result.type = UrlType.INNOVATION_LIBRARY;
         return result;
@@ -460,6 +462,43 @@ export class UrlResolverService {
         {
           urlPath,
         }
+      );
+    }
+
+    const innovationHub =
+      await this.innovationHubService.getInnovationHubByNameIdOrFail(
+        innovationHubNameID
+      );
+    result.innovationHubId = innovationHub.id;
+
+    return result;
+  }
+
+  private async populateHubResult(
+    result: UrlResolverQueryResults,
+    urlPath: string
+  ): Promise<UrlResolverQueryResults> {
+    result.type = UrlType.INNOVATION_HUB;
+    const hubMatch = Utils.hubPathMatcher(urlPath);
+    if (!hubMatch || !hubMatch.params) {
+      throw new ValidationException('Invalid URL', LogContext.URL_RESOLVER, {
+        urlPath,
+      });
+    }
+    const params = hubMatch.params as {
+      innovationHubNameID?: string | string[];
+      path?: string | string[];
+    };
+
+    const innovationHubNameID = Utils.getMatchedResultAsString(
+      params.innovationHubNameID
+    );
+
+    if (!innovationHubNameID) {
+      throw new ValidationException(
+        'Unable to resolve innovation hub from URL',
+        LogContext.URL_RESOLVER,
+        { urlPath }
       );
     }
 

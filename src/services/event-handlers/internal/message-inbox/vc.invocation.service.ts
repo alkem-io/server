@@ -1,19 +1,19 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
-import { EntityManager, In } from 'typeorm';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums';
 import { AgentType } from '@common/enums/agent.type';
-import { Agent } from '@domain/agent/agent/agent.entity';
-import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
-import { VirtualContributorMessageService } from '@domain/communication/virtual.contributor.message/virtual.contributor.message.service';
-import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
-import { IRoom } from '@domain/communication/room/room.interface';
+import { Agent } from '@domain/agent/agent/agent.entity';
 import {
-  MentionedEntityType,
   Mention,
+  MentionedEntityType,
 } from '@domain/communication/messaging/mention.interface';
+import { IRoom } from '@domain/communication/room/room.interface';
+import { VirtualContributorMessageService } from '@domain/communication/virtual.contributor.message/virtual.contributor.message.service';
+import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InjectEntityManager } from '@nestjs/typeorm';
+import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { EntityManager, In } from 'typeorm';
 import { MessageNotificationService } from './message.notification.service';
 
 /**
@@ -84,7 +84,7 @@ export class VcInvocationService {
 
     if (otherMembers.length === 0) {
       this.logger.verbose?.(
-        `No other members in DIRECT room ${room.id}, skipping`,
+        `No other members in room ${room.id}, skipping`,
         LogContext.COMMUNICATION
       );
       return;
@@ -102,7 +102,7 @@ export class VcInvocationService {
 
     if (vcMembers.length === 0) {
       this.logger.verbose?.(
-        `No VC members found in DIRECT room ${room.id}, skipping`,
+        `No VC members found in room ${room.id}, skipping`,
         LogContext.COMMUNICATION
       );
       return;
@@ -118,7 +118,7 @@ export class VcInvocationService {
 
     // Invoke all VCs in parallel
     this.logger.verbose?.(
-      `Invoking ${vcMembers.length} VC(s) in DIRECT conversation`,
+      `Invoking ${vcMembers.length} VC(s) in conversation`,
       LogContext.COMMUNICATION
     );
 
@@ -130,11 +130,7 @@ export class VcInvocationService {
           threadID,
           agentInfo,
           '', // contextSpaceID out of scope
-          room,
-          {
-            threadID,
-            virtualContributorID: vcActorID,
-          }
+          room
         )
       )
     );
@@ -187,11 +183,7 @@ export class VcInvocationService {
       threadID,
       agentInfo,
       '', // contextSpaceID out of scope
-      room,
-      {
-        threadID,
-        virtualContributorID: vcData.virtualContributorActorID,
-      }
+      room
     );
   }
 

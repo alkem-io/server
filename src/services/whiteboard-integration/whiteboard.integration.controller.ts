@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { Controller } from '@nestjs/common';
 import {
   Ctx,
@@ -8,24 +9,23 @@ import {
   Transport,
 } from '@nestjs/microservices';
 import { ack } from '../util';
-import { UserInfo, WhiteboardIntegrationMessagePattern } from './types';
-import { WhiteboardIntegrationService } from './whiteboard.integration.service';
-import { WhiteboardIntegrationEventPattern } from './types/event.pattern';
 import {
   ContentModifiedInputData,
   ContributionInputData,
+  FetchInputData,
   InfoInputData,
   SaveInputData,
   WhoInputData,
-  FetchInputData,
 } from './inputs';
 import {
-  InfoOutputData,
-  HealthCheckOutputData,
-  SaveOutputData,
   FetchOutputData,
+  HealthCheckOutputData,
+  InfoOutputData,
+  SaveOutputData,
 } from './outputs';
-import { randomUUID } from 'node:crypto';
+import { UserInfo, WhiteboardIntegrationMessagePattern } from './types';
+import { WhiteboardIntegrationEventPattern } from './types/event.pattern';
+import { WhiteboardIntegrationService } from './whiteboard.integration.service';
 
 /**
  * Controller exposing the Whiteboard Integration service via message queue.

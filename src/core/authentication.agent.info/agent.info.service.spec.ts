@@ -4,28 +4,29 @@ import {
   UserAuthenticationLinkOutcome,
   UserAuthenticationLinkResult,
 } from '@domain/community/user-authentication-link/user.authentication.link.types';
+import { type Mock, vi } from 'vitest';
 
 describe('AgentInfoService', () => {
   const email = 'user@example.com';
   const authenticationId = 'auth-123';
   let logger: {
-    log: jest.Mock;
-    verbose: jest.Mock;
-    warn: jest.Mock;
-    error: jest.Mock;
+    log: Mock;
+    verbose: Mock;
+    warn: Mock;
+    error: Mock;
   };
-  let linkService: { resolveExistingUser: jest.Mock };
+  let linkService: { resolveExistingUser: Mock };
   let service: AgentInfoService;
 
   beforeEach(() => {
     logger = {
-      log: jest.fn(),
-      verbose: jest.fn(),
-      warn: jest.fn(),
-      error: jest.fn(),
+      log: vi.fn(),
+      verbose: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
     };
     linkService = {
-      resolveExistingUser: jest.fn(),
+      resolveExistingUser: vi.fn(),
     };
     service = new AgentInfoService(
       linkService as any,

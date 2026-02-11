@@ -1,13 +1,13 @@
-import { Field, InputType } from '@nestjs/graphql';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { IsOptional, ValidateNested } from 'class-validator';
-import { Type } from 'class-transformer';
-import { CreateCollaborationOnSpaceInput } from './space.dto.create.collaboration';
 import { SpaceLevel } from '@common/enums/space.level';
-import { CreateSpaceAboutInput } from '@domain/space/space.about/dto/space.about.dto.create';
 import { NameID } from '@domain/common/scalars/scalar.nameid';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
+import { CreateSpaceAboutInput } from '@domain/space/space.about/dto/space.about.dto.create';
 import { CreateSpaceSettingsInput } from '@domain/space/space.settings';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { Field, InputType } from '@nestjs/graphql';
+import { Type } from 'class-transformer';
+import { IsOptional, ValidateNested } from 'class-validator';
+import { CreateCollaborationOnSpaceInput } from './space.dto.create.collaboration';
 
 @InputType()
 export class CreateSpaceInput {

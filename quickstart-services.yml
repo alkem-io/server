@@ -407,14 +407,13 @@ services:
     restart: always
     networks:
       - alkemio_dev_net
-    command: sh -c "/wait && npm run start"
 
   matrix-adapter:
     extra_hosts:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_matrix_adapter
     hostname: matrix-adapter
-    image: alkemio/matrix-adapter-go:v0.8.4-mapping6
+    image: alkemio/matrix-adapter-go:v0.8.4-mapping8
     platform: linux/amd64
     depends_on:
       - rabbitmq
@@ -510,7 +509,7 @@ services:
       - LOCAL_STORAGE_PATH
     restart: always
     volumes:
-      - ${PWD}/.storage:${LOCAL_STORAGE_PATH}
+      - ${PWD}/.storage:${LOCAL_STORAGE_PATH}:ro
     networks:
       - alkemio_dev_net
     ports:

@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { performOverrideEvaluation } from '../../src/tools/schema/override';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
@@ -10,7 +11,7 @@ describe('synchronous override evaluation (env-only)', () => {
   let _tmpCodeownersPath: string | undefined;
 
   beforeEach(() => {
-    jest.resetModules();
+    vi.resetModules();
     process.env = { ...OLD_ENV };
     // create a temporary directory and write a CODEOWNERS file inside it
     try {

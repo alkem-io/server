@@ -1,39 +1,37 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { SpaceService } from './space.service';
-import { MockCacheManager } from '@test/mocks/cache-manager.mock';
-import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
-import { Space } from './space.entity';
-import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { AuthorizationPrivilege, ProfileType } from '@common/enums';
+import { AccountType } from '@common/enums/account.type';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { CalloutsSetType } from '@common/enums/callouts.set.type';
+import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
+import { RoleName } from '@common/enums/role.name';
+import { SpaceLevel } from '@common/enums/space.level';
+import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { SpaceVisibility } from '@common/enums/space.visibility';
+import { TagsetType } from '@common/enums/tagset.type';
+import { CalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.entity';
+import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
+import { InnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.entity';
+import { InnovationFlowState } from '@domain/collaboration/innovation-flow-state/innovation.flow.state.entity';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { Profile } from '@domain/common/profile';
-import { SpaceFilterService } from '@services/infrastructure/space-filter/space.filter.service';
-import { MockFunctionMetadata, ModuleMocker } from 'jest-mock';
-import { InnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.entity';
-import { AuthorizationPrivilege, ProfileType } from '@common/enums';
-import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
-import { Account } from '../account/account.entity';
-import { SpaceLevel } from '@common/enums/space.level';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { AccountType } from '@common/enums/account.type';
-import { Repository } from 'typeorm';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
-import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
-import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
-import { CalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.entity';
-import { CalloutsSetType } from '@common/enums/callouts.set.type';
-import { SpaceAbout } from '../space.about';
 import { TagsetTemplate } from '@domain/common/tagset-template';
-import { TagsetType } from '@common/enums/tagset.type';
+import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
+import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { SpaceFilterService } from '@services/infrastructure/space-filter/space.filter.service';
 import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator/url.generator.service.cache';
-import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
-import { InnovationFlowState } from '@domain/collaboration/innovation-flow-state/innovation.flow.state.entity';
+import { MockCacheManager } from '@test/mocks/cache-manager.mock';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
+import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { Repository } from 'typeorm';
+import { vi } from 'vitest';
+import { Account } from '../account/account.entity';
 import { DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN } from '../account/constants';
-import { RoleName } from '@common/enums/role.name';
-
-const moduleMocker = new ModuleMocker(global);
+import { SpaceAbout } from '../space.about';
+import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
+import { Space } from './space.entity';
+import { SpaceService } from './space.service';
 
 describe('SpaceService', () => {
   let service: SpaceService;
@@ -103,12 +101,12 @@ describe('SpaceService', () => {
 
       // Mock the naming service to return empty reserved nameIDs
       const mockNamingService = {
-        getReservedNameIDsLevelZeroSpaces: jest.fn().mockResolvedValue([]),
+        getReservedNameIDsLevelZeroSpaces: vi.fn().mockResolvedValue([]),
       };
       service['namingService'] = mockNamingService as any;
 
       // Mock the repository to return subspaces
-      jest.spyOn(spaceRepository, 'findOne').mockImplementation(options => {
+      vi.spyOn(spaceRepository, 'findOne').mockImplementation(options => {
         const { where } = options ?? {};
         if (!Array.isArray(where) && where?.id) {
           const result = [mockSpace, mockSubspace].find(
@@ -120,13 +118,12 @@ describe('SpaceService', () => {
         }
         return Promise.resolve(null);
       });
-      jest.spyOn(spaceRepository, 'find').mockResolvedValue([mockSubspace]);
-      jest.spyOn(service, 'save').mockResolvedValue(mockSpace);
+      vi.spyOn(spaceRepository, 'find').mockResolvedValue([mockSubspace]);
+      vi.spyOn(service, 'save').mockResolvedValue(mockSpace);
 
-      // Mock the URL cache service
-      const revokeUrlCacheSpy = jest
-        .spyOn(urlGeneratorCacheService, 'revokeUrlCache')
-        .mockResolvedValue();
+      // Mock the URL cache service - use direct assignment for mock objects
+      const revokeUrlCacheSpy = vi.fn().mockResolvedValue(undefined);
+      urlGeneratorCacheService.revokeUrlCache = revokeUrlCacheSpy;
 
       // Act
       await service.updateSpacePlatformSettings(mockSpace, updateData);
@@ -199,12 +196,12 @@ describe('SpaceService', () => {
 
       // Mock the naming service to return empty reserved nameIDs
       const mockNamingService = {
-        getReservedNameIDsInLevelZeroSpace: jest.fn().mockResolvedValue([]),
+        getReservedNameIDsInLevelZeroSpace: vi.fn().mockResolvedValue([]),
       };
       service['namingService'] = mockNamingService as any;
 
       // Mock the repository to return child subspaces
-      jest.spyOn(spaceRepository, 'findOne').mockImplementation(options => {
+      vi.spyOn(spaceRepository, 'findOne').mockImplementation(options => {
         const { where } = options ?? {};
         if (!Array.isArray(where) && where?.id) {
           const result = [
@@ -218,15 +215,12 @@ describe('SpaceService', () => {
         }
         return Promise.resolve(null);
       });
-      jest
-        .spyOn(spaceRepository, 'find')
-        .mockResolvedValue([mockChildSubspace]);
-      jest.spyOn(service, 'save').mockResolvedValue(mockSubspace);
+      vi.spyOn(spaceRepository, 'find').mockResolvedValue([mockChildSubspace]);
+      vi.spyOn(service, 'save').mockResolvedValue(mockSubspace);
 
-      // Mock the URL cache service
-      const revokeUrlCacheSpy = jest
-        .spyOn(urlGeneratorCacheService, 'revokeUrlCache')
-        .mockResolvedValue();
+      // Mock the URL cache service - use direct assignment for mock objects
+      const revokeUrlCacheSpy = vi.fn().mockResolvedValue(undefined);
+      urlGeneratorCacheService.revokeUrlCache = revokeUrlCacheSpy;
 
       // Act
       await service.updateSpacePlatformSettings(mockSubspace, updateData);
@@ -258,7 +252,7 @@ describe('SpaceService', () => {
         visibility: SpaceVisibility.DEMO, // Only changing visibility, not nameID
       };
 
-      jest.spyOn(spaceRepository, 'findOne').mockImplementation(options => {
+      vi.spyOn(spaceRepository, 'findOne').mockImplementation(options => {
         const { where } = options ?? {};
         if (!Array.isArray(where) && where?.id) {
           const result = [mockSpace].find(space => space.id === where.id);
@@ -268,15 +262,15 @@ describe('SpaceService', () => {
         }
         return Promise.resolve(null);
       });
-      jest.spyOn(service, 'save').mockResolvedValue(mockSpace);
-      jest
-        .spyOn(service, 'updateSpaceVisibilityAllSubspaces' as any)
-        .mockResolvedValue(undefined);
+      vi.spyOn(service, 'save').mockResolvedValue(mockSpace);
+      vi.spyOn(
+        service,
+        'updateSpaceVisibilityAllSubspaces' as any
+      ).mockResolvedValue(undefined);
 
-      // Mock the URL cache service
-      const revokeUrlCacheSpy = jest
-        .spyOn(urlGeneratorCacheService, 'revokeUrlCache')
-        .mockResolvedValue();
+      // Mock the URL cache service - use direct assignment for mock objects
+      const revokeUrlCacheSpy = vi.fn().mockResolvedValue(undefined);
+      urlGeneratorCacheService.revokeUrlCache = revokeUrlCacheSpy;
 
       // Act
       await service.updateSpacePlatformSettings(mockSpace, updateData);
@@ -297,7 +291,7 @@ describe('SpaceService', () => {
         settings: settingsData,
       } as Space;
 
-      jest.spyOn(spaceRepository, 'findOneOrFail').mockResolvedValue(space);
+      vi.spyOn(spaceRepository, 'findOneOrFail').mockResolvedValue(space);
 
       const result = await service.shouldUpdateAuthorizationPolicy(
         spaceId,
@@ -325,7 +319,7 @@ describe('SpaceService', () => {
         settings: originalSettings,
       } as Space;
 
-      jest.spyOn(spaceRepository, 'findOneOrFail').mockResolvedValue(space);
+      vi.spyOn(spaceRepository, 'findOneOrFail').mockResolvedValue(space);
 
       const result = await service.shouldUpdateAuthorizationPolicy(
         spaceId,
@@ -347,7 +341,7 @@ describe('SpaceService', () => {
         settings: originalSettings,
       } as Space;
 
-      jest.spyOn(spaceRepository, 'findOneOrFail').mockResolvedValue(space);
+      vi.spyOn(spaceRepository, 'findOneOrFail').mockResolvedValue(space);
 
       const result = await service.shouldUpdateAuthorizationPolicy(
         spaceId,
@@ -362,9 +356,9 @@ describe('SpaceService', () => {
         collaboration: { allowEventsFromSubspaces: true },
       } as ISpaceSettings;
 
-      jest
-        .spyOn(spaceRepository, 'findOneOrFail')
-        .mockRejectedValue(new Error('Space not found'));
+      vi.spyOn(spaceRepository, 'findOneOrFail').mockRejectedValue(
+        new Error('Space not found')
+      );
 
       await expect(
         service.shouldUpdateAuthorizationPolicy(spaceId, settingsData)
@@ -400,13 +394,11 @@ describe('SpacesSorting', () => {
     })
       .useMocker(injectionToken => {
         // SpaceFilterService should be a real one and not mocked.
-        if (typeof injectionToken === 'function') {
-          const mockMetadata = moduleMocker.getMetadata(
-            injectionToken
-          ) as MockFunctionMetadata<any, any>;
-          if (mockMetadata.name === 'SpaceFilterService') {
-            return filterService;
-          }
+        if (
+          typeof injectionToken === 'function' &&
+          injectionToken.name === 'SpaceFilterService'
+        ) {
+          return filterService;
         }
         // The rest of the dependencies can be mocks
         return defaultMockerFactory(injectionToken);
@@ -454,22 +446,22 @@ describe('SpacesSorting', () => {
 const getEntityMock = <T>() => ({
   createdDate: new Date(),
   updatedDate: new Date(),
-  hasId: function (): boolean {
+  hasId: (): boolean => {
     throw new Error('Function not implemented.');
   },
-  save: function (): Promise<T> {
+  save: (): Promise<T> => {
     throw new Error('Function not implemented.');
   },
-  remove: function (): Promise<T> {
+  remove: (): Promise<T> => {
     throw new Error('Function not implemented.');
   },
-  softRemove: function (): Promise<T> {
+  softRemove: (): Promise<T> => {
     throw new Error('Function not implemented.');
   },
-  recover: function (): Promise<T> {
+  recover: (): Promise<T> => {
     throw new Error('Function not implemented.');
   },
-  reload: function (): Promise<void> {
+  reload: (): Promise<void> => {
     throw new Error('Function not implemented.');
   },
 });

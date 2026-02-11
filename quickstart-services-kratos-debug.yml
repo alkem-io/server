@@ -192,8 +192,34 @@ services:
         if [ $$? -eq 0 ]; then
           echo "Successfully registered Synapse OAuth2 client"
         else
-          echo "Failed to register client"
+          echo "Failed to register Synapse client"
           exit 1
+        fi
+
+        # Register client-web OAuth2 client (for OIDC-based frontend flows)
+        if [ -n "$$CLIENT_WEB_OIDC_CLIENT_ID" ] && [ -n "$$CLIENT_WEB_OIDC_CLIENT_SECRET" ] && [ -n "$$CLIENT_WEB_PUBLIC_URL" ]; then
+          echo "Registering client-web OAuth2 client..."
+          curl -X POST $$HYDRA_ADMIN_URL/admin/clients \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"client_id\": \"$$CLIENT_WEB_OIDC_CLIENT_ID\",
+              \"client_name\": \"Alkemio Client Web\",
+              \"client_secret\": \"$$CLIENT_WEB_OIDC_CLIENT_SECRET\",
+              \"grant_types\": [\"authorization_code\", \"refresh_token\"],
+              \"response_types\": [\"code\"],
+              \"redirect_uris\": [\"$$CLIENT_WEB_PUBLIC_URL/oidc/callback\"],
+              \"scope\": \"openid profile email\",
+              \"token_endpoint_auth_method\": \"client_secret_basic\"
+            }"
+
+          if [ $$? -eq 0 ]; then
+            echo "Successfully registered client-web OAuth2 client"
+          else
+            echo "Failed to register client-web client"
+            exit 1
+          fi
+        else
+          echo "Skipping client-web OAuth2 client registration (CLIENT_WEB_OIDC_CLIENT_ID/SECRET or CLIENT_WEB_PUBLIC_URL not set)"
         fi
 
   oidc-service:
@@ -301,7 +327,7 @@ services:
     ports:
       - 5432
     volumes:
-      - alkemio_dev_postgres:/var/lib/postgresql/data
+      - alkemio_dev_postgres:/var/lib/postgresql
       - ./.build/postgres/init-multiple-databases.sh:/docker-entrypoint-initdb.d/init-multiple-databases.sh
       - ./.build/postgres/entrypoint-wrapper.sh:/usr/local/bin/entrypoint-wrapper.sh:ro
     healthcheck:
@@ -393,7 +419,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_matrix_adapter
     hostname: matrix-adapter
-    image: alkemio/matrix-adapter-go:v0.8.4-mapping6
+    image: alkemio/matrix-adapter-go:v0.8.4-mapping8
     platform: linux/amd64
     depends_on:
       - rabbitmq

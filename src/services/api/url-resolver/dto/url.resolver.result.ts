@@ -1,8 +1,8 @@
 import { UrlType } from '@common/enums/url.type';
 import { UUID } from '@domain/common/scalars';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { UrlResolverQueryResultSpace } from './url.resolver.query.space.result';
 import { UrlResolverQueryResultInnovationPack } from './url.resolver.query.innovation.pack.result';
+import { UrlResolverQueryResultSpace } from './url.resolver.query.space.result';
 import { UrlResolverQueryResultVirtualContributor } from './url.resolver.query.virtual.contributor.result';
 
 @ObjectType({ isAbstract: true })

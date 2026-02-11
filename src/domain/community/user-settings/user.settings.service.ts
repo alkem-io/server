@@ -1,16 +1,19 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { IUserSettings } from './user.settings.interface';
-import { UpdateUserSettingsEntityInput } from './dto/user.settings.dto.update';
-import { CreateUserSettingsInput } from './dto/user.settings.dto.create';
-import { NotificationSettingInput } from './dto/notification.setting.input';
-import { UserSettings } from './user.settings.entity';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { LogContext } from '@common/enums/logging.context';
-import { FindOneOptions, Repository } from 'typeorm';
+import {
+  EntityNotFoundException,
+  ValidationException,
+} from '@common/exceptions';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { FindOneOptions, Repository } from 'typeorm';
+import { NotificationSettingInput } from './dto/notification.setting.input';
+import { CreateUserSettingsInput } from './dto/user.settings.dto.create';
+import { UpdateUserSettingsEntityInput } from './dto/user.settings.dto.update';
+import { UserSettings } from './user.settings.entity';
+import { IUserSettings } from './user.settings.interface';
 
 @Injectable()
 export class UserSettingsService {
@@ -28,6 +31,7 @@ export class UserSettingsService {
       communication: settingsData.communication,
       privacy: settingsData.privacy,
       notification: settingsData.notification,
+      homeSpace: settingsData.homeSpace,
     });
     settings.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.USER_SETTINGS
@@ -204,6 +208,29 @@ export class UserSettingsService {
         settings.notification.virtualContributor.adminSpaceCommunityInvitation,
         notificationVcData.adminSpaceCommunityInvitation
       );
+    }
+
+    if (updateData.homeSpace) {
+      // Note: spaceID can be explicitly set to null to clear
+      if (updateData.homeSpace.spaceID !== undefined) {
+        settings.homeSpace.spaceID = updateData.homeSpace.spaceID;
+
+        // If clearing spaceID, also disable autoRedirect
+        if (settings.homeSpace.spaceID === null) {
+          settings.homeSpace.autoRedirect = false;
+        }
+      }
+
+      if (updateData.homeSpace.autoRedirect !== undefined) {
+        // Validation: cannot enable autoRedirect without a spaceID
+        if (updateData.homeSpace.autoRedirect && !settings.homeSpace.spaceID) {
+          throw new ValidationException(
+            'Cannot enable auto-redirect without a home space set',
+            LogContext.COMMUNITY
+          );
+        }
+        settings.homeSpace.autoRedirect = updateData.homeSpace.autoRedirect;
+      }
     }
 
     return settings;

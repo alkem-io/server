@@ -1,22 +1,22 @@
-import { IReference } from '@domain/common/reference';
-import { ITagset } from '@domain/common/tagset/tagset.interface';
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { CurrentUser, Profiling } from '@src/common/decorators';
-import { ProfileService } from './profile.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { AuthorizationService } from '@core/authorization/authorization.service';
+import { LogContext } from '@common/enums';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { TagsetService } from '@domain/common/tagset/tagset.service';
-import { ReferenceService } from '@domain/common/reference/reference.service';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { CreateTagsetOnProfileInput } from './dto';
-import { CreateReferenceOnProfileInput } from './dto/profile.dto.create.reference';
-import { IProfile } from './profile.interface';
-import { UpdateProfileDirectInput } from './dto/profile.dto.update.direct';
 import { TagsetType } from '@common/enums/tagset.type';
 import { NotSupportedException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { IReference } from '@domain/common/reference';
+import { ReferenceService } from '@domain/common/reference/reference.service';
+import { ITagset } from '@domain/common/tagset/tagset.interface';
+import { TagsetService } from '@domain/common/tagset/tagset.service';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentUser, Profiling } from '@src/common/decorators';
+import { CreateTagsetOnProfileInput } from './dto';
+import { CreateReferenceOnProfileInput } from './dto/profile.dto.create.reference';
+import { UpdateProfileDirectInput } from './dto/profile.dto.update.direct';
+import { IProfile } from './profile.interface';
+import { ProfileService } from './profile.service';
 
 @InstrumentResolver()
 @Resolver()

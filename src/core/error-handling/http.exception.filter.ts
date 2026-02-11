@@ -1,18 +1,18 @@
+import { LogContext } from '@common/enums';
+import { BaseHttpException } from '@common/exceptions/http';
 import {
-  ExceptionFilter,
-  Catch,
   ArgumentsHost,
+  Catch,
+  ExceptionFilter,
+  HttpException,
   Inject,
   LoggerService,
-  HttpException,
 } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Response } from 'express';
-import { BaseHttpException } from '@common/exceptions/http';
-import { RestErrorResponse } from './rest.error.response';
 import { HttpContext } from '@src/types';
-import { LogContext } from '@common/enums';
 import { ContextTypeWithGraphQL } from '@src/types/context.type';
+import { Response } from 'express';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { RestErrorResponse } from './rest.error.response';
 
 @Catch(HttpException)
 export class HttpExceptionFilter implements ExceptionFilter {
@@ -54,6 +54,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
     response.status(status).json({
       statusCode: status,
       code: exception.code,
+      numericCode: exception.numericCode,
+      userMessage: exception.userMessage,
       timestamp: new Date().toISOString(),
       message: exception.message,
       errorId: exception.errorId,

@@ -1,24 +1,25 @@
-import { IProfile } from '@domain/common/profile/profile.interface';
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { ISpace } from '../space/space.interface';
-import { ProfileLoaderCreator } from '@core/dataloader/creators/loader.creators/profile.loader.creator';
-import { Loader } from '@core/dataloader/decorators/data.loader.decorator';
-import { ILoader } from '@core/dataloader/loader.interface';
-import { ISpaceAbout } from './space.about.interface';
-import { SpaceAbout } from './space.about.entity';
-import { INVP } from '@domain/common/nvp/nvp.interface';
-import { SpaceAboutService } from './space.about.service';
-import { SpaceLookupService } from '../space.lookup/space.lookup.service';
-import { TemplateContentSpaceLookupService } from '@domain/template/template-content-space/template-content-space.lookup/template-content-space.lookup.service';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { SpaceAboutMembership } from '../space.about.membership/dto/space.about.membership';
-import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { AuthorizationAgentPrivilege } from '@common/decorators';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
-import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
-import { UseGuards } from '@nestjs/common';
-import { GraphqlGuard } from '@core/authorization';
+import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { EntityNotFoundException } from '@common/exceptions';
+import { GraphqlGuard } from '@core/authorization';
+import { ProfileLoaderCreator } from '@core/dataloader/creators/loader.creators/profile.loader.creator';
+import { SpaceBySpaceAboutIdLoaderCreator } from '@core/dataloader/creators/loader.creators/space/space.by.space.about.id.loader.creator';
+import { Loader } from '@core/dataloader/decorators/data.loader.decorator';
+import { ILoader } from '@core/dataloader/loader.interface';
+import { INVP } from '@domain/common/nvp/nvp.interface';
+import { IProfile } from '@domain/common/profile/profile.interface';
+import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
+import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { TemplateContentSpaceLookupService } from '@domain/template/template-content-space/template-content-space.lookup/template-content-space.lookup.service';
+import { UseGuards } from '@nestjs/common';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { ISpace } from '../space/space.interface';
+import { SpaceAboutMembership } from '../space.about.membership/dto/space.about.membership';
+import { SpaceLookupService } from '../space.lookup/space.lookup.service';
+import { SpaceAbout } from './space.about.entity';
+import { ISpaceAbout } from './space.about.interface';
+import { SpaceAboutService } from './space.about.service';
 
 @Resolver(() => ISpaceAbout)
 export class SpaceAboutResolverFields {
@@ -68,20 +69,23 @@ export class SpaceAboutResolverFields {
     nullable: false,
     description: 'Is the content of this Space visible to non-Members?.',
   })
-  async isContentPublic(@Parent() spaceAbout: ISpaceAbout): Promise<boolean> {
+  async isContentPublic(
+    @Parent() spaceAbout: ISpaceAbout,
+    @Loader(SpaceBySpaceAboutIdLoaderCreator)
+    loader: ILoader<ISpace | null>
+  ): Promise<boolean> {
     const spaceAboutId = spaceAbout.id;
-    const space =
-      await this.spaceLookupService.getSpaceForSpaceAbout(spaceAboutId);
+    const space = await loader.load(spaceAboutId);
     if (space) {
       return space.settings.privacy.mode === SpacePrivacyMode.PUBLIC;
-    } else {
-      const spaceTemplate =
-        await this.templateContentSpaceLookupService.getTemplateContentSpaceForSpaceAbout(
-          spaceAboutId
-        );
-      if (spaceTemplate) {
-        return spaceTemplate?.settings.privacy.mode === SpacePrivacyMode.PUBLIC;
-      }
+    }
+    // Fallback for TemplateContentSpace (not a regular Space)
+    const spaceTemplate =
+      await this.templateContentSpaceLookupService.getTemplateContentSpaceForSpaceAbout(
+        spaceAboutId
+      );
+    if (spaceTemplate) {
+      return spaceTemplate.settings.privacy.mode === SpacePrivacyMode.PUBLIC;
     }
     throw new EntityNotFoundException(
       'Unable to find Space or TemplateContentSpace for the about',

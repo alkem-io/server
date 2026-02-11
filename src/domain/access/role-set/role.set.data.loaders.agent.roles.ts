@@ -1,7 +1,7 @@
+import { RoleName } from '@common/enums/role.name';
 import { Injectable, Scope } from '@nestjs/common';
 import DataLoader from 'dataloader';
 import { RoleSetService } from './role.set.service';
-import { RoleName } from '@common/enums/role.name';
 import { AgentRoleKey } from './types';
 
 @Injectable({ scope: Scope.REQUEST })

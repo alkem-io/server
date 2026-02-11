@@ -1,45 +1,46 @@
-import { MockApplicationService } from '@test/mocks/application.service.mock';
-import { MockCommunityService } from '@test/mocks/community.service.mock';
-import { MockOrganizationService } from '@test/mocks/organization.service.mock';
-import { MockUserService } from '@test/mocks/user.service.mock';
-import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
-import { MockSpaceFilterService } from '@test/mocks/space.filter.service.mock';
-import {
-  MockEntityManagerProvider,
-  MockAuthorizationService,
-  MockSpaceService,
-} from '@test/mocks';
-import { Test } from '@nestjs/testing';
-import { RolesService } from './roles.service';
-import { ApplicationService } from '@domain/access/application/application.service';
-import { SpaceFilterService } from '@services/infrastructure/space-filter/space.filter.service';
-import { testData } from '@test/utils';
-import { SpaceVisibility } from '@common/enums/space.visibility';
-import * as getOrganizationRolesForUserEntityData from './util/get.organization.roles.for.user.entity.data';
-import * as getSpaceRolesForContributorQueryResult from './util/get.space.roles.for.contributor.query.result';
-import { MockInvitationService } from '@test/mocks/invitation.service.mock';
-import { MockCommunityResolverService } from '@test/mocks/community.resolver.service.mock';
-import { RolesResultSpace } from './dto/roles.dto.result.space';
-import { ProfileType } from '@common/enums/profile.type';
-import { Profile } from '@domain/common/profile/profile.entity';
-import { SpaceLevel } from '@common/enums/space.level';
-import { Space } from '@domain/space/space/space.entity';
-import { RolesResultCommunity } from './dto/roles.dto.result.community';
-import { MockUserLookupService } from '@test/mocks/user.lookup.service.mock';
-import { MockVirtualContributorService } from '@test/mocks/virtual.contributor.service.mock';
-import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { AccountType } from '@common/enums/account.type';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
+import { ProfileType } from '@common/enums/profile.type';
+import { SpaceLevel } from '@common/enums/space.level';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
+import { SpaceVisibility } from '@common/enums/space.visibility';
+import { ApplicationService } from '@domain/access/application/application.service';
+import { Profile } from '@domain/common/profile/profile.entity';
+import { Organization } from '@domain/community/organization';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { MockVirtualContributorLookupService } from '@test/mocks/virtual.contributor.lookup.service.mock';
-import { MockOrganizationLookupService } from '@test/mocks/organization.lookup.service.mock';
-import { MockContributorLookupService } from '@test/mocks/contributor.lookup.service.mock';
-import { SpaceAbout } from '@domain/space/space.about';
 import { Account } from '@domain/space/account/account.entity';
-import { Organization } from '@domain/community/organization';
 import { DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN } from '@domain/space/account/constants';
+import { Space } from '@domain/space/space/space.entity';
+import { SpaceAbout } from '@domain/space/space.about';
+import { Test } from '@nestjs/testing';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { SpaceFilterService } from '@services/infrastructure/space-filter/space.filter.service';
+import {
+  MockAuthorizationService,
+  MockEntityManagerProvider,
+  MockSpaceService,
+} from '@test/mocks';
+import { MockApplicationService } from '@test/mocks/application.service.mock';
+import { MockCommunityResolverService } from '@test/mocks/community.resolver.service.mock';
+import { MockCommunityService } from '@test/mocks/community.service.mock';
+import { MockContributorLookupService } from '@test/mocks/contributor.lookup.service.mock';
+import { MockInvitationService } from '@test/mocks/invitation.service.mock';
+import { MockOrganizationLookupService } from '@test/mocks/organization.lookup.service.mock';
+import { MockOrganizationService } from '@test/mocks/organization.service.mock';
+import { MockSpaceFilterService } from '@test/mocks/space.filter.service.mock';
+import { MockUserLookupService } from '@test/mocks/user.lookup.service.mock';
+import { MockUserService } from '@test/mocks/user.service.mock';
+import { MockVirtualContributorLookupService } from '@test/mocks/virtual.contributor.lookup.service.mock';
+import { MockVirtualContributorService } from '@test/mocks/virtual.contributor.service.mock';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
+import { testData } from '@test/utils';
+import { vi } from 'vitest';
+import { RolesResultCommunity } from './dto/roles.dto.result.community';
+import { RolesResultSpace } from './dto/roles.dto.result.space';
+import { RolesService } from './roles.service';
+import * as getOrganizationRolesForUserEntityData from './util/get.organization.roles.for.user.entity.data';
+import * as getSpaceRolesForContributorQueryResult from './util/get.space.roles.for.contributor.query.result';
 
 describe('RolesService', () => {
   let rolesService: RolesService;
@@ -104,41 +105,38 @@ describe('RolesService', () => {
       }
       spaceRolesMock.subspaces = subspaceRolesMocks;
       const spacesRolesMock: RolesResultSpace[] = [spaceRolesMock];
-      jest.spyOn(userLookupService, 'getUserWithAgent').mockResolvedValue(user);
+      vi.spyOn(userLookupService, 'getUserWithAgent').mockResolvedValue(user);
 
-      jest
-        .spyOn(spaceFilterService, 'getAllowedVisibilities')
-        .mockReturnValue([SpaceVisibility.ACTIVE]);
+      vi.spyOn(spaceFilterService, 'getAllowedVisibilities').mockReturnValue([
+        SpaceVisibility.ACTIVE,
+      ]);
 
-      jest
-        .spyOn(
-          getSpaceRolesForContributorQueryResult,
-          'getSpaceRolesForContributorQueryResult'
-        )
-        .mockReturnValue(spacesRolesMock);
+      vi.spyOn(
+        getSpaceRolesForContributorQueryResult,
+        'getSpaceRolesForContributorQueryResult'
+      ).mockReturnValue(spacesRolesMock);
 
-      jest
-        .spyOn(
-          getOrganizationRolesForUserEntityData,
-          'getOrganizationRolesForUserEntityData'
-        )
-        .mockResolvedValue([testData.organization as Organization]);
+      vi.spyOn(
+        getOrganizationRolesForUserEntityData,
+        'getOrganizationRolesForUserEntityData'
+      ).mockResolvedValue([testData.organization as Organization]);
 
-      jest
-        .spyOn(applicationService, 'findApplicationsForUser')
-        .mockResolvedValue(testData.applications as any);
+      vi.spyOn(applicationService, 'findApplicationsForUser').mockResolvedValue(
+        testData.applications as any
+      );
 
-      jest
-        .spyOn(applicationService, 'isFinalizedApplication')
-        .mockResolvedValue(false);
+      vi.spyOn(applicationService, 'isFinalizedApplication').mockResolvedValue(
+        false
+      );
 
-      jest
-        .spyOn(applicationService, 'getLifecycleState')
-        .mockResolvedValue('new');
+      vi.spyOn(applicationService, 'getLifecycleState').mockResolvedValue(
+        'new'
+      );
 
-      jest
-        .spyOn(communityResolverService, 'getSpaceForCommunityOrFail')
-        .mockResolvedValue(testData.space);
+      vi.spyOn(
+        communityResolverService,
+        'getSpaceForCommunityOrFail'
+      ).mockResolvedValue(testData.space);
     });
 
     it('Should get user roles', async () => {
@@ -188,12 +186,13 @@ describe('RolesService', () => {
 
   describe('Organization Roles', () => {
     it('Should get organization roles', async () => {
-      jest
-        .spyOn(organizationLookupService, 'getOrganizationAndAgent')
-        .mockResolvedValue({
-          organization: testData.organization,
-          agent: testData.agent,
-        } as any);
+      vi.spyOn(
+        organizationLookupService,
+        'getOrganizationAndAgent'
+      ).mockResolvedValue({
+        organization: testData.organization,
+        agent: testData.agent,
+      } as any);
 
       const roles = await rolesService.getRolesForOrganization({
         organizationID: testData.organization.id,
@@ -319,22 +318,22 @@ const getSubspaceRoleResultMock = ({
 const getEntityMock = <T>() => ({
   createdDate: new Date(),
   updatedDate: new Date(),
-  hasId: function (): boolean {
+  hasId: (): boolean => {
     throw new Error('Function not implemented.');
   },
-  save: function (): Promise<T> {
+  save: (): Promise<T> => {
     throw new Error('Function not implemented.');
   },
-  remove: function (): Promise<T> {
+  remove: (): Promise<T> => {
     throw new Error('Function not implemented.');
   },
-  softRemove: function (): Promise<T> {
+  softRemove: (): Promise<T> => {
     throw new Error('Function not implemented.');
   },
-  recover: function (): Promise<T> {
+  recover: (): Promise<T> => {
     throw new Error('Function not implemented.');
   },
-  reload: function (): Promise<void> {
+  reload: (): Promise<void> => {
     throw new Error('Function not implemented.');
   },
 });

@@ -1,13 +1,13 @@
+import { SubscriptionType } from '@common/enums/subscription.type';
 import { Inject, Injectable } from '@nestjs/common';
 import {
   SUBSCRIPTION_ACTIVITY_CREATED,
-  SUBSCRIPTION_IN_APP_NOTIFICATION_RECEIVED,
+  SUBSCRIPTION_CONVERSATION_EVENT,
   SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER,
+  SUBSCRIPTION_IN_APP_NOTIFICATION_RECEIVED,
   SUBSCRIPTION_ROOM_EVENT,
   SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED,
-  SUBSCRIPTION_CONVERSATION_EVENT,
 } from '@src/common/constants';
-import { SubscriptionType } from '@common/enums/subscription.type';
 import { TypedPubSubEngine } from './typed.pub.sub.engine';
 
 @Injectable()

@@ -1,9 +1,9 @@
 /** Apply overrides to a ChangeReport (T028)
  * Aggregates CODEOWNERS + reviews ingestion to mark breaking changes overridden.
  */
-import { ChangeReport, ChangeEntry, ChangeType } from '../model';
-import { parseCodeOwnersFile, collectAllOwners } from './codeowners';
-import { loadReviews, evaluateOverride } from './reviews';
+import { ChangeEntry, ChangeReport, ChangeType } from '../model';
+import { collectAllOwners, parseCodeOwnersFile } from './codeowners';
+import { evaluateOverride, loadReviews } from './reviews';
 
 export interface OverrideResult {
   applied: boolean;

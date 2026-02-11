@@ -1,10 +1,10 @@
-import { EntityManager } from 'typeorm';
+import { User } from '@domain/community/user/user.entity';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { IUser } from '@src/domain/community/user/user.interface';
+import { EntityManager } from 'typeorm';
 import { createTypedSimpleDataLoader } from '../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../base';
-import { User } from '@domain/community/user/user.entity';
 
 @Injectable()
 export class UserLoaderCreator implements DataLoaderCreator<IUser> {

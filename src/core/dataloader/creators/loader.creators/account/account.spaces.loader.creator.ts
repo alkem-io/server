@@ -1,10 +1,10 @@
-import { EntityManager } from 'typeorm';
+import { Account } from '@domain/space/account/account.entity';
+import { ISpace } from '@domain/space/space/space.interface';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { Account } from '@domain/space/account/account.entity';
+import { EntityManager } from 'typeorm';
 import { createTypedRelationDataLoader } from '../../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
-import { ISpace } from '@domain/space/space/space.interface';
 
 @Injectable()
 export class AccountSpacesLoaderCreator implements DataLoaderCreator<ISpace[]> {

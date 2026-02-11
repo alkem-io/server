@@ -1,6 +1,6 @@
 import { Brackets, ObjectLiteral, SelectQueryBuilder } from 'typeorm';
-import { UserFilterInput } from '../input-types';
 import { applyFilteringOnWhereExpression } from '../filter.fn.where.expression';
+import { UserFilterInput } from '../input-types';
 
 export const applyUserFilter = <T extends ObjectLiteral>(
   query: SelectQueryBuilder<T>,
@@ -23,10 +23,16 @@ export const applyUserFilter = <T extends ObjectLiteral>(
       if (displayName) {
         const hasRest = Object.keys(rest).length > 0;
         query.leftJoin('user.profile', 'profile');
-        // Use the table-qualified column directly instead of alias (PostgreSQL requires quoted identifiers)
-        wqb[hasRest ? 'orWhere' : 'where'](
-          `"profile"."displayName" LIKE '%${displayName}%'`
-        );
+        // Use parameterized query to prevent SQL injection
+        if (hasRest) {
+          wqb.orWhere('profile.displayName ILIKE :userDisplayName', {
+            userDisplayName: `%${displayName}%`,
+          });
+        } else {
+          wqb.where('profile.displayName ILIKE :userDisplayName', {
+            userDisplayName: `%${displayName}%`,
+          });
+        }
       }
     })
   );

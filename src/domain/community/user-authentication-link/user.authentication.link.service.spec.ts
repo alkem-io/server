@@ -1,12 +1,13 @@
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { LogContext } from '@common/enums';
 import { UserAlreadyRegisteredException } from '@common/exceptions';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { UserAuthenticationLinkService } from '@domain/community/user-authentication-link/user.authentication.link.service';
 import {
   UserAuthenticationLinkMatch,
   UserAuthenticationLinkOutcome,
 } from '@domain/community/user-authentication-link/user.authentication.link.types';
 import { LoggerService } from '@nestjs/common';
+import { type Mock, vi } from 'vitest';
 
 const createAgentInfo = (overrides: Partial<AgentInfo> = {}) => {
   const agentInfo = new AgentInfo();
@@ -19,28 +20,28 @@ const createAgentInfo = (overrides: Partial<AgentInfo> = {}) => {
 describe('UserAuthenticationLinkService', () => {
   const createService = () => {
     const userLookupService = {
-      getUserByAuthenticationID: jest.fn(),
-      getUserByEmail: jest.fn(),
+      getUserByAuthenticationID: vi.fn(),
+      getUserByEmail: vi.fn(),
     };
 
     const userRepository = {
-      save: jest.fn(async user => user),
+      save: vi.fn(async user => user),
     };
 
     const kratosService = {
-      getIdentityById: jest.fn(),
+      getIdentityById: vi.fn(),
     };
 
     const logger: LoggerService & {
-      log: jest.Mock;
-      verbose: jest.Mock;
-      error: jest.Mock;
+      log: Mock;
+      verbose: Mock;
+      error: Mock;
     } = {
-      log: jest.fn(),
-      verbose: jest.fn(),
-      error: jest.fn(),
-      warn: jest.fn(),
-      debug: jest.fn(),
+      log: vi.fn(),
+      verbose: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn(),
     };
 
     const service = new UserAuthenticationLinkService(

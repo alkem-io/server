@@ -1,23 +1,24 @@
-import { Args, Int, Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { LoggerService } from '@nestjs/common';
-import { Inject, UseGuards } from '@nestjs/common/decorators';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { AuthorizationAgentPrivilege } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
+import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { GraphqlGuard } from '@core/authorization';
+import { UserLoaderCreator } from '@core/dataloader/creators';
+import { Loader } from '@core/dataloader/decorators';
+import { ILoader } from '@core/dataloader/loader.interface';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
-import { IUser } from '@domain/community/user/user.interface';
-import { UserLoaderCreator } from '@core/dataloader/creators';
-import { ILoader } from '@core/dataloader/loader.interface';
-import { Loader } from '@core/dataloader/decorators';
+import { CalloutService } from '@domain/collaboration/callout/callout.service';
+import { IClassification } from '@domain/common/classification/classification.interface';
 import { IRoom } from '@domain/communication/room/room.interface';
+import { IUser } from '@domain/community/user/user.interface';
+import { LoggerService } from '@nestjs/common';
+import { Inject, UseGuards } from '@nestjs/common/decorators';
+import { Args, Int, Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
 import { ICalloutContributionDefaults } from '../callout-contribution-defaults/callout.contribution.defaults.interface';
-import { IClassification } from '@domain/common/classification/classification.interface';
-import { ContributionsFilterInput } from './dto/contributions.filter';
 import { CalloutContributionsCountOutput } from './dto/callout.contributions.count.dto';
+import { ContributionsFilterInput } from './dto/contributions.filter';
 
 @Resolver(() => ICallout)
 export class CalloutResolverFields {
@@ -131,23 +132,27 @@ export class CalloutResolverFields {
     @Parent() callout: ICallout,
     @Loader(UserLoaderCreator) loader: ILoader<IUser | null>
   ): Promise<IUser | null> {
-    if (!callout.publishedBy) {
+    if (
+      !callout.publishedBy ||
+      callout.settings.visibility !== CalloutVisibility.PUBLISHED
+    ) {
       return null;
     }
     return loader.load(callout.publishedBy);
   }
 
-  @ResolveField('publishedDate', () => Number, {
+  @ResolveField('publishedDate', () => Date, {
     nullable: true,
-    description: 'The timestamp for the publishing of this Callout.',
+    description: 'The Date of the publishing of this Callout.',
   })
-  async publishedDate(@Parent() callout: ICallout): Promise<number | null> {
-    if (!callout.publishedDate) {
+  async publishedDate(@Parent() callout: ICallout): Promise<Date | null> {
+    if (
+      !callout.publishedDate ||
+      callout.settings.visibility !== CalloutVisibility.PUBLISHED
+    ) {
       return null;
     }
-    const createdDate = callout.publishedDate;
-    const date = new Date(createdDate);
-    return date.getTime();
+    return callout.publishedDate;
   }
 
   @ResolveField('createdBy', () => IUser, {

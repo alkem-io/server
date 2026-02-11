@@ -1,24 +1,25 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { NotSupportedException } from '@common/exceptions';
+import ConfigUtils from '@config/config.utils';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AgentInfoCacheService } from '@core/authentication.agent.info/agent.info.cache.service';
+import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
+import { AgentService } from '@domain/agent/agent/agent.service';
 import { ConfigService } from '@nestjs/config';
+import { Test, TestingModule } from '@nestjs/testing';
+import { Session } from '@ory/kratos-client';
+import { KratosService } from '@services/infrastructure/kratos/kratos.service';
+import { OryDefaultIdentitySchema } from '@services/infrastructure/kratos/types/ory.default.identity.schema';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { type Mocked, vi } from 'vitest';
 import { AuthenticationService } from './authentication.service';
-import { AgentInfoCacheService } from '@core/authentication.agent.info/agent.info.cache.service';
-import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
-import { KratosService } from '@services/infrastructure/kratos/kratos.service';
-import { AgentService } from '@domain/agent/agent/agent.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { Session } from '@ory/kratos-client';
-import { OryDefaultIdentitySchema } from '@services/infrastructure/kratos/types/ory.default.identity.schema';
-import { NotSupportedException } from '@common/exceptions';
-import ConfigUtils from '@config/config.utils';
 
 describe('AuthenticationService', () => {
   let service: AuthenticationService;
-  let agentInfoCacheService: jest.Mocked<AgentInfoCacheService>;
-  let agentInfoService: jest.Mocked<AgentInfoService>;
-  let kratosService: jest.Mocked<KratosService>;
+  let agentInfoCacheService: Mocked<AgentInfoCacheService>;
+  let agentInfoService: Mocked<AgentInfoService>;
+  let kratosService: Mocked<KratosService>;
 
   const mockOryIdentity: OryDefaultIdentitySchema = {
     id: 'test-id',
@@ -103,29 +104,29 @@ describe('AuthenticationService', () => {
         }
         if (token === AgentInfoCacheService) {
           return {
-            getAgentInfoFromCache: jest.fn(),
-            setAgentInfoCache: jest.fn(),
+            getAgentInfoFromCache: vi.fn(),
+            setAgentInfoCache: vi.fn(),
           };
         }
         if (token === AgentInfoService) {
           return {
-            createAnonymousAgentInfo: jest.fn(),
-            createGuestAgentInfo: jest.fn(),
-            getAgentInfoMetadata: jest.fn(),
-            populateAgentInfoWithMetadata: jest.fn(),
-            buildAgentInfoFromOryIdentity: jest.fn(),
+            createAnonymousAgentInfo: vi.fn(),
+            createGuestAgentInfo: vi.fn(),
+            getAgentInfoMetadata: vi.fn(),
+            populateAgentInfoWithMetadata: vi.fn(),
+            buildAgentInfoFromOryIdentity: vi.fn(),
           };
         }
         if (token === KratosService) {
           return {
-            getSession: jest.fn(),
-            getBearerToken: jest.fn(),
-            tryExtendSession: jest.fn(),
+            getSession: vi.fn(),
+            getBearerToken: vi.fn(),
+            tryExtendSession: vi.fn(),
           };
         }
         if (token === AgentService) {
           return {
-            getVerifiedCredentials: jest.fn(),
+            getVerifiedCredentials: vi.fn(),
           };
         }
 
@@ -140,7 +141,7 @@ describe('AuthenticationService', () => {
   });
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -230,7 +231,7 @@ describe('AuthenticationService', () => {
 
     it('should create agent info when session has valid identity', async () => {
       kratosService.getSession.mockResolvedValue(mockSession);
-      jest.spyOn(service, 'createAgentInfo').mockResolvedValue(mockAgentInfo);
+      vi.spyOn(service, 'createAgentInfo').mockResolvedValue(mockAgentInfo);
 
       const result = await service.getAgentInfo({
         authorization: 'Bearer token',
@@ -352,9 +353,9 @@ describe('AuthenticationService', () => {
   describe('shouldExtendSession', () => {
     beforeEach(() => {
       // Mock the constructor call that sets extendSessionMinRemainingTTL
-      jest
-        .spyOn(service as any, 'parseEarliestPossibleExtend')
-        .mockReturnValue(300000); // 5 minutes
+      vi.spyOn(service as any, 'parseEarliestPossibleExtend').mockReturnValue(
+        300000
+      ); // 5 minutes
       (service as any).extendSessionMinRemainingTTL = 300000;
     });
 
@@ -417,8 +418,8 @@ describe('AuthenticationService', () => {
     });
     it('should parse HMS string correctly', () => {
       // Mock ConfigUtils.parseHMSString to return 300 seconds (5 minutes)
-      const mockConfigUtils = ConfigUtils as jest.Mocked<typeof ConfigUtils>;
-      mockConfigUtils.parseHMSString = jest.fn().mockReturnValue(300);
+      const mockConfigUtils = ConfigUtils as Mocked<typeof ConfigUtils>;
+      mockConfigUtils.parseHMSString = vi.fn().mockReturnValue(300);
 
       const result = (service as any).parseEarliestPossibleExtend('5m');
 
@@ -426,8 +427,8 @@ describe('AuthenticationService', () => {
     });
 
     it('should return undefined for invalid HMS string', () => {
-      const mockConfigUtils = ConfigUtils as jest.Mocked<typeof ConfigUtils>;
-      mockConfigUtils.parseHMSString = jest.fn().mockReturnValue(undefined);
+      const mockConfigUtils = ConfigUtils as Mocked<typeof ConfigUtils>;
+      mockConfigUtils.parseHMSString = vi.fn().mockReturnValue(undefined);
 
       const result = (service as any).parseEarliestPossibleExtend('invalid');
 
@@ -472,7 +473,7 @@ describe('AuthenticationService', () => {
 });
 
 const ConfigServiceMock = {
-  get: jest.fn().mockImplementation((key: string) => {
+  get: vi.fn().mockImplementation((key: string) => {
     if (key === 'identity.authentication.providers.ory') {
       return {
         kratos_public_base_url_server: 'mockUrl',

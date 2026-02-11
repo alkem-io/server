@@ -1,15 +1,15 @@
-import { Args, Resolver, Query } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { RolesOrganizationInput } from './dto/roles.dto.input.organization';
-import { RolesVirtualContributorInput } from './dto/roles.dto.input.virtual.contributor';
-import { RolesService } from './roles.service';
-import { RolesUserInput } from './dto/roles.dto.input.user';
-import { ContributorRoles } from './dto/roles.dto.result.contributor';
-import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { Args, Query, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentUser } from '@src/common/decorators';
+import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
+import { RolesOrganizationInput } from './dto/roles.dto.input.organization';
+import { RolesUserInput } from './dto/roles.dto.input.user';
+import { RolesVirtualContributorInput } from './dto/roles.dto.input.virtual.contributor';
+import { ContributorRoles } from './dto/roles.dto.result.contributor';
+import { RolesService } from './roles.service';
 
 @InstrumentResolver()
 @Resolver()

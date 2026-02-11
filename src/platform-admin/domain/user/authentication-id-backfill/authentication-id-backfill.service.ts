@@ -1,16 +1,16 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
-import { EntityManager } from 'typeorm';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { AdminAuthenticationIDBackfillResult } from './dto/admin.authentication-id-backfill.result';
-import { User } from '@domain/community/user/user.entity';
-import { KratosService } from '@services/infrastructure/kratos/kratos.service';
+import { LogContext } from '@common/enums';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AgentInfoCacheService } from '@core/authentication.agent.info/agent.info.cache.service';
-import { LogContext } from '@common/enums';
-import { Identity } from '@ory/kratos-client';
-import { OryDefaultIdentitySchema } from '@services/infrastructure/kratos/types/ory.default.identity.schema';
+import { User } from '@domain/community/user/user.entity';
 import { UserService } from '@domain/community/user/user.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InjectEntityManager } from '@nestjs/typeorm';
+import { Identity } from '@ory/kratos-client';
+import { KratosService } from '@services/infrastructure/kratos/kratos.service';
+import { OryDefaultIdentitySchema } from '@services/infrastructure/kratos/types/ory.default.identity.schema';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { EntityManager } from 'typeorm';
+import { AdminAuthenticationIDBackfillResult } from './dto/admin.authentication-id-backfill.result';
 
 @Injectable()
 export class AdminAuthenticationIDBackfillService {
@@ -161,7 +161,6 @@ export class AdminAuthenticationIDBackfillService {
           LogContext.AUTH
         );
         outcome.skipped += 1;
-        continue;
       }
     }
   }

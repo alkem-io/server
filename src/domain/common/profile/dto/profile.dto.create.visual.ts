@@ -1,5 +1,5 @@
 import { VisualType } from '@common/enums/visual.type';
-import { InputType, Field, ObjectType } from '@nestjs/graphql';
+import { Field, InputType, ObjectType } from '@nestjs/graphql';
 
 @InputType()
 @ObjectType('CreateVisualOnProfileData')

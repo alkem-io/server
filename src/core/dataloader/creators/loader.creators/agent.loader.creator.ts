@@ -1,8 +1,8 @@
-import { EntityManager } from 'typeorm';
+import { DataLoaderInitError } from '@common/exceptions/data-loader';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { DataLoaderInitError } from '@common/exceptions/data-loader';
 import { Agent, IAgent } from '@src/domain/agent';
+import { EntityManager } from 'typeorm';
 import { createTypedRelationDataLoader } from '../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../base';
 

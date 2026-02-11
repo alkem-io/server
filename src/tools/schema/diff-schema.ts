@@ -1,4 +1,5 @@
 #!/usr/bin/env ts-node
+
 // GraphQL Schema Diff & Deprecation Lifecycle Tool (Feature 002)
 // Implements:
 //  - Deterministic AST diff for object types, fields, enums, enum values, scalars
@@ -15,32 +16,32 @@
 //  - Grace period warning for newly added deprecations missing REMOVE_AFTER (FR-014 nuanced timing) — current parser treats absence as invalid
 //  - Enum value addition referencing prior soft-deprecation metadata (FR-010 partial nuance)
 
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { execSync } from 'node:child_process';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import {
-  ScalarTypeDefinitionNode,
-  FieldDefinitionNode,
-  TypeNode,
   DirectiveNode,
+  FieldDefinitionNode,
+  ScalarTypeDefinitionNode,
+  TypeNode,
 } from 'graphql';
 import {
-  ChangeReport,
-  ChangeEntry,
-  DeprecationEntry,
-  ElementType,
-  ChangeType,
-} from './types';
-import { performOverrideEvaluationAsync } from './override';
-import { parseDeprecationReason } from './deprecation-parser';
-import {
-  sha256,
-  emptyCounts,
   baselineReport,
+  DiffContext,
+  emptyCounts,
   IndexedSchema,
   indexSDL,
-  DiffContext,
   pushEntry,
+  sha256,
 } from '../../schema-contract/diff/diff-core';
+import { parseDeprecationReason } from './deprecation-parser';
+import { performOverrideEvaluationAsync } from './override';
+import {
+  ChangeEntry,
+  ChangeReport,
+  ChangeType,
+  DeprecationEntry,
+  ElementType,
+} from './types';
 
 interface Args {
   oldPath: string | null;

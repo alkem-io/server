@@ -1,18 +1,18 @@
 import { LogContext } from '@common/enums';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { Injectable, Inject, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { IAccount } from '../account/account.interface';
 import {
   EntityNotFoundException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
-import { User } from '@domain/community/user/user.entity';
-import { Organization } from '@domain/community/organization';
-import { Account } from '../account/account.entity';
-import { InjectEntityManager } from '@nestjs/typeorm';
-import { EntityManager, FindOneOptions } from 'typeorm';
 import { IAgent } from '@domain/agent/agent/agent.interface';
+import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { Organization } from '@domain/community/organization';
+import { User } from '@domain/community/user/user.entity';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InjectEntityManager } from '@nestjs/typeorm';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { EntityManager, FindOneOptions } from 'typeorm';
+import { Account } from '../account/account.entity';
+import { IAccount } from '../account/account.interface';
 
 @Injectable()
 export class AccountLookupService {

@@ -1,5 +1,5 @@
-import { inflate, deflate } from 'zlib';
 import { promisify } from 'util';
+import { deflate, inflate } from 'zlib';
 
 const deflateAsync = promisify(deflate);
 const inflateAsync = promisify(inflate);

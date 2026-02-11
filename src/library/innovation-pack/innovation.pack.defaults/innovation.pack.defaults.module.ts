@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { InnovationPackDefaultsService } from './innovation.pack.defaults.service';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
+import { InnovationPackDefaultsService } from './innovation.pack.defaults.service';
 
 @Module({
   imports: [NamingModule],

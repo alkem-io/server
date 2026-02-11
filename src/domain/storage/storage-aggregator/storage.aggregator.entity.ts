@@ -1,9 +1,9 @@
+import { ENUM_LENGTH } from '@common/constants';
+import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
-import { IStorageAggregator } from './storage.aggregator.interface';
 import { StorageBucket } from '../storage-bucket/storage.bucket.entity';
-import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
-import { ENUM_LENGTH } from '@common/constants';
+import { IStorageAggregator } from './storage.aggregator.interface';
 
 @Entity()
 export class StorageAggregator

@@ -1,7 +1,7 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { UpdateUserSettingsNotificationOrganizationInput } from './user.settings.notification.organization.dto.update';
 import { Type } from 'class-transformer';
 import { ValidateNested } from 'class-validator';
+import { UpdateUserSettingsNotificationOrganizationInput } from './user.settings.notification.organization.dto.update';
 import { UpdateUserSettingsNotificationPlatformInput } from './user.settings.notification.platform.dto.update';
 import { UpdateUserSettingsNotificationSpaceInput } from './user.settings.notification.space.dto.update';
 import { UpdateUserSettingsNotificationUserInput } from './user.settings.notification.user.dto.update';

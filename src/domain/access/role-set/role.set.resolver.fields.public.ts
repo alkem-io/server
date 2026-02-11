@@ -1,18 +1,18 @@
+import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
+import { RoleName } from '@common/enums/role.name';
+import { RoleSetRoleImplicit } from '@common/enums/role.set.role.implicit';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { IForm } from '@domain/common/form/form.interface';
 import { Inject } from '@nestjs/common';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
-import { RoleSetService } from './role.set.service';
-import { IForm } from '@domain/common/form/form.interface';
-import { IRoleSet } from './role.set.interface';
-import { RoleSet } from './role.set.entity';
-import { RoleName } from '@common/enums/role.name';
-import { IRole } from '../role/role.interface';
-import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { RoleSetRoleImplicit } from '@common/enums/role.set.role.implicit';
-import { RoleSetAgentRolesDataLoader } from './role.set.data.loaders.agent.roles';
-import { RoleSetMembershipStatusDataLoader } from './role.set.data.loader.membership.status';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentUser } from '@src/common/decorators';
+import { IRole } from '../role/role.interface';
+import { RoleSetMembershipStatusDataLoader } from './role.set.data.loader.membership.status';
+import { RoleSetAgentRolesDataLoader } from './role.set.data.loaders.agent.roles';
+import { RoleSet } from './role.set.entity';
+import { IRoleSet } from './role.set.interface';
+import { RoleSetService } from './role.set.service';
 
 // Resolver for fields on RoleSet that are available without READ access
 @InstrumentResolver()

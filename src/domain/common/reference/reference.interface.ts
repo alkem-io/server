@@ -1,5 +1,5 @@
-import { Field, ObjectType } from '@nestjs/graphql';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
+import { Field, ObjectType } from '@nestjs/graphql';
 import { IProfile } from '../profile/profile.interface';
 
 @ObjectType('Reference')

@@ -1,45 +1,40 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, FindOneOptions, Repository } from 'typeorm';
+import { LogContext } from '@common/enums';
+import { AgentType } from '@common/enums/agent.type';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
+import { RoomType } from '@common/enums/room.type';
+import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { RoomService } from '@domain/communication/room/room.service';
-import { RoomType } from '@common/enums/room.type';
+import { Room } from '@domain/communication/room/room.entity';
 import { IRoom } from '@domain/communication/room/room.interface';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { RoomService } from '@domain/communication/room/room.service';
+import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
+import { IUser } from '@domain/community/user/user.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { Conversation } from './conversation.entity';
-import { IConversation } from './conversation.interface';
+import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
+import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston/dist/winston.constants';
+import { FindOneOptions, Repository } from 'typeorm';
 import { ConversationMembership } from '../conversation-membership/conversation.membership.entity';
 import { IConversationMembership } from '../conversation-membership/conversation.membership.interface';
-import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
-import { AgentType } from '@common/enums/agent.type';
-import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
-import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
-import { IUser } from '@domain/community/user/user.interface';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
-import { InvocationResultAction } from '@services/ai-server/ai-persona/dto';
-import { InvocationOperation } from '@common/enums/ai.persona.invocation.operation';
-import { ConversationVcAskQuestionResult } from './dto/conversation.vc.dto.ask.question.result';
-import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
-import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
-import { RoomLookupService } from '../room-lookup/room.lookup.service';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston/dist/winston.constants';
+import { Conversation } from './conversation.entity';
+import { IConversation } from './conversation.interface';
 
 @Injectable()
 export class ConversationService {
   constructor(
-    private aiServerAdapter: AiServerAdapter,
     private authorizationPolicyService: AuthorizationPolicyService,
     private roomService: RoomService,
-    private roomLookupService: RoomLookupService,
+    private roomAuthorizationService: RoomAuthorizationService,
     private userLookupService: UserLookupService,
     private virtualContributorLookupService: VirtualContributorLookupService,
     private platformWellKnownVirtualContributorsService: PlatformWellKnownVirtualContributorsService,
@@ -47,8 +42,6 @@ export class ConversationService {
     private conversationRepository: Repository<Conversation>,
     @InjectRepository(ConversationMembership)
     private conversationMembershipRepository: Repository<ConversationMembership>,
-    @InjectEntityManager('default')
-    private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -88,8 +81,7 @@ export class ConversationService {
       AuthorizationPolicyType.COMMUNICATION_CONVERSATION
     );
 
-    // Create room only for USER_USER conversations
-    // USER_VC rooms are created on-demand when first message is sent
+    // Create room for the conversation
     if (createRoom) {
       conversation.room = await this.createConversationRoom(
         currentUserAgentId,
@@ -212,6 +204,12 @@ export class ConversationService {
     return result;
   }
 
+  /**
+   * Get the room for a conversation.
+   * Returns undefined if the conversation has no room (legacy conversations).
+   * Run adminCommunicationMigrateOrphanedConversations mutation to create rooms
+   * for legacy conversations before they can be used.
+   */
   public async getRoom(conversationID: string): Promise<IRoom | undefined> {
     const conversation = await this.getConversationOrFail(conversationID, {
       relations: { room: true },
@@ -219,69 +217,79 @@ export class ConversationService {
     return conversation.room;
   }
 
+  /**
+   * LEGACY MIGRATION: Create a room for a conversation that doesn't have one.
+   *
+   * This method is ONLY used by the adminCommunicationMigrateOrphanedConversations
+   * mutation to bulk-create rooms for legacy conversations.
+   *
+   * TODO: Delete this method after migration has been run on all environments.
+   */
+  public async ensureRoomExists(
+    conversation: IConversation
+  ): Promise<IRoom | undefined> {
+    // Room already exists
+    if (conversation.room) {
+      return conversation.room;
+    }
+
+    // Load conversation with authorization for room creation
+    const conversationWithAuth = await this.getConversationOrFail(
+      conversation.id,
+      { relations: { authorization: true } }
+    );
+
+    // Get the two members of the conversation
+    const members = await this.getConversationMembers(conversation.id);
+    if (members.length !== 2) {
+      this.logger.warn(
+        `Cannot create room for conversation ${conversation.id}: expected 2 members, found ${members.length}`,
+        LogContext.COMMUNICATION_CONVERSATION
+      );
+      return undefined;
+    }
+
+    const [member1, member2] = members;
+
+    this.logger.verbose?.(
+      `[LEGACY MIGRATION] Creating room for conversation ${conversation.id}`,
+      LogContext.COMMUNICATION_CONVERSATION
+    );
+
+    // Create the room
+    const createdRoom = await this.createConversationRoom(
+      member1.agentId,
+      member2.agentId,
+      RoomType.CONVERSATION_DIRECT
+    );
+
+    conversationWithAuth.room = createdRoom as Room;
+    await this.save(conversationWithAuth);
+
+    // Apply authorization to the new room
+    if (conversationWithAuth.authorization) {
+      let roomAuth = this.roomAuthorizationService.applyAuthorizationPolicy(
+        createdRoom,
+        conversationWithAuth.authorization
+      );
+      roomAuth =
+        this.roomAuthorizationService.allowContributorsToCreateMessages(
+          roomAuth
+        );
+      roomAuth =
+        this.roomAuthorizationService.allowContributorsToReplyReactToMessages(
+          roomAuth
+        );
+      await this.authorizationPolicyService.save(roomAuth);
+    }
+
+    return createdRoom;
+  }
+
   public async getCommentsCount(conversationID: string): Promise<number> {
     const room = await this.getRoom(conversationID);
     if (!room) return 0;
     return room.messagesCount;
-  }
-
-  /**
-   * Ask a question to a virtual contributor in a conversation.
-   * Caller is responsible for validation (type check, authorization).
-   * @param conversation - Pre-fetched conversation with room relation
-   * @param vc - Pre-fetched virtual contributor with agent relation
-   * @param question - The question text
-   * @param language - Language for the response
-   * @param agentInfo - Caller's agent info
-   */
-  public async askQuestion(
-    conversation: IConversation,
-    vc: IVirtualContributor,
-    question: string,
-    language: string | undefined,
-    agentInfo: AgentInfo
-  ): Promise<ConversationVcAskQuestionResult> {
-    // If the conversation has no room yet, create one on-demand
-    if (!conversation.room) {
-      conversation.room = await this.createConversationRoom(
-        agentInfo.agentID,
-        vc.agent.id,
-        RoomType.CONVERSATION
-      );
-      await this.conversationRepository.save(conversation);
-    }
-
-    const message = await this.roomLookupService.sendMessage(
-      conversation.room,
-      agentInfo.agentID,
-      {
-        message: question,
-        roomID: conversation.room.id,
-      }
-    );
-
-    this.aiServerAdapter.invoke({
-      bodyOfKnowledgeID: '',
-      operation: InvocationOperation.QUERY,
-      message: question,
-      aiPersonaID: vc.aiPersonaID,
-      userID: agentInfo.userID,
-      displayName: 'Guidance',
-      language: language,
-      resultHandler: {
-        action: InvocationResultAction.POST_MESSAGE,
-        roomDetails: {
-          roomID: conversation.room.id,
-          actorId: vc.agent.id,
-        },
-      },
-    });
-
-    return {
-      id: message.id,
-      success: true,
-      question: question,
-    };
   }
 
   /**
@@ -306,23 +314,32 @@ export class ConversationService {
     conversation.room = await this.createConversationRoom(
       senderAgentId,
       receiverAgentId,
-      RoomType.CONVERSATION
+      RoomType.CONVERSATION_DIRECT
     );
     return await this.save(conversation);
   }
 
   /**
-   * Get all members of a conversation via the pivot table.   * Performance: Queries are limited to 2 members per conversation by domain constraint.
-   * Consider DataLoader batching for GraphQL resolvers when querying multiple conversations.   * @param conversationId - UUID of the conversation
+   * Get all members of a conversation via the pivot table.
+   * Performance: Queries are limited to 2 members per conversation by domain constraint.
+   * Consider DataLoader batching for GraphQL resolvers when querying multiple conversations.
+   * @param conversationId - UUID of the conversation
    * @returns Array of conversation memberships with agent relationships loaded
    */
   async getConversationMembers(
     conversationId: string
   ): Promise<IConversationMembership[]> {
-    return await this.conversationMembershipRepository.find({
+    return this.conversationMembershipRepository.find({
+      loadEagerRelations: false,
       where: { conversationId },
-      relations: {
-        agent: true,
+      relations: { agent: true },
+      select: {
+        conversationId: true,
+        agentId: true,
+        agent: {
+          id: true,
+          type: true,
+        },
       },
     });
   }
@@ -416,30 +433,28 @@ export class ConversationService {
    * without loading full user/virtualContributor entities. Agent type is eagerly loaded
    * by the memberships query, avoiding N+1 queries.
    * Enforces exactly at most 2 members per conversation (per spec clarification).
-   * @param conversationId - UUID of the conversation
    * @returns USER_USER if both are users, USER_VC if one is a VC
    * @throws ValidationException if conversation doesn't have exactly 2 members
+   * @param memberships
    */
   async inferConversationType(
-    conversationId: string
+    memberships: IConversationMembership[]
   ): Promise<CommunicationConversationType> {
-    const members = await this.getConversationMembers(conversationId);
-
-    if (members.length > 2) {
+    if (memberships.length > 2) {
       throw new ValidationException(
         'Conversation must have exactly 2 members',
         LogContext.COMMUNICATION,
         {
           details: {
-            conversationId,
-            memberCount: members.length,
+            conversationId: memberships[0]?.conversationId,
+            memberCount: memberships.length,
           },
         }
       );
     }
 
     // Check if any agent is a virtual contributor using agent.type field
-    const hasVC = members.some(
+    const hasVC = memberships.some(
       m => m.agent.type === AgentType.VIRTUAL_CONTRIBUTOR
     );
 
@@ -571,5 +586,18 @@ export class ConversationService {
       select: ['agentId'],
     });
     return memberships.map(m => m.agentId);
+  }
+
+  /**
+   * Find all conversations that don't have a room.
+   * Used by admin migration to bulk-create rooms for legacy conversations.
+   * @returns Array of conversations without rooms
+   */
+  async findConversationsWithoutRooms(): Promise<IConversation[]> {
+    return await this.conversationRepository
+      .createQueryBuilder('conversation')
+      .leftJoinAndSelect('conversation.room', 'room')
+      .where('conversation.roomId IS NULL')
+      .getMany();
   }
 }

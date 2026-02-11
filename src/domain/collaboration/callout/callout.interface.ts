@@ -1,15 +1,15 @@
 import { IPost } from '@domain/collaboration/post/post.interface';
-import { ObjectType, Field } from '@nestjs/graphql';
-import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
-import { IRoom } from '@domain/communication/room/room.interface';
+import { IClassification } from '@domain/common/classification/classification.interface';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity/authorizable.interface';
 import { NameID } from '@domain/common/scalars/scalar.nameid';
+import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
+import { IRoom } from '@domain/communication/room/room.interface';
+import { Field, ObjectType } from '@nestjs/graphql';
+import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
+import { ICalloutContributionDefaults } from '../callout-contribution-defaults/callout.contribution.defaults.interface';
 import { ICalloutFraming } from '../callout-framing/callout.framing.interface';
 import { ICalloutSettings } from '../callout-settings/callout.settings.interface';
-import { ICalloutContributionDefaults } from '../callout-contribution-defaults/callout.contribution.defaults.interface';
-import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
 import { ICalloutsSet } from '../callouts-set/callouts.set.interface';
-import { IClassification } from '@domain/common/classification/classification.interface';
 
 @ObjectType('Callout')
 export abstract class ICallout extends IAuthorizable {

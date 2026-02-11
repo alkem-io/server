@@ -1,20 +1,20 @@
-import { Injectable } from '@nestjs/common';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { LicensingFrameworkService } from './licensing.framework.service';
-import { ILicensingFramework } from './licensing.framework.interface';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import {
-  EntityNotInitializedException,
-  RelationshipNotFoundException,
-} from '@common/exceptions';
+import { CREDENTIAL_RULE_LICENSE_MANAGER } from '@common/constants/authorization/credential.rule.constants';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
-import { LicensePolicyAuthorizationService } from '@platform/licensing/credential-based/license-policy/license.policy.service.authorization';
+import {
+  EntityNotInitializedException,
+  RelationshipNotFoundException,
+} from '@common/exceptions';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { CREDENTIAL_RULE_LICENSE_MANAGER } from '@common/constants/authorization/credential.rule.constants';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { Injectable } from '@nestjs/common';
+import { LicensePolicyAuthorizationService } from '@platform/licensing/credential-based/license-policy/license.policy.service.authorization';
+import { ILicensingFramework } from './licensing.framework.interface';
+import { LicensingFrameworkService } from './licensing.framework.service';
 
 @Injectable()
 export class LicensingFrameworkAuthorizationService {

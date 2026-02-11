@@ -1,5 +1,5 @@
-import { Field, Float, InputType } from '@nestjs/graphql';
 import { InnovationPacksOrderBy } from '@common/enums/innovation.packs.orderBy';
+import { Field, Float, InputType } from '@nestjs/graphql';
 
 @InputType()
 export class InnovationPacksInput {

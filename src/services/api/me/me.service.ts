@@ -1,22 +1,22 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { groupCredentialsByEntity } from '@services/api/roles/util/group.credentials.by.entity';
-import { SpaceService } from '@domain/space/space/space.service';
-import { RolesService } from '../roles/roles.service';
-import { ISpace } from '@domain/space/space/space.interface';
-import { ActivityLogService } from '../activity-log';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { MySpaceResults } from './dto/my.journeys.results';
-import { ActivityService } from '@platform/activity/activity.service';
 import { LogContext } from '@common/enums';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { sortSpacesByActivity } from '@domain/space/space/sort.spaces.by.activity';
-import { CommunityInvitationResult } from './dto/me.invitation.result';
-import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
-import { EntityNotFoundException } from '@common/exceptions';
-import { CommunityApplicationResult } from './dto/me.application.result';
-import { SpaceMembershipCollaborationInfo } from './space.membership.type';
-import { CommunityMembershipResult } from './dto/me.membership.result';
 import { SpaceLevel } from '@common/enums/space.level';
+import { EntityNotFoundException } from '@common/exceptions';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { sortSpacesByActivity } from '@domain/space/space/sort.spaces.by.activity';
+import { ISpace } from '@domain/space/space/space.interface';
+import { SpaceService } from '@domain/space/space/space.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { ActivityService } from '@platform/activity/activity.service';
+import { groupCredentialsByEntity } from '@services/api/roles/util/group.credentials.by.entity';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { ActivityLogService } from '../activity-log';
+import { RolesService } from '../roles/roles.service';
+import { CommunityApplicationResult } from './dto/me.application.result';
+import { CommunityInvitationResult } from './dto/me.invitation.result';
+import { CommunityMembershipResult } from './dto/me.membership.result';
+import { MySpaceResults } from './dto/my.journeys.results';
+import { SpaceMembershipCollaborationInfo } from './space.membership.type';
 
 @Injectable()
 export class MeService {
@@ -296,15 +296,15 @@ export class MeService {
       Array.from(credentialMap.get('spaces')?.keys() ?? [])
     );
 
+    const activityLogs =
+      await this.activityLogService.convertRawActivityToResults(rawActivities);
+
     const mySpaceResults: MySpaceResults[] = [];
-
-    for (const rawActivity of rawActivities) {
-      const activityLog =
-        await this.activityLogService.convertRawActivityToResult(rawActivity);
-
+    for (let i = 0; i < rawActivities.length; i++) {
+      const activityLog = activityLogs[i];
       if (!activityLog?.space) {
         this.logger.warn(
-          `Unable to process activity entry ${rawActivity.id} because it does not have a journey.`,
+          `Unable to process activity entry ${rawActivities[i].id} because it does not have a journey.`,
           LogContext.ACTIVITY
         );
         continue;

@@ -1,18 +1,18 @@
+import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
+import { RoleName } from '@common/enums/role.name';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { RoleSetMembershipStatusDataLoader } from '@domain/access/role-set/role.set.data.loader.membership.status';
+import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { IForm } from '@domain/common/form/form.interface';
+import { UUID } from '@domain/common/scalars';
+import { IOrganization } from '@domain/community/organization';
+import { IUser } from '@domain/community/user/user.interface';
+import { Inject } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { SpaceAboutMembership } from './dto/space.about.membership';
-import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
-import { CurrentUser } from '@common/decorators/current-user.decorator';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { Inject } from '@nestjs/common';
-import { RoleSetMembershipStatusDataLoader } from '@domain/access/role-set/role.set.data.loader.membership.status';
-import { IForm } from '@domain/common/form/form.interface';
-import { RoleSetService } from '@domain/access/role-set/role.set.service';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { IUser } from '@domain/community/user/user.interface';
-import { RoleName } from '@common/enums/role.name';
-import { IOrganization } from '@domain/community/organization';
-import { UUID } from '@domain/common/scalars';
 
 @Resolver(() => SpaceAboutMembership)
 export class SpaceAboutMembershipResolverFields {

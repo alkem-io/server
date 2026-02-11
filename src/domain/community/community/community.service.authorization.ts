@@ -1,39 +1,39 @@
-import { Injectable } from '@nestjs/common';
-import { CommunityService } from './community.service';
-import {
-  AuthorizationCredential,
-  AuthorizationPrivilege,
-  LogContext,
-} from '@common/enums';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
-import { CommunicationAuthorizationService } from '@domain/communication/communication/communication.service.authorization';
-import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
   CREDENTIAL_RULE_ROLESET_ASSIGN,
   CREDENTIAL_RULE_SPACE_HOST_ASSOCIATES_JOIN,
   CREDENTIAL_RULE_SUBSPACE_PARENT_MEMBER_APPLY,
   CREDENTIAL_RULE_SUBSPACE_PARENT_MEMBER_JOIN,
   CREDENTIAL_RULE_TYPES_COMMUNITY_READ_GLOBAL_REGISTERED,
-  CREDENTIAL_RULE_TYPES_ROLESET_ENTRY_ROLE_INVITE,
   CREDENTIAL_RULE_TYPES_ROLESET_APPLY_GLOBAL_REGISTERED,
+  CREDENTIAL_RULE_TYPES_ROLESET_ENTRY_ROLE_INVITE,
   CREDENTIAL_RULE_TYPES_SPACE_ROLESET_JOIN_GLOBAL_REGISTERED,
   POLICY_RULE_COMMUNITY_ADD_VC,
 } from '@common/constants';
-import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
-import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
-import { RoleSetAuthorizationService } from '@domain/access/role-set/role.set.service.authorization';
-import { IRoleSet } from '@domain/access/role-set/role.set.interface';
-import { RoleSetType } from '@common/enums/role.set.type';
+import {
+  AuthorizationCredential,
+  AuthorizationPrivilege,
+  LogContext,
+} from '@common/enums';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
-import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { RoleName } from '@common/enums/role.name';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
-import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { RoleSetType } from '@common/enums/role.set.type';
+import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
 import { PlatformRolesAccessService } from '@domain/access/platform-roles-access/platform.roles.access.service';
+import { IRoleSet } from '@domain/access/role-set/role.set.interface';
+import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { RoleSetAuthorizationService } from '@domain/access/role-set/role.set.service.authorization';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { UUID } from '@domain/common/scalars/scalar.uuid';
+import { CommunicationAuthorizationService } from '@domain/communication/communication/communication.service.authorization';
+import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
+import { Injectable } from '@nestjs/common';
+import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
+import { CommunityService } from './community.service';
 
 @Injectable()
 export class CommunityAuthorizationService {
@@ -245,7 +245,7 @@ export class CommunityAuthorizationService {
     if (parentRoleSetCredential) {
       const membershipSettings = spaceSettings.membership;
       switch (membershipSettings.policy) {
-        case CommunityMembershipPolicy.APPLICATIONS:
+        case CommunityMembershipPolicy.APPLICATIONS: {
           const spaceMemberCanApply =
             this.authorizationPolicyService.createCredentialRule(
               [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_APPLY],
@@ -255,7 +255,8 @@ export class CommunityAuthorizationService {
           spaceMemberCanApply.cascade = false;
           newRules.push(spaceMemberCanApply);
           break;
-        case CommunityMembershipPolicy.OPEN:
+        }
+        case CommunityMembershipPolicy.OPEN: {
           const spaceMemberCanJoin =
             this.authorizationPolicyService.createCredentialRule(
               [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_JOIN],
@@ -265,6 +266,7 @@ export class CommunityAuthorizationService {
           spaceMemberCanJoin.cascade = false;
           newRules.push(spaceMemberCanJoin);
           break;
+        }
       }
     }
 
@@ -300,7 +302,7 @@ export class CommunityAuthorizationService {
 
     const membershipPolicy = spaceSettings.membership.policy;
     switch (membershipPolicy) {
-      case CommunityMembershipPolicy.APPLICATIONS:
+      case CommunityMembershipPolicy.APPLICATIONS: {
         const anyUserCanApply =
           this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
             [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_APPLY],
@@ -310,7 +312,8 @@ export class CommunityAuthorizationService {
         anyUserCanApply.cascade = false;
         newRules.push(anyUserCanApply);
         break;
-      case CommunityMembershipPolicy.OPEN:
+      }
+      case CommunityMembershipPolicy.OPEN: {
         const anyUserCanJoin =
           this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
             [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_JOIN],
@@ -320,6 +323,7 @@ export class CommunityAuthorizationService {
         anyUserCanJoin.cascade = false;
         newRules.push(anyUserCanJoin);
         break;
+      }
     }
 
     // Associates of trusted organizations can join

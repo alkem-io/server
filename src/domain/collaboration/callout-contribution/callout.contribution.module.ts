@@ -1,19 +1,19 @@
-import { Module } from '@nestjs/common';
-import { CalloutContributionService } from './callout.contribution.service';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { CalloutContribution } from './callout.contribution.entity';
-import { CalloutContributionAuthorizationService } from './callout.contribution.service.authorization';
-import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { CalloutContributionResolverFields } from './callout.contribution.resolver.fields';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
-import { WhiteboardModule } from '@domain/common/whiteboard/whiteboard.module';
-import { NamingModule } from '@services/infrastructure/naming/naming.module';
-import { PostModule } from '../post/post.module';
-import { LinkModule } from '../link/link.module';
-import { MemoModule } from '@domain/common/memo/memo.module';
-import { RoleSetModule } from '@domain/access/role-set/role.set.module';
-import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { PlatformRolesAccessModule } from '@domain/access/platform-roles-access/platform.roles.access.module';
+import { RoleSetModule } from '@domain/access/role-set/role.set.module';
+import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
+import { MemoModule } from '@domain/common/memo/memo.module';
+import { WhiteboardModule } from '@domain/common/whiteboard/whiteboard.module';
+import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { NamingModule } from '@services/infrastructure/naming/naming.module';
+import { LinkModule } from '../link/link.module';
+import { PostModule } from '../post/post.module';
+import { CalloutContribution } from './callout.contribution.entity';
+import { CalloutContributionResolverFields } from './callout.contribution.resolver.fields';
+import { CalloutContributionService } from './callout.contribution.service';
+import { CalloutContributionAuthorizationService } from './callout.contribution.service.authorization';
 
 @Module({
   imports: [

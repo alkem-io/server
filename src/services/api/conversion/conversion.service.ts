@@ -1,34 +1,34 @@
-import { Inject, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums/logging.context';
-import { ConvertSpaceL1ToSpaceL0Input } from './dto/convert.dto.space.l1.to.space.l0.input';
-import { ISpace } from '@domain/space/space/space.interface';
+import { RoleName } from '@common/enums/role.name';
+import { SpaceLevel } from '@common/enums/space.level';
+import { TemplateDefaultType } from '@common/enums/template.default.type';
 import {
   EntityNotInitializedException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { SpaceService } from '@domain/space/space/space.service';
-import { NamingService } from '@services/infrastructure/naming/naming.service';
-import { SpaceLevel } from '@common/enums/space.level';
-import { RoleSetService } from '@domain/access/role-set/role.set.service';
-import { PlatformService } from '@platform/platform/platform.service';
-import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
-import { TemplateDefaultType } from '@common/enums/template.default.type';
-import { TemplateService } from '@domain/template/template/template.service';
-import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovation.flow.service';
-import { RoleName } from '@common/enums/role.name';
-import { ConvertSpaceL1ToSpaceL2Input } from './dto/convert.dto.space.l1.to.space.l2.input';
-import { ConvertSpaceL2ToSpaceL1Input } from './dto/convert.dto.space.l2.to.space.l1.input';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
-import { IUser } from '@domain/community/user/user.interface';
+import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovation.flow.service';
+import { CreateInnovationFlowStateInput } from '@domain/collaboration/innovation-flow-state/dto';
+import { IInnovationFlowState } from '@domain/collaboration/innovation-flow-state/innovation.flow.state.interface';
 import { IOrganization } from '@domain/community/organization/organization.interface';
+import { IUser } from '@domain/community/user/user.interface';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { AccountHostService } from '@domain/space/account.host/account.host.service';
+import { ISpace } from '@domain/space/space/space.interface';
+import { SpaceService } from '@domain/space/space/space.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { IInnovationFlowState } from '@domain/collaboration/innovation-flow-state/innovation.flow.state.interface';
-import { CreateInnovationFlowStateInput } from '@domain/collaboration/innovation-flow-state/dto';
+import { TemplateService } from '@domain/template/template/template.service';
+import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
+import { Inject, LoggerService } from '@nestjs/common';
+import { PlatformService } from '@platform/platform/platform.service';
+import { NamingService } from '@services/infrastructure/naming/naming.service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { InputCreatorService } from '../input-creator/input.creator.service';
+import { ConvertSpaceL1ToSpaceL0Input } from './dto/convert.dto.space.l1.to.space.l0.input';
+import { ConvertSpaceL1ToSpaceL2Input } from './dto/convert.dto.space.l1.to.space.l2.input';
+import { ConvertSpaceL2ToSpaceL1Input } from './dto/convert.dto.space.l2.to.space.l1.input';
 
 export class ConversionService {
   constructor(

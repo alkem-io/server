@@ -1,23 +1,23 @@
+import { InnovationPacksOrderBy } from '@common/enums/innovation.packs.orderBy';
 import { LogContext } from '@common/enums/logging.context';
+import { SearchVisibility } from '@common/enums/search.visibility';
+import { RelationshipNotFoundException } from '@common/exceptions';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
+import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
+import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
+import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
+import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 import { InnovationPackService } from '@library/innovation-pack/innovation.pack.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EntityManager, FindOneOptions, Repository } from 'typeorm';
+import { ITemplateResult } from './dto/library.dto.template.result';
+import { LibraryTemplatesFilterInput } from './dto/library.dto.templates.input';
 import { Library } from './library.entity';
 import { ILibrary } from './library.interface';
-import { InnovationPacksOrderBy } from '@common/enums/innovation.packs.orderBy';
-import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
-import { SearchVisibility } from '@common/enums/search.visibility';
-import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
-import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
-import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
-import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
-import { LibraryTemplatesFilterInput } from './dto/library.dto.templates.input';
-import { ITemplateResult } from './dto/library.dto.template.result';
-import { RelationshipNotFoundException } from '@common/exceptions';
 
 @Injectable()
 export class LibraryService {
@@ -31,9 +31,10 @@ export class LibraryService {
   ) {}
 
   async getLibraryOrFail(options?: FindOneOptions<Library>): Promise<ILibrary> {
-    const library = (
-      await this.libraryRepository.find({ take: 1, ...options })
-    )?.[0];
+    const library = await this.libraryRepository.findOne({
+      where: {},
+      ...options,
+    });
     if (!library)
       throw new EntityNotFoundException(
         'No Library found!',

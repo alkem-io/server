@@ -1,9 +1,9 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { NamingService } from './naming.service';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Discussion } from '@platform/forum-discussion/discussion.entity';
 import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
+import { Test, TestingModule } from '@nestjs/testing';
+import { Discussion } from '@platform/forum-discussion/discussion.entity';
+import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { NamingService } from './naming.service';
 
 describe('Naming Service', () => {
   let service: NamingService;

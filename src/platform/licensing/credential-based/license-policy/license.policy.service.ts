@@ -1,15 +1,15 @@
+import { LogContext } from '@common/enums/logging.context';
+import { EntityNotFoundException } from '@common/exceptions';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, Repository } from 'typeorm';
-import { EntityNotFoundException } from '@common/exceptions';
-import { ILicensePolicy } from './license.policy.interface';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LicensePolicy } from './license.policy.entity';
-import { LogContext } from '@common/enums/logging.context';
 import { ILicensingCredentialBasedPolicyCredentialRule } from '@platform/licensing/credential-based/licensing-credential-based-entitlements-engine';
 import { randomUUID } from 'crypto';
-import { UpdateLicensePolicyCredentialRuleInput } from './dto/license.policy.dto.credential.rule.update';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { EntityManager, Repository } from 'typeorm';
 import { CreateLicensePolicyCredentialRuleInput } from './dto/license.policy.dto.credential.rule.create';
+import { UpdateLicensePolicyCredentialRuleInput } from './dto/license.policy.dto.credential.rule.update';
+import { LicensePolicy } from './license.policy.entity';
+import { ILicensePolicy } from './license.policy.interface';
 
 @Injectable()
 export class LicensePolicyService {
@@ -43,9 +43,9 @@ export class LicensePolicyService {
   // in all contexts
   public async getDefaultLicensePolicyOrFail(): Promise<ILicensePolicy> {
     let licensePolicy: ILicensePolicy | null = null;
-    licensePolicy = (
-      await this.entityManager.find(LicensePolicy, { take: 1 })
-    )?.[0];
+    licensePolicy = await this.entityManager.findOne(LicensePolicy, {
+      where: {},
+    });
 
     if (!licensePolicy) {
       throw new EntityNotFoundException(

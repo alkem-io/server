@@ -1,17 +1,18 @@
-import { EntityManager, FindOneOptions, In } from 'typeorm';
-import { isUUID } from 'class-validator';
-import { InjectEntityManager } from '@nestjs/typeorm';
-import { Inject, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { User } from '@domain/community/user/user.entity';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { EntityNotFoundException } from '@common/exceptions';
+import { SYSTEM_ACTOR_IDS } from '@common/constants/system.actor.ids';
 import { AuthorizationCredential, LogContext } from '@common/enums';
-import { Credential, CredentialsSearchInput, ICredential } from '@domain/agent';
-import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
-import { Organization } from '@domain/community/organization/organization.entity';
+import { EntityNotFoundException } from '@common/exceptions';
 import { InvalidUUID } from '@common/exceptions/invalid.uuid';
+import { Credential, CredentialsSearchInput, ICredential } from '@domain/agent';
+import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { Organization } from '@domain/community/organization/organization.entity';
+import { User } from '@domain/community/user/user.entity';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
+import { Inject, LoggerService } from '@nestjs/common';
+import { InjectEntityManager } from '@nestjs/typeorm';
+import { isUUID } from 'class-validator';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { EntityManager, FindOneOptions, In } from 'typeorm';
 
 export class ContributorLookupService {
   constructor(
@@ -221,6 +222,10 @@ export class ContributorLookupService {
     agentId: string,
     options?: Omit<FindOneOptions<User>, 'where'>
   ): Promise<IContributor | null> {
+    if (SYSTEM_ACTOR_IDS.has(agentId)) {
+      return null;
+    }
+
     if (!isUUID(agentId)) {
       throw new InvalidUUID(
         'Invalid UUID provided for agent ID!',

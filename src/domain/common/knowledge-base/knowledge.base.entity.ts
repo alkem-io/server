@@ -1,9 +1,9 @@
-import { Entity, JoinColumn, OneToOne } from 'typeorm';
+import { CalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
 import { Profile } from '@domain/common/profile/profile.entity';
-import { CalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.entity';
-import { IKnowledgeBase } from './knowledge.base.interface';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
+import { Entity, JoinColumn, OneToOne } from 'typeorm';
+import { IKnowledgeBase } from './knowledge.base.interface';
 
 @Entity()
 export class KnowledgeBase

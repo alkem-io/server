@@ -1,39 +1,41 @@
-import { Injectable } from '@nestjs/common';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { CalloutService } from './callout.service';
-import { ICallout } from '@domain/collaboration/callout/callout.interface';
-import {
-  LogContext,
-  AuthorizationPrivilege,
-  AuthorizationCredential,
-} from '@common/enums';
-import { EntityNotInitializedException } from '@common/exceptions';
-import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
-import { CalloutContributionType } from '@common/enums/callout.contribution.type';
-import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
   CREDENTIAL_RULE_CALLOUT_CREATED_BY,
   CREDENTIAL_RULE_TYPES_CALLOUT_UPDATE_PUBLISHER_ADMINS,
-  POLICY_RULE_CALLOUT_CREATE,
   POLICY_RULE_CALLOUT_CONTRIBUTE,
+  POLICY_RULE_CALLOUT_CREATE,
 } from '@common/constants';
-import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
-import { CalloutFramingAuthorizationService } from '../callout-framing/callout.framing.service.authorization';
-import { CalloutContributionAuthorizationService } from '../callout-contribution/callout.contribution.service.authorization';
-import { IRoleSet } from '@domain/access/role-set/role.set.interface';
-import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
+import {
+  AuthorizationCredential,
+  AuthorizationPrivilege,
+  LogContext,
+} from '@common/enums';
+import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
-import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { RoleName } from '@common/enums/role.name';
+import { EntityNotInitializedException } from '@common/exceptions';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
+import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
+import { IRoleSet } from '@domain/access/role-set/role.set.interface';
+import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { ICallout } from '@domain/collaboration/callout/callout.interface';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { ClassificationAuthorizationService } from '@domain/common/classification/classification.service.authorization';
+import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
+import { Injectable } from '@nestjs/common';
+import { CalloutContributionAuthorizationService } from '../callout-contribution/callout.contribution.service.authorization';
+import { CalloutFramingAuthorizationService } from '../callout-framing/callout.framing.service.authorization';
+import { CalloutService } from './callout.service';
 
 @Injectable()
 export class CalloutAuthorizationService {
   constructor(
     private calloutService: CalloutService,
     private authorizationPolicyService: AuthorizationPolicyService,
+    private classificationAuthorizationService: ClassificationAuthorizationService,
     private contributionAuthorizationService: CalloutContributionAuthorizationService,
     private calloutFramingAuthorizationService: CalloutFramingAuthorizationService,
     private roomAuthorizationService: RoomAuthorizationService,
@@ -53,6 +55,7 @@ export class CalloutAuthorizationService {
         comments: true,
         contributions: true,
         contributionDefaults: true,
+        classification: true,
         calloutsSet: {
           collaboration: {
             space: {
@@ -146,6 +149,15 @@ export class CalloutAuthorizationService {
           commentsAuthorization
         );
       updatedAuthorizations.push(commentsAuthorization);
+    }
+
+    if (callout.classification) {
+      const classificationAuthorizations =
+        await this.classificationAuthorizationService.applyAuthorizationPolicy(
+          callout.classification.id,
+          callout.authorization
+        );
+      updatedAuthorizations.push(...classificationAuthorizations);
     }
 
     return updatedAuthorizations;

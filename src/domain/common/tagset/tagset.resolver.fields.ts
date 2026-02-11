@@ -1,7 +1,6 @@
-import { Resolver } from '@nestjs/graphql';
-import { Parent, ResolveField } from '@nestjs/graphql';
-import { TagsetService } from './tagset.service';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { ITagset } from './tagset.interface';
+import { TagsetService } from './tagset.service';
 
 @Resolver(() => ITagset)
 export class TagsetResolverFields {

@@ -1,16 +1,16 @@
-import { Injectable } from '@nestjs/common';
+import { POLICY_RULE_READ_ABOUT } from '@common/constants';
+import { AuthorizationPrivilege } from '@common/enums';
+import { LogContext } from '@common/enums/logging.context';
+import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { CalloutsSetAuthorizationService } from '@domain/collaboration/callouts-set/callouts.set.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
-import { KnowledgeBaseService } from './knowledge.base.service';
+import { Injectable } from '@nestjs/common';
 import { IKnowledgeBase } from './knowledge.base.interface';
-import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
-import { LogContext } from '@common/enums/logging.context';
-import { CalloutsSetAuthorizationService } from '@domain/collaboration/callouts-set/callouts.set.service.authorization';
-import { AuthorizationPrivilege } from '@common/enums';
-import { POLICY_RULE_READ_ABOUT } from '@common/constants';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
-import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import { KnowledgeBaseService } from './knowledge.base.service';
 
 @Injectable()
 export class KnowledgeBaseAuthorizationService {

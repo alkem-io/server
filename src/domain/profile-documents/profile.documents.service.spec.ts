@@ -1,15 +1,16 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { ProfileDocumentsService } from './profile.documents.service';
-import { DocumentService } from '@domain/storage/document/document.service';
-import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
-import { uniqueId } from 'lodash';
-import { MimeTypeVisual } from '@common/enums/mime.file.type.visual';
-import { IAuthorizationPolicy } from '../common/authorization-policy';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { MimeTypeVisual } from '@common/enums/mime.file.type.visual';
 import { TagsetType } from '@common/enums/tagset.type';
 import { IDocument } from '@domain/storage/document';
+import { DocumentService } from '@domain/storage/document/document.service';
 import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
+import { Test, TestingModule } from '@nestjs/testing';
+import { uniqueId } from 'lodash';
+import { vi } from 'vitest';
+import { IAuthorizationPolicy } from '../common/authorization-policy';
+import { ProfileDocumentsService } from './profile.documents.service';
 
 const ALKEMIO_URL = 'https://alkem.io';
 const ALKEMIO_DOCUMENT_URL = `${ALKEMIO_URL}/api/private/rest/storage/document`;
@@ -86,23 +87,23 @@ describe('ProfileDocumentsService', () => {
         {
           provide: DocumentService,
           useValue: {
-            getDocumentsBaseUrlPath: jest.fn(),
-            isAlkemioDocumentURL: jest.fn(),
-            getDocumentFromURL: jest.fn(),
-            getPubliclyAccessibleURL: jest.fn(),
-            createDocument: jest.fn(),
+            getDocumentsBaseUrlPath: vi.fn(),
+            isAlkemioDocumentURL: vi.fn(),
+            getDocumentFromURL: vi.fn(),
+            getPubliclyAccessibleURL: vi.fn(),
+            createDocument: vi.fn(),
           },
         },
         {
           provide: StorageBucketService,
           useValue: {
-            addDocumentToStorageBucketOrFail: jest.fn(),
+            addDocumentToStorageBucketOrFail: vi.fn(),
           },
         },
         {
           provide: DocumentAuthorizationService,
           useValue: {
-            applyAuthorizationPolicy: jest.fn(),
+            applyAuthorizationPolicy: vi.fn(),
           },
         },
       ],
@@ -118,9 +119,7 @@ describe('ProfileDocumentsService', () => {
       const fileUrl = 'http://external.com/doc/1234';
       const storageBucket = mockStorageBucket();
 
-      jest
-        .spyOn(documentService, 'isAlkemioDocumentURL')
-        .mockReturnValue(false);
+      vi.spyOn(documentService, 'isAlkemioDocumentURL').mockReturnValue(false);
 
       const result = await service.reuploadFileOnStorageBucket(
         fileUrl,
@@ -135,9 +134,7 @@ describe('ProfileDocumentsService', () => {
       const fileUrl = 'http://external.com/doc/1234';
       const storageBucket = mockStorageBucket();
 
-      jest
-        .spyOn(documentService, 'isAlkemioDocumentURL')
-        .mockReturnValue(false);
+      vi.spyOn(documentService, 'isAlkemioDocumentURL').mockReturnValue(false);
 
       const result = await service.reuploadFileOnStorageBucket(
         fileUrl,
@@ -153,11 +150,11 @@ describe('ProfileDocumentsService', () => {
       const storageBucket: IStorageBucket = mockStorageBucket();
       const doc = mockDocument(storageBucket);
 
-      jest.spyOn(documentService, 'isAlkemioDocumentURL').mockReturnValue(true);
-      jest.spyOn(documentService, 'getDocumentFromURL').mockResolvedValue(doc);
-      jest
-        .spyOn(documentService, 'getPubliclyAccessibleURL')
-        .mockReturnValue(EXAMPLE_ALKEMIO_DOCUMENT_URL);
+      vi.spyOn(documentService, 'isAlkemioDocumentURL').mockReturnValue(true);
+      vi.spyOn(documentService, 'getDocumentFromURL').mockResolvedValue(doc);
+      vi.spyOn(documentService, 'getPubliclyAccessibleURL').mockReturnValue(
+        EXAMPLE_ALKEMIO_DOCUMENT_URL
+      );
 
       const result = await service.reuploadFileOnStorageBucket(
         fileUrl,
@@ -184,11 +181,11 @@ describe('ProfileDocumentsService', () => {
       mockDocument(storageBucketOrigin);
       mockDocument(storageBucketDestination);
 
-      jest.spyOn(documentService, 'isAlkemioDocumentURL').mockReturnValue(true);
-      jest.spyOn(documentService, 'getDocumentFromURL').mockResolvedValue(doc);
-      jest
-        .spyOn(documentService, 'getPubliclyAccessibleURL')
-        .mockReturnValue(EXAMPLE_ALKEMIO_DOCUMENT_URL);
+      vi.spyOn(documentService, 'isAlkemioDocumentURL').mockReturnValue(true);
+      vi.spyOn(documentService, 'getDocumentFromURL').mockResolvedValue(doc);
+      vi.spyOn(documentService, 'getPubliclyAccessibleURL').mockReturnValue(
+        EXAMPLE_ALKEMIO_DOCUMENT_URL
+      );
 
       const result = await service.reuploadFileOnStorageBucket(
         fileUrl,
@@ -217,23 +214,22 @@ describe('ProfileDocumentsService', () => {
       mockDocument(storageBucketOrigin);
       mockDocument(storageBucketDestination);
 
-      jest.spyOn(documentService, 'isAlkemioDocumentURL').mockReturnValue(true);
-      jest.spyOn(documentService, 'getDocumentFromURL').mockResolvedValue(doc);
+      vi.spyOn(documentService, 'isAlkemioDocumentURL').mockReturnValue(true);
+      vi.spyOn(documentService, 'getDocumentFromURL').mockResolvedValue(doc);
       const resultUrl = `${ALKEMIO_URL}/api/private/rest/storage/document/${uniqueId()}`;
-      jest
-        .spyOn(documentService, 'getPubliclyAccessibleURL')
-        .mockReturnValue(resultUrl);
+      vi.spyOn(documentService, 'getPubliclyAccessibleURL').mockReturnValue(
+        resultUrl
+      );
 
       const newDocMock = mockDocument(storageBucketDestination, {
         ...doc,
         id: uniqueId(),
       });
-      jest
-        .spyOn(documentService, 'createDocument')
-        .mockResolvedValue(newDocMock);
-      jest
-        .spyOn(storageBucketService, 'addDocumentToStorageBucketOrFail')
-        .mockResolvedValue(newDocMock);
+      vi.spyOn(documentService, 'createDocument').mockResolvedValue(newDocMock);
+      vi.spyOn(
+        storageBucketService,
+        'addDocumentToStorageBucketOrFail'
+      ).mockResolvedValue(newDocMock);
 
       const result = await service.reuploadFileOnStorageBucket(
         fileUrl,
@@ -258,9 +254,9 @@ describe('ProfileDocumentsService', () => {
           'Some text with an external URL: https://example.com/test/image.png\n\nMarkdown Link asf dsa [link](https://example.com/test/image2.png) fdsafdsa dsdsfdsfsd dsa d fda <img src="http://example.com/test/image3.png" alt="image in html"/> <a href="https://alkem.io" />';
         const storageBucketDestination = mockStorageBucket();
 
-        jest
-          .spyOn(documentService, 'getDocumentsBaseUrlPath')
-          .mockReturnValue(ALKEMIO_DOCUMENT_URL);
+        vi.spyOn(documentService, 'getDocumentsBaseUrlPath').mockReturnValue(
+          ALKEMIO_DOCUMENT_URL
+        );
 
         const result = await service.reuploadDocumentsInMarkdownToStorageBucket(
           markdown,
@@ -278,25 +274,22 @@ describe('ProfileDocumentsService', () => {
         const storageBucketDestination = mockStorageBucket();
         const doc = mockDocument(storageBucketDestination);
 
-        jest
-          .spyOn(documentService, 'getDocumentsBaseUrlPath')
-          .mockReturnValue(ALKEMIO_DOCUMENT_URL);
+        vi.spyOn(documentService, 'getDocumentsBaseUrlPath').mockReturnValue(
+          ALKEMIO_DOCUMENT_URL
+        );
 
-        jest
-          .spyOn(documentService, 'isAlkemioDocumentURL')
-          .mockReturnValue(true);
-        jest
-          .spyOn(documentService, 'getDocumentFromURL')
-          .mockResolvedValue(doc);
+        vi.spyOn(documentService, 'isAlkemioDocumentURL').mockReturnValue(true);
+        vi.spyOn(documentService, 'getDocumentFromURL').mockResolvedValue(doc);
 
-        jest
-          .spyOn(documentService, 'getPubliclyAccessibleURL')
-          .mockReturnValue(resultUrl);
+        vi.spyOn(documentService, 'getPubliclyAccessibleURL').mockReturnValue(
+          resultUrl
+        );
 
-        jest.spyOn(documentService, 'createDocument').mockResolvedValue(doc);
-        jest
-          .spyOn(storageBucketService, 'addDocumentToStorageBucketOrFail')
-          .mockResolvedValue(doc);
+        vi.spyOn(documentService, 'createDocument').mockResolvedValue(doc);
+        vi.spyOn(
+          storageBucketService,
+          'addDocumentToStorageBucketOrFail'
+        ).mockResolvedValue(doc);
 
         const result = await service.reuploadDocumentsInMarkdownToStorageBucket(
           markdown,

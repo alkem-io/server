@@ -1,18 +1,18 @@
-import { Field, Int, ObjectType } from '@nestjs/graphql';
+import { SpaceLevel } from '@common/enums/space.level';
+import { SpaceVisibility } from '@common/enums/space.visibility';
+import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { ICollaboration } from '@domain/collaboration/collaboration';
+import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
+import { ILicense } from '@domain/common/license/license.interface';
+import { NameID } from '@domain/common/scalars/scalar.nameid';
 import { ICommunity } from '@domain/community/community';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { IAccount } from '../account/account.interface';
-import { SpaceVisibility } from '@common/enums/space.visibility';
 import { ITemplatesManager } from '@domain/template/templates-manager';
-import { ILicense } from '@domain/common/license/license.interface';
-import { SpaceLevel } from '@common/enums/space.level';
-import { ISpaceSettings } from '../space.settings/space.settings.interface';
-import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
-import { NameID } from '@domain/common/scalars/scalar.nameid';
+import { Field, Int, ObjectType } from '@nestjs/graphql';
+import { IAccount } from '../account/account.interface';
 import { ISpaceAbout } from '../space.about/space.about.interface';
-import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
+import { ISpaceSettings } from '../space.settings/space.settings.interface';
 
 @ObjectType('Space')
 export class ISpace extends IAuthorizable {

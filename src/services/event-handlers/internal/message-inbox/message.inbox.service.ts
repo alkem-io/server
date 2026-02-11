@@ -1,30 +1,40 @@
-import { randomUUID } from 'crypto';
+import { LogContext } from '@common/enums';
+import { RoomType } from '@common/enums/room.type';
+import { MutationType } from '@common/enums/subscriptions';
+import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
+import { ConversationService } from '@domain/communication/conversation/conversation.service';
+import { IMessage } from '@domain/communication/message/message.interface';
+import { IRoom } from '@domain/communication/room/room.interface';
+import { RoomServiceEvents } from '@domain/communication/room/room.service.events';
+import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
+import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
+import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
+import { randomUUID } from 'crypto';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LogContext } from '@common/enums';
-import { MutationType } from '@common/enums/subscriptions';
-import { RoomType } from '@common/enums/room.type';
+import { MessageEditedEvent } from './message.edited.event';
+import { MessageNotificationService } from './message.notification.service';
 import { MessageReceivedEvent } from './message.received.event';
+import { MessageRedactedEvent } from './message.redacted.event';
 import { ReactionAddedEvent } from './reaction.added.event';
 import { ReactionRemovedEvent } from './reaction.removed.event';
-import { MessageEditedEvent } from './message.edited.event';
-import { MessageRedactedEvent } from './message.redacted.event';
 import { RoomCreatedEvent } from './room.created.event';
 import { RoomDmRequestedEvent } from './room.dm.requested.event';
 import { RoomMemberLeftEvent } from './room.member.left.event';
 import { RoomMemberUpdatedEvent } from './room.member.updated.event';
 import { RoomReceiptUpdatedEvent } from './room.receipt.updated.event';
-import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
-import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup.service';
-import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
-import { RoomServiceEvents } from '@domain/communication/room/room.service.events';
-import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
-import { MessageNotificationService } from './message.notification.service';
 import { VcInvocationService } from './vc.invocation.service';
-import { IMessage } from '@domain/communication/message/message.interface';
-import { ConversationService } from '@domain/communication/conversation/conversation.service';
-import { IRoom } from '@domain/communication/room/room.interface';
+
+/**
+ * Check if a room is a conversation room (direct messaging).
+ */
+function isConversationRoom(room: IRoom): boolean {
+  return (
+    room.type === RoomType.CONVERSATION ||
+    room.type === RoomType.CONVERSATION_DIRECT
+  );
+}
 
 /**
  * Event handler service for Matrix events.
@@ -87,18 +97,12 @@ export class MessageInboxService {
 
     // Publish conversation events for direct messaging rooms
     // Note: conversationCreated is fired when conversation is created, not on first message
-    if (
-      room.type === RoomType.CONVERSATION ||
-      room.type === RoomType.CONVERSATION_DIRECT
-    ) {
+    if (isConversationRoom(room)) {
       await this.publishMessageReceivedConversationEvent(room, message);
     }
 
     // Process notifications (skip for conversation rooms)
-    if (
-      room.type !== RoomType.CONVERSATION &&
-      room.type !== RoomType.CONVERSATION_DIRECT
-    ) {
+    if (!isConversationRoom(room)) {
       const agentInfo = await this.agentInfoService.buildAgentInfoForAgent(
         payload.actorID
       );
@@ -122,12 +126,14 @@ export class MessageInboxService {
     payload: MessageReceivedEvent['payload'],
     room: IRoom
   ): Promise<void> {
-    // Direct conversations have special handling
-    if (room.type === RoomType.CONVERSATION_DIRECT) {
+    // Conversation rooms use direct VC invocation
+    // This handles USER_VC conversations where the VC should respond to every message
+    if (isConversationRoom(room)) {
       await this.vcInvocationService.processDirectConversation(payload, room);
       return;
     }
 
+    // For other room types (e.g., discussions), use thread-based VC tracking
     // Determine threadID: use existing or message ID as new thread root
     const threadID = payload.message.threadID || payload.message.id;
 
@@ -226,10 +232,7 @@ export class MessageInboxService {
     );
 
     // Publish conversation event for direct messaging rooms
-    if (
-      room.type === RoomType.CONVERSATION ||
-      room.type === RoomType.CONVERSATION_DIRECT
-    ) {
+    if (isConversationRoom(room)) {
       await this.publishMessageRemovedConversationEvent(
         room,
         payload.redactedMessageId
@@ -362,10 +365,7 @@ export class MessageInboxService {
     });
 
     // Publish conversation events for direct messaging rooms
-    if (
-      room.type === RoomType.CONVERSATION ||
-      room.type === RoomType.CONVERSATION_DIRECT
-    ) {
+    if (isConversationRoom(room)) {
       await this.publishReadReceiptConversationEvent(room, payload);
     }
   }

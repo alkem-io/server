@@ -1,18 +1,18 @@
+import { LogContext } from '@common/enums';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { EntityNotFoundException } from '@common/exceptions';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository } from 'typeorm';
-import { EntityNotFoundException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import {
-  UpdateReferenceInput,
   CreateReferenceInput,
   DeleteReferenceInput,
-  Reference,
   IReference,
+  Reference,
+  UpdateReferenceInput,
 } from '../reference';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
-import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class ReferenceService {

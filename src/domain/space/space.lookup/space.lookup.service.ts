@@ -1,13 +1,14 @@
 import { LogContext } from '@common/enums';
-import { Injectable, Inject, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { ISpace } from '../space/space.interface';
+import { SpaceLevel } from '@common/enums/space.level';
 import {
   EntityNotFoundException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
-import { Space } from '../space/space.entity';
+import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
+import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import {
   EntityManager,
   FindManyOptions,
@@ -16,11 +17,10 @@ import {
   Not,
   Repository,
 } from 'typeorm';
-import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { AccountLookupService } from '../account.lookup/account.lookup.service';
+import { Space } from '../space/space.entity';
+import { ISpace } from '../space/space.interface';
 import { ISpaceAbout } from '../space.about';
-import { SpaceLevel } from '@common/enums/space.level';
 
 @Injectable()
 export class SpaceLookupService {

@@ -19,4 +19,4 @@ ts: pnpm exec tsc -w --noEmit --preserveWatchOutput 2>&1 | tee -a /tmp/overmind-
 test: pnpm test:watch 2>&1 | tee -a /tmp/overmind-log.txt
 
 # NestJS development server with hot reload
-app: pnpm start:dev 2>&1 | tee -a /tmp/overmind-log.txt
+app: pnpm start:dev 2>&1 | tee ../../tmp/overmind-log.txt

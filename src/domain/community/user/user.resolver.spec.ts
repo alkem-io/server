@@ -1,18 +1,19 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { UserResolverQueries } from './user.resolver.queries';
-import { UserResolverMutations } from './user.resolver.mutations';
-import { MockCacheManager } from '@test/mocks/cache-manager.mock';
-import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
-import { MockUserService } from '@test/mocks/user.service.mock';
-import { MockAuthorizationService } from '@test/mocks/authorization.service.mock';
-import { MockAuthorizationPolicyService } from '@test/mocks/authorization.policy.service.mock';
-import { MockAgentService } from '@test/mocks/agent.service.mock';
-import { MockCommunicationAdapter } from '@test/mocks/communication.adapter.mock';
-import { MockUserAuthorizationService } from '@test/mocks/user.authorization.service.mock';
-import { MockNotificationsService } from '@test/mocks/notifications.service.mock';
-import { MockNotificationPlatformAdapter } from '@test/mocks/notification.platform.adapter.service.mock';
-import { MockPlatformAuthorizationService } from '@test/mocks/platform.authorization.service.mock';
 import { MockEntityManagerProvider } from '@test/mocks';
+import { MockAgentService } from '@test/mocks/agent.service.mock';
+import { MockAuthorizationPolicyService } from '@test/mocks/authorization.policy.service.mock';
+import { MockAuthorizationService } from '@test/mocks/authorization.service.mock';
+import { MockCacheManager } from '@test/mocks/cache-manager.mock';
+import { MockCommunicationAdapter } from '@test/mocks/communication.adapter.mock';
+import { MockNotificationPlatformAdapter } from '@test/mocks/notification.platform.adapter.service.mock';
+import { MockNotificationsService } from '@test/mocks/notifications.service.mock';
+import { MockPlatformAuthorizationService } from '@test/mocks/platform.authorization.service.mock';
+import { MockUserAuthorizationService } from '@test/mocks/user.authorization.service.mock';
+import { MockUserService } from '@test/mocks/user.service.mock';
+import { MockUserSettingsHomeSpaceValidationService } from '@test/mocks/user.settings.home.space.validation.service.mock';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
+import { UserResolverMutations } from './user.resolver.mutations';
+import { UserResolverQueries } from './user.resolver.queries';
 
 describe('UserResolver', () => {
   let resolver: UserResolverQueries;
@@ -30,6 +31,7 @@ describe('UserResolver', () => {
         MockPlatformAuthorizationService,
         MockCommunicationAdapter,
         MockUserAuthorizationService,
+        MockUserSettingsHomeSpaceValidationService,
         MockNotificationPlatformAdapter,
         MockNotificationsService,
         MockEntityManagerProvider,

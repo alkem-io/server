@@ -1,15 +1,3 @@
-import { Injectable } from '@nestjs/common';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
-import { PlatformService } from './platform.service';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
-import {
-  AuthorizationCredential,
-  AuthorizationPrivilege,
-  LogContext,
-} from '@common/enums';
-import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
   CREDENTIAL_RULE_PLATFORM_CREATE_ORGANIZATION,
   CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_GUIDANCE,
@@ -20,16 +8,28 @@ import {
   CREDENTIAL_RULE_TYPES_PLATFORM_MGMT,
   CREDENTIAL_RULE_TYPES_PLATFORM_READ_REGISTERED,
 } from '@common/constants';
-import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
-import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
-import { ForumAuthorizationService } from '@platform/forum/forum.service.authorization';
-import { LibraryAuthorizationService } from '@library/library/library.service.authorization';
-import { TemplatesManagerAuthorizationService } from '@domain/template/templates-manager/templates.manager.service.authorization';
-import { LicensingFrameworkAuthorizationService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service.authorization';
-import { RoleSetAuthorizationService } from '@domain/access/role-set/role.set.service.authorization';
-import { IRoleSet } from '@domain/access/role-set/role.set.interface';
+import {
+  AuthorizationCredential,
+  AuthorizationPrivilege,
+  LogContext,
+} from '@common/enums';
 import { RoleSetType } from '@common/enums/role.set.type';
+import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
+import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import { IRoleSet } from '@domain/access/role-set/role.set.interface';
+import { RoleSetAuthorizationService } from '@domain/access/role-set/role.set.service.authorization';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { MessagingAuthorizationService } from '@domain/communication/messaging/messaging.service.authorization';
+import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
+import { TemplatesManagerAuthorizationService } from '@domain/template/templates-manager/templates.manager.service.authorization';
+import { LibraryAuthorizationService } from '@library/library/library.service.authorization';
+import { Injectable } from '@nestjs/common';
+import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
+import { ForumAuthorizationService } from '@platform/forum/forum.service.authorization';
+import { LicensingFrameworkAuthorizationService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service.authorization';
+import { PlatformService } from './platform.service';
 
 @Injectable()
 export class PlatformAuthorizationService {

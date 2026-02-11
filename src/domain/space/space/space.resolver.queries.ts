@@ -1,16 +1,16 @@
+import { RestrictedSpaceNames } from '@common/enums/restricted.space.names';
+import { PaginatedSpaces, PaginationArgs } from '@core/pagination';
+import { InnovationHub } from '@domain/innovation-hub/types';
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Query, Resolver } from '@nestjs/graphql';
-import { InnovationHub as InnovationHubDecorator } from '@src/common/decorators';
-import { SpaceService } from './space.service';
-import { ISpace } from './space.interface';
-import { SpacesQueryArgs } from './dto/space.args.query.spaces';
-import { ExploreSpacesInput } from './dto/explore.spaces.dto.input';
-import { InnovationHub } from '@domain/innovation-hub/types';
-import { PaginatedSpaces, PaginationArgs } from '@core/pagination';
 import { SpaceFilterInput } from '@services/infrastructure/space-filter/dto/space.filter.dto.input';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { InstrumentResolver } from '@src/apm/decorators';
-import { RestrictedSpaceNames } from '@common/enums/restricted.space.names';
+import { InnovationHub as InnovationHubDecorator } from '@src/common/decorators';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { ExploreSpacesInput } from './dto/explore.spaces.dto.input';
+import { SpacesQueryArgs } from './dto/space.args.query.spaces';
+import { ISpace } from './space.interface';
+import { SpaceService } from './space.service';
 
 @InstrumentResolver()
 @Resolver()

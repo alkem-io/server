@@ -1,14 +1,14 @@
-import { Args, ResolveField, Resolver } from '@nestjs/graphql';
-import { PlatformAdminCommunicationQueryResults } from './dto/platform.admin.query.communication.results';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { Args, ResolveField, Resolver } from '@nestjs/graphql';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
-import { CommunicationAdminOrphanedUsageResult } from '../domain/communication/dto/admin.communication.dto.orphaned.usage.result';
+import { AdminCommunicationService } from '../domain/communication/admin.communication.service';
 import { CommunicationAdminMembershipInput } from '../domain/communication/dto/admin.communication.dto.membership.input';
 import { CommunicationAdminMembershipResult } from '../domain/communication/dto/admin.communication.dto.membership.result';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { AdminCommunicationService } from '../domain/communication/admin.communication.service';
+import { CommunicationAdminOrphanedUsageResult } from '../domain/communication/dto/admin.communication.dto.orphaned.usage.result';
+import { PlatformAdminCommunicationQueryResults } from './dto/platform.admin.query.communication.results';
 
 @Resolver(() => PlatformAdminCommunicationQueryResults)
 export class PlatformAdminCommunicationResolverFields {

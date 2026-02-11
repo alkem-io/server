@@ -41,7 +41,7 @@ if ! command -v yq &> /dev/null; then
 fi
 
 # Check yq version (only versions >= 4 are supported)
-YQ_VERSION=$(yq --version | awk '{print $4}' | cut -d. -f1)
+YQ_VERSION=$(yq --version | awk '{print $4}' | sed 's/^v//' | cut -d. -f1)
 if [[ "$YQ_VERSION" -lt 4 ]]; then
     echo "yq version is lower than 4. Please upgrade yq to version 4 or higher."
     exit 1

@@ -1,31 +1,31 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LogContext } from '@common/enums';
 import {
   MatrixAdapterEventType,
-  MessageReceivedPayload,
-  ReactionAddedEvent as MatrixReactionAddedEvent,
-  ReactionRemovedEvent as MatrixReactionRemovedEvent,
+  DMRequestedEvent as MatrixDMRequestedEvent,
   MessageEditedEvent as MatrixMessageEditedEvent,
   MessageRedactedEvent as MatrixMessageRedactedEvent,
+  ReactionAddedEvent as MatrixReactionAddedEvent,
+  ReactionRemovedEvent as MatrixReactionRemovedEvent,
+  ReadReceiptUpdatedEvent as MatrixReadReceiptUpdatedEvent,
   RoomCreatedEvent as MatrixRoomCreatedEvent,
-  DMRequestedEvent as MatrixDMRequestedEvent,
   RoomMemberLeftEvent as MatrixRoomMemberLeftEvent,
   RoomMemberUpdatedEvent as MatrixRoomMemberUpdatedEvent,
-  ReadReceiptUpdatedEvent as MatrixReadReceiptUpdatedEvent,
+  MessageReceivedPayload,
 } from '@alkemio/matrix-adapter-lib';
-import { RabbitSubscribe, Nack } from '@golevelup/nestjs-rabbitmq';
+import { LogContext } from '@common/enums';
+import { Nack, RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { MessageEditedEvent } from '@services/event-handlers/internal/message-inbox/message.edited.event';
 import { MessageReceivedEvent } from '@services/event-handlers/internal/message-inbox/message.received.event';
+import { MessageRedactedEvent } from '@services/event-handlers/internal/message-inbox/message.redacted.event';
 import { ReactionAddedEvent } from '@services/event-handlers/internal/message-inbox/reaction.added.event';
 import { ReactionRemovedEvent } from '@services/event-handlers/internal/message-inbox/reaction.removed.event';
-import { MessageEditedEvent } from '@services/event-handlers/internal/message-inbox/message.edited.event';
-import { MessageRedactedEvent } from '@services/event-handlers/internal/message-inbox/message.redacted.event';
 import { RoomCreatedEvent } from '@services/event-handlers/internal/message-inbox/room.created.event';
 import { RoomDmRequestedEvent } from '@services/event-handlers/internal/message-inbox/room.dm.requested.event';
 import { RoomMemberLeftEvent } from '@services/event-handlers/internal/message-inbox/room.member.left.event';
 import { RoomMemberUpdatedEvent } from '@services/event-handlers/internal/message-inbox/room.member.updated.event';
 import { RoomReceiptUpdatedEvent } from '@services/event-handlers/internal/message-inbox/room.receipt.updated.event';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 /**
  * Boundary service for Matrix Adapter RabbitMQ events.

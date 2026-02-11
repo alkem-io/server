@@ -1,5 +1,4 @@
-import { Resolver } from '@nestjs/graphql';
-import { Parent, ResolveField } from '@nestjs/graphql';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { ICredential } from './credential.interface';
 
 @Resolver(() => ICredential)

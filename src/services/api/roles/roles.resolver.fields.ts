@@ -1,16 +1,15 @@
-import { Parent, Resolver } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
-import { Args, ResolveField } from '@nestjs/graphql';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { CommunityInvitationForRoleResult } from './dto/roles.dto.result.community.invitation';
-import { RolesService } from './roles.service';
-import { ContributorRoles } from './dto/roles.dto.result.contributor';
-import { CommunityApplicationForRoleResult } from './dto/roles.dto.result.community.application';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { AuthorizationPrivilege } from '@common/enums';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
+import { CurrentUser } from '@src/common/decorators';
+import { CommunityApplicationForRoleResult } from './dto/roles.dto.result.community.application';
+import { CommunityInvitationForRoleResult } from './dto/roles.dto.result.community.invitation';
+import { ContributorRoles } from './dto/roles.dto.result.contributor';
 import { RolesResultOrganization } from './dto/roles.dto.result.organization';
 import { RolesResultSpace } from './dto/roles.dto.result.space';
+import { RolesService } from './roles.service';
 
 @Resolver(() => ContributorRoles)
 export class RolesResolverFields {

@@ -1552,8 +1552,8 @@ type Callout {
   posts: [Post!]
   """The user that published this Callout"""
   publishedBy: User
-  """The timestamp for the publishing of this Callout."""
-  publishedDate: Float
+  """The Date of the publishing of this Callout."""
+  publishedDate: DateTime
   """The Callout Settings associated with this Callout."""
   settings: CalloutSettings!
   """The sorting order for this Callout."""
@@ -2779,7 +2779,7 @@ type ISearchCategoryResult {
 type ISearchResults {
   """The search results for Callouts."""
   calloutResults: ISearchCategoryResult!
-  """The search results for contributions (Posts, Whiteboards etc)."""
+  """The search results for contributions (Posts, Whiteboards, Memos)."""
   contributionResults: ISearchCategoryResult!
   """The search results for contributors (Users, Organizations)."""
   contributorResults: ISearchCategoryResult!
@@ -3279,18 +3279,6 @@ type Message {
   timestamp: Float!
 }
 
-"""A detailed answer to a question, typically from an AI service."""
-type MessageAnswerQuestion {
-  """Error message if an error occurred"""
-  error: String
-  """The id of the answer; null if an error was returned"""
-  id: String
-  """The original question"""
-  question: String!
-  """Message successfully sent. If false, error will have the reason."""
-  success: Boolean!
-}
-
 """
 Details about a message, including the room it was sent in and the parent entity that is using the room.
 """
@@ -3428,8 +3416,6 @@ type Mutation {
   aiServerUpdateAiPersona(aiPersonaData: UpdateAiPersonaInput!): AiPersona!
   """Apply to join the specified RoleSet in the entry Role."""
   applyForEntryRoleOnRoleSet(applicationData: ApplyForEntryRoleOnRoleSetInput!): Application!
-  """Ask the chat engine for guidance."""
-  askVcQuestion(input: ConversationVcAskQuestionInput!): MessageAnswerQuestion!
   """Assign the specified LicensePlan to an Account."""
   assignLicensePlanToAccount(planData: AssignLicensePlanToAccount!): Account!
   """Assign the specified LicensePlan to a Space."""
@@ -3582,8 +3568,6 @@ type Mutation {
   eventOnInvitation(eventData: InvitationEventInput!): Invitation!
   """Trigger an event on the Organization Verification."""
   eventOnOrganizationVerification(eventData: OrganizationVerificationEventInput!): OrganizationVerification!
-  """User vote if a specific answer is relevant."""
-  feedbackOnVcAnswerRelevance(input: ConversationVcAnswerRelevanceInput!): Boolean!
   """Grants an authorization credential to an Organization."""
   grantCredentialToOrganization(grantCredentialData: GrantOrganizationAuthorizationCredentialInput!): Organization!
   """Grants an authorization credential to a User."""
@@ -3638,7 +3622,7 @@ type Mutation {
   removeRoleFromVirtualContributor(roleData: RemoveRoleOnRoleSetFromVirtualContributorInput!): VirtualContributor!
   """Removes the specified User from specified user group"""
   removeUserFromGroup(membershipData: RemoveUserGroupMemberInput!): UserGroup!
-  """Resets the interaction with the chat engine."""
+  """Resets the interaction with the VC by recreating the room."""
   resetConversationVc(input: ConversationVcResetInput!): Conversation!
   """Reset all license plans on Accounts"""
   resetLicenseOnAccounts: Space!
@@ -4939,6 +4923,27 @@ type SearchResultCallout implements SearchResult {
   type: SearchResultType!
 }
 
+type SearchResultMemo implements SearchResult {
+  """The Callout of the Memo."""
+  callout: Callout!
+  """
+  The identifier of the search result. Does not represent the entity in Alkemio.
+  """
+  id: UUID!
+  """Whether the Memo is a contribution (response) or part of the framing."""
+  isContribution: Boolean!
+  """The Memo that was found."""
+  memo: Memo!
+  """The score for this search result; more matches means a higher score."""
+  score: Float!
+  """The Space of the Memo."""
+  space: Space!
+  """The terms that were matched for this result"""
+  terms: [String!]!
+  """The type of returned result for this search."""
+  type: SearchResultType!
+}
+
 type SearchResultOrganization implements SearchResult {
   """
   The identifier of the search result. Does not represent the entity in Alkemio.
@@ -5003,6 +5008,29 @@ type SearchResultUser implements SearchResult {
   type: SearchResultType!
   """The User that was found."""
   user: User!
+}
+
+type SearchResultWhiteboard implements SearchResult {
+  """The Callout of the Whiteboard."""
+  callout: Callout!
+  """
+  The identifier of the search result. Does not represent the entity in Alkemio.
+  """
+  id: UUID!
+  """
+  Whether the Whiteboard is a contribution (response) or part of the framing.
+  """
+  isContribution: Boolean!
+  """The score for this search result; more matches means a higher score."""
+  score: Float!
+  """The Space of the Whiteboard."""
+  space: Space!
+  """The terms that were matched for this result"""
+  terms: [String!]!
+  """The type of returned result for this search."""
+  type: SearchResultType!
+  """The Whiteboard that was found."""
+  whiteboard: Whiteboard!
 }
 
 type Sentry {
@@ -5671,6 +5699,8 @@ type UserSettings {
   communication: UserSettingsCommunication!
   """The date at which the entity was created."""
   createdDate: DateTime!
+  """The home space settings for this User."""
+  homeSpace: UserSettingsHomeSpace!
   """The ID of the entity"""
   id: UUID!
   """The notification settings for this User."""
@@ -5684,6 +5714,13 @@ type UserSettings {
 type UserSettingsCommunication {
   """Allow Users to send messages to this User."""
   allowOtherUsersToSendMessages: Boolean!
+}
+
+type UserSettingsHomeSpace {
+  """Automatically redirect to home space instead of the dashboard."""
+  autoRedirect: Boolean!
+  """The ID of the Space to use as home. Null if not set."""
+  spaceID: String
 }
 
 type UserSettingsNotification {
@@ -6201,26 +6238,8 @@ input ContributorFilterInput {
   credentials: [AuthorizationCredential!]
 }
 
-input ConversationVcAnswerRelevanceInput {
-  """The ID of the conversation."""
-  conversationID: UUID!
-  """The answer id."""
-  id: String!
-  """Is the answer relevant or not."""
-  relevant: Boolean!
-}
-
-input ConversationVcAskQuestionInput {
-  """The ID of the conversation."""
-  conversationID: UUID!
-  """The language of the answer."""
-  language: String
-  """The question that is being asked."""
-  question: String!
-}
-
 input ConversationVcResetInput {
-  """The ID of the conversation."""
+  """The ID of the Conversation to reset."""
   conversationID: UUID!
 }
 
@@ -6236,11 +6255,11 @@ input ConvertSpaceL1ToSpaceL0Input {
 
 input ConvertSpaceL1ToSpaceL2Input {
   """
-  The Space L1 to be the parent of the Space L1 when it is moved to be L2. 
+  The Space L1 to be the parent of the Space L1 when it is moved to be L2.
   """
   parentSpaceL1ID: UUID!
   """
-  The Space L1 to be moved to be a child of another Space L. Both the L1 Space and the parent Space must be in the same L0 Space. 
+  The Space L1 to be moved to be a child of another Space L. Both the L1 Space and the parent Space must be in the same L0 Space.
   """
   spaceL1ID: UUID!
 }
@@ -7959,10 +7978,19 @@ input UpdateUserSettingsCommunicationInput {
 input UpdateUserSettingsEntityInput {
   """Settings related to this users Communication preferences."""
   communication: UpdateUserSettingsCommunicationInput
+  """Settings related to Home Space."""
+  homeSpace: UpdateUserSettingsHomeSpaceInput
   """Settings related to this users Notifications preferences."""
   notification: UpdateUserSettingsNotificationInput
   """Settings related to Privacy."""
   privacy: UpdateUserSettingsPrivacyInput
+}
+
+input UpdateUserSettingsHomeSpaceInput {
+  """Automatically redirect to home space instead of the dashboard."""
+  autoRedirect: Boolean
+  """The ID of the Space to use as home. Set to null to clear."""
+  spaceID: UUID
 }
 
 input UpdateUserSettingsInput {

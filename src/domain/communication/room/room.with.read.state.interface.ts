@@ -1,5 +1,5 @@
-import { Field, Int, ObjectType } from '@nestjs/graphql';
 import { MessageID, UUID } from '@domain/common/scalars';
+import { Field, Int, ObjectType } from '@nestjs/graphql';
 import { IMessage } from '../message/message.interface';
 
 @ObjectType('RoomWithReadState')

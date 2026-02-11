@@ -2,8 +2,8 @@ import { UUID } from '@domain/common/scalars';
 import { ExternalMetadata } from '@domain/communication/vc-interaction/vc.interaction.entity';
 import { Field, InputType } from '@nestjs/graphql';
 import { PromptGraph } from '../../../prompt-graph/dto/prompt.graph.dto';
-import { ResultHandler } from './result.handler.dto';
 import { InvocationOperation } from './invocation.operation.dto';
+import { ResultHandler } from './result.handler.dto';
 
 @InputType()
 export class AiPersonaInvocationInput {
