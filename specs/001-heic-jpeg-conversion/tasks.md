@@ -17,9 +17,9 @@
 
 **Purpose**: Install new dependency and register provider
 
-- [ ] T001 Install `heic-convert` as a production dependency, `@types/heic-convert` as a dev dependency, and `sharp` as a production dependency via `pnpm add heic-convert sharp && pnpm add -D @types/heic-convert` and verify lockfile updates in `package.json` and `pnpm-lock.yaml`
-- [ ] T002 [P] Add HEIC and HEIF entries to `MimeTypeVisual` enum in `src/common/enums/mime.file.type.visual.ts` — add `HEIC = 'image/heic'` and `HEIF = 'image/heif'`
-- [ ] T003 [P] Add `'image/heic'` and `'image/heif'` to `VISUAL_ALLOWED_TYPES` array in `src/domain/common/visual/visual.constraints.ts`
+- [X] T001 Install `heic-convert` as a production dependency, `@types/heic-convert` as a dev dependency, and `sharp` as a production dependency via `pnpm add heic-convert sharp && pnpm add -D @types/heic-convert` and verify lockfile updates in `package.json` and `pnpm-lock.yaml`
+- [X] T002 [P] Add HEIC and HEIF entries to `MimeTypeVisual` enum in `src/common/enums/mime.file.type.visual.ts` — add `HEIC = 'image/heic'` and `HEIF = 'image/heif'`
+- [X] T003 [P] Add `'image/heic'` and `'image/heif'` to `VISUAL_ALLOWED_TYPES` array in `src/domain/common/visual/visual.constraints.ts`
 
 ---
 
@@ -29,7 +29,7 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 Create `ImageConversionService` in `src/domain/common/visual/image.conversion.service.ts` implementing the interface from `contracts/heic-conversion.md`:
+- [X] T004 Create `ImageConversionService` in `src/domain/common/visual/image.conversion.service.ts` implementing the interface from `contracts/heic-conversion.md`:
   - Define `HEIC_MIME_TYPES` and `HEIC_FILE_EXTENSIONS` constants
   - Implement `isHeicFormat(mimeType: string, fileName: string): boolean` — checks MIME type against `HEIC_MIME_TYPES` and file extension against `HEIC_FILE_EXTENSIONS`
   - Implement `convertIfNeeded(buffer: Buffer, mimeType: string, fileName: string): Promise<ImageConversionResult>` — if HEIC detected, convert via `convert({ buffer, format: 'JPEG', quality: 1 })` using `heic-convert`, update MIME type to `image/jpeg`, change file extension to `.jpg`, return `{ buffer, mimeType, fileName, converted: true }`; otherwise return inputs unchanged with `converted: false`
@@ -37,7 +37,7 @@
   - Wrap heic-convert errors in `ValidationException` with static message pattern ("Failed to convert HEIC image") and original error in `details` per coding standards
   - Inject NestJS `Logger` and log conversion events at verbose level: source MIME, target MIME, original size, converted size, conversion duration (FR-008)
   - Use `@Injectable()` decorator for NestJS DI
-- [ ] T004b Create `ImageCompressionService` in `src/domain/common/visual/image.compression.service.ts` implementing the interface from `contracts/heic-conversion.md`:
+- [X] T004b Create `ImageCompressionService` in `src/domain/common/visual/image.compression.service.ts` implementing the interface from `contracts/heic-conversion.md`:
   - Define `COMPRESSION_QUALITY` (82), `MAX_DIMENSION` (4096), `NON_COMPRESSIBLE_MIMES` (['image/svg+xml', 'image/gif', 'image/png', 'image/x-png']) constants
   - Implement `isCompressibleFormat(mimeType: string): boolean` — returns false for SVG, GIF, PNG
   - Implement `compressIfNeeded(buffer: Buffer, mimeType: string, fileName: string): Promise<ImageCompressionResult>` — if format is compressible:
@@ -50,8 +50,8 @@
   - Wrap sharp errors in `ValidationException` with static message ("Failed to compress image") and original error in `details`
   - Inject NestJS `Logger` and log compression events at verbose level: original size, final size, quality used, resize applied, compression duration
   - Use `@Injectable()` decorator for NestJS DI
-- [ ] T005 Register `ImageConversionService` and `ImageCompressionService` as providers in `src/domain/common/visual/visual.module.ts`
-- [ ] T006 Create unit tests for `ImageConversionService` in `src/domain/common/visual/__tests__/image.conversion.service.spec.ts`:
+- [X] T005 Register `ImageConversionService` and `ImageCompressionService` as providers in `src/domain/common/visual/visual.module.ts`
+- [X] T006 Create unit tests for `ImageConversionService` in `src/domain/common/visual/__tests__/image.conversion.service.spec.ts`:
   - Test `isHeicFormat()` returns true for `image/heic`, `image/heif` MIME types
   - Test `isHeicFormat()` returns true for `.heic`, `.heif` extensions regardless of MIME type
   - Test `isHeicFormat()` returns false for `image/jpeg`, `image/png`, etc.
@@ -59,7 +59,7 @@
   - Test `convertIfNeeded()` rejects HEIC files exceeding 15MB with `ValidationException`
   - Test `convertIfNeeded()` converts HEIC buffer and returns `mimeType: 'image/jpeg'`, `fileName` ending in `.jpg`, `converted: true` (use a real small HEIC fixture or mock heic-convert)
   - Test `convertIfNeeded()` wraps heic-convert errors in `ValidationException` with details payload
-- [ ] T006b Create unit tests for `ImageCompressionService` in `src/domain/common/visual/__tests__/image.compression.service.spec.ts`:
+- [X] T006b Create unit tests for `ImageCompressionService` in `src/domain/common/visual/__tests__/image.compression.service.spec.ts`:
   - Test `isCompressibleFormat()` returns false for `image/svg+xml`, `image/gif`, `image/png`
   - Test `isCompressibleFormat()` returns true for `image/jpeg`, `image/webp`
   - Test `compressIfNeeded()` optimizes a small (500KB) JPEG buffer (mock sharp) with `compressed: true`
@@ -82,14 +82,14 @@
 
 ### Implementation for User Story 1
 
-- [ ] T007 [US1] Inject `ImageConversionService` and `ImageCompressionService` into `VisualService` constructor in `src/domain/common/visual/visual.service.ts` — add constructor parameters and private fields
-- [ ] T008 [US1] Integrate HEIC conversion and compression into `VisualService.uploadImageOnVisual()` in `src/domain/common/visual/visual.service.ts`:
+- [X] T007 [US1] Inject `ImageConversionService` and `ImageCompressionService` into `VisualService` constructor in `src/domain/common/visual/visual.service.ts` — add constructor parameters and private fields
+- [X] T008 [US1] Integrate HEIC conversion and compression into `VisualService.uploadImageOnVisual()` in `src/domain/common/visual/visual.service.ts`:
   - After `const buffer = await streamToBuffer(readStream)` and before `const { imageHeight, imageWidth } = await this.getImageDimensions(buffer)`
   - Call `const conversionResult = await this.imageConversionService.convertIfNeeded(buffer, mimetype, fileName)`
   - Call `const compressionResult = await this.imageCompressionService.compressIfNeeded(conversionResult.buffer, conversionResult.mimeType, conversionResult.fileName)`
   - Use `compressionResult.buffer` for downstream dimension validation and storage
   - Pass `compressionResult.mimeType` and `compressionResult.fileName` to `this.storageBucketService.uploadFileAsDocumentFromBuffer()` instead of the originals
-- [ ] T009 [US1] Update MIME type validation in `VisualService.validateMimeType()` in `src/domain/common/visual/visual.service.ts`:
+- [X] T009 [US1] Update MIME type validation in `VisualService.validateMimeType()` in `src/domain/common/visual/visual.service.ts`:
   - Expand validation to also check against `DEFAULT_VISUAL_CONSTRAINTS[visual.name].allowedTypes` (code-level fix per data-model.md) so that existing Visual entities in the database with stale `allowedTypes` still accept HEIC
   - This avoids a database migration for existing visuals
 
@@ -105,8 +105,8 @@
 
 ### Implementation for User Story 2
 
-- [ ] T010 [US2] Verify that the optimization pipeline in `VisualService.uploadImageOnVisual()` handles all JPEG/WebP images correctly — since `compressIfNeeded()` runs for all compressible images, every JPEG/WebP should be optimized. Confirm with manual test or write an integration test.
-- [ ] T010b [US2] Integration test: upload a JPEG of any size via `uploadImageOnVisual` → verify stored file is optimized (quality 80–85, max 4096px). Upload a PNG → verify stored file is unchanged.
+- [X] T010 [US2] Verify that the optimization pipeline in `VisualService.uploadImageOnVisual()` handles all JPEG/WebP images correctly — since `compressIfNeeded()` runs for all compressible images, every JPEG/WebP should be optimized. Confirm with manual test or write an integration test.
+- [X] T010b [US2] Integration test: upload a JPEG of any size via `uploadImageOnVisual` → verify stored file is optimized (quality 80–85, max 4096px). Upload a PNG → verify stored file is unchanged.
 
 **Checkpoint**: Image optimization works for all JPEG, WebP, and converted HEIC uploads. PNG passes through unchanged.
 
@@ -120,7 +120,7 @@
 
 ### Implementation for User Story 3
 
-- [ ] T010c [US3] Verify and document that the existing upload pipeline already handles mixed formats correctly — since `convertIfNeeded()` + `compressIfNeeded()` are per-file operations called within `uploadImageOnVisual()`, mixed format batches are handled by design. Confirm that the `uploadFileOnStorageBucket` mutation path also supports both conversion and compression:
+- [X] T010c [US3] Verify and document that the existing upload pipeline already handles mixed formats correctly — since `convertIfNeeded()` + `compressIfNeeded()` are per-file operations called within `uploadImageOnVisual()`, mixed format batches are handled by design. Confirm that the `uploadFileOnStorageBucket` mutation path also supports both conversion and compression:
   - Inject `ImageConversionService` and `ImageCompressionService` into `StorageBucketService` in `src/domain/storage/storage-bucket/storage.bucket.service.ts`
   - In `uploadFileAsDocument()` (the stream-based entry point), after converting stream to buffer and before `validateMimeTypes()`, call `convertIfNeeded()` then `compressIfNeeded()`
   - Pass converted/compressed buffer, MIME type, and filename downstream
@@ -138,19 +138,19 @@
 
 ### Implementation for User Story 4
 
-- [ ] T011 [US4] Verify error handling in `ImageConversionService.convertIfNeeded()` in `src/domain/common/visual/image.conversion.service.ts`:
+- [X] T011 [US4] Verify error handling in `ImageConversionService.convertIfNeeded()` in `src/domain/common/visual/image.conversion.service.ts`:
   - Confirm heic-convert errors are caught and wrapped in `ValidationException` with a static message and structured `details` (original error message, file size, MIME type, filename)
   - Confirm the `ValidationException` propagates correctly through `VisualService.uploadImageOnVisual()` try/catch — the existing `StorageUploadFailedException` wrapping in the catch block handles it
   - Ensure error logging at warning level includes the original error stack trace and structured context (LogContext.STORAGE_BUCKET or LogContext.COMMUNITY)
-- [ ] T011b [US4] Verify error handling in `ImageCompressionService.compressIfNeeded()` in `src/domain/common/visual/image.compression.service.ts`:
+- [X] T011b [US4] Verify error handling in `ImageCompressionService.compressIfNeeded()` in `src/domain/common/visual/image.compression.service.ts`:
   - Confirm sharp errors are caught and wrapped in `ValidationException` with static message ("Failed to compress image") and original error in `details`
   - Confirm that compression failure does not block the upload — if compression fails, log the error and store the uncompressed image as a fallback
-- [ ] T012 [US4] Add unit tests for error scenarios in `src/domain/common/visual/__tests__/image.conversion.service.spec.ts`:
+- [X] T012 [US4] Add unit tests for error scenarios in `src/domain/common/visual/__tests__/image.conversion.service.spec.ts`:
   - Test: corrupted HEIC buffer (mock heic-convert to throw) → `ValidationException` thrown with correct message and details
   - Test: HEIC file exactly at 15MB boundary → accepted
   - Test: HEIC file at 15MB + 1 byte → rejected with `ValidationException`
   - Test: conversion failure does not affect subsequent conversion calls (service remains stateless)
-- [ ] T012b [US4] Add unit tests for compression error scenarios in `src/domain/common/visual/__tests__/image.compression.service.spec.ts`:
+- [X] T012b [US4] Add unit tests for compression error scenarios in `src/domain/common/visual/__tests__/image.compression.service.spec.ts`:
   - Test: sharp throws on corrupted buffer → `ValidationException` thrown with correct message and details
   - Test: compression failure falls back to storing uncompressed image
   - Test: compression service remains stateless after error
@@ -164,8 +164,8 @@
 **Purpose**: Documentation, validation, and cleanup
 
 - [ ] T013 [P] Verify Docker build succeeds with heic-convert and sharp dependencies — run `docker build -t alkemio-server-heic-test .` and confirm no native compilation errors (sharp ships prebuilt binaries for linux-x64 glibc)
-- [ ] T014 [P] Run full lint pass `pnpm lint` and fix any issues introduced by the changes
-- [ ] T015 [P] Run existing test suite `pnpm run test:ci:no:coverage` to confirm no regressions
+- [X] T014 [P] Run full lint pass `pnpm lint` and fix any issues introduced by the changes
+- [X] T015 [P] Run existing test suite `pnpm run test:ci:no:coverage` to confirm no regressions
 - [ ] T016 Run quickstart.md validation — follow the steps in `specs/001-heic-jpeg-conversion/quickstart.md` to verify end-to-end operation
 
 ---
