@@ -20,7 +20,7 @@ mutation uploadImageOnVisual($uploadData: UploadImageOnVisualInput!) {
 
 The behavioral change is transparent to API consumers:
 - Clients that previously could **not** upload HEIC can now do so
-- Large images are automatically compressed/resized to ≤3MB
+- All compressible images (JPEG, WebP) are automatically optimized
 - The response is identical (a Visual with a URI pointing to a JPEG file)
 - The served file is always JPEG with `Content-Type: image/jpeg` (for HEIC conversions and compressed images)
 
@@ -73,9 +73,8 @@ interface ImageCompressionResult {
 
 interface IImageCompressionService {
   /**
-   * Compresses and/or resizes images exceeding the size threshold.
-   * Images at or below the threshold pass through unchanged.
-   * SVG files always pass through unchanged.
+   * Optimizes compressible images (JPEG, WebP): quality 80–85 MozJPEG, resize if >4096px, auto-orient, strip EXIF.
+   * Non-compressible formats (SVG, GIF, PNG) pass through unchanged.
    *
    * @param buffer - Image file buffer (JPEG, PNG, or WebP)
    * @param mimeType - Current MIME type
@@ -87,7 +86,7 @@ interface IImageCompressionService {
 
   /**
    * Check if compression should be applied to this format.
-   * Returns false for SVG, GIF, and other non-raster formats.
+   * Returns false for SVG, GIF, PNG, and other non-compressible formats.
    */
   isCompressibleFormat(mimeType: string): boolean;
 }
@@ -105,13 +104,13 @@ interface IImageCompressionService {
 
 | Parameter | Value | Rationale |
 | --- | --- | --- |
-| Size threshold | 3MB (3,145,728 bytes) | Files ≤3MB pass through unchanged |
+| Size threshold | N/A — all compressible images optimized | No size threshold; every JPEG/WebP is processed |
 | Quality | 82 (range 80–85) | Sweet spot — visually indistinguishable from 100, 3–5x smaller |
 | MozJPEG | enabled | 5–10% smaller output at equivalent quality vs standard libjpeg |
 | Auto-orient | true | Corrects EXIF orientation to prevent rotated output |
 | Metadata | stripped | `sharp.rotate()` auto-orients then all EXIF metadata is discarded per FR-005 (GDPR) |
 | Max dimension | 4096px longest side | Resize before compression if longest side exceeds cap; preserves aspect ratio |
-| PNG alpha handling | flatten to white (`#ffffff`) | PNG→JPEG conversion composites alpha against white |
+| PNG alpha handling | N/A — PNG excluded from compression | PNG passes through unchanged to preserve transparency |
 | SVG bypass | yes | Vector format excluded from compression |
 
 ### Error Contract
@@ -133,11 +132,11 @@ Error details (file size, original MIME type, conversion duration) are placed in
 
 | MIME Type | Extension | Status |
 | --- | --- | --- |
-| `image/heic` | `.heic` | **New — accepted, converted to JPEG, compressed if >3MB** |
-| `image/heif` | `.heif` | **New — accepted, converted to JPEG, compressed if >3MB** |
-| `image/jpeg` | `.jpg`, `.jpeg` | Existing — **compressed if >3MB**, pass-through if ≤3MB |
-| `image/png` | `.png` | Existing — **converted to JPEG & compressed if >3MB**, pass-through if ≤3MB |
-| `image/webp` | `.webp` | Existing — **compressed if >3MB**, pass-through if ≤3MB |
+| `image/heic` | `.heic` | **New — accepted, converted to JPEG, then optimized** |
+| `image/heif` | `.heif` | **New — accepted, converted to JPEG, then optimized** |
+| `image/jpeg` | `.jpg`, `.jpeg` | Existing — **always optimized** (quality 80–85, max 4096px, EXIF stripped) |
+| `image/png` | `.png` | Existing — always pass-through (preserves transparency) |
+| `image/webp` | `.webp` | Existing — **always optimized** (re-encoded as JPEG quality 80–85) |
 | `image/svg+xml` | `.svg` | Existing — always pass-through (vector format, no compression) |
 
 ### Stored (output)
@@ -147,10 +146,11 @@ HEIC files are **never** stored in their original format. After conversion:
 - Extension: `.jpg`
 - Buffer: JPEG-encoded pixel data
 
-Large images (>3MB) are stored at reduced quality/dimensions:
-- MIME type: `image/jpeg` (PNG is converted to JPEG during compression)
-- Extension: `.jpg` (may change from `.png`)
-- File size: ≤3MB (best-effort)
+All compressible images are stored optimized:
+- MIME type: `image/jpeg` (JPEG/WebP are re-encoded)
+- Extension: `.jpg`
+- Quality: 80–85 MozJPEG
+- Max dimension: 4096px longest side
 
 ## Dependency Contract
 

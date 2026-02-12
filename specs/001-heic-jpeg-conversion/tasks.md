@@ -38,17 +38,15 @@
   - Inject NestJS `Logger` and log conversion events at verbose level: source MIME, target MIME, original size, converted size, conversion duration (FR-008)
   - Use `@Injectable()` decorator for NestJS DI
 - [ ] T004b Create `ImageCompressionService` in `src/domain/common/visual/image.compression.service.ts` implementing the interface from `contracts/heic-conversion.md`:
-  - Define `IMAGE_COMPRESSION_THRESHOLD` (3MB), `COMPRESSION_QUALITY` (82), `MAX_DIMENSION` (4096), `NON_COMPRESSIBLE_MIMES` (['image/svg+xml', 'image/gif']) constants
-  - Implement `isCompressibleFormat(mimeType: string): boolean` — returns false for SVG, GIF
-  - Implement `compressIfNeeded(buffer: Buffer, mimeType: string, fileName: string): Promise<ImageCompressionResult>` — if buffer.length > 3MB or longest side > 4096px, and format is compressible:
-    - For PNG: use `sharp(buffer, { autoOrient: true }).flatten({ background: '#ffffff' })` to handle alpha (no keepMetadata — all EXIF stripped per FR-005)
+  - Define `COMPRESSION_QUALITY` (82), `MAX_DIMENSION` (4096), `NON_COMPRESSIBLE_MIMES` (['image/svg+xml', 'image/gif', 'image/png', 'image/x-png']) constants
+  - Implement `isCompressibleFormat(mimeType: string): boolean` — returns false for SVG, GIF, PNG
+  - Implement `compressIfNeeded(buffer: Buffer, mimeType: string, fileName: string): Promise<ImageCompressionResult>` — if format is compressible:
     - For JPEG/WebP: use `sharp(buffer, { autoOrient: true })` (no keepMetadata — all EXIF stripped per FR-005)
     - If longest side >4096px: `.resize({ width: 4096, height: 4096, fit: 'inside', withoutEnlargement: true })`
     - Compress: `.jpeg({ quality: 82, mozjpeg: true }).toBuffer()`
-    - If result is still >3MB: store best-effort (do not reject)
     - Update MIME type to `image/jpeg`, change extension to `.jpg` if needed
     - Return `{ buffer, mimeType, fileName, compressed: true, originalSize, finalSize }`
-  - If buffer ≤3MB or non-compressible: return inputs unchanged with `compressed: false`
+  - If non-compressible (PNG, SVG, GIF): return inputs unchanged with `compressed: false`
   - Wrap sharp errors in `ValidationException` with static message ("Failed to compress image") and original error in `details`
   - Inject NestJS `Logger` and log compression events at verbose level: original size, final size, quality used, resize applied, compression duration
   - Use `@Injectable()` decorator for NestJS DI
@@ -62,12 +60,12 @@
   - Test `convertIfNeeded()` converts HEIC buffer and returns `mimeType: 'image/jpeg'`, `fileName` ending in `.jpg`, `converted: true` (use a real small HEIC fixture or mock heic-convert)
   - Test `convertIfNeeded()` wraps heic-convert errors in `ValidationException` with details payload
 - [ ] T006b Create unit tests for `ImageCompressionService` in `src/domain/common/visual/__tests__/image.compression.service.spec.ts`:
-  - Test `isCompressibleFormat()` returns false for `image/svg+xml`, `image/gif`
-  - Test `isCompressibleFormat()` returns true for `image/jpeg`, `image/png`, `image/webp`
-  - Test `compressIfNeeded()` passes through buffers ≤3MB unchanged with `compressed: false`
+  - Test `isCompressibleFormat()` returns false for `image/svg+xml`, `image/gif`, `image/png`
+  - Test `isCompressibleFormat()` returns true for `image/jpeg`, `image/webp`
+  - Test `compressIfNeeded()` optimizes a small (500KB) JPEG buffer (mock sharp) with `compressed: true`
   - Test `compressIfNeeded()` passes through SVG unchanged regardless of size
-  - Test `compressIfNeeded()` compresses a 5MB JPEG buffer to ≤3MB (mock sharp)
-  - Test `compressIfNeeded()` converts PNG to JPEG during compression (mock sharp)
+  - Test `compressIfNeeded()` passes through PNG unchanged regardless of size (preserve transparency)
+  - Test `compressIfNeeded()` optimizes a 5MB JPEG buffer (mock sharp)
   - Test `compressIfNeeded()` applies resize when quality reduction alone isn’t enough (mock sharp)
   - Test `compressIfNeeded()` wraps sharp errors in `ValidationException` with details payload
   - Test `compressIfNeeded()` returns correct `originalSize` and `finalSize` values
@@ -78,9 +76,9 @@
 
 ## Phase 3: User Story 1 — iPhone User Uploads Single Image (Priority: P1) 🎯 MVP
 
-**Goal**: An iPhone user uploads a HEIC image via `uploadImageOnVisual` mutation and it is automatically converted to JPEG, compressed if >3MB, stored, and served correctly.
+**Goal**: An iPhone user uploads a HEIC image via `uploadImageOnVisual` mutation and it is automatically converted to JPEG, optimized, stored, and served correctly.
 
-**Independent Test**: Upload a HEIC file via `uploadImageOnVisual` GraphQL mutation → verify the response URI returns `Content-Type: image/jpeg`, the file is ≤3MB, and the image displays correctly in a browser.
+**Independent Test**: Upload a HEIC file via `uploadImageOnVisual` GraphQL mutation → verify the response URI returns `Content-Type: image/jpeg`, the file is optimized, and the image displays correctly in a browser.
 
 ### Implementation for User Story 1
 
@@ -95,30 +93,30 @@
   - Expand validation to also check against `DEFAULT_VISUAL_CONSTRAINTS[visual.name].allowedTypes` (code-level fix per data-model.md) so that existing Visual entities in the database with stale `allowedTypes` still accept HEIC
   - This avoids a database migration for existing visuals
 
-**Checkpoint**: Single HEIC upload via `uploadImageOnVisual` works end-to-end for all visual types (avatar, banner, card, gallery image). Large images are compressed to ≤3MB. Existing small JPEG/PNG uploads continue unchanged.
+**Checkpoint**: Single HEIC upload via `uploadImageOnVisual` works end-to-end for all visual types (avatar, banner, card, gallery image). All compressible images are optimized. PNG uploads pass through unchanged.
 
 ---
 
 ## Phase 4: User Story 2 — Large Image Compression (Priority: P2)
 
-**Goal**: Any uploaded image (JPEG, PNG, WebP) exceeding 3MB is automatically compressed and/or resized. Images ≤3MB pass through unchanged.
+**Goal**: Any uploaded compressible image (JPEG, WebP) is automatically optimized (quality 80–85, max 4096px, EXIF stripped). PNG, SVG, GIF pass through unchanged.
 
-**Independent Test**: Upload a 10MB JPEG photo → verify the stored file is ≤3MB with acceptable visual quality. Upload a 2MB JPEG → verify it is stored unchanged.
+**Independent Test**: Upload a 10MB JPEG photo → verify the stored file is optimized. Upload a 500KB JPEG → verify it is also optimized. Upload a PNG → verify it passes through unchanged.
 
 ### Implementation for User Story 2
 
-- [ ] T010 [US2] Verify that the compression pipeline in `VisualService.uploadImageOnVisual()` handles non-HEIC large images correctly — since `compressIfNeeded()` runs for all images after conversion, a large JPEG should be compressed without any HEIC conversion step. Confirm with manual test or write an integration test.
-- [ ] T010b [US2] Integration test: upload a JPEG >3MB via `uploadImageOnVisual` → verify stored file is ≤3MB. Upload a JPEG <3MB → verify stored file is unchanged.
+- [ ] T010 [US2] Verify that the optimization pipeline in `VisualService.uploadImageOnVisual()` handles all JPEG/WebP images correctly — since `compressIfNeeded()` runs for all compressible images, every JPEG/WebP should be optimized. Confirm with manual test or write an integration test.
+- [ ] T010b [US2] Integration test: upload a JPEG of any size via `uploadImageOnVisual` → verify stored file is optimized (quality 80–85, max 4096px). Upload a PNG → verify stored file is unchanged.
 
-**Checkpoint**: Large image compression works for JPEG, PNG, and converted HEIC. Small images pass through unchanged.
+**Checkpoint**: Image optimization works for all JPEG, WebP, and converted HEIC uploads. PNG passes through unchanged.
 
 ---
 
 ## Phase 5: User Story 3 — Bulk Upload with Mixed Formats (Priority: P3)
 
-**Goal**: When multiple images are uploaded (including a mix of HEIC and non-HEIC, large and small), HEIC images are converted, and any image >3MB is compressed.
+**Goal**: When multiple images are uploaded (including a mix of HEIC and non-HEIC), HEIC images are converted, and all compressible images are optimized. PNG files pass through unchanged.
 
-**Independent Test**: Upload a batch containing HEIC, JPEG, and PNG files of various sizes → verify HEIC files are converted, large files are compressed, and small non-HEIC files pass through unchanged.
+**Independent Test**: Upload a batch containing HEIC, JPEG, and PNG files of various sizes → verify HEIC files are converted, all JPEG/WebP files are optimized, and PNG files pass through unchanged.
 
 ### Implementation for User Story 3
 
@@ -231,7 +229,7 @@ Task T015: "Existing test suite regression check"
 1. Complete Phase 1: Setup (T001–T003)
 2. Complete Phase 2: Foundational (T004–T006b) — `ImageConversionService` and `ImageCompressionService` created and tested
 3. Complete Phase 3: User Story 1 (T007–T009) — HEIC upload via visuals works + compression
-4. **STOP and VALIDATE**: Upload a HEIC image via `uploadImageOnVisual`, verify JPEG output ≤3MB
+4. **STOP and VALIDATE**: Upload a HEIC image via `uploadImageOnVisual`, verify JPEG output is optimized
 5. Deploy/demo if ready — iPhone users can now upload images
 
 ### Incremental Delivery

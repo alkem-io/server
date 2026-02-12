@@ -19,7 +19,7 @@
 
 **Why not `sharp`?** Sharp's prebuilt binaries **do not include HEIC/HEIF support** due to HEVC patent/licensing constraints. The maintainer confirmed (sharp issue #4479) that HEVC codec licensing fees would be ~US$25M/year at sharp's download volume. Getting HEIC working with sharp requires building from source against a globally-installed `libvips + libheif + libde265` combo, which is complex and fragile in Docker environments (67+ GitHub issues from users struggling with this).
 
-**Future image optimization**: `sharp` is now included in this feature for image compression and resizing of all uploaded images exceeding 3MB. The pipeline is: `heic-convert` (HEIC→JPEG) → `sharp` (compress/resize any JPEG/PNG >3MB). Sharp's prebuilt binaries handle JPEG/PNG/WebP natively; only HEIC decoding is excluded from prebuilts.
+**Future image optimization**: `sharp` is now included in this feature for image optimization of all uploaded compressible images. The pipeline is: `heic-convert` (HEIC→JPEG) → `sharp` (optimize all JPEG/WebP: quality 80–85, resize if >4096px, auto-orient, strip EXIF). Sharp's prebuilt binaries handle JPEG/PNG/WebP natively; only HEIC decoding is excluded from prebuilts. PNG files pass through unchanged to preserve transparency.
 
 **Alternatives considered**:
 - `sharp` (v0.34.x): The most capable image processing library for Node.js (libvips-based). However, **prebuilt binaries exclude HEIC** due to HEVC patent risk. Using sharp for HEIC requires building from source with globally-installed libvips+libheif+libde265 — complex Docker setup, fragile CI/CD, and patent exposure. Rejected for HEIC conversion; may be added later for general image optimization on non-HEIC formats.
@@ -62,7 +62,7 @@
 
 **Decision**: Use `heic-convert`'s JPEG output combined with sharp for auto-orientation. `heic-convert` preserves embedded EXIF metadata in its JPEG output by default. However, per our GDPR-first decision, the compression step (or a standalone sharp call for images not needing compression) applies `autoOrient: true` to bake orientation into pixel data and then strips all EXIF metadata — no GPS, date, camera info, or other personal data is retained in the stored file.
 
-**Simplified approach**: The compression pipeline uses `sharp({ autoOrient: true })` to normalize orientation into pixel data, then outputs JPEG without metadata. For images ≤3MB that skip compression, a separate `sharp(buffer).rotate().toBuffer()` call handles auto-orientation and metadata stripping. This ensures no EXIF data (GPS, personal info) is ever persisted.
+**Simplified approach**: All compressible images (JPEG, WebP, converted HEIC) pass through the sharp optimization pipeline: `sharp({ autoOrient: true })` normalizes orientation into pixel data, then outputs JPEG at quality 82 without metadata. This ensures consistent optimization and EXIF stripping for every upload.
 
 **Rationale**:
 - iPhone HEIC files contain EXIF orientation tags; these are preserved in the converted JPEG output by `heic-convert`.
@@ -108,7 +108,7 @@
 
 ## R8: Image Compression Library for Large Files
 
-**Decision**: `sharp` (v0.34.x) for JPEG/PNG compression and resizing of images exceeding 3MB.
+**Decision**: `sharp` (v0.34.x) for JPEG/WebP optimization of all uploaded compressible images.
 
 **Rationale**:
 - Built on libvips, the fastest image processing library for Node.js (4–5x faster than ImageMagick)
@@ -124,37 +124,36 @@
 
 **HEIC exclusion reminder**: Sharp's prebuilt binaries do NOT decode HEIC. HEIC decoding is handled by `heic-convert` upstream. By the time sharp processes an image, HEIC has already been converted to JPEG.
 
-## R9: Compression Strategy for Images >3MB
+## R9: Image Optimization Strategy
 
-**Decision**: Resize to max 4096px longest side, then compress at JPEG quality 80–85.
+**Decision**: Optimize all compressible images — resize to max 4096px longest side, then compress at JPEG quality 80–85.
 
 **Algorithm**:
-1. If image buffer ≤3MB and longest side ≤4096px — pass through unchanged.
+1. If format is non-compressible (SVG, GIF, PNG) — pass through unchanged.
 2. If longest side >4096px — resize to 4096px on longest side (preserve aspect ratio, `fit: 'inside'`, `withoutEnlargement: true`).
-3. Compress with JPEG quality 82 (midpoint of 80–85 range) + MozJPEG + autoOrient + strip EXIF → check size.
-4. If still >3MB — store result (best-effort). Do not reject the upload.
+3. Compress with JPEG quality 82 (midpoint of 80–85 range) + MozJPEG + autoOrient + strip EXIF.
+4. Return optimized result.
 
 **Rationale**:
 - Quality 80–85 is the sweet spot — visually indistinguishable from 100 for most photographic images, roughly 3–5x smaller.
 - MozJPEG produces 5–10% smaller files at equivalent quality vs standard libjpeg.
 - 4096px max dimension covers retina/high-DPI displays while eliminating extremely large raw sensor outputs (48MP iPhone Pro = ~8064×6048).
-- Resize-first approach reduces pixel count before compression, making quality reduction more effective.
+- Optimizing all images (not just large ones) ensures consistent quality, storage efficiency, and EXIF stripping for every upload.
 - `fit: 'inside'` with `withoutEnlargement: true` ensures images are only shrunk, never upscaled.
-- Best-effort: if after resize + quality 82 the image is still >3MB, store the compressed version. Don't reject the upload.
 
 **Alternatives considered**:
-- Progressive quality stepping (85→75→65): Rejected — adds complexity and multiple sharp passes. A single quality in the 80–85 range produces excellent results for nearly all images.
+- Threshold-based (only >3MB): Rejected — adds complexity (threshold constant, conditional logic, separate EXIF-stripping path for small images). Optimizing everything is simpler and ensures consistent output.
 - WebP conversion instead of JPEG: Considered but rejected for now — JPEG has universal compatibility. WebP can be added as a future enhancement.
 - Server-side only resize with no quality reduction: Rejected — resizing alone isn’t enough for dense high-quality images.
 
 ## R10: Compression Scope — Which Formats Are Compressed
 
-**Decision**: Compress JPEG and PNG images exceeding 3MB. PNG is converted to JPEG during compression (alpha composited against white). SVG, GIF, and WebP (≤3MB) pass through unchanged.
+**Decision**: Optimize all JPEG and WebP images. PNG, SVG, and GIF pass through unchanged.
 
 **Rationale**:
 - JPEG: Direct quality reduction and resize via sharp.
-- PNG: Often very large (lossless). Converting to JPEG during compression is acceptable — most uploaded PNGs are photos, not graphics requiring transparency. Alpha channel is composited against white via `sharp(buffer).flatten({ background: '#ffffff' }).jpeg(...)` .
+- PNG: Pass through unchanged — PNG is used for transparency-dependent graphics (logos, icons, overlays). Preserving PNG as-is avoids data loss.
 - SVG: Vector format — compression/resizing is not applicable.
 - GIF: Typically small; animating frames make compression complex. Out of scope.
-- WebP: Already compressed. If >3MB, can be re-encoded via sharp, but rare. Included if straightforward.
-- Auto-orientation is applied during compression via `sharp(buffer, { autoOrient: true })` — this also resolves the EXIF orientation concern for HEIC-converted images.
+- WebP: Can be re-encoded via sharp. Included.
+- Auto-orientation is applied during optimization via `sharp(buffer, { autoOrient: true })` — this also resolves the EXIF orientation concern for HEIC-converted images.

@@ -7,7 +7,7 @@
 
 ## Summary
 
-iPhone users uploading HEIC/HEIF images experience failures because the platform does not accept these formats. Additionally, large photos (from any device) consume excessive storage and slow page loads. This plan introduces a two-stage image processing layer in the upload pipeline: (1) detect HEIC/HEIF uploads and convert them to JPEG using `heic-convert`, then (2) compress and/or resize any image (HEIC-converted or otherwise) exceeding 3MB using `sharp`. The processing hooks into `VisualService.uploadImageOnVisual()` — the single entry point for all visual uploads — and into `StorageBucketService` for generic file uploads. Non-HEIC formats under 3MB pass through unchanged.
+iPhone users uploading HEIC/HEIF images experience failures because the platform does not accept these formats. Additionally, uploaded photos are stored at full resolution, consuming excessive storage and slowing page loads. This plan introduces a two-stage image processing layer in the upload pipeline: (1) detect HEIC/HEIF uploads and convert them to JPEG using `heic-convert`, then (2) optimize all compressible images (JPEG, WebP) using `sharp` — compress at quality 80–85 with MozJPEG, resize if longest side >4096px, auto-orient, and strip EXIF. The processing hooks into `VisualService.uploadImageOnVisual()` — the single entry point for all visual uploads — and into `StorageBucketService` for generic file uploads. PNG, SVG, and GIF pass through unchanged.
 
 ## Technical Context
 
@@ -17,8 +17,8 @@ iPhone users uploading HEIC/HEIF images experience failures because the platform
 **Testing**: Vitest (unit), Jest CI (integration)
 **Target Platform**: Linux server (Docker Node 22), macOS dev
 **Project Type**: Single NestJS server monolith
-**Performance Goals**: HEIC→JPEG conversion ≤5s for images up to 10MB; compression/resize ≤2s per image; no regression on non-HEIC uploads under 3MB
-**Constraints**: 15MB max HEIC upload size; 3MB compression threshold; strip all EXIF metadata (preserve orientation via auto-orient into pixel data); only primary frame extracted from multi-frame containers
+**Performance Goals**: HEIC→JPEG conversion ≤5s for images up to 10MB; optimization (compress/resize) ≤2s per image
+**Constraints**: 15MB max HEIC upload size; all compressible images optimized (no size threshold); strip all EXIF metadata (preserve orientation via auto-orient into pixel data); only primary frame extracted from multi-frame containers
 **Scale/Scope**: ~6 visual types + 2 generic upload mutations; ~400 LOC change (services + enum + tests)
 
 ## Constitution Check
@@ -27,7 +27,7 @@ _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
 | Principle | Status | Notes |
 | --- | --- | --- |
-| 1. Domain-Centric Design First | ✅ Pass | Processing logic lives in domain services (`ImageConversionService`, `ImageCompressionService`) under `src/domain/common/visual/`. Business rules: "HEIC uploads become JPEG" and "images >3MB are compressed" stay in domain layer. |
+| 1. Domain-Centric Design First | ✅ Pass | Processing logic lives in domain services (`ImageConversionService`, `ImageCompressionService`) under `src/domain/common/visual/`. Business rules: "HEIC uploads become JPEG" and "all compressible images are optimized" stay in domain layer. |
 | 2. Modular NestJS Boundaries | ✅ Pass | New service injected into existing `VisualModule`. No new module required — conversion is a capability of visual upload, not a standalone domain. |
 | 3. GraphQL Schema as Stable Contract | ✅ Pass | No GraphQL schema changes. Existing `uploadImageOnVisual` mutation signature unchanged; HEIC acceptance is a backend behavior change. MIME type enums are internal, not in GraphQL schema. |
 | 4. Explicit Data & Event Flow | ✅ Pass | Conversion occurs within the existing upload pipeline (validate → convert → store). No new events needed — existing upload success/failure flows apply. |
@@ -36,7 +36,7 @@ _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 | 7. API Consistency & Evolution | ✅ Pass | No API surface change. |
 | 8. Secure-by-Design Integration | ✅ Pass | HEIC input passes through existing centralized validation. 15MB size limit enforced before conversion. Compression operates on in-memory buffers only. |
 | 9. Container & Deployment Determinism | ✅ Pass | `heic-convert` is pure JavaScript/WASM. `sharp` ships prebuilt binaries via `@img/sharp-*` platform packages (JPEG/PNG/WebP support; no HEIC in prebuilts). Dockerfile uses explicit Node 22 base. No runtime dynamic install. |
-| 10. Simplicity & Incremental Hardening | ✅ Pass | Two-stage pipeline: detect HEIC → convert → compress if >3MB → continue existing pipeline. No caching, queuing, or async processing. |
+| 10. Simplicity & Incremental Hardening | ✅ Pass | Two-stage pipeline: detect HEIC → convert → optimize all compressible images → continue existing pipeline. No caching, queuing, or async processing. |
 
 ## Project Structure
 
@@ -71,7 +71,7 @@ src/
 │           ├── visual.constraints.ts      # Add 'image/heic', 'image/heif' to VISUAL_ALLOWED_TYPES
 │           ├── visual.service.ts           # Add HEIC detection + conversion before dimension validation
 │           ├── image.conversion.service.ts # NEW: Encapsulates HEIC→JPEG conversion via heic-convert
-│           ├── image.compression.service.ts # NEW: Compresses/resizes images >3MB via sharp
+│           ├── image.compression.service.ts # NEW: Optimizes all compressible images via sharp
 │           ├── image.conversion.service.spec.ts # NEW: Unit tests
 │           ├── image.compression.service.spec.ts # NEW: Unit tests
 │           └── visual.module.ts           # Register ImageConversionService

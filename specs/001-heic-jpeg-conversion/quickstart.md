@@ -40,8 +40,8 @@ pnpm start:dev
 # 2. Use the uploadImageOnVisual mutation with a .heic file
 # 3. Verify the response contains a valid URI
 # 4. Fetch the URI and confirm Content-Type is image/jpeg
-# 5. Upload a large (>3MB) JPEG/PNG — verify stored file is ≤3MB
-# 6. Upload a small (<3MB) JPEG — verify stored file is unchanged
+# 5. Upload any JPEG — verify stored file is optimized (quality 80-85, max 4096px)
+# 6. Upload a PNG — verify stored file is unchanged (preserves transparency)
 ```
 
 ### Unit Tests
@@ -84,5 +84,5 @@ curl -s -I "http://localhost:3000/api/private/rest/storage/document/<document-id
 | HEIC upload rejected with "not in allowed mime types" | Existing Visual entities in DB may have stale `allowedTypes`. Check if the code-level fix in `validateMimeType` is in place, or run the data migration. |
 | Converted image appears rotated | Both the compression step and standalone processing use `sharp({ autoOrient: true })` to bake orientation into pixel data before stripping EXIF. If rotation is wrong, check that `autoOrient` is enabled in the sharp pipeline. All EXIF metadata (including orientation tags) is stripped from stored files per FR-005. |
 | Out of memory on large HEIC files | The 15MB upload limit should prevent this. Check if `storage.file.max_file_size` in `alkemio.yml` is set correctly. |
-| Large image not compressed | Verify file size exceeds 3MB threshold (`IMAGE_COMPRESSION_THRESHOLD`). Check MIME type is compressible (JPEG, PNG, WebP — not SVG or GIF). Check `ImageCompressionService` logs at verbose level. |
+| Image not optimized | Check MIME type is compressible (JPEG, WebP — not SVG, GIF, or PNG). Check `ImageCompressionService` logs at verbose level. |
 | Compressed image quality too low | The compression uses JPEG quality 82 (80–85 range) with MozJPEG. If quality is unacceptable, adjust `COMPRESSION_QUALITY` in `image.compression.service.ts`. |

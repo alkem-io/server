@@ -44,18 +44,17 @@ HEIC_FILE_EXTENSIONS = ['.heic', '.heif']
 
 Used by the conversion service to detect whether a buffer needs conversion.
 
-### IMAGE_COMPRESSION_THRESHOLD (new constant)
+### Image Optimization Constants (new)
 
 **File**: `src/domain/common/visual/image.compression.service.ts` (or a shared constants file)
 
 ```
-IMAGE_COMPRESSION_THRESHOLD = 3 * 1024 * 1024  // 3MB in bytes
 COMPRESSION_QUALITY = 82                        // sweet spot in 80-85 range
 MAX_DIMENSION = 4096                            // longest side cap
-NON_COMPRESSIBLE_MIMES = ['image/svg+xml', 'image/gif']
+NON_COMPRESSIBLE_MIMES = ['image/svg+xml', 'image/gif', 'image/png', 'image/x-png']
 ```
 
-Used by the compression service to determine when and how to compress images.
+Used by the optimization service to determine how to process images. All compressible images (JPEG, WebP) are optimized regardless of size.
 
 ## Existing Entities (unchanged)
 
@@ -111,13 +110,10 @@ ImageConversionService.convertIfNeeded(buffer, mimeType, fileName)
     │
     ▼
 ImageCompressionService.compressIfNeeded(buffer, mimeType, fileName)
-    │  ├─ SVG/GIF → skip (pass through unchanged)
-    │  ├─ Size ≤3MB → pass through unchanged
-    │  └─ Size >3MB or longest side >4096px → compression via sharp:
+    │  ├─ SVG/GIF/PNG → skip (pass through unchanged, preserve transparency for PNG)
+    │  └─ JPEG/WebP → optimize via sharp:
     │       Step 1: Resize to 4096px max longest side (if larger, preserve aspect ratio)
     │       Step 2: JPEG quality 82 + MozJPEG + autoOrient (strip EXIF per FR-005)
-    │       If still >3MB → store best-effort result
-    │       PNG → flatten alpha to white, output as JPEG
     │
     ▼
 Get Image Dimensions (image-size works on JPEG buffer)
