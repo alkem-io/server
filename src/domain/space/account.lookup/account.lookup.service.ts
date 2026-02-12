@@ -74,19 +74,18 @@ export class AccountLookupService {
   }
 
   public async getHost(account: IAccount): Promise<IContributor | null> {
-    const user = await this.entityManager.findOne(User, {
-      where: {
-        accountID: account.id,
-      },
-    });
+    const [user, organization] = await Promise.all([
+      this.entityManager.findOne(User, {
+        where: { accountID: account.id },
+      }),
+      this.entityManager.findOne(Organization, {
+        where: { accountID: account.id },
+      }),
+    ]);
+
     if (user) {
       return user;
     }
-    const organization = await this.entityManager.findOne(Organization, {
-      where: {
-        accountID: account.id,
-      },
-    });
     if (organization) {
       return organization;
     }

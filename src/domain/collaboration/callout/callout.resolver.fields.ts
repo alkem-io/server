@@ -2,7 +2,7 @@ import { AuthorizationAgentPrivilege } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { GraphqlGuard } from '@core/authorization';
-import { UserLoaderCreator } from '@core/dataloader/creators';
+import { CalloutActivityLoaderCreator, UserLoaderCreator } from '@core/dataloader/creators';
 import { Loader } from '@core/dataloader/decorators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
@@ -108,7 +108,21 @@ export class CalloutResolverFields {
     description:
       'The activity for this Callout. The number of Contributions if the callout allows contributions, or the number of comments if it does not.',
   })
-  async activity(@Parent() callout: ICallout): Promise<number> {
+  async activity(
+    @Parent() callout: ICallout,
+    @Loader(CalloutActivityLoaderCreator)
+    loader: ILoader<number>
+  ): Promise<number> {
+    // If activity was already computed (e.g. during sortByActivity), reuse it
+    if (callout.activity !== undefined) {
+      return callout.activity;
+    }
+    // Contribution-type callouts: use batched DataLoader (1 query for all callouts)
+    if (callout.settings.contribution.allowedTypes.length > 0) {
+      return loader.load(callout.id);
+    }
+    // Comment-type callouts: fall back to individual RPC (rare, involves Matrix)
+    // can be optimized further with the adapter supporting reading multiple rooms
     return await this.calloutService.getActivityCount(callout);
   }
 

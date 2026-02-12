@@ -238,4 +238,12 @@ export class AgentService {
       credentialCriteria
     );
   }
+
+  async countAgentsWithMatchingCredentialsBatch(
+    criteriaList: CredentialsSearchInput[]
+  ): Promise<Map<string, number>> {
+    return await this.credentialService.countMatchingCredentialsBatch(
+      criteriaList
+    );
+  }
 }
