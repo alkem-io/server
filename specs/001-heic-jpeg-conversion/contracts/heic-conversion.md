@@ -119,7 +119,7 @@ interface IImageCompressionService {
 | Condition | Error Type | Message Pattern |
 | --- | --- | --- |
 | Corrupted HEIC file | `ValidationException` | "Failed to convert HEIC image" |
-| HEIC exceeds 25MB | `ValidationException` | "File size exceeds the maximum allowed size of 25MB for HEIC uploads" |
+| HEIC exceeds 15MB | `ValidationException` | "File size exceeds the maximum allowed size of 15MB for HEIC uploads" |
 | Unsupported HEIC codec | `ValidationException` | "Unsupported HEIC format variant" |
 | Compression failure | `ValidationException` | "Failed to compress image" |
 | heic-convert processing failure | `StorageUploadFailedException` | "Upload on visual failed!" (existing pattern) |

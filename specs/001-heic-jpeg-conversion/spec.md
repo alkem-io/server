@@ -10,7 +10,7 @@
 ### Session 2026-02-11
 
 - Q: How should the system handle multi-frame HEIC containers (Live Photos, bursts)? → A: Extract only the primary still image and convert it to JPEG; discard additional frames.
-- Q: What is the maximum allowed file size for HEIC uploads? → A: 25MB, covering standard and high-resolution iPhone shots while preventing abuse.
+- Q: What is the maximum allowed file size for HEIC uploads? → A: 15MB, covering standard and high-resolution iPhone shots while preventing abuse.
 
 ### Session 2026-02-12
 
@@ -86,7 +86,7 @@ A user attempts to upload a corrupted or invalid HEIC file, or an image that can
 ### Edge Cases
 
 - What happens when a HEIC file is extremely large (e.g., high-resolution iPhone ProRAW)?
-  - Files exceeding 25MB are rejected with a clear error message before conversion is attempted.
+  - Files exceeding 15MB are rejected with a clear error message before conversion is attempted.
 - How does the system handle HEIC files with embedded metadata (EXIF, location, etc.)?
   - All EXIF metadata is stripped during processing. Orientation is applied to pixel data (auto-orient) and then discarded. No metadata is persisted in the stored file.
 - What happens if storage space is insufficient to store both the temporary HEIC and converted JPEG?
@@ -117,7 +117,7 @@ A user attempts to upload a corrupted or invalid HEIC file, or an image that can
 - **FR-011**: System MUST maintain the original filename with the extension changed to .jpg or .jpeg after conversion or compression.
 - **FR-012**: System MUST apply compression to non-HEIC image formats (JPEG, PNG, WebP) when their file size exceeds 3MB. Images at or below 3MB pass through unchanged.
 - **FR-013**: System MUST extract only the primary still image from multi-frame HEIC containers (e.g., Live Photos, burst sequences) and convert that single frame to JPEG, discarding any additional frames or embedded video data.
-- **FR-014**: System MUST reject HEIC uploads exceeding 25MB with a clear error message informing the user of the size limit.
+- **FR-014**: System MUST reject HEIC uploads exceeding 15MB with a clear error message informing the user of the size limit.
 - **FR-015**: System MUST compress images exceeding 3MB using JPEG quality 80–85 with MozJPEG encoding to bring the file size to ≤3MB.
 - **FR-016**: System MUST resize images whose longest side exceeds 4096px down to 4096px on the longest side, preserving the original aspect ratio. Resizing is applied before quality compression.
 - **FR-017**: System MUST NOT apply compression or resizing to SVG files, which are vector-based and not subject to raster image optimization.

@@ -18,7 +18,7 @@ iPhone users uploading HEIC/HEIF images experience failures because the platform
 **Target Platform**: Linux server (Docker Node 22), macOS dev
 **Project Type**: Single NestJS server monolith
 **Performance Goals**: HEIC→JPEG conversion ≤5s for images up to 10MB; compression/resize ≤2s per image; no regression on non-HEIC uploads under 3MB
-**Constraints**: 25MB max HEIC upload size; 3MB compression threshold; strip all EXIF metadata (preserve orientation via auto-orient into pixel data); only primary frame extracted from multi-frame containers
+**Constraints**: 15MB max HEIC upload size; 3MB compression threshold; strip all EXIF metadata (preserve orientation via auto-orient into pixel data); only primary frame extracted from multi-frame containers
 **Scale/Scope**: ~6 visual types + 2 generic upload mutations; ~400 LOC change (services + enum + tests)
 
 ## Constitution Check
@@ -34,7 +34,7 @@ _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 | 5. Observability & Operational Readiness | ✅ Pass | Conversion events logged with structured context (source format, target format, file size, conversion time). Uses existing `LogContext` patterns. |
 | 6. Code Quality with Pragmatic Testing | ✅ Pass | Unit tests for conversion service (mock heic-convert) and compression service (mock sharp). Integration test for upload pipeline with HEIC fixture and large image fixture. Risk-based: testing actual output, not mocking internals. |
 | 7. API Consistency & Evolution | ✅ Pass | No API surface change. |
-| 8. Secure-by-Design Integration | ✅ Pass | HEIC input passes through existing centralized validation. 25MB size limit enforced before conversion. Compression operates on in-memory buffers only. |
+| 8. Secure-by-Design Integration | ✅ Pass | HEIC input passes through existing centralized validation. 15MB size limit enforced before conversion. Compression operates on in-memory buffers only. |
 | 9. Container & Deployment Determinism | ✅ Pass | `heic-convert` is pure JavaScript/WASM. `sharp` ships prebuilt binaries via `@img/sharp-*` platform packages (JPEG/PNG/WebP support; no HEIC in prebuilts). Dockerfile uses explicit Node 22 base. No runtime dynamic install. |
 | 10. Simplicity & Incremental Hardening | ✅ Pass | Two-stage pipeline: detect HEIC → convert → compress if >3MB → continue existing pipeline. No caching, queuing, or async processing. |
 

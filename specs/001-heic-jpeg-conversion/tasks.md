@@ -33,7 +33,7 @@
   - Define `HEIC_MIME_TYPES` and `HEIC_FILE_EXTENSIONS` constants
   - Implement `isHeicFormat(mimeType: string, fileName: string): boolean` — checks MIME type against `HEIC_MIME_TYPES` and file extension against `HEIC_FILE_EXTENSIONS`
   - Implement `convertIfNeeded(buffer: Buffer, mimeType: string, fileName: string): Promise<ImageConversionResult>` — if HEIC detected, convert via `convert({ buffer, format: 'JPEG', quality: 1 })` using `heic-convert`, update MIME type to `image/jpeg`, change file extension to `.jpg`, return `{ buffer, mimeType, fileName, converted: true }`; otherwise return inputs unchanged with `converted: false`
-  - Implement 25MB size validation for HEIC uploads (FR-014) — throw `ValidationException` with static message and file size in `details` payload
+  - Implement 15MB size validation for HEIC uploads (FR-014) — throw `ValidationException` with static message and file size in `details` payload
   - Wrap heic-convert errors in `ValidationException` with static message pattern ("Failed to convert HEIC image") and original error in `details` per coding standards
   - Inject NestJS `Logger` and log conversion events at verbose level: source MIME, target MIME, original size, converted size, conversion duration (FR-008)
   - Use `@Injectable()` decorator for NestJS DI
@@ -58,7 +58,7 @@
   - Test `isHeicFormat()` returns true for `.heic`, `.heif` extensions regardless of MIME type
   - Test `isHeicFormat()` returns false for `image/jpeg`, `image/png`, etc.
   - Test `convertIfNeeded()` passes through non-HEIC buffers unchanged with `converted: false`
-  - Test `convertIfNeeded()` rejects HEIC files exceeding 25MB with `ValidationException`
+  - Test `convertIfNeeded()` rejects HEIC files exceeding 15MB with `ValidationException`
   - Test `convertIfNeeded()` converts HEIC buffer and returns `mimeType: 'image/jpeg'`, `fileName` ending in `.jpg`, `converted: true` (use a real small HEIC fixture or mock heic-convert)
   - Test `convertIfNeeded()` wraps heic-convert errors in `ValidationException` with details payload
 - [ ] T006b Create unit tests for `ImageCompressionService` in `src/domain/common/visual/__tests__/image.compression.service.spec.ts`:
@@ -149,8 +149,8 @@
   - Confirm that compression failure does not block the upload — if compression fails, log the error and store the uncompressed image as a fallback
 - [ ] T012 [US4] Add unit tests for error scenarios in `src/domain/common/visual/__tests__/image.conversion.service.spec.ts`:
   - Test: corrupted HEIC buffer (mock heic-convert to throw) → `ValidationException` thrown with correct message and details
-  - Test: HEIC file exactly at 25MB boundary → accepted
-  - Test: HEIC file at 25MB + 1 byte → rejected with `ValidationException`
+  - Test: HEIC file exactly at 15MB boundary → accepted
+  - Test: HEIC file at 15MB + 1 byte → rejected with `ValidationException`
   - Test: conversion failure does not affect subsequent conversion calls (service remains stateless)
 - [ ] T012b [US4] Add unit tests for compression error scenarios in `src/domain/common/visual/__tests__/image.compression.service.spec.ts`:
   - Test: sharp throws on corrupted buffer → `ValidationException` thrown with correct message and details
