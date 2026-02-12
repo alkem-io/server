@@ -1,13 +1,15 @@
 #!/bin/bash
 
-# Usage: ./restore_latest_backup_set.sh <environment> [restart_services] [non_interactive]
+# Usage: ./restore_latest_backup_set.sh <environment> [restart_services] [non_interactive] [restore_kratos]
 # Arguments:
 #   environment      - Environment to restore (acc/dev/sandbox/prod). Default: prod
 #   restart_services - Whether to restart services after restore (true/false). Default: true
 #   non_interactive  - Run without prompts (true/false). Default: true
+#   restore_kratos   - Whether to restore kratos database (true/false). Default: false
 # Examples:
-#   ./restore_latest_backup_set.sh acc false true   # Restore acc, no restart, non-interactive
-#   ./restore_latest_backup_set.sh dev true false   # Restore dev, restart, interactive mode
+#   ./restore_latest_backup_set.sh acc false true        # Restore acc, no restart, non-interactive, no kratos
+#   ./restore_latest_backup_set.sh dev true false        # Restore dev, restart, interactive mode, no kratos
+#   ./restore_latest_backup_set.sh prod true true true   # Restore prod with kratos database
 
 # Determine the platform (macOS vs. Linux vs. others)
 PLATFORM=$(uname | tr '[:upper:]' '[:lower:]')
@@ -55,6 +57,9 @@ RESTART_SERVICES=${2:-true}
 
 # Optional parameter for non-interactive mode (default is true)
 NON_INTERACTIVE=${3:-true}
+
+# Optional parameter to restore kratos database (default is false)
+RESTORE_KRATOS=${4:-false}
 
 # The path to the .env.docker file is the second argument.
 ENV_FILE_PATH=../../.env.docker
@@ -108,8 +113,13 @@ SCRIPT_PATH='restore_latest_backup.sh'
 # Call the existing script for alkemio (pass NON_INTERACTIVE mode)
 bash $SCRIPT_PATH alkemio $ENV $NON_INTERACTIVE
 
-# Call the existing script for kratos (pass NON_INTERACTIVE mode)
-bash $SCRIPT_PATH kratos $ENV $NON_INTERACTIVE
+# Conditionally restore kratos database based on the RESTORE_KRATOS flag
+if [[ "$RESTORE_KRATOS" == "true" ]]; then
+    echo "Restoring kratos database..."
+    bash $SCRIPT_PATH kratos $ENV $NON_INTERACTIVE
+else
+    echo "Skipping kratos database restore (use 4th argument 'true' to enable)."
+fi
 
 # Call the existing script for synapse (pass NON_INTERACTIVE mode)
 bash $SCRIPT_PATH synapse $ENV $NON_INTERACTIVE
