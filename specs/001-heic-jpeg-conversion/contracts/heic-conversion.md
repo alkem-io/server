@@ -1,4 +1,4 @@
-# Contract: HEIC Image Conversion
+# Contract: HEIC Conversion & Image Compression
 
 **Feature**: 001-heic-jpeg-conversion
 **Date**: 2026-02-11
@@ -20,8 +20,9 @@ mutation uploadImageOnVisual($uploadData: UploadImageOnVisualInput!) {
 
 The behavioral change is transparent to API consumers:
 - Clients that previously could **not** upload HEIC can now do so
+- Large images are automatically compressed/resized to ≤3MB
 - The response is identical (a Visual with a URI pointing to a JPEG file)
-- The served file is always JPEG with `Content-Type: image/jpeg`
+- The served file is always JPEG with `Content-Type: image/jpeg` (for HEIC conversions and compressed images)
 
 ## Internal Service Contract
 
@@ -56,13 +57,62 @@ interface IImageConversionService {
 }
 ```
 
+### ImageCompressionService
+
+New internal service — not exposed via GraphQL. Used by `VisualService` and optionally by `StorageBucketService`. Runs **after** HEIC conversion (if applicable).
+
+```typescript
+interface ImageCompressionResult {
+  buffer: Buffer;
+  mimeType: string;    // 'image/jpeg' after compression
+  fileName: string;    // Extension may change (e.g., .png → .jpg)
+  compressed: boolean; // True if compression/resize was applied
+  originalSize: number;
+  finalSize: number;
+}
+
+interface IImageCompressionService {
+  /**
+   * Compresses and/or resizes images exceeding the size threshold.
+   * Images at or below the threshold pass through unchanged.
+   * SVG files always pass through unchanged.
+   *
+   * @param buffer - Image file buffer (JPEG, PNG, or WebP)
+   * @param mimeType - Current MIME type
+   * @param fileName - Current filename
+   * @returns Compression result with potentially optimized buffer
+   * @throws ValidationException if compression fails
+   */
+  compressIfNeeded(buffer: Buffer, mimeType: string, fileName: string): Promise<ImageCompressionResult>;
+
+  /**
+   * Check if compression should be applied to this format.
+   * Returns false for SVG, GIF, and other non-raster formats.
+   */
+  isCompressibleFormat(mimeType: string): boolean;
+}
+```
+
 ### Conversion Parameters
 
 | Parameter | Value | Rationale |
 | --- | --- | --- |
-| JPEG quality | 1.0 (heic-convert scale 0–1, equivalent to ~100%) | `heic-convert` uses a 0–1 quality scale; 1.0 produces highest quality JPEG output. Can be tuned down later if file sizes are too large. |
-| Metadata | preserved | `heic-convert` preserves EXIF metadata (orientation, date, camera info) in the JPEG output by default per FR-005 |
+| JPEG quality | 1.0 (heic-convert scale 0–1, equivalent to ~100%) | `heic-convert` uses a 0–1 quality scale; 1.0 produces highest quality JPEG output. Compression is handled separately by `ImageCompressionService`. |
+| Metadata | stripped | `heic-convert` preserves EXIF in JPEG output, but the subsequent processing step (compression or standalone auto-orient) strips all metadata per FR-005. Orientation is applied to pixel data before stripping. |
 | Pages extracted | main image only | `convert()` extracts main image; `convert.all()` available but not used per clarification |
+
+### Compression Parameters
+
+| Parameter | Value | Rationale |
+| --- | --- | --- |
+| Size threshold | 3MB (3,145,728 bytes) | Files ≤3MB pass through unchanged |
+| Quality | 82 (range 80–85) | Sweet spot — visually indistinguishable from 100, 3–5x smaller |
+| MozJPEG | enabled | 5–10% smaller output at equivalent quality vs standard libjpeg |
+| Auto-orient | true | Corrects EXIF orientation to prevent rotated output |
+| Metadata | stripped | `sharp.rotate()` auto-orients then all EXIF metadata is discarded per FR-005 (GDPR) |
+| Max dimension | 4096px longest side | Resize before compression if longest side exceeds cap; preserves aspect ratio |
+| PNG alpha handling | flatten to white (`#ffffff`) | PNG→JPEG conversion composites alpha against white |
+| SVG bypass | yes | Vector format excluded from compression |
 
 ### Error Contract
 
@@ -71,7 +121,9 @@ interface IImageConversionService {
 | Corrupted HEIC file | `ValidationException` | "Failed to convert HEIC image" |
 | HEIC exceeds 25MB | `ValidationException` | "File size exceeds the maximum allowed size of 25MB for HEIC uploads" |
 | Unsupported HEIC codec | `ValidationException` | "Unsupported HEIC format variant" |
+| Compression failure | `ValidationException` | "Failed to compress image" |
 | heic-convert processing failure | `StorageUploadFailedException` | "Upload on visual failed!" (existing pattern) |
+| sharp processing failure | `StorageUploadFailedException` | "Upload on visual failed!" (existing pattern) |
 
 Error details (file size, original MIME type, conversion duration) are placed in the exception `details` payload per coding standards — never in the message string.
 
@@ -81,12 +133,12 @@ Error details (file size, original MIME type, conversion duration) are placed in
 
 | MIME Type | Extension | Status |
 | --- | --- | --- |
-| `image/heic` | `.heic` | **New — accepted, converted to JPEG** |
-| `image/heif` | `.heif` | **New — accepted, converted to JPEG** |
-| `image/jpeg` | `.jpg`, `.jpeg` | Existing — pass-through |
-| `image/png` | `.png` | Existing — pass-through |
-| `image/webp` | `.webp` | Existing — pass-through |
-| `image/svg+xml` | `.svg` | Existing — pass-through |
+| `image/heic` | `.heic` | **New — accepted, converted to JPEG, compressed if >3MB** |
+| `image/heif` | `.heif` | **New — accepted, converted to JPEG, compressed if >3MB** |
+| `image/jpeg` | `.jpg`, `.jpeg` | Existing — **compressed if >3MB**, pass-through if ≤3MB |
+| `image/png` | `.png` | Existing — **converted to JPEG & compressed if >3MB**, pass-through if ≤3MB |
+| `image/webp` | `.webp` | Existing — **compressed if >3MB**, pass-through if ≤3MB |
+| `image/svg+xml` | `.svg` | Existing — always pass-through (vector format, no compression) |
 
 ### Stored (output)
 
@@ -94,6 +146,11 @@ HEIC files are **never** stored in their original format. After conversion:
 - MIME type: `image/jpeg`
 - Extension: `.jpg`
 - Buffer: JPEG-encoded pixel data
+
+Large images (>3MB) are stored at reduced quality/dimensions:
+- MIME type: `image/jpeg` (PNG is converted to JPEG during compression)
+- Extension: `.jpg` (may change from `.png`)
+- File size: ≤3MB (best-effort)
 
 ## Dependency Contract
 
@@ -111,3 +168,17 @@ HEIC files are **never** stored in their original format. After conversion:
 | TypeScript types | `@types/heic-convert` (separate dev dependency) |
 | Weekly downloads | ~314k |
 | Unpacked size | 7.92 kB (core); ~3 MB including libheif-js WASM dependency |
+
+### sharp (new dependency)
+
+| Property | Value |
+| --- | --- |
+| Package | `sharp` |
+| Version | `^0.34.0` |
+| License | Apache-2.0 |
+| Type | Production dependency |
+| Native binaries | Prebuilt via `@img/sharp-*` optional dependencies (JPEG/PNG/WebP/AVIF/TIFF/GIF/SVG; **no HEIC**) |
+| Docker compatibility | linux-x64 glibc (matches Node 22 Docker base) |
+| macOS dev | Prebuilt darwin-arm64 and darwin-x64 available |
+| Weekly downloads | ~35M |
+| Use in this feature | Image compression & resizing only (not HEIC decoding) |

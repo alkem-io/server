@@ -1,13 +1,11 @@
-# Data Model: HEIC to JPEG Image Conversion
+# Data Model: HEIC Conversion & Image Compression
 
 **Feature**: 001-heic-jpeg-conversion
 **Date**: 2026-02-11
 
 ## Overview
 
-This feature does **not** introduce new database entities or schema changes. The conversion is a runtime transformation in the upload pipeline — HEIC buffers are converted to JPEG in-memory before being stored. Existing entities (`Visual`, `Document`, `StorageBucket`) are used unchanged.
-
-The only data-level changes are to in-code enums and constraints that control allowed MIME types.
+This feature does **not** introduce new database entities or schema changes. The conversion and compression are runtime transformations in the upload pipeline — buffers are processed in-memory before being stored. Existing entities (`Visual`, `Document`, `StorageBucket`) are used unchanged.
 
 ## Affected Enums & Constants
 
@@ -46,6 +44,19 @@ HEIC_FILE_EXTENSIONS = ['.heic', '.heif']
 
 Used by the conversion service to detect whether a buffer needs conversion.
 
+### IMAGE_COMPRESSION_THRESHOLD (new constant)
+
+**File**: `src/domain/common/visual/image.compression.service.ts` (or a shared constants file)
+
+```
+IMAGE_COMPRESSION_THRESHOLD = 3 * 1024 * 1024  // 3MB in bytes
+COMPRESSION_QUALITY = 82                        // sweet spot in 80-85 range
+MAX_DIMENSION = 4096                            // longest side cap
+NON_COMPRESSIBLE_MIMES = ['image/svg+xml', 'image/gif']
+```
+
+Used by the compression service to determine when and how to compress images.
+
 ## Existing Entities (unchanged)
 
 ### Visual
@@ -69,17 +80,17 @@ Used by the conversion service to detect whether a buffer needs conversion.
 | --- | --- | --- |
 | id | UUID | PK |
 | displayName | string | Filename — will be `.jpg` after conversion |
-| mimeType | MimeFileType | Will be `image/jpeg` for converted files |
+| mimeType | MimeFileType | Will be `image/jpeg` for converted/compressed files |
 | externalID | string | SHA hash of file contents (content-addressed) |
-| size | number | Size of the converted JPEG (not the original HEIC) |
+| size | number | Size of the final processed file (converted and/or compressed) |
 | createdBy | string | User ID |
 | temporaryLocation | boolean | Upload staging flag |
 
-No schema changes needed — HEIC files are stored as JPEG with a JPEG MIME type.
+No schema changes needed — HEIC files are stored as JPEG with a JPEG MIME type. Large images are stored at their compressed size.
 
 ### StorageBucket
 
-No changes. The bucket's `allowedMimeTypes` already include image types. Since HEIC is converted to JPEG before storage, the stored document's MIME type will always be an already-allowed type.
+No changes. The bucket's `allowedMimeTypes` already include image types. Since HEIC is converted to JPEG and large images are compressed before storage, the stored document's MIME type will always be an already-allowed type.
 
 ## Data Flow
 
@@ -99,16 +110,26 @@ ImageConversionService.convertIfNeeded(buffer, mimeType, fileName)
     │  └─ Not HEIC → return unchanged { buffer, mimeType, fileName }
     │
     ▼
+ImageCompressionService.compressIfNeeded(buffer, mimeType, fileName)
+    │  ├─ SVG/GIF → skip (pass through unchanged)
+    │  ├─ Size ≤3MB → pass through unchanged
+    │  └─ Size >3MB or longest side >4096px → compression via sharp:
+    │       Step 1: Resize to 4096px max longest side (if larger, preserve aspect ratio)
+    │       Step 2: JPEG quality 82 + MozJPEG + autoOrient (strip EXIF per FR-005)
+    │       If still >3MB → store best-effort result
+    │       PNG → flatten alpha to white, output as JPEG
+    │
+    ▼
 Get Image Dimensions (image-size works on JPEG buffer)
     │
     ▼
 Validate Width/Height constraints
     │
     ▼
-StorageBucketService.uploadFileAsDocumentFromBuffer(bucketId, jpegBuffer, 'photo.jpg', 'image/jpeg', userId)
+StorageBucketService.uploadFileAsDocumentFromBuffer(bucketId, processedBuffer, 'photo.jpg', 'image/jpeg', userId)
     │
     ▼
-Document created with JPEG metadata
+Document created with final processed metadata (JPEG MIME, compressed size)
 ```
 
 ## Migration Requirements

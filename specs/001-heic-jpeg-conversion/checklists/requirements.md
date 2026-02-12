@@ -1,7 +1,7 @@
-# Specification Quality Checklist: HEIC to JPEG Image Conversion
+# Specification Quality Checklist: HEIC Conversion & Image Compression
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
-**Created**: 2026-02-11
+**Created**: 2026-02-11 (updated for compression scope expansion)
 **Feature**: [spec.md](../spec.md)
 
 ## Content Quality
@@ -32,4 +32,7 @@
 ## Notes
 
 - Q1 (Original HEIC storage strategy): Resolved — Option A selected. System stores only the converted JPEG and discards the original HEIC immediately after successful conversion.
-- All checklist items pass. Spec is ready for `/speckit.clarify` or `/speckit.plan`.
+- Q2 (Compression scope): Resolved — all uploaded images (JPEG, PNG, WebP, converted HEIC) exceeding 3MB or with longest side >4096px are compressed at JPEG quality 80–85 with resize to 4096px max. SVG and GIF are excluded from compression.
+- User stories updated: US1 (HEIC single upload, P1), US2 (Large Image Compression, P2), US3 (Bulk Mixed Formats, P3), US4 (Error Handling, P4).
+- New FRs added: FR-015 (progressive compression), FR-016 (proportional resizing), FR-017 (SVG bypass), FR-018 (PNG alpha compositing).
+- All checklist items pass. Spec is ready for implementation.
