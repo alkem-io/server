@@ -89,7 +89,15 @@ No schema changes needed — HEIC files are stored as JPEG with a JPEG MIME type
 
 ### StorageBucket
 
-No changes. The bucket's `allowedMimeTypes` already include image types. Since HEIC is converted to JPEG and large images are compressed before storage, the stored document's MIME type will always be an already-allowed type.
+| Field | Type | Notes |
+| --- | --- | --- |
+| id | UUID | PK |
+| allowedMimeTypes | text (comma-separated) | MIME types accepted for uploads to this bucket |
+| maxFileSize | number | Maximum file size in bytes |
+| authorization | Authorization | Policy |
+| storageAggregatorId | UUID | FK |
+
+**Change required**: Existing storage buckets in the database must be updated to include `image/heic,image/heif` in their `allowedMimeTypes` column. A migration (`1770909862763-AddHeicHeifMimeTypes.ts`) appends these types to all buckets that contain image MIME types. New buckets created after deployment will include HEIC/HEIF automatically via the updated `allowedTypes` constant in seed/migration utils.
 
 ## Data Flow
 

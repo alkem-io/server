@@ -67,12 +67,10 @@
 **Rationale**:
 - iPhone HEIC files contain EXIF orientation tags; these are preserved in the converted JPEG output by `heic-convert`.
 - Modern browsers and image viewers respect EXIF orientation automatically.
-- If server-side auto-orientation becomes needed in the future, `sharp` can be added to post-process the JPEG buffer (which is a standard format sharp supports out of the box).
+- Sharp is included in this feature for image optimization (compression/resizing). Auto-orientation and EXIF stripping are handled as part of the same sharp pipeline.
 - This matches FR-005 (strip all EXIF metadata; apply orientation to pixel data via auto-orient).
 
-**Alternatives considered**:
-- Strip all metadata: Rejected — violates FR-005.
-- Add sharp just for auto-orientation: Over-engineered for now — adds a large dependency for a single operation that browsers handle natively. Can be added later if needed.
+**Note**: The decision to include sharp was finalized during implementation after syncing with hero101 and ccanos. Sharp handles compression/resizing/auto-orientation/EXIF-stripping in a single optimized pipeline for all compressible images, not just for orientation alone.
 
 ## R5: Multi-Frame HEIC Handling
 

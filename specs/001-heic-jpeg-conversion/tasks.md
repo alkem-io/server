@@ -247,8 +247,8 @@ Task T015: "Existing test suite regression check"
 
 - [P] tasks = different files, no dependencies
 - [Story] label maps task to specific user story for traceability
-- No database migration needed — code-level fix for existing Visual entity's `allowedTypes`
-- No GraphQL schema changes — `schema.graphql` is untouched
+- Database migration (`1770909862763-AddHeicHeifMimeTypes.ts`) adds `image/heic,image/heif` to existing storage buckets' `allowedMimeTypes`. Code-level fix also applied to Visual validation to check against current `DEFAULT_VISUAL_CONSTRAINTS`.
+- GraphQL schema updated — `MimeTypeVisual` enum extended with HEIC/HEIF values (additive, non-breaking)
 - Two-stage pipeline: heic-convert for HEIC decoding, sharp for compression/resizing on standard formats
 - Exception messages use static strings; dynamic data (file sizes, MIME types, durations) goes in `details` payload per coding standards
 - Logging uses verbose level with structured context per constitution Principle 5

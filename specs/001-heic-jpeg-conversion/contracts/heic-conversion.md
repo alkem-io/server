@@ -5,7 +5,13 @@
 
 ## GraphQL Schema Impact
 
-**No GraphQL schema changes.** The existing mutations remain identical:
+**Minor additive change**: The `MimeTypeVisual` enum is extended with two new values:
+- `HEIC = 'image/heic'`
+- `HEIF = 'image/heif'`
+
+This is a **non-breaking additive change** — existing clients continue to work unchanged. The enum extension allows clients to query these MIME types but does not require schema updates.
+
+The existing mutations remain identical:
 
 ```graphql
 # Unchanged — accepts same Upload scalar, returns same Visual type
@@ -174,7 +180,7 @@ All compressible images are stored optimized:
 | Property | Value |
 | --- | --- |
 | Package | `sharp` |
-| Version | `^0.34.0` |
+| Version | `^0.34.5` |
 | License | Apache-2.0 |
 | Type | Production dependency |
 | Native binaries | Prebuilt via `@img/sharp-*` optional dependencies (JPEG/PNG/WebP/AVIF/TIFF/GIF/SVG; **no HEIC**) |

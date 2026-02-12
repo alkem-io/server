@@ -90,11 +90,14 @@ A user attempts to upload a corrupted or invalid HEIC file, or an image that can
 - How does the system handle HEIC files with embedded metadata (EXIF, location, etc.)?
   - All EXIF metadata is stripped during processing. Orientation is applied to pixel data (auto-orient) and then discarded. No metadata is persisted in the stored file.
 - What happens if storage space is insufficient to store both the temporary HEIC and converted JPEG?
+  - Processing occurs entirely in-memory via buffers; no temporary files are written to disk. If memory is exhausted during conversion, Node.js throws an out-of-memory error and the upload fails. The 15MB HEIC limit bounds peak memory usage to ~60-80MB per upload (HEIC buffer + JPEG intermediate + compressed output).
 - How does the system behave when conversion takes longer than expected (e.g., timeout scenarios)?
+  - No explicit timeout is enforced on heic-convert or sharp operations. If conversion stalls, the GraphQL request will eventually hit the global HTTP timeout (~30s). For production monitoring, conversion duration is logged in the `details` payload; anomalies trigger observability alerts.
 - What happens if a HEIC file uses a newer codec version not supported by the conversion library?
+  - heic-convert (via libheif-js WASM) throws a decoding error. This is caught and wrapped in a `ValidationException` with message "Failed to convert HEIC image" and details including `originalException`, `fileSize`, `mimeType`, `fileName`. The user receives a client-friendly error; logs contain full diagnostic context.
 - Multi-frame HEIC containers (Live Photos, bursts): only the primary still image is extracted; additional frames are silently discarded.
 - What happens when compression produces a file larger than expected?
-  - The system resizes images with longest side >4096px, then compresses at JPEG quality 80–85. The optimized result is always stored. Quality 80–85 is visually indistinguishable from 100 for most images.
+  - The system resizes images with longest side >4096px, then compresses at JPEG quality 82. The optimized result is always stored. Quality 82 is visually indistinguishable from 100 for most images and typically reduces file size by 3-5x. In rare cases where compression increases size (e.g., tiny already-optimized images), the larger output is still stored — correctness over micro-optimization.
 - What about SVG files — are they compressed?
   - No. SVG is a vector format; compression/resizing does not apply. SVG files pass through unchanged.
 - What about PNG transparency?
@@ -107,7 +110,7 @@ A user attempts to upload a corrupted or invalid HEIC file, or an image that can
 - **FR-001**: System MUST accept image uploads in HEIC and HEIF formats from client applications.
 - **FR-002**: System MUST automatically detect when an uploaded image is in HEIC/HEIF format based on file MIME type or file extension.
 - **FR-003**: System MUST convert HEIC/HEIF images to JPEG format during the upload process, before storing the image to disk.
-- **FR-004**: System MUST preserve image quality during conversion and compression using JPEG quality 80–85, which is visually indistinguishable from 100 for most images while achieving 3–5x size reduction.
+- **FR-004**: System MUST preserve image quality during conversion and compression using JPEG quality 82, which is visually indistinguishable from 100 for most images while achieving 3–5x size reduction.
 - **FR-005**: System MUST strip all EXIF metadata (GPS, date taken, camera information, etc.) during image processing. Only image orientation data MUST be preserved (applied to pixel data via auto-orient) to ensure correct display. This minimizes GDPR exposure by not retaining personal location or device data.
 - **FR-006**: System MUST return image/jpeg as the MIME type for converted images when requested by the file-service.
 - **FR-007**: System MUST handle conversion and compression failures gracefully by returning meaningful error messages to the user without crashing.
@@ -135,7 +138,7 @@ A user attempts to upload a corrupted or invalid HEIC file, or an image that can
 
 - **SC-001**: iPhone users can successfully upload HEIC images with 100% of valid files being accepted and converted to JPEG.
 - **SC-002**: All converted JPEG images display correctly in major web browsers (Chrome, Firefox, Safari, Edge) without compatibility issues.
-- **SC-003**: HEIC to JPEG conversion completes within 5 seconds for images up to 10MB in size under normal system load.
+- **SC-003**: HEIC to JPEG conversion completes within 5 seconds for images up to 10MB in size under normal system load. Combined conversion + compression pipeline completes within 7 seconds total (5s conversion + 2s compression budget).
 - **SC-004**: Image quality is preserved during conversion and compression with no visible artifacts at standard viewing distances.
 - **SC-005**: Conversion and compression failures (corrupted files, unsupported formats) are handled gracefully with clear error messages and 100% of errors logged for debugging.
 - **SC-006**: Support ticket volume related to iPhone image upload issues decreases by at least 80% after feature deployment.
