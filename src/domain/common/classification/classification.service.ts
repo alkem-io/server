@@ -190,16 +190,28 @@ export class ClassificationService {
     });
   }
 
+  async updateTagsetTemplateOnSelectTagset(
+    classificationID: string,
+    tagsetTemplate: ITagsetTemplate
+  ): Promise<ITagset> {
+    const tagset = await this.getTagset(classificationID, tagsetTemplate.name);
+    tagset.tagsetTemplate = tagsetTemplate;
+    tagset.tags = tagsetTemplate.defaultSelectedValue
+      ? [tagsetTemplate.defaultSelectedValue]
+      : [];
+    return await this.tagsetService.save(tagset);
+  }
+
   // Note: provided data has priority when it comes to tags
   public updateClassificationTagsetInputs(
-    tagsetInputDtata: CreateTagsetInput[] | undefined,
+    tagsetInputData: CreateTagsetInput[] | undefined,
     additionalTagsetInputs: CreateTagsetInput[]
   ): CreateTagsetInput[] {
     const result: CreateTagsetInput[] = [...additionalTagsetInputs];
 
-    if (!tagsetInputDtata) return result;
+    if (!tagsetInputData) return result;
 
-    for (const tagsetInput of tagsetInputDtata) {
+    for (const tagsetInput of tagsetInputData) {
       const existingInput = result.find(t => t.name === tagsetInput.name);
       if (existingInput) {
         // Do not change type, name etc - only tags

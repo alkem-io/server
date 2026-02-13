@@ -5,6 +5,7 @@ import {
   RelationshipNotFoundException,
 } from '@common/exceptions';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ClassificationService } from '@domain/common/classification/classification.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.interface';
@@ -21,12 +22,13 @@ import { CalloutsSetService } from '../callouts-set/callouts.set.service';
 @Injectable()
 export class CalloutTransferService {
   constructor(
-    private calloutService: CalloutService,
-    private calloutsSetService: CalloutsSetService,
-    private storageBucketService: StorageBucketService,
-    private profileService: ProfileService,
-    private tagsetService: TagsetService,
-    private storageAggregatorResolverService: StorageAggregatorResolverService
+    private readonly calloutService: CalloutService,
+    private readonly calloutsSetService: CalloutsSetService,
+    private readonly classificationService: ClassificationService,
+    private readonly storageBucketService: StorageBucketService,
+    private readonly profileService: ProfileService,
+    private readonly tagsetService: TagsetService,
+    private readonly storageAggregatorResolverService: StorageAggregatorResolverService
   ) {}
 
   public async transferCallout(
@@ -57,8 +59,15 @@ export class CalloutTransferService {
     const tagsetTemplateSet =
       await this.calloutsSetService.getTagsetTemplatesSet(targetCalloutsSet.id);
 
-    // Update the tagsets
+    // Update the profile tagsets
     await this.updateTagsetsFromTemplates(
+      updatedCallout.id,
+      tagsetTemplateSet.tagsetTemplates
+    );
+
+    // Update the classification tagsets to pick up the default state
+    // from the target callouts set
+    await this.updateClassificationFromTemplates(
       updatedCallout.id,
       tagsetTemplateSet.tagsetTemplates
     );
@@ -186,6 +195,26 @@ export class CalloutTransferService {
       const tagset = this.tagsetService.createTagsetWithName([], tagsetInput);
       tagset.profile = profile;
       await this.tagsetService.save(tagset);
+    }
+  }
+
+  private async updateClassificationFromTemplates(
+    calloutID: string,
+    tagsetTemplates: ITagsetTemplate[]
+  ): Promise<void> {
+    const callout = await this.calloutService.getCalloutOrFail(calloutID, {
+      relations: {
+        classification: true,
+      },
+    });
+
+    // Update each classification tagset to point to the target callouts set
+    // template, picking up the correct allowedValues and defaultSelectedValue
+    for (const tagsetTemplate of tagsetTemplates) {
+      await this.classificationService.updateTagsetTemplateOnSelectTagset(
+        callout.classification.id,
+        tagsetTemplate
+      );
     }
   }
 }
