@@ -4,6 +4,7 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Cache } from 'cache-manager';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { type Mocked, vi, describe, it, expect, beforeEach } from 'vitest';
 import { RoleSetCacheService } from './role.set.service.cache';
 
@@ -43,6 +44,7 @@ describe('RoleSetCacheService', () => {
       providers: [
         RoleSetCacheService,
         { provide: CACHE_MANAGER, useValue: cacheManager },
+        { provide: WINSTON_MODULE_NEST_PROVIDER, useValue: { warn: vi.fn() } },
         { provide: ConfigService, useValue: createMockConfigService() },
       ],
     }).compile();

@@ -80,6 +80,8 @@ export class RoleSetAgentRolesDataLoader {
     );
 
     // 4. In-memory credential matching for uncached keys.
+    const cacheWrites: Promise<unknown>[] = [];
+
     for (const i of uncachedIndices) {
       const { agentInfo, roleSet } = keys[i];
       const credentials = credentialsByAgent.get(agentInfo.agentID);
@@ -94,13 +96,17 @@ export class RoleSetAgentRolesDataLoader {
       );
       results[i] = agentRoles;
 
-      // 5. Cache the result.
-      await this.roleSetCacheService.setAgentRolesCache(
-        agentInfo.agentID,
-        roleSet.id,
-        agentRoles
+      cacheWrites.push(
+        this.roleSetCacheService.setAgentRolesCache(
+          agentInfo.agentID,
+          roleSet.id,
+          agentRoles
+        )
       );
     }
+
+    // 5. Fire-and-forget: cache writes don't affect the response.
+    void Promise.all(cacheWrites);
 
     return results;
   }

@@ -68,9 +68,9 @@ function createMocks() {
   };
 
   const invitationService: Mocked<
-    Pick<InvitationService, 'canInvitationBeAccepted'>
+    Pick<InvitationService, 'canAcceptInvitation'>
   > = {
-    canInvitationBeAccepted: vi.fn().mockResolvedValue(false),
+    canAcceptInvitation: vi.fn().mockReturnValue(false),
   };
 
   const roleSetRepository: Mocked<Pick<Repository<RoleSet>, 'find'>> = {
@@ -384,7 +384,7 @@ describe('RoleSetMembershipStatusDataLoader', () => {
       mocks.roleSetService.findOpenInvitation.mockResolvedValue({
         id: 'inv-1',
       } as any);
-      mocks.invitationService.canInvitationBeAccepted.mockResolvedValue(true);
+      mocks.invitationService.canAcceptInvitation.mockReturnValue(true);
 
       const loader = createLoader(mocks);
       const result = await loader.loader.load(
@@ -399,7 +399,7 @@ describe('RoleSetMembershipStatusDataLoader', () => {
       mocks.roleSetService.findOpenInvitation.mockResolvedValue({
         id: 'inv-1',
       } as any);
-      mocks.invitationService.canInvitationBeAccepted.mockResolvedValue(false);
+      mocks.invitationService.canAcceptInvitation.mockReturnValue(false);
 
       const loader = createLoader(mocks);
       const result = await loader.loader.load(
@@ -429,16 +429,15 @@ describe('RoleSetMembershipStatusDataLoader', () => {
       mocks.roleSetService.findOpenInvitation.mockResolvedValue({
         id: 'inv-1',
       } as any);
-      mocks.invitationService.canInvitationBeAccepted.mockResolvedValue(true);
+      mocks.invitationService.canAcceptInvitation.mockReturnValue(true);
 
       const loader = createLoader(mocks);
       const result = await loader.loader.load(
         makeKey('agent-1', 'user-1', roleSet)
       );
 
+      // Application and invitation are fetched in parallel, but application takes precedence
       expect(result).toBe(CommunityMembershipStatus.APPLICATION_PENDING);
-      // Should NOT even check invitations
-      expect(mocks.roleSetService.findOpenInvitation).not.toHaveBeenCalled();
     });
   });
 

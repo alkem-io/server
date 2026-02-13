@@ -90,31 +90,46 @@ export class RoleSetMembershipStatusDataLoader {
       this.roleSetRepository
     );
 
-    // 4. In-memory membership check + fallback for non-members.
+    // 4. In-memory membership check; split into members and non-members.
+    const nonMemberIndices: number[] = [];
+    const cacheWrites: Promise<unknown>[] = [];
+
     for (const i of uncachedIndices) {
       const { agentInfo, roleSet } = keys[i];
       const credentials = credentialsByAgent.get(agentInfo.agentID);
 
-      // Check member credential in memory
       if (credentials && this.isMemberInMemory(roleSet, credentials)) {
         results[i] = CommunityMembershipStatus.MEMBER;
-        await this.roleSetCacheService.setMembershipStatusCache(
-          agentInfo.agentID,
-          roleSet.id,
-          CommunityMembershipStatus.MEMBER
+        cacheWrites.push(
+          this.roleSetCacheService.setMembershipStatusCache(
+            agentInfo.agentID,
+            roleSet.id,
+            CommunityMembershipStatus.MEMBER
+          )
         );
-        continue;
+      } else {
+        nonMemberIndices.push(i);
       }
-
-      // For non-members: check application & invitation (already cached individually)
-      const status = await this.resolveNonMemberStatus(agentInfo, roleSet);
-      results[i] = status;
-      await this.roleSetCacheService.setMembershipStatusCache(
-        agentInfo.agentID,
-        roleSet.id,
-        status
-      );
     }
+
+    // 5. Resolve non-member statuses in parallel (application + invitation checks).
+    await Promise.all(
+      nonMemberIndices.map(async i => {
+        const { agentInfo, roleSet } = keys[i];
+        const status = await this.resolveNonMemberStatus(agentInfo, roleSet);
+        results[i] = status;
+        cacheWrites.push(
+          this.roleSetCacheService.setMembershipStatusCache(
+            agentInfo.agentID,
+            roleSet.id,
+            status
+          )
+        );
+      })
+    );
+
+    // 6. Fire-and-forget: cache writes don't affect the response.
+    void Promise.all(cacheWrites);
 
     return results;
   }
@@ -137,27 +152,23 @@ export class RoleSetMembershipStatusDataLoader {
     );
   }
 
-  /** For non-members, check pending applications and invitations. */
+  /** For non-members, check pending applications and invitations in parallel. */
   private async resolveNonMemberStatus(
     agentInfo: { userID: string },
     roleSet: IRoleSet
   ): Promise<CommunityMembershipStatus> {
-    const openApplication = await this.roleSetService.findOpenApplication(
-      agentInfo.userID,
-      roleSet.id
-    );
+    // Fetch application and invitation concurrently
+    const [openApplication, openInvitation] = await Promise.all([
+      this.roleSetService.findOpenApplication(agentInfo.userID, roleSet.id),
+      this.roleSetService.findOpenInvitation(agentInfo.userID, roleSet.id),
+    ]);
+
     if (openApplication) {
       return CommunityMembershipStatus.APPLICATION_PENDING;
     }
 
-    const openInvitation = await this.roleSetService.findOpenInvitation(
-      agentInfo.userID,
-      roleSet.id
-    );
-    if (
-      openInvitation &&
-      (await this.invitationService.canInvitationBeAccepted(openInvitation.id))
-    ) {
+    // Lifecycle is already eager-loaded; check in-memory without re-fetching
+    if (openInvitation && this.invitationService.canAcceptInvitation(openInvitation)) {
       return CommunityMembershipStatus.INVITATION_PENDING;
     }
 

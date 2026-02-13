@@ -248,11 +248,18 @@ export class InvitationService {
 
   async canInvitationBeAccepted(invitationID: string): Promise<boolean> {
     const invitation = await this.getInvitationOrFail(invitationID);
-    const lifecycle = invitation.lifecycle;
+    return this.canAcceptInvitation(invitation);
+  }
 
-    const canAccept = this.invitationLifecycleService
-      .getNextEvents(lifecycle)
+  /** Synchronous check when the entity (with eager lifecycle) is already loaded. */
+  isInvitationFinalized(invitation: IInvitation): boolean {
+    return this.invitationLifecycleService.isFinalState(invitation.lifecycle);
+  }
+
+  /** Synchronous check when the entity (with eager lifecycle) is already loaded. */
+  canAcceptInvitation(invitation: IInvitation): boolean {
+    return this.invitationLifecycleService
+      .getNextEvents(invitation.lifecycle)
       .includes('ACCEPT');
-    return canAccept;
   }
 }

@@ -1,10 +1,12 @@
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
+import { LogContext } from '@common/enums/logging.context';
 import { RoleName } from '@common/enums/role.name';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AlkemioConfig } from '@src/types';
 import { Cache } from 'cache-manager';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IApplication } from '../application';
 import { IInvitation } from '../invitation';
 
@@ -15,6 +17,8 @@ export class RoleSetCacheService {
   constructor(
     @Inject(CACHE_MANAGER)
     private readonly cacheManager: Cache,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
     private configService: ConfigService<AlkemioConfig, true>
   ) {
     this.cache_ttl = this.configService.get(
@@ -57,8 +61,16 @@ export class RoleSetCacheService {
    * @param value - Value to cache
    * @returns The cached value.
    */
-  private cacheSet<T>(key: string, value: T): Promise<T> {
-    return this.cacheManager.set<T>(key, value, { ttl: this.cache_ttl });
+  private async cacheSet<T>(key: string, value: T): Promise<T> {
+    try {
+      return await this.cacheManager.set<T>(key, value, { ttl: this.cache_ttl });
+    } catch (error) {
+      this.logger.warn?.(
+        `RoleSet cache write failed for key ${key}: ${error}`,
+        LogContext.COMMUNITY
+      );
+      return value;
+    }
   }
 
   /**
