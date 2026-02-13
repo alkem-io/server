@@ -162,7 +162,8 @@ export class VisualService {
         LogContext.STORAGE_BUCKET,
         {
           message: error.message,
-          fileName,
+          fileName: processedFileName,
+          originalFileName: fileName,
           visualID: visual.id,
           originalException: error,
         }

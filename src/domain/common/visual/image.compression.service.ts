@@ -73,6 +73,8 @@ export class ImageCompressionService {
 
       let resizeApplied = false;
       if (longestSide > MAX_DIMENSION) {
+        // fit: 'inside' preserves aspect ratio — the image is scaled so that
+        // its longest side is at most MAX_DIMENSION; it does NOT crop to a square.
         pipeline = pipeline.resize({
           width: MAX_DIMENSION,
           height: MAX_DIMENSION,
@@ -111,8 +113,8 @@ export class ImageCompressionService {
       };
     } catch (error: unknown) {
       // Graceful fallback: log the error and return the uncompressed image
-      // rather than blocking the upload entirely
-      this.logger.warn?.(
+      // rather than blocking the upload entirely (bulk uploads must not break)
+      this.logger.error?.(
         {
           message: 'Failed to compress image, storing uncompressed',
           fileSize: originalSize,
@@ -120,6 +122,7 @@ export class ImageCompressionService {
           fileName,
           error: error instanceof Error ? error.message : String(error),
         },
+        error instanceof Error ? error.stack : undefined,
         LogContext.STORAGE_BUCKET
       );
 
