@@ -14,6 +14,7 @@ import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.in
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Injectable } from '@nestjs/common';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
+import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator/url.generator.service.cache';
 import { ICallout } from '../callout/callout.interface';
 import { CalloutService } from '../callout/callout.service';
 import { ICalloutsSet } from '../callouts-set/callouts.set.interface';
@@ -28,7 +29,8 @@ export class CalloutTransferService {
     private readonly storageBucketService: StorageBucketService,
     private readonly profileService: ProfileService,
     private readonly tagsetService: TagsetService,
-    private readonly storageAggregatorResolverService: StorageAggregatorResolverService
+    private readonly storageAggregatorResolverService: StorageAggregatorResolverService,
+    private readonly urlGeneratorCacheService: UrlGeneratorCacheService
   ) {}
 
   public async transferCallout(
@@ -55,6 +57,9 @@ export class CalloutTransferService {
 
     // Fix the storage aggregator
     await this.updateStorageAggregator(updatedCallout.id, storageAggregator);
+
+    // Invalidate cached URLs for the callout and all contained entities
+    await this.revokeUrlCaches(updatedCallout.id);
 
     const tagsetTemplateSet =
       await this.calloutsSetService.getTagsetTemplatesSet(targetCalloutsSet.id);
@@ -157,6 +162,63 @@ export class CalloutTransferService {
     if (storageBucket) {
       storageBucket.storageAggregator = aggregator;
       await this.storageBucketService.save(storageBucket);
+    }
+  }
+
+  private async revokeUrlCaches(calloutID: string): Promise<void> {
+    const callout = await this.calloutService.getCalloutOrFail(calloutID, {
+      relations: {
+        framing: {
+          profile: true,
+          whiteboard: {
+            profile: true,
+          },
+        },
+        contributions: {
+          post: { profile: true },
+          link: { profile: true },
+          whiteboard: { profile: true },
+          memo: { profile: true },
+        },
+      },
+    });
+
+    // Revoke the framing profile URL cache
+    await this.urlGeneratorCacheService.revokeUrlCache(
+      callout.framing.profile.id
+    );
+
+    // Revoke the framing whiteboard profile URL cache
+    if (callout.framing.whiteboard?.profile.id) {
+      await this.urlGeneratorCacheService.revokeUrlCache(
+        callout.framing.whiteboard.profile.id
+      );
+    }
+
+    // Revoke URL caches for all contribution profiles
+    if (callout.contributions) {
+      for (const contribution of callout.contributions) {
+        if (contribution.post?.profile.id) {
+          await this.urlGeneratorCacheService.revokeUrlCache(
+            contribution.post.profile.id
+          );
+        }
+        if (contribution.link?.profile.id) {
+          await this.urlGeneratorCacheService.revokeUrlCache(
+            contribution.link.profile.id
+          );
+        }
+        if (contribution.whiteboard?.profile.id) {
+          await this.urlGeneratorCacheService.revokeUrlCache(
+            contribution.whiteboard.profile.id
+          );
+        }
+        if (contribution.memo?.profile.id) {
+          await this.urlGeneratorCacheService.revokeUrlCache(
+            contribution.memo.profile.id
+          );
+        }
+      }
     }
   }
 
