@@ -121,14 +121,15 @@ interface IImageCompressionService {
 
 ### Error Contract
 
-| Condition | Error Type | Message Pattern |
+| Condition | Error Type | Behavior |
 | --- | --- | --- |
-| Corrupted HEIC file | `ValidationException` | "Failed to convert HEIC image" |
-| HEIC exceeds 15MB | `ValidationException` | "File size exceeds the maximum allowed size of 15MB for HEIC uploads" |
-| Unsupported HEIC codec | `ValidationException` | "Unsupported HEIC format variant" |
-| Compression failure | `ValidationException` | "Failed to compress image" |
-| heic-convert processing failure | `StorageUploadFailedException` | "Upload on visual failed!" (existing pattern) |
-| sharp processing failure | `StorageUploadFailedException` | "Upload on visual failed!" (existing pattern) |
+| Corrupted HEIC file | `ValidationException` | Hard error — "Failed to convert HEIC image" |
+| HEIC exceeds 15MB | `ValidationException` | Hard error — "File size exceeds the maximum allowed size of 15MB for HEIC uploads" |
+| Unsupported HEIC codec | `ValidationException` | Hard error — "Failed to convert HEIC image" (wraps heic-convert error) |
+| Compression failure (sharp) | Graceful fallback | Log error with stack trace, store uncompressed image; upload succeeds |
+| heic-convert processing failure (upstream) | `StorageUploadFailedException` | "Upload on visual failed!" (existing caller wraps `ValidationException`) |
+
+**Design rationale**: HEIC conversion failures are hard errors because no valid image exists to store. Compression failures use graceful fallback because a valid (unconverted or already-JPEG) image exists — blocking the upload would degrade the user experience, especially in bulk gallery uploads where one sharp failure should not prevent other images from being stored.
 
 Error details (file size, original MIME type, conversion duration) are placed in the exception `details` payload per coding standards — never in the message string.
 

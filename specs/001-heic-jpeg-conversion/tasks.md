@@ -144,7 +144,7 @@
   - Ensure error logging at warning level includes the original error stack trace and structured context (LogContext.STORAGE_BUCKET or LogContext.COMMUNITY)
 - [X] T011b [US4] Verify error handling in `ImageCompressionService.compressIfNeeded()` in `src/domain/common/visual/image.compression.service.ts`:
   - Confirm sharp errors are caught and wrapped in `ValidationException` with static message ("Failed to compress image") and original error in `details`
-  - Confirm that compression failure does not block the upload — if compression fails, log the error and store the uncompressed image as a fallback
+  - Confirm that compression failure does not block the upload — if compression fails, log the error at error level (with stack trace) and store the uncompressed image as a fallback (per FR-007: compression failures use graceful fallback, unlike HEIC conversion failures which are hard errors)
 - [X] T012 [US4] Add unit tests for error scenarios in `src/domain/common/visual/__tests__/image.conversion.service.spec.ts`:
   - Test: corrupted HEIC buffer (mock heic-convert to throw) → `ValidationException` thrown with correct message and details
   - Test: HEIC file exactly at 15MB boundary → accepted

@@ -69,17 +69,18 @@ A user uploads multiple images simultaneously, including a mix of HEIC, JPEG, an
 
 ### User Story 4 - Conversion/Compression Failure Handling (Priority: P4)
 
-A user attempts to upload a corrupted or invalid HEIC file, or an image that cannot be compressed. The system detects the failure and provides clear error feedback to the user without blocking other uploads in a batch.
+A user attempts to upload a corrupted or invalid HEIC file, or an image that cannot be compressed. The system distinguishes between **conversion failures** (no valid image exists — hard error reported to user) and **compression failures** (valid image exists but optimization failed — store uncompressed as fallback). This ensures bulk uploads are never blocked by a single image's compression issue.
 
 **Why this priority**: While less common, handling edge cases gracefully prevents user frustration and provides clear paths to resolution. This ensures system reliability and good user experience even in error conditions.
 
-**Independent Test**: Upload a corrupted HEIC file and verify the system returns a meaningful error message without crashing or affecting other concurrent uploads.
+**Independent Test**: Upload a corrupted HEIC file and verify the system returns a meaningful error message without crashing or affecting other concurrent uploads. Upload a valid JPEG that triggers a compression error (e.g., mocked sharp failure) and verify the uncompressed image is stored successfully.
 
 **Acceptance Scenarios**:
 
 1. **Given** a user uploads a corrupted HEIC file, **When** the system attempts conversion, **Then** the upload fails with a clear error message indicating the file could not be processed.
 2. **Given** a batch upload includes one corrupted HEIC and several valid images, **When** processing completes, **Then** valid images are successfully stored and the corrupted image is reported as failed with details.
-3. **Given** conversion or compression fails for any reason, **When** the error occurs, **Then** the system logs sufficient diagnostic information for troubleshooting.
+3. **Given** compression fails for a valid image (JPEG/WebP), **When** the error occurs, **Then** the system logs the error at error level, stores the uncompressed image as a fallback, and the upload succeeds.
+4. **Given** conversion or compression fails for any reason, **When** the error occurs, **Then** the system logs sufficient diagnostic information for troubleshooting.
 
 ---
 
@@ -113,7 +114,7 @@ A user attempts to upload a corrupted or invalid HEIC file, or an image that can
 - **FR-004**: System MUST preserve image quality during conversion and compression using JPEG quality 82, which is visually indistinguishable from 100 for most images while achieving 3–5x size reduction.
 - **FR-005**: System MUST strip all EXIF metadata (GPS, date taken, camera information, etc.) during image processing. Only image orientation data MUST be preserved (applied to pixel data via auto-orient) to ensure correct display. This minimizes GDPR exposure by not retaining personal location or device data.
 - **FR-006**: System MUST return image/jpeg as the MIME type for converted images when requested by the file-service.
-- **FR-007**: System MUST handle conversion and compression failures gracefully by returning meaningful error messages to the user without crashing.
+- **FR-007**: System MUST handle conversion failures (HEIC→JPEG) as hard errors, returning a meaningful error message to the user. Compression failures (sharp optimization) MUST use a graceful fallback: log the error at error level and store the uncompressed (but valid) image, so that bulk uploads are not blocked by a single compression failure.
 - **FR-008**: System MUST log conversion and compression events including success, failure, processing time, original and final file sizes for monitoring and debugging purposes.
 - **FR-009**: System MUST validate that the converted/compressed JPEG file is not corrupted before storing it and marking the upload as successful.
 - **FR-010**: System MUST store only the final optimized version (converted and/or compressed) and discard any intermediate or original files immediately after successful processing. The original file is not retained.
