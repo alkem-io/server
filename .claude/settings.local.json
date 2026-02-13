@@ -10,8 +10,7 @@
       "Bash(.scripts/register-user.sh:*)",
       "Bash(git stash:*)",
       "Bash(git worktree add:*)",
-      "Bash(npx tsc:*)",
-      "Bash(bash:*)"
+      "Bash(npx tsc:*)"
     ]
   }
 }
