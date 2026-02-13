@@ -17,6 +17,16 @@ SERVER_LOG="/tmp/alkemio-dev-server.log"
 fail() { echo "FAIL: $1" >&2; exit 1; }
 info() { echo "==> $1"; }
 
+DEV_SERVER_PID=""
+cleanup() {
+  if [ -n "$DEV_SERVER_PID" ]; then
+    info "Stopping dev server (PID $DEV_SERVER_PID)"
+    kill -- -"$DEV_SERVER_PID" 2>/dev/null || kill "$DEV_SERVER_PID" 2>/dev/null || true
+    wait "$DEV_SERVER_PID" 2>/dev/null || true
+  fi
+}
+trap cleanup EXIT
+
 # ---------- Parse AUTH_ADMIN_PASSWORD from .env (not an env var) ----------
 AUTH_ADMIN_PASSWORD=$(grep '^AUTH_ADMIN_PASSWORD=' .env | head -1 | cut -d= -f2- | tr -d '\r')
 [ -n "$AUTH_ADMIN_PASSWORD" ] || fail "AUTH_ADMIN_PASSWORD not found in .env"
@@ -81,11 +91,6 @@ done
 # ---------- Step 6: Register admin user ----------
 info "Step 6/6: Registering admin user"
 bash .scripts/register-user.sh "admin@alkem.io" "$AUTH_ADMIN_PASSWORD" "admin" "alkemio"
-
-# ---------- Cleanup: kill dev server and all children ----------
-info "Stopping dev server (PID $DEV_SERVER_PID)"
-kill -- -"$DEV_SERVER_PID" 2>/dev/null || kill "$DEV_SERVER_PID" 2>/dev/null || true
-wait "$DEV_SERVER_PID" 2>/dev/null || true
 
 cat <<'EOF'
 
