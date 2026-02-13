@@ -239,6 +239,90 @@ describe('RoleSetCacheService', () => {
     });
   });
 
+  /* ─── Error resilience ─── */
+
+  describe('error resilience', () => {
+    let loggerMock: { warn: ReturnType<typeof vi.fn> };
+
+    beforeEach(async () => {
+      loggerMock = { warn: vi.fn() };
+      cacheManager = createMockCacheManager(true);
+
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          RoleSetCacheService,
+          { provide: CACHE_MANAGER, useValue: cacheManager },
+          { provide: WINSTON_MODULE_NEST_PROVIDER, useValue: loggerMock },
+          { provide: ConfigService, useValue: createMockConfigService() },
+        ],
+      }).compile();
+
+      service = module.get(RoleSetCacheService);
+    });
+
+    it('should return undefined and log when a single cache get fails', async () => {
+      cacheManager.get.mockRejectedValue(new Error('Redis down'));
+
+      const result = await service.getMembershipStatusFromCache('agent-1', 'rs-1');
+
+      expect(result).toBeUndefined();
+      expect(loggerMock.warn).toHaveBeenCalledOnce();
+    });
+
+    it('should return all undefined and log when mget fails', async () => {
+      cacheManager.store.mget!.mockRejectedValue(new Error('Redis down'));
+
+      const results = await service.getAgentRolesBatchFromCache([
+        { agentId: 'a1', roleSetId: 'rs-1' },
+        { agentId: 'a2', roleSetId: 'rs-2' },
+      ]);
+
+      expect(results).toEqual([undefined, undefined]);
+      expect(loggerMock.warn).toHaveBeenCalledOnce();
+    });
+
+    it('should return the value and log when a cache set fails', async () => {
+      cacheManager.set.mockRejectedValue(new Error('Redis down'));
+
+      const result = await service.setMembershipStatusCache(
+        'agent-1',
+        'rs-1',
+        CommunityMembershipStatus.MEMBER
+      );
+
+      expect(result).toBe(CommunityMembershipStatus.MEMBER);
+      expect(loggerMock.warn).toHaveBeenCalledOnce();
+    });
+
+    it('should return partial results when one individual get fails in fallback path', async () => {
+      // Recreate without mget support to force the fallback path
+      cacheManager = createMockCacheManager(false);
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          RoleSetCacheService,
+          { provide: CACHE_MANAGER, useValue: cacheManager },
+          { provide: WINSTON_MODULE_NEST_PROVIDER, useValue: loggerMock },
+          { provide: ConfigService, useValue: createMockConfigService() },
+        ],
+      }).compile();
+      service = module.get(RoleSetCacheService);
+
+      cacheManager.get
+        .mockResolvedValueOnce([RoleName.MEMBER] as any)
+        .mockRejectedValueOnce(new Error('transient'))
+        .mockResolvedValueOnce([RoleName.LEAD] as any);
+
+      const results = await service.getAgentRolesBatchFromCache([
+        { agentId: 'a1', roleSetId: 'rs-1' },
+        { agentId: 'a2', roleSetId: 'rs-2' },
+        { agentId: 'a3', roleSetId: 'rs-3' },
+      ]);
+
+      expect(results).toEqual([[RoleName.MEMBER], undefined, [RoleName.LEAD]]);
+      expect(loggerMock.warn).toHaveBeenCalledOnce();
+    });
+  });
+
   /* ─── Individual get/set/delete methods ─── */
 
   describe('individual cache operations', () => {

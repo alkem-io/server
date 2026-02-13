@@ -156,10 +156,19 @@ export class AgentService {
 
     // 1. Build cache keys and attempt mget
     const cacheKeys = agentIDs.map(id => this.getAgentCacheKey(id));
-    const mget = this.cacheManager.store.mget;
-    const cached: (IAgent | undefined)[] = mget
-      ? await mget<IAgent>(...cacheKeys)
-      : await Promise.all(cacheKeys.map(k => this.cacheManager.get<IAgent>(k)));
+    let cached: (IAgent | undefined)[];
+    try {
+      const mget = this.cacheManager.store.mget;
+      cached = mget
+        ? await mget<IAgent>(...cacheKeys)
+        : await Promise.all(cacheKeys.map(k => this.cacheManager.get<IAgent>(k)));
+    } catch (error) {
+      this.logger.warn?.(
+        `Agent cache mget failed, treating as cache miss: ${error}`,
+        LogContext.AGENT
+      );
+      cached = new Array(agentIDs.length).fill(undefined);
+    }
 
     // 2. Separate hits from misses
     const missedIDs: string[] = [];

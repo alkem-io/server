@@ -36,8 +36,16 @@ export class RoleSetCacheService {
    * @param key - Cache key
    * @returns Cached value of type T or undefined if not found/error.
    */
-  private cacheGet<T>(key: string): Promise<T | undefined> {
-    return this.cacheManager.get<T>(key);
+  private async cacheGet<T>(key: string): Promise<T | undefined> {
+    try {
+      return await this.cacheManager.get<T>(key);
+    } catch (error) {
+      this.logger.warn?.(
+        `RoleSet cache read failed for key ${key}: ${error}`,
+        LogContext.COMMUNITY
+      );
+      return undefined;
+    }
   }
 
   /**
@@ -47,11 +55,18 @@ export class RoleSetCacheService {
   private async cacheMget<T>(keys: string[]): Promise<(T | undefined)[]> {
     if (keys.length === 0) return [];
     const mget = this.cacheManager.store.mget;
-    // use mget if it exists
     if (mget) {
-      return mget<T>(...keys);
+      try {
+        return await mget<T>(...keys);
+      } catch (error) {
+        this.logger.warn?.(
+          `RoleSet cache mget failed, treating as cache miss: ${error}`,
+          LogContext.COMMUNITY
+        );
+        return new Array(keys.length).fill(undefined);
+      }
     }
-    // otherwise fallback to sequential gets (less efficient)
+    // Fallback: individual gets — each one is independently resilient via cacheGet
     return Promise.all(keys.map(k => this.cacheGet<T>(k)));
   }
 
