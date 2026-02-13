@@ -119,6 +119,10 @@ export class RoleSetAgentRolesDataLoader {
     const agentRoles: RoleName[] = [];
     for (const roleDef of roleDefinitions) {
       const credDef = roleDef.credential;
+      if (!credDef) {
+        continue;
+      }
+
       const hasRole = credentials.some(
         c =>
           c.type === credDef.type &&

@@ -508,7 +508,9 @@ export class SpaceService {
       relations: {
         parentSpace: true,
         collaboration: true,
-        about: true,
+        about: {
+          profile: true,
+        },
       },
     });
 
