@@ -5,20 +5,15 @@ import { RoleSet } from './role.set.entity';
 import { IRoleSet } from './role.set.interface';
 import { AgentRoleKey } from './types';
 
-/** Load credentials once per unique agentID across all keys. */
+/** Load credentials once per unique agentID across all keys using batch mget. */
 export async function loadAgentCredentials(
   keys: readonly AgentRoleKey[],
   agentService: AgentService
 ): Promise<Map<string, ICredential[]>> {
-  const map = new Map<string, ICredential[]>();
   const uniqueAgentIDs = [
     ...new Set(keys.map(k => k.agentInfo.agentID).filter(id => id.length > 0)),
   ];
-  for (const agentID of uniqueAgentIDs) {
-    const { credentials } = await agentService.getAgentCredentials(agentID);
-    map.set(agentID, credentials);
-  }
-  return map;
+  return agentService.getAgentCredentialsBatch(uniqueAgentIDs);
 }
 
 /**

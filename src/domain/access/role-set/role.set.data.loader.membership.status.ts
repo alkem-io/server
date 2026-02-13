@@ -54,24 +54,33 @@ export class RoleSetMembershipStatusDataLoader {
       this.agentService
     );
 
-    // 2. Check Redis cache; collect indices that still need computation.
-    const uncachedIndices: number[] = [];
+    // 2. Check Redis cache via single mget; collect indices that still need computation.
+    const cacheEntries: Array<{ agentId: string; roleSetId: string }> = [];
+    const cacheIndexMap: number[] = []; // cacheEntries[j] corresponds to keys[cacheIndexMap[j]]
     for (let i = 0; i < keys.length; i++) {
       const { agentInfo, roleSet } = keys[i];
       if (!agentInfo.agentID) {
         results[i] = CommunityMembershipStatus.NOT_MEMBER;
-        continue;
-      }
-
-      const cached =
-        await this.roleSetCacheService.getMembershipStatusFromCache(
-          agentInfo.agentID,
-          roleSet.id
-        );
-      if (cached) {
-        results[i] = cached;
       } else {
-        uncachedIndices.push(i);
+        cacheEntries.push({
+          agentId: agentInfo.agentID,
+          roleSetId: roleSet.id,
+        });
+        cacheIndexMap.push(i);
+      }
+    }
+    const cachedValues =
+      await this.roleSetCacheService.getMembershipStatusBatchFromCache(
+        cacheEntries
+      );
+
+    const uncachedIndices: number[] = [];
+    for (let j = 0; j < cachedValues.length; j++) {
+      const cached = cachedValues[j];
+      if (cached) {
+        results[cacheIndexMap[j]] = cached;
+      } else {
+        uncachedIndices.push(cacheIndexMap[j]);
       }
     }
 

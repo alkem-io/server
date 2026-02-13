@@ -37,6 +37,21 @@ export class RoleSetCacheService {
   }
 
   /**
+   * Get multiple values from cache in a single round-trip.
+   * Falls back to sequential gets if the store doesn't support mget.
+   */
+  private async cacheMget<T>(keys: string[]): Promise<(T | undefined)[]> {
+    if (keys.length === 0) return [];
+    const mget = this.cacheManager.store.mget;
+    // use mget if it exists
+    if (mget) {
+      return mget<T>(...keys);
+    }
+    // otherwise fallback to sequential gets (less efficient)
+    return Promise.all(keys.map(k => this.cacheGet<T>(k)));
+  }
+
+  /**
    * Set a value in cache.
    * @param key - Cache key
    * @param value - Value to cache
@@ -169,6 +184,32 @@ export class RoleSetCacheService {
     return this.cacheGet<boolean>(
       this.getAgentIsMemberCacheKey(agentId, roleSetId)
     );
+  }
+
+  /* Batch Cache Retrieval Methods (mget) */
+
+  /**
+   * Retrieve agent roles for multiple (agentId, roleSetId) pairs in a single round-trip.
+   */
+  public async getAgentRolesBatchFromCache(
+    entries: ReadonlyArray<{ agentId: string; roleSetId: string }>
+  ): Promise<(RoleName[] | undefined)[]> {
+    const keys = entries.map(e =>
+      this.getAgentRolesCacheKey(e.agentId, e.roleSetId)
+    );
+    return this.cacheMget<RoleName[]>(keys);
+  }
+
+  /**
+   * Retrieve membership status for multiple (agentId, roleSetId) pairs in a single round-trip.
+   */
+  public async getMembershipStatusBatchFromCache(
+    entries: ReadonlyArray<{ agentId: string; roleSetId: string }>
+  ): Promise<(CommunityMembershipStatus | undefined)[]> {
+    const keys = entries.map(e =>
+      this.getMembershipStatusCacheKey(e.agentId, e.roleSetId)
+    );
+    return this.cacheMget<CommunityMembershipStatus>(keys);
   }
 
   /* Public Cache Deletion Methods */
