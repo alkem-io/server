@@ -470,6 +470,8 @@ const allowedTypes = [
   'image/svg+xml',
   'image/webp',
   'image/avif',
+  'image/heic',
+  'image/heif',
   'application/pdf',
 ];
 
