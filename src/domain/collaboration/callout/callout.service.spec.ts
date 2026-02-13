@@ -218,10 +218,7 @@ describe('CalloutService', () => {
       const comment1 = makeCommentCallout('c-1');
       const comment2 = makeCommentCallout('c-2');
 
-      // Track call order to verify parallelism
-      let callCount = 0;
       (roomService.getMessages as Mock).mockImplementation(async () => {
-        callCount++;
         // Simulate async delay
         await new Promise(resolve => setTimeout(resolve, 10));
         return [{ id: 'msg' }];

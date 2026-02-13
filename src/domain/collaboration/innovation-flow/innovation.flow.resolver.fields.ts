@@ -28,7 +28,7 @@ export class InnovationFlowResolverFields {
   ): Promise<IInnovationFlowState[]> {
     // If states were eagerly loaded (e.g. from getInnovationFlow), reuse them
     if (innovationFlow.states?.length) {
-      return innovationFlow.states.sort(sortBySortOrder);
+      return [...innovationFlow.states].sort(sortBySortOrder);
     }
     return await this.innovationFlowService.getStates(innovationFlow.id);
   }

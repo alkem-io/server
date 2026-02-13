@@ -11,9 +11,9 @@ import { EntityManager, In } from 'typeorm';
  * For N contribution-type callouts, this performs a single grouped COUNT
  * query instead of N individual COUNT queries.
  *
- * Returns -1 for callout IDs not found in the results, signaling the
- * resolver to fall back to the original per-callout method (e.g. for
- * comment-type callouts that require RPC).
+ * Returns 0 for callout IDs with no contributions. The resolver is
+ * responsible for routing comment-type callouts to the RPC path
+ * before reaching this loader.
  */
 @Injectable()
 export class CalloutActivityLoaderCreator

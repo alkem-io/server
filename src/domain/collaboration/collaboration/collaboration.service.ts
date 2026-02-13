@@ -163,7 +163,7 @@ export class CollaborationService {
     this.innovationFlowService.validateInnovationFlowDefinition(
       innovationFlowData.states
     );
-    const allowedValues = innovationFlowData.states
+    const allowedValues = [...innovationFlowData.states]
       .sort(sortBySortOrder)
       .map(state => state.displayName);
     let defaultSelectedValue = innovationFlowData.currentStateDisplayName;
