@@ -46,13 +46,14 @@ export class SpaceMetricsLoaderCreator
       },
     });
 
-    // Build map: spaceAboutId → { roleSet, memberCredentialResourceID }
+    // Build map: spaceAboutId → { resourceID, type }
     const spaceDataByAboutId = new Map<
       string,
-      { resourceID: string }
+      { resourceID: string; type: string }
     >();
 
     const resourceIDs: string[] = [];
+    const types: string[] = [];
 
     for (const space of spaces) {
       if (!space.about || !space.community?.roleSet?.roles) continue;
@@ -63,16 +64,19 @@ export class SpaceMetricsLoaderCreator
       if (!memberRole?.credential?.resourceID) continue;
 
       const resourceID = memberRole.credential.resourceID;
-      spaceDataByAboutId.set(space.about.id, { resourceID });
+      const type = memberRole.credential.type;
+      spaceDataByAboutId.set(space.about.id, { resourceID, type });
       resourceIDs.push(resourceID);
+      types.push(type);
     }
 
     // Step 2: Batch count credentials
     const countsByResourceID = new Map<string, number>();
 
     if (resourceIDs.length > 0) {
-      // Deduplicate resourceIDs (subspaces under same L0 might share)
+      // Deduplicate resourceIDs and types (subspaces under same L0 might share)
       const uniqueResourceIDs = [...new Set(resourceIDs)];
+      const uniqueTypes = [...new Set(types)];
 
       const results = await this.manager
         .getRepository(Credential)
@@ -81,6 +85,9 @@ export class SpaceMetricsLoaderCreator
         .addSelect('COUNT(*)', 'count')
         .where('credential.resourceID IN (:...resourceIDs)', {
           resourceIDs: uniqueResourceIDs,
+        })
+        .andWhere('credential.type IN (:...types)', {
+          types: uniqueTypes,
         })
         .groupBy('credential.resourceID')
         .getRawMany<{ resourceID: string; count: string }>();

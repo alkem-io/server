@@ -14,7 +14,8 @@ import { SpaceMetricsLoaderCreator } from './space.metrics.loader.creator';
 function makeSpaceWithMemberRole(
   spaceId: string,
   aboutId: string,
-  resourceID: string
+  resourceID: string,
+  memberType = 'space-member'
 ): Space {
   return {
     id: spaceId,
@@ -24,11 +25,11 @@ function makeSpaceWithMemberRole(
         roles: [
           {
             name: RoleName.MEMBER,
-            credential: { resourceID },
+            credential: { resourceID, type: memberType },
           },
           {
             name: RoleName.LEAD,
-            credential: { resourceID: `lead-${resourceID}` },
+            credential: { resourceID: `lead-${resourceID}`, type: 'space-lead' },
           },
         ],
       },
@@ -47,6 +48,7 @@ function mockCredentialQueryBuilder(
     select: vi.fn().mockReturnThis(),
     addSelect: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
+    andWhere: vi.fn().mockReturnThis(),
     groupBy: vi.fn().mockReturnThis(),
     getRawMany: vi.fn().mockResolvedValue(rawResult),
   };
@@ -266,10 +268,60 @@ describe('SpaceMetricsLoaderCreator', () => {
       expect(metrics).toEqual([]);
     });
 
-    it('should deduplicate resourceIDs when subspaces share credentials', async () => {
-      // Two spaces sharing the same resourceID (e.g. subspaces under same L0)
-      const space1 = makeSpaceWithMemberRole('s-1', 'about-1', 'shared-res');
-      const space2 = makeSpaceWithMemberRole('s-2', 'about-2', 'shared-res');
+    it('should filter by credential type so non-member credentials are excluded', async () => {
+      const space = makeSpaceWithMemberRole('s-1', 'about-1', 'res-1', 'space-member');
+      entityManager.find.mockResolvedValueOnce([space]);
+
+      const qb = mockCredentialQueryBuilder(entityManager, [
+        { resourceID: 'res-1', count: '10' },
+      ]);
+
+      const loader = creator.create();
+      const metrics = await loader.load('about-1');
+
+      expect(metrics[0].value).toBe('10');
+
+      // Verify that andWhere was called with the type filter
+      expect(qb.andWhere).toHaveBeenCalledWith(
+        'credential.type IN (:...types)',
+        { types: ['space-member'] }
+      );
+    });
+
+    it('should include all distinct credential types in the type filter', async () => {
+      // L0 space uses 'space-member', subspace uses 'subspace-member'
+      const l0Space = makeSpaceWithMemberRole('s-1', 'about-1', 'res-1', 'space-member');
+      const subSpace = makeSpaceWithMemberRole('s-2', 'about-2', 'res-2', 'subspace-member');
+
+      entityManager.find.mockResolvedValueOnce([l0Space, subSpace]);
+
+      const qb = mockCredentialQueryBuilder(entityManager, [
+        { resourceID: 'res-1', count: '30' },
+        { resourceID: 'res-2', count: '15' },
+      ]);
+
+      const loader = creator.create();
+
+      const [m1, m2] = await Promise.all([
+        loader.load('about-1'),
+        loader.load('about-2'),
+      ]);
+
+      expect(m1[0].value).toBe('30');
+      expect(m2[0].value).toBe('15');
+
+      // Both credential types should appear in the IN clause
+      const andWhereCall = qb.andWhere.mock.calls[0];
+      expect(andWhereCall[1].types).toEqual(
+        expect.arrayContaining(['space-member', 'subspace-member'])
+      );
+      expect(andWhereCall[1].types).toHaveLength(2);
+    });
+
+    it('should deduplicate both resourceIDs and types when subspaces share credentials', async () => {
+      // Two spaces sharing the same resourceID and credential type
+      const space1 = makeSpaceWithMemberRole('s-1', 'about-1', 'shared-res', 'space-member');
+      const space2 = makeSpaceWithMemberRole('s-2', 'about-2', 'shared-res', 'space-member');
 
       entityManager.find.mockResolvedValueOnce([space1, space2]);
 
@@ -291,6 +343,10 @@ describe('SpaceMetricsLoaderCreator', () => {
       // The WHERE clause should use deduplicated resourceIDs
       const whereCall = qb.where.mock.calls[0];
       expect(whereCall[1].resourceIDs).toEqual(['shared-res']);
+
+      // The AND WHERE clause should use deduplicated types
+      const andWhereCall = qb.andWhere.mock.calls[0];
+      expect(andWhereCall[1].types).toEqual(['space-member']);
     });
 
     it('should propagate database errors to all pending loads', async () => {
