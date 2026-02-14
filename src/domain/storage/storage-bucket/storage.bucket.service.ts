@@ -18,6 +18,8 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Profile } from '@domain/common/profile/profile.entity';
+import { ImageCompressionService } from '@domain/common/visual/image.compression.service';
+import { ImageConversionService } from '@domain/common/visual/image.conversion.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { AvatarCreatorService } from '@services/external/avatar-creator/avatar.creator.service';
@@ -44,6 +46,8 @@ export class StorageBucketService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationService: AuthorizationService,
     private urlGeneratorService: UrlGeneratorService,
+    private imageConversionService: ImageConversionService,
+    private imageCompressionService: ImageCompressionService,
     @InjectRepository(StorageBucket)
     private storageBucketRepository: Repository<StorageBucket>,
     @InjectRepository(Document)
@@ -145,11 +149,24 @@ export class StorageBucketService {
   ): Promise<IDocument> {
     const buffer = await streamToBuffer(readStream);
 
+    // Process image: HEIC conversion + optimization
+    const conversionResult = await this.imageConversionService.convertIfNeeded(
+      buffer,
+      mimeType,
+      filename
+    );
+    const compressionResult =
+      await this.imageCompressionService.compressIfNeeded(
+        conversionResult.buffer,
+        conversionResult.mimeType,
+        conversionResult.fileName
+      );
+
     return await this.uploadFileAsDocumentFromBuffer(
       storageBucketId,
-      buffer,
-      filename,
-      mimeType,
+      compressionResult.buffer,
+      compressionResult.fileName,
+      compressionResult.mimeType,
       userID,
       temporaryDocument
     );
