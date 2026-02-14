@@ -266,6 +266,14 @@ export class CalloutTransferService {
       },
     });
 
+    if (!callout.classification) {
+      throw new EntityNotInitializedException(
+        'Callout classification not initialized',
+        LogContext.COLLABORATION,
+        { calloutId: calloutID }
+      );
+    }
+
     // Update each classification tagset to point to the target callouts set
     // template, picking up the correct allowedValues and defaultSelectedValue
     for (const tagsetTemplate of tagsetTemplates) {

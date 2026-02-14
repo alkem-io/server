@@ -194,12 +194,31 @@ export class ClassificationService {
     classificationID: string,
     tagsetTemplate: ITagsetTemplate
   ): Promise<ITagset> {
-    const tagset = await this.getTagset(classificationID, tagsetTemplate.name);
-    tagset.tagsetTemplate = tagsetTemplate;
-    tagset.tags = tagsetTemplate.defaultSelectedValue
+    const tagsets = await this.getTagsets(classificationID);
+    const existingTagset = this.tagsetService.getTagsetByName(
+      tagsets,
+      tagsetTemplate.name
+    );
+
+    const defaultTags = tagsetTemplate.defaultSelectedValue
       ? [tagsetTemplate.defaultSelectedValue]
       : [];
-    return await this.tagsetService.save(tagset);
+
+    if (existingTagset) {
+      existingTagset.tagsetTemplate = tagsetTemplate;
+      existingTagset.tags = defaultTags;
+      return await this.tagsetService.save(existingTagset);
+    }
+
+    // Target callouts set has a template not present in the source classification;
+    // create a new tagset for it
+    const classification = await this.getClassificationOrFail(classificationID);
+    return await this.addTagsetOnClassification(classification, {
+      name: tagsetTemplate.name,
+      type: tagsetTemplate.type,
+      tags: defaultTags,
+      tagsetTemplate,
+    });
   }
 
   // Note: provided data has priority when it comes to tags
