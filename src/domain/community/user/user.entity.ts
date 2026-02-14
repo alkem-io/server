@@ -1,78 +1,29 @@
-import { MID_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@common/constants';
 import { Application } from '@domain/access/application/application.entity';
 import { IUser } from '@domain/community/user/user.interface';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
-import {
-  Column,
-  Entity,
-  Generated,
-  Index,
-  JoinColumn,
-  OneToMany,
-  OneToOne,
-} from 'typeorm';
 import { ContributorBase } from '../contributor/contributor.base.entity';
 import { UserSettings } from '../user-settings/user.settings.entity';
 
-@Entity()
 export class User extends ContributorBase implements IUser {
-  @Column('uuid', { nullable: false })
   accountID!: string;
 
-  @Column({
-    unique: true,
-  })
-  @Generated('increment')
   rowId!: number;
 
-  @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: false })
   firstName!: string;
 
-  @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: false })
   lastName!: string;
 
-  @Column('varchar', { length: MID_TEXT_LENGTH, nullable: false, unique: true })
   email!: string;
 
-  @Column('varchar', {
-    length: SMALL_TEXT_LENGTH,
-    nullable: true,
-  })
   phone?: string;
 
-  @Index()
-  @Column('uuid', {
-    nullable: true,
-    unique: true,
-  })
   authenticationID!: string | null;
 
-  @Column({ type: 'boolean', nullable: false })
   serviceProfile!: boolean;
 
-  @OneToMany(
-    () => Application,
-    application => application.id,
-    {
-      eager: false,
-      cascade: false,
-    }
-  )
   applications?: Application[];
 
-  @OneToOne(() => UserSettings, {
-    eager: false,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
   settings!: UserSettings;
 
-  @OneToOne(() => StorageAggregator, {
-    eager: false,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
   storageAggregator?: StorageAggregator;
 }

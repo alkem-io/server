@@ -1,8 +1,7 @@
-import { Profile } from '@domain/common/profile';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { ITagset } from '@domain/common/tagset';
-import { Injectable } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
-import { EntityManager } from 'typeorm';
+import { Inject, Injectable } from '@nestjs/common';
 import { createTypedRelationDataLoader } from '../../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
 
@@ -10,12 +9,12 @@ import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
 export class ProfileTagsetsLoaderCreator
   implements DataLoaderCreator<ITagset[]>
 {
-  constructor(@InjectEntityManager() private manager: EntityManager) {}
+  constructor(@Inject(DRIZZLE) private readonly db: DrizzleDb) {}
 
   create(options: DataLoaderCreatorOptions<ITagset[]>) {
     return createTypedRelationDataLoader(
-      this.manager,
-      Profile,
+      this.db,
+      'profiles',
       { tagsets: true },
       this.constructor.name,
       options

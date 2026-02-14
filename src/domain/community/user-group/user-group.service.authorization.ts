@@ -9,10 +9,8 @@ import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authoriz
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
-import { IUserGroup, UserGroup } from '@domain/community/user-group';
+import { IUserGroup } from '@domain/community/user-group';
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { UserGroupService } from './user-group.service';
 
 @Injectable()
@@ -20,9 +18,7 @@ export class UserGroupAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService,
-    private userGroupService: UserGroupService,
-    @InjectRepository(UserGroup)
-    private userGroupRepository: Repository<UserGroup>
+    private userGroupService: UserGroupService
   ) {}
 
   async applyAuthorizationPolicy(

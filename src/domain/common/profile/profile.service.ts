@@ -7,6 +7,8 @@ import {
   NotSupportedException,
   ValidationException,
 } from '@common/exceptions';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ILocation, LocationService } from '@domain/common/location';
@@ -22,16 +24,27 @@ import { ProfileDocumentsService } from '@domain/profile-documents/profile.docum
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { DEFAULT_AVATAR_SERVICE_URL } from '@services/external/avatar-creator/avatar.creator.service';
+import { eq } from 'drizzle-orm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
 import { CreateReferenceInput } from '../reference';
 import { CreateTagsetInput } from '../tagset';
 import { ITagsetTemplate } from '../tagset-template/tagset.template.interface';
 import { CreateProfileInput, UpdateProfileInput } from './dto';
 import { CreateReferenceOnProfileInput } from './dto/profile.dto.create.reference';
 import { CreateVisualOnProfileInput } from './dto/profile.dto.create.visual';
+import { profiles } from './profile.schema';
+
+type ProfileFindOptions = {
+  relations?: {
+    references?: boolean;
+    tagsets?: boolean;
+    authorization?: boolean;
+    location?: boolean;
+    visuals?: boolean;
+    storageBucket?: boolean;
+  };
+};
 
 @Injectable()
 export class ProfileService {
@@ -43,8 +56,7 @@ export class ProfileService {
     private visualService: VisualService,
     private locationService: LocationService,
     private profileDocumentsService: ProfileDocumentsService,
-    @InjectRepository(Profile)
-    private profileRepository: Repository<Profile>,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -161,7 +173,7 @@ export class ProfileService {
       );
     }
 
-    return await this.profileRepository.save(profile);
+    return await this.save(profile);
   }
 
   async deleteProfile(profileID: string): Promise<IProfile> {
@@ -210,11 +222,44 @@ export class ProfileService {
     if (profile.authorization)
       await this.authorizationPolicyService.delete(profile.authorization);
 
-    return await this.profileRepository.remove(profile as Profile);
+    const [result] = await this.db
+      .delete(profiles)
+      .where(eq(profiles.id, profile.id))
+      .returning();
+    return result as unknown as IProfile;
   }
 
   async save(profile: IProfile): Promise<IProfile> {
-    return await this.profileRepository.save(profile);
+    if (profile.id) {
+      const [updated] = await this.db
+        .update(profiles)
+        .set({
+          displayName: profile.displayName,
+          tagline: profile.tagline,
+          description: profile.description,
+          type: profile.type,
+          locationId: profile.location?.id,
+          storageBucketId: profile.storageBucket?.id,
+        })
+        .where(eq(profiles.id, profile.id))
+        .returning();
+      return updated as unknown as IProfile;
+    } else {
+      const [inserted] = await this.db
+        .insert(profiles)
+        .values({
+          id: profile.id,
+          displayName: profile.displayName,
+          tagline: profile.tagline,
+          description: profile.description,
+          type: profile.type,
+          locationId: profile.location?.id,
+          storageBucketId: profile.storageBucket?.id,
+          authorizationId: profile.authorization?.id,
+        })
+        .returning();
+      return inserted as unknown as IProfile;
+    }
   }
 
   public async addVisualsOnProfile(
@@ -365,18 +410,61 @@ export class ProfileService {
 
   async getProfileOrFail(
     profileID: string,
-    options?: FindOneOptions<Profile>
+    options?: ProfileFindOptions & { loadEagerRelations?: boolean; select?: any }
   ): Promise<IProfile | never> {
-    const profile = await Profile.findOne({
-      ...options,
-      where: { ...options?.where, id: profileID },
-    });
+    const withClause: any = {};
+
+    if (options?.relations) {
+      if (options.relations.references) {
+        withClause.references = { with: { authorization: true } };
+      }
+      if (options.relations.tagsets) {
+        withClause.tagsets = { with: { authorization: true } };
+      }
+      if (options.relations.authorization) {
+        withClause.authorization = true;
+      }
+      if (options.relations.location) {
+        withClause.location = true;
+      }
+      if (options.relations.visuals) {
+        withClause.visuals = { with: { authorization: true } };
+      }
+      if (options.relations.storageBucket) {
+        withClause.storageBucket = {
+          with: {
+            authorization: true,
+            documents: {
+              with: {
+                authorization: true,
+                tagset: { with: { authorization: true } },
+              },
+            },
+          },
+        };
+      }
+    }
+
+    const queryOptions: any = {
+      where: eq(profiles.id, profileID),
+    };
+
+    if (Object.keys(withClause).length > 0) {
+      queryOptions.with = withClause;
+    }
+
+    if (options?.select) {
+      queryOptions.columns = options.select;
+    }
+
+    const profile = await this.db.query.profiles.findFirst(queryOptions);
+
     if (!profile)
       throw new EntityNotFoundException(
         `Profile with id(${profileID}) not found!`,
         LogContext.COMMUNITY
       );
-    return profile;
+    return profile as unknown as IProfile;
   }
 
   async getReferences(profileInput: IProfile): Promise<IReference[]> {

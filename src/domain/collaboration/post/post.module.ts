@@ -7,8 +7,6 @@ import { VisualModule } from '@domain/common/visual/visual.module';
 import { RoomModule } from '@domain/communication/room/room.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { Post } from './post.entity';
 import { PostResolverFields } from './post.resolver.fields';
 import { PostResolverMutations } from './post.resolver.mutations';
 import { PostService } from './post.service';
@@ -24,7 +22,6 @@ import { PostAuthorizationService } from './post.service.authorization';
     UserLookupModule,
     ProfileModule,
     PlatformRolesAccessModule,
-    TypeOrmModule.forFeature([Post]),
   ],
   providers: [
     PostResolverMutations,

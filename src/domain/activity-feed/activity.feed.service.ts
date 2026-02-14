@@ -1,15 +1,17 @@
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { ActivityEventType } from '@common/enums/activity.event.type';
 import { SpaceLevel } from '@common/enums/space.level';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { PaginationArgs } from '@core/pagination';
 import { ActivityFeed } from '@domain/activity-feed/activity.feed.interface';
 import { ActivityFeedRoles } from '@domain/activity-feed/activity.feed.roles.enum';
 import { Space } from '@domain/space/space/space.entity';
+import { spaces } from '@domain/space/space/space.schema';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
 import { IActivity } from '@platform/activity';
 import { ActivityService } from '@platform/activity/activity.service';
 import { ActivityLogService } from '@services/api/activity-log';
@@ -18,9 +20,9 @@ import {
   CredentialMap,
   groupCredentialsByEntity,
 } from '@services/api/roles/util/group.credentials.by.entity';
+import { inArray } from 'drizzle-orm';
 import { intersection } from 'lodash';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager, In } from 'typeorm';
 
 type ActivityFeedFilters = {
   types?: Array<ActivityEventType>;
@@ -44,8 +46,7 @@ export class ActivityFeedService {
     private authorizationService: AuthorizationService,
     private activityService: ActivityService,
     private activityLogService: ActivityLogService,
-    @InjectEntityManager('default')
-    private entityManager: EntityManager
+    @Inject(DRIZZLE) private readonly db: DrizzleDb
   ) {}
 
   public async getActivityFeed(
@@ -256,15 +257,15 @@ export class ActivityFeedService {
     }
 
     // Step A: Batch-load all spaces with their collaboration (1 query instead of N)
-    const spaces = await this.entityManager.find(Space, {
-      where: { id: In(spaceIds) },
-      relations: { collaboration: true },
-    });
+    const loadedSpaces = (await this.db.query.spaces.findMany({
+      where: inArray(spaces.id, spaceIds),
+      with: { collaboration: { with: { authorization: true } } },
+    })) as unknown as Space[];
 
     const readableCollaborationIds: string[] = [];
 
     // Check read access on each space's collaboration (in-memory, no DB)
-    for (const space of spaces) {
+    for (const space of loadedSpaces) {
       if (!space.collaboration) {
         continue;
       }
@@ -280,29 +281,29 @@ export class ActivityFeedService {
     }
 
     // Step B: Batch-load child spaces based on level
-    const l0SpaceIds = spaces
+    const l0SpaceIds = loadedSpaces
       .filter(s => s.level === SpaceLevel.L0)
       .map(s => s.id);
-    const l1SpaceIds = spaces
+    const l1SpaceIds = loadedSpaces
       .filter(s => s.level === SpaceLevel.L1)
       .map(s => s.id);
 
     // For L0 spaces: load all spaces in the account (1 query)
     const childSpaces: Space[] = [];
     if (l0SpaceIds.length > 0) {
-      const accountChildren = await this.entityManager.find(Space, {
-        where: { levelZeroSpaceID: In(l0SpaceIds) },
-        relations: { collaboration: true },
-      });
+      const accountChildren = (await this.db.query.spaces.findMany({
+        where: inArray(spaces.levelZeroSpaceID, l0SpaceIds),
+        with: { collaboration: { with: { authorization: true } } },
+      })) as unknown as Space[];
       childSpaces.push(...accountChildren);
     }
 
     // For L1 spaces: load all L2 subspaces (1 query)
     if (l1SpaceIds.length > 0) {
-      const subspaces = await this.entityManager.find(Space, {
-        where: { parentSpace: { id: In(l1SpaceIds) } },
-        relations: { collaboration: true },
-      });
+      const subspaces = (await this.db.query.spaces.findMany({
+        where: inArray(spaces.parentSpaceId, l1SpaceIds),
+        with: { collaboration: { with: { authorization: true } } },
+      })) as unknown as Space[];
       childSpaces.push(...subspaces);
     }
 

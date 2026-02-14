@@ -1,25 +1,24 @@
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { ILicensingCredentialBasedPolicyCredentialRule } from '@platform/licensing/credential-based/licensing-credential-based-entitlements-engine';
 import { randomUUID } from 'crypto';
+import { eq } from 'drizzle-orm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager, Repository } from 'typeorm';
 import { CreateLicensePolicyCredentialRuleInput } from './dto/license.policy.dto.credential.rule.create';
 import { UpdateLicensePolicyCredentialRuleInput } from './dto/license.policy.dto.credential.rule.update';
-import { LicensePolicy } from './license.policy.entity';
+import { licensePolicies } from './license.policy.schema';
 import { ILicensePolicy } from './license.policy.interface';
 
 @Injectable()
 export class LicensePolicyService {
   constructor(
-    @InjectRepository(LicensePolicy)
-    private licensePolicyRepository: Repository<LicensePolicy>,
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService,
-    @InjectEntityManager('default')
-    private entityManager: EntityManager
+    private readonly logger: LoggerService
   ) {}
 
   public async createCredentialRule(
@@ -35,16 +34,15 @@ export class LicensePolicyService {
     };
 
     licensePolicy.credentialRules.push(newRule);
-    await this.licensePolicyRepository.save(licensePolicy as LicensePolicy);
+    await this.save(licensePolicy);
     return newRule;
   }
 
   // TODO: a work around, need to look at how to make the license policy more readily available
   // in all contexts
   public async getDefaultLicensePolicyOrFail(): Promise<ILicensePolicy> {
-    let licensePolicy: ILicensePolicy | null = null;
-    licensePolicy = await this.entityManager.findOne(LicensePolicy, {
-      where: {},
+    const licensePolicy = await this.db.query.licensePolicies.findFirst({
+      where: undefined,
     });
 
     if (!licensePolicy) {
@@ -53,21 +51,21 @@ export class LicensePolicyService {
         LogContext.LICENSE
       );
     }
-    return licensePolicy;
+    return licensePolicy as unknown as ILicensePolicy;
   }
 
   public async getLicensePolicyOrFail(
     licensePolicyID: string
   ): Promise<ILicensePolicy> {
-    const licensePolicy = await this.licensePolicyRepository.findOneBy({
-      id: licensePolicyID,
+    const licensePolicy = await this.db.query.licensePolicies.findFirst({
+      where: eq(licensePolicies.id, licensePolicyID),
     });
     if (!licensePolicy)
       throw new EntityNotFoundException(
         `Not able to locate License Policy with the specified ID: ${licensePolicyID}`,
         LogContext.LICENSE
       );
-    return licensePolicy;
+    return licensePolicy as unknown as ILicensePolicy;
   }
 
   // delete a specific credential rule
@@ -85,7 +83,7 @@ export class LicensePolicyService {
       );
     }
     const [removedRule] = licensePolicy.credentialRules.splice(ruleIndex, 1);
-    await this.licensePolicyRepository.save(licensePolicy as LicensePolicy);
+    await this.save(licensePolicy);
     return removedRule;
   }
 
@@ -117,17 +115,26 @@ export class LicensePolicyService {
     }
 
     // Save the updated license policy
-    await this.licensePolicyRepository.save(licensePolicy as LicensePolicy);
+    await this.save(licensePolicy);
     return ruleToUpdate;
   }
 
   async delete(licensePolicy: ILicensePolicy): Promise<ILicensePolicy> {
-    return await this.licensePolicyRepository.remove(
-      licensePolicy as LicensePolicy
-    );
+    await this.db
+      .delete(licensePolicies)
+      .where(eq(licensePolicies.id, licensePolicy.id));
+    return licensePolicy;
   }
 
   async save(licensePolicy: ILicensePolicy): Promise<ILicensePolicy> {
-    return await this.licensePolicyRepository.save(licensePolicy);
+    const [saved] = await this.db
+      .insert(licensePolicies)
+      .values(licensePolicy as any)
+      .onConflictDoUpdate({
+        target: licensePolicies.id,
+        set: licensePolicy as any,
+      })
+      .returning();
+    return saved as unknown as ILicensePolicy;
   }
 }

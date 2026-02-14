@@ -24,10 +24,10 @@ export class SpaceAboutAuthorizationService {
     const spaceAbout = await this.spaceAboutService.getSpaceAboutOrFail(
       spaceAboutID,
       {
-        relations: {
+        with: {
           profile: true,
           guidelines: {
-            profile: true,
+            with: { profile: true },
           },
         },
       }

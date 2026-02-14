@@ -35,7 +35,7 @@ export class IdentityResolveService {
     const existingUser = await this.userLookupService.getUserByAuthenticationID(
       authenticationId,
       {
-        relations: {
+        with: {
           agent: true,
         },
       }
@@ -140,7 +140,7 @@ export class IdentityResolveService {
     );
 
     const userWithAgent = await this.userLookupService.getUserOrFail(user.id, {
-      relations: { agent: true },
+      with: { agent: true },
     });
     return this.ensureAgentOrFail(userWithAgent, authenticationId);
   }

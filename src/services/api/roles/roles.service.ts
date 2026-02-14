@@ -9,12 +9,12 @@ import { OrganizationLookupService } from '@domain/community/organization-lookup
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { Inject, LoggerService } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { SpaceFilterService } from '@services/infrastructure/space-filter/space.filter.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager } from 'typeorm';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { RolesOrganizationInput } from './dto/roles.dto.input.organization';
 import { RolesUserInput } from './dto/roles.dto.input.user';
 import { RolesVirtualContributorInput } from './dto/roles.dto.input.virtual.contributor';
@@ -28,7 +28,7 @@ import { mapSpaceCredentialsToRoles } from './util/map.space.credentials.to.role
 
 export class RolesService {
   constructor(
-    @InjectEntityManager() private entityManager: EntityManager,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     private userLookupService: UserLookupService,
     private virtualContributorLookupService: VirtualContributorLookupService,
     private applicationService: ApplicationService,
@@ -92,7 +92,7 @@ export class RolesService {
     roles: ContributorRoles
   ): Promise<RolesResultOrganization[]> {
     return await mapOrganizationCredentialsToRoles(
-      this.entityManager,
+      this.db,
       roles.credentials
     );
   }
@@ -106,7 +106,7 @@ export class RolesService {
     );
 
     return mapSpaceCredentialsToRoles(
-      this.entityManager,
+      this.db,
       roles.credentials,
       allowedVisibilities,
       agentInfo,

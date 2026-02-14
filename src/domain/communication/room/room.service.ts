@@ -4,11 +4,13 @@ import { RoomType } from '@common/enums/room.type';
 import { ValidationException } from '@common/exceptions';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { eq } from 'drizzle-orm';
+import { rooms } from './room.schema';
 import { IMessage } from '../message/message.interface';
 import { IMessageReaction } from '../message.reaction/message.reaction.interface';
 import { RoomLookupService } from '../room-lookup/room.lookup.service';
@@ -25,8 +27,7 @@ import { IRoom } from './room.interface';
 @Injectable()
 export class RoomService {
   constructor(
-    @InjectRepository(Room)
-    private readonly roomRepository: Repository<Room>,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     private readonly communicationAdapter: CommunicationAdapter,
     private readonly roomLookupService: RoomLookupService,
     private readonly contributorLookupService: ContributorLookupService,
@@ -50,11 +51,8 @@ export class RoomService {
   /**
    * Delegate to RoomLookupService to avoid duplication.
    */
-  async getRoomOrFail(
-    roomID: string,
-    options?: FindOneOptions<Room>
-  ): Promise<Room> {
-    return this.roomLookupService.getRoomOrFail(roomID, options);
+  async getRoomOrFail(roomID: string): Promise<Room> {
+    return this.roomLookupService.getRoomOrFail(roomID);
   }
 
   async deleteRoom(deleteData: DeleteRoomInput): Promise<IRoom> {
@@ -67,17 +65,16 @@ export class RoomService {
 
     const room = await this.getRoomOrFail(deleteData.roomID);
 
-    // Capture ID before removal - TypeORM's remove() clears the entity's id field
+    // Capture ID before removal
     const roomId = room.id;
 
-    const result = await this.roomRepository.remove(room as Room);
+    await this.db.delete(rooms).where(eq(rooms.id, deleteData.roomID));
 
     // Delete from external Matrix server
     // Note: For direct rooms, we still use the standard deleteRoom -
     // the Matrix adapter handles the room type internally
     await this.communicationAdapter.deleteRoom(roomId);
-    result.id = roomId;
-    return result;
+    return { ...room, id: roomId };
   }
 
   /**
@@ -99,7 +96,30 @@ export class RoomService {
   }
 
   async save(room: IRoom): Promise<IRoom> {
-    return await this.roomRepository.save(room);
+    if (room.id) {
+      const [result] = await this.db
+        .update(rooms)
+        .set({
+          displayName: room.displayName,
+          type: room.type,
+          messagesCount: room.messagesCount,
+          vcInteractionsByThread: room.vcInteractionsByThread,
+        })
+        .where(eq(rooms.id, room.id))
+        .returning();
+      return result as unknown as IRoom;
+    } else {
+      const [result] = await this.db
+        .insert(rooms)
+        .values({
+          displayName: room.displayName,
+          type: room.type,
+          messagesCount: room.messagesCount,
+          vcInteractionsByThread: room.vcInteractionsByThread,
+        })
+        .returning();
+      return result as unknown as IRoom;
+    }
   }
 
   async getMessages(room: IRoom): Promise<IMessage[]> {

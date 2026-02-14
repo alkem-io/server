@@ -8,27 +8,39 @@ import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import { BaseException } from '@common/exceptions/base.exception';
 import { isDefined } from '@common/utils';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
+import { calloutContributions } from '@domain/collaboration/callout-contribution/callout.contribution.schema';
+import { calloutFramings } from '@domain/collaboration/callout-framing/callout.framing.schema';
+import { callouts } from '@domain/collaboration/callout/callout.schema';
+import { calloutsSets } from '@domain/collaboration/callouts-set/callouts.set.schema';
+import { collaborations } from '@domain/collaboration/collaboration/collaboration.schema';
 import { Post } from '@domain/collaboration/post';
+import { posts } from '@domain/collaboration/post/post.schema';
 import { Memo } from '@domain/common/memo/memo.entity';
+import { memos } from '@domain/common/memo/memo.schema';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
-import { IOrganization, Organization } from '@domain/community/organization';
+import { whiteboards } from '@domain/common/whiteboard/whiteboard.schema';
+import { IOrganization } from '@domain/community/organization';
+import { organizations } from '@domain/community/organization/organization.schema';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { User } from '@domain/community/user/user.entity';
 import { IUser } from '@domain/community/user/user.interface';
+import { users } from '@domain/community/user/user.schema';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { Space } from '@domain/space/space/space.entity';
 import { ISpace } from '@domain/space/space/space.interface';
+import { spaces } from '@domain/space/space/space.schema';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
 import { SearchFilterInput } from '@services/api/search/dto/inputs';
 import { SearchCategory } from '@services/api/search/search.category';
 import { calculateSearchCursor } from '@services/api/search/util';
+import { eq, inArray, sql } from 'drizzle-orm';
 import { groupBy, intersection, orderBy } from 'lodash';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager, In } from 'typeorm';
 import {
   ISearchResult,
   ISearchResultCallout,
@@ -70,7 +82,7 @@ type CalloutParents = {
 @Injectable()
 export class SearchResultService {
   constructor(
-    @InjectEntityManager() private entityManager: EntityManager,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
     private authorizationService: AuthorizationService,
     private userLookupService: UserLookupService,
@@ -172,20 +184,24 @@ export class SearchResultService {
     }
 
     if (spaceId) {
-      const space = await this.entityManager.findOneByOrFail(Space, {
-        id: spaceId,
+      const space = await this.db.query.spaces.findFirst({
+        where: eq(spaces.id, spaceId),
       });
 
-      return [{ ...rawSearchResults[0], space }];
+      if (!space) {
+        return [];
+      }
+
+      return [{ ...rawSearchResults[0], space: space as unknown as ISpace }];
     }
 
     const spaceIds = rawSearchResults.map(hit => hit.result.id);
 
-    const spaces = await this.entityManager.findBy(Space, {
-      id: In(spaceIds),
+    const loadedSpaces = await this.db.query.spaces.findMany({
+      where: inArray(spaces.id, spaceIds),
     });
 
-    return spaces
+    return (loadedSpaces as unknown as Space[])
       .map<ISearchResultSpace | undefined>(space => {
         const rawSearchResult = rawSearchResults.find(
           hit => hit.result.id === space.id
@@ -221,12 +237,10 @@ export class SearchResultService {
 
     const subspaceIds = rawSearchResults.map(hit => hit.result.id);
 
-    const subspaces = await this.entityManager.find(Space, {
-      where: {
-        id: In(subspaceIds),
-      },
-      relations: { parentSpace: true },
-    });
+    const subspaces = (await this.db.query.spaces.findMany({
+      where: inArray(spaces.id, subspaceIds),
+      with: { parentSpace: true, authorization: true },
+    })) as unknown as Space[];
 
     return subspaces
       .map<ISearchResultSpace | undefined>(subspace => {
@@ -292,11 +306,11 @@ export class SearchResultService {
       ? intersection(usersFromSearch, usersInSpace)
       : usersFromSearch;
 
-    const users = await this.entityManager.findBy(User, {
-      id: In(userIdsIntersection),
-    });
+    const loadedUsers = (await this.db.query.users.findMany({
+      where: inArray(users.id, userIdsIntersection),
+    })) as unknown as User[];
 
-    return users
+    return loadedUsers
       .map<ISearchResultUser | undefined>(user => {
         const rawSearchResult = rawSearchResults.find(
           hit => hit.result.id === user.id
@@ -336,11 +350,12 @@ export class SearchResultService {
       ? intersection(orgsInSearch, orgsInSpace)
       : orgsInSearch;
 
-    const organizations = await this.entityManager.findBy(Organization, {
-      id: In(orgIdsIntersection),
-    });
+    const loadedOrganizations = (await this.db.query.organizations.findMany({
+      where: inArray(organizations.id, orgIdsIntersection),
+      with: { authorization: true },
+    })) as unknown as IOrganization[];
 
-    return organizations
+    return loadedOrganizations
       .map<ISearchResultOrganization | undefined>(org => {
         const rawSearchResult = rawSearchResults.find(
           hit => hit.result.id === org.id
@@ -383,13 +398,14 @@ export class SearchResultService {
 
     const postIds = rawSearchResults.map(hit => hit.result.id);
 
-    const posts = await this.entityManager.findBy(Post, {
-      id: In(postIds),
-    });
+    const loadedPosts = (await this.db.query.posts.findMany({
+      where: inArray(posts.id, postIds),
+      with: { authorization: true },
+    })) as unknown as Post[];
 
     // usually the authorization is last but here it might be more expensive than usual
     // find the authorized post first, then get the parents, and map the results
-    const authorizedPosts = posts.filter(post =>
+    const authorizedPosts = loadedPosts.filter(post =>
       this.authorizationService.isAccessGranted(
         agentInfo,
         post.authorization,
@@ -435,13 +451,14 @@ export class SearchResultService {
 
     const whiteboardIds = rawSearchResults.map(hit => hit.result.id);
 
-    const whiteboards = await this.entityManager.findBy(Whiteboard, {
-      id: In(whiteboardIds),
-    });
+    const loadedWhiteboards = (await this.db.query.whiteboards.findMany({
+      where: inArray(whiteboards.id, whiteboardIds),
+      with: { authorization: true },
+    })) as unknown as Whiteboard[];
 
     // usually the authorization is last but here it might be more expensive than usual
     // find the authorized whiteboard first, then get the parents, and map the results
-    const authorizedWhiteboards = whiteboards.filter(whiteboard =>
+    const authorizedWhiteboards = loadedWhiteboards.filter(whiteboard =>
       this.authorizationService.isAccessGranted(
         agentInfo,
         whiteboard.authorization,
@@ -492,13 +509,14 @@ export class SearchResultService {
 
     const memoIds = rawSearchResults.map(hit => hit.result.id);
 
-    const memos = await this.entityManager.findBy(Memo, {
-      id: In(memoIds),
-    });
+    const loadedMemos = (await this.db.query.memos.findMany({
+      where: inArray(memos.id, memoIds),
+      with: { authorization: true },
+    })) as unknown as Memo[];
 
     // usually the authorization is last but here it might be more expensive than usual
     // find the authorized memo first, then get the parents, and map the results
-    const authorizedMemos = memos.filter(memo =>
+    const authorizedMemos = loadedMemos.filter(memo =>
       this.authorizationService.isAccessGranted(
         agentInfo,
         memo.authorization,
@@ -547,49 +565,26 @@ export class SearchResultService {
 
     const calloutIds = rawSearchResults.map(hit => hit.result.id);
 
-    const callouts = await this.entityManager.find(Callout, {
-      where: {
-        id: In(calloutIds),
-        calloutsSet: { type: CalloutsSetType.COLLABORATION },
-      },
-      relations: {
+    const loadedCallouts = (await this.db.query.callouts.findMany({
+      where: inArray(callouts.id, calloutIds),
+      with: {
+        authorization: true,
         calloutsSet: true,
-        framing: {
-          whiteboard: true,
-        },
+        framing: true,
         contributions: {
-          post: true,
-          whiteboard: true,
+          with: {
+            post: true,
+          },
         },
       },
-      select: {
-        id: true,
-        nameID: true,
-        framing: {
-          id: true,
-          type: true,
-          whiteboard: {
-            id: true,
-          },
-        },
-        contributions: {
-          id: true,
-          post: {
-            id: true,
-          },
-          whiteboard: {
-            id: true,
-          },
-        },
-        calloutsSet: {
-          id: true,
-          type: true,
-        },
-      },
-    });
+    })) as unknown as Callout[];
+    // Filter to only collaboration callouts-set type
+    const filteredCallouts = loadedCallouts.filter(
+      c => c.calloutsSet?.type === CalloutsSetType.COLLABORATION
+    );
     // usually the authorization is last but here it might be more expensive than usual
     // find the authorized post first, then get the parents, and map the results
-    const authorizedCallouts = callouts.filter(callout =>
+    const authorizedCallouts = filteredCallouts.filter(callout =>
       this.authorizationService.isAccessGranted(
         agentInfo,
         callout.authorization,
@@ -627,80 +622,38 @@ export class SearchResultService {
   }
 
   private async getCalloutParents(
-    callouts: Callout[]
+    calloutEntities: Callout[]
   ): Promise<CalloutParents[]> {
-    const calloutIds = callouts.map(callout => callout.id);
+    const calloutIds = calloutEntities.map(callout => callout.id);
 
-    const parentSpaces = await this.entityManager.find(Space, {
-      where: {
-        collaboration: {
-          calloutsSet: {
-            callouts: {
-              id: In(calloutIds),
-            },
-          },
-        },
-      },
-      relations: {
-        collaboration: {
-          calloutsSet: {
-            callouts: {
-              framing: {
-                whiteboard: true,
-                memo: true,
-              },
-              contributions: {
-                post: true,
-                whiteboard: true,
-                memo: true,
-              },
-            },
-          },
-        },
-      },
-      select: {
-        id: true,
-        level: true,
-        collaboration: {
-          id: true,
-          calloutsSet: {
-            id: true,
-            callouts: {
-              id: true,
-              framing: {
-                id: true,
-                whiteboard: {
-                  id: true,
-                },
-                memo: {
-                  id: true,
-                },
-              },
-              contributions: {
-                id: true,
-                post: {
-                  id: true,
-                },
-                whiteboard: {
-                  id: true,
-                },
-                memo: {
-                  id: true,
-                },
-              },
-            },
-          },
-        },
-      },
-    });
+    if (calloutIds.length === 0) {
+      return [];
+    }
 
-    return callouts
+    // Find spaces that own these callouts via collaboration -> calloutsSet -> callout chain
+    const spaceCalloutRows = await this.db
+      .select({
+        spaceId: spaces.id,
+        calloutId: callouts.id,
+      })
+      .from(spaces)
+      .innerJoin(collaborations, eq(spaces.collaborationId, collaborations.id))
+      .innerJoin(calloutsSets, eq(collaborations.calloutsSetId, calloutsSets.id))
+      .innerJoin(callouts, eq(callouts.calloutsSetId, calloutsSets.id))
+      .where(inArray(callouts.id, calloutIds));
+
+    // Load full space data for found space IDs
+    const spaceIdsFound = [...new Set(spaceCalloutRows.map(r => r.spaceId))];
+    const parentSpaces = spaceIdsFound.length > 0
+      ? (await this.db.query.spaces.findMany({
+          where: inArray(spaces.id, spaceIdsFound),
+        })) as unknown as Space[]
+      : [];
+
+    return calloutEntities
       .map(callout => {
-        const space = parentSpaces.find(space =>
-          space?.collaboration?.calloutsSet?.callouts?.some(
-            spaceCallout => spaceCallout.id === callout.id
-          )
-        );
+        const row = spaceCalloutRows.find(r => r.calloutId === callout.id);
+        const space = row ? parentSpaces.find(s => s.id === row.spaceId) : undefined;
 
         if (!space) {
           this.logger.error(
@@ -722,114 +675,50 @@ export class SearchResultService {
       .filter(isDefined);
   }
 
-  private async getPostParents(posts: Post[]): Promise<PostParents[]> {
-    if (!posts.length) {
+  private async getPostParents(postEntities: Post[]): Promise<PostParents[]> {
+    if (!postEntities.length) {
       return [];
     }
 
-    const postIds = posts.map(post => post.id);
+    const postIds = postEntities.map(post => post.id);
 
-    const callouts = await this.entityManager.find(Callout, {
-      where: {
-        contributions: {
-          post: {
-            id: In(postIds),
-          },
-        },
-        calloutsSet: { type: CalloutsSetType.COLLABORATION },
-      },
-      relations: {
-        contributions: {
-          post: true,
-        },
-        calloutsSet: true,
-      },
-      select: {
-        id: true,
-        settings: {
-          visibility: true,
-        },
-        contributions: {
-          id: true,
-          post: {
-            id: true,
-          },
-        },
-        calloutsSet: {
-          id: true,
-          type: true,
-        },
-      },
-    });
-    const calloutIds = callouts.map(callout => callout.id);
+    // Find callout -> post mappings with space via join chain
+    const rows = await this.db
+      .select({
+        postId: calloutContributions.postId,
+        calloutId: callouts.id,
+        calloutSettings: callouts.settings,
+        calloutsSetType: calloutsSets.type,
+        spaceId: spaces.id,
+      })
+      .from(calloutContributions)
+      .innerJoin(callouts, eq(calloutContributions.calloutId, callouts.id))
+      .innerJoin(calloutsSets, eq(callouts.calloutsSetId, calloutsSets.id))
+      .innerJoin(collaborations, eq(calloutsSets.id, collaborations.calloutsSetId))
+      .innerJoin(spaces, eq(spaces.collaborationId, collaborations.id))
+      .where(inArray(calloutContributions.postId, postIds));
 
-    const spaces = await this.entityManager.find(Space, {
-      where: {
-        collaboration: {
-          calloutsSet: {
-            callouts: {
-              id: In(calloutIds),
-            },
-          },
-        },
-      },
-      relations: {
-        collaboration: {
-          calloutsSet: {
-            callouts: {
-              contributions: {
-                post: true,
-              },
-            },
-          },
-        },
-      },
-      select: {
-        id: true,
-        level: true,
-        settings: {
-          collaboration: {
-            allowEventsFromSubspaces: true,
-            allowMembersToCreateCallouts: true,
-            allowMembersToCreateSubspaces: true,
-            inheritMembershipRights: true,
-            allowMembersToVideoCall: true,
-            allowGuestContributions: true,
-          },
-          membership: {
-            allowSubspaceAdminsToInviteMembers: true,
-            policy: true,
-          },
-          privacy: { allowPlatformSupportAsAdmin: true, mode: true },
-        },
-        visibility: true,
-        collaboration: {
-          id: true,
-          calloutsSet: {
-            id: true,
-            callouts: {
-              id: true,
-              contributions: {
-                id: true,
-                post: {
-                  id: true,
-                },
-              },
-            },
-          },
-        },
-      },
-    });
+    // Filter to collaboration callouts-set type
+    const collabRows = rows.filter(r => r.calloutsSetType === CalloutsSetType.COLLABORATION);
 
-    return posts
+    // Load full space + callout data
+    const spaceIdsFound = [...new Set(collabRows.map(r => r.spaceId))];
+    const calloutIdsFound = [...new Set(collabRows.map(r => r.calloutId))];
+
+    const [loadedSpaces, loadedCallouts] = await Promise.all([
+      spaceIdsFound.length > 0
+        ? this.db.query.spaces.findMany({ where: inArray(spaces.id, spaceIdsFound) })
+        : [],
+      calloutIdsFound.length > 0
+        ? this.db.query.callouts.findMany({ where: inArray(callouts.id, calloutIdsFound) })
+        : [],
+    ]);
+
+    return postEntities
       .map(post => {
-        const callout = callouts.find(callout =>
-          callout?.contributions?.some(
-            contribution => contribution?.post?.id === post.id
-          )
-        );
+        const row = collabRows.find(r => r.postId === post.id);
 
-        if (!callout) {
+        if (!row) {
           this.logger.error(
             `Unable to find Callout parent for Post: ${post.id}`,
             undefined,
@@ -838,13 +727,10 @@ export class SearchResultService {
           return undefined;
         }
 
-        const space = spaces.find(space =>
-          space?.collaboration?.calloutsSet?.callouts?.some(
-            spaceCallout => spaceCallout.id === callout.id
-          )
-        );
+        const callout = loadedCallouts.find(c => c.id === row.calloutId);
+        const space = loadedSpaces.find(s => s.id === row.spaceId);
 
-        if (!space) {
+        if (!callout || !space) {
           this.logger.error(
             `Unable to find Space parent for Post: ${post.id}`,
             undefined,
@@ -855,161 +741,84 @@ export class SearchResultService {
 
         return {
           post,
-          callout,
-          space,
+          callout: callout as unknown as Callout,
+          space: space as unknown as Space,
         };
       })
       .filter((x): x is PostParents => !!x)
       .filter(
         postParent =>
-          postParent.callout?.settings?.visibility !== CalloutVisibility.DRAFT
+          (postParent.callout?.settings as any)?.visibility !== CalloutVisibility.DRAFT
       );
   }
 
-  private async getMemoParents(memos: Memo[]): Promise<MemoParents[]> {
-    if (!memos.length) {
+  private async getMemoParents(memoEntities: Memo[]): Promise<MemoParents[]> {
+    if (!memoEntities.length) {
       return [];
     }
 
-    const memoIds = memos.map(memo => memo.id);
+    const memoIds = memoEntities.map(memo => memo.id);
 
-    const callouts = await this.entityManager.find(Callout, {
-      where: [
-        {
-          contributions: {
-            memo: {
-              id: In(memoIds),
-            },
-          },
-          calloutsSet: { type: CalloutsSetType.COLLABORATION },
-        },
-        {
-          framing: {
-            memo: {
-              id: In(memoIds),
-            },
-          },
-          calloutsSet: { type: CalloutsSetType.COLLABORATION },
-        },
-      ],
-      relations: {
-        framing: {
-          memo: true,
-        },
-        contributions: {
-          memo: true,
-        },
-        calloutsSet: true,
-      },
-      select: {
-        id: true,
-        settings: {
-          visibility: true,
-        },
-        framing: {
-          id: true,
-          memo: {
-            id: true,
-          },
-        },
-        contributions: {
-          id: true,
-          memo: {
-            id: true,
-          },
-        },
-        calloutsSet: {
-          id: true,
-          type: true,
-        },
-      },
-    });
-    const calloutIds = callouts.map(callout => callout.id);
+    // Find memos as contributions: contribution.memoId -> callout -> space
+    const contributionRows = await this.db
+      .select({
+        memoId: calloutContributions.memoId,
+        calloutId: callouts.id,
+        calloutsSetType: calloutsSets.type,
+        spaceId: spaces.id,
+      })
+      .from(calloutContributions)
+      .innerJoin(callouts, eq(calloutContributions.calloutId, callouts.id))
+      .innerJoin(calloutsSets, eq(callouts.calloutsSetId, calloutsSets.id))
+      .innerJoin(collaborations, eq(calloutsSets.id, collaborations.calloutsSetId))
+      .innerJoin(spaces, eq(spaces.collaborationId, collaborations.id))
+      .where(inArray(calloutContributions.memoId, memoIds));
 
-    const spaces = await this.entityManager.find(Space, {
-      where: {
-        collaboration: {
-          calloutsSet: {
-            callouts: {
-              id: In(calloutIds),
-            },
-          },
-        },
-      },
-      relations: {
-        collaboration: {
-          calloutsSet: {
-            callouts: {
-              framing: {
-                memo: true,
-              },
-              contributions: {
-                memo: true,
-              },
-            },
-          },
-        },
-      },
-      select: {
-        id: true,
-        level: true,
-        settings: {
-          collaboration: {
-            allowEventsFromSubspaces: true,
-            allowMembersToCreateCallouts: true,
-            allowMembersToCreateSubspaces: true,
-            inheritMembershipRights: true,
-            allowMembersToVideoCall: true,
-            allowGuestContributions: true,
-          },
-          membership: {
-            allowSubspaceAdminsToInviteMembers: true,
-            policy: true,
-          },
-          privacy: { allowPlatformSupportAsAdmin: true, mode: true },
-        },
-        visibility: true,
-        collaboration: {
-          id: true,
-          calloutsSet: {
-            id: true,
-            callouts: {
-              id: true,
-              framing: {
-                id: true,
-                memo: {
-                  id: true,
-                },
-              },
-              contributions: {
-                id: true,
-                memo: {
-                  id: true,
-                },
-              },
-            },
-          },
-        },
-      },
-    });
+    // Find memos as framing: framing.memoId -> callout -> space
+    const framingRows = await this.db
+      .select({
+        memoId: calloutFramings.memoId,
+        calloutId: callouts.id,
+        calloutsSetType: calloutsSets.type,
+        spaceId: spaces.id,
+      })
+      .from(calloutFramings)
+      .innerJoin(callouts, eq(callouts.framingId, calloutFramings.id))
+      .innerJoin(calloutsSets, eq(callouts.calloutsSetId, calloutsSets.id))
+      .innerJoin(collaborations, eq(calloutsSets.id, collaborations.calloutsSetId))
+      .innerJoin(spaces, eq(spaces.collaborationId, collaborations.id))
+      .where(inArray(calloutFramings.memoId, memoIds));
 
-    return memos
+    // Filter to collaboration type
+    const collabContributionRows = contributionRows.filter(r => r.calloutsSetType === CalloutsSetType.COLLABORATION);
+    const collabFramingRows = framingRows.filter(r => r.calloutsSetType === CalloutsSetType.COLLABORATION);
+
+    // Load full entities
+    const allCalloutIds = [...new Set([...collabContributionRows.map(r => r.calloutId), ...collabFramingRows.map(r => r.calloutId)])];
+    const allSpaceIds = [...new Set([...collabContributionRows.map(r => r.spaceId), ...collabFramingRows.map(r => r.spaceId)])];
+
+    const [loadedCallouts, loadedSpaces] = await Promise.all([
+      allCalloutIds.length > 0
+        ? this.db.query.callouts.findMany({ where: inArray(callouts.id, allCalloutIds) })
+        : [],
+      allSpaceIds.length > 0
+        ? this.db.query.spaces.findMany({ where: inArray(spaces.id, allSpaceIds) })
+        : [],
+    ]);
+
+    return memoEntities
       .map(memo => {
         let isContribution = false;
-        let callout = callouts.find(
-          callout => callout?.framing?.memo?.id === memo.id
-        );
 
-        if (!callout) {
+        // Check framing first
+        let row = collabFramingRows.find(r => r.memoId === memo.id);
+
+        if (!row) {
           isContribution = true;
-          callout = callouts.find(callout =>
-            callout?.contributions?.some(
-              contribution => contribution?.memo?.id === memo.id
-            )
-          );
+          row = collabContributionRows.find(r => r.memoId === memo.id);
         }
 
-        if (!callout) {
+        if (!row) {
           this.logger.error(
             {
               message: 'Unable to find Callout parent for Memo',
@@ -1021,13 +830,10 @@ export class SearchResultService {
           return undefined;
         }
 
-        const space = spaces.find(space =>
-          space?.collaboration?.calloutsSet?.callouts?.some(
-            spaceCallout => spaceCallout.id === callout?.id
-          )
-        );
+        const callout = loadedCallouts.find(c => c.id === row!.calloutId);
+        const space = loadedSpaces.find(s => s.id === row!.spaceId);
 
-        if (!space) {
+        if (!callout || !space) {
           this.logger.error(
             {
               message: 'Unable to find Space parent for Memo',
@@ -1042,163 +848,86 @@ export class SearchResultService {
         return {
           memo,
           isContribution,
-          callout,
-          space,
+          callout: callout as unknown as Callout,
+          space: space as unknown as Space,
         };
       })
       .filter((x): x is MemoParents => !!x)
       .filter(
         memoParent =>
-          memoParent.callout?.settings?.visibility !== CalloutVisibility.DRAFT
+          (memoParent.callout?.settings as any)?.visibility !== CalloutVisibility.DRAFT
       );
   }
 
   private async getWhiteboardParents(
-    whiteboards: Whiteboard[]
+    whiteboardEntities: Whiteboard[]
   ): Promise<WhiteboardParents[]> {
-    if (!whiteboards.length) {
+    if (!whiteboardEntities.length) {
       return [];
     }
 
-    const whiteboardIds = whiteboards.map(wb => wb.id);
+    const whiteboardIds = whiteboardEntities.map(wb => wb.id);
 
-    const callouts = await this.entityManager.find(Callout, {
-      where: [
-        {
-          contributions: {
-            whiteboard: {
-              id: In(whiteboardIds),
-            },
-          },
-          calloutsSet: { type: CalloutsSetType.COLLABORATION },
-        },
-        {
-          framing: {
-            whiteboard: {
-              id: In(whiteboardIds),
-            },
-          },
-          calloutsSet: { type: CalloutsSetType.COLLABORATION },
-        },
-      ],
-      relations: {
-        framing: {
-          whiteboard: true,
-        },
-        contributions: {
-          whiteboard: true,
-        },
-        calloutsSet: true,
-      },
-      select: {
-        id: true,
-        settings: {
-          visibility: true,
-        },
-        framing: {
-          id: true,
-          whiteboard: {
-            id: true,
-          },
-        },
-        contributions: {
-          id: true,
-          whiteboard: {
-            id: true,
-          },
-        },
-        calloutsSet: {
-          id: true,
-          type: true,
-        },
-      },
-    });
-    const calloutIds = callouts.map(callout => callout.id);
+    // Find whiteboards as contributions: contribution.whiteboardId -> callout -> space
+    const contributionRows = await this.db
+      .select({
+        whiteboardId: calloutContributions.whiteboardId,
+        calloutId: callouts.id,
+        calloutsSetType: calloutsSets.type,
+        spaceId: spaces.id,
+      })
+      .from(calloutContributions)
+      .innerJoin(callouts, eq(calloutContributions.calloutId, callouts.id))
+      .innerJoin(calloutsSets, eq(callouts.calloutsSetId, calloutsSets.id))
+      .innerJoin(collaborations, eq(calloutsSets.id, collaborations.calloutsSetId))
+      .innerJoin(spaces, eq(spaces.collaborationId, collaborations.id))
+      .where(inArray(calloutContributions.whiteboardId, whiteboardIds));
 
-    const spaces = await this.entityManager.find(Space, {
-      where: {
-        collaboration: {
-          calloutsSet: {
-            callouts: {
-              id: In(calloutIds),
-            },
-          },
-        },
-      },
-      relations: {
-        collaboration: {
-          calloutsSet: {
-            callouts: {
-              framing: {
-                whiteboard: true,
-              },
-              contributions: {
-                whiteboard: true,
-              },
-            },
-          },
-        },
-      },
-      select: {
-        id: true,
-        level: true,
-        settings: {
-          collaboration: {
-            allowEventsFromSubspaces: true,
-            allowMembersToCreateCallouts: true,
-            allowMembersToCreateSubspaces: true,
-            inheritMembershipRights: true,
-            allowMembersToVideoCall: true,
-            allowGuestContributions: true,
-          },
-          membership: {
-            allowSubspaceAdminsToInviteMembers: true,
-            policy: true,
-          },
-          privacy: { allowPlatformSupportAsAdmin: true, mode: true },
-        },
-        visibility: true,
-        collaboration: {
-          id: true,
-          calloutsSet: {
-            id: true,
-            callouts: {
-              id: true,
-              framing: {
-                id: true,
-                whiteboard: {
-                  id: true,
-                },
-              },
-              contributions: {
-                id: true,
-                whiteboard: {
-                  id: true,
-                },
-              },
-            },
-          },
-        },
-      },
-    });
+    // Find whiteboards as framing: framing.whiteboardId -> callout -> space
+    const framingRows = await this.db
+      .select({
+        whiteboardId: calloutFramings.whiteboardId,
+        calloutId: callouts.id,
+        calloutsSetType: calloutsSets.type,
+        spaceId: spaces.id,
+      })
+      .from(calloutFramings)
+      .innerJoin(callouts, eq(callouts.framingId, calloutFramings.id))
+      .innerJoin(calloutsSets, eq(callouts.calloutsSetId, calloutsSets.id))
+      .innerJoin(collaborations, eq(calloutsSets.id, collaborations.calloutsSetId))
+      .innerJoin(spaces, eq(spaces.collaborationId, collaborations.id))
+      .where(inArray(calloutFramings.whiteboardId, whiteboardIds));
 
-    return whiteboards
+    // Filter to collaboration type
+    const collabContributionRows = contributionRows.filter(r => r.calloutsSetType === CalloutsSetType.COLLABORATION);
+    const collabFramingRows = framingRows.filter(r => r.calloutsSetType === CalloutsSetType.COLLABORATION);
+
+    // Load full entities
+    const allCalloutIds = [...new Set([...collabContributionRows.map(r => r.calloutId), ...collabFramingRows.map(r => r.calloutId)])];
+    const allSpaceIds = [...new Set([...collabContributionRows.map(r => r.spaceId), ...collabFramingRows.map(r => r.spaceId)])];
+
+    const [loadedCallouts, loadedSpaces] = await Promise.all([
+      allCalloutIds.length > 0
+        ? this.db.query.callouts.findMany({ where: inArray(callouts.id, allCalloutIds) })
+        : [],
+      allSpaceIds.length > 0
+        ? this.db.query.spaces.findMany({ where: inArray(spaces.id, allSpaceIds) })
+        : [],
+    ]);
+
+    return whiteboardEntities
       .map(whiteboard => {
         let isContribution = false;
-        let callout = callouts.find(
-          callout => callout?.framing?.whiteboard?.id === whiteboard.id
-        );
 
-        if (!callout) {
+        // Check framing first
+        let row = collabFramingRows.find(r => r.whiteboardId === whiteboard.id);
+
+        if (!row) {
           isContribution = true;
-          callout = callouts.find(callout =>
-            callout?.contributions?.some(
-              contribution => contribution?.whiteboard?.id === whiteboard.id
-            )
-          );
+          row = collabContributionRows.find(r => r.whiteboardId === whiteboard.id);
         }
 
-        if (!callout) {
+        if (!row) {
           this.logger.error(
             {
               message: 'Unable to find Callout parent for Whiteboard',
@@ -1210,13 +939,10 @@ export class SearchResultService {
           return undefined;
         }
 
-        const space = spaces.find(space =>
-          space?.collaboration?.calloutsSet?.callouts?.some(
-            spaceCallout => spaceCallout.id === callout?.id
-          )
-        );
+        const callout = loadedCallouts.find(c => c.id === row!.calloutId);
+        const space = loadedSpaces.find(s => s.id === row!.spaceId);
 
-        if (!space) {
+        if (!callout || !space) {
           this.logger.error(
             {
               message: 'Unable to find Space parent for Whiteboard',
@@ -1231,14 +957,14 @@ export class SearchResultService {
         return {
           whiteboard,
           isContribution,
-          callout,
-          space,
+          callout: callout as unknown as Callout,
+          space: space as unknown as Space,
         };
       })
       .filter((x): x is WhiteboardParents => !!x)
       .filter(
         whiteboardParent =>
-          whiteboardParent.callout?.settings?.visibility !==
+          (whiteboardParent.callout?.settings as any)?.visibility !==
           CalloutVisibility.DRAFT
       );
   }

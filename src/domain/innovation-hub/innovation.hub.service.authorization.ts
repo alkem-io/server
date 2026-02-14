@@ -26,7 +26,7 @@ export class InnovationHubAuthorizationService {
     const hub = await this.innovationHubService.getInnovationHubOrFail(
       hubInput.id,
       {
-        relations: {
+        with: {
           profile: true,
         },
       }

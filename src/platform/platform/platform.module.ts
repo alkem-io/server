@@ -7,7 +7,6 @@ import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/stor
 import { TemplatesManagerModule } from '@domain/template/templates-manager/templates.manager.module';
 import { LibraryModule } from '@library/library/library.module';
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { KonfigModule } from '@platform/configuration/config/config.module';
 import { ForumModule } from '@platform/forum/forum.module';
@@ -15,7 +14,6 @@ import { LicensingFrameworkModule } from '@platform/licensing/credential-based/l
 import { MetadataModule } from '@platform/metadata/metadata.module';
 import { PlatformWellKnownVirtualContributorsModule } from '@platform/platform.well.known.virtual.contributors';
 import { PlatformSettingsModule } from '@platform/platform-settings/platform.settings.module';
-import { Platform } from './platform.entity';
 import { PlatformResolverFields } from './platform.resolver.fields';
 import { PlatformResolverMutations } from './platform.resolver.mutations';
 import { PlatformResolverQueries } from './platform.resolver.queries';
@@ -40,7 +38,6 @@ import { PlatformLicenseService } from './platform.service.license';
     TemplatesManagerModule,
     RoleSetModule,
     PlatformWellKnownVirtualContributorsModule,
-    TypeOrmModule.forFeature([Platform]),
   ],
   providers: [
     PlatformResolverQueries,

@@ -11,12 +11,13 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy/authori
 import { LicenseService } from '@domain/common/license/license.service';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { LicenseIssuerService } from '@platform/licensing/credential-based/license-credential-issuer/license.issuer.service';
 import { ILicensePlan } from '@platform/licensing/credential-based/license-plan/license.plan.interface';
 import { LicensingFrameworkService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Repository } from 'typeorm';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { accounts } from '../account/account.schema';
 import { Account } from '../account/account.entity';
 import { IAccount } from '../account/account.interface';
 import { DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN } from '../account/constants';
@@ -30,8 +31,8 @@ export class AccountHostService {
     private licensingFrameworkService: LicensingFrameworkService,
     private licenseService: LicenseService,
     private storageAggregatorService: StorageAggregatorService,
-    @InjectRepository(Account)
-    private accountRepository: Repository<Account>,
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -93,7 +94,19 @@ export class AccountHostService {
       ],
     });
 
-    return await this.accountRepository.save(account);
+    const [inserted] = await this.db
+      .insert(accounts)
+      .values({
+        type: account.type,
+        baselineLicensePlan: account.baselineLicensePlan,
+        authorizationId: account.authorization?.id,
+        agentId: account.agent?.id,
+        licenseId: account.license?.id,
+        storageAggregatorId: account.storageAggregator?.id,
+      })
+      .returning();
+    account.id = inserted.id;
+    return account;
   }
 
   private getBaselineAccountLicensePlan(): IAccountLicensePlan {

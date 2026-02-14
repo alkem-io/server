@@ -5,12 +5,13 @@ import {
   EntityNotFoundException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { eq } from 'drizzle-orm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
 import { ITemplate } from '../template/template.interface';
 import { ITemplateDefault } from '../template-default/template.default.interface';
 import { TemplateDefaultService } from '../template-default/template.default.service';
@@ -19,13 +20,13 @@ import { TemplatesSetService } from '../templates-set/templates.set.service';
 import { CreateTemplatesManagerInput } from './dto/templates.manager.dto.create';
 import { TemplatesManager } from './templates.manager.entity';
 import { ITemplatesManager } from './templates.manager.interface';
+import { templatesManagers } from './templates.manager.schema';
 
 @Injectable()
 export class TemplatesManagerService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    @InjectRepository(TemplatesManager)
-    private templatesManagerRepository: Repository<TemplatesManager>,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     private templatesSetService: TemplatesSetService,
     private templateDefaultService: TemplateDefaultService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -48,26 +49,29 @@ export class TemplatesManagerService {
       templatesManager.templateDefaults.push(templateDefault);
     }
 
-    return await this.templatesManagerRepository.save(templatesManager);
+    const [inserted] = await this.db
+      .insert(templatesManagers)
+      .values(templatesManager as any)
+      .returning();
+    return inserted as unknown as ITemplatesManager;
   }
 
   async getTemplatesManagerOrFail(
     templatesManagerID: string,
-    options?: FindOneOptions<TemplatesManager>
+    options?: {
+      relations?: Record<string, any>;
+    }
   ): Promise<ITemplatesManager | never> {
-    const templatesManager = await this.templatesManagerRepository.findOne({
-      ...options,
-      where: {
-        id: templatesManagerID,
-        ...(options?.where || {}),
-      },
+    const templatesManager = await this.db.query.templatesManagers.findFirst({
+      where: eq(templatesManagers.id, templatesManagerID),
+      with: options?.relations,
     });
     if (!templatesManager)
       throw new EntityNotFoundException(
         `TemplatesManager with id(${templatesManagerID}) not found!`,
         LogContext.TEMPLATES
       );
-    return templatesManager;
+    return templatesManager as unknown as ITemplatesManager;
   }
 
   async deleteTemplatesManager(
@@ -106,11 +110,11 @@ export class TemplatesManagerService {
       templatesManager.templatesSet.id
     );
 
-    const result = await this.templatesManagerRepository.remove(
-      templatesManager as TemplatesManager
-    );
-    result.id = templatesManagerID;
-    return result;
+    await this.db
+      .delete(templatesManagers)
+      .where(eq(templatesManagers.id, templatesManagerID));
+
+    return templatesManager;
   }
 
   public async getTemplateDefault(
@@ -172,7 +176,19 @@ export class TemplatesManagerService {
   public async save(
     templatesManager: ITemplatesManager
   ): Promise<ITemplatesManager> {
-    return await this.templatesManagerRepository.save(templatesManager);
+    if (!templatesManager.id) {
+      const [inserted] = await this.db
+        .insert(templatesManagers)
+        .values(templatesManager as any)
+        .returning();
+      return inserted as unknown as ITemplatesManager;
+    }
+    const [updated] = await this.db
+      .update(templatesManagers)
+      .set(templatesManager as any)
+      .where(eq(templatesManagers.id, templatesManager.id))
+      .returning();
+    return updated as unknown as ITemplatesManager;
   }
 
   async getTemplatesSetOrFail(

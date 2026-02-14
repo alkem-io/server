@@ -24,12 +24,7 @@ export class StorageAggregatorAuthorizationService {
         storageAggregatorInput.id,
         {
           relations: {
-            directStorage: {
-              documents: {
-                tagset: true,
-              },
-            },
-            authorization: true,
+            directStorage: true,
           },
         }
       );

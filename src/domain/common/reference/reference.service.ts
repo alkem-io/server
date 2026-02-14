@@ -2,9 +2,7 @@ import { LogContext } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { EntityNotFoundException } from '@common/exceptions';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, Repository } from 'typeorm';
+import { Inject, Injectable } from '@nestjs/common';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import {
   CreateReferenceInput,
@@ -13,13 +11,16 @@ import {
   Reference,
   UpdateReferenceInput,
 } from '../reference';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { eq } from 'drizzle-orm';
+import { references } from './reference.schema';
 
 @Injectable()
 export class ReferenceService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    @InjectRepository(Reference)
-    private referenceRepository: Repository<Reference>
+    @Inject(DRIZZLE) private readonly db: DrizzleDb
   ) {}
 
   public createReference(referenceInput: CreateReferenceInput): IReference {
@@ -36,7 +37,30 @@ export class ReferenceService {
   }
 
   public async save(reference: IReference): Promise<IReference> {
-    return await this.referenceRepository.save(reference);
+    if (reference.id) {
+      const [updated] = await this.db
+        .update(references)
+        .set({
+          name: reference.name,
+          uri: reference.uri,
+          description: reference.description,
+        })
+        .where(eq(references.id, reference.id))
+        .returning();
+      return updated as unknown as IReference;
+    } else {
+      const [inserted] = await this.db
+        .insert(references)
+        .values({
+          id: reference.id,
+          name: reference.name,
+          uri: reference.uri,
+          description: reference.description,
+          authorizationId: reference.authorization?.id,
+        })
+        .returning();
+      return inserted as unknown as IReference;
+    }
   }
 
   updateReferenceValues(
@@ -62,7 +86,16 @@ export class ReferenceService {
     const reference = await this.getReferenceOrFail(referenceData.ID);
     this.updateReferenceValues(reference, referenceData);
 
-    return await this.referenceRepository.save(reference);
+    const [updated] = await this.db
+      .update(references)
+      .set({
+        name: reference.name,
+        uri: reference.uri,
+        description: reference.description,
+      })
+      .where(eq(references.id, reference.id))
+      .returning();
+    return updated as unknown as IReference;
   }
 
   updateReferences(
@@ -91,20 +124,16 @@ export class ReferenceService {
     return references;
   }
 
-  async getReferenceOrFail(
-    referenceID: string,
-    options?: FindOneOptions<Reference>
-  ): Promise<IReference | never> {
-    const reference = await this.referenceRepository.findOne({
-      where: { id: referenceID },
-      ...options,
+  async getReferenceOrFail(referenceID: string): Promise<IReference | never> {
+    const reference = await this.db.query.references.findFirst({
+      where: eq(references.id, referenceID),
     });
     if (!reference)
       throw new EntityNotFoundException(
         `Not able to locate reference with the specified ID: ${referenceID}`,
         LogContext.SPACES
       );
-    return reference;
+    return reference as unknown as IReference;
   }
 
   async deleteReference(deleteData: DeleteReferenceInput): Promise<IReference> {
@@ -114,17 +143,34 @@ export class ReferenceService {
     if (reference.authorization)
       await this.authorizationPolicyService.delete(reference.authorization);
 
-    const { id } = reference;
-    const result = await this.referenceRepository.remove(
-      reference as Reference
-    );
-    return {
-      ...result,
-      id,
-    };
+    await this.db.delete(references).where(eq(references.id, reference.id));
+    return reference;
   }
 
   async saveReference(reference: IReference): Promise<IReference> {
-    return await this.referenceRepository.save(reference);
+    if (reference.id) {
+      const [updated] = await this.db
+        .update(references)
+        .set({
+          name: reference.name,
+          uri: reference.uri,
+          description: reference.description,
+        })
+        .where(eq(references.id, reference.id))
+        .returning();
+      return updated as unknown as IReference;
+    } else {
+      const [inserted] = await this.db
+        .insert(references)
+        .values({
+          id: reference.id,
+          name: reference.name,
+          uri: reference.uri,
+          description: reference.description,
+          authorizationId: reference.authorization?.id,
+        })
+        .returning();
+      return inserted as unknown as IReference;
+    }
   }
 }

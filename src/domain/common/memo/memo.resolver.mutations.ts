@@ -1,15 +1,16 @@
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
-import { CalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.entity';
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { InjectEntityManager } from '@nestjs/typeorm';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentUser } from '@src/common/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager } from 'typeorm';
+import { eq } from 'drizzle-orm';
+import { calloutFramings } from '@domain/collaboration/callout-framing/callout.framing.schema';
+import { calloutContributions } from '@domain/collaboration/callout-contribution/callout.contribution.schema';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { DeleteMemoInput } from './dto/memo.dto.delete';
 import { IMemo } from './memo.interface';
@@ -25,7 +26,7 @@ export class MemoResolverMutations {
     private authorizationPolicyService: AuthorizationPolicyService,
     private memoService: MemoService,
     private memoAuthService: MemoAuthorizationService,
-    @InjectEntityManager() private entityManager: EntityManager,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -47,11 +48,9 @@ export class MemoResolverMutations {
 
     const updatedMemo = await this.memoService.updateMemo(memo.id, memoData);
     if (updatedMemo.contentUpdatePolicy !== originalContentPolicy) {
-      const framing = await this.entityManager.findOne(CalloutFraming, {
-        where: {
-          memo: { id: memo.id },
-        },
-        relations: {
+      const framing = await this.db.query.calloutFramings.findFirst({
+        where: eq(calloutFramings.memoId, memo.id),
+        with: {
           authorization: true,
         },
       });
@@ -60,28 +59,23 @@ export class MemoResolverMutations {
         const updatedMemoAuthorizations =
           await this.memoAuthService.applyAuthorizationPolicy(
             memo.id,
-            framing.authorization
+            (framing as any).authorization
           );
         await this.authorizationPolicyService.saveAll(
           updatedMemoAuthorizations
         );
       } else {
-        const contribution = await this.entityManager.findOne(
-          CalloutContribution,
-          {
-            where: {
-              memo: { id: memo.id },
-            },
-            relations: {
-              authorization: true,
-            },
-          }
-        );
+        const contribution = await this.db.query.calloutContributions.findFirst({
+          where: eq(calloutContributions.memoId, memo.id),
+          with: {
+            authorization: true,
+          },
+        });
         if (contribution) {
           const contributionAuthorizations =
             await this.memoAuthService.applyAuthorizationPolicy(
               memo.id,
-              contribution.authorization
+              (contribution as any).authorization
             );
           await this.authorizationPolicyService.saveAll(
             contributionAuthorizations

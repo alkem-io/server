@@ -4,7 +4,7 @@ import {
   ObjectLiteral,
   SelectQueryBuilder,
   WhereExpressionBuilder,
-} from 'typeorm';
+} from '@core/typeorm-compat.types';
 
 /***
  * Applies filtering based on fields of T

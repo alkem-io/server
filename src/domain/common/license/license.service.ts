@@ -5,9 +5,11 @@ import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exc
 import { LicenseEntitlementNotAvailableException } from '@common/exceptions/license.entitlement.not.available.exception';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { eq } from 'drizzle-orm';
+import { licenses } from './license.schema';
 import { AuthorizationPolicy } from '../authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { ILicenseEntitlement } from '../license-entitlement/license.entitlement.interface';
@@ -21,14 +23,13 @@ export class LicenseService {
   constructor(
     private licenseEntitlementService: LicenseEntitlementService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    @InjectRepository(License)
-    private licenseRepository: Repository<License>,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
 
   createLicense(licenseData: CreateLicenseInput): ILicense {
-    const license: ILicense = License.create(licenseData);
+    const license: ILicense = License.create(licenseData as Partial<License>);
     license.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.LICENSE
     );
@@ -45,18 +46,18 @@ export class LicenseService {
 
   async getLicenseOrFail(
     licenseID: string,
-    options?: FindOneOptions<License>
+    options?: { relations?: { entitlements?: boolean } }
   ): Promise<ILicense | never> {
-    const license = await this.licenseRepository.findOne({
-      where: { id: licenseID },
-      ...options,
+    const license = await this.db.query.licenses.findFirst({
+      where: eq(licenses.id, licenseID),
+      with: options?.relations?.entitlements ? { entitlements: true } : undefined,
     });
     if (!license)
       throw new EntityNotFoundException(
         `Unable to find License with ID: ${licenseID}`,
         LogContext.LICENSE
       );
-    return license;
+    return license as unknown as ILicense;
   }
 
   async removeLicenseOrFail(licenseID: string): Promise<ILicense | never> {
@@ -77,25 +78,36 @@ export class LicenseService {
     if (license.authorization)
       await this.authorizationPolicyService.delete(license.authorization);
 
-    const deletedLicense = await this.licenseRepository.remove(
-      license as License
-    );
-    deletedLicense.id = license.id;
-    return deletedLicense;
+    await this.db.delete(licenses).where(eq(licenses.id, licenseID));
+    return license;
   }
 
   async save(license: ILicense): Promise<ILicense> {
-    return this.licenseRepository.save(license);
+    const [updated] = await this.db
+      .update(licenses)
+      .set({ type: license.type })
+      .where(eq(licenses.id, license.id))
+      .returning();
+    return updated as unknown as ILicense;
   }
 
-  async saveAll(licenses: ILicense[]): Promise<void> {
+  async saveAll(items: ILicense[]): Promise<void> {
     this.logger.verbose?.(
-      `Saving ${licenses.length} licenses`,
+      `Saving ${items.length} licenses`,
       LogContext.LICENSE
     );
-    await this.licenseRepository.save(licenses, {
-      chunk: 100,
-    });
+    const chunkSize = 100;
+    for (let i = 0; i < items.length; i += chunkSize) {
+      const chunk = items.slice(i, i + chunkSize);
+      await Promise.all(
+        chunk.map(item =>
+          this.db
+            .update(licenses)
+            .set({ type: item.type })
+            .where(eq(licenses.id, item.id))
+        )
+      );
+    }
   }
 
   public async getEntitlements(

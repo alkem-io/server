@@ -3,36 +3,71 @@ import {
   EntityNotFoundException,
   EntityNotInitializedException,
 } from '@common/exceptions';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { CredentialsSearchInput } from '@domain/agent/credential/dto/credentials.dto.search';
 import { Inject, LoggerService } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager, FindOneOptions } from 'typeorm';
-import { Organization } from '../organization/organization.entity';
+import { eq, and, inArray, sql } from 'drizzle-orm';
+import { organizations } from '../organization/organization.schema';
+import { agents } from '@domain/agent/agent/agent.schema';
+import { credentials } from '@domain/agent/credential/credential.schema';
 import { IOrganization } from '../organization/organization.interface';
+
+type OrganizationFindOptions = {
+  relations?: {
+    agent?: boolean | { credentials?: boolean; authorization?: boolean };
+    profile?: boolean;
+    authorization?: boolean;
+    roleSet?: boolean;
+    storageAggregator?: boolean;
+    verification?: boolean;
+  };
+};
 
 export class OrganizationLookupService {
   constructor(
-    @InjectEntityManager('default')
-    private entityManager: EntityManager,
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
 
+  private buildWithClause(options?: OrganizationFindOptions): Record<string, any> {
+    const withClause: any = {};
+    if (options?.relations) {
+      if (options.relations.authorization) withClause.authorization = true;
+      if (options.relations.profile) withClause.profile = true;
+      if (options.relations.agent) {
+        if (typeof options.relations.agent === 'object') {
+          const agentWith: any = {};
+          if (options.relations.agent.credentials) agentWith.credentials = true;
+          if (options.relations.agent.authorization) agentWith.authorization = true;
+          withClause.agent = Object.keys(agentWith).length > 0 ? { with: agentWith } : true;
+        } else {
+          withClause.agent = true;
+        }
+      }
+      if (options.relations.roleSet) withClause.roleSet = true;
+      if (options.relations.storageAggregator) withClause.storageAggregator = true;
+      if (options.relations.verification) withClause.verification = true;
+    }
+    return withClause;
+  }
+
   async getOrganizationByUUID(
     organizationID: string,
-    options?: FindOneOptions<Organization>
+    options?: OrganizationFindOptions
   ): Promise<IOrganization | null> {
-    const organization: IOrganization | null = await this.entityManager.findOne(
-      Organization,
-      {
-        ...options,
-        where: { ...options?.where, id: organizationID },
-      }
-    );
+    const withClause = this.buildWithClause(options);
 
-    return organization;
+    const organization = await this.db.query.organizations.findFirst({
+      where: eq(organizations.id, organizationID),
+      ...(Object.keys(withClause).length > 0 ? { with: withClause } : {}),
+    });
+
+    return (organization as unknown as IOrganization) ?? null;
   }
 
   async getOrganizationAndAgent(
@@ -57,24 +92,36 @@ export class OrganizationLookupService {
   ): Promise<IOrganization[]> {
     const credResourceID = credentialCriteria.resourceID || '';
 
-    const organizations = await this.entityManager.find(Organization, {
-      where: {
+    const matchingOrgIds = await this.db
+      .selectDistinct({ orgId: organizations.id })
+      .from(organizations)
+      .innerJoin(agents, eq(organizations.agentId, agents.id))
+      .innerJoin(credentials, eq(agents.id, credentials.agentId))
+      .where(
+        and(
+          eq(credentials.type, credentialCriteria.type),
+          eq(credentials.resourceID, credResourceID)
+        )
+      )
+      .limit(limit ?? 10000);
+
+    if (matchingOrgIds.length === 0) {
+      return [];
+    }
+
+    const orgIds = matchingOrgIds.map(r => r.orgId);
+    const foundOrgs = await this.db.query.organizations.findMany({
+      where: inArray(organizations.id, orgIds),
+      with: {
         agent: {
-          credentials: {
-            type: credentialCriteria.type,
-            resourceID: credResourceID,
+          with: {
+            credentials: true,
           },
         },
       },
-      relations: {
-        agent: {
-          credentials: true,
-        },
-      },
-      take: limit,
     });
 
-    return organizations;
+    return foundOrgs as unknown as IOrganization[];
   }
 
   async countOrganizationsWithCredentials(
@@ -82,52 +129,52 @@ export class OrganizationLookupService {
   ): Promise<number> {
     const credResourceID = credentialCriteria.resourceID || '';
 
-    const orgContributorsCount = await this.entityManager.count(Organization, {
-      where: {
-        agent: {
-          credentials: {
-            type: credentialCriteria.type,
-            resourceID: credResourceID,
-          },
-        },
-      },
-    });
-    return orgContributorsCount;
+    const result = await this.db
+      .select({ count: sql<number>`count(distinct ${organizations.id})` })
+      .from(organizations)
+      .innerJoin(agents, eq(organizations.agentId, agents.id))
+      .innerJoin(credentials, eq(agents.id, credentials.agentId))
+      .where(
+        and(
+          eq(credentials.type, credentialCriteria.type),
+          eq(credentials.resourceID, credResourceID)
+        )
+      );
+
+    return Number(result[0]?.count ?? 0);
   }
 
   async getOrganizationByDomain(
     domain: string,
-    options?: FindOneOptions<Organization>
+    options?: OrganizationFindOptions
   ): Promise<IOrganization | null> {
-    const organization: IOrganization | null = await this.entityManager.findOne(
-      Organization,
-      {
-        ...options,
-        where: { ...options?.where, domain: domain },
-      }
-    );
+    const withClause = this.buildWithClause(options);
 
-    return organization;
+    const organization = await this.db.query.organizations.findFirst({
+      where: eq(organizations.domain, domain),
+      ...(Object.keys(withClause).length > 0 ? { with: withClause } : {}),
+    });
+
+    return (organization as unknown as IOrganization) ?? null;
   }
 
   async getOrganizationByNameId(
     organizationNameID: string,
-    options?: FindOneOptions<Organization>
+    options?: OrganizationFindOptions
   ): Promise<IOrganization | null> {
-    const organization: IOrganization | null = await this.entityManager.findOne(
-      Organization,
-      {
-        ...options,
-        where: { ...options?.where, nameID: organizationNameID },
-      }
-    );
+    const withClause = this.buildWithClause(options);
 
-    return organization;
+    const organization = await this.db.query.organizations.findFirst({
+      where: eq(organizations.nameID, organizationNameID),
+      ...(Object.keys(withClause).length > 0 ? { with: withClause } : {}),
+    });
+
+    return (organization as unknown as IOrganization) ?? null;
   }
 
   async getOrganizationByNameIdOrFail(
     organizationNameID: string,
-    options?: FindOneOptions<Organization>
+    options?: OrganizationFindOptions
   ): Promise<IOrganization> {
     const organization = await this.getOrganizationByNameId(
       organizationNameID,
@@ -143,7 +190,7 @@ export class OrganizationLookupService {
 
   async getOrganizationOrFail(
     organizationID: string,
-    options?: FindOneOptions<Organization>
+    options?: OrganizationFindOptions
   ): Promise<IOrganization | never> {
     const organization = await this.getOrganizationByUUID(
       organizationID,

@@ -2,9 +2,7 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { DocumentModule } from '@domain/storage/document/document.module';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthorizationPolicyModule } from '../authorization-policy/authorization.policy.module';
-import { Reference } from './reference.entity';
 import { ReferenceResolverMutations } from './reference.resolver.mutations';
 import { ReferenceService } from './reference.service';
 
@@ -14,7 +12,6 @@ import { ReferenceService } from './reference.service';
     AuthorizationModule,
     StorageBucketModule,
     DocumentModule,
-    TypeOrmModule.forFeature([Reference]),
   ],
   providers: [ReferenceResolverMutations, ReferenceService],
   exports: [ReferenceService],

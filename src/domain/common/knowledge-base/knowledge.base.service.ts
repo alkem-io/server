@@ -13,9 +13,11 @@ import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { CreateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.create';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
+import { Inject, Injectable } from '@nestjs/common';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { eq } from 'drizzle-orm';
+import { knowledgeBases } from './knowledge.base.schema';
 import { TagsetService } from '../tagset/tagset.service';
 import { CreateKnowledgeBaseInput } from './dto/knowledge.base.dto.create';
 import { UpdateKnowledgeBaseInput } from './dto/knowledge.base.dto.update';
@@ -29,8 +31,7 @@ export class KnowledgeBaseService {
     private profileService: ProfileService,
     private tagsetService: TagsetService,
     private calloutsSetService: CalloutsSetService,
-    @InjectRepository(KnowledgeBase)
-    private knowledgeBaseRepository: Repository<KnowledgeBase>
+    @Inject(DRIZZLE) private readonly db: DrizzleDb
   ) {}
 
   public async createKnowledgeBase(
@@ -38,7 +39,7 @@ export class KnowledgeBaseService {
     storageAggregator: IStorageAggregator,
     userID: string | undefined
   ): Promise<IKnowledgeBase> {
-    let knowledgeBase: IKnowledgeBase = KnowledgeBase.create(knowledgeBaseData);
+    let knowledgeBase: IKnowledgeBase = KnowledgeBase.create(knowledgeBaseData as unknown as Partial<KnowledgeBase>);
 
     knowledgeBase.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.KNOWLEDGE_BASE
@@ -132,42 +133,69 @@ export class KnowledgeBaseService {
       await this.authorizationPolicyService.delete(knowledgeBase.authorization);
     }
 
-    const result = await this.knowledgeBaseRepository.remove(
-      knowledgeBase as KnowledgeBase
-    );
-    result.id = knowledgeBaseID;
-    return result;
+    await this.db
+      .delete(knowledgeBases)
+      .where(eq(knowledgeBases.id, knowledgeBaseID));
+    return knowledgeBase;
   }
 
   async save(knowledgeBase: IKnowledgeBase): Promise<IKnowledgeBase> {
-    return await this.knowledgeBaseRepository.save(knowledgeBase);
+    const [updated] = await this.db
+      .update(knowledgeBases)
+      .set({
+        profileId: knowledgeBase.profile?.id,
+        calloutsSetId: knowledgeBase.calloutsSet?.id,
+      })
+      .where(eq(knowledgeBases.id, knowledgeBase.id))
+      .returning();
+    return updated as unknown as IKnowledgeBase;
   }
 
   public async getKnowledgeBaseOrFail(
     knowledgeBaseID: string,
-    options?: FindOneOptions<KnowledgeBase>
+    options?: {
+      relations?: {
+        profile?: boolean;
+        calloutsSet?: boolean | { tagsetTemplateSet?: boolean; callouts?: boolean };
+        authorization?: boolean;
+      };
+    }
   ): Promise<IKnowledgeBase | never> {
-    const knowledgeBase = await this.knowledgeBaseRepository.findOne({
-      where: { id: knowledgeBaseID },
-      ...options,
-    });
+    const withClause: any = {};
+    if (options?.relations) {
+      if (options.relations.profile) withClause.profile = true;
+      if (options.relations.authorization) withClause.authorization = true;
+      if (options.relations.calloutsSet) {
+        if (typeof options.relations.calloutsSet === 'object') {
+          const nested: any = {};
+          if (options.relations.calloutsSet.tagsetTemplateSet) nested.tagsetTemplateSet = true;
+          if (options.relations.calloutsSet.callouts) nested.callouts = true;
+          withClause.calloutsSet = Object.keys(nested).length > 0 ? { with: nested } : true;
+        } else {
+          withClause.calloutsSet = true;
+        }
+      }
+    }
+    const knowledgeBase = await this.db.query.knowledgeBases.findFirst({
+      where: eq(knowledgeBases.id, knowledgeBaseID),
+      ...(Object.keys(withClause).length > 0 ? { with: withClause } : {}),
+    } as any);
 
     if (!knowledgeBase)
       throw new EntityNotFoundException(
         `No KnowledgeBase found with the given id: ${knowledgeBaseID}`,
         LogContext.COLLABORATION
       );
-    return knowledgeBase;
+    return knowledgeBase as unknown as IKnowledgeBase;
   }
 
   public async getProfile(
-    knowledgeBaseInput: IKnowledgeBase,
-    relations?: FindOptionsRelations<IKnowledgeBase>
+    knowledgeBaseInput: IKnowledgeBase
   ): Promise<IProfile> {
     const knowledgeBase = await this.getKnowledgeBaseOrFail(
       knowledgeBaseInput.id,
       {
-        relations: { profile: true, ...relations },
+        relations: { profile: true },
       }
     );
     if (!knowledgeBase.profile)
@@ -180,13 +208,12 @@ export class KnowledgeBaseService {
   }
 
   public async getCalloutsSet(
-    knowledgeBaseInput: IKnowledgeBase,
-    relations?: FindOptionsRelations<IKnowledgeBase>
+    knowledgeBaseInput: IKnowledgeBase
   ): Promise<ICalloutsSet> {
     const knowledgeBase = await this.getKnowledgeBaseOrFail(
       knowledgeBaseInput.id,
       {
-        relations: { calloutsSet: true, ...relations },
+        relations: { calloutsSet: true },
       }
     );
     if (!knowledgeBase.calloutsSet)

@@ -30,16 +30,16 @@ export class SpaceLicenseService {
     level0SpaceAgent?: IAgent
   ): Promise<ILicense[]> {
     const space = await this.spaceService.getSpaceOrFail(spaceID, {
-      relations: {
+      with: {
         agent: {
-          credentials: true,
+          with: { credentials: true },
         },
         subspaces: true,
         license: {
-          entitlements: true,
+          with: { entitlements: true },
         },
         community: {
-          roleSet: true,
+          with: { roleSet: true },
         },
         collaboration: true,
       },

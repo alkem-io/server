@@ -8,10 +8,8 @@ import { ProfileDocumentsModule } from '@domain/profile-documents/profile.docume
 import { DocumentModule } from '@domain/storage/document/document.module';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { UrlGeneratorModule } from '@services/infrastructure/url-generator';
 import { TagsetTemplateModule } from '../tagset-template/tagset.template.module';
-import { Profile } from './profile.entity';
 import { ProfileResolverFields } from './profile.resolver.fields';
 import { ProfileResolverMutations } from './profile.resolver.mutations';
 import { ProfileService } from './profile.service';
@@ -24,7 +22,6 @@ import { ProfileAuthorizationService } from './profile.service.authorization';
     TagsetModule,
     TagsetTemplateModule,
     ReferenceModule,
-    TypeOrmModule.forFeature([Profile]),
     VisualModule,
     LocationModule,
     StorageBucketModule,

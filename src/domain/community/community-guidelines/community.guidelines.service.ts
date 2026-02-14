@@ -4,17 +4,19 @@ import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TagsetType } from '@common/enums/tagset.type';
 import { VisualType } from '@common/enums/visual.type';
 import { EntityNotFoundException } from '@common/exceptions';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { CreateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.create';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
+import { Inject, Injectable } from '@nestjs/common';
+import { eq } from 'drizzle-orm';
 import { CommunityGuidelines } from './community.guidelines.entity';
 import { ICommunityGuidelines } from './community.guidelines.interface';
+import { communityGuidelines } from './community.guidelines.schema';
 import { CreateCommunityGuidelinesInput } from './dto/community.guidelines.dto.create';
 import { UpdateCommunityGuidelinesInput } from './dto/community.guidelines.dto.update';
 
@@ -23,8 +25,7 @@ export class CommunityGuidelinesService {
   constructor(
     private profileService: ProfileService,
     private tagsetService: TagsetService,
-    @InjectRepository(CommunityGuidelines)
-    private communityGuidelinesRepository: Repository<CommunityGuidelines>
+    @Inject(DRIZZLE) private readonly db: DrizzleDb
   ) {}
 
   async createCommunityGuidelines(
@@ -63,28 +64,46 @@ export class CommunityGuidelinesService {
   }
 
   async save(
-    communityGuidelines: ICommunityGuidelines
+    guidelinesInput: ICommunityGuidelines
   ): Promise<ICommunityGuidelines> {
-    return await this.communityGuidelinesRepository.save(communityGuidelines);
+    if (guidelinesInput.id) {
+      const [updated] = await this.db
+        .update(communityGuidelines)
+        .set({
+          profileId: guidelinesInput.profile?.id ?? null,
+          authorizationId: guidelinesInput.authorization?.id ?? null,
+        })
+        .where(eq(communityGuidelines.id, guidelinesInput.id))
+        .returning();
+      return { ...guidelinesInput, ...updated } as unknown as ICommunityGuidelines;
+    }
+    const [inserted] = await this.db
+      .insert(communityGuidelines)
+      .values({
+        profileId: guidelinesInput.profile?.id ?? null,
+        authorizationId: guidelinesInput.authorization?.id ?? null,
+      })
+      .returning();
+    return { ...guidelinesInput, ...inserted } as unknown as ICommunityGuidelines;
   }
 
   async update(
-    communityGuidelines: ICommunityGuidelines,
+    guidelinesInput: ICommunityGuidelines,
     communityGuidelinesData: UpdateCommunityGuidelinesInput
   ): Promise<ICommunityGuidelines> {
-    communityGuidelines.profile = await this.profileService.updateProfile(
-      communityGuidelines.profile,
+    guidelinesInput.profile = await this.profileService.updateProfile(
+      guidelinesInput.profile,
       communityGuidelinesData.profile
     );
 
-    return await this.communityGuidelinesRepository.save(communityGuidelines);
+    return await this.save(guidelinesInput);
   }
 
   async eraseContent(
-    communityGuidelines: ICommunityGuidelines
+    guidelinesInput: ICommunityGuidelines
   ): Promise<ICommunityGuidelines> {
-    communityGuidelines.profile = await this.profileService.updateProfile(
-      communityGuidelines.profile,
+    guidelinesInput.profile = await this.profileService.updateProfile(
+      guidelinesInput.profile,
       {
         displayName: '',
         description: '',
@@ -92,66 +111,64 @@ export class CommunityGuidelinesService {
     );
 
     await this.profileService.deleteAllReferencesFromProfile(
-      communityGuidelines.profile.id
+      guidelinesInput.profile.id
     );
-    communityGuidelines.profile.references = [];
+    guidelinesInput.profile.references = [];
 
-    return await this.communityGuidelinesRepository.save(communityGuidelines);
+    return await this.save(guidelinesInput);
   }
 
   async deleteCommunityGuidelines(
     communityGuidelinesID: string
   ): Promise<ICommunityGuidelines> {
-    const communityGuidelines = await this.getCommunityGuidelinesOrFail(
+    const guidelinesEntity = await this.getCommunityGuidelinesOrFail(
       communityGuidelinesID,
       {
-        relations: { profile: true },
+        with: { profile: true },
       }
     );
 
-    await this.profileService.deleteProfile(communityGuidelines.profile.id);
+    await this.profileService.deleteProfile(guidelinesEntity.profile.id);
 
-    const result = await this.communityGuidelinesRepository.remove(
-      communityGuidelines as CommunityGuidelines
-    );
-    result.id = communityGuidelinesID;
-    return result;
+    await this.db
+      .delete(communityGuidelines)
+      .where(eq(communityGuidelines.id, communityGuidelinesID));
+    return guidelinesEntity;
   }
 
   async getCommunityGuidelinesOrFail(
     communityGuidelinesID: string,
-    options?: FindOneOptions<CommunityGuidelines>
+    options?: { with?: Record<string, boolean | object> }
   ): Promise<ICommunityGuidelines | never> {
-    const communityGuidelines =
-      await this.communityGuidelinesRepository.findOne({
-        where: { id: communityGuidelinesID },
-        ...options,
+    const result =
+      await this.db.query.communityGuidelines.findFirst({
+        where: eq(communityGuidelines.id, communityGuidelinesID),
+        with: options?.with,
       });
 
-    if (!communityGuidelines)
+    if (!result)
       throw new EntityNotFoundException(
         `Unable to find CommunityGuidelines with ID: ${communityGuidelinesID}`,
         LogContext.SPACES
       );
-    return communityGuidelines;
+    return result as unknown as ICommunityGuidelines;
   }
 
   public async getProfile(
-    communityGuidelinesInput: ICommunityGuidelines,
-    relations?: FindOptionsRelations<ICommunityGuidelines>
+    communityGuidelinesInput: ICommunityGuidelines
   ): Promise<IProfile> {
-    const communityGuidelines = await this.getCommunityGuidelinesOrFail(
+    const guidelinesEntity = await this.getCommunityGuidelinesOrFail(
       communityGuidelinesInput.id,
       {
-        relations: { profile: true, ...relations },
+        with: { profile: true },
       }
     );
-    if (!communityGuidelines.profile)
+    if (!guidelinesEntity.profile)
       throw new EntityNotFoundException(
-        `CommunityGuidelines profile not initialised: ${communityGuidelines.id}`,
+        `CommunityGuidelines profile not initialised: ${guidelinesEntity.id}`,
         LogContext.COLLABORATION
       );
 
-    return communityGuidelines.profile;
+    return guidelinesEntity.profile;
   }
 }

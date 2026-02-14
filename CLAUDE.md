@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Alkemio Server is a NestJS GraphQL server for the Alkemio collaboration platform. It exposes a GraphQL API at `/graphql` and orchestrates domain services, authentication (via Ory Kratos/Oathkeeper), and integrations (RabbitMQ, Matrix Synapse, Elasticsearch).
 
-**Stack**: TypeScript 5.3, Node.js 22 LTS (Volta pins 22.21.1), pnpm 10.17.1, NestJS 10, TypeORM 0.3, Apollo Server 4, GraphQL 16, PostgreSQL 17.5.
+**Stack**: TypeScript 5.3, Node.js 22 LTS (Volta pins 22.21.1), pnpm 10.17.1, NestJS 10, Drizzle ORM, postgres.js, Apollo Server 4, GraphQL 16, PostgreSQL 17.5.
 
 ## Common Commands
 
@@ -56,14 +56,23 @@ pnpm run schema:diff    # Diff vs tmp/prev.schema.graphql (review change-report.
 - **`library/`**: Isolated reusable utilities (no NestJS DI reliance)
 - **`platform/`**: Platform-scoped modules
 - **`platform-admin/`**: Admin operations
-- **`config/`**: Configuration and TypeORM setup
-- **`migrations/`**: Database migrations
+- **`config/`**: Configuration, Drizzle ORM setup (`config/drizzle/`)
+- **`migrations/`**: Database migrations (Drizzle Kit)
 
 ### Layered Architecture
 
-Data Layer (entities) → Repositories → Domain Services (business logic) → API Layer (GraphQL resolvers)
+Data Layer (Drizzle schemas) → Domain Services (business logic via `@Inject(DRIZZLE)`) → API Layer (GraphQL resolvers)
 
-State changes flow: validation → authorization → domain operation → event emission → persistence. Direct repository calls from resolvers are forbidden.
+State changes flow: validation → authorization → domain operation → event emission → persistence. Direct database calls from resolvers are forbidden.
+
+### Drizzle ORM Conventions
+
+- Schema files: `*.schema.ts` (co-located with domain modules) — export **plural** table names (e.g., `accounts`, `spaces`, `users`)
+- Relations files: `*.relations.ts` (co-located with schema files)
+- Barrel export: `src/config/drizzle/schema.ts` re-exports all schemas and relations
+- Injection: `@Inject(DRIZZLE) private readonly db: DrizzleDb` (Symbol token, not string)
+- Queries: `this.db.query.<tableName>.findFirst/findMany()` for relational queries, `this.db.select().from(<table>)` for SQL-like queries
+- Transactions: `this.db.transaction(async (tx) => { ... })`
 
 ## Development Workflow
 
@@ -101,12 +110,13 @@ Winston logger signatures:
 - **verbose/warning**: `(message: string | object, context: string)`
 - **error**: `(message: string | object, stacktrace: string, context: string)`
 
-### TypeORM Entity Guidelines
+### Drizzle Schema Guidelines
 
-- No defaults in entity definitions or class fields
-- Non-eager relations must be optional
-- Always use length constants: `UUID_LENGTH`, `ENUM_LENGTH`, `URI_LENGTH`
-- Generate migrations after schema changes
+- Schema files export plural table names: `export const users = pgTable('user', { ... })`
+- Use shared base columns: `authorizableColumns`, `nameableColumns`, `contributorColumns`
+- Use length constants: `UUID_LENGTH`, `ENUM_LENGTH`, `URI_LENGTH`
+- All relations defined via `relations()` in separate `*.relations.ts` files
+- Generate migrations after schema changes: `npx drizzle-kit generate`
 
 ### GraphQL API Conventions
 
@@ -147,7 +157,7 @@ Required services (via `pnpm run start:services`):
 - Ory Kratos/Oathkeeper (identity)
 - Elasticsearch
 
-Environment variables in `.env` for TypeORM CLI. Docker Compose uses `.env.docker`.
+Environment variables in `.env` for Drizzle Kit CLI. Docker Compose uses `.env.docker`.
 
 ## Path Aliases
 
@@ -181,7 +191,10 @@ Key rules:
 
 ## Active Technologies
 - TypeScript 5.3, Node.js 22 LTS (Volta pins 22.21.1) + NestJS 10, Vitest 4.x, Biome for linting/formatting
+- Drizzle ORM + postgres.js (replaced TypeORM 0.3 + pg), Apollo Server 4, GraphQL 16
+- PostgreSQL 17.5
 
 ## Recent Changes
+- 034-drizzle-migration: Migrated from TypeORM 0.3 to Drizzle ORM with postgres.js driver
 - 028-migrate-biome-linting: Migrated from ESLint + Prettier to Biome for linting and formatting
 - 027-vitest-migration: Migrated from Jest to Vitest for testing

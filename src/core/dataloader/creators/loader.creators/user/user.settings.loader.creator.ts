@@ -1,16 +1,17 @@
 import { DataLoaderInitError } from '@common/exceptions/data-loader';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { IUserSettings } from '@domain/community/user-settings/user.settings.interface';
-import { Injectable } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
-import { EntityManager } from 'typeorm';
+import { Inject, Injectable } from '@nestjs/common';
 import { createTypedRelationDataLoader } from '../../../utils';
+import { getTableName } from '../../../utils/tableNameMapping';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
 
 @Injectable()
 export class UserSettingsLoaderCreator
   implements DataLoaderCreator<IUserSettings>
 {
-  constructor(@InjectEntityManager() private manager: EntityManager) {}
+  constructor(@Inject(DRIZZLE) private readonly db: DrizzleDb) {}
 
   create(options: DataLoaderCreatorOptions<IUserSettings>) {
     if (!options?.parentClassRef) {
@@ -19,9 +20,11 @@ export class UserSettingsLoaderCreator
       );
     }
 
+    const tableName = getTableName(options.parentClassRef.name);
+
     return createTypedRelationDataLoader(
-      this.manager,
-      options.parentClassRef,
+      this.db,
+      tableName,
       { settings: true },
       this.constructor.name,
       options

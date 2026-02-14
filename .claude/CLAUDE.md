@@ -18,7 +18,7 @@
 | --------------- | --------------------------------------- |
 | Runtime         | Node.js 22 LTS (Volta pins 22.21.1)     |
 | Package Manager | pnpm 10.17.1 via Corepack               |
-| Framework       | NestJS 10, TypeORM 0.3, Apollo Server 4 |
+| Framework       | NestJS 10, Drizzle ORM, Apollo Server 4 |
 | Language        | TypeScript 5.3                          |
 | Database        | PostgreSQL 17.5                         |
 | Messaging       | RabbitMQ queues                         |

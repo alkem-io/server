@@ -5,16 +5,17 @@ import {
   EntityNotFoundException,
   ValidationException,
 } from '@common/exceptions';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
+import { eq } from 'drizzle-orm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
 import { CreateTemplateInput } from '../template/dto/template.dto.create';
 import { ITemplate } from '../template/template.interface';
 import { TemplateService } from '../template/template.service';
@@ -22,13 +23,13 @@ import { CreateTemplateFromSpaceOnTemplatesSetInput } from './dto/templates.set.
 import { CreateTemplateFromContentSpaceOnTemplatesSetInput } from './dto/templates.set.dto.create.template.from.space.content';
 import { TemplatesSet } from './templates.set.entity';
 import { ITemplatesSet } from './templates.set.interface';
+import { templatesSets } from './templates.set.schema';
 
 @Injectable()
 export class TemplatesSetService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    @InjectRepository(TemplatesSet)
-    private templatesSetRepository: Repository<TemplatesSet>,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
     private templateService: TemplateService,
     private namingService: NamingService,
@@ -37,29 +38,33 @@ export class TemplatesSetService {
   ) {}
 
   async createTemplatesSet(): Promise<ITemplatesSet> {
-    const templatesSet: ITemplatesSet = TemplatesSet.create();
+    const templatesSet: ITemplatesSet = new TemplatesSet();
     templatesSet.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.TEMPLATES_SET
     );
     templatesSet.templates = [];
 
-    return await this.templatesSetRepository.save(templatesSet);
+    const [inserted] = await this.db
+      .insert(templatesSets)
+      .values(templatesSet as any)
+      .returning();
+    return inserted as unknown as ITemplatesSet;
   }
 
   async getTemplatesSetOrFail(
     templatesSetID: string,
-    options?: FindOneOptions<TemplatesSet>
+    options?: { relations?: Record<string, any> }
   ): Promise<ITemplatesSet | never> {
-    const templatesSet = await TemplatesSet.findOne({
-      where: { id: templatesSetID },
-      ...options,
+    const templatesSet = await this.db.query.templatesSets.findFirst({
+      where: eq(templatesSets.id, templatesSetID),
+      with: options?.relations,
     });
     if (!templatesSet)
       throw new EntityNotFoundException(
         `TemplatesSet with id(${templatesSetID}) not found!`,
         LogContext.TEMPLATES
       );
-    return templatesSet;
+    return templatesSet as unknown as ITemplatesSet;
   }
 
   async deleteTemplatesSet(templatesSetID: string): Promise<ITemplatesSet> {
@@ -79,9 +84,10 @@ export class TemplatesSetService {
       }
     }
 
-    return await this.templatesSetRepository.remove(
-      templatesSet as TemplatesSet
-    );
+    await this.db
+      .delete(templatesSets)
+      .where(eq(templatesSets.id, templatesSetID));
+    return templatesSet;
   }
 
   public getTemplate(
@@ -186,7 +192,19 @@ export class TemplatesSetService {
   }
 
   public async save(templatesSet: ITemplatesSet): Promise<ITemplatesSet> {
-    return await this.templatesSetRepository.save(templatesSet);
+    if (!templatesSet.id) {
+      const [inserted] = await this.db
+        .insert(templatesSets)
+        .values(templatesSet as any)
+        .returning();
+      return inserted as unknown as ITemplatesSet;
+    }
+    const [updated] = await this.db
+      .update(templatesSets)
+      .set(templatesSet as any)
+      .where(eq(templatesSets.id, templatesSet.id))
+      .returning();
+    return updated as unknown as ITemplatesSet;
   }
 
   async getTemplatesCountForType(

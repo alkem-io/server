@@ -12,15 +12,17 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { InjectRepository } from '@nestjs/typeorm';
 import { AlkemioConfig } from '@src/types';
 import { Cache } from 'cache-manager';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
 import { AgentInfoCacheService } from '../../../core/authentication.agent.info/agent.info.cache.service';
 import { CredentialService } from '../credential/credential.service';
 import { GrantCredentialToAgentInput } from './dto/agent.dto.credential.grant';
 import { RevokeCredentialInput } from './dto/agent.dto.credential.revoke';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { agents } from './agent.schema';
+import { eq } from 'drizzle-orm';
 
 @Injectable()
 export class AgentService {
@@ -31,8 +33,8 @@ export class AgentService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private configService: ConfigService<AlkemioConfig, true>,
     private credentialService: CredentialService,
-    @InjectRepository(Agent)
-    private agentRepository: Repository<Agent>,
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     @Inject(CACHE_MANAGER)
@@ -58,18 +60,18 @@ export class AgentService {
 
   async getAgentOrFail(
     agentID: string,
-    options?: FindOneOptions<Agent>
+    options?: { relations?: { credentials?: boolean } }
   ): Promise<IAgent | never> {
-    const agent = await this.agentRepository.findOne({
-      where: { id: agentID },
-      ...options,
+    const agent = await this.db.query.agents.findFirst({
+      where: eq(agents.id, agentID),
+      with: options?.relations?.credentials ? { credentials: true } : undefined,
     });
     if (!agent)
       throw new EntityNotFoundException(
         `No Agent found with the given id: ${agentID}`,
         LogContext.AGENT
       );
-    return agent;
+    return agent as unknown as IAgent;
   }
 
   async deleteAgent(agentID: string): Promise<IAgent> {
@@ -84,11 +86,33 @@ export class AgentService {
     if (agent.authorization)
       await this.authorizationPolicyService.delete(agent.authorization);
 
-    return await this.agentRepository.remove(agent as Agent);
+    await this.db.delete(agents).where(eq(agents.id, agentID));
+    return agent;
   }
 
   async saveAgent(agent: IAgent): Promise<IAgent> {
-    return await this.agentRepository.save(agent);
+    if (agent.id) {
+      const [updated] = await this.db
+        .update(agents)
+        .set({
+          type: agent.type,
+          authorizationId: agent.authorization?.id,
+        })
+        .where(eq(agents.id, agent.id))
+        .returning();
+      // Preserve in-memory relations not in DB
+      return { ...agent, ...updated } as unknown as IAgent;
+    } else {
+      const [created] = await this.db
+        .insert(agents)
+        .values({
+          type: agent.type,
+          authorizationId: agent.authorization?.id,
+        })
+        .returning();
+      // Preserve in-memory relations not in DB
+      return { ...agent, ...created } as unknown as IAgent;
+    }
   }
 
   async findAgentsWithMatchingCredentials(

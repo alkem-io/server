@@ -149,7 +149,7 @@ export class RoleSetResolverMutationsMembership {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
       applicationData.roleSetID,
       {
-        relations: {
+        with: {
           parentRoleSet: true,
         },
       }
@@ -218,7 +218,7 @@ export class RoleSetResolverMutationsMembership {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
       invitationData.roleSetID,
       {
-        relations: {
+        with: {
           parentRoleSet: {
             authorization: true,
             parentRoleSet: {
@@ -259,7 +259,7 @@ export class RoleSetResolverMutationsMembership {
         await this.contributorService.getContributorByUuidOrFail(
           contributorID,
           {
-            relations: {
+            with: {
               agent: true,
             },
           }
@@ -284,7 +284,7 @@ export class RoleSetResolverMutationsMembership {
     for (const email of invitationData.invitedUserEmails) {
       // If the user is already registered, then just create a normal invitation
       const existingUser = await this.userLookupService.getUserByEmail(email, {
-        relations: {
+        with: {
           agent: true,
         },
       });
@@ -436,7 +436,7 @@ export class RoleSetResolverMutationsMembership {
     application = await this.applicationService.getApplicationOrFail(
       eventData.applicationID,
       {
-        relations: {
+        with: {
           roleSet: true,
           user: {
             agent: true,
@@ -537,7 +537,7 @@ export class RoleSetResolverMutationsMembership {
     let invitation = await this.invitationService.getInvitationOrFail(
       eventData.invitationID,
       {
-        relations: {
+        with: {
           roleSet: true,
         },
       }
@@ -567,7 +567,7 @@ export class RoleSetResolverMutationsMembership {
     invitation = await this.invitationService.getInvitationOrFail(
       eventData.invitationID,
       {
-        relations: {
+        with: {
           roleSet: true,
         },
       }
@@ -592,7 +592,7 @@ export class RoleSetResolverMutationsMembership {
 
     const invitedContributor = await this.contributorService.getContributor(
       invitation.invitedContributorID,
-      { relations: { agent: true } }
+      { with: { agent: true } }
     );
 
     if (
@@ -901,7 +901,7 @@ export class RoleSetResolverMutationsMembership {
       roleSetID,
 
       {
-        relations: {
+        with: {
           invitations: true,
           platformInvitations: true,
           applications: true,

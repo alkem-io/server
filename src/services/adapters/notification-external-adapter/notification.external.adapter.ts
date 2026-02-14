@@ -962,7 +962,7 @@ export class NotificationExternalAdapter {
   ): Promise<ContributorPayload> {
     const contributor =
       await this.contributorLookupService.getContributorByUUID(contributorID, {
-        relations: {
+        with: {
           profile: true,
         },
       });
@@ -994,7 +994,7 @@ export class NotificationExternalAdapter {
   ): Promise<ContributorPayload> {
     const contributor =
       await this.contributorLookupService.getContributorByAgentId(agentId, {
-        relations: {
+        with: {
           profile: true,
         },
       });
@@ -1023,7 +1023,7 @@ export class NotificationExternalAdapter {
 
   private async getUserPayloadOrFail(userID: string): Promise<UserPayload> {
     const user = await this.userLookupService.getUserOrFail(userID, {
-      relations: {
+      with: {
         profile: true,
       },
     });

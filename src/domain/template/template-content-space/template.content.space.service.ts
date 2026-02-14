@@ -8,6 +8,8 @@ import {
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
@@ -19,13 +21,13 @@ import { ISpaceAbout } from '@domain/space/space.about/space.about.interface';
 import { SpaceAboutService } from '@domain/space/space.about/space.about.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { eq } from 'drizzle-orm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
 import { CreateTemplateContentSpaceInput } from './dto/template.content.space.dto.create';
 import { UpdateTemplateContentSpaceInput } from './dto/template.content.space.dto.update';
 import { TemplateContentSpace } from './template.content.space.entity';
 import { ITemplateContentSpace } from './template.content.space.interface';
+import { templateContentSpaces } from './template.content.space.schema';
 
 @Injectable()
 export class TemplateContentSpaceService {
@@ -34,8 +36,7 @@ export class TemplateContentSpaceService {
     private spaceAboutService: SpaceAboutService,
     private collaborationService: CollaborationService,
     private licenseService: LicenseService,
-    @InjectRepository(TemplateContentSpace)
-    private templateContentSpaceRepository: Repository<TemplateContentSpace>,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -45,7 +46,7 @@ export class TemplateContentSpaceService {
     agentInfo?: AgentInfo
   ): Promise<ITemplateContentSpace> {
     const templateContentSpace: ITemplateContentSpace =
-      TemplateContentSpace.create(templateContentSpaceData);
+      TemplateContentSpace.create(templateContentSpaceData as any);
 
     templateContentSpace.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.TEMPLATE_CONTENT_SPACE
@@ -81,7 +82,19 @@ export class TemplateContentSpaceService {
   async save(
     templateContentSpace: ITemplateContentSpace
   ): Promise<ITemplateContentSpace> {
-    return await this.templateContentSpaceRepository.save(templateContentSpace);
+    if (!templateContentSpace.id) {
+      const [inserted] = await this.db
+        .insert(templateContentSpaces)
+        .values(templateContentSpace as any)
+        .returning();
+      return inserted as unknown as ITemplateContentSpace;
+    }
+    const [updated] = await this.db
+      .update(templateContentSpaces)
+      .set(templateContentSpace as any)
+      .where(eq(templateContentSpaces.id, templateContentSpace.id))
+      .returning();
+    return updated as unknown as ITemplateContentSpace;
   }
 
   async deleteTemplateContentSpaceOrFail(
@@ -166,17 +179,48 @@ export class TemplateContentSpaceService {
     );
 
     // Finally, delete the template content space itself
-    const result = await this.templateContentSpaceRepository.remove(
-      templateContentSpace as TemplateContentSpace
-    );
-    result.id = templateContentSpaceID;
+    await this.db
+      .delete(templateContentSpaces)
+      .where(eq(templateContentSpaces.id, templateContentSpaceID));
 
-    return result;
+    return templateContentSpace;
   }
 
   async getTemplateContentSpaceOrFail(
     templateContentSpaceID: string,
-    options?: FindOneOptions<TemplateContentSpace>
+    options?: {
+      relations?: {
+        authorization?: boolean;
+        collaboration?: boolean | {
+          innovationFlow?: boolean;
+          timeline?: boolean;
+          calloutsSet?: boolean;
+        };
+        about?: boolean | {
+          profile?: boolean;
+        };
+        subspaces?: boolean | {
+          collaboration?: boolean | {
+            innovationFlow?: boolean;
+            timeline?: boolean;
+            calloutsSet?: boolean;
+          };
+          about?: boolean | {
+            profile?: boolean;
+          };
+          subspaces?: boolean | {
+            collaboration?: boolean | {
+              innovationFlow?: boolean;
+              timeline?: boolean;
+              calloutsSet?: boolean;
+            };
+            about?: boolean | {
+              profile?: boolean;
+            };
+          };
+        };
+      };
+    }
   ): Promise<ITemplateContentSpace> {
     const templateContentSpace = await this.getTemplateContentSpace(
       templateContentSpaceID,
@@ -194,17 +238,17 @@ export class TemplateContentSpaceService {
 
   async getTemplateContentSpace(
     templateContentSpaceID: string,
-    options?: FindOneOptions<TemplateContentSpace>
+    options?: {
+      relations?: Record<string, any>;
+    }
   ): Promise<ITemplateContentSpace | null> {
     const templateContentSpace =
-      await this.templateContentSpaceRepository.findOne({
-        where: {
-          id: templateContentSpaceID,
-        },
-        ...options,
+      await this.db.query.templateContentSpaces.findFirst({
+        where: eq(templateContentSpaces.id, templateContentSpaceID),
+        with: options?.relations,
       });
 
-    return templateContentSpace;
+    return (templateContentSpace as unknown as ITemplateContentSpace) ?? null;
   }
 
   public async update(

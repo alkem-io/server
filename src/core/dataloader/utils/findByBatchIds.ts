@@ -3,23 +3,18 @@ import {
   EntityNotFoundException,
   ForbiddenAuthorizationPolicyException,
 } from '@common/exceptions';
-import { Type } from '@nestjs/common';
-import {
-  EntityManager,
-  FindOptionsRelations,
-  FindOptionsWhere,
-  In,
-} from 'typeorm';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { inArray } from 'drizzle-orm';
 import { FindByBatchIdsOptions } from './find.by.batch.options';
 
 export const findByBatchIds = async <
   TParent extends { id: string } & { [key: string]: any }, // todo better type
   TResult,
 >(
-  manager: EntityManager,
-  classRef: Type<TParent>,
+  db: DrizzleDb,
+  tableName: string,
   ids: string[],
-  relations: FindOptionsRelations<TParent>,
+  relations: Record<string, boolean | object>,
   options: FindByBatchIdsOptions<TParent, TResult>
 ): Promise<
   (
@@ -41,16 +36,19 @@ export const findByBatchIds = async <
     );
   }
 
-  const { select, limit } = options ?? {};
+  const { limit } = options ?? {};
 
-  const unsortedResults = await manager.find<TParent>(classRef, {
-    take: limit,
-    where: {
-      id: In(ids),
-    } as FindOptionsWhere<TParent>,
-    relations: relations,
-    select: select,
-  });
+  // Get the table from the schema
+  const table = (db.query as any)[tableName];
+  if (!table) {
+    throw new Error(`Table ${tableName} not found in Drizzle schema`);
+  }
+
+  const unsortedResults = await table.findMany({
+    where: (t: any) => inArray(t.id, ids),
+    with: relations,
+    limit: limit,
+  }) as TParent[];
   const topLevelRelation = relationKeys[0];
 
   const getRelation = (result: TParent) =>
@@ -61,7 +59,7 @@ export const findByBatchIds = async <
     return options?.resolveToNull
       ? null
       : new EntityNotFoundException(
-          `Could not load relation '${topLevelRelation}' for ${classRef.name} for the given key: ${key}`,
+          `Could not load relation '${topLevelRelation}' for ${tableName} for the given key: ${key}`,
           LogContext.DATA_LOADER,
           { id: key }
         );

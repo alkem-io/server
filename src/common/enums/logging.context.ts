@@ -84,4 +84,5 @@ export enum LogContext {
   AUTH_GUARD = 'auth-guard',
   CODE_ERRORS = 'code-errors', // This is a special context for logging code errors with potential high impact
   NEST_FILTER = 'nest-filter', // This is a special context for logging NestJS filter errors
+  DATABASE = 'database',
 }

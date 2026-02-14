@@ -228,7 +228,7 @@ export class UserResolverFields {
     // needs to be loaded if you are not going through the orm layer
     // e.g. pagination is going around the orm layer
     const { authorization } = await this.userService.getUserOrFail(user.id, {
-      relations: { authorization: true },
+      with: { authorization: true },
     });
     const accessGranted = this.authorizationService.isAccessGranted(
       agentInfo,

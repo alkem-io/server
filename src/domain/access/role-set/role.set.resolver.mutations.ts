@@ -153,7 +153,7 @@ export class RoleSetResolverMutations {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
       roleData.roleSetID,
       {
-        relations: {
+        with: {
           license: {
             entitlements: true,
           },

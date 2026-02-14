@@ -2,18 +2,19 @@ import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 import { LogContext } from '@common/enums/logging.context';
 import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { Post } from '@domain/collaboration/post/post.entity';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IMessage } from '@domain/communication/message/message.interface';
 import { isInputValidForAction } from '@domain/community/virtual-contributor/dto';
-import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
+import { virtualContributors } from '@domain/community/virtual-contributor/virtual.contributor.schema';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EventBus } from '@nestjs/cqrs';
-import { InjectRepository } from '@nestjs/typeorm';
-import { AiPersona, IAiPersona } from '@services/ai-server/ai-persona';
+import { IAiPersona } from '@services/ai-server/ai-persona';
 import {
   IngestBodyOfKnowledge,
   IngestionPurpose,
@@ -24,8 +25,8 @@ import { RoomControllerService } from '@services/room-integration/room.controlle
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
 import { AlkemioConfig } from '@src/types';
 import { ChromaClient } from 'chromadb';
+import { eq } from 'drizzle-orm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { AiPersonaService } from '../ai-persona/ai.persona.service';
 import { AiPersonaAuthorizationService } from '../ai-persona/ai.persona.service.authorization';
 import { CreateAiPersonaInput, UpdateAiPersonaInput } from '../ai-persona/dto';
@@ -36,7 +37,7 @@ import {
   InteractionMessage,
   MessageSenderRole,
 } from '../ai-persona/dto/interaction.message';
-import { AiServer } from './ai.server.entity';
+import { aiServers } from './ai.server.schema';
 import { IAiServer } from './ai.server.interface';
 
 @Injectable()
@@ -69,10 +70,7 @@ export class AiServerService {
     private config: ConfigService<AlkemioConfig, true>,
     private roomControllerService: RoomControllerService,
     private aiPersonaAuthorizationService: AiPersonaAuthorizationService,
-    @InjectRepository(AiServer)
-    private aiServerRepository: Repository<AiServer>,
-    @InjectRepository(VirtualContributor)
-    private vcRespository: Repository<VirtualContributor>,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private eventBus: EventBus
@@ -95,10 +93,8 @@ export class AiServerService {
 
     //TODO we shouldn't use the repository here but down the road this will e graphql call
     // from the AI to the Collaboration servers
-    const virtualContributor = await this.vcRespository.findOne({
-      where: {
-        aiPersonaID: persona.id,
-      },
+    const virtualContributor = await this.db.query.virtualContributors.findFirst({
+      where: eq(virtualContributors.aiPersonaID, persona.id),
     });
 
     if (virtualContributor) {
@@ -108,7 +104,7 @@ export class AiServerService {
       );
 
       this.subscriptionPublishService.publishVirtualContributorUpdated(
-        virtualContributor
+        virtualContributor as any
       );
     } else {
       this.logger.verbose?.(
@@ -336,7 +332,7 @@ export class AiServerService {
 
   async createAiPersona(personaData: CreateAiPersonaInput) {
     const server = await this.getAiServerOrFail({
-      relations: { aiPersonas: true },
+      with: { aiPersonas: true },
     });
     const aiPersona = await this.aiPersonaService.createAiPersona(
       personaData,
@@ -357,12 +353,10 @@ export class AiServerService {
   }
 
   async getAiServerOrFail(
-    options?: FindOneOptions<AiServer>
+    options?: { with?: Record<string, boolean | object> }
   ): Promise<IAiServer | never> {
-    let aiServer: IAiServer | null = null;
-    aiServer = await this.aiServerRepository.findOne({
-      where: {},
-      ...options,
+    const aiServer = await this.db.query.aiServers.findFirst({
+      with: options?.with,
     });
 
     if (!aiServer) {
@@ -371,42 +365,58 @@ export class AiServerService {
         LogContext.AI_SERVER
       );
     }
-    return aiServer;
+    return aiServer as unknown as IAiServer;
   }
 
   async saveAiServer(aiServer: IAiServer): Promise<IAiServer> {
-    return await this.aiServerRepository.save(aiServer);
+    if (aiServer.id) {
+      const [updated] = await this.db
+        .update(aiServers)
+        .set({
+          authorizationId: aiServer.authorization?.id,
+        })
+        .where(eq(aiServers.id, aiServer.id))
+        .returning();
+      return updated as unknown as IAiServer;
+    }
+    const [created] = await this.db
+      .insert(aiServers)
+      .values({
+        authorizationId: aiServer.authorization?.id,
+      })
+      .returning();
+    return created as unknown as IAiServer;
   }
 
   async getAiPersonas(
-    relations?: FindOptionsRelations<IAiServer>
+    additionalWith?: Record<string, boolean>
   ): Promise<IAiPersona[]> {
     const aiServer = await this.getAiServerOrFail({
-      relations: {
+      with: {
         aiPersonas: true,
-        ...relations,
+        ...additionalWith,
       },
     });
-    const aiPersonas = aiServer.aiPersonas;
-    if (!aiPersonas) {
+    const personas = aiServer.aiPersonas;
+    if (!personas) {
       throw new EntityNotFoundException(
         'No AI Persona Services found!',
         LogContext.AI_PERSONA
       );
     }
-    return aiPersonas;
+    return personas;
   }
 
   async getDefaultAiPersonaOrFail(
-    relations?: FindOptionsRelations<IAiServer>
+    additionalWith?: Record<string, boolean>
   ): Promise<IAiPersona> {
     const aiServer = await this.getAiServerOrFail({
-      relations: {
-        defaultAiPersona: true,
-        ...relations,
+      with: {
+        aiPersonas: true,
+        ...additionalWith,
       },
     });
-    const defaultAiPersonaService = aiServer.defaultAiPersona;
+    const defaultAiPersonaService = aiServer.aiPersonas?.[0];
     if (!defaultAiPersonaService) {
       throw new EntityNotFoundException(
         'No default Virtual Personas found!',
@@ -418,7 +428,7 @@ export class AiServerService {
 
   public async getAiPersonaOrFail(
     virtualID: string,
-    options?: FindOneOptions<AiPersona>
+    options?: { with?: Record<string, boolean> }
   ): Promise<IAiPersona | never> {
     return this.aiPersonaService.getAiPersonaOrFail(virtualID, options);
   }
@@ -438,7 +448,7 @@ export class AiServerService {
 
   private async getAuthorizationPolicyAiServer(): Promise<IAuthorizationPolicy> {
     const aiServer = await this.getAiServerOrFail({
-      relations: {
+      with: {
         authorization: true,
       },
     });

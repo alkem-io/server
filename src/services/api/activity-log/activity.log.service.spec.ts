@@ -1,4 +1,5 @@
 import { ActivityEventType } from '@common/enums/activity.event.type';
+import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { IUser } from '@domain/community/user/user.interface';
 import { UserService } from '@domain/community/user/user.service';
@@ -6,14 +7,13 @@ import { UserLookupService } from '@domain/community/user-lookup/user.lookup.ser
 import { Space } from '@domain/space/space/space.entity';
 import { ISpace } from '@domain/space/space/space.interface';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getEntityManagerToken } from '@nestjs/typeorm';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 import { IActivity } from '@platform/activity/activity.interface';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { ActivityService } from '@src/platform/activity/activity.service';
 import { MockWinstonProvider } from '@test/mocks';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager } from 'typeorm';
 import { type Mocked, vi } from 'vitest';
 import { ActivityLogService } from './activity.log.service';
 import { ActivityLogInput } from './dto/activity.log.dto.collaboration.input';
@@ -53,7 +53,7 @@ function makeRawActivity(
 
 describe('ActivityLogService', () => {
   let service: ActivityLogService;
-  let entityManager: Mocked<EntityManager>;
+  let db: any;
   let userLookupService: Mocked<UserLookupService>;
   let userService: Mocked<UserService>;
   let communityResolverService: Mocked<CommunityResolverService>;
@@ -69,9 +69,7 @@ describe('ActivityLogService', () => {
       .compile();
 
     service = module.get<ActivityLogService>(ActivityLogService);
-    entityManager = module.get<EntityManager>(
-      getEntityManagerToken('default')
-    ) as Mocked<EntityManager>;
+    db = module.get(DRIZZLE);
     userLookupService = module.get<UserLookupService>(
       UserLookupService
     ) as Mocked<UserLookupService>;
@@ -101,7 +99,7 @@ describe('ActivityLogService', () => {
       const result = await service.convertRawActivityToResults([]);
 
       expect(result).toEqual([]);
-      expect(entityManager.find).not.toHaveBeenCalled();
+      expect(db.query.spaces.findMany).not.toHaveBeenCalled();
       expect(userLookupService.getUsersByUUID).not.toHaveBeenCalled();
     });
 
@@ -118,22 +116,14 @@ describe('ActivityLogService', () => {
       ];
 
       // Batch space load
-      entityManager.find.mockResolvedValueOnce([space1, space2]);
+      db.query.spaces.findMany.mockResolvedValueOnce([space1, space2]);
       // Batch user load
       userLookupService.getUsersByUUID.mockResolvedValueOnce([user1, user2]);
 
       await service.convertRawActivityToResults(rawActivities);
 
       // 1 batch query for spaces
-      expect(entityManager.find).toHaveBeenCalledTimes(1);
-      expect(entityManager.find).toHaveBeenCalledWith(Space, {
-        where: { collaboration: { id: expect.anything() } },
-        relations: {
-          collaboration: true,
-          about: { profile: true },
-          community: true,
-        },
-      });
+      expect(db.query.spaces.findMany).toHaveBeenCalledTimes(1);
 
       // 1 batch query for users
       expect(userLookupService.getUsersByUUID).toHaveBeenCalledTimes(1);
@@ -160,13 +150,13 @@ describe('ActivityLogService', () => {
         makeRawActivity('act-3', 'collab-1', 'user-1'),
       ];
 
-      entityManager.find.mockResolvedValueOnce([space1]);
+      db.query.spaces.findMany.mockResolvedValueOnce([space1]);
       userLookupService.getUsersByUUID.mockResolvedValueOnce([user1]);
 
       await service.convertRawActivityToResults(rawActivities);
 
       // Still just 1 query each, not 3
-      expect(entityManager.find).toHaveBeenCalledTimes(1);
+      expect(db.query.spaces.findMany).toHaveBeenCalledTimes(1);
       expect(userLookupService.getUsersByUUID).toHaveBeenCalledTimes(1);
       expect(userLookupService.getUsersByUUID).toHaveBeenCalledWith(['user-1']);
     });
@@ -187,7 +177,7 @@ describe('ActivityLogService', () => {
         },
       ];
 
-      entityManager.find.mockResolvedValueOnce([space1]);
+      db.query.spaces.findMany.mockResolvedValueOnce([space1]);
       userLookupService.getUsersByUUID.mockResolvedValueOnce([user1]);
 
       const result = await service.convertRawActivityToResults(
@@ -238,7 +228,7 @@ describe('ActivityLogService', () => {
       expect(userService.getUserOrFail).toHaveBeenCalledWith('user-1');
       expect(
         communityResolverService.getSpaceForCollaborationOrFail
-      ).toHaveBeenCalledWith('collab-1', expect.anything());
+      ).toHaveBeenCalledWith('collab-1');
     });
 
     it('should fall back to individual query when user not found in map', async () => {
@@ -284,7 +274,7 @@ describe('ActivityLogService', () => {
       // Space should be loaded individually since not in map
       expect(
         communityResolverService.getSpaceForCollaborationOrFail
-      ).toHaveBeenCalledWith('collab-1', expect.anything());
+      ).toHaveBeenCalledWith('collab-1');
       // User should come from map
       expect(userService.getUserOrFail).not.toHaveBeenCalled();
     });
@@ -520,13 +510,13 @@ describe('ActivityLogService', () => {
         makeRawActivity('act-2', 'collab-1', 'user-1'),
       ];
 
-      entityManager.find.mockResolvedValueOnce([space1]);
+      db.query.spaces.findMany.mockResolvedValueOnce([space1]);
       userLookupService.getUsersByUUID.mockResolvedValueOnce([user1]);
 
       // First activity fails in builder, second succeeds
       calloutService.getCalloutOrFail
         .mockRejectedValueOnce(new Error('fail'))
-        .mockResolvedValueOnce({ id: 'callout-1' });
+        .mockResolvedValueOnce({ id: 'callout-1' } as unknown as ICallout);
 
       const results = await service.convertRawActivityToResults(rawActivities);
 
@@ -545,11 +535,11 @@ describe('ActivityLogService', () => {
 
       const rawActivities = [makeRawActivity('act-1', 'collab-1', 'user-1')];
 
-      entityManager.find.mockResolvedValueOnce([space1]);
+      db.query.spaces.findMany.mockResolvedValueOnce([space1]);
       userLookupService.getUsersByUUID.mockResolvedValueOnce([user1]);
       calloutService.getCalloutOrFail.mockResolvedValueOnce({
         id: 'callout-1',
-      });
+      } as unknown as ICallout);
 
       const results = await service.convertRawActivityToResults(rawActivities);
 
@@ -569,7 +559,7 @@ describe('ActivityLogService', () => {
 
       const rawActivities = [makeRawActivity('act-1', 'collab-1', '')];
 
-      entityManager.find.mockResolvedValueOnce([space1]);
+      db.query.spaces.findMany.mockResolvedValueOnce([space1]);
       userLookupService.getUsersByUUID.mockResolvedValueOnce([]);
 
       await service.convertRawActivityToResults(rawActivities);

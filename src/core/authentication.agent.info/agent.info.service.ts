@@ -5,11 +5,13 @@ import { ICredential } from '@domain/agent/credential/credential.interface';
 import { User } from '@domain/community/user/user.entity';
 import { UserAuthenticationLinkService } from '@domain/community/user-authentication-link/user.authentication.link.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
 import { Identity, Session } from '@ory/kratos-client';
 import { OryDefaultIdentitySchema } from '@services/infrastructure/kratos/types/ory.default.identity.schema';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager } from 'typeorm';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { eq } from 'drizzle-orm';
+import { users as userSchema } from '@domain/community/user/user.schema';
 import { AgentInfo } from './agent.info';
 import { AgentInfoMetadata } from './agent.info.metadata';
 
@@ -17,8 +19,8 @@ import { AgentInfoMetadata } from './agent.info.metadata';
 export class AgentInfoService {
   constructor(
     private readonly userAuthenticationLinkService: UserAuthenticationLinkService,
-    @InjectEntityManager('default')
-    private readonly entityManager: EntityManager,
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -69,7 +71,7 @@ export class AgentInfoService {
 
     const resolved =
       await this.userAuthenticationLinkService.resolveExistingUser(agentInfo, {
-        relations: {
+        with: {
           agent: {
             credentials: true,
           },
@@ -130,18 +132,20 @@ export class AgentInfoService {
       return this.createAnonymousAgentInfo();
     }
 
-    const user = await this.entityManager.findOneOrFail(User, {
-      where: { id: userId },
-      relations: {
+    const user = await this.db.query.users.findFirst({
+      where: eq(userSchema.id, userId),
+      with: {
         agent: {
-          credentials: true,
+          with: {
+            credentials: true,
+          },
         },
       },
     });
 
-    if (!user.agent || !user.agent.credentials) {
+    if (!user || !user.agent || !user.agent.credentials) {
       throw new EntityNotInitializedException(
-        `Agent not loaded for User: ${user.id}`,
+        `Agent not loaded for User: ${userId}`,
         LogContext.WHITEBOARD_INTEGRATION,
         { userId }
       );
@@ -152,9 +156,9 @@ export class AgentInfoService {
 
     if (user.agent.credentials.length !== 0) {
       credentials = user.agent.credentials.map(
-        (credential: ICredential): ICredentialDefinition => {
+        (credential): ICredentialDefinition => {
           return {
-            type: credential.type,
+            type: credential.type as AuthorizationCredential,
             resourceID: credential.resourceID,
           };
         }
@@ -229,10 +233,10 @@ export class AgentInfoService {
     options?: { includeCredentials?: boolean }
   ): Promise<AgentInfo> {
     // Try to find user by agent ID
-    const user = await this.entityManager.findOne(User, {
-      where: { agent: { id: agentId } },
-      relations: options?.includeCredentials
-        ? { agent: { credentials: true } }
+    const user = await this.db.query.users.findFirst({
+      where: eq(userSchema.agentId, agentId),
+      with: options?.includeCredentials
+        ? { agent: { with: { credentials: true } } }
         : { agent: true },
     });
 
@@ -248,8 +252,8 @@ export class AgentInfoService {
 
       if (options?.includeCredentials && user.agent.credentials) {
         agentInfo.credentials = user.agent.credentials.map(
-          (credential: ICredential): ICredentialDefinition => ({
-            type: credential.type,
+          (credential): ICredentialDefinition => ({
+            type: credential.type as AuthorizationCredential,
             resourceID: credential.resourceID,
           })
         );

@@ -8,6 +8,8 @@ import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
@@ -15,18 +17,17 @@ import { IContributor } from '@domain/community/contributor/contributor.interfac
 import { IAccount } from '@domain/space/account/account.interface';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { Inject, Injectable } from '@nestjs/common';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
-import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
+import { eq, or } from 'drizzle-orm';
 import { CreateInnovationHubInput, UpdateInnovationHubInput } from './dto';
 import { IInnovationHub, InnovationHub, InnovationHubType } from './types';
+import { innovationHubs } from './innovation.hub.schema';
 
 @Injectable()
 export class InnovationHubService {
   constructor(
-    @InjectRepository(InnovationHub)
-    private readonly innovationHubRepository: Repository<InnovationHub>,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     private readonly profileService: ProfileService,
     private readonly authorizationPolicyService: AuthorizationPolicyService,
     private readonly spaceLookupService: SpaceLookupService,
@@ -109,8 +110,42 @@ export class InnovationHubService {
     return await this.save(hub);
   }
 
-  public save(hub: IInnovationHub): Promise<IInnovationHub> {
-    return this.innovationHubRepository.save(hub);
+  public async save(hub: IInnovationHub): Promise<IInnovationHub> {
+    if (hub.id) {
+      const [updated] = await this.db
+        .update(innovationHubs)
+        .set({
+          nameID: hub.nameID,
+          subdomain: hub.subdomain,
+          type: hub.type,
+          spaceVisibilityFilter: hub.spaceVisibilityFilter,
+          spaceListFilter: hub.spaceListFilter,
+          listedInStore: hub.listedInStore,
+          searchVisibility: hub.searchVisibility,
+          accountId: hub.account?.id,
+          profileId: hub.profile?.id,
+          authorizationId: hub.authorization?.id,
+        })
+        .where(eq(innovationHubs.id, hub.id))
+        .returning();
+      return updated as unknown as IInnovationHub;
+    }
+    const [inserted] = await this.db
+      .insert(innovationHubs)
+      .values({
+        nameID: hub.nameID,
+        subdomain: hub.subdomain,
+        type: hub.type,
+        spaceVisibilityFilter: hub.spaceVisibilityFilter,
+        spaceListFilter: hub.spaceListFilter,
+        listedInStore: hub.listedInStore,
+        searchVisibility: hub.searchVisibility,
+        accountId: hub.account?.id,
+        profileId: hub.profile?.id,
+        authorizationId: hub.authorization?.id,
+      })
+      .returning();
+    return inserted as unknown as IInnovationHub;
   }
 
   public async updateOrFail(
@@ -118,7 +153,7 @@ export class InnovationHubService {
   ): Promise<IInnovationHub> {
     const innovationHub: IInnovationHub = await this.getInnovationHubOrFail(
       input.ID,
-      { relations: { profile: true } }
+      { with: { profile: true } }
     );
 
     if (input.nameID) {
@@ -183,7 +218,7 @@ export class InnovationHubService {
 
   public async delete(innovationHubID: string): Promise<IInnovationHub> {
     const hub = await this.getInnovationHubOrFail(innovationHubID, {
-      relations: { profile: true },
+      with: { profile: true },
     });
 
     if (hub.profile) {
@@ -193,25 +228,49 @@ export class InnovationHubService {
     if (hub.authorization)
       await this.authorizationPolicyService.delete(hub.authorization);
 
-    const result = await this.innovationHubRepository.remove(
-      hub as InnovationHub
-    );
-    result.id = innovationHubID;
+    await this.db
+      .delete(innovationHubs)
+      .where(eq(innovationHubs.id, innovationHubID));
+    hub.id = innovationHubID;
 
-    return result;
+    return hub;
   }
 
-  public getInnovationHubs(options?: FindManyOptions<InnovationHub>) {
-    return this.innovationHubRepository.find(options);
+  public async getInnovationHubs(): Promise<IInnovationHub[]> {
+    const result = await this.db.query.innovationHubs.findMany();
+    return result as unknown as IInnovationHub[];
   }
 
   public async getInnovationHubOrFail(
     innovationHubID: string,
-    options?: FindOneOptions<InnovationHub>
+    options?: {
+      with?: {
+        profile?: boolean;
+        authorization?: boolean;
+        account?: boolean | {
+          with?: {
+            authorization?: boolean;
+          };
+        };
+      };
+    }
   ): Promise<IInnovationHub> {
-    const innovationHub = await this.innovationHubRepository.findOne({
-      where: { id: innovationHubID },
-      ...options,
+    const withClause: Record<string, any> = {};
+    if (options?.with?.profile) withClause.profile = true;
+    if (options?.with?.authorization) withClause.authorization = true;
+    if (options?.with?.account) {
+      if (typeof options.with.account === 'object') {
+        const nested: any = {};
+        if (options.with.account.with?.authorization) nested.authorization = true;
+        withClause.account = { with: nested };
+      } else {
+        withClause.account = true;
+      }
+    }
+
+    const innovationHub = await this.db.query.innovationHubs.findFirst({
+      where: eq(innovationHubs.id, innovationHubID),
+      with: Object.keys(withClause).length > 0 ? withClause : undefined,
     });
 
     if (!innovationHub)
@@ -219,16 +278,22 @@ export class InnovationHubService {
         `Unable to find InnovationHub with ID: ${innovationHubID}`,
         LogContext.SPACES
       );
-    return innovationHub;
+    return innovationHub as unknown as IInnovationHub;
   }
 
   public async getInnovationHubByNameIdOrFail(
     innovationHubNameID: string,
-    options?: FindOneOptions<InnovationHub>
+    options?: {
+      relations?: { profile?: boolean; account?: boolean };
+    }
   ): Promise<IInnovationHub> {
-    const innovationHub = await this.innovationHubRepository.findOne({
-      where: { nameID: innovationHubNameID },
-      ...options,
+    const withClause: Record<string, boolean> = {};
+    if (options?.relations?.profile) withClause.profile = true;
+    if (options?.relations?.account) withClause.account = true;
+
+    const innovationHub = await this.db.query.innovationHubs.findFirst({
+      where: eq(innovationHubs.nameID, innovationHubNameID),
+      with: Object.keys(withClause).length > 0 ? withClause : undefined,
     });
 
     if (!innovationHub)
@@ -236,32 +301,37 @@ export class InnovationHubService {
         `Unable to find InnovationHub with NameID: ${innovationHubNameID}`,
         LogContext.SPACES
       );
-    return innovationHub;
+    return innovationHub as unknown as IInnovationHub;
   }
 
   public async getInnovationHubFlexOrFail(
     args: { subdomain?: string; idOrNameId?: string },
-    options?: FindOneOptions<InnovationHub>
-  ): Promise<InnovationHub | never> {
+    options?: {
+      relations?: { profile?: boolean; account?: boolean };
+    }
+  ): Promise<IInnovationHub | never> {
     if (!Object.keys(args).length) {
       throw new Error('No criteria provided for fetching the Innovation Hub');
     }
 
     const { idOrNameId, subdomain } = args;
 
-    const whereArgs = [
-      { id: idOrNameId },
-      { nameID: idOrNameId },
-      { subdomain },
-    ];
+    const conditions = [];
+    if (idOrNameId) {
+      conditions.push(eq(innovationHubs.id, idOrNameId));
+      conditions.push(eq(innovationHubs.nameID, idOrNameId));
+    }
+    if (subdomain) {
+      conditions.push(eq(innovationHubs.subdomain, subdomain));
+    }
 
-    const innovationHub = await this.innovationHubRepository.findOne({
-      where: options?.where
-        ? Array.isArray(options.where)
-          ? [...whereArgs, ...options.where]
-          : [...whereArgs, options.where]
-        : [{ id: idOrNameId }, { subdomain }, { nameID: idOrNameId }],
-      ...options,
+    const withClause: Record<string, boolean> = {};
+    if (options?.relations?.profile) withClause.profile = true;
+    if (options?.relations?.account) withClause.account = true;
+
+    const innovationHub = await this.db.query.innovationHubs.findFirst({
+      where: or(...conditions),
+      with: Object.keys(withClause).length > 0 ? withClause : undefined,
     });
 
     if (!innovationHub) {
@@ -271,14 +341,14 @@ export class InnovationHubService {
       );
     }
 
-    return innovationHub;
+    return innovationHub as unknown as IInnovationHub;
   }
 
   public async getSpaceListFilterOrFail(
     hubId: string
   ): Promise<string[] | undefined | never> {
-    const hub = await this.innovationHubRepository.findOneBy({
-      id: hubId,
+    const hub = await this.db.query.innovationHubs.findFirst({
+      where: eq(innovationHubs.id, hubId),
     });
 
     if (!hub) {
@@ -288,7 +358,7 @@ export class InnovationHubService {
       );
     }
 
-    return hub.spaceListFilter;
+    return hub.spaceListFilter as string[] | undefined;
   }
 
   private async validateCreateInput({
@@ -335,9 +405,9 @@ export class InnovationHubService {
   }
 
   public async getProvider(innovationHubID: string): Promise<IContributor> {
-    const innovationHub = await this.innovationHubRepository.findOne({
-      where: { id: innovationHubID },
-      relations: {
+    const innovationHub = await this.db.query.innovationHubs.findFirst({
+      where: eq(innovationHubs.id, innovationHubID),
+      with: {
         account: true,
       },
     });
@@ -348,7 +418,7 @@ export class InnovationHubService {
       );
     }
     const provider = await this.accountLookupService.getHost(
-      innovationHub.account
+      innovationHub.account as any
     );
     if (!provider) {
       throw new RelationshipNotFoundException(

@@ -1,182 +1,169 @@
 import { RestrictedSpaceNames } from '@common/enums/restricted.space.names';
 import { SpaceLevel } from '@common/enums/space.level';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
+import { callouts } from '@domain/collaboration/callout/callout.schema';
 import { Organization } from '@domain/community/organization';
+import { organizations } from '@domain/community/organization/organization.schema';
 import { User } from '@domain/community/user/user.entity';
+import { users } from '@domain/community/user/user.schema';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
+import { virtualContributors } from '@domain/community/virtual-contributor/virtual.contributor.schema';
 import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
+import { innovationHubs } from '@domain/innovation-hub/innovation.hub.schema';
 import { Space } from '@domain/space/space/space.entity';
+import { spaces } from '@domain/space/space/space.schema';
 import { Template } from '@domain/template/template/template.entity';
+import { templates } from '@domain/template/template/template.schema';
 import { CalendarEvent } from '@domain/timeline/event';
+import { calendarEvents } from '@domain/timeline/event/event.schema';
 import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
-import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
+import { innovationPacks } from '@library/innovation-pack/innovation.pack.schema';
 import { Discussion } from '@platform/forum-discussion/discussion.entity';
+import { discussions } from '@platform/forum-discussion/discussion.schema';
 import { generateNameId } from '@services/infrastructure/naming/generate.name.id';
-import { EntityManager, Not, Repository } from 'typeorm';
+import { Inject } from '@nestjs/common';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { eq, ne, and, sql } from 'drizzle-orm';
 
 export class NamingService {
   constructor(
-    @InjectRepository(Discussion)
-    private discussionRepository: Repository<Discussion>,
-    @InjectRepository(InnovationHub)
-    private innovationHubRepository: Repository<InnovationHub>,
-    @InjectEntityManager('default')
-    private entityManager: EntityManager
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb
   ) {}
 
   public async getReservedNameIDsInLevelZeroSpace(
     levelZeroSpaceID: string
   ): Promise<string[]> {
-    const subspaces = await this.entityManager.find(Space, {
-      where: {
-        levelZeroSpaceID: levelZeroSpaceID,
-        level: Not(SpaceLevel.L0),
-      },
-      select: {
-        nameID: true,
-      },
-    });
-    return subspaces.map(space => space.nameID);
+    const subspaces = await this.db
+      .select({ nameID: spaces.nameID })
+      .from(spaces)
+      .where(
+        and(
+          eq(spaces.levelZeroSpaceID, levelZeroSpaceID),
+          ne(spaces.level, SpaceLevel.L0)
+        )
+      );
+    return subspaces.map(s => s.nameID);
   }
 
   public async getReservedNameIDsLevelZeroSpaces(): Promise<string[]> {
-    const levelZeroSpaces = await this.entityManager.find(Space, {
-      where: {
-        level: SpaceLevel.L0,
-      },
-      select: {
-        nameID: true,
-      },
-    });
-    const nameIDs = levelZeroSpaces.map(space => space.nameID.toLowerCase());
+    const levelZeroSpaces = await this.db
+      .select({ nameID: spaces.nameID })
+      .from(spaces)
+      .where(eq(spaces.level, SpaceLevel.L0));
+    const nameIDs = levelZeroSpaces.map(s => s.nameID.toLowerCase());
 
     return nameIDs.concat(RestrictedSpaceNames);
   }
 
   public async getReservedNameIDsInForum(forumID: string): Promise<string[]> {
-    const discussions = await this.entityManager.find(Discussion, {
-      where: {
-        forum: {
-          id: forumID,
-        },
-      },
-      select: {
+    const discussionRecords = await this.db.query.discussions.findMany({
+      where: eq(discussions.forumId, forumID),
+      columns: {
         nameID: true,
       },
     });
-    return discussions?.map(discussion => discussion.nameID) || [];
+    return discussionRecords?.map(d => d.nameID) || [];
   }
 
   public async getReservedNameIDsInCalloutsSet(
     calloutsSetID: string
   ): Promise<string[]> {
-    const callouts = await this.entityManager.find(Callout, {
-      where: {
-        calloutsSet: {
-          id: calloutsSetID,
-        },
-      },
-      select: {
+    const calloutRecords = await this.db.query.callouts.findMany({
+      where: eq(callouts.calloutsSetId, calloutsSetID),
+      columns: {
         nameID: true,
       },
     });
-    return callouts?.map(callout => callout.nameID) ?? [];
+    return calloutRecords?.map(c => c.nameID) ?? [];
   }
 
   public async getReservedNameIDsInTemplatesSet(
     templatesSetID: string
   ): Promise<string[]> {
-    const templates = await this.entityManager.find(Template, {
-      where: {
-        templatesSet: {
-          id: templatesSetID,
-        },
-      },
-      select: {
+    const templateRecords = await this.db.query.templates.findMany({
+      where: eq(templates.templatesSetId, templatesSetID),
+      columns: {
         nameID: true,
       },
     });
-    return templates?.map(template => template.nameID) ?? [];
+    return templateRecords?.map(t => t.nameID) ?? [];
   }
 
   public async getReservedNameIDsInCalendar(
     calendarID: string
   ): Promise<string[]> {
-    const events = await this.entityManager.find(CalendarEvent, {
-      where: {
-        calendar: {
-          id: calendarID,
-        },
-      },
-      select: {
+    const events = await this.db.query.calendarEvents.findMany({
+      where: eq(calendarEvents.calendarId, calendarID),
+      columns: {
         nameID: true,
       },
     });
-    return events?.map(event => event.nameID) ?? [];
+    return events?.map(e => e.nameID) ?? [];
   }
 
   public async getReservedNameIDsInInnovationPacks(): Promise<string[]> {
-    const packs = await this.entityManager.find(InnovationPack, {
-      select: {
-        nameID: true,
-      },
-    });
-    return packs.map(pack => pack.nameID);
+    const packs = await this.db
+      .select({ nameID: innovationPacks.nameID })
+      .from(innovationPacks);
+    return packs.map(p => p.nameID);
   }
 
   public async getReservedNameIDsInHubs(): Promise<string[]> {
-    const hubs = await this.entityManager.find(InnovationHub, {
-      select: {
-        nameID: true,
-      },
-    });
-    return hubs.map(hub => hub.nameID);
+    const hubs = await this.db
+      .select({ nameID: innovationHubs.nameID })
+      .from(innovationHubs);
+    return hubs.map(h => h.nameID);
   }
 
   public async getReservedNameIDsInUsers(): Promise<string[]> {
-    const users = await this.entityManager.find(User, {
-      select: {
-        nameID: true,
-      },
-    });
-    return users.map(user => user.nameID);
+    const userRecords = await this.db.select({ nameID: users.nameID }).from(users);
+    return userRecords.map(u => u.nameID);
   }
 
   public async getReservedNameIDsInVirtualContributors(): Promise<string[]> {
-    const vcs = await this.entityManager.find(VirtualContributor, {
-      select: {
-        nameID: true,
-      },
-    });
+    const vcs = await this.db
+      .select({ nameID: virtualContributors.nameID })
+      .from(virtualContributors);
     return vcs.map(vc => vc.nameID);
   }
 
   public async getReservedNameIDsInOrganizations(): Promise<string[]> {
-    const organizations = await this.entityManager.find(Organization, {
-      select: {
-        nameID: true,
-      },
-    });
-    return organizations.map(organization => organization.nameID);
+    const orgRecords = await this.db
+      .select({ nameID: organizations.nameID })
+      .from(organizations);
+    return orgRecords.map(org => org.nameID);
   }
 
   public async getReservedNameIDsInCalloutContributions(
     calloutID: string
   ): Promise<string[]> {
-    const callout = await this.entityManager.findOne(Callout, {
-      where: {
-        id: calloutID,
-      },
-      relations: {
+    const calloutData = await this.db.query.callouts.findFirst({
+      where: eq(callouts.id, calloutID),
+      with: {
         contributions: {
-          whiteboard: true,
-          post: true,
-          memo: true,
+          with: {
+            whiteboard: {
+              columns: {
+                nameID: true,
+              },
+            },
+            post: {
+              columns: {
+                nameID: true,
+              },
+            },
+            memo: {
+              columns: {
+                nameID: true,
+              },
+            },
+          },
         },
       },
-      select: ['contributions'],
     });
-    const contributions = callout?.contributions || [];
+    const contributions = calloutData?.contributions || [];
     const reservedNameIDs: string[] = [];
     for (const contribution of contributions) {
       if (contribution.whiteboard) {
@@ -196,18 +183,18 @@ export class NamingService {
     displayName: string,
     forumID: string
   ): Promise<boolean> {
-    const query = this.discussionRepository
-      .createQueryBuilder('discussion')
-      .leftJoinAndSelect('discussion.forum', 'forum')
-      .leftJoinAndSelect('discussion.profile', 'profile')
-      .where('forum.id = :id')
-      .andWhere('profile.displayName = :displayName')
-      .setParameters({
-        id: `${forumID}`,
-        displayName: `${displayName}`,
-      });
-    const discussionsWithDisplayName = await query.getOne();
-    if (discussionsWithDisplayName) {
+    const discussionsWithDisplayName = await this.db.query.discussions.findFirst(
+      {
+        where: eq(discussions.forumId, forumID),
+        with: {
+          profile: true,
+        },
+      }
+    );
+    if (
+      discussionsWithDisplayName &&
+      discussionsWithDisplayName.profile?.displayName === displayName
+    ) {
       return false;
     }
 
@@ -215,10 +202,11 @@ export class NamingService {
   }
 
   async isInnovationHubSubdomainAvailable(subdomain: string): Promise<boolean> {
-    const innovationHubsCount = await this.innovationHubRepository.countBy({
-      subdomain: subdomain,
-    });
-    return innovationHubsCount === 0;
+    const result = await this.db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(innovationHubs)
+      .where(eq(innovationHubs.subdomain, subdomain));
+    return (result[0]?.count ?? 0) === 0;
   }
 
   private createNameID(base: string): string {

@@ -4,9 +4,11 @@ import {
   InvalidStateTransitionException,
 } from '@common/exceptions';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { eq } from 'drizzle-orm';
+import { lifecycles } from './lifecycle.schema';
 import { AnyMachineSnapshot, AnyStateMachine, createActor } from 'xstate';
 import { LifecycleEventInput } from './dto/lifecycle.dto.event';
 import { Lifecycle } from './lifecycle.entity';
@@ -18,8 +20,7 @@ export class LifecycleService {
   private XSTATE_ERROR_STATE = 'error';
 
   constructor(
-    @InjectRepository(Lifecycle)
-    private lifecycleRepository: Repository<Lifecycle>,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -31,7 +32,8 @@ export class LifecycleService {
 
   async deleteLifecycle(lifecycleID: string): Promise<ILifecycle> {
     const lifecycle = await this.getLifecycleOrFail(lifecycleID);
-    return this.lifecycleRepository.remove(lifecycle as Lifecycle);
+    await this.db.delete(lifecycles).where(eq(lifecycles.id, lifecycleID));
+    return lifecycle;
   }
 
   async event(eventData: LifecycleEventInput): Promise<ILifecycle> {
@@ -116,7 +118,12 @@ export class LifecycleService {
       }) event '${eventName}' completed: from state '${startingState}' to state '${updatedState}'`,
       LogContext.LIFECYCLE
     );
-    return await this.lifecycleRepository.save(eventData.lifecycle);
+    const [updated] = await this.db
+      .update(lifecycles)
+      .set({ machineState: newStateStr })
+      .where(eq(lifecycles.id, eventData.lifecycle.id))
+      .returning();
+    return updated as unknown as ILifecycle;
   }
 
   private getNextEventsFromSnapshot(snapshot: AnyMachineSnapshot) {
@@ -132,19 +139,17 @@ export class LifecycleService {
   }
 
   public async getLifecycleOrFail(
-    lifecycleID: string,
-    options?: FindOneOptions<Lifecycle>
+    lifecycleID: string
   ): Promise<ILifecycle | never> {
-    const lifecycle = await this.lifecycleRepository.findOne({
-      where: { id: lifecycleID },
-      ...options,
+    const lifecycle = await this.db.query.lifecycles.findFirst({
+      where: eq(lifecycles.id, lifecycleID),
     });
     if (!lifecycle)
       throw new EntityNotFoundException(
         `Unable to find Lifecycle with ID: ${lifecycleID}`,
         LogContext.SPACES
       );
-    return lifecycle;
+    return lifecycle as unknown as ILifecycle;
   }
 
   private getRestoredSnapshot(
@@ -206,6 +211,20 @@ export class LifecycleService {
   }
 
   async save(lifecycle: Lifecycle): Promise<Lifecycle> {
-    return await this.lifecycleRepository.save(lifecycle);
+    if (!lifecycle.id) {
+      const [inserted] = await this.db
+        .insert(lifecycles)
+        .values({
+          machineState: lifecycle.machineState,
+        })
+        .returning();
+      return inserted as unknown as Lifecycle;
+    }
+    const [updated] = await this.db
+      .update(lifecycles)
+      .set({ machineState: lifecycle.machineState })
+      .where(eq(lifecycles.id, lifecycle.id))
+      .returning();
+    return updated as unknown as Lifecycle;
   }
 }

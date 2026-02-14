@@ -5,7 +5,6 @@ import { ClassificationModule } from '@domain/common/classification/classificati
 import { RoomModule } from '@domain/communication/room/room.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
@@ -17,7 +16,6 @@ import { CalloutContributionModule } from '../callout-contribution/callout.contr
 import { CalloutContributionDefaultsModule } from '../callout-contribution-defaults/callout.contribution.defaults.module';
 import { CalloutFramingModule } from '../callout-framing/callout.framing.module';
 import { PostModule } from '../post/post.module';
-import { Callout } from './callout.entity';
 import { CalloutResolverFields } from './callout.resolver.fields';
 import { CalloutResolverMutations } from './callout.resolver.mutations';
 import { CalloutResolverSubscriptions } from './callout.resolver.subscriptions';
@@ -44,7 +42,6 @@ import { CalloutAuthorizationService } from './callout.service.authorization';
     ClassificationModule,
     TemporaryStorageModule,
     RoleSetModule,
-    TypeOrmModule.forFeature([Callout]),
   ],
   providers: [
     CalloutResolverMutations,

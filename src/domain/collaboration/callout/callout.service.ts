@@ -29,12 +29,15 @@ import { RoomService } from '@domain/communication/room/room.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { Inject, Injectable } from '@nestjs/common';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { eq, sql } from 'drizzle-orm';
+import { callouts } from './callout.schema';
+import { calloutContributions } from '../callout-contribution/callout.contribution.schema';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { cloneDeep, keyBy, merge } from 'lodash';
-import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
 import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
 import { CalloutContributionService } from '../callout-contribution/callout.contribution.service';
 import { UpdateContributionCalloutsSortOrderInput } from '../callout-contribution/dto/callout.contribution.dto.update.callouts.sort.order';
@@ -62,8 +65,8 @@ export class CalloutService {
     private contributionService: CalloutContributionService,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
     private classificationService: ClassificationService,
-    @InjectRepository(Callout)
-    private calloutRepository: Repository<Callout>
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb
   ) {}
 
   public async createCallout(
@@ -78,7 +81,7 @@ export class CalloutService {
       calloutData.sortOrder = 10;
     }
 
-    const callout: ICallout = Callout.create(calloutData);
+    const callout: ICallout = Callout.create(calloutData as Partial<Callout>);
     callout.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.CALLOUT
     );
@@ -182,21 +185,65 @@ export class CalloutService {
 
   public async getCalloutOrFail(
     calloutID: string,
-    options?: FindOneOptions<Callout>
+    options?: {
+      relations?: {
+        authorization?: boolean;
+        framing?: boolean | {
+          profile?: boolean | { storageBucket?: boolean; tagsets?: boolean };
+          whiteboard?: boolean | { profile?: boolean | { storageBucket?: boolean } };
+          link?: boolean;
+          memo?: boolean | { profile?: boolean };
+          mediaGallery?: boolean;
+        };
+        classification?: boolean | { tagsets?: boolean };
+        contributionDefaults?: boolean;
+        contributions?: boolean | {
+          post?: boolean | { profile?: boolean | { tagsets?: boolean; storageBucket?: boolean } };
+          whiteboard?: boolean | { profile?: boolean | { storageBucket?: boolean } };
+          link?: boolean | { profile?: boolean | { storageBucket?: boolean } };
+          memo?: boolean | { profile?: boolean | { storageBucket?: boolean } };
+        };
+        comments?: boolean;
+        calloutsSet?: boolean | {
+          authorization?: boolean;
+          collaboration?: boolean | {
+            space?: boolean | {
+              community?: boolean | {
+                roleSet?: boolean;
+              };
+            };
+          };
+        };
+      };
+    }
   ): Promise<ICallout | never> {
-    const callout = await this.calloutRepository.findOne({
-      where: { id: calloutID },
-      ...options,
-    });
+    const withClause = this.buildWithClause(options?.relations);
+    const callout = await this.db.query.callouts.findFirst({
+      where: eq(callouts.id, calloutID),
+      ...(withClause ? { with: withClause } : {}),
+    }) as unknown as ICallout;
 
     if (!callout)
       throw new EntityNotFoundException(
-        `No Callout found with the given id: ${calloutID}, using options: ${JSON.stringify(
-          options
-        )}`,
+        `No Callout found with the given id: ${calloutID}`,
         LogContext.COLLABORATION
       );
     return callout;
+  }
+
+  private buildWithClause(
+    relations?: Record<string, boolean | Record<string, any>>
+  ): Record<string, any> | undefined {
+    if (!relations) return undefined;
+    const withClause: Record<string, any> = {};
+    for (const [key, value] of Object.entries(relations)) {
+      if (value === true) {
+        withClause[key] = true;
+      } else if (typeof value === 'object' && value !== null) {
+        withClause[key] = { with: this.buildWithClause(value) };
+      }
+    }
+    return Object.keys(withClause).length > 0 ? withClause : undefined;
   }
 
   public async updateCalloutVisibility(
@@ -209,7 +256,7 @@ export class CalloutService {
     if (calloutVisibilityUpdateData.visibility)
       callout.settings.visibility = calloutVisibilityUpdateData.visibility;
 
-    return await this.calloutRepository.save(callout);
+    return await this.save(callout);
   }
 
   public async updateCalloutPublishInfo(
@@ -227,7 +274,7 @@ export class CalloutService {
       callout.publishedDate = date;
     }
 
-    return await this.calloutRepository.save(callout);
+    return await this.save(callout);
   }
 
   public async updateCallout(
@@ -304,11 +351,19 @@ export class CalloutService {
     if (calloutUpdateData.sortOrder)
       callout.sortOrder = calloutUpdateData.sortOrder;
 
-    return await this.calloutRepository.save(callout);
+    return await this.save(callout);
   }
 
   async save(callout: ICallout): Promise<ICallout> {
-    return await this.calloutRepository.save(callout);
+    const [result] = await this.db
+      .insert(callouts)
+      .values(callout as any)
+      .onConflictDoUpdate({
+        target: callouts.id,
+        set: callout as any,
+      })
+      .returning();
+    return result as unknown as ICallout;
   }
 
   public async deleteCallout(calloutID: string): Promise<ICallout> {
@@ -349,14 +404,25 @@ export class CalloutService {
     if (callout.authorization)
       await this.authorizationPolicyService.delete(callout.authorization);
 
-    const result = await this.calloutRepository.remove(callout as Callout);
+    await this.db.delete(callouts).where(eq(callouts.id, calloutID));
+    const result = { ...callout };
     result.id = calloutID;
 
     return result;
   }
 
-  public getCallouts(options: FindManyOptions<Callout>): Promise<ICallout[]> {
-    return this.calloutRepository.find(options);
+  public async getCallouts(options?: {
+    where?: { calloutsSetId?: string };
+    relations?: Record<string, boolean | Record<string, any>>;
+  }): Promise<ICallout[]> {
+    const withClause = this.buildWithClause(options?.relations);
+    const results = await this.db.query.callouts.findMany({
+      ...(options?.where?.calloutsSetId
+        ? { where: eq(callouts.calloutsSetId, options.where.calloutsSetId) }
+        : {}),
+      ...(withClause ? { with: withClause } : {}),
+    });
+    return results as unknown as ICallout[];
   }
 
   /**
@@ -617,10 +683,10 @@ export class CalloutService {
 
   public async getCalloutFraming(
     calloutID: string,
-    relations: FindOneOptions<ICallout>[] = []
+    additionalRelations: Record<string, boolean | Record<string, any>> = {}
   ): Promise<ICalloutFraming> {
     const calloutLoaded = await this.getCalloutOrFail(calloutID, {
-      relations: { framing: true, ...relations },
+      relations: { framing: true, ...additionalRelations },
     });
     if (!calloutLoaded.framing)
       throw new EntityNotFoundException(
@@ -638,30 +704,27 @@ export class CalloutService {
     limit?: number,
     shuffle?: boolean
   ): Promise<ICalloutContribution[]> {
+    const contributionsWith: Record<string, boolean> = {};
+    if (types.includes(CalloutContributionType.POST)) contributionsWith.post = true;
+    if (types.includes(CalloutContributionType.WHITEBOARD)) contributionsWith.whiteboard = true;
+    if (types.includes(CalloutContributionType.LINK)) contributionsWith.link = true;
+    if (types.includes(CalloutContributionType.MEMO)) contributionsWith.memo = true;
+
     const calloutLoaded = await this.getCalloutOrFail(callout.id, {
       relations: {
-        contributions: {
-          post: types.includes(CalloutContributionType.POST),
-          whiteboard: types.includes(CalloutContributionType.WHITEBOARD),
-          link: types.includes(CalloutContributionType.LINK),
-          memo: types.includes(CalloutContributionType.MEMO),
-        },
+        contributions: contributionsWith,
       },
-      ...(!shuffle
-        ? {
-            order: {
-              contributions: {
-                sortOrder: 'ASC',
-              },
-            },
-          }
-        : undefined),
     });
     if (!calloutLoaded.contributions)
       throw new EntityNotFoundException(
         `Callout not initialized, no contributions: ${callout.id}`,
         LogContext.COLLABORATION
       );
+
+    // Sort by sortOrder ASC unless shuffling
+    if (!shuffle) {
+      calloutLoaded.contributions.sort((a, b) => a.sortOrder - b.sortOrder);
+    }
 
     const results: ICalloutContribution[] = [];
     if (!contributionIDs) {
@@ -684,14 +747,14 @@ export class CalloutService {
   public async getContributionsCount(
     callout: ICallout
   ): Promise<CalloutContributionsCountOutput> {
-    const counts = await this.calloutRepository
-      .createQueryBuilder('callout')
-      .leftJoin('callout.contributions', 'contribution')
-      .select('contribution.type', 'type')
-      .addSelect('COUNT(contribution.id)', 'count')
-      .where('callout.id = :calloutId', { calloutId: callout.id })
-      .groupBy('contribution.type')
-      .getRawMany<{ type: CalloutContributionType; count: string }>();
+    const counts = await this.db
+      .select({
+        type: calloutContributions.type,
+        count: sql<string>`count(${calloutContributions.id})`,
+      })
+      .from(calloutContributions)
+      .where(eq(calloutContributions.calloutId, callout.id))
+      .groupBy(calloutContributions.type);
 
     const result: CalloutContributionsCountOutput = {
       post: 0,

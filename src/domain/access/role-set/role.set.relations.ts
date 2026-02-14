@@ -1,0 +1,34 @@
+import { relations } from 'drizzle-orm';
+import { roleSets } from './role.set.schema';
+import { authorizationPolicies } from '@domain/common/authorization-policy/authorization.policy.schema';
+import { roles } from '@domain/access/role/role.schema';
+import { applications } from '@domain/access/application/application.schema';
+import { invitations } from '@domain/access/invitation/invitation.schema';
+import { platformInvitations } from '@domain/access/invitation.platform/platform.invitation.schema';
+
+export const roleSetsRelations = relations(roleSets, ({ one, many }) => ({
+  // OneToOne: authorization (from authorizableColumns)
+  authorization: one(authorizationPolicies, {
+    fields: [roleSets.authorizationId],
+    references: [authorizationPolicies.id],
+  }),
+
+  // ManyToOne: self-referencing parentRoleSet
+  parentRoleSet: one(roleSets, {
+    fields: [roleSets.parentRoleSetId],
+    references: [roleSets.id],
+    relationName: 'parentChild',
+  }),
+
+  // OneToMany: roles
+  roles: many(roles),
+
+  // OneToMany: applications
+  applications: many(applications),
+
+  // OneToMany: invitations
+  invitations: many(invitations),
+
+  // OneToMany: platformInvitations
+  platformInvitations: many(platformInvitations),
+}));

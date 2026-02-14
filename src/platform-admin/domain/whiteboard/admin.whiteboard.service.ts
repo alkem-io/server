@@ -7,15 +7,16 @@ import { DocumentService } from '@domain/storage/document/document.service';
 import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager, FindManyOptions } from 'typeorm';
+import { DRIZZLE, type DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { whiteboards as whiteboardsTable } from '@domain/common/whiteboard/whiteboard.schema';
+import { eq } from 'drizzle-orm';
 
 @Injectable()
 export class AdminWhiteboardService {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
-    @InjectEntityManager() private manager: EntityManager,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     private storageBucketService: StorageBucketService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private documentService: DocumentService,
@@ -23,37 +24,39 @@ export class AdminWhiteboardService {
   ) {}
 
   public async uploadFilesFromContentToStorageBucket(agentInfo: AgentInfo) {
-    // select the ids of the entities, needed for the save
-    const options: FindManyOptions = {
-      relations: {
-        profile: {
-          storageBucket: true,
-        },
-      },
-      select: {
+    const whiteboardResults = await this.db.query.whiteboards.findMany({
+      columns: {
         id: true,
-        profile: {
-          id: true,
-          displayName: true,
-          storageBucket: {
-            id: true,
-          },
-        },
         content: true,
       },
-    };
+      with: {
+        profile: {
+          columns: {
+            id: true,
+            displayName: true,
+          },
+          with: {
+            storageBucket: {
+              columns: {
+                id: true,
+              },
+            },
+          },
+        },
+      },
+    });
 
-    const whiteboards = await this.manager.find(Whiteboard, options);
+    const whiteboardEntities = whiteboardResults as unknown as Whiteboard[];
 
-    const whiteboardResults = await this._uploadFilesFromContentToStorageBucket(
-      whiteboards,
+    const uploadResults = await this._uploadFilesFromContentToStorageBucket(
+      whiteboardEntities,
       agentInfo.userID
     );
 
     return {
-      results: [...whiteboardResults.results],
-      errors: [...whiteboardResults.errors],
-      warns: [...whiteboardResults.warns],
+      results: [...uploadResults.results],
+      errors: [...uploadResults.errors],
+      warns: [...uploadResults.warns],
     };
   }
 
@@ -139,9 +142,16 @@ export class AdminWhiteboardService {
       }
     }
 
-    await this.manager.save(whiteboards, {
-      chunk: 20,
-    });
+    // Save updated whiteboards in chunks of 20
+    for (let i = 0; i < whiteboards.length; i += 20) {
+      const chunk = whiteboards.slice(i, i + 20);
+      for (const wb of chunk) {
+        await this.db
+          .update(whiteboardsTable)
+          .set({ content: wb.content })
+          .where(eq(whiteboardsTable.id, wb.id));
+      }
+    }
     results.unshift(`${whiteboards.length} ${className}s processed`);
 
     return { errors, warns, results };

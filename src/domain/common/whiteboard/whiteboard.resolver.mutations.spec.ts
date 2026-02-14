@@ -16,7 +16,7 @@ import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service'
 import { WhiteboardAuthorizationService } from '@domain/common/whiteboard/whiteboard.service.authorization';
 import { LoggerService } from '@nestjs/common';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
-import { EntityManager } from 'typeorm';
+import { createMockDrizzle } from '@test/utils/drizzle.mock.factory';
 import { type Mocked, vi } from 'vitest';
 
 const createResolver = () => {
@@ -45,10 +45,7 @@ const createResolver = () => {
     getSpaceForCommunityOrFail: vi.fn(),
   } as unknown as Mocked<CommunityResolverService>;
 
-  const entityManager = {
-    findOne: vi.fn(),
-    save: vi.fn(),
-  } as unknown as Mocked<EntityManager>;
+  const mockDb = createMockDrizzle();
 
   const logger = {
     verbose: vi.fn(),
@@ -63,7 +60,7 @@ const createResolver = () => {
     whiteboardAuthorizationService,
     whiteboardGuestAccessService,
     communityResolverService,
-    entityManager,
+    mockDb,
     logger
   );
 

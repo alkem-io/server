@@ -16,11 +16,13 @@ import { CreateUserGroupInput } from '@domain/community/user-group/dto';
 import { IUserGroup } from '@domain/community/user-group/user-group.interface';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { eq } from 'drizzle-orm';
+import { communities } from './community.schema';
 import { CreateCommunityInput } from './dto/community.dto.create';
 
 @Injectable()
@@ -32,8 +34,8 @@ export class CommunityService {
     private communityResolverService: CommunityResolverService,
     private roleSetService: RoleSetService,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
-    @InjectRepository(Community)
-    private communityRepository: Repository<Community>,
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -80,7 +82,7 @@ export class CommunityService {
       groupName,
       storageAggregator
     );
-    await this.communityRepository.save(community);
+    await this.save(community);
 
     return group;
   }
@@ -128,18 +130,18 @@ export class CommunityService {
 
   async getCommunityOrFail(
     communityID: string,
-    options?: FindOneOptions<Community>
+    options?: { relations?: Record<string, any> }
   ): Promise<ICommunity | never> {
-    const community = await this.communityRepository.findOne({
-      where: { id: communityID },
-      ...options,
+    const community = await this.db.query.communities.findFirst({
+      where: eq(communities.id, communityID),
+      with: options?.relations as any,
     });
     if (!community)
       throw new EntityNotFoundException(
         `Unable to find Community with ID: ${communityID}`,
         LogContext.COMMUNITY
       );
-    return community;
+    return community as unknown as ICommunity;
   }
 
   async removeCommunityOrFail(communityID: string): Promise<boolean | never> {
@@ -179,12 +181,25 @@ export class CommunityService {
       community.communication.id
     );
 
-    await this.communityRepository.remove(community as Community);
+    await this.db.delete(communities).where(eq(communities.id, community.id));
     return true;
   }
 
   async save(community: ICommunity): Promise<ICommunity> {
-    return await this.communityRepository.save(community);
+    if (community.id) {
+      const [updated] = await this.db
+        .update(communities)
+        .set(community as any)
+        .where(eq(communities.id, community.id))
+        .returning();
+      return updated as unknown as ICommunity;
+    } else {
+      const [inserted] = await this.db
+        .insert(communities)
+        .values(community as any)
+        .returning();
+      return inserted as unknown as ICommunity;
+    }
   }
 
   public async getDisplayName(community: ICommunity): Promise<string> {
@@ -209,7 +224,7 @@ export class CommunityService {
 
   async getCommunication(
     communityID: string,
-    relations?: FindOptionsRelations<ICommunity>
+    relations?: Record<string, any>
   ): Promise<ICommunication> {
     const community = await this.getCommunityOrFail(communityID, {
       relations: { communication: true, ...relations },

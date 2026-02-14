@@ -22,7 +22,7 @@ export class AiServerAuthorizationService {
 
   async applyAuthorizationPolicy(): Promise<IAuthorizationPolicy[]> {
     const aiServer = await this.aiServerService.getAiServerOrFail({
-      relations: {
+      with: {
         authorization: true,
         aiPersonas: true,
       },

@@ -1,4 +1,4 @@
-import { Brackets, ObjectLiteral, SelectQueryBuilder } from 'typeorm';
+import { Brackets, ObjectLiteral, SelectQueryBuilder } from '@core/typeorm-compat.types';
 import { applyFilteringOnWhereExpression } from '../filter.fn.where.expression';
 import { UserFilterInput } from '../input-types';
 

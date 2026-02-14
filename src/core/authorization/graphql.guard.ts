@@ -22,9 +22,11 @@ import {
 import { Reflector } from '@nestjs/core';
 import { GqlExecutionContext } from '@nestjs/graphql';
 import { AuthGuard } from '@nestjs/passport';
-import { InjectEntityManager } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager } from 'typeorm';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { eq } from 'drizzle-orm';
+import { authorizationPolicies } from '@domain/common/authorization-policy/authorization.policy.schema';
 import { AuthorizationRuleAgentPrivilege } from './authorization.rule.agent.privilege';
 
 @Injectable()
@@ -37,8 +39,8 @@ export class GraphqlGuard extends AuthGuard([
   constructor(
     private reflector: Reflector,
     private authorizationService: AuthorizationService,
-    @InjectEntityManager('default')
-    private entityManager: EntityManager,
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {
     super();
@@ -120,12 +122,12 @@ export class GraphqlGuard extends AuthGuard([
           undefined,
           LogContext.CODE_ERRORS
         );
-        this.entityManager
-          .findOne(AuthorizationPolicy, {
-            where: { id: fieldParent.authorizationId },
+        this.db.query.authorizationPolicies
+          .findFirst({
+            where: eq(authorizationPolicies.id, fieldParent.authorizationId),
           })
           .then((authorization: any) => {
-            fieldParent.authorization = authorization;
+            fieldParent.authorization = authorization as unknown as AuthorizationPolicy;
           })
           .catch((error: any) => {
             this.logger.error(

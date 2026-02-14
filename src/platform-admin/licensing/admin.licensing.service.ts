@@ -7,11 +7,10 @@ import { AccountLookupService } from '@domain/space/account.lookup/account.looku
 import { ISpace } from '@domain/space/space/space.interface';
 import { SpaceService } from '@domain/space/space/space.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
 import { LicenseIssuerService } from '@platform/licensing/credential-based/license-credential-issuer/license.issuer.service';
 import { LicensingFrameworkService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager } from 'typeorm';
+import { DRIZZLE, type DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { AssignLicensePlanToAccount } from './dto/admin.licensing.dto.assign.license.plan.to.account';
 import { AssignLicensePlanToSpace } from './dto/admin.licensing.dto.assign.license.plan.to.space';
 import { RevokeLicensePlanFromAccount } from './dto/admin.licensing.dto.revoke.license.plan.from.account';
@@ -24,8 +23,8 @@ export class AdminLicensingService {
     private licensingFrameworkService: LicensingFrameworkService,
     private licenseIssuerService: LicenseIssuerService,
     private spaceService: SpaceService,
-    @InjectEntityManager('default')
-    private entityManager: EntityManager,
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -53,7 +52,7 @@ export class AdminLicensingService {
     const space = await this.spaceService.getSpaceOrFail(
       licensePlanData.spaceID,
       {
-        relations: {
+        with: {
           agent: true,
         },
       }
@@ -97,7 +96,7 @@ export class AdminLicensingService {
     const space = await this.spaceService.getSpaceOrFail(
       licensePlanData.spaceID,
       {
-        relations: {
+        with: {
           agent: true,
         },
       }
@@ -205,10 +204,11 @@ export class AdminLicensingService {
   }
 
   public async getAllAccounts(): Promise<IAccount[]> {
-    return this.entityManager.find(IAccount, {
-      relations: {
+    const results = await this.db.query.accounts.findMany({
+      with: {
         license: true,
       },
     });
+    return results as unknown as IAccount[];
   }
 }

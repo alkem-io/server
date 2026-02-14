@@ -1,63 +1,55 @@
 import { LogContext } from '@common/enums';
-import { Callout } from '@domain/collaboration/callout/callout.entity';
+import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
-import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
+import { callouts } from '@domain/collaboration/callout/callout.schema';
 import { ICalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.interface';
+import { calloutContributions } from '@domain/collaboration/callout-contribution/callout.contribution.schema';
+import { posts } from '@domain/collaboration/post/post.schema';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager, EntityNotFoundError, FindOneOptions } from 'typeorm';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { eq, sql } from 'drizzle-orm';
 
 @Injectable()
 export class ContributionResolverService {
   constructor(
-    @InjectEntityManager('default')
-    private entityManager: EntityManager,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
 
   public async getCalloutForPostContribution(
-    postID: string,
-    options?: FindOneOptions<Callout>
+    postID: string
   ): Promise<ICallout> {
-    const result = await this.entityManager.findOne(Callout, {
-      where: {
-        contributions: {
-          post: {
-            id: postID,
-          },
-        },
+    // Find the callout through contribution -> post chain
+    const contribution = await this.db.query.calloutContributions.findFirst({
+      where: eq(calloutContributions.postId, postID),
+      with: {
+        callout: true,
       },
-      ...options,
     });
-    if (!result) {
-      throw new EntityNotFoundError(
+    if (!contribution || !contribution.callout) {
+      throw new EntityNotFoundException(
         `Unable to identify Callout with postID profiled: ${postID}`,
         LogContext.COLLABORATION
       );
     }
-    return result;
+    return contribution.callout as unknown as ICallout;
   }
 
   public async getContributionForPost(
-    postID: string,
-    options?: FindOneOptions<CalloutContribution>
+    postID: string
   ): Promise<ICalloutContribution> {
-    const result = await this.entityManager.findOne(CalloutContribution, {
-      where: {
-        post: {
-          id: postID,
-        },
-      },
-      ...options,
+    const result = await this.db.query.calloutContributions.findFirst({
+      where: eq(calloutContributions.postId, postID),
     });
     if (!result) {
-      throw new EntityNotFoundError(
+      throw new EntityNotFoundException(
         `Unable to identify Callout with postID profiled: ${postID}`,
         LogContext.COLLABORATION
       );
     }
-    return result;
+    return result as unknown as ICalloutContribution;
   }
 }

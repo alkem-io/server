@@ -1,8 +1,7 @@
-import { Profile } from '@domain/common/profile';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
-import { Injectable } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
-import { EntityManager } from 'typeorm';
+import { Inject, Injectable } from '@nestjs/common';
 import { createTypedRelationDataLoader } from '../../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
 
@@ -10,12 +9,12 @@ import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
 export class ProfileStorageBucketLoaderCreator
   implements DataLoaderCreator<IStorageBucket>
 {
-  constructor(@InjectEntityManager() private manager: EntityManager) {}
+  constructor(@Inject(DRIZZLE) private readonly db: DrizzleDb) {}
 
   create(options: DataLoaderCreatorOptions<IStorageBucket>) {
     return createTypedRelationDataLoader(
-      this.manager,
-      Profile,
+      this.db,
+      'profiles',
       { storageBucket: true },
       this.constructor.name,
       options

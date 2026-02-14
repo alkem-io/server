@@ -6,11 +6,9 @@ import { MemoModule } from '@domain/common/memo/memo.module';
 import { WhiteboardModule } from '@domain/common/whiteboard/whiteboard.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { LinkModule } from '../link/link.module';
 import { PostModule } from '../post/post.module';
-import { CalloutContribution } from './callout.contribution.entity';
 import { CalloutContributionResolverFields } from './callout.contribution.resolver.fields';
 import { CalloutContributionService } from './callout.contribution.service';
 import { CalloutContributionAuthorizationService } from './callout.contribution.service.authorization';
@@ -27,7 +25,6 @@ import { CalloutContributionAuthorizationService } from './callout.contribution.
     UserLookupModule,
     RoleSetModule,
     PlatformRolesAccessModule,
-    TypeOrmModule.forFeature([CalloutContribution]),
   ],
   providers: [
     CalloutContributionService,

@@ -56,21 +56,7 @@ export class VisualResolverMutations {
     { createReadStream, filename, mimetype }: FileUpload
   ): Promise<IVisual> {
     const visual = await this.visualService.getVisualOrFail(
-      uploadData.visualID,
-      {
-        relations: {
-          profile: {
-            storageBucket: {
-              authorization: true,
-            },
-          },
-          mediaGallery: {
-            storageBucket: {
-              authorization: true,
-            },
-          },
-        },
-      }
+      uploadData.visualID
     );
     this.authorizationService.grantAccessOrFail(
       agentInfo,

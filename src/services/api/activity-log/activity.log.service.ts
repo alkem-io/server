@@ -16,14 +16,17 @@ import { SpaceService } from '@domain/space/space/space.service';
 import { CalendarService } from '@domain/timeline/calendar/calendar.service';
 import { CalendarEventService } from '@domain/timeline/event/event.service';
 import { Inject, LoggerService } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
 import { IActivity } from '@platform/activity/activity.interface';
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { ActivityService } from '@src/platform/activity/activity.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager, In } from 'typeorm';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { inArray } from 'drizzle-orm';
+import { spaces } from '@domain/space/space/space.schema';
+import { collaborations } from '@domain/collaboration/collaboration/collaboration.schema';
 import { IActivityLogBuilder } from './activity.log.builder.interface';
 import ActivityLogBuilderService from './activity.log.builder.service';
 import { ActivityLogInput } from './dto/activity.log.dto.collaboration.input';
@@ -47,8 +50,7 @@ export class ActivityLogService {
     private calendarEventService: CalendarEventService,
     private communityService: CommunityService,
     private urlGeneratorService: UrlGeneratorService,
-    @InjectEntityManager('default')
-    private entityManager: EntityManager,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -102,16 +104,20 @@ export class ActivityLogService {
     ];
 
     // Batch-load all spaces by collaboration ID (1 query instead of 2P)
-    const spaces = await this.entityManager.find(Space, {
-      where: { collaboration: { id: In(collaborationIds) } },
-      relations: {
+    const spaceResults = await this.db.query.spaces.findMany({
+      where: inArray(spaces.collaborationId, collaborationIds),
+      with: {
         collaboration: true,
-        about: { profile: true },
+        about: {
+          with: {
+            profile: true,
+          },
+        },
         community: true,
       },
     });
     const spaceByCollabId = new Map<string, ISpace>(
-      spaces.map(s => [s.collaboration!.id, s])
+      spaceResults.map(s => [s.collaboration!.id, s as unknown as ISpace])
     );
 
     // Batch-load all users (1 query instead of P)
@@ -149,13 +155,7 @@ export class ActivityLogService {
       const space =
         spaceByCollabId?.get(rawActivity.collaborationID) ??
         (await this.communityResolverService.getSpaceForCollaborationOrFail(
-          rawActivity.collaborationID,
-          {
-            relations: {
-              about: { profile: true },
-              community: true,
-            },
-          }
+          rawActivity.collaborationID
         ));
 
       const parentDisplayName = space.about.profile.displayName;

@@ -3,8 +3,6 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { CommunityGuidelines } from './community.guidelines.entity';
 import { CommunityGuidelinesResolverMutations } from './community.guidelines.resolver.mutations';
 import { CommunityGuidelinesService } from './community.guidelines.service';
 import { CommunityGuidelinesAuthorizationService } from './community.guidelines.service.authorization';
@@ -15,7 +13,6 @@ import { CommunityGuidelinesAuthorizationService } from './community.guidelines.
     AuthorizationPolicyModule,
     ProfileModule,
     TagsetModule,
-    TypeOrmModule.forFeature([CommunityGuidelines]),
   ],
   providers: [
     CommunityGuidelinesService,

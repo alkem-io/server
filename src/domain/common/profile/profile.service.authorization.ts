@@ -25,52 +25,11 @@ export class ProfileAuthorizationService {
     const profile = await this.profileService.getProfileOrFail(profileID, {
       loadEagerRelations: false,
       relations: {
+        references: true,
+        tagsets: true,
+        visuals: true,
         authorization: true,
-        references: { authorization: true },
-        tagsets: { authorization: true },
-        visuals: { authorization: true },
-        storageBucket: {
-          authorization: true,
-          documents: {
-            authorization: true,
-            tagset: { authorization: true },
-          },
-        },
-      },
-      select: {
-        id: true,
-        authorization:
-          this.authorizationPolicyService.authorizationSelectOptions,
-        references: {
-          id: true,
-          authorization:
-            this.authorizationPolicyService.authorizationSelectOptions,
-        },
-        tagsets: {
-          id: true,
-          authorization:
-            this.authorizationPolicyService.authorizationSelectOptions,
-        },
-        visuals: {
-          id: true,
-          authorization:
-            this.authorizationPolicyService.authorizationSelectOptions,
-        },
-        storageBucket: {
-          id: true,
-          authorization:
-            this.authorizationPolicyService.authorizationSelectOptions,
-          documents: {
-            id: true,
-            authorization:
-              this.authorizationPolicyService.authorizationSelectOptions,
-            tagset: {
-              id: true,
-              authorization:
-                this.authorizationPolicyService.authorizationSelectOptions,
-            },
-          },
-        },
+        storageBucket: true,
       },
     });
     if (

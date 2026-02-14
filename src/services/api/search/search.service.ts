@@ -2,11 +2,13 @@ import { LogContext } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { Space } from '@domain/space/space/space.entity';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { InjectEntityManager } from '@nestjs/typeorm';
 import { AlkemioConfig } from '@src/types';
-import { EntityManager } from 'typeorm';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { eq } from 'drizzle-orm';
+import { spaces } from '@domain/space/space/space.schema';
 import { SearchFilterInput, SearchInput } from './dto/inputs';
 import { ISearchResults } from './dto/results';
 import { SearchExtractService } from './extract/search.extract.service';
@@ -20,7 +22,7 @@ const DEFAULT_RESULT_SIZE = 4;
 export class SearchService {
   private readonly maxSearchResults: number;
   constructor(
-    @InjectEntityManager() private entityManager: EntityManager,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     private searchExtractService: SearchExtractService,
     private searchResultService: SearchResultService,
     private configService: ConfigService<AlkemioConfig, true>
@@ -45,11 +47,10 @@ export class SearchService {
     });
     // check if the Space exists
     if (searchData.searchInSpaceFilter) {
-      try {
-        await this.entityManager.findOneByOrFail(Space, {
-          id: searchData.searchInSpaceFilter,
-        });
-      } catch {
+      const space = await this.db.query.spaces.findFirst({
+        where: eq(spaces.id, searchData.searchInSpaceFilter),
+      });
+      if (!space) {
         throw new EntityNotFoundException(
           'Space with the given identifier not found',
           LogContext.SEARCH,

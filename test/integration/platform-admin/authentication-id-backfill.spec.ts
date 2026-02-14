@@ -3,20 +3,9 @@ import { AdminAuthenticationIDBackfillService } from '@src/platform-admin/domain
 import { UserService } from '@domain/community/user/user.service';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { AgentInfoCacheService } from '@core/authentication.agent.info/agent.info.cache.service';
-import { EntityManager } from 'typeorm';
 import { LoggerService } from '@nestjs/common';
 import { Identity } from '@ory/kratos-client';
 import { LogContext } from '@common/enums';
-
-const createQueryBuilder = () => {
-  const builder = {
-    orderBy: vi.fn().mockReturnThis(),
-    skip: vi.fn().mockReturnThis(),
-    take: vi.fn().mockReturnThis(),
-    getMany: vi.fn(),
-  };
-  return builder;
-};
 
 describe('AdminAuthenticationIDBackfillService (integration)', () => {
   const loggerMock: LoggerService & {
@@ -46,17 +35,20 @@ describe('AdminAuthenticationIDBackfillService (integration)', () => {
       deleteAgentInfoFromCache: vi.fn(),
     } as unknown as AgentInfoCacheService;
 
-    const queryBuilder = createQueryBuilder();
-
-    const entityManager = {
-      createQueryBuilder: vi.fn().mockReturnValue(queryBuilder),
-    } as unknown as EntityManager;
+    const findMany = vi.fn();
+    const db = {
+      query: {
+        users: {
+          findMany,
+        },
+      },
+    };
 
     const service = new AdminAuthenticationIDBackfillService(
-      userService,
-      kratosService,
-      agentInfoCacheService,
-      entityManager,
+      userService as any,
+      kratosService as any,
+      agentInfoCacheService as any,
+      db as any,
       loggerMock
     );
 
@@ -71,7 +63,7 @@ describe('AdminAuthenticationIDBackfillService (integration)', () => {
       agentInfoCacheService: agentInfoCacheService as unknown as {
         deleteAgentInfoFromCache: Mock;
       },
-      queryBuilder,
+      findMany,
     };
   };
 
@@ -85,7 +77,7 @@ describe('AdminAuthenticationIDBackfillService (integration)', () => {
       userService,
       kratosService,
       agentInfoCacheService,
-      queryBuilder,
+      findMany,
     } = createService();
 
     const user = {
@@ -94,7 +86,7 @@ describe('AdminAuthenticationIDBackfillService (integration)', () => {
       authenticationID: null,
     };
 
-    queryBuilder.getMany
+    findMany
       .mockResolvedValueOnce([user])
       .mockResolvedValueOnce([]);
 
@@ -144,7 +136,7 @@ describe('AdminAuthenticationIDBackfillService (integration)', () => {
   });
 
   it('marks users as skipped when no identity is found', async () => {
-    const { service, kratosService, queryBuilder, userService } =
+    const { service, kratosService, findMany, userService } =
       createService();
 
     const user = {
@@ -153,7 +145,7 @@ describe('AdminAuthenticationIDBackfillService (integration)', () => {
       authenticationID: null,
     };
 
-    queryBuilder.getMany
+    findMany
       .mockResolvedValueOnce([user])
       .mockResolvedValueOnce([]);
 

@@ -14,15 +14,17 @@ import { IDocument } from '@domain/storage/document/document.interface';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { Inject, Injectable } from '@nestjs/common';
 import { Readable } from 'stream';
-import { FindOneOptions, Repository } from 'typeorm';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { DeleteVisualInput } from './dto/visual.dto.delete';
 import { DEFAULT_VISUAL_CONSTRAINTS } from './visual.constraints';
 import { Visual } from './visual.entity';
 import { IVisual } from './visual.interface';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { eq } from 'drizzle-orm';
+import { visuals } from './visual.schema';
 
 @Injectable()
 export class VisualService {
@@ -30,8 +32,7 @@ export class VisualService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private documentService: DocumentService,
     private storageBucketService: StorageBucketService,
-    @InjectRepository(Visual)
-    private visualRepository: Repository<Visual>
+    @Inject(DRIZZLE) private readonly db: DrizzleDb
   ) {}
 
   public createVisual(
@@ -67,7 +68,15 @@ export class VisualService {
       visual.alternativeText = visualData.alternativeText;
     }
 
-    return await this.visualRepository.save(visual);
+    const [updated] = await this.db
+      .update(visuals)
+      .set({
+        uri: visual.uri,
+        alternativeText: visual.alternativeText,
+      })
+      .where(eq(visuals.id, visual.id))
+      .returning();
+    return updated as unknown as IVisual;
   }
 
   async deleteVisual(deleteData: DeleteVisualInput): Promise<IVisual> {
@@ -77,12 +86,8 @@ export class VisualService {
     if (visual.authorization)
       await this.authorizationPolicyService.delete(visual.authorization);
 
-    const { id } = visual;
-    const result = await this.visualRepository.remove(visual as Visual);
-    return {
-      ...result,
-      id,
-    };
+    await this.db.delete(visuals).where(eq(visuals.id, visual.id));
+    return visual;
   }
 
   async uploadImageOnVisual(
@@ -143,24 +148,57 @@ export class VisualService {
     }
   }
 
-  async getVisualOrFail(
-    visualID: string,
-    options?: FindOneOptions<Visual>
-  ): Promise<IVisual> {
-    const visual = await this.visualRepository.findOne({
-      where: { id: visualID },
-      ...options,
+  async getVisualOrFail(visualID: string): Promise<IVisual> {
+    const visual = await this.db.query.visuals.findFirst({
+      where: eq(visuals.id, visualID),
     });
     if (!visual)
       throw new EntityNotFoundException(
         `Not able to locate visual with the specified ID: ${visualID}`,
         LogContext.SPACES
       );
-    return visual;
+    return visual as unknown as IVisual;
   }
 
   async saveVisual(visual: IVisual): Promise<IVisual> {
-    return await this.visualRepository.save(visual);
+    if (visual.id) {
+      const [updated] = await this.db
+        .update(visuals)
+        .set({
+          name: visual.name,
+          uri: visual.uri,
+          minWidth: visual.minWidth,
+          maxWidth: visual.maxWidth,
+          minHeight: visual.minHeight,
+          maxHeight: visual.maxHeight,
+          aspectRatio: visual.aspectRatio.toString(),
+          allowedTypes: visual.allowedTypes,
+          alternativeText: visual.alternativeText,
+          sortOrder: visual.sortOrder,
+        })
+        .where(eq(visuals.id, visual.id))
+        .returning();
+      return updated as unknown as IVisual;
+    } else {
+      const [inserted] = await this.db
+        .insert(visuals)
+        .values({
+          id: visual.id,
+          name: visual.name,
+          uri: visual.uri,
+          minWidth: visual.minWidth,
+          maxWidth: visual.maxWidth,
+          minHeight: visual.minHeight,
+          maxHeight: visual.maxHeight,
+          aspectRatio: visual.aspectRatio.toString(),
+          allowedTypes: visual.allowedTypes,
+          alternativeText: visual.alternativeText,
+          sortOrder: visual.sortOrder,
+          authorizationId: visual.authorization?.id,
+        })
+        .returning();
+      return inserted as unknown as IVisual;
+    }
   }
 
   public async getImageDimensions(buffer: Buffer) {

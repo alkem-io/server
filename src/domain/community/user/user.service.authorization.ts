@@ -50,7 +50,7 @@ export class UserAuthorizationService {
   ): Promise<IAuthorizationPolicy[]> {
     const user = await this.userLookupService.getUserOrFail(userID, {
       loadEagerRelations: false,
-      relations: {
+      with: {
         authorization: true,
         agent: { authorization: true },
         profile: { authorization: true },

@@ -52,16 +52,10 @@ export class AdminSearchContributorsMutations {
       );
     profile = await this.profileService.getProfileOrFail(profile.id, {
       relations: {
-        storageBucket: {
-          documents: {
-            tagset: {
-              authorization: true,
-            },
-          },
-        },
+        storageBucket: true,
         authorization: true,
       },
-    });
+    } as any);
 
     if (!profile.storageBucket) {
       throw new RelationshipNotFoundException(

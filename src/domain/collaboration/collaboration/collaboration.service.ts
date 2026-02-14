@@ -13,6 +13,8 @@ import {
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
@@ -20,20 +22,20 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy/authori
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LicenseService } from '@domain/common/license/license.service';
 import { CreateTagsetTemplateInput } from '@domain/common/tagset-template';
-import { Space } from '@domain/space/space/space.entity';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
 import { TimelineService } from '@domain/timeline/timeline/timeline.service';
-import { Injectable } from '@nestjs/common';
-import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, FindOneOptions, Repository } from 'typeorm';
+import { Inject, Injectable } from '@nestjs/common';
+import { eq, sql } from 'drizzle-orm';
 import { ICalloutsSet } from '../callouts-set/callouts.set.interface';
 import { CalloutsSetService } from '../callouts-set/callouts.set.service';
 import { CreateInnovationFlowInput } from '../innovation-flow/dto/innovation.flow.dto.create';
 import { IInnovationFlow } from '../innovation-flow/innovation.flow.interface';
 import { InnovationFlowService } from '../innovation-flow/innovation.flow.service';
 import { sortBySortOrder } from '../innovation-flow-state/utils/sortBySortOrder';
+import { collaborations } from './collaboration.schema';
 import { CreateCollaborationInput } from './dto/collaboration.dto.create';
+import { spaces } from '@domain/space/space/space.schema';
 
 @Injectable()
 export class CollaborationService {
@@ -41,10 +43,7 @@ export class CollaborationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private calloutsSetService: CalloutsSetService,
     private innovationFlowService: InnovationFlowService,
-    @InjectRepository(Collaboration)
-    private collaborationRepository: Repository<Collaboration>,
-    @InjectEntityManager('default')
-    private entityManager: EntityManager,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     private timelineService: TimelineService,
     private licenseService: LicenseService
   ) {}
@@ -184,37 +183,135 @@ export class CollaborationService {
   }
 
   async save(collaboration: ICollaboration): Promise<ICollaboration> {
-    return await this.collaborationRepository.save(collaboration);
+    if (collaboration.id) {
+      const [updated] = await this.db
+        .update(collaborations)
+        .set({
+          isTemplate: collaboration.isTemplate,
+          calloutsSetId: collaboration.calloutsSet?.id,
+          timelineId: collaboration.timeline?.id,
+          innovationFlowId: collaboration.innovationFlow?.id,
+          licenseId: collaboration.license?.id,
+          authorizationId: collaboration.authorization?.id,
+        })
+        .where(eq(collaborations.id, collaboration.id))
+        .returning();
+      return updated as unknown as ICollaboration;
+    }
+    const [inserted] = await this.db
+      .insert(collaborations)
+      .values({
+        isTemplate: collaboration.isTemplate,
+        calloutsSetId: collaboration.calloutsSet?.id,
+        timelineId: collaboration.timeline?.id,
+        innovationFlowId: collaboration.innovationFlow?.id,
+        licenseId: collaboration.license?.id,
+        authorizationId: collaboration.authorization?.id,
+      })
+      .returning();
+    return inserted as unknown as ICollaboration;
   }
 
   async getCollaborationOrFail(
     collaborationID: string,
-    options?: FindOneOptions<Collaboration>
+    options?: {
+      relations?: {
+        calloutsSet?: boolean | {
+          tagsetTemplateSet?: boolean;
+          callouts?: boolean | {
+            classification?: boolean | {
+              tagsets?: boolean;
+            };
+          };
+        };
+        timeline?: boolean;
+        innovationFlow?: boolean | {
+          profile?: boolean;
+          states?: boolean;
+          flowStatesTagsetTemplate?: boolean;
+        };
+        authorization?: boolean;
+        license?: boolean | {
+          entitlements?: boolean;
+        };
+      };
+    }
   ): Promise<ICollaboration | never> {
-    const { where, ...rest } = options ?? {};
-    const collaboration = await this.collaborationRepository.findOne({
-      where: {
-        ...where,
-        id: collaborationID,
-      },
-      ...rest,
-    });
+    const withClause: any = {};
+    if (options?.relations) {
+      if (options.relations.calloutsSet) {
+        if (typeof options.relations.calloutsSet === 'object') {
+          const csNested: any = {};
+          if (options.relations.calloutsSet.tagsetTemplateSet) csNested.tagsetTemplateSet = true;
+          if (options.relations.calloutsSet.callouts) {
+            if (typeof options.relations.calloutsSet.callouts === 'object') {
+              const calloutNested: any = {};
+              if (options.relations.calloutsSet.callouts.classification) {
+                if (typeof options.relations.calloutsSet.callouts.classification === 'object') {
+                  calloutNested.classification = { with: { tagsets: !!options.relations.calloutsSet.callouts.classification.tagsets } };
+                } else {
+                  calloutNested.classification = true;
+                }
+              }
+              csNested.callouts = Object.keys(calloutNested).length > 0 ? { with: calloutNested } : true;
+            } else {
+              csNested.callouts = true;
+            }
+          }
+          withClause.calloutsSet = Object.keys(csNested).length > 0 ? { with: csNested } : true;
+        } else {
+          withClause.calloutsSet = true;
+        }
+      }
+      if (options.relations.timeline) withClause.timeline = true;
+      if (options.relations.innovationFlow) {
+        if (typeof options.relations.innovationFlow === 'object') {
+          const nested: any = {};
+          if (options.relations.innovationFlow.profile) nested.profile = true;
+          if (options.relations.innovationFlow.states) nested.states = true;
+          if (options.relations.innovationFlow.flowStatesTagsetTemplate) nested.flowStatesTagsetTemplate = true;
+          withClause.innovationFlow = Object.keys(nested).length > 0 ? { with: nested } : true;
+        } else {
+          withClause.innovationFlow = true;
+        }
+      }
+      if (options.relations.authorization) withClause.authorization = true;
+      if (options.relations.license) {
+        if (typeof options.relations.license === 'object') {
+          const nested: any = {};
+          if (options.relations.license.entitlements) nested.entitlements = true;
+          withClause.license = { with: nested };
+        } else {
+          withClause.license = true;
+        }
+      }
+    }
+
+    const queryOptions: any = {
+      where: eq(collaborations.id, collaborationID),
+    };
+    if (Object.keys(withClause).length > 0) {
+      queryOptions.with = withClause;
+    }
+
+    const collaboration =
+      await this.db.query.collaborations.findFirst(queryOptions);
     if (!collaboration)
       throw new EntityNotFoundException(
         `No Collaboration found with the given id: ${collaborationID}`,
         LogContext.COLLABORATION
       );
-    return collaboration;
+    return collaboration as unknown as ICollaboration;
   }
 
   public async getChildCollaborationsOrFail(
     collaborationID: string
   ): Promise<ICollaboration[] | never> {
-    const space = await this.entityManager.findOne(Space, {
-      where: { collaboration: { id: collaborationID } },
-      relations: {
+    const space = await this.db.query.spaces.findFirst({
+      where: eq(spaces.collaborationId, collaborationID),
+      with: {
         subspaces: {
-          collaboration: true,
+          with: { collaboration: true },
         },
       },
     });
@@ -227,17 +324,10 @@ export class CollaborationService {
 
     switch (space.level) {
       case SpaceLevel.L0: {
-        const spacesInAccount = await this.entityManager.find(Space, {
-          where: {
-            levelZeroSpaceID: space.id,
-          },
-          relations: {
-            collaboration: true,
-          },
-          select: {
-            collaboration: {
-              id: true,
-            },
+        const spacesInAccount = await this.db.query.spaces.findMany({
+          where: eq(spaces.levelZeroSpaceID, space.id),
+          with: {
+            collaboration: { columns: { id: true } },
           },
         });
         return [...spacesInAccount].map(x => {
@@ -247,11 +337,11 @@ export class CollaborationService {
               LogContext.COLLABORATION
             );
           }
-          return x.collaboration;
+          return x.collaboration as unknown as ICollaboration;
         });
       }
       case SpaceLevel.L1: {
-        const subsubspaces = space.subspaces;
+        const subsubspaces = (space as any).subspaces;
         if (!subsubspaces) {
           throw new EntityNotInitializedException(
             `Subsubspaces not found on subspace with level ${space.level}`,
@@ -259,14 +349,14 @@ export class CollaborationService {
           );
         }
 
-        return subsubspaces?.map(subsubspace => {
+        return subsubspaces?.map((subsubspace: any) => {
           if (!subsubspace.collaboration) {
             throw new EntityNotInitializedException(
               `Collaboration not found on subsubspace ${subsubspace.id}`,
               LogContext.COLLABORATION
             );
           }
-          return subsubspace.collaboration;
+          return subsubspace.collaboration as unknown as ICollaboration;
         });
       }
     }
@@ -315,9 +405,11 @@ export class CollaborationService {
     );
     await this.licenseService.removeLicenseOrFail(collaboration.license.id);
 
-    return await this.collaborationRepository.remove(
-      collaboration as Collaboration
-    );
+    const [deleted] = await this.db
+      .delete(collaborations)
+      .where(eq(collaborations.id, collaboration.id))
+      .returning();
+    return deleted as unknown as ICollaboration;
   }
 
   async getTimelineOrFail(collaborationID: string): Promise<ITimeline> {
@@ -354,38 +446,28 @@ export class CollaborationService {
   }
 
   public async getPostsCount(calloutsSet: ICalloutsSet): Promise<number> {
-    const [result]: {
-      postsCount: number;
-    }[] = await this.entityManager.connection.query(
-      `
+    const result = await this.db.execute<{ postsCount: string }>(sql`
       SELECT COUNT(*) as "postsCount" FROM "callouts_set"
       RIGHT JOIN "callout" ON "callout"."calloutsSetId" = "callouts_set"."id"
       RIGHT JOIN "callout_contribution" ON "callout_contribution"."calloutId" = "callout"."id"
-      WHERE "callouts_set"."id" = $1
-        AND "callout"."visibility" = $2
+      WHERE "callouts_set"."id" = ${calloutsSet.id}
+        AND "callout"."visibility" = ${CalloutVisibility.PUBLISHED}
         AND "callout_contribution"."postId" IS NOT NULL
-      `,
-      [calloutsSet.id, CalloutVisibility.PUBLISHED]
-    );
+    `);
 
-    return result.postsCount;
+    return Number(result[0]?.postsCount ?? 0);
   }
 
   public async getWhiteboardsCount(calloutsSet: ICalloutsSet): Promise<number> {
-    const [result]: {
-      whiteboardsCount: number;
-    }[] = await this.entityManager.connection.query(
-      `
+    const result = await this.db.execute<{ whiteboardsCount: string }>(sql`
       SELECT COUNT(*) as "whiteboardsCount"
       FROM "callouts_set" RIGHT JOIN "callout" ON "callout"."calloutsSetId" = "callouts_set"."id"
       RIGHT JOIN "callout_contribution" ON "callout_contribution"."calloutId" = "callout"."id"
-      WHERE "callouts_set"."id" = $1
-        AND "callout"."visibility" = $2
+      WHERE "callouts_set"."id" = ${calloutsSet.id}
+        AND "callout"."visibility" = ${CalloutVisibility.PUBLISHED}
         AND "callout_contribution"."whiteboardId" IS NOT NULL
-      `,
-      [calloutsSet.id, CalloutVisibility.PUBLISHED]
-    );
+    `);
 
-    return result.whiteboardsCount;
+    return Number(result[0]?.whiteboardsCount ?? 0);
   }
 }

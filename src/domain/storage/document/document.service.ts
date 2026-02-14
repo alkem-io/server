@@ -5,22 +5,24 @@ import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { EntityNotFoundException } from '@common/exceptions';
 import { DocumentDeleteFailedException } from '@common/exceptions/document/document.delete.failed.exception';
 import { DocumentSaveFailedException } from '@common/exceptions/document/document.save.failed.exception';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { InjectRepository } from '@nestjs/typeorm';
 import { StorageService } from '@services/adapters/storage';
 import { AlkemioConfig } from '@src/types';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Readable } from 'stream';
-import { FindOneOptions, Repository } from 'typeorm';
+import { eq, and } from 'drizzle-orm';
 import { Document } from './document.entity';
 import { IDocument } from './document.interface';
 import { CreateDocumentInput } from './dto/document.dto.create';
 import { DeleteDocumentInput } from './dto/document.dto.delete';
 import { UpdateDocumentInput } from './dto/document.dto.update';
+import { documents } from './document.schema';
 
 @Injectable()
 export class DocumentService {
@@ -30,8 +32,7 @@ export class DocumentService {
     private tagsetService: TagsetService,
     @Inject(STORAGE_SERVICE)
     private storageService: StorageService,
-    @InjectRepository(Document)
-    private documentRepository: Repository<Document>,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -48,7 +49,7 @@ export class DocumentService {
       AuthorizationPolicyType.DOCUMENT
     );
 
-    return await this.documentRepository.save(document);
+    return await this.save(document);
   }
 
   public async deleteDocument(
@@ -79,56 +80,93 @@ export class DocumentService {
       await this.tagsetService.removeTagset(document.tagset.id);
     }
 
-    const result = await this.documentRepository.remove(document as Document);
-    result.id = documentID;
-    return result;
+    await this.db.delete(documents).where(eq(documents.id, documentID));
+    document.id = documentID;
+    return document;
   }
 
   public async getDocumentOrFail(
     documentID: string,
-    options?: FindOneOptions<Document>
+    options?: {
+      relations?: { tagset?: boolean; storageBucket?: boolean };
+    }
   ): Promise<IDocument> {
-    const document = await this.documentRepository.findOne({
-      where: {
-        ...options?.where,
-        id: documentID,
-      },
-      ...options,
+    const withClause: Record<string, boolean> = {};
+    if (options?.relations?.tagset) withClause.tagset = true;
+    if (options?.relations?.storageBucket) withClause.storageBucket = true;
+
+    const document = await this.db.query.documents.findFirst({
+      where: eq(documents.id, documentID),
+      with: Object.keys(withClause).length > 0 ? withClause : undefined,
     });
     if (!document)
       throw new EntityNotFoundException(
         `Not able to locate document with the specified ID: ${documentID}`,
         LogContext.STORAGE_BUCKET
       );
-    return document;
+    return document as unknown as IDocument;
   }
 
   public async getDocumentByExternalIdOrFail(
     externalID: string,
-    { where, ...rest }: FindOneOptions<Document>
+    options?: {
+      storageBucketId?: string;
+    }
   ) {
-    const document = await this.documentRepository.findOne({
-      where: {
-        ...where,
-        externalID,
-      },
-      ...rest,
+    const conditions = [eq(documents.externalID, externalID)];
+    if (options?.storageBucketId) {
+      conditions.push(eq(documents.storageBucketId, options.storageBucketId));
+    }
+    const document = await this.db.query.documents.findFirst({
+      where: and(...conditions),
     });
     if (!document)
       throw new EntityNotFoundException(
         `Not able to locate document with the specified external id: ${externalID}`,
         LogContext.STORAGE_BUCKET
       );
-    return document;
+    return document as unknown as IDocument;
   }
 
   public async save(document: IDocument): Promise<IDocument> {
-    return await this.documentRepository.save(document);
+    if (document.id) {
+      const [updated] = await this.db
+        .update(documents)
+        .set({
+          displayName: document.displayName,
+          mimeType: document.mimeType,
+          size: document.size,
+          externalID: document.externalID,
+          createdBy: document.createdBy,
+          temporaryLocation: document.temporaryLocation,
+          tagsetId: document.tagset?.id,
+          storageBucketId: document.storageBucket?.id,
+          authorizationId: document.authorization?.id,
+        })
+        .where(eq(documents.id, document.id))
+        .returning();
+      return updated as unknown as IDocument;
+    }
+    const [inserted] = await this.db
+      .insert(documents)
+      .values({
+        displayName: document.displayName,
+        mimeType: document.mimeType,
+        size: document.size,
+        externalID: document.externalID,
+        createdBy: document.createdBy,
+        temporaryLocation: document.temporaryLocation,
+        tagsetId: document.tagset?.id,
+        storageBucketId: document.storageBucket?.id,
+        authorizationId: document.authorization?.id,
+      })
+      .returning();
+    return inserted as unknown as IDocument;
   }
 
   public async getUploadedDate(documentID: string): Promise<Date> {
-    const document = await this.documentRepository.findOne({
-      where: { id: documentID },
+    const document = await this.db.query.documents.findFirst({
+      where: eq(documents.id, documentID),
     });
     if (!document)
       throw new EntityNotFoundException(
@@ -167,13 +205,13 @@ export class DocumentService {
       );
     }
 
-    await this.documentRepository.save(document);
+    await this.save(document);
 
     return document;
   }
 
   public async saveDocument(document: IDocument): Promise<IDocument> {
-    return await this.documentRepository.save(document);
+    return await this.save(document);
   }
 
   public getPubliclyAccessibleURL(document: IDocument): string {
@@ -183,7 +221,9 @@ export class DocumentService {
 
   public async getDocumentFromURL(
     url: string,
-    options?: FindOneOptions<Document>
+    options?: {
+      relations?: { tagset?: boolean; storageBucket?: boolean };
+    }
   ): Promise<IDocument | undefined> {
     const documentsBaseUrlPath = this.getDocumentsBaseUrlPath();
 

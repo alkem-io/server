@@ -1,12 +1,10 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
-import { Application } from '@domain/access/application';
 import { ApplicationService } from '@domain/access/application/application.service';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
 import { NVPModule } from '@domain/common/nvp/nvp.module';
 import { UserModule } from '@domain/community/user/user.module';
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { RoleSetCacheModule } from '../role-set/role.set.service.cache.module';
 import { ApplicationResolverFields } from './application.resolver.fields';
 import { ApplicationLifecycleResolverFields } from './application.resolver.fields.lifecycle';
@@ -21,7 +19,6 @@ import { ApplicationLifecycleService } from './application.service.lifecycle';
     NVPModule,
     LifecycleModule,
     UserModule,
-    TypeOrmModule.forFeature([Application]),
     RoleSetCacheModule,
   ],
   providers: [

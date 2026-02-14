@@ -1,20 +1,21 @@
 import { LogContext } from '@common/enums';
 import { EntityNotInitializedException } from '@common/exceptions';
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { Inject, Injectable } from '@nestjs/common';
 import { GeoapifyService } from '@services/external/geoapify/geoapify.service';
-import { Repository } from 'typeorm';
 import { CreateLocationInput, UpdateLocationInput } from './dto';
 import { IGeoLocation } from './geolocation.interface';
 import { Location } from './location.entity';
 import { ILocation } from './location.interface';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { eq } from 'drizzle-orm';
+import { locations } from './location.schema';
 
 @Injectable()
 export class LocationService {
   constructor(
     private readonly geoapifyService: GeoapifyService,
-    @InjectRepository(Location)
-    private locationRepository: Repository<Location>
+    @Inject(DRIZZLE) private readonly db: DrizzleDb
   ) {}
 
   public async createLocation(
@@ -28,11 +29,42 @@ export class LocationService {
     return location;
   }
   async removeLocation(location: ILocation): Promise<ILocation> {
-    return await this.locationRepository.remove(location as Location);
+    await this.db.delete(locations).where(eq(locations.id, location.id));
+    return location;
   }
 
   async save(location: ILocation): Promise<ILocation> {
-    return await this.locationRepository.save(location);
+    if (location.id) {
+      const [updated] = await this.db
+        .update(locations)
+        .set({
+          city: location.city,
+          country: location.country,
+          addressLine1: location.addressLine1,
+          addressLine2: location.addressLine2,
+          stateOrProvince: location.stateOrProvince,
+          postalCode: location.postalCode,
+          geoLocation: location.geoLocation,
+        })
+        .where(eq(locations.id, location.id))
+        .returning();
+      return updated as unknown as ILocation;
+    } else {
+      const [inserted] = await this.db
+        .insert(locations)
+        .values({
+          id: location.id,
+          city: location.city,
+          country: location.country,
+          addressLine1: location.addressLine1,
+          addressLine2: location.addressLine2,
+          stateOrProvince: location.stateOrProvince,
+          postalCode: location.postalCode,
+          geoLocation: location.geoLocation,
+        })
+        .returning();
+      return inserted as unknown as ILocation;
+    }
   }
 
   /** Update the location, including the GeoLocation if needed. */

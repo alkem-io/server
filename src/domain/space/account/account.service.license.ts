@@ -35,13 +35,13 @@ export class AccountLicenseService {
 
   async applyLicensePolicy(accountID: string): Promise<ILicense[]> {
     const account = await this.accountService.getAccountOrFail(accountID, {
-      relations: {
+      with: {
         agent: {
-          credentials: true,
+          with: { credentials: true },
         },
         spaces: true,
         license: {
-          entitlements: true,
+          with: { entitlements: true },
         },
       },
     });
@@ -114,11 +114,11 @@ export class AccountLicenseService {
 
     const { user, organization } = accountDetails;
     const name =
-      user?.name ?? (organization?.legalName || organization?.displayName);
+      (user?.name ?? (organization?.legalName || organization?.displayName)) as string | undefined;
     const mainEmail =
-      user?.email ??
+      (user?.email ??
       (organization?.email ||
-        `dummy-${organization?.nameID}@${organization?.nameID}.com`);
+        `dummy-${organization?.nameID}@${organization?.nameID}.com`)) as string;
 
     const { id: wingbackCustomerID } =
       await this.licensingWingbackSubscriptionService.createCustomer({

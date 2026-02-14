@@ -2,11 +2,11 @@ import { LogContext } from '@common/enums';
 import { ValidationException } from '@common/exceptions';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { InjectRepository } from '@nestjs/typeorm';
-import { InAppNotification } from '@platform/in-app-notification/in.app.notification.entity';
 import { AlkemioConfig } from '@src/types/alkemio.config';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LessThan, Repository } from 'typeorm';
+import { DRIZZLE, type DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { inAppNotifications } from '@platform/in-app-notification/in.app.notification.schema';
+import { lt, eq, sql, inArray } from 'drizzle-orm';
 import { PruneInAppNotificationAdminResult } from './dto/in.app.notification.admin.dto.prune.result';
 
 @Injectable()
@@ -15,8 +15,8 @@ export class InAppNotificationAdminService {
     private configService: ConfigService<AlkemioConfig, true>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    @InjectRepository(InAppNotification)
-    private readonly inAppNotificationRepo: Repository<InAppNotification>
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb
   ) {}
 
   async pruneInAppNotifications(): Promise<PruneInAppNotificationAdminResult> {
@@ -56,11 +56,11 @@ export class InAppNotificationAdminService {
 
     try {
       // Remove all notifications older than the cutoff date
-      const deleteResult = await this.inAppNotificationRepo.delete({
-        triggeredAt: LessThan(cutoffDate),
-      });
+      const deleteResult = await this.db
+        .delete(inAppNotifications)
+        .where(lt(inAppNotifications.triggeredAt, cutoffDate));
 
-      const removedCountOutsideRetentionPeriod = deleteResult.affected || 0;
+      const removedCountOutsideRetentionPeriod = Array.from(deleteResult).length;
 
       this.logger.verbose?.(
         `Successfully pruned ${removedCountOutsideRetentionPeriod} in-app notifications older than ${cutoffDate.toISOString()}`
@@ -100,39 +100,38 @@ export class InAppNotificationAdminService {
 
     try {
       // Get all users who have more than the maximum allowed notifications
-      const usersWithExcessNotifications = await this.inAppNotificationRepo
-        .createQueryBuilder('notification')
-        .select('notification.receiverID', 'receiverID')
-        .addSelect('COUNT(*)', 'count')
-        .groupBy('notification.receiverID')
-        .having('COUNT(*) > :maxNotifications', {
-          maxNotifications: maxPerUser,
+      const usersWithExcessNotifications = await this.db
+        .select({
+          receiverID: inAppNotifications.receiverID,
+          count: sql<number>`COUNT(*)`,
         })
-        .getRawMany();
+        .from(inAppNotifications)
+        .groupBy(inAppNotifications.receiverID)
+        .having(sql`COUNT(*) > ${maxPerUser}`);
 
       let totalRemovedCount = 0;
 
       // For each user with excess notifications, remove the oldest ones
       for (const user of usersWithExcessNotifications) {
         const receiverID = user.receiverID;
-        const excessCount = parseInt(user.count) - maxPerUser;
+        const excessCount = Number(user.count) - maxPerUser;
 
         if (excessCount > 0) {
           // Get the IDs of the oldest notifications for this user
-          const oldestNotifications = await this.inAppNotificationRepo
-            .createQueryBuilder('notification')
-            .select('notification.id')
-            .where('notification.receiverID = :receiverID', { receiverID })
-            .orderBy('notification.triggeredAt', 'ASC')
-            .limit(excessCount)
-            .getMany();
+          const oldestNotifications = await this.db.query.inAppNotifications.findMany({
+            columns: { id: true },
+            where: eq(inAppNotifications.receiverID, receiverID),
+            orderBy: [inAppNotifications.triggeredAt],
+            limit: excessCount,
+          });
 
           if (oldestNotifications.length > 0) {
             const idsToDelete = oldestNotifications.map(n => n.id);
 
-            const deleteResult =
-              await this.inAppNotificationRepo.delete(idsToDelete);
-            const removedForUser = deleteResult.affected || 0;
+            const deleteResult = await this.db
+              .delete(inAppNotifications)
+              .where(inArray(inAppNotifications.id, idsToDelete));
+            const removedForUser = Array.from(deleteResult).length;
             totalRemovedCount += removedForUser;
 
             this.logger.verbose?.(

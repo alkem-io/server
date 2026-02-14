@@ -1,10 +1,11 @@
 import { LogContext } from '@common/enums';
 import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
 import { EntityNotFoundException } from '@common/exceptions';
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Platform } from '@platform/platform/platform.entity';
-import { Repository } from 'typeorm';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { Inject, Injectable } from '@nestjs/common';
+import { platforms } from '@platform/platform/platform.schema';
+import { eq } from 'drizzle-orm';
 
 // Internal storage type - Record for JSON storage
 type WellKnownVCMappingsRecord = Record<
@@ -15,13 +16,13 @@ type WellKnownVCMappingsRecord = Record<
 @Injectable()
 export class PlatformWellKnownVirtualContributorsService {
   constructor(
-    @InjectRepository(Platform)
-    private platformRepository: Repository<Platform>
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb
   ) {}
 
   async getMappings(): Promise<WellKnownVCMappingsRecord> {
-    const platform = await this.platformRepository.findOne({
-      where: {},
+    const platform = await this.db.query.platforms.findFirst({
+      where: undefined,
     });
 
     if (!platform) {
@@ -38,8 +39,8 @@ export class PlatformWellKnownVirtualContributorsService {
     wellKnown: VirtualContributorWellKnown,
     virtualContributorID: string
   ): Promise<WellKnownVCMappingsRecord> {
-    const platform = await this.platformRepository.findOne({
-      where: {},
+    const platform = await this.db.query.platforms.findFirst({
+      where: undefined,
     });
 
     if (!platform) {
@@ -56,9 +57,10 @@ export class PlatformWellKnownVirtualContributorsService {
     // Set the mapping
     mappings[wellKnown] = virtualContributorID;
 
-    platform.wellKnownVirtualContributors = mappings as any;
-
-    await this.platformRepository.save(platform);
+    await this.db
+      .update(platforms)
+      .set({ wellKnownVirtualContributors: mappings as any })
+      .where(eq(platforms.id, platform.id));
 
     return mappings;
   }

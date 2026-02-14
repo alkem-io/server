@@ -41,7 +41,7 @@ export class InputCreatorResolverFields {
   ): Promise<CreateCommunityGuidelinesInput> {
     const guidelines =
       await this.communityGuidelinesService.getCommunityGuidelinesOrFail(id, {
-        relations: {
+        with: {
           authorization: true,
           profile: {
             references: true,
@@ -80,7 +80,7 @@ export class InputCreatorResolverFields {
             tagsets: true,
           },
         },
-      });
+      } as any);
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       innovationFlow.authorization,

@@ -12,20 +12,21 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { CreateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.create';
 import { UpdateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.update';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { eq } from 'drizzle-orm';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { ITagsetTemplate } from '../tagset-template';
 import { Tagset } from './tagset.entity';
 import { ITagset } from './tagset.interface';
+import { tagsets as tagsetsTable } from './tagset.schema';
 
 @Injectable()
 export class TagsetService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    @InjectRepository(Tagset)
-    private tagsetRepository: Repository<Tagset>,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -41,18 +42,20 @@ export class TagsetService {
 
   async getTagsetOrFail(
     tagsetID: string,
-    options?: FindOneOptions<Tagset>
+    options?: { relations?: { tagsetTemplate?: boolean } }
   ): Promise<ITagset> {
-    const tagset = await this.tagsetRepository.findOne({
-      where: { id: tagsetID },
-      ...options,
+    const tagset = await this.db.query.tagsets.findFirst({
+      where: eq(tagsetsTable.id, tagsetID),
+      with: options?.relations?.tagsetTemplate
+        ? { tagsetTemplate: true }
+        : undefined,
     });
     if (!tagset)
       throw new EntityNotFoundException(
         `Tagset with id(${tagsetID}) not found!`,
         LogContext.COMMUNITY
       );
-    return tagset as ITagset;
+    return tagset as unknown as ITagset;
   }
 
   async removeTagset(tagsetID: string): Promise<ITagset> {
@@ -60,9 +63,8 @@ export class TagsetService {
     if (tagset.authorization)
       await this.authorizationPolicyService.delete(tagset.authorization);
 
-    const result = await this.tagsetRepository.remove(tagset as Tagset);
-    result.id = tagsetID;
-    return result;
+    await this.db.delete(tagsetsTable).where(eq(tagsetsTable.id, tagsetID));
+    return tagset;
   }
 
   async updateTagset(tagsetData: UpdateTagsetInput): Promise<ITagset> {
@@ -96,7 +98,15 @@ export class TagsetService {
     }
 
     this.updateTagsetValues(tagset, tagsetData);
-    return await this.tagsetRepository.save(tagset);
+    const [updated] = await this.db
+      .update(tagsetsTable)
+      .set({
+        name: tagset.name,
+        tags: tagset.tags,
+      })
+      .where(eq(tagsetsTable.id, tagset.id))
+      .returning();
+    return updated as unknown as ITagset;
   }
 
   validateForAllowedValues(tags: string[], allowedValues: string[]) {
@@ -228,7 +238,10 @@ export class TagsetService {
         continue;
       }
       tagset.tags = [newDefaultValue];
-      await this.tagsetRepository.save(tagset);
+      await this.db
+        .update(tagsetsTable)
+        .set({ tags: tagset.tags })
+        .where(eq(tagsetsTable.id, tagset.id));
     }
   }
 
@@ -281,7 +294,30 @@ export class TagsetService {
   }
 
   async save(tagset: ITagset): Promise<ITagset> {
-    return await this.tagsetRepository.save(tagset);
+    if (tagset.id) {
+      const [updated] = await this.db
+        .update(tagsetsTable)
+        .set({
+          name: tagset.name,
+          tags: tagset.tags,
+          type: tagset.type,
+        })
+        .where(eq(tagsetsTable.id, tagset.id))
+        .returning();
+      return updated as unknown as ITagset;
+    } else {
+      const [inserted] = await this.db
+        .insert(tagsetsTable)
+        .values({
+          name: tagset.name,
+          tags: tagset.tags,
+          type: tagset.type,
+          authorizationId: tagset.authorization?.id,
+          tagsetTemplateId: tagset.tagsetTemplate?.id,
+        })
+        .returning();
+      return inserted as unknown as ITagset;
+    }
   }
 
   // Note: provided data has priority when it comes to tags

@@ -2,12 +2,13 @@ import { LogContext } from '@common/enums/logging.context';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { InjectEntityManager } from '@nestjs/typeorm';
 import { AlkemioConfig } from '@src/types';
 import { Cache } from 'cache-manager';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-
-import { EntityManager } from 'typeorm';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { eq } from 'drizzle-orm';
+import { users as userSchema } from '@domain/community/user/user.schema';
 import { IAgent, ICredential } from '../../domain/agent';
 import { AgentInfo } from './agent.info';
 @Injectable()
@@ -20,8 +21,8 @@ export class AgentInfoCacheService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private configService: ConfigService<AlkemioConfig, true>,
-    @InjectEntityManager('default')
-    private entityManager: EntityManager
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb
   ) {
     this.cache_ttl = this.configService.get(
       'identity.authentication.cache_ttl',
@@ -112,17 +113,15 @@ export class AgentInfoCacheService {
   private async getAuthenticationIdForAgent(
     agentId: string
   ): Promise<string | undefined> {
-    const users: { authenticationID: string | null }[] =
-      await this.entityManager.connection.query(
-        `SELECT "u"."authenticationID" FROM "agent" as "a"
-        RIGHT JOIN "user" as "u"
-        ON "u"."agentId" = "a"."id"
-        WHERE "a"."id" = $1`,
-        [agentId]
-      );
+    const result = await this.db.query.users.findFirst({
+      where: eq(userSchema.agentId, agentId),
+      columns: {
+        authenticationID: true,
+      },
+    });
 
-    if (!users[0] || !users[0].authenticationID) return undefined;
+    if (!result || !result.authenticationID) return undefined;
 
-    return users[0].authenticationID;
+    return result.authenticationID;
   }
 }

@@ -1,13 +1,14 @@
 import { LogContext } from '@common/enums';
 import { UserAlreadyRegisteredException } from '@common/exceptions';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { User } from '@domain/community/user/user.entity';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Repository } from 'typeorm';
+import { eq } from 'drizzle-orm';
+import { users } from '@domain/community/user/user.schema';
 import {
   UserAuthenticationLinkConflictMode,
   UserAuthenticationLinkMatch,
@@ -20,8 +21,8 @@ import {
 export class UserAuthenticationLinkService {
   constructor(
     private readonly userLookupService: UserLookupService,
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb,
     private readonly kratosService: KratosService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
@@ -44,11 +45,11 @@ export class UserAuthenticationLinkService {
   ): Promise<UserAuthenticationLinkResult | null> {
     const authId = agentInfo.authenticationID?.trim();
     const email = agentInfo.email?.trim().toLowerCase();
-    const relations = options?.relations;
+    const withClause = options?.with;
     const conflictMode: UserAuthenticationLinkConflictMode =
       options?.conflictMode ?? 'error';
     const lookupByAuthenticationId = options?.lookupByAuthenticationId ?? true;
-    const lookupOptions = relations ? { relations } : undefined;
+    const lookupOptions = withClause ? { with: withClause } : undefined;
 
     if (!email) {
       return null;
@@ -154,7 +155,11 @@ export class UserAuthenticationLinkService {
     }
 
     existingByEmail.authenticationID = authId;
-    const updatedUser = await this.userRepository.save(existingByEmail as User);
+    await this.db
+      .update(users)
+      .set({ authenticationID: authId })
+      .where(eq(users.id, existingByEmail.id));
+    const updatedUser = existingByEmail;
     this.logger.log?.(
       `Linked authentication ID ${authId} to user ${updatedUser.id}`,
       LogContext.AUTH

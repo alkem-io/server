@@ -20,11 +20,13 @@ import { UserLookupService } from '@domain/community/user-lookup/user.lookup.ser
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston/dist/winston.constants';
-import { FindOneOptions, Repository } from 'typeorm';
-import { ConversationMembership } from '../conversation-membership/conversation.membership.entity';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { eq, and, isNull, inArray } from 'drizzle-orm';
+import { conversations } from './conversation.schema';
+import { conversationMemberships } from '../conversation-membership/conversation.membership.schema';
 import { IConversationMembership } from '../conversation-membership/conversation.membership.interface';
 import { Conversation } from './conversation.entity';
 import { IConversation } from './conversation.interface';
@@ -38,10 +40,7 @@ export class ConversationService {
     private userLookupService: UserLookupService,
     private virtualContributorLookupService: VirtualContributorLookupService,
     private platformWellKnownVirtualContributorsService: PlatformWellKnownVirtualContributorsService,
-    @InjectRepository(Conversation)
-    private conversationRepository: Repository<Conversation>,
-    @InjectRepository(ConversationMembership)
-    private conversationMembershipRepository: Repository<ConversationMembership>,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -91,22 +90,18 @@ export class ConversationService {
     }
 
     // Save conversation to get ID
-    const savedConversation = await this.conversationRepository.save(
-      conversation as Conversation
-    );
+    const savedConversation = await this.save(conversation);
 
     // Create membership records for both agents
-    const membership1 = this.conversationMembershipRepository.create({
-      conversationId: savedConversation.id,
-      agentId: currentUserAgentId,
-    });
-    const membership2 = this.conversationMembershipRepository.create({
-      conversationId: savedConversation.id,
-      agentId: otherAgentId,
-    });
-    await this.conversationMembershipRepository.save([
-      membership1,
-      membership2,
+    await this.db.insert(conversationMemberships).values([
+      {
+        conversationId: savedConversation.id,
+        agentId: currentUserAgentId,
+      },
+      {
+        conversationId: savedConversation.id,
+        agentId: otherAgentId,
+      },
     ]);
 
     this.logger.verbose?.(
@@ -138,11 +133,15 @@ export class ConversationService {
 
   public async getConversationOrFail(
     conversationID: string,
-    options?: FindOneOptions<Conversation>
+    options?: { relations?: { room?: boolean; messaging?: boolean; authorization?: boolean } }
   ): Promise<IConversation | never> {
-    const conversation = await this.conversationRepository.findOne({
-      where: { id: conversationID },
-      ...options,
+    const conversation = await this.db.query.conversations.findFirst({
+      where: eq(conversations.id, conversationID),
+      with: {
+        room: options?.relations?.room || undefined,
+        messaging: options?.relations?.messaging || undefined,
+        authorization: options?.relations?.authorization || undefined,
+      },
     });
 
     if (!conversation)
@@ -151,11 +150,30 @@ export class ConversationService {
         LogContext.COMMUNICATION_CONVERSATION,
         { conversationID, options }
       );
-    return conversation;
+    return conversation as unknown as IConversation;
   }
 
   async save(conversation: IConversation): Promise<IConversation> {
-    return await this.conversationRepository.save(conversation);
+    if (conversation.id) {
+      const [result] = await this.db
+        .update(conversations)
+        .set({
+          messagingId: conversation.messaging?.id,
+          roomId: conversation.room?.id,
+        })
+        .where(eq(conversations.id, conversation.id))
+        .returning();
+      return result as unknown as IConversation;
+    } else {
+      const [result] = await this.db
+        .insert(conversations)
+        .values({
+          messagingId: conversation.messaging?.id,
+          roomId: conversation.room?.id,
+        })
+        .returning();
+      return result as unknown as IConversation;
+    }
   }
 
   public async deleteConversation(
@@ -196,12 +214,11 @@ export class ConversationService {
 
     await this.authorizationPolicyService.delete(conversation.authorization);
 
-    const result = await this.conversationRepository.remove(
-      conversation as Conversation
-    );
-    result.id = conversationID;
+    await this.db
+      .delete(conversations)
+      .where(eq(conversations.id, conversationID));
 
-    return result;
+    return { ...conversation, id: conversationID };
   }
 
   /**
@@ -329,19 +346,22 @@ export class ConversationService {
   async getConversationMembers(
     conversationId: string
   ): Promise<IConversationMembership[]> {
-    return this.conversationMembershipRepository.find({
-      loadEagerRelations: false,
-      where: { conversationId },
-      relations: { agent: true },
-      select: {
-        conversationId: true,
-        agentId: true,
+    const results = await this.db.query.conversationMemberships.findMany({
+      where: eq(conversationMemberships.conversationId, conversationId),
+      with: {
         agent: {
-          id: true,
-          type: true,
+          columns: {
+            id: true,
+            type: true,
+          },
         },
       },
+      columns: {
+        conversationId: true,
+        agentId: true,
+      },
     });
+    return results as unknown as IConversationMembership[];
   }
 
   /**
@@ -354,10 +374,13 @@ export class ConversationService {
     conversationId: string,
     agentId: string
   ): Promise<boolean> {
-    const count = await this.conversationMembershipRepository.count({
-      where: { conversationId, agentId },
+    const result = await this.db.query.conversationMemberships.findFirst({
+      where: and(
+        eq(conversationMemberships.conversationId, conversationId),
+        eq(conversationMemberships.agentId, agentId)
+      ),
     });
-    return count > 0;
+    return !!result;
   }
 
   /**
@@ -373,20 +396,34 @@ export class ConversationService {
     agentId1: string,
     agentId2: string
   ): Promise<IConversation | null> {
-    const result = await this.conversationMembershipRepository
-      .createQueryBuilder('m1')
-      .innerJoin(
-        'conversation_membership',
-        'm2',
-        'm1.conversationId = m2.conversationId AND m1.agentId != m2.agentId'
-      )
-      .innerJoinAndSelect('m1.conversation', 'conversation')
-      .leftJoinAndSelect('conversation.authorization', 'authorization')
-      .where('m1.agentId = :agentId1', { agentId1 })
-      .andWhere('m2.agentId = :agentId2', { agentId2 })
-      .getOne();
+    // Find conversation IDs where agentId1 is a member
+    const memberships1 = await this.db.query.conversationMemberships.findMany({
+      where: eq(conversationMemberships.agentId, agentId1),
+      columns: { conversationId: true },
+    });
 
-    return result?.conversation || null;
+    if (memberships1.length === 0) return null;
+
+    const conversationIds = memberships1.map(m => m.conversationId);
+
+    // Find the conversation where agentId2 is also a member
+    const membership2 = await this.db.query.conversationMemberships.findFirst({
+      where: and(
+        eq(conversationMemberships.agentId, agentId2),
+        inArray(conversationMemberships.conversationId, conversationIds)
+      ),
+      with: {
+        conversation: {
+          with: {
+            authorization: true,
+          },
+        },
+      },
+    });
+
+    return membership2?.conversation
+      ? (membership2.conversation as unknown as IConversation)
+      : null;
   }
 
   /**
@@ -411,7 +448,7 @@ export class ConversationService {
 
     // Get user's agent ID
     const user = await this.userLookupService.getUserOrFail(userID, {
-      relations: { agent: true },
+      with: { agent: true },
     });
     const userAgentId = user.agent.id;
 
@@ -419,7 +456,7 @@ export class ConversationService {
     const vc =
       await this.virtualContributorLookupService.getVirtualContributorOrFail(
         vcId,
-        { relations: { agent: true } }
+        { with: { agent: true } }
       );
     const vcAgentId = vc.agent.id;
 
@@ -486,7 +523,7 @@ export class ConversationService {
     // Resolve VC from agent, eagerly loading agent relation
     return await this.virtualContributorLookupService.getVirtualContributorByAgentId(
       vcMember.agentId,
-      { relations: { agent: true } }
+      { with: { agent: true } }
     );
   }
 
@@ -515,7 +552,7 @@ export class ConversationService {
     }
 
     return await this.userLookupService.getUserByAgentId(userMember.agentId, {
-      relations: { agent: true },
+      with: { agent: true },
     });
   }
 
@@ -537,14 +574,14 @@ export class ConversationService {
       if (member.agent.type === AgentType.USER) {
         const user = await this.userLookupService.getUserByAgentId(
           member.agentId,
-          { relations: { agent: true } }
+          { with: { agent: true } }
         );
         if (user) users.push(user);
       } else if (member.agent.type === AgentType.VIRTUAL_CONTRIBUTOR) {
         const vc =
           await this.virtualContributorLookupService.getVirtualContributorByAgentId(
             member.agentId,
-            { relations: { agent: true } }
+            { with: { agent: true } }
           );
         if (vc) virtualContributors.push(vc);
       }
@@ -562,13 +599,14 @@ export class ConversationService {
   async findConversationByRoomId(
     roomId: string
   ): Promise<IConversation | null> {
-    return await this.conversationRepository.findOne({
-      where: { room: { id: roomId } },
-      relations: {
+    const conversation = await this.db.query.conversations.findFirst({
+      where: eq(conversations.roomId, roomId),
+      with: {
         room: true,
         authorization: true,
       },
     });
+    return conversation ? (conversation as unknown as IConversation) : null;
   }
 
   /**
@@ -581,9 +619,9 @@ export class ConversationService {
   async getConversationMemberAgentIds(
     conversationId: string
   ): Promise<string[]> {
-    const memberships = await this.conversationMembershipRepository.find({
-      where: { conversationId },
-      select: ['agentId'],
+    const memberships = await this.db.query.conversationMemberships.findMany({
+      where: eq(conversationMemberships.conversationId, conversationId),
+      columns: { agentId: true },
     });
     return memberships.map(m => m.agentId);
   }
@@ -594,10 +632,12 @@ export class ConversationService {
    * @returns Array of conversations without rooms
    */
   async findConversationsWithoutRooms(): Promise<IConversation[]> {
-    return await this.conversationRepository
-      .createQueryBuilder('conversation')
-      .leftJoinAndSelect('conversation.room', 'room')
-      .where('conversation.roomId IS NULL')
-      .getMany();
+    const results = await this.db.query.conversations.findMany({
+      where: isNull(conversations.roomId),
+      with: {
+        room: true,
+      },
+    });
+    return results as unknown as IConversation[];
   }
 }

@@ -11,13 +11,11 @@ import { OrganizationLookupModule } from '@domain/community/organization-lookup/
 import { UserModule } from '@domain/community/user/user.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { AccountModule } from '@domain/space/account/account.module';
-import { Space } from '@domain/space/space/space.entity';
 import { SpaceModule } from '@domain/space/space/space.module';
 import { TemplateDefaultModule } from '@domain/template/template-default/template.default.module';
 import { TemplatesManagerModule } from '@domain/template/templates-manager/templates.manager.module';
 import { TemplatesSetModule } from '@domain/template/templates-set/templates.set.module';
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { LicensePlanModule } from '@platform/licensing/credential-based/license-plan/license.plan.module';
 import { LicensingFrameworkModule } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.module';
@@ -50,7 +48,6 @@ import { BootstrapService } from './bootstrap.service';
     PlatformModule,
     PlatformAuthorizationPolicyModule,
     CommunicationModule,
-    TypeOrmModule.forFeature([Space]),
     SearchIngestModule,
     TemplatesSetModule,
     TemplatesManagerModule,

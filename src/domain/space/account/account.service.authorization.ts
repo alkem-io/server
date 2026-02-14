@@ -58,10 +58,10 @@ export class AccountAuthorizationService {
     const account = await this.accountService.getAccountOrFail(
       accountInput.id,
       {
-        relations: {
+        with: {
           agent: true,
           spaces: {
-            templatesManager: true,
+            with: { templatesManager: true },
           },
           virtualContributors: true,
           innovationPacks: true,

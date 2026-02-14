@@ -29,7 +29,7 @@ export class InnovationPackAuthorizationService {
       await this.innovationPackService.getInnovationPackOrFail(
         innovationPackInput.id,
         {
-          relations: {
+          with: {
             profile: true,
             templatesSet: true,
           },

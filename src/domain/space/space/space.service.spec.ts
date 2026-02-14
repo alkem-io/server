@@ -16,15 +16,14 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { Profile } from '@domain/common/profile';
 import { TagsetTemplate } from '@domain/common/tagset-template';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { SpaceFilterService } from '@services/infrastructure/space-filter/space.filter.service';
 import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator/url.generator.service.cache';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
 import { vi } from 'vitest';
 import { Account } from '../account/account.entity';
 import { DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN } from '../account/constants';
@@ -35,7 +34,7 @@ import { SpaceService } from './space.service';
 
 describe('SpaceService', () => {
   let service: SpaceService;
-  let spaceRepository: Repository<Space>;
+  let db: any;
   let urlGeneratorCacheService: UrlGeneratorCacheService;
 
   beforeEach(async () => {
@@ -44,14 +43,14 @@ describe('SpaceService', () => {
         SpaceService,
         MockCacheManager,
         MockWinstonProvider,
-        repositoryProviderMockFactory(Space),
+        mockDrizzleProvider,
       ],
     })
       .useMocker(defaultMockerFactory)
       .compile();
 
     service = module.get<SpaceService>(SpaceService);
-    spaceRepository = module.get<Repository<Space>>(getRepositoryToken(Space));
+    db = module.get(DRIZZLE);
     urlGeneratorCacheService = module.get<UrlGeneratorCacheService>(
       UrlGeneratorCacheService
     );
@@ -105,20 +104,9 @@ describe('SpaceService', () => {
       };
       service['namingService'] = mockNamingService as any;
 
-      // Mock the repository to return subspaces
-      vi.spyOn(spaceRepository, 'findOne').mockImplementation(options => {
-        const { where } = options ?? {};
-        if (!Array.isArray(where) && where?.id) {
-          const result = [mockSpace, mockSubspace].find(
-            space => space.id === where.id
-          );
-          if (result) {
-            return Promise.resolve(result);
-          }
-        }
-        return Promise.resolve(null);
-      });
-      vi.spyOn(spaceRepository, 'find').mockResolvedValue([mockSubspace]);
+      // Mock the db to return subspaces
+      db.query.spaces.findFirst.mockResolvedValue(mockSpace);
+      db.query.spaces.findMany.mockResolvedValue([mockSubspace]);
       vi.spyOn(service, 'save').mockResolvedValue(mockSpace);
 
       // Mock the URL cache service - use direct assignment for mock objects
@@ -200,22 +188,9 @@ describe('SpaceService', () => {
       };
       service['namingService'] = mockNamingService as any;
 
-      // Mock the repository to return child subspaces
-      vi.spyOn(spaceRepository, 'findOne').mockImplementation(options => {
-        const { where } = options ?? {};
-        if (!Array.isArray(where) && where?.id) {
-          const result = [
-            mockParentSpace,
-            mockSubspace,
-            mockChildSubspace,
-          ].find(space => space.id === where.id);
-          if (result) {
-            return Promise.resolve(result);
-          }
-        }
-        return Promise.resolve(null);
-      });
-      vi.spyOn(spaceRepository, 'find').mockResolvedValue([mockChildSubspace]);
+      // Mock the db to return child subspaces
+      db.query.spaces.findFirst.mockResolvedValue(mockSubspace);
+      db.query.spaces.findMany.mockResolvedValue([mockChildSubspace]);
       vi.spyOn(service, 'save').mockResolvedValue(mockSubspace);
 
       // Mock the URL cache service - use direct assignment for mock objects
@@ -252,16 +227,7 @@ describe('SpaceService', () => {
         visibility: SpaceVisibility.DEMO, // Only changing visibility, not nameID
       };
 
-      vi.spyOn(spaceRepository, 'findOne').mockImplementation(options => {
-        const { where } = options ?? {};
-        if (!Array.isArray(where) && where?.id) {
-          const result = [mockSpace].find(space => space.id === where.id);
-          if (result) {
-            return Promise.resolve(result);
-          }
-        }
-        return Promise.resolve(null);
-      });
+      db.query.spaces.findFirst.mockResolvedValue(mockSpace);
       vi.spyOn(service, 'save').mockResolvedValue(mockSpace);
       vi.spyOn(
         service,
@@ -291,7 +257,7 @@ describe('SpaceService', () => {
         settings: settingsData,
       } as Space;
 
-      vi.spyOn(spaceRepository, 'findOneOrFail').mockResolvedValue(space);
+      db.query.spaces.findFirst.mockResolvedValue(space);
 
       const result = await service.shouldUpdateAuthorizationPolicy(
         spaceId,
@@ -319,7 +285,7 @@ describe('SpaceService', () => {
         settings: originalSettings,
       } as Space;
 
-      vi.spyOn(spaceRepository, 'findOneOrFail').mockResolvedValue(space);
+      db.query.spaces.findFirst.mockResolvedValue(space);
 
       const result = await service.shouldUpdateAuthorizationPolicy(
         spaceId,
@@ -341,7 +307,7 @@ describe('SpaceService', () => {
         settings: originalSettings,
       } as Space;
 
-      vi.spyOn(spaceRepository, 'findOneOrFail').mockResolvedValue(space);
+      db.query.spaces.findFirst.mockResolvedValue(space);
 
       const result = await service.shouldUpdateAuthorizationPolicy(
         spaceId,
@@ -356,13 +322,11 @@ describe('SpaceService', () => {
         collaboration: { allowEventsFromSubspaces: true },
       } as ISpaceSettings;
 
-      vi.spyOn(spaceRepository, 'findOneOrFail').mockRejectedValue(
-        new Error('Space not found')
-      );
+      db.query.spaces.findFirst.mockResolvedValue(undefined);
 
       await expect(
         service.shouldUpdateAuthorizationPolicy(spaceId, settingsData)
-      ).rejects.toThrow('Space not found');
+      ).rejects.toThrow('Unable to find Space');
     });
   });
 });
@@ -389,7 +353,7 @@ describe('SpacesSorting', () => {
         SpaceService,
         MockCacheManager,
         MockWinstonProvider,
-        repositoryProviderMockFactory(Space),
+        mockDrizzleProvider,
       ],
     })
       .useMocker(injectionToken => {

@@ -4,32 +4,32 @@ import { LogContext } from '@common/enums/logging.context';
 import { SpaceLevel } from '@common/enums/space.level';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { ValidationException } from '@common/exceptions/validation.exception';
-import { convertToEntity } from '@common/utils/convert-to-entity';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { Collaboration } from '@domain/collaboration/collaboration';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { Space } from '@domain/space/space/space.entity';
 import { ISpace } from '@domain/space/space/space.interface';
-import { CalendarEvent } from '@domain/timeline/event';
-import { Timeline } from '@domain/timeline/timeline/timeline.entity';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { ActivityInputCalendarEventCreated } from '@services/adapters/activity-adapter/dto/activity.dto.input.calendar.event.created';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { TimelineResolverService } from '@services/infrastructure/entity-resolver/timeline.resolver.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
-import { PrefixKeys } from '@src/types';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { eq, and, isNotNull, sql } from 'drizzle-orm';
 import { ICalendarEvent } from '../event/event.interface';
 import { CalendarEventService } from '../event/event.service';
 import { Calendar } from './calendar.entity';
 import { ICalendar } from './calendar.interface';
 import { CreateCalendarEventOnCalendarInput } from './dto/calendar.dto.create.event';
+import { calendars } from './calendar.schema';
+import { calendarEvents } from '../event/event.schema';
+import { timelines } from '@domain/timeline/timeline/timeline.schema';
+import { collaborations } from '@domain/collaboration/collaboration/collaboration.schema';
+import { spaces } from '@domain/space/space/space.schema';
 
 @Injectable()
 export class CalendarService {
@@ -42,8 +42,7 @@ export class CalendarService {
     private contributionReporter: ContributionReporterService,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
     private timelineResolverService: TimelineResolverService,
-    @InjectRepository(Calendar)
-    private calendarRepository: Repository<Calendar>,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -73,55 +72,43 @@ export class CalendarService {
       }
     }
 
-    return await this.calendarRepository.remove(calendar as Calendar);
+    await this.db.delete(calendars).where(eq(calendars.id, calendarID));
+    return calendar;
   }
 
   async getCalendarOrFail(
     calendarID: string,
-    options?: FindOneOptions<Calendar>
+    options?: { relations?: { events?: boolean } }
   ): Promise<ICalendar | never> {
-    const calendar = await this.calendarRepository.findOne({
-      where: { id: calendarID },
-      ...options,
+    const calendar = await this.db.query.calendars.findFirst({
+      where: eq(calendars.id, calendarID),
+      with: options?.relations?.events ? { events: true } : undefined,
     });
     if (!calendar)
       throw new EntityNotFoundException(
         `Calendar not found: ${calendarID}`,
         LogContext.CALENDAR
       );
-    return calendar;
+    return calendar as unknown as ICalendar;
   }
 
   public async getCalendarEventsFromSubspaces(
     rootSpaceId: string
   ): Promise<ICalendarEvent[]> {
-    const result = await this.calendarRepository.manager
-      .createQueryBuilder(Space, 'subspace')
-      // if all the subspaces must be included change the statement
-      // to be levelZeroSpace = spaceId and level > space level
-      .where({
-        parentSpace: { id: rootSpaceId },
-        level: SpaceLevel.L1,
-      })
-      .leftJoin(
-        Collaboration,
-        'collaboration',
-        'collaboration.id = subspace.collaborationId'
-      )
-      .leftJoin(Timeline, 'timeline', 'timeline.id = collaboration.timelineId')
-      .leftJoin(Calendar, 'calendar', 'calendar.id = timeline.calendarId')
-      .leftJoin(
-        CalendarEvent,
-        'calendarEvent',
-        'calendarEvent.calendarId = calendar.id'
-      )
-      // cannot find alias when using relations https://github.com/typeorm/typeorm/issues/2707
-      .andWhere('calendarEvent.visibleOnParentCalendar = true')
-      .andWhere('calendarEvent.id IS NOT NULL')
-      .select('calendarEvent.id')
-      .getRawMany<PrefixKeys<{ id: string }, 'calendarEvent_'>>();
+    const result = await this.db.execute<{ id: string }>(sql`
+      SELECT "calendarEvent"."id"
+      FROM "space" AS "subspace"
+      LEFT JOIN "collaboration" ON "collaboration"."id" = "subspace"."collaborationId"
+      LEFT JOIN "timeline" ON "timeline"."id" = "collaboration"."timelineId"
+      LEFT JOIN "calendar" ON "calendar"."id" = "timeline"."calendarId"
+      LEFT JOIN "calendar_event" AS "calendarEvent" ON "calendarEvent"."calendarId" = "calendar"."id"
+      WHERE "subspace"."parentSpaceId" = ${rootSpaceId}
+        AND "subspace"."level" = ${SpaceLevel.L1}
+        AND "calendarEvent"."visibleOnParentCalendar" = true
+        AND "calendarEvent"."id" IS NOT NULL
+    `);
 
-    const ids = result.map(({ calendarEvent_id }) => calendarEvent_id);
+    const ids = Array.from(result).map(row => row.id);
     return this.calendarEventService.getCalendarEvents(ids);
   }
 
@@ -223,23 +210,28 @@ export class CalendarService {
   }
 
   public async getSpaceFromCalendarOrFail(calendarId: string): Promise<ISpace> {
-    const spaceAlias = 'space';
-    const rawSpace = await this.calendarRepository
-      .createQueryBuilder('calendar')
-      .where({ id: calendarId })
-      .leftJoin('timeline', 'timeline', 'timeline.calendarId = calendar.id')
-      .leftJoin(
-        'collaboration',
-        'collaboration',
-        'collaboration.timelineId = timeline.id'
-      )
-      .leftJoinAndSelect(
-        'space',
-        spaceAlias,
-        'space.collaborationId = collaboration.id'
-      )
-      .getRawOne<PrefixKeys<Space, `${typeof spaceAlias}_`>>();
+    const result = await this.db.execute<{
+      id: string;
+      nameID: string;
+      level: number;
+      visibility: string;
+      collaborationId: string;
+      aboutId: string;
+      communityId: string;
+      accountId: string;
+      parentSpaceId: string;
+      authorizationId: string;
+    }>(sql`
+      SELECT "space".*
+      FROM "calendar"
+      LEFT JOIN "timeline" ON "timeline"."calendarId" = "calendar"."id"
+      LEFT JOIN "collaboration" ON "collaboration"."timelineId" = "timeline"."id"
+      LEFT JOIN "space" ON "space"."collaborationId" = "collaboration"."id"
+      WHERE "calendar"."id" = ${calendarId}
+      LIMIT 1
+    `);
 
+    const rawSpace = Array.from(result)[0];
     if (!rawSpace) {
       throw new EntityNotFoundException(
         'Space not found for Calendar',
@@ -247,8 +239,7 @@ export class CalendarService {
         { calendarId }
       );
     }
-    // todo: not needed when using select instead of leftJoinAndSelect
-    return convertToEntity(rawSpace, 'space_');
+    return rawSpace as unknown as ISpace;
   }
 
   public async processActivityCalendarEventCreated(

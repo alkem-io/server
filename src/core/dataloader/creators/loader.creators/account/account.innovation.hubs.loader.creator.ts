@@ -1,8 +1,7 @@
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
-import { Account } from '@domain/space/account/account.entity';
-import { Injectable } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
-import { EntityManager } from 'typeorm';
+import { Inject, Injectable } from '@nestjs/common';
 import { createTypedRelationDataLoader } from '../../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
 
@@ -10,12 +9,12 @@ import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
 export class AccountInnovationHubsLoaderCreator
   implements DataLoaderCreator<IInnovationHub[]>
 {
-  constructor(@InjectEntityManager() private manager: EntityManager) {}
+  constructor(@Inject(DRIZZLE) private readonly db: DrizzleDb) {}
 
   create(options: DataLoaderCreatorOptions<IInnovationHub[]>) {
     return createTypedRelationDataLoader(
-      this.manager,
-      Account,
+      this.db,
+      'accounts',
       { innovationHubs: true },
       this.constructor.name,
       options

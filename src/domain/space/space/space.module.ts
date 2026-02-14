@@ -7,7 +7,6 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { LicenseModule } from '@domain/common/license/license.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { CommunityModule } from '@domain/community/community/community.module';
-import { Space } from '@domain/space/space/space.entity';
 import { SpaceResolverFields } from '@domain/space/space/space.resolver.fields';
 import { SpaceResolverMutations } from '@domain/space/space/space.resolver.mutations';
 import { SpaceResolverQueries } from '@domain/space/space/space.resolver.queries';
@@ -17,7 +16,6 @@ import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/stor
 import { TemplateContentSpaceModule } from '@domain/template/template-content-space/template.content.space.module';
 import { TemplatesManagerModule } from '@domain/template/templates-manager/templates.manager.module';
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { LicenseIssuerModule } from '@platform/licensing/credential-based/license-credential-issuer/license.issuer.module';
 import { LicensingCredentialBasedModule } from '@platform/licensing/credential-based/licensing-credential-based-entitlements-engine/licensing.credential.based.module';
@@ -66,7 +64,6 @@ import { SpacePlatformRolesAccessService } from './space.service.platform.roles.
     SpaceLookupModule,
     LicenseModule,
     UrlGeneratorModule,
-    TypeOrmModule.forFeature([Space]),
   ],
   providers: [
     SpaceService,

@@ -2,8 +2,9 @@ import { InjectionToken } from '@nestjs/common';
 import { createMock } from '@golevelup/ts-vitest';
 import { vi } from 'vitest';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 import { MockWinstonProvider } from '@test/mocks';
-import { repositoryMockFactory } from '@test/utils/repository.mock.factory';
+import { createMockDrizzle } from '@test/utils/drizzle.mock.factory';
 import { Publisher } from '@services/infrastructure/event-bus/publisher';
 import { Subscriber } from '@services/infrastructure/event-bus/subscriber';
 import { RabbitMQConnectionFactory } from '@services/infrastructure/event-bus/rabbitmq.connection.factory';
@@ -51,16 +52,16 @@ export const defaultMockerFactory = (token: InjectionToken | undefined) => {
 
   // For string tokens, check the dictionary first
   if (typeof token === 'string') {
-    // Handle repository tokens
-    if (token.endsWith('EntityRepository')) {
-      return repositoryMockFactory();
-    }
-
     // Check for known mock providers
     const mockProvider = mockerDictionary.get(token);
     if (mockProvider) {
       return mockProvider;
     }
+  }
+
+  // Handle DRIZZLE symbol token
+  if (token === DRIZZLE) {
+    return createMockDrizzle();
   }
 
   // Symbol or other token types - check dictionary

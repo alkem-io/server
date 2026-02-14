@@ -1,5 +1,8 @@
-// Minimal TypeORM DataSource stand-in; enough for modules that inject DataSource but won't actually run queries.
-import { DataSource, EntityManager } from 'typeorm';
+/**
+ * Minimal DataSource / EntityManager stand-ins using string tokens.
+ * Kept only for schema-bootstrap module compatibility — nothing in the
+ * application injects DataSource or EntityManager any longer (Drizzle is used instead).
+ */
 
 const queryBuilderStub = {
   leftJoinAndSelect() {
@@ -73,7 +76,7 @@ const dataSourceStub = {
 };
 
 export const DataSourceStubProvider = {
-  provide: DataSource,
+  provide: 'DataSource',
   useValue: dataSourceStub,
 };
 
@@ -83,7 +86,7 @@ export const DefaultDataSourceStubProvider = {
 };
 
 export const EntityManagerStubProvider = {
-  provide: EntityManager,
+  provide: 'EntityManager',
   useValue: entityManagerStub,
 };
 

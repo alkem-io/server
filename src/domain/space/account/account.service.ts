@@ -27,12 +27,14 @@ import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interf
 import { InnovationPackService } from '@library/innovation-pack/innovation.pack.service';
 import { InnovationPackAuthorizationService } from '@library/innovation-pack/innovation.pack.service.authorization';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { PlatformTemplatesService } from '@platform/platform-templates/platform.templates.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { InstrumentService } from '@src/apm/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { eq, sql } from 'drizzle-orm';
+import { accounts } from './account.schema';
 import { AccountHostService } from '../account.host/account.host.service';
 import { AccountLookupService } from '../account.lookup/account.lookup.service';
 import { ISpace } from '../space/space.interface';
@@ -63,8 +65,8 @@ export class AccountService {
     private namingService: NamingService,
     private licenseService: LicenseService,
     private platformTemplatesService: PlatformTemplatesService,
-    @InjectRepository(Account)
-    private accountRepository: Repository<Account>,
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -73,7 +75,7 @@ export class AccountService {
     agentInfo: AgentInfo
   ): Promise<ISpace> {
     const account = await this.getAccountOrFail(spaceData.accountID, {
-      relations: {
+      with: {
         spaces: true,
         storageAggregator: true,
       },
@@ -116,17 +118,21 @@ export class AccountService {
     space = await this.spaceService.save(space);
 
     space = await this.spaceService.getSpaceOrFail(space.id, {
-      relations: {
+      with: {
         community: {
-          roleSet: true,
+          with: { roleSet: true },
         },
         subspaces: {
-          community: {
-            roleSet: true,
-          },
-          subspaces: {
+          with: {
             community: {
-              roleSet: true,
+              with: { roleSet: true },
+            },
+            subspaces: {
+              with: {
+                community: {
+                  with: { roleSet: true },
+                },
+              },
             },
           },
         },
@@ -167,7 +173,7 @@ export class AccountService {
       spaceData.licensePlanID
     );
     return await this.spaceService.getSpaceOrFail(space.id, {
-      relations: {
+      with: {
         agent: true,
       },
     });
@@ -193,13 +199,30 @@ export class AccountService {
   };
 
   async save(account: IAccount): Promise<IAccount> {
-    return await this.accountRepository.save(account);
+    if (account.id) {
+      // Update existing account
+      const { id, ...updateData } = account;
+      const [result] = await this.db
+        .update(accounts)
+        .set(updateData)
+        .where(eq(accounts.id, id))
+        .returning();
+      return result as unknown as IAccount;
+    } else {
+      // Insert new account
+      const [result] = await this.db
+        .insert(accounts)
+        .values(account as any)
+        .returning();
+      return result as unknown as IAccount;
+    }
   }
 
   async deleteAccountOrFail(accountInput: IAccount): Promise<IAccount | never> {
     const accountID = accountInput.id;
-    const account = await this.getAccountOrFail(accountID, {
-      relations: {
+    const account = await this.db.query.accounts.findFirst({
+      where: eq(accounts.id, accountID),
+      with: {
         agent: true,
         spaces: true,
         virtualContributors: true,
@@ -208,7 +231,14 @@ export class AccountService {
         innovationHubs: true,
         license: true,
       },
-    });
+    }) as unknown as IAccount | undefined;
+
+    if (!account) {
+      throw new EntityNotFoundException(
+        `Unable to find Account with ID: ${accountID}`,
+        LogContext.ACCOUNT
+      );
+    }
 
     if (
       !account.agent ||
@@ -246,21 +276,23 @@ export class AccountService {
       await this.spaceService.deleteSpaceOrFail({ ID: space.id });
     }
 
-    const result = await this.accountRepository.remove(account as Account);
-    result.id = accountID;
-    return result;
+    await this.db.delete(accounts).where(eq(accounts.id, accountID));
+    return { ...account, id: accountID };
   }
 
-  public updateExternalSubscriptionId(
+  public async updateExternalSubscriptionId(
     accountID: string,
     externalSubscriptionID: string
   ) {
-    return this.accountRepository.update(accountID, { externalSubscriptionID });
+    await this.db
+      .update(accounts)
+      .set({ externalSubscriptionID })
+      .where(eq(accounts.id, accountID));
   }
 
   async getAccountOrFail(
     accountID: string,
-    options?: FindOneOptions<Account>
+    options?: { with?: Record<string, boolean | object> }
   ): Promise<IAccount | never> {
     const account = await this.getAccount(accountID, options);
     if (!account)
@@ -273,17 +305,18 @@ export class AccountService {
 
   async getAccount(
     accountID: string,
-    options?: FindOneOptions<Account>
+    options?: { with?: Record<string, boolean | object> }
   ): Promise<IAccount | null> {
-    return await this.accountRepository.findOne({
-      where: { id: accountID },
+    const account = await this.db.query.accounts.findFirst({
+      where: eq(accounts.id, accountID),
       ...options,
     });
+    return account as unknown as IAccount | null;
   }
 
   public async getAccountAndDetails(accountID: string) {
-    const [account] = await this.accountRepository.query(
-      `
+    const [account] = await this.db.execute(
+      sql`
         SELECT
           "account"."id" as "accountId", "account"."externalSubscriptionID" as "externalSubscriptionID",
           "organization"."id" as "orgId", "organization"."contactEmail" as "orgContactEmail", "organization"."legalEntityName" as "orgLegalName", "organization"."nameID" as "orgNameID",
@@ -293,9 +326,8 @@ export class AccountService {
         LEFT JOIN "user" on "account"."id" = "user"."accountID"
         LEFT JOIN "organization" on "account"."id" = "organization"."accountID"
         LEFT JOIN "profile" on "organization"."profileId" = "profile"."id"
-        WHERE "account"."id" = $1
-    `,
-      [accountID]
+        WHERE "account"."id" = ${accountID}
+      `
     );
 
     if (!account) {
@@ -325,19 +357,19 @@ export class AccountService {
     };
   }
 
-  async getAccounts(options?: FindManyOptions<Account>): Promise<IAccount[]> {
-    const accounts = await this.accountRepository.find({
+  async getAccounts(options?: { where?: any; with?: Record<string, boolean | object> }): Promise<IAccount[]> {
+    const result = await this.db.query.accounts.findMany({
       ...options,
     });
 
-    if (!accounts) return [];
+    if (!result) return [];
 
-    return accounts;
+    return result as unknown as IAccount[];
   }
 
   public async getAgentOrFail(accountID: string): Promise<IAgent> {
     const account = await this.getAccountOrFail(accountID, {
-      relations: {
+      with: {
         agent: true,
       },
     });
@@ -359,7 +391,7 @@ export class AccountService {
   ): Promise<IVirtualContributor> {
     const accountID = vcData.accountID;
     const account = await this.getAccountOrFail(accountID, {
-      relations: {
+      with: {
         virtualContributors: true,
         storageAggregator: true,
       },
@@ -391,7 +423,7 @@ export class AccountService {
   ): Promise<IInnovationHub> {
     const accountID = innovationHubData.accountID;
     const account = await this.getAccountOrFail(accountID, {
-      relations: { storageAggregator: true },
+      with: { storageAggregator: true },
     });
 
     if (!account.storageAggregator) {
@@ -420,7 +452,7 @@ export class AccountService {
   ): Promise<IInnovationPack> {
     const accountID = ipData.accountID;
     const account = await this.getAccountOrFail(accountID, {
-      relations: { storageAggregator: true },
+      with: { storageAggregator: true },
     });
 
     if (!account.storageAggregator) {
@@ -448,7 +480,7 @@ export class AccountService {
     accountID: string
   ): Promise<IStorageAggregator> {
     const space = await this.getAccountOrFail(accountID, {
-      relations: {
+      with: {
         storageAggregator: true,
       },
     });
@@ -465,9 +497,9 @@ export class AccountService {
     accountInput: IAccount
   ): Promise<IAccountSubscription[]> {
     const account = await this.getAccountOrFail(accountInput.id, {
-      relations: {
+      with: {
         agent: {
-          credentials: true,
+          with: { credentials: true },
         },
       },
     });

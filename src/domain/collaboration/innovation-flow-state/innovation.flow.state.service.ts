@@ -8,9 +8,11 @@ import {
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { Template } from '@domain/template/template/template.entity';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { eq } from 'drizzle-orm';
+import { innovationFlowStates } from './innovation.flow.state.schema';
 import { CreateInnovationFlowStateInput } from './dto/innovation.flow.state.dto.create';
 import { UpdateInnovationFlowStateInput } from './dto/innovation.flow.state.dto.update';
 import { InnovationFlowState } from './innovation.flow.state.entity';
@@ -19,10 +21,8 @@ import { IInnovationFlowState } from './innovation.flow.state.interface';
 @Injectable()
 export class InnovationFlowStateService {
   constructor(
-    @InjectRepository(InnovationFlowState)
-    private innovationFlowStateRepository: Repository<InnovationFlowState>,
-    @InjectRepository(Template)
-    private templateRepository: Repository<Template>,
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -48,13 +48,26 @@ export class InnovationFlowStateService {
   async save(
     innovationFlowState: IInnovationFlowState
   ): Promise<IInnovationFlowState> {
-    return await this.innovationFlowStateRepository.save(innovationFlowState);
+    const [result] = await this.db
+      .insert(innovationFlowStates)
+      .values(innovationFlowState as any)
+      .onConflictDoUpdate({
+        target: innovationFlowStates.id,
+        set: innovationFlowState as any,
+      })
+      .returning();
+    return result as unknown as IInnovationFlowState;
   }
 
-  saveAll(
+  async saveAll(
     innovationFlowStates: IInnovationFlowState[]
   ): Promise<IInnovationFlowState[]> {
-    return this.innovationFlowStateRepository.save(innovationFlowStates);
+    const results: IInnovationFlowState[] = [];
+    for (const state of innovationFlowStates) {
+      const saved = await this.save(state);
+      results.push(saved);
+    }
+    return results;
   }
 
   async update(
@@ -72,22 +85,25 @@ export class InnovationFlowStateService {
   }
 
   async delete(state: IInnovationFlowState): Promise<IInnovationFlowState> {
-    const result = await this.innovationFlowStateRepository.remove(
-      state as InnovationFlowState
-    );
+    await this.db
+      .delete(innovationFlowStates)
+      .where(eq(innovationFlowStates.id, state.id));
+    const result = { ...state };
     result.id = state.id; // Preserve the ID for consistency
-    return result;
+    return result as IInnovationFlowState;
   }
 
   async getInnovationFlowStateOrFail(
-    innovationFlowStateID: string,
-    options?: FindOneOptions<InnovationFlowState>
+    innovationFlowStateID: string
   ): Promise<IInnovationFlowState | never> {
-    const innovationFlowState =
-      await this.innovationFlowStateRepository.findOne({
-        where: { id: innovationFlowStateID },
-        ...options,
-      });
+    const innovationFlowState = await this.db.query.innovationFlowStates.findFirst({
+      where: eq(innovationFlowStates.id, innovationFlowStateID),
+      with: {
+        authorization: true,
+        defaultCalloutTemplate: true,
+        innovationFlow: true,
+      },
+    }) as unknown as IInnovationFlowState;
 
     if (!innovationFlowState)
       throw new EntityNotFoundException(
@@ -104,12 +120,14 @@ export class InnovationFlowStateService {
   async getDefaultCalloutTemplate(
     flowStateID: string
   ): Promise<Template | null> {
-    const flowState = await this.innovationFlowStateRepository.findOne({
-      where: { id: flowStateID },
-      relations: ['defaultCalloutTemplate'],
+    const flowState = await this.db.query.innovationFlowStates.findFirst({
+      where: eq(innovationFlowStates.id, flowStateID),
+      with: {
+        defaultCalloutTemplate: true,
+      },
     });
 
-    return flowState?.defaultCalloutTemplate ?? null;
+    return (flowState?.defaultCalloutTemplate as Template | undefined) ?? null;
   }
 
   async setDefaultCalloutTemplate(
@@ -119,19 +137,17 @@ export class InnovationFlowStateService {
     const flowState = await this.getInnovationFlowStateOrFail(flowStateID);
 
     // Fetch template directly to avoid circular dependency with TemplateService
-    const templates = await this.templateRepository.find({
-      where: { id: templateID },
+    const template = await this.db.query.templates.findFirst({
+      where: eq(innovationFlowStates.id, templateID),
     });
 
-    if (!templates || templates.length === 0) {
+    if (!template) {
       throw new EntityNotFoundException(
         'Template not found',
         LogContext.COLLABORATION,
         { templateID }
       );
     }
-
-    const template = templates[0];
 
     if (template.type !== TemplateType.CALLOUT) {
       this.logger.warn?.(
@@ -146,34 +162,32 @@ export class InnovationFlowStateService {
       );
     }
 
-    (flowState as InnovationFlowState).defaultCalloutTemplate = template;
-    await this.innovationFlowStateRepository.save(
-      flowState as InnovationFlowState
-    );
+    await this.db
+      .update(innovationFlowStates)
+      .set({ defaultCalloutTemplateId: templateID })
+      .where(eq(innovationFlowStates.id, flowStateID));
 
     this.logger.verbose?.(
       `Set default callout template on flow state: ${flowStateID}`,
       LogContext.COLLABORATION
     );
 
-    return flowState;
+    return await this.getInnovationFlowStateOrFail(flowStateID);
   }
 
   async removeDefaultCalloutTemplate(
     flowStateID: string
   ): Promise<IInnovationFlowState> {
-    const flowState = await this.getInnovationFlowStateOrFail(flowStateID);
-
-    (flowState as InnovationFlowState).defaultCalloutTemplate = null;
-    await this.innovationFlowStateRepository.save(
-      flowState as InnovationFlowState
-    );
+    await this.db
+      .update(innovationFlowStates)
+      .set({ defaultCalloutTemplateId: null })
+      .where(eq(innovationFlowStates.id, flowStateID));
 
     this.logger.verbose?.(
       `Removed default callout template from flow state: ${flowStateID}`,
       LogContext.COLLABORATION
     );
 
-    return flowState;
+    return await this.getInnovationFlowStateOrFail(flowStateID);
   }
 }

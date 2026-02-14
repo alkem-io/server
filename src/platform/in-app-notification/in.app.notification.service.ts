@@ -3,25 +3,18 @@ import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationEventInAppState } from '@common/enums/notification.event.in.app.state';
 import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
 import { EntityNotFoundException } from '@common/exceptions';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import {
-  getPaginationResults,
   PaginatedInAppNotifications,
   PaginationArgs,
 } from '@core/pagination';
 import { Injectable } from '@nestjs/common';
 import { Inject } from '@nestjs/common/decorators';
-import { InjectRepository } from '@nestjs/typeorm';
-import { InAppNotification } from '@platform/in-app-notification/in.app.notification.entity';
 import { NotificationEventsFilterInput } from '@services/api/me/dto/me.notification.event.filter.dto.input';
+import { and, count, desc, eq, gt, inArray, lt, ne, or } from 'drizzle-orm';
 import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
-import {
-  Brackets,
-  FindOptionsWhere,
-  In,
-  Not,
-  Repository,
-  UpdateResult,
-} from 'typeorm';
+import { inAppNotifications } from './in.app.notification.schema';
 import {
   InAppNotificationPayloadOrganizationMessageDirect,
   InAppNotificationPayloadOrganizationMessageRoom,
@@ -56,19 +49,19 @@ export class InAppNotificationService {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: WinstonLogger,
-    @InjectRepository(InAppNotification)
-    private readonly inAppNotificationRepo: Repository<InAppNotification>
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb
   ) {}
 
   public createInAppNotification(
     inAppData: CreateInAppNotificationInput
-  ): InAppNotification {
+  ): typeof inAppNotifications.$inferInsert {
     const coreEntityIds = this.extractCoreEntityIds(
       inAppData.type,
       inAppData.payload
     );
 
-    return this.inAppNotificationRepo.create({
+    return {
       type: inAppData.type,
       category: inAppData.category,
       triggeredByID: inAppData.triggeredByID,
@@ -91,14 +84,14 @@ export class InAppNotificationService {
       contributorUserID: coreEntityIds.contributorUserID,
       contributorVcID: coreEntityIds.contributorVcID,
       calendarEventID: coreEntityIds.calendarEventID,
-    });
+    };
   }
 
   public async getRawNotificationOrFail(
     ID: string
-  ): Promise<InAppNotification> {
-    const notification = await this.inAppNotificationRepo.findOne({
-      where: { id: ID },
+  ): Promise<typeof inAppNotifications.$inferSelect> {
+    const notification = await this.db.query.inAppNotifications.findFirst({
+      where: eq(inAppNotifications.id, ID),
     });
 
     if (!notification) {
@@ -116,31 +109,37 @@ export class InAppNotificationService {
     receiverID: string,
     filter?: NotificationEventsFilterInput
   ): Promise<IInAppNotification[]> {
-    const where =
-      filter && filter.types && filter.types.length > 0
-        ? { receiverID, type: In(filter.types) }
-        : { receiverID };
-    return this.inAppNotificationRepo.find({
-      where,
-      order: { triggeredAt: 'desc' },
-    });
+    const conditions = [eq(inAppNotifications.receiverID, receiverID)];
+
+    if (filter?.types && filter.types.length > 0) {
+      conditions.push(inArray(inAppNotifications.type, filter.types));
+    }
+
+    return this.db.query.inAppNotifications.findMany({
+      where: and(...conditions),
+      orderBy: desc(inAppNotifications.triggeredAt),
+    }) as unknown as Promise<IInAppNotification[]>;
   }
 
-  public getRawNotificationsUnreadCount(
+  public async getRawNotificationsUnreadCount(
     receiverID: string,
     filter?: NotificationEventsFilterInput
   ): Promise<number> {
-    const where =
-      filter && filter.types && filter.types.length > 0
-        ? {
-            receiverID,
-            state: NotificationEventInAppState.UNREAD,
-            type: In(filter.types),
-          }
-        : { receiverID, state: NotificationEventInAppState.UNREAD };
-    return this.inAppNotificationRepo.count({
-      where,
-    });
+    const conditions = [
+      eq(inAppNotifications.receiverID, receiverID),
+      eq(inAppNotifications.state, NotificationEventInAppState.UNREAD),
+    ];
+
+    if (filter?.types && filter.types.length > 0) {
+      conditions.push(inArray(inAppNotifications.type, filter.types));
+    }
+
+    const result = await this.db
+      .select({ count: count() })
+      .from(inAppNotifications)
+      .where(and(...conditions));
+
+    return result[0]?.count ?? 0;
   }
 
   public async getPaginatedNotifications(
@@ -148,109 +147,90 @@ export class InAppNotificationService {
     paginationArgs: PaginationArgs,
     filter?: NotificationEventsFilterInput
   ): Promise<PaginatedInAppNotifications> {
-    const queryBuilder = this.inAppNotificationRepo
-      .createQueryBuilder('notification')
-      .where('notification.receiverID = :receiverID', { receiverID })
-      .andWhere('notification.state <> :archivedState', {
-        archivedState: NotificationEventInAppState.ARCHIVED,
-      });
+    // Build base conditions
+    const baseConditions = [
+      eq(inAppNotifications.receiverID, receiverID),
+      ne(inAppNotifications.state, NotificationEventInAppState.ARCHIVED),
+    ];
 
     if (filter?.types && filter.types.length > 0) {
-      queryBuilder.andWhere('notification.type IN (:...types)', {
-        types: filter.types,
-      });
+      baseConditions.push(inArray(inAppNotifications.type, filter.types));
     }
 
-    // Use triggeredAt as the primary ordering for notifications
-    // This ensures notifications are ordered by when they were actually triggered, not when saved
-    queryBuilder.orderBy('notification.triggeredAt', 'DESC');
-
-    // For cursor-based pagination, we need to use triggeredAt + id as composite cursor
-    // to ensure stable pagination while maintaining semantic ordering
-    if (paginationArgs.after || paginationArgs.before) {
-      // If using cursor pagination, add secondary ordering by id for stability
-      queryBuilder.addOrderBy('notification.id', 'DESC');
-      return await this.getPaginatedNotificationsWithTriggeredAtCursor(
-        queryBuilder,
-        paginationArgs
-      );
-    } else {
-      // For simple pagination (first page), we can use the standard approach
-      return await getPaginationResults(queryBuilder, paginationArgs, 'DESC');
-    }
-  }
-
-  private async getPaginatedNotificationsWithTriggeredAtCursor(
-    queryBuilder: any,
-    paginationArgs: PaginationArgs
-  ): Promise<PaginatedInAppNotifications> {
-    // Custom cursor-based pagination that uses triggeredAt instead of rowId
     const { first, after, last, before } = paginationArgs;
     const limit = first ?? last ?? 25;
 
+    // Build cursor conditions if needed
+    const cursorConditions = [...baseConditions];
+
     if (after) {
-      // Parse the cursor to get triggeredAt value
-      const afterNotification = await this.inAppNotificationRepo.findOne({
-        where: { id: after },
-      });
+      const afterNotification =
+        await this.db.query.inAppNotifications.findFirst({
+          where: eq(inAppNotifications.id, after),
+          columns: { id: true, triggeredAt: true },
+        });
       if (afterNotification) {
-        queryBuilder.andWhere(
-          new Brackets(qb =>
-            qb
-              .where('notification.triggeredAt < :afterTriggeredAt', {
-                afterTriggeredAt: afterNotification.triggeredAt,
-              })
-              .orWhere(
-                '(notification.triggeredAt = :afterTriggeredAt AND notification.id < :afterId)',
-                {
-                  afterTriggeredAt: afterNotification.triggeredAt,
-                  afterId: afterNotification.id,
-                }
-              )
-          )
+        cursorConditions.push(
+          or(
+            lt(inAppNotifications.triggeredAt, afterNotification.triggeredAt),
+            and(
+              eq(inAppNotifications.triggeredAt, afterNotification.triggeredAt),
+              lt(inAppNotifications.id, afterNotification.id)
+            )
+          )!
         );
       }
     }
 
     if (before) {
-      // Parse the cursor to get triggeredAt value
-      const beforeNotification = await this.inAppNotificationRepo.findOne({
-        where: { id: before },
-      });
+      const beforeNotification =
+        await this.db.query.inAppNotifications.findFirst({
+          where: eq(inAppNotifications.id, before),
+          columns: { id: true, triggeredAt: true },
+        });
       if (beforeNotification) {
-        queryBuilder.andWhere(
-          new Brackets(qb =>
-            qb
-              .where('notification.triggeredAt > :beforeTriggeredAt', {
-                beforeTriggeredAt: beforeNotification.triggeredAt,
-              })
-              .orWhere(
-                '(notification.triggeredAt = :beforeTriggeredAt AND notification.id > :beforeId)',
-                {
-                  beforeTriggeredAt: beforeNotification.triggeredAt,
-                  beforeId: beforeNotification.id,
-                }
-              )
-          )
+        cursorConditions.push(
+          or(
+            gt(inAppNotifications.triggeredAt, beforeNotification.triggeredAt),
+            and(
+              eq(
+                inAppNotifications.triggeredAt,
+                beforeNotification.triggeredAt
+              ),
+              gt(inAppNotifications.id, beforeNotification.id)
+            )
+          )!
         );
       }
     }
 
-    queryBuilder.take(limit + 1); // Get one extra to check if there are more
+    // Fetch one extra to determine hasNextPage
+    const items = await this.db.query.inAppNotifications.findMany({
+      where: and(...cursorConditions),
+      orderBy: [
+        desc(inAppNotifications.triggeredAt),
+        desc(inAppNotifications.id),
+      ],
+      limit: limit + 1,
+    });
 
-    const items = await queryBuilder.getMany();
     const hasNextPage = items.length > limit;
     const hasPreviousPage = !!after || !!before;
-
     const actualItems = hasNextPage ? items.slice(0, limit) : items;
-    const total = await queryBuilder.clone().getCount();
+
+    // Get total count with base conditions (without cursor)
+    const totalResult = await this.db
+      .select({ count: count() })
+      .from(inAppNotifications)
+      .where(and(...baseConditions));
+    const total = totalResult[0]?.count ?? 0;
 
     return {
       total,
-      items: actualItems,
+      items: actualItems as unknown as IInAppNotification[],
       pageInfo: {
-        startCursor: actualItems[0]?.id || null,
-        endCursor: actualItems[actualItems.length - 1]?.id || null,
+        startCursor: actualItems[0]?.id ?? undefined,
+        endCursor: actualItems[actualItems.length - 1]?.id ?? undefined,
         hasNextPage,
         hasPreviousPage,
       },
@@ -261,57 +241,73 @@ export class InAppNotificationService {
     ID: string,
     state: NotificationEventInAppState
   ): Promise<NotificationEventInAppState> {
-    const notification = await this.getRawNotificationOrFail(ID);
+    // Verify the notification exists
+    await this.getRawNotificationOrFail(ID);
 
-    notification.state = state;
+    const [updated] = await this.db
+      .update(inAppNotifications)
+      .set({ state })
+      .where(eq(inAppNotifications.id, ID))
+      .returning({ state: inAppNotifications.state });
 
-    // Persist the existing entity instance to prevent TypeORM from treating it as a
-    // new record (which could happen when spreading into a plain object).
-    const updatedNotification =
-      await this.inAppNotificationRepo.save(notification);
-
-    return updatedNotification.state;
+    return updated.state as NotificationEventInAppState;
   }
 
   async bulkUpdateNotificationStateByTypes(
     userId: string,
     state: NotificationEventInAppState,
     filter?: NotificationEventsFilterInput
-  ): Promise<UpdateResult> {
-    const where: FindOptionsWhere<InAppNotification> = {
-      receiverID: userId,
-      state: Not(NotificationEventInAppState.ARCHIVED),
-    };
+  ): Promise<{ affected: number }> {
+    const conditions = [
+      eq(inAppNotifications.receiverID, userId),
+      ne(inAppNotifications.state, NotificationEventInAppState.ARCHIVED),
+    ];
 
     // If filter is provided with specific types, only update those types
     // If no filter is provided, update all notifications
     if (filter?.types && filter.types.length > 0) {
-      where.type = In(filter.types);
+      conditions.push(inArray(inAppNotifications.type, filter.types));
     }
 
-    return this.inAppNotificationRepo.update(where, { state });
+    const result = await this.db
+      .update(inAppNotifications)
+      .set({ state })
+      .where(and(...conditions));
+
+    return { affected: Array.from(result).length };
   }
 
-  public saveInAppNotifications(
-    entities: InAppNotification[]
-  ): Promise<InAppNotification[]> {
-    return this.inAppNotificationRepo.save(entities, {
-      chunk: 100,
-    });
+  public async saveInAppNotifications(
+    entities: (typeof inAppNotifications.$inferInsert)[]
+  ): Promise<(typeof inAppNotifications.$inferSelect)[]> {
+    if (entities.length === 0) {
+      return [];
+    }
+
+    return this.db
+      .insert(inAppNotifications)
+      .values(entities)
+      .returning();
   }
 
   public async deleteAllByMessageId(messageID: string): Promise<void> {
-    await this.inAppNotificationRepo.delete({ messageID });
+    await this.db
+      .delete(inAppNotifications)
+      .where(eq(inAppNotifications.messageID, messageID));
   }
 
   public async deleteAllForReceiverInSpace(
     receiverID: string,
     spaceID: string
   ): Promise<void> {
-    await this.inAppNotificationRepo.delete({
-      receiverID,
-      spaceID,
-    });
+    await this.db
+      .delete(inAppNotifications)
+      .where(
+        and(
+          eq(inAppNotifications.receiverID, receiverID),
+          eq(inAppNotifications.spaceID, spaceID)
+        )
+      );
   }
 
   /**
@@ -329,30 +325,42 @@ export class InAppNotificationService {
       return;
     }
 
-    await this.inAppNotificationRepo.delete({
-      receiverID,
-      spaceID: In(spaceIDs),
-    });
+    await this.db
+      .delete(inAppNotifications)
+      .where(
+        and(
+          eq(inAppNotifications.receiverID, receiverID),
+          inArray(inAppNotifications.spaceID, spaceIDs)
+        )
+      );
   }
 
   public async deleteAllForReceiverInOrganization(
     receiverID: string,
     organizationID: string
   ): Promise<void> {
-    await this.inAppNotificationRepo.delete({
-      receiverID,
-      organizationID,
-    });
+    await this.db
+      .delete(inAppNotifications)
+      .where(
+        and(
+          eq(inAppNotifications.receiverID, receiverID),
+          eq(inAppNotifications.organizationID, organizationID)
+        )
+      );
   }
 
   public async deleteAllForContributorVcInSpace(
     contributorVcID: string,
     spaceID: string
   ): Promise<void> {
-    await this.inAppNotificationRepo.delete({
-      contributorVcID,
-      spaceID,
-    });
+    await this.db
+      .delete(inAppNotifications)
+      .where(
+        and(
+          eq(inAppNotifications.contributorVcID, contributorVcID),
+          eq(inAppNotifications.spaceID, spaceID)
+        )
+      );
   }
 
   /**
@@ -370,20 +378,31 @@ export class InAppNotificationService {
       return;
     }
 
-    await this.inAppNotificationRepo.delete({
-      contributorVcID,
-      spaceID: In(spaceIDs),
-    });
+    await this.db
+      .delete(inAppNotifications)
+      .where(
+        and(
+          eq(inAppNotifications.contributorVcID, contributorVcID),
+          inArray(inAppNotifications.spaceID, spaceIDs)
+        )
+      );
   }
 
   public async deleteAllForContributorOrganizationInSpace(
     contributorOrganizationID: string,
     spaceID: string
   ): Promise<void> {
-    await this.inAppNotificationRepo.delete({
-      contributorOrganizationID,
-      spaceID,
-    });
+    await this.db
+      .delete(inAppNotifications)
+      .where(
+        and(
+          eq(
+            inAppNotifications.contributorOrganizationID,
+            contributorOrganizationID
+          ),
+          eq(inAppNotifications.spaceID, spaceID)
+        )
+      );
   }
 
   /**
@@ -401,10 +420,17 @@ export class InAppNotificationService {
       return;
     }
 
-    await this.inAppNotificationRepo.delete({
-      contributorOrganizationID,
-      spaceID: In(spaceIDs),
-    });
+    await this.db
+      .delete(inAppNotifications)
+      .where(
+        and(
+          eq(
+            inAppNotifications.contributorOrganizationID,
+            contributorOrganizationID
+          ),
+          inArray(inAppNotifications.spaceID, spaceIDs)
+        )
+      );
   }
 
   /**

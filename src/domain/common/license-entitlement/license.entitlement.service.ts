@@ -7,10 +7,12 @@ import {
 } from '@common/exceptions';
 import { LicenseEntitlementNotSupportedException } from '@common/exceptions/license.entitlement.not.supported';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { LicenseEntitlementUsageService } from '@services/infrastructure/license-entitlement-usage/license.entitlement.usage.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { eq } from 'drizzle-orm';
+import { licenseEntitlements } from './license.entitlement.schema';
 import { ILicense } from '../license/license.interface';
 import { CreateLicenseEntitlementInput } from './dto/license.entitlement.dto.create';
 import { LicenseEntitlement } from './license.entitlement.entity';
@@ -22,8 +24,7 @@ export class LicenseEntitlementService {
     private licenseEntitlementUsageService: LicenseEntitlementUsageService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    @InjectRepository(LicenseEntitlement)
-    private entitlementRepository: Repository<LicenseEntitlement>
+    @Inject(DRIZZLE) private readonly db: DrizzleDb
   ) {}
 
   public createEntitlement(
@@ -40,18 +41,18 @@ export class LicenseEntitlementService {
 
   async getEntitlementOrFail(
     entitlementID: string,
-    options?: FindOneOptions<LicenseEntitlement>
+    options?: { relations?: { license?: boolean } }
   ): Promise<ILicenseEntitlement | never> {
-    const entitlement = await this.entitlementRepository.findOne({
-      where: { id: entitlementID },
-      ...options,
+    const entitlement = await this.db.query.licenseEntitlements.findFirst({
+      where: eq(licenseEntitlements.id, entitlementID),
+      with: options?.relations?.license ? { license: true } : undefined,
     });
     if (!entitlement)
       throw new EntityNotFoundException(
         `Not able to locate entitlement with the specified ID: ${entitlementID}`,
         LogContext.SPACES
       );
-    return entitlement;
+    return entitlement as unknown as ILicenseEntitlement;
   }
 
   async deleteEntitlementOrFail(
@@ -59,20 +60,26 @@ export class LicenseEntitlementService {
   ): Promise<ILicenseEntitlement | never> {
     const entitlement = await this.getEntitlementOrFail(entitlementID);
 
-    const { id } = entitlement;
-    const result = await this.entitlementRepository.remove(
-      entitlement as LicenseEntitlement
-    );
-    return {
-      ...result,
-      id,
-    };
+    await this.db
+      .delete(licenseEntitlements)
+      .where(eq(licenseEntitlements.id, entitlementID));
+    return entitlement;
   }
 
   public async saveEntitlement(
     entitlement: ILicenseEntitlement
   ): Promise<ILicenseEntitlement> {
-    return await this.entitlementRepository.save(entitlement);
+    const [updated] = await this.db
+      .update(licenseEntitlements)
+      .set({
+        type: entitlement.type,
+        dataType: entitlement.dataType,
+        limit: entitlement.limit,
+        enabled: entitlement.enabled,
+      })
+      .where(eq(licenseEntitlements.id, entitlement.id))
+      .returning();
+    return updated as unknown as ILicenseEntitlement;
   }
 
   public reset(entitlement: ILicenseEntitlement): ILicenseEntitlement {

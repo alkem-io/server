@@ -1,40 +1,23 @@
 import { compressText, decompressText } from '@common/utils/compression.util';
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
-import {
-  AfterInsert,
-  AfterLoad,
-  AfterUpdate,
-  BeforeInsert,
-  BeforeUpdate,
-  Column,
-  Entity,
-} from 'typeorm';
 import { ICalloutContributionDefaults } from './callout.contribution.defaults.interface';
 
-@Entity()
 export class CalloutContributionDefaults
   extends BaseAlkemioEntity
   implements ICalloutContributionDefaults
 {
-  @Column('text', { nullable: true })
   defaultDisplayName?: string;
 
-  @Column('text', { nullable: true })
   postDescription? = '';
 
-  @Column('text', { nullable: true })
   whiteboardContent?: string;
 
-  @BeforeInsert()
-  @BeforeUpdate()
   async compressContent() {
     if (this.whiteboardContent) {
       this.whiteboardContent = await compressText(this.whiteboardContent);
     }
   }
-  @AfterInsert()
-  @AfterUpdate()
-  @AfterLoad()
+
   async decompressContent() {
     if (this.whiteboardContent) {
       this.whiteboardContent = await decompressText(this.whiteboardContent);

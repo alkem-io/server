@@ -96,7 +96,7 @@ export class LookupMyPrivilegesResolverFields {
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const space = await this.spaceService.getSpace(id, {
-      relations: { authorization: true },
+      with: { authorization: true },
     });
     if (!space) return [];
 
@@ -112,7 +112,7 @@ export class LookupMyPrivilegesResolverFields {
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const account = await this.accountService.getAccountOrFail(id, {
-      relations: { authorization: true },
+      with: { authorization: true },
     });
 
     return this.getMyPrivilegesOnAuthorizable(agentInfo, account);
@@ -127,7 +127,7 @@ export class LookupMyPrivilegesResolverFields {
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const roleSet = await this.roleSetService.getRoleSetOrFail(id, {
-      relations: { authorization: true },
+      with: { authorization: true },
     });
 
     return this.getMyPrivilegesOnAuthorizable(agentInfo, roleSet);
@@ -143,7 +143,7 @@ export class LookupMyPrivilegesResolverFields {
   ): Promise<AuthorizationPrivilege[]> {
     const document = await this.documentService.getDocumentOrFail(id, {
       relations: { authorization: true },
-    });
+    } as any);
 
     return this.getMyPrivilegesOnAuthorizable(agentInfo, document);
   }
@@ -159,7 +159,7 @@ export class LookupMyPrivilegesResolverFields {
     const virtualContributor =
       await this.virtualContributorService.getVirtualContributorOrFail(id, {
         relations: { authorization: true },
-      });
+      } as any);
 
     return this.getMyPrivilegesOnAuthorizable(agentInfo, virtualContributor);
   }
@@ -173,7 +173,7 @@ export class LookupMyPrivilegesResolverFields {
     @Args('ID', { type: () => UUID, nullable: false }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const user = await this.userLookupService.getUserOrFail(id, {
-      relations: { authorization: true },
+      with: { authorization: true },
     });
 
     return this.getMyPrivilegesOnAuthorizable(agentInfo, user);
@@ -190,7 +190,7 @@ export class LookupMyPrivilegesResolverFields {
     const storageAggregator =
       await this.storageAggregatorService.getStorageAggregatorOrFail(id, {
         relations: { authorization: true },
-      });
+      } as any);
 
     return this.getMyPrivilegesOnAuthorizable(agentInfo, storageAggregator);
   }
@@ -205,7 +205,7 @@ export class LookupMyPrivilegesResolverFields {
   ): Promise<AuthorizationPrivilege[]> {
     const innovationPack =
       await this.innovationPackService.getInnovationPackOrFail(id, {
-        relations: { authorization: true },
+        with: { authorization: true },
       });
 
     return this.getMyPrivilegesOnAuthorizable(agentInfo, innovationPack);
@@ -222,7 +222,7 @@ export class LookupMyPrivilegesResolverFields {
     const storageBucket =
       await this.storageBucketService.getStorageBucketOrFail(id, {
         relations: { authorization: true },
-      });
+      } as any);
 
     return this.getMyPrivilegesOnAuthorizable(agentInfo, storageBucket);
   }
@@ -237,7 +237,7 @@ export class LookupMyPrivilegesResolverFields {
   ): Promise<AuthorizationPrivilege[]> {
     const innovationHub =
       await this.innovationHubService.getInnovationHubOrFail(id, {
-        relations: { authorization: true },
+        with: { authorization: true },
       });
 
     return this.getMyPrivilegesOnAuthorizable(agentInfo, innovationHub);
@@ -252,7 +252,7 @@ export class LookupMyPrivilegesResolverFields {
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const application = await this.applicationService.getApplicationOrFail(id, {
-      relations: { authorization: true },
+      with: { authorization: true },
     });
 
     return this.getMyPrivilegesOnAuthorizable(agentInfo, application);
@@ -268,7 +268,7 @@ export class LookupMyPrivilegesResolverFields {
   ): Promise<AuthorizationPrivilege[]> {
     const invitation = await this.invitationService.getInvitationOrFail(id, {
       relations: { authorization: true },
-    });
+    } as any);
 
     return this.getMyPrivilegesOnAuthorizable(agentInfo, invitation);
   }
@@ -283,7 +283,7 @@ export class LookupMyPrivilegesResolverFields {
   ): Promise<AuthorizationPrivilege[]> {
     const community = await this.communityService.getCommunityOrFail(id, {
       relations: { authorization: true },
-    });
+    } as any);
 
     return this.getMyPrivilegesOnAuthorizable(agentInfo, community);
   }
@@ -299,7 +299,7 @@ export class LookupMyPrivilegesResolverFields {
     const collaboration =
       await this.collaborationService.getCollaborationOrFail(id, {
         relations: { authorization: true },
-      });
+      } as any);
 
     return this.getMyPrivilegesOnAuthorizable(agentInfo, collaboration);
   }
@@ -315,7 +315,7 @@ export class LookupMyPrivilegesResolverFields {
     const calendarEvent =
       await this.calendarEventService.getCalendarEventOrFail(id, {
         relations: { authorization: true },
-      });
+      } as any);
 
     return this.getMyPrivilegesOnAuthorizable(agentInfo, calendarEvent);
   }
@@ -330,7 +330,7 @@ export class LookupMyPrivilegesResolverFields {
   ): Promise<AuthorizationPrivilege[]> {
     const calendar = await this.calendarService.getCalendarOrFail(id, {
       relations: { authorization: true },
-    });
+    } as any);
 
     return this.getMyPrivilegesOnAuthorizable(agentInfo, calendar);
   }
@@ -345,7 +345,7 @@ export class LookupMyPrivilegesResolverFields {
   ): Promise<AuthorizationPrivilege[]> {
     const context = await this.spaceAboutService.getSpaceAboutOrFail(id, {
       relations: { authorization: true },
-    });
+    } as any);
 
     return this.getMyPrivilegesOnAuthorizable(agentInfo, context);
   }
@@ -360,7 +360,7 @@ export class LookupMyPrivilegesResolverFields {
   ): Promise<AuthorizationPrivilege[]> {
     const whiteboard = await this.whiteboardService.getWhiteboardOrFail(id, {
       relations: { authorization: true },
-    });
+    } as any);
 
     return this.getMyPrivilegesOnAuthorizable(agentInfo, whiteboard);
   }
@@ -375,7 +375,7 @@ export class LookupMyPrivilegesResolverFields {
   ): Promise<AuthorizationPrivilege[]> {
     const profile = await this.profileService.getProfileOrFail(id, {
       relations: { authorization: true },
-    });
+    } as any);
 
     return this.getMyPrivilegesOnAuthorizable(agentInfo, profile);
   }
@@ -389,7 +389,7 @@ export class LookupMyPrivilegesResolverFields {
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const callout = await this.calloutService.getCalloutOrFail(id, {
-      relations: { authorization: true },
+      relations: { authorization: true } as any,
     });
 
     return this.getMyPrivilegesOnAuthorizable(agentInfo, callout);
@@ -403,9 +403,7 @@ export class LookupMyPrivilegesResolverFields {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
-    const post = await this.postService.getPostOrFail(id, {
-      relations: { authorization: true },
-    });
+    const post = await this.postService.getPostOrFail(id);
 
     return this.getMyPrivilegesOnAuthorizable(agentInfo, post);
   }
@@ -418,9 +416,7 @@ export class LookupMyPrivilegesResolverFields {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
-    const room = await this.roomService.getRoomOrFail(id, {
-      relations: { authorization: true },
-    });
+    const room = await this.roomService.getRoomOrFail(id);
 
     return this.getMyPrivilegesOnAuthorizable(agentInfo, room);
   }
@@ -436,7 +432,7 @@ export class LookupMyPrivilegesResolverFields {
     const innovationFlow =
       await this.innovationFlowService.getInnovationFlowOrFail(id, {
         relations: { authorization: true },
-      });
+      } as any);
 
     return this.getMyPrivilegesOnAuthorizable(agentInfo, innovationFlow);
   }
@@ -451,7 +447,7 @@ export class LookupMyPrivilegesResolverFields {
   ): Promise<AuthorizationPrivilege[]> {
     const template = await this.templateService.getTemplateOrFail(id, {
       relations: { authorization: true },
-    });
+    } as any);
 
     return this.getMyPrivilegesOnAuthorizable(agentInfo, template);
   }
@@ -466,7 +462,7 @@ export class LookupMyPrivilegesResolverFields {
   ): Promise<AuthorizationPrivilege[]> {
     const templatesSet = await this.templatesSetService.getTemplatesSetOrFail(
       id,
-      { relations: { authorization: true } }
+      { relations: { authorization: true } } as any
     );
 
     return this.getMyPrivilegesOnAuthorizable(agentInfo, templatesSet);
@@ -483,7 +479,7 @@ export class LookupMyPrivilegesResolverFields {
     const templatesManager =
       await this.templatesManagerService.getTemplatesManagerOrFail(id, {
         relations: { authorization: true },
-      });
+      } as any);
 
     return this.getMyPrivilegesOnAuthorizable(agentInfo, templatesManager);
   }
@@ -499,7 +495,7 @@ export class LookupMyPrivilegesResolverFields {
     const guidelines =
       await this.guidelinesService.getCommunityGuidelinesOrFail(id, {
         relations: { authorization: true },
-      });
+      } as any);
 
     return this.getMyPrivilegesOnAuthorizable(agentInfo, guidelines);
   }
@@ -514,7 +510,7 @@ export class LookupMyPrivilegesResolverFields {
   ): Promise<AuthorizationPrivilege[]> {
     const license = await this.licenseService.getLicenseOrFail(id, {
       relations: { authorization: true },
-    });
+    } as any);
 
     return this.getMyPrivilegesOnAuthorizable(agentInfo, license);
   }

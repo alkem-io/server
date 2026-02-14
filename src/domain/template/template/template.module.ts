@@ -8,11 +8,9 @@ import { WhiteboardModule } from '@domain/common/whiteboard';
 import { CommunityGuidelinesModule } from '@domain/community/community-guidelines/community.guidelines.module';
 import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.module';
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { InputCreatorModule } from '@services/api/input-creator/input.creator.module';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 import { TemplateContentSpaceModule } from '../template-content-space/template.content.space.module';
-import { Template } from './template.entity';
 import { TemplateResolverFields } from './template.resolver.fields';
 import { TemplateResolverMutations } from './template.resolver.mutations';
 import { TemplateService } from './template.service';
@@ -32,7 +30,6 @@ import { TemplateAuthorizationService } from './template.service.authorization';
     CalloutsSetModule,
     TemplateContentSpaceModule,
     SpaceLookupModule,
-    TypeOrmModule.forFeature([Template]),
   ],
   providers: [
     TemplateService,

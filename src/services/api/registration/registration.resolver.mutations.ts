@@ -125,7 +125,7 @@ export class RegistrationResolverMutations {
     @Args('deleteData') deleteData: DeleteUserInput
   ): Promise<IUser> {
     const user = await this.userService.getUserOrFail(deleteData.ID, {
-      relations: { profile: true },
+      with: { profile: true },
     });
     await this.authorizationService.grantAccessOrFail(
       agentInfo,

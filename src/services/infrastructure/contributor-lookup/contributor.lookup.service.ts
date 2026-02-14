@@ -3,22 +3,28 @@ import { AuthorizationCredential, LogContext } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions';
 import { InvalidUUID } from '@common/exceptions/invalid.uuid';
 import { Credential, CredentialsSearchInput, ICredential } from '@domain/agent';
+import { credentials } from '@domain/agent/credential/credential.schema';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { Organization } from '@domain/community/organization/organization.entity';
+import { organizations } from '@domain/community/organization/organization.schema';
 import { User } from '@domain/community/user/user.entity';
+import { users } from '@domain/community/user/user.schema';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
+import { virtualContributors } from '@domain/community/virtual-contributor/virtual.contributor.schema';
 import { Inject, LoggerService } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
 import { isUUID } from 'class-validator';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager, FindOneOptions, In } from 'typeorm';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { eq, and, inArray } from 'drizzle-orm';
+type FindOneOptions<_T> = { with?: Record<string, any> };
 
 export class ContributorLookupService {
   constructor(
     private userLookupService: UserLookupService,
-    @InjectEntityManager('default')
-    private entityManager: EntityManager,
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -30,7 +36,7 @@ export class ContributorLookupService {
   ): Promise<IContributor[]> {
     const contributorsManagedByUser: IContributor[] = [];
     const user = await this.userLookupService.getUserOrFail(userID, {
-      relations: {
+      with: {
         agent: true,
       },
     });
@@ -53,16 +59,14 @@ export class ContributorLookupService {
     const organizationsIDs = organizationOwnerCredentials.map(
       credential => credential.resourceID
     );
-    const organizations = await this.entityManager.find(Organization, {
-      where: {
-        id: In(organizationsIDs),
-      },
-      relations: {
+    const managedOrganizations = (await this.db.query.organizations.findMany({
+      where: inArray(organizations.id, organizationsIDs),
+      with: {
         agent: true,
       },
-    });
-    if (organizations.length > 0) {
-      contributorsManagedByUser.push(...organizations);
+    })) as unknown as Organization[];
+    if (managedOrganizations.length > 0) {
+      contributorsManagedByUser.push(...managedOrganizations);
     }
 
     // Get all the Accounts from the User directly or via Organizations the user manages
@@ -70,15 +74,15 @@ export class ContributorLookupService {
 
     accountIDs.push(user.accountID);
 
-    for (const organization of organizations) {
+    for (const organization of managedOrganizations) {
       accountIDs.push(organization.accountID);
     }
 
     // Finally, get all the virtual contributors managed by the accounts
     for (const accountID of accountIDs) {
-      const virtualContributors =
+      const vcs =
         await this.getVirtualContributorsManagedByAccount(accountID);
-      contributorsManagedByUser.push(...virtualContributors);
+      contributorsManagedByUser.push(...vcs);
     }
 
     return contributorsManagedByUser;
@@ -87,17 +91,12 @@ export class ContributorLookupService {
   private async getVirtualContributorsManagedByAccount(
     accountID: string
   ): Promise<IContributor[]> {
-    const virtualContributors = await this.entityManager.find(
-      VirtualContributor,
+    const vcs = await this.db.query.virtualContributors.findMany(
       {
-        where: {
-          account: {
-            id: accountID,
-          },
-        },
+        where: eq(virtualContributors.accountId, accountID),
       }
     );
-    return virtualContributors;
+    return vcs as unknown as IContributor[];
   }
 
   async contributorsWithCredentials(
@@ -106,61 +105,81 @@ export class ContributorLookupService {
   ): Promise<IContributor[]> {
     const credResourceID = credentialCriteria.resourceID || '';
 
-    const userContributors: IContributor[] = await this.entityManager.find(
-      User,
+    const userContributors: IContributor[] = (await this.db.query.users.findMany(
       {
-        where: {
+        where: (user, { exists }) =>
+          exists(
+            this.db
+              .select()
+              .from(credentials)
+              .where(
+                and(
+                  eq(credentials.agentId, user.agentId),
+                  eq(credentials.type, credentialCriteria.type),
+                  eq(credentials.resourceID, credResourceID)
+                )
+              )
+          ),
+        with: {
           agent: {
-            credentials: {
-              type: credentialCriteria.type,
-              resourceID: credResourceID,
+            with: {
+              credentials: true,
             },
           },
         },
-        relations: {
-          agent: {
-            credentials: true,
-          },
-        },
-        take: limit,
+        limit,
       }
-    );
-    const organizationContributors = await this.entityManager.find(
-      Organization,
-      {
-        where: {
-          agent: {
-            credentials: {
-              type: credentialCriteria.type,
-              resourceID: credResourceID,
-            },
-          },
-        },
-        relations: {
-          agent: {
-            credentials: true,
-          },
-        },
-        take: limit,
-      }
-    );
+    )) as unknown as IContributor[];
 
-    const vcContributors = await this.entityManager.find(VirtualContributor, {
-      where: {
+    const organizationContributors = (await this.db.query.organizations.findMany(
+      {
+        where: (org, { exists }) =>
+          exists(
+            this.db
+              .select()
+              .from(credentials)
+              .where(
+                and(
+                  eq(credentials.agentId, org.agentId),
+                  eq(credentials.type, credentialCriteria.type),
+                  eq(credentials.resourceID, credResourceID)
+                )
+              )
+          ),
+        with: {
+          agent: {
+            with: {
+              credentials: true,
+            },
+          },
+        },
+        limit,
+      }
+    )) as unknown as IContributor[];
+
+    const vcContributors = (await this.db.query.virtualContributors.findMany({
+      where: (vc, { exists }) =>
+        exists(
+          this.db
+            .select()
+            .from(credentials)
+            .where(
+              and(
+                eq(credentials.agentId, vc.agentId),
+                eq(credentials.type, credentialCriteria.type),
+                eq(credentials.resourceID, credResourceID)
+              )
+            )
+        ),
+      with: {
         agent: {
-          credentials: {
-            type: credentialCriteria.type,
-            resourceID: credResourceID,
+          with: {
+            credentials: true,
           },
         },
       },
-      relations: {
-        agent: {
-          credentials: true,
-        },
-      },
-      take: limit,
-    });
+      limit,
+    })) as unknown as IContributor[];
 
     return userContributors
       .concat(organizationContributors)
@@ -176,24 +195,22 @@ export class ContributorLookupService {
         provided: contributorID,
       });
     }
-    let contributor: IContributor | null = await this.entityManager.findOne(
-      User,
-      {
+    let contributor: IContributor | null =
+      (await this.db.query.users.findFirst({
+        where: eq(users.id, contributorID),
         ...options,
-        where: { ...options?.where, id: contributorID },
-      }
-    );
+      })) as unknown as IContributor | null;
     if (!contributor) {
-      contributor = await this.entityManager.findOne(Organization, {
+      contributor = (await this.db.query.organizations.findFirst({
+        where: eq(organizations.id, contributorID),
         ...options,
-        where: { ...options?.where, id: contributorID },
-      });
+      })) as unknown as IContributor | null;
     }
     if (!contributor) {
-      contributor = await this.entityManager.findOne(VirtualContributor, {
+      contributor = (await this.db.query.virtualContributors.findFirst({
+        where: eq(virtualContributors.id, contributorID),
         ...options,
-        where: { ...options?.where, id: contributorID },
-      });
+      })) as unknown as IContributor | null;
     }
 
     return contributor;
@@ -236,21 +253,19 @@ export class ContributorLookupService {
       );
     }
 
-    let contributor: IContributor | null = await this.entityManager.findOne(
-      User,
-      {
-        where: { agent: { id: agentId } },
+    let contributor: IContributor | null =
+      (await this.db.query.users.findFirst({
+        where: eq(users.agentId, agentId),
         ...options,
-      }
-    );
-    contributor ??= await this.entityManager.findOne(Organization, {
-      where: { agent: { id: agentId } },
+      })) as unknown as IContributor | null;
+    contributor ??= (await this.db.query.organizations.findFirst({
+      where: eq(organizations.agentId, agentId),
       ...options,
-    });
-    contributor ??= await this.entityManager.findOne(VirtualContributor, {
-      where: { agent: { id: agentId } },
+    })) as unknown as IContributor | null;
+    contributor ??= (await this.db.query.virtualContributors.findFirst({
+      where: eq(virtualContributors.agentId, agentId),
       ...options,
-    });
+    })) as unknown as IContributor | null;
 
     return contributor;
   }
@@ -265,27 +280,27 @@ export class ContributorLookupService {
       return undefined;
     }
 
-    const user = await this.entityManager.findOne(User, {
-      where: { agent: { id: agentId } },
-      select: ['id'],
+    const userData = await this.db.query.users.findFirst({
+      where: eq(users.agentId, agentId),
+      columns: {
+        id: true,
+      },
     });
 
-    return user?.id;
+    return userData?.id;
   }
 
   private async getCredentialsByTypeHeldByAgent(
     agentID: string,
     credentialTypes: AuthorizationCredential[]
   ): Promise<ICredential[]> {
-    const hostedAccountCredentials = await this.entityManager.find(Credential, {
-      where: {
-        type: In(credentialTypes),
-        agent: {
-          id: agentID,
-        },
-      },
+    const hostedAccountCredentials = await this.db.query.credentials.findMany({
+      where: and(
+        inArray(credentials.type, credentialTypes),
+        eq(credentials.agentId, agentID)
+      ),
     });
 
-    return hostedAccountCredentials;
+    return hostedAccountCredentials as unknown as ICredential[];
   }
 }

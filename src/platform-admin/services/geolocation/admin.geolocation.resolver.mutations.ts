@@ -6,13 +6,14 @@ import { LocationService } from '@domain/common/location';
 import { Location } from '@domain/common/location/location.entity';
 import { Inject, LoggerService } from '@nestjs/common';
 import { Mutation, Resolver } from '@nestjs/graphql';
-import { InjectEntityManager } from '@nestjs/typeorm';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { GeoapifyService } from '@services/external/geoapify';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentUser } from '@src/common/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager, IsNull, Not } from 'typeorm';
+import { DRIZZLE, type DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { locations } from '@domain/common/location/location.schema';
+import { isNotNull } from 'drizzle-orm';
 
 @InstrumentResolver()
 @Resolver()
@@ -22,8 +23,8 @@ export class AdminGeoLocationMutations {
     private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService,
     private locationService: LocationService,
     private geoapifyService: GeoapifyService,
-    @InjectEntityManager('default')
-    private entityManager: EntityManager,
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService
   ) {}
 
@@ -51,13 +52,11 @@ export class AdminGeoLocationMutations {
     }
 
     // Get all the location entities which have a country set and the string length is greater than zero
-    const locations = await this.entityManager.find(Location, {
-      where: {
-        country: Not(IsNull()),
-      },
+    const locationResults = await this.db.query.locations.findMany({
+      where: isNotNull(locations.country),
     });
     // Filter out empty strings in code
-    const filteredLocations = locations.filter(
+    const filteredLocations = (locationResults as unknown as Location[]).filter(
       loc =>
         loc.country &&
         loc.country.trim().length > 0 &&

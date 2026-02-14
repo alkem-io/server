@@ -19,9 +19,12 @@ import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity'
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 import { InnovationPacksInput } from '@library/library/dto/library.dto.innovationPacks.input';
 import { LibraryService } from '@library/library/library.service';
-import { Injectable } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
-import { EntityManager, In } from 'typeorm';
+import { Inject, Injectable } from '@nestjs/common';
+import { DRIZZLE, type DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { inArray, eq } from 'drizzle-orm';
+import { innovationHubs } from '@domain/innovation-hub/innovation.hub.schema';
+import { innovationPacks } from '@library/innovation-pack/innovation.pack.schema';
+import { spaces } from '@domain/space/space/space.schema';
 
 @Injectable()
 export class PlatformAdminService {
@@ -30,42 +33,50 @@ export class PlatformAdminService {
     private organizationService: OrganizationService,
     private userService: UserService,
     private virtualContributorService: VirtualContributorService,
-    @InjectEntityManager('default')
-    private entityManager: EntityManager,
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb,
     private libraryService: LibraryService
   ) {}
 
-  public getAllInnovationHubs(): Promise<IInnovationHub[]> {
-    return this.entityManager.find(InnovationHub);
+  public async getAllInnovationHubs(): Promise<IInnovationHub[]> {
+    const results = await this.db.query.innovationHubs.findMany();
+    return results as unknown as IInnovationHub[];
   }
 
-  public getAllSpaces(
+  public async getAllSpaces(
     args: SpacesQueryArgs,
     sort: 'ASC' | 'DESC' = 'DESC'
   ): Promise<ISpace[]> {
     const visibilities = args?.filter?.visibilities;
     const IDs = args?.IDs;
+
+    const conditions = [];
+    if (visibilities?.length) {
+      conditions.push(inArray(spaces.visibility, visibilities));
+    }
+    if (IDs?.length) {
+      conditions.push(inArray(spaces.id, IDs));
+    }
+    conditions.push(eq(spaces.level, SpaceLevel.L0));
+
     return this.spaceService.getAllSpaces({
-      where: {
-        visibility: visibilities?.length ? In(visibilities) : undefined,
-        id: IDs?.length ? In(IDs) : undefined,
-        level: SpaceLevel.L0,
-      },
-      order: { createdDate: sort },
+      where: conditions.length > 0 ? conditions : undefined,
     });
   }
 
   public async getAllInnovationPacks(
     args?: InnovationPacksInput
   ): Promise<IInnovationPack[]> {
-    const innovationPacks = await this.entityManager.find(InnovationPack, {
-      relations: {
+    const packResults = await this.db.query.innovationPacks.findMany({
+      with: {
         templatesSet: true,
       },
     });
 
+    const innovationPacksTyped = packResults as unknown as InnovationPack[];
+
     return await this.libraryService.sortAndFilterInnovationPacks(
-      innovationPacks,
+      innovationPacksTyped,
       args?.limit,
       args?.orderBy
     );

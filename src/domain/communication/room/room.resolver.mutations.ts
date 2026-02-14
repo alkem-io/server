@@ -49,9 +49,7 @@ export class RoomResolverMutations {
     @Args('messageData') messageData: RoomSendMessageInput,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<IMessage> {
-    const room = await this.roomService.getRoomOrFail(messageData.roomID, {
-      relations: { authorization: true },
-    });
+    const room = await this.roomService.getRoomOrFail(messageData.roomID);
 
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -127,7 +125,7 @@ export class RoomResolverMutations {
     const receivingUserFull = await this.userLookupService.getUserOrFail(
       receivingUser.id,
       {
-        relations: {
+        with: {
           settings: true,
         },
       }
@@ -154,9 +152,7 @@ export class RoomResolverMutations {
     @Args('messageData') messageData: RoomSendMessageReplyInput,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<IMessage> {
-    const room = await this.roomService.getRoomOrFail(messageData.roomID, {
-      relations: { authorization: true },
-    });
+    const room = await this.roomService.getRoomOrFail(messageData.roomID);
 
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -291,9 +287,7 @@ export class RoomResolverMutations {
     @Args('messageData') messageData: RoomMarkMessageReadInput,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<boolean> {
-    const room = await this.roomService.getRoomOrFail(messageData.roomID, {
-      relations: { authorization: true },
-    });
+    const room = await this.roomService.getRoomOrFail(messageData.roomID);
 
     this.authorizationService.grantAccessOrFail(
       agentInfo,

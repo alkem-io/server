@@ -10,6 +10,8 @@ import {
   ForbiddenException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
@@ -20,19 +22,18 @@ import { CredentialsSearchInput } from '@domain/agent/credential/dto/credentials
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { InjectRepository } from '@nestjs/typeorm';
 import { AlkemioConfig } from '@src/types';
+import { eq } from 'drizzle-orm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOptionsSelect, Repository } from 'typeorm';
 import { IAuthorizationPolicyRuleCredential } from '../../../core/authorization/authorization.policy.rule.credential.interface';
+import { authorizationPolicies } from './authorization.policy.schema';
 import { IAuthorizationPolicy } from './authorization.policy.interface';
 
 @Injectable()
 export class AuthorizationPolicyService {
   private readonly authChunkSize: number;
   constructor(
-    @InjectRepository(AuthorizationPolicy)
-    private authorizationPolicyRepository: Repository<AuthorizationPolicy>,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     private authorizationService: AuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
@@ -43,10 +44,14 @@ export class AuthorizationPolicyService {
     });
   }
 
-  public authorizationSelectOptions: FindOptionsSelect<AuthorizationPolicy> = {
-    id: true,
-    credentialRules: true,
-    privilegeRules: true,
+  /**
+   * Column selection for authorization policies in relational queries.
+   * Used by consuming services in Drizzle `with: { authorization: { columns: ... } }`.
+   */
+  public authorizationSelectOptions = {
+    id: true as const,
+    credentialRules: true as const,
+    privilegeRules: true as const,
   };
 
   createCredentialRule(
@@ -166,47 +171,80 @@ export class AuthorizationPolicyService {
     authorizationPolicyID: string
   ): Promise<IAuthorizationPolicy> {
     const authorizationPolicy =
-      await this.authorizationPolicyRepository.findOneBy({
-        id: authorizationPolicyID,
+      await this.db.query.authorizationPolicies.findFirst({
+        where: eq(authorizationPolicies.id, authorizationPolicyID),
       });
     if (!authorizationPolicy)
       throw new EntityNotFoundException(
         `Not able to locate Authorization Policy with the specified ID: ${authorizationPolicyID}`,
         LogContext.AUTH
       );
-    return authorizationPolicy;
+    return authorizationPolicy as unknown as IAuthorizationPolicy;
   }
 
   async delete(
     authorizationPolicy: IAuthorizationPolicy
   ): Promise<IAuthorizationPolicy> {
-    return await this.authorizationPolicyRepository.remove(
-      authorizationPolicy as AuthorizationPolicy
-    );
+    await this.db
+      .delete(authorizationPolicies)
+      .where(eq(authorizationPolicies.id, authorizationPolicy.id));
+    return authorizationPolicy;
   }
 
   async save(
     authorizationPolicy: IAuthorizationPolicy
   ): Promise<IAuthorizationPolicy> {
-    return this.authorizationPolicyRepository.save(authorizationPolicy);
+    if (authorizationPolicy.id) {
+      const [result] = await this.db
+        .update(authorizationPolicies)
+        .set({
+          credentialRules: authorizationPolicy.credentialRules,
+          privilegeRules: authorizationPolicy.privilegeRules,
+          type: authorizationPolicy.type,
+        })
+        .where(eq(authorizationPolicies.id, authorizationPolicy.id))
+        .returning();
+      return result as unknown as IAuthorizationPolicy;
+    }
+    const [result] = await this.db
+      .insert(authorizationPolicies)
+      .values({
+        credentialRules: authorizationPolicy.credentialRules,
+        privilegeRules: authorizationPolicy.privilegeRules,
+        type: authorizationPolicy.type,
+      })
+      .returning();
+    return result as unknown as IAuthorizationPolicy;
   }
 
-  async saveAll(authorizationPolicies: IAuthorizationPolicy[]): Promise<void> {
-    if (authorizationPolicies.length > 500)
+  async saveAll(policies: IAuthorizationPolicy[]): Promise<void> {
+    if (policies.length > 500)
       this.logger.warn?.(
-        `Saving ${authorizationPolicies.length} authorization policies of type ${authorizationPolicies[0].type}`,
+        `Saving ${policies.length} authorization policies of type ${policies[0].type}`,
         LogContext.AUTH
       );
     else {
       this.logger.verbose?.(
-        `Saving ${authorizationPolicies.length} authorization policies`,
+        `Saving ${policies.length} authorization policies`,
         LogContext.AUTH
       );
     }
 
-    await this.authorizationPolicyRepository.save(authorizationPolicies, {
-      chunk: this.authChunkSize,
-    });
+    for (let i = 0; i < policies.length; i += this.authChunkSize) {
+      const chunk = policies.slice(i, i + this.authChunkSize);
+      await Promise.all(
+        chunk.map((policy) =>
+          this.db
+            .update(authorizationPolicies)
+            .set({
+              credentialRules: policy.credentialRules,
+              privilegeRules: policy.privilegeRules,
+              type: policy.type,
+            })
+            .where(eq(authorizationPolicies.id, policy.id))
+        )
+      );
+    }
   }
 
   cloneAuthorizationPolicy(

@@ -1,18 +1,19 @@
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
-import { CalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.entity';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { InjectEntityManager } from '@nestjs/typeorm';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentUser } from '@src/common/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager } from 'typeorm';
+import { eq } from 'drizzle-orm';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
+import { calloutFramings } from '@domain/collaboration/callout-framing/callout.framing.schema';
+import { calloutContributions } from '@domain/collaboration/callout-contribution/callout.contribution.schema';
 import { DeleteWhiteboardInput } from './dto/whiteboard.dto.delete';
 import {
   UpdateWhiteboardGuestAccessInput,
@@ -23,6 +24,7 @@ import { WhiteboardGuestAccessService } from './whiteboard.guest-access.service'
 import { IWhiteboard } from './whiteboard.interface';
 import { WhiteboardService } from './whiteboard.service';
 import { WhiteboardAuthorizationService } from './whiteboard.service.authorization';
+import { whiteboards } from './whiteboard.schema';
 
 @InstrumentResolver()
 @Resolver(() => IWhiteboard)
@@ -34,7 +36,7 @@ export class WhiteboardResolverMutations {
     private whiteboardAuthService: WhiteboardAuthorizationService,
     private whiteboardGuestAccessService: WhiteboardGuestAccessService,
     private communityResolverService: CommunityResolverService,
-    @InjectEntityManager() private entityManager: EntityManager,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -108,42 +110,37 @@ export class WhiteboardResolverMutations {
         whiteboard.id
       );
 
-      const framing = await this.entityManager.findOne(CalloutFraming, {
-        where: {
-          whiteboard: { id: whiteboard.id },
-        },
-        relations: {
+      const framing = await this.db.query.calloutFramings.findFirst({
+        where: eq(calloutFramings.whiteboardId, whiteboard.id),
+        with: {
           authorization: true,
         },
       });
 
-      if (framing) {
+      if (framing && framing.authorization) {
         const updatedWhiteboardAuthorizations =
           await this.whiteboardAuthService.applyAuthorizationPolicy(
             whiteboard.id,
-            framing.authorization,
+            framing.authorization as any,
             spaceSettings
           );
         await this.authorizationPolicyService.saveAll(
           updatedWhiteboardAuthorizations
         );
       } else {
-        const contribution = await this.entityManager.findOne(
-          CalloutContribution,
+        const contribution = await this.db.query.calloutContributions.findFirst(
           {
-            where: {
-              whiteboard: { id: whiteboard.id },
-            },
-            relations: {
+            where: eq(calloutContributions.whiteboardId, whiteboard.id),
+            with: {
               authorization: true,
             },
           }
         );
-        if (contribution) {
+        if (contribution && contribution.authorization) {
           const contributionAuthorizations =
             await this.whiteboardAuthService.applyAuthorizationPolicy(
               whiteboard.id,
-              contribution.authorization,
+              contribution.authorization as any,
               spaceSettings
             );
           await this.authorizationPolicyService.saveAll(

@@ -3,28 +3,32 @@ import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exc
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
-import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
+import { callouts } from '@domain/collaboration/callout/callout.schema';
 import { ICalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.interface';
 import { IPost } from '@domain/collaboration/post/post.interface';
-import { Conversation } from '@domain/communication/conversation/conversation.entity';
+import { posts } from '@domain/collaboration/post/post.schema';
 import { IConversation } from '@domain/communication/conversation/conversation.interface';
-import { Space } from '@domain/space/space/space.entity';
+import { conversations } from '@domain/communication/conversation/conversation.schema';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
-import { CalendarEvent } from '@domain/timeline/event/event.entity';
 import { ICalendarEvent } from '@domain/timeline/event/event.interface';
+import { calendarEvents } from '@domain/timeline/event/event.schema';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
-import { Discussion } from '@platform/forum-discussion/discussion.entity';
 import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
+import { discussions } from '@platform/forum-discussion/discussion.schema';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager } from 'typeorm';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { eq, sql } from 'drizzle-orm';
+import { calloutContributions } from '@domain/collaboration/callout-contribution/callout.contribution.schema';
+import { calloutsSets } from '@domain/collaboration/callouts-set/callouts.set.schema';
+import { collaborations } from '@domain/collaboration/collaboration/collaboration.schema';
+import { spaces } from '@domain/space/space/space.schema';
 
 @Injectable()
 export class RoomResolverService {
   constructor(
-    @InjectEntityManager('default')
-    private entityManager: EntityManager,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -36,17 +40,24 @@ export class RoomResolverService {
     platformRolesAccess: IPlatformRolesAccess;
     spaceSettings: ISpaceSettings;
   }> {
-    const space = await this.entityManager.findOne(Space, {
-      where: {
-        collaboration: {
-          calloutsSet: {
-            id: calloutsSetID,
-          },
-        },
-      },
-      relations: {
+    // Find the collaboration that owns this calloutsSet, then the space
+    const collaboration = await this.db.query.collaborations.findFirst({
+      where: eq(collaborations.calloutsSetId, calloutsSetID),
+    });
+    if (!collaboration) {
+      throw new EntityNotInitializedException(
+        `Unable to load all entities for roleSet + settings for collaboration ${calloutsSetID}`,
+        LogContext.COMMUNITY
+      );
+    }
+
+    const space = await this.db.query.spaces.findFirst({
+      where: eq(spaces.collaborationId, collaboration.id),
+      with: {
         community: {
-          roleSet: true,
+          with: {
+            roleSet: true,
+          },
         },
       },
     });
@@ -62,12 +73,12 @@ export class RoomResolverService {
       );
     }
     // Directly parse the settings string to avoid the need to load the settings service
-    const roleSet = space.community.roleSet;
+    const roleSet = space.community.roleSet as unknown as IRoleSet;
     const platformRolesAccess: IPlatformRolesAccess =
-      space.platformRolesAccess || {
+      (space.platformRolesAccess as IPlatformRolesAccess) || {
         roles: [],
       };
-    return { roleSet, platformRolesAccess, spaceSettings: space.settings };
+    return { roleSet, platformRolesAccess, spaceSettings: space.settings as unknown as ISpaceSettings };
   }
 
   async getRoleSetAndPlatformRolesWithAccessForCallout(
@@ -77,22 +88,29 @@ export class RoomResolverService {
     platformRolesAccess: IPlatformRolesAccess;
     spaceSettings?: ISpaceSettings;
   }> {
-    const space = await this.entityManager.findOne(Space, {
-      where: {
-        collaboration: {
-          calloutsSet: {
-            callouts: {
-              id: calloutID,
+    // Find the callout to get its calloutsSetId
+    const callout = await this.db.query.callouts.findFirst({
+      where: eq(callouts.id, calloutID),
+    });
+
+    let space: any = undefined;
+    if (callout?.calloutsSetId) {
+      const collaboration = await this.db.query.collaborations.findFirst({
+        where: eq(collaborations.calloutsSetId, callout.calloutsSetId),
+      });
+      if (collaboration) {
+        space = await this.db.query.spaces.findFirst({
+          where: eq(spaces.collaborationId, collaboration.id),
+          with: {
+            community: {
+              with: {
+                roleSet: true,
+              },
             },
           },
-        },
-      },
-      relations: {
-        community: {
-          roleSet: true,
-        },
-      },
-    });
+        });
+      }
+    }
 
     // Directly parse the settings string to avoid the need to load the settings service
     // We have 2 types of CalloutSet parents now, and KnowledgeBase doesn't have a roleSet and spaceSettings
@@ -111,49 +129,44 @@ export class RoomResolverService {
     callout: ICallout;
     contribution: ICalloutContribution;
   }> {
-    const callout = await this.entityManager.findOne(Callout, {
-      where: {
-        contributions: {
-          post: {
-            comments: { id: roomID },
-          },
-        },
-      },
-      relations: {
-        contributions: {
-          post: {
-            profile: true,
-          },
-        },
+    // Find the post by its comments room ID, then its contribution and callout
+    const post = await this.db.query.posts.findFirst({
+      where: eq(posts.commentsId, roomID),
+      with: {
+        profile: true,
       },
     });
-    if (
-      !callout ||
-      !callout.contributions ||
-      callout.contributions.length === 0 ||
-      !callout.contributions[0].post
-    ) {
+    if (!post) {
       throw new EntityNotFoundException(
         `Unable to identify Callout with Post contribution for Room: : ${roomID}`,
         LogContext.COLLABORATION
       );
     }
-    // First contribution since we are selecting all contributions, with a certain roomID.
-    // Since we have Room->Post->Contribution->Callout we can safely assume Room is indirectly OneToOne related to Contribution through Post
-    const postContribution = callout.contributions[0].post;
+
+    const contribution = await this.db.query.calloutContributions.findFirst({
+      where: eq(calloutContributions.postId, post.id),
+      with: {
+        callout: true,
+      },
+    });
+    if (!contribution || !contribution.callout) {
+      throw new EntityNotFoundException(
+        `Unable to identify Callout with Post contribution for Room: : ${roomID}`,
+        LogContext.COLLABORATION
+      );
+    }
+
     return {
-      post: postContribution,
-      callout,
-      contribution: callout.contributions[0],
+      post: post as unknown as IPost,
+      callout: contribution.callout as unknown as ICallout,
+      contribution: contribution as unknown as ICalloutContribution,
     };
   }
 
   async getCalloutForRoom(commentsID: string): Promise<ICallout> {
-    const result = await this.entityManager.findOne(Callout, {
-      where: {
-        comments: { id: commentsID },
-      },
-      relations: {
+    const result = await this.db.query.callouts.findFirst({
+      where: eq(callouts.commentsId, commentsID),
+      with: {
         calloutsSet: true,
       },
     });
@@ -163,15 +176,13 @@ export class RoomResolverService {
         LogContext.COLLABORATION
       );
     }
-    return result;
+    return result as unknown as ICallout;
   }
 
   async getCalendarEventForRoom(commentsID: string): Promise<ICalendarEvent> {
-    const result = await this.entityManager.findOne(CalendarEvent, {
-      where: {
-        comments: { id: commentsID },
-      },
-      relations: { profile: true, comments: true, calendar: true },
+    const result = await this.db.query.calendarEvents.findFirst({
+      where: eq(calendarEvents.commentsId, commentsID),
+      with: { profile: true, comments: true, calendar: true },
     });
     if (!result) {
       throw new EntityNotFoundException(
@@ -179,16 +190,13 @@ export class RoomResolverService {
         LogContext.COLLABORATION
       );
     }
-    return result;
+    return result as unknown as ICalendarEvent;
   }
 
   async getDiscussionForRoom(commentsID: string): Promise<IDiscussion> {
     // check if this is a comment related to an calendar
-    const result = await this.entityManager.findOne(Discussion, {
-      where: {
-        comments: { id: commentsID },
-      },
-      relations: { profile: true, comments: true },
+    const result = await this.db.query.discussions.findFirst({
+      where: eq(discussions.commentsId, commentsID),
     });
     if (!result) {
       throw new EntityNotFoundException(
@@ -196,14 +204,12 @@ export class RoomResolverService {
         LogContext.COLLABORATION
       );
     }
-    return result;
+    return result as unknown as IDiscussion;
   }
 
   async getConversationForRoom(roomID: string): Promise<IConversation> {
-    const result = await this.entityManager.findOne(Conversation, {
-      where: {
-        room: { id: roomID },
-      },
+    const result = await this.db.query.conversations.findFirst({
+      where: eq(conversations.roomId, roomID),
     });
     if (!result) {
       throw new EntityNotFoundException(
@@ -211,6 +217,6 @@ export class RoomResolverService {
         LogContext.COMMUNICATION
       );
     }
-    return result;
+    return result as unknown as IConversation;
   }
 }

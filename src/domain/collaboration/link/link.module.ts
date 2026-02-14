@@ -4,8 +4,6 @@ import { ProfileModule } from '@domain/common/profile/profile.module';
 import { DocumentModule } from '@domain/storage/document/document.module';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { Link } from './link.entity';
 import { LinkResolverFields } from './link.resolver.fields';
 import { LinkResolverMutations } from './link.resolver.mutations';
 import { LinkService } from './link.service';
@@ -18,7 +16,6 @@ import { LinkAuthorizationService } from './link.service.authorization';
     ProfileModule,
     DocumentModule,
     StorageBucketModule,
-    TypeOrmModule.forFeature([Link]),
   ],
   providers: [
     LinkResolverMutations,

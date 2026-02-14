@@ -82,16 +82,7 @@ export class ReferenceResolverMutations {
     { createReadStream, filename, mimetype }: FileUpload
   ): Promise<IReference> {
     const reference = await this.referenceService.getReferenceOrFail(
-      uploadData.referenceID,
-      {
-        relations: {
-          profile: {
-            storageBucket: {
-              authorization: true,
-            },
-          },
-        },
-      }
+      uploadData.referenceID
     );
     this.authorizationService.grantAccessOrFail(
       agentInfo,

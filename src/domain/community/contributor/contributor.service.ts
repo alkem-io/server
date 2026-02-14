@@ -6,6 +6,8 @@ import {
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { CreateProfileInput } from '@domain/common/profile/dto';
@@ -14,24 +16,31 @@ import { ProfileService } from '@domain/common/profile/profile.service';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
 import { AvatarCreatorService } from '@services/external/avatar-creator/avatar.creator.service';
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager, FindOneOptions } from 'typeorm';
-import { Organization } from '../organization/organization.entity';
-import { User } from '../user/user.entity';
-import { VirtualContributor } from '../virtual-contributor/virtual.contributor.entity';
+import { eq } from 'drizzle-orm';
+import { users } from '../user/user.schema';
+import { organizations } from '../organization/organization.schema';
+import { virtualContributors } from '../virtual-contributor/virtual.contributor.schema';
 import { IContributor } from './contributor.interface';
 import { getContributorType } from './get.contributor.type';
+
+type ContributorFindOptions = {
+  with?: {
+    agent?: boolean;
+    profile?: boolean;
+    authorization?: boolean;
+  };
+};
 
 @Injectable()
 export class ContributorService {
   constructor(
     private contributorLookupService: ContributorLookupService,
     private profileService: ProfileService,
-    @InjectEntityManager('default')
-    private entityManager: EntityManager,
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb,
     private avatarCreatorService: AvatarCreatorService,
     private storageBucketService: StorageBucketService,
     private documentService: DocumentService,
@@ -140,7 +149,7 @@ export class ContributorService {
 
   async getContributor(
     contributorID: string,
-    options?: FindOneOptions<IContributor>
+    options?: ContributorFindOptions
   ): Promise<IContributor | null> {
     return await this.contributorLookupService.getContributorByUUID(
       contributorID,
@@ -150,7 +159,7 @@ export class ContributorService {
 
   async getContributorByUuidOrFail(
     contributorID: string,
-    options?: FindOneOptions<IContributor>
+    options?: ContributorFindOptions
   ): Promise<IContributor | never> {
     const contributor = await this.getContributor(contributorID, options);
     if (!contributor)
@@ -165,7 +174,7 @@ export class ContributorService {
     contributorID: string
   ): Promise<{ contributor: IContributor; agent: IAgent }> {
     const contributor = await this.getContributorByUuidOrFail(contributorID, {
-      relations: { agent: true },
+      with: { agent: true },
     });
 
     if (!contributor.agent) {
@@ -177,37 +186,42 @@ export class ContributorService {
     return { contributor: contributor, agent: contributor.agent };
   }
 
+  private buildWithClause(options?: ContributorFindOptions): Record<string, any> {
+    const withClause: any = {};
+    if (options?.with) {
+      if (options.with.agent) withClause.agent = true;
+      if (options.with.profile) withClause.profile = true;
+      if (options.with.authorization) withClause.authorization = true;
+    }
+    return withClause;
+  }
+
   // A utility method to load fields that are known by the Contributor type if not already
   public async getContributorWithRelations(
     contributor: IContributor,
-    options?: FindOneOptions<IContributor>
+    options?: ContributorFindOptions
   ): Promise<IContributor> {
     const type = getContributorType(contributor);
-    let contributorWithRelations: IContributor | null = null;
+    const withClause = this.buildWithClause(options);
+    let contributorWithRelations: any = null;
     switch (type) {
       case RoleSetContributorType.USER:
-        contributorWithRelations = await this.entityManager.findOne(User, {
-          ...options,
-          where: { ...options?.where, id: contributor.id },
+        contributorWithRelations = await this.db.query.users.findFirst({
+          where: eq(users.id, contributor.id),
+          ...(Object.keys(withClause).length > 0 ? { with: withClause } : {}),
         });
         break;
       case RoleSetContributorType.ORGANIZATION:
-        contributorWithRelations = await this.entityManager.findOne(
-          Organization,
-          {
-            ...options,
-            where: { ...options?.where, id: contributor.id },
-          }
-        );
+        contributorWithRelations = await this.db.query.organizations.findFirst({
+          where: eq(organizations.id, contributor.id),
+          ...(Object.keys(withClause).length > 0 ? { with: withClause } : {}),
+        });
         break;
       case RoleSetContributorType.VIRTUAL:
-        contributorWithRelations = await this.entityManager.findOne(
-          VirtualContributor,
-          {
-            ...options,
-            where: { ...options?.where, id: contributor.id },
-          }
-        );
+        contributorWithRelations = await this.db.query.virtualContributors.findFirst({
+          where: eq(virtualContributors.id, contributor.id),
+          ...(Object.keys(withClause).length > 0 ? { with: withClause } : {}),
+        });
         break;
     }
     if (!contributorWithRelations) {
@@ -216,6 +230,6 @@ export class ContributorService {
         LogContext.COMMUNITY
       );
     }
-    return contributorWithRelations;
+    return contributorWithRelations as unknown as IContributor;
   }
 }

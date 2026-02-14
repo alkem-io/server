@@ -1,4 +1,4 @@
-import { FindOptionsSelect } from 'typeorm';
+import { FindOptionsSelect } from '@core/typeorm-compat.types';
 import {
   DataLoaderCreatorAuthOptions,
   DataLoaderCreatorLimitOptions,
@@ -11,6 +11,6 @@ export type FindByBatchIdsOptions<TParent, TResult> = Omit<
   'cache' | 'parentClassRef' | 'fields'
 > &
   DataLoaderCreatorAuthOptions<any> & {
-    select: FindOptionsSelect<TParent>;
+    select?: FindOptionsSelect<TParent>;
     dataLoaderName?: string; // for debugging purposes
   };

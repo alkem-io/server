@@ -1,24 +1,25 @@
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { eq } from 'drizzle-orm';
 import { ICalendar } from '../calendar/calendar.interface';
 import { CalendarService } from '../calendar/calendar.service';
 import { Timeline } from './timeline.entity';
 import { ITimeline } from './timeline.interface';
+import { timelines } from './timeline.schema';
 
 @Injectable()
 export class TimelineService {
   constructor(
     private calendarService: CalendarService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    @InjectRepository(Timeline)
-    private timelineRepository: Repository<Timeline>,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -44,27 +45,46 @@ export class TimelineService {
       await this.calendarService.deleteCalendar(timeline.calendar.id);
     }
 
-    return await this.timelineRepository.remove(timeline as Timeline);
+    await this.db.delete(timelines).where(eq(timelines.id, timelineID));
+    return timeline;
   }
 
   async getTimelineOrFail(
     timelineID: string,
-    options?: FindOneOptions<Timeline>
+    options?: { relations?: { calendar?: boolean } }
   ): Promise<ITimeline | never> {
-    const timeline = await this.timelineRepository.findOne({
-      where: { id: timelineID },
-      ...options,
+    const timeline = await this.db.query.timelines.findFirst({
+      where: eq(timelines.id, timelineID),
+      with: options?.relations?.calendar ? { calendar: true } : undefined,
     });
     if (!timeline)
       throw new EntityNotFoundException(
         `Timeline not found: ${timelineID}`,
         LogContext.CALENDAR
       );
-    return timeline;
+    return timeline as unknown as ITimeline;
   }
 
   async saveTimeline(timeline: ITimeline): Promise<ITimeline> {
-    return await this.timelineRepository.save(timeline);
+    if (timeline.id) {
+      const [updated] = await this.db
+        .update(timelines)
+        .set({
+          calendarId: timeline.calendar?.id,
+          authorizationId: timeline.authorization?.id,
+        })
+        .where(eq(timelines.id, timeline.id))
+        .returning();
+      return updated as unknown as ITimeline;
+    }
+    const [inserted] = await this.db
+      .insert(timelines)
+      .values({
+        calendarId: timeline.calendar?.id,
+        authorizationId: timeline.authorization?.id,
+      })
+      .returning();
+    return inserted as unknown as ITimeline;
   }
 
   async getCalendarOrFail(timelineInput: ITimeline): Promise<ICalendar> {

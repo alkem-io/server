@@ -1,9 +1,9 @@
 import { Space } from '@domain/space/space/space.entity';
 import { ISpace } from '@domain/space/space/space.interface';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getEntityManagerToken } from '@nestjs/typeorm';
-import { type Mocked, vi } from 'vitest';
-import { EntityManager } from 'typeorm';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { vi } from 'vitest';
 import { SpaceBySpaceAboutIdLoaderCreator } from './space.by.space.about.id.loader.creator';
 
 function makeSpace(spaceId: string, aboutId: string): Space {
@@ -18,28 +18,18 @@ function makeSpace(spaceId: string, aboutId: string): Space {
 
 describe('SpaceBySpaceAboutIdLoaderCreator', () => {
   let creator: SpaceBySpaceAboutIdLoaderCreator;
-  let entityManager: Mocked<EntityManager>;
+  let db: any;
 
   beforeEach(async () => {
-    const mockEntityManager = {
-      find: vi.fn(),
-      findOne: vi.fn(),
-    };
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SpaceBySpaceAboutIdLoaderCreator,
-        {
-          provide: getEntityManagerToken(),
-          useValue: mockEntityManager,
-        },
+        mockDrizzleProvider,
       ],
     }).compile();
 
     creator = module.get(SpaceBySpaceAboutIdLoaderCreator);
-    entityManager = module.get(
-      getEntityManagerToken()
-    ) as Mocked<EntityManager>;
+    db = module.get(DRIZZLE);
   });
 
   afterEach(() => {
@@ -61,7 +51,7 @@ describe('SpaceBySpaceAboutIdLoaderCreator', () => {
       const space1 = makeSpace('space-1', 'about-1');
       const space2 = makeSpace('space-2', 'about-2');
 
-      entityManager.find.mockResolvedValueOnce([space1, space2]);
+      db.query.spaces.findMany.mockResolvedValueOnce([space1, space2]);
 
       const loader = creator.create();
 
@@ -71,13 +61,7 @@ describe('SpaceBySpaceAboutIdLoaderCreator', () => {
         loader.load('about-2'),
       ]);
 
-      expect(entityManager.find).toHaveBeenCalledTimes(1);
-      expect(entityManager.find).toHaveBeenCalledWith(Space, {
-        where: {
-          about: { id: expect.anything() },
-        },
-        relations: { about: true },
-      });
+      expect(db.query.spaces.findMany).toHaveBeenCalledTimes(1);
 
       expect((result1 as ISpace).id).toBe('space-1');
       expect((result2 as ISpace).id).toBe('space-2');
@@ -87,7 +71,7 @@ describe('SpaceBySpaceAboutIdLoaderCreator', () => {
       const space1 = makeSpace('space-1', 'about-1');
 
       // Only return one space — about-2 has no match (e.g. TemplateContentSpace)
-      entityManager.find.mockResolvedValueOnce([space1]);
+      db.query.spaces.findMany.mockResolvedValueOnce([space1]);
 
       const loader = creator.create();
 
@@ -103,7 +87,7 @@ describe('SpaceBySpaceAboutIdLoaderCreator', () => {
     it('should use DataLoader caching for repeated keys', async () => {
       const space1 = makeSpace('space-1', 'about-1');
 
-      entityManager.find.mockResolvedValueOnce([space1]);
+      db.query.spaces.findMany.mockResolvedValueOnce([space1]);
 
       const loader = creator.create();
 
@@ -111,12 +95,12 @@ describe('SpaceBySpaceAboutIdLoaderCreator', () => {
       const result2 = await loader.load('about-1');
 
       // Second load should be served from cache, not trigger another query
-      expect(entityManager.find).toHaveBeenCalledTimes(1);
+      expect(db.query.spaces.findMany).toHaveBeenCalledTimes(1);
       expect(result1).toBe(result2);
     });
 
     it('should return empty results for empty input', async () => {
-      entityManager.find.mockResolvedValueOnce([]);
+      db.query.spaces.findMany.mockResolvedValueOnce([]);
 
       const loader = creator.create();
 
@@ -129,7 +113,7 @@ describe('SpaceBySpaceAboutIdLoaderCreator', () => {
 
   describe('edge cases', () => {
     it('should propagate database errors to all pending loads', async () => {
-      entityManager.find.mockRejectedValueOnce(
+      db.query.spaces.findMany.mockRejectedValueOnce(
         new Error('DB connection failed')
       );
 
@@ -154,7 +138,7 @@ describe('SpaceBySpaceAboutIdLoaderCreator', () => {
       const spaceWithAbout = makeSpace('s-1', 'about-1');
       const orphanSpace = { id: 'orphan', about: undefined } as unknown as Space;
 
-      entityManager.find.mockResolvedValueOnce([spaceWithAbout, orphanSpace]);
+      db.query.spaces.findMany.mockResolvedValueOnce([spaceWithAbout, orphanSpace]);
 
       const loader = creator.create();
 
@@ -173,7 +157,7 @@ describe('SpaceBySpaceAboutIdLoaderCreator', () => {
       const space3 = makeSpace('space-3', 'about-3');
 
       // DB returns in reverse order
-      entityManager.find.mockResolvedValueOnce([space3, space1, space2]);
+      db.query.spaces.findMany.mockResolvedValueOnce([space3, space1, space2]);
 
       const loader = creator.create();
 
@@ -190,7 +174,7 @@ describe('SpaceBySpaceAboutIdLoaderCreator', () => {
     });
 
     it('should cache null results and not re-query for same key', async () => {
-      entityManager.find.mockResolvedValueOnce([]);
+      db.query.spaces.findMany.mockResolvedValueOnce([]);
 
       const loader = creator.create();
 
@@ -201,7 +185,7 @@ describe('SpaceBySpaceAboutIdLoaderCreator', () => {
       const result2 = await loader.load('about-missing');
       expect(result2).toBeNull();
 
-      expect(entityManager.find).toHaveBeenCalledTimes(1);
+      expect(db.query.spaces.findMany).toHaveBeenCalledTimes(1);
     });
   });
 });

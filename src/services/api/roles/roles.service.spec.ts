@@ -18,9 +18,9 @@ import { CommunityResolverService } from '@services/infrastructure/entity-resolv
 import { SpaceFilterService } from '@services/infrastructure/space-filter/space.filter.service';
 import {
   MockAuthorizationService,
-  MockEntityManagerProvider,
   MockSpaceService,
 } from '@test/mocks';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
 import { MockApplicationService } from '@test/mocks/application.service.mock';
 import { MockCommunityResolverService } from '@test/mocks/community.resolver.service.mock';
 import { MockCommunityService } from '@test/mocks/community.service.mock';
@@ -64,7 +64,7 @@ describe('RolesService', () => {
         MockOrganizationLookupService,
         MockAuthorizationService,
         MockWinstonProvider,
-        MockEntityManagerProvider,
+        mockDrizzleProvider,
         MockSpaceService,
         MockUserLookupService,
         MockVirtualContributorService,

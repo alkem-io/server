@@ -4,24 +4,25 @@ import {
   EntityNotFoundException,
   ValidationException,
 } from '@common/exceptions';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { eq } from 'drizzle-orm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
 import { NotificationSettingInput } from './dto/notification.setting.input';
 import { CreateUserSettingsInput } from './dto/user.settings.dto.create';
 import { UpdateUserSettingsEntityInput } from './dto/user.settings.dto.update';
 import { UserSettings } from './user.settings.entity';
 import { IUserSettings } from './user.settings.interface';
+import { userSettings } from './user.settings.schema';
 
 @Injectable()
 export class UserSettingsService {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    @InjectRepository(UserSettings)
-    private userSettingsRepository: Repository<UserSettings>
+    @Inject(DRIZZLE) private readonly db: DrizzleDb
   ) {}
 
   public createUserSettings(
@@ -30,7 +31,7 @@ export class UserSettingsService {
     const settings = UserSettings.create({
       communication: settingsData.communication,
       privacy: settingsData.privacy,
-      notification: settingsData.notification,
+      notification: settingsData.notification as any,
       homeSpace: settingsData.homeSpace,
     });
     settings.authorization = new AuthorizationPolicy(
@@ -237,25 +238,25 @@ export class UserSettingsService {
   }
 
   async deleteUserSettings(userSettingsID: string): Promise<IUserSettings> {
-    const userSettings = await this.getUserSettingsOrFail(userSettingsID);
-    await this.userSettingsRepository.remove(userSettings as UserSettings);
-    return userSettings;
+    const settingsEntity = await this.getUserSettingsOrFail(userSettingsID);
+    await this.db.delete(userSettings).where(eq(userSettings.id, userSettingsID));
+    return settingsEntity;
   }
 
   async getUserSettingsOrFail(
     userSettingsID: string,
-    options?: FindOneOptions<UserSettings>
+    options?: { with?: Record<string, boolean | object> }
   ): Promise<IUserSettings | never> {
-    const userSettings = await this.userSettingsRepository.findOne({
-      where: { id: userSettingsID },
-      ...options,
+    const result = await this.db.query.userSettings.findFirst({
+      where: eq(userSettings.id, userSettingsID),
+      with: options?.with,
     });
-    if (!userSettings) {
+    if (!result) {
       throw new EntityNotFoundException(
         `Unable to find UserSettings with ID: ${userSettingsID}`,
         LogContext.COMMUNITY
       );
     }
-    return userSettings;
+    return result as unknown as IUserSettings;
   }
 }

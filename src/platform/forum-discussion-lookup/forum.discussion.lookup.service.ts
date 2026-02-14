@@ -1,34 +1,40 @@
 import { LogContext } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { Inject, LoggerService } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
-import { Discussion } from '@platform/forum-discussion/discussion.entity';
+import { discussions } from '@platform/forum-discussion/discussion.schema';
 import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
+import { eq } from 'drizzle-orm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager, FindOneOptions } from 'typeorm';
 
 export class ForumDiscussionLookupService {
   constructor(
-    @InjectEntityManager('default')
-    private entityManager: EntityManager,
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
 
   async getForumDiscussionByNameIdOrFail(
     forumDiscussionNameID: string,
-    options?: FindOneOptions<Discussion>
+    options?: { relations?: Record<string, boolean> }
   ): Promise<IDiscussion> {
-    const forumDiscussion: IDiscussion | null =
-      await this.entityManager.findOne(Discussion, {
-        ...options,
-        where: { ...options?.where, nameID: forumDiscussionNameID },
-      });
+    const with_ = options?.relations
+      ? Object.fromEntries(
+          Object.entries(options.relations).map(([key, value]) => [key, value])
+        )
+      : undefined;
+
+    const forumDiscussion = await this.db.query.discussions.findFirst({
+      where: eq(discussions.nameID, forumDiscussionNameID),
+      with: with_ as any,
+    });
     if (!forumDiscussion)
       throw new EntityNotFoundException(
         `Unable to find Forum Discussion with NameID: ${forumDiscussionNameID}`,
         LogContext.PLATFORM_FORUM
       );
-    return forumDiscussion;
+    return forumDiscussion as unknown as IDiscussion;
   }
 }

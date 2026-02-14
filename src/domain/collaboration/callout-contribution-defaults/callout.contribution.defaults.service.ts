@@ -1,9 +1,11 @@
 import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Repository } from 'typeorm';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { eq } from 'drizzle-orm';
+import { calloutContributionDefaults } from './callout.contribution.defaults.schema';
 import { CalloutContributionDefaults } from './callout.contribution.defaults.entity';
 import { ICalloutContributionDefaults } from './callout.contribution.defaults.interface';
 import {
@@ -17,8 +19,8 @@ export class CalloutContributionDefaultsService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private profileDocumentsService: ProfileDocumentsService,
-    @InjectRepository(CalloutContributionDefaults)
-    private calloutContributionDefaultsRepository: Repository<CalloutContributionDefaults>
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb
   ) {}
 
   public async createCalloutContributionDefaults(
@@ -74,13 +76,14 @@ export class CalloutContributionDefaultsService {
   }
 
   public async delete(
-    calloutContributionDefaults: ICalloutContributionDefaults
+    defaults: ICalloutContributionDefaults
   ): Promise<ICalloutContributionDefaults> {
-    const calloutContributionDefaultsID = calloutContributionDefaults.id;
-    const result = await this.calloutContributionDefaultsRepository.remove(
-      calloutContributionDefaults as CalloutContributionDefaults
-    );
-    result.id = calloutContributionDefaultsID;
-    return result;
+    const defaultsID = defaults.id;
+    await this.db
+      .delete(calloutContributionDefaults)
+      .where(eq(calloutContributionDefaults.id, defaultsID));
+    const result = { ...defaults };
+    result.id = defaultsID;
+    return result as ICalloutContributionDefaults;
   }
 }

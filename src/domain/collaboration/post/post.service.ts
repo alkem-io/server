@@ -13,9 +13,11 @@ import { ProfileService } from '@domain/common/profile/profile.service';
 import { RoomService } from '@domain/communication/room/room.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { eq } from 'drizzle-orm';
+import { posts } from './post.schema';
 import { CreatePostInput } from './dto/post.dto.create';
 import { UpdatePostInput } from './dto/post.dto.update';
 
@@ -25,8 +27,8 @@ export class PostService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private roomService: RoomService,
     private profileService: ProfileService,
-    @InjectRepository(Post)
-    private postRepository: Repository<Post>,
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -62,9 +64,21 @@ export class PostService {
   }
 
   public async deletePost(postId: string): Promise<IPost> {
-    const post = await this.getPostOrFail(postId, {
-      relations: { profile: true, comments: true },
-    });
+    const post = await this.db.query.posts.findFirst({
+      where: eq(posts.id, postId),
+      with: {
+        profile: true,
+        comments: true,
+        authorization: true,
+      },
+    }) as unknown as IPost;
+
+    if (!post)
+      throw new EntityNotFoundException(
+        `Not able to locate post with the specified ID: ${postId}`,
+        LogContext.SPACES
+      );
+
     if (post.authorization) {
       await this.authorizationPolicyService.delete(post.authorization);
     }
@@ -77,19 +91,22 @@ export class PostService {
       });
     }
 
-    const result = await this.postRepository.remove(post as Post);
+    await this.db.delete(posts).where(eq(posts.id, postId));
+    const result = { ...post };
     result.id = postId;
     return result;
   }
 
-  public async getPostOrFail(
-    postID: string,
-    options?: FindOneOptions<Post>
-  ): Promise<IPost | never> {
-    const post = await this.postRepository.findOne({
-      where: { id: postID },
-      ...options,
-    });
+  public async getPostOrFail(postID: string): Promise<IPost | never> {
+    const post = await this.db.query.posts.findFirst({
+      where: eq(posts.id, postID),
+      with: {
+        profile: true,
+        comments: true,
+        authorization: true,
+      },
+    }) as unknown as IPost;
+
     if (!post)
       throw new EntityNotFoundException(
         `Not able to locate post with the specified ID: ${postID}`,
@@ -99,9 +116,19 @@ export class PostService {
   }
 
   public async updatePost(postData: UpdatePostInput): Promise<IPost> {
-    const post = await this.getPostOrFail(postData.ID, {
-      relations: { profile: true, comments: true },
-    });
+    const post = await this.db.query.posts.findFirst({
+      where: eq(posts.id, postData.ID),
+      with: {
+        profile: true,
+        comments: true,
+      },
+    }) as unknown as IPost;
+
+    if (!post)
+      throw new EntityNotFoundException(
+        `Not able to locate post with the specified ID: ${postData.ID}`,
+        LogContext.SPACES
+      );
 
     if (postData.profileData) {
       if (!post.profile) {
@@ -136,17 +163,26 @@ export class PostService {
   }
 
   public async savePost(post: IPost): Promise<IPost> {
-    return await this.postRepository.save(post);
+    const [result] = await this.db
+      .insert(posts)
+      .values(post as any)
+      .onConflictDoUpdate({
+        target: posts.id,
+        set: post as any,
+      })
+      .returning();
+    return result as unknown as IPost;
   }
 
-  public async getProfile(
-    post: IPost,
-    relations?: FindOptionsRelations<IPost>
-  ): Promise<IProfile> {
-    const postLoaded = await this.getPostOrFail(post.id, {
-      relations: { profile: true, ...relations },
-    });
-    if (!postLoaded.profile)
+  public async getProfile(post: IPost): Promise<IProfile> {
+    const postLoaded = await this.db.query.posts.findFirst({
+      where: eq(posts.id, post.id),
+      with: {
+        profile: true,
+      },
+    }) as unknown as IPost;
+
+    if (!postLoaded?.profile)
       throw new EntityNotFoundException(
         `Post profile not initialised for post: ${post.id}`,
         LogContext.COLLABORATION
@@ -156,19 +192,18 @@ export class PostService {
   }
 
   public async getComments(postID: string) {
-    const { commentsId } = await this.postRepository
-      .createQueryBuilder('post')
-      .select('post.commentsId', 'commentsId')
-      .where({ id: postID })
-      .getRawOne();
+    const post = await this.db.query.posts.findFirst({
+      where: eq(posts.id, postID),
+      columns: { commentsId: true },
+    });
 
-    if (!commentsId) {
+    if (!post?.commentsId) {
       throw new EntityNotFoundException(
         `Comments not found on post: ${postID}`,
         LogContext.COLLABORATION
       );
     }
 
-    return this.roomService.getRoomOrFail(commentsId);
+    return this.roomService.getRoomOrFail(post.commentsId);
   }
 }

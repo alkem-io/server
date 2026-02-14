@@ -56,8 +56,7 @@ import { ITemplatesManager } from '@domain/template/templates-manager';
 import { CreateTemplatesManagerInput } from '@domain/template/templates-manager/dto/templates.manager.dto.create';
 import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Activity } from '@platform/activity';
+import { activities as Activity } from '@platform/activity/activity.schema';
 import { ILicensePlan } from '@platform/licensing/credential-based/license-plan/license.plan.interface';
 import { LicensingFrameworkService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
@@ -66,7 +65,10 @@ import { SpaceFilterService } from '@services/infrastructure/space-filter/space.
 import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator/url.generator.service.cache';
 import { keyBy } from 'lodash';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindManyOptions, FindOneOptions, In, Repository } from 'typeorm';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { eq, and, inArray, desc, sql } from 'drizzle-orm';
+import { spaces } from './space.schema';
 import { IAccount } from '../account/account.interface';
 import { ISpaceAbout } from '../space.about/space.about.interface';
 import { SpaceAboutService } from '../space.about/space.about.service';
@@ -115,8 +117,8 @@ export class SpaceService {
     private licenseService: LicenseService,
     private urlGeneratorCacheService: UrlGeneratorCacheService,
     private spacePlatformRolesAccessService: SpacePlatformRolesAccessService,
-    @InjectRepository(Space)
-    private spaceRepository: Repository<Space>,
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -133,7 +135,7 @@ export class SpaceService {
     agentInfo: AgentInfo,
     parentPlatformRolesAccess?: IPlatformRolesAccess
   ): Promise<ISpace> {
-    const space: ISpace = Space.create(spaceData);
+    const space: ISpace = Space.create(spaceData as any);
     // default to demo space
     space.visibility = SpaceVisibility.ACTIVE;
     space.sortOrder = 0;
@@ -320,12 +322,29 @@ export class SpaceService {
   }
 
   async save(space: ISpace): Promise<ISpace> {
-    return await this.spaceRepository.save(space);
+    if (space.id) {
+      // Update existing space
+      const { id, ...updateData } = space;
+      const [result] = await this.db
+        .update(spaces)
+        .set(updateData)
+        .where(eq(spaces.id, id))
+        .returning();
+      return result as unknown as ISpace;
+    } else {
+      // Insert new space
+      const [result] = await this.db
+        .insert(spaces)
+        .values(space as any)
+        .returning();
+      return result as unknown as ISpace;
+    }
   }
 
   async deleteSpaceOrFail(deleteData: DeleteSpaceInput): Promise<ISpace> {
-    const space = await this.getSpaceOrFail(deleteData.ID, {
-      relations: {
+    const space = await this.db.query.spaces.findFirst({
+      where: eq(spaces.id, deleteData.ID),
+      with: {
         subspaces: true,
         collaboration: true,
         community: true,
@@ -335,7 +354,15 @@ export class SpaceService {
         templatesManager: true,
         license: true,
       },
-    });
+    }) as unknown as ISpace | undefined;
+
+    if (!space) {
+      throw new EntityNotFoundException(
+        `Unable to find Space for deletion with ID: ${deleteData.ID}`,
+        LogContext.SPACES,
+        { spaceID: deleteData.ID }
+      );
+    }
 
     if (
       !space.subspaces ||
@@ -384,9 +411,8 @@ export class SpaceService {
 
     await this.storageAggregatorService.delete(space.storageAggregator.id);
 
-    const result = await this.spaceRepository.remove(space as Space);
-    result.id = deleteData.ID;
-    return result;
+    await this.db.delete(spaces).where(eq(spaces.id, deleteData.ID));
+    return { ...space, id: deleteData.ID };
   }
 
   public async createTemplatesManagerForSpaceL0(): Promise<ITemplatesManager> {
@@ -424,10 +450,13 @@ export class SpaceService {
         );
       }
 
-      return this.spaceRepository.findBy({
-        visibility: spaceVisibilityFilter,
-        level: SpaceLevel.L0,
+      const result = await this.db.query.spaces.findMany({
+        where: and(
+          eq(spaces.visibility, spaceVisibilityFilter),
+          eq(spaces.level, SpaceLevel.L0)
+        ),
       });
+      return result as unknown as Space[];
     }
 
     if (type === InnovationHubType.LIST) {
@@ -438,9 +467,9 @@ export class SpaceService {
         );
       }
 
-      const unsortedSpaces = await this.spaceRepository.findBy([
-        { id: In(spaceListFilter) },
-      ]);
+      const unsortedSpaces = await this.db.query.spaces.findMany({
+        where: inArray(spaces.id, spaceListFilter),
+      }) as unknown as Space[];
       // sort according to the order of the space list filter
       return unsortedSpaces.sort(
         (a, b) => spaceListFilter.indexOf(a.id) - spaceListFilter.indexOf(b.id)
@@ -455,7 +484,7 @@ export class SpaceService {
 
   async getSpacesSorted(
     args: SpacesQueryArgs,
-    options?: FindManyOptions<Space>
+    options?: { with?: Record<string, boolean | object> }
   ): Promise<ISpace[]> {
     const spaces = await this.getSpacesUnsorted(args, options);
 
@@ -466,57 +495,57 @@ export class SpaceService {
 
   async getSpacesUnsorted(
     args: SpacesQueryArgs,
-    options?: FindManyOptions<Space>
+    options?: { with?: Record<string, boolean | object> }
   ): Promise<ISpace[]> {
     const visibilities = this.spacesFilterService.getAllowedVisibilities(
       args.filter
     );
     // Load the spaces
-    let spaces: ISpace[];
+    let result: ISpace[];
     if (args && args.IDs) {
-      spaces = await this.spaceRepository.find({
-        where: {
-          id: In(args.IDs),
-          level: SpaceLevel.L0,
-          visibility: In(visibilities),
-        },
+      result = await this.db.query.spaces.findMany({
+        where: and(
+          inArray(spaces.id, args.IDs),
+          eq(spaces.level, SpaceLevel.L0),
+          inArray(spaces.visibility, visibilities)
+        ),
         ...options,
-      });
+      }) as unknown as ISpace[];
     } else {
-      spaces = await this.spaceRepository.find({
-        where: {
-          visibility: In(visibilities),
-          level: SpaceLevel.L0,
-        },
+      result = await this.db.query.spaces.findMany({
+        where: and(
+          inArray(spaces.visibility, visibilities),
+          eq(spaces.level, SpaceLevel.L0)
+        ),
         ...options,
-      });
+      }) as unknown as ISpace[];
     }
 
-    if (spaces.length === 0) return [];
+    if (result.length === 0) return [];
 
-    return spaces;
+    return result;
   }
 
   public async getSpacesInList(spaceIDs: string[]): Promise<ISpace[]> {
     const visibilities = [SpaceVisibility.ACTIVE, SpaceVisibility.DEMO];
 
-    const spaces = await this.spaceRepository.find({
-      where: {
-        id: In(spaceIDs),
-        visibility: In(visibilities),
-      },
-      relations: {
+    const result = await this.db.query.spaces.findMany({
+      where: and(
+        inArray(spaces.id, spaceIDs),
+        inArray(spaces.visibility, visibilities)
+      ),
+      with: {
         parentSpace: true,
         collaboration: true,
         about: {
-          profile: true,
+          with: { profile: true },
         },
       },
-    });
+    }) as unknown as ISpace[];
 
-    if (spaces.length === 0) return [];
+    if (result.length === 0) return [];
 
-    return spaces;
+    return result;
   }
 
   public async orderSpacesDefault(spaces: ISpace[]): Promise<ISpace[]> {
@@ -540,39 +569,46 @@ export class SpaceService {
     return spacesResult;
   }
 
-  getPaginatedSpaces(
+  async getPaginatedSpaces(
     paginationArgs: PaginationArgs,
     filter?: SpaceFilterInput
   ): Promise<IPaginatedType<ISpace>> {
     const visibilities =
       this.spacesFilterService.getAllowedVisibilities(filter);
 
-    const qb = this.spaceRepository.createQueryBuilder('space');
+    const query = this.db.select().from(spaces);
+
     if (visibilities) {
-      qb.leftJoinAndSelect('space.authorization', 'authorization');
-      qb.where({
-        level: SpaceLevel.L0,
-        visibility: In(visibilities),
-      });
+      query.where(
+        and(
+          eq(spaces.level, SpaceLevel.L0),
+          inArray(spaces.visibility, visibilities)
+        )
+      );
     }
 
-    return getPaginationResults(qb, paginationArgs);
+    // getPaginationResults expects a query builder, but we can pass the Drizzle query
+    return getPaginationResults(query as any, paginationArgs);
   }
 
   private async getSpacesWithSortOrderDefault(
     IDs: string[]
   ): Promise<string[]> {
-    // Then load data to do the sorting
-    const qb = this.spaceRepository.createQueryBuilder('space');
-
-    qb.leftJoinAndSelect('space.subspaces', 'subspace');
-    qb.leftJoinAndSelect('space.authorization', 'authorization_policy');
-    qb.leftJoinAndSelect('subspace.subspaces', 'subspaces');
-    qb.where({
-      level: SpaceLevel.L0,
-      id: In(IDs),
-    });
-    const spacesDataForSorting = await qb.getMany();
+    // Load data for sorting with nested subspaces
+    const spacesDataForSorting = await this.db.query.spaces.findMany({
+      where: and(
+        eq(spaces.level, SpaceLevel.L0),
+        inArray(spaces.id, IDs)
+      ),
+      with: {
+        subspaces: {
+          with: {
+            subspaces: true,
+          },
+        },
+        authorization: true,
+      },
+    }) as unknown as Space[];
 
     return this.sortSpacesDefault(spacesDataForSorting);
   }
@@ -626,21 +662,24 @@ export class SpaceService {
     return subspacesCount;
   }
 
-  public getSpacesByVisibilities(
+  public async getSpacesByVisibilities(
     spaceIds: string[],
     visibilities: SpaceVisibility[] = []
-  ) {
-    return this.spaceRepository.find({
-      where: {
-        id: In(spaceIds),
-        visibility: visibilities.length ? In(visibilities) : undefined,
-      },
+  ): Promise<ISpace[]> {
+    const conditions = [inArray(spaces.id, spaceIds)];
+    if (visibilities.length) {
+      conditions.push(inArray(spaces.visibility, visibilities));
+    }
+
+    const result = await this.db.query.spaces.findMany({
+      where: and(...conditions),
     });
+    return result as unknown as ISpace[];
   }
 
   async getSpaceOrFail(
     spaceID: string,
-    options?: FindOneOptions<Space>
+    options?: { with?: Record<string, boolean | object> }
   ): Promise<ISpace> {
     const space = await this.getSpace(spaceID, options);
     if (!space)
@@ -659,22 +698,25 @@ export class SpaceService {
     const daysAgo = new Date();
     daysAgo.setDate(daysAgo.getDate() - daysOld);
 
-    // First, get the space IDs ordered by activity count using a subquery approach
-    // This avoids PostgreSQL GROUP BY issues with joined columns
-    const spaceIdsWithActivity = await this.spaceRepository
-      .createQueryBuilder('s')
-      .select('s.id', 'id')
-      .innerJoin(Activity, 'a', 's.collaborationId = a.collaborationID')
-      .where({
-        level: SpaceLevel.L0,
-        visibility: SpaceVisibility.ACTIVE,
+    // First, get the space IDs ordered by activity count
+    // Using raw Drizzle query for aggregation with join
+    const spaceIdsWithActivity = await this.db
+      .select({
+        id: spaces.id,
+        activityCount: sql<number>`COUNT(${Activity.id})`,
       })
-      // activities in the past "daysOld" days
-      .andWhere('a.createdDate >= :daysAgo', { daysAgo })
-      .groupBy('s.id')
-      .orderBy('COUNT(a.id)', 'DESC')
-      .limit(limit)
-      .getRawMany<{ id: string }>();
+      .from(spaces)
+      .innerJoin(Activity, eq(spaces.collaborationId, Activity.collaborationID))
+      .where(
+        and(
+          eq(spaces.level, SpaceLevel.L0),
+          eq(spaces.visibility, SpaceVisibility.ACTIVE),
+          sql`${Activity.createdDate} >= ${daysAgo}`
+        )
+      )
+      .groupBy(spaces.id)
+      .orderBy(desc(sql<number>`COUNT(${Activity.id})`))
+      .limit(limit);
 
     if (spaceIdsWithActivity.length === 0) {
       return [];
@@ -683,36 +725,35 @@ export class SpaceService {
     const spaceIds = spaceIdsWithActivity.map(row => row.id);
 
     // Then fetch the full space entities with authorization relation
-    const spaces = await this.spaceRepository.find({
-      where: { id: In(spaceIds) },
-      relations: { authorization: true },
-    });
+    const spacesList = await this.db.query.spaces.findMany({
+      where: inArray(spaces.id, spaceIds),
+      with: { authorization: true },
+    }) as unknown as ISpace[];
 
     // Preserve the activity-based ordering from the first query
-    const spaceMap = new Map(spaces.map(space => [space.id, space]));
+    const spaceMap = new Map(spacesList.map(space => [space.id, space]));
     return spaceIds
       .map(id => spaceMap.get(id))
-      .filter((space): space is Space => space !== undefined);
+      .filter((space): space is ISpace => space !== undefined);
   }
 
   async getSpace(
     spaceID: string,
-    options?: FindOneOptions<Space>
+    options?: { with?: Record<string, boolean | object> }
   ): Promise<ISpace | null> {
-    const space = await this.spaceRepository.findOne({
-      where: {
-        id: spaceID,
-      },
+    const space = await this.db.query.spaces.findFirst({
+      where: eq(spaces.id, spaceID),
       ...options,
     });
 
-    return space;
+    return space as unknown as ISpace | null;
   }
 
   public async getAllSpaces(
-    options?: FindManyOptions<ISpace>
+    options?: { where?: any; with?: Record<string, boolean | object> }
   ): Promise<ISpace[]> {
-    return this.spaceRepository.find(options);
+    const result = await this.db.query.spaces.findMany(options);
+    return result as unknown as ISpace[];
   }
 
   public async updatePlatformRolesAccessRecursively(
@@ -720,7 +761,7 @@ export class SpaceService {
     parentPlatformRolesAccess?: IPlatformRolesAccess
   ): Promise<ISpace> {
     const { subspaces } = await this.getSpaceOrFail(space.id, {
-      relations: {
+      with: {
         subspaces: true,
       },
     });
@@ -800,16 +841,14 @@ export class SpaceService {
       // Invalidate URL cache for all subspaces since their URLs include parent nameIDs
       if (space.level === SpaceLevel.L0) {
         // For L0 spaces, invalidate all subspaces in the entire space hierarchy
-        const allSubspaces = await this.spaceRepository.find({
-          where: {
-            levelZeroSpaceID: space.id,
-          },
-          relations: {
+        const allSubspaces = await this.db.query.spaces.findMany({
+          where: eq(spaces.levelZeroSpaceID, space.id),
+          with: {
             about: {
-              profile: true,
+              with: { profile: true },
             },
           },
-        });
+        }) as unknown as ISpace[];
 
         for (const subspace of allSubspaces) {
           if (subspace.about?.profile?.id) {
@@ -825,16 +864,14 @@ export class SpaceService {
         );
       } else {
         // For subspaces, also invalidate any child subspaces
-        const childSubspaces = await this.spaceRepository.find({
-          where: {
-            parentSpace: { id: space.id },
-          },
-          relations: {
+        const childSubspaces = await this.db.query.spaces.findMany({
+          where: eq(spaces.parentSpaceId, space.id),
+          with: {
             about: {
-              profile: true,
+              with: { profile: true },
             },
           },
-        });
+        }) as unknown as ISpace[];
 
         for (const childSubspace of childSubspaces) {
           if (childSubspace.about?.profile?.id) {
@@ -870,7 +907,7 @@ export class SpaceService {
     }
 
     const { parentSpace } = await this.getSpaceOrFail(space.id, {
-      relations: {
+      with: {
         parentSpace: true,
       },
     });
@@ -890,12 +927,10 @@ export class SpaceService {
     levelZeroSpaceID: string,
     visibility: SpaceVisibility
   ) {
-    await this.spaceRepository.update(
-      {
-        levelZeroSpaceID: levelZeroSpaceID,
-      },
-      { visibility }
-    );
+    await this.db
+      .update(spaces)
+      .set({ visibility })
+      .where(eq(spaces.levelZeroSpaceID, levelZeroSpaceID));
   }
 
   /**
@@ -908,13 +943,21 @@ export class SpaceService {
     spaceId: string,
     settingsData: UpdateSpaceSettingsEntityInput
   ): Promise<boolean> {
-    const space = await this.spaceRepository.findOneOrFail({
-      where: { id: spaceId },
+    const space = await this.db.query.spaces.findFirst({
+      where: eq(spaces.id, spaceId),
     });
 
-    const originalSettings = space.settings;
+    if (!space) {
+      throw new EntityNotFoundException(
+        `Unable to find Space with ID: ${spaceId}`,
+        LogContext.SPACES,
+        { spaceId }
+      );
+    }
+
+    const originalSettings = space.settings as Record<string, any>;
     // compare the new values from the incoming update request with the original settings
-    const difference = getDiff(settingsData, originalSettings);
+    const difference = getDiff(settingsData as Record<string, any>, originalSettings);
     // if there is no difference, then no need to update the authorization policy
     if (difference === null) {
       return false;
@@ -935,10 +978,12 @@ export class SpaceService {
     let spaceWithSubspaces;
     if (args && args.IDs) {
       spaceWithSubspaces = await this.getSpaceOrFail(space.id, {
-        relations: {
+        with: {
           subspaces: {
-            about: {
-              profile: true,
+            with: {
+              about: {
+                with: { profile: true },
+              },
             },
           },
         },
@@ -948,10 +993,12 @@ export class SpaceService {
       );
     } else
       spaceWithSubspaces = await this.getSpaceOrFail(space.id, {
-        relations: {
+        with: {
           subspaces: {
-            about: {
-              profile: true,
+            with: {
+              about: {
+                with: { profile: true },
+              },
             },
           },
         },
@@ -1001,7 +1048,7 @@ export class SpaceService {
     }
 
     const spaceLoaded = await this.getSpaceOrFail(space.id, {
-      relations: { subspaces: true },
+      with: { subspaces: true },
     });
 
     const allSubspaces = spaceLoaded.subspaces;
@@ -1050,16 +1097,18 @@ export class SpaceService {
       index++;
     }
 
-    await this.spaceRepository.save(modifiedSubspaces);
+    for (const subspace of modifiedSubspaces) {
+      await this.save(subspace);
+    }
 
     return subspacesInOrder;
   }
 
   async getSubscriptions(spaceInput: ISpace): Promise<ISpaceSubscription[]> {
     const space = await this.getSpaceOrFail(spaceInput.id, {
-      relations: {
+      with: {
         agent: {
-          credentials: true,
+          with: { credentials: true },
         },
       },
     });
@@ -1124,11 +1173,11 @@ export class SpaceService {
     templateContentSpaceID?: string
   ): Promise<ISpace> {
     const space = await this.getSpaceOrFail(subspaceData.spaceID, {
-      relations: {
+      with: {
         storageAggregator: true,
         templatesManager: true,
         community: {
-          roleSet: true,
+          with: { roleSet: true },
         },
         parentSpace: true,
         subspaces: true,
@@ -1169,7 +1218,7 @@ export class SpaceService {
     let levelZeroSpace = space;
     if (levelZeroSpaceID !== space.id) {
       levelZeroSpace = await this.getSpaceOrFail(levelZeroSpaceID, {
-        relations: {
+        with: {
           templatesManager: true,
         },
       });
@@ -1219,12 +1268,12 @@ export class SpaceService {
     subspace = await this.save(subspace);
 
     subspace = await this.getSpaceOrFail(subspace.id, {
-      relations: {
+      with: {
         about: {
-          profile: true,
+          with: { profile: true },
         },
         community: {
-          roleSet: true,
+          with: { roleSet: true },
         },
       },
     });
@@ -1288,30 +1337,40 @@ export class SpaceService {
         {
           relations: {
             subspaces: {
-              about: {
-                profile: true,
+              with: {
+                about: {
+                  with: { profile: true },
+                },
               },
             },
             collaboration: {
-              innovationFlow: {
-                states: true,
+              with: {
+                innovationFlow: {
+                  with: { states: true },
+                },
               },
             },
             about: {
-              profile: {
-                references: true,
-                visuals: true,
-                location: true,
-                tagsets: true,
-              },
-              guidelines: {
+              with: {
                 profile: {
-                  references: true,
+                  with: {
+                    references: true,
+                    visuals: true,
+                    location: true,
+                    tagsets: true,
+                  },
+                },
+                guidelines: {
+                  with: {
+                    profile: {
+                      with: { references: true },
+                    },
+                  },
                 },
               },
             },
           },
-        }
+        } as any
       );
 
     if (
@@ -1380,9 +1439,9 @@ export class SpaceService {
 
   public async update(spaceData: UpdateSpaceInput): Promise<ISpace> {
     const space = await this.getSpaceOrFail(spaceData.ID, {
-      relations: {
+      with: {
         about: {
-          profile: true,
+          with: { profile: true },
         },
       },
     });
@@ -1407,13 +1466,13 @@ export class SpaceService {
   async getSubspaceInLevelZeroScopeOrFail(
     subspaceID: string,
     levelZeroSpaceID: string,
-    options?: FindOneOptions<Space>
+    options?: { relations?: Record<string, any> }
   ): Promise<ISpace> {
     const subspace =
       await this.spaceLookupService.getSubspaceByNameIdInLevelZeroSpace(
         subspaceID,
         levelZeroSpaceID,
-        options
+        options as any
       );
 
     if (!subspace) {
@@ -1455,7 +1514,7 @@ export class SpaceService {
     settingsData: UpdateSpaceSettingsEntityInput
   ): Promise<ISpace> {
     let space = await this.getSpaceOrFail(spaceID, {
-      relations: {
+      with: {
         parentSpace: true,
       },
     });
@@ -1476,9 +1535,9 @@ export class SpaceService {
   public async getAccountForLevelZeroSpaceOrFail(
     space: ISpace
   ): Promise<IAccount> {
-    const spaceWithAccount = await this.spaceRepository.findOne({
-      where: { id: space.levelZeroSpaceID },
-      relations: {
+    const spaceWithAccount = await this.db.query.spaces.findFirst({
+      where: eq(spaces.id, space.levelZeroSpaceID),
+      with: {
         account: true,
       },
     });
@@ -1490,12 +1549,12 @@ export class SpaceService {
       );
     }
 
-    return spaceWithAccount.account;
+    return spaceWithAccount.account as unknown as IAccount;
   }
 
   public async getCommunity(spaceId: string): Promise<ICommunity> {
     const subspaceWithCommunity = await this.getSpaceOrFail(spaceId, {
-      relations: { community: true },
+      with: { community: true },
     });
     const community = subspaceWithCommunity.community;
     if (!community)
@@ -1510,7 +1569,7 @@ export class SpaceService {
     rootSpaceID: string
   ): Promise<ITemplatesManager> {
     const levelZeroSpace = await this.getSpaceOrFail(rootSpaceID, {
-      relations: {
+      with: {
         templatesManager: true,
       },
     });
@@ -1569,7 +1628,7 @@ export class SpaceService {
     spaceID: string
   ): Promise<IStorageAggregator> {
     const space = await this.getSpaceOrFail(spaceID, {
-      relations: {
+      with: {
         storageAggregator: true,
       },
     });
@@ -1584,7 +1643,7 @@ export class SpaceService {
 
   public async getSpaceAbout(spaceID: string): Promise<ISpaceAbout> {
     const space = await this.getSpaceOrFail(spaceID, {
-      relations: { about: true },
+      with: { about: true },
     });
     const about = space.about;
     if (!about)
@@ -1602,9 +1661,9 @@ export class SpaceService {
    */
   public async getCalloutsSetOrFail(spaceId: string): Promise<ICalloutsSet> {
     const subspaceWithCollaboration = await this.getSpaceOrFail(spaceId, {
-      relations: {
+      with: {
         collaboration: {
-          calloutsSet: true,
+          with: { calloutsSet: true },
         },
       },
     });
@@ -1619,7 +1678,7 @@ export class SpaceService {
 
   public async getAgent(subspaceId: string): Promise<IAgent> {
     const subspaceWithContext = await this.getSpaceOrFail(subspaceId, {
-      relations: { agent: true },
+      with: { agent: true },
     });
     const agent = subspaceWithContext.agent;
     if (!agent)

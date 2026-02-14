@@ -1,14 +1,15 @@
 import { DataLoaderInitError } from '@common/exceptions/data-loader';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { createTypedRelationDataLoader } from '@core/dataloader/utils';
+import { getTableName } from '@core/dataloader/utils/tableNameMapping';
 import { IAccount } from '@domain/space/account/account.interface';
-import { Injectable } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
-import { EntityManager } from 'typeorm';
+import { Inject, Injectable } from '@nestjs/common';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
 
 @Injectable()
 export class AccountLoaderCreator implements DataLoaderCreator<IAccount> {
-  constructor(@InjectEntityManager() private manager: EntityManager) {}
+  constructor(@Inject(DRIZZLE) private readonly db: DrizzleDb) {}
 
   create(
     options?: DataLoaderCreatorOptions<
@@ -22,9 +23,11 @@ export class AccountLoaderCreator implements DataLoaderCreator<IAccount> {
       );
     }
 
+    const tableName = getTableName(options.parentClassRef.name);
+
     return createTypedRelationDataLoader(
-      this.manager,
-      options.parentClassRef,
+      this.db,
+      tableName,
       {
         account: true,
       },
