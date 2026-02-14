@@ -4,7 +4,6 @@ import {
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { ClassificationService } from '@domain/common/classification/classification.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
@@ -35,8 +34,7 @@ export class CalloutTransferService {
 
   public async transferCallout(
     callout: ICallout,
-    targetCalloutsSet: ICalloutsSet,
-    agentInfo: AgentInfo
+    targetCalloutsSet: ICalloutsSet
   ): Promise<ICallout> {
     // Check that the nameID is unique in the target callouts set
     await this.calloutsSetService.validateNameIDNotInUseOrFail(
@@ -51,8 +49,6 @@ export class CalloutTransferService {
       );
     // Move the callout
     callout.calloutsSet = targetCalloutsSet;
-    // Update the user
-    callout.createdBy = agentInfo.userID;
     const updatedCallout = await this.calloutService.save(callout);
 
     // Fix the storage aggregator
