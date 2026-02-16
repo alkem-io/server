@@ -79,6 +79,12 @@ import { RoleSetServiceLifecycleInvitation } from './role.set.service.lifecycle.
     RoleSetAgentRolesDataLoader,
     RoleSetMembershipStatusDataLoader,
   ],
-  exports: [RoleSetService, RoleSetAuthorizationService, RoleSetLicenseService],
+  exports: [
+    RoleSetService,
+    RoleSetAuthorizationService,
+    RoleSetLicenseService,
+    RoleSetAgentRolesDataLoader,
+    RoleSetMembershipStatusDataLoader,
+  ],
 })
 export class RoleSetModule {}

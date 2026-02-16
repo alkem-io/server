@@ -204,6 +204,11 @@ export class ApplicationService {
     return this.applicationLifecycleService.isFinalState(application.lifecycle);
   }
 
+  /** Synchronous check when the entity (with eager lifecycle) is already loaded. */
+  isApplicationFinalized(application: IApplication): boolean {
+    return this.applicationLifecycleService.isFinalState(application.lifecycle);
+  }
+
   async getQuestionsSorted(application: IApplication): Promise<IQuestion[]> {
     const questions = application.questions;
     if (!questions) {

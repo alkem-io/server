@@ -136,7 +136,10 @@ describe('SpaceBySpaceAboutIdLoaderCreator', () => {
 
     it('should return null when space has undefined about property', async () => {
       const spaceWithAbout = makeSpace('s-1', 'about-1');
-      const orphanSpace = { id: 'orphan', about: undefined } as unknown as Space;
+      const orphanSpace = {
+        id: 'orphan',
+        about: undefined,
+      } as unknown as Space;
 
       db.query.spaces.findMany.mockResolvedValueOnce([spaceWithAbout, orphanSpace]);
 

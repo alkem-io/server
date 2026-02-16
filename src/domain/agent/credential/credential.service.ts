@@ -118,4 +118,42 @@ export class CredentialService {
 
     return Number(result[0]?.count || 0);
   }
+
+  /**
+   * Batch-counts matching credentials for multiple (type, resourceID) pairs
+   * in a single grouped query. Returns a Map keyed by resourceID.
+   */
+  async countMatchingCredentialsBatch(
+    criteriaList: CredentialsSearchInput[]
+  ): Promise<Map<string, number>> {
+    if (criteriaList.length === 0) {
+      return new Map();
+    }
+
+    const resourceIDs = criteriaList
+      .map(c => c.resourceID)
+      .filter((id): id is string => !!id);
+
+    if (resourceIDs.length === 0) {
+      return new Map();
+    }
+
+    // All criteria should share the same type for member counts
+    const type = criteriaList[0].type;
+
+    const results = await this.credentialRepository
+      .createQueryBuilder('credential')
+      .select('credential.resourceID', 'resourceID')
+      .addSelect('COUNT(*)', 'count')
+      .where('credential.type = :type', { type })
+      .andWhere('credential.resourceID IN (:...resourceIDs)', { resourceIDs })
+      .groupBy('credential.resourceID')
+      .getRawMany<{ resourceID: string; count: string }>();
+
+    const countsMap = new Map<string, number>();
+    for (const row of results) {
+      countsMap.set(row.resourceID, parseInt(row.count, 10));
+    }
+    return countsMap;
+  }
 }

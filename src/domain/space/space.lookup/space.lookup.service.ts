@@ -245,22 +245,38 @@ export class SpaceLookupService {
       );
       return null;
     }
-    if (!space.levelZeroSpaceID) {
-      this.logger.warn(
-        `Space has no levelZeroSpaceID for SpaceAbout: ${spaceAbout.id}`,
-        LogContext.SPACES
-      );
-      return null;
+    return this.getProviderForSpace(space as unknown as ISpace);
+  }
+
+  /**
+   * Gets the provider for a space that has already been loaded.
+   * For L0 spaces (levelZeroSpaceID === space.id), skips the redundant L0 lookup.
+   */
+  public async getProviderForSpace(
+    space: ISpace
+  ): Promise<IContributor | null> {
+    let l0Space: ISpace | null;
+
+    if (space.levelZeroSpaceID === space.id) {
+      // This is already the L0 space; just need to load account if not present
+      if (space.account) {
+        l0Space = space;
+      } else {
+        l0Space = await this.db.query.spaces.findFirst({
+          where: eq(spaces.id, space.id),
+          with: { account: true },
+        }) as unknown as ISpace | null;
+      }
+    } else {
+      l0Space = await this.db.query.spaces.findFirst({
+        where: eq(spaces.id, space.levelZeroSpaceID),
+        with: { account: true },
+      }) as unknown as ISpace | null;
     }
-    const l0Space = await this.db.query.spaces.findFirst({
-      where: eq(spaces.id, space.levelZeroSpaceID),
-      with: {
-        account: true,
-      },
-    });
+
     if (!l0Space || !l0Space.account) {
       this.logger.warn(
-        `Unable to load Space with account to get Provider for SpaceAbout: ${spaceAbout.id}`,
+        `Unable to load Space with account to get Provider for Space: ${space.id}`,
         LogContext.SPACES
       );
       return null;

@@ -195,10 +195,16 @@ export class SpaceAboutService {
     return communityWithGuidelines.guidelines;
   }
 
-  async getMetrics(spaceAbout: ISpaceAbout): Promise<INVP[]> {
+  async getMetrics(
+    spaceAbout: ISpaceAbout,
+    preloadedCommunity?: ICommunity | null
+  ): Promise<INVP[]> {
     const metrics: INVP[] = [];
 
-    const community = await this.getCommunityWithRoleSet(spaceAbout.id);
+    const community =
+      preloadedCommunity && preloadedCommunity.roleSet
+        ? preloadedCommunity
+        : await this.getCommunityWithRoleSet(spaceAbout.id);
     const roleSet = community.roleSet;
 
     // Members
