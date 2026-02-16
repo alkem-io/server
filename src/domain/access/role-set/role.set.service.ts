@@ -361,7 +361,7 @@ export class RoleSetService {
     const agentRoles = rolesThatAgentHas.filter(
       (role): role is RoleName => role !== undefined
     );
-    await this.roleSetCacheService.setAgentRolesCache(
+    void this.roleSetCacheService.setAgentRolesCache(
       agent.id,
       roleSet.id,
       agentRoles
@@ -386,12 +386,9 @@ export class RoleSetService {
       roleSetID
     );
     for (const application of applications) {
-      // skip any finalized applications; only want to return pending applications
-      const isFinalized = await this.applicationService.isFinalizedApplication(
-        application.id
-      );
-      if (isFinalized) continue;
-      await this.roleSetCacheService.setOpenApplicationCache(
+      // Lifecycle is eager-loaded; check in-memory without re-fetching from DB
+      if (this.applicationService.isApplicationFinalized(application)) continue;
+      void this.roleSetCacheService.setOpenApplicationCache(
         userID,
         roleSetID,
         application
@@ -420,7 +417,7 @@ export class RoleSetService {
     const agent = await this.agentService.getAgentOrFail(agentInfo.agentID);
     const isMember = await this.isMember(agent, roleSet);
     if (isMember) {
-      await this.roleSetCacheService.setMembershipStatusCache(
+      void this.roleSetCacheService.setMembershipStatusCache(
         agent.id,
         roleSet.id,
         CommunityMembershipStatus.MEMBER
@@ -434,7 +431,7 @@ export class RoleSetService {
       roleSet.id
     );
     if (openApplication) {
-      await this.roleSetCacheService.setMembershipStatusCache(
+      void this.roleSetCacheService.setMembershipStatusCache(
         agent.id,
         roleSet.id,
         CommunityMembershipStatus.APPLICATION_PENDING
@@ -450,7 +447,7 @@ export class RoleSetService {
       openInvitation &&
       (await this.invitationService.canInvitationBeAccepted(openInvitation.id))
     ) {
-      await this.roleSetCacheService.setMembershipStatusCache(
+      void this.roleSetCacheService.setMembershipStatusCache(
         agent.id,
         roleSet.id,
         CommunityMembershipStatus.INVITATION_PENDING
@@ -458,7 +455,7 @@ export class RoleSetService {
       return CommunityMembershipStatus.INVITATION_PENDING;
     }
 
-    await this.roleSetCacheService.setMembershipStatusCache(
+    void this.roleSetCacheService.setMembershipStatusCache(
       agent.id,
       roleSet.id,
       CommunityMembershipStatus.NOT_MEMBER
@@ -484,14 +481,9 @@ export class RoleSetService {
       roleSetID
     );
     for (const invitation of invitations) {
-      // skip any finalized invitations; only return pending invitations
-      const isFinalized = await this.invitationService.isFinalizedInvitation(
-        invitation.id
-      );
-      if (isFinalized) {
-        continue;
-      }
-      await this.roleSetCacheService.setOpenInvitationCache(
+      // Lifecycle is eager-loaded; check in-memory without re-fetching from DB
+      if (this.invitationService.isInvitationFinalized(invitation)) continue;
+      void this.roleSetCacheService.setOpenInvitationCache(
         contributorID,
         roleSetID,
         invitation
@@ -1598,7 +1590,7 @@ export class RoleSetService {
         resourceID: membershipCredential.resourceID,
       }
     );
-    await this.roleSetCacheService.setAgentIsMemberCache(
+    void this.roleSetCacheService.setAgentIsMemberCache(
       agent.id,
       roleSet.id,
       validCredential
