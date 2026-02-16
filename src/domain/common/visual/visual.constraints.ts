@@ -7,6 +7,8 @@ export const VISUAL_ALLOWED_TYPES = [
   'image/jpg',
   'image/svg+xml',
   'image/webp',
+  'image/gif',
+  'image/avif',
   'image/heic',
   'image/heif',
 ] as const;
