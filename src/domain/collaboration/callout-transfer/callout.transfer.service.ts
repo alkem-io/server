@@ -163,6 +163,7 @@ export class CalloutTransferService {
 
   private async revokeUrlCaches(calloutID: string): Promise<void> {
     const callout = await this.calloutService.getCalloutOrFail(calloutID, {
+      loadEagerRelations: false,
       relations: {
         framing: {
           profile: true,
@@ -177,6 +178,23 @@ export class CalloutTransferService {
           memo: { profile: true },
         },
       },
+      select: {
+        id: true,
+        framing: {
+          id: true,
+          profile: { id: true },
+          whiteboard: {
+            id: true,
+            profile: {  id: true },
+          },
+        },
+        contributions: {
+          post: { id: true, profile: { id: true, } },
+          link: { id: true, profile: { id: true, } },
+          whiteboard: { id: true, profile: { id: true, } },
+          memo: { id: true, profile: { id: true, } },
+        },
+      }
     });
 
     // Revoke the framing profile URL cache
@@ -264,6 +282,10 @@ export class CalloutTransferService {
       relations: {
         classification: true,
       },
+      select: {
+        id: true,
+        classification: { id: true },
+      }
     });
 
     if (!callout.classification) {
