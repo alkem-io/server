@@ -1,5 +1,8 @@
 import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
+import { CommunityRoleSetLoaderCreator } from '@core/dataloader/creators/loader.creators';
+import { Loader } from '@core/dataloader/decorators';
+import { ILoader } from '@core/dataloader/loader.interface';
 import { IRoleSet } from '@domain/access/role-set';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { ICommunication } from '@domain/communication/communication/communication.interface';
@@ -55,7 +58,11 @@ export class CommunityResolverFields {
     nullable: false,
     description: 'The RoleSet for this Community.',
   })
-  async roleSet(@Parent() community: Community): Promise<IRoleSet> {
-    return this.communityService.getRoleSet(community);
+  async roleSet(
+    @Parent() community: Community,
+    @Loader(CommunityRoleSetLoaderCreator, { parentClassRef: Community })
+    loader: ILoader<IRoleSet>
+  ): Promise<IRoleSet> {
+    return loader.load(community.id);
   }
 }
