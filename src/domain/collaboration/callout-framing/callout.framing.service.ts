@@ -7,6 +7,8 @@ import { TagsetType } from '@common/enums/tagset.type';
 import { VisualType } from '@common/enums/visual.type';
 import { ValidationException } from '@common/exceptions';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { CreateLinkInput } from '@domain/collaboration/link/dto/link.dto.create';
 import { LinkService } from '@domain/collaboration/link/link.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
@@ -25,15 +27,26 @@ import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { Inject, Injectable } from '@nestjs/common';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
-import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
+import { eq } from 'drizzle-orm';
+import { calloutFramings } from './callout.framing.schema';
 import { ILink } from '../link/link.interface';
 import { CalloutFraming } from './callout.framing.entity';
 import { ICalloutFraming } from './callout.framing.interface';
 import { CreateCalloutFramingInput } from './dto/callout.framing.dto.create';
 import { UpdateCalloutFramingInput } from './dto/callout.framing.dto.update';
+
+type FramingFindOptions = {
+  relations?: {
+    profile?: boolean;
+    whiteboard?: boolean;
+    link?: boolean;
+    memo?: boolean;
+    mediaGallery?: boolean | { storageBucket?: boolean };
+    authorization?: boolean;
+  };
+};
 
 @Injectable()
 export class CalloutFramingService {
@@ -47,8 +60,8 @@ export class CalloutFramingService {
     private namingService: NamingService,
     private tagsetService: TagsetService,
     private mediaGalleryService: MediaGalleryService,
-    @InjectRepository(CalloutFraming)
-    private calloutFramingRepository: Repository<CalloutFraming>
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb
   ) {}
 
   public async createCalloutFraming(
@@ -57,7 +70,7 @@ export class CalloutFramingService {
     userID?: string
   ): Promise<ICalloutFraming> {
     const calloutFraming: ICalloutFraming =
-      CalloutFraming.create(calloutFramingData);
+      CalloutFraming.create(calloutFramingData as Partial<CalloutFraming>);
 
     calloutFraming.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.CALLOUT_FRAMING
@@ -466,42 +479,74 @@ export class CalloutFramingService {
       );
     }
 
-    const result = await this.calloutFramingRepository.remove(
-      calloutFraming as CalloutFraming
-    );
+    await this.db
+      .delete(calloutFramings)
+      .where(eq(calloutFramings.id, calloutFramingID));
+    const result = { ...calloutFraming };
     result.id = calloutFramingID;
     return result;
   }
 
   async save(calloutFraming: ICalloutFraming): Promise<ICalloutFraming> {
-    return await this.calloutFramingRepository.save(calloutFraming);
+    const [result] = await this.db
+      .insert(calloutFramings)
+      .values(calloutFraming as any)
+      .onConflictDoUpdate({
+        target: calloutFramings.id,
+        set: calloutFraming as any,
+      })
+      .returning();
+    return result as unknown as ICalloutFraming;
   }
 
   public async getCalloutFramingOrFail(
     calloutFramingID: string,
-    options?: FindOneOptions<CalloutFraming>
+    options?: FramingFindOptions
   ): Promise<ICalloutFraming | never> {
-    const calloutFraming = await this.calloutFramingRepository.findOne({
-      where: { id: calloutFramingID },
-      ...options,
-    });
+    const withClause: Record<string, any> = {};
+    if (options?.relations) {
+      if (options.relations.profile) withClause.profile = true;
+      if (options.relations.whiteboard) withClause.whiteboard = true;
+      if (options.relations.link) withClause.link = true;
+      if (options.relations.memo) withClause.memo = true;
+      if (options.relations.mediaGallery) {
+        if (typeof options.relations.mediaGallery === 'object') {
+          const mediaWith: Record<string, boolean> = {};
+          if (options.relations.mediaGallery.storageBucket)
+            mediaWith.storageBucket = true;
+          withClause.mediaGallery = { with: mediaWith };
+        } else {
+          withClause.mediaGallery = true;
+        }
+      }
+      if (options.relations.authorization) withClause.authorization = true;
+    }
+
+    const queryOptions: any = {
+      where: eq(calloutFramings.id, calloutFramingID),
+    };
+    if (Object.keys(withClause).length > 0) {
+      queryOptions.with = withClause;
+    }
+
+    const calloutFraming =
+      await this.db.query.calloutFramings.findFirst(queryOptions);
 
     if (!calloutFraming)
       throw new EntityNotFoundException(
         `No CalloutFraming found with the given id: ${calloutFramingID}`,
         LogContext.COLLABORATION
       );
-    return calloutFraming;
+    return calloutFraming as unknown as ICalloutFraming;
   }
 
   public async getProfile(
-    calloutFramingInput: ICalloutFraming,
-    relations?: FindOptionsRelations<ICalloutFraming>
+    calloutFramingInput: ICalloutFraming
   ): Promise<IProfile> {
     const calloutFraming = await this.getCalloutFramingOrFail(
       calloutFramingInput.id,
       {
-        relations: { profile: true, ...relations },
+        relations: { profile: true },
       }
     );
     if (!calloutFraming.profile)
@@ -514,13 +559,12 @@ export class CalloutFramingService {
   }
 
   public async getWhiteboard(
-    calloutFramingInput: ICalloutFraming,
-    relations?: FindOptionsRelations<ICalloutFraming>
+    calloutFramingInput: ICalloutFraming
   ): Promise<IWhiteboard | null> {
     const calloutFraming = await this.getCalloutFramingOrFail(
       calloutFramingInput.id,
       {
-        relations: { whiteboard: true, ...relations },
+        relations: { whiteboard: true },
       }
     );
     if (!calloutFraming.whiteboard) {
@@ -531,13 +575,12 @@ export class CalloutFramingService {
   }
 
   public async getLink(
-    calloutFramingInput: ICalloutFraming,
-    relations?: FindOptionsRelations<ICalloutFraming>
+    calloutFramingInput: ICalloutFraming
   ): Promise<ILink | null> {
     const calloutFraming = await this.getCalloutFramingOrFail(
       calloutFramingInput.id,
       {
-        relations: { link: true, ...relations },
+        relations: { link: true },
       }
     );
     if (!calloutFraming.link) {
@@ -548,13 +591,12 @@ export class CalloutFramingService {
   }
 
   public async getMemo(
-    calloutFramingInput: ICalloutFraming,
-    relations?: FindOptionsRelations<ICalloutFraming>
+    calloutFramingInput: ICalloutFraming
   ): Promise<IMemo | null> {
     const calloutFraming = await this.getCalloutFramingOrFail(
       calloutFramingInput.id,
       {
-        relations: { memo: true, ...relations },
+        relations: { memo: true },
       }
     );
     if (!calloutFraming.memo) {
@@ -565,13 +607,12 @@ export class CalloutFramingService {
   }
 
   public async getMediaGallery(
-    calloutFramingInput: ICalloutFraming,
-    relations?: FindOptionsRelations<ICalloutFraming>
+    calloutFramingInput: ICalloutFraming
   ): Promise<IMediaGallery | null> {
     const calloutFraming = await this.getCalloutFramingOrFail(
       calloutFramingInput.id,
       {
-        relations: { mediaGallery: true, ...relations },
+        relations: { mediaGallery: true },
       }
     );
     if (!calloutFraming.mediaGallery) {

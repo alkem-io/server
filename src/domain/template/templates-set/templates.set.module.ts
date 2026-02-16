@@ -3,12 +3,10 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.module';
 import { TemplateContentSpaceModule } from '@domain/template/template-content-space/template.content.space.module';
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { InputCreatorModule } from '@services/api/input-creator/input.creator.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 import { TemplateModule } from '../template/template.module';
-import { TemplatesSet } from './templates.set.entity';
 import { TemplatesSetResolverFields } from './templates.set.resolver.fields';
 import { TemplatesSetResolverMutations } from './templates.set.resolver.mutations';
 import { TemplatesSetService } from './templates.set.service';
@@ -24,7 +22,6 @@ import { TemplatesSetAuthorizationService } from './templates.set.service.author
     SpaceLookupModule,
     InputCreatorModule,
     TemplateContentSpaceModule,
-    TypeOrmModule.forFeature([TemplatesSet]),
   ],
   providers: [
     TemplatesSetService,

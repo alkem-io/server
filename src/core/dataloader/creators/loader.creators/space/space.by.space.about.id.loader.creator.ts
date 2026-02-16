@@ -1,11 +1,10 @@
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { DataLoaderCreator } from '@core/dataloader/creators/base';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { Space } from '@domain/space/space/space.entity';
 import { ISpace } from '@domain/space/space/space.interface';
-import { Injectable } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
+import { Inject, Injectable } from '@nestjs/common';
 import DataLoader from 'dataloader';
-import { EntityManager, In } from 'typeorm';
 
 /**
  * DataLoader creator for batching Space lookups by SpaceAbout ID.
@@ -15,7 +14,7 @@ import { EntityManager, In } from 'typeorm';
 export class SpaceBySpaceAboutIdLoaderCreator
   implements DataLoaderCreator<ISpace | null>
 {
-  constructor(@InjectEntityManager() private manager: EntityManager) {}
+  constructor(@Inject(DRIZZLE) private readonly db: DrizzleDb) {}
 
   public create(): ILoader<ISpace | null> {
     return new DataLoader<string, ISpace | null>(
@@ -31,14 +30,14 @@ export class SpaceBySpaceAboutIdLoaderCreator
       return [];
     }
 
-    const spaces = await this.manager.find(Space, {
-      where: { about: { id: In([...spaceAboutIds]) } },
-      relations: { about: true },
-    });
+    const spacesList = await this.db.query.spaces.findMany({
+      where: (table, { inArray }) => inArray(table.aboutId, [...spaceAboutIds]),
+      with: { about: true },
+    }) as unknown as ISpace[];
 
     // Map by about.id for O(1) lookup
     const byAboutId = new Map<string, ISpace>();
-    for (const space of spaces) {
+    for (const space of spacesList) {
       if (space.about) {
         byAboutId.set(space.about.id, space);
       }

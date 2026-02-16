@@ -13,19 +13,18 @@ import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exc
 import { StorageUploadFailedException } from '@common/exceptions/storage/storage.upload.failed.exception';
 import { streamToBuffer } from '@common/utils';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { Profile } from '@domain/common/profile/profile.entity';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { AvatarCreatorService } from '@services/external/avatar-creator/avatar.creator.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Readable } from 'stream';
-import { FindOneOptions, Repository } from 'typeorm';
-import { Document } from '../document/document.entity';
+import { eq, sql } from 'drizzle-orm';
 import { IDocument } from '../document/document.interface';
 import { DocumentService } from '../document/document.service';
 import { CreateDocumentInput } from '../document/dto/document.dto.create';
@@ -34,6 +33,9 @@ import { CreateStorageBucketInput } from './dto/storage.bucket.dto.create';
 import { IStorageBucketParent } from './dto/storage.bucket.dto.parent';
 import { StorageBucket } from './storage.bucket.entity';
 import { IStorageBucket } from './storage.bucket.interface';
+import { storageBuckets } from './storage.bucket.schema';
+import { documents } from '../document/document.schema';
+import { profiles } from '@domain/common/profile/profile.schema';
 @Injectable()
 export class StorageBucketService {
   DEFAULT_MAX_ALLOWED_FILE_SIZE = 15728640;
@@ -44,14 +46,9 @@ export class StorageBucketService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationService: AuthorizationService,
     private urlGeneratorService: UrlGeneratorService,
-    @InjectRepository(StorageBucket)
-    private storageBucketRepository: Repository<StorageBucket>,
-    @InjectRepository(Document)
-    private documentRepository: Repository<Document>,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService,
-    @InjectRepository(Profile)
-    private profileRepository: Repository<Profile>
+    private readonly logger: LoggerService
   ) {}
 
   public createStorageBucket(
@@ -87,20 +84,42 @@ export class StorageBucketService {
       }
     }
 
-    const result = await this.storageBucketRepository.remove(
-      storage as StorageBucket
-    );
-    result.id = storageID;
-    return result;
+    await this.db
+      .delete(storageBuckets)
+      .where(eq(storageBuckets.id, storageID));
+    storage.id = storageID;
+    return storage;
   }
 
   public async save(storage: IStorageBucket): Promise<IStorageBucket> {
-    return this.storageBucketRepository.save(storage);
+    if (storage.id) {
+      const [updated] = await this.db
+        .update(storageBuckets)
+        .set({
+          allowedMimeTypes: storage.allowedMimeTypes,
+          maxFileSize: storage.maxFileSize,
+          storageAggregatorId: storage.storageAggregator?.id,
+          authorizationId: storage.authorization?.id,
+        })
+        .where(eq(storageBuckets.id, storage.id))
+        .returning();
+      return updated as unknown as IStorageBucket;
+    }
+    const [inserted] = await this.db
+      .insert(storageBuckets)
+      .values({
+        allowedMimeTypes: storage.allowedMimeTypes,
+        maxFileSize: storage.maxFileSize,
+        storageAggregatorId: storage.storageAggregator?.id,
+        authorizationId: storage.authorization?.id,
+      })
+      .returning();
+    return inserted as unknown as IStorageBucket;
   }
 
   async getStorageBucketOrFail(
     storageBucketID: string,
-    options?: FindOneOptions<StorageBucket>
+    options?: { relations?: { documents?: boolean } }
   ): Promise<IStorageBucket> {
     if (!storageBucketID) {
       throw new EntityNotFoundException(
@@ -108,16 +127,19 @@ export class StorageBucketService {
         LogContext.STORAGE_BUCKET
       );
     }
-    const storageBucket = await this.storageBucketRepository.findOneOrFail({
-      where: { id: storageBucketID },
-      ...options,
+    const withClause: Record<string, boolean> = {};
+    if (options?.relations?.documents) withClause.documents = true;
+
+    const storageBucket = await this.db.query.storageBuckets.findFirst({
+      where: eq(storageBuckets.id, storageBucketID),
+      with: Object.keys(withClause).length > 0 ? withClause : undefined,
     });
     if (!storageBucket)
       throw new EntityNotFoundException(
         `StorageBucket not found: ${storageBucketID}`,
         LogContext.STORAGE_BUCKET
       );
-    return storageBucket;
+    return storageBucket as unknown as IStorageBucket;
   }
 
   public async getDocuments(
@@ -186,11 +208,7 @@ export class StorageBucketService {
     try {
       const docByExternalId =
         await this.documentService.getDocumentByExternalIdOrFail(externalID, {
-          where: {
-            storageBucket: {
-              id: storageBucketId,
-            },
-          },
+          storageBucketId,
         });
       if (docByExternalId) {
         return docByExternalId;
@@ -289,15 +307,13 @@ export class StorageBucketService {
   }
 
   public async size(storage: IStorageBucket): Promise<number> {
-    const documentsSize = await this.documentRepository
-      .createQueryBuilder('document')
-      .where('document.storageBucketId = :storageBucketId', {
-        storageBucketId: storage.id,
-      })
-      .select('SUM(size)', 'totalSize')
-      .getRawOne<{ totalSize: number }>();
+    const result = await this.db.execute<{ totalSize: string }>(sql`
+      SELECT COALESCE(SUM("size"), 0) AS "totalSize"
+      FROM "document"
+      WHERE "document"."storageBucketId" = ${storage.id}
+    `);
 
-    return documentsSize?.totalSize ?? 0;
+    return Number(Array.from(result)[0]?.totalSize ?? 0);
   }
 
   public async getFilteredDocuments(
@@ -382,31 +398,26 @@ export class StorageBucketService {
   public async getStorageBucketsForAggregator(
     storageAggregatorID: string
   ): Promise<IStorageBucket[]> {
-    return this.storageBucketRepository.find({
-      where: {
-        storageAggregator: {
-          id: storageAggregatorID,
-        },
-      },
+    const result = await this.db.query.storageBuckets.findMany({
+      where: eq(storageBuckets.storageAggregatorId, storageAggregatorID),
     });
+    return result as unknown as IStorageBucket[];
   }
 
   public async getStorageBucketParent(
     storageBucket: IStorageBucket
   ): Promise<IStorageBucketParent | null> {
-    const profile = await this.profileRepository.findOne({
-      where: {
-        storageBucket: {
-          id: storageBucket.id,
-        },
-      },
+    const profile = await this.db.query.profiles.findFirst({
+      where: eq(profiles.storageBucketId, storageBucket.id),
     });
     if (profile) {
       return {
         id: profile.id,
         type: profile.type as ProfileType,
         displayName: profile.displayName,
-        url: await this.urlGeneratorService.generateUrlForProfile(profile),
+        url: await this.urlGeneratorService.generateUrlForProfile(
+          profile as any
+        ),
       };
     }
 

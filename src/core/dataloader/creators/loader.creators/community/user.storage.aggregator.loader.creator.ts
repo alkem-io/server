@@ -1,8 +1,7 @@
-import { User } from '@domain/community/user/user.entity';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { Injectable } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
-import { EntityManager } from 'typeorm';
+import { Inject, Injectable } from '@nestjs/common';
 import { createTypedRelationDataLoader } from '../../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
 
@@ -10,12 +9,12 @@ import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
 export class UserStorageAggregatorLoaderCreator
   implements DataLoaderCreator<IStorageAggregator[]>
 {
-  constructor(@InjectEntityManager() private manager: EntityManager) {}
+  constructor(@Inject(DRIZZLE) private readonly db: DrizzleDb) {}
 
   create(options: DataLoaderCreatorOptions<IStorageAggregator[]>) {
     return createTypedRelationDataLoader(
-      this.manager,
-      User,
+      this.db,
+      'users',
       { storageAggregator: true },
       this.constructor.name,
       options

@@ -4,13 +4,11 @@ import { AgentModule } from '@domain/agent/agent/agent.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { LicenseEntitlementModule } from '@domain/common/license-entitlement/license.entitlement.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
-import { Organization } from '@domain/community/organization';
 import { UserGroupModule } from '@domain/community/user-group/user-group.module';
 import { AccountHostModule } from '@domain/space/account.host/account.host.module';
 import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { AvatarCreatorModule } from '@services/external/avatar-creator/avatar.creator.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
@@ -46,7 +44,6 @@ import { OrganizationLicenseService } from './organization.service.license';
     ProfileModule,
     AvatarCreatorModule,
     StorageAggregatorModule,
-    TypeOrmModule.forFeature([Organization]),
   ],
   providers: [
     OrganizationService,

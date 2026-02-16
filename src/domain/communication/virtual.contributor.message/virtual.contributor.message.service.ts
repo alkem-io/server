@@ -68,7 +68,7 @@ export class VirtualContributorMessageService {
       await this.virtualContributorLookupService.getVirtualContributorOrFail(
         invocationInput.virtualContributorID,
         {
-          relations: {
+          with: {
             authorization: true,
             agent: true,
             profile: true,

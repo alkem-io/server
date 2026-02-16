@@ -98,7 +98,7 @@ export class RoomMentionsService {
         const virtualContributor =
           await this.virtualContributorLookupService.getVirtualContributorOrFail(
             vcMention.contributorID,
-            { relations: { agent: true } }
+            { with: { agent: true } }
           );
 
         if (!virtualContributor.agent) {

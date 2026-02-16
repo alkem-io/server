@@ -31,9 +31,8 @@ export class ForumAuthorizationService {
   ): Promise<IAuthorizationPolicy[]> {
     const forum = await this.forumService.getForumOrFail(forumInput.id, {
       relations: {
-        discussions: {
-          comments: true,
-        },
+        discussions: true,
+        comments: true,
       },
     });
 

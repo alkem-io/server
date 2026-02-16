@@ -2,18 +2,19 @@ import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { EncryptionService } from '@hedger/nestjs-encryption';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { AiPersonaEngineAdapter } from '@services/ai-server/ai-persona-engine-adapter/ai.persona.engine.adapter';
+import { eq } from 'drizzle-orm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
 import { AiPersonaEngineAdapterInvocationInput } from '../ai-persona-engine-adapter/dto/ai.persona.engine.adapter.dto.invocation.input';
 import { IAiServer } from '../ai-server/ai.server.interface';
 import graphJson from '../prompt-graph/config/prompt.graph.expert.json';
-import { AiPersona } from './ai.persona.entity';
+import { aiPersonas } from './ai.persona.schema';
 import { IAiPersona } from './ai.persona.interface';
 import {
   AiPersonaInvocationInput,
@@ -29,8 +30,7 @@ export class AiPersonaService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private aiPersonaEngineAdapter: AiPersonaEngineAdapter,
-    @InjectRepository(AiPersona)
-    private aiPersonaRepository: Repository<AiPersona>,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     private readonly crypto: EncryptionService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
@@ -40,25 +40,32 @@ export class AiPersonaService {
     aiPersonaData: CreateAiPersonaInput,
     aiServer: IAiServer
   ): Promise<IAiPersona> {
-    const aiPersona: IAiPersona = new AiPersona();
-    aiPersona.authorization = new AuthorizationPolicy(
+    const authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.AI_PERSONA
     );
-    aiPersona.aiServer = aiServer;
 
-    aiPersona.engine = aiPersonaData.engine;
-    aiPersona.prompt = aiPersonaData.prompt;
-    aiPersona.externalConfig = this.encryptExternalConfig(
-      aiPersonaData.externalConfig
-    );
+    const [savedAiPersona] = await this.db
+      .insert(aiPersonas)
+      .values({
+        engine: aiPersonaData.engine,
+        prompt: aiPersonaData.prompt,
+        externalConfig: this.encryptExternalConfig(
+          aiPersonaData.externalConfig
+        ),
+        aiServerId: aiServer.id,
+      })
+      .returning();
 
-    const savedAiPersona = await this.aiPersonaRepository.save(aiPersona);
+    const result = savedAiPersona as unknown as IAiPersona;
+    result.authorization = authorization;
+    result.aiServer = aiServer;
+
     this.logger.verbose?.(
-      `Created new AI Persona with id ${aiPersona.id}`,
+      `Created new AI Persona with id ${result.id}`,
       LogContext.PLATFORM
     );
 
-    return savedAiPersona;
+    return result;
   }
 
   async updateAiPersona(
@@ -66,41 +73,49 @@ export class AiPersonaService {
   ): Promise<IAiPersona> {
     const aiPersona = await this.getAiPersonaOrFail(aiPersonaData.ID);
 
+    const updateData: Record<string, unknown> = {};
+
     if (aiPersonaData.prompt !== undefined) {
-      aiPersona.prompt = aiPersonaData.prompt;
+      updateData.prompt = aiPersonaData.prompt;
     }
 
     if (aiPersonaData.engine !== undefined) {
-      aiPersona.engine = aiPersonaData.engine;
+      updateData.engine = aiPersonaData.engine;
     }
 
     if (aiPersonaData.externalConfig !== undefined) {
-      aiPersona.externalConfig = this.encryptExternalConfig({
+      updateData.externalConfig = this.encryptExternalConfig({
         ...this.decryptExternalConfig(aiPersona.externalConfig || {}),
         ...aiPersonaData.externalConfig,
       });
     }
     if (aiPersonaData.promptGraph !== undefined) {
-      aiPersona.promptGraph = aiPersona.promptGraph || {};
+      const currentGraph = aiPersona.promptGraph || {};
       const promptGraphData = aiPersonaData.promptGraph;
       if (promptGraphData.nodes !== undefined) {
-        aiPersona.promptGraph.nodes = promptGraphData.nodes;
+        currentGraph.nodes = promptGraphData.nodes;
       }
       if (promptGraphData.edges !== undefined) {
-        aiPersona.promptGraph.edges = promptGraphData.edges;
+        currentGraph.edges = promptGraphData.edges;
       }
       if (promptGraphData.start !== undefined) {
-        aiPersona.promptGraph.start = promptGraphData.start;
+        currentGraph.start = promptGraphData.start;
       }
       if (promptGraphData.end !== undefined) {
-        aiPersona.promptGraph.end = promptGraphData.end;
+        currentGraph.end = promptGraphData.end;
       }
       if (promptGraphData.state !== undefined) {
-        aiPersona.promptGraph.state = promptGraphData.state;
+        currentGraph.state = promptGraphData.state;
       }
+      updateData.promptGraph = currentGraph;
     }
 
-    await this.aiPersonaRepository.save(aiPersona);
+    if (Object.keys(updateData).length > 0) {
+      await this.db
+        .update(aiPersonas)
+        .set(updateData)
+        .where(eq(aiPersonas.id, aiPersona.id));
+    }
 
     return await this.getAiPersonaOrFail(aiPersona.id);
   }
@@ -109,7 +124,7 @@ export class AiPersonaService {
     const personaID = deleteData.ID;
 
     const aiPersona = await this.getAiPersonaOrFail(personaID, {
-      relations: {
+      with: {
         authorization: true,
       },
     });
@@ -120,28 +135,26 @@ export class AiPersonaService {
       );
     }
     await this.authorizationPolicyService.delete(aiPersona.authorization);
-    const result = await this.aiPersonaRepository.remove(
-      aiPersona as AiPersona
-    );
-    result.id = personaID;
-    return result;
+    await this.db.delete(aiPersonas).where(eq(aiPersonas.id, personaID));
+    aiPersona.id = personaID;
+    return aiPersona;
   }
 
   public async getAiPersona(
     aiPersonaID: string,
-    options?: FindOneOptions<AiPersona>
+    options?: { with?: Record<string, boolean> }
   ): Promise<IAiPersona | null> {
-    const aiPersona = await this.aiPersonaRepository.findOne({
-      ...options,
-      where: { ...options?.where, id: aiPersonaID },
+    const aiPersona = await this.db.query.aiPersonas.findFirst({
+      where: eq(aiPersonas.id, aiPersonaID),
+      with: options?.with,
     });
 
-    return aiPersona;
+    return (aiPersona as unknown as IAiPersona) ?? null;
   }
 
   public async getAiPersonaOrFail(
     aiPersonaID: string,
-    options?: FindOneOptions<AiPersona>
+    options?: { with?: Record<string, boolean> }
   ): Promise<IAiPersona | never> {
     const aiPersona = await this.getAiPersona(aiPersonaID, options);
     if (!aiPersona)
@@ -153,7 +166,33 @@ export class AiPersonaService {
   }
 
   async save(aiPersona: IAiPersona): Promise<IAiPersona> {
-    return await this.aiPersonaRepository.save(aiPersona);
+    if (aiPersona.id) {
+      const [updated] = await this.db
+        .update(aiPersonas)
+        .set({
+          engine: aiPersona.engine,
+          prompt: aiPersona.prompt,
+          externalConfig: aiPersona.externalConfig,
+          bodyOfKnowledgeLastUpdated: aiPersona.bodyOfKnowledgeLastUpdated,
+          promptGraph: aiPersona.promptGraph,
+          aiServerId: aiPersona.aiServer?.id,
+        })
+        .where(eq(aiPersonas.id, aiPersona.id))
+        .returning();
+      return updated as unknown as IAiPersona;
+    }
+    const [created] = await this.db
+      .insert(aiPersonas)
+      .values({
+        engine: aiPersona.engine,
+        prompt: aiPersona.prompt,
+        externalConfig: aiPersona.externalConfig,
+        bodyOfKnowledgeLastUpdated: aiPersona.bodyOfKnowledgeLastUpdated,
+        promptGraph: aiPersona.promptGraph,
+        aiServerId: aiPersona.aiServer?.id,
+      })
+      .returning();
+    return created as unknown as IAiPersona;
   }
 
   public async invoke(

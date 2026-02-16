@@ -9,6 +9,8 @@ import {
   EntityNotInitializedException,
   NotSupportedException,
 } from '@common/exceptions';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -18,10 +20,9 @@ import { IUser } from '@domain/community/user/user.interface';
 import { IUserGroup, UserGroup } from '@domain/community/user-group';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
+import { eq } from 'drizzle-orm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
 import { UserLookupService } from '../user-lookup/user.lookup.service';
 import {
   AssignUserGroupMemberInput,
@@ -30,6 +31,7 @@ import {
   RemoveUserGroupMemberInput,
   UpdateUserGroupInput,
 } from './dto';
+import { userGroups } from './user-group.schema';
 
 @Injectable()
 export class UserGroupService {
@@ -38,8 +40,7 @@ export class UserGroupService {
     private userLookupService: UserLookupService,
     private profileService: ProfileService,
     private agentService: AgentService,
-    @InjectRepository(UserGroup)
-    private userGroupRepository: Repository<UserGroup>,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -47,7 +48,7 @@ export class UserGroupService {
     userGroupData: CreateUserGroupInput,
     storageAggregator: IStorageAggregator
   ): Promise<IUserGroup> {
-    const group = UserGroup.create(userGroupData);
+    const group = UserGroup.create(userGroupData as unknown as Partial<UserGroup>);
     group.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.USER_GROUP
     );
@@ -57,7 +58,7 @@ export class UserGroupService {
       ProfileType.USER_GROUP,
       storageAggregator
     );
-    const savedUserGroup = await this.userGroupRepository.save(group);
+    const savedUserGroup = await this.saveUserGroup(group);
     this.logger.verbose?.(
       `Created new group (${group.id}) with name: ${group.profile?.displayName}`,
       LogContext.COMMUNITY
@@ -83,9 +84,9 @@ export class UserGroupService {
     }
 
     const { id } = group;
-    const result = await this.userGroupRepository.remove(group);
+    await this.db.delete(userGroups).where(eq(userGroups.id, id));
     return {
-      ...result,
+      ...group,
       id,
     };
   }
@@ -94,7 +95,7 @@ export class UserGroupService {
     userGroupInput: UpdateUserGroupInput
   ): Promise<IUserGroup> {
     const group = await this.getUserGroupOrFail(userGroupInput.ID, {
-      relations: { profile: true },
+      with: { profile: true },
     });
     if (!group.profile) {
       throw new EntityNotFoundException(
@@ -119,16 +120,38 @@ export class UserGroupService {
       );
     }
 
-    return await this.userGroupRepository.save(group);
+    return await this.saveUserGroup(group);
   }
 
   async saveUserGroup(group: IUserGroup): Promise<IUserGroup> {
-    return await this.userGroupRepository.save(group);
+    if (group.id) {
+      const [updated] = await this.db
+        .update(userGroups)
+        .set({
+          profileId: group.profile?.id ?? null,
+          authorizationId: group.authorization?.id ?? null,
+          organizationId: (group as any).organization?.id ?? (group as any).organizationId ?? null,
+          communityId: (group as any).community?.id ?? (group as any).communityId ?? null,
+        })
+        .where(eq(userGroups.id, group.id))
+        .returning();
+      return { ...group, ...updated } as unknown as IUserGroup;
+    }
+    const [inserted] = await this.db
+      .insert(userGroups)
+      .values({
+        profileId: group.profile?.id ?? null,
+        authorizationId: group.authorization?.id ?? null,
+        organizationId: (group as any).organization?.id ?? (group as any).organizationId ?? null,
+        communityId: (group as any).community?.id ?? (group as any).communityId ?? null,
+      })
+      .returning();
+    return { ...group, ...inserted } as unknown as IUserGroup;
   }
 
   async getParent(group: IUserGroup): Promise<IGroupable> {
     const groupWithParent = (await this.getUserGroupOrFail(group.id, {
-      relations: { community: true, organization: true },
+      with: { community: true, organization: true },
     })) as UserGroup;
     if (groupWithParent?.community) return groupWithParent?.community;
     if (groupWithParent?.organization) return groupWithParent?.organization;
@@ -140,16 +163,11 @@ export class UserGroupService {
 
   async getUserGroupOrFail(
     groupID: string,
-    options?: FindOneOptions<UserGroup>
+    options?: { with?: Record<string, boolean | object> }
   ): Promise<IUserGroup | never> {
-    //const t1 = performance.now()
-
-    const group = await this.userGroupRepository.findOne({
-      ...options,
-      where: {
-        ...options?.where,
-        id: groupID,
-      },
+    const group = await this.db.query.userGroups.findFirst({
+      where: eq(userGroups.id, groupID),
+      with: options?.with,
     });
 
     if (!group)
@@ -157,7 +175,7 @@ export class UserGroupService {
         `Unable to find group with ID: ${groupID}`,
         LogContext.COMMUNITY
       );
-    return group;
+    return group as unknown as IUserGroup;
   }
 
   async assignUser(
@@ -174,7 +192,7 @@ export class UserGroupService {
     });
 
     return await this.getUserGroupOrFail(membershipData.groupID, {
-      relations: { community: true },
+      with: { community: true },
     });
   }
 
@@ -192,7 +210,7 @@ export class UserGroupService {
     });
 
     return await this.getUserGroupOrFail(membershipData.groupID, {
-      relations: { community: true },
+      with: { community: true },
     });
   }
 
@@ -251,9 +269,12 @@ export class UserGroupService {
   }
 
   async getGroups(
-    conditions?: FindManyOptions<UserGroup>
+    options?: { with?: Record<string, boolean | object> }
   ): Promise<IUserGroup[]> {
-    return (await this.userGroupRepository.find(conditions)) || [];
+    const result = await this.db.query.userGroups.findMany({
+      with: options?.with,
+    });
+    return (result as unknown as IUserGroup[]) || [];
   }
 
   getProfile(userGroup: IUserGroup): IProfile {

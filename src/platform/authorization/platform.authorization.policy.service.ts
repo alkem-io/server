@@ -6,14 +6,13 @@ import {
 } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Platform } from '@platform/platform/platform.entity';
-import { Repository } from 'typeorm';
+import { Inject, Injectable } from '@nestjs/common';
 
 @Injectable()
 export class PlatformAuthorizationPolicyService {
@@ -21,27 +20,27 @@ export class PlatformAuthorizationPolicyService {
 
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    @InjectRepository(Platform)
-    private platformRepository: Repository<Platform>
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb
   ) {
     this.rootAuthorizationPolicy = this.createRootAuthorizationPolicy();
   }
 
   public async getPlatformAuthorizationPolicy(): Promise<IAuthorizationPolicy> {
-    const platform = await this.platformRepository.findOne({
-      where: {},
-      relations: {
+    const platform = await this.db.query.platforms.findFirst({
+      where: undefined,
+      with: {
         authorization: true,
-      },
+      } as any,
     });
 
-    if (!platform || !platform.authorization) {
+    if (!platform || !(platform as any).authorization) {
       throw new EntityNotFoundException(
         'No Platform authorization found!',
         LogContext.PLATFORM
       );
     }
-    return platform.authorization;
+    return (platform as any).authorization as IAuthorizationPolicy;
   }
 
   public inheritRootAuthorizationPolicy(

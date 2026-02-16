@@ -1,15 +1,14 @@
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { SpaceLevel } from '@common/enums/space.level';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { Space } from '@domain/space/space/space.entity';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getEntityManagerToken } from '@nestjs/typeorm';
 import { MockWinstonProvider } from '@test/mocks';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { EntityManager } from 'typeorm';
 import { type Mocked, vi } from 'vitest';
 import { ActivityFeedService } from './activity.feed.service';
 
@@ -39,7 +38,7 @@ function makeCredential(spaceId: string): ICredentialDefinition {
 
 describe('ActivityFeedService', () => {
   let service: ActivityFeedService;
-  let entityManager: Mocked<EntityManager>;
+  let db: any;
   let authorizationService: Mocked<AuthorizationService>;
   let spaceLookupService: Mocked<SpaceLookupService>;
 
@@ -51,9 +50,7 @@ describe('ActivityFeedService', () => {
       .compile();
 
     service = module.get<ActivityFeedService>(ActivityFeedService);
-    entityManager = module.get<EntityManager>(
-      getEntityManagerToken('default')
-    ) as Mocked<EntityManager>;
+    db = module.get(DRIZZLE);
     authorizationService = module.get<AuthorizationService>(
       AuthorizationService
     ) as Mocked<AuthorizationService>;
@@ -80,7 +77,7 @@ describe('ActivityFeedService', () => {
 
       await service.getActivityFeed(agentInfo, { spaceIds: [] });
 
-      expect(entityManager.find).not.toHaveBeenCalled();
+      expect(db.query.spaces.findMany).not.toHaveBeenCalled();
     });
 
     it('should batch-load spaces with collaborations in a single query for L2 spaces', async () => {
@@ -93,7 +90,7 @@ describe('ActivityFeedService', () => {
       const space1 = makeSpace('space-1', SpaceLevel.L2, 'collab-1');
       const space2 = makeSpace('space-2', SpaceLevel.L2, 'collab-2');
 
-      entityManager.find.mockResolvedValueOnce([space1, space2]);
+      db.query.spaces.findMany.mockResolvedValueOnce([space1, space2]);
       authorizationService.isAccessGranted.mockReturnValue(true);
 
       await service.getActivityFeed(agentInfo, {
@@ -101,11 +98,7 @@ describe('ActivityFeedService', () => {
       });
 
       // 1 batch query for spaces (L2 has no children)
-      expect(entityManager.find).toHaveBeenCalledTimes(1);
-      expect(entityManager.find).toHaveBeenCalledWith(Space, {
-        where: { id: expect.anything() },
-        relations: { collaboration: true },
-      });
+      expect(db.query.spaces.findMany).toHaveBeenCalledTimes(1);
     });
 
     it('should batch-load L0 child spaces in a single additional query', async () => {
@@ -123,7 +116,7 @@ describe('ActivityFeedService', () => {
         'space-l0'
       );
 
-      entityManager.find
+      db.query.spaces.findMany
         .mockResolvedValueOnce([l0Space])
         .mockResolvedValueOnce([childL1]);
 
@@ -134,7 +127,7 @@ describe('ActivityFeedService', () => {
       });
 
       // 2 calls: 1 for parent spaces + 1 for L0 account children
-      expect(entityManager.find).toHaveBeenCalledTimes(2);
+      expect(db.query.spaces.findMany).toHaveBeenCalledTimes(2);
     });
 
     it('should batch-load L1 subspaces in a single additional query', async () => {
@@ -147,7 +140,7 @@ describe('ActivityFeedService', () => {
       const l1Space = makeSpace('space-l1', SpaceLevel.L1, 'collab-l1');
       const childL2 = makeSpace('space-l2', SpaceLevel.L2, 'collab-l2');
 
-      entityManager.find
+      db.query.spaces.findMany
         .mockResolvedValueOnce([l1Space])
         .mockResolvedValueOnce([childL2]);
 
@@ -158,7 +151,7 @@ describe('ActivityFeedService', () => {
       });
 
       // 2 calls: 1 for parent spaces + 1 for L1 subspaces
-      expect(entityManager.find).toHaveBeenCalledTimes(2);
+      expect(db.query.spaces.findMany).toHaveBeenCalledTimes(2);
     });
 
     it('should use isAccessGranted to filter collaborations', async () => {
@@ -171,7 +164,7 @@ describe('ActivityFeedService', () => {
       const space1 = makeSpace('space-1', SpaceLevel.L2, 'collab-1');
       const space2 = makeSpace('space-2', SpaceLevel.L2, 'collab-2');
 
-      entityManager.find.mockResolvedValueOnce([space1, space2]);
+      db.query.spaces.findMany.mockResolvedValueOnce([space1, space2]);
       authorizationService.isAccessGranted
         .mockReturnValueOnce(true)
         .mockReturnValueOnce(false);
@@ -201,7 +194,7 @@ describe('ActivityFeedService', () => {
         collaboration: undefined,
       } as unknown as Space;
 
-      entityManager.find.mockResolvedValueOnce([spaceNoCollab]);
+      db.query.spaces.findMany.mockResolvedValueOnce([spaceNoCollab]);
 
       await service.getActivityFeed(agentInfo, {
         spaceIds: ['space-no-collab'],
@@ -232,7 +225,7 @@ describe('ActivityFeedService', () => {
         'space-l0'
       );
 
-      entityManager.find
+      db.query.spaces.findMany
         .mockResolvedValueOnce([l0Space])
         .mockResolvedValueOnce([l0SpaceDuplicate, childL1]);
 
@@ -263,7 +256,7 @@ describe('ActivityFeedService', () => {
       );
       const l1Child = makeSpace('space-l2', SpaceLevel.L2, 'collab-l2');
 
-      entityManager.find
+      db.query.spaces.findMany
         .mockResolvedValueOnce([l0Space, l1Space]) // parent spaces
         .mockResolvedValueOnce([l0Child]) // L0 children
         .mockResolvedValueOnce([l1Child]); // L1 children
@@ -275,7 +268,7 @@ describe('ActivityFeedService', () => {
       });
 
       // 3 calls: parent spaces + L0 children + L1 children
-      expect(entityManager.find).toHaveBeenCalledTimes(3);
+      expect(db.query.spaces.findMany).toHaveBeenCalledTimes(3);
     });
   });
 });

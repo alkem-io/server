@@ -50,9 +50,9 @@ export class SpaceResolverMutations {
     @Args('spaceData') spaceData: UpdateSpaceInput
   ): Promise<ISpace> {
     const space = await this.spaceService.getSpaceOrFail(spaceData.ID, {
-      relations: {
+      with: {
         about: {
-          profile: true,
+          with: { profile: true },
         },
       },
     });
@@ -144,7 +144,7 @@ export class SpaceResolverMutations {
     @Args('updateData') updateData: UpdateSpacePlatformSettingsInput
   ): Promise<ISpace> {
     let space = await this.spaceService.getSpaceOrFail(updateData.spaceID, {
-      relations: { about: { profile: true } },
+      with: { about: { with: { profile: true } } },
     });
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -174,7 +174,7 @@ export class SpaceResolverMutations {
     @Args('subspaceData') subspaceData: CreateSubspaceInput
   ): Promise<ISpace> {
     const space = await this.spaceService.getSpaceOrFail(subspaceData.spaceID, {
-      relations: {},
+      with: {},
     });
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -217,7 +217,7 @@ export class SpaceResolverMutations {
     const level0Space = await this.spaceService.getSpaceOrFail(
       subspace.levelZeroSpaceID,
       {
-        relations: { agent: { credentials: true } },
+        with: { agent: { with: { credentials: true } } },
       }
     );
 

@@ -10,7 +10,7 @@ import {
   MoreThanOrEqual,
   ObjectLiteral,
   SelectQueryBuilder,
-} from 'typeorm';
+} from '@core/typeorm-compat.types';
 import { PaginationArgs } from './pagination.args';
 import {
   IRelayStyleEdge,
@@ -112,7 +112,7 @@ export const getRelayStylePaginationResults = async <
 
   const pageInfo = await getPageInfo(query, cursorColumn, sort);
 
-  const edges = result.map<IRelayStyleEdge<T>>(x => ({ node: x }));
+  const edges = result.map((x: T): IRelayStyleEdge<T> => ({ node: x }));
 
   return { edges, pageInfo };
 };

@@ -3,88 +3,98 @@ import { LogContext } from '@common/enums/logging.context';
 import { SearchVisibility } from '@common/enums/search.visibility';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
-import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { virtualContributors } from '@domain/community/virtual-contributor/virtual.contributor.schema';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
-import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
+import { innovationHubs } from '@domain/innovation-hub/innovation.hub.schema';
 import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
-import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
+import { innovationPacks } from '@library/innovation-pack/innovation.pack.schema';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 import { InnovationPackService } from '@library/innovation-pack/innovation.pack.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
+import { and, eq } from 'drizzle-orm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { ITemplateResult } from './dto/library.dto.template.result';
 import { LibraryTemplatesFilterInput } from './dto/library.dto.templates.input';
-import { Library } from './library.entity';
+import { libraries } from './library.schema';
 import { ILibrary } from './library.interface';
 
 @Injectable()
 export class LibraryService {
   constructor(
     private innovationPackService: InnovationPackService,
-    @InjectEntityManager('default')
-    private entityManager: EntityManager,
-    @InjectRepository(Library)
-    private libraryRepository: Repository<Library>,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async getLibraryOrFail(options?: FindOneOptions<Library>): Promise<ILibrary> {
-    const library = await this.libraryRepository.findOne({
-      where: {},
-      ...options,
+  async getLibraryOrFail(options?: { with?: Record<string, boolean | object> }): Promise<ILibrary> {
+    const library = await this.db.query.libraries.findFirst({
+      with: options?.with,
     });
     if (!library)
       throw new EntityNotFoundException(
         'No Library found!',
         LogContext.LIBRARY
       );
-    return library;
+    return library as unknown as ILibrary;
   }
   public async save(library: ILibrary): Promise<ILibrary> {
-    return await this.libraryRepository.save(library);
+    if (library.id) {
+      const [updated] = await this.db
+        .update(libraries)
+        .set({
+          authorizationId: library.authorization?.id,
+        })
+        .where(eq(libraries.id, library.id))
+        .returning();
+      return updated as unknown as ILibrary;
+    }
+    const [created] = await this.db
+      .insert(libraries)
+      .values({
+        authorizationId: library.authorization?.id,
+      })
+      .returning();
+    return created as unknown as ILibrary;
   }
 
   public async getListedVirtualContributors(): Promise<IVirtualContributor[]> {
-    const virtualContributors = await this.entityManager.find(
-      VirtualContributor,
-      {
-        where: {
-          listedInStore: true,
-          searchVisibility: SearchVisibility.PUBLIC,
-        },
-      }
-    );
-    return virtualContributors;
+    const results = await this.db.query.virtualContributors.findMany({
+      where: and(
+        eq(virtualContributors.listedInStore, true),
+        eq(virtualContributors.searchVisibility, SearchVisibility.PUBLIC)
+      ),
+    });
+    return results as unknown as IVirtualContributor[];
   }
 
   public async getListedInnovationHubs(): Promise<IInnovationHub[]> {
-    const innovationHubs = await this.entityManager.find(InnovationHub, {
-      where: {
-        listedInStore: true,
-        searchVisibility: SearchVisibility.PUBLIC,
-      },
+    const results = await this.db.query.innovationHubs.findMany({
+      where: and(
+        eq(innovationHubs.listedInStore, true),
+        eq(innovationHubs.searchVisibility, SearchVisibility.PUBLIC)
+      ),
     });
-    return innovationHubs;
+    return results as unknown as IInnovationHub[];
   }
 
   public async getListedInnovationPacks(
     limit?: number,
     orderBy: InnovationPacksOrderBy = InnovationPacksOrderBy.NUMBER_OF_TEMPLATES_DESC
   ): Promise<IInnovationPack[]> {
-    const innovationPacks = await this.entityManager.find(InnovationPack, {
-      where: {
-        listedInStore: true,
-        searchVisibility: SearchVisibility.PUBLIC,
-      },
-      relations: {
+    const results = await this.db.query.innovationPacks.findMany({
+      where: and(
+        eq(innovationPacks.listedInStore, true),
+        eq(innovationPacks.searchVisibility, SearchVisibility.PUBLIC)
+      ),
+      with: {
         templatesSet: true,
       },
     });
 
     return await this.sortAndFilterInnovationPacks(
-      innovationPacks,
+      results as unknown as IInnovationPack[],
       limit,
       orderBy
     );
@@ -122,40 +132,44 @@ export class LibraryService {
     filter?: LibraryTemplatesFilterInput
   ): Promise<ITemplateResult[]> {
     // Note: potentially we can also make this all a lot faster with having a smart select on the included Templates that are returned
-    const innovationPacks = await this.entityManager.find(InnovationPack, {
-      where: {
-        listedInStore: true,
-        searchVisibility: SearchVisibility.PUBLIC,
-      },
-      relations: {
+    const results = await this.db.query.innovationPacks.findMany({
+      where: and(
+        eq(innovationPacks.listedInStore, true),
+        eq(innovationPacks.searchVisibility, SearchVisibility.PUBLIC)
+      ),
+      with: {
         templatesSet: {
-          templates: {
-            profile: true,
+          with: {
+            templates: {
+              with: {
+                profile: true,
+              },
+            },
           },
         },
       },
     });
     const templateResults: ITemplateResult[] = [];
-    for (const innovationPack of innovationPacks) {
+    for (const innovationPack of results) {
       if (
         !innovationPack.templatesSet ||
-        !innovationPack.templatesSet.templates
+        !(innovationPack.templatesSet as any).templates
       ) {
         throw new RelationshipNotFoundException(
           `InnovationPack ${innovationPack.id} does not have a templatesSet or templates`,
           LogContext.LIBRARY
         );
       }
-      let filteredTemplates = innovationPack.templatesSet.templates;
+      let filteredTemplates = (innovationPack.templatesSet as any).templates;
       if (filter && filter.types) {
-        filteredTemplates = filteredTemplates.filter(template =>
+        filteredTemplates = filteredTemplates.filter((template: any) =>
           filter.types.includes(template.type)
         );
       }
       for (const template of filteredTemplates) {
         const result: ITemplateResult = {
           template,
-          innovationPack,
+          innovationPack: innovationPack as unknown as IInnovationPack,
         };
         templateResults.push(result);
       }

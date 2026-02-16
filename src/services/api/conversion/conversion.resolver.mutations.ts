@@ -205,7 +205,7 @@ export class ConversionResolverMutations {
     }
 
     const space = await this.spaceService.getSpaceOrFail(spaceID, {
-      relations: {
+      with: {
         collaboration: {
           calloutsSet: {
             callouts: true,
@@ -269,7 +269,7 @@ export class ConversionResolverMutations {
     subspaceID: string
   ): Promise<IAuthorizationPolicy | never> {
     const subspace = await this.spaceService.getSpaceOrFail(subspaceID, {
-      relations: {
+      with: {
         parentSpace: {
           authorization: true,
         },

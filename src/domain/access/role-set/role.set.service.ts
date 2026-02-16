@@ -45,12 +45,15 @@ import { VirtualContributorLookupService } from '@domain/community/virtual-contr
 import { ISpace } from '@domain/space/space/space.interface';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { and, eq, ne } from 'drizzle-orm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Not, Repository } from 'typeorm';
+import { forms } from '@domain/common/form/form.schema';
+import { roleSets } from './role.set.schema';
 import { IApplication } from '../application/application.interface';
 import { CreateApplicationInput } from '../application/dto/application.dto.create';
 import { CreateInvitationInput } from '../invitation/dto/invitation.dto.create';
@@ -84,8 +87,7 @@ export class RoleSetService {
     private communityCommunicationService: CommunityCommunicationService,
     private licenseService: LicenseService,
     private inAppNotificationService: InAppNotificationService,
-    @InjectRepository(RoleSet)
-    private roleSetRepository: Repository<RoleSet>,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private readonly roleSetCacheService: RoleSetCacheService
@@ -131,39 +133,40 @@ export class RoleSetService {
 
   async getRoleSetOrFail(
     roleSetID: string,
-    options?: FindOneOptions<RoleSet>
+    options?: { with?: Record<string, boolean | object> }
   ): Promise<IRoleSet | never> {
-    const roleSet = await this.roleSetRepository.findOne({
-      where: { id: roleSetID },
-      ...options,
+    const roleSet = await this.db.query.roleSets.findFirst({
+      where: eq(roleSets.id, roleSetID),
+      with: options?.with,
     });
     if (!roleSet)
       throw new EntityNotFoundException(
         `Unable to find RoleSet with ID: ${roleSetID}`,
         LogContext.COMMUNITY
       );
-    return roleSet;
+    return roleSet as unknown as IRoleSet;
   }
 
   async removeRoleSetOrFail(roleSetID: string): Promise<boolean | never> {
     // Note need to load it in with all contained entities so can remove fully
     const roleSet = await this.getRoleSetOrFail(roleSetID, {
-      relations: {
+      with: {
         roles: true,
         applications: true,
         invitations: true,
         platformInvitations: true,
-        applicationForm: true,
-        license: true,
       },
     });
+    // Also load applicationForm and license via FK columns on the roleSet
+    const applicationForm = await this.getApplicationForm(roleSet);
+    const licenseId = (roleSet as any).licenseId;
     if (
       !roleSet.roles ||
       !roleSet.applications ||
       !roleSet.invitations ||
       !roleSet.platformInvitations ||
-      !roleSet.applicationForm ||
-      !roleSet.license
+      !applicationForm ||
+      !licenseId
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load child entities for roleSet for deletion: ${roleSet.id} `,
@@ -200,20 +203,46 @@ export class RoleSetService {
       });
     }
 
-    await this.formService.removeForm(roleSet.applicationForm);
-    await this.licenseService.removeLicenseOrFail(roleSet.license.id);
+    await this.formService.removeForm(applicationForm);
+    await this.licenseService.removeLicenseOrFail(licenseId);
 
-    await this.roleSetRepository.remove(roleSet as RoleSet);
+    await this.db.delete(roleSets).where(eq(roleSets.id, roleSet.id));
     return true;
   }
 
   async save(roleSet: IRoleSet): Promise<IRoleSet> {
-    return await this.roleSetRepository.save(roleSet);
+    if (roleSet.id) {
+      const [updated] = await this.db
+        .update(roleSets)
+        .set({
+          entryRoleName: roleSet.entryRoleName,
+          type: roleSet.type,
+          licenseId: roleSet.license?.id ?? (roleSet as any).licenseId ?? null,
+          applicationFormId: roleSet.applicationForm?.id ?? (roleSet as any).applicationFormId ?? null,
+          parentRoleSetId: roleSet.parentRoleSet?.id ?? (roleSet as any).parentRoleSetId ?? null,
+          authorizationId: roleSet.authorization?.id ?? (roleSet as any).authorizationId ?? null,
+        })
+        .where(eq(roleSets.id, roleSet.id))
+        .returning();
+      return { ...roleSet, ...updated } as unknown as IRoleSet;
+    }
+    const [inserted] = await this.db
+      .insert(roleSets)
+      .values({
+        entryRoleName: roleSet.entryRoleName,
+        type: roleSet.type,
+        licenseId: roleSet.license?.id ?? null,
+        applicationFormId: roleSet.applicationForm?.id ?? null,
+        parentRoleSetId: roleSet.parentRoleSet?.id ?? null,
+        authorizationId: roleSet.authorization?.id ?? null,
+      })
+      .returning();
+    return { ...roleSet, ...inserted } as unknown as IRoleSet;
   }
 
   async getParentRoleSet(roleSet: IRoleSet): Promise<IRoleSet | undefined> {
     const roleSetWithParent = await this.getRoleSetOrFail(roleSet.id, {
-      relations: { parentRoleSet: true },
+      with: { parentRoleSet: true },
     });
 
     const parentRoleSet = roleSetWithParent?.parentRoleSet;
@@ -236,10 +265,22 @@ export class RoleSetService {
   }
 
   async getApplicationForm(roleSet: IRoleSet): Promise<IForm> {
-    const roleSetForm = await this.getRoleSetOrFail(roleSet.id, {
-      relations: { applicationForm: true },
+    // If applicationForm is already loaded on the roleSet, use it
+    if (roleSet.applicationForm) {
+      return roleSet.applicationForm;
+    }
+    // Otherwise load via FK column
+    const roleSetRow = await this.db.query.roleSets.findFirst({
+      where: eq(roleSets.id, roleSet.id),
     });
-    const applicationForm = roleSetForm.applicationForm;
+    const formId = (roleSetRow as any)?.applicationFormId;
+    let applicationForm: IForm | undefined;
+    if (formId) {
+      const formRow = await this.db.query.forms.findFirst({
+        where: eq(forms.id, formId),
+      });
+      applicationForm = formRow as unknown as IForm | undefined;
+    }
     if (!applicationForm) {
       throw new EntityNotFoundException(
         `Unable to find Application Form for RoleSet with ID: ${roleSet.id}`,
@@ -787,9 +828,11 @@ export class RoleSetService {
       const invitation = await this.invitationService.getInvitationOrFail(
         invitationID,
         {
-          relations: {
+          with: {
             roleSet: {
-              parentRoleSet: true,
+              with: {
+                parentRoleSet: true,
+              },
             },
           },
         }
@@ -1036,7 +1079,7 @@ export class RoleSetService {
     roleSetID: string
   ): Promise<{ parentRoleSet: IRoleSet | undefined; isMember: boolean }> {
     const roleSet = await this.getRoleSetOrFail(roleSetID, {
-      relations: { parentRoleSet: true },
+      with: { parentRoleSet: true },
     });
 
     // If the parent roleSet is set, then check if the user is also a member there
@@ -1668,7 +1711,7 @@ export class RoleSetService {
       applicationData.userID
     );
     const roleSet = await this.getRoleSetOrFail(applicationData.roleSetID, {
-      relations: {
+      with: {
         parentRoleSet: true,
       },
     });
@@ -1878,14 +1921,14 @@ export class RoleSetService {
 
   async getApplications(roleSet: IRoleSet): Promise<IApplication[]> {
     const roleSetApplications = await this.getRoleSetOrFail(roleSet.id, {
-      relations: { applications: true },
+      with: { applications: true },
     });
     return roleSetApplications?.applications || [];
   }
 
   async getInvitations(roleSet: IRoleSet): Promise<IInvitation[]> {
     const roleSetInvitations = await this.getRoleSetOrFail(roleSet.id, {
-      relations: { invitations: true },
+      with: { invitations: true },
     });
     return roleSetInvitations?.invitations || [];
   }
@@ -1894,7 +1937,7 @@ export class RoleSetService {
     roleSet: IRoleSet
   ): Promise<IPlatformInvitation[]> {
     const roleSetInvs = await this.getRoleSetOrFail(roleSet.id, {
-      relations: { platformInvitations: true },
+      with: { platformInvitations: true },
     });
     return roleSetInvs?.platformInvitations || [];
   }
@@ -1937,12 +1980,13 @@ export class RoleSetService {
     parentRoleSet: IRoleSet,
     childRoleSet: IRoleSet
   ): Promise<IRoleSet[]> {
-    return this.roleSetRepository.find({
-      where: {
-        parentRoleSet: { id: parentRoleSet.id },
-        id: Not(childRoleSet.id),
-      },
+    const result = await this.db.query.roleSets.findMany({
+      where: and(
+        eq(roleSets.parentRoleSetId, parentRoleSet.id),
+        ne(roleSets.id, childRoleSet.id)
+      ),
     });
+    return result as unknown as IRoleSet[];
   }
 
   public async setParentRoleSetAndCredentials(
@@ -1977,7 +2021,7 @@ export class RoleSetService {
    */
   public async removeParentRoleSet(roleSetID: string): Promise<IRoleSet> {
     const roleSet = await this.getRoleSetOrFail(roleSetID, {
-      relations: {
+      with: {
         roles: true,
         parentRoleSet: true,
       },
@@ -1993,10 +2037,11 @@ export class RoleSetService {
     roleSet.roles = roleDefinitions;
 
     await this.save(roleSet);
-    // TypeORM does not support removing relations as far as I can tell, so do it manually
-    await this.roleSetRepository.query(
-      `UPDATE role_set SET "parentRoleSetId" = NULL WHERE id = '${roleSetID}'`
-    );
+    // Explicitly set parentRoleSetId to NULL
+    await this.db
+      .update(roleSets)
+      .set({ parentRoleSetId: null })
+      .where(eq(roleSets.id, roleSetID));
 
     return await this.getRoleSetOrFail(roleSetID);
   }
@@ -2061,7 +2106,7 @@ export class RoleSetService {
     let roleDefinitions = roleSetInput.roles;
     if (!roleDefinitions) {
       const roleSet = await this.getRoleSetOrFail(roleSetInput.id, {
-        relations: { roles: true },
+        with: { roles: true },
       });
       roleDefinitions = roleSet.roles;
     }
@@ -2081,7 +2126,7 @@ export class RoleSetService {
     let roleDefinitions = roleSetInput.roles;
     if (!roleDefinitions) {
       const roleSet = await this.getRoleSetOrFail(roleSetInput.id, {
-        relations: { roles: true },
+        with: { roles: true },
       });
       roleDefinitions = roleSet.roles;
     }
@@ -2116,7 +2161,7 @@ export class RoleSetService {
     const application = await this.applicationService.getApplicationOrFail(
       applicationID,
       {
-        relations: { roleSet: true, user: true },
+        with: { roleSet: true, user: true },
       }
     );
     const userID = application.user?.id;

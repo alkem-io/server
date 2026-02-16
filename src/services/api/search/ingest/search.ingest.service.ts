@@ -7,13 +7,7 @@ import { ExcalidrawContent, isExcalidrawTextElement } from '@common/interfaces';
 import { isDefined } from '@common/utils';
 import { asyncMap } from '@common/utils/async.map';
 import { asyncReduceSequential } from '@common/utils/async.reduce.sequential';
-import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { yjsStateToMarkdown } from '@domain/common/memo/conversion';
-import { Memo } from '@domain/common/memo/memo.entity';
-import { Tagset } from '@domain/common/tagset';
-import { Organization } from '@domain/community/organization';
-import { User } from '@domain/community/user/user.entity';
-import { Space } from '@domain/space/space/space.entity';
 import { Client as ElasticClient } from '@elastic/elasticsearch';
 import {
   ErrorCause,
@@ -21,53 +15,25 @@ import {
 } from '@elastic/elasticsearch/lib/api/types';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { InjectEntityManager } from '@nestjs/typeorm';
 import { ElasticResponseError } from '@services/external/elasticsearch/types';
 import { TaskService } from '@services/task';
 import { Task } from '@services/task/task.interface';
 import { AlkemioConfig } from '@src/types';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager, FindManyOptions } from 'typeorm';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { eq, and, sql, count } from 'drizzle-orm';
+import { spaces } from '@domain/space/space/space.schema';
+import { organizations } from '@domain/community/organization/organization.schema';
+import { users } from '@domain/community/user/user.schema';
 import { SearchResultType } from '../search.result.type';
 import { getIndexPattern } from './get.index.pattern';
 
-const profileRelationOptions = {
+/** Drizzle `with` shape for loading profile with location + tagsets */
+const profileWith = {
   location: true,
   tagsets: true,
-};
-
-const profileSelectOptions = {
-  references: false, // ?
-  displayName: true,
-  tagline: true,
-  description: true,
-  location: {
-    city: true,
-    country: true,
-  },
-  tagsets: {
-    tags: true,
-  },
-};
-
-const journeyFindOptions: FindManyOptions<Space> = {
-  loadEagerRelations: false,
-  relations: {
-    about: {
-      profile: profileRelationOptions,
-    },
-  },
-  select: {
-    id: true,
-    level: true,
-    visibility: true,
-    about: {
-      why: true,
-      who: true,
-      profile: profileSelectOptions,
-    },
-  },
-};
+} as const;
 
 const EMPTY_VALUE = 'N/A';
 
@@ -109,7 +75,7 @@ export class SearchIngestService {
   constructor(
     @Inject(ELASTICSEARCH_CLIENT_PROVIDER)
     private elasticClient: ElasticClient | undefined,
-    @InjectEntityManager() private entityManager: EntityManager,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
     private configService: ConfigService<AlkemioConfig, true>,
     private taskService: TaskService
@@ -643,540 +609,343 @@ export class SearchIngestService {
     }
   }
   // TODO: validate the loaded data for missing relations - https://github.com/alkem-io/server/issues/3699
-  private fetchSpacesLevel0Count() {
-    return this.entityManager.count<Space>(Space, {
-      where: {
-        level: SpaceLevel.L0,
-        visibility: SpaceVisibility.ACTIVE,
-      },
-    });
-  }
-  private fetchSpacesLevel0(start: number, limit: number) {
-    return this.entityManager
-      .find<Space>(Space, {
-        ...journeyFindOptions,
-        where: {
-          level: SpaceLevel.L0,
-          visibility: SpaceVisibility.ACTIVE,
-        },
-        relations: {
-          ...journeyFindOptions.relations,
-        },
-        select: {
-          ...journeyFindOptions.select,
-          visibility: true,
-        },
-        skip: start,
-        take: limit,
-      })
-      .then(spaces => {
-        return spaces.map(space => ({
-          ...space,
-          account: undefined,
-          type: SearchResultType.SPACE,
-          visibility: space?.visibility,
-          spaceID: space.id, // spaceID is the same as the space's id
-          profile: {
-            ...space.about.profile,
-            tags: processTagsets(space.about.profile.tagsets),
-            tagsets: undefined,
-          },
-        }));
-      });
-  }
-
-  private fetchSpacesLevel1Count() {
-    return this.entityManager.count<Space>(Space, {
-      where: {
-        level: SpaceLevel.L1,
-        visibility: SpaceVisibility.ACTIVE,
-      },
-    });
-  }
-  private fetchSpacesLevel1(start: number, limit: number) {
-    return this.entityManager
-      .find<Space>(Space, {
-        ...journeyFindOptions,
-        where: {
-          level: SpaceLevel.L1,
-          visibility: SpaceVisibility.ACTIVE,
-        },
-        relations: {
-          ...journeyFindOptions.relations,
-          parentSpace: true,
-        },
-        select: {
-          ...journeyFindOptions.select,
-          visibility: true,
-          parentSpace: { id: true },
-        },
-        skip: start,
-        take: limit,
-      })
-      .then(spaces => {
-        return spaces.map(space => ({
-          ...space,
-          account: undefined,
-          parentSpace: undefined,
-          type: SearchResultType.SUBSPACE,
-          visibility: space?.visibility,
-          spaceID: space.parentSpace?.id ?? EMPTY_VALUE,
-          profile: {
-            ...space.about.profile,
-            tags: processTagsets(space.about.profile.tagsets),
-            tagsets: undefined,
-          },
-        }));
-      });
-  }
-
-  private fetchSpacesLevel2Count() {
-    return this.entityManager.count<Space>(Space, {
-      where: {
-        level: SpaceLevel.L2,
-        visibility: SpaceVisibility.ACTIVE,
-      },
-    });
-  }
-  private fetchSpacesLevel2(start: number, limit: number) {
-    return this.entityManager
-      .find<Space>(Space, {
-        ...journeyFindOptions,
-        where: {
-          level: SpaceLevel.L2,
-          visibility: SpaceVisibility.ACTIVE,
-        },
-        relations: {
-          ...journeyFindOptions.relations,
-          parentSpace: { parentSpace: true },
-        },
-        select: {
-          ...journeyFindOptions.select,
-          visibility: true,
-          parentSpace: { id: true, parentSpace: { id: true } },
-        },
-        skip: start,
-        take: limit,
-      })
-      .then(spaces => {
-        return spaces.map(space => ({
-          ...space,
-          account: undefined,
-          parentSpace: undefined,
-          type: SearchResultType.SUBSPACE,
-          visibility: space?.visibility,
-          spaceID: space.parentSpace?.parentSpace?.id ?? EMPTY_VALUE,
-          profile: {
-            ...space.about.profile,
-            tags: processTagsets(space.about.profile.tagsets),
-            tagsets: undefined,
-          },
-        }));
-      });
-  }
-
-  private fetchOrganizationsCount() {
-    return this.entityManager.count<Organization>(Organization);
-  }
-  private fetchOrganizations(start: number, limit: number) {
-    return this.entityManager
-      .find<Organization>(Organization, {
-        loadEagerRelations: false,
-        relations: {
-          profile: profileRelationOptions,
-        },
-        select: {
-          profile: profileSelectOptions,
-        },
-        skip: start,
-        take: limit,
-      })
-      .then(organizations => {
-        return organizations.map(organization => ({
-          ...organization,
-          type: SearchResultType.ORGANIZATION,
-          profile: {
-            ...organization.profile,
-            tags: processTagsets(organization.profile.tagsets),
-            tagsets: undefined,
-          },
-        }));
-      });
-  }
-
-  private fetchUsersCount() {
-    return this.entityManager.count<User>(User, {
-      where: { serviceProfile: false },
-    });
-  }
-  private fetchUsers(start: number, limit: number) {
-    return this.entityManager
-      .find(User, {
-        loadEagerRelations: false,
-        where: { serviceProfile: false },
-        relations: {
-          profile: profileRelationOptions,
-        },
-        select: {
-          profile: profileSelectOptions,
-        },
-        skip: start,
-        take: limit,
-      })
-      .then(users =>
-        users.map(user => ({
-          ...user,
-          email: undefined,
-          phone: undefined,
-          serviceProfile: undefined,
-          type: SearchResultType.USER,
-          profile: {
-            ...user.profile,
-            tags: processTagsets(user.profile.tagsets),
-            tagsets: undefined,
-          },
-        }))
-      );
-  }
-
-  private fetchCalloutCount() {
-    // todo: count through Callout directly
-    return this.entityManager.count<Space>(Space, {
-      loadEagerRelations: false,
-      where: {
-        visibility: SpaceVisibility.ACTIVE,
-      },
-    });
-  }
-
-  private fetchCallout(start: number, limit: number) {
-    return this.entityManager
-      .find<Space>(Space, {
-        loadEagerRelations: false,
-        where: {
-          visibility: SpaceVisibility.ACTIVE,
-        },
-        relations: {
-          parentSpace: {
-            parentSpace: true,
-          },
-          collaboration: {
-            calloutsSet: {
-              callouts: {
-                framing: {
-                  profile: profileRelationOptions,
-                },
-              },
-            },
-          },
-        },
-        select: {
-          id: true,
-          visibility: true,
-          parentSpace: { id: true, parentSpace: { id: true } },
-          collaboration: {
-            id: true,
-            calloutsSet: {
-              id: true,
-              callouts: {
-                id: true,
-                createdBy: true,
-                createdDate: true,
-                nameID: true,
-                framing: {
-                  id: true,
-                  profile: profileSelectOptions,
-                },
-              },
-            },
-          },
-        },
-        skip: start,
-        take: limit,
-      })
-      .then(spaces =>
-        spaces.flatMap(space =>
-          space.collaboration?.calloutsSet?.callouts?.map(callout => ({
-            ...callout,
-            framing: undefined,
-            type: SearchResultType.CALLOUT,
-            license: {
-              visibility: space?.visibility ?? EMPTY_VALUE,
-            },
-            spaceID:
-              space.parentSpace?.parentSpace?.id ??
-              space.parentSpace?.id ??
-              space.id,
-            collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
-            profile: {
-              ...callout.framing.profile,
-              tags: processTagsets(callout.framing?.profile?.tagsets),
-              tagsets: undefined,
-            },
-          }))
+  private async fetchSpacesLevel0Count() {
+    const result = await this.db
+      .select({ count: count() })
+      .from(spaces)
+      .where(
+        and(
+          eq(spaces.level, SpaceLevel.L0),
+          eq(spaces.visibility, SpaceVisibility.ACTIVE)
         )
       );
+    return result[0]?.count ?? 0;
   }
-
-  private fetchWhiteboardCount() {
-    // todo: count through Whiteboard directly; consider both framing and contributions
-    return this.entityManager.count<Space>(Space, {
-      loadEagerRelations: false,
-      where: {
-        visibility: SpaceVisibility.ACTIVE,
+  private async fetchSpacesLevel0(start: number, limit: number) {
+    const spaceResults = await this.db.query.spaces.findMany({
+      where: and(
+        eq(spaces.level, SpaceLevel.L0),
+        eq(spaces.visibility, SpaceVisibility.ACTIVE)
+      ),
+      with: {
+        about: { with: { profile: { with: profileWith } } },
       },
+      offset: start,
+      limit,
     });
+
+    return spaceResults.map(space => ({
+      ...space,
+      account: undefined,
+      type: SearchResultType.SPACE,
+      visibility: space.visibility,
+      spaceID: space.id,
+      profile: {
+        ...(space as any).about?.profile,
+        tags: processTagsets((space as any).about?.profile?.tagsets),
+        tagsets: undefined,
+      },
+    }));
   }
 
-  private fetchWhiteboard(start: number, limit: number) {
-    return this.entityManager
-      .find<Space>(Space, {
-        loadEagerRelations: false,
-        where: {
-          visibility: SpaceVisibility.ACTIVE,
-        },
-        relations: {
-          collaboration: {
+  private async fetchSpacesLevel1Count() {
+    const result = await this.db
+      .select({ count: count() })
+      .from(spaces)
+      .where(and(eq(spaces.level, SpaceLevel.L1), eq(spaces.visibility, SpaceVisibility.ACTIVE)));
+    return result[0]?.count ?? 0;
+  }
+  private async fetchSpacesLevel1(start: number, limit: number) {
+    const spaceResults = await this.db.query.spaces.findMany({
+      where: and(
+        eq(spaces.level, SpaceLevel.L1),
+        eq(spaces.visibility, SpaceVisibility.ACTIVE)
+      ),
+      with: {
+        about: { with: { profile: { with: profileWith } } },
+        parentSpace: true,
+      },
+      offset: start,
+      limit,
+    });
+
+    return spaceResults.map(space => ({
+      ...space,
+      account: undefined,
+      parentSpace: undefined,
+      type: SearchResultType.SUBSPACE,
+      visibility: space.visibility,
+      spaceID: (space as any).parentSpace?.id ?? EMPTY_VALUE,
+      profile: {
+        ...(space as any).about?.profile,
+        tags: processTagsets((space as any).about?.profile?.tagsets),
+        tagsets: undefined,
+      },
+    }));
+  }
+
+  private async fetchSpacesLevel2Count() {
+    const result = await this.db
+      .select({ count: count() })
+      .from(spaces)
+      .where(and(eq(spaces.level, SpaceLevel.L2), eq(spaces.visibility, SpaceVisibility.ACTIVE)));
+    return result[0]?.count ?? 0;
+  }
+  private async fetchSpacesLevel2(start: number, limit: number) {
+    const spaceResults = await this.db.query.spaces.findMany({
+      where: and(
+        eq(spaces.level, SpaceLevel.L2),
+        eq(spaces.visibility, SpaceVisibility.ACTIVE)
+      ),
+      with: {
+        about: { with: { profile: { with: profileWith } } },
+        parentSpace: { with: { parentSpace: true } },
+      },
+      offset: start,
+      limit,
+    });
+
+    return spaceResults.map(space => ({
+      ...space,
+      account: undefined,
+      parentSpace: undefined,
+      type: SearchResultType.SUBSPACE,
+      visibility: space.visibility,
+      spaceID: (space as any).parentSpace?.parentSpace?.id ?? EMPTY_VALUE,
+      profile: {
+        ...(space as any).about?.profile,
+        tags: processTagsets((space as any).about?.profile?.tagsets),
+        tagsets: undefined,
+      },
+    }));
+  }
+
+  private async fetchOrganizationsCount() {
+    const result = await this.db.select({ count: count() }).from(organizations);
+    return result[0]?.count ?? 0;
+  }
+  private async fetchOrganizations(start: number, limit: number) {
+    const orgResults = await this.db.query.organizations.findMany({
+      with: { profile: { with: profileWith } },
+      offset: start,
+      limit,
+    });
+
+    return orgResults.map(org => ({
+      ...org,
+      type: SearchResultType.ORGANIZATION,
+      profile: {
+        ...(org as any).profile,
+        tags: processTagsets((org as any).profile?.tagsets),
+        tagsets: undefined,
+      },
+    }));
+  }
+
+  private async fetchUsersCount() {
+    const result = await this.db
+      .select({ count: count() })
+      .from(users)
+      .where(eq(users.serviceProfile, false));
+    return result[0]?.count ?? 0;
+  }
+  private async fetchUsers(start: number, limit: number) {
+    const userResults = await this.db.query.users.findMany({
+      where: eq(users.serviceProfile, false),
+      with: { profile: { with: profileWith } },
+      offset: start,
+      limit,
+    });
+
+    return userResults.map(user => ({
+      ...user,
+      email: undefined,
+      phone: undefined,
+      serviceProfile: undefined,
+      type: SearchResultType.USER,
+      profile: {
+        ...(user as any).profile,
+        tags: processTagsets((user as any).profile?.tagsets),
+        tagsets: undefined,
+      },
+    }));
+  }
+
+  private async fetchCalloutCount() {
+    const result = await this.db
+      .select({ count: count() })
+      .from(spaces)
+      .where(eq(spaces.visibility, SpaceVisibility.ACTIVE));
+    return result[0]?.count ?? 0;
+  }
+
+  private async fetchCallout(start: number, limit: number) {
+    const spaceResults = await this.db.query.spaces.findMany({
+      where: eq(spaces.visibility, SpaceVisibility.ACTIVE),
+      with: {
+        parentSpace: { with: { parentSpace: true } },
+        collaboration: {
+          with: {
             calloutsSet: {
-              callouts: {
-                framing: {
-                  whiteboard: {
-                    profile: profileRelationOptions,
-                  },
-                },
-                contributions: {
-                  whiteboard: {
-                    profile: profileRelationOptions,
+              with: {
+                callouts: {
+                  with: {
+                    framing: { with: { profile: { with: profileWith } } },
                   },
                 },
               },
             },
           },
-          parentSpace: {
-            parentSpace: true,
-          },
         },
-        select: {
-          id: true,
-          visibility: true,
-          collaboration: {
-            id: true,
+      },
+      offset: start,
+      limit,
+    } as any);
+
+    return spaceResults.flatMap((space: any) =>
+      space.collaboration?.calloutsSet?.callouts?.map((callout: any) => ({
+        ...callout,
+        framing: undefined,
+        type: SearchResultType.CALLOUT,
+        license: { visibility: space?.visibility ?? EMPTY_VALUE },
+        spaceID:
+          space.parentSpace?.parentSpace?.id ??
+          space.parentSpace?.id ??
+          space.id,
+        collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
+        profile: {
+          ...callout.framing?.profile,
+          tags: processTagsets(callout.framing?.profile?.tagsets),
+          tagsets: undefined,
+        },
+      }))
+    );
+  }
+
+  private async fetchWhiteboardCount() {
+    const result = await this.db
+      .select({ count: count() })
+      .from(spaces)
+      .where(eq(spaces.visibility, SpaceVisibility.ACTIVE));
+    return result[0]?.count ?? 0;
+  }
+
+  private async fetchWhiteboard(start: number, limit: number) {
+    const spaceResults = await this.db.query.spaces.findMany({
+      where: eq(spaces.visibility, SpaceVisibility.ACTIVE),
+      with: {
+        collaboration: {
+          with: {
             calloutsSet: {
-              id: true,
-              callouts: {
-                id: true,
-                createdBy: true,
-                createdDate: true,
-                nameID: true,
-                framing: {
-                  id: true,
-                  whiteboard: {
-                    id: true,
-                    content: true,
-                    profile: profileSelectOptions,
-                  },
-                },
-                contributions: {
-                  id: true,
-                  whiteboard: {
-                    id: true,
-                    content: true,
-                    profile: profileSelectOptions,
+              with: {
+                callouts: {
+                  with: {
+                    framing: { with: { whiteboard: { with: { profile: { with: profileWith } } } } },
+                    contributions: { with: { whiteboard: { with: { profile: { with: profileWith } } } } },
                   },
                 },
               },
             },
           },
-          parentSpace: {
-            id: true,
-            parentSpace: {
-              id: true,
-            },
-          },
         },
-        skip: start,
-        take: limit,
-      })
-      .then(spaces => {
-        return spaces.flatMap(space => {
-          const callouts = space.collaboration?.calloutsSet?.callouts;
-          return callouts
-            ?.flatMap(callout => {
-              // a callout can have whiteboard in the framing
-              // AND whiteboards in the contributions
-              const wbs = [];
-              if (callout.framing.whiteboard) {
-                const content = extractTextFromWhiteboardContent(
-                  callout.framing.whiteboard.content
-                );
-                // only whiteboards with content are ingested
-                if (!content) {
-                  return;
-                }
+        parentSpace: { with: { parentSpace: true } },
+      },
+      offset: start,
+      limit,
+    } as any);
 
-                wbs.push({
-                  ...callout.framing.whiteboard,
-                  content,
-                  type: SearchResultType.WHITEBOARD,
-                  license: {
-                    visibility: space?.visibility ?? EMPTY_VALUE,
-                  },
-                  spaceID:
-                    space?.parentSpace?.parentSpace?.id ??
-                    space?.parentSpace?.id ??
-                    space.id,
-                  calloutID: callout.id,
-                  collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
-                  profile: {
-                    ...callout.framing.whiteboard.profile,
-                    tags: processTagsets(
-                      callout.framing.whiteboard?.profile?.tagsets
-                    ),
-                    tagsets: undefined,
-                  },
-                });
-              }
-
-              callout?.contributions?.forEach(contribution => {
-                if (!contribution?.whiteboard) {
-                  return;
-                }
-
-                const content = extractTextFromWhiteboardContent(
-                  contribution.whiteboard.content
-                );
-                // only whiteboards with content are ingested
-                if (!content) {
-                  return;
-                }
-
-                wbs.push({
-                  ...contribution.whiteboard,
-                  content,
-                  type: SearchResultType.WHITEBOARD,
-                  license: {
-                    visibility: space?.visibility ?? EMPTY_VALUE,
-                  },
-                  spaceID:
-                    space?.parentSpace?.parentSpace?.id ??
-                    space?.parentSpace?.id ??
-                    space.id,
-                  calloutID: callout.id,
-                  collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
-                  profile: {
-                    ...contribution.whiteboard.profile,
-                    tags: processTagsets(
-                      contribution.whiteboard?.profile?.tagsets
-                    ),
-                    tagsets: undefined,
-                  },
-                });
+    return spaceResults.flatMap((space: any) => {
+      const calloutList = space.collaboration?.calloutsSet?.callouts;
+      return (calloutList ?? [])
+        .flatMap((callout: any) => {
+          const wbs: any[] = [];
+          if (callout.framing?.whiteboard) {
+            const content = extractTextFromWhiteboardContent(callout.framing.whiteboard.content);
+            if (content) {
+              wbs.push({
+                ...callout.framing.whiteboard,
+                content,
+                type: SearchResultType.WHITEBOARD,
+                license: { visibility: space?.visibility ?? EMPTY_VALUE },
+                spaceID: space?.parentSpace?.parentSpace?.id ?? space?.parentSpace?.id ?? space.id,
+                calloutID: callout.id,
+                collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
+                profile: {
+                  ...callout.framing.whiteboard.profile,
+                  tags: processTagsets(callout.framing.whiteboard?.profile?.tagsets),
+                  tagsets: undefined,
+                },
               });
+            }
+          }
 
-              return wbs;
-            })
-            .filter(Boolean);
-        });
-      });
+          callout?.contributions?.forEach((contribution: any) => {
+            if (!contribution?.whiteboard) return;
+            const content = extractTextFromWhiteboardContent(contribution.whiteboard.content);
+            if (!content) return;
+            wbs.push({
+              ...contribution.whiteboard,
+              content,
+              type: SearchResultType.WHITEBOARD,
+              license: { visibility: space?.visibility ?? EMPTY_VALUE },
+              spaceID: space?.parentSpace?.parentSpace?.id ?? space?.parentSpace?.id ?? space.id,
+              calloutID: callout.id,
+              collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
+              profile: {
+                ...contribution.whiteboard.profile,
+                tags: processTagsets(contribution.whiteboard?.profile?.tagsets),
+                tagsets: undefined,
+              },
+            });
+          });
+
+          return wbs;
+        })
+        .filter(Boolean);
+    });
   }
 
-  private fetchMemoCount() {
-    // todo: count through Memo directly; consider both framing and contributions
-    return this.entityManager.count<Space>(Space, {
-      loadEagerRelations: false,
-      where: {
-        visibility: SpaceVisibility.ACTIVE,
-      },
-    });
+  private async fetchMemoCount() {
+    const result = await this.db
+      .select({ count: count() })
+      .from(spaces)
+      .where(eq(spaces.visibility, SpaceVisibility.ACTIVE));
+    return result[0]?.count ?? 0;
   }
   private async fetchMemo(start: number, limit: number) {
-    const spaces = await this.entityManager.find<Space>(Space, {
-      loadEagerRelations: false,
-      where: {
-        visibility: SpaceVisibility.ACTIVE,
-      },
-      relations: {
+    const spaceResults = await this.db.query.spaces.findMany({
+      where: eq(spaces.visibility, SpaceVisibility.ACTIVE),
+      with: {
         collaboration: {
-          calloutsSet: {
-            callouts: {
-              framing: {
-                memo: {
-                  profile: profileRelationOptions,
-                },
-              },
-              contributions: {
-                memo: {
-                  profile: profileRelationOptions,
+          with: {
+            calloutsSet: {
+              with: {
+                callouts: {
+                  with: {
+                    framing: { with: { memo: { with: { profile: { with: profileWith } } } } },
+                    contributions: { with: { memo: { with: { profile: { with: profileWith } } } } },
+                  },
                 },
               },
             },
           },
         },
-        parentSpace: {
-          parentSpace: true,
-        },
+        parentSpace: { with: { parentSpace: true } },
       },
-      select: {
-        id: true,
-        visibility: true,
-        collaboration: {
-          id: true,
-          calloutsSet: {
-            id: true,
-            callouts: {
-              id: true,
-              createdBy: true,
-              createdDate: true,
-              nameID: true,
-              framing: {
-                id: true,
-                memo: {
-                  id: true,
-                  content: true,
-                  profile: profileSelectOptions,
-                },
-              },
-              contributions: {
-                id: true,
-                memo: {
-                  id: true,
-                  content: true,
-                  profile: profileSelectOptions,
-                },
-              },
-            },
-          },
-        },
-        parentSpace: {
-          id: true,
-          parentSpace: {
-            id: true,
-          },
-        },
-      },
-      skip: start,
-      take: limit,
-    });
+      offset: start,
+      limit,
+    } as any);
 
-    const memoForIngestion = (memo: Memo, callout: Callout, space: Space) => {
+    const memoForIngestion = (memo: any, callout: any, space: any) => {
       const markdown = extractMarkdownFromMemoContent(memo.content);
-      // only memos with content are ingested
-      if (!markdown) {
-        return;
-      }
-
+      if (!markdown) return;
       return {
         ...memo,
         content: undefined,
         markdown,
         type: SearchResultType.MEMO,
-        license: {
-          visibility: space?.visibility ?? EMPTY_VALUE,
-        },
-        spaceID:
-          space?.parentSpace?.parentSpace?.id ??
-          space?.parentSpace?.id ??
-          space.id,
+        license: { visibility: space?.visibility ?? EMPTY_VALUE },
+        spaceID: space?.parentSpace?.parentSpace?.id ?? space?.parentSpace?.id ?? space.id,
         calloutID: callout.id,
         collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
         profile: {
@@ -1187,133 +956,82 @@ export class SearchIngestService {
       };
     };
 
-    return spaces.flatMap(space => {
-      const callouts = space.collaboration?.calloutsSet?.callouts ?? [];
-      return callouts
-        .flatMap(callout => {
-          // a callout can have memo in the framing
-          // AND memos in the contributions
-          const memos: (Record<string, unknown> | undefined)[] = [];
-          if (callout.framing.memo) {
-            memos.push(memoForIngestion(callout.framing.memo, callout, space));
+    return spaceResults.flatMap((space: any) => {
+      const calloutList = space.collaboration?.calloutsSet?.callouts ?? [];
+      return calloutList
+        .flatMap((callout: any) => {
+          const memoItems: (Record<string, unknown> | undefined)[] = [];
+          if (callout.framing?.memo) {
+            memoItems.push(memoForIngestion(callout.framing.memo, callout, space));
           }
-
-          callout?.contributions?.forEach(({ memo }) => {
-            if (!memo) {
-              return;
-            }
-
-            memos.push(memoForIngestion(memo, callout, space));
+          callout?.contributions?.forEach(({ memo }: any) => {
+            if (!memo) return;
+            memoItems.push(memoForIngestion(memo, callout, space));
           });
-
-          return memos;
+          return memoItems;
         })
         .filter(isDefined);
     });
   }
 
-  private fetchPostsCount() {
-    // todo: count through Post directly
-    return this.entityManager.count<Space>(Space, {
-      loadEagerRelations: false,
-      where: {
-        visibility: SpaceVisibility.ACTIVE,
-      },
-    });
+  private async fetchPostsCount() {
+    const result = await this.db
+      .select({ count: count() })
+      .from(spaces)
+      .where(eq(spaces.visibility, SpaceVisibility.ACTIVE));
+    return result[0]?.count ?? 0;
   }
-  private fetchPosts(start: number, limit: number) {
-    return this.entityManager
-      .find<Space>(Space, {
-        loadEagerRelations: false,
-        where: {
-          visibility: SpaceVisibility.ACTIVE,
-        },
-        relations: {
-          collaboration: {
+  private async fetchPosts(start: number, limit: number) {
+    const spaceResults = await this.db.query.spaces.findMany({
+      where: eq(spaces.visibility, SpaceVisibility.ACTIVE),
+      with: {
+        collaboration: {
+          with: {
             calloutsSet: {
-              callouts: {
-                contributions: {
-                  post: {
-                    profile: profileRelationOptions,
+              with: {
+                callouts: {
+                  with: {
+                    contributions: { with: { post: { with: { profile: { with: profileWith } } } } },
                   },
                 },
               },
             },
           },
-          parentSpace: {
-            parentSpace: true,
-          },
         },
-        select: {
-          id: true,
-          visibility: true,
-          collaboration: {
-            id: true,
-            calloutsSet: {
-              id: true,
-              callouts: {
-                id: true,
-                contributions: {
-                  id: true,
-                  post: {
-                    id: true,
-                    createdBy: true,
-                    createdDate: true,
-                    nameID: true,
-                    profile: profileSelectOptions,
-                  },
-                },
-              },
+        parentSpace: { with: { parentSpace: true } },
+      },
+      offset: start,
+      limit,
+    } as any);
+
+    const postItems: any[] = [];
+    spaceResults.forEach((space: any) => {
+      const calloutList = space?.collaboration?.calloutsSet?.callouts;
+      calloutList?.forEach((callout: any) => {
+        callout?.contributions?.forEach((contribution: any) => {
+          if (!contribution.post) return;
+          postItems.push({
+            ...contribution.post,
+            type: SearchResultType.POST,
+            license: { visibility: space?.visibility ?? EMPTY_VALUE },
+            spaceID: space.parentSpace?.parentSpace?.id ?? space.parentSpace?.id ?? space.id,
+            calloutID: callout.id,
+            collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
+            profile: {
+              ...contribution.post.profile,
+              tags: processTagsets(contribution.post?.profile?.tagsets),
+              tagsets: undefined,
             },
-          },
-          parentSpace: {
-            id: true,
-            parentSpace: {
-              id: true,
-            },
-          },
-        },
-        skip: start,
-        take: limit,
-      })
-      .then(spaces => {
-        const posts: any[] = [];
-        spaces.forEach(space => {
-          const callouts = space?.collaboration?.calloutsSet?.callouts;
-          callouts?.forEach(callout => {
-            const contributions = callout?.contributions;
-            contributions?.forEach(contribution => {
-              if (!contribution.post) {
-                return;
-              }
-              posts.push({
-                ...contribution.post,
-                type: SearchResultType.POST,
-                license: {
-                  visibility: space?.visibility ?? EMPTY_VALUE,
-                },
-                spaceID:
-                  space.parentSpace?.parentSpace?.id ??
-                  space.parentSpace?.id ??
-                  space.id,
-                calloutID: callout.id,
-                collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
-                profile: {
-                  ...contribution.post.profile,
-                  tags: processTagsets(contribution.post?.profile?.tagsets),
-                  tagsets: undefined,
-                },
-              });
-            });
           });
         });
-
-        return posts;
       });
+    });
+
+    return postItems;
   }
 }
 
-const processTagsets = (tagsets: Tagset[] | undefined) => {
+const processTagsets = (tagsets: { tags: string[] }[] | undefined) => {
   return tagsets?.flatMap(tagset => tagset.tags).join(' ');
 };
 

@@ -11,14 +11,16 @@ import {
   RelationshipNotFoundException,
 } from '@common/exceptions';
 import { ExcalidrawContent } from '@common/interfaces';
+import { compressText, decompressText } from '@common/utils/compression.util';
 import { IProfile } from '@domain/common/profile';
 import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
+import { eq } from 'drizzle-orm';
 import { AuthorizationPolicy } from '../authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { LicenseService } from '../license/license.service';
@@ -27,14 +29,15 @@ import { CreateWhiteboardInput } from './dto/whiteboard.dto.create';
 import { UpdateWhiteboardInput } from './dto/whiteboard.dto.update';
 import { Whiteboard } from './whiteboard.entity';
 import { IWhiteboard } from './whiteboard.interface';
+import { whiteboards } from './whiteboard.schema';
 
 @Injectable()
 export class WhiteboardService {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    @InjectRepository(Whiteboard)
-    private whiteboardRepository: Repository<Whiteboard>,
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb,
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileService: ProfileService,
     private profileDocumentsService: ProfileDocumentsService,
@@ -49,7 +52,7 @@ export class WhiteboardService {
   ): Promise<IWhiteboard> {
     const whiteboard: IWhiteboard = Whiteboard.create({
       ...whiteboardData,
-    });
+    } as Partial<Whiteboard>);
     whiteboard.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.WHITEBOARD
     );
@@ -81,13 +84,62 @@ export class WhiteboardService {
     return whiteboard;
   }
 
+  /**
+   * Compresses whiteboard content before saving to database.
+   * Moved from @BeforeInsert/@BeforeUpdate lifecycle hooks.
+   */
+  private async compressContent(content: string): Promise<string> {
+    if (content !== '') {
+      try {
+        return await compressText(content);
+      } catch {
+        // rethrow to be caught higher, does not crash the server
+        throw new Error('Failed to compress content');
+      }
+    }
+    return content;
+  }
+
+  /**
+   * Decompresses whiteboard content after loading from database.
+   * Moved from @AfterLoad/@AfterInsert/@AfterUpdate lifecycle hooks.
+   */
+  private async decompressContent(content: string): Promise<string> {
+    if (content !== '') {
+      try {
+        return await decompressText(content);
+      } catch (e: any) {
+        // rethrow to be caught higher, does not crash the server
+        throw new Error(`Failed to decompress content: ${e?.message}`);
+      }
+    }
+    return content;
+  }
+
   async getWhiteboardOrFail(
     whiteboardID: string,
-    options?: FindOneOptions<Whiteboard>
+    options?: {
+      relations?: Record<string, boolean | Record<string, boolean>>;
+      select?: Record<string, boolean | Record<string, boolean>>;
+      loadEagerRelations?: boolean;
+    }
   ): Promise<IWhiteboard | never> {
-    const whiteboard = await this.whiteboardRepository.findOne({
-      where: { id: whiteboardID },
-      ...options,
+    const withClause: Record<string, any> = {};
+
+    if (options?.relations) {
+      Object.keys(options.relations).forEach(key => {
+        const value = options.relations![key];
+        if (typeof value === 'boolean' && value) {
+          withClause[key] = true;
+        } else if (typeof value === 'object') {
+          withClause[key] = { with: value };
+        }
+      });
+    }
+
+    const whiteboard = await this.db.query.whiteboards.findFirst({
+      where: eq(whiteboards.id, whiteboardID),
+      with: withClause,
     });
 
     if (!whiteboard)
@@ -95,7 +147,12 @@ export class WhiteboardService {
         `Not able to locate Whiteboard with the specified ID: ${whiteboardID}`,
         LogContext.SPACES
       );
-    return whiteboard;
+
+    // Decompress content after loading
+    const result = whiteboard as unknown as IWhiteboard;
+    result.content = await this.decompressContent(result.content);
+
+    return result;
   }
 
   async deleteWhiteboard(whiteboardID: string): Promise<IWhiteboard> {
@@ -123,11 +180,10 @@ export class WhiteboardService {
     await this.profileService.deleteProfile(whiteboard.profile.id);
     await this.authorizationPolicyService.delete(whiteboard.authorization);
 
-    const deletedWhiteboard = await this.whiteboardRepository.remove(
-      whiteboard as Whiteboard
-    );
-    deletedWhiteboard.id = whiteboardID;
-    return deletedWhiteboard;
+    await this.db.delete(whiteboards).where(eq(whiteboards.id, whiteboardID));
+
+    whiteboard.id = whiteboardID;
+    return whiteboard;
   }
 
   async updateWhiteboard(
@@ -162,7 +218,27 @@ export class WhiteboardService {
       }
     }
 
-    whiteboard = await this.save(whiteboard);
+    const updateData: Record<string, any> = {};
+    if (updateWhiteboardData.contentUpdatePolicy) {
+      updateData.contentUpdatePolicy = updateWhiteboardData.contentUpdatePolicy;
+    }
+    if (updateWhiteboardData.previewSettings) {
+      updateData.previewSettings = whiteboard.previewSettings;
+    }
+
+    if (Object.keys(updateData).length > 0) {
+      await this.db
+        .update(whiteboards)
+        .set(updateData)
+        .where(eq(whiteboards.id, whiteboard.id));
+    }
+
+    // Reload to get updated data
+    whiteboard = await this.getWhiteboardOrFail(whiteboard.id, {
+      relations: {
+        profile: true,
+      },
+    });
 
     return whiteboard;
   }
@@ -199,9 +275,20 @@ export class WhiteboardService {
       whiteboard?.profile.id
     );
 
-    whiteboard.content = JSON.stringify(newContentWithFiles);
+    const contentString = JSON.stringify(newContentWithFiles);
+    const compressedContent = await this.compressContent(contentString);
 
-    return this.save(whiteboard);
+    await this.db
+      .update(whiteboards)
+      .set({ content: compressedContent })
+      .where(eq(whiteboards.id, whiteboardInputId));
+
+    // Reload and return with decompressed content
+    return await this.getWhiteboardOrFail(whiteboardInputId, {
+      relations: {
+        profile: true,
+      },
+    });
   }
 
   public async isMultiUser(whiteboardId: string): Promise<boolean> {
@@ -218,7 +305,7 @@ export class WhiteboardService {
 
   public async getProfile(
     whiteboardId: string,
-    relations?: FindOptionsRelations<IWhiteboard>
+    relations?: Record<string, boolean | Record<string, boolean>>
   ): Promise<IProfile> {
     const whiteboardLoaded = await this.getWhiteboardOrFail(whiteboardId, {
       relations: {
@@ -236,8 +323,27 @@ export class WhiteboardService {
     return whiteboardLoaded.profile;
   }
 
-  public save(whiteboard: IWhiteboard): Promise<IWhiteboard> {
-    return this.whiteboardRepository.save(whiteboard);
+  public async save(whiteboard: IWhiteboard): Promise<IWhiteboard> {
+    // Compress content before saving
+    const compressedContent = await this.compressContent(whiteboard.content);
+
+    const updateData: Record<string, any> = {
+      content: compressedContent,
+      contentUpdatePolicy: whiteboard.contentUpdatePolicy,
+      previewSettings: whiteboard.previewSettings,
+    };
+
+    if (whiteboard.createdBy !== undefined) {
+      updateData.createdBy = whiteboard.createdBy;
+    }
+
+    await this.db
+      .update(whiteboards)
+      .set(updateData)
+      .where(eq(whiteboards.id, whiteboard.id));
+
+    // Reload with decompressed content
+    return await this.getWhiteboardOrFail(whiteboard.id);
   }
   // todo: use one optimized query with a "where not exists"
   // to return just the ones not in the bucket
@@ -264,9 +370,7 @@ export class WhiteboardService {
       profileIdToCheck,
       {
         relations: {
-          storageBucket: {
-            documents: true,
-          },
+          storageBucket: true,
         },
       }
     );

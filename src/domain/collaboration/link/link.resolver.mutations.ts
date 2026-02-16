@@ -35,9 +35,7 @@ export class LinkResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('deleteData') deleteData: DeleteLinkInput
   ): Promise<ILink> {
-    const link = await this.linkService.getLinkOrFail(deleteData.ID, {
-      relations: { profile: true },
-    });
+    const link = await this.linkService.getLinkOrFail(deleteData.ID);
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       link.authorization,
@@ -75,15 +73,7 @@ export class LinkResolverMutations {
     @Args({ name: 'file', type: () => GraphQLUpload })
     { createReadStream, filename, mimetype }: FileUpload
   ): Promise<ILink> {
-    const link = await this.linkService.getLinkOrFail(uploadData.linkID, {
-      relations: {
-        profile: {
-          storageBucket: {
-            authorization: true,
-          },
-        },
-      },
-    });
+    const link = await this.linkService.getLinkOrFail(uploadData.linkID);
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       link.authorization,

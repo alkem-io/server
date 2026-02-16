@@ -1,8 +1,7 @@
-import { Organization } from '@domain/community/organization/organization.entity';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { IOrganization } from '@domain/community/organization/organization.interface';
-import { Injectable } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
-import { EntityManager } from 'typeorm';
+import { Inject, Injectable } from '@nestjs/common';
 import { createTypedSimpleDataLoader } from '../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../base';
 
@@ -10,12 +9,12 @@ import { DataLoaderCreator, DataLoaderCreatorOptions } from '../base';
 export class OrganizationLoaderCreator
   implements DataLoaderCreator<IOrganization>
 {
-  constructor(@InjectEntityManager() private manager: EntityManager) {}
+  constructor(@Inject(DRIZZLE) private readonly db: DrizzleDb) {}
 
   create(options: DataLoaderCreatorOptions<IOrganization>) {
     return createTypedSimpleDataLoader(
-      this.manager,
-      Organization,
+      this.db,
+      'organizations',
       this.constructor.name,
       options
     );

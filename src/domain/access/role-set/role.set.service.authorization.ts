@@ -43,7 +43,7 @@ export class RoleSetAuthorizationService {
     privilegeRulesFromParent: AuthorizationPolicyRulePrivilege[] = []
   ): Promise<IAuthorizationPolicy[]> {
     const roleSet = await this.roleSetService.getRoleSetOrFail(roleSetID, {
-      relations: {
+      with: {
         roles: true,
         applications: true,
         invitations: true,

@@ -1,4 +1,6 @@
 import { EntityNotFoundException } from '@common/exceptions';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import {
   DataLoaderCreator,
   DataLoaderCreatorBaseOptions,
@@ -7,18 +9,13 @@ import { ILoader } from '@core/dataloader/loader.interface';
 import { createBatchLoader } from '@core/dataloader/utils';
 import { IContributorBase } from '@domain/community/contributor';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { Organization } from '@domain/community/organization';
-import { User } from '@domain/community/user/user.entity';
-import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
-import { Injectable } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
-import { EntityManager, In } from 'typeorm';
+import { Inject, Injectable } from '@nestjs/common';
 
 @Injectable()
 export class ContributorLoaderCreator
   implements DataLoaderCreator<IContributorBase>
 {
-  constructor(@InjectEntityManager() private manager: EntityManager) {}
+  constructor(@Inject(DRIZZLE) private readonly db: DrizzleDb) {}
 
   public create(
     options?: DataLoaderCreatorBaseOptions<any, any>
@@ -35,17 +32,21 @@ export class ContributorLoaderCreator
   ): Promise<IContributor[]> => {
     const contributors: IContributor[] = [];
 
-    let result: IContributor[] = await this.manager.findBy(User, {
-      id: In(keys),
-    });
+    let result: IContributor[] = await this.db.query.users.findMany({
+      where: (table, { inArray }) => inArray(table.id, [...keys]),
+    }) as unknown as IContributor[];
     contributors.push(...result);
 
     if (contributors.length !== keys.length) {
-      result = await this.manager.findBy(Organization, { id: In(keys) });
+      result = await this.db.query.organizations.findMany({
+        where: (table, { inArray }) => inArray(table.id, [...keys]),
+      }) as unknown as IContributor[];
       contributors.push(...result);
     }
     if (contributors.length !== keys.length) {
-      result = await this.manager.findBy(VirtualContributor, { id: In(keys) });
+      result = await this.db.query.virtualContributors.findMany({
+        where: (table, { inArray }) => inArray(table.id, [...keys]),
+      }) as unknown as IContributor[];
       contributors.push(...result);
     }
 

@@ -1,7 +1,9 @@
 import { LogContext } from '@common/enums';
 import { AgentType } from '@common/enums/agent.type';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
-import { Agent } from '@domain/agent/agent/agent.entity';
+import { agents } from '@domain/agent/agent/agent.schema';
 import {
   Mention,
   MentionedEntityType,
@@ -10,10 +12,9 @@ import { IRoom } from '@domain/communication/room/room.interface';
 import { VirtualContributorMessageService } from '@domain/communication/virtual.contributor.message/virtual.contributor.message.service';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
+import { and, eq, inArray } from 'drizzle-orm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager, In } from 'typeorm';
 import { MessageNotificationService } from './message.notification.service';
 
 /**
@@ -55,8 +56,7 @@ export class VcInvocationService {
     private readonly communicationAdapter: CommunicationAdapter,
     private readonly agentInfoService: AgentInfoService,
     private readonly messageNotificationService: MessageNotificationService,
-    @InjectEntityManager()
-    private readonly entityManager: EntityManager,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -91,12 +91,12 @@ export class VcInvocationService {
     }
 
     // Find all VCs among other members (single query)
-    const vcAgents = await this.entityManager.find(Agent, {
-      where: {
-        id: In(otherMembers),
-        type: AgentType.VIRTUAL_CONTRIBUTOR,
-      },
-      select: ['id'],
+    const vcAgents = await this.db.query.agents.findMany({
+      where: and(
+        inArray(agents.id, otherMembers),
+        eq(agents.type, AgentType.VIRTUAL_CONTRIBUTOR)
+      ),
+      columns: { id: true },
     });
     const vcMembers = vcAgents.map(a => a.id);
 

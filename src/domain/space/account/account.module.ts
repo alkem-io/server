@@ -6,14 +6,12 @@ import { ContributorModule } from '@domain/community/contributor/contributor.mod
 import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 import { VirtualContributorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
 import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.module';
-import { Account } from '@domain/space/account/account.entity';
 import { AccountResolverFields } from '@domain/space/account/account.resolver.fields';
 import { AccountService } from '@domain/space/account/account.service';
 import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 import { InnovationPackModule } from '@library/innovation-pack/innovation.pack.module';
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { LicenseIssuerModule } from '@platform/licensing/credential-based/license-credential-issuer/license.issuer.module';
 import { LicensingCredentialBasedModule } from '@platform/licensing/credential-based/licensing-credential-based-entitlements-engine/licensing.credential.based.module';
@@ -54,7 +52,6 @@ import { AccountLicenseService } from './account.service.license';
     VirtualContributorModule,
     VirtualContributorLookupModule,
     NamingModule,
-    TypeOrmModule.forFeature([Account]),
     NotificationAdapterModule,
     AccountLicensePlanModule,
   ],

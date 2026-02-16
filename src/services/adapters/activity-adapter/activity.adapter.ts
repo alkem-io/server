@@ -2,18 +2,25 @@ import { ActivityEventType } from '@common/enums/activity.event.type';
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions';
 import { stringifyWithoutAuthorizationMetaInfo } from '@common/utils/stringify.util';
-import { Callout } from '@domain/collaboration/callout/callout.entity';
-import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
-import { Memo } from '@domain/common/memo/memo.entity';
-import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
-import { Community } from '@domain/community/community/community.entity';
-import { Space } from '@domain/space/space/space.entity';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { calloutContributions } from '@domain/collaboration/callout-contribution/callout.contribution.schema';
+import { calloutFramings } from '@domain/collaboration/callout-framing/callout.framing.schema';
+import { callouts } from '@domain/collaboration/callout/callout.schema';
+import { calloutsSets } from '@domain/collaboration/callouts-set/callouts.set.schema';
+import { collaborations } from '@domain/collaboration/collaboration/collaboration.schema';
+import { memos } from '@domain/common/memo/memo.schema';
+import { profiles } from '@domain/common/profile/profile.schema';
+import { whiteboards } from '@domain/common/whiteboard/whiteboard.schema';
+import { communications } from '@domain/communication/communication/communication.schema';
+import { communities } from '@domain/community/community/community.schema';
+import { rooms } from '@domain/communication/room/room.schema';
+import { spaces } from '@domain/space/space/space.schema';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { TimelineResolverService } from '@services/infrastructure/entity-resolver/timeline.resolver.service';
 import { ActivityService } from '@src/platform/activity/activity.service';
+import { eq, or, sql } from 'drizzle-orm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager, Repository } from 'typeorm';
 import { SubscriptionPublishService } from '../../subscriptions/subscription-service';
 import { ActivityInputBase } from './dto/activity.dto.input.base';
 import { ActivityInputCalendarEventCreated } from './dto/activity.dto.input.calendar.event.created';
@@ -34,40 +41,30 @@ import { ActivityInputUpdateSent } from './dto/activity.dto.input.update.sent';
 export class ActivityAdapter {
   constructor(
     private activityService: ActivityService,
-    @InjectRepository(Community)
-    private communityRepository: Repository<Community>,
-    @InjectRepository(Callout)
-    private calloutRepository: Repository<Callout>,
-    @InjectRepository(Whiteboard)
-    private whiteboardRepository: Repository<Whiteboard>,
-    @InjectRepository(Memo)
-    private memoRepository: Repository<Memo>,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private readonly graphqlSubscriptionService: SubscriptionPublishService,
-    private readonly timelineResolverService: TimelineResolverService,
-    @InjectEntityManager('default')
-    private entityManager: EntityManager
+    private readonly timelineResolverService: TimelineResolverService
   ) {}
 
   public async subspaceCreated(
     eventData: ActivityInputSubspaceCreated
   ): Promise<boolean> {
-    const subspace = await this.entityManager.findOne(Space, {
-      where: {
-        id: eventData.subspace.id,
-      },
-      relations: {
+    const subspace = await this.db.query.spaces.findFirst({
+      where: eq(spaces.id, eventData.subspace.id),
+      with: {
         about: {
-          profile: true,
+          with: { profile: true },
         },
         parentSpace: {
-          collaboration: true,
+          with: { collaboration: true },
         },
       },
     });
     if (
       !subspace ||
+      !subspace.about ||
       !subspace.about.profile ||
       !subspace.parentSpace ||
       !subspace.parentSpace.collaboration
@@ -385,13 +382,9 @@ export class ActivityAdapter {
   }
 
   private async getCollaborationIdFromCommunity(communityID: string) {
-    const space = await this.entityManager.findOne(Space, {
-      where: {
-        community: {
-          id: communityID,
-        },
-      },
-      relations: {
+    const space = await this.db.query.spaces.findFirst({
+      where: eq(spaces.communityId, communityID),
+      with: {
         collaboration: true,
       },
     });
@@ -451,11 +444,9 @@ export class ActivityAdapter {
   }
 
   private async getCollaborationIdForSpace(spaceID: string): Promise<string> {
-    const space = await this.entityManager.findOne(Space, {
-      where: {
-        id: spaceID,
-      },
-      relations: {
+    const space = await this.db.query.spaces.findFirst({
+      where: eq(spaces.id, spaceID),
+      with: {
         collaboration: true,
       },
     });
@@ -472,15 +463,14 @@ export class ActivityAdapter {
   private async getCollaborationIdForCallout(
     calloutID: string
   ): Promise<string> {
-    const collaboration = await this.entityManager.findOne(Collaboration, {
-      where: {
-        calloutsSet: {
-          callouts: {
-            id: calloutID,
-          },
-        },
-      },
-    });
+    const result = await this.db
+      .select({ id: collaborations.id })
+      .from(collaborations)
+      .innerJoin(calloutsSets, eq(collaborations.calloutsSetId, calloutsSets.id))
+      .innerJoin(callouts, eq(callouts.calloutsSetId, calloutsSets.id))
+      .where(eq(callouts.id, calloutID))
+      .limit(1);
+    const collaboration = result[0];
     if (!collaboration) {
       throw new EntityNotFoundException(
         `Unable to identify Collaboration for Callout with ID: ${calloutID}`,
@@ -491,13 +481,13 @@ export class ActivityAdapter {
   }
 
   private async getCalloutIdForPost(postID: string): Promise<string> {
-    const callout = await this.calloutRepository
-      .createQueryBuilder('callout')
-      .leftJoinAndSelect('callout.contributions', 'contributions')
-      .innerJoinAndSelect('contributions.post', 'post')
-      .where('post.id = :id')
-      .setParameters({ id: `${postID}` })
-      .getOne();
+    const result = await this.db
+      .select({ id: callouts.id })
+      .from(callouts)
+      .innerJoin(calloutContributions, eq(calloutContributions.calloutId, callouts.id))
+      .where(eq(calloutContributions.postId, postID))
+      .limit(1);
+    const callout = result[0];
     if (!callout) {
       throw new EntityNotFoundException(
         `Unable to identify Callout for Post with ID: ${postID}`,
@@ -508,19 +498,15 @@ export class ActivityAdapter {
   }
 
   private async getCollaborationIdForPost(postID: string): Promise<string> {
-    const collaboration = await this.entityManager.findOne(Collaboration, {
-      where: {
-        calloutsSet: {
-          callouts: {
-            contributions: {
-              post: {
-                id: postID,
-              },
-            },
-          },
-        },
-      },
-    });
+    const result = await this.db
+      .select({ id: collaborations.id })
+      .from(collaborations)
+      .innerJoin(calloutsSets, eq(collaborations.calloutsSetId, calloutsSets.id))
+      .innerJoin(callouts, eq(callouts.calloutsSetId, calloutsSets.id))
+      .innerJoin(calloutContributions, eq(calloutContributions.calloutId, callouts.id))
+      .where(eq(calloutContributions.postId, postID))
+      .limit(1);
+    const collaboration = result[0];
     if (!collaboration) {
       throw new EntityNotFoundException(
         `Unable to identify Collaboration for Post with ID: ${postID}`,
@@ -533,19 +519,15 @@ export class ActivityAdapter {
   private async getCollaborationIdForWhiteboard(
     whiteboardID: string
   ): Promise<string> {
-    const collaboration = await this.entityManager.findOne(Collaboration, {
-      where: {
-        calloutsSet: {
-          callouts: {
-            contributions: {
-              whiteboard: {
-                id: whiteboardID,
-              },
-            },
-          },
-        },
-      },
-    });
+    const result = await this.db
+      .select({ id: collaborations.id })
+      .from(collaborations)
+      .innerJoin(calloutsSets, eq(collaborations.calloutsSetId, calloutsSets.id))
+      .innerJoin(callouts, eq(callouts.calloutsSetId, calloutsSets.id))
+      .innerJoin(calloutContributions, eq(calloutContributions.calloutId, callouts.id))
+      .where(eq(calloutContributions.whiteboardId, whiteboardID))
+      .limit(1);
+    const collaboration = result[0];
     if (!collaboration) {
       throw new EntityNotFoundException(
         `Unable to identify Collaboration for Whiteboard with ID: ${whiteboardID}`,
@@ -556,19 +538,15 @@ export class ActivityAdapter {
   }
 
   private async getCollaborationIdForMemo(memoID: string): Promise<string> {
-    const collaboration = await this.entityManager.findOne(Collaboration, {
-      where: {
-        calloutsSet: {
-          callouts: {
-            contributions: {
-              memo: {
-                id: memoID,
-              },
-            },
-          },
-        },
-      },
-    });
+    const result = await this.db
+      .select({ id: collaborations.id })
+      .from(collaborations)
+      .innerJoin(calloutsSets, eq(collaborations.calloutsSetId, calloutsSets.id))
+      .innerJoin(callouts, eq(callouts.calloutsSetId, calloutsSets.id))
+      .innerJoin(calloutContributions, eq(calloutContributions.calloutId, callouts.id))
+      .where(eq(calloutContributions.memoId, memoID))
+      .limit(1);
+    const collaboration = result[0];
     if (!collaboration) {
       throw new EntityNotFoundException(
         'Unable to identify Collaboration for Memo',
@@ -582,12 +560,11 @@ export class ActivityAdapter {
   private async getWhiteboardDisplayName(
     whiteboardID: string
   ): Promise<string> {
-    const whiteboard = await this.whiteboardRepository
-      .createQueryBuilder('whiteboard')
-      .leftJoinAndSelect('whiteboard.profile', 'profile')
-      .where({ id: whiteboardID })
-      .getOne();
-    if (!whiteboard) {
+    const whiteboard = await this.db.query.whiteboards.findFirst({
+      where: eq(whiteboards.id, whiteboardID),
+      with: { profile: true },
+    });
+    if (!whiteboard || !whiteboard.profile) {
       throw new EntityNotFoundException(
         'Unable to identify Whiteboard',
         LogContext.ACTIVITY,
@@ -598,12 +575,11 @@ export class ActivityAdapter {
   }
 
   private async getMemoDisplayName(memoID: string): Promise<string> {
-    const memo = await this.memoRepository
-      .createQueryBuilder('memo')
-      .leftJoinAndSelect('memo.profile', 'profile')
-      .where({ id: memoID })
-      .getOne();
-    if (!memo) {
+    const memo = await this.db.query.memos.findFirst({
+      where: eq(memos.id, memoID),
+      with: { profile: true },
+    });
+    if (!memo || !memo.profile) {
       throw new EntityNotFoundException(
         'Unable to identify Memo',
         LogContext.ACTIVITY,
@@ -616,15 +592,20 @@ export class ActivityAdapter {
   private async getCollaborationIdWithCalloutIdForWhiteboard(
     whiteboardID: string
   ): Promise<{ collaborationID: string; calloutID: string }> {
-    const callout = await this.entityManager
-      .createQueryBuilder(Callout, 'callout')
-      .leftJoinAndSelect('callout.contributions', 'contributions')
-      .leftJoinAndSelect('callout.framing', 'framing')
-      .leftJoinAndSelect('framing.whiteboard', 'framingWhiteboard')
-      .leftJoinAndSelect('contributions.whiteboard', 'whiteboard')
-      .where('whiteboard.id = :whiteboardID', { whiteboardID })
-      .orWhere('framingWhiteboard.id = :whiteboardID', { whiteboardID })
-      .getOne();
+    // Find callout where whiteboard is either a contribution or in framing
+    const calloutResult = await this.db
+      .select({ id: callouts.id })
+      .from(callouts)
+      .leftJoin(calloutContributions, eq(calloutContributions.calloutId, callouts.id))
+      .leftJoin(calloutFramings, eq(callouts.framingId, calloutFramings.id))
+      .where(
+        or(
+          eq(calloutContributions.whiteboardId, whiteboardID),
+          eq(calloutFramings.whiteboardId, whiteboardID)
+        )
+      )
+      .limit(1);
+    const callout = calloutResult[0];
     if (!callout) {
       throw new EntityNotFoundException(
         `Unable to identify Callout for Whiteboard with ID: ${whiteboardID}`,
@@ -632,15 +613,14 @@ export class ActivityAdapter {
       );
     }
 
-    const collaboration = await this.entityManager.findOne(Collaboration, {
-      where: {
-        calloutsSet: {
-          callouts: {
-            id: callout.id,
-          },
-        },
-      },
-    });
+    const collabResult = await this.db
+      .select({ id: collaborations.id })
+      .from(collaborations)
+      .innerJoin(calloutsSets, eq(collaborations.calloutsSetId, calloutsSets.id))
+      .innerJoin(callouts, eq(callouts.calloutsSetId, calloutsSets.id))
+      .where(eq(callouts.id, callout.id))
+      .limit(1);
+    const collaboration = collabResult[0];
     if (!collaboration) {
       throw new EntityNotFoundException(
         `Unable to identify Collaboration for callout with ID: ${callout.id}`,
@@ -652,15 +632,13 @@ export class ActivityAdapter {
   }
 
   private async getCommunityIdFromUpdates(updatesID: string) {
-    const community = await this.communityRepository
-      .createQueryBuilder('community')
-      .leftJoinAndSelect('community.communication', 'communication')
-      .leftJoinAndSelect('communication.updates', 'updates')
-      .where('updates.id = :updatesID')
-      .setParameters({
-        updatesID: `${updatesID}`,
-      })
-      .getOne();
+    const result = await this.db
+      .select({ id: communities.id })
+      .from(communities)
+      .innerJoin(communications, eq(communities.communicationId, communications.id))
+      .where(eq(communications.updatesId, updatesID))
+      .limit(1);
+    const community = result[0];
     if (!community) {
       this.logger.error(
         `Unable to identify Community for provided updates: ${updatesID}`,

@@ -12,22 +12,23 @@ import { IClassification } from '@domain/common/classification/classification.in
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { eq } from 'drizzle-orm';
 import { CreateTagsetInput } from '../tagset';
 import { ITagsetTemplate } from '../tagset-template/tagset.template.interface';
 import { CreateClassificationInput } from './dto/classification.dto.create';
 import { UpdateClassificationInput } from './dto/classification.dto.update';
 import { UpdateClassificationSelectTagsetValueInput } from './dto/classification.dto.update.select.tagset.value';
+import { classifications } from './classification.schema';
 
 @Injectable()
 export class ClassificationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private tagsetService: TagsetService,
-    @InjectRepository(Classification)
-    private classificationRepository: Repository<Classification>,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -93,13 +94,19 @@ export class ClassificationService {
 
     await this.authorizationPolicyService.delete(classification.authorization);
 
-    return await this.classificationRepository.remove(
-      classification as Classification
-    );
+    await this.db
+      .delete(classifications)
+      .where(eq(classifications.id, classificationID));
+    return classification;
   }
 
   public async save(classification: IClassification): Promise<IClassification> {
-    return await this.classificationRepository.save(classification);
+    const [updated] = await this.db
+      .update(classifications)
+      .set({})
+      .where(eq(classifications.id, classification.id))
+      .returning();
+    return updated as unknown as IClassification;
   }
 
   public async addTagsetOnClassification(
@@ -120,18 +127,33 @@ export class ClassificationService {
 
   async getClassificationOrFail(
     classificationID: string,
-    options?: FindOneOptions<Classification>
+    options?: {
+      loadEagerRelations?: boolean;
+      relations?: {
+        authorization?: boolean;
+        tagsets?: boolean | { authorization?: boolean };
+      };
+      select?: any;
+    }
   ): Promise<IClassification | never> {
-    const classification = await Classification.findOne({
-      ...options,
-      where: { ...options?.where, id: classificationID },
+    const classification = await this.db.query.classifications.findFirst({
+      where: eq(classifications.id, classificationID),
+      with: options?.relations
+        ? {
+            authorization: options.relations.authorization || undefined,
+            tagsets:
+              typeof options.relations.tagsets === 'object'
+                ? { with: { authorization: options.relations.tagsets.authorization || undefined } }
+                : options.relations.tagsets || undefined,
+          }
+        : undefined,
     });
     if (!classification)
       throw new EntityNotFoundException(
         `Classification with id(${classificationID}) not found!`,
         LogContext.CLASSIFICATION
       );
-    return classification;
+    return classification as unknown as IClassification;
   }
 
   async getTagsets(classificationID: string): Promise<ITagset[]> {

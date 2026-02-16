@@ -1,5 +1,4 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
-import { Invitation } from '@domain/access/invitation';
 import { InvitationService } from '@domain/access/invitation/invitation.service';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
@@ -8,7 +7,6 @@ import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.modu
 import { VirtualContributorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
 import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { RoleSetCacheModule } from '../role-set/role.set.service.cache.module';
 import { InvitationResolverFields } from './invitation.resolver.fields';
 import { InvitationLifecycleResolverFields } from './invitation.resolver.fields.lifecycle';
@@ -25,7 +23,6 @@ import { InvitationLifecycleService } from './invitation.service.lifecycle';
     VirtualContributorLookupModule,
     UserLookupModule,
     AccountLookupModule,
-    TypeOrmModule.forFeature([Invitation]),
     RoleSetCacheModule,
   ],
   providers: [

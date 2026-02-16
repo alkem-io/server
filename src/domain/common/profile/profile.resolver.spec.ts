@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
 import { ProfileResolverMutations } from './profile.resolver.mutations';
 
 describe('Profile3Resolver', () => {
@@ -13,6 +14,7 @@ describe('Profile3Resolver', () => {
         ProfileResolverMutations,
         MockCacheManager,
         MockWinstonProvider,
+        mockDrizzleProvider,
       ],
     })
       .useMocker(defaultMockerFactory)

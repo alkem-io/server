@@ -1,20 +1,20 @@
 import { DataLoaderInitError } from '@common/exceptions/data-loader';
-import { License } from '@domain/common/license/license.entity';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { ILicense } from '@domain/common/license/license.interface';
-import { Injectable } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
-import { EntityManager } from 'typeorm';
+import { Inject, Injectable } from '@nestjs/common';
 import { createTypedRelationDataLoader } from '../../utils';
+import { getTableName } from '../../utils/tableNameMapping';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../base';
 
 @Injectable()
 export class LicenseLoaderCreator implements DataLoaderCreator<ILicense> {
-  constructor(@InjectEntityManager() private manager: EntityManager) {}
+  constructor(@Inject(DRIZZLE) private readonly db: DrizzleDb) {}
 
   create(
     options?: DataLoaderCreatorOptions<
       ILicense,
-      { id: string; license?: License }
+      { id: string; license?: ILicense }
     >
   ) {
     if (!options?.parentClassRef) {
@@ -23,9 +23,11 @@ export class LicenseLoaderCreator implements DataLoaderCreator<ILicense> {
       );
     }
 
+    const tableName = getTableName(options.parentClassRef.name);
+
     return createTypedRelationDataLoader(
-      this.manager,
-      options.parentClassRef,
+      this.db,
+      tableName,
       {
         license: true,
       },

@@ -24,8 +24,12 @@ describe('UserAuthenticationLinkService', () => {
       getUserByEmail: vi.fn(),
     };
 
-    const userRepository = {
-      save: vi.fn(async user => user),
+    const db = {
+      update: vi.fn().mockReturnValue({
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue(undefined),
+        }),
+      }),
     };
 
     const kratosService = {
@@ -46,7 +50,7 @@ describe('UserAuthenticationLinkService', () => {
 
     const service = new UserAuthenticationLinkService(
       userLookupService as any,
-      userRepository as any,
+      db as any,
       kratosService as any,
       logger
     );
@@ -54,7 +58,7 @@ describe('UserAuthenticationLinkService', () => {
     return {
       service,
       userLookupService,
-      userRepository,
+      db,
       kratosService,
       logger,
     };
@@ -75,7 +79,7 @@ describe('UserAuthenticationLinkService', () => {
   });
 
   it('links authentication ID when user is found by email', async () => {
-    const { service, userLookupService, userRepository } = createService();
+    const { service, userLookupService, db } = createService();
 
     const existingUser = {
       id: 'user-2',
@@ -89,7 +93,7 @@ describe('UserAuthenticationLinkService', () => {
 
     const result = await service.resolveExistingUser(createAgentInfo());
 
-    expect(userRepository.save).toHaveBeenCalledWith(existingUser);
+    expect(db.update).toHaveBeenCalled();
     expect(result?.outcome).toBe(UserAuthenticationLinkOutcome.LINKED);
     expect(result?.user.authenticationID).toBe('auth-123');
   });
@@ -150,7 +154,7 @@ describe('UserAuthenticationLinkService', () => {
       service,
       userLookupService,
       kratosService,
-      userRepository,
+      db,
       logger,
     } = createService();
 
@@ -173,7 +177,7 @@ describe('UserAuthenticationLinkService', () => {
       expect.stringContaining('no longer exists in Kratos'),
       LogContext.AUTH
     );
-    expect(userRepository.save).toHaveBeenCalled();
+    expect(db.update).toHaveBeenCalled();
     expect(result?.outcome).toBe(UserAuthenticationLinkOutcome.LINKED);
     expect(result?.user.authenticationID).toBe('auth-123');
   });

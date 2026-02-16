@@ -50,7 +50,7 @@ export class ConversionService {
     let spaceL1 = await this.spaceService.getSpaceOrFail(
       conversionData.spaceL1ID,
       {
-        relations: {
+        with: {
           agent: true,
           community: {
             roleSet: true,
@@ -89,7 +89,7 @@ export class ConversionService {
     const spaceL0Orig = await this.spaceService.getSpaceOrFail(
       spaceL1.levelZeroSpaceID,
       {
-        relations: {
+        with: {
           subspaces: true,
           account: {
             storageAggregator: true,
@@ -204,7 +204,7 @@ export class ConversionService {
     roleSetL0: IRoleSet
   ): Promise<ISpace> {
     const spaceL2 = await this.spaceService.getSpaceOrFail(spaceL2ID, {
-      relations: {
+      with: {
         storageAggregator: true,
         parentSpace: true,
         community: {
@@ -277,7 +277,7 @@ export class ConversionService {
     let spaceL2 = await this.spaceService.getSpaceOrFail(
       conversionData.spaceL2ID,
       {
-        relations: {
+        with: {
           community: {
             roleSet: true,
           },
@@ -295,7 +295,7 @@ export class ConversionService {
     const spaceL0 = await this.spaceService.getSpaceOrFail(
       spaceL2.levelZeroSpaceID,
       {
-        relations: {
+        with: {
           storageAggregator: true,
           community: {
             roleSet: true,
@@ -353,7 +353,7 @@ export class ConversionService {
     let spaceL1 = await this.spaceService.getSpaceOrFail(
       conversionData.spaceL1ID,
       {
-        relations: {
+        with: {
           community: {
             roleSet: true,
           },
@@ -376,7 +376,7 @@ export class ConversionService {
     const parentSpaceL1 = await this.spaceService.getSpaceOrFail(
       conversionData.parentSpaceL1ID,
       {
-        relations: {
+        with: {
           storageAggregator: true,
           community: {
             roleSet: true,

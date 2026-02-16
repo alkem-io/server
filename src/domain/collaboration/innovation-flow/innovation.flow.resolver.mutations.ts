@@ -166,12 +166,7 @@ export class InnovationFlowResolverMutations {
   ): Promise<IInnovationFlowState> {
     const innovationFlowState =
       await this.innovationFlowStateService.getInnovationFlowStateOrFail(
-        innovationFlowStateData.innovationFlowStateID,
-        {
-          relations: {
-            innovationFlow: true,
-          },
-        }
+        innovationFlowStateData.innovationFlowStateID
       );
     if (!innovationFlowState.innovationFlow) {
       throw new EntityNotInitializedException(
@@ -251,8 +246,7 @@ export class InnovationFlowResolverMutations {
   ): Promise<IInnovationFlowState> {
     const flowState =
       await this.innovationFlowStateService.getInnovationFlowStateOrFail(
-        setData.flowStateID,
-        { relations: { authorization: true } }
+        setData.flowStateID
       );
 
     this.authorizationService.grantAccessOrFail(
@@ -279,8 +273,7 @@ export class InnovationFlowResolverMutations {
   ): Promise<IInnovationFlowState> {
     const flowState =
       await this.innovationFlowStateService.getInnovationFlowStateOrFail(
-        removeData.flowStateID,
-        { relations: { authorization: true } }
+        removeData.flowStateID
       );
 
     this.authorizationService.grantAccessOrFail(

@@ -4,12 +4,13 @@ import {
   ForbiddenAuthorizationPolicyException,
 } from '@common/exceptions';
 import { NotImplementedException, Type } from '@nestjs/common';
-import { EntityManager, FindOptionsWhere, In } from 'typeorm';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { inArray } from 'drizzle-orm';
 import { FindByBatchIdsOptions } from './find.by.batch.options';
 
 export const findByBatchIdsSimple = async <TResult extends { id: string }>(
-  manager: EntityManager,
-  classRef: Type<TResult>,
+  db: DrizzleDb,
+  tableName: string,
   ids: string[],
   options: FindByBatchIdsOptions<TResult, TResult>
 ): Promise<
@@ -30,22 +31,25 @@ export const findByBatchIdsSimple = async <TResult extends { id: string }>(
     return [];
   }
 
-  const { select, limit } = options ?? {};
+  const { limit } = options ?? {};
 
-  const results = await manager.find(classRef, {
-    take: limit,
-    where: {
-      id: In(ids),
-    } as FindOptionsWhere<TResult>,
-    select: select,
-  });
+  // Get the table from the schema
+  const table = (db.query as any)[tableName];
+  if (!table) {
+    throw new Error(`Table ${tableName} not found in Drizzle schema`);
+  }
+
+  const results = await table.findMany({
+    where: (t: any) => inArray(t.id, ids),
+    limit: limit,
+  }) as TResult[];
   // return empty object because DataLoader does not allow to return NULL values
   // handle the value when the result is returned
   const resolveUnresolvedForKey = (key: string) => {
     return options?.resolveToNull
       ? null
       : new EntityNotFoundException(
-          `Could not find ${classRef.name} for the given key`,
+          `Could not find ${tableName} for the given key`,
           LogContext.DATA_LOADER,
           { id: key }
         );

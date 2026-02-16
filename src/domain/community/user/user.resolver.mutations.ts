@@ -54,7 +54,7 @@ export class UserResolverMutations {
     @Args('settingsData') settingsData: UpdateUserSettingsInput
   ): Promise<IUser> {
     let user = await this.userService.getUserOrFail(settingsData.userID, {
-      relations: {
+      with: {
         settings: true,
       },
     });

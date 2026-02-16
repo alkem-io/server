@@ -27,13 +27,15 @@ import { ISpace } from '@domain/space/space/space.interface';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { randomUUID } from 'crypto';
 import { merge } from 'lodash';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager, FindOneOptions, Repository } from 'typeorm';
+import { eq, and, countDistinct } from 'drizzle-orm';
+import { templates } from './template.schema';
 import { ITemplateContentSpace } from '../template-content-space/template.content.space.interface';
 import { TemplateContentSpaceService } from '../template-content-space/template.content.space.service';
 import { TemplateDefault } from '../template-default/template.default.entity';
@@ -56,10 +58,8 @@ export class TemplateService {
     private templateContentSpaceService: TemplateContentSpaceService,
     private calloutsSetService: CalloutsSetService,
     private spaceLookupService: SpaceLookupService,
-    @InjectRepository(Template)
-    private templateRepository: Repository<Template>,
-    @InjectEntityManager('default')
-    private entityManager: EntityManager,
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -68,7 +68,7 @@ export class TemplateService {
     templateData: CreateTemplateInput,
     storageAggregator: IStorageAggregator
   ): Promise<ITemplate> {
-    const template: ITemplate = Template.create(templateData);
+    const template: ITemplate = Template.create(templateData as any);
     template.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.TEMPLATE
     );
@@ -206,7 +206,8 @@ export class TemplateService {
         );
     }
 
-    return await this.templateRepository.save(template);
+    const [result] = await this.db.insert(templates).values(template as any).returning();
+    return result as unknown as ITemplate;
   }
 
   private overrideCalloutSettingsForTemplate(calloutData: CreateCalloutInput) {
@@ -215,26 +216,18 @@ export class TemplateService {
 
   async getTemplateOrFail(
     templateID: string,
-    options?: FindOneOptions<Template>
+    options?: any
   ): Promise<ITemplate | never> {
-    /* TODO: This should be a findOne, but we have to use find because of a bug in TypeORM.
-     * updateTemplate makes use of this method and the select option to only fetch the whiteboard.id
-     * is causing an error with findOne which is not happening with find.
-     * When we tackle #4106 (Typeorm upgrade) we can switch back to findOne
-     */
-    const templates = await this.templateRepository.find({
-      ...options,
-      where: {
-        ...options?.where,
-        id: templateID,
-      },
+    const template = await this.db.query.templates.findFirst({
+      where: eq(templates.id, templateID),
+      with: options?.relations,
     });
-    if (templates.length !== 1)
+    if (!template)
       throw new EntityNotFoundException(
         `Not able to locate Template with the specified ID: ${templateID}`,
         LogContext.TEMPLATES
       );
-    return templates[0];
+    return template as unknown as ITemplate;
   }
 
   // Only support updating the profile part of the template; not the contained entity. That should
@@ -283,7 +276,8 @@ export class TemplateService {
       template.whiteboard.content = templateData.whiteboardContent;
     }
 
-    return await this.templateRepository.save(template);
+    const [result] = await this.db.update(templates).set(template as any).where(eq(templates.id, template.id)).returning();
+    return result as unknown as ITemplate;
   }
 
   public async updateTemplateFromSpace(
@@ -589,79 +583,56 @@ export class TemplateService {
     const templateId: string = template.id;
     await this.profileService.deleteProfile(template.profile.id);
 
-    const result = await this.templateRepository.remove(template as Template);
-    result.id = templateId;
+    await this.db.delete(templates).where(eq(templates.id, templateId));
+    const result = { ...template, id: templateId };
     return result;
   }
 
   async save(template: ITemplate): Promise<ITemplate> {
-    return await this.templateRepository.save(template);
+    const [result] = await this.db.update(templates).set(template as any).where(eq(templates.id, template.id)).returning();
+    return result as unknown as ITemplate;
   }
 
   async getCountInTemplatesSet(
     templatesSetID: string,
     type: TemplateType
   ): Promise<number> {
-    return await this.templateRepository.countBy({
-      templatesSet: {
-        id: templatesSetID,
-      },
-      type: type,
-    });
+    const result = await this.db.select({ count: countDistinct(templates.id) }).from(templates).where(and(eq(templates.templatesSetId, templatesSetID), eq(templates.type, type)));
+    return Number(result[0]?.count || 0);
   }
   async getTemplatesInTemplatesSet(
     templatesSetID: string
   ): Promise<ITemplate[]> {
-    return await this.templateRepository.find({
-      where: {
-        templatesSet: {
-          id: templatesSetID,
-        },
-      },
-      relations: {
+    const results = await this.db.query.templates.findMany({
+      where: eq(templates.templatesSetId, templatesSetID),
+      with: {
         profile: true,
       },
-      order: {
-        profile: {
-          displayName: 'ASC',
-        },
-      },
+      orderBy: (t, { asc }) => [asc(t.createdDate)],
     });
+    return results as unknown as ITemplate[];
   }
 
   async getTemplateTypeInTemplatesSet(
     templatesSetID: string,
     type: TemplateType
   ): Promise<ITemplate[]> {
-    return await this.templateRepository.find({
-      where: {
-        templatesSet: {
-          id: templatesSetID,
-        },
-        type: type,
-      },
-      relations: {
+    const results = await this.db.query.templates.findMany({
+      where: and(eq(templates.templatesSetId, templatesSetID), eq(templates.type, type)),
+      with: {
         profile: true,
       },
-      order: {
-        profile: {
-          displayName: 'ASC',
-        },
-      },
+      orderBy: (t, { asc }) => [asc(t.createdDate)],
     });
+    return results as unknown as ITemplate[];
   }
 
   async getTemplateByNameIDInTemplatesSetOrFail(
     templatesSetID: string,
     templateNameId: string
   ): Promise<ITemplate> {
-    const template = await this.templateRepository.findOne({
-      where: {
-        templatesSet: {
-          id: templatesSetID,
-        },
-        nameID: templateNameId,
-      },
+    const template = await this.db.query.templates.findFirst({
+      where: and(eq(templates.templatesSetId, templatesSetID), eq(templates.nameID, templateNameId)),
     });
 
     if (!template) {
@@ -670,7 +641,7 @@ export class TemplateService {
         LogContext.TEMPLATES
       );
     }
-    return template;
+    return template as unknown as ITemplate;
   }
 
   async getCommunityGuidelines(
@@ -757,14 +728,11 @@ export class TemplateService {
   public async isTemplateInUseInTemplateDefault(
     templateID: string
   ): Promise<boolean> {
-    const templateDefaults = await this.entityManager.find(TemplateDefault, {
-      where: {
-        template: {
-          id: templateID,
-        },
-      },
+    const { templateDefaults } = await import('../template-default/template.default.schema');
+    const templateDefaultsList = await this.db.query.templateDefaults.findMany({
+      where: (templateDefaults, { eq }) => eq(templateDefaults.templateId, templateID),
     });
-    if (templateDefaults.length > 0) {
+    if (templateDefaultsList.length > 0) {
       return true;
     }
     return false;

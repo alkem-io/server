@@ -3,7 +3,6 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { VirtualContributorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { InAppNotificationModule } from '@platform/in-app-notification/in.app.notification.module';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
@@ -17,7 +16,6 @@ import { MessageModule } from '../message/message.module';
 import { RoomLookupModule } from '../room-lookup/room.lookup.module';
 import { VirtualContributorMessageModule } from '../virtual.contributor.message/virtual.contributor.message.module';
 import { RoomDataLoader } from './room.data.loader';
-import { Room } from './room.entity';
 import { RoomEventResolverSubscription } from './room.event.resolver.subscription';
 import { RoomResolverFields } from './room.resolver.fields';
 import { RoomResolverMutations } from './room.resolver.mutations';
@@ -41,7 +39,6 @@ import { RoomServiceEvents } from './room.service.events';
     VirtualContributorMessageModule,
     UserLookupModule,
     RoomLookupModule,
-    TypeOrmModule.forFeature([Room]),
     SubscriptionServiceModule,
     InAppNotificationModule,
   ],

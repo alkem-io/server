@@ -87,7 +87,7 @@ export class OrganizationResolverFields {
     );
 
     const userGroup = await this.groupService.getUserGroupOrFail(groupID, {
-      relations: { profile: true },
+      with: { profile: true },
     });
 
     if (userGroup.profile && !userGroup.profile?.displayName) {

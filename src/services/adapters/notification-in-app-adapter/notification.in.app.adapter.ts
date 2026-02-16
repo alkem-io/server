@@ -73,7 +73,7 @@ export class NotificationInAppAdapter {
     );
     await Promise.all(
       savedNotifications.map(x =>
-        this.subscriptionPublishService.publishInAppNotificationReceived(x)
+        this.subscriptionPublishService.publishInAppNotificationReceived(x as any)
       )
     );
 

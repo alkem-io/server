@@ -81,9 +81,11 @@ export class AccountResolverMutations {
     const account = await this.accountService.getAccountOrFail(
       spaceData.accountID,
       {
-        relations: {
+        with: {
           license: {
-            entitlements: true,
+            with: {
+              entitlements: true,
+            },
           },
         },
       }
@@ -113,9 +115,11 @@ export class AccountResolverMutations {
     await this.licenseService.saveAll(updatedLicenses);
 
     space = await this.spaceService.getSpaceOrFail(space.id, {
-      relations: {
+      with: {
         about: {
-          profile: true,
+          with: {
+            profile: true,
+          },
         },
         community: true,
       },
@@ -148,10 +152,12 @@ export class AccountResolverMutations {
     const account = await this.accountService.getAccountOrFail(
       createData.accountID,
       {
-        relations: {
+        with: {
           storageAggregator: true,
           license: {
-            entitlements: true,
+            with: {
+              entitlements: true,
+            },
           },
         },
       }
@@ -191,9 +197,11 @@ export class AccountResolverMutations {
     const account = await this.accountService.getAccountOrFail(
       virtualContributorData.accountID,
       {
-        relations: {
+        with: {
           license: {
-            entitlements: true,
+            with: {
+              entitlements: true,
+            },
           },
         },
       }
@@ -244,9 +252,11 @@ export class AccountResolverMutations {
     const account = await this.accountService.getAccountOrFail(
       innovationPackData.accountID,
       {
-        relations: {
+        with: {
           license: {
-            entitlements: true,
+            with: {
+              entitlements: true,
+            },
           },
         },
       }
@@ -373,9 +383,11 @@ export class AccountResolverMutations {
     let innovationHub = await this.innovationHubService.getInnovationHubOrFail(
       transferData.innovationHubID,
       {
-        relations: {
+        with: {
           account: {
-            authorization: true,
+            with: {
+              authorization: true,
+            },
           },
         },
       }
@@ -421,9 +433,11 @@ export class AccountResolverMutations {
     @Args('transferData') transferData: TransferAccountSpaceInput
   ): Promise<ISpace> {
     let space = await this.spaceService.getSpaceOrFail(transferData.spaceID, {
-      relations: {
+      with: {
         account: {
-          authorization: true,
+          with: {
+            authorization: true,
+          },
         },
       },
     });
@@ -461,9 +475,11 @@ export class AccountResolverMutations {
       await this.innovationPackService.getInnovationPackOrFail(
         transferData.innovationPackID,
         {
-          relations: {
+          with: {
             account: {
-              authorization: true,
+              with: {
+                authorization: true,
+              },
             },
           },
         }
@@ -511,9 +527,11 @@ export class AccountResolverMutations {
       await this.virtualContributorLookupService.getVirtualContributorOrFail(
         transferData.virtualContributorID,
         {
-          relations: {
+          with: {
             account: {
-              authorization: true,
+              with: {
+                authorization: true,
+              },
             },
           },
         }

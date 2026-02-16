@@ -16,7 +16,6 @@ import { VirtualContributorLookupModule } from '@domain/community/virtual-contri
 import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
 import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.module';
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { InAppNotificationModule } from '@platform/in-app-notification/in.app.notification.module';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 import { AiServerAdapterModule } from '@services/adapters/ai-server-adapter/ai.server.adapter.module';
@@ -26,7 +25,6 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
 import { RoleModule } from '../role/role.module';
 import { RoleSetMembershipStatusDataLoader } from './role.set.data.loader.membership.status';
 import { RoleSetAgentRolesDataLoader } from './role.set.data.loaders.agent.roles';
-import { RoleSet } from './role.set.entity';
 import { RoleSetResolverFields } from './role.set.resolver.fields';
 import { RoleSetResolverFieldsPublic } from './role.set.resolver.fields.public';
 import { RoleSetResolverMutations } from './role.set.resolver.mutations';
@@ -65,7 +63,6 @@ import { RoleSetServiceLifecycleInvitation } from './role.set.service.lifecycle.
     LifecycleModule,
     CommunityCommunicationModule,
     InAppNotificationModule,
-    TypeOrmModule.forFeature([RoleSet]),
     RoleSetCacheModule,
   ],
   providers: [

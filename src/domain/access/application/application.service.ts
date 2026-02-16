@@ -4,6 +4,8 @@ import {
   EntityNotFoundException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import {
   Application,
   CreateApplicationInput,
@@ -17,19 +19,18 @@ import { NVPService } from '@domain/common/nvp/nvp.service';
 import { IQuestion } from '@domain/common/question/question.interface';
 import { UserService } from '@domain/community/user/user.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { and, eq } from 'drizzle-orm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
 import { IContributor } from '../../community/contributor/contributor.interface';
 import { RoleSetCacheService } from '../role-set/role.set.service.cache';
+import { applications } from './application.schema';
 import { ApplicationLifecycleService } from './application.service.lifecycle';
 
 @Injectable()
 export class ApplicationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    @InjectRepository(Application)
-    private applicationRepository: Repository<Application>,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     private userService: UserService,
     private lifecycleService: LifecycleService,
     private applicationLifecycleService: ApplicationLifecycleService,
@@ -41,7 +42,7 @@ export class ApplicationService {
   async createApplication(
     applicationData: CreateApplicationInput
   ): Promise<IApplication> {
-    const application: IApplication = Application.create(applicationData);
+    const application: IApplication = Application.create(applicationData as unknown as Partial<Application>);
     application.user = await this.userService.getUserOrFail(
       applicationData.userID
     );
@@ -49,12 +50,12 @@ export class ApplicationService {
     application.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.APPLICATION
     );
-    // save the user to get the id assigned
-    await this.applicationRepository.save(application);
+    // save the entity to get the id assigned
+    const saved = await this.save(application);
 
-    application.lifecycle = await this.lifecycleService.createLifecycle();
+    saved.lifecycle = await this.lifecycleService.createLifecycle();
 
-    return await this.applicationRepository.save(application);
+    return await this.save(saved);
   }
 
   async deleteApplication(
@@ -62,7 +63,7 @@ export class ApplicationService {
   ): Promise<IApplication> {
     const applicationID = deleteData.ID;
     const application = await this.getApplicationOrFail(applicationID, {
-      relations: { roleSet: true, user: true },
+      with: { roleSet: true, user: true },
     });
     if (application.questions) {
       for (const question of application.questions) {
@@ -74,10 +75,9 @@ export class ApplicationService {
     if (application.authorization)
       await this.authorizationPolicyService.delete(application.authorization);
 
-    const result = await this.applicationRepository.remove(
-      application as Application
-    );
-    result.id = applicationID;
+    await this.db
+      .delete(applications)
+      .where(eq(applications.id, applicationID));
 
     if (application.user?.id && application.roleSet?.id) {
       await this.roleSetCacheService.deleteOpenApplicationFromCache(
@@ -86,35 +86,54 @@ export class ApplicationService {
       );
     }
 
-    return result;
+    return application;
   }
 
   async getApplicationOrFail(
     applicationId: string,
-    options?: FindOneOptions<Application>
+    options?: { with?: Record<string, boolean | object> }
   ): Promise<Application | never> {
-    const application = await this.applicationRepository.findOne({
-      ...options,
-      where: {
-        ...options?.where,
-        id: applicationId,
-      },
+    const application = await this.db.query.applications.findFirst({
+      where: eq(applications.id, applicationId),
+      with: options?.with,
     });
     if (!application)
       throw new EntityNotFoundException(
         `Application with ID ${applicationId} can not be found!`,
         LogContext.COMMUNITY
       );
-    return application;
+    return application as unknown as Application;
   }
 
   async save(application: IApplication): Promise<IApplication> {
-    return await this.applicationRepository.save(application);
+    if (application.id) {
+      const [updated] = await this.db
+        .update(applications)
+        .set({
+          lifecycleId: application.lifecycle?.id ?? null,
+          userId: application.user?.id ?? null,
+          roleSetId: application.roleSet?.id ?? null,
+          authorizationId: application.authorization?.id ?? null,
+        })
+        .where(eq(applications.id, application.id))
+        .returning();
+      return { ...application, ...updated } as unknown as IApplication;
+    }
+    const [inserted] = await this.db
+      .insert(applications)
+      .values({
+        lifecycleId: application.lifecycle?.id ?? null,
+        userId: application.user?.id ?? null,
+        roleSetId: application.roleSet?.id ?? null,
+        authorizationId: application.authorization?.id ?? null,
+      })
+      .returning();
+    return { ...application, ...inserted } as unknown as IApplication;
   }
 
   async getContributor(applicationID: string): Promise<IContributor> {
     const application = await this.getApplicationOrFail(applicationID, {
-      relations: { user: true },
+      with: { user: true },
     });
     const user = application.user;
     if (!user)
@@ -129,17 +148,17 @@ export class ApplicationService {
     userID: string,
     roleSetID: string
   ): Promise<IApplication[]> {
-    const existingApplications = await this.applicationRepository.find({
-      where: {
-        user: { id: userID },
-        roleSet: { id: roleSetID },
-      },
-      relations: {
+    const existingApplications = await this.db.query.applications.findMany({
+      where: and(
+        eq(applications.userId, userID),
+        eq(applications.roleSetId, roleSetID)
+      ),
+      with: {
         roleSet: true,
         user: true,
       },
     });
-    if (existingApplications.length > 0) return existingApplications;
+    if (existingApplications.length > 0) return existingApplications as unknown as IApplication[];
     return [];
   }
 
@@ -147,27 +166,21 @@ export class ApplicationService {
     userID: string,
     states: string[] = []
   ): Promise<IApplication[]> {
-    const findOpts: FindManyOptions<Application> = {
-      relations: { roleSet: true },
-      where: { user: { id: userID } },
-    };
+    const withRelations: Record<string, boolean> = { roleSet: true };
 
     if (states.length) {
-      findOpts.relations = {
-        ...findOpts.relations,
-        lifecycle: true,
-      };
-      findOpts.select = {
-        lifecycle: {
-          machineState: true,
-        },
-      };
+      withRelations.lifecycle = true;
     }
 
-    const applications = await this.applicationRepository.find(findOpts);
+    const result = await this.db.query.applications.findMany({
+      where: eq(applications.userId, userID),
+      with: withRelations as any,
+    });
+
+    const typedResult = result as unknown as IApplication[];
 
     if (states.length) {
-      const filteredApplications = applications.filter(app =>
+      const filteredApplications = typedResult.filter(app =>
         states.includes(
           this.applicationLifecycleService.getState(app.lifecycle)
         )
@@ -175,7 +188,7 @@ export class ApplicationService {
       return filteredApplications;
     }
 
-    return applications;
+    return typedResult;
   }
 
   async getLifecycleState(applicationID: string): Promise<string> {

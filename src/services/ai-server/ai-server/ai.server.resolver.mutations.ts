@@ -1,19 +1,20 @@
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { Space } from '@domain/space/space/space.entity';
+import { spaces } from '@domain/space/space/space.schema';
 import { Inject, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Args, Field, Mutation, ObjectType, Resolver } from '@nestjs/graphql';
-import { InjectEntityManager } from '@nestjs/typeorm';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { AlkemioConfig } from '@src/types';
 import { ChromaClient } from 'chromadb';
+import { eq } from 'drizzle-orm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager } from 'typeorm';
 import {
   AiPersonaService,
   CreateAiPersonaInput,
@@ -41,8 +42,7 @@ export class AiServerResolverMutations {
     private aiPersonaService: AiPersonaService,
     private aiPersonaAuthorizationService: AiPersonaAuthorizationService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
-    @InjectEntityManager('default')
-    private entityManager: EntityManager,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     private config: ConfigService<AlkemioConfig, true>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private logger: LoggerService
@@ -93,8 +93,8 @@ export class AiServerResolverMutations {
       }
 
       // get the space by nameID
-      const space = await this.entityManager.findOne(Space, {
-        where: { nameID: nameID },
+      const space = await this.db.query.spaces.findFirst({
+        where: eq(spaces.nameID, nameID),
       });
 
       // if the space doesn't exit skip the colletion

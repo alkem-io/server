@@ -4,38 +4,34 @@ import {
   EntityNotFoundException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import {
-  EntityManager,
-  FindManyOptions,
-  FindOneOptions,
-  In,
-  Not,
-  Repository,
-} from 'typeorm';
+import { eq, ne, inArray, and } from 'drizzle-orm';
 import { AccountLookupService } from '../account.lookup/account.lookup.service';
-import { Space } from '../space/space.entity';
+import { spaces } from '../space/space.schema';
 import { ISpace } from '../space/space.interface';
 import { ISpaceAbout } from '../space.about';
+
+type SpaceFindOptions = {
+  relations?: Record<string, any>;
+};
 
 @Injectable()
 export class SpaceLookupService {
   constructor(
     private accountLookupService: AccountLookupService,
-    @InjectEntityManager('default')
-    private entityManager: EntityManager,
-    @InjectRepository(Space)
-    private spaceRepository: Repository<Space>,
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async getSpaceOrFail(
     spaceID: string,
-    options?: FindOneOptions<Space>
+    options?: SpaceFindOptions
   ): Promise<ISpace | never> {
     const space = await this.getSpace(spaceID, options);
     if (!space)
@@ -48,7 +44,7 @@ export class SpaceLookupService {
 
   public async getSpaceForSpaceAboutOrFail(
     spaceAboutID: string,
-    options?: FindOneOptions<Space>
+    options?: SpaceFindOptions
   ): Promise<ISpace | never> {
     const space = await this.getSpaceForSpaceAbout(spaceAboutID, options);
     if (!space)
@@ -59,81 +55,107 @@ export class SpaceLookupService {
     return space;
   }
 
+  /**
+   * Converts a `relations` object to a Drizzle `with` clause.
+   * Boolean `true` values pass through directly.
+   * Nested objects are wrapped in `{ with: { ... } }` for Drizzle's relational query syntax.
+   */
+  private buildWithClause(options?: SpaceFindOptions): Record<string, any> {
+    if (!options?.relations) return {};
+    return this.convertRelationsToWith(options.relations);
+  }
+
+  private convertRelationsToWith(relations: Record<string, any>): Record<string, any> {
+    const withClause: any = {};
+    for (const [key, value] of Object.entries(relations)) {
+      if (value === true) {
+        withClause[key] = true;
+      } else if (typeof value === 'object' && value !== null) {
+        withClause[key] = { with: this.convertRelationsToWith(value) };
+      }
+    }
+    return withClause;
+  }
+
   private async getSpace(
     spaceID: string,
-    options?: FindOneOptions<Space>
+    options?: SpaceFindOptions
   ): Promise<ISpace | null> {
-    const space: ISpace | null = await this.entityManager.findOne(Space, {
-      ...options,
-      where: { ...options?.where, id: spaceID },
+    const withClause = this.buildWithClause(options);
+
+    const space = await this.db.query.spaces.findFirst({
+      where: eq(spaces.id, spaceID),
+      ...(Object.keys(withClause).length > 0 ? { with: withClause } : {}),
     });
-    return space;
+    return (space as unknown as ISpace) ?? null;
   }
 
   public async getSpaceByNameIdOrFail(
     spaceNameID: string,
-    options?: FindOneOptions<Space>
+    options?: SpaceFindOptions
   ): Promise<ISpace> {
-    const space = await this.spaceRepository.findOne({
-      where: {
-        nameID: spaceNameID,
-        level: SpaceLevel.L0,
-      },
-      ...options,
+    const withClause = this.buildWithClause(options);
+
+    const space = await this.db.query.spaces.findFirst({
+      where: and(
+        eq(spaces.nameID, spaceNameID),
+        eq(spaces.level, SpaceLevel.L0)
+      ),
+      ...(Object.keys(withClause).length > 0 ? { with: withClause } : {}),
     });
     if (!space) {
-      if (!space)
-        throw new EntityNotFoundException(
-          `Unable to find L0 Space with nameID: ${spaceNameID}`,
-          LogContext.SPACES
-        );
+      throw new EntityNotFoundException(
+        `Unable to find L0 Space with nameID: ${spaceNameID}`,
+        LogContext.SPACES
+      );
     }
-    return space;
+    return space as unknown as ISpace;
   }
 
   public async getSubspaceByNameIdInLevelZeroSpace(
     subspaceNameID: string,
     levelZeroSpaceID: string,
-    options?: FindOneOptions<Space>
+    options?: SpaceFindOptions
   ): Promise<ISpace | null> {
-    const subspace = await this.spaceRepository.findOne({
-      where: {
-        nameID: subspaceNameID,
-        levelZeroSpaceID: levelZeroSpaceID,
-        level: Not(SpaceLevel.L0),
-      },
-      ...options,
+    const withClause = this.buildWithClause(options);
+
+    const subspace = await this.db.query.spaces.findFirst({
+      where: and(
+        eq(spaces.nameID, subspaceNameID),
+        eq(spaces.levelZeroSpaceID, levelZeroSpaceID),
+        ne(spaces.level, SpaceLevel.L0)
+      ),
+      ...(Object.keys(withClause).length > 0 ? { with: withClause } : {}),
     });
 
-    return subspace;
+    return (subspace as unknown as ISpace) ?? null;
   }
 
   public async getSpaceForSpaceAbout(
     spaceAboutID: string,
-    options?: FindOneOptions<Space>
+    options?: SpaceFindOptions
   ): Promise<ISpace | null> {
-    const space: ISpace | null = await this.entityManager.findOne(Space, {
-      ...options,
-      where: {
-        ...options?.where,
-        about: {
-          id: spaceAboutID,
-        },
-      },
+    const withClause = this.buildWithClause(options);
+
+    const space = await this.db.query.spaces.findFirst({
+      where: eq(spaces.aboutId, spaceAboutID),
+      ...(Object.keys(withClause).length > 0 ? { with: withClause } : {}),
     });
-    return space;
+    return (space as unknown as ISpace) ?? null;
   }
 
   public async getFullSpaceHierarchy(spaceID: string): Promise<ISpace | null> {
-    const space: ISpace | null = await this.entityManager.findOne(Space, {
-      where: { id: spaceID },
-      relations: {
+    const space = await this.db.query.spaces.findFirst({
+      where: eq(spaces.id, spaceID),
+      with: {
         subspaces: {
-          subspaces: true,
+          with: {
+            subspaces: true,
+          },
         },
       },
     });
-    return space;
+    return (space as unknown as ISpace) ?? null;
   }
 
   /***
@@ -146,18 +168,18 @@ export class SpaceLookupService {
       return true;
     }
 
-    const spaces = await this.spaceRepository.find({
-      where: { id: In(ids) },
-      select: { id: true },
+    const foundSpaces = await this.db.query.spaces.findMany({
+      where: inArray(spaces.id, ids),
+      columns: { id: true },
     });
 
-    if (!spaces.length) {
+    if (!foundSpaces.length) {
       return ids;
     }
 
     const notExist = [...ids];
 
-    spaces.forEach(space => {
+    foundSpaces.forEach(space => {
       const idIndex = notExist.findIndex(x => x === space.id);
 
       if (idIndex >= -1) {
@@ -168,26 +190,26 @@ export class SpaceLookupService {
     return notExist.length > 0 ? notExist : true;
   }
 
-  public getSpacesById(
-    spaceIdsOrNameIds: string[],
-    options?: FindManyOptions<Space>
+  public async getSpacesById(
+    spaceIdsOrNameIds: string[]
   ) {
-    return this.spaceRepository.find({
-      ...options,
-      where: options?.where
-        ? Array.isArray(options.where)
-          ? [
-              { id: In(spaceIdsOrNameIds) },
-              { nameID: In(spaceIdsOrNameIds) },
-              ...options.where,
-            ]
-          : [
-              { id: In(spaceIdsOrNameIds) },
-              { nameID: In(spaceIdsOrNameIds) },
-              options.where,
-            ]
-        : [{ id: In(spaceIdsOrNameIds) }, { nameID: In(spaceIdsOrNameIds) }],
+    const byId = await this.db.query.spaces.findMany({
+      where: inArray(spaces.id, spaceIdsOrNameIds),
     });
+    const byNameId = await this.db.query.spaces.findMany({
+      where: inArray(spaces.nameID, spaceIdsOrNameIds),
+    });
+
+    // Deduplicate by ID
+    const seen = new Set(byId.map(s => s.id));
+    const merged = [...byId];
+    for (const s of byNameId) {
+      if (!seen.has(s.id)) {
+        seen.add(s.id);
+        merged.push(s);
+      }
+    }
+    return merged as unknown as ISpace[];
   }
 
   /**
@@ -213,12 +235,8 @@ export class SpaceLookupService {
   public async getProvider(
     spaceAbout: ISpaceAbout
   ): Promise<IContributor | null> {
-    const space = await this.spaceRepository.findOne({
-      where: {
-        about: {
-          id: spaceAbout.id,
-        },
-      },
+    const space = await this.db.query.spaces.findFirst({
+      where: eq(spaces.aboutId, spaceAbout.id),
     });
     if (!space) {
       this.logger.warn(
@@ -227,11 +245,16 @@ export class SpaceLookupService {
       );
       return null;
     }
-    const l0Space = await this.spaceRepository.findOne({
-      where: {
-        id: space.levelZeroSpaceID,
-      },
-      relations: {
+    if (!space.levelZeroSpaceID) {
+      this.logger.warn(
+        `Space has no levelZeroSpaceID for SpaceAbout: ${spaceAbout.id}`,
+        LogContext.SPACES
+      );
+      return null;
+    }
+    const l0Space = await this.db.query.spaces.findFirst({
+      where: eq(spaces.id, space.levelZeroSpaceID),
+      with: {
         account: true,
       },
     });
@@ -242,7 +265,7 @@ export class SpaceLookupService {
       );
       return null;
     }
-    return await this.accountLookupService.getHost(l0Space.account);
+    return await this.accountLookupService.getHost(l0Space.account as any);
   }
 
   /**

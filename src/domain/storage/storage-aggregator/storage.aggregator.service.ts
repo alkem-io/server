@@ -6,19 +6,21 @@ import {
   NotSupportedException,
 } from '@common/exceptions';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { eq } from 'drizzle-orm';
 import { IStorageBucket } from '../storage-bucket/storage.bucket.interface';
 import { StorageBucketService } from '../storage-bucket/storage.bucket.service';
 import { IStorageAggregatorParent } from './dto/storage.aggregator.dto.parent';
 import { StorageAggregator } from './storage.aggregator.entity';
 import { IStorageAggregator } from './storage.aggregator.interface';
+import { storageAggregators } from './storage.aggregator.schema';
 @Injectable()
 export class StorageAggregatorService {
   constructor(
@@ -26,8 +28,7 @@ export class StorageAggregatorService {
     private storageBucketService: StorageBucketService,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
     private urlGeneratorService: UrlGeneratorService,
-    @InjectRepository(StorageAggregator)
-    private storageAggregatorRepository: Repository<StorageAggregator>,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -79,34 +80,68 @@ export class StorageAggregatorService {
       storageAggregator.directStorage.id
     );
 
-    const result = await this.storageAggregatorRepository.remove(
-      storageAggregator as StorageAggregator
-    );
-    result.id = storageAggregatorID;
-    return result;
+    await this.db
+      .delete(storageAggregators)
+      .where(eq(storageAggregators.id, storageAggregatorID));
+    storageAggregator.id = storageAggregatorID;
+    return storageAggregator;
   }
 
   async getStorageAggregatorOrFail(
     storageAggregatorID: string,
-    options?: FindOneOptions<StorageAggregator>
+    options?: {
+      relations?: {
+        directStorage?: boolean;
+        parentStorageAggregator?: boolean;
+      };
+    }
   ): Promise<IStorageAggregator | never> {
+    const withClause: Record<string, boolean> = {};
+    if (options?.relations?.directStorage) withClause.directStorage = true;
+    if (options?.relations?.parentStorageAggregator)
+      withClause.parentStorageAggregator = true;
+
     const storageAggregator =
-      await this.storageAggregatorRepository.findOneOrFail({
-        where: { id: storageAggregatorID },
-        ...options,
+      await this.db.query.storageAggregators.findFirst({
+        where: eq(storageAggregators.id, storageAggregatorID),
+        with: Object.keys(withClause).length > 0 ? withClause : undefined,
       });
     if (!storageAggregator)
       throw new EntityNotFoundException(
         `StorageAggregator not found: ${storageAggregatorID}`,
         LogContext.STORAGE_BUCKET
       );
-    return storageAggregator;
+    return storageAggregator as unknown as IStorageAggregator;
   }
 
   async save(
     storageAggregator: IStorageAggregator
   ): Promise<IStorageAggregator> {
-    return await this.storageAggregatorRepository.save(storageAggregator);
+    if (storageAggregator.id) {
+      const [updated] = await this.db
+        .update(storageAggregators)
+        .set({
+          type: storageAggregator.type,
+          parentStorageAggregatorId:
+            storageAggregator.parentStorageAggregator?.id,
+          directStorageId: storageAggregator.directStorage?.id,
+          authorizationId: storageAggregator.authorization?.id,
+        })
+        .where(eq(storageAggregators.id, storageAggregator.id))
+        .returning();
+      return updated as unknown as IStorageAggregator;
+    }
+    const [inserted] = await this.db
+      .insert(storageAggregators)
+      .values({
+        type: storageAggregator.type,
+        parentStorageAggregatorId:
+          storageAggregator.parentStorageAggregator?.id,
+        directStorageId: storageAggregator.directStorage?.id,
+        authorizationId: storageAggregator.authorization?.id,
+      })
+      .returning();
+    return inserted as unknown as IStorageAggregator;
   }
 
   public async size(storageAggregator: IStorageAggregator): Promise<number> {
@@ -155,15 +190,14 @@ export class StorageAggregatorService {
   public async getChildStorageAggregators(
     storageAggregator: IStorageAggregator
   ): Promise<IStorageAggregator[]> {
-    const result = await this.storageAggregatorRepository.find({
-      where: {
-        parentStorageAggregator: {
-          id: storageAggregator.id,
-        },
-      },
+    const result = await this.db.query.storageAggregators.findMany({
+      where: eq(
+        storageAggregators.parentStorageAggregatorId,
+        storageAggregator.id
+      ),
     });
     if (!result) return [];
-    return result;
+    return result as unknown as IStorageAggregator[];
   }
 
   public async getStorageBuckets(

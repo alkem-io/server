@@ -1,6 +1,8 @@
 import { ForumDiscussionCategory } from '@common/enums/forum.discussion.category';
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { IRoleSet } from '@domain/access/role-set';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IMessaging } from '@domain/communication/messaging/messaging.interface';
@@ -9,20 +11,14 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { ITemplatesManager } from '@domain/template/templates-manager/templates.manager.interface';
 import { ILibrary } from '@library/library/library.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { IForum } from '@platform/forum/forum.interface';
 import { ForumService } from '@platform/forum/forum.service';
-import { Discussion } from '@platform/forum-discussion/discussion.entity';
+import { discussions } from '@platform/forum-discussion/discussion.schema';
 import { ILicensingFramework } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.interface';
+import { desc, eq } from 'drizzle-orm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import {
-  EntityManager,
-  FindOneOptions,
-  FindOptionsRelations,
-  Repository,
-} from 'typeorm';
 import { ReleaseDiscussionOutput } from './dto/release.discussion.dto';
-import { Platform } from './platform.entity';
+import { platforms } from './platform.schema';
 import { IPlatform } from './platform.interface';
 
 @Injectable()
@@ -30,19 +26,23 @@ export class PlatformService {
   constructor(
     private forumService: ForumService,
     private readonly messagingService: MessagingService,
-    private entityManager: EntityManager,
-    @InjectRepository(Platform)
-    private platformRepository: Repository<Platform>,
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async getPlatformOrFail(
-    options?: FindOneOptions<Platform>
+    options?: { relations?: Record<string, boolean> }
   ): Promise<IPlatform | never> {
-    let platform: IPlatform | null = null;
-    platform = await this.platformRepository.findOne({
-      where: {},
-      ...options,
+    const with_ = options?.relations
+      ? Object.fromEntries(
+          Object.entries(options.relations).map(([key, value]) => [key, value])
+        )
+      : undefined;
+
+    const platform = await this.db.query.platforms.findFirst({
+      where: undefined,
+      with: with_ as any,
     });
 
     if (!platform) {
@@ -59,15 +59,23 @@ export class PlatformService {
       }
     }
 
-    return platform;
+    return platform as unknown as IPlatform;
   }
 
   async savePlatform(platform: IPlatform): Promise<IPlatform> {
-    return await this.platformRepository.save(platform);
+    const [saved] = await this.db
+      .insert(platforms)
+      .values(platform as any)
+      .onConflictDoUpdate({
+        target: platforms.id,
+        set: platform as any,
+      })
+      .returning();
+    return saved as unknown as IPlatform;
   }
 
   async getLibraryOrFail(
-    relations?: FindOptionsRelations<IPlatform>
+    relations?: Record<string, boolean>
   ): Promise<ILibrary> {
     const platform = await this.getPlatformOrFail({
       relations: { library: true, ...relations },
@@ -221,15 +229,12 @@ export class PlatformService {
   public async getLatestReleaseDiscussion(): Promise<
     ReleaseDiscussionOutput | undefined
   > {
-    let latestDiscussion: Discussion | undefined;
-    try {
-      latestDiscussion = await this.entityManager
-        .getRepository(Discussion)
-        .findOneOrFail({
-          where: { category: ForumDiscussionCategory.RELEASES },
-          order: { createdDate: 'DESC' },
-        });
-    } catch {
+    const latestDiscussion = await this.db.query.discussions.findFirst({
+      where: eq(discussions.category, ForumDiscussionCategory.RELEASES),
+      orderBy: desc(discussions.createdDate),
+    });
+
+    if (!latestDiscussion) {
       return undefined;
     }
 

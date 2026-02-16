@@ -6,93 +6,116 @@ import {
   CredentialsSearchInput,
   ICredential,
 } from '@domain/agent/credential';
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Injectable, Inject } from '@nestjs/common';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { credentials } from './credential.schema';
+import { eq, and } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 @Injectable()
 export class CredentialService {
   constructor(
-    @InjectRepository(Credential)
-    private credentialRepository: Repository<Credential>
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb
   ) {}
 
   async createCredential(
     credentialInput: CreateCredentialInput
   ): Promise<ICredential> {
     const credential = Credential.create({ ...credentialInput });
-    await this.credentialRepository.save(credential);
-    return credential;
+    const [created] = await this.db
+      .insert(credentials)
+      .values({
+        resourceID: credential.resourceID,
+        type: credential.type,
+        issuer: credential.issuer,
+        expires: credential.expires,
+      })
+      .returning();
+    return created as unknown as ICredential;
   }
 
   public async save(credential: ICredential): Promise<ICredential> {
-    return await this.credentialRepository.save(credential);
+    if (credential.id) {
+      const [updated] = await this.db
+        .update(credentials)
+        .set({
+          resourceID: credential.resourceID,
+          type: credential.type,
+          issuer: credential.issuer,
+          expires: credential.expires,
+          agentId: credential.agent?.id,
+        })
+        .where(eq(credentials.id, credential.id))
+        .returning();
+      return updated as unknown as ICredential;
+    } else {
+      const [created] = await this.db
+        .insert(credentials)
+        .values({
+          resourceID: credential.resourceID,
+          type: credential.type,
+          issuer: credential.issuer,
+          expires: credential.expires,
+          agentId: credential.agent?.id,
+        })
+        .returning();
+      return created as unknown as ICredential;
+    }
   }
 
   async getCredentialOrFail(credentialID: string): Promise<ICredential> {
-    const credential = await this.credentialRepository.findOneBy({
-      id: credentialID,
+    const credential = await this.db.query.credentials.findFirst({
+      where: eq(credentials.id, credentialID),
     });
     if (!credential)
       throw new EntityNotFoundException(
         `Not able to locate credential with the specified ID: ${credentialID}`,
         LogContext.AUTH
       );
-    return credential;
+    return credential as unknown as ICredential;
   }
 
   async deleteCredential(credentialID: string): Promise<ICredential> {
     const credential = await this.getCredentialOrFail(credentialID);
-    const result = await this.credentialRepository.remove(
-      credential as Credential
-    );
-    result.id = credentialID;
-    return result;
+    await this.db.delete(credentials).where(eq(credentials.id, credentialID));
+    return credential;
   }
 
   async findMatchingCredentials(
     credentialCriteria: CredentialsSearchInput
   ): Promise<Credential[]> {
-    if (!credentialCriteria.resourceID) {
-      const credentialMatches = await this.credentialRepository
-        .createQueryBuilder('credential')
-        .leftJoinAndSelect('credential.agent', 'agent')
-        .where({
-          type: `${credentialCriteria.type}`,
-        })
-        .getMany();
-      return credentialMatches;
-    } else {
-      const credentialMatches = await this.credentialRepository
-        .createQueryBuilder('credential')
-        .leftJoinAndSelect('credential.agent', 'agent')
-        .where({
-          type: `${credentialCriteria.type}`,
-          resourceID: `${credentialCriteria.resourceID}`,
-        })
-        .getMany();
-      return credentialMatches;
-    }
+    const whereCondition = credentialCriteria.resourceID
+      ? and(
+          eq(credentials.type, credentialCriteria.type),
+          eq(credentials.resourceID, credentialCriteria.resourceID)
+        )
+      : eq(credentials.type, credentialCriteria.type);
+
+    const credentialMatches = await this.db.query.credentials.findMany({
+      where: whereCondition,
+      with: {
+        agent: true,
+      },
+    });
+    return credentialMatches as unknown as Credential[];
   }
 
   async countMatchingCredentials(
     credentialCriteria: CredentialsSearchInput
   ): Promise<number> {
-    if (!credentialCriteria.resourceID) {
-      return await this.credentialRepository
-        .createQueryBuilder('credential')
-        .leftJoinAndSelect('credential.agent', 'agent')
-        .where({
-          type: `${credentialCriteria.type}`,
-        })
-        .getCount();
-    }
-    return await this.credentialRepository
-      .createQueryBuilder('credential')
-      .leftJoinAndSelect('credential.agent', 'agent')
-      .where({
-        type: `${credentialCriteria.type}`,
-        resourceID: `${credentialCriteria.resourceID}`,
-      })
-      .getCount();
+    const whereCondition = credentialCriteria.resourceID
+      ? and(
+          eq(credentials.type, credentialCriteria.type),
+          eq(credentials.resourceID, credentialCriteria.resourceID)
+        )
+      : eq(credentials.type, credentialCriteria.type);
+
+    const result = await this.db
+      .select({ count: sql<number>`count(*)` })
+      .from(credentials)
+      .where(whereCondition);
+
+    return Number(result[0]?.count || 0);
   }
 }

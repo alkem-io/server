@@ -1,14 +1,15 @@
 import { LogContext } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { Inject } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { eq, sql } from 'drizzle-orm';
+import { rooms } from '../room/room.schema';
 import { IMessage } from '../message/message.interface';
 import { RoomSendMessageInput } from '../room/dto/room.dto.send.message';
 import { RoomSendMessageReplyInput } from '../room/dto/room.dto.send.message.reply';
-import { Room } from '../room/room.entity';
 import { IRoom } from '../room/room.interface';
 import { CreateVcInteractionInput } from '../vc-interaction/dto/vc.interaction.dto.create';
 import { IVcInteraction } from '../vc-interaction/vc.interaction.interface';
@@ -16,8 +17,8 @@ import { IVcInteraction } from '../vc-interaction/vc.interaction.interface';
 export class RoomLookupService {
   constructor(
     private readonly communicationAdapter: CommunicationAdapter,
-    @InjectRepository(Room)
-    private readonly roomRepository: Repository<Room>,
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: WinstonLogger
   ) {}
@@ -79,7 +80,10 @@ export class RoomLookupService {
       virtualContributorActorID: interactionData.virtualContributorActorID,
     };
 
-    await this.roomRepository.save(room);
+    await this.db
+      .update(rooms)
+      .set({ vcInteractionsByThread: room.vcInteractionsByThread })
+      .where(eq(rooms.id, room.id));
 
     return {
       threadID: interactionData.threadID,
@@ -98,23 +102,31 @@ export class RoomLookupService {
   }
 
   async getRoomOrFail(
-    roomID: string,
-    options?: FindOneOptions<Room>
-  ): Promise<Room> {
-    const room = await this.roomRepository.findOne({
-      where: { id: roomID },
-      ...options,
+    roomID: string
+  ): Promise<IRoom> {
+    const room = await this.db.query.rooms.findFirst({
+      where: eq(rooms.id, roomID),
     });
     if (!room)
       throw new EntityNotFoundException(
         `Not able to locate Room with the specified ID: ${roomID}`,
         LogContext.COMMUNICATION
       );
-    return room;
+    return room as unknown as IRoom;
   }
 
   async save(room: IRoom): Promise<IRoom> {
-    return await this.roomRepository.save(room as Room);
+    const [updated] = await this.db
+      .update(rooms)
+      .set({
+        messagesCount: room.messagesCount,
+        type: room.type,
+        displayName: room.displayName,
+        vcInteractionsByThread: room.vcInteractionsByThread,
+      })
+      .where(eq(rooms.id, room.id))
+      .returning();
+    return updated as unknown as IRoom;
   }
 
   /**
@@ -122,7 +134,10 @@ export class RoomLookupService {
    * Uses database-level increment to avoid race conditions.
    */
   async incrementMessagesCount(roomId: string): Promise<void> {
-    await this.roomRepository.increment({ id: roomId }, 'messagesCount', 1);
+    await this.db
+      .update(rooms)
+      .set({ messagesCount: sql`${rooms.messagesCount} + 1` })
+      .where(eq(rooms.id, roomId));
   }
 
   /**
@@ -130,12 +145,10 @@ export class RoomLookupService {
    * Uses raw query to ensure count doesn't go below 0.
    */
   async decrementMessagesCount(roomId: string): Promise<void> {
-    await this.roomRepository
-      .createQueryBuilder()
-      .update()
-      .set({ messagesCount: () => 'GREATEST("messagesCount" - 1, 0)' })
-      .where('id = :id', { id: roomId })
-      .execute();
+    await this.db
+      .update(rooms)
+      .set({ messagesCount: sql`GREATEST(${rooms.messagesCount} - 1, 0)` })
+      .where(eq(rooms.id, roomId));
   }
 
   async sendMessage(

@@ -1,6 +1,7 @@
 import { INNOVATION_HUB_INJECT_TOKEN } from '@common/constants';
 import { LogContext } from '@common/enums';
 import { DOMAIN_PATTERN, SUBDOMAIN_PATTERN } from '@core/validation';
+import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
 import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.service';
 import {
   CallHandler,
@@ -90,7 +91,7 @@ export class InnovationHubInterceptor implements NestInterceptor {
       ctx[INNOVATION_HUB_INJECT_TOKEN] =
         await this.innovationHubService.getInnovationHubFlexOrFail({
           subdomain: subDomain,
-        });
+        }) as InnovationHub;
     } catch {
       this.logger.warn(
         `${this.constructor.name} unable to find Innovation Hub with subdomain '${subDomain}'`,

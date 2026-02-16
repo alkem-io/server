@@ -2,8 +2,6 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { OrganizationVerification } from './organization.verification.entity';
 import { OrganizationVerificationLifecycleResolverFields } from './organization.verification.resolver.fields.lifecycle';
 import { OrganizationVerificationResolverMutations } from './organization.verification.resolver.mutations';
 import { OrganizationVerificationService } from './organization.verification.service';
@@ -15,7 +13,6 @@ import { OrganizationVerificationLifecycleService } from './organization.verific
     AuthorizationPolicyModule,
     AuthorizationModule,
     LifecycleModule,
-    TypeOrmModule.forFeature([OrganizationVerification]),
   ],
   providers: [
     OrganizationVerificationService,

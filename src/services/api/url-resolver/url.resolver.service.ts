@@ -21,11 +21,14 @@ import { ISpace } from '@domain/space/space/space.interface';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { InnovationPackService } from '@library/innovation-pack/innovation.pack.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
 import { ForumDiscussionLookupService } from '@platform/forum-discussion-lookup/forum.discussion.lookup.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager, EntityNotFoundError } from 'typeorm';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { eq, and } from 'drizzle-orm';
+import { callouts } from '@domain/collaboration/callout/callout.schema';
+import { calloutContributions } from '@domain/collaboration/callout-contribution/callout.contribution.schema';
 import { UrlResolverQueryResultCalloutsSet } from './dto/url.resolver.query.callouts.set.result';
 import { UrlResolverQueryResults } from './dto/url.resolver.query.results';
 import { UrlResolverQueryResultSpace } from './dto/url.resolver.query.space.result';
@@ -47,8 +50,7 @@ export class UrlResolverService {
     private urlGeneratorService: UrlGeneratorService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    @InjectEntityManager('default')
-    private entityManager: EntityManager
+    @Inject(DRIZZLE) private readonly db: DrizzleDb
   ) {}
 
   public async resolveUrl(
@@ -103,8 +105,7 @@ export class UrlResolverService {
     if (
       error instanceof EntityNotFoundException ||
       error instanceof RelationshipNotFoundException ||
-      error instanceof ValidationException ||
-      error instanceof EntityNotFoundError // TypeORM couldn't find the entity
+      error instanceof ValidationException
     ) {
       result.state = UrlResolverResultState.NotFound;
       await this.populateClosestAncestor(result);
@@ -375,7 +376,7 @@ export class UrlResolverService {
       await this.virtualContributorLookupService.getVirtualContributorByNameIdOrFail(
         virtualContributorNameID,
         {
-          relations: {
+          with: {
             knowledgeBase: {
               calloutsSet: {
                 callouts: {
@@ -388,7 +389,7 @@ export class UrlResolverService {
               },
             },
           },
-        }
+        } as any
       );
 
     // Set the VC result immediately so it can be used as an ancestor if subsequent checks fail
@@ -547,9 +548,11 @@ export class UrlResolverService {
       await this.innovationPackService.getInnovationPackByNameIdOrFail(
         innovationPackNameID,
         {
-          relations: {
+          with: {
             templatesSet: {
-              templates: true,
+              with: {
+                templates: true,
+              },
             },
           },
         }
@@ -737,11 +740,7 @@ export class UrlResolverService {
       result.space.levelZeroSpaceID,
       {
         relations: {
-          templatesManager: {
-            templatesSet: {
-              templates: true,
-            },
-          },
+          templatesManager: true,
         },
       }
     );
@@ -839,25 +838,32 @@ export class UrlResolverService {
     }
 
     // Assume have a callout
-    const callout = await this.entityManager.findOneOrFail(Callout, {
-      where: {
-        nameID: calloutNameID,
-        calloutsSet: {
-          id: calloutsSetId,
-        },
-      },
-      relations: {
+    const callout = await this.db.query.callouts.findFirst({
+      where: and(
+        eq(callouts.nameID, calloutNameID),
+        eq(callouts.calloutsSetId, calloutsSetId)
+      ),
+      with: {
         authorization: true,
         contributions: {
-          post: true,
-          whiteboard: true,
-          memo: true,
+          with: {
+            post: true,
+            whiteboard: true,
+            memo: true,
+          },
         },
       },
     });
+
+    if (!callout) {
+      throw new EntityNotFoundException(
+        `Callout not found`,
+        LogContext.URL_RESOLVER
+      );
+    }
     this.authorizationService.grantAccessOrFail(
       agentInfo,
-      callout.authorization,
+      (callout.authorization ?? undefined) as any,
       AuthorizationPrivilege.READ,
       `resolving url for callout ${urlPath}`
     );
@@ -869,30 +875,23 @@ export class UrlResolverService {
 
     // Check for post contribution
     if (postNameID) {
-      const contribution = await this.entityManager.findOne(
-        CalloutContribution,
-        {
-          where: {
-            callout: {
-              id: callout.id,
-            },
-            post: {
-              nameID: postNameID,
-            },
-          },
-          relations: {
-            authorization: true,
-            post: true,
-          },
-        }
-      );
+      const contribution = await this.db.query.calloutContributions.findFirst({
+        where: and(
+          eq(calloutContributions.calloutId, callout.id),
+          eq(calloutContributions.postId, postNameID)
+        ),
+        with: {
+          authorization: true,
+          post: true,
+        },
+      });
       if (!contribution) {
         // Do not throw an error but return what is available
         return result;
       }
       this.authorizationService.grantAccessOrFail(
         agentInfo,
-        contribution.authorization,
+        (contribution.authorization ?? undefined) as any,
         AuthorizationPrivilege.READ,
         `resolving url for post on callout ${urlPath}`
       );
@@ -904,23 +903,16 @@ export class UrlResolverService {
 
     // Check for whiteboard contribution
     if (whiteboardNameID) {
-      const contribution = await this.entityManager.findOne(
-        CalloutContribution,
-        {
-          where: {
-            callout: {
-              id: callout.id,
-            },
-            whiteboard: {
-              nameID: whiteboardNameID,
-            },
-          },
-          relations: {
-            authorization: true,
-            whiteboard: true,
-          },
-        }
-      );
+      const contribution = await this.db.query.calloutContributions.findFirst({
+        where: and(
+          eq(calloutContributions.calloutId, callout.id),
+          eq(calloutContributions.whiteboardId, whiteboardNameID)
+        ),
+        with: {
+          authorization: true,
+          whiteboard: true,
+        },
+      });
       if (!contribution) {
         // Do not throw an error but return what is available
         return result;
@@ -928,7 +920,7 @@ export class UrlResolverService {
 
       this.authorizationService.grantAccessOrFail(
         agentInfo,
-        contribution.authorization,
+        (contribution.authorization ?? undefined) as any,
         AuthorizationPrivilege.READ,
         `resolving url for whiteboard on callout ${urlPath}`
       );
@@ -940,23 +932,16 @@ export class UrlResolverService {
 
     // Check for memo contribution
     if (memoNameID) {
-      const contribution = await this.entityManager.findOne(
-        CalloutContribution,
-        {
-          where: {
-            callout: {
-              id: callout.id,
-            },
-            memo: {
-              nameID: memoNameID,
-            },
-          },
-          relations: {
-            authorization: true,
-            memo: true,
-          },
-        }
-      );
+      const contribution = await this.db.query.calloutContributions.findFirst({
+        where: and(
+          eq(calloutContributions.calloutId, callout.id),
+          eq(calloutContributions.memoId, memoNameID)
+        ),
+        with: {
+          authorization: true,
+          memo: true,
+        },
+      });
       if (!contribution) {
         // Do not throw an error but return what is available
         return result;
@@ -964,7 +949,7 @@ export class UrlResolverService {
 
       this.authorizationService.grantAccessOrFail(
         agentInfo,
-        contribution.authorization,
+        (contribution.authorization ?? undefined) as any,
         AuthorizationPrivilege.READ,
         `resolving url for memo on callout ${urlPath}`
       );
@@ -1004,13 +989,7 @@ export class UrlResolverService {
       result.space.id,
       {
         relations: {
-          collaboration: {
-            timeline: {
-              calendar: {
-                events: true,
-              },
-            },
-          },
+          collaboration: true,
         },
       }
     );
@@ -1088,16 +1067,8 @@ export class UrlResolverService {
 
   private spaceRelations = {
     relations: {
-      collaboration: {
-        calloutsSet: {
-          callouts: {
-            contributions: true,
-          },
-        },
-      },
-      community: {
-        roleSet: true,
-      },
+      collaboration: true,
+      community: true,
     },
   };
 }

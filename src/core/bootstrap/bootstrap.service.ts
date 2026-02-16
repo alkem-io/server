@@ -40,7 +40,6 @@ import { TemplateDefaultService } from '@domain/template/template-default/templa
 import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { InjectRepository } from '@nestjs/typeorm';
 import { LicensePlanService } from '@platform/licensing/credential-based/license-plan/license.plan.service';
 import { LicensingFrameworkService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service';
 import { PlatformService } from '@platform/platform/platform.service';
@@ -51,7 +50,10 @@ import { AiServerService } from '@services/ai-server/ai-server/ai.server.service
 import { AiServerAuthorizationService } from '@services/ai-server/ai-server/ai.server.service.authorization';
 import { AdminAuthorizationService } from '@src/platform-admin/domain/authorization/admin.authorization.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Repository } from 'typeorm';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { count } from 'drizzle-orm';
+import { spaces as spaceSchema } from '@domain/space/space/space.schema';
 import { bootstrapTemplateSpaceContentCalloutsSpaceL0Tutorials } from './platform-template-definitions/default-templates/bootstrap.template.space.content.callouts.space.l0.tutorials';
 import { bootstrapTemplateSpaceContentCalloutsVcKnowledgeBase } from './platform-template-definitions/default-templates/bootstrap.template.space.content.callouts.vc.knowledge.base';
 import { bootstrapTemplateSpaceContentSpaceL0 } from './platform-template-definitions/default-templates/bootstrap.template.space.content.space.l0';
@@ -78,8 +80,8 @@ export class BootstrapService {
     private platformService: PlatformService,
     private platformAuthorizationService: PlatformAuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    @InjectRepository(Space)
-    private spaceRepository: Repository<Space>,
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private aiServer: AiServerService,
@@ -495,7 +497,10 @@ export class BootstrapService {
       '=== Ensuring at least one Account with a space is present ===',
       LogContext.BOOTSTRAP
     );
-    const spaceCount = await this.spaceRepository.count();
+    const result = await this.db
+      .select({ count: count() })
+      .from(spaceSchema);
+    const spaceCount = Number(result[0]?.count ?? 0);
     if (spaceCount == 0) {
       this.logger.verbose?.('...No space present...', LogContext.BOOTSTRAP);
       this.logger.verbose?.(

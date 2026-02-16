@@ -15,9 +15,12 @@ import { IWhiteboard } from '@domain/common/whiteboard/types';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
+import { Inject, Injectable } from '@nestjs/common';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { eq } from 'drizzle-orm';
+import { sql } from 'drizzle-orm/sql';
+import { calloutContributions } from './callout.contribution.schema';
 import { ICalloutSettingsContribution } from '../callout-settings/callout.settings.contribution.interface';
 import { ILink } from '../link/link.interface';
 import { LinkService } from '../link/link.service';
@@ -35,8 +38,8 @@ export class CalloutContributionService {
     private whiteboardService: WhiteboardService,
     private linkService: LinkService,
     private memoService: MemoService,
-    @InjectRepository(CalloutContribution)
-    private contributionRepository: Repository<CalloutContribution>
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb
   ) {}
 
   public async createCalloutContributions(
@@ -71,7 +74,7 @@ export class CalloutContributionService {
       contributionSettings
     );
     const contribution: ICalloutContribution = CalloutContribution.create(
-      calloutContributionData
+      calloutContributionData as Partial<CalloutContribution>
     );
 
     contribution.authorization = new AuthorizationPolicy(
@@ -170,17 +173,23 @@ export class CalloutContributionService {
   }
 
   async delete(contributionID: string): Promise<ICalloutContribution> {
-    const contribution = await this.getCalloutContributionOrFail(
-      contributionID,
-      {
-        relations: {
-          post: true,
-          whiteboard: true,
-          link: true,
-          memo: true,
-        },
-      }
-    );
+    const contribution = await this.db.query.calloutContributions.findFirst({
+      where: eq(calloutContributions.id, contributionID),
+      with: {
+        post: true,
+        whiteboard: true,
+        link: true,
+        memo: true,
+        authorization: true,
+      },
+    }) as unknown as ICalloutContribution;
+
+    if (!contribution)
+      throw new EntityNotFoundException(
+        `No CalloutContribution found with the given id: ${contributionID}`,
+        LogContext.COLLABORATION
+      );
+
     if (contribution.post) {
       await this.postService.deletePost(contribution.post.id);
     }
@@ -201,9 +210,8 @@ export class CalloutContributionService {
       await this.authorizationPolicyService.delete(contribution.authorization);
     }
 
-    const result = await this.contributionRepository.remove(
-      contribution as CalloutContribution
-    );
+    await this.db.delete(calloutContributions).where(eq(calloutContributions.id, contributionID));
+    const result = { ...contribution };
     result.id = contributionID;
     return result;
   }
@@ -221,19 +229,37 @@ export class CalloutContributionService {
     const contributionsArray = isParamArray
       ? calloutContribution
       : [calloutContribution];
-    const results = await this.contributionRepository.save(contributionsArray);
+
+    const results: ICalloutContribution[] = [];
+    for (const contribution of contributionsArray) {
+      const [saved] = await this.db
+        .insert(calloutContributions)
+        .values(contribution as any)
+        .onConflictDoUpdate({
+          target: calloutContributions.id,
+          set: contribution as any,
+        })
+        .returning();
+      results.push(saved as unknown as ICalloutContribution);
+    }
 
     return isParamArray ? results : results[0];
   }
 
   public async getCalloutContributionOrFail(
-    calloutContributionID: string,
-    options?: FindOneOptions<CalloutContribution>
+    calloutContributionID: string
   ): Promise<ICalloutContribution | never> {
-    const calloutContribution = await this.contributionRepository.findOne({
-      where: { id: calloutContributionID },
-      ...options,
-    });
+    const calloutContribution = await this.db.query.calloutContributions.findFirst({
+      where: eq(calloutContributions.id, calloutContributionID),
+      with: {
+        authorization: true,
+        post: true,
+        whiteboard: true,
+        link: true,
+        memo: true,
+        callout: true,
+      },
+    }) as unknown as ICalloutContribution;
 
     if (!calloutContribution)
       throw new EntityNotFoundException(
@@ -246,24 +272,24 @@ export class CalloutContributionService {
   public async getContributionsInCalloutCount(
     calloutID: string
   ): Promise<number> {
-    return await this.contributionRepository.countBy({
-      callout: {
-        id: calloutID,
-      },
-    });
+    const result = await this.db
+      .select({ count: sql<number>`count(*)` })
+      .from(calloutContributions)
+      .where(eq(calloutContributions.calloutId, calloutID));
+    return Number(result[0]?.count ?? 0);
   }
 
   public async getWhiteboard(
-    calloutContributionInput: ICalloutContribution,
-    relations?: FindOptionsRelations<ICalloutContribution>
+    calloutContributionInput: ICalloutContribution
   ): Promise<IWhiteboard | null> {
-    const calloutContribution = await this.getCalloutContributionOrFail(
-      calloutContributionInput.id,
-      {
-        relations: { whiteboard: true, ...relations },
-      }
-    );
-    if (!calloutContribution.whiteboard) {
+    const calloutContribution = await this.db.query.calloutContributions.findFirst({
+      where: eq(calloutContributions.id, calloutContributionInput.id),
+      with: {
+        whiteboard: true,
+      },
+    }) as unknown as ICalloutContribution;
+
+    if (!calloutContribution?.whiteboard) {
       return null;
     }
 
@@ -271,16 +297,16 @@ export class CalloutContributionService {
   }
 
   public async getLink(
-    calloutContributionInput: ICalloutContribution,
-    relations?: FindOptionsRelations<ICalloutContribution>
+    calloutContributionInput: ICalloutContribution
   ): Promise<ILink | null> {
-    const calloutContribution = await this.getCalloutContributionOrFail(
-      calloutContributionInput.id,
-      {
-        relations: { link: true, ...relations },
-      }
-    );
-    if (!calloutContribution.link) {
+    const calloutContribution = await this.db.query.calloutContributions.findFirst({
+      where: eq(calloutContributions.id, calloutContributionInput.id),
+      with: {
+        link: true,
+      },
+    }) as unknown as ICalloutContribution;
+
+    if (!calloutContribution?.link) {
       return null;
     }
 
@@ -288,16 +314,16 @@ export class CalloutContributionService {
   }
 
   public async getPost(
-    calloutContributionInput: ICalloutContribution,
-    relations?: FindOptionsRelations<ICalloutContribution>
+    calloutContributionInput: ICalloutContribution
   ): Promise<IPost | null> {
-    const calloutContribution = await this.getCalloutContributionOrFail(
-      calloutContributionInput.id,
-      {
-        relations: { post: true, ...relations },
-      }
-    );
-    if (!calloutContribution.post) {
+    const calloutContribution = await this.db.query.calloutContributions.findFirst({
+      where: eq(calloutContributions.id, calloutContributionInput.id),
+      with: {
+        post: true,
+      },
+    }) as unknown as ICalloutContribution;
+
+    if (!calloutContribution?.post) {
       return null;
     }
 
@@ -305,16 +331,16 @@ export class CalloutContributionService {
   }
 
   public async getMemo(
-    calloutContributionInput: ICalloutContribution,
-    relations?: FindOptionsRelations<ICalloutContribution>
+    calloutContributionInput: ICalloutContribution
   ): Promise<IMemo | null> {
-    const calloutContribution = await this.getCalloutContributionOrFail(
-      calloutContributionInput.id,
-      {
-        relations: { memo: true, ...relations },
-      }
-    );
-    if (!calloutContribution.memo) {
+    const calloutContribution = await this.db.query.calloutContributions.findFirst({
+      where: eq(calloutContributions.id, calloutContributionInput.id),
+      with: {
+        memo: true,
+      },
+    }) as unknown as ICalloutContribution;
+
+    if (!calloutContribution?.memo) {
       return null;
     }
 
@@ -330,33 +356,53 @@ export class CalloutContributionService {
   public async getStorageBucketForContribution(
     contributionID: string
   ): Promise<IStorageBucket> {
-    const contribution = await this.getCalloutContributionOrFail(
-      contributionID,
-      {
-        relations: {
-          post: {
+    const contribution = await this.db.query.calloutContributions.findFirst({
+      where: eq(calloutContributions.id, contributionID),
+      with: {
+        post: {
+          with: {
             profile: {
-              storageBucket: true,
-            },
-          },
-          link: {
-            profile: {
-              storageBucket: true,
-            },
-          },
-          whiteboard: {
-            profile: {
-              storageBucket: true,
-            },
-          },
-          memo: {
-            profile: {
-              storageBucket: true,
+              with: {
+                storageBucket: true,
+              },
             },
           },
         },
-      }
-    );
+        link: {
+          with: {
+            profile: {
+              with: {
+                storageBucket: true,
+              },
+            },
+          },
+        },
+        whiteboard: {
+          with: {
+            profile: {
+              with: {
+                storageBucket: true,
+              },
+            },
+          },
+        },
+        memo: {
+          with: {
+            profile: {
+              with: {
+                storageBucket: true,
+              },
+            },
+          },
+        },
+      },
+    }) as unknown as ICalloutContribution;
+
+    if (!contribution)
+      throw new EntityNotFoundException(
+        `No CalloutContribution found with the given id: ${contributionID}`,
+        LogContext.COLLABORATION
+      );
 
     const profile = this.getProfileFromContribution(contribution);
     if (!profile || !profile.storageBucket) {

@@ -30,9 +30,8 @@ export class LicensePlanResolverMutations {
       deleteData.ID,
       {
         relations: {
-          licensingFramework: {
-            authorization: true,
-          },
+          licensingFramework: true,
+          authorization: true,
         },
       }
     );
@@ -62,9 +61,8 @@ export class LicensePlanResolverMutations {
       updateData.ID,
       {
         relations: {
-          licensingFramework: {
-            authorization: true,
-          },
+          licensingFramework: true,
+          authorization: true,
         },
       }
     );

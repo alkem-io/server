@@ -13,10 +13,11 @@ import { IProfile } from '@domain/common/profile';
 import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { eq } from 'drizzle-orm';
 import { AuthorizationPolicy } from '../authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { LicenseService } from '../license/license.service';
@@ -26,14 +27,14 @@ import { CreateMemoInput } from './dto/memo.dto.create';
 import { UpdateMemoInput } from './dto/memo.dto.update';
 import { Memo } from './memo.entity';
 import { IMemo } from './memo.interface';
+import { memos } from './memo.schema';
 
 @Injectable()
 export class MemoService {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    @InjectRepository(Memo)
-    private memoRepository: Repository<Memo>,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileService: ProfileService,
     private profileDocumentsService: ProfileDocumentsService,
@@ -51,7 +52,7 @@ export class MemoService {
     const memo: IMemo = Memo.create({
       ...restOfMemoData,
       content,
-    });
+    } as Partial<Memo>);
     memo.authorization = new AuthorizationPolicy(AuthorizationPolicyType.MEMO);
     memo.createdBy = userID;
     memo.contentUpdatePolicy = ContentUpdatePolicy.CONTRIBUTORS;
@@ -78,11 +79,31 @@ export class MemoService {
 
   async getMemoOrFail(
     memoID: string,
-    options?: FindOneOptions<Memo>
+    options?: {
+      loadEagerRelations?: boolean;
+      relations?: {
+        authorization?: boolean;
+        profile?: boolean | { authorization?: boolean; storageBucket?: boolean };
+      };
+      select?: any;
+    }
   ): Promise<IMemo | never> {
-    const memo = await this.memoRepository.findOne({
-      where: { id: memoID },
-      ...options,
+    const memo = await this.db.query.memos.findFirst({
+      where: eq(memos.id, memoID),
+      with: options?.relations
+        ? {
+            authorization: options.relations.authorization || undefined,
+            profile:
+              typeof options.relations.profile === 'object'
+                ? {
+                    with: {
+                      authorization: options.relations.profile.authorization || undefined,
+                      storageBucket: options.relations.profile.storageBucket || undefined,
+                    },
+                  }
+                : (options.relations.profile || undefined),
+          }
+        : undefined,
     });
 
     if (!memo)
@@ -90,7 +111,7 @@ export class MemoService {
         `Not able to locate Memo with the specified ID: ${memoID}`,
         LogContext.MEMOS
       );
-    return memo;
+    return memo as unknown as IMemo;
   }
 
   async deleteMemo(memoID: string): Promise<IMemo> {
@@ -118,9 +139,8 @@ export class MemoService {
     await this.profileService.deleteProfile(memo.profile.id);
     await this.authorizationPolicyService.delete(memo.authorization);
 
-    const deletedMemo = await this.memoRepository.remove(memo as Memo);
-    deletedMemo.id = memoID;
-    return deletedMemo;
+    await this.db.delete(memos).where(eq(memos.id, memoID));
+    return memo;
   }
 
   /**
@@ -140,10 +160,12 @@ export class MemoService {
   }
 
   async saveContent(memoId: string, content: Buffer): Promise<IMemo> {
-    const memo = await this.getMemoOrFail(memoId);
-    memo.content = content;
-
-    return this.save(memo);
+    const [updated] = await this.db
+      .update(memos)
+      .set({ content })
+      .where(eq(memos.id, memoId))
+      .returning();
+    return updated as unknown as IMemo;
   }
 
   async updateMemo(
@@ -229,13 +251,11 @@ export class MemoService {
   }
 
   public async getProfile(
-    memoId: string,
-    relations?: FindOptionsRelations<IMemo>
+    memoId: string
   ): Promise<IProfile> {
     const memoLoaded = await this.getMemoOrFail(memoId, {
       relations: {
         profile: true,
-        ...relations,
       },
     });
 
@@ -248,7 +268,15 @@ export class MemoService {
     return memoLoaded.profile;
   }
 
-  public save(memo: IMemo): Promise<IMemo> {
-    return this.memoRepository.save(memo);
+  public async save(memo: IMemo): Promise<IMemo> {
+    const [updated] = await this.db
+      .update(memos)
+      .set({
+        content: memo.content,
+        contentUpdatePolicy: memo.contentUpdatePolicy,
+      })
+      .where(eq(memos.id, memo.id))
+      .returning();
+    return updated as unknown as IMemo;
   }
 }

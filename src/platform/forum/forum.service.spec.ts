@@ -1,8 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Forum } from './forum.entity';
 import { ForumService } from './forum.service';
 
 describe('ForumService', () => {
@@ -13,7 +11,6 @@ describe('ForumService', () => {
       providers: [
         ForumService,
         MockWinstonProvider,
-        repositoryProviderMockFactory(Forum),
       ],
     })
       .useMocker(defaultMockerFactory)

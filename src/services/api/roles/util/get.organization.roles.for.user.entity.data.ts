@@ -1,19 +1,21 @@
 import { Organization } from '@src/domain/community/organization';
-import { EntityManager, FindManyOptions, In } from 'typeorm';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { inArray } from 'drizzle-orm';
+import { organizations } from '@domain/community/organization/organization.schema';
 
-export const getOrganizationRolesForUserEntityData = (
-  entityManager: EntityManager,
+export const getOrganizationRolesForUserEntityData = async (
+  db: DrizzleDb,
   organizationIds: string[]
 ): Promise<Organization[]> => {
-  return entityManager.find(Organization, {
-    where: {
-      id: In(organizationIds),
-    },
-    relations: { profile: true },
-    select: {
+  const result = await db.query.organizations.findMany({
+    where: inArray(organizations.id, organizationIds),
+    with: {
       profile: {
-        displayName: true,
+        columns: {
+          displayName: true,
+        },
       },
     },
-  } as FindManyOptions);
+  });
+  return result as unknown as Organization[];
 };

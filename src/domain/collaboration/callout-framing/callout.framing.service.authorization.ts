@@ -31,7 +31,6 @@ export class CalloutFramingAuthorizationService {
       await this.calloutFramingService.getCalloutFramingOrFail(
         calloutFramingInput.id,
         {
-          loadEagerRelations: false,
           relations: {
             authorization: true,
             profile: true,
@@ -39,24 +38,6 @@ export class CalloutFramingAuthorizationService {
             memo: true,
             mediaGallery: {
               storageBucket: true,
-            },
-          },
-          select: {
-            id: true,
-            authorization:
-              this.authorizationPolicyService.authorizationSelectOptions,
-            profile: {
-              id: true,
-            },
-            whiteboard: {
-              id: true,
-            },
-            memo: {
-              id: true,
-            },
-            mediaGallery: {
-              id: true,
-              storageBucket: { id: true },
             },
           },
         }

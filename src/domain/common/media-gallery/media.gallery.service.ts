@@ -10,9 +10,11 @@ import { Visual } from '@domain/common/visual/visual.entity';
 import { VisualService } from '@domain/common/visual/visual.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, Repository } from 'typeorm';
+import { Inject, Injectable } from '@nestjs/common';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { eq } from 'drizzle-orm';
+import { mediaGalleries } from './media.gallery.schema';
 import { IVisual } from '../visual';
 import { MediaGallery } from './media.gallery.entity';
 import { IMediaGallery } from './media.gallery.interface';
@@ -20,8 +22,7 @@ import { IMediaGallery } from './media.gallery.interface';
 @Injectable()
 export class MediaGalleryService {
   constructor(
-    @InjectRepository(MediaGallery)
-    private readonly mediaGalleryRepository: Repository<MediaGallery>,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     private readonly storageBucketService: StorageBucketService,
     private readonly visualService: VisualService,
     private readonly authorizationPolicyService: AuthorizationPolicyService
@@ -49,7 +50,16 @@ export class MediaGalleryService {
     // Create visuals using Media Gallery mutations
     mediaGallery.visuals = [] as Visual[];
 
-    return await this.mediaGalleryRepository.save(mediaGallery);
+    const [saved] = await this.db
+      .insert(mediaGalleries)
+      .values({
+        id: mediaGallery.id,
+        createdBy: mediaGallery.createdBy,
+        storageBucketId: mediaGallery.storageBucket.id,
+        authorizationId: mediaGallery.authorization?.id,
+      })
+      .returning();
+    return saved as unknown as IMediaGallery;
   }
 
   public async addVisualToMediaGallery(
@@ -154,20 +164,55 @@ export class MediaGalleryService {
     );
     await this.authorizationPolicyService.delete(mediaGallery.authorization);
 
-    const deletedMediaGallery = await this.mediaGalleryRepository.remove(
-      mediaGallery as MediaGallery
-    );
-    deletedMediaGallery.id = mediaGalleryId;
-    return deletedMediaGallery;
+    await this.db
+      .delete(mediaGalleries)
+      .where(eq(mediaGalleries.id, mediaGalleryId));
+    return mediaGallery;
   }
 
   public async getMediaGalleryOrFail(
     mediaGalleryID: string,
-    options?: FindOneOptions<MediaGallery>
+    options?: {
+      loadEagerRelations?: boolean;
+      relations?: {
+        authorization?: boolean;
+        storageBucket?: boolean | { authorization?: boolean; documents?: boolean | { authorization?: boolean; tagset?: boolean | { authorization?: boolean } } };
+        visuals?: boolean | { authorization?: boolean };
+      };
+      select?: any;
+    }
   ): Promise<IMediaGallery> {
-    const mediaGallery = await this.mediaGalleryRepository.findOne({
-      where: { id: mediaGalleryID },
-      ...options,
+    const mediaGallery = await this.db.query.mediaGalleries.findFirst({
+      where: eq(mediaGalleries.id, mediaGalleryID),
+      with: options?.relations
+        ? {
+            authorization: options.relations.authorization || undefined,
+            storageBucket:
+              typeof options.relations.storageBucket === 'object'
+                ? {
+                    with: {
+                      authorization: options.relations.storageBucket.authorization || undefined,
+                      documents:
+                        typeof options.relations.storageBucket.documents === 'object'
+                          ? {
+                              with: {
+                                authorization: options.relations.storageBucket.documents.authorization || undefined,
+                                tagset:
+                                  typeof options.relations.storageBucket.documents.tagset === 'object'
+                                    ? { with: { authorization: options.relations.storageBucket.documents.tagset.authorization || undefined } }
+                                    : (options.relations.storageBucket.documents.tagset || undefined),
+                              },
+                            }
+                          : (options.relations.storageBucket.documents || undefined),
+                    },
+                  }
+                : (options.relations.storageBucket || undefined),
+            visuals:
+              typeof options.relations.visuals === 'object'
+                ? { with: { authorization: options.relations.visuals.authorization || undefined } }
+                : (options.relations.visuals || undefined),
+          }
+        : undefined,
     });
 
     if (!mediaGallery) {
@@ -177,15 +222,17 @@ export class MediaGalleryService {
       );
     }
 
+    const result = mediaGallery as unknown as IMediaGallery;
+
     // Sort visuals by sortOrder ascending
-    if (mediaGallery.visuals && mediaGallery.visuals.length > 0) {
-      mediaGallery.visuals.sort((a, b) => {
+    if (result.visuals && result.visuals.length > 0) {
+      result.visuals.sort((a, b) => {
         const aSortOrder = a.sortOrder ?? Number.MAX_SAFE_INTEGER;
         const bSortOrder = b.sortOrder ?? Number.MAX_SAFE_INTEGER;
         return aSortOrder - bSortOrder;
       });
     }
 
-    return mediaGallery;
+    return result;
   }
 }

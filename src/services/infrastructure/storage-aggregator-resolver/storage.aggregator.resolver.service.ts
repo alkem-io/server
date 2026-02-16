@@ -1,52 +1,51 @@
 import { LogContext } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { InvalidUUID } from '@common/exceptions/invalid.uuid';
-import { Callout } from '@domain/collaboration/callout/callout.entity';
-import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
-import { KnowledgeBase } from '@domain/common/knowledge-base/knowledge.base.entity';
-import { IOrganization, Organization } from '@domain/community/organization';
-import { User } from '@domain/community/user/user.entity';
+import { callouts } from '@domain/collaboration/callout/callout.schema';
+import { collaborations } from '@domain/collaboration/collaboration/collaboration.schema';
+import { knowledgeBases } from '@domain/common/knowledge-base/knowledge.base.schema';
+import { IOrganization } from '@domain/community/organization';
+import { organizations } from '@domain/community/organization/organization.schema';
 import { IUser } from '@domain/community/user/user.interface';
-import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
-import { Account } from '@domain/space/account/account.entity';
+import { users } from '@domain/community/user/user.schema';
+import { virtualContributors } from '@domain/community/virtual-contributor/virtual.contributor.schema';
+import { accounts } from '@domain/space/account/account.schema';
 import { IAccount } from '@domain/space/account/account.interface';
-import { Space } from '@domain/space/space/space.entity';
+import { spaces } from '@domain/space/space/space.schema';
 import { ISpace } from '@domain/space/space/space.interface';
-import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
+import { storageAggregators } from '@domain/storage/storage-aggregator/storage.aggregator.schema';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { Template } from '@domain/template/template/template.entity';
-import { TemplatesManager } from '@domain/template/templates-manager';
-import { TemplatesSet } from '@domain/template/templates-set';
-import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
+import { templates } from '@domain/template/template/template.schema';
+import { templateContentSpaces } from '@domain/template/template-content-space/template.content.space.schema';
+import { templatesManagers } from '@domain/template/templates-manager/templates.manager.schema';
+import { templatesSets } from '@domain/template/templates-set/templates.set.schema';
+import { innovationPacks } from '@library/innovation-pack/innovation.pack.schema';
 import {
   Inject,
   Injectable,
   LoggerService,
   NotImplementedException,
 } from '@nestjs/common';
-import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
-import { Platform } from '@platform/platform/platform.entity';
+import { platforms } from '@platform/platform/platform.schema';
 import { isUUID } from 'class-validator';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager, FindOneOptions, Repository } from 'typeorm';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { eq, sql } from 'drizzle-orm';
 import { TimelineResolverService } from '../entity-resolver/timeline.resolver.service';
 
 @Injectable()
 export class StorageAggregatorResolverService {
   constructor(
     private timelineResolverService: TimelineResolverService,
-    @InjectEntityManager('default')
-    private entityManager: EntityManager,
-    @InjectRepository(StorageAggregator)
-    private storageAggregatorRepository: Repository<StorageAggregator>,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
 
   async getStorageAggregatorOrFail(
-    storageAggregatorID: string,
-    options?: FindOneOptions<StorageAggregator>
-  ): Promise<StorageAggregator | never> {
+    storageAggregatorID: string
+  ): Promise<IStorageAggregator | never> {
     if (!storageAggregatorID) {
       throw new EntityNotFoundException(
         `StorageAggregator not found: ${storageAggregatorID}`,
@@ -54,36 +53,37 @@ export class StorageAggregatorResolverService {
       );
     }
     const storageAggregator =
-      await this.storageAggregatorRepository.findOneOrFail({
-        where: { id: storageAggregatorID },
-        ...options,
+      await this.db.query.storageAggregators.findFirst({
+        where: eq(storageAggregators.id, storageAggregatorID),
       });
     if (!storageAggregator)
       throw new EntityNotFoundException(
         `StorageAggregator not found: ${storageAggregatorID}`,
         LogContext.STORAGE_AGGREGATOR
       );
-    return storageAggregator;
+    return storageAggregator as unknown as IStorageAggregator;
   }
 
   public async getPlatformStorageAggregator(): Promise<IStorageAggregator> {
-    const query = `SELECT "storageAggregatorId"
-    FROM "platform" LIMIT 1`;
-    const [result]: {
-      storageAggregatorId: string;
-    }[] = await this.entityManager.connection.query(query);
+    const result = await this.db.query.platforms.findFirst({
+      columns: {
+        storageAggregatorId: true,
+      },
+    });
+    if (!result?.storageAggregatorId) {
+      throw new EntityNotFoundException(
+        'Unable to find platform storage aggregator',
+        LogContext.STORAGE_AGGREGATOR
+      );
+    }
     return this.getStorageAggregatorOrFail(result.storageAggregatorId);
   }
 
   public async getParentAccountForStorageAggregator(
     storageAggregator: IStorageAggregator
   ): Promise<IAccount> {
-    const account = await this.entityManager.findOne(Account, {
-      where: {
-        storageAggregator: {
-          id: storageAggregator.id,
-        },
-      },
+    const account = await this.db.query.accounts.findFirst({
+      where: eq(accounts.storageAggregatorId, storageAggregator.id),
     });
     if (!account) {
       throw new EntityNotFoundException(
@@ -91,21 +91,19 @@ export class StorageAggregatorResolverService {
         LogContext.STORAGE_AGGREGATOR
       );
     }
-    return account;
+    return account as unknown as IAccount;
   }
 
   public async getParentSpaceForStorageAggregator(
     storageAggregator: IStorageAggregator
   ): Promise<ISpace> {
-    const space = await this.entityManager.findOne(Space, {
-      where: {
-        storageAggregator: {
-          id: storageAggregator.id,
-        },
-      },
-      relations: {
+    const space = await this.db.query.spaces.findFirst({
+      where: eq(spaces.storageAggregatorId, storageAggregator.id),
+      with: {
         about: {
-          profile: true,
+          with: {
+            profile: true,
+          },
         },
       },
     });
@@ -115,19 +113,15 @@ export class StorageAggregatorResolverService {
         LogContext.STORAGE_AGGREGATOR
       );
     }
-    return space;
+    return space as unknown as ISpace;
   }
 
   public async getParentOrganizationForStorageAggregator(
     storageAggregator: IStorageAggregator
   ): Promise<IOrganization> {
-    const organization = await this.entityManager.findOne(Organization, {
-      where: {
-        storageAggregator: {
-          id: storageAggregator.id,
-        },
-      },
-      relations: {
+    const organization = await this.db.query.organizations.findFirst({
+      where: eq(organizations.storageAggregatorId, storageAggregator.id),
+      with: {
         profile: true,
       },
     });
@@ -137,19 +131,15 @@ export class StorageAggregatorResolverService {
         LogContext.STORAGE_AGGREGATOR
       );
     }
-    return organization;
+    return organization as unknown as IOrganization;
   }
 
   public async getParentUserForStorageAggregator(
     storageAggregator: IStorageAggregator
   ): Promise<IUser> {
-    const user = await this.entityManager.findOne(User, {
-      where: {
-        storageAggregator: {
-          id: storageAggregator.id,
-        },
-      },
-      relations: {
+    const user = await this.db.query.users.findFirst({
+      where: eq(users.storageAggregatorId, storageAggregator.id),
+      with: {
         profile: true,
       },
     });
@@ -159,7 +149,7 @@ export class StorageAggregatorResolverService {
         LogContext.STORAGE_AGGREGATOR
       );
     }
-    return user;
+    return user as unknown as IUser;
   }
 
   public async getStorageAggregatorForTemplatesManager(
@@ -174,13 +164,9 @@ export class StorageAggregatorResolverService {
     }
 
     // First try on Space
-    const space = await this.entityManager.findOne(Space, {
-      where: {
-        templatesManager: {
-          id: templatesManagerId,
-        },
-      },
-      relations: {
+    const space = await this.db.query.spaces.findFirst({
+      where: eq(spaces.templatesManagerId, templatesManagerId),
+      with: {
         storageAggregator: true,
       },
     });
@@ -188,18 +174,12 @@ export class StorageAggregatorResolverService {
       return this.getStorageAggregatorOrFail(space.storageAggregator.id);
     }
 
-    const platform = await this.entityManager.findOne(Platform, {
-      where: {
-        templatesManager: {
-          id: templatesManagerId,
-        },
-      },
-      relations: {
-        storageAggregator: true,
-      },
+    // Then try on Platform
+    const platform = await this.db.query.platforms.findFirst({
+      where: eq(platforms.templatesManagerId, templatesManagerId),
     });
-    if (platform && platform.storageAggregator) {
-      return this.getStorageAggregatorOrFail(platform.storageAggregator.id);
+    if (platform && platform.storageAggregatorId) {
+      return this.getStorageAggregatorOrFail(platform.storageAggregatorId);
     }
     throw new NotImplementedException(
       `Unable to retrieve storage aggregator to use for TemplatesManager ${templatesManagerId}`,
@@ -218,42 +198,28 @@ export class StorageAggregatorResolverService {
       );
     }
 
-    // First try on Space
-    const templatesManager = await this.entityManager.findOne(
-      TemplatesManager,
-      {
-        where: {
-          templatesSet: {
-            id: templatesSetId,
-          },
-        },
-      }
-    );
+    // First try via TemplatesManager
+    const templatesManager = await this.db.query.templatesManagers.findFirst({
+      where: eq(templatesManagers.templatesSetId, templatesSetId),
+    });
     if (templatesManager) {
       return this.getStorageAggregatorForTemplatesManager(templatesManager.id);
     }
 
     // Then on InnovationPack
-    const innovationPack = await this.entityManager.findOne(InnovationPack, {
-      where: {
-        templatesSet: {
-          id: templatesSetId,
-        },
-      },
-      relations: {
-        account: {
+    const innovationPack = await this.db.query.innovationPacks.findFirst({
+      where: eq(innovationPacks.templatesSetId, templatesSetId),
+    });
+    if (innovationPack && innovationPack.accountId) {
+      const account = await this.db.query.accounts.findFirst({
+        where: eq(accounts.id, innovationPack.accountId),
+        with: {
           storageAggregator: true,
         },
-      },
-    });
-    if (
-      innovationPack &&
-      innovationPack.account &&
-      innovationPack.account.storageAggregator
-    ) {
-      return this.getStorageAggregatorOrFail(
-        innovationPack.account.storageAggregator.id
-      );
+      });
+      if (account && account.storageAggregator) {
+        return this.getStorageAggregatorOrFail(account.storageAggregator.id);
+      }
     }
 
     throw new EntityNotFoundException(
@@ -273,40 +239,40 @@ export class StorageAggregatorResolverService {
       );
     }
 
-    // First try on Space
-    const space = await this.entityManager.findOne(Space, {
-      where: {
-        collaboration: {
-          calloutsSet: {
-            id: calloutsSetID,
-          },
-        },
-      },
-      relations: {
-        storageAggregator: true,
-      },
+    // First try on Space via collaboration
+    const collaboration = await this.db.query.collaborations.findFirst({
+      where: eq(collaborations.calloutsSetId, calloutsSetID),
     });
-    if (space && space.storageAggregator) {
-      return this.getStorageAggregatorOrFail(space.storageAggregator.id);
-    }
-
-    // First try on Space
-    const vc = await this.entityManager.findOne(VirtualContributor, {
-      where: {
-        knowledgeBase: {
-          calloutsSet: {
-            id: calloutsSetID,
-          },
-        },
-      },
-      relations: {
-        account: {
+    if (collaboration) {
+      const space = await this.db.query.spaces.findFirst({
+        where: eq(spaces.collaborationId, collaboration.id),
+        with: {
           storageAggregator: true,
         },
-      },
+      });
+      if (space && space.storageAggregator) {
+        return this.getStorageAggregatorOrFail(space.storageAggregator.id);
+      }
+    }
+
+    // Then try on VirtualContributor via knowledgeBase
+    const knowledgeBase = await this.db.query.knowledgeBases.findFirst({
+      where: eq(knowledgeBases.calloutsSetId, calloutsSetID),
     });
-    if (vc && vc.account && vc.account.storageAggregator) {
-      return this.getStorageAggregatorOrFail(vc.account.storageAggregator.id);
+    if (knowledgeBase) {
+      const vc = await this.db.query.virtualContributors.findFirst({
+        where: eq(virtualContributors.knowledgeBaseId, knowledgeBase.id),
+        with: {
+          account: {
+            with: {
+              storageAggregator: true,
+            },
+          },
+        },
+      });
+      if (vc && vc.account && vc.account.storageAggregator) {
+        return this.getStorageAggregatorOrFail(vc.account.storageAggregator.id);
+      }
     }
 
     throw new EntityNotFoundException(
@@ -334,13 +300,9 @@ export class StorageAggregatorResolverService {
   private async getStorageAggregatorIdForCollaboration(
     collaborationID: string
   ): Promise<string> {
-    const space = await this.entityManager.findOne(Space, {
-      where: {
-        collaboration: {
-          id: collaborationID,
-        },
-      },
-      relations: {
+    const space = await this.db.query.spaces.findFirst({
+      where: eq(spaces.collaborationId, collaborationID),
+      with: {
         storageAggregator: true,
       },
     });
@@ -354,22 +316,22 @@ export class StorageAggregatorResolverService {
       return space.storageAggregator.id;
     }
     // If not found on Space, try with Collaboration templates
-    const template = await this.entityManager.findOne(Template, {
-      where: {
-        contentSpace: {
-          collaboration: {
-            id: collaborationID,
-          },
-        },
-      },
-      relations: {
-        templatesSet: true,
-      },
+    // Find templateContentSpace by collaborationId, then find template by contentSpaceId
+    const templateContentSpace = await this.db.query.templateContentSpaces.findFirst({
+      where: eq(templateContentSpaces.collaborationId, collaborationID),
     });
-    if (template && template.templatesSet) {
-      return (
-        await this.getStorageAggregatorForTemplatesSet(template.templatesSet.id)
-      ).id;
+    if (templateContentSpace) {
+      const template = await this.db.query.templates.findFirst({
+        where: eq(templates.contentSpaceId, templateContentSpace.id),
+        with: {
+          templatesSet: true,
+        },
+      });
+      if (template && template.templatesSet) {
+        return (
+          await this.getStorageAggregatorForTemplatesSet(template.templatesSet.id)
+        ).id;
+      }
     }
     throw new EntityNotFoundException(
       `Unable to retrieve storage aggregator for collaborationID: ${collaborationID}`,
@@ -402,13 +364,9 @@ export class StorageAggregatorResolverService {
   private async getStorageAggregatorIdForCommunity(
     communityID: string
   ): Promise<string> {
-    const space = await this.entityManager.findOne(Space, {
-      where: {
-        community: {
-          id: communityID,
-        },
-      },
-      relations: {
+    const space = await this.db.query.spaces.findFirst({
+      where: eq(spaces.communityId, communityID),
+      with: {
         storageAggregator: true,
       },
     });
@@ -432,11 +390,9 @@ export class StorageAggregatorResolverService {
   private async getStorageAggregatorIdForCallout(
     calloutID: string
   ): Promise<string> {
-    const callout = await this.entityManager.findOne(Callout, {
-      where: {
-        id: calloutID,
-      },
-      relations: {
+    const callout = await this.db.query.callouts.findFirst({
+      where: eq(callouts.id, calloutID),
+      with: {
         calloutsSet: true,
       },
     });
@@ -451,25 +407,17 @@ export class StorageAggregatorResolverService {
       return this.getStorageAggregatorIdForCalloutTemplate(calloutID);
     }
 
-    // Callout is in a CalloutsSet, so much be linked to a Space, TemplateContentSpace or KnowledgeBase
+    // Callout is in a CalloutsSet, so must be linked to a Space, TemplateContentSpace or KnowledgeBase
 
     // Next see if have a collaboration parent or not
-    const collaboration = await this.entityManager.findOne(Collaboration, {
-      where: {
-        calloutsSet: {
-          id: callout.calloutsSet.id,
-        },
-      },
+    const collaboration = await this.db.query.collaborations.findFirst({
+      where: eq(collaborations.calloutsSetId, callout.calloutsSet.id),
     });
     if (collaboration) {
       // Either Space or TemplateContentSpace
-      const space = await this.entityManager.findOne(Space, {
-        where: {
-          collaboration: {
-            id: collaboration.id,
-          },
-        },
-        relations: {
+      const space = await this.db.query.spaces.findFirst({
+        where: eq(spaces.collaborationId, collaboration.id),
+        with: {
           storageAggregator: true,
         },
       });
@@ -483,80 +431,71 @@ export class StorageAggregatorResolverService {
         return space.storageAggregator.id;
       } else {
         // must be a template content space
-        const spaceTemplate = await this.entityManager.findOne(TemplatesSet, {
-          where: {
-            templates: {
-              contentSpace: {
-                collaboration: {
-                  id: collaboration.id,
-                },
-              },
-            },
-          },
-          select: { id: true },
+        // Find templateContentSpace by collaborationId, then find template by contentSpaceId
+        const tcs = await this.db.query.templateContentSpaces.findFirst({
+          where: eq(templateContentSpaces.collaborationId, collaboration.id),
         });
-        if (!spaceTemplate) {
-          throw new EntityNotFoundException(
-            `Unable to retrieve storage aggregator for calloutID: ${calloutID} - where did find CalloutsSet ${callout.calloutsSet.id} and Collaboration ${collaboration.id} but no Space or TemplateContentSpace linked to it`,
-            LogContext.STORAGE_AGGREGATOR
-          );
+        if (tcs) {
+          const template = await this.db.query.templates.findFirst({
+            where: eq(templates.contentSpaceId, tcs.id),
+          });
+          if (template?.templatesSetId) {
+            return (
+              await this.getStorageAggregatorForTemplatesSet(template.templatesSetId)
+            ).id;
+          }
         }
-        return (
-          await this.getStorageAggregatorForTemplatesSet(spaceTemplate.id)
-        ).id;
+        throw new EntityNotFoundException(
+          `Unable to retrieve storage aggregator for calloutID: ${calloutID} - where did find CalloutsSet ${callout.calloutsSet.id} and Collaboration ${collaboration.id} but no Space or TemplateContentSpace linked to it`,
+          LogContext.STORAGE_AGGREGATOR
+        );
       }
     } else {
       // Must be knowledgeBase
-      const knowledgeBase = await this.entityManager.findOne(KnowledgeBase, {
-        where: {
-          calloutsSet: {
-            id: callout.calloutsSet.id,
-          },
-        },
-        relations: {
-          virtualContributor: {
-            account: {
-              storageAggregator: true,
-            },
-          },
-        },
+      const knowledgeBase = await this.db.query.knowledgeBases.findFirst({
+        where: eq(knowledgeBases.calloutsSetId, callout.calloutsSet.id),
       });
-      if (
-        !knowledgeBase ||
-        !knowledgeBase.virtualContributor ||
-        !knowledgeBase.virtualContributor.account ||
-        !knowledgeBase.virtualContributor.account.storageAggregator
-      ) {
+      if (!knowledgeBase) {
         throw new EntityNotFoundException(
           `Unable to resolve StorageAggregator for calloutID: ${calloutID} (found CalloutsSet ${callout.calloutsSet.id}, but no KnowledgeBase linked)`,
           LogContext.STORAGE_AGGREGATOR
         );
       }
 
-      return knowledgeBase.virtualContributor.account.storageAggregator.id;
+      const vc = await this.db.query.virtualContributors.findFirst({
+        where: eq(virtualContributors.knowledgeBaseId, knowledgeBase.id),
+        with: {
+          account: {
+            with: {
+              storageAggregator: true,
+            },
+          },
+        },
+      });
+      if (!vc || !vc.account || !vc.account.storageAggregator) {
+        throw new EntityNotFoundException(
+          `Unable to resolve StorageAggregator for calloutID: ${calloutID} (found CalloutsSet ${callout.calloutsSet.id}, but no KnowledgeBase linked)`,
+          LogContext.STORAGE_AGGREGATOR
+        );
+      }
+
+      return vc.account.storageAggregator.id;
     }
   }
 
   private async getStorageAggregatorIdForCalloutTemplate(
     calloutId: string
   ): Promise<string> {
-    const templatesSet = await this.entityManager.findOne(TemplatesSet, {
-      where: {
-        templates: {
-          callout: {
-            id: calloutId,
-          },
-        },
-      },
-      select: { id: true },
+    const template = await this.db.query.templates.findFirst({
+      where: eq(templates.calloutId, calloutId),
     });
-    if (!templatesSet) {
+    if (!template?.templatesSetId) {
       throw new EntityNotFoundException(
         `Unable to retrieve storage aggregator for calloutID: ${calloutId} `,
         LogContext.STORAGE_AGGREGATOR
       );
     }
     // TODO: probably this file needs a refactor. I don't understand why we have some getSAIdFor... and some direct getSAFor
-    return (await this.getStorageAggregatorForTemplatesSet(templatesSet.id)).id;
+    return (await this.getStorageAggregatorForTemplatesSet(template.templatesSetId)).id;
   }
 }

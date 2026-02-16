@@ -1,7 +1,9 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Repository } from 'typeorm';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { eq } from 'drizzle-orm';
+import { forms } from './form.schema';
 import { CreateFormInput } from './dto/form.dto.create';
 import { UpdateFormInput } from './dto/form.dto.update';
 import { IFormQuestion } from './form.dto.question.interface';
@@ -11,8 +13,7 @@ import { IForm } from './form.interface';
 @Injectable()
 export class FormService {
   constructor(
-    @InjectRepository(Form)
-    private formRepository: Repository<Form>,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -25,12 +26,20 @@ export class FormService {
   }
 
   public async removeForm(form: IForm): Promise<boolean> {
-    await this.formRepository.remove(form as Form);
+    await this.db.delete(forms).where(eq(forms.id, form.id));
     return true;
   }
 
-  private save(form: IForm): Promise<IForm> {
-    return this.formRepository.save(form);
+  private async save(form: IForm): Promise<IForm> {
+    const [updated] = await this.db
+      .update(forms)
+      .set({
+        description: form.description,
+        questions: form.questions,
+      })
+      .where(eq(forms.id, form.id))
+      .returning();
+    return updated as unknown as IForm;
   }
 
   public getQuestions(form: IForm): IFormQuestion[] {

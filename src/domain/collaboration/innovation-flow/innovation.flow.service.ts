@@ -8,6 +8,8 @@ import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
@@ -17,12 +19,11 @@ import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.
 import { TagsetTemplateService } from '@domain/common/tagset-template/tagset.template.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { eq } from 'drizzle-orm';
 import { keyBy } from 'lodash';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { CalloutsSetService } from '../callouts-set/callouts.set.service';
-import { Collaboration } from '../collaboration/collaboration.entity';
+import { collaborations } from '../collaboration/collaboration.schema';
 import { IInnovationFlowSettings } from '../innovation-flow-settings/innovation.flow.settings.interface';
 import { CreateInnovationFlowStateInput } from '../innovation-flow-state/dto/innovation.flow.state.dto.create';
 import { UpdateInnovationFlowStateInput } from '../innovation-flow-state/dto/innovation.flow.state.dto.update';
@@ -36,6 +37,7 @@ import { UpdateInnovationFlowInput } from './dto/innovation.flow.dto.update';
 import { UpdateInnovationFlowStatesSortOrderInput } from './dto/innovation.flow.dto.update.states.sort.order';
 import { InnovationFlow } from './innovation.flow.entity';
 import { IInnovationFlow } from './innovation.flow.interface';
+import { innovationFlows } from './innovation.flow.schema';
 
 @Injectable()
 export class InnovationFlowService {
@@ -45,8 +47,7 @@ export class InnovationFlowService {
     private tagsetTemplateService: TagsetTemplateService,
     private innovationFlowStateService: InnovationFlowStateService,
     private calloutsSetService: CalloutsSetService,
-    @InjectRepository(InnovationFlow)
-    private innovationFlowRepository: Repository<InnovationFlow>,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -117,7 +118,39 @@ export class InnovationFlowService {
   }
 
   async save(innovationFlow: IInnovationFlow): Promise<IInnovationFlow> {
-    return await this.innovationFlowRepository.save(innovationFlow);
+    if (innovationFlow.id) {
+      const [updated] = await this.db
+        .update(innovationFlows)
+        .set({
+          currentStateID: innovationFlow.currentStateID,
+          settings: innovationFlow.settings,
+          profileId: innovationFlow.profile?.id,
+          flowStatesTagsetTemplateId:
+            innovationFlow.flowStatesTagsetTemplate?.id,
+          authorizationId: innovationFlow.authorization?.id,
+        })
+        .where(eq(innovationFlows.id, innovationFlow.id))
+        .returning();
+      return {
+        ...innovationFlow,
+        ...updated,
+      } as unknown as IInnovationFlow;
+    }
+    const [inserted] = await this.db
+      .insert(innovationFlows)
+      .values({
+        currentStateID: innovationFlow.currentStateID,
+        settings: innovationFlow.settings,
+        profileId: innovationFlow.profile?.id,
+        flowStatesTagsetTemplateId:
+          innovationFlow.flowStatesTagsetTemplate?.id,
+        authorizationId: innovationFlow.authorization?.id,
+      })
+      .returning();
+    return {
+      ...innovationFlow,
+      ...inserted,
+    } as unknown as IInnovationFlow;
   }
 
   /**
@@ -142,7 +175,7 @@ export class InnovationFlowService {
       );
     }
 
-    return await this.innovationFlowRepository.save(innovationFlow);
+    return await this.save(innovationFlow);
   }
 
   /**
@@ -580,38 +613,66 @@ export class InnovationFlowService {
       await this.innovationFlowStateService.delete(state);
     }
 
-    const result = await this.innovationFlowRepository.remove(
-      innovationFlow as InnovationFlow
-    );
+    await this.db
+      .delete(innovationFlows)
+      .where(eq(innovationFlows.id, innovationFlowID));
+    const result = { ...innovationFlow };
     result.id = innovationFlowID;
     return result;
   }
 
   async getInnovationFlowOrFail(
     innovationFlowID: string,
-    options?: FindOneOptions<InnovationFlow>
+    options?: {
+      relations?: {
+        profile?: boolean;
+        states?: boolean | { defaultCalloutTemplate?: boolean };
+        flowStatesTagsetTemplate?: boolean | { tagsets?: boolean };
+        authorization?: boolean;
+      };
+    }
   ): Promise<IInnovationFlow | never> {
-    const innovationFlow = await this.innovationFlowRepository.findOne({
-      where: { id: innovationFlowID },
-      ...options,
-    });
+    const withClause: Record<string, any> = {};
+    if (options?.relations?.profile) {
+      withClause.profile = true;
+    }
+    if (options?.relations?.states) {
+      withClause.states =
+        typeof options.relations.states === 'object'
+          ? { with: options.relations.states }
+          : true;
+    }
+    if (options?.relations?.flowStatesTagsetTemplate) {
+      withClause.flowStatesTagsetTemplate =
+        typeof options.relations.flowStatesTagsetTemplate === 'object'
+          ? { with: options.relations.flowStatesTagsetTemplate }
+          : true;
+    }
+    if (options?.relations?.authorization) {
+      withClause.authorization = true;
+    }
+
+    const innovationFlow =
+      await this.db.query.innovationFlows.findFirst({
+        where: eq(innovationFlows.id, innovationFlowID),
+        with: withClause,
+      });
 
     if (!innovationFlow)
       throw new EntityNotFoundException(
         `Unable to find InnovationFlow with ID: ${innovationFlowID}`,
         LogContext.INNOVATION_FLOW
       );
-    return innovationFlow;
+    return innovationFlow as unknown as IInnovationFlow;
   }
 
   public async getProfile(
-    innovationFlowInput: IInnovationFlow,
-    relations?: FindOptionsRelations<IInnovationFlow>
+    innovationFlowInput: IInnovationFlow
   ): Promise<IProfile> {
     const innovationFlow = await this.getInnovationFlowOrFail(
       innovationFlowInput.id,
       {
-        relations: { profile: true, ...relations },
+        relations: { profile: true },
       }
     );
     if (!innovationFlow.profile)
@@ -652,13 +713,12 @@ export class InnovationFlowService {
   }
 
   public async getFlowTagsetTemplate(
-    innovationFlowInput: IInnovationFlow,
-    relations?: FindOptionsRelations<IInnovationFlow>
+    innovationFlowInput: IInnovationFlow
   ): Promise<ITagsetTemplate> {
     const innovationFlow = await this.getInnovationFlowOrFail(
       innovationFlowInput.id,
       {
-        relations: { flowStatesTagsetTemplate: true, ...relations },
+        relations: { flowStatesTagsetTemplate: true },
       }
     );
     if (!innovationFlow.flowStatesTagsetTemplate)
@@ -729,19 +789,14 @@ export class InnovationFlowService {
   }
 
   private async getCollaborationByInnovationFlowId(innovationFlowId: string) {
-    // Query to find collaboration that contains this innovation flow
-    const collaborationRepository =
-      this.innovationFlowRepository.manager.getRepository(Collaboration);
-
-    const collaborationResult = await collaborationRepository.findOne({
-      where: {
-        innovationFlow: { id: innovationFlowId },
-      },
-      relations: {
-        calloutsSet: true,
-        innovationFlow: true,
-      },
-    });
+    const collaborationResult =
+      await this.db.query.collaborations.findFirst({
+        where: eq(collaborations.innovationFlowId, innovationFlowId),
+        with: {
+          calloutsSet: true,
+          innovationFlow: true,
+        },
+      });
 
     if (!collaborationResult) {
       throw new RelationshipNotFoundException(

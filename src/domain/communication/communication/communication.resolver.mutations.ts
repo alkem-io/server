@@ -54,7 +54,7 @@ export class CommunicationResolverMutations {
     for (const receiverId of messageData.receiverIds) {
       // Check if the receiving user allows messages from other users
       const receivingUser = await this.userService.getUserOrFail(receiverId, {
-        relations: {
+        with: {
           settings: true,
         },
       });

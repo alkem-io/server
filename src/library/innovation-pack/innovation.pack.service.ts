@@ -8,6 +8,8 @@ import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
@@ -17,15 +19,15 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { ITemplatesSet } from '@domain/template/templates-set/templates.set.interface';
 import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { eq, sql } from 'drizzle-orm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { CreateInnovationPackInput } from './dto/innovation.pack.dto.create';
 import { UpdateInnovationPackInput } from './dto/innovation.pack.dto.update';
 import { DeleteInnovationPackInput } from './dto/innovationPack.dto.delete';
 import { InnovationPackDefaultsService } from './innovation.pack.defaults/innovation.pack.defaults.service';
 import { InnovationPack } from './innovation.pack.entity';
 import { IInnovationPack } from './innovation.pack.interface';
+import { innovationPacks } from './innovation.pack.schema';
 
 @Injectable()
 export class InnovationPackService {
@@ -34,15 +36,16 @@ export class InnovationPackService {
     private templatesSetService: TemplatesSetService,
     private accountLookupService: AccountLookupService,
     private innovationPackDefaultsService: InnovationPackDefaultsService,
-    @InjectRepository(InnovationPack)
-    private innovationPackRepository: Repository<InnovationPack>,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   private async checkNameIdOrFail(nameID: string) {
-    const innovationPackCount = await this.innovationPackRepository.countBy({
-      nameID: nameID,
-    });
+    const result = await this.db
+      .select({ count: sql<number>`count(*)` })
+      .from(innovationPacks)
+      .where(eq(innovationPacks.nameID, nameID));
+    const innovationPackCount = Number(result[0]?.count || 0);
     if (innovationPackCount >= 1)
       throw new ValidationException(
         `InnovationPack: the provided nameID is already taken: ${nameID}`,
@@ -100,7 +103,35 @@ export class InnovationPackService {
   }
 
   async save(innovationPack: IInnovationPack): Promise<IInnovationPack> {
-    return await this.innovationPackRepository.save(innovationPack);
+    if (innovationPack.id) {
+      const [updated] = await this.db
+        .update(innovationPacks)
+        .set({
+          nameID: innovationPack.nameID,
+          listedInStore: innovationPack.listedInStore,
+          searchVisibility: innovationPack.searchVisibility,
+          profileId: innovationPack.profile?.id,
+          templatesSetId: innovationPack.templatesSet?.id,
+          accountId: innovationPack.account?.id,
+          authorizationId: innovationPack.authorization?.id,
+        })
+        .where(eq(innovationPacks.id, innovationPack.id))
+        .returning();
+      return updated as unknown as IInnovationPack;
+    }
+    const [created] = await this.db
+      .insert(innovationPacks)
+      .values({
+        nameID: innovationPack.nameID,
+        listedInStore: innovationPack.listedInStore,
+        searchVisibility: innovationPack.searchVisibility,
+        profileId: innovationPack.profile?.id,
+        templatesSetId: innovationPack.templatesSet?.id,
+        accountId: innovationPack.account?.id,
+        authorizationId: innovationPack.authorization?.id,
+      })
+      .returning();
+    return created as unknown as IInnovationPack;
   }
 
   async update(
@@ -109,7 +140,7 @@ export class InnovationPackService {
     const innovationPack = await this.getInnovationPackOrFail(
       innovationPackData.ID,
       {
-        relations: { profile: true },
+        with: { profile: true },
       }
     );
 
@@ -151,7 +182,7 @@ export class InnovationPackService {
     deleteData: DeleteInnovationPackInput
   ): Promise<IInnovationPack> {
     const innovationPack = await this.getInnovationPackOrFail(deleteData.ID, {
-      relations: { templatesSet: true, profile: true },
+      with: { templatesSet: true, profile: true },
     });
 
     if (innovationPack.templatesSet) {
@@ -164,20 +195,18 @@ export class InnovationPackService {
       await this.profileService.deleteProfile(innovationPack.profile.id);
     }
 
-    const result = await this.innovationPackRepository.remove(
-      innovationPack as InnovationPack
-    );
-    result.id = deleteData.ID;
-    return result;
+    await this.db.delete(innovationPacks).where(eq(innovationPacks.id, deleteData.ID));
+    innovationPack.id = deleteData.ID;
+    return innovationPack;
   }
 
   async getInnovationPackOrFail(
     innovationPackID: string,
-    options?: FindOneOptions<InnovationPack>
+    options?: { with?: Record<string, boolean | object> }
   ): Promise<IInnovationPack | never> {
-    const innovationPack = await this.innovationPackRepository.findOne({
-      where: { id: innovationPackID },
-      ...options,
+    const innovationPack = await this.db.query.innovationPacks.findFirst({
+      where: eq(innovationPacks.id, innovationPackID),
+      with: options?.with,
     });
 
     if (!innovationPack)
@@ -185,16 +214,16 @@ export class InnovationPackService {
         `Unable to find InnovationPack with ID: ${innovationPackID}`,
         LogContext.LIBRARY
       );
-    return innovationPack;
+    return innovationPack as unknown as IInnovationPack;
   }
 
   async getInnovationPackByNameIdOrFail(
     innovationPackNameID: string,
-    options?: FindOneOptions<InnovationPack>
+    options?: { with?: Record<string, boolean | object> }
   ): Promise<IInnovationPack | never> {
-    const innovationPack = await this.innovationPackRepository.findOne({
-      where: { nameID: innovationPackNameID },
-      ...options,
+    const innovationPack = await this.db.query.innovationPacks.findFirst({
+      where: eq(innovationPacks.nameID, innovationPackNameID),
+      with: options?.with,
     });
 
     if (!innovationPack)
@@ -202,17 +231,17 @@ export class InnovationPackService {
         `Unable to find InnovationPack using NameID: ${innovationPackNameID}`,
         LogContext.LIBRARY
       );
-    return innovationPack;
+    return innovationPack as unknown as IInnovationPack;
   }
 
   public async getProfile(
     innovationPackInput: IInnovationPack,
-    relations?: FindOptionsRelations<IInnovationPack>
+    additionalWith?: Record<string, boolean>
   ): Promise<IProfile> {
     const innovationPack = await this.getInnovationPackOrFail(
       innovationPackInput.id,
       {
-        relations: { profile: true, ...relations },
+        with: { profile: true, ...additionalWith },
       }
     );
     if (!innovationPack.profile)
@@ -229,7 +258,7 @@ export class InnovationPackService {
     const innovationPackWithTemplates = await this.getInnovationPackOrFail(
       innovationPackId,
       {
-        relations: { templatesSet: true },
+        with: { templatesSet: true },
       }
     );
     const templatesSet = innovationPackWithTemplates.templatesSet;
@@ -245,17 +274,18 @@ export class InnovationPackService {
   }
 
   async isNameIdAvailable(nameID: string): Promise<boolean> {
-    const innovationPackCount = await this.innovationPackRepository.countBy({
-      nameID: nameID,
-    });
-    return innovationPackCount == 0;
+    const result = await this.db
+      .select({ count: sql<number>`count(*)` })
+      .from(innovationPacks)
+      .where(eq(innovationPacks.nameID, nameID));
+    return Number(result[0]?.count || 0) === 0;
   }
 
   async getTemplatesCount(innovationPackID: string): Promise<number> {
     const innovationPack = await this.getInnovationPackOrFail(
       innovationPackID,
       {
-        relations: {
+        with: {
           templatesSet: true,
         },
       }
@@ -271,9 +301,9 @@ export class InnovationPackService {
   }
 
   public async getProvider(innovationPackID: string): Promise<IContributor> {
-    const innovationPack = await this.innovationPackRepository.findOne({
-      where: { id: innovationPackID },
-      relations: {
+    const innovationPack = await this.db.query.innovationPacks.findFirst({
+      where: eq(innovationPacks.id, innovationPackID),
+      with: {
         account: true,
       },
     });
@@ -284,7 +314,7 @@ export class InnovationPackService {
       );
     }
     const provider = await this.accountLookupService.getHost(
-      innovationPack.account
+      innovationPack.account as any
     );
     if (!provider) {
       throw new RelationshipNotFoundException(

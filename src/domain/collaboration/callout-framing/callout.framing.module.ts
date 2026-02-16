@@ -8,9 +8,7 @@ import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { WhiteboardModule } from '@domain/common/whiteboard';
 import { ProfileDocumentsModule } from '@domain/profile-documents/profile.documents.module';
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
-import { CalloutFraming } from './callout.framing.entity';
 import { CalloutFramingResolverFields } from './callout.framing.resolver.fields';
 import { CalloutFramingService } from './callout.framing.service';
 import { CalloutFramingAuthorizationService } from './callout.framing.service.authorization';
@@ -27,7 +25,6 @@ import { CalloutFramingAuthorizationService } from './callout.framing.service.au
     MemoModule,
     MediaGalleryModule,
     NamingModule,
-    TypeOrmModule.forFeature([CalloutFraming]),
   ],
   providers: [
     CalloutFramingService,

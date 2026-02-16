@@ -11,10 +11,12 @@ import {
   ICommunication,
 } from '@domain/communication/communication';
 import { IUser } from '@domain/community/user/user.interface';
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { Inject, Injectable } from '@nestjs/common';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
-import { FindOneOptions, Repository } from 'typeorm';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { eq } from 'drizzle-orm';
+import { communications } from './communication.schema';
 import { IRoom } from '../room/room.interface';
 import { RoomService } from '../room/room.service';
 
@@ -23,8 +25,7 @@ export class CommunicationService {
   constructor(
     private readonly roomService: RoomService,
     private readonly communicationAdapter: CommunicationAdapter,
-    @InjectRepository(Communication)
-    private readonly communicationRepository: Repository<Communication>
+    @Inject(DRIZZLE) private readonly db: DrizzleDb
   ) {}
 
   async createCommunication(
@@ -49,7 +50,28 @@ export class CommunicationService {
   }
 
   async save(communication: ICommunication): Promise<ICommunication> {
-    return this.communicationRepository.save(communication);
+    if (communication.id) {
+      const [result] = await this.db
+        .update(communications)
+        .set({
+          displayName: communication.displayName,
+          spaceID: communication.spaceID,
+          updatesId: communication.updates?.id,
+        })
+        .where(eq(communications.id, communication.id))
+        .returning();
+      return result as unknown as ICommunication;
+    } else {
+      const [result] = await this.db
+        .insert(communications)
+        .values({
+          displayName: communication.displayName,
+          spaceID: communication.spaceID,
+          updatesId: communication.updates?.id,
+        })
+        .returning();
+      return result as unknown as ICommunication;
+    }
   }
 
   getUpdates(communication: ICommunication): IRoom {
@@ -64,20 +86,28 @@ export class CommunicationService {
 
   async getCommunicationOrFail(
     communicationID: string,
-    options?: FindOneOptions<Communication>
+    options?: { relations?: { updates?: boolean | { authorization?: boolean } } }
   ): Promise<ICommunication | never> {
-    const communication = await this.communicationRepository.findOne({
-      where: {
-        id: communicationID,
-      },
-      ...options,
+    let updatesWith: any = undefined;
+    if (options?.relations?.updates) {
+      if (typeof options.relations.updates === 'object') {
+        const nested: any = {};
+        if (options.relations.updates.authorization) nested.authorization = true;
+        updatesWith = { updates: { with: nested } };
+      } else {
+        updatesWith = { updates: true };
+      }
+    }
+    const communication = await this.db.query.communications.findFirst({
+      where: eq(communications.id, communicationID),
+      with: updatesWith,
     });
     if (!communication)
       throw new EntityNotFoundException(
         `Unable to find Communication with ID: ${communicationID}`,
         LogContext.COMMUNICATION
       );
-    return communication;
+    return communication as unknown as ICommunication;
   }
 
   async removeCommunication(communicationID: string): Promise<boolean> {
@@ -96,7 +126,9 @@ export class CommunicationService {
       roomID: communication.updates.id,
     });
 
-    await this.communicationRepository.remove(communication as Communication);
+    await this.db
+      .delete(communications)
+      .where(eq(communications.id, communicationID));
     return true;
   }
 
@@ -122,10 +154,9 @@ export class CommunicationService {
   }
 
   async getCommunicationIDsUsed(): Promise<string[]> {
-    const results = await this.communicationRepository
-      .createQueryBuilder('communication')
-      .select('communication.id', 'id')
-      .getRawMany<{ id: string }>();
+    const results = await this.db.query.communications.findMany({
+      columns: { id: true },
+    });
     return results.map(r => r.id);
   }
 

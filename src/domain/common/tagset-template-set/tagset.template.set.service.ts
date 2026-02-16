@@ -4,21 +4,22 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { eq } from 'drizzle-orm';
 import { CreateTagsetTemplateInput } from '../tagset-template/dto/tagset.template.dto.create';
 import { ITagsetTemplate } from '../tagset-template/tagset.template.interface';
 import { TagsetTemplateService } from '../tagset-template/tagset.template.service';
 import { ITagsetTemplateSet } from '.';
 import { TagsetTemplateSet } from './tagset.template.set.entity';
+import { tagsetTemplateSets } from './tagset.template.set.schema';
 
 @Injectable()
 export class TagsetTemplateSetService {
   constructor(
     private tagsetTemplateService: TagsetTemplateService,
-    @InjectRepository(TagsetTemplateSet)
-    private tagsetTemplateSetRepository: Repository<TagsetTemplateSet>,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -34,7 +35,7 @@ export class TagsetTemplateSetService {
     const tagsetTemplateSet = await this.getTagsetTemplateSetOrFail(
       tagsetTemplateSetID,
       {
-        relations: {},
+        relations: { tagsetTemplates: true },
       }
     );
 
@@ -44,31 +45,45 @@ export class TagsetTemplateSetService {
       }
     }
 
-    return await this.tagsetTemplateSetRepository.remove(
-      tagsetTemplateSet as TagsetTemplateSet
-    );
+    await this.db.delete(tagsetTemplateSets).where(eq(tagsetTemplateSets.id, tagsetTemplateSetID));
+    return tagsetTemplateSet;
   }
 
   private async getTagsetTemplateSetOrFail(
     tagsetTemplateSetID: string,
-    options?: FindOneOptions<TagsetTemplateSet>
+    options?: { relations?: { tagsetTemplates?: boolean } }
   ): Promise<ITagsetTemplateSet | never> {
-    const tagsetTemplateSet = await TagsetTemplateSet.findOne({
-      where: { id: tagsetTemplateSetID },
-      ...options,
+    const tagsetTemplateSet = await this.db.query.tagsetTemplateSets.findFirst({
+      where: eq(tagsetTemplateSets.id, tagsetTemplateSetID),
+      with: options?.relations?.tagsetTemplates
+        ? { tagsetTemplates: true }
+        : undefined,
     });
     if (!tagsetTemplateSet)
       throw new EntityNotFoundException(
         `TagsetTemplateSet with id(${tagsetTemplateSetID}) not found!`,
         LogContext.COMMUNITY
       );
-    return tagsetTemplateSet;
+    return tagsetTemplateSet as unknown as ITagsetTemplateSet;
   }
 
   public async save(
     tagsetTemplateSet: ITagsetTemplateSet
   ): Promise<ITagsetTemplateSet> {
-    return await this.tagsetTemplateSetRepository.save(tagsetTemplateSet);
+    if (tagsetTemplateSet.id) {
+      const [updated] = await this.db
+        .update(tagsetTemplateSets)
+        .set({})
+        .where(eq(tagsetTemplateSets.id, tagsetTemplateSet.id))
+        .returning();
+      return updated as unknown as ITagsetTemplateSet;
+    } else {
+      const [inserted] = await this.db
+        .insert(tagsetTemplateSets)
+        .values({})
+        .returning();
+      return inserted as unknown as ITagsetTemplateSet;
+    }
   }
 
   getTagsetTemplatesOrFail(

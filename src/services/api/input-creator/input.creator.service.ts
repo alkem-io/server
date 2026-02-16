@@ -40,9 +40,11 @@ import { CreateSpaceAboutInput, ISpaceAbout } from '@domain/space/space.about';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { CreateTemplateContentSpaceInput } from '@domain/template/template-content-space/dto/template.content.space.dto.create';
 import { TemplateContentSpace } from '@domain/template/template-content-space/template.content.space.entity';
-import { Injectable } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
-import { EntityManager } from 'typeorm';
+import { Injectable, Inject } from '@nestjs/common';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { eq } from 'drizzle-orm';
+import { templateContentSpaces } from '@domain/template/template-content-space/template.content.space.schema';
 
 @Injectable()
 export class InputCreatorService {
@@ -50,8 +52,7 @@ export class InputCreatorService {
     private collaborationService: CollaborationService,
     private spaceLookupService: SpaceLookupService,
     private calloutService: CalloutService,
-    @InjectEntityManager('default')
-    private entityManager: EntityManager
+    @Inject(DRIZZLE) private readonly db: DrizzleDb
   ) {}
 
   public async buildCreateCalloutInputsFromCallouts(
@@ -70,31 +71,9 @@ export class InputCreatorService {
     const callout = await this.calloutService.getCalloutOrFail(calloutID, {
       relations: {
         contributionDefaults: true,
-        classification: {
-          tagsets: true,
-        },
-        framing: {
-          profile: {
-            tagsets: true,
-            references: true,
-            visuals: true,
-          },
-          whiteboard: {
-            profile: {
-              visuals: true,
-            },
-          },
-          link: {
-            profile: true,
-          },
-          memo: {
-            profile: true,
-          },
-          mediaGallery: {
-            visuals: true,
-          },
-        },
-      },
+        classification: true,
+        framing: true,
+      } as any,
     });
     if (
       !callout.framing ||
@@ -163,21 +142,9 @@ export class InputCreatorService {
       relations: {
         collaboration: true,
         subspaces: true,
-        about: {
-          profile: {
-            references: true,
-            visuals: true,
-            location: true,
-            tagsets: true,
-          },
-          guidelines: {
-            profile: {
-              references: true,
-            },
-          },
-        },
+        about: true,
       },
-    });
+    } as any);
     if (!space.collaboration || !space.about || !space.subspaces) {
       throw new RelationshipNotFoundException(
         `Space ${space.id} is missing a relation`,
@@ -218,31 +185,41 @@ export class InputCreatorService {
   public async buildCreateTemplateContentSpaceInputFromContentSpace(
     contentSpaceID: string
   ): Promise<CreateTemplateContentSpaceInput> {
-    const contentSpace = await this.entityManager.findOneOrFail(
-      TemplateContentSpace,
-      {
-        where: {
-          id: contentSpaceID,
-        },
-        relations: {
-          subspaces: true,
-          collaboration: true,
-          about: {
+    const contentSpace = await this.db.query.templateContentSpaces.findFirst({
+      where: eq(templateContentSpaces.id, contentSpaceID),
+      with: {
+        subspaces: true,
+        collaboration: true,
+        about: {
+          with: {
             profile: {
-              references: true,
-              visuals: true,
-              location: true,
-              tagsets: true,
+              with: {
+                references: true,
+                visuals: true,
+                location: true,
+                tagsets: true,
+              },
             },
             guidelines: {
-              profile: {
-                references: true,
+              with: {
+                profile: {
+                  with: {
+                    references: true,
+                  },
+                },
               },
             },
           },
         },
-      }
-    );
+      },
+    });
+
+    if (!contentSpace) {
+      throw new RelationshipNotFoundException(
+        `ContentSpace ${contentSpaceID} not found`,
+        LogContext.INPUT_CREATOR
+      );
+    }
 
     if (
       !contentSpace.collaboration ||
@@ -260,7 +237,7 @@ export class InputCreatorService {
         contentSpace.collaboration.id
       );
     const aboutInput = this.buildCreateSpaceAboutInputFromSpaceAbout(
-      contentSpace.about
+      contentSpace.about as unknown as ISpaceAbout
     );
 
     const subspacesInput: CreateTemplateContentSpaceInput[] = [];
@@ -276,7 +253,7 @@ export class InputCreatorService {
       collaborationData: collaborationInput,
       about: aboutInput,
       level: contentSpace.level,
-      settings: contentSpace.settings,
+      settings: contentSpace.settings as any,
       subspaces: subspacesInput,
     };
 
@@ -288,16 +265,11 @@ export class InputCreatorService {
   ): Promise<CreateCollaborationInput> {
     const collaboration =
       await this.collaborationService.getCollaborationOrFail(collaborationID, {
-        relations: {
-          calloutsSet: {
-            callouts: true,
-          },
-          innovationFlow: {
-            profile: true,
-            states: true,
-          },
+        with: {
+          calloutsSet: true,
+          innovationFlow: true,
         },
-      });
+      } as any);
     if (
       !collaboration.calloutsSet ||
       !collaboration.calloutsSet.callouts ||

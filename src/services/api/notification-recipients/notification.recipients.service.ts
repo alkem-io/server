@@ -67,7 +67,7 @@ export class NotificationRecipientsService {
         credentialCriteria,
         undefined,
         {
-          relations: {
+          with: {
             settings: true,
           },
         }
@@ -167,7 +167,7 @@ export class NotificationRecipientsService {
       await this.userLookupService.getUsersByUUID(
         recipientsWithNotificationEnabledIDs,
         {
-          relations: {
+          with: {
             settings: true,
             profile: true,
             agent: {
@@ -640,7 +640,7 @@ export class NotificationRecipientsService {
       await this.virtualContributorLookupService.getVirtualContributorOrFail(
         virtualContributorID,
         {
-          relations: {
+          with: {
             account: true,
           },
         }

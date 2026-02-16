@@ -1,11 +1,9 @@
-import { FindOneOptions } from 'typeorm';
-import { User } from '../user/user.entity';
 import { IUser } from '../user/user.interface';
 
 export type UserAuthenticationLinkConflictMode = 'error' | 'log';
 
 export type UserAuthenticationLinkResolveOptions = {
-  relations?: FindOneOptions<User>['relations'];
+  with?: Record<string, boolean | object>;
   conflictMode?: UserAuthenticationLinkConflictMode;
   lookupByAuthenticationId?: boolean;
 };

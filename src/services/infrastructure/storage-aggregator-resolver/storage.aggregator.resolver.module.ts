@@ -1,14 +1,9 @@
-import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { EntityResolverModule } from '../entity-resolver/entity.resolver.module';
 import { StorageAggregatorResolverService } from './storage.aggregator.resolver.service';
 
 @Module({
-  imports: [
-    EntityResolverModule,
-    TypeOrmModule.forFeature([StorageAggregator]),
-  ],
+  imports: [EntityResolverModule],
   providers: [StorageAggregatorResolverService],
   exports: [StorageAggregatorResolverService],
 })

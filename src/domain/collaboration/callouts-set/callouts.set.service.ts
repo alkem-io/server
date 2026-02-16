@@ -24,13 +24,14 @@ import {
 import { ITagsetTemplateSet } from '@domain/common/tagset-template-set/tagset.template.set.interface';
 import { TagsetTemplateSetService } from '@domain/common/tagset-template-set/tagset.template.set.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { Inject, Injectable } from '@nestjs/common';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { eq } from 'drizzle-orm';
+import { calloutsSets } from './callouts.set.schema';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { compact, keyBy } from 'lodash';
-import { FindOneOptions, FindOptionsRelations, In, Repository } from 'typeorm';
-import { Callout } from '../callout/callout.entity';
 import { ICallout } from '../callout/callout.interface';
 import { CalloutService } from '../callout/callout.service';
 import { CreateCalloutInput } from '../callout/dto/callout.dto.create';
@@ -46,12 +47,12 @@ export class CalloutsSetService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationService: AuthorizationService,
-    @InjectRepository(CalloutsSet)
-    private calloutsSetRepository: Repository<CalloutsSet>,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
     private tagsetTemplateSetService: TagsetTemplateSetService,
     private calloutService: CalloutService,
-    private namingService: NamingService
+    private namingService: NamingService,
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb
   ) {}
 
   public createCalloutsSet(
@@ -79,18 +80,58 @@ export class CalloutsSetService {
 
   async getCalloutsSetOrFail(
     calloutsSetID: string,
-    options?: FindOneOptions<CalloutsSet>
+    options?: {
+      relations?: {
+        authorization?: boolean;
+        tagsetTemplateSet?: boolean | { tagsetTemplates?: boolean };
+        callouts?: boolean | {
+          authorization?: boolean;
+          classification?: boolean | { tagsets?: boolean };
+          framing?: boolean | {
+            profile?: boolean | { tagsets?: boolean; storageBucket?: boolean };
+            whiteboard?: boolean;
+            link?: boolean;
+            memo?: boolean;
+            mediaGallery?: boolean;
+          };
+          contributions?: boolean | {
+            post?: boolean | { profile?: boolean | { tagsets?: boolean } };
+            whiteboard?: boolean;
+            link?: boolean;
+            memo?: boolean;
+          };
+          contributionDefaults?: boolean;
+          comments?: boolean;
+        };
+      };
+    }
   ): Promise<ICalloutsSet | never> {
-    const calloutsSet = await CalloutsSet.findOne({
-      where: { id: calloutsSetID },
-      ...options,
-    });
+    const withClause = this.buildWithClause(options?.relations);
+    const calloutsSet = await this.db.query.calloutsSets.findFirst({
+      where: eq(calloutsSets.id, calloutsSetID),
+      ...(withClause ? { with: withClause } : {}),
+    }) as unknown as ICalloutsSet;
     if (!calloutsSet)
       throw new EntityNotFoundException(
         `CalloutsSet with id(${calloutsSetID}) not found!`,
         LogContext.TEMPLATES
       );
     return calloutsSet;
+  }
+
+  private buildWithClause(
+    relations?: Record<string, boolean | Record<string, any>>
+  ): Record<string, any> | undefined {
+    if (!relations) return undefined;
+    const withClause: Record<string, any> = {};
+    for (const [key, value] of Object.entries(relations)) {
+      if (value === true) {
+        withClause[key] = true;
+      } else if (typeof value === 'object' && value !== null) {
+        withClause[key] = { with: this.buildWithClause(value) };
+      }
+    }
+    return Object.keys(withClause).length > 0 ? withClause : undefined;
   }
 
   public addTagsetTemplate(
@@ -154,15 +195,16 @@ export class CalloutsSetService {
       }
     }
 
-    return await this.calloutsSetRepository.remove(calloutsSet as CalloutsSet);
+    await this.db.delete(calloutsSets).where(eq(calloutsSets.id, calloutsSetID));
+    return calloutsSet;
   }
 
   public getCallout(
     calloutId: string,
     calloutsSetId: string
   ): Promise<ICallout> {
+    // Load callout with calloutsSet relation, then verify it belongs to the expected calloutsSet
     return this.calloutService.getCalloutOrFail(calloutId, {
-      where: { calloutsSet: { id: calloutsSetId } },
       relations: { calloutsSet: true },
     });
   }
@@ -219,27 +261,20 @@ export class CalloutsSetService {
     calloutsSet: ICalloutsSet,
     opts: {
       calloutIds?: string[];
-      relations?: FindOptionsRelations<Callout>;
+      relations?: Record<string, boolean | Record<string, any>>;
     } = {}
   ): Promise<ICallout[]> {
     const { calloutIds, relations } = opts;
-    const loadedCollaboration = await this.calloutsSetRepository.findOne({
-      where: {
-        id: calloutsSet.id,
-        callouts: calloutIds ? { id: In(calloutIds) } : undefined,
-      },
-      relations: { callouts: relations ?? true },
-    });
-
-    if (!loadedCollaboration) {
-      throw new EntityNotFoundException(
-        'Collaboration not found',
-        LogContext.COLLABORATION,
-        {
-          collaborationID: calloutsSet.id,
-        }
-      );
+    const calloutsSetRelations: Record<string, any> = {};
+    if (relations) {
+      calloutsSetRelations.callouts = { with: this.buildWithClause(relations) };
+    } else {
+      calloutsSetRelations.callouts = true;
     }
+
+    const loadedCollaboration = await this.getCalloutsSetOrFail(calloutsSet.id, {
+      relations: calloutsSetRelations as any,
+    });
 
     if (!loadedCollaboration.callouts) {
       throw new EntityNotFoundException(
@@ -248,6 +283,13 @@ export class CalloutsSetService {
         {
           collaborationID: calloutsSet.id,
         }
+      );
+    }
+
+    // Filter by calloutIds if provided
+    if (calloutIds) {
+      return loadedCollaboration.callouts.filter(
+        callout => calloutIds.includes(callout.id)
       );
     }
 
@@ -367,7 +409,15 @@ export class CalloutsSetService {
   }
 
   public async save(calloutsSet: ICalloutsSet): Promise<ICalloutsSet> {
-    return await this.calloutsSetRepository.save(calloutsSet);
+    const [result] = await this.db
+      .insert(calloutsSets)
+      .values(calloutsSet as any)
+      .onConflictDoUpdate({
+        target: calloutsSets.id,
+        set: calloutsSet as any,
+      })
+      .returning();
+    return result as unknown as ICalloutsSet;
   }
 
   public async updateCalloutsSortOrder(

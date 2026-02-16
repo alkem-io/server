@@ -1,50 +1,46 @@
 import { SpaceLevel } from '@common/enums/space.level';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { Space } from '@domain/space/space/space.entity';
-import { EntityManager, In } from 'typeorm';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { inArray, and } from 'drizzle-orm';
+import { spaces } from '@domain/space/space/space.schema';
 
 export const getSpaceRolesForContributorEntityData = async (
-  entityManager: EntityManager,
+  db: DrizzleDb,
   spaceIds: string[],
   spaceAllowedVisibilities: SpaceVisibility[]
 ) => {
-  const fetchData = (
+  const fetchData = async (
     ids: string[],
     levels: number[],
     visibility?: SpaceVisibility[]
   ): Promise<Space[]> => {
+    const conditions = [
+      inArray(spaces.id, ids),
+      inArray(spaces.level, levels),
+    ];
+
     if (visibility) {
-      return entityManager.find(Space, {
-        where: {
-          id: In(ids),
-          level: In(levels),
-          visibility: In(visibility),
-        },
-        relations: {
-          about: {
-            profile: true,
-          },
-        },
-      });
-    } else {
-      return entityManager.find(Space, {
-        where: {
-          id: In(ids),
-          level: In(levels),
-        },
-        relations: {
-          about: {
-            profile: true,
-          },
-        },
-      });
+      conditions.push(inArray(spaces.visibility, visibility));
     }
+
+    const result = await db.query.spaces.findMany({
+      where: and(...conditions),
+      with: {
+        about: {
+          with: {
+            profile: true,
+          },
+        },
+      },
+    });
+    return result as unknown as Space[];
   };
 
-  const [spaces, subspaces] = await Promise.all([
+  const [spacesResult, subspaces] = await Promise.all([
     fetchData(spaceIds, [SpaceLevel.L0], spaceAllowedVisibilities),
     fetchData(spaceIds, [SpaceLevel.L1, SpaceLevel.L2]),
   ]);
 
-  return { spaces, subspaces };
+  return { spaces: spacesResult, subspaces };
 };

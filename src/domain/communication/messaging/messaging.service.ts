@@ -16,17 +16,20 @@ import { UserLookupService } from '@domain/community/user-lookup/user.lookup.ser
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { InjectRepository } from '@nestjs/typeorm';
 import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
 import { AlkemioConfig } from '@src/types/alkemio.config';
 import { randomUUID } from 'crypto';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager, FindOneOptions, Repository } from 'typeorm';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { eq, and } from 'drizzle-orm';
+import { messagings } from './messaging.schema';
+import { conversationMemberships } from '../conversation-membership/conversation.membership.schema';
+import { platforms } from '@platform/platform/platform.schema';
 import { IConversation } from '../conversation/conversation.interface';
 import { ConversationService } from '../conversation/conversation.service';
 import { ConversationAuthorizationService } from '../conversation/conversation.service.authorization';
-import { ConversationMembership } from '../conversation-membership/conversation.membership.entity';
 import { Messaging } from './messaging.entity';
 import { IMessaging } from './messaging.interface';
 
@@ -36,11 +39,7 @@ export class MessagingService {
     private readonly configService: ConfigService<AlkemioConfig, true>,
     private readonly authorizationPolicyService: AuthorizationPolicyService,
     private readonly conversationAuthorizationService: ConversationAuthorizationService,
-    private readonly entityManager: EntityManager,
-    @InjectRepository(Messaging)
-    private readonly messagingRepository: Repository<Messaging>,
-    @InjectRepository(ConversationMembership)
-    private readonly conversationMembershipRepository: Repository<ConversationMembership>,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     private readonly conversationService: ConversationService,
     private readonly platformWellKnownVirtualContributorsService: PlatformWellKnownVirtualContributorsService,
     private readonly userLookupService: UserLookupService,
@@ -57,23 +56,27 @@ export class MessagingService {
       AuthorizationPolicyType.COMMUNICATION_MESSAGING
     );
 
-    return await this.messagingRepository.save(messaging as Messaging);
+    const [result] = await this.db.insert(messagings).values({}).returning();
+    return result as unknown as IMessaging;
   }
 
   async getMessagingOrFail(
     messagingID: string,
-    options?: FindOneOptions<Messaging>
+    options?: { relations?: { authorization?: boolean; conversations?: boolean } }
   ): Promise<IMessaging> {
-    const messaging = await Messaging.findOne({
-      where: { id: messagingID },
-      ...options,
+    const messaging = await this.db.query.messagings.findFirst({
+      where: eq(messagings.id, messagingID),
+      with: {
+        authorization: options?.relations?.authorization || undefined,
+        conversations: options?.relations?.conversations || undefined,
+      },
     });
     if (!messaging)
       throw new EntityNotFoundException(
         `Messaging with id(${messagingID}) not found!`,
         LogContext.TEMPLATES
       );
-    return messaging;
+    return messaging as unknown as IMessaging;
   }
 
   async deleteMessaging(messagingID: string): Promise<IMessaging> {
@@ -97,21 +100,22 @@ export class MessagingService {
       await this.conversationService.deleteConversation(conversation.id);
     }
 
-    return await this.messagingRepository.remove(messaging as Messaging);
+    await this.db.delete(messagings).where(eq(messagings.id, messagingID));
+    return messaging;
   }
 
   public async getConversations(messagingID: string): Promise<IConversation[]> {
     const messaging = await this.getMessagingOrFail(messagingID, {
       relations: { conversations: true },
     });
-    return messaging.conversations;
+    return messaging.conversations || [];
   }
 
   public async getConversationsCount(messagingID: string): Promise<number> {
     const messaging = await this.getMessagingOrFail(messagingID, {
       relations: { conversations: true },
     });
-    return messaging.conversations.length;
+    return messaging.conversations?.length || 0;
   }
 
   /**
@@ -145,7 +149,7 @@ export class MessagingService {
       const vc =
         await this.virtualContributorLookupService.getVirtualContributorOrFail(
           vcId,
-          { relations: { agent: true } }
+          { with: { agent: true } }
         );
       invitedAgentId = vc.agent.id;
       isUserVc = true;
@@ -218,7 +222,17 @@ export class MessagingService {
   }
 
   public async save(messaging: IMessaging): Promise<IMessaging> {
-    return await this.messagingRepository.save(messaging as Messaging);
+    if (messaging.id) {
+      const [result] = await this.db
+        .update(messagings)
+        .set({})
+        .where(eq(messagings.id, messaging.id))
+        .returning();
+      return result as unknown as IMessaging;
+    } else {
+      const [result] = await this.db.insert(messagings).values({}).returning();
+      return result as unknown as IMessaging;
+    }
   }
 
   /**
@@ -351,12 +365,15 @@ export class MessagingService {
    */
   public async getPlatformMessaging(): Promise<IMessaging> {
     // Query the platform and load the messaging relation with authorization
-    const platform = await this.entityManager
-      .getRepository('Platform')
-      .createQueryBuilder('platform')
-      .leftJoinAndSelect('platform.messaging', 'messaging')
-      .leftJoinAndSelect('messaging.authorization', 'authorization')
-      .getOne();
+    const platform = await this.db.query.platforms.findFirst({
+      with: {
+        messaging: {
+          with: {
+            authorization: true,
+          },
+        },
+      },
+    });
 
     if (!platform) {
       throw new EntityNotFoundException(
@@ -373,7 +390,7 @@ export class MessagingService {
       );
     }
 
-    return messaging;
+    return messaging as unknown as IMessaging;
   }
 
   /**
@@ -390,38 +407,51 @@ export class MessagingService {
     agentId: string,
     typeFilter?: CommunicationConversationType
   ): Promise<IConversation[]> {
-    const queryBuilder = this.conversationMembershipRepository
-      .createQueryBuilder('membership')
-      .innerJoinAndSelect('membership.conversation', 'conversation')
-      .leftJoinAndSelect('conversation.authorization', 'authorization')
-      // Eager-load room — the query already joins conversations,
-      // just add the room relation to eliminate N queries
-      .leftJoinAndSelect('conversation.room', 'room')
-      .leftJoinAndSelect('room.authorization', 'roomAuthorization')
-      .where('membership.agentId = :agentId', { agentId })
-      .andWhere('conversation.messagingId = :messagingId', { messagingId });
+    // Get all memberships for this agent
+    const memberships = await this.db.query.conversationMemberships.findMany({
+      where: eq(conversationMemberships.agentId, agentId),
+      with: {
+        conversation: {
+          with: {
+            authorization: true,
+            room: {
+              with: {
+                authorization: true,
+              },
+            },
+          },
+        },
+      },
+    });
 
-    // Filter by type using subquery - O(1) instead of O(n)
+    // Filter by messagingId
+    let conversations = memberships
+      .map(m => m.conversation)
+      .filter(c => c.messagingId === messagingId);
+
+    // Filter by type if specified
     if (typeFilter) {
-      // Subquery checks if conversation has a VC member
-      const vcExistsSubquery = this.conversationMembershipRepository
-        .createQueryBuilder('m2')
-        .innerJoin('m2.agent', 'a')
-        .where('m2.conversationId = membership.conversationId')
-        .andWhere('a.type = :vcType')
-        .select('1');
-
-      if (typeFilter === CommunicationConversationType.USER_VC) {
-        queryBuilder.andWhere(`EXISTS (${vcExistsSubquery.getQuery()})`);
-      } else {
-        // USER_USER: No VC members
-        queryBuilder.andWhere(`NOT EXISTS (${vcExistsSubquery.getQuery()})`);
+      const conversationsWithType: IConversation[] = [];
+      for (const conversation of conversations) {
+        const members = await this.conversationService.getConversationMembers(
+          conversation.id
+        );
+        const hasVC = members.some(
+          m => m.agent.type === AgentType.VIRTUAL_CONTRIBUTOR
+        );
+        const isUserVc = hasVC;
+        const matchesFilter =
+          typeFilter === CommunicationConversationType.USER_VC
+            ? isUserVc
+            : !isUserVc;
+        if (matchesFilter) {
+          conversationsWithType.push(conversation as unknown as IConversation);
+        }
       }
-      queryBuilder.setParameter('vcType', AgentType.VIRTUAL_CONTRIBUTOR);
+      return conversationsWithType;
     }
 
-    const memberships = await queryBuilder.getMany();
-    return memberships.map(m => m.conversation);
+    return conversations as unknown as IConversation[];
   }
 
   /**
@@ -436,7 +466,7 @@ export class MessagingService {
     typeFilter?: CommunicationConversationType
   ): Promise<IConversation[]> {
     const user = await this.userLookupService.getUserOrFail(userID, {
-      relations: { agent: true },
+      with: { agent: true },
     });
 
     if (!user.agent) {

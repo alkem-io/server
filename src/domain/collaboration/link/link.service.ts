@@ -7,9 +7,11 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
+import { Inject, Injectable } from '@nestjs/common';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { eq } from 'drizzle-orm';
+import { links } from './link.schema';
 import { CreateLinkInput } from './dto/link.dto.create';
 import { UpdateLinkInput } from './dto/link.dto.update';
 import { Link } from './link.entity';
@@ -20,15 +22,15 @@ export class LinkService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileService: ProfileService,
-    @InjectRepository(Link)
-    private linkRepository: Repository<Link>
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb
   ) {}
 
   public async createLink(
     linkData: CreateLinkInput,
     storageAggregator: IStorageAggregator
   ): Promise<ILink> {
-    const link: ILink = Link.create(linkData);
+    const link: ILink = Link.create(linkData as Partial<Link>);
 
     link.authorization = new AuthorizationPolicy(AuthorizationPolicyType.LINK);
 
@@ -42,9 +44,7 @@ export class LinkService {
   }
 
   public async updateLink(linkData: UpdateLinkInput): Promise<ILink> {
-    const link = await this.getLinkOrFail(linkData.ID, {
-      relations: { profile: true },
-    });
+    const link = await this.getLinkOrFail(linkData.ID);
     if (linkData.profile) {
       link.profile = await this.profileService.updateProfile(
         link.profile,
@@ -58,11 +58,20 @@ export class LinkService {
   }
 
   async deleteLink(linkId: string): Promise<ILink> {
-    const link = await this.getLinkOrFail(linkId, {
-      relations: {
+    const link = await this.db.query.links.findFirst({
+      where: eq(links.id, linkId),
+      with: {
         profile: true,
+        authorization: true,
       },
-    });
+    }) as unknown as ILink;
+
+    if (!link)
+      throw new EntityNotFoundException(
+        `No Link found with the given id: ${linkId}`,
+        LogContext.COLLABORATION
+      );
+
     if (link.profile) {
       await this.profileService.deleteProfile(link.profile.id);
     }
@@ -71,23 +80,32 @@ export class LinkService {
       await this.authorizationPolicyService.delete(link.authorization);
     }
 
-    const result = await this.linkRepository.remove(link as Link);
+    await this.db.delete(links).where(eq(links.id, linkId));
+    const result = { ...link };
     result.id = linkId;
     return result;
   }
 
   async save(link: ILink): Promise<ILink> {
-    return await this.linkRepository.save(link);
+    const [result] = await this.db
+      .insert(links)
+      .values(link as any)
+      .onConflictDoUpdate({
+        target: links.id,
+        set: link as any,
+      })
+      .returning();
+    return result as unknown as ILink;
   }
 
-  public async getLinkOrFail(
-    linkID: string,
-    options?: FindOneOptions<Link>
-  ): Promise<ILink | never> {
-    const link = await this.linkRepository.findOne({
-      where: { id: linkID },
-      ...options,
-    });
+  public async getLinkOrFail(linkID: string): Promise<ILink | never> {
+    const link = await this.db.query.links.findFirst({
+      where: eq(links.id, linkID),
+      with: {
+        profile: true,
+        authorization: true,
+      },
+    }) as unknown as ILink;
 
     if (!link)
       throw new EntityNotFoundException(
@@ -97,14 +115,15 @@ export class LinkService {
     return link;
   }
 
-  public async getProfile(
-    linkInput: ILink,
-    relations?: FindOptionsRelations<ILink>
-  ): Promise<IProfile> {
-    const link = await this.getLinkOrFail(linkInput.id, {
-      relations: { profile: true, ...relations },
-    });
-    if (!link.profile)
+  public async getProfile(linkInput: ILink): Promise<IProfile> {
+    const link = await this.db.query.links.findFirst({
+      where: eq(links.id, linkInput.id),
+      with: {
+        profile: true,
+      },
+    }) as unknown as ILink;
+
+    if (!link?.profile)
       throw new EntityNotFoundException(
         `Link profile not initialised: ${linkInput.id}`,
         LogContext.COLLABORATION

@@ -3,18 +3,20 @@ import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type
 import { RoomType } from '@common/enums/room.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { EntityNotFoundException } from '@common/exceptions';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { ForumCreateDiscussionInput } from '@platform/forum/dto/forum.dto.create.discussion';
+import { and, eq } from 'drizzle-orm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { IRoom } from '../../domain/communication/room/room.interface';
 import { RoomService } from '../../domain/communication/room/room.service';
 import { Discussion } from './discussion.entity';
+import { discussions } from './discussion.schema';
 import { IDiscussion } from './discussion.interface';
 import { DeleteDiscussionInput } from './dto/discussion.dto.delete';
 import { UpdateDiscussionInput } from './dto/discussion.dto.update';
@@ -22,8 +24,8 @@ import { UpdateDiscussionInput } from './dto/discussion.dto.update';
 @Injectable()
 export class DiscussionService {
   constructor(
-    @InjectRepository(Discussion)
-    private readonly discussionRepository: Repository<Discussion>,
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb,
     private readonly profileService: ProfileService,
     private readonly roomService: RoomService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -36,7 +38,7 @@ export class DiscussionService {
     roomType: RoomType,
     storageAggregator: IStorageAggregator
   ): Promise<IDiscussion> {
-    const discussion: IDiscussion = Discussion.create(discussionData);
+    const discussion: IDiscussion = Discussion.create(discussionData as any);
     discussion.profile = await this.profileService.createProfile(
       discussionData.profile,
       ProfileType.DISCUSSION,
@@ -81,21 +83,25 @@ export class DiscussionService {
       });
     }
 
-    const result = await this.discussionRepository.remove(
-      discussion as Discussion
-    );
+    await this.db.delete(discussions).where(eq(discussions.id, discussionID));
 
-    result.id = discussionID;
-    return result;
+    discussion.id = discussionID;
+    return discussion;
   }
 
   async getDiscussionOrFail(
     discussionID: string,
-    options?: FindOneOptions<Discussion>
+    options?: { relations?: Record<string, boolean> }
   ): Promise<IDiscussion> {
-    const discussion = await this.discussionRepository.findOne({
-      where: { id: discussionID },
-      ...options,
+    const with_ = options?.relations
+      ? Object.fromEntries(
+          Object.entries(options.relations).map(([key, value]) => [key, value])
+        )
+      : undefined;
+
+    const discussion = await this.db.query.discussions.findFirst({
+      where: eq(discussions.id, discussionID),
+      with: with_ as any,
     });
 
     if (!discussion)
@@ -103,7 +109,7 @@ export class DiscussionService {
         `Not able to locate Discussion with the specified ID: ${discussionID}`,
         LogContext.COMMUNICATION
       );
-    return discussion;
+    return discussion as unknown as IDiscussion;
   }
 
   async updateDiscussion(
@@ -137,12 +143,20 @@ export class DiscussionService {
   }
 
   async save(discussion: IDiscussion): Promise<IDiscussion> {
-    return await this.discussionRepository.save(discussion);
+    const [saved] = await this.db
+      .insert(discussions)
+      .values(discussion as any)
+      .onConflictDoUpdate({
+        target: discussions.id,
+        set: discussion as any,
+      })
+      .returning();
+    return saved as unknown as IDiscussion;
   }
 
   public async getProfile(
     discussionInput: IDiscussion,
-    relations?: FindOptionsRelations<IDiscussion>
+    relations?: Record<string, boolean>
   ): Promise<IProfile> {
     const discussion = await this.getDiscussionOrFail(discussionInput.id, {
       relations: { profile: true, ...relations },
@@ -176,15 +190,9 @@ export class DiscussionService {
     discussionID: string,
     forumID: string
   ): Promise<boolean> {
-    const discussion = await this.discussionRepository
-      .createQueryBuilder('discussion')
-      .where('discussion.id = :discussionID')
-      .andWhere('discussion.forumId = :forumID')
-      .setParameters({
-        discussionID: `${discussionID}`,
-        forumID: `${forumID}`,
-      })
-      .getOne();
+    const discussion = await this.db.query.discussions.findFirst({
+      where: and(eq(discussions.id, discussionID), eq(discussions.forumId, forumID)),
+    });
     if (discussion) return true;
     return false;
   }

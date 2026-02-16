@@ -24,7 +24,7 @@ export class RoleSetLicenseService {
     parentLicenseEntitlements: ILicenseEntitlement[]
   ): Promise<ILicense[]> {
     const roleSet = await this.roleSetService.getRoleSetOrFail(roleSetID, {
-      relations: {
+      with: {
         license: {
           entitlements: true,
         },

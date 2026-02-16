@@ -2,21 +2,22 @@ import { LogContext } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
 import { EntityNotFoundException } from '@common/exceptions';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, Repository } from 'typeorm';
+import { Inject, Injectable } from '@nestjs/common';
+import { eq } from 'drizzle-orm';
 import { CreateOrganizationVerificationInput } from './dto/organization.verification.dto.create';
 import { OrganizationVerification } from './organization.verification.entity';
 import { IOrganizationVerification } from './organization.verification.interface';
+import { organizationVerifications } from './organization.verification.schema';
 
 @Injectable()
 export class OrganizationVerificationService {
   constructor(
-    @InjectRepository(OrganizationVerification)
-    private organizationVerificationRepository: Repository<OrganizationVerification>,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     private authorizationPolicyService: AuthorizationPolicyService,
     private lifecycleService: LifecycleService
   ) {}
@@ -32,65 +33,80 @@ export class OrganizationVerificationService {
       AuthorizationPolicyType.ORGANIZATION_VERIFICATION
     );
 
-    // save the user to get the id assigned
-    await this.organizationVerificationRepository.save(
-      organizationVerification
-    );
+    // save the entity to get the id assigned
+    const saved = await this.save(organizationVerification);
 
     // Create the lifecycle
-    organizationVerification.lifecycle =
+    saved.lifecycle =
       await this.lifecycleService.createLifecycle();
 
-    return organizationVerification;
+    return saved;
   }
 
   async delete(
     organizationVerificationID: string
   ): Promise<IOrganizationVerification> {
-    const organizationVerification =
-      await this.getOrganizationVerificationOrFail(organizationVerificationID, {
-        relations: { lifecycle: true },
-      });
+    const orgVerification =
+      await this.getOrganizationVerificationOrFail(organizationVerificationID);
 
-    if (organizationVerification.authorization)
+    if (orgVerification.authorization)
       await this.authorizationPolicyService.delete(
-        organizationVerification.authorization
+        orgVerification.authorization
       );
 
-    if (organizationVerification.lifecycle) {
+    if (orgVerification.lifecycle) {
       await this.lifecycleService.deleteLifecycle(
-        organizationVerification.lifecycle.id
+        orgVerification.lifecycle.id
       );
     }
 
-    const result = await this.organizationVerificationRepository.remove(
-      organizationVerification as OrganizationVerification
-    );
-    result.id = organizationVerificationID;
-    return result;
+    await this.db
+      .delete(organizationVerifications)
+      .where(eq(organizationVerifications.id, organizationVerificationID));
+    return orgVerification;
   }
 
   async save(
     organizationVerification: IOrganizationVerification
   ): Promise<IOrganizationVerification> {
-    return await this.organizationVerificationRepository.save(
-      organizationVerification
-    );
+    if (organizationVerification.id) {
+      const [updated] = await this.db
+        .update(organizationVerifications)
+        .set({
+          status: organizationVerification.status,
+          organizationID: organizationVerification.organizationID,
+          lifecycleId: organizationVerification.lifecycle?.id ?? null,
+          authorizationId: organizationVerification.authorization?.id ?? null,
+        })
+        .where(eq(organizationVerifications.id, organizationVerification.id))
+        .returning();
+      return { ...organizationVerification, ...updated } as unknown as IOrganizationVerification;
+    }
+    const [inserted] = await this.db
+      .insert(organizationVerifications)
+      .values({
+        status: organizationVerification.status,
+        organizationID: organizationVerification.organizationID,
+        lifecycleId: organizationVerification.lifecycle?.id ?? null,
+        authorizationId: organizationVerification.authorization?.id ?? null,
+      })
+      .returning();
+    return { ...organizationVerification, ...inserted } as unknown as IOrganizationVerification;
   }
   async getOrganizationVerificationOrFail(
     organizationVerificationID: string,
-    options?: FindOneOptions<OrganizationVerification>
+    options?: { with?: Record<string, boolean | object> }
   ): Promise<IOrganizationVerification | never> {
-    const organizationVerification =
-      await this.organizationVerificationRepository.findOne({
-        where: { id: organizationVerificationID },
-        ...options,
+    const result =
+      await this.db.query.organizationVerifications.findFirst({
+        where: eq(organizationVerifications.id, organizationVerificationID),
+        with: options?.with,
       });
-    if (!organizationVerification)
+    if (!result)
       throw new EntityNotFoundException(
         `Unable to find organizationVerification with ID: ${organizationVerificationID}`,
         LogContext.COMMUNITY
       );
-    return organizationVerification;
+    return result as unknown as IOrganizationVerification;
   }
 }

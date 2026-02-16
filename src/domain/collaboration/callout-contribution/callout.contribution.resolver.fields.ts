@@ -51,9 +51,7 @@ export class CalloutContributionResolverFields {
   async post(
     @Parent() calloutContribution: ICalloutContribution
   ): Promise<IPost | null> {
-    return await this.calloutContributionService.getPost(calloutContribution, {
-      post: { comments: true },
-    });
+    return await this.calloutContributionService.getPost(calloutContribution);
   }
 
   @ResolveField('memo', () => IMemo, {

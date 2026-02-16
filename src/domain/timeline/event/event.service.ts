@@ -4,26 +4,25 @@ import { RoomType } from '@common/enums/room.type';
 import { SpaceLevel } from '@common/enums/space.level';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { EntityNotFoundException } from '@common/exceptions';
-import { Collaboration } from '@domain/collaboration/collaboration';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { RoomService } from '@domain/communication/room/room.service';
-import { Space } from '@domain/space/space/space.entity';
 import { ISpace } from '@domain/space/space/space.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { Calendar } from '@domain/timeline/calendar/calendar.entity';
-import { Timeline } from '@domain/timeline/timeline/timeline.entity';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, In, Repository } from 'typeorm';
+import { eq, and, inArray, sql } from 'drizzle-orm';
 import { CreateCalendarEventInput } from './dto/event.dto.create';
 import { DeleteCalendarEventInput } from './dto/event.dto.delete';
 import { UpdateCalendarEventInput } from './dto/event.dto.update';
 import { CalendarEvent } from './event.entity';
 import { ICalendarEvent } from './event.interface';
+import { calendarEvents } from './event.schema';
+import { spaces } from '@domain/space/space/space.schema';
 
 @Injectable()
 export class CalendarEventService {
@@ -31,9 +30,7 @@ export class CalendarEventService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private roomService: RoomService,
     private profileService: ProfileService,
-    @InjectRepository(Space) private spaceRepository: Repository<Space>,
-    @InjectRepository(CalendarEvent)
-    private calendarEventRepository: Repository<CalendarEvent>,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -69,8 +66,48 @@ export class CalendarEventService {
     return await this.save(calendarEvent);
   }
 
-  public async save(calendarEvent: ICalendarEvent): Promise<CalendarEvent> {
-    return this.calendarEventRepository.save(calendarEvent);
+  public async save(calendarEvent: ICalendarEvent): Promise<ICalendarEvent> {
+    if (calendarEvent.id) {
+      const [updated] = await this.db
+        .update(calendarEvents)
+        .set({
+          nameID: calendarEvent.nameID,
+          type: calendarEvent.type,
+          createdBy: calendarEvent.createdBy,
+          startDate: calendarEvent.startDate,
+          wholeDay: calendarEvent.wholeDay,
+          multipleDays: calendarEvent.multipleDays,
+          durationMinutes: calendarEvent.durationMinutes,
+          durationDays: calendarEvent.durationDays,
+          visibleOnParentCalendar: calendarEvent.visibleOnParentCalendar,
+          commentsId: calendarEvent.comments?.id,
+          calendarId: calendarEvent.calendar?.id,
+          profileId: calendarEvent.profile?.id,
+          authorizationId: calendarEvent.authorization?.id,
+        })
+        .where(eq(calendarEvents.id, calendarEvent.id))
+        .returning();
+      return updated as unknown as ICalendarEvent;
+    }
+    const [inserted] = await this.db
+      .insert(calendarEvents)
+      .values({
+        nameID: calendarEvent.nameID,
+        type: calendarEvent.type,
+        createdBy: calendarEvent.createdBy,
+        startDate: calendarEvent.startDate,
+        wholeDay: calendarEvent.wholeDay,
+        multipleDays: calendarEvent.multipleDays,
+        durationMinutes: calendarEvent.durationMinutes,
+        durationDays: calendarEvent.durationDays,
+        visibleOnParentCalendar: calendarEvent.visibleOnParentCalendar,
+        commentsId: calendarEvent.comments?.id,
+        calendarId: calendarEvent.calendar?.id,
+        profileId: calendarEvent.profile?.id,
+        authorizationId: calendarEvent.authorization?.id,
+      })
+      .returning();
+    return inserted as unknown as ICalendarEvent;
   }
 
   public async deleteCalendarEvent(
@@ -92,27 +129,34 @@ export class CalendarEventService {
       });
     }
 
-    const result = await this.calendarEventRepository.remove(
-      calendarEvent as CalendarEvent
-    );
-    result.id = calendarEventID;
-    return result;
+    await this.db
+      .delete(calendarEvents)
+      .where(eq(calendarEvents.id, calendarEventID));
+    calendarEvent.id = calendarEventID;
+    return calendarEvent;
   }
 
   public async getCalendarEventOrFail(
     calendarEventID: string,
-    options?: FindOneOptions<CalendarEvent>
+    options?: {
+      relations?: { profile?: boolean; comments?: boolean; calendar?: boolean };
+    }
   ): Promise<ICalendarEvent | never> {
-    const calendarEvent = await this.calendarEventRepository.findOne({
-      where: { id: calendarEventID },
-      ...options,
+    const withClause: Record<string, boolean> = {};
+    if (options?.relations?.profile) withClause.profile = true;
+    if (options?.relations?.comments) withClause.comments = true;
+    if (options?.relations?.calendar) withClause.calendar = true;
+
+    const calendarEvent = await this.db.query.calendarEvents.findFirst({
+      where: eq(calendarEvents.id, calendarEventID),
+      with: Object.keys(withClause).length > 0 ? withClause : undefined,
     });
     if (!calendarEvent)
       throw new EntityNotFoundException(
         `Not able to locate calendarEvent with the specified ID: ${calendarEventID}`,
         LogContext.CALENDAR
       );
-    return calendarEvent;
+    return calendarEvent as unknown as ICalendarEvent;
   }
 
   public async updateCalendarEvent(
@@ -170,35 +214,54 @@ export class CalendarEventService {
       calendarEventData.visibleOnParentCalendar ??
       calendarEvent.visibleOnParentCalendar;
 
-    return this.calendarEventRepository.save(calendarEvent);
+    const [updated] = await this.db
+      .update(calendarEvents)
+      .set({
+        type: calendarEvent.type,
+        startDate: calendarEvent.startDate,
+        wholeDay: calendarEvent.wholeDay,
+        multipleDays: calendarEvent.multipleDays,
+        durationMinutes: calendarEvent.durationMinutes,
+        durationDays: calendarEvent.durationDays,
+        visibleOnParentCalendar: calendarEvent.visibleOnParentCalendar,
+      })
+      .where(eq(calendarEvents.id, calendarEvent.id))
+      .returning();
+    return updated as unknown as ICalendarEvent;
   }
 
   public async saveCalendarEvent(
     calendarEvent: ICalendarEvent
   ): Promise<ICalendarEvent> {
-    return await this.calendarEventRepository.save(calendarEvent);
+    return await this.save(calendarEvent);
   }
 
-  public getCalendarEvent(
+  public async getCalendarEvent(
     calendarId: string,
     eventID: string
   ): Promise<ICalendarEvent> {
-    return this.calendarEventRepository.findOneOrFail({
-      where: [
-        {
-          id: eventID,
-          calendar: {
-            id: calendarId,
-          },
-        },
-      ],
+    const event = await this.db.query.calendarEvents.findFirst({
+      where: and(
+        eq(calendarEvents.id, eventID),
+        eq(calendarEvents.calendarId, calendarId)
+      ),
     });
+    if (!event)
+      throw new EntityNotFoundException(
+        `Not able to locate calendarEvent with the specified ID: ${eventID}`,
+        LogContext.CALENDAR
+      );
+    return event as unknown as ICalendarEvent;
   }
 
-  public getCalendarEvents(eventIds: string[]): Promise<ICalendarEvent[]> {
-    return this.calendarEventRepository.findBy({
-      id: In(eventIds),
+  public async getCalendarEvents(
+    eventIds: string[]
+  ): Promise<ICalendarEvent[]> {
+    if (eventIds.length === 0) return [];
+    const events = await this.db.query.calendarEvents.findMany({
+      where: inArray(calendarEvents.id, eventIds),
     });
+    return events as unknown as ICalendarEvent[];
   }
 
   public async getProfileOrFail(
@@ -222,34 +285,28 @@ export class CalendarEventService {
   public async getSubspace(
     calendarEvent: ICalendarEvent
   ): Promise<ISpace | undefined> {
-    const spaceParentOfTheEvent = await this.calendarEventRepository
-      .createQueryBuilder('calendarEvent')
-      .leftJoin(Calendar, 'calendar', 'calendar.id = calendarEvent.calendarId')
-      .leftJoin(Timeline, 'timeline', 'timeline.calendarId = calendar.id')
-      .leftJoin(
-        Collaboration,
-        'collaboration',
-        'collaboration.timelineId = timeline.id'
-      )
-      .leftJoin(
-        Space,
-        'subspace',
-        'subspace.collaborationId = collaboration.id'
-      )
-      .where('calendarEvent.id = :id', { id: calendarEvent.id })
-      .andWhere('subspace.level != :level', { level: SpaceLevel.L0 })
-      .select('subspace.id as spaceId')
-      .getRawOne<{ spaceId: string }>();
+    const result = await this.db.execute<{ spaceId: string }>(sql`
+      SELECT "subspace"."id" AS "spaceId"
+      FROM "calendar_event" AS "calendarEvent"
+      LEFT JOIN "calendar" ON "calendar"."id" = "calendarEvent"."calendarId"
+      LEFT JOIN "timeline" ON "timeline"."calendarId" = "calendar"."id"
+      LEFT JOIN "collaboration" ON "collaboration"."timelineId" = "timeline"."id"
+      LEFT JOIN "space" AS "subspace" ON "subspace"."collaborationId" = "collaboration"."id"
+      WHERE "calendarEvent"."id" = ${calendarEvent.id}
+        AND "subspace"."level" != ${SpaceLevel.L0}
+      LIMIT 1
+    `);
 
+    const spaceParentOfTheEvent = Array.from(result)[0];
     if (!spaceParentOfTheEvent) {
       return undefined;
     }
 
-    const space = await this.spaceRepository.findOne({
-      where: { id: spaceParentOfTheEvent.spaceId },
+    const space = await this.db.query.spaces.findFirst({
+      where: eq(spaces.id, spaceParentOfTheEvent.spaceId),
     });
 
-    return space ?? undefined;
+    return (space as unknown as ISpace) ?? undefined;
   }
 
   public async getComments(calendarEventID: string) {

@@ -1,19 +1,18 @@
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { createTypedRelationDataLoader } from '@core/dataloader/utils';
-import { Profile } from '@domain/common/profile';
 import { IVisual } from '@domain/common/visual';
-import { Injectable } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
-import { EntityManager } from 'typeorm';
+import { Inject, Injectable } from '@nestjs/common';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
 
 @Injectable()
 export class ProfileAvatarsLoaderCreator implements DataLoaderCreator<IVisual> {
-  constructor(@InjectEntityManager() private manager: EntityManager) {}
+  constructor(@Inject(DRIZZLE) private readonly db: DrizzleDb) {}
 
   create(options: DataLoaderCreatorOptions<IVisual>) {
     return createTypedRelationDataLoader(
-      this.manager,
-      Profile,
+      this.db,
+      'profiles',
       { avatar: true },
       this.constructor.name,
       options

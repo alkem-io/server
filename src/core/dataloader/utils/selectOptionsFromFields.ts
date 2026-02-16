@@ -1,4 +1,4 @@
-import { FindOptionsSelect } from 'typeorm';
+import { FindOptionsSelect } from '@core/typeorm-compat.types';
 
 export const selectOptionsFromFields = <TResult>(
   fields?: Array<keyof TResult>

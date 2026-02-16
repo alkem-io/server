@@ -1,24 +1,18 @@
 import { EntityNotFoundException } from '@common/exceptions';
 import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
-import { Type } from '@nestjs/common';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import DataLoader from 'dataloader';
-import {
-  EntityManager,
-  FindOptionsRelations,
-  FindOptionsSelect,
-} from 'typeorm';
 import { DataLoaderCreatorOptions } from '../creators/base';
 import { ILoader } from '../loader.interface';
 import { findByBatchIds } from './findByBatchIds';
-import { selectOptionsFromFields } from './selectOptionsFromFields';
 
 export const createTypedRelationDataLoader = <
   TParent extends { id: string } & { [key: string]: any }, // todo better type,
   TResult,
 >(
-  manager: EntityManager,
-  parentClassRef: Type<TParent>,
-  relations: FindOptionsRelations<TParent>,
+  db: DrizzleDb,
+  tableName: string,
+  relations: Record<string, boolean | object>,
   name: string,
   options: DataLoaderCreatorOptions<TResult, TParent>
 ): ILoader<
@@ -28,17 +22,6 @@ export const createTypedRelationDataLoader = <
   | ForbiddenAuthorizationPolicyException
 > => {
   const { fields, ...restOptions } = options ?? {};
-
-  const topRelation = <keyof TResult>Object.keys(relations)[0];
-
-  const selectOptions = fields
-    ? Array.isArray(fields)
-      ? {
-          id: true,
-          [topRelation]: selectOptionsFromFields(fields),
-        }
-      : fields
-    : { id: true };
 
   return new DataLoader<
     string,
@@ -54,9 +37,8 @@ export const createTypedRelationDataLoader = <
         | null
         | EntityNotFoundException
         | ForbiddenAuthorizationPolicyException
-      >(manager, parentClassRef, keys as string[], relations, {
+      >(db, tableName, keys as string[], relations, {
         ...restOptions,
-        select: selectOptions as FindOptionsSelect<TParent>,
         dataLoaderName: name,
       }),
     {

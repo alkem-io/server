@@ -1,8 +1,7 @@
-import { Collaboration } from '@domain/collaboration/collaboration';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
-import { Injectable } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
-import { EntityManager } from 'typeorm';
+import { Inject, Injectable } from '@nestjs/common';
 import { createTypedRelationDataLoader } from '../../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
 
@@ -10,12 +9,12 @@ import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
 export class CollaborationTimelineLoaderCreator
   implements DataLoaderCreator<ITimeline[]>
 {
-  constructor(@InjectEntityManager() private manager: EntityManager) {}
+  constructor(@Inject(DRIZZLE) private readonly db: DrizzleDb) {}
 
   create(options: DataLoaderCreatorOptions<ITimeline[]>) {
     return createTypedRelationDataLoader(
-      this.manager,
-      Collaboration,
+      this.db,
+      'collaborations',
       { timeline: true },
       this.constructor.name,
       options

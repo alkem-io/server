@@ -1,11 +1,11 @@
-import { EntityManager, In } from 'typeorm';
-import DataLoader from 'dataloader';
-import { Injectable } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { DataLoaderCreator } from '@core/dataloader/creators/base';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { ConversationMembership } from '@domain/communication/conversation-membership/conversation.membership.entity';
 import { IConversationMembership } from '@domain/communication/conversation-membership/conversation.membership.interface';
+import { Inject, Injectable } from '@nestjs/common';
+import DataLoader from 'dataloader';
+import { inArray } from 'drizzle-orm';
 
 /**
  * DataLoader creator for batching conversation membership lookups.
@@ -16,7 +16,7 @@ import { IConversationMembership } from '@domain/communication/conversation-memb
 export class ConversationMembershipsLoaderCreator
   implements DataLoaderCreator<IConversationMembership[]>
 {
-  constructor(@InjectEntityManager() private manager: EntityManager) {}
+  constructor(@Inject(DRIZZLE) private readonly db: DrizzleDb) {}
 
   public create(): ILoader<IConversationMembership[]> {
     return new DataLoader<string, IConversationMembership[]>(
@@ -32,19 +32,14 @@ export class ConversationMembershipsLoaderCreator
       return [];
     }
 
-    const memberships = await this.manager.find(ConversationMembership, {
-      loadEagerRelations: false,
-      where: { conversationId: In([...conversationIds]) },
-      relations: { agent: true },
-      select: {
+    const memberships = await this.db.query.conversationMemberships.findMany({
+      where: (table, { inArray }) => inArray(table.conversationId, [...conversationIds]),
+      with: { agent: true },
+      columns: {
         conversationId: true,
         agentId: true,
-        agent: {
-          id: true,
-          type: true,
-        },
       },
-    });
+    }) as unknown as IConversationMembership[];
 
     // Group by conversation ID for O(1) lookup
     const grouped = new Map<string, IConversationMembership[]>();

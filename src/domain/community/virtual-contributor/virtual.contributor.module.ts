@@ -5,7 +5,6 @@ import { KnowledgeBaseModule } from '@domain/common/knowledge-base/knowledge.bas
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { PlatformWellKnownVirtualContributorsModule } from '@platform/platform.well.known.virtual.contributors';
 import { AiServerAdapterModule } from '@services/adapters/ai-server-adapter/ai.server.adapter.module';
@@ -18,7 +17,6 @@ import { VirtualContributorLookupModule } from '../virtual-contributor-lookup/vi
 import { VirtualContributorModelCardModule } from '../virtual-contributor-model-card/virtual.contributor.model.card.module';
 import { VirtualContributorPlatformSettingsModule } from '../virtual-contributor-platform-settings';
 import { VirtualContributorSettingsModule } from '../virtual-contributor-settings/virtual.contributor.settings.module';
-import { VirtualContributor } from './virtual.contributor.entity';
 import { VirtualContributorResolverFields } from './virtual.contributor.resolver.fields';
 import { VirtualContributorResolverMutations } from './virtual.contributor.resolver.mutations';
 import { VirtualContributorResolverQueries } from './virtual.contributor.resolver.queries';
@@ -43,7 +41,6 @@ import { VirtualContributorAuthorizationService } from './virtual.contributor.se
     VirtualContributorDefaultsModule,
     AccountLookupModule,
     PlatformWellKnownVirtualContributorsModule,
-    TypeOrmModule.forFeature([VirtualContributor]),
     PlatformAuthorizationPolicyModule,
     SubscriptionServiceModule,
     VirtualContributorModelCardModule,

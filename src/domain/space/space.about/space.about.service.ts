@@ -22,10 +22,12 @@ import { CreateCommunityGuidelinesInput } from '@domain/community/community-guid
 import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
 import { CommunityGuidelinesService } from '@domain/community/community-guidelines/community.guidelines.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { Inject, Injectable } from '@nestjs/common';
 import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
-import { FindOneOptions, Repository } from 'typeorm';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { eq } from 'drizzle-orm';
+import { spaceAbouts } from './space.about.schema';
 import { SpaceLookupService } from '../space.lookup/space.lookup.service';
 import { CreateSpaceAboutInput } from './dto/space.about.dto.create';
 import { UpdateSpaceAboutInput } from './dto/space.about.dto.update';
@@ -41,8 +43,8 @@ export class SpaceAboutService {
     private profileService: ProfileService,
     private roleSetService: RoleSetService,
     private inputCreatorService: InputCreatorService,
-    @InjectRepository(SpaceAbout)
-    private spaceAboutRepository: Repository<SpaceAbout>
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb
   ) {}
 
   public async createSpaceAbout(
@@ -52,7 +54,7 @@ export class SpaceAboutService {
     let spaceAbout: ISpaceAbout = SpaceAbout.create({
       ...spaceAboutData,
       authorization: new AuthorizationPolicy(AuthorizationPolicyType.SPACE),
-    });
+    } as any);
     spaceAbout.profile = await this.profileService.createProfile(
       spaceAboutData.profileData,
       ProfileType.SPACE_ABOUT,
@@ -90,10 +92,10 @@ export class SpaceAboutService {
 
   async getSpaceAboutOrFail(
     spaceAboutID: string,
-    options?: FindOneOptions<SpaceAbout>
+    options?: { with?: Record<string, boolean | object> }
   ): Promise<ISpaceAbout | never> {
-    const spaceAbout = await this.spaceAboutRepository.findOne({
-      where: { id: spaceAboutID },
+    const spaceAbout = await this.db.query.spaceAbouts.findFirst({
+      where: eq(spaceAbouts.id, spaceAboutID),
       ...options,
     });
     if (!spaceAbout)
@@ -101,7 +103,7 @@ export class SpaceAboutService {
         `No SpaceAbout found with the given id: ${spaceAboutID}`,
         LogContext.SPACE_ABOUT
       );
-    return spaceAbout;
+    return spaceAbout as unknown as ISpaceAbout;
   }
 
   async updateSpaceAbout(
@@ -109,7 +111,7 @@ export class SpaceAboutService {
     spaceAboutUpdateData: UpdateSpaceAboutInput
   ): Promise<ISpaceAbout> {
     const spaceAbout = await this.getSpaceAboutOrFail(spaceAboutInput.id, {
-      relations: {
+      with: {
         profile: true,
       },
     });
@@ -129,13 +131,29 @@ export class SpaceAboutService {
   }
 
   public async save(spaceAbout: ISpaceAbout): Promise<ISpaceAbout> {
-    return await this.spaceAboutRepository.save(spaceAbout);
+    if (spaceAbout.id) {
+      // Update existing spaceAbout
+      const { id, ...updateData } = spaceAbout;
+      const [result] = await this.db
+        .update(spaceAbouts)
+        .set(updateData)
+        .where(eq(spaceAbouts.id, id))
+        .returning();
+      return result as unknown as ISpaceAbout;
+    } else {
+      // Insert new spaceAbout
+      const [result] = await this.db
+        .insert(spaceAbouts)
+        .values(spaceAbout as any)
+        .returning();
+      return result as unknown as ISpaceAbout;
+    }
   }
 
   async removeSpaceAbout(spaceAboutID: string): Promise<ISpaceAbout> {
     // Note need to load it in with all contained entities so can remove fully
     const spaceAbout = await this.getSpaceAboutOrFail(spaceAboutID, {
-      relations: {
+      with: {
         profile: true,
         guidelines: true,
       },
@@ -157,14 +175,15 @@ export class SpaceAboutService {
     if (spaceAbout.authorization)
       await this.authorizationPolicyService.delete(spaceAbout.authorization);
 
-    return await this.spaceAboutRepository.remove(spaceAbout as SpaceAbout);
+    await this.db.delete(spaceAbouts).where(eq(spaceAbouts.id, spaceAboutID));
+    return spaceAbout;
   }
 
   public async getCommunityGuidelines(
     about: ISpaceAbout
   ): Promise<ICommunityGuidelines> {
     const communityWithGuidelines = await this.getSpaceAboutOrFail(about.id, {
-      relations: { guidelines: true },
+      with: { guidelines: true },
     });
 
     if (!communityWithGuidelines.guidelines) {

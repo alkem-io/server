@@ -1,17 +1,18 @@
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { eq } from 'drizzle-orm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Repository } from 'typeorm';
 import { CreateRoleInput } from './dto/role.dto.create';
 import { Role } from './role.entity';
 import { IRole } from './role.interface';
+import { roles } from './role.schema';
 
 @Injectable()
 export class RoleService {
   constructor(
-    @InjectRepository(Role)
-    private roleRepository: Repository<Role>,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -26,7 +27,7 @@ export class RoleService {
   }
 
   public async removeRole(role: IRole): Promise<boolean> {
-    await this.roleRepository.remove(role as Role);
+    await this.db.delete(roles).where(eq(roles.id, role.id));
     return true;
   }
 

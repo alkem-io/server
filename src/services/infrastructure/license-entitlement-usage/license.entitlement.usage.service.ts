@@ -5,11 +5,13 @@ import {
   RelationshipNotFoundException,
 } from '@common/exceptions';
 import { Account } from '@domain/space/account/account.entity';
+import { accounts } from '@domain/space/account/account.schema';
 import { ISpace } from '@domain/space/space/space.interface';
 import { Inject, LoggerService } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager, FindOptionsRelations } from 'typeorm';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { eq } from 'drizzle-orm';
 
 /**
  * Priority order for space entitlements (highest to lowest priority).
@@ -23,8 +25,8 @@ const SPACE_ENTITLEMENT_PRIORITY: readonly LicenseEntitlementType[] = [
 
 export class LicenseEntitlementUsageService {
   constructor(
-    @InjectEntityManager('default')
-    private entityManager: EntityManager,
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -33,39 +35,54 @@ export class LicenseEntitlementUsageService {
     licenseID: string,
     entitlementType: LicenseEntitlementType
   ): Promise<number> {
-    // optimize the joins based on the type
-    const relations: FindOptionsRelations<Account> = {};
+    // Build the query with optimized relations based on the type
+    let accountData: any;
     switch (entitlementType) {
       case LicenseEntitlementType.ACCOUNT_SPACE_FREE:
       case LicenseEntitlementType.ACCOUNT_SPACE_PLUS:
       case LicenseEntitlementType.ACCOUNT_SPACE_PREMIUM:
-        relations.spaces = {
-          license: {
-            entitlements: true,
+        accountData = await this.db.query.accounts.findFirst({
+          where: eq(accounts.licenseId, licenseID),
+          with: {
+            spaces: {
+              with: {
+                license: {
+                  with: {
+                    entitlements: true,
+                  },
+                },
+              },
+            },
           },
-        };
+        });
         break;
       case LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR:
-        relations.virtualContributors = true;
+        accountData = await this.db.query.accounts.findFirst({
+          where: eq(accounts.licenseId, licenseID),
+          with: {
+            virtualContributors: true,
+          },
+        });
         break;
       case LicenseEntitlementType.ACCOUNT_INNOVATION_HUB:
-        relations.innovationHubs = true;
+        accountData = await this.db.query.accounts.findFirst({
+          where: eq(accounts.licenseId, licenseID),
+          with: {
+            innovationHubs: true,
+          },
+        });
         break;
       case LicenseEntitlementType.ACCOUNT_INNOVATION_PACK:
-        relations.innovationPacks = true;
+        accountData = await this.db.query.accounts.findFirst({
+          where: eq(accounts.licenseId, licenseID),
+          with: {
+            innovationPacks: true,
+          },
+        });
         break;
     }
 
-    const account = await this.entityManager.findOne(Account, {
-      loadEagerRelations: false,
-      where: {
-        license: {
-          id: licenseID,
-        },
-      },
-      relations,
-    });
-    if (!account) {
+    if (!accountData) {
       throw new EntityNotFoundException(
         `Unable to find Account with license with ID: ${licenseID}`,
         LogContext.LICENSE
@@ -74,25 +91,25 @@ export class LicenseEntitlementUsageService {
     switch (entitlementType) {
       case LicenseEntitlementType.ACCOUNT_SPACE_FREE:
         return this.getAccountSpacesTypeCount(
-          account.spaces,
+          accountData.spaces || [],
           LicenseEntitlementType.SPACE_FREE
         );
       case LicenseEntitlementType.ACCOUNT_SPACE_PLUS:
         return this.getAccountSpacesTypeCount(
-          account.spaces,
+          accountData.spaces || [],
           LicenseEntitlementType.SPACE_PLUS
         );
       case LicenseEntitlementType.ACCOUNT_SPACE_PREMIUM:
         return this.getAccountSpacesTypeCount(
-          account.spaces,
+          accountData.spaces || [],
           LicenseEntitlementType.SPACE_PREMIUM
         );
       case LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR:
-        return account.virtualContributors.length;
+        return accountData.virtualContributors?.length || 0;
       case LicenseEntitlementType.ACCOUNT_INNOVATION_HUB:
-        return account.innovationHubs.length;
+        return accountData.innovationHubs?.length || 0;
       case LicenseEntitlementType.ACCOUNT_INNOVATION_PACK:
-        return account.innovationPacks.length;
+        return accountData.innovationPacks?.length || 0;
       default:
         throw new RelationshipNotFoundException(
           `Unexpected entitlement type encountered: ${entitlementType}`,

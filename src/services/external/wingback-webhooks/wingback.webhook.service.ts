@@ -1,12 +1,13 @@
 import { LogContext } from '@common/enums';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { LicenseService } from '@domain/common/license/license.service';
-import { Account } from '@domain/space/account/account.entity';
+import { accounts } from '@domain/space/account/account.schema';
 import { AccountLicenseService } from '@domain/space/account/account.service.license';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
 import { WingbackManager } from '@services/external/wingback';
+import { eq } from 'drizzle-orm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager } from 'typeorm';
 import { WingbackContractPayload } from './types';
 
 @Injectable()
@@ -15,7 +16,7 @@ export class WingbackWebhookService {
     private readonly wingbackManager: WingbackManager,
     private readonly accountLicenseService: AccountLicenseService,
     private readonly licenseService: LicenseService,
-    @InjectEntityManager() private entityManager: EntityManager,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -39,10 +40,9 @@ export class WingbackWebhookService {
       contract_summary: { customer_id: customerId },
     } = await this.wingbackManager.getContract(contractId);
     // 3. use the customer ID to get the account in Alkemio
-    const account = await this.entityManager.findOne(Account, {
-      loadEagerRelations: false,
-      where: { externalSubscriptionID: customerId },
-      select: { id: true },
+    const account = await this.db.query.accounts.findFirst({
+      where: eq(accounts.externalSubscriptionID, customerId),
+      columns: { id: true },
     });
 
     if (!account) {

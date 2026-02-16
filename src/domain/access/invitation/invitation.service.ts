@@ -5,6 +5,8 @@ import {
   RelationshipNotFoundException,
 } from '@common/exceptions';
 import { asyncFilter } from '@common/utils';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import {
   CreateInvitationInput,
   DeleteInvitationInput,
@@ -20,24 +22,17 @@ import { getContributorType } from '@domain/community/contributor/get.contributo
 import { IUser } from '@domain/community/user/user.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import {
-  FindManyOptions,
-  FindOneOptions,
-  FindOptionsWhere,
-  In,
-  Repository,
-} from 'typeorm';
 import { RoleSetCacheService } from '../role-set/role.set.service.cache';
+import { invitations } from './invitation.schema';
 import { InvitationLifecycleService } from './invitation.service.lifecycle';
 
 @Injectable()
 export class InvitationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    @InjectRepository(Invitation)
-    private invitationRepository: Repository<Invitation>,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     private userLookupService: UserLookupService,
     private contributorService: ContributorService,
     private lifecycleService: LifecycleService,
@@ -57,12 +52,12 @@ export class InvitationService {
       AuthorizationPolicyType.INVITATION
     );
 
-    // save the user to get the id assigned
-    await this.invitationRepository.save(invitation);
+    // save the entity to get the id assigned
+    const saved = await this.save(invitation);
 
-    invitation.lifecycle = await this.lifecycleService.createLifecycle();
+    saved.lifecycle = await this.lifecycleService.createLifecycle();
 
-    return await this.invitationRepository.save(invitation);
+    return await this.save(saved);
   }
 
   async deleteInvitation(
@@ -70,7 +65,7 @@ export class InvitationService {
   ): Promise<IInvitation> {
     const invitationID = deleteData.ID;
     const invitation = await this.getInvitationOrFail(invitationID, {
-      relations: {
+      with: {
         roleSet: true,
       },
     });
@@ -79,10 +74,9 @@ export class InvitationService {
     if (invitation.authorization)
       await this.authorizationPolicyService.delete(invitation.authorization);
 
-    const result = await this.invitationRepository.remove(
-      invitation as Invitation
-    );
-    result.id = invitationID;
+    await this.db
+      .delete(invitations)
+      .where(eq(invitations.id, invitationID));
 
     if (invitation.invitedContributorID && invitation.roleSet) {
       await this.roleSetCacheService.deleteOpenInvitationFromCache(
@@ -92,7 +86,7 @@ export class InvitationService {
       const contributor = await this.contributorService.getContributor(
         invitation.invitedContributorID,
         {
-          relations: { agent: true },
+          with: { agent: true },
         }
       );
 
@@ -116,47 +110,74 @@ export class InvitationService {
       }
     }
 
-    return result;
+    return invitation;
   }
 
   async getInvitationOrFail(
     invitationId: string,
-    options?: FindOneOptions<Invitation>
+    options?: { with?: Record<string, boolean | object> }
   ): Promise<IInvitation | never> {
-    const invitation = await this.invitationRepository.findOne({
-      ...options,
-      where: {
-        ...options?.where,
-        id: invitationId,
-      },
+    const invitation = await this.db.query.invitations.findFirst({
+      where: eq(invitations.id, invitationId),
+      with: options?.with,
     });
     if (!invitation)
       throw new EntityNotFoundException(
         `Invitation with ID ${invitationId} can not be found!`,
         LogContext.COMMUNITY
       );
-    return invitation;
+    return invitation as unknown as IInvitation;
   }
 
   async getInvitationsOrFail(
-    invitationIds: string[],
-    options?: FindOptionsWhere<Invitation>
+    invitationIds: string[]
   ): Promise<IInvitation[] | never> {
-    const invitations = await this.invitationRepository.findBy({
-      ...options,
-      id: In(invitationIds),
+    const result = await this.db.query.invitations.findMany({
+      where: inArray(invitations.id, invitationIds),
     });
 
-    if (!invitations || invitationIds.length !== invitations.length)
+    if (!result || invitationIds.length !== result.length)
       throw new EntityNotFoundException(
         `Some invitations couldn't be found with these Ids:${JSON.stringify(invitationIds)}`,
         LogContext.COMMUNITY
       );
-    return invitations;
+    return result as unknown as IInvitation[];
   }
 
   async save(invitation: IInvitation): Promise<IInvitation> {
-    return await this.invitationRepository.save(invitation);
+    if (invitation.id) {
+      const [updated] = await this.db
+        .update(invitations)
+        .set({
+          invitedContributorID: invitation.invitedContributorID,
+          createdBy: invitation.createdBy,
+          welcomeMessage: invitation.welcomeMessage ?? null,
+          invitedToParent: invitation.invitedToParent,
+          contributorType: invitation.contributorType,
+          extraRoles: invitation.extraRoles,
+          lifecycleId: invitation.lifecycle?.id ?? null,
+          roleSetId: invitation.roleSet?.id ?? null,
+          authorizationId: invitation.authorization?.id ?? null,
+        })
+        .where(eq(invitations.id, invitation.id))
+        .returning();
+      return { ...invitation, ...updated } as unknown as IInvitation;
+    }
+    const [inserted] = await this.db
+      .insert(invitations)
+      .values({
+        invitedContributorID: invitation.invitedContributorID,
+        createdBy: invitation.createdBy,
+        welcomeMessage: invitation.welcomeMessage ?? null,
+        invitedToParent: invitation.invitedToParent,
+        contributorType: invitation.contributorType,
+        extraRoles: invitation.extraRoles,
+        lifecycleId: invitation.lifecycle?.id ?? null,
+        roleSetId: invitation.roleSet?.id ?? null,
+        authorizationId: invitation.authorization?.id ?? null,
+      })
+      .returning();
+    return { ...invitation, ...inserted } as unknown as IInvitation;
   }
 
   async getLifecycleState(invitationID: string): Promise<string> {
@@ -195,15 +216,15 @@ export class InvitationService {
     contributorID: string,
     roleSetID: string
   ): Promise<IInvitation[]> {
-    const existingInvitations = await this.invitationRepository.find({
-      where: {
-        invitedContributorID: contributorID,
-        roleSet: { id: roleSetID },
-      },
-      relations: { roleSet: true },
+    const existingInvitations = await this.db.query.invitations.findMany({
+      where: and(
+        eq(invitations.invitedContributorID, contributorID),
+        eq(invitations.roleSetId, roleSetID)
+      ),
+      with: { roleSet: true },
     });
 
-    if (existingInvitations.length > 0) return existingInvitations;
+    if (existingInvitations.length > 0) return existingInvitations as unknown as IInvitation[];
     return [];
   }
 
@@ -211,32 +232,26 @@ export class InvitationService {
     contributorID: string,
     states: string[] = []
   ): Promise<IInvitation[]> {
-    const findOpts: FindManyOptions<Invitation> = {
-      relations: { roleSet: true },
-      where: { invitedContributorID: contributorID },
-    };
+    const withRelations: Record<string, boolean> = { roleSet: true };
 
     if (states.length) {
-      findOpts.relations = {
-        ...findOpts.relations,
-        lifecycle: true,
-      };
-      findOpts.select = {
-        lifecycle: {
-          machineState: true,
-        },
-      };
+      withRelations.lifecycle = true;
     }
 
-    const invitations = await this.invitationRepository.find(findOpts);
+    const result = await this.db.query.invitations.findMany({
+      where: eq(invitations.invitedContributorID, contributorID),
+      with: withRelations as any,
+    });
+
+    const typedResult = result as unknown as IInvitation[];
 
     if (states.length) {
-      return asyncFilter(invitations, async app =>
+      return asyncFilter(typedResult, async app =>
         states.includes(await this.getLifecycleState(app.id))
       );
     }
 
-    return invitations;
+    return typedResult;
   }
 
   async isFinalizedInvitation(invitationID: string): Promise<boolean> {

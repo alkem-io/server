@@ -4,12 +4,13 @@ import { AgentInfoCacheService } from '@core/authentication.agent.info/agent.inf
 import { User } from '@domain/community/user/user.entity';
 import { UserService } from '@domain/community/user/user.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
 import { Identity } from '@ory/kratos-client';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { OryDefaultIdentitySchema } from '@services/infrastructure/kratos/types/ory.default.identity.schema';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager } from 'typeorm';
+import { DRIZZLE, type DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { users } from '@domain/community/user/user.schema';
+import { asc } from 'drizzle-orm';
 import { AdminAuthenticationIDBackfillResult } from './dto/admin.authentication-id-backfill.result';
 
 @Injectable()
@@ -20,8 +21,8 @@ export class AdminAuthenticationIDBackfillService {
     private readonly userService: UserService,
     private readonly kratosService: KratosService,
     private readonly agentInfoCacheService: AgentInfoCacheService,
-    @InjectEntityManager('default')
-    private readonly entityManager: EntityManager,
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -93,12 +94,12 @@ export class AdminAuthenticationIDBackfillService {
   }
 
   private async fetchBatch(offset: number): Promise<User[]> {
-    return await this.entityManager
-      .createQueryBuilder(User, 'user')
-      .orderBy('user.rowId', 'ASC')
-      .skip(offset)
-      .take(AdminAuthenticationIDBackfillService.DEFAULT_BATCH_SIZE)
-      .getMany();
+    const results = await this.db.query.users.findMany({
+      orderBy: [asc(users.rowId)],
+      offset,
+      limit: AdminAuthenticationIDBackfillService.DEFAULT_BATCH_SIZE,
+    });
+    return results as unknown as User[];
   }
 
   private async processBatch(

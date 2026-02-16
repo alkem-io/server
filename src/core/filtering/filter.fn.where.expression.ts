@@ -1,4 +1,4 @@
-import { ILike, WhereExpressionBuilder } from 'typeorm';
+import { ILike, WhereExpressionBuilder } from '@core/typeorm-compat.types';
 
 /***
  * Applies filtering using the where clause builder of an already existing query.

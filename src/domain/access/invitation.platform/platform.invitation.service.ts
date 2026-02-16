@@ -7,19 +7,21 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { RoleSetMembershipException } from '@common/exceptions/role.set.membership.exception';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IUser } from '@domain/community/user/user.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { and, eq } from 'drizzle-orm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
 import { IRoleSet } from '../role-set/role.set.interface';
 import { CreatePlatformInvitationInput } from './dto/platform.invitation.dto.create';
 import { DeletePlatformInvitationInput } from './dto/platform.invitation.dto.delete';
 import { PlatformInvitation } from './platform.invitation.entity';
 import { IPlatformInvitation } from './platform.invitation.interface';
+import { platformInvitations } from './platform.invitation.schema';
 
 @Injectable()
 export class PlatformInvitationService {
@@ -30,8 +32,7 @@ export class PlatformInvitationService {
 
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    @InjectRepository(PlatformInvitation)
-    private platformInvitationRepository: Repository<PlatformInvitation>,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     private userLookupService: UserLookupService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -63,7 +64,7 @@ export class PlatformInvitationService {
       AuthorizationPolicyType.INVITATION
     );
 
-    return await this.platformInvitationRepository.save(platformInvitation);
+    return await this.save(platformInvitation);
   }
 
   async deletePlatformInvitation(
@@ -78,36 +79,66 @@ export class PlatformInvitationService {
         platformInvitation.authorization
       );
 
-    const result = await this.platformInvitationRepository.remove(
-      platformInvitation as PlatformInvitation
-    );
-    result.id = platformInvitationID;
-    return result;
+    await this.db
+      .delete(platformInvitations)
+      .where(eq(platformInvitations.id, platformInvitationID));
+    return platformInvitation;
   }
 
   async getPlatformInvitationOrFail(
     platformInvitationId: string,
-    options?: FindOneOptions<PlatformInvitation>
+    options?: { with?: Record<string, boolean | object> }
   ): Promise<PlatformInvitation | never> {
-    const platformInvitation = await this.platformInvitationRepository.findOne({
-      ...options,
-      where: {
-        ...options?.where,
-        id: platformInvitationId,
-      },
+    const platformInvitation = await this.db.query.platformInvitations.findFirst({
+      where: eq(platformInvitations.id, platformInvitationId),
+      with: options?.with,
     });
     if (!platformInvitation)
       throw new EntityNotFoundException(
         `PlatformInvitation with ID ${platformInvitationId} can not be found!`,
         LogContext.COMMUNITY
       );
-    return platformInvitation;
+    return platformInvitation as unknown as PlatformInvitation;
   }
 
   async save(
     platformInvitation: IPlatformInvitation
   ): Promise<IPlatformInvitation> {
-    return await this.platformInvitationRepository.save(platformInvitation);
+    if (platformInvitation.id) {
+      const [updated] = await this.db
+        .update(platformInvitations)
+        .set({
+          email: platformInvitation.email,
+          firstName: platformInvitation.firstName ?? null,
+          lastName: platformInvitation.lastName ?? null,
+          createdBy: platformInvitation.createdBy,
+          welcomeMessage: platformInvitation.welcomeMessage ?? null,
+          profileCreated: platformInvitation.profileCreated,
+          roleSetInvitedToParent: platformInvitation.roleSetInvitedToParent,
+          roleSetExtraRoles: platformInvitation.roleSetExtraRoles,
+          roleSetId: platformInvitation.roleSet?.id ?? null,
+          authorizationId: platformInvitation.authorization?.id ?? null,
+        })
+        .where(eq(platformInvitations.id, platformInvitation.id))
+        .returning();
+      return { ...platformInvitation, ...updated } as unknown as IPlatformInvitation;
+    }
+    const [inserted] = await this.db
+      .insert(platformInvitations)
+      .values({
+        email: platformInvitation.email,
+        firstName: platformInvitation.firstName ?? null,
+        lastName: platformInvitation.lastName ?? null,
+        createdBy: platformInvitation.createdBy,
+        welcomeMessage: platformInvitation.welcomeMessage ?? null,
+        profileCreated: platformInvitation.profileCreated,
+        roleSetInvitedToParent: platformInvitation.roleSetInvitedToParent,
+        roleSetExtraRoles: platformInvitation.roleSetExtraRoles,
+        roleSetId: platformInvitation.roleSet?.id ?? null,
+        authorizationId: platformInvitation.authorization?.id ?? null,
+      })
+      .returning();
+    return { ...platformInvitation, ...inserted } as unknown as IPlatformInvitation;
   }
 
   async recordProfileCreated(
@@ -128,13 +159,13 @@ export class PlatformInvitationService {
     email: string
   ): Promise<IPlatformInvitation[]> {
     const existingPlatformInvitations =
-      await this.platformInvitationRepository.find({
-        where: { email: email.toLowerCase() },
-        relations: { roleSet: true },
+      await this.db.query.platformInvitations.findMany({
+        where: eq(platformInvitations.email, email.toLowerCase()),
+        with: { roleSet: true },
       });
 
     if (existingPlatformInvitations.length > 0)
-      return existingPlatformInvitations;
+      return existingPlatformInvitations as unknown as IPlatformInvitation[];
     return [];
   }
 
@@ -143,14 +174,12 @@ export class PlatformInvitationService {
     roleSetID: string
   ): Promise<IPlatformInvitation | undefined> {
     const existingPlatformInvitations =
-      await this.platformInvitationRepository.find({
-        where: {
-          email: email.toLowerCase(),
-          roleSet: {
-            id: roleSetID,
-          },
-        },
-        relations: { roleSet: true },
+      await this.db.query.platformInvitations.findMany({
+        where: and(
+          eq(platformInvitations.email, email.toLowerCase()),
+          eq(platformInvitations.roleSetId, roleSetID)
+        ),
+        with: { roleSet: true },
       });
 
     if (existingPlatformInvitations.length > 1) {
@@ -160,7 +189,7 @@ export class PlatformInvitationService {
       );
     }
     if (existingPlatformInvitations.length === 1) {
-      return existingPlatformInvitations[0];
+      return existingPlatformInvitations[0] as unknown as IPlatformInvitation;
     }
     return undefined;
   }

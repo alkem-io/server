@@ -1,17 +1,18 @@
 import { DataLoaderInitError } from '@common/exceptions/data-loader';
-import { Injectable } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
-import { Agent, IAgent } from '@src/domain/agent';
-import { EntityManager } from 'typeorm';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { IAgent } from '@src/domain/agent';
+import { Inject, Injectable } from '@nestjs/common';
 import { createTypedRelationDataLoader } from '../../utils';
+import { getTableName } from '../../utils/tableNameMapping';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../base';
 
 @Injectable()
 export class AgentLoaderCreator implements DataLoaderCreator<IAgent> {
-  constructor(@InjectEntityManager() private manager: EntityManager) {}
+  constructor(@Inject(DRIZZLE) private readonly db: DrizzleDb) {}
 
   create(
-    options?: DataLoaderCreatorOptions<IAgent, { id: string; agent?: Agent }>
+    options?: DataLoaderCreatorOptions<IAgent, { id: string; agent?: IAgent }>
   ) {
     if (!options?.parentClassRef) {
       throw new DataLoaderInitError(
@@ -19,9 +20,11 @@ export class AgentLoaderCreator implements DataLoaderCreator<IAgent> {
       );
     }
 
+    const tableName = getTableName(options.parentClassRef.name);
+
     return createTypedRelationDataLoader(
-      this.manager,
-      options.parentClassRef,
+      this.db,
+      tableName,
       {
         agent: true,
       },

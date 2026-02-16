@@ -3,119 +3,186 @@ import {
   EntityNotFoundException,
   EntityNotInitializedException,
 } from '@common/exceptions';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { ICredential } from '@domain/agent/credential/credential.interface';
 import { CredentialsSearchInput } from '@domain/agent/credential/dto/credentials.dto.search';
 import { Inject, LoggerService } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
 import { isUUID } from 'class-validator';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager, FindManyOptions, FindOneOptions, In } from 'typeorm';
-import { User } from '../user/user.entity';
+import { eq, inArray, and, sql } from 'drizzle-orm';
+import { users } from '../user/user.schema';
+import { credentials } from '@domain/agent/credential/credential.schema';
+import { agents } from '@domain/agent/agent/agent.schema';
 import { IUser } from '../user/user.interface';
+
+type UserFindOptions = {
+  loadEagerRelations?: boolean;
+  with?: {
+    agent?: boolean | { credentials?: boolean; authorization?: boolean };
+    profile?: boolean | { authorization?: boolean };
+    authorization?: boolean;
+    settings?: boolean | { authorization?: boolean };
+    storageAggregator?: boolean | { authorization?: boolean; directStorage?: boolean | { authorization?: boolean } };
+  };
+  select?: any;
+};
 
 export class UserLookupService {
   constructor(
-    @InjectEntityManager('default')
-    private entityManager: EntityManager,
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
 
+  private buildWithClause(options?: UserFindOptions): Record<string, any> {
+    const withClause: any = {};
+    if (options?.with) {
+      if (options.with.authorization) withClause.authorization = true;
+      if (options.with.profile) {
+        if (typeof options.with.profile === 'object') {
+          const profileWith: any = {};
+          if (options.with.profile.authorization) profileWith.authorization = true;
+          withClause.profile = Object.keys(profileWith).length > 0 ? { with: profileWith } : true;
+        } else {
+          withClause.profile = true;
+        }
+      }
+      if (options.with.agent) {
+        if (typeof options.with.agent === 'object') {
+          const agentWith: any = {};
+          if (options.with.agent.credentials) agentWith.credentials = true;
+          if (options.with.agent.authorization) agentWith.authorization = true;
+          withClause.agent = Object.keys(agentWith).length > 0 ? { with: agentWith } : true;
+        } else {
+          withClause.agent = true;
+        }
+      }
+      if (options.with.settings) {
+        if (typeof options.with.settings === 'object') {
+          const settingsWith: any = {};
+          if (options.with.settings.authorization) settingsWith.authorization = true;
+          withClause.settings = Object.keys(settingsWith).length > 0 ? { with: settingsWith } : true;
+        } else {
+          withClause.settings = true;
+        }
+      }
+      if (options.with.storageAggregator) {
+        if (typeof options.with.storageAggregator === 'object') {
+          const saWith: any = {};
+          if (options.with.storageAggregator.authorization) saWith.authorization = true;
+          if (options.with.storageAggregator.directStorage) {
+            if (typeof options.with.storageAggregator.directStorage === 'object') {
+              const dsWith: any = {};
+              if (options.with.storageAggregator.directStorage.authorization) dsWith.authorization = true;
+              saWith.directStorage = Object.keys(dsWith).length > 0 ? { with: dsWith } : true;
+            } else {
+              saWith.directStorage = true;
+            }
+          }
+          withClause.storageAggregator = Object.keys(saWith).length > 0 ? { with: saWith } : true;
+        } else {
+          withClause.storageAggregator = true;
+        }
+      }
+    }
+    return withClause;
+  }
+
   public async getUserByUUID(
     userID: string,
-    options?: FindOneOptions<User> | undefined
+    options?: UserFindOptions | undefined
   ): Promise<IUser | null> {
     if (!isUUID(userID)) {
       return null;
     }
 
-    const user: IUser | null = await this.entityManager.findOne(User, {
-      where: {
-        id: userID,
-      },
-      ...options,
+    const withClause = this.buildWithClause(options);
+
+    const user = await this.db.query.users.findFirst({
+      where: eq(users.id, userID),
+      ...(Object.keys(withClause).length > 0 ? { with: withClause } : {}),
     });
 
-    return user;
+    return (user as unknown as IUser) ?? null;
   }
 
   public async getUserByAgentId(
     agentID: string,
-    options?: FindOneOptions<User> | undefined
+    options?: UserFindOptions | undefined
   ): Promise<IUser | null> {
-    const user: IUser | null = await this.entityManager.findOne(User, {
-      where: {
-        agent: {
-          id: agentID,
-        },
-      },
-      relations: {
-        agent: true,
-        ...options?.relations,
-      },
-      ...options,
+    const withClause = this.buildWithClause(options);
+    // Always load agent for agent-based lookups
+    if (!withClause.agent) {
+      withClause.agent = true;
+    }
+
+    const user = await this.db.query.users.findFirst({
+      where: eq(users.agentId, agentID),
+      with: withClause,
     });
 
-    return user;
+    return (user as unknown as IUser) ?? null;
   }
 
   public async getUsersByUUID(
     userIDs: string[],
-    options?: FindManyOptions<User> | undefined
+    options?: UserFindOptions | undefined
   ): Promise<IUser[]> {
     const validUUIDs = userIDs.filter(id => isUUID(id));
     if (validUUIDs.length === 0) {
       return [];
     }
 
-    const users: IUser[] = await this.entityManager.find(User, {
-      where: {
-        id: In(validUUIDs),
-      },
-      ...options,
+    const withClause = this.buildWithClause(options);
+
+    const foundUsers = await this.db.query.users.findMany({
+      where: inArray(users.id, validUUIDs),
+      ...(Object.keys(withClause).length > 0 ? { with: withClause } : {}),
     });
 
-    return users;
+    return foundUsers as unknown as IUser[];
   }
 
   public async getUserByEmail(
     email: string,
-    options?: FindOneOptions<User> | undefined
+    options?: UserFindOptions | undefined
   ): Promise<IUser | null> {
-    const user: IUser | null = await this.entityManager.findOne(User, {
-      where: {
-        email: email.toLowerCase(),
-      },
-      ...options,
+    const withClause = this.buildWithClause(options);
+
+    const user = await this.db.query.users.findFirst({
+      where: eq(users.email, email.toLowerCase()),
+      ...(Object.keys(withClause).length > 0 ? { with: withClause } : {}),
     });
 
-    return user;
+    return (user as unknown as IUser) ?? null;
   }
 
   public async getUserByAuthenticationID(
     authenticationID: string,
-    options?: FindOneOptions<User> | undefined
+    options?: UserFindOptions | undefined
   ): Promise<IUser | null> {
-    const user: IUser | null = await this.entityManager.findOne(User, {
-      where: {
-        authenticationID: authenticationID,
-      },
-      ...options,
+    const withClause = this.buildWithClause(options);
+
+    const user = await this.db.query.users.findFirst({
+      where: eq(users.authenticationID, authenticationID),
+      ...(Object.keys(withClause).length > 0 ? { with: withClause } : {}),
     });
 
-    return user;
+    return (user as unknown as IUser) ?? null;
   }
 
   public async getUserByNameIdOrFail(
     userNameID: string,
-    options?: FindOneOptions<User> | undefined
+    options?: UserFindOptions | undefined
   ): Promise<IUser> {
-    const user: IUser | null = await this.entityManager.findOne(User, {
-      where: {
-        nameID: userNameID,
-      },
-      ...options,
+    const withClause = this.buildWithClause(options);
+
+    const user = await this.db.query.users.findFirst({
+      where: eq(users.nameID, userNameID),
+      ...(Object.keys(withClause).length > 0 ? { with: withClause } : {}),
     });
     if (!user) {
       throw new EntityNotFoundException(
@@ -123,7 +190,7 @@ export class UserLookupService {
         LogContext.COMMUNITY
       );
     }
-    return user;
+    return user as unknown as IUser;
   }
 
   async isRegisteredUser(email: string): Promise<boolean> {
@@ -134,7 +201,7 @@ export class UserLookupService {
 
   public async getUserOrFail(
     userID: string,
-    options?: FindOneOptions<User> | undefined
+    options?: UserFindOptions | undefined
   ): Promise<IUser> {
     const user = await this.getUserByUUID(userID, options);
     if (!user) {
@@ -149,7 +216,7 @@ export class UserLookupService {
   async usersWithCredential(
     credentialCriteria: CredentialsSearchInput,
     limit?: number,
-    options?: FindManyOptions<User>
+    options?: UserFindOptions
   ): Promise<IUser[]> {
     return this.usersWithCredentials([credentialCriteria], limit, options);
   }
@@ -157,49 +224,51 @@ export class UserLookupService {
   async usersWithCredentials(
     credentialCriteriaArray: CredentialsSearchInput[],
     limit?: number,
-    options?: FindManyOptions<User>
+    _options?: UserFindOptions
   ): Promise<IUser[]> {
     if (credentialCriteriaArray.length === 0) {
       return [];
     }
 
-    // Build OR conditions for multiple credential criteria
-    const whereConditions = credentialCriteriaArray.map(criteria => ({
-      agent: {
-        credentials: {
-          type: criteria.type,
-          resourceID: criteria.resourceID || '',
-        },
-      },
-    }));
+    // Build OR conditions using SQL for credential-based lookups
+    const conditions = credentialCriteriaArray.map(criteria => {
+      const credResourceID = criteria.resourceID || '';
+      return and(
+        eq(credentials.type, criteria.type),
+        eq(credentials.resourceID, credResourceID)
+      );
+    });
 
-    const findOptions: FindManyOptions<User> = {
-      where: whereConditions,
-      relations: {
-        agent: {
-          credentials: true,
-        },
-        ...options?.relations,
-      },
-      take: limit,
-      ...options,
-    };
+    // Use a join-based query to find users matching credential criteria
+    const condition = conditions.length === 1
+      ? conditions[0]
+      : sql`(${sql.join(conditions.map(c => sql`(${c})`), sql` OR `)})`;
 
-    // Merge relations properly to avoid overriding the agent.credentials relation
-    if (options?.relations) {
-      findOptions.relations = {
-        ...findOptions.relations,
-        ...options.relations,
-        agent: {
-          credentials: true,
-          ...(options.relations as any)?.agent,
-        },
-      };
+    const matchingUserIds = await this.db
+      .selectDistinct({ userId: users.id })
+      .from(users)
+      .innerJoin(agents, eq(users.agentId, agents.id))
+      .innerJoin(credentials, eq(agents.id, credentials.agentId))
+      .where(condition!)
+      .limit(limit ?? 10000);
+
+    if (matchingUserIds.length === 0) {
+      return [];
     }
 
-    const users = await this.entityManager.find(User, findOptions);
+    const userIds = matchingUserIds.map(r => r.userId);
+    const foundUsers = await this.db.query.users.findMany({
+      where: inArray(users.id, userIds),
+      with: {
+        agent: {
+          with: {
+            credentials: true,
+          },
+        },
+      },
+    });
 
-    return users;
+    return foundUsers as unknown as IUser[];
   }
 
   public async countUsersWithCredentials(
@@ -207,36 +276,36 @@ export class UserLookupService {
   ): Promise<number> {
     const credResourceID = credentialCriteria.resourceID || '';
 
-    const usersCount = await this.entityManager.count(User, {
-      where: {
-        agent: {
-          credentials: {
-            type: credentialCriteria.type,
-            resourceID: credResourceID,
-          },
-        },
-      },
-    });
-    return usersCount;
+    const result = await this.db
+      .select({ count: sql<number>`count(distinct ${users.id})` })
+      .from(users)
+      .innerJoin(agents, eq(users.agentId, agents.id))
+      .innerJoin(credentials, eq(agents.id, credentials.agentId))
+      .where(
+        and(
+          eq(credentials.type, credentialCriteria.type),
+          eq(credentials.resourceID, credResourceID)
+        )
+      );
+
+    return Number(result[0]?.count ?? 0);
   }
 
   public async getUsersWithAgent(ids: string[]): Promise<IUser[]> {
-    const users = await this.entityManager.find(User, {
-      where: {
-        id: In(ids),
-      },
-      relations: {
+    const foundUsers = await this.db.query.users.findMany({
+      where: inArray(users.id, ids),
+      with: {
         agent: true,
       },
     });
-    return users;
+    return foundUsers as unknown as IUser[];
   }
 
   public async getUserAndCredentials(
     userID: string
   ): Promise<{ user: IUser; credentials: ICredential[] }> {
     const user = await this.getUserOrFail(userID, {
-      relations: { agent: true },
+      with: { agent: { credentials: true } },
     });
 
     if (!user.agent || !user.agent.credentials) {
@@ -252,7 +321,7 @@ export class UserLookupService {
     userID: string
   ): Promise<{ user: IUser; agent: IAgent }> {
     const user = await this.getUserOrFail(userID, {
-      relations: { agent: true },
+      with: { agent: true },
     });
 
     if (!user.agent) {
@@ -266,7 +335,7 @@ export class UserLookupService {
 
   async getUserWithAgent(userID: string): Promise<IUser> {
     const user = await this.getUserOrFail(userID, {
-      relations: {
+      with: {
         agent: {
           credentials: true,
         },

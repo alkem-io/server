@@ -12,14 +12,16 @@ import { VirtualContributorService } from '@domain/community/virtual-contributor
 import { Space } from '@domain/space/space/space.entity';
 import { SpaceService } from '@domain/space/space/space.service';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { InjectEntityManager } from '@nestjs/typeorm';
+import { Inject } from '@nestjs/common';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { NotificationInputPlatformGlobalRoleChange } from '@services/adapters/notification-adapter/dto/platform/notification.dto.input.platform.global.role.change';
 import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
 import { AuthResetService } from '@services/auth-reset/publisher/auth-reset.service';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentUser, Profiling } from '@src/common/decorators';
-import { EntityManager } from 'typeorm';
+import { DRIZZLE, type DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { eq } from 'drizzle-orm';
+import { spaces } from '@domain/space/space/space.schema';
 import { AdminAuthorizationService } from './admin.authorization.service';
 import { GrantAuthorizationCredentialInput } from './dto/authorization.dto.credential.grant';
 import { GrantOrganizationAuthorizationCredentialInput } from './dto/authorization.dto.credential.grant.organization';
@@ -39,8 +41,8 @@ export class AdminAuthorizationResolverMutations {
     private adminAuthorizationService: AdminAuthorizationService,
     private authResetService: AuthResetService,
     private virtualContributorService: VirtualContributorService,
-    @InjectEntityManager('default')
-    private entityManager: EntityManager,
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb,
     private spaceService: SpaceService
   ) {
     this.authorizationGlobalAdminPolicy =
@@ -185,13 +187,11 @@ export class AdminAuthorizationResolverMutations {
       `reset platformRolesAccess on all Spaces: ${agentInfo.email}`
     );
 
-    const spaces = await this.entityManager.find(Space, {
-      where: {
-        level: SpaceLevel.L0,
-      },
+    const spaceResults = await this.db.query.spaces.findMany({
+      where: eq(spaces.level, SpaceLevel.L0),
     });
-    for (const space of spaces) {
-      await this.spaceService.updatePlatformRolesAccessRecursively(space);
+    for (const space of spaceResults) {
+      await this.spaceService.updatePlatformRolesAccessRecursively(space as unknown as Space);
     }
     return true;
   }

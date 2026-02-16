@@ -1,20 +1,22 @@
 import { LogContext } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { eq } from 'drizzle-orm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
 import { CreateLicensePlanInput } from './dto/license.plan.dto.create';
 import { DeleteLicensePlanInput } from './dto/license.plan.dto.delete';
 import { UpdateLicensePlanInput } from './dto/license.plan.dto.update';
 import { LicensePlan } from './license.plan.entity';
+import { licensePlans } from './license.plan.schema';
 import { ILicensePlan } from './license.plan.interface';
 
 @Injectable()
 export class LicensePlanService {
   constructor(
-    @InjectRepository(LicensePlan)
-    private licensePlanRepository: Repository<LicensePlan>,
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -41,7 +43,15 @@ export class LicensePlanService {
   }
 
   public async save(licensePlan: ILicensePlan): Promise<ILicensePlan> {
-    return await this.licensePlanRepository.save(licensePlan);
+    const [saved] = await this.db
+      .insert(licensePlans)
+      .values(licensePlan as any)
+      .onConflictDoUpdate({
+        target: licensePlans.id,
+        set: licensePlan as any,
+      })
+      .returning();
+    return saved as unknown as ILicensePlan;
   }
 
   public async update(
@@ -49,7 +59,7 @@ export class LicensePlanService {
   ): Promise<ILicensePlan> {
     const licensePlan = await this.getLicensePlanOrFail(licensePlanData.ID);
 
-    return await this.licensePlanRepository.save(licensePlan);
+    return await this.save(licensePlan);
   }
 
   public async deleteLicensePlan(
@@ -57,20 +67,26 @@ export class LicensePlanService {
   ): Promise<ILicensePlan> {
     const licensePlan = await this.getLicensePlanOrFail(deleteData.ID);
 
-    const result = await this.licensePlanRepository.remove(
-      licensePlan as LicensePlan
-    );
-    result.id = deleteData.ID;
-    return result;
+    await this.db
+      .delete(licensePlans)
+      .where(eq(licensePlans.id, deleteData.ID));
+    licensePlan.id = deleteData.ID;
+    return licensePlan;
   }
 
   public async getLicensePlanOrFail(
     licensePlanID: string,
-    options?: FindOneOptions<LicensePlan>
+    options?: { relations?: Record<string, boolean> }
   ): Promise<ILicensePlan | never> {
-    const licensePlan = await this.licensePlanRepository.findOne({
-      where: { id: licensePlanID },
-      ...options,
+    const with_ = options?.relations
+      ? Object.fromEntries(
+          Object.entries(options.relations).map(([key, value]) => [key, value])
+        )
+      : undefined;
+
+    const licensePlan = await this.db.query.licensePlans.findFirst({
+      where: eq(licensePlans.id, licensePlanID),
+      with: with_ as any,
     });
 
     if (!licensePlan) {
@@ -79,12 +95,12 @@ export class LicensePlanService {
         LogContext.LICENSE
       );
     }
-    return licensePlan;
+    return licensePlan as unknown as ILicensePlan;
   }
 
   public async licensePlanByNameExists(name: string): Promise<boolean> {
-    const licensePlan = await this.licensePlanRepository.findOne({
-      where: { name },
+    const licensePlan = await this.db.query.licensePlans.findFirst({
+      where: eq(licensePlans.name, name),
     });
 
     if (!licensePlan) {

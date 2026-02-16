@@ -27,13 +27,8 @@ export class RoomControllerService {
    * @throws {EntityNotFoundException} If the room does not have a callout or post.
    */
   public async getRoomEntityOrFail(roomID: string): Promise<Callout | Post> {
-    const room = await this.roomLookupService.getRoomOrFail(roomID, {
-      relations: {
-        callout: { framing: { profile: true } },
-        post: { profile: true },
-      },
-    });
-    const entity = room.callout || room.post;
+    const room = await this.roomLookupService.getRoomOrFail(roomID);
+    const entity = (room as any).callout || (room as any).post;
     if (!entity) {
       throw new EntityNotFoundException(
         'Room with ID does not have a callout or post.',

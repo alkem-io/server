@@ -1,23 +1,23 @@
 import { LogContext } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
+import { eq } from 'drizzle-orm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager, FindOneOptions } from 'typeorm';
-import { TemplateContentSpace } from '../template.content.space.entity';
+import { templateContentSpaces } from '../template.content.space.schema';
 import { ITemplateContentSpace } from '../template.content.space.interface';
 
 @Injectable()
 export class TemplateContentSpaceLookupService {
   constructor(
-    @InjectEntityManager('default')
-    private entityManager: EntityManager,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   public async getTemplateContentSpaceOrFail(
     templateContentSpaceID: string,
-    options?: FindOneOptions<TemplateContentSpace>
+    options?: { relations?: Record<string, any> }
   ): Promise<ITemplateContentSpace | never> {
     const space = await this.getTemplateContentSpace(
       templateContentSpaceID,
@@ -34,30 +34,23 @@ export class TemplateContentSpaceLookupService {
 
   private async getTemplateContentSpace(
     spaceID: string,
-    options?: FindOneOptions<TemplateContentSpace>
+    options?: { relations?: Record<string, any> }
   ): Promise<ITemplateContentSpace | null> {
-    const space: ITemplateContentSpace | null =
-      await this.entityManager.findOne(TemplateContentSpace, {
-        ...options,
-        where: { ...options?.where, id: spaceID },
-      });
-    return space;
+    const space = await this.db.query.templateContentSpaces.findFirst({
+      where: eq(templateContentSpaces.id, spaceID),
+      with: options?.relations,
+    });
+    return (space as unknown as ITemplateContentSpace) ?? null;
   }
 
   public async getTemplateContentSpaceForSpaceAbout(
     spaceAboutID: string,
-    options?: FindOneOptions<TemplateContentSpace>
+    options?: { relations?: Record<string, any> }
   ): Promise<ITemplateContentSpace | null> {
-    const space: ITemplateContentSpace | null =
-      await this.entityManager.findOne(TemplateContentSpace, {
-        ...options,
-        where: {
-          ...options?.where,
-          about: {
-            id: spaceAboutID,
-          },
-        },
-      });
-    return space;
+    const space = await this.db.query.templateContentSpaces.findFirst({
+      where: eq(templateContentSpaces.aboutId, spaceAboutID),
+      with: options?.relations,
+    });
+    return (space as unknown as ITemplateContentSpace) ?? null;
   }
 }

@@ -1,33 +1,40 @@
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { ILicensePlan } from '@platform/licensing/credential-based/license-plan/license.plan.interface';
 import { LicensePlanService } from '@platform/licensing/credential-based/license-plan/license.plan.service';
 import { ILicensePolicy } from '@platform/licensing/credential-based/license-policy/license.policy.interface';
+import { eq } from 'drizzle-orm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
 import { CreateLicensePlanOnLicensingFrameworkInput } from './dto/licensing.framework.dto.create.license.plan';
-import { LicensingFramework } from './licensing.framework.entity';
+import { licensingFrameworks } from './licensing.framework.schema';
 import { ILicensingFramework } from './licensing.framework.interface';
 
 @Injectable()
 export class LicensingFrameworkService {
   constructor(
     private licensePlanService: LicensePlanService,
-    @InjectRepository(LicensingFramework)
-    private licensingFrameworkRepository: Repository<LicensingFramework>,
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async getLicensingOrFail(
     licensingID: string,
-    options?: FindOneOptions<LicensingFramework>
+    options?: { relations?: Record<string, boolean> }
   ): Promise<ILicensingFramework> {
-    const licensing = await this.licensingFrameworkRepository.findOne({
-      where: { id: licensingID },
-      ...options,
+    const with_ = options?.relations
+      ? Object.fromEntries(
+          Object.entries(options.relations).map(([key, value]) => [key, value])
+        )
+      : undefined;
+
+    const licensing = await this.db.query.licensingFrameworks.findFirst({
+      where: eq(licensingFrameworks.id, licensingID),
+      with: with_ as any,
     });
 
     if (!licensing) {
@@ -36,29 +43,43 @@ export class LicensingFrameworkService {
         LogContext.LICENSE
       );
     }
-    return licensing;
+    return licensing as unknown as ILicensingFramework;
   }
 
   async getDefaultLicensingOrFail(
-    options?: FindOneOptions<LicensingFramework>
+    options?: { relations?: Record<string, boolean> }
   ): Promise<ILicensingFramework | never> {
-    const licensingFrameworks = await this.licensingFrameworkRepository.find({
-      ...options,
+    const with_ = options?.relations
+      ? Object.fromEntries(
+          Object.entries(options.relations).map(([key, value]) => [key, value])
+        )
+      : undefined;
+
+    const allFrameworks = await this.db.query.licensingFrameworks.findMany({
+      with: with_ as any,
     });
 
-    if (licensingFrameworks.length !== 1) {
+    if (allFrameworks.length !== 1) {
       throw new EntityNotFoundException(
         'Unable to retrieve the Default Licensing for the platform',
         LogContext.LICENSE
       );
     }
-    return licensingFrameworks[0];
+    return allFrameworks[0] as unknown as ILicensingFramework;
   }
 
   public async save(
     licensing: ILicensingFramework
   ): Promise<ILicensingFramework> {
-    return this.licensingFrameworkRepository.save(licensing);
+    const [saved] = await this.db
+      .insert(licensingFrameworks)
+      .values(licensing as any)
+      .onConflictDoUpdate({
+        target: licensingFrameworks.id,
+        set: licensing as any,
+      })
+      .returning();
+    return saved as unknown as ILicensingFramework;
   }
 
   public async getLicensePlansOrFail(
@@ -114,7 +135,7 @@ export class LicensingFrameworkService {
     const licensePlan =
       await this.licensePlanService.createLicensePlan(licensePlanData);
     licensing.plans.push(licensePlan);
-    await this.licensingFrameworkRepository.save(licensing);
+    await this.save(licensing);
 
     return licensePlan;
   }

@@ -5,9 +5,7 @@ import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innova
 import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
 import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.module';
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
-import { InnovationHub } from './innovation.hub.entity';
 import { InnovationHubResolverFields } from './innovation.hub.resolver.fields';
 import { InnovationHubResolverMutations } from './innovation.hub.resolver.mutations';
 import { InnovationHubService } from './innovation.hub.service';
@@ -20,7 +18,6 @@ import { InnovationHubService } from './innovation.hub.service';
     AuthorizationPolicyModule,
     AuthorizationModule,
     NamingModule,
-    TypeOrmModule.forFeature([InnovationHub]),
   ],
   providers: [
     InnovationHubService,

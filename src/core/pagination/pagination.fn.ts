@@ -1,5 +1,5 @@
 import { IBaseAlkemio } from '@src/domain/common/entity/base-entity';
-import { SelectQueryBuilder } from 'typeorm';
+import { SelectQueryBuilder } from '@core/typeorm-compat.types';
 import {
   getRelayStylePaginationResults,
   PaginationArgs,
@@ -23,7 +23,7 @@ export const getPaginationResults = async <
 
   return {
     total,
-    items: result.edges.map(x => x.node),
+    items: result.edges.map(x => x.node) as T[],
     pageInfo: result.pageInfo,
   };
 };

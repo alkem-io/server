@@ -67,7 +67,7 @@ export class MessagingResolverMutations {
     // Resolve current user's agent ID
     const currentUser = await this.userLookupService.getUserOrFail(
       agentInfo.userID,
-      { relations: { agent: true } }
+      { with: { agent: true } }
     );
     const callerAgentId = currentUser.agent.id;
 
@@ -82,14 +82,14 @@ export class MessagingResolverMutations {
       const vc =
         await this.virtualContributorLookupService.getVirtualContributorOrFail(
           conversationData.virtualContributorID,
-          { relations: { agent: true } }
+          { with: { agent: true } }
         );
       internalData.invitedAgentId = vc.agent.id;
     } else if (!conversationData.wellKnownVirtualContributor) {
       // User-to-user: resolve other user's agent ID
       const otherUser = await this.userLookupService.getUserOrFail(
         conversationData.userID,
-        { relations: { agent: true } }
+        { with: { agent: true } }
       );
       internalData.invitedAgentId = otherUser.agent.id;
     }
@@ -105,7 +105,7 @@ export class MessagingResolverMutations {
     const receivingUser = await this.userLookupService.getUserOrFail(
       receivingUserID,
       {
-        relations: {
+        with: {
           settings: true,
         },
       }

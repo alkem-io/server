@@ -1,9 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import {
   MockAuthResetService,
-  MockEntityManagerProvider,
   MockWinstonProvider,
 } from '@test/mocks';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
 import { MockTaskService } from '@test/mocks/task.service.mock';
 import { AuthResetService } from './auth-reset.service';
 
@@ -16,7 +16,7 @@ describe('AuthResetService', () => {
         AuthResetService,
         MockAuthResetService,
         MockTaskService,
-        MockEntityManagerProvider,
+        mockDrizzleProvider,
         MockWinstonProvider,
       ],
     }).compile();

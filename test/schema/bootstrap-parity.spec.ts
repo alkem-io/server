@@ -10,7 +10,6 @@ import { AppModule } from '@src/app.module';
 import { SchemaBootstrapModule } from '@src/schema-bootstrap/module.schema-bootstrap';
 import { Type } from '@nestjs/common';
 import { IS_SCHEMA_BOOTSTRAP } from '@common/constants';
-import { DataSource, EntityManager } from 'typeorm';
 import {
   DataSourceStubProvider,
   EntityManagerStubProvider,
@@ -43,9 +42,9 @@ async function captureSchema(
   // When testing AppModule, mock out heavy infrastructure to prevent leaks and speed up tests
   if (moduleRef === AppModule) {
     moduleBuilder
-      .overrideProvider(DataSource)
+      .overrideProvider('DataSource')
       .useValue(DataSourceStubProvider.useValue)
-      .overrideProvider(EntityManager)
+      .overrideProvider('EntityManager')
       .useValue(EntityManagerStubProvider.useValue)
       .overrideProvider('CACHE_MANAGER')
       .useValue(CacheStubProvider.useValue);

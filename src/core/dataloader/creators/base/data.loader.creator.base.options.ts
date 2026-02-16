@@ -1,6 +1,6 @@
 import { AuthorizationPrivilege } from '@common/enums';
 import { Type } from '@nestjs/common';
-import { FindOptionsSelect } from 'typeorm';
+import { FindOptionsSelect } from '@core/typeorm-compat.types';
 
 export interface DataLoaderCreatorBaseOptions<TParent, TResult> {
   /***

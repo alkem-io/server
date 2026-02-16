@@ -8,20 +8,22 @@ import {
   EntityNotInitializedException,
 } from '@common/exceptions';
 import { ForumDiscussionCategoryException } from '@common/exceptions/forum.discussion.category.exception';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IUser } from '@domain/community/user/user.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
+import { eq } from 'drizzle-orm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
 import { Discussion } from '../forum-discussion/discussion.entity';
 import { IDiscussion } from '../forum-discussion/discussion.interface';
 import { DiscussionService } from '../forum-discussion/discussion.service';
 import { ForumCreateDiscussionInput } from './dto/forum.dto.create.discussion';
 import { Forum } from './forum.entity';
+import { forums } from './forum.schema';
 import { IForum } from './forum.interface';
 
 @Injectable()
@@ -31,8 +33,8 @@ export class ForumService {
     private communicationAdapter: CommunicationAdapter,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
     private namingService: NamingService,
-    @InjectRepository(Forum)
-    private forumRepository: Repository<Forum>,
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -51,7 +53,15 @@ export class ForumService {
   }
 
   async save(forum: IForum): Promise<IForum> {
-    return await this.forumRepository.save(forum);
+    const [saved] = await this.db
+      .insert(forums)
+      .values(forum as any)
+      .onConflictDoUpdate({
+        target: forums.id,
+        set: forum as any,
+      })
+      .returning();
+    return saved as unknown as IForum;
   }
 
   async createDiscussion(
@@ -162,20 +172,24 @@ export class ForumService {
 
   async getForumOrFail(
     forumID: string,
-    options?: FindOneOptions<Forum>
+    options?: { relations?: Record<string, boolean> }
   ): Promise<IForum | never> {
-    const forum = await this.forumRepository.findOne({
-      where: {
-        id: forumID,
-      },
-      ...options,
+    const with_ = options?.relations
+      ? Object.fromEntries(
+          Object.entries(options.relations).map(([key, value]) => [key, value])
+        )
+      : undefined;
+
+    const forum = await this.db.query.forums.findFirst({
+      where: eq(forums.id, forumID),
+      with: with_ as any,
     });
     if (!forum)
       throw new EntityNotFoundException(
         `Unable to find Forum with ID: ${forumID}`,
         LogContext.PLATFORM_FORUM
       );
-    return forum;
+    return forum as unknown as IForum;
   }
 
   async removeForum(forumID: string): Promise<boolean> {
@@ -191,7 +205,7 @@ export class ForumService {
       });
     }
 
-    await this.forumRepository.remove(forum as Forum);
+    await this.db.delete(forums).where(eq(forums.id, forumID));
     return true;
   }
 
@@ -213,9 +227,7 @@ export class ForumService {
   }
 
   async getForumIDsUsed(): Promise<string[]> {
-    const forumMatches = await this.forumRepository
-      .createQueryBuilder('forum')
-      .getMany();
+    const forumMatches = await this.db.query.forums.findMany();
     const forumIDs: string[] = [];
     for (const forum of forumMatches) {
       forumIDs.push(forum.id);

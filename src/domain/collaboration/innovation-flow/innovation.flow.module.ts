@@ -4,10 +4,8 @@ import { ProfileModule } from '@domain/common/profile/profile.module';
 import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { TagsetTemplateModule } from '@domain/common/tagset-template/tagset.template.module';
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { CalloutsSetModule } from '../callouts-set/callouts.set.module';
 import { InnovationFlowStateModule } from '../innovation-flow-state/innovation.flow.state.module';
-import { InnovationFlow } from './innovation.flow.entity';
 import { InnovationFlowResolverFields } from './innovation.flow.resolver.fields';
 import { InnovationFlowResolverMutations } from './innovation.flow.resolver.mutations';
 import { InnovationFlowService } from './innovation.flow.service';
@@ -22,7 +20,6 @@ import { InnovationFlowAuthorizationService } from './innovation.flow.service.au
     ProfileModule,
     TagsetTemplateModule,
     TagsetModule,
-    TypeOrmModule.forFeature([InnovationFlow]),
   ],
   providers: [
     InnovationFlowService,
