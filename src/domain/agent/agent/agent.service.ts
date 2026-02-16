@@ -16,7 +16,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { AlkemioConfig } from '@src/types';
 import { Cache } from 'cache-manager';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { FindOneOptions, In, Repository } from 'typeorm';
 import { AgentInfoCacheService } from '../../../core/authentication.agent.info/agent.info.cache.service';
 import { CredentialService } from '../credential/credential.service';
 import { GrantCredentialToAgentInput } from './dto/agent.dto.credential.grant';
@@ -142,6 +142,69 @@ export class AgentService {
       }
     }
     return { agent: agent, credentials: agent.credentials };
+  }
+
+  /**
+   * Batch-load credentials for multiple agents using a single Redis mget + batched DB fallback.
+   * Returns a Map from agentID to its credentials array.
+   */
+  async getAgentCredentialsBatch(
+    agentIDs: string[]
+  ): Promise<Map<string, ICredential[]>> {
+    const result = new Map<string, ICredential[]>();
+    if (agentIDs.length === 0) return result;
+
+    // 1. Build cache keys and attempt mget
+    const cacheKeys = agentIDs.map(id => this.getAgentCacheKey(id));
+    let cached: (IAgent | undefined)[];
+    try {
+      const mget = this.cacheManager.store.mget;
+      cached = mget
+        ? await mget<IAgent>(...cacheKeys)
+        : await Promise.all(cacheKeys.map(k => this.cacheManager.get<IAgent>(k)));
+    } catch (error) {
+      this.logger.warn?.(
+        `Agent cache mget failed, treating as cache miss: ${error}`,
+        LogContext.AGENT
+      );
+      cached = new Array(agentIDs.length).fill(undefined);
+    }
+
+    // 2. Separate hits from misses
+    const missedIDs: string[] = [];
+    for (let i = 0; i < agentIDs.length; i++) {
+      const agent = cached[i];
+      if (agent?.credentials) {
+        result.set(agentIDs[i], agent.credentials);
+      } else {
+        missedIDs.push(agentIDs[i]);
+      }
+    }
+
+    if (missedIDs.length === 0) return result;
+
+    // 3. Batch DB load for cache misses
+    const agents = await this.agentRepository.find({
+      where: { id: In(missedIDs) },
+      relations: { credentials: true },
+    });
+
+    // 4. Populate result + warm cache
+    for (const agent of agents) {
+      if (agent.credentials) {
+        result.set(agent.id, agent.credentials);
+      }
+      await this.setAgentCache(agent);
+    }
+
+    // 5. For any IDs that weren't in DB either, set empty
+    for (const id of missedIDs) {
+      if (!result.has(id)) {
+        result.set(id, []);
+      }
+    }
+
+    return result;
   }
 
   /**
