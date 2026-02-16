@@ -1,7 +1,6 @@
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IAuthorizable } from '../entity/authorizable-entity';
-import { INameable } from '../entity/nameable-entity';
 import { IVisual } from '../visual';
 
 @ObjectType('MediaGallery')

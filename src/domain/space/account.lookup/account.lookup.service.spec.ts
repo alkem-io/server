@@ -1,99 +1,254 @@
+import { Organization } from '@domain/community/organization';
 import { User } from '@domain/community/user/user.entity';
-import { Organization } from '@domain/community/organization/organization.entity';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getEntityManagerToken } from '@nestjs/typeorm';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { type Mocked } from 'vitest';
 import { EntityManager } from 'typeorm';
+import { vi } from 'vitest';
+import { Account } from '../account/account.entity';
 import { IAccount } from '../account/account.interface';
 import { AccountLookupService } from './account.lookup.service';
 
-function makeAccount(id: string): IAccount {
-  return { id } as IAccount;
-}
-
 describe('AccountLookupService', () => {
   let service: AccountLookupService;
-  let entityManager: Mocked<EntityManager>;
+  let entityManager: EntityManager;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [AccountLookupService, MockWinstonProvider],
+      providers: [
+        AccountLookupService,
+        MockWinstonProvider,
+        {
+          provide: getEntityManagerToken('default'),
+          useValue: {
+            findOne: vi.fn(),
+          },
+        },
+      ],
     })
       .useMocker(defaultMockerFactory)
       .compile();
 
-    service = module.get<AccountLookupService>(AccountLookupService);
-    entityManager = module.get<EntityManager>(
-      getEntityManagerToken('default')
-    ) as Mocked<EntityManager>;
+    service = module.get(AccountLookupService);
+    entityManager = module.get(getEntityManagerToken('default'));
+  });
+
+  describe('getAccountOrFail', () => {
+    it('should return account when found', async () => {
+      const mockAccount = { id: 'account-1' } as IAccount;
+      vi.spyOn(entityManager, 'findOne').mockResolvedValue(mockAccount);
+
+      const result = await service.getAccountOrFail('account-1');
+
+      expect(result).toBe(mockAccount);
+    });
+
+    it('should throw EntityNotFoundException when account not found', async () => {
+      vi.spyOn(entityManager, 'findOne').mockResolvedValue(null);
+
+      await expect(service.getAccountOrFail('missing-id')).rejects.toThrow(
+        'Unable to find Account on Host with ID: missing-id'
+      );
+    });
+
+    it('should pass options through to entityManager.findOne', async () => {
+      const mockAccount = { id: 'account-1' } as IAccount;
+      const findOneSpy = vi
+        .spyOn(entityManager, 'findOne')
+        .mockResolvedValue(mockAccount);
+      const options = {
+        relations: { agent: true },
+      };
+
+      await service.getAccountOrFail('account-1', options as any);
+
+      expect(findOneSpy).toHaveBeenCalledWith(Account, {
+        relations: { agent: true },
+        where: { id: 'account-1' },
+      });
+    });
+  });
+
+  describe('getAccount', () => {
+    it('should return null when account not found', async () => {
+      vi.spyOn(entityManager, 'findOne').mockResolvedValue(null);
+
+      const result = await service.getAccount('nonexistent');
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('getAgent', () => {
+    it('should return agent when account and agent exist', async () => {
+      const mockAgent = { id: 'agent-1' };
+      const mockAccount = { id: 'account-1', agent: mockAgent } as IAccount;
+      vi.spyOn(entityManager, 'findOne').mockResolvedValue(mockAccount);
+
+      const result = await service.getAgent('account-1');
+
+      expect(result).toBe(mockAgent);
+    });
+
+    it('should throw RelationshipNotFoundException when agent is not loaded', async () => {
+      const mockAccount = { id: 'account-1', agent: undefined } as IAccount;
+      vi.spyOn(entityManager, 'findOne').mockResolvedValue(mockAccount);
+
+      await expect(service.getAgent('account-1')).rejects.toThrow(
+        'Unable to retrieve Agent for Account: account-1'
+      );
+    });
+
+    it('should throw EntityNotFoundException when account not found', async () => {
+      vi.spyOn(entityManager, 'findOne').mockResolvedValue(null);
+
+      await expect(service.getAgent('missing-id')).rejects.toThrow(
+        'Unable to find Account on Host with ID: missing-id'
+      );
+    });
+  });
+
+  describe('getHostOrFail', () => {
+    it('should throw EntityNotFoundException when no host found', async () => {
+      const mockAccount = { id: 'account-1' } as IAccount;
+      vi.spyOn(entityManager, 'findOne')
+        .mockResolvedValueOnce(null) // User lookup
+        .mockResolvedValueOnce(null); // Organization lookup
+
+      await expect(service.getHostOrFail(mockAccount)).rejects.toThrow(
+        'Unable to find Host for account with ID: account-1'
+      );
+    });
   });
 
   describe('getHost', () => {
-    it('should return user when user is found', async () => {
-      const account = makeAccount('acc-1');
-      const user = { id: 'user-1' } as User;
-      entityManager.findOne.mockImplementation((entity: any) => {
-        if (entity === User) return Promise.resolve(user);
-        return Promise.resolve(null);
+    it('should return user when user exists for account', async () => {
+      const mockUser = { id: 'user-1', accountID: 'account-1' };
+      const mockAccount = { id: 'account-1' } as IAccount;
+      vi.spyOn(entityManager, 'findOne').mockResolvedValueOnce(mockUser);
+
+      const result = await service.getHost(mockAccount);
+
+      expect(result).toBe(mockUser);
+      expect(entityManager.findOne).toHaveBeenCalledWith(User, {
+        where: { accountID: 'account-1' },
       });
-
-      const result = await service.getHost(account);
-
-      expect(result).toBe(user);
     });
 
-    it('should return organization when only organization is found', async () => {
-      const account = makeAccount('acc-1');
-      const org = { id: 'org-1' } as Organization;
-      entityManager.findOne.mockImplementation((entity: any) => {
-        if (entity === Organization) return Promise.resolve(org);
-        return Promise.resolve(null);
+    it('should return organization when no user but organization exists', async () => {
+      const mockOrg = { id: 'org-1', accountID: 'account-1' };
+      const mockAccount = { id: 'account-1' } as IAccount;
+      vi.spyOn(entityManager, 'findOne')
+        .mockResolvedValueOnce(null) // User lookup returns null
+        .mockResolvedValueOnce(mockOrg); // Organization lookup
+
+      const result = await service.getHost(mockAccount);
+
+      expect(result).toBe(mockOrg);
+      expect(entityManager.findOne).toHaveBeenCalledWith(Organization, {
+        where: { accountID: 'account-1' },
       });
-
-      const result = await service.getHost(account);
-
-      expect(result).toBe(org);
     });
 
-    it('should return null when neither user nor organization is found', async () => {
-      const account = makeAccount('acc-1');
-      entityManager.findOne.mockResolvedValue(null);
+    it('should return null and log warning when neither user nor organization found', async () => {
+      const mockAccount = { id: 'account-1' } as IAccount;
+      vi.spyOn(entityManager, 'findOne')
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null);
 
-      const result = await service.getHost(account);
+      const result = await service.getHost(mockAccount);
 
       expect(result).toBeNull();
     });
 
-    it('should return user when both user and organization are found', async () => {
-      const account = makeAccount('acc-1');
-      const user = { id: 'user-1' } as User;
-      const org = { id: 'org-1' } as Organization;
-      entityManager.findOne.mockImplementation((entity: any) => {
-        if (entity === User) return Promise.resolve(user);
-        if (entity === Organization) return Promise.resolve(org);
-        return Promise.resolve(null);
-      });
+    it('should prefer user over organization when both exist', async () => {
+      const mockUser = { id: 'user-1', accountID: 'account-1' };
+      const mockAccount = { id: 'account-1' } as IAccount;
+      vi.spyOn(entityManager, 'findOne').mockResolvedValueOnce(mockUser);
 
-      const result = await service.getHost(account);
+      const result = await service.getHost(mockAccount);
 
-      expect(result).toBe(user);
+      expect(result).toBe(mockUser);
+      // getHost now uses Promise.all, so both User and Organization lookups run
+      expect(entityManager.findOne).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('areResourcesInAccount', () => {
+    it('should return true when account has spaces', async () => {
+      const mockAccount = {
+        id: 'account-1',
+        spaces: [{ id: 'space-1' }],
+        virtualContributors: [],
+        innovationPacks: [],
+        innovationHubs: [],
+      } as unknown as IAccount;
+      vi.spyOn(entityManager, 'findOne').mockResolvedValue(mockAccount);
+
+      const result = await service.areResourcesInAccount('account-1');
+
+      expect(result).toBe(true);
     });
 
-    it('should use correct account ID for both queries', async () => {
-      const account = makeAccount('acc-42');
-      entityManager.findOne.mockResolvedValue(null);
+    it('should return true when account has virtual contributors', async () => {
+      const mockAccount = {
+        id: 'account-1',
+        spaces: [],
+        virtualContributors: [{ id: 'vc-1' }],
+        innovationPacks: [],
+        innovationHubs: [],
+      } as unknown as IAccount;
+      vi.spyOn(entityManager, 'findOne').mockResolvedValue(mockAccount);
 
-      await service.getHost(account);
+      const result = await service.areResourcesInAccount('account-1');
 
-      expect(entityManager.findOne).toHaveBeenCalledTimes(2);
-      expect(entityManager.findOne).toHaveBeenCalledWith(User, {
-        where: { accountID: 'acc-42' },
-      });
-      expect(entityManager.findOne).toHaveBeenCalledWith(Organization, {
-        where: { accountID: 'acc-42' },
-      });
+      expect(result).toBe(true);
+    });
+
+    it('should return true when account has innovation packs', async () => {
+      const mockAccount = {
+        id: 'account-1',
+        spaces: [],
+        virtualContributors: [],
+        innovationPacks: [{ id: 'ip-1' }],
+        innovationHubs: [],
+      } as unknown as IAccount;
+      vi.spyOn(entityManager, 'findOne').mockResolvedValue(mockAccount);
+
+      const result = await service.areResourcesInAccount('account-1');
+
+      expect(result).toBe(true);
+    });
+
+    it('should return true when account has innovation hubs', async () => {
+      const mockAccount = {
+        id: 'account-1',
+        spaces: [],
+        virtualContributors: [],
+        innovationPacks: [],
+        innovationHubs: [{ id: 'hub-1' }],
+      } as unknown as IAccount;
+      vi.spyOn(entityManager, 'findOne').mockResolvedValue(mockAccount);
+
+      const result = await service.areResourcesInAccount('account-1');
+
+      expect(result).toBe(true);
+    });
+
+    it('should return false when account has no resources', async () => {
+      const mockAccount = {
+        id: 'account-1',
+        spaces: [],
+        virtualContributors: [],
+        innovationPacks: [],
+        innovationHubs: [],
+      } as unknown as IAccount;
+      vi.spyOn(entityManager, 'findOne').mockResolvedValue(mockAccount);
+
+      const result = await service.areResourcesInAccount('account-1');
+
+      expect(result).toBe(false);
     });
   });
 });
