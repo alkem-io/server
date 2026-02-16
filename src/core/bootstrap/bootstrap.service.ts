@@ -357,7 +357,9 @@ export class BootstrapService {
 
   private async ensureAuthorizationsPopulated() {
     // For platform
-    const platform = await this.platformService.getPlatformOrFail();
+    const platform = await this.platformService.getPlatformOrFail({
+      relations: { authorization: true },
+    });
     const platformAuthorization =
       this.authorizationPolicyService.validateAuthorization(
         platform.authorization
@@ -376,7 +378,9 @@ export class BootstrapService {
     }
 
     // Also do same for AI Server until it is moved out of the server
-    const aiServer = await this.aiServer.getAiServerOrFail();
+    const aiServer = await this.aiServer.getAiServerOrFail({
+      with: { authorization: true },
+    });
     const aiServerAuthorization =
       this.authorizationPolicyService.validateAuthorization(
         aiServer.authorization

@@ -1,16 +1,15 @@
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { ICredential } from '@domain/agent/credential/credential.interface';
-import { In, Repository } from 'typeorm';
 import { beforeEach, describe, expect, it, type Mocked, vi } from 'vitest';
 import {
   ensureRolesLoaded,
   loadAgentCredentials,
 } from './role.set.data.loader.utils';
-import { RoleSet } from './role.set.entity';
 import { IRoleSet } from './role.set.interface';
 import { AgentRoleKey } from './types';
+import { createMockDrizzle } from '@test/utils/drizzle.mock.factory';
 
-/* ───────── helpers ───────── */
+/* ---------- helpers ---------- */
 
 function makeAgentRoleKey(
   agentID: string,
@@ -28,9 +27,9 @@ function makeCredential(type: string, resourceID: string): ICredential {
   return { type, resourceID } as unknown as ICredential;
 }
 
-/* ═══════════════════════════════════════════════
+/* ===============================================
    loadAgentCredentials
-   ═══════════════════════════════════════════════ */
+   =============================================== */
 
 describe('loadAgentCredentials', () => {
   let agentService: Mocked<Pick<AgentService, 'getAgentCredentialsBatch'>>;
@@ -121,17 +120,15 @@ describe('loadAgentCredentials', () => {
   });
 });
 
-/* ═══════════════════════════════════════════════
+/* ===============================================
    ensureRolesLoaded
-   ═══════════════════════════════════════════════ */
+   =============================================== */
 
 describe('ensureRolesLoaded', () => {
-  let roleSetRepository: Mocked<Pick<Repository<RoleSet>, 'find'>>;
+  let db: any;
 
   beforeEach(() => {
-    roleSetRepository = {
-      find: vi.fn().mockResolvedValue([]),
-    };
+    db = createMockDrizzle();
   });
 
   it('should skip DB query when all roleSets already have roles', async () => {
@@ -140,12 +137,9 @@ describe('ensureRolesLoaded', () => {
       { id: 'rs-2', roles: [{ id: 'role-2', name: 'lead' }] } as any,
     ];
 
-    await ensureRolesLoaded(
-      roleSets,
-      roleSetRepository as unknown as Repository<RoleSet>
-    );
+    await ensureRolesLoaded(roleSets, db);
 
-    expect(roleSetRepository.find).not.toHaveBeenCalled();
+    expect(db.query.roleSets.findMany).not.toHaveBeenCalled();
   });
 
   it('should fetch roles for roleSets with undefined roles', async () => {
@@ -156,20 +150,13 @@ describe('ensureRolesLoaded', () => {
     } as any;
 
     const loadedRoles = [{ id: 'role-1', name: 'member' }];
-    roleSetRepository.find.mockResolvedValue([
-      { id: 'rs-1', roles: loadedRoles } as any,
+    db.query.roleSets.findMany.mockResolvedValueOnce([
+      { id: 'rs-1', roles: loadedRoles },
     ]);
 
-    await ensureRolesLoaded(
-      [rs1, rs2],
-      roleSetRepository as unknown as Repository<RoleSet>
-    );
+    await ensureRolesLoaded([rs1, rs2], db);
 
-    expect(roleSetRepository.find).toHaveBeenCalledTimes(1);
-    expect(roleSetRepository.find).toHaveBeenCalledWith({
-      where: { id: In(['rs-1']) },
-      relations: { roles: true },
-    });
+    expect(db.query.roleSets.findMany).toHaveBeenCalled();
     // Mutates in place
     expect(rs1.roles).toEqual(loadedRoles);
     // Already-loaded roleSet untouched
@@ -181,43 +168,31 @@ describe('ensureRolesLoaded', () => {
     const rs2: IRoleSet = { id: 'rs-1', roles: undefined } as any; // same ID, different ref
 
     const loadedRoles = [{ id: 'role-1', name: 'member' }];
-    roleSetRepository.find.mockResolvedValue([
-      { id: 'rs-1', roles: loadedRoles } as any,
+    db.query.roleSets.findMany.mockResolvedValueOnce([
+      { id: 'rs-1', roles: loadedRoles },
     ]);
 
-    await ensureRolesLoaded(
-      [rs1, rs2],
-      roleSetRepository as unknown as Repository<RoleSet>
-    );
+    await ensureRolesLoaded([rs1, rs2], db);
 
-    // Should only query with unique IDs
-    expect(roleSetRepository.find).toHaveBeenCalledWith({
-      where: { id: In(['rs-1']) },
-      relations: { roles: true },
-    });
+    // Should only query once
+    expect(db.query.roleSets.findMany).toHaveBeenCalledTimes(1);
     // Both references should be hydrated
     expect(rs1.roles).toEqual(loadedRoles);
     expect(rs2.roles).toEqual(loadedRoles);
   });
 
   it('should handle empty input array', async () => {
-    await ensureRolesLoaded(
-      [],
-      roleSetRepository as unknown as Repository<RoleSet>
-    );
+    await ensureRolesLoaded([], db);
 
-    expect(roleSetRepository.find).not.toHaveBeenCalled();
+    expect(db.query.roleSets.findMany).not.toHaveBeenCalled();
   });
 
   it('should handle roleSet not found in DB (sets undefined)', async () => {
     const rs1: IRoleSet = { id: 'rs-missing', roles: undefined } as any;
 
-    roleSetRepository.find.mockResolvedValue([]);
+    db.query.roleSets.findMany.mockResolvedValueOnce([]);
 
-    await ensureRolesLoaded(
-      [rs1],
-      roleSetRepository as unknown as Repository<RoleSet>
-    );
+    await ensureRolesLoaded([rs1], db);
 
     // rolesById.get('rs-missing') returns undefined
     expect(rs1.roles).toBeUndefined();

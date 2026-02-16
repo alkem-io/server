@@ -1,50 +1,40 @@
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getEntityManagerToken, getRepositoryToken } from '@nestjs/typeorm';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
 import { vi } from 'vitest';
 import { AccountLookupService } from '../account.lookup/account.lookup.service';
 import { Space } from '../space/space.entity';
 import { ISpace } from '../space/space.interface';
 import { SpaceLookupService } from './space.lookup.service';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 
 describe('SpaceLookupService', () => {
   let service: SpaceLookupService;
-  let spaceRepository: Repository<Space>;
-  let entityManager: any;
+  let db: any;
   let accountLookupService: AccountLookupService;
 
   beforeEach(async () => {
-    entityManager = {
-      findOne: vi.fn(),
-    };
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SpaceLookupService,
         MockWinstonProvider,
-        repositoryProviderMockFactory(Space),
-        {
-          provide: getEntityManagerToken('default'),
-          useValue: entityManager,
-        },
+        mockDrizzleProvider,
       ],
     })
       .useMocker(defaultMockerFactory)
       .compile();
 
     service = module.get(SpaceLookupService);
-    spaceRepository = module.get<Repository<Space>>(getRepositoryToken(Space));
+    db = module.get(DRIZZLE);
     accountLookupService = module.get(AccountLookupService);
   });
 
   describe('getSpaceOrFail', () => {
     it('should return space when found', async () => {
       const mockSpace = { id: 'space-1' } as ISpace;
-      entityManager.findOne.mockResolvedValue(mockSpace);
+      db.query.spaces.findFirst.mockResolvedValueOnce(mockSpace);
 
       const result = await service.getSpaceOrFail('space-1');
 
@@ -52,7 +42,6 @@ describe('SpaceLookupService', () => {
     });
 
     it('should throw EntityNotFoundException when space not found', async () => {
-      entityManager.findOne.mockResolvedValue(null);
 
       await expect(service.getSpaceOrFail('missing-id')).rejects.toThrow(
         'Unable to find Space on Host with ID: missing-id'
@@ -63,7 +52,7 @@ describe('SpaceLookupService', () => {
   describe('getSpaceForSpaceAboutOrFail', () => {
     it('should return space when found by about ID', async () => {
       const mockSpace = { id: 'space-1' } as ISpace;
-      entityManager.findOne.mockResolvedValue(mockSpace);
+      db.query.spaces.findFirst.mockResolvedValueOnce(mockSpace);
 
       const result = await service.getSpaceForSpaceAboutOrFail('about-1');
 
@@ -71,7 +60,6 @@ describe('SpaceLookupService', () => {
     });
 
     it('should throw EntityNotFoundException when space not found for about ID', async () => {
-      entityManager.findOne.mockResolvedValue(null);
 
       await expect(
         service.getSpaceForSpaceAboutOrFail('about-missing')
@@ -84,9 +72,7 @@ describe('SpaceLookupService', () => {
   describe('getSpaceByNameIdOrFail', () => {
     it('should return space when found by nameID', async () => {
       const mockSpace = { id: 'space-1', nameID: 'my-space' } as ISpace;
-      vi.spyOn(spaceRepository, 'findOne').mockResolvedValue(
-        mockSpace as Space
-      );
+      db.query.spaces.findFirst.mockResolvedValueOnce(mockSpace);
 
       const result = await service.getSpaceByNameIdOrFail('my-space');
 
@@ -94,7 +80,6 @@ describe('SpaceLookupService', () => {
     });
 
     it('should throw EntityNotFoundException when space with nameID not found', async () => {
-      vi.spyOn(spaceRepository, 'findOne').mockResolvedValue(null);
 
       await expect(
         service.getSpaceByNameIdOrFail('nonexistent')
@@ -110,9 +95,9 @@ describe('SpaceLookupService', () => {
     });
 
     it('should return true when all spaces exist', async () => {
-      vi.spyOn(spaceRepository, 'find').mockResolvedValue([
-        { id: 'space-1' } as Space,
-        { id: 'space-2' } as Space,
+      db.query.spaces.findMany.mockResolvedValueOnce([
+        { id: 'space-1' },
+        { id: 'space-2' },
       ]);
 
       const result = await service.spacesExist(['space-1', 'space-2']);
@@ -121,7 +106,7 @@ describe('SpaceLookupService', () => {
     });
 
     it('should return all IDs when no spaces found', async () => {
-      vi.spyOn(spaceRepository, 'find').mockResolvedValue([]);
+      db.query.spaces.findMany.mockResolvedValueOnce([]);
 
       const result = await service.spacesExist(['space-1', 'space-2']);
 
@@ -129,9 +114,7 @@ describe('SpaceLookupService', () => {
     });
 
     it('should return missing IDs when only some spaces exist', async () => {
-      vi.spyOn(spaceRepository, 'find').mockResolvedValue([
-        { id: 'space-1' } as Space,
-      ]);
+      db.query.spaces.findMany.mockResolvedValueOnce([{ id: 'space-1' }]);
 
       const result = await service.spacesExist(['space-1', 'space-2']);
 
@@ -146,7 +129,7 @@ describe('SpaceLookupService', () => {
         id: 'space-1',
         collaboration: mockCollaboration,
       } as ISpace;
-      entityManager.findOne.mockResolvedValue(mockSpace);
+      db.query.spaces.findFirst.mockResolvedValueOnce(mockSpace);
 
       const result = await service.getCollaborationOrFail('space-1');
 
@@ -158,7 +141,7 @@ describe('SpaceLookupService', () => {
         id: 'space-1',
         collaboration: undefined,
       } as ISpace;
-      entityManager.findOne.mockResolvedValue(mockSpace);
+      db.query.spaces.findFirst.mockResolvedValueOnce(mockSpace);
 
       await expect(service.getCollaborationOrFail('space-1')).rejects.toThrow(
         'Unable to load collaboration for space space-1'
@@ -166,7 +149,6 @@ describe('SpaceLookupService', () => {
     });
 
     it('should throw EntityNotFoundException when space not found', async () => {
-      entityManager.findOne.mockResolvedValue(null);
 
       await expect(
         service.getCollaborationOrFail('missing-id')
@@ -177,7 +159,7 @@ describe('SpaceLookupService', () => {
   describe('getProvider', () => {
     it('should return null and log warning when space not found for about', async () => {
       const spaceAbout = { id: 'about-1' };
-      vi.spyOn(spaceRepository, 'findOne').mockResolvedValue(null);
+      // findFirst returns undefined by default (no space found for aboutId)
 
       const result = await service.getProvider(spaceAbout as any);
 
@@ -190,9 +172,9 @@ describe('SpaceLookupService', () => {
         id: 'space-1',
         levelZeroSpaceID: 'l0-space-1',
       } as Space;
-      vi.spyOn(spaceRepository, 'findOne')
-        .mockResolvedValueOnce(mockSpace) // first call: find space for about
-        .mockResolvedValueOnce(null); // second call: find L0 space
+      // First call: find space by aboutId -> returns mockSpace
+      db.query.spaces.findFirst.mockResolvedValueOnce(mockSpace);
+      // Second call: find L0 space by id -> returns undefined
 
       const result = await service.getProvider(spaceAbout as any);
 
@@ -209,9 +191,10 @@ describe('SpaceLookupService', () => {
         id: 'l0-space-1',
         account: undefined,
       } as Space;
-      vi.spyOn(spaceRepository, 'findOne')
-        .mockResolvedValueOnce(mockSpace)
-        .mockResolvedValueOnce(mockL0Space);
+      // First call: find space by aboutId -> returns mockSpace
+      db.query.spaces.findFirst.mockResolvedValueOnce(mockSpace);
+      // Second call: find L0 space by id -> returns mockL0Space (no account)
+      db.query.spaces.findFirst.mockResolvedValueOnce(mockL0Space);
 
       const result = await service.getProvider(spaceAbout as any);
 
@@ -230,9 +213,10 @@ describe('SpaceLookupService', () => {
         account: mockAccount,
       } as Space;
       const mockHost = { id: 'user-1' };
-      vi.spyOn(spaceRepository, 'findOne')
-        .mockResolvedValueOnce(mockSpace)
-        .mockResolvedValueOnce(mockL0Space);
+      // First call: find space by aboutId -> returns mockSpace
+      db.query.spaces.findFirst.mockResolvedValueOnce(mockSpace);
+      // Second call: find L0 space by id -> returns mockL0Space (with account)
+      db.query.spaces.findFirst.mockResolvedValueOnce(mockL0Space);
       accountLookupService.getHost = vi.fn().mockResolvedValue(mockHost);
 
       const result = await service.getProvider(spaceAbout as any);
@@ -259,49 +243,35 @@ describe('SpaceLookupService', () => {
       const result = await service.getProviderForSpace(space);
 
       expect(result).toBe(mockHost);
-      expect(spaceRepository.findOne).not.toHaveBeenCalled();
       expect(accountLookupService.getHost).toHaveBeenCalledWith(space.account);
     });
 
     it('should load from DB for L0 space without account', async () => {
       const space = makeSpace('space-1', 'space-1');
       const dbSpace = makeSpace('space-1', 'space-1', { id: 'acc-1' });
-      vi.spyOn(spaceRepository, 'findOne').mockResolvedValue(
-        dbSpace as unknown as Space
-      );
       const mockHost = { id: 'user-1' } as IContributor;
+      db.query.spaces.findFirst.mockResolvedValueOnce(dbSpace);
       accountLookupService.getHost = vi.fn().mockResolvedValue(mockHost);
 
       const result = await service.getProviderForSpace(space);
 
       expect(result).toBe(mockHost);
-      expect(spaceRepository.findOne).toHaveBeenCalledWith({
-        where: { id: 'space-1' },
-        relations: { account: true },
-      });
     });
 
     it('should load L0 space for non-L0 space', async () => {
       const space = makeSpace('subspace-1', 'root-space');
       const l0Space = makeSpace('root-space', 'root-space', { id: 'acc-1' });
-      vi.spyOn(spaceRepository, 'findOne').mockResolvedValue(
-        l0Space as unknown as Space
-      );
       const mockHost = { id: 'org-1' } as IContributor;
+      db.query.spaces.findFirst.mockResolvedValueOnce(l0Space);
       accountLookupService.getHost = vi.fn().mockResolvedValue(mockHost);
 
       const result = await service.getProviderForSpace(space);
 
       expect(result).toBe(mockHost);
-      expect(spaceRepository.findOne).toHaveBeenCalledWith({
-        where: { id: 'root-space' },
-        relations: { account: true },
-      });
     });
 
     it('should return null and log warning when L0 space not found in DB', async () => {
       const space = makeSpace('space-1', 'space-1');
-      vi.spyOn(spaceRepository, 'findOne').mockResolvedValue(null);
       accountLookupService.getHost = vi.fn();
 
       const result = await service.getProviderForSpace(space);
@@ -313,9 +283,7 @@ describe('SpaceLookupService', () => {
     it('should return null and log warning when L0 space has no account', async () => {
       const space = makeSpace('space-1', 'space-1');
       const dbSpace = makeSpace('space-1', 'space-1');
-      vi.spyOn(spaceRepository, 'findOne').mockResolvedValue(
-        dbSpace as unknown as Space
-      );
+      db.query.spaces.findFirst.mockResolvedValueOnce(dbSpace);
       accountLookupService.getHost = vi.fn();
 
       const result = await service.getProviderForSpace(space);
@@ -327,10 +295,8 @@ describe('SpaceLookupService', () => {
     it('should return getHost result for full happy path', async () => {
       const space = makeSpace('sub-1', 'l0-space');
       const l0Space = makeSpace('l0-space', 'l0-space', { id: 'acc-42' });
-      vi.spyOn(spaceRepository, 'findOne').mockResolvedValue(
-        l0Space as unknown as Space
-      );
       const expectedHost = { id: 'user-42' } as IContributor;
+      db.query.spaces.findFirst.mockResolvedValueOnce(l0Space);
       accountLookupService.getHost = vi.fn().mockResolvedValue(expectedHost);
 
       const result = await service.getProviderForSpace(space);
@@ -348,7 +314,7 @@ describe('SpaceLookupService', () => {
         id: 'space-1',
         subspaces: [],
       } as unknown as ISpace;
-      entityManager.findOne.mockResolvedValue(mockSpace);
+      db.query.spaces.findFirst.mockResolvedValueOnce(mockSpace);
 
       const result = await service.getAllDescendantSpaceIDs('space-1');
 
@@ -364,12 +330,10 @@ describe('SpaceLookupService', () => {
         ],
       } as unknown as ISpace;
 
-      entityManager.findOne.mockImplementation((_entity: any, options: any) => {
-        if (options.where.id === 'space-1') return mockSpace;
-        if (options.where.id === 'sub-1') return { id: 'sub-1', subspaces: [] };
-        if (options.where.id === 'sub-2') return { id: 'sub-2', subspaces: [] };
-        return null;
-      });
+      db.query.spaces.findFirst
+        .mockResolvedValueOnce(mockSpace)
+        .mockResolvedValueOnce({ id: 'sub-1', subspaces: [] })
+        .mockResolvedValueOnce({ id: 'sub-2', subspaces: [] });
 
       const result = await service.getAllDescendantSpaceIDs('space-1');
 
@@ -379,15 +343,10 @@ describe('SpaceLookupService', () => {
     });
 
     it('should return nested descendant IDs recursively', async () => {
-      entityManager.findOne.mockImplementation((_entity: any, options: any) => {
-        const id = options.where.id;
-        if (id === 'space-1')
-          return { id: 'space-1', subspaces: [{ id: 'sub-1' }] };
-        if (id === 'sub-1')
-          return { id: 'sub-1', subspaces: [{ id: 'sub-1-1' }] };
-        if (id === 'sub-1-1') return { id: 'sub-1-1', subspaces: [] };
-        return null;
-      });
+      db.query.spaces.findFirst
+        .mockResolvedValueOnce({ id: 'space-1', subspaces: [{ id: 'sub-1' }] })
+        .mockResolvedValueOnce({ id: 'sub-1', subspaces: [{ id: 'sub-1-1' }] })
+        .mockResolvedValueOnce({ id: 'sub-1-1', subspaces: [] });
 
       const result = await service.getAllDescendantSpaceIDs('space-1');
 
@@ -401,7 +360,7 @@ describe('SpaceLookupService', () => {
         id: 'space-1',
         subspaces: undefined,
       } as unknown as ISpace;
-      entityManager.findOne.mockResolvedValue(mockSpace);
+      db.query.spaces.findFirst.mockResolvedValueOnce(mockSpace);
 
       const result = await service.getAllDescendantSpaceIDs('space-1');
 

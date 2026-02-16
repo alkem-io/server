@@ -1,26 +1,24 @@
 import { TagsetType } from '@common/enums/tagset.type';
 import { EntityNotFoundException } from '@common/exceptions';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { MockType } from '@test/utils/mock.type';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
 import { TagsetTemplate } from './tagset.template.entity';
 import { ITagsetTemplate } from './tagset.template.interface';
 import { TagsetTemplateService } from './tagset.template.service';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 
 describe('TagsetTemplateService', () => {
   let service: TagsetTemplateService;
-  let tagsetTemplateRepository: MockType<Repository<TagsetTemplate>>;
+  let db: any;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TagsetTemplateService,
-        repositoryProviderMockFactory(TagsetTemplate),
+        mockDrizzleProvider,
         MockCacheManager,
         MockWinstonProvider,
       ],
@@ -29,7 +27,7 @@ describe('TagsetTemplateService', () => {
       .compile();
 
     service = module.get(TagsetTemplateService);
-    tagsetTemplateRepository = module.get(getRepositoryToken(TagsetTemplate));
+    db = module.get(DRIZZLE);
   });
 
   describe('createTagsetTemplate', () => {
@@ -62,7 +60,7 @@ describe('TagsetTemplateService', () => {
   describe('getTagsetTemplateOrFail', () => {
     it('should return the tagset template when found', async () => {
       const template = { id: 'tt-1', name: 'skills' } as TagsetTemplate;
-      tagsetTemplateRepository.findOne!.mockResolvedValue(template);
+      db.query.tagsetTemplates.findFirst.mockResolvedValueOnce(template);
 
       const result = await service.getTagsetTemplateOrFail('tt-1');
 
@@ -70,7 +68,6 @@ describe('TagsetTemplateService', () => {
     });
 
     it('should throw EntityNotFoundException when not found', async () => {
-      tagsetTemplateRepository.findOne!.mockResolvedValue(null);
 
       await expect(service.getTagsetTemplateOrFail('missing')).rejects.toThrow(
         EntityNotFoundException
@@ -81,9 +78,6 @@ describe('TagsetTemplateService', () => {
   describe('removeTagsetTemplate', () => {
     it('should remove and return the template with preserved id', async () => {
       const template = { id: 'tt-1', name: 'skills' } as ITagsetTemplate;
-      tagsetTemplateRepository.remove!.mockResolvedValue({
-        name: 'skills',
-      });
 
       const result = await service.removeTagsetTemplate(template);
 
@@ -99,8 +93,6 @@ describe('TagsetTemplateService', () => {
         defaultSelectedValue: 'a',
       } as ITagsetTemplate;
 
-      tagsetTemplateRepository.save!.mockResolvedValue(template);
-
       await service.updateTagsetTemplateDefinition(template, {
         allowedValues: ['a', 'b', 'c'],
       });
@@ -114,8 +106,6 @@ describe('TagsetTemplateService', () => {
         allowedValues: ['a', 'b'],
         defaultSelectedValue: 'a',
       } as ITagsetTemplate;
-
-      tagsetTemplateRepository.save!.mockResolvedValue(template);
 
       await service.updateTagsetTemplateDefinition(template, {
         defaultSelectedValue: 'b',
@@ -131,8 +121,6 @@ describe('TagsetTemplateService', () => {
         defaultSelectedValue: 'x',
       } as ITagsetTemplate;
 
-      tagsetTemplateRepository.save!.mockResolvedValue(template);
-
       await service.updateTagsetTemplateDefinition(template, {} as any);
 
       expect(template.allowedValues).toEqual(['x']);
@@ -144,7 +132,7 @@ describe('TagsetTemplateService', () => {
     it('should return tagsets associated with the template', async () => {
       const tagsets = [{ id: 'ts-1' }, { id: 'ts-2' }];
       const template = { id: 'tt-1', tagsets } as unknown as TagsetTemplate;
-      tagsetTemplateRepository.findOne!.mockResolvedValue(template);
+      db.query.tagsetTemplates.findFirst.mockResolvedValueOnce(template);
 
       const result = await service.getTagsetsUsingTagsetTemplate('tt-1');
 
@@ -156,7 +144,7 @@ describe('TagsetTemplateService', () => {
         id: 'tt-1',
         tagsets: undefined,
       } as unknown as TagsetTemplate;
-      tagsetTemplateRepository.findOne!.mockResolvedValue(template);
+      db.query.tagsetTemplates.findFirst.mockResolvedValueOnce(template);
 
       await expect(
         service.getTagsetsUsingTagsetTemplate('tt-1')

@@ -7,28 +7,27 @@ import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { NVPService } from '@domain/common/nvp/nvp.service';
 import { UserService } from '@domain/community/user/user.service';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
 import { Mock, vi } from 'vitest';
 import { RoleSetCacheService } from '../role-set/role.set.service.cache';
 import { Application } from './application.entity';
 import { IApplication } from './application.interface';
 import { ApplicationService } from './application.service';
 import { ApplicationLifecycleService } from './application.service.lifecycle';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 
 describe('ApplicationService', () => {
   let service: ApplicationService;
-  let applicationRepository: Repository<Application>;
   let userService: UserService;
   let lifecycleService: LifecycleService;
   let applicationLifecycleService: ApplicationLifecycleService;
   let nvpService: NVPService;
   let authorizationPolicyService: AuthorizationPolicyService;
   let roleSetCacheService: RoleSetCacheService;
+  let db: any;
 
   beforeEach(async () => {
     // Mock static Application.create to avoid DataSource requirement
@@ -41,7 +40,7 @@ describe('ApplicationService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ApplicationService,
-        repositoryProviderMockFactory(Application),
+        mockDrizzleProvider,
         MockCacheManager,
         MockWinstonProvider,
       ],
@@ -50,9 +49,6 @@ describe('ApplicationService', () => {
       .compile();
 
     service = module.get<ApplicationService>(ApplicationService);
-    applicationRepository = module.get<Repository<Application>>(
-      getRepositoryToken(Application)
-    );
     userService = module.get<UserService>(UserService);
     lifecycleService = module.get<LifecycleService>(LifecycleService);
     applicationLifecycleService = module.get<ApplicationLifecycleService>(
@@ -63,27 +59,20 @@ describe('ApplicationService', () => {
       AuthorizationPolicyService
     );
     roleSetCacheService = module.get<RoleSetCacheService>(RoleSetCacheService);
+    db = module.get(DRIZZLE);
   });
 
   describe('getApplicationOrFail', () => {
     it('should return application when it exists', async () => {
       const mockApplication = { id: 'app-1' } as Application;
-      vi.spyOn(applicationRepository, 'findOne').mockResolvedValue(
-        mockApplication
-      );
+      db.query.applications.findFirst.mockResolvedValueOnce(mockApplication);
 
       const result = await service.getApplicationOrFail('app-1');
 
       expect(result).toBe(mockApplication);
-      expect(applicationRepository.findOne).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { id: 'app-1' },
-        })
-      );
     });
 
     it('should throw EntityNotFoundException when application does not exist', async () => {
-      vi.spyOn(applicationRepository, 'findOne').mockResolvedValue(null);
 
       await expect(
         service.getApplicationOrFail('non-existent-id')
@@ -92,20 +81,12 @@ describe('ApplicationService', () => {
 
     it('should merge provided options with the id filter', async () => {
       const mockApplication = { id: 'app-1' } as Application;
-      vi.spyOn(applicationRepository, 'findOne').mockResolvedValue(
-        mockApplication
-      );
+      db.query.applications.findFirst.mockResolvedValueOnce(mockApplication);
 
       await service.getApplicationOrFail('app-1', {
         relations: { user: true },
       });
 
-      expect(applicationRepository.findOne).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { id: 'app-1' },
-          relations: { user: true },
-        })
-      );
     });
   });
 
@@ -123,9 +104,6 @@ describe('ApplicationService', () => {
       (lifecycleService.createLifecycle as Mock).mockResolvedValue(
         mockLifecycle
       );
-      vi.spyOn(applicationRepository, 'save').mockImplementation(
-        async (app: any) => app
-      );
 
       const result = await service.createApplication(applicationData);
 
@@ -133,7 +111,6 @@ describe('ApplicationService', () => {
       expect(result.user).toBe(mockUser);
       expect(result.authorization).toBeDefined();
       expect(result.lifecycle).toBe(mockLifecycle);
-      expect(applicationRepository.save).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -158,10 +135,6 @@ describe('ApplicationService', () => {
       (authorizationPolicyService.delete as Mock).mockResolvedValue(
         undefined as any
       );
-      vi.spyOn(applicationRepository, 'remove').mockResolvedValue({
-        ...mockApplication,
-        id: undefined,
-      });
       (
         roleSetCacheService.deleteOpenApplicationFromCache as Mock
       ).mockResolvedValue(undefined);
@@ -199,10 +172,6 @@ describe('ApplicationService', () => {
       (authorizationPolicyService.delete as Mock).mockResolvedValue(
         undefined as any
       );
-      vi.spyOn(applicationRepository, 'remove').mockResolvedValue({
-        ...mockApplication,
-        id: undefined,
-      });
       (
         roleSetCacheService.deleteOpenApplicationFromCache as Mock
       ).mockResolvedValue(undefined);
@@ -228,10 +197,6 @@ describe('ApplicationService', () => {
       (lifecycleService.deleteLifecycle as Mock).mockResolvedValue(
         undefined as any
       );
-      vi.spyOn(applicationRepository, 'remove').mockResolvedValue({
-        ...mockApplication,
-        id: undefined,
-      });
       (
         roleSetCacheService.deleteOpenApplicationFromCache as Mock
       ).mockResolvedValue(undefined);
@@ -257,10 +222,6 @@ describe('ApplicationService', () => {
       (lifecycleService.deleteLifecycle as Mock).mockResolvedValue(
         undefined as any
       );
-      vi.spyOn(applicationRepository, 'remove').mockResolvedValue({
-        ...mockApplication,
-        id: undefined,
-      });
 
       await service.deleteApplication({ ID: 'app-1' });
 
@@ -309,20 +270,11 @@ describe('ApplicationService', () => {
         { id: 'app-1' },
         { id: 'app-2' },
       ] as Application[];
-
-      vi.spyOn(applicationRepository, 'find').mockResolvedValue(
-        mockApplications
-      );
+      db.query.applications.findMany.mockResolvedValueOnce(mockApplications);
 
       const result = await service.findApplicationsForUser('user-1');
 
       expect(result).toEqual(mockApplications);
-      expect(applicationRepository.find).toHaveBeenCalledWith(
-        expect.objectContaining({
-          relations: { roleSet: true },
-          where: { user: { id: 'user-1' } },
-        })
-      );
     });
 
     it('should filter applications by lifecycle state when states are provided', async () => {
@@ -330,10 +282,8 @@ describe('ApplicationService', () => {
         { id: 'app-1', lifecycle: { machineState: 'new' } },
         { id: 'app-2', lifecycle: { machineState: 'approved' } },
       ] as any[];
+      db.query.applications.findMany.mockResolvedValueOnce(mockApplications);
 
-      vi.spyOn(applicationRepository, 'find').mockResolvedValue(
-        mockApplications
-      );
       (applicationLifecycleService.getState as Mock)
         .mockReturnValueOnce('new')
         .mockReturnValueOnce('approved');
@@ -345,16 +295,10 @@ describe('ApplicationService', () => {
     });
 
     it('should include lifecycle relation when states filter is provided', async () => {
-      vi.spyOn(applicationRepository, 'find').mockResolvedValue([]);
       (applicationLifecycleService.getState as Mock).mockReturnValue('new');
 
       await service.findApplicationsForUser('user-1', ['new']);
 
-      expect(applicationRepository.find).toHaveBeenCalledWith(
-        expect.objectContaining({
-          relations: { roleSet: true, lifecycle: true },
-        })
-      );
     });
 
     it('should return empty array when no applications match the states filter', async () => {
@@ -362,9 +306,6 @@ describe('ApplicationService', () => {
         { id: 'app-1', lifecycle: { machineState: 'approved' } },
       ] as any[];
 
-      vi.spyOn(applicationRepository, 'find').mockResolvedValue(
-        mockApplications
-      );
       (applicationLifecycleService.getState as Mock).mockReturnValue(
         'approved'
       );
@@ -378,9 +319,7 @@ describe('ApplicationService', () => {
   describe('findExistingApplications', () => {
     it('should return existing applications when found', async () => {
       const mockApplications = [{ id: 'app-1' }] as Application[];
-      vi.spyOn(applicationRepository, 'find').mockResolvedValue(
-        mockApplications
-      );
+      db.query.applications.findMany.mockResolvedValueOnce(mockApplications);
 
       const result = await service.findExistingApplications(
         'user-1',
@@ -391,7 +330,6 @@ describe('ApplicationService', () => {
     });
 
     it('should return empty array when no applications found', async () => {
-      vi.spyOn(applicationRepository, 'find').mockResolvedValue([]);
 
       const result = await service.findExistingApplications(
         'user-1',

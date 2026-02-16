@@ -10,21 +10,21 @@ import {
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { TagsetTemplateSetService } from '@domain/common/tagset-template-set/tagset.template.set.service';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
 import { CalloutService } from '../callout/callout.service';
 import { CalloutsSet } from './callouts.set.entity';
 import { CalloutsSetService } from './callouts.set.service';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import { vi } from 'vitest';
 
 describe('CalloutsSetService', () => {
   let service: CalloutsSetService;
-  let repository: Repository<CalloutsSet>;
+  let db: any;
   let calloutService: CalloutService;
   let authorizationPolicyService: AuthorizationPolicyService;
   let tagsetTemplateSetService: TagsetTemplateSetService;
@@ -33,18 +33,11 @@ describe('CalloutsSetService', () => {
 
   beforeEach(async () => {
     // Mock static CalloutsSet.create to avoid DataSource requirement
-    vi.spyOn(CalloutsSet, 'create').mockImplementation((input: any) => {
-      const entity = new CalloutsSet();
-      Object.assign(entity, input);
-      return entity as any;
-    });
-    // Mock static CalloutsSet.findOne (used by getCalloutsSetOrFail)
-    vi.spyOn(CalloutsSet, 'findOne').mockResolvedValue(null as any);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CalloutsSetService,
-        repositoryProviderMockFactory(CalloutsSet),
+        mockDrizzleProvider,
         MockCacheManager,
         MockWinstonProvider,
       ],
@@ -53,7 +46,7 @@ describe('CalloutsSetService', () => {
       .compile();
 
     service = module.get(CalloutsSetService);
-    repository = module.get(getRepositoryToken(CalloutsSet));
+    db = module.get(DRIZZLE);
     calloutService = module.get(CalloutService);
     authorizationPolicyService = module.get(AuthorizationPolicyService);
     tagsetTemplateSetService = module.get(TagsetTemplateSetService);
@@ -180,9 +173,7 @@ describe('CalloutsSetService', () => {
         callouts: [{ id: 'c-1' }, { id: 'c-2' }],
       } as any;
 
-      // getCalloutsSetOrFail uses CalloutsSet.findOne (static method)
-      vi.mocked(CalloutsSet.findOne).mockResolvedValue(calloutsSet);
-      vi.mocked(repository.remove).mockResolvedValue(calloutsSet);
+      db.query.calloutsSets.findFirst.mockResolvedValueOnce(calloutsSet);
 
       await service.deleteCalloutsSet('cs-1');
 
@@ -190,7 +181,6 @@ describe('CalloutsSetService', () => {
         calloutsSet.authorization
       );
       expect(calloutService.deleteCallout).toHaveBeenCalledTimes(2);
-      expect(repository.remove).toHaveBeenCalledWith(calloutsSet);
     });
   });
 
@@ -338,8 +328,8 @@ describe('CalloutsSetService', () => {
       ] as any[];
 
       const calloutsSet = { id: 'cs-1', callouts } as any;
+      db.query.calloutsSets.findFirst.mockResolvedValueOnce(calloutsSet);
 
-      vi.mocked(CalloutsSet.findOne).mockResolvedValue(calloutsSet as any);
       vi.mocked(calloutService.save).mockImplementation(
         async (callout: any) => callout
       );
@@ -360,8 +350,7 @@ describe('CalloutsSetService', () => {
         id: 'cs-1',
         callouts: [{ id: 'c-1', nameID: 'n-1', sortOrder: 1 }],
       } as any;
-
-      vi.mocked(CalloutsSet.findOne).mockResolvedValue(calloutsSet as any);
+      db.query.calloutsSets.findFirst.mockResolvedValueOnce(calloutsSet);
 
       await expect(
         service.updateCalloutsSortOrder(calloutsSet, {
@@ -382,7 +371,8 @@ describe('CalloutsSetService', () => {
         tagsetTemplateSet: { tagsetTemplates: [] },
       } as any;
 
-      vi.mocked(CalloutsSet.findOne).mockResolvedValue(calloutsSet);
+      db.query.calloutsSets.findFirst.mockResolvedValueOnce(calloutsSet);
+
       vi.mocked(
         namingService.getReservedNameIDsInCalloutsSet
       ).mockResolvedValue(['c-1', 'c-2']);
@@ -418,7 +408,8 @@ describe('CalloutsSetService', () => {
         tagsetTemplateSet: { tagsetTemplates: [] },
       } as any;
 
-      vi.mocked(CalloutsSet.findOne).mockResolvedValue(calloutsSet);
+      db.query.calloutsSets.findFirst.mockResolvedValueOnce(calloutsSet);
+
       vi.mocked(
         namingService.getReservedNameIDsInCalloutsSet
       ).mockResolvedValue(['taken-name']);

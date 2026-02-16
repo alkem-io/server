@@ -133,12 +133,22 @@ export class ConversationService {
 
   public async getConversationOrFail(
     conversationID: string,
-    options?: { relations?: { room?: boolean; messaging?: boolean; authorization?: boolean } }
+    options?: { relations?: { room?: boolean | { authorization?: boolean }; messaging?: boolean; authorization?: boolean } }
   ): Promise<IConversation | never> {
+    let roomWith: any = undefined;
+    if (options?.relations?.room) {
+      if (typeof options.relations.room === 'object') {
+        const nested: Record<string, any> = {};
+        if (options.relations.room.authorization) nested.authorization = true;
+        roomWith = { with: nested };
+      } else {
+        roomWith = true;
+      }
+    }
     const conversation = await this.db.query.conversations.findFirst({
       where: eq(conversations.id, conversationID),
       with: {
-        room: options?.relations?.room || undefined,
+        room: roomWith,
         messaging: options?.relations?.messaging || undefined,
         authorization: options?.relations?.authorization || undefined,
       },

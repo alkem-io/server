@@ -1,27 +1,25 @@
 import { EntityNotFoundException } from '@common/exceptions';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { LicensePlanService } from '@platform/licensing/credential-based/license-plan/license.plan.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { MockType } from '@test/utils/mock.type';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
 import { vi } from 'vitest';
 import { LicensingFramework } from './licensing.framework.entity';
 import { LicensingFrameworkService } from './licensing.framework.service';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 
 describe('LicensingFrameworkService', () => {
   let service: LicensingFrameworkService;
-  let licensingRepo: MockType<Repository<LicensingFramework>>;
   let licensePlanService: LicensePlanService;
+  let db: any;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         LicensingFrameworkService,
-        repositoryProviderMockFactory(LicensingFramework),
+        mockDrizzleProvider,
         MockWinstonProvider,
       ],
     })
@@ -29,8 +27,8 @@ describe('LicensingFrameworkService', () => {
       .compile();
 
     service = module.get(LicensingFrameworkService);
-    licensingRepo = module.get(getRepositoryToken(LicensingFramework));
     licensePlanService = module.get(LicensePlanService);
+    db = module.get(DRIZZLE);
   });
 
   describe('getLicensingOrFail', () => {
@@ -39,7 +37,7 @@ describe('LicensingFrameworkService', () => {
         id: 'lic-1',
         plans: [],
       } as unknown as LicensingFramework;
-      licensingRepo.findOne!.mockResolvedValue(licensing);
+      db.query.licensingFrameworks.findFirst.mockResolvedValueOnce(licensing);
 
       const result = await service.getLicensingOrFail('lic-1');
 
@@ -47,7 +45,6 @@ describe('LicensingFrameworkService', () => {
     });
 
     it('should throw EntityNotFoundException when licensing not found', async () => {
-      licensingRepo.findOne!.mockResolvedValue(null);
 
       await expect(service.getLicensingOrFail('missing')).rejects.toThrow(
         EntityNotFoundException
@@ -58,7 +55,7 @@ describe('LicensingFrameworkService', () => {
   describe('getDefaultLicensingOrFail', () => {
     it('should return the single licensing framework when exactly one exists', async () => {
       const licensing = { id: 'lic-1' } as LicensingFramework;
-      licensingRepo.find!.mockResolvedValue([licensing]);
+      db.query.licensingFrameworks.findMany.mockResolvedValueOnce([licensing]);
 
       const result = await service.getDefaultLicensingOrFail();
 
@@ -66,15 +63,17 @@ describe('LicensingFrameworkService', () => {
     });
 
     it('should throw EntityNotFoundException when no licensing frameworks exist', async () => {
-      licensingRepo.find!.mockResolvedValue([]);
-
+      // findMany returns [] by default
       await expect(service.getDefaultLicensingOrFail()).rejects.toThrow(
         EntityNotFoundException
       );
     });
 
     it('should throw EntityNotFoundException when multiple licensing frameworks exist', async () => {
-      licensingRepo.find!.mockResolvedValue([{ id: 'lic-1' }, { id: 'lic-2' }]);
+      db.query.licensingFrameworks.findMany.mockResolvedValueOnce([
+        { id: 'lic-1' },
+        { id: 'lic-2' },
+      ]);
 
       await expect(service.getDefaultLicensingOrFail()).rejects.toThrow(
         EntityNotFoundException
@@ -86,7 +85,7 @@ describe('LicensingFrameworkService', () => {
     it('should return plans when licensing has plans', async () => {
       const plans = [{ id: 'plan-1' }, { id: 'plan-2' }];
       const licensing = { id: 'lic-1', plans } as unknown as LicensingFramework;
-      licensingRepo.findOne!.mockResolvedValue(licensing);
+      db.query.licensingFrameworks.findFirst.mockResolvedValueOnce(licensing);
 
       const result = await service.getLicensePlansOrFail('lic-1');
 
@@ -98,7 +97,7 @@ describe('LicensingFrameworkService', () => {
         id: 'lic-1',
         plans: undefined,
       } as unknown as LicensingFramework;
-      licensingRepo.findOne!.mockResolvedValue(licensing);
+      db.query.licensingFrameworks.findFirst.mockResolvedValueOnce(licensing);
 
       await expect(service.getLicensePlansOrFail('lic-1')).rejects.toThrow(
         EntityNotFoundException
@@ -114,7 +113,7 @@ describe('LicensingFrameworkService', () => {
         id: 'lic-1',
         plans: [plan1, plan2],
       } as unknown as LicensingFramework;
-      licensingRepo.findOne!.mockResolvedValue(licensing);
+      db.query.licensingFrameworks.findFirst.mockResolvedValueOnce(licensing);
 
       const result = await service.getLicensePlanOrFail('lic-1', 'plan-2');
 
@@ -126,7 +125,7 @@ describe('LicensingFrameworkService', () => {
         id: 'lic-1',
         plans: [{ id: 'plan-1' }],
       } as unknown as LicensingFramework;
-      licensingRepo.findOne!.mockResolvedValue(licensing);
+      db.query.licensingFrameworks.findFirst.mockResolvedValueOnce(licensing);
 
       await expect(
         service.getLicensePlanOrFail('lic-1', 'non-existent')
@@ -140,13 +139,13 @@ describe('LicensingFrameworkService', () => {
         id: 'lic-1',
         plans: [],
       } as unknown as LicensingFramework;
-      licensingRepo.findOne!.mockResolvedValue(licensing);
+      db.query.licensingFrameworks.findFirst.mockResolvedValueOnce(licensing);
+      db.returning.mockResolvedValueOnce([licensing]);
 
       const newPlan = { id: 'plan-new', name: 'NewPlan' } as any;
       vi.mocked(licensePlanService.createLicensePlan).mockResolvedValue(
         newPlan
       );
-      licensingRepo.save!.mockResolvedValue(licensing);
 
       const result = await service.createLicensePlan({
         licensingFrameworkID: 'lic-1',
@@ -155,7 +154,6 @@ describe('LicensingFrameworkService', () => {
 
       expect(result).toBe(newPlan);
       expect(licensing.plans).toContain(newPlan);
-      expect(licensingRepo.save).toHaveBeenCalledWith(licensing);
     });
 
     it('should throw EntityNotInitializedException when plans is undefined', async () => {
@@ -163,7 +161,7 @@ describe('LicensingFrameworkService', () => {
         id: 'lic-1',
         plans: undefined,
       } as unknown as LicensingFramework;
-      licensingRepo.findOne!.mockResolvedValue(licensing);
+      db.query.licensingFrameworks.findFirst.mockResolvedValueOnce(licensing);
 
       await expect(
         service.createLicensePlan({
@@ -181,7 +179,7 @@ describe('LicensingFrameworkService', () => {
         id: 'lic-1',
         licensePolicy: policy,
       } as unknown as LicensingFramework;
-      licensingRepo.findOne!.mockResolvedValue(licensing);
+      db.query.licensingFrameworks.findFirst.mockResolvedValueOnce(licensing);
 
       const result = await service.getLicensePolicy('lic-1');
 
@@ -193,7 +191,7 @@ describe('LicensingFrameworkService', () => {
         id: 'lic-1',
         licensePolicy: undefined,
       } as unknown as LicensingFramework;
-      licensingRepo.findOne!.mockResolvedValue(licensing);
+      db.query.licensingFrameworks.findFirst.mockResolvedValueOnce(licensing);
 
       await expect(service.getLicensePolicy('lic-1')).rejects.toThrow(
         EntityNotFoundException

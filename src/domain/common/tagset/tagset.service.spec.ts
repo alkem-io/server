@@ -5,13 +5,9 @@ import {
 } from '@common/exceptions';
 import { TagsetNotFoundException } from '@common/exceptions/tagset.not.found.exception';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { MockType } from '@test/utils/mock.type';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
 import { type Mock } from 'vitest';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { ITagsetTemplate } from '../tagset-template/tagset.template.interface';
@@ -19,10 +15,12 @@ import { CreateTagsetInput } from './dto/tagset.dto.create';
 import { Tagset } from './tagset.entity';
 import { ITagset } from './tagset.interface';
 import { TagsetService } from './tagset.service';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 
 describe('TagsetService', () => {
   let service: TagsetService;
-  let tagsetRepository: MockType<Repository<Tagset>>;
+  let db: any;
   let authorizationPolicyService: AuthorizationPolicyService;
 
   beforeEach(async () => {
@@ -36,7 +34,7 @@ describe('TagsetService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TagsetService,
-        repositoryProviderMockFactory(Tagset),
+        mockDrizzleProvider,
         MockCacheManager,
         MockWinstonProvider,
       ],
@@ -45,7 +43,7 @@ describe('TagsetService', () => {
       .compile();
 
     service = module.get(TagsetService);
-    tagsetRepository = module.get(getRepositoryToken(Tagset));
+    db = module.get(DRIZZLE);
     authorizationPolicyService = module.get(AuthorizationPolicyService);
   });
 
@@ -82,7 +80,7 @@ describe('TagsetService', () => {
   describe('getTagsetOrFail', () => {
     it('should return tagset when found', async () => {
       const tagset = { id: 'ts-1', name: 'test' } as Tagset;
-      tagsetRepository.findOne!.mockResolvedValue(tagset);
+      db.query.tagsets.findFirst.mockResolvedValueOnce(tagset);
 
       const result = await service.getTagsetOrFail('ts-1');
 
@@ -90,7 +88,6 @@ describe('TagsetService', () => {
     });
 
     it('should throw EntityNotFoundException when not found', async () => {
-      tagsetRepository.findOne!.mockResolvedValue(null);
 
       await expect(service.getTagsetOrFail('missing')).rejects.toThrow(
         EntityNotFoundException
@@ -104,8 +101,7 @@ describe('TagsetService', () => {
         id: 'ts-1',
         authorization: { id: 'auth-1' },
       } as unknown as Tagset;
-      tagsetRepository.findOne!.mockResolvedValue(tagset);
-      tagsetRepository.remove!.mockResolvedValue({ name: 'test' });
+      db.query.tagsets.findFirst.mockResolvedValueOnce(tagset);
       (authorizationPolicyService.delete as Mock).mockResolvedValue({} as any);
 
       const result = await service.removeTagset('ts-1');
@@ -121,8 +117,7 @@ describe('TagsetService', () => {
         id: 'ts-1',
         authorization: undefined,
       } as unknown as Tagset;
-      tagsetRepository.findOne!.mockResolvedValue(tagset);
-      tagsetRepository.remove!.mockResolvedValue({});
+      db.query.tagsets.findFirst.mockResolvedValueOnce(tagset);
 
       await service.removeTagset('ts-1');
 

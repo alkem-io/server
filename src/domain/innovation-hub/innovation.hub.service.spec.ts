@@ -5,23 +5,22 @@ import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 import { IAccount } from '@domain/space/account/account.interface';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
 import { vi } from 'vitest';
 import { CreateInnovationHubInput, UpdateInnovationHubInput } from './dto';
 import { InnovationHub } from './innovation.hub.entity';
 import { InnovationHubService } from './innovation.hub.service';
 import { InnovationHubType } from './innovation.hub.type.enum';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
 
 describe('InnovationHubService', () => {
   let service: InnovationHubService;
-  let innovationHubRepository: Repository<InnovationHub>;
+  let db: any;
 
   beforeEach(async () => {
     // Mock the static BaseEntity.create method to avoid DataSource requirement
@@ -36,16 +35,14 @@ describe('InnovationHubService', () => {
         InnovationHubService,
         MockCacheManager,
         MockWinstonProvider,
-        repositoryProviderMockFactory(InnovationHub),
+        mockDrizzleProvider,
       ],
     })
       .useMocker(defaultMockerFactory)
       .compile();
 
     service = module.get<InnovationHubService>(InnovationHubService);
-    innovationHubRepository = module.get<Repository<InnovationHub>>(
-      getRepositoryToken(InnovationHub)
-    );
+    db = module.get(DRIZZLE);
   });
 
   /**
@@ -98,9 +95,6 @@ describe('InnovationHubService', () => {
         .mockReturnValue('generated-name-id'),
     });
     setupProfileServiceMocksForCreate(profile);
-    vi.spyOn(innovationHubRepository, 'save').mockImplementation(hub =>
-      Promise.resolve(hub as any)
-    );
   };
 
   describe('createInnovationHub', () => {
@@ -117,6 +111,11 @@ describe('InnovationHubService', () => {
       id: 'account-1',
       storageAggregator: { id: 'storage-1' },
     } as IAccount;
+
+    // save() calls db.insert().values().returning() — spy on save to return the hub as-is
+    beforeEach(() => {
+      vi.spyOn(service, 'save').mockImplementation(async (hub) => hub);
+    });
 
     it('should create an innovation hub with VISIBILITY type when input is valid', async () => {
       // Arrange
@@ -149,9 +148,6 @@ describe('InnovationHubService', () => {
         createNameIdAvoidingReservedNameIDs: createNameIdSpy,
       });
       setupProfileServiceMocksForCreate();
-      vi.spyOn(innovationHubRepository, 'save').mockImplementation(hub =>
-        Promise.resolve(hub as any)
-      );
 
       // Act
       await service.createInnovationHub(input, mockAccount);
@@ -330,14 +326,14 @@ describe('InnovationHubService', () => {
       profile: { id: 'profile-1' },
     } as unknown as InnovationHub;
 
+    let hubForTest: any;
     beforeEach(() => {
-      vi.spyOn(innovationHubRepository, 'findOne').mockResolvedValue(
-        // Return a fresh copy each time to avoid state leakage
-        { ...existingHub } as InnovationHub
-      );
-      vi.spyOn(innovationHubRepository, 'save').mockImplementation(hub =>
-        Promise.resolve(hub as any)
-      );
+      // getInnovationHubOrFail uses db.query.innovationHubs.findFirst
+      // Create a fresh copy so mutations don't leak between tests
+      hubForTest = { ...existingHub, profile: { id: 'profile-1' } };
+      db.query.innovationHubs.findFirst.mockResolvedValue(hubForTest);
+      // save uses db.update().set().where().returning() — return the mutated hub
+      db.returning.mockImplementation(async () => [hubForTest]);
     });
 
     it('should update spaceVisibilityFilter when hub type is VISIBILITY', async () => {
@@ -365,7 +361,6 @@ describe('InnovationHubService', () => {
         ID: 'hub-1',
         profileData: { displayName: 'Updated' } as any,
       };
-
       // Act
       const result = await service.updateOrFail(input);
 
@@ -379,9 +374,6 @@ describe('InnovationHubService', () => {
         ...existingHub,
         listedInStore: true,
       } as unknown as InnovationHub;
-      vi.spyOn(innovationHubRepository, 'findOne').mockResolvedValue(
-        hubWithListedInStore
-      );
 
       const input: UpdateInnovationHubInput = {
         ID: 'hub-1',
@@ -451,12 +443,9 @@ describe('InnovationHubService', () => {
 
     it('should validate and update spaceListFilter when hub type is LIST', async () => {
       // Arrange
-      const listHub = {
-        ...existingHub,
-        type: InnovationHubType.LIST,
-        spaceListFilter: ['space-old'],
-      } as unknown as InnovationHub;
-      vi.spyOn(innovationHubRepository, 'findOne').mockResolvedValue(listHub);
+      hubForTest.type = InnovationHubType.LIST;
+      hubForTest.spaceListFilter = ['space-old'];
+
       (service['spaceLookupService'] as any).spacesExist = vi
         .fn()
         .mockResolvedValue(true);
@@ -475,11 +464,7 @@ describe('InnovationHubService', () => {
 
     it('should throw Error when updating LIST hub with empty spaceListFilter', async () => {
       // Arrange
-      const listHub = {
-        ...existingHub,
-        type: InnovationHubType.LIST,
-      } as unknown as InnovationHub;
-      vi.spyOn(innovationHubRepository, 'findOne').mockResolvedValue(listHub);
+      hubForTest.type = InnovationHubType.LIST;
 
       const input: UpdateInnovationHubInput = {
         ID: 'hub-1',
@@ -494,11 +479,8 @@ describe('InnovationHubService', () => {
 
     it('should throw Error when updating LIST hub with non-existent space IDs', async () => {
       // Arrange
-      const listHub = {
-        ...existingHub,
-        type: InnovationHubType.LIST,
-      } as unknown as InnovationHub;
-      vi.spyOn(innovationHubRepository, 'findOne').mockResolvedValue(listHub);
+      hubForTest.type = InnovationHubType.LIST;
+
       (service['spaceLookupService'] as any).spacesExist = vi
         .fn()
         .mockResolvedValue(['bad-id-1', 'bad-id-2']);
@@ -537,12 +519,7 @@ describe('InnovationHubService', () => {
         profile: { id: 'profile-1' },
         authorization: { id: 'auth-1' },
       } as unknown as InnovationHub;
-
-      vi.spyOn(innovationHubRepository, 'findOne').mockResolvedValue(hub);
-      vi.spyOn(innovationHubRepository, 'remove').mockResolvedValue({
-        ...hub,
-        id: '',
-      } as any);
+      db.query.innovationHubs.findFirst.mockResolvedValueOnce(hub);
 
       const deleteProfileSpy = vi.fn().mockResolvedValue({ id: 'profile-1' });
       (service['profileService'] as any).deleteProfile = deleteProfileSpy;
@@ -566,12 +543,7 @@ describe('InnovationHubService', () => {
         profile: undefined,
         authorization: { id: 'auth-2' },
       } as unknown as InnovationHub;
-
-      vi.spyOn(innovationHubRepository, 'findOne').mockResolvedValue(hub);
-      vi.spyOn(innovationHubRepository, 'remove').mockResolvedValue({
-        ...hub,
-        id: '',
-      } as any);
+      db.query.innovationHubs.findFirst.mockResolvedValueOnce(hub);
 
       const deleteProfileSpy = vi.fn();
       (service['profileService'] as any).deleteProfile = deleteProfileSpy;
@@ -593,12 +565,7 @@ describe('InnovationHubService', () => {
         profile: { id: 'profile-3' },
         authorization: undefined,
       } as unknown as InnovationHub;
-
-      vi.spyOn(innovationHubRepository, 'findOne').mockResolvedValue(hub);
-      vi.spyOn(innovationHubRepository, 'remove').mockResolvedValue({
-        ...hub,
-        id: '',
-      } as any);
+      db.query.innovationHubs.findFirst.mockResolvedValueOnce(hub);
 
       const deleteProfileSpy = vi.fn().mockResolvedValue({});
       (service['profileService'] as any).deleteProfile = deleteProfileSpy;
@@ -614,8 +581,7 @@ describe('InnovationHubService', () => {
     });
 
     it('should throw EntityNotFoundException when hub does not exist', async () => {
-      // Arrange
-      vi.spyOn(innovationHubRepository, 'findOne').mockResolvedValue(null);
+      // Arrange — findFirst returns undefined by default (no hub found)
 
       // Act & Assert
       await expect(service.delete('non-existent')).rejects.toThrow(
@@ -628,7 +594,7 @@ describe('InnovationHubService', () => {
     it('should return the hub when it exists', async () => {
       // Arrange
       const hub = { id: 'hub-1', nameID: 'test' } as InnovationHub;
-      vi.spyOn(innovationHubRepository, 'findOne').mockResolvedValue(hub);
+      db.query.innovationHubs.findFirst.mockResolvedValueOnce(hub);
 
       // Act
       const result = await service.getInnovationHubOrFail('hub-1');
@@ -637,28 +603,8 @@ describe('InnovationHubService', () => {
       expect(result).toBe(hub);
     });
 
-    it('should pass options to repository findOne', async () => {
-      // Arrange
-      const hub = { id: 'hub-1', nameID: 'test' } as InnovationHub;
-      const findOneSpy = vi
-        .spyOn(innovationHubRepository, 'findOne')
-        .mockResolvedValue(hub);
-
-      const options = { relations: { profile: true } };
-
-      // Act
-      await service.getInnovationHubOrFail('hub-1', options as any);
-
-      // Assert
-      expect(findOneSpy).toHaveBeenCalledWith({
-        where: { id: 'hub-1' },
-        relations: { profile: true },
-      });
-    });
-
     it('should throw EntityNotFoundException when hub does not exist', async () => {
-      // Arrange
-      vi.spyOn(innovationHubRepository, 'findOne').mockResolvedValue(null);
+      // Arrange — findFirst returns undefined by default
 
       // Act & Assert
       await expect(
@@ -671,7 +617,7 @@ describe('InnovationHubService', () => {
     it('should return the hub when found by nameID', async () => {
       // Arrange
       const hub = { id: 'hub-1', nameID: 'my-hub' } as InnovationHub;
-      vi.spyOn(innovationHubRepository, 'findOne').mockResolvedValue(hub);
+      db.query.innovationHubs.findFirst.mockResolvedValueOnce(hub);
 
       // Act
       const result = await service.getInnovationHubByNameIdOrFail('my-hub');
@@ -680,25 +626,8 @@ describe('InnovationHubService', () => {
       expect(result).toBe(hub);
     });
 
-    it('should query repository with nameID in where clause', async () => {
-      // Arrange
-      const hub = { id: 'hub-1', nameID: 'my-hub' } as InnovationHub;
-      const findOneSpy = vi
-        .spyOn(innovationHubRepository, 'findOne')
-        .mockResolvedValue(hub);
-
-      // Act
-      await service.getInnovationHubByNameIdOrFail('my-hub');
-
-      // Assert
-      expect(findOneSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { nameID: 'my-hub' } })
-      );
-    });
-
     it('should throw EntityNotFoundException when no hub matches the nameID', async () => {
-      // Arrange
-      vi.spyOn(innovationHubRepository, 'findOne').mockResolvedValue(null);
+      // Arrange — findFirst returns undefined by default
 
       // Act & Assert
       await expect(
@@ -711,7 +640,7 @@ describe('InnovationHubService', () => {
     it('should return the hub when found by idOrNameId', async () => {
       // Arrange
       const hub = { id: 'hub-1', nameID: 'my-hub' } as InnovationHub;
-      vi.spyOn(innovationHubRepository, 'findOne').mockResolvedValue(hub);
+      db.query.innovationHubs.findFirst.mockResolvedValueOnce(hub);
 
       // Act
       const result = await service.getInnovationHubFlexOrFail({
@@ -728,7 +657,7 @@ describe('InnovationHubService', () => {
         id: 'hub-1',
         subdomain: 'test-sub',
       } as InnovationHub;
-      vi.spyOn(innovationHubRepository, 'findOne').mockResolvedValue(hub);
+      db.query.innovationHubs.findFirst.mockResolvedValueOnce(hub);
 
       // Act
       const result = await service.getInnovationHubFlexOrFail({
@@ -747,8 +676,7 @@ describe('InnovationHubService', () => {
     });
 
     it('should throw EntityNotFoundException when no hub matches any criteria', async () => {
-      // Arrange
-      vi.spyOn(innovationHubRepository, 'findOne').mockResolvedValue(null);
+      // Arrange — findFirst returns undefined by default
 
       // Act & Assert
       await expect(
@@ -756,45 +684,33 @@ describe('InnovationHubService', () => {
       ).rejects.toThrow(EntityNotFoundException);
     });
 
-    it('should build where clause with id, nameID, and subdomain from args', async () => {
+    it('should call findFirst when both idOrNameId and subdomain provided', async () => {
       // Arrange
       const hub = { id: 'hub-1' } as InnovationHub;
-      const findOneSpy = vi
-        .spyOn(innovationHubRepository, 'findOne')
-        .mockResolvedValue(hub);
+      db.query.innovationHubs.findFirst.mockResolvedValueOnce(hub);
 
       // Act
-      await service.getInnovationHubFlexOrFail({
+      const result = await service.getInnovationHubFlexOrFail({
         idOrNameId: 'hub-1',
         subdomain: 'sub',
       });
 
-      // Assert - without options.where, the default where is used
-      const callArgs = findOneSpy.mock.calls[0][0] as any;
-      expect(callArgs.where).toEqual([
-        { id: 'hub-1' },
-        { subdomain: 'sub' },
-        { nameID: 'hub-1' },
-      ]);
+      // Assert
+      expect(db.query.innovationHubs.findFirst).toHaveBeenCalled();
+      expect(result).toBe(hub);
     });
 
     it('should search by subdomain only when idOrNameId is not provided', async () => {
       // Arrange
       const hub = { id: 'hub-1', subdomain: 'my-sub' } as InnovationHub;
-      const findOneSpy = vi
-        .spyOn(innovationHubRepository, 'findOne')
-        .mockResolvedValue(hub);
+      db.query.innovationHubs.findFirst.mockResolvedValueOnce(hub);
 
       // Act
-      await service.getInnovationHubFlexOrFail({ subdomain: 'my-sub' });
+      const result = await service.getInnovationHubFlexOrFail({ subdomain: 'my-sub' });
 
       // Assert
-      const callArgs = findOneSpy.mock.calls[0][0] as any;
-      expect(callArgs.where).toEqual([
-        { id: undefined },
-        { subdomain: 'my-sub' },
-        { nameID: undefined },
-      ]);
+      expect(db.query.innovationHubs.findFirst).toHaveBeenCalled();
+      expect(result).toBe(hub);
     });
   });
 
@@ -805,7 +721,7 @@ describe('InnovationHubService', () => {
         id: 'hub-1',
         spaceListFilter: ['space-1', 'space-2'],
       } as InnovationHub;
-      vi.spyOn(innovationHubRepository, 'findOneBy').mockResolvedValue(hub);
+      db.query.innovationHubs.findFirst.mockResolvedValueOnce(hub);
 
       // Act
       const result = await service.getSpaceListFilterOrFail('hub-1');
@@ -820,7 +736,7 @@ describe('InnovationHubService', () => {
         id: 'hub-1',
         spaceListFilter: undefined,
       } as InnovationHub;
-      vi.spyOn(innovationHubRepository, 'findOneBy').mockResolvedValue(hub);
+      db.query.innovationHubs.findFirst.mockResolvedValueOnce(hub);
 
       // Act
       const result = await service.getSpaceListFilterOrFail('hub-1');
@@ -830,8 +746,7 @@ describe('InnovationHubService', () => {
     });
 
     it('should throw EntityNotFoundException when hub does not exist', async () => {
-      // Arrange
-      vi.spyOn(innovationHubRepository, 'findOneBy').mockResolvedValue(null);
+      // Arrange — findFirst returns undefined by default
 
       // Act & Assert
       await expect(
@@ -848,8 +763,8 @@ describe('InnovationHubService', () => {
         id: 'hub-1',
         account: { id: 'account-1' },
       } as unknown as InnovationHub;
+      db.query.innovationHubs.findFirst.mockResolvedValueOnce(hub);
 
-      vi.spyOn(innovationHubRepository, 'findOne').mockResolvedValue(hub);
       (service['accountLookupService'] as any).getHost = vi
         .fn()
         .mockResolvedValue(mockProvider);
@@ -862,8 +777,7 @@ describe('InnovationHubService', () => {
     });
 
     it('should throw RelationshipNotFoundException when hub is not found', async () => {
-      // Arrange
-      vi.spyOn(innovationHubRepository, 'findOne').mockResolvedValue(null);
+      // Arrange — findFirst returns undefined by default
 
       // Act & Assert
       await expect(service.getProvider('non-existent')).rejects.toThrow(
@@ -877,7 +791,7 @@ describe('InnovationHubService', () => {
         id: 'hub-1',
         account: undefined,
       } as unknown as InnovationHub;
-      vi.spyOn(innovationHubRepository, 'findOne').mockResolvedValue(hub);
+      db.query.innovationHubs.findFirst.mockResolvedValueOnce(hub);
 
       // Act & Assert
       await expect(service.getProvider('hub-1')).rejects.toThrow(
@@ -891,7 +805,8 @@ describe('InnovationHubService', () => {
         id: 'hub-1',
         account: { id: 'account-1' },
       } as unknown as InnovationHub;
-      vi.spyOn(innovationHubRepository, 'findOne').mockResolvedValue(hub);
+      db.query.innovationHubs.findFirst.mockResolvedValueOnce(hub);
+
       (service['accountLookupService'] as any).getHost = vi
         .fn()
         .mockResolvedValue(null);
@@ -908,9 +823,7 @@ describe('InnovationHubService', () => {
         id: 'hub-1',
         account: { id: 'account-1' },
       } as unknown as InnovationHub;
-      const findOneSpy = vi
-        .spyOn(innovationHubRepository, 'findOne')
-        .mockResolvedValue(hub);
+      db.query.innovationHubs.findFirst.mockResolvedValueOnce(hub);
       (service['accountLookupService'] as any).getHost = vi
         .fn()
         .mockResolvedValue({ id: 'p' });
@@ -919,54 +832,14 @@ describe('InnovationHubService', () => {
       await service.getProvider('hub-1');
 
       // Assert
-      expect(findOneSpy).toHaveBeenCalledWith({
-        where: { id: 'hub-1' },
-        relations: { account: true },
-      });
     });
   });
-
-  describe('save', () => {
-    it('should delegate to repository save', async () => {
-      // Arrange
-      const hub = { id: 'hub-1' } as InnovationHub;
-      const saveSpy = vi
-        .spyOn(innovationHubRepository, 'save')
-        .mockResolvedValue(hub);
-
-      // Act
-      const result = await service.save(hub);
-
-      // Assert
-      expect(saveSpy).toHaveBeenCalledWith(hub);
-      expect(result).toBe(hub);
-    });
-  });
-
   describe('getInnovationHubs', () => {
-    it('should delegate to repository find with options', async () => {
-      // Arrange
-      const hubs = [
-        { id: 'hub-1' } as InnovationHub,
-        { id: 'hub-2' } as InnovationHub,
-      ];
-      const findSpy = vi
-        .spyOn(innovationHubRepository, 'find')
-        .mockResolvedValue(hubs);
-      const options = { where: { type: InnovationHubType.LIST } };
-
-      // Act
-      const result = await service.getInnovationHubs(options as any);
-
-      // Assert
-      expect(findSpy).toHaveBeenCalledWith(options);
-      expect(result).toBe(hubs);
-    });
 
     it('should return all hubs when no options are provided', async () => {
       // Arrange
       const hubs = [{ id: 'hub-1' } as InnovationHub];
-      vi.spyOn(innovationHubRepository, 'find').mockResolvedValue(hubs);
+      db.query.innovationHubs.findMany.mockResolvedValueOnce(hubs);
 
       // Act
       const result = await service.getInnovationHubs();

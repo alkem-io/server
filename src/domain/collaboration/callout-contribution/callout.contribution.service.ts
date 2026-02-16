@@ -18,7 +18,7 @@ import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.in
 import { Inject, Injectable } from '@nestjs/common';
 import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
-import { eq } from 'drizzle-orm';
+import { eq, count, inArray } from 'drizzle-orm';
 import { sql } from 'drizzle-orm/sql';
 import { calloutContributions } from './callout.contribution.schema';
 import { ICalloutSettingsContribution } from '../callout-settings/callout.settings.contribution.interface';
@@ -290,17 +290,20 @@ export class CalloutContributionService {
       return new Map();
     }
 
-    const results = await this.contributionRepository
-      .createQueryBuilder('contribution')
-      .select('contribution.calloutId', 'calloutId')
-      .addSelect('COUNT(*)', 'count')
-      .where('contribution.calloutId IN (:...calloutIds)', { calloutIds })
-      .groupBy('contribution.calloutId')
-      .getRawMany<{ calloutId: string; count: string }>();
+    const results = await this.db
+      .select({
+        calloutId: calloutContributions.calloutId,
+        count: count(),
+      })
+      .from(calloutContributions)
+      .where(inArray(calloutContributions.calloutId, calloutIds))
+      .groupBy(calloutContributions.calloutId);
 
     const countsMap = new Map<string, number>();
     for (const row of results) {
-      countsMap.set(row.calloutId, parseInt(row.count, 10));
+      if (row.calloutId) {
+        countsMap.set(row.calloutId, row.count);
+      }
     }
     return countsMap;
   }

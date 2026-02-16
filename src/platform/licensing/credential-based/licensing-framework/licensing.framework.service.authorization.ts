@@ -29,12 +29,13 @@ export class LicensingFrameworkAuthorizationService {
     parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IAuthorizationPolicy[]> {
     let licensing = licensingInput;
-    if (!licensing.licensePolicy) {
+    if (!licensing.licensePolicy || !licensing.authorization) {
       licensing = await this.licensingFrameworkService.getLicensingOrFail(
         licensingInput.id,
         {
           relations: {
-            licensePolicy: true,
+            authorization: true,
+            licensePolicy: { authorization: true },
           },
         }
       );

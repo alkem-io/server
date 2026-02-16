@@ -3,7 +3,6 @@ import { DocumentService } from '@domain/storage/document/document.service';
 import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getEntityManagerToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -20,10 +19,12 @@ vi.mock('@common/utils', async importOriginal => {
 });
 
 import { base64ToBuffer } from '@common/utils';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 
 describe('AdminWhiteboardService', () => {
   let service: AdminWhiteboardService;
-  let mockEntityManager: { find: Mock; save: Mock };
+  let db: any;
   let storageBucketService: { uploadFileAsDocumentFromBuffer: Mock };
   let documentService: { saveDocument: Mock; getPubliclyAccessibleURL: Mock };
   let documentAuthorizationService: { applyAuthorizationPolicy: Mock };
@@ -32,18 +33,10 @@ describe('AdminWhiteboardService', () => {
   const agentInfo = { userID: 'uploader-1' } as any;
 
   beforeEach(async () => {
-    mockEntityManager = {
-      find: vi.fn(),
-      save: vi.fn(),
-    };
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AdminWhiteboardService,
-        {
-          provide: getEntityManagerToken('default'),
-          useValue: mockEntityManager,
-        },
+        mockDrizzleProvider,
         MockCacheManager,
         MockWinstonProvider,
       ],
@@ -52,6 +45,7 @@ describe('AdminWhiteboardService', () => {
       .compile();
 
     service = module.get(AdminWhiteboardService);
+    db = module.get(DRIZZLE);
     storageBucketService = module.get(
       StorageBucketService
     ) as unknown as typeof storageBucketService;
@@ -88,8 +82,8 @@ describe('AdminWhiteboardService', () => {
   describe('uploadFilesFromContentToStorageBucket', () => {
     it('should skip whiteboards with no content', async () => {
       const wb = makeWhiteboard('wb-1', null);
-      mockEntityManager.find.mockResolvedValue([wb]);
-      mockEntityManager.save.mockResolvedValue(undefined);
+      db.query.whiteboards.findMany.mockResolvedValue([wb]);
+      // save is handled by Drizzle mock
 
       const result =
         await service.uploadFilesFromContentToStorageBucket(agentInfo);
@@ -103,8 +97,8 @@ describe('AdminWhiteboardService', () => {
     it('should add error when storageBucket is missing', async () => {
       const wb = makeWhiteboard('wb-1', '{}', undefined);
       wb.profile.storageBucket = undefined;
-      mockEntityManager.find.mockResolvedValue([wb]);
-      mockEntityManager.save.mockResolvedValue(undefined);
+      db.query.whiteboards.findMany.mockResolvedValue([wb]);
+      // save is handled by Drizzle mock
 
       const result =
         await service.uploadFilesFromContentToStorageBucket(agentInfo);
@@ -118,8 +112,8 @@ describe('AdminWhiteboardService', () => {
 
     it('should add warning when content has no files attribute', async () => {
       const wb = makeWhiteboard('wb-1', JSON.stringify({ type: 'excalidraw' }));
-      mockEntityManager.find.mockResolvedValue([wb]);
-      mockEntityManager.save.mockResolvedValue(undefined);
+      db.query.whiteboards.findMany.mockResolvedValue([wb]);
+      // save is handled by Drizzle mock
 
       const result =
         await service.uploadFilesFromContentToStorageBucket(agentInfo);
@@ -138,8 +132,8 @@ describe('AdminWhiteboardService', () => {
         },
       };
       const wb = makeWhiteboard('wb-1', JSON.stringify(content));
-      mockEntityManager.find.mockResolvedValue([wb]);
-      mockEntityManager.save.mockResolvedValue(undefined);
+      db.query.whiteboards.findMany.mockResolvedValue([wb]);
+      // save is handled by Drizzle mock
 
       const result =
         await service.uploadFilesFromContentToStorageBucket(agentInfo);
@@ -162,8 +156,8 @@ describe('AdminWhiteboardService', () => {
         },
       };
       const wb = makeWhiteboard('wb-1', JSON.stringify(content));
-      mockEntityManager.find.mockResolvedValue([wb]);
-      mockEntityManager.save.mockResolvedValue(undefined);
+      db.query.whiteboards.findMany.mockResolvedValue([wb]);
+      // save is handled by Drizzle mock
       vi.mocked(base64ToBuffer).mockReturnValue(undefined);
 
       const result =
@@ -187,8 +181,8 @@ describe('AdminWhiteboardService', () => {
         },
       };
       const wb = makeWhiteboard('wb-1', JSON.stringify(content));
-      mockEntityManager.find.mockResolvedValue([wb]);
-      mockEntityManager.save.mockResolvedValue(undefined);
+      db.query.whiteboards.findMany.mockResolvedValue([wb]);
+      // save is handled by Drizzle mock
 
       const buffer = Buffer.from('abc');
       vi.mocked(base64ToBuffer).mockReturnValue(buffer);
@@ -242,8 +236,8 @@ describe('AdminWhiteboardService', () => {
         },
       };
       const wb = makeWhiteboard('wb-1', JSON.stringify(content));
-      mockEntityManager.find.mockResolvedValue([wb]);
-      mockEntityManager.save.mockResolvedValue(undefined);
+      db.query.whiteboards.findMany.mockResolvedValue([wb]);
+      // save is handled by Drizzle mock
 
       const buffer = Buffer.from('abc');
       vi.mocked(base64ToBuffer).mockReturnValue(buffer);

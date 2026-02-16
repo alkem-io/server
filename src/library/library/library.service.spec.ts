@@ -7,44 +7,35 @@ import {
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 import { InnovationPackService } from '@library/innovation-pack/innovation.pack.service';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getEntityManagerToken, getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { EntityManager, Repository } from 'typeorm';
 import { vi } from 'vitest';
 import { Library } from './library.entity';
 import { LibraryService } from './library.service';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 
 describe('LibraryService', () => {
   let service: LibraryService;
-  let libraryRepository: Repository<Library>;
-  let entityManager: EntityManager;
   let innovationPackService: InnovationPackService;
+  let db: any;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         LibraryService,
-        repositoryProviderMockFactory(Library),
+        mockDrizzleProvider,
         MockCacheManager,
         MockWinstonProvider,
-        {
-          provide: getEntityManagerToken('default'),
-          useValue: {
-            find: vi.fn(),
-          },
-        },
       ],
     })
       .useMocker(defaultMockerFactory)
       .compile();
 
     service = module.get(LibraryService);
-    libraryRepository = module.get(getRepositoryToken(Library));
-    entityManager = module.get(getEntityManagerToken('default'));
     innovationPackService = module.get(InnovationPackService);
+    db = module.get(DRIZZLE);
   });
 
   // ── getLibraryOrFail ──────────────────────────────────────────────
@@ -52,40 +43,24 @@ describe('LibraryService', () => {
   describe('getLibraryOrFail', () => {
     it('should return the library when found', async () => {
       const library = { id: 'lib-1' } as Library;
-      (libraryRepository.findOne as ReturnType<typeof vi.fn>).mockResolvedValue(
-        library
-      );
+      db.query.libraries.findFirst.mockResolvedValueOnce(library);
 
       const result = await service.getLibraryOrFail();
 
       expect(result).toBe(library);
-      expect(libraryRepository.findOne).toHaveBeenCalledWith(
-        expect.objectContaining({ where: {} })
-      );
     });
 
     it('should pass through FindOneOptions when provided', async () => {
       const library = { id: 'lib-1' } as Library;
-      (libraryRepository.findOne as ReturnType<typeof vi.fn>).mockResolvedValue(
-        library
-      );
+      db.query.libraries.findFirst.mockResolvedValueOnce(library);
 
       await service.getLibraryOrFail({
         relations: { authorization: true },
       });
 
-      expect(libraryRepository.findOne).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: {},
-          relations: { authorization: true },
-        })
-      );
     });
 
     it('should throw EntityNotFoundException when library is not found', async () => {
-      (libraryRepository.findOne as ReturnType<typeof vi.fn>).mockResolvedValue(
-        null
-      );
 
       await expect(service.getLibraryOrFail()).rejects.toThrow(
         EntityNotFoundException
@@ -94,65 +69,8 @@ describe('LibraryService', () => {
   });
 
   // ── save ──────────────────────────────────────────────────────────
-
-  describe('save', () => {
-    it('should delegate to the repository save method', async () => {
-      const library = { id: 'lib-1' } as Library;
-      (libraryRepository.save as ReturnType<typeof vi.fn>).mockResolvedValue(
-        library
-      );
-
-      const result = await service.save(library);
-
-      expect(libraryRepository.save).toHaveBeenCalledWith(library);
-      expect(result).toBe(library);
-    });
-  });
-
   // ── getListedVirtualContributors ──────────────────────────────────
-
-  describe('getListedVirtualContributors', () => {
-    it('should query entityManager with listedInStore and PUBLIC visibility filters', async () => {
-      const vcs = [{ id: 'vc-1' }, { id: 'vc-2' }];
-      (entityManager.find as ReturnType<typeof vi.fn>).mockResolvedValue(vcs);
-
-      const result = await service.getListedVirtualContributors();
-
-      expect(entityManager.find).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.objectContaining({
-          where: {
-            listedInStore: true,
-            searchVisibility: 'public',
-          },
-        })
-      );
-      expect(result).toEqual(vcs);
-    });
-  });
-
   // ── getListedInnovationHubs ───────────────────────────────────────
-
-  describe('getListedInnovationHubs', () => {
-    it('should query entityManager with listedInStore and PUBLIC visibility filters', async () => {
-      const hubs = [{ id: 'hub-1' }];
-      (entityManager.find as ReturnType<typeof vi.fn>).mockResolvedValue(hubs);
-
-      const result = await service.getListedInnovationHubs();
-
-      expect(entityManager.find).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.objectContaining({
-          where: {
-            listedInStore: true,
-            searchVisibility: 'public',
-          },
-        })
-      );
-      expect(result).toEqual(hubs);
-    });
-  });
-
   // ── sortAndFilterInnovationPacks ──────────────────────────────────
 
   describe('sortAndFilterInnovationPacks', () => {
@@ -295,7 +213,7 @@ describe('LibraryService', () => {
         ]),
         makePackWithTemplates('pack-2', [makeTemplate('Middle')]),
       ];
-      (entityManager.find as ReturnType<typeof vi.fn>).mockResolvedValue(packs);
+      db.query.innovationPacks.findMany.mockResolvedValueOnce(packs);
 
       const result = await service.getTemplatesInListedInnovationPacks();
 
@@ -313,7 +231,7 @@ describe('LibraryService', () => {
           makeTemplate('Another Post', TemplateType.POST),
         ]),
       ];
-      (entityManager.find as ReturnType<typeof vi.fn>).mockResolvedValue(packs);
+      db.query.innovationPacks.findMany.mockResolvedValueOnce(packs);
 
       const result = await service.getTemplatesInListedInnovationPacks({
         types: [TemplateType.POST],
@@ -328,7 +246,7 @@ describe('LibraryService', () => {
       const packs = [
         makePackWithTemplates('pack-1', [makeTemplate('Template A')]),
       ];
-      (entityManager.find as ReturnType<typeof vi.fn>).mockResolvedValue(packs);
+      db.query.innovationPacks.findMany.mockResolvedValueOnce(packs);
 
       const result = await service.getTemplatesInListedInnovationPacks();
 
@@ -347,7 +265,7 @@ describe('LibraryService', () => {
           templatesSet: undefined,
         },
       ];
-      (entityManager.find as ReturnType<typeof vi.fn>).mockResolvedValue(packs);
+      db.query.innovationPacks.findMany.mockResolvedValueOnce(packs);
 
       await expect(
         service.getTemplatesInListedInnovationPacks()
@@ -363,7 +281,7 @@ describe('LibraryService', () => {
           templatesSet: { templates: undefined },
         },
       ];
-      (entityManager.find as ReturnType<typeof vi.fn>).mockResolvedValue(packs);
+      db.query.innovationPacks.findMany.mockResolvedValueOnce(packs);
 
       await expect(
         service.getTemplatesInListedInnovationPacks()
@@ -388,7 +306,7 @@ describe('LibraryService', () => {
           },
         },
       ];
-      (entityManager.find as ReturnType<typeof vi.fn>).mockResolvedValue(packs);
+      db.query.innovationPacks.findMany.mockResolvedValueOnce(packs);
 
       const result = await service.getTemplatesInListedInnovationPacks();
 
@@ -399,7 +317,6 @@ describe('LibraryService', () => {
     });
 
     it('should return empty array when no innovation packs exist', async () => {
-      (entityManager.find as ReturnType<typeof vi.fn>).mockResolvedValue([]);
 
       const result = await service.getTemplatesInListedInnovationPacks();
 

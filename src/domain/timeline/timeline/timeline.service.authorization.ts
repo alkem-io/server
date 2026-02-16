@@ -22,7 +22,7 @@ export class TimelineAuthorizationService {
     const timeline = await this.timelineService.getTimelineOrFail(
       timelineInput.id,
       {
-        relations: { calendar: true },
+        relations: { authorization: true, calendar: true },
       }
     );
     if (!timeline.calendar) {

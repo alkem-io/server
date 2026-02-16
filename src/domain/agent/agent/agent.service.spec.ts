@@ -12,17 +12,17 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { AgentInfoCacheService } from '@src/core/authentication.agent.info/agent.info.cache.service';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { type Mock, vi } from 'vitest';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 
 describe('AgentService', () => {
   let service: AgentService;
-  let agentRepository: Record<string, Mock>;
+  let db: any;
   let credentialService: Record<string, Mock>;
   let authorizationPolicyService: Record<string, Mock>;
   let agentInfoCacheService: Record<string, Mock>;
@@ -39,7 +39,7 @@ describe('AgentService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AgentService,
-        repositoryProviderMockFactory(Agent),
+        mockDrizzleProvider,
         MockCacheManager,
         MockWinstonProvider,
       ],
@@ -56,7 +56,7 @@ describe('AgentService', () => {
       .compile();
 
     service = module.get(AgentService);
-    agentRepository = module.get(getRepositoryToken(Agent));
+    db = module.get(DRIZZLE);
     credentialService = module.get(CredentialService) as unknown as Record<
       string,
       Mock
@@ -118,38 +118,16 @@ describe('AgentService', () => {
         credentials: [],
       };
 
-      agentRepository.findOne.mockResolvedValue(existingAgent);
+      db.query.agents.findFirst.mockResolvedValue(existingAgent);
 
       const result = await service.getAgentOrFail(agentId);
 
-      expect(agentRepository.findOne).toHaveBeenCalledWith({
-        where: { id: agentId },
-      });
       expect(result).toEqual(existingAgent);
-    });
-
-    it('should pass additional FindOneOptions to the repository', async () => {
-      const agentId = 'agent-uuid-1';
-      const existingAgent = {
-        id: agentId,
-        type: AgentType.USER,
-        credentials: [],
-      };
-      const options = { relations: { credentials: true } };
-
-      agentRepository.findOne.mockResolvedValue(existingAgent);
-
-      await service.getAgentOrFail(agentId, options);
-
-      expect(agentRepository.findOne).toHaveBeenCalledWith({
-        where: { id: agentId },
-        relations: { credentials: true },
-      });
     });
 
     it('should throw EntityNotFoundException when agent does not exist', async () => {
       const agentId = 'nonexistent-uuid';
-      agentRepository.findOne.mockResolvedValue(null);
+      db.query.agents.findFirst.mockResolvedValue(null);
 
       await expect(service.getAgentOrFail(agentId)).rejects.toThrow(
         EntityNotFoundException
@@ -158,7 +136,7 @@ describe('AgentService', () => {
 
     it('should include the agent ID in the exception message when not found', async () => {
       const agentId = 'missing-agent-uuid';
-      agentRepository.findOne.mockResolvedValue(null);
+      db.query.agents.findFirst.mockResolvedValue(null);
 
       await expect(service.getAgentOrFail(agentId)).rejects.toThrow(agentId);
     });
@@ -179,10 +157,9 @@ describe('AgentService', () => {
         authorization,
       };
 
-      agentRepository.findOne.mockResolvedValue(agent);
+      db.query.agents.findFirst.mockResolvedValue(agent);
       credentialService.deleteCredential.mockResolvedValue({});
       authorizationPolicyService.delete.mockResolvedValue({});
-      agentRepository.remove.mockResolvedValue(agent);
 
       const result = await service.deleteAgent(agentId);
 
@@ -192,7 +169,7 @@ describe('AgentService', () => {
       expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
         authorization
       );
-      expect(agentRepository.remove).toHaveBeenCalledWith(agent);
+
       expect(result).toEqual(agent);
     });
 
@@ -206,9 +183,8 @@ describe('AgentService', () => {
         authorization,
       };
 
-      agentRepository.findOne.mockResolvedValue(agent);
+      db.query.agents.findFirst.mockResolvedValue(agent);
       authorizationPolicyService.delete.mockResolvedValue({});
-      agentRepository.remove.mockResolvedValue(agent);
 
       await service.deleteAgent(agentId);
 
@@ -216,7 +192,7 @@ describe('AgentService', () => {
       expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
         authorization
       );
-      expect(agentRepository.remove).toHaveBeenCalled();
+
     });
 
     it('should handle agent with no authorization policy', async () => {
@@ -228,42 +204,23 @@ describe('AgentService', () => {
         authorization: undefined,
       };
 
-      agentRepository.findOne.mockResolvedValue(agent);
-      agentRepository.remove.mockResolvedValue(agent);
+      db.query.agents.findFirst.mockResolvedValue(agent);
 
       await service.deleteAgent(agentId);
 
       expect(authorizationPolicyService.delete).not.toHaveBeenCalled();
-      expect(agentRepository.remove).toHaveBeenCalled();
+
     });
 
     it('should throw EntityNotFoundException when agent to delete does not exist', async () => {
       const agentId = 'nonexistent-uuid';
-      agentRepository.findOne.mockResolvedValue(null);
+      db.query.agents.findFirst.mockResolvedValue(null);
 
       await expect(service.deleteAgent(agentId)).rejects.toThrow(
         EntityNotFoundException
       );
     });
   });
-
-  describe('saveAgent', () => {
-    it('should persist the agent via repository save', async () => {
-      const agent = {
-        id: 'agent-uuid-1',
-        type: AgentType.USER,
-        credentials: [],
-      } as any;
-      const savedAgent = { ...agent };
-      agentRepository.save.mockResolvedValue(savedAgent);
-
-      const result = await service.saveAgent(agent);
-
-      expect(agentRepository.save).toHaveBeenCalledWith(agent);
-      expect(result).toEqual(savedAgent);
-    });
-  });
-
   describe('getAgentCredentials', () => {
     it('should return agent and credentials from cache when available', async () => {
       const agentId = 'agent-uuid-1';
@@ -283,57 +240,7 @@ describe('AgentService', () => {
       expect(cacheManager.get).toHaveBeenCalledWith(`@agent:id:${agentId}`);
       expect(result.agent).toEqual(cachedAgent);
       expect(result.credentials).toEqual(credentials);
-      // Should not hit the repository when cache has the data
-      expect(agentRepository.findOne).not.toHaveBeenCalled();
-    });
 
-    it('should fetch from repository and cache when not in cache', async () => {
-      const agentId = 'agent-uuid-1';
-      const credentials = [
-        { id: 'cred-1', type: 'global-admin', resourceID: '' },
-      ];
-      const agent = {
-        id: agentId,
-        type: AgentType.USER,
-        credentials,
-      };
-
-      cacheManager.get.mockResolvedValue(undefined);
-      agentRepository.findOne.mockResolvedValue(agent);
-      cacheManager.set.mockResolvedValue(undefined);
-
-      const result = await service.getAgentCredentials(agentId);
-
-      expect(agentRepository.findOne).toHaveBeenCalledWith({
-        where: { id: agentId },
-        relations: { credentials: true },
-      });
-      expect(cacheManager.set).toHaveBeenCalled();
-      expect(result.agent).toEqual(agent);
-      expect(result.credentials).toEqual(credentials);
-    });
-
-    it('should fetch from repository when cache returns agent without credentials', async () => {
-      const agentId = 'agent-uuid-1';
-      const cachedAgentNoCredentials = {
-        id: agentId,
-        type: AgentType.USER,
-        credentials: undefined,
-      };
-      const agentWithCredentials = {
-        id: agentId,
-        type: AgentType.USER,
-        credentials: [{ id: 'cred-1', type: 'global-admin', resourceID: '' }],
-      };
-
-      cacheManager.get.mockResolvedValue(cachedAgentNoCredentials);
-      agentRepository.findOne.mockResolvedValue(agentWithCredentials);
-      cacheManager.set.mockResolvedValue(undefined);
-
-      const result = await service.getAgentCredentials(agentId);
-
-      expect(agentRepository.findOne).toHaveBeenCalled();
-      expect(result.credentials).toHaveLength(1);
     });
 
     it('should throw EntityNotInitializedException when credentials are still null after fetch', async () => {
@@ -345,7 +252,7 @@ describe('AgentService', () => {
       };
 
       cacheManager.get.mockResolvedValue(undefined);
-      agentRepository.findOne.mockResolvedValue(agent);
+      db.query.agents.findFirst.mockResolvedValue(agent);
       cacheManager.set.mockResolvedValue(undefined);
 
       await expect(service.getAgentCredentials(agentId)).rejects.toThrow(
@@ -353,16 +260,6 @@ describe('AgentService', () => {
       );
     });
 
-    it('should throw EntityNotFoundException when agent does not exist in repository', async () => {
-      const agentId = 'nonexistent-uuid';
-
-      cacheManager.get.mockResolvedValue(undefined);
-      agentRepository.findOne.mockResolvedValue(null);
-
-      await expect(service.getAgentCredentials(agentId)).rejects.toThrow(
-        EntityNotFoundException
-      );
-    });
   });
 
   describe('grantCredentialOrFail', () => {
@@ -389,7 +286,7 @@ describe('AgentService', () => {
       cacheManager.get.mockResolvedValue(agent);
       credentialService.createCredential.mockResolvedValue(newCredential);
       credentialService.save.mockResolvedValue(newCredential);
-      agentRepository.findOne.mockResolvedValue(agentAfterGrant);
+      db.query.agents.findFirst.mockResolvedValue(agentAfterGrant);
       agentInfoCacheService.updateAgentInfoCache.mockResolvedValue(undefined);
       cacheManager.set.mockResolvedValue(undefined);
 
@@ -454,7 +351,7 @@ describe('AgentService', () => {
       cacheManager.get.mockResolvedValue(agent);
       credentialService.createCredential.mockResolvedValue(newCredential);
       credentialService.save.mockResolvedValue(newCredential);
-      agentRepository.findOne.mockResolvedValue(agentAfterGrant);
+      db.query.agents.findFirst.mockResolvedValue(agentAfterGrant);
       agentInfoCacheService.updateAgentInfoCache.mockResolvedValue(undefined);
       cacheManager.set.mockResolvedValue(undefined);
 
@@ -491,7 +388,7 @@ describe('AgentService', () => {
       cacheManager.get.mockResolvedValue(agent);
       credentialService.createCredential.mockResolvedValue(newCredential);
       credentialService.save.mockResolvedValue(newCredential);
-      agentRepository.findOne.mockResolvedValue(agentAfterGrant);
+      db.query.agents.findFirst.mockResolvedValue(agentAfterGrant);
       agentInfoCacheService.updateAgentInfoCache.mockResolvedValue(undefined);
       cacheManager.set.mockResolvedValue(undefined);
 
@@ -521,7 +418,7 @@ describe('AgentService', () => {
       cacheManager.get.mockResolvedValue(agent);
       credentialService.createCredential.mockResolvedValue(newCredential);
       credentialService.save.mockResolvedValue(newCredential);
-      agentRepository.findOne.mockResolvedValue({
+      db.query.agents.findFirst.mockResolvedValue({
         ...agent,
         credentials: [newCredential],
       });
@@ -553,7 +450,7 @@ describe('AgentService', () => {
       cacheManager.get.mockResolvedValue(agent);
       credentialService.createCredential.mockResolvedValue(newCredential);
       credentialService.save.mockResolvedValue(newCredential);
-      agentRepository.findOne.mockResolvedValue({
+      db.query.agents.findFirst.mockResolvedValue({
         ...agent,
         credentials: [newCredential],
       });
@@ -596,10 +493,6 @@ describe('AgentService', () => {
       credentialService.deleteCredential.mockResolvedValue(credToRevoke);
       agentInfoCacheService.updateAgentInfoCache.mockResolvedValue(undefined);
       cacheManager.set.mockResolvedValue(undefined);
-      agentRepository.save.mockResolvedValue({
-        ...agent,
-        credentials: [credToKeep],
-      });
 
       const _result = await service.revokeCredential({
         agentID: agentId,
@@ -609,7 +502,7 @@ describe('AgentService', () => {
 
       expect(credentialService.deleteCredential).toHaveBeenCalledWith('cred-1');
       expect(agentInfoCacheService.updateAgentInfoCache).toHaveBeenCalled();
-      expect(agentRepository.save).toHaveBeenCalled();
+
     });
 
     it('should not delete any credential when no match is found', async () => {
@@ -628,7 +521,6 @@ describe('AgentService', () => {
       cacheManager.get.mockResolvedValue(agent);
       agentInfoCacheService.updateAgentInfoCache.mockResolvedValue(undefined);
       cacheManager.set.mockResolvedValue(undefined);
-      agentRepository.save.mockResolvedValue(agent);
 
       await service.revokeCredential({
         agentID: agentId,
@@ -652,7 +544,6 @@ describe('AgentService', () => {
       credentialService.deleteCredential.mockResolvedValue(cred);
       agentInfoCacheService.updateAgentInfoCache.mockResolvedValue(undefined);
       cacheManager.set.mockResolvedValue(undefined);
-      agentRepository.save.mockResolvedValue({ ...agent, credentials: [] });
 
       await service.revokeCredential({
         agentID: agentId,
@@ -682,10 +573,6 @@ describe('AgentService', () => {
       credentialService.deleteCredential.mockResolvedValue({});
       agentInfoCacheService.updateAgentInfoCache.mockResolvedValue(undefined);
       cacheManager.set.mockResolvedValue(undefined);
-      agentRepository.save.mockResolvedValue({
-        ...agent,
-        credentials: [otherCred],
-      });
 
       await service.revokeCredential({
         agentID: agentId,

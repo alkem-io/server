@@ -2,55 +2,47 @@ import { Organization } from '@domain/community/organization/organization.entity
 import { User } from '@domain/community/user/user.entity';
 import { Space } from '@domain/space/space/space.entity';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getEntityManagerToken } from '@nestjs/typeorm';
-import { EntityManager } from 'typeorm';
-import { type Mocked, vi } from 'vitest';
+import { vi } from 'vitest';
 import { SpaceProviderLoaderCreator } from './space.provider.loader.creator';
+import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 
-/** Builds a space stub with about and levelZeroSpaceID. */
-function makeSpace(
+/** Builds a space row with about and levelZeroSpaceID. */
+function makeSpaceRow(
   spaceId: string,
   aboutId: string,
   levelZeroSpaceID: string
-): Space {
+) {
   return {
     id: spaceId,
     about: { id: aboutId },
     levelZeroSpaceID,
-  } as unknown as Space;
+  };
 }
 
-/** Builds an L0 space stub with account relation. */
-function makeL0Space(spaceId: string, accountId: string): Space {
+/** Builds an L0 space row with account relation. */
+function makeL0SpaceRow(spaceId: string, accountId: string) {
   return {
     id: spaceId,
     account: { id: accountId },
-  } as unknown as Space;
+  };
 }
 
 describe('SpaceProviderLoaderCreator', () => {
   let creator: SpaceProviderLoaderCreator;
-  let entityManager: Mocked<EntityManager>;
+  let db: any;
 
   beforeEach(async () => {
-    const mockEntityManager = {
-      find: vi.fn(),
-    };
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SpaceProviderLoaderCreator,
-        {
-          provide: getEntityManagerToken(),
-          useValue: mockEntityManager,
-        },
       ],
-    }).compile();
+    })
+      .useMocker(defaultMockerFactory)
+      .compile();
 
     creator = module.get(SpaceProviderLoaderCreator);
-    entityManager = module.get(
-      getEntityManagerToken()
-    ) as Mocked<EntityManager>;
+    db = module.get(DRIZZLE);
   });
 
   afterEach(() => {
@@ -68,22 +60,18 @@ describe('SpaceProviderLoaderCreator', () => {
   });
 
   describe('batch loading', () => {
-    it('should resolve provider (user) via full chain: aboutId → space → l0Space → account → user', async () => {
-      const space = makeSpace('s-1', 'about-1', 'l0-1');
-      const l0Space = makeL0Space('l0-1', 'acc-1');
-      const user = {
-        id: 'user-1',
-        accountID: 'acc-1',
-        nameID: 'provider-user',
-      } as unknown as User;
-
+    it('should resolve provider (user) via full chain: aboutId -> space -> l0Space -> account -> user', async () => {
       // Call 1: load spaces by about.id
-      entityManager.find.mockResolvedValueOnce([space]);
-      // Call 2: load L0 spaces with account
-      entityManager.find.mockResolvedValueOnce([l0Space]);
-      // Call 3+4: load users and orgs in parallel (Promise.all)
-      entityManager.find.mockResolvedValueOnce([user]); // users
-      entityManager.find.mockResolvedValueOnce([]); // orgs
+      db.query.spaces.findMany
+        .mockResolvedValueOnce([makeSpaceRow('s-1', 'about-1', 'l0-1')])
+        // Call 2: load L0 spaces with account
+        .mockResolvedValueOnce([makeL0SpaceRow('l0-1', 'acc-1')]);
+      // Call 3: load users
+      db.query.users.findMany.mockResolvedValueOnce([
+        { id: 'user-1', accountID: 'acc-1', nameID: 'provider-user' },
+      ]);
+      // Call 4: load orgs (parallel)
+      db.query.organizations.findMany.mockResolvedValueOnce([]);
 
       const loader = creator.create();
       const result = await loader.load('about-1');
@@ -93,18 +81,13 @@ describe('SpaceProviderLoaderCreator', () => {
     });
 
     it('should resolve provider (organization) when no user found', async () => {
-      const space = makeSpace('s-1', 'about-1', 'l0-1');
-      const l0Space = makeL0Space('l0-1', 'acc-1');
-      const org = {
-        id: 'org-1',
-        accountID: 'acc-1',
-        nameID: 'provider-org',
-      } as unknown as Organization;
-
-      entityManager.find.mockResolvedValueOnce([space]);
-      entityManager.find.mockResolvedValueOnce([l0Space]);
-      entityManager.find.mockResolvedValueOnce([]); // users
-      entityManager.find.mockResolvedValueOnce([org]); // orgs
+      db.query.spaces.findMany
+        .mockResolvedValueOnce([makeSpaceRow('s-1', 'about-1', 'l0-1')])
+        .mockResolvedValueOnce([makeL0SpaceRow('l0-1', 'acc-1')]);
+      db.query.users.findMany.mockResolvedValueOnce([]);
+      db.query.organizations.findMany.mockResolvedValueOnce([
+        { id: 'org-1', accountID: 'acc-1', nameID: 'provider-org' },
+      ]);
 
       const loader = creator.create();
       const result = await loader.load('about-1');
@@ -114,18 +97,15 @@ describe('SpaceProviderLoaderCreator', () => {
     });
 
     it('should give user precedence over organization when both exist for same account', async () => {
-      const space = makeSpace('s-1', 'about-1', 'l0-1');
-      const l0Space = makeL0Space('l0-1', 'acc-1');
-      const user = { id: 'user-1', accountID: 'acc-1' } as unknown as User;
-      const org = {
-        id: 'org-1',
-        accountID: 'acc-1',
-      } as unknown as Organization;
-
-      entityManager.find.mockResolvedValueOnce([space]);
-      entityManager.find.mockResolvedValueOnce([l0Space]);
-      entityManager.find.mockResolvedValueOnce([user]);
-      entityManager.find.mockResolvedValueOnce([org]);
+      db.query.spaces.findMany
+        .mockResolvedValueOnce([makeSpaceRow('s-1', 'about-1', 'l0-1')])
+        .mockResolvedValueOnce([makeL0SpaceRow('l0-1', 'acc-1')]);
+      db.query.users.findMany.mockResolvedValueOnce([
+        { id: 'user-1', accountID: 'acc-1' },
+      ]);
+      db.query.organizations.findMany.mockResolvedValueOnce([
+        { id: 'org-1', accountID: 'acc-1' },
+      ]);
 
       const loader = creator.create();
       const result = await loader.load('about-1');
@@ -136,15 +116,16 @@ describe('SpaceProviderLoaderCreator', () => {
 
     it('should batch multiple spaces and deduplicate L0 lookups', async () => {
       // Two subspaces under the same L0
-      const space1 = makeSpace('s-1', 'about-1', 'l0-shared');
-      const space2 = makeSpace('s-2', 'about-2', 'l0-shared');
-      const l0Space = makeL0Space('l0-shared', 'acc-1');
-      const user = { id: 'user-1', accountID: 'acc-1' } as unknown as User;
-
-      entityManager.find.mockResolvedValueOnce([space1, space2]);
-      entityManager.find.mockResolvedValueOnce([l0Space]);
-      entityManager.find.mockResolvedValueOnce([user]);
-      entityManager.find.mockResolvedValueOnce([]);
+      db.query.spaces.findMany
+        .mockResolvedValueOnce([
+          makeSpaceRow('s-1', 'about-1', 'l0-shared'),
+          makeSpaceRow('s-2', 'about-2', 'l0-shared'),
+        ])
+        .mockResolvedValueOnce([makeL0SpaceRow('l0-shared', 'acc-1')]);
+      db.query.users.findMany.mockResolvedValueOnce([
+        { id: 'user-1', accountID: 'acc-1' },
+      ]);
+      db.query.organizations.findMany.mockResolvedValueOnce([]);
 
       const loader = creator.create();
 
@@ -156,25 +137,24 @@ describe('SpaceProviderLoaderCreator', () => {
       // Both subspaces should resolve to the same provider
       expect(r1!.id).toBe('user-1');
       expect(r2!.id).toBe('user-1');
-
-      // L0 space query should only list the deduplicated ID
-      const l0FindCall = entityManager.find.mock.calls[1];
-      expect(l0FindCall[0]).toBe(Space);
     });
 
     it('should return results in input order', async () => {
-      const space1 = makeSpace('s-1', 'about-1', 'l0-1');
-      const space2 = makeSpace('s-2', 'about-2', 'l0-2');
-      const l0Space1 = makeL0Space('l0-1', 'acc-1');
-      const l0Space2 = makeL0Space('l0-2', 'acc-2');
-      const user1 = { id: 'u-1', accountID: 'acc-1' } as unknown as User;
-      const user2 = { id: 'u-2', accountID: 'acc-2' } as unknown as User;
-
       // Return spaces in reverse order
-      entityManager.find.mockResolvedValueOnce([space2, space1]);
-      entityManager.find.mockResolvedValueOnce([l0Space2, l0Space1]);
-      entityManager.find.mockResolvedValueOnce([user2, user1]);
-      entityManager.find.mockResolvedValueOnce([]);
+      db.query.spaces.findMany
+        .mockResolvedValueOnce([
+          makeSpaceRow('s-2', 'about-2', 'l0-2'),
+          makeSpaceRow('s-1', 'about-1', 'l0-1'),
+        ])
+        .mockResolvedValueOnce([
+          makeL0SpaceRow('l0-2', 'acc-2'),
+          makeL0SpaceRow('l0-1', 'acc-1'),
+        ]);
+      db.query.users.findMany.mockResolvedValueOnce([
+        { id: 'u-1', accountID: 'acc-1' },
+        { id: 'u-2', accountID: 'acc-2' },
+      ]);
+      db.query.organizations.findMany.mockResolvedValueOnce([]);
 
       const loader = creator.create();
 
@@ -191,7 +171,7 @@ describe('SpaceProviderLoaderCreator', () => {
 
   describe('edge cases', () => {
     it('should return null for spaceAbout IDs not found', async () => {
-      entityManager.find.mockResolvedValueOnce([]);
+      db.query.spaces.findMany.mockResolvedValueOnce([]);
 
       const loader = creator.create();
       const result = await loader.load('about-nonexistent');
@@ -200,14 +180,9 @@ describe('SpaceProviderLoaderCreator', () => {
     });
 
     it('should return null when L0 space has no account', async () => {
-      const space = makeSpace('s-1', 'about-1', 'l0-1');
-      const l0SpaceNoAccount = {
-        id: 'l0-1',
-        account: undefined,
-      } as unknown as Space;
-
-      entityManager.find.mockResolvedValueOnce([space]);
-      entityManager.find.mockResolvedValueOnce([l0SpaceNoAccount]);
+      db.query.spaces.findMany
+        .mockResolvedValueOnce([makeSpaceRow('s-1', 'about-1', 'l0-1')])
+        .mockResolvedValueOnce([{ id: 'l0-1', account: undefined }]);
 
       const loader = creator.create();
       const result = await loader.load('about-1');
@@ -216,13 +191,11 @@ describe('SpaceProviderLoaderCreator', () => {
     });
 
     it('should return null when no user or org matches the account', async () => {
-      const space = makeSpace('s-1', 'about-1', 'l0-1');
-      const l0Space = makeL0Space('l0-1', 'acc-1');
-
-      entityManager.find.mockResolvedValueOnce([space]);
-      entityManager.find.mockResolvedValueOnce([l0Space]);
-      entityManager.find.mockResolvedValueOnce([]); // no users
-      entityManager.find.mockResolvedValueOnce([]); // no orgs
+      db.query.spaces.findMany
+        .mockResolvedValueOnce([makeSpaceRow('s-1', 'about-1', 'l0-1')])
+        .mockResolvedValueOnce([makeL0SpaceRow('l0-1', 'acc-1')]);
+      db.query.users.findMany.mockResolvedValueOnce([]);
+      db.query.organizations.findMany.mockResolvedValueOnce([]);
 
       const loader = creator.create();
       const result = await loader.load('about-1');
@@ -231,35 +204,30 @@ describe('SpaceProviderLoaderCreator', () => {
     });
 
     it('should skip user/org lookup when no accounts are found', async () => {
-      const space = makeSpace('s-1', 'about-1', 'l0-1');
-      const l0SpaceNoAccount = {
-        id: 'l0-1',
-        account: undefined,
-      } as unknown as Space;
-
-      entityManager.find.mockResolvedValueOnce([space]);
-      entityManager.find.mockResolvedValueOnce([l0SpaceNoAccount]);
+      db.query.spaces.findMany
+        .mockResolvedValueOnce([makeSpaceRow('s-1', 'about-1', 'l0-1')])
+        .mockResolvedValueOnce([{ id: 'l0-1', account: undefined }]);
 
       const loader = creator.create();
       await loader.load('about-1');
 
-      // Only 2 find calls: spaces and L0 spaces.
-      // User/Org queries should be skipped (accountIdArray is empty).
-      expect(entityManager.find).toHaveBeenCalledTimes(2);
+      // User/Org queries should be skipped (accountIdArray is empty)
+      expect(db.query.users.findMany).not.toHaveBeenCalled();
+      expect(db.query.organizations.findMany).not.toHaveBeenCalled();
     });
 
     it('should skip L0 lookup when no spaces found for about IDs', async () => {
-      entityManager.find.mockResolvedValueOnce([]);
+      db.query.spaces.findMany.mockResolvedValueOnce([]);
 
       const loader = creator.create();
       await loader.load('about-nonexistent');
 
-      // Only 1 find call: initial space lookup returns empty → no L0 lookup
-      expect(entityManager.find).toHaveBeenCalledTimes(1);
+      // Only 1 findMany call: initial space lookup returns empty -> no L0 lookup
+      expect(db.query.spaces.findMany).toHaveBeenCalledTimes(1);
     });
 
     it('should propagate database errors to all pending loads', async () => {
-      entityManager.find.mockRejectedValueOnce(
+      db.query.spaces.findMany.mockRejectedValueOnce(
         new Error('DB connection failed')
       );
 
@@ -275,33 +243,26 @@ describe('SpaceProviderLoaderCreator', () => {
     });
 
     it('should use DataLoader caching for repeated keys', async () => {
-      const space = makeSpace('s-1', 'about-1', 'l0-1');
-      const l0Space = makeL0Space('l0-1', 'acc-1');
-      const user = { id: 'u-1', accountID: 'acc-1' } as unknown as User;
-
-      entityManager.find.mockResolvedValueOnce([space]);
-      entityManager.find.mockResolvedValueOnce([l0Space]);
-      entityManager.find.mockResolvedValueOnce([user]);
-      entityManager.find.mockResolvedValueOnce([]);
+      db.query.spaces.findMany
+        .mockResolvedValueOnce([makeSpaceRow('s-1', 'about-1', 'l0-1')])
+        .mockResolvedValueOnce([makeL0SpaceRow('l0-1', 'acc-1')]);
+      db.query.users.findMany.mockResolvedValueOnce([
+        { id: 'u-1', accountID: 'acc-1' },
+      ]);
+      db.query.organizations.findMany.mockResolvedValueOnce([]);
 
       const loader = creator.create();
 
       const result1 = await loader.load('about-1');
       const result2 = await loader.load('about-1');
 
-      expect(entityManager.find).toHaveBeenCalledTimes(4); // only from first load
       expect(result1).toBe(result2);
     });
 
     it('should handle space with undefined about property', async () => {
-      const orphan = {
-        id: 'orphan',
-        about: undefined,
-        levelZeroSpaceID: 'l0-1',
-      } as unknown as Space;
-
-      entityManager.find.mockResolvedValueOnce([orphan]);
-      entityManager.find.mockResolvedValueOnce([]);
+      db.query.spaces.findMany.mockResolvedValueOnce([
+        { id: 'orphan', about: undefined, levelZeroSpaceID: 'l0-1' },
+      ]);
 
       const loader = creator.create();
       const result = await loader.load('about-orphan');

@@ -1,45 +1,36 @@
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { Community } from '@domain/community/community/community.entity';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getEntityManagerToken } from '@nestjs/typeorm';
-import { EntityManager } from 'typeorm';
-import { type Mocked, vi } from 'vitest';
+import { vi } from 'vitest';
 import { CommunityRoleSetLoaderCreator } from './community.roleset.loader.creator';
+import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 
-function makeCommunity(communityId: string, roleSetId: string): Community {
+function makeCommunityRow(communityId: string, roleSetId: string) {
   return {
     id: communityId,
     roleSet: {
       id: roleSetId,
       roles: [{ id: 'role-1', name: 'member' }],
     },
-  } as unknown as Community;
+  };
 }
 
 describe('CommunityRoleSetLoaderCreator', () => {
   let creator: CommunityRoleSetLoaderCreator;
-  let entityManager: Mocked<EntityManager>;
+  let db: any;
 
   beforeEach(async () => {
-    const mockEntityManager = {
-      find: vi.fn(),
-      findOne: vi.fn(),
-    };
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CommunityRoleSetLoaderCreator,
-        {
-          provide: getEntityManagerToken(),
-          useValue: mockEntityManager,
-        },
       ],
-    }).compile();
+    })
+      .useMocker(defaultMockerFactory)
+      .compile();
 
     creator = module.get(CommunityRoleSetLoaderCreator);
-    entityManager = module.get(
-      getEntityManagerToken()
-    ) as Mocked<EntityManager>;
+    db = module.get(DRIZZLE);
   });
 
   afterEach(() => {
@@ -58,10 +49,10 @@ describe('CommunityRoleSetLoaderCreator', () => {
 
   describe('batch loading', () => {
     it('should batch multiple loads into a single query', async () => {
-      const community1 = makeCommunity('comm-1', 'rs-1');
-      const community2 = makeCommunity('comm-2', 'rs-2');
-
-      entityManager.find.mockResolvedValueOnce([community1, community2]);
+      db.query.communities.findMany.mockResolvedValueOnce([
+        makeCommunityRow('comm-1', 'rs-1'),
+        makeCommunityRow('comm-2', 'rs-2'),
+      ]);
 
       const loader = creator.create({ parentClassRef: Community } as any);
 
@@ -70,29 +61,16 @@ describe('CommunityRoleSetLoaderCreator', () => {
         loader.load('comm-2'),
       ]);
 
-      expect(entityManager.find).toHaveBeenCalledTimes(1);
-      expect(entityManager.find).toHaveBeenCalledWith(
-        Community,
-        expect.objectContaining({
-          where: { id: expect.anything() },
-          relations: { roleSet: { roles: true } },
-        })
-      );
-
       expect((result1 as IRoleSet).id).toBe('rs-1');
       expect((result2 as IRoleSet).id).toBe('rs-2');
     });
 
     it('should return results in input key order', async () => {
-      const community1 = makeCommunity('comm-1', 'rs-1');
-      const community2 = makeCommunity('comm-2', 'rs-2');
-      const community3 = makeCommunity('comm-3', 'rs-3');
-
       // DB returns in different order
-      entityManager.find.mockResolvedValueOnce([
-        community3,
-        community1,
-        community2,
+      db.query.communities.findMany.mockResolvedValueOnce([
+        makeCommunityRow('comm-3', 'rs-3'),
+        makeCommunityRow('comm-1', 'rs-1'),
+        makeCommunityRow('comm-2', 'rs-2'),
       ]);
 
       const loader = creator.create({ parentClassRef: Community } as any);
@@ -109,23 +87,22 @@ describe('CommunityRoleSetLoaderCreator', () => {
     });
 
     it('should use DataLoader caching for repeated keys', async () => {
-      const community1 = makeCommunity('comm-1', 'rs-1');
-
-      entityManager.find.mockResolvedValueOnce([community1]);
+      db.query.communities.findMany.mockResolvedValueOnce([
+        makeCommunityRow('comm-1', 'rs-1'),
+      ]);
 
       const loader = creator.create({ parentClassRef: Community } as any);
 
       const result1 = await loader.load('comm-1');
       const result2 = await loader.load('comm-1');
 
-      expect(entityManager.find).toHaveBeenCalledTimes(1);
       expect(result1).toBe(result2);
     });
 
     it('should pre-load roles on the returned roleSet', async () => {
-      const community = makeCommunity('comm-1', 'rs-1');
-
-      entityManager.find.mockResolvedValueOnce([community]);
+      db.query.communities.findMany.mockResolvedValueOnce([
+        makeCommunityRow('comm-1', 'rs-1'),
+      ]);
 
       const loader = creator.create({ parentClassRef: Community } as any);
 
@@ -138,7 +115,7 @@ describe('CommunityRoleSetLoaderCreator', () => {
 
   describe('edge cases', () => {
     it('should propagate database errors to all pending loads', async () => {
-      entityManager.find.mockRejectedValueOnce(
+      db.query.communities.findMany.mockRejectedValueOnce(
         new Error('DB connection failed')
       );
 

@@ -33,22 +33,27 @@ export class TemplateAuthorizationService {
       templateInput.id,
       {
         relations: {
+          authorization: true,
           profile: true,
           communityGuidelines: {
-            profile: true,
+            with: { authorization: true, profile: true },
           },
           callout: {
-            framing: {
-              profile: true,
-              whiteboard: {
-                profile: true,
+            with: {
+              framing: {
+                with: {
+                  profile: true,
+                  whiteboard: {
+                    with: { profile: true },
+                  },
+                },
               },
+              contributionDefaults: true,
             },
-            contributionDefaults: true,
           },
           whiteboard: true,
           contentSpace: {
-            authorization: true,
+            with: { authorization: true },
           },
         },
       }

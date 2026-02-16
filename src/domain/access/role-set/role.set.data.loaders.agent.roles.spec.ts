@@ -1,10 +1,9 @@
 import { RoleName } from '@common/enums/role.name';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { ICredential } from '@domain/agent/credential/credential.interface';
-import { Repository } from 'typeorm';
 import { beforeEach, describe, expect, it, type Mocked, vi } from 'vitest';
 import { RoleSetAgentRolesDataLoader } from './role.set.data.loaders.agent.roles';
-import { RoleSet } from './role.set.entity';
 import { IRoleSet } from './role.set.interface';
 import { RoleSetCacheService } from './role.set.service.cache';
 import { AgentRoleKey } from './types';
@@ -60,18 +59,22 @@ function createMocks() {
     setAgentRolesCache: vi.fn().mockResolvedValue(undefined),
   };
 
-  const roleSetRepository: Mocked<Pick<Repository<RoleSet>, 'find'>> = {
-    find: vi.fn().mockResolvedValue([]),
+  const db = {
+    query: {
+      roleSets: {
+        findMany: vi.fn().mockResolvedValue([]),
+      },
+    },
   };
 
-  return { agentService, roleSetCacheService, roleSetRepository };
+  return { agentService, roleSetCacheService, db };
 }
 
 function createLoader(mocks: ReturnType<typeof createMocks>) {
   return new RoleSetAgentRolesDataLoader(
     mocks.agentService as unknown as AgentService,
     mocks.roleSetCacheService as unknown as RoleSetCacheService,
-    mocks.roleSetRepository as unknown as Repository<RoleSet>
+    mocks.db as unknown as DrizzleDb
   );
 }
 
@@ -410,7 +413,7 @@ describe('RoleSetAgentRolesDataLoader', () => {
         loader.loader.load(makeKey('agent-1', 'user-1', rs2)),
       ]);
 
-      expect(roles1).toEqual([]); // empty agent → empty roles
+      expect(roles1).toEqual([]); // empty agent -> empty roles
       expect(roles2).toEqual([]); // agent-1 has space-1 cred, not space-2
     });
   });

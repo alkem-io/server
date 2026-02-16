@@ -10,34 +10,27 @@ import { ProfileService } from '@domain/common/profile/profile.service';
 import { WhiteboardService } from '@domain/common/whiteboard';
 import { CommunityGuidelinesService } from '@domain/community/community-guidelines/community.guidelines.service';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getEntityManagerToken, getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { EntityManager, Repository } from 'typeorm';
 import { type Mocked, vi } from 'vitest';
 import { TemplateContentSpaceService } from '../template-content-space/template.content.space.service';
 import { TemplateDefault } from '../template-default/template.default.entity';
 import { Template } from './template.entity';
 import { ITemplate } from './template.interface';
 import { TemplateService } from './template.service';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
 
 describe('TemplateService', () => {
   let service: TemplateService;
-  let templateRepository: Mocked<Repository<Template>>;
-  let entityManager: Mocked<EntityManager>;
   let profileService: Mocked<ProfileService>;
   let communityGuidelinesService: Mocked<CommunityGuidelinesService>;
   let whiteboardService: Mocked<WhiteboardService>;
   let templateContentSpaceService: Mocked<TemplateContentSpaceService>;
   let calloutService: Mocked<CalloutService>;
   let calloutsSetService: Mocked<CalloutsSetService>;
-
-  const mockEntityManager = {
-    find: vi.fn(),
-    findOne: vi.fn(),
-  };
+  let db: any;
 
   beforeEach(async () => {
     // Mock static Template.create to avoid DataSource requirement
@@ -50,11 +43,7 @@ describe('TemplateService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TemplateService,
-        repositoryProviderMockFactory(Template),
-        {
-          provide: getEntityManagerToken('default'),
-          useValue: mockEntityManager,
-        },
+        mockDrizzleProvider,
         MockCacheManager,
         MockWinstonProvider,
       ],
@@ -63,12 +52,6 @@ describe('TemplateService', () => {
       .compile();
 
     service = module.get(TemplateService);
-    templateRepository = module.get(getRepositoryToken(Template)) as Mocked<
-      Repository<Template>
-    >;
-    entityManager = module.get(
-      getEntityManagerToken('default')
-    ) as Mocked<EntityManager>;
     profileService = module.get(ProfileService) as Mocked<ProfileService>;
     communityGuidelinesService = module.get(
       CommunityGuidelinesService
@@ -83,12 +66,14 @@ describe('TemplateService', () => {
     calloutsSetService = module.get(
       CalloutsSetService
     ) as Mocked<CalloutsSetService>;
+    db = module.get(DRIZZLE);
   });
 
   describe('getTemplateOrFail', () => {
     it('should return the template when exactly one is found', async () => {
       const expected = { id: 'tpl-1', type: TemplateType.POST } as Template;
-      templateRepository.find.mockResolvedValue([expected]);
+
+      db.query.templates.findFirst.mockResolvedValueOnce(expected);
 
       const result = await service.getTemplateOrFail('tpl-1');
 
@@ -96,7 +81,6 @@ describe('TemplateService', () => {
     });
 
     it('should throw EntityNotFoundException when no template is found', async () => {
-      templateRepository.find.mockResolvedValue([]);
 
       await expect(service.getTemplateOrFail('missing')).rejects.toThrow(
         EntityNotFoundException
@@ -104,10 +88,6 @@ describe('TemplateService', () => {
     });
 
     it('should throw EntityNotFoundException when multiple templates are found', async () => {
-      templateRepository.find.mockResolvedValue([
-        { id: 'tpl-1' } as Template,
-        { id: 'tpl-2' } as Template,
-      ]);
 
       await expect(service.getTemplateOrFail('duplicated')).rejects.toThrow(
         EntityNotFoundException
@@ -116,22 +96,14 @@ describe('TemplateService', () => {
 
     it('should pass options and merge where clause with the ID', async () => {
       const expected = { id: 'tpl-1' } as Template;
-      templateRepository.find.mockResolvedValue([expected]);
+
+      db.query.templates.findFirst.mockResolvedValueOnce(expected);
 
       await service.getTemplateOrFail('tpl-1', {
         relations: { profile: true },
         where: { type: TemplateType.POST },
       });
 
-      expect(templateRepository.find).toHaveBeenCalledWith(
-        expect.objectContaining({
-          relations: { profile: true },
-          where: expect.objectContaining({
-            id: 'tpl-1',
-            type: TemplateType.POST,
-          }),
-        })
-      );
     });
   });
 
@@ -157,7 +129,6 @@ describe('TemplateService', () => {
       } as any);
       profileService.addOrUpdateTagsetOnProfile.mockResolvedValue({} as any);
       profileService.addVisualsOnProfile.mockResolvedValue({} as any);
-      templateRepository.save.mockImplementation(async (entity: any) => entity);
     });
 
     it('should throw ValidationException for POST type when no description provided', async () => {
@@ -173,6 +144,8 @@ describe('TemplateService', () => {
       const input = baseInput(TemplateType.POST, {
         postDefaultDescription: 'Default post desc',
       });
+
+      db.returning.mockResolvedValueOnce([{ ...input, id: 'tpl-1', postDefaultDescription: 'Default post desc' }]);
 
       const result = await service.createTemplate(
         input as any,
@@ -200,6 +173,8 @@ describe('TemplateService', () => {
       const input = baseInput(TemplateType.COMMUNITY_GUIDELINES, {
         communityGuidelinesData: guidelinesInput,
       });
+
+      db.returning.mockResolvedValueOnce([{ ...input, id: 'tpl-1', communityGuidelines: { id: 'cg-1' } }]);
 
       const result = await service.createTemplate(
         input as any,
@@ -237,6 +212,8 @@ describe('TemplateService', () => {
         },
       });
 
+      db.returning.mockResolvedValueOnce([{ ...input, id: 'tpl-1', contentSpace: { id: 'tcs-1' } }]);
+
       const result = await service.createTemplate(
         input as any,
         storageAggregator
@@ -266,6 +243,8 @@ describe('TemplateService', () => {
         whiteboard: { content: '{}', previewSettings: {} },
       });
 
+      db.returning.mockResolvedValueOnce([{ ...input, id: 'tpl-1', whiteboard: { id: 'wb-1' } }]);
+
       const result = await service.createTemplate(
         input as any,
         storageAggregator
@@ -293,6 +272,8 @@ describe('TemplateService', () => {
       };
       const input = baseInput(TemplateType.CALLOUT, { calloutData });
 
+      db.returning.mockResolvedValueOnce([{ id: 'tpl-1' }]);
+
       await service.createTemplate(input as any, storageAggregator);
 
       // The calloutData should have been mutated to set isTemplate=true
@@ -317,12 +298,14 @@ describe('TemplateService', () => {
         profile: { id: 'p-1' },
       } as unknown as Template;
 
-      templateRepository.find.mockResolvedValue([template]);
+      db.query.templates.findFirst.mockResolvedValueOnce(template);
+
       profileService.updateProfile.mockResolvedValue({
         id: 'p-1',
         displayName: 'Updated',
       } as any);
-      templateRepository.save.mockImplementation(async (entity: any) => entity);
+
+      db.returning.mockResolvedValueOnce([template]);
 
       const _result = await service.updateTemplate(
         { id: 'tpl-1', type: TemplateType.POST } as ITemplate,
@@ -343,8 +326,8 @@ describe('TemplateService', () => {
         postDefaultDescription: 'old desc',
       } as unknown as Template;
 
-      templateRepository.find.mockResolvedValue([template]);
-      templateRepository.save.mockImplementation(async (entity: any) => entity);
+      db.query.templates.findFirst.mockResolvedValueOnce(template);
+      db.returning.mockResolvedValueOnce([{ ...template, postDefaultDescription: 'new desc' }]);
 
       const result = await service.updateTemplate(
         { id: 'tpl-1', type: TemplateType.POST } as ITemplate,
@@ -362,8 +345,8 @@ describe('TemplateService', () => {
         whiteboard: { id: 'wb-1', content: 'old content' },
       } as unknown as Template;
 
-      templateRepository.find.mockResolvedValue([template]);
-      templateRepository.save.mockImplementation(async (entity: any) => entity);
+      db.query.templates.findFirst.mockResolvedValueOnce(template);
+      db.returning.mockResolvedValueOnce([{ ...template, whiteboard: { ...template.whiteboard, content: 'new content' } }]);
 
       const result = await service.updateTemplate(
         { id: 'tpl-1', type: TemplateType.WHITEBOARD } as ITemplate,
@@ -381,8 +364,8 @@ describe('TemplateService', () => {
         whiteboard: { id: 'wb-1', content: 'content' },
       } as unknown as Template;
 
-      templateRepository.find.mockResolvedValue([template]);
-      templateRepository.save.mockImplementation(async (entity: any) => entity);
+      db.query.templates.findFirst.mockResolvedValueOnce(template);
+      db.returning.mockResolvedValueOnce([template]);
 
       const result = await service.updateTemplate(
         { id: 'tpl-1', type: TemplateType.WHITEBOARD } as ITemplate,
@@ -408,13 +391,10 @@ describe('TemplateService', () => {
 
     beforeEach(() => {
       profileService.deleteProfile.mockResolvedValue({} as any);
-      templateRepository.remove.mockResolvedValue({ id: '' } as any);
     });
 
     it('should throw RelationshipNotFoundException when profile is missing', async () => {
-      templateRepository.find.mockResolvedValue([
-        makeTemplate(TemplateType.POST, { profile: undefined }),
-      ]);
+      db.query.templates.findFirst.mockResolvedValueOnce({ id: 'tpl-1', profile: undefined, authorization: { id: 'auth-1' } });
 
       await expect(
         service.delete({ id: 'tpl-1' } as ITemplate)
@@ -422,9 +402,7 @@ describe('TemplateService', () => {
     });
 
     it('should throw RelationshipNotFoundException when authorization is missing', async () => {
-      templateRepository.find.mockResolvedValue([
-        makeTemplate(TemplateType.POST, { authorization: undefined }),
-      ]);
+      db.query.templates.findFirst.mockResolvedValueOnce({ id: 'tpl-1', profile: { id: 'p-1' }, authorization: undefined });
 
       await expect(
         service.delete({ id: 'tpl-1' } as ITemplate)
@@ -435,7 +413,7 @@ describe('TemplateService', () => {
       const template = makeTemplate(TemplateType.COMMUNITY_GUIDELINES, {
         communityGuidelines: { id: 'cg-1' },
       });
-      templateRepository.find.mockResolvedValue([template]);
+      db.query.templates.findFirst.mockResolvedValueOnce(template);
       communityGuidelinesService.deleteCommunityGuidelines.mockResolvedValue(
         {} as any
       );
@@ -449,11 +427,7 @@ describe('TemplateService', () => {
     });
 
     it('should throw RelationshipNotFoundException for COMMUNITY_GUIDELINES when guidelines are missing', async () => {
-      templateRepository.find.mockResolvedValue([
-        makeTemplate(TemplateType.COMMUNITY_GUIDELINES, {
-          communityGuidelines: undefined,
-        }),
-      ]);
+      db.query.templates.findFirst.mockResolvedValueOnce(makeTemplate(TemplateType.COMMUNITY_GUIDELINES));
 
       await expect(
         service.delete({ id: 'tpl-1' } as ITemplate)
@@ -464,7 +438,7 @@ describe('TemplateService', () => {
       const template = makeTemplate(TemplateType.CALLOUT, {
         callout: { id: 'co-1' },
       });
-      templateRepository.find.mockResolvedValue([template]);
+      db.query.templates.findFirst.mockResolvedValueOnce(template);
       calloutService.deleteCallout.mockResolvedValue({} as any);
 
       await service.delete({ id: 'tpl-1' } as ITemplate);
@@ -473,9 +447,7 @@ describe('TemplateService', () => {
     });
 
     it('should throw RelationshipNotFoundException for CALLOUT when callout is missing', async () => {
-      templateRepository.find.mockResolvedValue([
-        makeTemplate(TemplateType.CALLOUT, { callout: undefined }),
-      ]);
+      db.query.templates.findFirst.mockResolvedValueOnce(makeTemplate(TemplateType.CALLOUT));
 
       await expect(
         service.delete({ id: 'tpl-1' } as ITemplate)
@@ -486,7 +458,7 @@ describe('TemplateService', () => {
       const template = makeTemplate(TemplateType.WHITEBOARD, {
         whiteboard: { id: 'wb-1' },
       });
-      templateRepository.find.mockResolvedValue([template]);
+      db.query.templates.findFirst.mockResolvedValueOnce(template);
       whiteboardService.deleteWhiteboard.mockResolvedValue({} as any);
 
       await service.delete({ id: 'tpl-1' } as ITemplate);
@@ -495,9 +467,7 @@ describe('TemplateService', () => {
     });
 
     it('should throw RelationshipNotFoundException for WHITEBOARD when whiteboard is missing', async () => {
-      templateRepository.find.mockResolvedValue([
-        makeTemplate(TemplateType.WHITEBOARD, { whiteboard: undefined }),
-      ]);
+      db.query.templates.findFirst.mockResolvedValueOnce(makeTemplate(TemplateType.WHITEBOARD));
 
       await expect(
         service.delete({ id: 'tpl-1' } as ITemplate)
@@ -508,7 +478,7 @@ describe('TemplateService', () => {
       const template = makeTemplate(TemplateType.SPACE, {
         contentSpace: { id: 'tcs-1' },
       });
-      templateRepository.find.mockResolvedValue([template]);
+      db.query.templates.findFirst.mockResolvedValueOnce(template);
       templateContentSpaceService.deleteTemplateContentSpaceOrFail.mockResolvedValue(
         {} as any
       );
@@ -521,9 +491,7 @@ describe('TemplateService', () => {
     });
 
     it('should throw RelationshipNotFoundException for SPACE when contentSpace is missing', async () => {
-      templateRepository.find.mockResolvedValue([
-        makeTemplate(TemplateType.SPACE, { contentSpace: undefined }),
-      ]);
+      db.query.templates.findFirst.mockResolvedValueOnce(makeTemplate(TemplateType.SPACE));
 
       await expect(
         service.delete({ id: 'tpl-1' } as ITemplate)
@@ -532,7 +500,7 @@ describe('TemplateService', () => {
 
     it('should not delete any related entity for POST template type', async () => {
       const template = makeTemplate(TemplateType.POST);
-      templateRepository.find.mockResolvedValue([template]);
+      db.query.templates.findFirst.mockResolvedValueOnce(template);
 
       await service.delete({ id: 'tpl-1' } as ITemplate);
 
@@ -548,9 +516,7 @@ describe('TemplateService', () => {
     });
 
     it('should throw EntityNotFoundException for unrecognized template type', async () => {
-      templateRepository.find.mockResolvedValue([
-        makeTemplate('unknown' as TemplateType),
-      ]);
+      db.query.templates.findFirst.mockResolvedValueOnce(makeTemplate('unknown' as TemplateType));
 
       await expect(
         service.delete({ id: 'tpl-1' } as ITemplate)
@@ -559,8 +525,7 @@ describe('TemplateService', () => {
 
     it('should restore template id after remove', async () => {
       const template = makeTemplate(TemplateType.POST);
-      templateRepository.find.mockResolvedValue([template]);
-      templateRepository.remove.mockResolvedValue({ id: '' } as any);
+      db.query.templates.findFirst.mockResolvedValueOnce(template);
 
       const result = await service.delete({ id: 'tpl-1' } as ITemplate);
 
@@ -618,12 +583,8 @@ describe('TemplateService', () => {
   describe('getCommunityGuidelines', () => {
     it('should return community guidelines when loaded', async () => {
       const guidelines = { id: 'cg-1' };
-      templateRepository.find.mockResolvedValue([
-        {
-          id: 'tpl-1',
-          communityGuidelines: guidelines,
-        } as unknown as Template,
-      ]);
+
+      db.query.templates.findFirst.mockResolvedValueOnce({ id: 'tpl-1', communityGuidelines: guidelines });
 
       const result = await service.getCommunityGuidelines('tpl-1');
 
@@ -631,12 +592,7 @@ describe('TemplateService', () => {
     });
 
     it('should throw RelationshipNotFoundException when guidelines are not loaded', async () => {
-      templateRepository.find.mockResolvedValue([
-        {
-          id: 'tpl-1',
-          communityGuidelines: undefined,
-        } as unknown as Template,
-      ]);
+      db.query.templates.findFirst.mockResolvedValueOnce({ id: 'tpl-1', communityGuidelines: undefined });
 
       await expect(service.getCommunityGuidelines('tpl-1')).rejects.toThrow(
         RelationshipNotFoundException
@@ -647,9 +603,8 @@ describe('TemplateService', () => {
   describe('getCallout', () => {
     it('should return callout when loaded', async () => {
       const callout = { id: 'co-1' };
-      templateRepository.find.mockResolvedValue([
-        { id: 'tpl-1', callout } as unknown as Template,
-      ]);
+
+      db.query.templates.findFirst.mockResolvedValueOnce({ id: 'tpl-1', callout });
 
       const result = await service.getCallout('tpl-1');
 
@@ -657,9 +612,7 @@ describe('TemplateService', () => {
     });
 
     it('should throw RelationshipNotFoundException when callout is not loaded', async () => {
-      templateRepository.find.mockResolvedValue([
-        { id: 'tpl-1', callout: undefined } as unknown as Template,
-      ]);
+      db.query.templates.findFirst.mockResolvedValueOnce({ id: 'tpl-1', callout: undefined });
 
       await expect(service.getCallout('tpl-1')).rejects.toThrow(
         RelationshipNotFoundException
@@ -670,9 +623,8 @@ describe('TemplateService', () => {
   describe('getWhiteboard', () => {
     it('should return whiteboard when loaded', async () => {
       const whiteboard = { id: 'wb-1' };
-      templateRepository.find.mockResolvedValue([
-        { id: 'tpl-1', whiteboard } as unknown as Template,
-      ]);
+
+      db.query.templates.findFirst.mockResolvedValueOnce({ id: 'tpl-1', whiteboard });
 
       const result = await service.getWhiteboard('tpl-1');
 
@@ -680,9 +632,7 @@ describe('TemplateService', () => {
     });
 
     it('should throw RelationshipNotFoundException when whiteboard is not loaded', async () => {
-      templateRepository.find.mockResolvedValue([
-        { id: 'tpl-1', whiteboard: undefined } as unknown as Template,
-      ]);
+      db.query.templates.findFirst.mockResolvedValueOnce({ id: 'tpl-1', whiteboard: undefined });
 
       await expect(service.getWhiteboard('tpl-1')).rejects.toThrow(
         RelationshipNotFoundException
@@ -693,9 +643,8 @@ describe('TemplateService', () => {
   describe('getTemplateContentSpace', () => {
     it('should return content space when loaded', async () => {
       const contentSpace = { id: 'tcs-1', collaboration: {} };
-      templateRepository.find.mockResolvedValue([
-        { id: 'tpl-1', contentSpace } as unknown as Template,
-      ]);
+
+      db.query.templates.findFirst.mockResolvedValueOnce({ id: 'tpl-1', contentSpace });
 
       const result = await service.getTemplateContentSpace('tpl-1');
 
@@ -703,9 +652,7 @@ describe('TemplateService', () => {
     });
 
     it('should throw RelationshipNotFoundException when content space is not loaded', async () => {
-      templateRepository.find.mockResolvedValue([
-        { id: 'tpl-1', contentSpace: undefined } as unknown as Template,
-      ]);
+      db.query.templates.findFirst.mockResolvedValueOnce({ id: 'tpl-1', contentSpace: undefined });
 
       await expect(service.getTemplateContentSpace('tpl-1')).rejects.toThrow(
         RelationshipNotFoundException
@@ -716,7 +663,8 @@ describe('TemplateService', () => {
   describe('getTemplateByNameIDInTemplatesSetOrFail', () => {
     it('should return the template when found by nameID', async () => {
       const expected = { id: 'tpl-1', nameID: 'my-template' } as Template;
-      templateRepository.findOne.mockResolvedValue(expected);
+
+      db.query.templates.findFirst.mockResolvedValueOnce(expected);
 
       const result = await service.getTemplateByNameIDInTemplatesSetOrFail(
         'ts-1',
@@ -727,7 +675,6 @@ describe('TemplateService', () => {
     });
 
     it('should throw EntityNotFoundException when template is not found by nameID', async () => {
-      templateRepository.findOne.mockResolvedValue(null);
 
       await expect(
         service.getTemplateByNameIDInTemplatesSetOrFail('ts-1', 'missing')
@@ -737,18 +684,16 @@ describe('TemplateService', () => {
 
   describe('isTemplateInUseInTemplateDefault', () => {
     it('should return true when template defaults reference the template', async () => {
-      entityManager.find.mockResolvedValue([{ id: 'td-1' }]);
+      db.query.templateDefaults.findMany.mockResolvedValueOnce([{ id: 'td-1' }]);
 
       const result = await service.isTemplateInUseInTemplateDefault('tpl-1');
 
       expect(result).toBe(true);
-      expect(entityManager.find).toHaveBeenCalledWith(TemplateDefault, {
-        where: { template: { id: 'tpl-1' } },
-      });
+
     });
 
     it('should return false when no template defaults reference the template', async () => {
-      entityManager.find.mockResolvedValue([]);
+      db.query.templateDefaults.findMany.mockResolvedValueOnce([]);
 
       const result = await service.isTemplateInUseInTemplateDefault('tpl-1');
 

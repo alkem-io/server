@@ -10,7 +10,7 @@ import { Injectable, Inject } from '@nestjs/common';
 import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { credentials } from './credential.schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, count, inArray } from 'drizzle-orm';
 import { sql } from 'drizzle-orm';
 @Injectable()
 export class CredentialService {
@@ -141,18 +141,23 @@ export class CredentialService {
     // All criteria should share the same type for member counts
     const type = criteriaList[0].type;
 
-    const results = await this.credentialRepository
-      .createQueryBuilder('credential')
-      .select('credential.resourceID', 'resourceID')
-      .addSelect('COUNT(*)', 'count')
-      .where('credential.type = :type', { type })
-      .andWhere('credential.resourceID IN (:...resourceIDs)', { resourceIDs })
-      .groupBy('credential.resourceID')
-      .getRawMany<{ resourceID: string; count: string }>();
+    const results = await this.db
+      .select({
+        resourceID: credentials.resourceID,
+        count: count(),
+      })
+      .from(credentials)
+      .where(
+        and(
+          eq(credentials.type, type),
+          inArray(credentials.resourceID, resourceIDs)
+        )
+      )
+      .groupBy(credentials.resourceID);
 
     const countsMap = new Map<string, number>();
     for (const row of results) {
-      countsMap.set(row.resourceID, parseInt(row.count, 10));
+      countsMap.set(row.resourceID, row.count);
     }
     return countsMap;
   }

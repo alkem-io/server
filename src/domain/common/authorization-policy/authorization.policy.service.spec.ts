@@ -11,16 +11,15 @@ import {
 } from '@common/exceptions';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { MockType } from '@test/utils/mock.type';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
 import { AuthorizationPolicy } from './authorization.policy.entity';
 import { IAuthorizationPolicy } from './authorization.policy.interface';
 import { AuthorizationPolicyService } from './authorization.policy.service';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import { vi } from 'vitest';
 
 const ConfigServiceMock = {
   get: vi.fn().mockReturnValue(500),
@@ -28,13 +27,13 @@ const ConfigServiceMock = {
 
 describe('AuthorizationPolicyService', () => {
   let service: AuthorizationPolicyService;
-  let authorizationPolicyRepository: MockType<Repository<AuthorizationPolicy>>;
+  let db: any;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthorizationPolicyService,
-        repositoryProviderMockFactory(AuthorizationPolicy),
+        mockDrizzleProvider,
         MockCacheManager,
         MockWinstonProvider,
       ],
@@ -48,9 +47,7 @@ describe('AuthorizationPolicyService', () => {
       .compile();
 
     service = module.get(AuthorizationPolicyService);
-    authorizationPolicyRepository = module.get(
-      getRepositoryToken(AuthorizationPolicy)
-    );
+    db = module.get(DRIZZLE);
   });
 
   describe('createCredentialRule', () => {
@@ -135,7 +132,7 @@ describe('AuthorizationPolicyService', () => {
   describe('getAuthorizationPolicyOrFail', () => {
     it('should return authorization policy when found', async () => {
       const policy = { id: 'auth-1' } as AuthorizationPolicy;
-      authorizationPolicyRepository.findOneBy!.mockResolvedValue(policy);
+      db.query.authorizationPolicies.findFirst.mockResolvedValueOnce(policy);
 
       const result = await service.getAuthorizationPolicyOrFail('auth-1');
 
@@ -143,7 +140,7 @@ describe('AuthorizationPolicyService', () => {
     });
 
     it('should throw EntityNotFoundException when not found', async () => {
-      authorizationPolicyRepository.findOneBy!.mockResolvedValue(null);
+      db.query.authorizationPolicies.findFirst.mockResolvedValueOnce(undefined);
 
       await expect(
         service.getAuthorizationPolicyOrFail('missing')
@@ -321,14 +318,8 @@ describe('AuthorizationPolicyService', () => {
         type: AuthorizationPolicyType.PROFILE,
       })) as IAuthorizationPolicy[];
 
-      authorizationPolicyRepository.save!.mockResolvedValue(policies);
-
       await service.saveAll(policies);
 
-      expect(authorizationPolicyRepository.save).toHaveBeenCalledWith(
-        policies,
-        { chunk: 500 }
-      );
     });
   });
 

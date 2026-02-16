@@ -2,26 +2,24 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { Platform } from '@platform/platform/platform.entity';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { MockType } from '@test/utils/mock.type';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
 import { vi } from 'vitest';
 import { PlatformAuthorizationPolicyService } from './platform.authorization.policy.service';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 
 describe('PlatformAuthorizationPolicyService', () => {
   let service: PlatformAuthorizationPolicyService;
-  let platformRepository: MockType<Repository<Platform>>;
   let authorizationPolicyService: AuthorizationPolicyService;
+  let db: any;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PlatformAuthorizationPolicyService,
-        repositoryProviderMockFactory(Platform),
+        mockDrizzleProvider,
         MockWinstonProvider,
       ],
     })
@@ -29,15 +27,15 @@ describe('PlatformAuthorizationPolicyService', () => {
       .compile();
 
     service = module.get(PlatformAuthorizationPolicyService);
-    platformRepository = module.get(getRepositoryToken(Platform));
     authorizationPolicyService = module.get(AuthorizationPolicyService);
+    db = module.get(DRIZZLE);
   });
 
   describe('getPlatformAuthorizationPolicy', () => {
     it('should return the authorization policy when platform is found', async () => {
       const authPolicy = { id: 'auth-1' } as IAuthorizationPolicy;
       const platform = { authorization: authPolicy } as Platform;
-      platformRepository.findOne!.mockResolvedValue(platform);
+      db.query.platforms.findFirst.mockResolvedValueOnce(platform);
 
       const result = await service.getPlatformAuthorizationPolicy();
 
@@ -45,8 +43,7 @@ describe('PlatformAuthorizationPolicyService', () => {
     });
 
     it('should throw EntityNotFoundException when platform is not found', async () => {
-      platformRepository.findOne!.mockResolvedValue(null);
-
+      // findFirst returns undefined by default
       await expect(service.getPlatformAuthorizationPolicy()).rejects.toThrow(
         EntityNotFoundException
       );
@@ -54,7 +51,7 @@ describe('PlatformAuthorizationPolicyService', () => {
 
     it('should throw EntityNotFoundException when platform has no authorization', async () => {
       const platform = { authorization: undefined } as unknown as Platform;
-      platformRepository.findOne!.mockResolvedValue(platform);
+      db.query.platforms.findFirst.mockResolvedValueOnce(platform);
 
       await expect(service.getPlatformAuthorizationPolicy()).rejects.toThrow(
         EntityNotFoundException

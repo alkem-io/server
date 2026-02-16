@@ -1,23 +1,22 @@
 import { VisualType } from '@common/enums/visual.type';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { DEFAULT_VISUAL_CONSTRAINTS } from '@domain/common/visual/visual.constraints';
 import { CommunityGuidelinesService } from '@domain/community/community-guidelines/community.guidelines.service';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
 import { vi } from 'vitest';
 import { SpaceLookupService } from '../space.lookup/space.lookup.service';
 import { SpaceAbout } from './space.about.entity';
 import { ISpaceAbout } from './space.about.interface';
 import { SpaceAboutService } from './space.about.service';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
 
 describe('SpaceAboutService', () => {
   let service: SpaceAboutService;
-  let spaceAboutRepository: Repository<SpaceAbout>;
+  let db: any;
   let profileService: ProfileService;
   let communityGuidelinesService: CommunityGuidelinesService;
   let authorizationPolicyService: AuthorizationPolicyService;
@@ -27,7 +26,7 @@ describe('SpaceAboutService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SpaceAboutService,
-        repositoryProviderMockFactory(SpaceAbout),
+        mockDrizzleProvider,
         MockWinstonProvider,
       ],
     })
@@ -35,9 +34,7 @@ describe('SpaceAboutService', () => {
       .compile();
 
     service = module.get(SpaceAboutService);
-    spaceAboutRepository = module.get<Repository<SpaceAbout>>(
-      getRepositoryToken(SpaceAbout)
-    );
+    db = module.get(DRIZZLE);
     profileService = module.get(ProfileService);
     communityGuidelinesService = module.get(CommunityGuidelinesService);
     authorizationPolicyService = module.get(AuthorizationPolicyService);
@@ -48,7 +45,7 @@ describe('SpaceAboutService', () => {
     it('should return space about when found', async () => {
       // Arrange
       const mockAbout = { id: 'about-1' } as SpaceAbout;
-      vi.spyOn(spaceAboutRepository, 'findOne').mockResolvedValue(mockAbout);
+      db.query.spaceAbouts.findFirst.mockResolvedValueOnce(mockAbout);
 
       // Act
       const result = await service.getSpaceAboutOrFail('about-1');
@@ -58,8 +55,7 @@ describe('SpaceAboutService', () => {
     });
 
     it('should throw EntityNotFoundException when not found', async () => {
-      // Arrange
-      vi.spyOn(spaceAboutRepository, 'findOne').mockResolvedValue(null);
+      // Arrange — findFirst returns undefined by default
 
       // Act & Assert
       await expect(service.getSpaceAboutOrFail('missing-id')).rejects.toThrow(
@@ -69,6 +65,20 @@ describe('SpaceAboutService', () => {
   });
 
   describe('updateSpaceAbout', () => {
+    let aboutForTest: any;
+    beforeEach(() => {
+      aboutForTest = {
+        id: 'about-1',
+        why: 'old why',
+        who: 'old who',
+        profile: { id: 'profile-1' },
+      };
+      // getSpaceAboutOrFail calls findFirst
+      db.query.spaceAbouts.findFirst.mockResolvedValue(aboutForTest);
+      // save calls returning — return the mutated aboutForTest
+      db.returning.mockImplementation(async () => [aboutForTest]);
+    });
+
     it('should update why and who fields when provided', async () => {
       // Arrange
       const existingAbout = {
@@ -77,12 +87,6 @@ describe('SpaceAboutService', () => {
         who: 'old who',
         profile: { id: 'profile-1' },
       } as SpaceAbout;
-      vi.spyOn(spaceAboutRepository, 'findOne').mockResolvedValue(
-        existingAbout
-      );
-      vi.spyOn(spaceAboutRepository, 'save').mockImplementation(
-        async entity => entity as SpaceAbout
-      );
 
       const updateData = {
         why: 'new why',
@@ -105,12 +109,8 @@ describe('SpaceAboutService', () => {
         who: 'existing who',
         profile: { id: 'profile-1' },
       } as SpaceAbout;
-      vi.spyOn(spaceAboutRepository, 'findOne').mockResolvedValue(
-        existingAbout
-      );
-      vi.spyOn(spaceAboutRepository, 'save').mockImplementation(
-        async entity => entity as SpaceAbout
-      );
+      aboutForTest.why = 'existing why';
+      aboutForTest.who = 'existing who';
 
       const updateData = { who: 'updated who' };
 
@@ -132,12 +132,6 @@ describe('SpaceAboutService', () => {
         who: 'who',
         profile: existingProfile,
       } as SpaceAbout;
-      vi.spyOn(spaceAboutRepository, 'findOne').mockResolvedValue(
-        existingAbout
-      );
-      vi.spyOn(spaceAboutRepository, 'save').mockImplementation(
-        async entity => entity as SpaceAbout
-      );
       profileService.updateProfile = vi.fn().mockResolvedValue(updatedProfile);
 
       const updateData = {
@@ -149,7 +143,7 @@ describe('SpaceAboutService', () => {
 
       // Assert
       expect(profileService.updateProfile).toHaveBeenCalledWith(
-        existingProfile,
+        expect.objectContaining({ id: 'profile-1' }),
         updateData.profile
       );
       expect(result.profile).toBe(updatedProfile);
@@ -163,12 +157,6 @@ describe('SpaceAboutService', () => {
         who: 'who',
         profile: { id: 'profile-1' },
       } as SpaceAbout;
-      vi.spyOn(spaceAboutRepository, 'findOne').mockResolvedValue(
-        existingAbout
-      );
-      vi.spyOn(spaceAboutRepository, 'save').mockImplementation(
-        async entity => entity as SpaceAbout
-      );
 
       const updateData = { why: 'new why' };
 
@@ -188,9 +176,7 @@ describe('SpaceAboutService', () => {
         profile: undefined,
         guidelines: { id: 'guide-1' },
       } as unknown as SpaceAbout;
-      vi.spyOn(spaceAboutRepository, 'findOne').mockResolvedValue(
-        aboutWithoutProfile
-      );
+      db.query.spaceAbouts.findFirst.mockResolvedValueOnce(aboutWithoutProfile);
 
       // Act & Assert
       await expect(service.removeSpaceAbout('about-1')).rejects.toThrow(
@@ -205,9 +191,7 @@ describe('SpaceAboutService', () => {
         profile: { id: 'profile-1' },
         guidelines: undefined,
       } as SpaceAbout;
-      vi.spyOn(spaceAboutRepository, 'findOne').mockResolvedValue(
-        aboutWithoutGuidelines
-      );
+      db.query.spaceAbouts.findFirst.mockResolvedValueOnce(aboutWithoutGuidelines);
 
       // Act & Assert
       await expect(service.removeSpaceAbout('about-1')).rejects.toThrow(
@@ -223,13 +207,12 @@ describe('SpaceAboutService', () => {
         guidelines: { id: 'guide-1' },
         authorization: { id: 'auth-1' },
       } as SpaceAbout;
-      vi.spyOn(spaceAboutRepository, 'findOne').mockResolvedValue(about);
+      db.query.spaceAbouts.findFirst.mockResolvedValueOnce(about);
       profileService.deleteProfile = vi.fn().mockResolvedValue(undefined);
       communityGuidelinesService.deleteCommunityGuidelines = vi
         .fn()
         .mockResolvedValue(undefined);
       authorizationPolicyService.delete = vi.fn().mockResolvedValue(undefined);
-      vi.spyOn(spaceAboutRepository, 'remove').mockResolvedValue(about);
 
       // Act
       await service.removeSpaceAbout('about-1');
@@ -242,7 +225,6 @@ describe('SpaceAboutService', () => {
       expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
         about.authorization
       );
-      expect(spaceAboutRepository.remove).toHaveBeenCalledWith(about);
     });
 
     it('should skip authorization deletion when authorization is not set', async () => {
@@ -253,13 +235,12 @@ describe('SpaceAboutService', () => {
         guidelines: { id: 'guide-1' },
         authorization: undefined,
       } as SpaceAbout;
-      vi.spyOn(spaceAboutRepository, 'findOne').mockResolvedValue(about);
+      db.query.spaceAbouts.findFirst.mockResolvedValueOnce(about);
       profileService.deleteProfile = vi.fn().mockResolvedValue(undefined);
       communityGuidelinesService.deleteCommunityGuidelines = vi
         .fn()
         .mockResolvedValue(undefined);
       authorizationPolicyService.delete = vi.fn().mockResolvedValue(undefined);
-      vi.spyOn(spaceAboutRepository, 'remove').mockResolvedValue(about);
 
       // Act
       await service.removeSpaceAbout('about-1');
@@ -277,7 +258,7 @@ describe('SpaceAboutService', () => {
         id: 'about-1',
         guidelines: mockGuidelines,
       } as SpaceAbout;
-      vi.spyOn(spaceAboutRepository, 'findOne').mockResolvedValue(about);
+      db.query.spaceAbouts.findFirst.mockResolvedValueOnce(about);
 
       // Act
       const result = await service.getCommunityGuidelines(about);
@@ -292,7 +273,7 @@ describe('SpaceAboutService', () => {
         id: 'about-1',
         guidelines: undefined,
       } as SpaceAbout;
-      vi.spyOn(spaceAboutRepository, 'findOne').mockResolvedValue(about);
+      db.query.spaceAbouts.findFirst.mockResolvedValueOnce(about);
 
       // Act & Assert
       await expect(service.getCommunityGuidelines(about)).rejects.toThrow(

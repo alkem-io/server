@@ -4,6 +4,7 @@ import { authorizationPolicies } from '@domain/common/authorization-policy/autho
 import { profiles } from '@domain/common/profile/profile.schema';
 import { communityGuidelines } from '@domain/community/community-guidelines/community.guidelines.schema';
 import { callouts } from '@domain/collaboration/callout/callout.schema';
+import { whiteboards } from '@domain/common/whiteboard/whiteboard.schema';
 import { templatesSets } from '@domain/template/templates-set/templates.set.schema';
 import { templateContentSpaces } from '@domain/template/template-content-space/template.content.space.schema';
 
@@ -30,6 +31,12 @@ export const templatesRelations = relations(templates, ({ one }) => ({
   callout: one(callouts, {
     fields: [templates.calloutId],
     references: [callouts.id],
+  }),
+
+  // OneToOne with @JoinColumn: Whiteboard
+  whiteboard: one(whiteboards, {
+    fields: [templates.whiteboardId],
+    references: [whiteboards.id],
   }),
 
   // OneToOne with @JoinColumn: TemplateContentSpace

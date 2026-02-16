@@ -51,11 +51,14 @@ export class TimelineService {
 
   async getTimelineOrFail(
     timelineID: string,
-    options?: { relations?: { calendar?: boolean } }
+    options?: { relations?: { calendar?: boolean; authorization?: boolean } }
   ): Promise<ITimeline | never> {
+    const withClause: any = {};
+    if (options?.relations?.calendar) withClause.calendar = true;
+    if (options?.relations?.authorization) withClause.authorization = true;
     const timeline = await this.db.query.timelines.findFirst({
       where: eq(timelines.id, timelineID),
-      with: options?.relations?.calendar ? { calendar: true } : undefined,
+      with: Object.keys(withClause).length > 0 ? withClause : undefined,
     });
     if (!timeline)
       throw new EntityNotFoundException(

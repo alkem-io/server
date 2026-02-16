@@ -26,11 +26,12 @@ export class TemplatesManagerAuthorizationService {
         templatesManagerID,
         {
           relations: {
+            authorization: true,
             templateDefaults: {
-              authorization: true,
+              with: { authorization: true },
             },
             templatesSet: {
-              authorization: true,
+              with: { authorization: true },
             },
           },
         }

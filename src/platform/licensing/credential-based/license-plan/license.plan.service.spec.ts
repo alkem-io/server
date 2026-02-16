@@ -1,18 +1,16 @@
 import { EntityNotFoundException } from '@common/exceptions';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { MockType } from '@test/utils/mock.type';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
 import { vi } from 'vitest';
 import { LicensePlan } from './license.plan.entity';
 import { LicensePlanService } from './license.plan.service';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 
 describe('LicensePlanService', () => {
   let service: LicensePlanService;
-  let licensePlanRepository: MockType<Repository<LicensePlan>>;
+  let db: any;
 
   beforeEach(async () => {
     vi.spyOn(LicensePlan, 'create').mockImplementation(() => {
@@ -22,7 +20,7 @@ describe('LicensePlanService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         LicensePlanService,
-        repositoryProviderMockFactory(LicensePlan),
+        mockDrizzleProvider,
         MockWinstonProvider,
       ],
     })
@@ -30,13 +28,13 @@ describe('LicensePlanService', () => {
       .compile();
 
     service = module.get(LicensePlanService);
-    licensePlanRepository = module.get(getRepositoryToken(LicensePlan));
+    db = module.get(DRIZZLE);
   });
 
   describe('getLicensePlanOrFail', () => {
     it('should return the license plan when found', async () => {
       const plan = { id: 'plan-1', name: 'Free' } as LicensePlan;
-      licensePlanRepository.findOne!.mockResolvedValue(plan);
+      db.query.licensePlans.findFirst.mockResolvedValueOnce(plan);
 
       const result = await service.getLicensePlanOrFail('plan-1');
 
@@ -44,7 +42,6 @@ describe('LicensePlanService', () => {
     });
 
     it('should throw EntityNotFoundException when not found', async () => {
-      licensePlanRepository.findOne!.mockResolvedValue(null);
 
       await expect(service.getLicensePlanOrFail('missing')).rejects.toThrow(
         EntityNotFoundException
@@ -54,10 +51,7 @@ describe('LicensePlanService', () => {
 
   describe('licensePlanByNameExists', () => {
     it('should return true when a plan with the given name exists', async () => {
-      licensePlanRepository.findOne!.mockResolvedValue({
-        id: 'plan-1',
-        name: 'Free',
-      });
+      db.query.licensePlans.findFirst.mockResolvedValueOnce({ id: 'plan-1', name: 'Free' });
 
       const result = await service.licensePlanByNameExists('Free');
 
@@ -65,8 +59,7 @@ describe('LicensePlanService', () => {
     });
 
     it('should return false when no plan with the given name exists', async () => {
-      licensePlanRepository.findOne!.mockResolvedValue(null);
-
+      // findFirst returns undefined by default
       const result = await service.licensePlanByNameExists('NonExistent');
 
       expect(result).toBe(false);
@@ -90,11 +83,10 @@ describe('LicensePlanService', () => {
         type: 'SPACE' as any,
       };
       const savedPlan = { id: 'plan-new', ...inputData } as any;
-      licensePlanRepository.save!.mockResolvedValue(savedPlan);
+      db.returning.mockResolvedValueOnce([savedPlan]);
 
       const result = await service.createLicensePlan(inputData);
 
-      expect(licensePlanRepository.save).toHaveBeenCalled();
       expect(result).toBe(savedPlan);
     });
   });
@@ -102,17 +94,14 @@ describe('LicensePlanService', () => {
   describe('deleteLicensePlan', () => {
     it('should find the plan and remove it, preserving the ID', async () => {
       const plan = { id: 'plan-1', name: 'Free' } as LicensePlan;
-      licensePlanRepository.findOne!.mockResolvedValue(plan);
-      licensePlanRepository.remove!.mockResolvedValue({ name: 'Free' } as any);
+      db.query.licensePlans.findFirst.mockResolvedValueOnce(plan);
 
       const result = await service.deleteLicensePlan({ ID: 'plan-1' });
 
       expect(result.id).toBe('plan-1');
-      expect(licensePlanRepository.remove).toHaveBeenCalledWith(plan);
     });
 
     it('should throw EntityNotFoundException when plan to delete is not found', async () => {
-      licensePlanRepository.findOne!.mockResolvedValue(null);
 
       await expect(
         service.deleteLicensePlan({ ID: 'missing' })

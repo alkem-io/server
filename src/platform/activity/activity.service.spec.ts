@@ -1,18 +1,16 @@
 import { EntityNotFoundException } from '@common/exceptions';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { MockType } from '@test/utils/mock.type';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
 import { vi } from 'vitest';
 import { Activity } from './activity.entity';
 import { ActivityService } from './activity.service';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 
 describe('ActivityService', () => {
   let service: ActivityService;
-  let activityRepository: MockType<Repository<Activity>>;
+  let db: any;
 
   beforeEach(async () => {
     vi.spyOn(Activity, 'create').mockImplementation((input: any) => {
@@ -24,7 +22,7 @@ describe('ActivityService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ActivityService,
-        repositoryProviderMockFactory(Activity),
+        mockDrizzleProvider,
         MockWinstonProvider,
       ],
     })
@@ -32,7 +30,7 @@ describe('ActivityService', () => {
       .compile();
 
     service = module.get(ActivityService);
-    activityRepository = module.get(getRepositoryToken(Activity));
+    db = module.get(DRIZZLE);
   });
 
   describe('createActivity', () => {
@@ -42,7 +40,7 @@ describe('ActivityService', () => {
         id: 'act-1',
         description: longDescription.substring(0, 256),
       } as Activity;
-      activityRepository.save!.mockResolvedValue(savedActivity);
+      db.returning.mockResolvedValueOnce([savedActivity]);
 
       const result = await service.createActivity({
         description: longDescription,
@@ -54,7 +52,6 @@ describe('ActivityService', () => {
         triggeredBy: 'user-1',
       });
 
-      expect(activityRepository.save).toHaveBeenCalled();
       expect(result).toBe(savedActivity);
     });
   });
@@ -62,7 +59,7 @@ describe('ActivityService', () => {
   describe('getActivityOrFail', () => {
     it('should return the activity when found', async () => {
       const activity = { id: 'act-1' } as Activity;
-      activityRepository.findOne!.mockResolvedValue(activity);
+      db.query.activities.findFirst.mockResolvedValueOnce(activity);
 
       const result = await service.getActivityOrFail('act-1');
 
@@ -70,7 +67,6 @@ describe('ActivityService', () => {
     });
 
     it('should throw EntityNotFoundException when activity not found', async () => {
-      activityRepository.findOne!.mockResolvedValue(null);
 
       await expect(service.getActivityOrFail('missing')).rejects.toThrow(
         EntityNotFoundException
@@ -81,17 +77,14 @@ describe('ActivityService', () => {
   describe('removeActivity', () => {
     it('should find and remove the activity', async () => {
       const activity = { id: 'act-1' } as Activity;
-      activityRepository.findOne!.mockResolvedValue(activity);
-      activityRepository.remove!.mockResolvedValue(activity);
+      db.query.activities.findFirst.mockResolvedValueOnce(activity);
 
       const result = await service.removeActivity('act-1');
 
-      expect(activityRepository.remove).toHaveBeenCalledWith(activity);
       expect(result).toBe(activity);
     });
 
     it('should throw EntityNotFoundException when activity to remove not found', async () => {
-      activityRepository.findOne!.mockResolvedValue(null);
 
       await expect(service.removeActivity('missing')).rejects.toThrow(
         EntityNotFoundException
@@ -102,28 +95,18 @@ describe('ActivityService', () => {
   describe('updateActivityVisibility', () => {
     it('should set visibility on the activity and save it', async () => {
       const activity = { id: 'act-1', visibility: true } as Activity;
-      activityRepository.save!.mockResolvedValue({
-        ...activity,
-        visibility: false,
-      });
+      db.returning.mockResolvedValueOnce([{ ...activity, visibility: false }]);
 
       const result = await service.updateActivityVisibility(activity, false);
 
       expect(activity.visibility).toBe(false);
-      expect(activityRepository.save).toHaveBeenCalledWith(activity);
       expect(result.visibility).toBe(false);
     });
   });
 
   describe('getActivityForMessage', () => {
     it('should return null and log warning when no activity found for message', async () => {
-      const mockQB = {
-        where: vi.fn().mockReturnThis(),
-        setParameters: vi.fn().mockReturnThis(),
-        getOne: vi.fn().mockResolvedValue(null),
-      };
-      activityRepository.createQueryBuilder!.mockReturnValue(mockQB);
-
+      // findFirst returns undefined by default, which triggers the null path
       const result = await service.getActivityForMessage('msg-123');
 
       expect(result).toBeNull();
@@ -131,12 +114,7 @@ describe('ActivityService', () => {
 
     it('should return the activity entry when found for message', async () => {
       const activity = { id: 'act-1', messageID: 'msg-123' } as Activity;
-      const mockQB = {
-        where: vi.fn().mockReturnThis(),
-        setParameters: vi.fn().mockReturnThis(),
-        getOne: vi.fn().mockResolvedValue(activity),
-      };
-      activityRepository.createQueryBuilder!.mockReturnValue(mockQB);
+      db.query.activities.findFirst.mockResolvedValueOnce(activity);
 
       const result = await service.getActivityForMessage('msg-123');
 

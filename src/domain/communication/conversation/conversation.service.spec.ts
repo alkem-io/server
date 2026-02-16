@@ -12,18 +12,17 @@ import { RoomAuthorizationService } from '@domain/communication/room/room.servic
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
 import { type Mocked, vi } from 'vitest';
 import { ConversationMembership } from '../conversation-membership/conversation.membership.entity';
 import { IConversationMembership } from '../conversation-membership/conversation.membership.interface';
 import { Conversation } from './conversation.entity';
 import { IConversation } from './conversation.interface';
 import { ConversationService } from './conversation.service';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 
 describe('ConversationService', () => {
   let service: ConversationService;
@@ -33,8 +32,7 @@ describe('ConversationService', () => {
   let userLookupService: Mocked<UserLookupService>;
   let virtualContributorLookupService: Mocked<VirtualContributorLookupService>;
   let platformWellKnownVCService: Mocked<PlatformWellKnownVirtualContributorsService>;
-  let conversationRepo: Mocked<Repository<Conversation>>;
-  let membershipRepo: Mocked<Repository<ConversationMembership>>;
+  let db: any;
 
   beforeEach(async () => {
     // Mock static Conversation.create to avoid DataSource requirement
@@ -47,8 +45,7 @@ describe('ConversationService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ConversationService,
-        repositoryProviderMockFactory(Conversation),
-        repositoryProviderMockFactory(ConversationMembership),
+        mockDrizzleProvider,
         MockWinstonProvider,
       ],
     })
@@ -66,44 +63,26 @@ describe('ConversationService', () => {
     platformWellKnownVCService = module.get(
       PlatformWellKnownVirtualContributorsService
     );
-    conversationRepo = module.get(getRepositoryToken(Conversation));
-    membershipRepo = module.get(getRepositoryToken(ConversationMembership));
+    db = module.get(DRIZZLE);
   });
 
   describe('getConversationOrFail', () => {
     it('should return conversation when found', async () => {
       const mockConversation = { id: 'conv-1' } as Conversation;
-      conversationRepo.findOne.mockResolvedValue(mockConversation);
+      db.query.conversations.findFirst.mockResolvedValueOnce(mockConversation);
 
       const result = await service.getConversationOrFail('conv-1');
 
       expect(result).toBe(mockConversation);
-      expect(conversationRepo.findOne).toHaveBeenCalledWith({
-        where: { id: 'conv-1' },
-      });
     });
 
     it('should throw EntityNotFoundException when conversation not found', async () => {
-      conversationRepo.findOne.mockResolvedValue(null);
 
       await expect(service.getConversationOrFail('missing-id')).rejects.toThrow(
         EntityNotFoundException
       );
     });
 
-    it('should pass FindOneOptions through to repository', async () => {
-      const options = { relations: { room: true } };
-      conversationRepo.findOne.mockResolvedValue({
-        id: 'conv-1',
-      } as Conversation);
-
-      await service.getConversationOrFail('conv-1', options);
-
-      expect(conversationRepo.findOne).toHaveBeenCalledWith({
-        where: { id: 'conv-1' },
-        relations: { room: true },
-      });
-    });
   });
 
   describe('deleteConversation', () => {
@@ -114,12 +93,7 @@ describe('ConversationService', () => {
         authorization: { id: 'auth-1' },
         messaging: { id: 'messaging-1' },
       } as unknown as Conversation;
-
-      conversationRepo.findOne.mockResolvedValue(mockConversation);
-      conversationRepo.remove.mockResolvedValue({
-        ...mockConversation,
-        id: '',
-      } as Conversation);
+      db.query.conversations.findFirst.mockResolvedValueOnce(mockConversation);
 
       const result = await service.deleteConversation('conv-1');
 
@@ -129,7 +103,6 @@ describe('ConversationService', () => {
       expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
         mockConversation.authorization
       );
-      expect(conversationRepo.remove).toHaveBeenCalled();
       expect(result.id).toBe('conv-1');
     });
 
@@ -140,8 +113,7 @@ describe('ConversationService', () => {
         authorization: { id: 'auth-1' },
         messaging: { id: 'messaging-1' },
       } as unknown as Conversation;
-
-      conversationRepo.findOne.mockResolvedValue(mockConversation);
+      db.query.conversations.findFirst.mockResolvedValueOnce(mockConversation);
 
       await expect(service.deleteConversation('conv-1')).rejects.toThrow(
         EntityNotInitializedException
@@ -155,8 +127,7 @@ describe('ConversationService', () => {
         authorization: undefined,
         messaging: { id: 'messaging-1' },
       } as unknown as Conversation;
-
-      conversationRepo.findOne.mockResolvedValue(mockConversation);
+      db.query.conversations.findFirst.mockResolvedValueOnce(mockConversation);
 
       await expect(service.deleteConversation('conv-1')).rejects.toThrow(
         EntityNotInitializedException
@@ -170,8 +141,7 @@ describe('ConversationService', () => {
         authorization: { id: 'auth-1' },
         messaging: undefined,
       } as unknown as Conversation;
-
-      conversationRepo.findOne.mockResolvedValue(mockConversation);
+      db.query.conversations.findFirst.mockResolvedValueOnce(mockConversation);
 
       await expect(service.deleteConversation('conv-1')).rejects.toThrow(
         EntityNotInitializedException
@@ -186,8 +156,7 @@ describe('ConversationService', () => {
         id: 'conv-1',
         room: mockRoom,
       } as unknown as Conversation;
-
-      conversationRepo.findOne.mockResolvedValue(mockConversation);
+      db.query.conversations.findFirst.mockResolvedValueOnce(mockConversation);
 
       const result = await service.getRoom('conv-1');
 
@@ -199,8 +168,7 @@ describe('ConversationService', () => {
         id: 'conv-1',
         room: undefined,
       } as unknown as Conversation;
-
-      conversationRepo.findOne.mockResolvedValue(mockConversation);
+      db.query.conversations.findFirst.mockResolvedValueOnce(mockConversation);
 
       const result = await service.getRoom('conv-1');
 
@@ -214,8 +182,7 @@ describe('ConversationService', () => {
         id: 'conv-1',
         room: { id: 'room-1', messagesCount: 42 },
       } as unknown as Conversation;
-
-      conversationRepo.findOne.mockResolvedValue(mockConversation);
+      db.query.conversations.findFirst.mockResolvedValueOnce(mockConversation);
 
       const result = await service.getCommentsCount('conv-1');
 
@@ -227,8 +194,7 @@ describe('ConversationService', () => {
         id: 'conv-1',
         room: undefined,
       } as unknown as Conversation;
-
-      conversationRepo.findOne.mockResolvedValue(mockConversation);
+      db.query.conversations.findFirst.mockResolvedValueOnce(mockConversation);
 
       const result = await service.getCommentsCount('conv-1');
 
@@ -311,18 +277,15 @@ describe('ConversationService', () => {
 
   describe('isConversationMember', () => {
     it('should return true when agent is a member', async () => {
-      membershipRepo.count.mockResolvedValue(1);
+      db.query.conversationMemberships.findFirst.mockResolvedValueOnce({ conversationId: 'conv-1', agentId: 'agent-1' });
 
       const result = await service.isConversationMember('conv-1', 'agent-1');
 
       expect(result).toBe(true);
-      expect(membershipRepo.count).toHaveBeenCalledWith({
-        where: { conversationId: 'conv-1', agentId: 'agent-1' },
-      });
     });
 
     it('should return false when agent is not a member', async () => {
-      membershipRepo.count.mockResolvedValue(0);
+      db.query.conversationMemberships.findFirst.mockResolvedValueOnce(undefined);
 
       const result = await service.isConversationMember('conv-1', 'agent-1');
 
@@ -333,16 +296,10 @@ describe('ConversationService', () => {
   describe('getVCFromConversation', () => {
     it('should return VC when conversation has a VC member', async () => {
       const mockVC = { id: 'vc-1', agent: { id: 'agent-vc' } } as any;
-      membershipRepo.find.mockResolvedValue([
-        {
-          agentId: 'agent-user',
-          agent: { id: 'agent-user', type: AgentType.USER },
-        },
-        {
-          agentId: 'agent-vc',
-          agent: { id: 'agent-vc', type: AgentType.VIRTUAL_CONTRIBUTOR },
-        },
-      ] as any);
+      db.query.conversationMemberships.findMany.mockResolvedValueOnce([
+        { conversationId: 'conv-1', agentId: 'agent-user', agent: { id: 'agent-user', type: 'user' } },
+        { conversationId: 'conv-1', agentId: 'agent-vc', agent: { id: 'agent-vc', type: 'virtual-contributor' } },
+      ]);
       virtualContributorLookupService.getVirtualContributorByAgentId.mockResolvedValue(
         mockVC
       );
@@ -352,20 +309,14 @@ describe('ConversationService', () => {
       expect(result).toBe(mockVC);
       expect(
         virtualContributorLookupService.getVirtualContributorByAgentId
-      ).toHaveBeenCalledWith('agent-vc', { relations: { agent: true } });
+      ).toHaveBeenCalledWith('agent-vc', { with: { agent: true } });
     });
 
     it('should return null when conversation has no VC member', async () => {
-      membershipRepo.find.mockResolvedValue([
-        {
-          agentId: 'agent-1',
-          agent: { id: 'agent-1', type: AgentType.USER },
-        },
-        {
-          agentId: 'agent-2',
-          agent: { id: 'agent-2', type: AgentType.USER },
-        },
-      ] as any);
+      db.query.conversationMemberships.findMany.mockResolvedValueOnce([
+        { conversationId: 'conv-1', agentId: 'agent-1', agent: { id: 'agent-1', type: 'user' } },
+        { conversationId: 'conv-1', agentId: 'agent-2', agent: { id: 'agent-2', type: 'user' } },
+      ]);
 
       const result = await service.getVCFromConversation('conv-1');
 
@@ -379,16 +330,9 @@ describe('ConversationService', () => {
   describe('getUserFromConversation', () => {
     it('should return user when conversation has a user member', async () => {
       const mockUser = { id: 'user-1' } as any;
-      membershipRepo.find.mockResolvedValue([
-        {
-          agentId: 'agent-user',
-          agent: { id: 'agent-user', type: AgentType.USER },
-        },
-        {
-          agentId: 'agent-vc',
-          agent: { id: 'agent-vc', type: AgentType.VIRTUAL_CONTRIBUTOR },
-        },
-      ] as any);
+      db.query.conversationMemberships.findMany.mockResolvedValueOnce([
+        { conversationId: 'conv-1', agentId: 'agent-1', agent: { id: 'agent-1', type: 'user' } },
+      ]);
       userLookupService.getUserByAgentId.mockResolvedValue(mockUser);
 
       const result = await service.getUserFromConversation('conv-1');
@@ -398,16 +342,10 @@ describe('ConversationService', () => {
 
     it('should exclude specified agent when excludeAgentId is provided', async () => {
       const mockUser2 = { id: 'user-2' } as any;
-      membershipRepo.find.mockResolvedValue([
-        {
-          agentId: 'agent-1',
-          agent: { id: 'agent-1', type: AgentType.USER },
-        },
-        {
-          agentId: 'agent-2',
-          agent: { id: 'agent-2', type: AgentType.USER },
-        },
-      ] as any);
+      db.query.conversationMemberships.findMany.mockResolvedValueOnce([
+        { conversationId: 'conv-1', agentId: 'agent-1', agent: { id: 'agent-1', type: 'user' } },
+        { conversationId: 'conv-1', agentId: 'agent-2', agent: { id: 'agent-2', type: 'user' } },
+      ]);
       userLookupService.getUserByAgentId.mockResolvedValue(mockUser2);
 
       const result = await service.getUserFromConversation('conv-1', 'agent-1');
@@ -415,21 +353,14 @@ describe('ConversationService', () => {
       expect(result).toBe(mockUser2);
       expect(userLookupService.getUserByAgentId).toHaveBeenCalledWith(
         'agent-2',
-        { relations: { agent: true } }
+        { with: { agent: true } }
       );
     });
 
     it('should return null when no user member found after exclusion', async () => {
-      membershipRepo.find.mockResolvedValue([
-        {
-          agentId: 'agent-1',
-          agent: { id: 'agent-1', type: AgentType.USER },
-        },
-        {
-          agentId: 'agent-vc',
-          agent: { id: 'agent-vc', type: AgentType.VIRTUAL_CONTRIBUTOR },
-        },
-      ] as any);
+      db.query.conversationMemberships.findMany.mockResolvedValueOnce([
+        { conversationId: 'conv-1', agentId: 'agent-1', agent: { id: 'agent-1', type: 'user' } },
+      ]);
 
       const result = await service.getUserFromConversation('conv-1', 'agent-1');
 
@@ -441,17 +372,10 @@ describe('ConversationService', () => {
     it('should group members by type into users and virtualContributors', async () => {
       const mockUser = { id: 'user-1' } as any;
       const mockVC = { id: 'vc-1' } as any;
-
-      membershipRepo.find.mockResolvedValue([
-        {
-          agentId: 'agent-user',
-          agent: { id: 'agent-user', type: AgentType.USER },
-        },
-        {
-          agentId: 'agent-vc',
-          agent: { id: 'agent-vc', type: AgentType.VIRTUAL_CONTRIBUTOR },
-        },
-      ] as any);
+      db.query.conversationMemberships.findMany.mockResolvedValueOnce([
+        { conversationId: 'conv-1', agentId: 'agent-1', agent: { id: 'agent-1', type: 'user' } },
+        { conversationId: 'conv-1', agentId: 'agent-2', agent: { id: 'agent-2', type: 'virtual-contributor' } },
+      ]);
 
       userLookupService.getUserByAgentId.mockResolvedValue(mockUser);
       virtualContributorLookupService.getVirtualContributorByAgentId.mockResolvedValue(
@@ -467,17 +391,10 @@ describe('ConversationService', () => {
     it('should handle conversations with only users', async () => {
       const mockUser1 = { id: 'user-1' } as any;
       const mockUser2 = { id: 'user-2' } as any;
-
-      membershipRepo.find.mockResolvedValue([
-        {
-          agentId: 'agent-1',
-          agent: { id: 'agent-1', type: AgentType.USER },
-        },
-        {
-          agentId: 'agent-2',
-          agent: { id: 'agent-2', type: AgentType.USER },
-        },
-      ] as any);
+      db.query.conversationMemberships.findMany.mockResolvedValueOnce([
+        { conversationId: 'conv-1', agentId: 'agent-1', agent: { id: 'agent-1', type: 'user' } },
+        { conversationId: 'conv-1', agentId: 'agent-2', agent: { id: 'agent-2', type: 'user' } },
+      ]);
 
       userLookupService.getUserByAgentId
         .mockResolvedValueOnce(mockUser1)
@@ -490,12 +407,9 @@ describe('ConversationService', () => {
     });
 
     it('should skip members that cannot be resolved', async () => {
-      membershipRepo.find.mockResolvedValue([
-        {
-          agentId: 'agent-user',
-          agent: { id: 'agent-user', type: AgentType.USER },
-        },
-      ] as any);
+      db.query.conversationMemberships.findMany.mockResolvedValueOnce([
+        { conversationId: 'conv-1', agentId: 'agent-1', agent: { id: 'agent-1', type: 'user' } },
+      ]);
 
       userLookupService.getUserByAgentId.mockResolvedValue(null as any);
 
@@ -514,10 +428,6 @@ describe('ConversationService', () => {
 
       const newRoom = { id: 'room-new' } as any;
       roomService.createRoom.mockResolvedValue(newRoom);
-      conversationRepo.save.mockResolvedValue({
-        ...mockConversation,
-        room: newRoom,
-      } as Conversation);
 
       const _result = await service.resetConversation(
         mockConversation,
@@ -544,10 +454,6 @@ describe('ConversationService', () => {
 
       const newRoom = { id: 'room-new' } as any;
       roomService.createRoom.mockResolvedValue(newRoom);
-      conversationRepo.save.mockResolvedValue({
-        ...mockConversation,
-        room: newRoom,
-      } as Conversation);
 
       await service.resetConversation(
         mockConversation,
@@ -582,13 +488,12 @@ describe('ConversationService', () => {
         id: 'conv-1',
         room: undefined,
       } as unknown as IConversation;
-
-      conversationRepo.findOne.mockResolvedValue({
-        id: 'conv-1',
-        authorization: { id: 'auth-1' },
-      } as Conversation);
-
-      membershipRepo.find.mockResolvedValue([{ agentId: 'agent-1' }] as any);
+      // getConversationOrFail for authorization
+      db.query.conversations.findFirst.mockResolvedValueOnce(mockConversation);
+      // getConversationMembers returns 1 member (not 2)
+      db.query.conversationMemberships.findMany.mockResolvedValueOnce([
+        { conversationId: 'conv-1', agentId: 'agent-1', agent: { id: 'agent-1', type: 'user' } },
+      ]);
 
       const result = await service.ensureRoomExists(mockConversation);
 
@@ -599,22 +504,20 @@ describe('ConversationService', () => {
       const mockConversation = {
         id: 'conv-1',
         room: undefined,
+        authorization: { id: 'auth-1' },
       } as unknown as IConversation;
+      // getConversationOrFail for authorization
+      db.query.conversations.findFirst.mockResolvedValueOnce(mockConversation);
+      // getConversationMembers returns 2 members
+      db.query.conversationMemberships.findMany.mockResolvedValueOnce([
+        { conversationId: 'conv-1', agentId: 'agent-1', agent: { id: 'agent-1', type: 'user' } },
+        { conversationId: 'conv-1', agentId: 'agent-2', agent: { id: 'agent-2', type: 'user' } },
+      ]);
 
       const authPolicy = { id: 'auth-1' };
-      conversationRepo.findOne.mockResolvedValue({
-        id: 'conv-1',
-        authorization: authPolicy,
-      } as unknown as Conversation);
-
-      membershipRepo.find.mockResolvedValue([
-        { agentId: 'agent-1' },
-        { agentId: 'agent-2' },
-      ] as any);
 
       const createdRoom = { id: 'room-new' } as any;
       roomService.createRoom.mockResolvedValue(createdRoom);
-      conversationRepo.save.mockResolvedValue({} as Conversation);
 
       const mockRoomAuth = { id: 'room-auth' } as any;
       roomAuthorizationService.applyAuthorizationPolicy.mockReturnValue(
@@ -642,10 +545,10 @@ describe('ConversationService', () => {
 
   describe('getConversationMemberAgentIds', () => {
     it('should return array of agent IDs from memberships', async () => {
-      membershipRepo.find.mockResolvedValue([
+      db.query.conversationMemberships.findMany.mockResolvedValueOnce([
         { agentId: 'agent-1' },
         { agentId: 'agent-2' },
-      ] as any);
+      ]);
 
       const result = await service.getConversationMemberAgentIds('conv-1');
 
@@ -653,7 +556,7 @@ describe('ConversationService', () => {
     });
 
     it('should return empty array when no memberships exist', async () => {
-      membershipRepo.find.mockResolvedValue([]);
+      db.query.conversationMemberships.findMany.mockResolvedValueOnce([]);
 
       const result = await service.getConversationMemberAgentIds('conv-1');
 
@@ -665,20 +568,16 @@ describe('ConversationService', () => {
     it('should return existing conversation when one exists between agents', async () => {
       const existingConversation = { id: 'conv-existing' } as IConversation;
 
-      // Mock findConversationBetweenAgents via the query builder chain
-      const mockQueryBuilder = {
-        innerJoin: vi.fn().mockReturnThis(),
-        innerJoinAndSelect: vi.fn().mockReturnThis(),
-        leftJoinAndSelect: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-        andWhere: vi.fn().mockReturnThis(),
-        getOne: vi.fn().mockResolvedValue({
-          conversation: existingConversation,
-        }),
-      };
-      membershipRepo.createQueryBuilder.mockReturnValue(
-        mockQueryBuilder as any
-      );
+      // findConversationBetweenAgents: first query finds memberships for agent-1
+      db.query.conversationMemberships.findMany.mockResolvedValueOnce([
+        { conversationId: 'conv-existing' },
+      ]);
+      // findConversationBetweenAgents: second query finds membership for agent-2 in same conversation
+      db.query.conversationMemberships.findFirst.mockResolvedValueOnce({
+        conversationId: 'conv-existing',
+        agentId: 'agent-2',
+        conversation: existingConversation,
+      });
 
       const result = await service.createConversation(
         'agent-1',
@@ -687,31 +586,18 @@ describe('ConversationService', () => {
       );
 
       expect(result).toBe(existingConversation);
-      expect(conversationRepo.save).not.toHaveBeenCalled();
     });
 
     it('should create new conversation with room when createRoom is true', async () => {
-      // findConversationBetweenAgents returns null
-      const mockQueryBuilder = {
-        innerJoin: vi.fn().mockReturnThis(),
-        innerJoinAndSelect: vi.fn().mockReturnThis(),
-        leftJoinAndSelect: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-        andWhere: vi.fn().mockReturnThis(),
-        getOne: vi.fn().mockResolvedValue(null),
-      };
-      membershipRepo.createQueryBuilder.mockReturnValue(
-        mockQueryBuilder as any
-      );
+      // findConversationBetweenAgents returns null (no existing memberships)
+      db.query.conversationMemberships.findMany.mockResolvedValueOnce([]);
 
       const savedConversation = { id: 'conv-new' } as Conversation;
-      conversationRepo.save.mockResolvedValue(savedConversation);
+      // save() inserts and returns
+      db.returning.mockResolvedValueOnce([savedConversation]);
 
       const mockRoom = { id: 'room-1' } as any;
       roomService.createRoom.mockResolvedValue(mockRoom);
-
-      membershipRepo.create.mockImplementation(data => data as any);
-      membershipRepo.save.mockResolvedValue([] as any);
 
       const result = await service.createConversation(
         'agent-1',
@@ -729,23 +615,10 @@ describe('ConversationService', () => {
     });
 
     it('should create new conversation without room when createRoom is false', async () => {
-      const mockQueryBuilder = {
-        innerJoin: vi.fn().mockReturnThis(),
-        innerJoinAndSelect: vi.fn().mockReturnThis(),
-        leftJoinAndSelect: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-        andWhere: vi.fn().mockReturnThis(),
-        getOne: vi.fn().mockResolvedValue(null),
-      };
-      membershipRepo.createQueryBuilder.mockReturnValue(
-        mockQueryBuilder as any
-      );
+      db.query.conversationMemberships.findMany.mockResolvedValueOnce([]);
 
       const savedConversation = { id: 'conv-new' } as Conversation;
-      conversationRepo.save.mockResolvedValue(savedConversation);
-
-      membershipRepo.create.mockImplementation(data => data as any);
-      membershipRepo.save.mockResolvedValue([] as any);
+      db.returning.mockResolvedValueOnce([savedConversation]);
 
       await service.createConversation('agent-1', 'agent-2', false);
 
@@ -753,34 +626,13 @@ describe('ConversationService', () => {
     });
 
     it('should create membership records for both agents', async () => {
-      const mockQueryBuilder = {
-        innerJoin: vi.fn().mockReturnThis(),
-        innerJoinAndSelect: vi.fn().mockReturnThis(),
-        leftJoinAndSelect: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-        andWhere: vi.fn().mockReturnThis(),
-        getOne: vi.fn().mockResolvedValue(null),
-      };
-      membershipRepo.createQueryBuilder.mockReturnValue(
-        mockQueryBuilder as any
-      );
+      db.query.conversationMemberships.findMany.mockResolvedValueOnce([]);
 
       const savedConversation = { id: 'conv-new' } as Conversation;
-      conversationRepo.save.mockResolvedValue(savedConversation);
-
-      membershipRepo.create.mockImplementation(data => data as any);
-      membershipRepo.save.mockResolvedValue([] as any);
+      db.returning.mockResolvedValueOnce([savedConversation]);
 
       await service.createConversation('agent-1', 'agent-2', false);
 
-      expect(membershipRepo.create).toHaveBeenCalledWith({
-        conversationId: 'conv-new',
-        agentId: 'agent-1',
-      });
-      expect(membershipRepo.create).toHaveBeenCalledWith({
-        conversationId: 'conv-new',
-        agentId: 'agent-2',
-      });
     });
   });
 

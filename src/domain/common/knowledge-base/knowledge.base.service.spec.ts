@@ -1,23 +1,21 @@
 import { EntityNotFoundException } from '@common/exceptions';
 import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { MockType } from '@test/utils/mock.type';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
 import { type Mock } from 'vitest';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { ProfileService } from '../profile/profile.service';
 import { KnowledgeBase } from './knowledge.base.entity';
 import { IKnowledgeBase } from './knowledge.base.interface';
 import { KnowledgeBaseService } from './knowledge.base.service';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 
 describe('KnowledgeBaseService', () => {
   let service: KnowledgeBaseService;
-  let knowledgeBaseRepository: MockType<Repository<KnowledgeBase>>;
+  let db: any;
   let profileService: ProfileService;
   let authorizationPolicyService: AuthorizationPolicyService;
   let calloutsSetService: CalloutsSetService;
@@ -33,7 +31,7 @@ describe('KnowledgeBaseService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         KnowledgeBaseService,
-        repositoryProviderMockFactory(KnowledgeBase),
+        mockDrizzleProvider,
         MockCacheManager,
         MockWinstonProvider,
       ],
@@ -42,7 +40,7 @@ describe('KnowledgeBaseService', () => {
       .compile();
 
     service = module.get(KnowledgeBaseService);
-    knowledgeBaseRepository = module.get(getRepositoryToken(KnowledgeBase));
+    db = module.get(DRIZZLE);
     profileService = module.get(ProfileService);
     authorizationPolicyService = module.get(AuthorizationPolicyService);
     calloutsSetService = module.get(CalloutsSetService);
@@ -51,7 +49,7 @@ describe('KnowledgeBaseService', () => {
   describe('getKnowledgeBaseOrFail', () => {
     it('should return knowledge base when found', async () => {
       const kb = { id: 'kb-1' } as KnowledgeBase;
-      knowledgeBaseRepository.findOne!.mockResolvedValue(kb);
+      db.query.knowledgeBases.findFirst.mockResolvedValueOnce(kb);
 
       const result = await service.getKnowledgeBaseOrFail('kb-1');
 
@@ -59,7 +57,6 @@ describe('KnowledgeBaseService', () => {
     });
 
     it('should throw EntityNotFoundException when not found', async () => {
-      knowledgeBaseRepository.findOne!.mockResolvedValue(null);
 
       await expect(service.getKnowledgeBaseOrFail('missing')).rejects.toThrow(
         EntityNotFoundException
@@ -112,11 +109,7 @@ describe('KnowledgeBaseService', () => {
         authorization: { id: 'auth-1' },
       } as unknown as KnowledgeBase;
 
-      knowledgeBaseRepository.findOne!.mockResolvedValue(kb);
-      knowledgeBaseRepository.remove!.mockResolvedValue({
-        ...kb,
-        id: undefined,
-      });
+      db.query.knowledgeBases.findFirst.mockResolvedValueOnce(kb);
       (profileService.deleteProfile as Mock).mockResolvedValue({} as any);
       (calloutsSetService.deleteCalloutsSet as Mock).mockResolvedValue(
         {} as any
@@ -140,8 +133,7 @@ describe('KnowledgeBaseService', () => {
         calloutsSet: undefined,
       } as unknown as KnowledgeBase;
 
-      knowledgeBaseRepository.findOne!.mockResolvedValue(kb);
-
+      db.query.knowledgeBases.findFirst.mockResolvedValueOnce(kb);
       await expect(service.delete(kb)).rejects.toThrow(EntityNotFoundException);
     });
 
@@ -153,11 +145,7 @@ describe('KnowledgeBaseService', () => {
         authorization: undefined,
       } as unknown as KnowledgeBase;
 
-      knowledgeBaseRepository.findOne!.mockResolvedValue(kb);
-      knowledgeBaseRepository.remove!.mockResolvedValue({
-        ...kb,
-        id: undefined,
-      });
+      db.query.knowledgeBases.findFirst.mockResolvedValueOnce(kb);
       (profileService.deleteProfile as Mock).mockResolvedValue({} as any);
       (calloutsSetService.deleteCalloutsSet as Mock).mockResolvedValue(
         {} as any
@@ -173,7 +161,7 @@ describe('KnowledgeBaseService', () => {
     it('should return profile when present on knowledge base', async () => {
       const profile = { id: 'p-1' };
       const kb = { id: 'kb-1', profile } as unknown as KnowledgeBase;
-      knowledgeBaseRepository.findOne!.mockResolvedValue(kb);
+      db.query.knowledgeBases.findFirst.mockResolvedValueOnce(kb);
 
       const result = await service.getProfile(kb);
 
@@ -185,7 +173,7 @@ describe('KnowledgeBaseService', () => {
         id: 'kb-1',
         profile: undefined,
       } as unknown as KnowledgeBase;
-      knowledgeBaseRepository.findOne!.mockResolvedValue(kb);
+      db.query.knowledgeBases.findFirst.mockResolvedValueOnce(kb);
 
       await expect(service.getProfile(kb)).rejects.toThrow(
         EntityNotFoundException
@@ -200,7 +188,7 @@ describe('KnowledgeBaseService', () => {
         id: 'kb-1',
         calloutsSet,
       } as unknown as KnowledgeBase;
-      knowledgeBaseRepository.findOne!.mockResolvedValue(kb);
+      db.query.knowledgeBases.findFirst.mockResolvedValueOnce(kb);
 
       const result = await service.getCalloutsSet(kb);
 
@@ -212,7 +200,7 @@ describe('KnowledgeBaseService', () => {
         id: 'kb-1',
         calloutsSet: undefined,
       } as unknown as KnowledgeBase;
-      knowledgeBaseRepository.findOne!.mockResolvedValue(kb);
+      db.query.knowledgeBases.findFirst.mockResolvedValueOnce(kb);
 
       await expect(service.getCalloutsSet(kb)).rejects.toThrow(
         EntityNotFoundException

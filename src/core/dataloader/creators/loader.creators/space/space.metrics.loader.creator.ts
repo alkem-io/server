@@ -1,25 +1,26 @@
 import { RoleName } from '@common/enums/role.name';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { DataLoaderCreator } from '@core/dataloader/creators/base';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { Credential } from '@domain/agent/credential/credential.entity';
+import { credentials } from '@domain/agent/credential/credential.schema';
 import { NVP } from '@domain/common/nvp/nvp.entity';
 import { INVP } from '@domain/common/nvp/nvp.interface';
-import { Space } from '@domain/space/space/space.entity';
-import { Injectable } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
+import { spaces } from '@domain/space/space/space.schema';
+import { Inject, Injectable } from '@nestjs/common';
 import DataLoader from 'dataloader';
-import { EntityManager, In } from 'typeorm';
+import { and, count, inArray } from 'drizzle-orm';
 
 /**
  * DataLoader creator that resolves space metrics (member count) in batch.
  * Given N spaceAbout IDs, this performs 3 queries total:
- *   1. Load spaces with community → roleSet → roles
+ *   1. Load spaces with community -> roleSet -> roles
  *   2. Batch-count credentials by resourceID (single grouped COUNT)
  * Instead of 2N queries (N role lookups + N credential counts).
  */
 @Injectable()
 export class SpaceMetricsLoaderCreator implements DataLoaderCreator<INVP[]> {
-  constructor(@InjectEntityManager() private manager: EntityManager) {}
+  constructor(@Inject(DRIZZLE) private readonly db: DrizzleDb) {}
 
   public create(): ILoader<INVP[]> {
     return new DataLoader<string, INVP[]>(
@@ -33,16 +34,24 @@ export class SpaceMetricsLoaderCreator implements DataLoaderCreator<INVP[]> {
       return [];
     }
 
-    // Step 1: Load spaces with community → roleSet → roles
-    const spaces = await this.manager.find(Space, {
-      where: { about: { id: In([...spaceAboutIds]) } },
-      relations: {
+    // Step 1: Load spaces with community -> roleSet -> roles
+    const spaceResults = await this.db.query.spaces.findMany({
+      where: inArray(spaces.aboutId, [...spaceAboutIds]),
+      with: {
         about: true,
-        community: { roleSet: { roles: true } },
+        community: {
+          with: {
+            roleSet: {
+              with: {
+                roles: true,
+              },
+            },
+          },
+        },
       },
     });
 
-    // Build map: spaceAboutId → { resourceID, type }
+    // Build map: spaceAboutId -> { resourceID, type }
     const spaceDataByAboutId = new Map<
       string,
       { resourceID: string; type: string }
@@ -51,11 +60,12 @@ export class SpaceMetricsLoaderCreator implements DataLoaderCreator<INVP[]> {
     const resourceIDs: string[] = [];
     const types: string[] = [];
 
-    for (const space of spaces) {
-      if (!space.about || !space.community?.roleSet?.roles) continue;
+    for (const space of spaceResults) {
+      if (!space.about || !(space.community as any)?.roleSet?.roles) continue;
 
-      const memberRole = space.community.roleSet.roles.find(
-        r => r.name === RoleName.MEMBER
+      const roleSet = (space.community as any).roleSet;
+      const memberRole = roleSet.roles.find(
+        (r: any) => r.name === RoleName.MEMBER
       );
       if (!memberRole?.credential?.resourceID) continue;
 
@@ -74,22 +84,22 @@ export class SpaceMetricsLoaderCreator implements DataLoaderCreator<INVP[]> {
       const uniqueResourceIDs = [...new Set(resourceIDs)];
       const uniqueTypes = [...new Set(types)];
 
-      const results = await this.manager
-        .getRepository(Credential)
-        .createQueryBuilder('credential')
-        .select('credential.resourceID', 'resourceID')
-        .addSelect('COUNT(*)', 'count')
-        .where('credential.resourceID IN (:...resourceIDs)', {
-          resourceIDs: uniqueResourceIDs,
+      const results = await this.db
+        .select({
+          resourceID: credentials.resourceID,
+          count: count(),
         })
-        .andWhere('credential.type IN (:...types)', {
-          types: uniqueTypes,
-        })
-        .groupBy('credential.resourceID')
-        .getRawMany<{ resourceID: string; count: string }>();
+        .from(credentials)
+        .where(
+          and(
+            inArray(credentials.resourceID, uniqueResourceIDs),
+            inArray(credentials.type, uniqueTypes)
+          )
+        )
+        .groupBy(credentials.resourceID);
 
       for (const row of results) {
-        countsByResourceID.set(row.resourceID, parseInt(row.count, 10));
+        countsByResourceID.set(row.resourceID, row.count);
       }
     }
 

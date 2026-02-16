@@ -8,7 +8,6 @@ import { ProfileService } from '@domain/common/profile/profile.service';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getEntityManagerToken } from '@nestjs/typeorm';
 import { AvatarCreatorService } from '@services/external/avatar-creator/avatar.creator.service';
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
@@ -19,9 +18,12 @@ import { Organization } from '../organization/organization.entity';
 import { User } from '../user/user.entity';
 import { VirtualContributor } from '../virtual-contributor/virtual.contributor.entity';
 import { ContributorService } from './contributor.service';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 
 describe('ContributorService', () => {
   let service: ContributorService;
+  let db: any;
   let contributorLookupService: {
     getContributorByUUID: Mock;
   };
@@ -39,22 +41,10 @@ describe('ContributorService', () => {
   let documentService: {
     getPubliclyAccessibleURL: Mock;
   };
-  let entityManager: {
-    findOne: Mock;
-  };
-
   beforeEach(async () => {
-    entityManager = {
-      findOne: vi.fn(),
-    };
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ContributorService,
-        {
-          provide: getEntityManagerToken('default'),
-          useValue: entityManager,
-        },
         MockCacheManager,
         MockWinstonProvider,
       ],
@@ -63,6 +53,7 @@ describe('ContributorService', () => {
       .compile();
 
     service = module.get(ContributorService);
+    db = module.get(DRIZZLE);
     contributorLookupService = module.get(ContributorLookupService) as any;
     profileService = module.get(ProfileService) as any;
     avatarCreatorService = module.get(AvatarCreatorService) as any;
@@ -307,16 +298,11 @@ describe('ContributorService', () => {
       userContributor.id = 'user-1';
 
       const mockUser = { id: 'user-1', profile: { id: 'p-1' } };
-      entityManager.findOne.mockResolvedValue(mockUser);
+      db.query.users.findFirst.mockResolvedValueOnce(mockUser);
 
       const result = await service.getContributorWithRelations(userContributor);
 
-      expect(entityManager.findOne).toHaveBeenCalledWith(
-        User,
-        expect.objectContaining({
-          where: { id: 'user-1' },
-        })
-      );
+      expect(db.query.users.findFirst).toHaveBeenCalled();
       expect(result).toBe(mockUser);
     });
 
@@ -325,16 +311,11 @@ describe('ContributorService', () => {
       orgContributor.id = 'org-1';
 
       const mockOrg = { id: 'org-1' };
-      entityManager.findOne.mockResolvedValue(mockOrg);
+      db.query.organizations.findFirst.mockResolvedValueOnce(mockOrg);
 
       const result = await service.getContributorWithRelations(orgContributor);
 
-      expect(entityManager.findOne).toHaveBeenCalledWith(
-        Organization,
-        expect.objectContaining({
-          where: { id: 'org-1' },
-        })
-      );
+      expect(db.query.organizations.findFirst).toHaveBeenCalled();
       expect(result).toBe(mockOrg);
     });
 
@@ -343,24 +324,17 @@ describe('ContributorService', () => {
       vcContributor.id = 'vc-1';
 
       const mockVC = { id: 'vc-1' };
-      entityManager.findOne.mockResolvedValue(mockVC);
+      db.query.virtualContributors.findFirst.mockResolvedValueOnce(mockVC);
 
       const result = await service.getContributorWithRelations(vcContributor);
 
-      expect(entityManager.findOne).toHaveBeenCalledWith(
-        VirtualContributor,
-        expect.objectContaining({
-          where: { id: 'vc-1' },
-        })
-      );
+      expect(db.query.virtualContributors.findFirst).toHaveBeenCalled();
       expect(result).toBe(mockVC);
     });
 
     it('should throw RelationshipNotFoundException when entity is not found after query', async () => {
       const userContributor = Object.create(User.prototype);
       userContributor.id = 'user-1';
-
-      entityManager.findOne.mockResolvedValue(null);
 
       await expect(
         service.getContributorWithRelations(userContributor)

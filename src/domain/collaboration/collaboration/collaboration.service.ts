@@ -227,12 +227,15 @@ export class CollaborationService {
         timeline?: boolean;
         innovationFlow?: boolean | {
           profile?: boolean;
-          states?: boolean;
+          states?: boolean | {
+            defaultCalloutTemplate?: boolean;
+          };
           flowStatesTagsetTemplate?: boolean;
         };
         authorization?: boolean;
         license?: boolean | {
           entitlements?: boolean;
+          authorization?: boolean;
         };
       };
     }
@@ -268,7 +271,15 @@ export class CollaborationService {
         if (typeof options.relations.innovationFlow === 'object') {
           const nested: any = {};
           if (options.relations.innovationFlow.profile) nested.profile = true;
-          if (options.relations.innovationFlow.states) nested.states = true;
+          if (options.relations.innovationFlow.states) {
+            if (typeof options.relations.innovationFlow.states === 'object') {
+              const statesNested: any = {};
+              if (options.relations.innovationFlow.states.defaultCalloutTemplate) statesNested.defaultCalloutTemplate = true;
+              nested.states = Object.keys(statesNested).length > 0 ? { with: statesNested } : true;
+            } else {
+              nested.states = true;
+            }
+          }
           if (options.relations.innovationFlow.flowStatesTagsetTemplate) nested.flowStatesTagsetTemplate = true;
           withClause.innovationFlow = Object.keys(nested).length > 0 ? { with: nested } : true;
         } else {
@@ -280,6 +291,7 @@ export class CollaborationService {
         if (typeof options.relations.license === 'object') {
           const nested: any = {};
           if (options.relations.license.entitlements) nested.entitlements = true;
+          if (options.relations.license.authorization) nested.authorization = true;
           withClause.license = { with: nested };
         } else {
           withClause.license = true;

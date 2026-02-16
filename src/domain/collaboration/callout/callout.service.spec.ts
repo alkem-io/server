@@ -12,14 +12,11 @@ import { ClassificationService } from '@domain/common/classification/classificat
 import { RoomService } from '@domain/communication/room/room.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
 import { type Mock, vi } from 'vitest';
 import { CalloutContributionService } from '../callout-contribution/callout.contribution.service';
 import { CalloutContributionDefaultsService } from '../callout-contribution-defaults/callout.contribution.defaults.service';
@@ -27,10 +24,12 @@ import { CalloutFramingService } from '../callout-framing/callout.framing.servic
 import { Callout } from './callout.entity';
 import { ICallout } from './callout.interface';
 import { CalloutService } from './callout.service';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 
 describe('CalloutService', () => {
   let service: CalloutService;
-  let repository: Repository<Callout>;
+  let db: any;
   let framingService: CalloutFramingService;
   let contributionDefaultsService: CalloutContributionDefaultsService;
   let contributionService: CalloutContributionService;
@@ -52,7 +51,7 @@ describe('CalloutService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CalloutService,
-        repositoryProviderMockFactory(Callout),
+        mockDrizzleProvider,
         MockCacheManager,
         MockWinstonProvider,
       ],
@@ -61,7 +60,7 @@ describe('CalloutService', () => {
       .compile();
 
     service = module.get(CalloutService);
-    repository = module.get(getRepositoryToken(Callout));
+    db = module.get(DRIZZLE);
     framingService = module.get(CalloutFramingService);
     contributionDefaultsService = module.get(
       CalloutContributionDefaultsService
@@ -256,7 +255,7 @@ describe('CalloutService', () => {
   describe('getCalloutOrFail', () => {
     it('should return callout when found', async () => {
       const callout = { id: 'callout-1' } as Callout;
-      vi.mocked(repository.findOne).mockResolvedValue(callout);
+      db.query.callouts.findFirst.mockResolvedValueOnce(callout);
 
       const result = await service.getCalloutOrFail('callout-1');
 
@@ -264,7 +263,7 @@ describe('CalloutService', () => {
     });
 
     it('should throw EntityNotFoundException when callout is not found', async () => {
-      vi.mocked(repository.findOne).mockResolvedValue(null);
+      db.query.callouts.findFirst.mockResolvedValueOnce(undefined);
 
       await expect(service.getCalloutOrFail('nonexistent')).rejects.toThrow(
         EntityNotFoundException
@@ -278,8 +277,8 @@ describe('CalloutService', () => {
         id: 'callout-1',
         settings: { visibility: CalloutVisibility.DRAFT },
       } as any;
-      vi.mocked(repository.findOne).mockResolvedValue(callout);
-      vi.mocked(repository.save).mockResolvedValue(callout);
+      db.query.callouts.findFirst.mockResolvedValueOnce(callout);
+      db.returning.mockResolvedValueOnce([callout]);
 
       await service.updateCalloutVisibility({
         calloutID: 'callout-1',
@@ -287,7 +286,6 @@ describe('CalloutService', () => {
       } as any);
 
       expect(callout.settings.visibility).toBe(CalloutVisibility.PUBLISHED);
-      expect(repository.save).toHaveBeenCalled();
     });
   });
 
@@ -299,7 +297,7 @@ describe('CalloutService', () => {
       vi.mocked(userLookupService.getUserByUUID).mockResolvedValue(
         publisher as any
       );
-      vi.mocked(repository.save).mockResolvedValue(callout);
+      db.returning.mockResolvedValueOnce([callout]);
 
       await service.updateCalloutPublishInfo(callout, 'publisher-uuid');
 
@@ -312,7 +310,7 @@ describe('CalloutService', () => {
       vi.mocked(userLookupService.getUserByUUID).mockResolvedValue(
         undefined as any
       );
-      vi.mocked(repository.save).mockResolvedValue(callout);
+      db.returning.mockResolvedValueOnce([callout]);
 
       await service.updateCalloutPublishInfo(callout, 'nonexistent-uuid');
 
@@ -322,8 +320,7 @@ describe('CalloutService', () => {
     it('should update publishedDate when timestamp is provided', async () => {
       const callout = { id: 'callout-1' } as any;
       const timestamp = Date.now();
-
-      vi.mocked(repository.save).mockResolvedValue(callout);
+      db.returning.mockResolvedValueOnce([callout]);
 
       await service.updateCalloutPublishInfo(callout, undefined, timestamp);
 
@@ -343,11 +340,7 @@ describe('CalloutService', () => {
         comments: { id: 'room-1' },
         authorization: { id: 'auth-1' },
       } as any;
-
-      vi.mocked(repository.findOne).mockResolvedValue(callout);
-      vi.mocked(repository.remove).mockResolvedValue({
-        id: undefined,
-      } as any);
+      db.query.callouts.findFirst.mockResolvedValueOnce(callout);
 
       const result = await service.deleteCallout('callout-1');
 
@@ -372,8 +365,7 @@ describe('CalloutService', () => {
         settings: undefined,
         contributions: undefined,
       } as any;
-
-      vi.mocked(repository.findOne).mockResolvedValue(callout);
+      db.query.callouts.findFirst.mockResolvedValueOnce(callout);
 
       await expect(service.deleteCallout('callout-1')).rejects.toThrow(
         EntityNotInitializedException
@@ -390,11 +382,7 @@ describe('CalloutService', () => {
         comments: undefined,
         authorization: { id: 'auth-1' },
       } as any;
-
-      vi.mocked(repository.findOne).mockResolvedValue(callout);
-      vi.mocked(repository.remove).mockResolvedValue({
-        id: undefined,
-      } as any);
+      db.query.callouts.findFirst.mockResolvedValueOnce(callout);
 
       await service.deleteCallout('callout-1');
 
@@ -409,8 +397,7 @@ describe('CalloutService', () => {
         id: 'callout-1',
         framing: { profile: { storageBucket } },
       } as any;
-
-      vi.mocked(repository.findOne).mockResolvedValue(callout);
+      db.query.callouts.findFirst.mockResolvedValueOnce(callout);
 
       const result = await service.getStorageBucket('callout-1');
 
@@ -422,8 +409,7 @@ describe('CalloutService', () => {
         id: 'callout-1',
         framing: { profile: { storageBucket: undefined } },
       } as any;
-
-      vi.mocked(repository.findOne).mockResolvedValue(callout);
+      db.query.callouts.findFirst.mockResolvedValueOnce(callout);
 
       await expect(service.getStorageBucket('callout-1')).rejects.toThrow(
         RelationshipNotFoundException
@@ -435,8 +421,7 @@ describe('CalloutService', () => {
     it('should return classification when it exists', async () => {
       const classification = { id: 'class-1' };
       const callout = { id: 'callout-1', classification } as any;
-
-      vi.mocked(repository.findOne).mockResolvedValue(callout);
+      db.query.callouts.findFirst.mockResolvedValueOnce(callout);
 
       const result = await service.getClassification('callout-1');
 
@@ -448,8 +433,7 @@ describe('CalloutService', () => {
         id: 'callout-1',
         classification: undefined,
       } as any;
-
-      vi.mocked(repository.findOne).mockResolvedValue(callout);
+      db.query.callouts.findFirst.mockResolvedValueOnce(callout);
 
       await expect(service.getClassification('callout-1')).rejects.toThrow(
         RelationshipNotFoundException
@@ -468,8 +452,8 @@ describe('CalloutService', () => {
         id: 'callout-1',
         contributions,
       } as any;
+      db.query.callouts.findFirst.mockResolvedValueOnce(callout);
 
-      vi.mocked(repository.findOne).mockResolvedValue(callout);
       vi.mocked(contributionService.save).mockImplementation(
         async (input: any) => input
       );
@@ -489,8 +473,7 @@ describe('CalloutService', () => {
         id: 'callout-1',
         contributions: [{ id: 'c-1', sortOrder: 1 }],
       } as any;
-
-      vi.mocked(repository.findOne).mockResolvedValue(callout);
+      db.query.callouts.findFirst.mockResolvedValueOnce(callout);
 
       await expect(
         service.updateContributionCalloutsSortOrder('callout-1', {
@@ -507,8 +490,7 @@ describe('CalloutService', () => {
         id: 'callout-1',
         contributionDefaults: defaults,
       } as any;
-
-      vi.mocked(repository.findOne).mockResolvedValue(callout);
+      db.query.callouts.findFirst.mockResolvedValueOnce(callout);
 
       const result = await service.getContributionDefaults('callout-1');
 
@@ -520,8 +502,7 @@ describe('CalloutService', () => {
         id: 'callout-1',
         contributionDefaults: undefined,
       } as any;
-
-      vi.mocked(repository.findOne).mockResolvedValue(callout);
+      db.query.callouts.findFirst.mockResolvedValueOnce(callout);
 
       await expect(
         service.getContributionDefaults('callout-1')
@@ -533,8 +514,7 @@ describe('CalloutService', () => {
     it('should return framing when initialized', async () => {
       const framing = { id: 'framing-1' };
       const callout = { id: 'callout-1', framing } as any;
-
-      vi.mocked(repository.findOne).mockResolvedValue(callout);
+      db.query.callouts.findFirst.mockResolvedValueOnce(callout);
 
       const result = await service.getCalloutFraming('callout-1');
 
@@ -543,8 +523,7 @@ describe('CalloutService', () => {
 
     it('should throw EntityNotFoundException when framing is not initialized', async () => {
       const callout = { id: 'callout-1', framing: undefined } as any;
-
-      vi.mocked(repository.findOne).mockResolvedValue(callout);
+      db.query.callouts.findFirst.mockResolvedValueOnce(callout);
 
       await expect(service.getCalloutFraming('callout-1')).rejects.toThrow(
         EntityNotFoundException
@@ -578,13 +557,11 @@ describe('CalloutService', () => {
         settings: {
           contribution: { allowedTypes: [] },
         },
+        comments: { id: 'room-1' },
       } as any;
 
-      // getComments path
-      vi.mocked(repository.findOne).mockResolvedValue({
-        ...callout,
-        comments: { id: 'room-1' },
-      });
+      // getComments path - needs db mock for getCalloutOrFail
+      db.query.callouts.findFirst.mockResolvedValueOnce(callout);
       vi.mocked(roomService.getMessages).mockResolvedValue([{}, {}, {}] as any);
 
       const result = await service.getActivityCount(callout);

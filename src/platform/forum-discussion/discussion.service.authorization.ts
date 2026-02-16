@@ -36,8 +36,9 @@ export class DiscussionAuthorizationService {
       discussionInput.id,
       {
         relations: {
+          authorization: true,
           profile: true,
-          comments: true,
+          comments: { authorization: true },
         },
       }
     );

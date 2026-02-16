@@ -44,11 +44,12 @@ export class RoleSetAuthorizationService {
   ): Promise<IAuthorizationPolicy[]> {
     const roleSet = await this.roleSetService.getRoleSetOrFail(roleSetID, {
       with: {
+        authorization: true,
         roles: true,
-        applications: true,
-        invitations: true,
-        platformInvitations: true,
-        license: true,
+        applications: { with: { authorization: true } },
+        invitations: { with: { authorization: true } },
+        platformInvitations: { with: { authorization: true } },
+        license: { with: { authorization: true } },
       },
     });
     if (

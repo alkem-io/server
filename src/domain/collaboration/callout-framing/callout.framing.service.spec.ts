@@ -10,20 +10,20 @@ import { ProfileService } from '@domain/common/profile/profile.service';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
 import { LinkService } from '../link/link.service';
 import { CalloutFraming } from './callout.framing.entity';
 import { CalloutFramingService } from './callout.framing.service';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import { vi } from 'vitest';
 
 describe('CalloutFramingService', () => {
   let service: CalloutFramingService;
-  let repository: Repository<CalloutFraming>;
+  let db: any;
   let profileService: ProfileService;
   let whiteboardService: WhiteboardService;
   let linkService: LinkService;
@@ -44,7 +44,7 @@ describe('CalloutFramingService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CalloutFramingService,
-        repositoryProviderMockFactory(CalloutFraming),
+        mockDrizzleProvider,
         MockCacheManager,
         MockWinstonProvider,
       ],
@@ -53,7 +53,7 @@ describe('CalloutFramingService', () => {
       .compile();
 
     service = module.get(CalloutFramingService);
-    repository = module.get(getRepositoryToken(CalloutFraming));
+    db = module.get(DRIZZLE);
     profileService = module.get(ProfileService);
     whiteboardService = module.get(WhiteboardService);
     linkService = module.get(LinkService);
@@ -469,8 +469,7 @@ describe('CalloutFramingService', () => {
         authorization: { id: 'auth-1' },
       } as any;
 
-      vi.mocked(repository.findOne).mockResolvedValue(framing);
-      vi.mocked(repository.remove).mockResolvedValue({ id: undefined } as any);
+      db.query.calloutFramings.findFirst.mockResolvedValueOnce(framing);
 
       const result = await service.delete(framing);
 
@@ -498,8 +497,7 @@ describe('CalloutFramingService', () => {
         authorization: undefined,
       } as any;
 
-      vi.mocked(repository.findOne).mockResolvedValue(framing);
-      vi.mocked(repository.remove).mockResolvedValue({ id: undefined } as any);
+      db.query.calloutFramings.findFirst.mockResolvedValueOnce(framing);
 
       await service.delete(framing);
 
@@ -513,7 +511,7 @@ describe('CalloutFramingService', () => {
   describe('getCalloutFramingOrFail', () => {
     it('should return framing when found', async () => {
       const framing = { id: 'framing-1' } as CalloutFraming;
-      vi.mocked(repository.findOne).mockResolvedValue(framing);
+      db.query.calloutFramings.findFirst.mockResolvedValueOnce(framing);
 
       const result = await service.getCalloutFramingOrFail('framing-1');
 
@@ -521,7 +519,7 @@ describe('CalloutFramingService', () => {
     });
 
     it('should throw EntityNotFoundException when framing not found', async () => {
-      vi.mocked(repository.findOne).mockResolvedValue(null);
+      db.query.calloutFramings.findFirst.mockResolvedValueOnce(undefined);
 
       await expect(
         service.getCalloutFramingOrFail('nonexistent')
@@ -533,7 +531,7 @@ describe('CalloutFramingService', () => {
     it('should return profile when it exists on framing', async () => {
       const profile = { id: 'profile-1', displayName: 'Test' } as any;
       const framing = { id: 'framing-1', profile } as CalloutFraming;
-      vi.mocked(repository.findOne).mockResolvedValue(framing);
+      db.query.calloutFramings.findFirst.mockResolvedValueOnce(framing);
 
       const result = await service.getProfile({ id: 'framing-1' } as any);
 
@@ -542,7 +540,7 @@ describe('CalloutFramingService', () => {
 
     it('should throw EntityNotFoundException when profile is not initialized', async () => {
       const framing = { id: 'framing-1', profile: undefined } as any;
-      vi.mocked(repository.findOne).mockResolvedValue(framing);
+      db.query.calloutFramings.findFirst.mockResolvedValueOnce(framing);
 
       await expect(
         service.getProfile({ id: 'framing-1' } as any)
@@ -556,7 +554,7 @@ describe('CalloutFramingService', () => {
         id: 'framing-1',
         whiteboard: undefined,
       } as CalloutFraming;
-      vi.mocked(repository.findOne).mockResolvedValue(framing);
+      db.query.calloutFramings.findFirst.mockResolvedValueOnce(framing);
 
       const result = await service.getWhiteboard({ id: 'framing-1' } as any);
 
@@ -566,7 +564,7 @@ describe('CalloutFramingService', () => {
     it('should return whiteboard when it exists', async () => {
       const whiteboard = { id: 'wb-1' } as any;
       const framing = { id: 'framing-1', whiteboard } as any;
-      vi.mocked(repository.findOne).mockResolvedValue(framing);
+      db.query.calloutFramings.findFirst.mockResolvedValueOnce(framing);
 
       const result = await service.getWhiteboard({ id: 'framing-1' } as any);
 
@@ -577,7 +575,7 @@ describe('CalloutFramingService', () => {
   describe('getLink', () => {
     it('should return null when framing has no link', async () => {
       const framing = { id: 'framing-1', link: undefined } as CalloutFraming;
-      vi.mocked(repository.findOne).mockResolvedValue(framing);
+      db.query.calloutFramings.findFirst.mockResolvedValueOnce(framing);
 
       const result = await service.getLink({ id: 'framing-1' } as any);
 
@@ -588,7 +586,7 @@ describe('CalloutFramingService', () => {
   describe('getMemo', () => {
     it('should return null when framing has no memo', async () => {
       const framing = { id: 'framing-1', memo: undefined } as CalloutFraming;
-      vi.mocked(repository.findOne).mockResolvedValue(framing);
+      db.query.calloutFramings.findFirst.mockResolvedValueOnce(framing);
 
       const result = await service.getMemo({ id: 'framing-1' } as any);
 
@@ -602,7 +600,7 @@ describe('CalloutFramingService', () => {
         id: 'framing-1',
         mediaGallery: undefined,
       } as CalloutFraming;
-      vi.mocked(repository.findOne).mockResolvedValue(framing);
+      db.query.calloutFramings.findFirst.mockResolvedValueOnce(framing);
 
       const result = await service.getMediaGallery({
         id: 'framing-1',

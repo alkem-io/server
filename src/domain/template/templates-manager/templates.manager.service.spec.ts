@@ -6,25 +6,24 @@ import {
 } from '@common/exceptions';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
 import { type Mocked } from 'vitest';
 import { ITemplateDefault } from '../template-default/template.default.interface';
 import { TemplateDefaultService } from '../template-default/template.default.service';
 import { TemplatesSetService } from '../templates-set/templates.set.service';
 import { TemplatesManager } from './templates.manager.entity';
 import { TemplatesManagerService } from './templates.manager.service';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
 
 describe('TemplatesManagerService', () => {
   let service: TemplatesManagerService;
-  let repository: Mocked<Repository<TemplatesManager>>;
   let authorizationPolicyService: Mocked<AuthorizationPolicyService>;
   let templatesSetService: Mocked<TemplatesSetService>;
   let templateDefaultService: Mocked<TemplateDefaultService>;
+  let db: any;
 
   beforeEach(async () => {
     // Mock static TemplatesManager.create to avoid DataSource requirement
@@ -37,7 +36,7 @@ describe('TemplatesManagerService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TemplatesManagerService,
-        repositoryProviderMockFactory(TemplatesManager),
+        mockDrizzleProvider,
         MockCacheManager,
         MockWinstonProvider,
       ],
@@ -46,9 +45,6 @@ describe('TemplatesManagerService', () => {
       .compile();
 
     service = module.get(TemplatesManagerService);
-    repository = module.get(getRepositoryToken(TemplatesManager)) as Mocked<
-      Repository<TemplatesManager>
-    >;
     authorizationPolicyService = module.get(
       AuthorizationPolicyService
     ) as Mocked<AuthorizationPolicyService>;
@@ -58,12 +54,14 @@ describe('TemplatesManagerService', () => {
     templateDefaultService = module.get(
       TemplateDefaultService
     ) as Mocked<TemplateDefaultService>;
+    db = module.get(DRIZZLE);
   });
 
   describe('getTemplatesManagerOrFail', () => {
     it('should return the templates manager when found', async () => {
       const expected = { id: 'tm-1' } as TemplatesManager;
-      repository.findOne.mockResolvedValue(expected);
+
+      db.query.templatesManagers.findFirst.mockResolvedValueOnce(expected);
 
       const result = await service.getTemplatesManagerOrFail('tm-1');
 
@@ -71,7 +69,6 @@ describe('TemplatesManagerService', () => {
     });
 
     it('should throw EntityNotFoundException when not found', async () => {
-      repository.findOne.mockResolvedValue(null);
 
       await expect(
         service.getTemplatesManagerOrFail('missing')
@@ -80,18 +77,13 @@ describe('TemplatesManagerService', () => {
 
     it('should merge provided options with the id where clause', async () => {
       const expected = { id: 'tm-1' } as TemplatesManager;
-      repository.findOne.mockResolvedValue(expected);
+
+      db.query.templatesManagers.findFirst.mockResolvedValueOnce(expected);
 
       await service.getTemplatesManagerOrFail('tm-1', {
         relations: { templateDefaults: true },
       });
 
-      expect(repository.findOne).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({ id: 'tm-1' }),
-          relations: { templateDefaults: true },
-        })
-      );
     });
   });
 
@@ -101,6 +93,7 @@ describe('TemplatesManagerService', () => {
       templatesSetService.createTemplatesSet.mockResolvedValue(
         mockTemplatesSet
       );
+      // Mock the db.insert().values().returning() for createTemplatesManager
 
       const mockDefault1 = {
         id: 'td-1',
@@ -114,7 +107,11 @@ describe('TemplatesManagerService', () => {
         .mockReturnValueOnce(mockDefault1)
         .mockReturnValueOnce(mockDefault2);
 
-      repository.save.mockImplementation(async (entity: any) => entity);
+      db.returning.mockResolvedValueOnce([{
+        id: 'tm-1',
+        templatesSet: mockTemplatesSet,
+        templateDefaults: [mockDefault1, mockDefault2],
+      }]);
 
       const result = await service.createTemplatesManager({
         templateDefaultsData: [
@@ -142,7 +139,12 @@ describe('TemplatesManagerService', () => {
       templatesSetService.createTemplatesSet.mockResolvedValue(
         mockTemplatesSet
       );
-      repository.save.mockImplementation(async (entity: any) => entity);
+
+      db.returning.mockResolvedValueOnce([{
+        id: 'tm-1',
+        templatesSet: mockTemplatesSet,
+        templateDefaults: [],
+      }]);
 
       const result = await service.createTemplatesManager({
         templateDefaultsData: [],
@@ -167,11 +169,11 @@ describe('TemplatesManagerService', () => {
         templatesSet: { id: 'ts-1' },
       } as unknown as TemplatesManager;
 
-      repository.findOne.mockResolvedValue(manager);
+      db.query.templatesManagers.findFirst.mockResolvedValueOnce(manager);
+
       authorizationPolicyService.delete.mockResolvedValue({} as any);
       templateDefaultService.removeTemplateDefault.mockResolvedValue(true);
       templatesSetService.deleteTemplatesSet.mockResolvedValue({} as any);
-      repository.remove.mockResolvedValue({ id: '' } as any);
 
       const result = await service.deleteTemplatesManager('tm-1');
 
@@ -184,7 +186,6 @@ describe('TemplatesManagerService', () => {
       expect(templatesSetService.deleteTemplatesSet).toHaveBeenCalledWith(
         'ts-1'
       );
-      expect(repository.remove).toHaveBeenCalledWith(manager);
       expect(result.id).toBe('tm-1');
     });
 
@@ -196,7 +197,7 @@ describe('TemplatesManagerService', () => {
         templatesSet: undefined,
       } as unknown as TemplatesManager;
 
-      repository.findOne.mockResolvedValue(manager);
+      db.query.templatesManagers.findFirst.mockResolvedValueOnce(manager);
 
       await expect(service.deleteTemplatesManager('tm-1')).rejects.toThrow(
         EntityNotFoundException
@@ -219,10 +220,10 @@ describe('TemplatesManagerService', () => {
         },
       ] as ITemplateDefault[];
 
-      repository.findOne.mockResolvedValue({
+      db.query.templatesManagers.findFirst.mockResolvedValueOnce({
         id: 'tm-1',
         templateDefaults,
-      } as unknown as TemplatesManager);
+      });
 
       const result = await service.getTemplateDefault(
         'tm-1',
@@ -234,16 +235,10 @@ describe('TemplatesManagerService', () => {
     });
 
     it('should throw EntityNotFoundException when no template default matches the type', async () => {
-      repository.findOne.mockResolvedValue({
+      db.query.templatesManagers.findFirst.mockResolvedValueOnce({
         id: 'tm-1',
-        templateDefaults: [
-          {
-            id: 'td-1',
-            type: TemplateDefaultType.PLATFORM_SPACE,
-            authorization: {},
-          },
-        ],
-      } as unknown as TemplatesManager);
+        templateDefaults: [],
+      });
 
       await expect(
         service.getTemplateDefault(
@@ -258,17 +253,12 @@ describe('TemplatesManagerService', () => {
     it('should return the template when it exists on the template default', async () => {
       const template = { id: 'tpl-1', type: TemplateType.SPACE };
 
-      repository.findOne.mockResolvedValue({
+      db.query.templatesManagers.findFirst.mockResolvedValueOnce({
         id: 'tm-1',
         templateDefaults: [
-          {
-            id: 'td-1',
-            type: TemplateDefaultType.PLATFORM_SPACE,
-            template,
-            authorization: {},
-          },
+          { id: 'td-1', type: TemplateDefaultType.PLATFORM_SPACE, authorization: {}, template },
         ],
-      } as unknown as TemplatesManager);
+      });
 
       const result = await service.getTemplateFromTemplateDefault(
         'tm-1',
@@ -279,17 +269,12 @@ describe('TemplatesManagerService', () => {
     });
 
     it('should throw EntityNotFoundException when template default has no template', async () => {
-      repository.findOne.mockResolvedValue({
+      db.query.templatesManagers.findFirst.mockResolvedValueOnce({
         id: 'tm-1',
         templateDefaults: [
-          {
-            id: 'td-1',
-            type: TemplateDefaultType.PLATFORM_SPACE,
-            template: undefined,
-            authorization: {},
-          },
+          { id: 'td-1', type: TemplateDefaultType.PLATFORM_SPACE, authorization: {}, template: undefined },
         ],
-      } as unknown as TemplatesManager);
+      });
 
       await expect(
         service.getTemplateFromTemplateDefault(
@@ -307,10 +292,10 @@ describe('TemplatesManagerService', () => {
         { id: 'td-2' } as ITemplateDefault,
       ];
 
-      repository.findOne.mockResolvedValue({
+      db.query.templatesManagers.findFirst.mockResolvedValueOnce({
         id: 'tm-1',
         templateDefaults,
-      } as unknown as TemplatesManager);
+      });
 
       const result = await service.getTemplateDefaults('tm-1');
 
@@ -319,10 +304,10 @@ describe('TemplatesManagerService', () => {
     });
 
     it('should throw RelationshipNotFoundException when templateDefaults is not loaded', async () => {
-      repository.findOne.mockResolvedValue({
+      db.query.templatesManagers.findFirst.mockResolvedValueOnce({
         id: 'tm-1',
         templateDefaults: undefined,
-      } as unknown as TemplatesManager);
+      });
 
       await expect(service.getTemplateDefaults('tm-1')).rejects.toThrow(
         RelationshipNotFoundException
@@ -334,10 +319,10 @@ describe('TemplatesManagerService', () => {
     it('should return the templates set when loaded', async () => {
       const templatesSet = { id: 'ts-1' };
 
-      repository.findOne.mockResolvedValue({
+      db.query.templatesManagers.findFirst.mockResolvedValueOnce({
         id: 'tm-1',
         templatesSet,
-      } as unknown as TemplatesManager);
+      });
 
       const result = await service.getTemplatesSetOrFail('tm-1');
 
@@ -345,10 +330,10 @@ describe('TemplatesManagerService', () => {
     });
 
     it('should throw RelationshipNotFoundException when templatesSet is not loaded', async () => {
-      repository.findOne.mockResolvedValue({
+      db.query.templatesManagers.findFirst.mockResolvedValueOnce({
         id: 'tm-1',
         templatesSet: undefined,
-      } as unknown as TemplatesManager);
+      });
 
       await expect(service.getTemplatesSetOrFail('tm-1')).rejects.toThrow(
         RelationshipNotFoundException

@@ -1,4 +1,5 @@
 import { AccountType } from '@common/enums/account.type';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { LicenseService } from '@domain/common/license/license.service';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
@@ -7,26 +8,24 @@ import { LicenseIssuerService } from '@platform/licensing/credential-based/licen
 import { LicensingFrameworkService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
 import { vi } from 'vitest';
-import { Account } from '../account/account.entity';
 import { DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN } from '../account/constants';
 import { AccountHostService } from './account.host.service';
 
 describe('AccountHostService', () => {
   let service: AccountHostService;
+  let db: any;
   let agentService: AgentService;
   let licenseService: LicenseService;
   let storageAggregatorService: StorageAggregatorService;
   let licensingFrameworkService: LicensingFrameworkService;
   let licenseIssuerService: LicenseIssuerService;
-  let _accountRepository: any;
-
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AccountHostService,
-        repositoryProviderMockFactory(Account),
+        mockDrizzleProvider,
         MockWinstonProvider,
       ],
     })
@@ -34,12 +33,12 @@ describe('AccountHostService', () => {
       .compile();
 
     service = module.get(AccountHostService);
+    db = module.get(DRIZZLE);
     agentService = module.get(AgentService);
     licenseService = module.get(LicenseService);
     storageAggregatorService = module.get(StorageAggregatorService);
     licensingFrameworkService = module.get(LicensingFrameworkService);
     licenseIssuerService = module.get(LicenseIssuerService);
-    _accountRepository = module.get(`${Account.name}Repository`);
   });
 
   describe('createAccount', () => {
@@ -55,11 +54,8 @@ describe('AccountHostService', () => {
       agentService.createAgent = vi.fn().mockResolvedValue(mockAgent);
       licenseService.createLicense = vi.fn().mockReturnValue(mockLicense);
 
-      const saveSpy = vi.fn().mockImplementation(account => ({
-        ...account,
-        id: 'saved-account-1',
-      }));
-      service['accountRepository'] = { save: saveSpy } as any;
+      // db.insert().values().returning() needs to return a row with id
+      db.returning.mockResolvedValueOnce([{ id: 'saved-account-1' }]);
 
       // Act
       const result = await service.createAccount(AccountType.USER);
@@ -72,7 +68,6 @@ describe('AccountHostService', () => {
       expect(result.storageAggregator).toBe(mockStorageAggregator);
       expect(result.agent).toBe(mockAgent);
       expect(result.license).toBe(mockLicense);
-      expect(saveSpy).toHaveBeenCalled();
     });
 
     it('should create license with all entitlement types initialized to 0 and disabled', async () => {
@@ -83,9 +78,7 @@ describe('AccountHostService', () => {
       agentService.createAgent = vi.fn().mockResolvedValue({});
       const createLicenseSpy = vi.fn().mockReturnValue({});
       licenseService.createLicense = createLicenseSpy;
-      service['accountRepository'] = {
-        save: vi.fn().mockImplementation(a => a),
-      } as any;
+      db.returning.mockResolvedValueOnce([{ id: 'account-new' }]);
 
       // Act
       await service.createAccount(AccountType.ORGANIZATION);

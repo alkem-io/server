@@ -2,22 +2,21 @@ import { AgentInfoCacheService } from '@core/authentication.agent.info/agent.inf
 import { User } from '@domain/community/user/user.entity';
 import { UserService } from '@domain/community/user/user.service';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getEntityManagerToken } from '@nestjs/typeorm';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { type Mock, vi } from 'vitest';
 import { AdminAuthenticationIDBackfillService } from './authentication-id-backfill.service';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 
 describe('AdminAuthenticationIDBackfillService', () => {
   let service: AdminAuthenticationIDBackfillService;
   let userService: { createOrLinkUserFromAgentInfo: Mock };
   let kratosService: { getIdentityByEmail: Mock };
   let agentInfoCacheService: { deleteAgentInfoFromCache: Mock };
-  let mockEntityManager: {
-    createQueryBuilder: Mock;
-  };
+  let db: any;
 
   const makeUser = (overrides: Partial<User> = {}): User =>
     ({
@@ -33,33 +32,18 @@ describe('AdminAuthenticationIDBackfillService', () => {
     verifiable_addresses: [{ via: 'email', verified }],
   });
 
-  // Helper to build a query builder mock that returns the given batch
-  const setupQueryBuilder = (batches: User[][]) => {
-    let callCount = 0;
-    mockEntityManager.createQueryBuilder.mockImplementation(() => {
-      const batch = batches[callCount] ?? [];
-      callCount++;
-      return {
-        orderBy: vi.fn().mockReturnThis(),
-        skip: vi.fn().mockReturnThis(),
-        take: vi.fn().mockReturnThis(),
-        getMany: vi.fn().mockResolvedValue(batch),
-      };
-    });
+  // Helper to set up db.query.users.findMany to return the given batches
+  const setupBatches = (batches: User[][]) => {
+    for (const batch of batches) {
+      db.query.users.findMany.mockResolvedValueOnce(batch);
+    }
   };
 
   beforeEach(async () => {
-    mockEntityManager = {
-      createQueryBuilder: vi.fn(),
-    };
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AdminAuthenticationIDBackfillService,
-        {
-          provide: getEntityManagerToken('default'),
-          useValue: mockEntityManager,
-        },
+        mockDrizzleProvider,
         MockCacheManager,
         MockWinstonProvider,
       ],
@@ -68,6 +52,7 @@ describe('AdminAuthenticationIDBackfillService', () => {
       .compile();
 
     service = module.get(AdminAuthenticationIDBackfillService);
+    db = module.get(DRIZZLE);
     userService = module.get(UserService) as unknown as typeof userService;
     kratosService = module.get(
       KratosService
@@ -80,7 +65,7 @@ describe('AdminAuthenticationIDBackfillService', () => {
   describe('backfillAuthenticationIDs', () => {
     it('should skip users that already have authenticationID', async () => {
       const user = makeUser({ authenticationID: 'existing-auth-id' });
-      setupQueryBuilder([[user], []]);
+      setupBatches([[user], []]);
 
       const result = await service.backfillAuthenticationIDs();
 
@@ -92,7 +77,7 @@ describe('AdminAuthenticationIDBackfillService', () => {
 
     it('should skip users when no Kratos identity is found', async () => {
       const user = makeUser({ authenticationID: '' });
-      setupQueryBuilder([[user], []]);
+      setupBatches([[user], []]);
       vi.mocked(kratosService.getIdentityByEmail).mockResolvedValue(undefined);
 
       const result = await service.backfillAuthenticationIDs();
@@ -109,7 +94,7 @@ describe('AdminAuthenticationIDBackfillService', () => {
         authenticationID: '',
       });
       const identity = makeIdentity('kratos-1', 'u@t.com');
-      setupQueryBuilder([[user], []]);
+      setupBatches([[user], []]);
       vi.mocked(kratosService.getIdentityByEmail).mockResolvedValue(
         identity as any
       );
@@ -135,7 +120,7 @@ describe('AdminAuthenticationIDBackfillService', () => {
         authenticationID: '',
       });
       const identity = makeIdentity('kratos-1', 'u@t.com');
-      setupQueryBuilder([[user], []]);
+      setupBatches([[user], []]);
       vi.mocked(kratosService.getIdentityByEmail).mockResolvedValue(
         identity as any
       );
@@ -156,7 +141,7 @@ describe('AdminAuthenticationIDBackfillService', () => {
         authenticationID: '',
       });
       const identity = makeIdentity('kratos-1', 'u@t.com');
-      setupQueryBuilder([[user], []]);
+      setupBatches([[user], []]);
       vi.mocked(kratosService.getIdentityByEmail).mockResolvedValue(
         identity as any
       );
@@ -177,7 +162,7 @@ describe('AdminAuthenticationIDBackfillService', () => {
         authenticationID: '',
       });
       const identity = makeIdentity('kratos-1', 'u@t.com');
-      setupQueryBuilder([[user], []]);
+      setupBatches([[user], []]);
       vi.mocked(kratosService.getIdentityByEmail).mockResolvedValue(
         identity as any
       );
@@ -192,7 +177,7 @@ describe('AdminAuthenticationIDBackfillService', () => {
     });
 
     it('should return zero counts when no users exist', async () => {
-      setupQueryBuilder([[]]);
+      setupBatches([[]]);
 
       const result = await service.backfillAuthenticationIDs();
 
@@ -207,19 +192,11 @@ describe('AdminAuthenticationIDBackfillService', () => {
         email: 'u@t.com',
         authenticationID: 'existing',
       });
-      let callCount = 0;
 
-      // First call for the batch returns users, second call (retry uses same batch)
-      // Third call returns empty (end of loop)
-      mockEntityManager.createQueryBuilder.mockImplementation(() => {
-        callCount++;
-        return {
-          orderBy: vi.fn().mockReturnThis(),
-          skip: vi.fn().mockReturnThis(),
-          take: vi.fn().mockReturnThis(),
-          getMany: vi.fn().mockResolvedValue(callCount <= 1 ? [user] : []),
-        };
-      });
+      // First call for the batch returns users, second call returns empty (end of loop)
+      db.query.users.findMany
+        .mockResolvedValueOnce([user])
+        .mockResolvedValueOnce([]);
 
       // processBatch: first call throws, second call succeeds
       const originalProcessBatch = (service as any).processBatch.bind(service);

@@ -1,12 +1,11 @@
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { RoleName } from '@common/enums/role.name';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { ICredential } from '@domain/agent/credential/credential.interface';
-import { Repository } from 'typeorm';
 import { beforeEach, describe, expect, it, type Mocked, vi } from 'vitest';
 import { InvitationService } from '../invitation/invitation.service';
 import { RoleSetMembershipStatusDataLoader } from './role.set.data.loader.membership.status';
-import { RoleSet } from './role.set.entity';
 import { IRoleSet } from './role.set.interface';
 import { RoleSetService } from './role.set.service';
 import { RoleSetCacheService } from './role.set.service.cache';
@@ -76,8 +75,12 @@ function createMocks() {
     canAcceptInvitation: vi.fn().mockReturnValue(false),
   };
 
-  const roleSetRepository: Mocked<Pick<Repository<RoleSet>, 'find'>> = {
-    find: vi.fn().mockResolvedValue([]),
+  const db = {
+    query: {
+      roleSets: {
+        findMany: vi.fn().mockResolvedValue([]),
+      },
+    },
   };
 
   return {
@@ -85,7 +88,7 @@ function createMocks() {
     roleSetCacheService,
     roleSetService,
     invitationService,
-    roleSetRepository,
+    db,
   };
 }
 
@@ -95,7 +98,7 @@ function createLoader(mocks: ReturnType<typeof createMocks>) {
     mocks.roleSetCacheService as unknown as RoleSetCacheService,
     mocks.roleSetService as unknown as RoleSetService,
     mocks.invitationService as unknown as InvitationService,
-    mocks.roleSetRepository as unknown as Repository<RoleSet>
+    mocks.db as unknown as DrizzleDb
   );
 }
 
@@ -359,7 +362,7 @@ describe('RoleSetMembershipStatusDataLoader', () => {
           credential: { type: 'space-member', resourceID: 'space-1' },
         },
       ]);
-      // Agent has NO matching credentials → triggers non-member path
+      // Agent has NO matching credentials -> triggers non-member path
       mocks.agentService.getAgentCredentialsBatch.mockResolvedValue(
         new Map([['agent-1', []]])
       );
@@ -549,7 +552,7 @@ describe('RoleSetMembershipStatusDataLoader', () => {
         loader.loader.load(makeKey('agent-1', 'user-1', rs2)),
       ]);
 
-      // Same agent, different roleSets → different results
+      // Same agent, different roleSets -> different results
       expect(result1).toBe(CommunityMembershipStatus.MEMBER);
       expect(result2).toBe(CommunityMembershipStatus.NOT_MEMBER);
     });

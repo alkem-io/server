@@ -23,6 +23,7 @@ export class CalendarAuthorizationService {
       calendarInput.id,
       {
         relations: {
+          authorization: true,
           events: true,
         },
       }

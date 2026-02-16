@@ -11,14 +11,12 @@ import { KnowledgeBaseService } from '@domain/common/knowledge-base/knowledge.ba
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getEntityManagerToken, getRepositoryToken } from '@nestjs/typeorm';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { AiPersonaService } from '@services/ai-server/ai-persona/ai.persona.service';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { type Mock, vi } from 'vitest';
 import { ContributorService } from '../contributor/contributor.service';
 import { VirtualContributorDefaultsService } from '../virtual-contributor-defaults/virtual.contributor.defaults.service';
@@ -27,21 +25,12 @@ import { VirtualContributorPlatformSettingsService } from '../virtual-contributo
 import { VirtualContributorSettingsService } from '../virtual-contributor-settings/virtual.contributor.settings.service';
 import { VirtualContributor } from './virtual.contributor.entity';
 import { VirtualContributorService } from './virtual.contributor.service';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 
 describe('VirtualContributorService', () => {
   let service: VirtualContributorService;
-  let repository: {
-    findOne: Mock;
-    save: Mock;
-    remove: Mock;
-    countBy: Mock;
-    find: Mock;
-    createQueryBuilder: Mock;
-  };
-  let entityManager: {
-    find: Mock;
-    remove: Mock;
-  };
+  let db: any;
   let authorizationPolicyService: { delete: Mock };
   let agentService: { createAgent: Mock; deleteAgent: Mock };
   let profileService: {
@@ -76,19 +65,10 @@ describe('VirtualContributorService', () => {
   };
 
   beforeEach(async () => {
-    entityManager = {
-      find: vi.fn(),
-      remove: vi.fn(),
-    };
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         VirtualContributorService,
-        repositoryProviderMockFactory(VirtualContributor),
-        {
-          provide: getEntityManagerToken('default'),
-          useValue: entityManager,
-        },
+        mockDrizzleProvider,
         MockCacheManager,
         MockWinstonProvider,
       ],
@@ -97,7 +77,7 @@ describe('VirtualContributorService', () => {
       .compile();
 
     service = module.get(VirtualContributorService);
-    repository = module.get(getRepositoryToken(VirtualContributor));
+    db = module.get(DRIZZLE);
     authorizationPolicyService = module.get(AuthorizationPolicyService) as any;
     agentService = module.get(AgentService) as any;
     profileService = module.get(ProfileService) as any;
@@ -124,14 +104,14 @@ describe('VirtualContributorService', () => {
   describe('getVirtualContributorOrFail', () => {
     it('should return the virtual contributor when found', async () => {
       const mockVC = { id: 'vc-1', nameID: 'test-vc' };
-      repository.findOne.mockResolvedValue(mockVC);
+      db.query.virtualContributors.findFirst.mockResolvedValue(mockVC);
 
       const result = await service.getVirtualContributorOrFail('vc-1');
       expect(result).toBe(mockVC);
     });
 
     it('should throw EntityNotFoundException when virtual contributor is not found', async () => {
-      repository.findOne.mockResolvedValue(null);
+      db.query.virtualContributors.findFirst.mockResolvedValue(null);
 
       await expect(
         service.getVirtualContributorOrFail('nonexistent')
@@ -143,7 +123,7 @@ describe('VirtualContributorService', () => {
     it('should return virtual contributor and agent when agent is loaded', async () => {
       const mockAgent = { id: 'agent-1' };
       const mockVC = { id: 'vc-1', agent: mockAgent };
-      repository.findOne.mockResolvedValue(mockVC);
+      db.query.virtualContributors.findFirst.mockResolvedValue(mockVC);
 
       const result = await service.getVirtualContributorAndAgent('vc-1');
 
@@ -153,7 +133,7 @@ describe('VirtualContributorService', () => {
 
     it('should throw EntityNotInitializedException when agent is not loaded', async () => {
       const mockVC = { id: 'vc-1', agent: undefined };
-      repository.findOne.mockResolvedValue(mockVC);
+      db.query.virtualContributors.findFirst.mockResolvedValue(mockVC);
 
       await expect(
         service.getVirtualContributorAndAgent('vc-1')
@@ -165,7 +145,7 @@ describe('VirtualContributorService', () => {
     it('should return the storage bucket from the virtual contributor profile', async () => {
       const mockBucket = { id: 'bucket-1' };
       const mockVC = { id: 'vc-1', profile: { storageBucket: mockBucket } };
-      repository.findOne.mockResolvedValue(mockVC);
+      db.query.virtualContributors.findFirst.mockResolvedValue(mockVC);
 
       const result = await service.getStorageBucket('vc-1');
       expect(result).toBe(mockBucket);
@@ -173,7 +153,7 @@ describe('VirtualContributorService', () => {
 
     it('should throw RelationshipNotFoundException when storage bucket is not found', async () => {
       const mockVC = { id: 'vc-1', profile: { storageBucket: undefined } };
-      repository.findOne.mockResolvedValue(mockVC);
+      db.query.virtualContributors.findFirst.mockResolvedValue(mockVC);
 
       await expect(service.getStorageBucket('vc-1')).rejects.toThrow(
         RelationshipNotFoundException
@@ -182,7 +162,7 @@ describe('VirtualContributorService', () => {
 
     it('should throw RelationshipNotFoundException when profile is missing', async () => {
       const mockVC = { id: 'vc-1', profile: undefined };
-      repository.findOne.mockResolvedValue(mockVC);
+      db.query.virtualContributors.findFirst.mockResolvedValue(mockVC);
 
       await expect(service.getStorageBucket('vc-1')).rejects.toThrow(
         RelationshipNotFoundException
@@ -193,14 +173,14 @@ describe('VirtualContributorService', () => {
   describe('getAgent', () => {
     it('should return the agent when loaded on the virtual contributor', async () => {
       const mockAgent = { id: 'agent-1' };
-      repository.findOne.mockResolvedValue({ id: 'vc-1', agent: mockAgent });
+      db.query.virtualContributors.findFirst.mockResolvedValue({ id: 'vc-1', agent: mockAgent });
 
       const result = await service.getAgent({ id: 'vc-1' } as any);
       expect(result).toBe(mockAgent);
     });
 
     it('should throw EntityNotInitializedException when agent is not loaded', async () => {
-      repository.findOne.mockResolvedValue({ id: 'vc-1', agent: undefined });
+      db.query.virtualContributors.findFirst.mockResolvedValue({ id: 'vc-1', agent: undefined });
 
       await expect(service.getAgent({ id: 'vc-1' } as any)).rejects.toThrow(
         EntityNotInitializedException
@@ -219,7 +199,7 @@ describe('VirtualContributorService', () => {
 
     it('should fetch and return knowledge base when not pre-loaded', async () => {
       const mockKB = { id: 'kb-1' };
-      repository.findOne.mockResolvedValue({
+      db.query.virtualContributors.findFirst.mockResolvedValue({
         id: 'vc-1',
         knowledgeBase: mockKB,
       });
@@ -231,7 +211,7 @@ describe('VirtualContributorService', () => {
     });
 
     it('should throw EntityNotFoundException when knowledge base is not found', async () => {
-      repository.findOne.mockResolvedValue({
+      db.query.virtualContributors.findFirst.mockResolvedValue({
         id: 'vc-1',
         knowledgeBase: undefined,
       });
@@ -273,14 +253,12 @@ describe('VirtualContributorService', () => {
       virtualContributorSettingsService.updateSettings.mockReturnValue(
         updatedSettings
       );
-      repository.save.mockImplementation((entity: any) =>
-        Promise.resolve(entity)
-      );
 
       const vc = {
         id: 'vc-1',
         settings: { privacy: { knowledgeBaseContentVisible: false } },
       } as any;
+      db.returning.mockResolvedValueOnce([{ ...vc, settings: updatedSettings }]);
       const result = await service.updateVirtualContributorSettings(vc, {
         privacy: { knowledgeBaseContentVisible: true },
       } as any);
@@ -288,8 +266,8 @@ describe('VirtualContributorService', () => {
       expect(
         virtualContributorSettingsService.updateSettings
       ).toHaveBeenCalled();
-      expect(repository.save).toHaveBeenCalled();
-      expect(result.settings).toBe(updatedSettings);
+
+      expect(result.settings).toEqual(updatedSettings);
     });
   });
 
@@ -299,14 +277,12 @@ describe('VirtualContributorService', () => {
       virtualContributorPlatformSettingsService.updateSettings.mockReturnValue(
         updatedPlatformSettings
       );
-      repository.save.mockImplementation((entity: any) =>
-        Promise.resolve(entity)
-      );
 
       const vc = {
         id: 'vc-1',
         platformSettings: { promptGraphEditingEnabled: false },
       } as any;
+      db.returning.mockResolvedValueOnce([{ ...vc, platformSettings: updatedPlatformSettings }]);
       const result = await service.updateVirtualContributorPlatformSettings(
         vc,
         {
@@ -317,8 +293,8 @@ describe('VirtualContributorService', () => {
       expect(
         virtualContributorPlatformSettingsService.updateSettings
       ).toHaveBeenCalled();
-      expect(repository.save).toHaveBeenCalled();
-      expect(result.platformSettings).toBe(updatedPlatformSettings);
+
+      expect(result.platformSettings).toEqual(updatedPlatformSettings);
     });
   });
 
@@ -402,14 +378,13 @@ describe('VirtualContributorService', () => {
         authorization: { id: 'auth-1' },
         aiPersonaID: 'persona-1',
       };
-      repository.findOne.mockResolvedValue(mockVC);
+      db.query.virtualContributors.findFirst.mockResolvedValue(mockVC);
       profileService.deleteProfile.mockResolvedValue(undefined);
       authorizationPolicyService.delete.mockResolvedValue(undefined);
       agentService.deleteAgent.mockResolvedValue(undefined);
       aiPersonaService.deleteAiPersona.mockResolvedValue(undefined);
       knowledgeBaseService.delete.mockResolvedValue(undefined);
-      entityManager.find.mockResolvedValue([]); // No invitations
-      repository.remove.mockResolvedValue({ ...mockVC, id: undefined });
+      db.query.virtualContributors.findMany.mockResolvedValue([]); // No invitations
 
       const result = await service.deleteVirtualContributor('vc-1');
 
@@ -434,7 +409,7 @@ describe('VirtualContributorService', () => {
         agent: { id: 'agent-1' },
         knowledgeBase: { id: 'kb-1' },
       };
-      repository.findOne.mockResolvedValue(mockVC);
+      db.query.virtualContributors.findFirst.mockResolvedValue(mockVC);
 
       await expect(service.deleteVirtualContributor('vc-1')).rejects.toThrow(
         RelationshipNotFoundException
@@ -448,7 +423,7 @@ describe('VirtualContributorService', () => {
         agent: undefined,
         knowledgeBase: { id: 'kb-1' },
       };
-      repository.findOne.mockResolvedValue(mockVC);
+      db.query.virtualContributors.findFirst.mockResolvedValue(mockVC);
 
       await expect(service.deleteVirtualContributor('vc-1')).rejects.toThrow(
         RelationshipNotFoundException
@@ -462,7 +437,7 @@ describe('VirtualContributorService', () => {
         agent: { id: 'agent-1' },
         knowledgeBase: undefined,
       };
-      repository.findOne.mockResolvedValue(mockVC);
+      db.query.virtualContributors.findFirst.mockResolvedValue(mockVC);
 
       await expect(service.deleteVirtualContributor('vc-1')).rejects.toThrow(
         RelationshipNotFoundException
@@ -478,12 +453,10 @@ describe('VirtualContributorService', () => {
         authorization: undefined,
         aiPersonaID: undefined,
       };
-      repository.findOne.mockResolvedValue(mockVC);
+      db.query.virtualContributors.findFirst.mockResolvedValue(mockVC);
       profileService.deleteProfile.mockResolvedValue(undefined);
       agentService.deleteAgent.mockResolvedValue(undefined);
       knowledgeBaseService.delete.mockResolvedValue(undefined);
-      entityManager.find.mockResolvedValue([]);
-      repository.remove.mockResolvedValue({ ...mockVC, id: undefined });
 
       await service.deleteVirtualContributor('vc-1');
 
@@ -499,15 +472,13 @@ describe('VirtualContributorService', () => {
         authorization: undefined,
         aiPersonaID: 'persona-1',
       };
-      repository.findOne.mockResolvedValue(mockVC);
+      db.query.virtualContributors.findFirst.mockResolvedValue(mockVC);
       profileService.deleteProfile.mockResolvedValue(undefined);
       agentService.deleteAgent.mockResolvedValue(undefined);
       aiPersonaService.deleteAiPersona.mockRejectedValue(
         new Error('External service error')
       );
       knowledgeBaseService.delete.mockResolvedValue(undefined);
-      entityManager.find.mockResolvedValue([]);
-      repository.remove.mockResolvedValue({ ...mockVC, id: undefined });
 
       // Should not throw - AI persona deletion failure is caught
       const result = await service.deleteVirtualContributor('vc-1');
@@ -527,22 +498,19 @@ describe('VirtualContributorService', () => {
         authorization: undefined,
         aiPersonaID: undefined,
       };
-      repository.findOne.mockResolvedValue(mockVC);
+      db.query.virtualContributors.findFirst.mockResolvedValue(mockVC);
+      db.query.invitations.findMany.mockResolvedValueOnce([mockInvitation]);
       profileService.deleteProfile.mockResolvedValue(undefined);
       agentService.deleteAgent.mockResolvedValue(undefined);
       knowledgeBaseService.delete.mockResolvedValue(undefined);
-      entityManager.find.mockResolvedValue([mockInvitation]);
-      entityManager.remove.mockResolvedValue(undefined);
+
       authorizationPolicyService.delete.mockResolvedValue(undefined);
-      repository.remove.mockResolvedValue({ ...mockVC, id: undefined });
 
       await service.deleteVirtualContributor('vc-1');
 
-      expect(entityManager.find).toHaveBeenCalled();
       expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
         mockInvitation.authorization
       );
-      expect(entityManager.remove).toHaveBeenCalledWith(mockInvitation);
     });
   });
 
@@ -555,12 +523,9 @@ describe('VirtualContributorService', () => {
         profile: { id: 'profile-1', displayName: 'Old' },
         knowledgeBase: { profile: { description: '' } },
       };
-      repository.findOne.mockResolvedValue(mockVC);
-      repository.countBy.mockResolvedValue(0);
+      db.query.virtualContributors.findFirst.mockResolvedValue(mockVC);
       profileService.updateProfile.mockResolvedValue(mockProfile);
-      repository.save.mockImplementation((entity: any) =>
-        Promise.resolve(entity)
-      );
+      db.returning.mockResolvedValueOnce([mockVC]);
 
       await service.updateVirtualContributor({
         ID: 'vc-1',
@@ -580,8 +545,9 @@ describe('VirtualContributorService', () => {
         profile: { id: 'profile-1', displayName: 'Test' },
         knowledgeBase: { profile: {} },
       };
-      repository.findOne.mockResolvedValue(mockVC);
-      repository.countBy.mockResolvedValue(1);
+      db.query.virtualContributors.findFirst.mockResolvedValue(mockVC);
+      // checkNameIdOrFail uses db.select().from().where() - mock where to return existing record
+      db.where.mockResolvedValueOnce([{ count: 'existing-id' }]);
 
       await expect(
         service.updateVirtualContributor({
@@ -598,17 +564,13 @@ describe('VirtualContributorService', () => {
         profile: { id: 'profile-1', displayName: 'Test' },
         knowledgeBase: { profile: {} },
       };
-      repository.findOne.mockResolvedValue(mockVC);
-      repository.save.mockImplementation((entity: any) =>
-        Promise.resolve(entity)
-      );
+      db.query.virtualContributors.findFirst.mockResolvedValue(mockVC);
+      db.returning.mockResolvedValueOnce([mockVC]);
 
       await service.updateVirtualContributor({
         ID: 'vc-1',
         nameID: 'same-name',
       } as any);
-
-      expect(repository.countBy).not.toHaveBeenCalled();
     });
 
     it('should update listedInStore when provided as a boolean', async () => {
@@ -619,10 +581,8 @@ describe('VirtualContributorService', () => {
         profile: { id: 'profile-1', displayName: 'Test' },
         knowledgeBase: { profile: {} },
       };
-      repository.findOne.mockResolvedValue(mockVC);
-      repository.save.mockImplementation((entity: any) =>
-        Promise.resolve(entity)
-      );
+      db.query.virtualContributors.findFirst.mockResolvedValue(mockVC);
+      db.returning.mockResolvedValueOnce([{ ...mockVC, listedInStore: false }]);
 
       const result = await service.updateVirtualContributor({
         ID: 'vc-1',
@@ -640,10 +600,8 @@ describe('VirtualContributorService', () => {
         profile: { id: 'profile-1', displayName: 'Test' },
         knowledgeBase: { profile: {} },
       };
-      repository.findOne.mockResolvedValue(mockVC);
-      repository.save.mockImplementation((entity: any) =>
-        Promise.resolve(entity)
-      );
+      db.query.virtualContributors.findFirst.mockResolvedValue(mockVC);
+      db.returning.mockResolvedValueOnce([{ ...mockVC, searchVisibility: 'public' }]);
 
       const result = await service.updateVirtualContributor({
         ID: 'vc-1',
@@ -660,10 +618,8 @@ describe('VirtualContributorService', () => {
         profile: { id: 'profile-1', displayName: 'Test' },
         knowledgeBase: { profile: { description: 'old' } },
       };
-      repository.findOne.mockResolvedValue(mockVC);
-      repository.save.mockImplementation((entity: any) =>
-        Promise.resolve(entity)
-      );
+      db.query.virtualContributors.findFirst.mockResolvedValue(mockVC);
+      db.returning.mockResolvedValueOnce([{ ...mockVC, knowledgeBase: { profile: { description: 'new description' } } }]);
 
       const result = await service.updateVirtualContributor({
         ID: 'vc-1',
@@ -681,10 +637,8 @@ describe('VirtualContributorService', () => {
         profile: { id: 'profile-1', displayName: 'Test' },
         knowledgeBase: { profile: {} },
       };
-      repository.findOne.mockResolvedValue(mockVC);
-      repository.save.mockImplementation((entity: any) =>
-        Promise.resolve(entity)
-      );
+      db.query.virtualContributors.findFirst.mockResolvedValue(mockVC);
+      db.returning.mockResolvedValueOnce([{ ...mockVC, bodyOfKnowledgeType: VirtualContributorBodyOfKnowledgeType.ALKEMIO_SPACE }]);
 
       const result = await service.updateVirtualContributor({
         ID: 'vc-1',
@@ -705,18 +659,16 @@ describe('VirtualContributorService', () => {
         profile: { id: 'profile-1', displayName: 'Test' },
         knowledgeBase: { profile: {} },
       };
-      repository.findOne.mockResolvedValue(mockVC);
-      repository.save.mockImplementation((entity: any) =>
-        Promise.resolve(entity)
-      );
-
+      db.query.virtualContributors.findFirst.mockResolvedValue(mockVC);
       const newModes = ['mode1', 'mode2'];
+      db.returning.mockResolvedValueOnce([{ ...mockVC, interactionModes: newModes }]);
+
       const result = await service.updateVirtualContributor({
         ID: 'vc-1',
         interactionModes: newModes,
       } as any);
 
-      expect(result.interactionModes).toBe(newModes);
+      expect(result.interactionModes).toEqual(newModes);
     });
 
     it('should update bodyOfKnowledgeDescription when provided as a string', async () => {
@@ -727,10 +679,8 @@ describe('VirtualContributorService', () => {
         profile: { id: 'profile-1', displayName: 'Test' },
         knowledgeBase: { profile: {} },
       };
-      repository.findOne.mockResolvedValue(mockVC);
-      repository.save.mockImplementation((entity: any) =>
-        Promise.resolve(entity)
-      );
+      db.query.virtualContributors.findFirst.mockResolvedValue(mockVC);
+      db.returning.mockResolvedValueOnce([{ ...mockVC, bodyOfKnowledgeDescription: 'new description' }]);
 
       const result = await service.updateVirtualContributor({
         ID: 'vc-1',

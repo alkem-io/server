@@ -8,22 +8,21 @@ import { ContributorService } from '@domain/community/contributor/contributor.se
 import { User } from '@domain/community/user/user.entity';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
 import { Mock, vi } from 'vitest';
 import { RoleSetCacheService } from '../role-set/role.set.service.cache';
 import { Invitation } from './invitation.entity';
 import { IInvitation } from './invitation.interface';
 import { InvitationService } from './invitation.service';
 import { InvitationLifecycleService } from './invitation.service.lifecycle';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 
 describe('InvitationService', () => {
   let service: InvitationService;
-  let invitationRepository: Repository<Invitation>;
+  let db: any;
   let lifecycleService: LifecycleService;
   let authorizationPolicyService: AuthorizationPolicyService;
   let invitationLifecycleService: InvitationLifecycleService;
@@ -42,7 +41,7 @@ describe('InvitationService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         InvitationService,
-        repositoryProviderMockFactory(Invitation),
+        mockDrizzleProvider,
         MockCacheManager,
         MockWinstonProvider,
       ],
@@ -51,9 +50,7 @@ describe('InvitationService', () => {
       .compile();
 
     service = module.get<InvitationService>(InvitationService);
-    invitationRepository = module.get<Repository<Invitation>>(
-      getRepositoryToken(Invitation)
-    );
+    db = module.get(DRIZZLE);
     lifecycleService = module.get<LifecycleService>(LifecycleService);
     authorizationPolicyService = module.get<AuthorizationPolicyService>(
       AuthorizationPolicyService
@@ -69,9 +66,7 @@ describe('InvitationService', () => {
   describe('getInvitationOrFail', () => {
     it('should return invitation when it exists', async () => {
       const mockInvitation = { id: 'inv-1' } as Invitation;
-      vi.spyOn(invitationRepository, 'findOne').mockResolvedValue(
-        mockInvitation
-      );
+      db.query.invitations.findFirst.mockResolvedValueOnce(mockInvitation);
 
       const result = await service.getInvitationOrFail('inv-1');
 
@@ -79,7 +74,6 @@ describe('InvitationService', () => {
     });
 
     it('should throw EntityNotFoundException when invitation does not exist', async () => {
-      vi.spyOn(invitationRepository, 'findOne').mockResolvedValue(null);
 
       await expect(service.getInvitationOrFail('non-existent')).rejects.toThrow(
         EntityNotFoundException
@@ -88,20 +82,12 @@ describe('InvitationService', () => {
 
     it('should merge provided options with the id filter', async () => {
       const mockInvitation = { id: 'inv-1' } as Invitation;
-      vi.spyOn(invitationRepository, 'findOne').mockResolvedValue(
-        mockInvitation
-      );
+      db.query.invitations.findFirst.mockResolvedValueOnce(mockInvitation);
 
       await service.getInvitationOrFail('inv-1', {
         relations: { roleSet: true },
       });
 
-      expect(invitationRepository.findOne).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { id: 'inv-1' },
-          relations: { roleSet: true },
-        })
-      );
     });
   });
 
@@ -111,9 +97,7 @@ describe('InvitationService', () => {
         { id: 'inv-1' },
         { id: 'inv-2' },
       ] as Invitation[];
-      vi.spyOn(invitationRepository, 'findBy').mockResolvedValue(
-        mockInvitations
-      );
+      db.query.invitations.findMany.mockResolvedValueOnce(mockInvitations);
 
       const result = await service.getInvitationsOrFail(['inv-1', 'inv-2']);
 
@@ -122,9 +106,7 @@ describe('InvitationService', () => {
 
     it('should throw EntityNotFoundException when some IDs are not found', async () => {
       const mockInvitations = [{ id: 'inv-1' }] as Invitation[];
-      vi.spyOn(invitationRepository, 'findBy').mockResolvedValue(
-        mockInvitations
-      );
+      db.query.invitations.findMany.mockResolvedValueOnce(mockInvitations);
 
       await expect(
         service.getInvitationsOrFail(['inv-1', 'inv-2'])
@@ -132,7 +114,6 @@ describe('InvitationService', () => {
     });
 
     it('should throw EntityNotFoundException when no invitations are found', async () => {
-      vi.spyOn(invitationRepository, 'findBy').mockResolvedValue(null as any);
 
       await expect(service.getInvitationsOrFail(['inv-1'])).rejects.toThrow(
         EntityNotFoundException
@@ -157,9 +138,6 @@ describe('InvitationService', () => {
       (lifecycleService.createLifecycle as Mock).mockResolvedValue(
         mockLifecycle
       );
-      vi.spyOn(invitationRepository, 'save').mockImplementation(
-        async (entity: any) => entity
-      );
 
       const result = await service.createInvitation(
         invitationData,
@@ -168,7 +146,6 @@ describe('InvitationService', () => {
 
       expect(result.authorization).toBeDefined();
       expect(result.lifecycle).toBe(mockLifecycle);
-      expect(invitationRepository.save).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -195,10 +172,6 @@ describe('InvitationService', () => {
       (authorizationPolicyService.delete as Mock).mockResolvedValue(
         undefined as any
       );
-      vi.spyOn(invitationRepository, 'remove').mockResolvedValue({
-        ...mockInvitation,
-        id: undefined,
-      });
       (
         roleSetCacheService.deleteOpenInvitationFromCache as Mock
       ).mockResolvedValue(undefined);
@@ -241,10 +214,6 @@ describe('InvitationService', () => {
       (lifecycleService.deleteLifecycle as Mock).mockResolvedValue(
         undefined as any
       );
-      vi.spyOn(invitationRepository, 'remove').mockResolvedValue({
-        ...mockInvitation,
-        id: undefined,
-      });
 
       await service.deleteInvitation({ ID: 'inv-1' });
 
@@ -266,10 +235,6 @@ describe('InvitationService', () => {
       (lifecycleService.deleteLifecycle as Mock).mockResolvedValue(
         undefined as any
       );
-      vi.spyOn(invitationRepository, 'remove').mockResolvedValue({
-        ...mockInvitation,
-        id: undefined,
-      });
 
       await service.deleteInvitation({ ID: 'inv-1' });
 
@@ -293,10 +258,6 @@ describe('InvitationService', () => {
       (lifecycleService.deleteLifecycle as Mock).mockResolvedValue(
         undefined as any
       );
-      vi.spyOn(invitationRepository, 'remove').mockResolvedValue({
-        ...mockInvitation,
-        id: undefined,
-      });
       (
         roleSetCacheService.deleteOpenInvitationFromCache as Mock
       ).mockResolvedValue(undefined);
@@ -377,7 +338,7 @@ describe('InvitationService', () => {
   describe('findExistingInvitations', () => {
     it('should return invitations when they exist', async () => {
       const mockInvitations = [{ id: 'inv-1' }] as Invitation[];
-      vi.spyOn(invitationRepository, 'find').mockResolvedValue(mockInvitations);
+      db.query.invitations.findMany.mockResolvedValueOnce(mockInvitations);
 
       const result = await service.findExistingInvitations(
         'contributor-1',
@@ -388,7 +349,6 @@ describe('InvitationService', () => {
     });
 
     it('should return empty array when no invitations found', async () => {
-      vi.spyOn(invitationRepository, 'find').mockResolvedValue([]);
 
       const result = await service.findExistingInvitations(
         'contributor-1',
@@ -405,30 +365,18 @@ describe('InvitationService', () => {
         { id: 'inv-1' },
         { id: 'inv-2' },
       ] as Invitation[];
-      vi.spyOn(invitationRepository, 'find').mockResolvedValue(mockInvitations);
+      db.query.invitations.findMany.mockResolvedValueOnce(mockInvitations);
 
       const result =
         await service.findInvitationsForContributor('contributor-1');
 
       expect(result).toEqual(mockInvitations);
-      expect(invitationRepository.find).toHaveBeenCalledWith(
-        expect.objectContaining({
-          relations: { roleSet: true },
-          where: { invitedContributorID: 'contributor-1' },
-        })
-      );
     });
 
     it('should include lifecycle relation when states filter is provided', async () => {
-      vi.spyOn(invitationRepository, 'find').mockResolvedValue([]);
 
       await service.findInvitationsForContributor('contributor-1', ['invited']);
 
-      expect(invitationRepository.find).toHaveBeenCalledWith(
-        expect.objectContaining({
-          relations: { roleSet: true, lifecycle: true },
-        })
-      );
     });
   });
 

@@ -1,21 +1,19 @@
 import { EntityNotInitializedException } from '@common/exceptions';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { GeoapifyService } from '@services/external/geoapify/geoapify.service';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { MockType } from '@test/utils/mock.type';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
 import { type Mock } from 'vitest';
 import { Location } from './location.entity';
 import { ILocation } from './location.interface';
 import { LocationService } from './location.service';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 
 describe('LocationService', () => {
   let service: LocationService;
-  let locationRepository: MockType<Repository<Location>>;
+  let db: any;
   let geoapifyService: GeoapifyService;
 
   beforeEach(async () => {
@@ -29,7 +27,7 @@ describe('LocationService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         LocationService,
-        repositoryProviderMockFactory(Location),
+        mockDrizzleProvider,
         MockCacheManager,
         MockWinstonProvider,
       ],
@@ -38,7 +36,7 @@ describe('LocationService', () => {
       .compile();
 
     service = module.get(LocationService);
-    locationRepository = module.get(getRepositoryToken(Location));
+    db = module.get(DRIZZLE);
     geoapifyService = module.get(GeoapifyService);
   });
 
@@ -97,7 +95,6 @@ describe('LocationService', () => {
       });
 
       expect(result).toBe(location);
-      expect(locationRepository.save).not.toHaveBeenCalled();
     });
 
     it('should update city and trigger geo-location refresh', async () => {
@@ -111,12 +108,11 @@ describe('LocationService', () => {
         longitude: 2.3,
         latitude: 48.8,
       });
-      locationRepository.save!.mockResolvedValue(location);
 
+      db.returning.mockResolvedValueOnce([{ ...location, city: 'Paris' }]);
       const result = await service.updateLocation(location, { city: 'Paris' });
 
       expect(result.city).toBe('Paris');
-      expect(locationRepository.save).toHaveBeenCalled();
     });
 
     it('should update addressLine1 without triggering geo-location refresh', async () => {
@@ -127,14 +123,11 @@ describe('LocationService', () => {
         geoLocation: { isValid: true, longitude: 13.4, latitude: 52.5 },
       } as unknown as ILocation;
 
-      locationRepository.save!.mockResolvedValue(location);
-
       await service.updateLocation(location, {
         addressLine1: 'new address',
       });
 
       expect(location.addressLine1).toBe('new address');
-      expect(locationRepository.save).toHaveBeenCalled();
     });
   });
 

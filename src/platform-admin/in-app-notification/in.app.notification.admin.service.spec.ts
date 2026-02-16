@@ -1,26 +1,25 @@
 import { ValidationException } from '@common/exceptions';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { InAppNotification } from '@platform/in-app-notification/in.app.notification.entity';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
 import { type Mock, vi } from 'vitest';
 import { InAppNotificationAdminService } from './in.app.notification.admin.service';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 
 describe('InAppNotificationAdminService', () => {
   let service: InAppNotificationAdminService;
-  let repo: Repository<InAppNotification>;
   let configService: { get: Mock };
+  let db: any;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         InAppNotificationAdminService,
-        repositoryProviderMockFactory(InAppNotification),
+        mockDrizzleProvider,
         MockCacheManager,
         MockWinstonProvider,
       ],
@@ -29,9 +28,7 @@ describe('InAppNotificationAdminService', () => {
       .compile();
 
     service = module.get(InAppNotificationAdminService);
-    repo = module.get<Repository<InAppNotification>>(
-      getRepositoryToken(InAppNotification)
-    );
+    db = module.get(DRIZZLE);
     configService = module.get(
       ConfigService
     ) as unknown as typeof configService;
@@ -93,23 +90,14 @@ describe('InAppNotificationAdminService', () => {
         .mockReturnValueOnce(30) // retentionDays
         .mockReturnValueOnce(50); // maxPerUser
 
-      vi.spyOn(repo, 'delete').mockResolvedValue({ affected: 5 } as any);
+      // Mock delete().where() for old notifications - returns 5 items
+      db.where
+        .mockResolvedValueOnce(new Array(5).fill({})) // delete old notifications
+        .mockResolvedValueOnce([]); // select excess users (having is terminal, but it chains through where first... actually having is after groupBy)
 
-      // Mock the query builder chain for pruneExcessNotificationsPerUser
-      const mockQueryBuilder = {
-        select: vi.fn().mockReturnThis(),
-        addSelect: vi.fn().mockReturnThis(),
-        groupBy: vi.fn().mockReturnThis(),
-        having: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-        orderBy: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockReturnThis(),
-        getRawMany: vi.fn().mockResolvedValue([]),
-        getMany: vi.fn().mockResolvedValue([]),
-      };
-      vi.spyOn(repo, 'createQueryBuilder').mockReturnValue(
-        mockQueryBuilder as any
-      );
+      // Mock the select chain for excess users: select().from().groupBy().having()
+      // having() is the terminal call, returns mock, Array.from resolves to []
+      db.having.mockResolvedValueOnce([]);
 
       const result = await service.pruneInAppNotifications();
 
@@ -122,30 +110,23 @@ describe('InAppNotificationAdminService', () => {
         .mockReturnValueOnce(30) // retentionDays
         .mockReturnValueOnce(10); // maxPerUser
 
-      // Step 1: delete old notifications
-      vi.spyOn(repo, 'delete')
-        .mockResolvedValueOnce({ affected: 2 } as any) // old ones
-        .mockResolvedValueOnce({ affected: 3 } as any); // excess per user
+      // Step 1: delete old notifications - where() resolves to 2 items
+      db.where.mockResolvedValueOnce(new Array(2).fill({}));
 
-      // Step 2: query builder for excess per user
-      const mockQueryBuilder = {
-        select: vi.fn().mockReturnThis(),
-        addSelect: vi.fn().mockReturnThis(),
-        groupBy: vi.fn().mockReturnThis(),
-        having: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-        orderBy: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockReturnThis(),
-        getRawMany: vi
-          .fn()
-          .mockResolvedValue([{ receiverID: 'user-1', count: '15' }]),
-        getMany: vi
-          .fn()
-          .mockResolvedValue([{ id: 'n-1' }, { id: 'n-2' }, { id: 'n-3' }]),
-      };
-      vi.spyOn(repo, 'createQueryBuilder').mockReturnValue(
-        mockQueryBuilder as any
-      );
+      // Step 2: select excess users - having() resolves to users with excess
+      db.having.mockResolvedValueOnce([
+        { receiverID: 'user-1', count: 13 }, // 13 - 10 = 3 excess
+      ]);
+
+      // Step 3: findMany for oldest notifications of user-1
+      db.query.inAppNotifications.findMany.mockResolvedValueOnce([
+        { id: 'notif-1' },
+        { id: 'notif-2' },
+        { id: 'notif-3' },
+      ]);
+
+      // Step 4: delete excess notifications - where() resolves to 3 items
+      db.where.mockResolvedValueOnce(new Array(3).fill({}));
 
       const result = await service.pruneInAppNotifications();
 
@@ -158,7 +139,8 @@ describe('InAppNotificationAdminService', () => {
         .mockReturnValueOnce(30) // retentionDays
         .mockReturnValueOnce(50); // maxPerUser
 
-      vi.spyOn(repo, 'delete').mockRejectedValue(new Error('db error'));
+      // Make where() reject to simulate db error during delete
+      db.where.mockRejectedValueOnce(new Error('db error'));
 
       await expect(service.pruneInAppNotifications()).rejects.toThrow(
         'db error'

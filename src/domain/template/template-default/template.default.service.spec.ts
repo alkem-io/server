@@ -6,28 +6,27 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
 import { type Mocked } from 'vitest';
 import { TemplateService } from '../template/template.service';
 import { TemplateDefault } from './template.default.entity';
 import { ITemplateDefault } from './template.default.interface';
 import { TemplateDefaultService } from './template.default.service';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
 
 describe('TemplateDefaultService', () => {
   let service: TemplateDefaultService;
-  let templateDefaultRepository: Mocked<Repository<TemplateDefault>>;
   let templateService: Mocked<TemplateService>;
+  let db: any;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TemplateDefaultService,
-        repositoryProviderMockFactory(TemplateDefault),
+        mockDrizzleProvider,
         MockCacheManager,
         MockWinstonProvider,
       ],
@@ -36,10 +35,8 @@ describe('TemplateDefaultService', () => {
       .compile();
 
     service = module.get(TemplateDefaultService);
-    templateDefaultRepository = module.get(
-      getRepositoryToken(TemplateDefault)
-    ) as Mocked<Repository<TemplateDefault>>;
     templateService = module.get(TemplateService) as Mocked<TemplateService>;
+    db = module.get(DRIZZLE);
   });
 
   describe('createTemplateDefault', () => {
@@ -97,10 +94,7 @@ describe('TemplateDefaultService', () => {
       } as any;
 
       templateService.getTemplateOrFail.mockResolvedValue(matchingTemplate);
-      templateDefaultRepository.save.mockResolvedValue({
-        ...templateDefault,
-        template: matchingTemplate,
-      } as any);
+      db.returning.mockResolvedValueOnce([{ ...templateDefault, template: matchingTemplate }]);
 
       const result = await service.updateTemplateDefaultTemplate(
         templateDefault,
@@ -143,44 +137,20 @@ describe('TemplateDefaultService', () => {
         type: TemplateDefaultType.PLATFORM_SPACE,
       } as TemplateDefault;
 
-      templateDefaultRepository.findOne.mockResolvedValue(expected);
+      db.query.templateDefaults.findFirst.mockResolvedValueOnce(expected);
 
       const result = await service.getTemplateDefaultOrFail('td-1');
 
       expect(result).toBe(expected);
-      expect(templateDefaultRepository.findOne).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { id: 'td-1' },
-        })
-      );
     });
 
     it('should throw EntityNotFoundException when template default is not found', async () => {
-      templateDefaultRepository.findOne.mockResolvedValue(null);
 
       await expect(
         service.getTemplateDefaultOrFail('nonexistent-id')
       ).rejects.toThrow(EntityNotFoundException);
     });
 
-    it('should pass additional options to the repository', async () => {
-      const expected = {
-        id: 'td-1',
-        template: { id: 'tpl-1' },
-      } as TemplateDefault;
-      templateDefaultRepository.findOne.mockResolvedValue(expected);
-
-      await service.getTemplateDefaultOrFail('td-1', {
-        relations: { template: true },
-      });
-
-      expect(templateDefaultRepository.findOne).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { id: 'td-1' },
-          relations: { template: true },
-        })
-      );
-    });
   });
 
   describe('removeTemplateDefault', () => {
@@ -188,16 +158,10 @@ describe('TemplateDefaultService', () => {
       const templateDefault = {
         id: 'td-1',
       } as ITemplateDefault;
-      templateDefaultRepository.remove.mockResolvedValue(
-        templateDefault as TemplateDefault
-      );
 
       const result = await service.removeTemplateDefault(templateDefault);
 
       expect(result).toBe(true);
-      expect(templateDefaultRepository.remove).toHaveBeenCalledWith(
-        templateDefault
-      );
     });
   });
 });

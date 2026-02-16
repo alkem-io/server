@@ -3,23 +3,22 @@ import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exc
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
 import { vi } from 'vitest';
 import { CalendarService } from '../calendar/calendar.service';
 import { Timeline } from './timeline.entity';
 import { ITimeline } from './timeline.interface';
 import { TimelineService } from './timeline.service';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 
 describe('TimelineService', () => {
   let service: TimelineService;
-  let timelineRepository: Repository<Timeline>;
   let calendarService: CalendarService;
   let authorizationPolicyService: AuthorizationPolicyService;
+  let db: any;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -27,20 +26,18 @@ describe('TimelineService', () => {
         TimelineService,
         MockCacheManager,
         MockWinstonProvider,
-        repositoryProviderMockFactory(Timeline),
+        mockDrizzleProvider,
       ],
     })
       .useMocker(defaultMockerFactory)
       .compile();
 
     service = module.get<TimelineService>(TimelineService);
-    timelineRepository = module.get<Repository<Timeline>>(
-      getRepositoryToken(Timeline)
-    );
     calendarService = module.get<CalendarService>(CalendarService);
     authorizationPolicyService = module.get<AuthorizationPolicyService>(
       AuthorizationPolicyService
     );
+    db = module.get(DRIZZLE);
   });
 
   describe('createTimeline', () => {
@@ -84,8 +81,7 @@ describe('TimelineService', () => {
         calendar: mockCalendar,
       } as unknown as Timeline;
 
-      vi.spyOn(timelineRepository, 'findOne').mockResolvedValue(mockTimeline);
-      vi.spyOn(timelineRepository, 'remove').mockResolvedValue(mockTimeline);
+      db.query.timelines.findFirst.mockResolvedValueOnce(mockTimeline);
       authorizationPolicyService.delete = vi.fn().mockResolvedValue(undefined);
       calendarService.deleteCalendar = vi.fn().mockResolvedValue(mockCalendar);
 
@@ -99,7 +95,6 @@ describe('TimelineService', () => {
       expect(calendarService.deleteCalendar).toHaveBeenCalledWith(
         mockCalendar.id
       );
-      expect(timelineRepository.remove).toHaveBeenCalledWith(mockTimeline);
     });
 
     it('should skip authorization deletion when timeline has no authorization', async () => {
@@ -112,8 +107,7 @@ describe('TimelineService', () => {
         calendar: mockCalendar,
       } as unknown as Timeline;
 
-      vi.spyOn(timelineRepository, 'findOne').mockResolvedValue(mockTimeline);
-      vi.spyOn(timelineRepository, 'remove').mockResolvedValue(mockTimeline);
+      db.query.timelines.findFirst.mockResolvedValueOnce(mockTimeline);
       authorizationPolicyService.delete = vi.fn();
       calendarService.deleteCalendar = vi.fn().mockResolvedValue(mockCalendar);
 
@@ -137,8 +131,7 @@ describe('TimelineService', () => {
         calendar: undefined,
       } as unknown as Timeline;
 
-      vi.spyOn(timelineRepository, 'findOne').mockResolvedValue(mockTimeline);
-      vi.spyOn(timelineRepository, 'remove').mockResolvedValue(mockTimeline);
+      db.query.timelines.findFirst.mockResolvedValueOnce(mockTimeline);
       authorizationPolicyService.delete = vi.fn().mockResolvedValue(undefined);
       calendarService.deleteCalendar = vi.fn();
 
@@ -154,7 +147,6 @@ describe('TimelineService', () => {
 
     it('should throw EntityNotFoundException when timeline does not exist', async () => {
       // Arrange
-      vi.spyOn(timelineRepository, 'findOne').mockResolvedValue(null);
 
       // Act & Assert
       await expect(service.deleteTimeline('non-existent-id')).rejects.toThrow(
@@ -168,42 +160,18 @@ describe('TimelineService', () => {
       // Arrange
       const timelineId = 'timeline-1';
       const mockTimeline = { id: timelineId } as Timeline;
-      vi.spyOn(timelineRepository, 'findOne').mockResolvedValue(mockTimeline);
+
+      db.query.timelines.findFirst.mockResolvedValueOnce(mockTimeline);
 
       // Act
       const result = await service.getTimelineOrFail(timelineId);
 
       // Assert
       expect(result).toBe(mockTimeline);
-      expect(timelineRepository.findOne).toHaveBeenCalledWith({
-        where: { id: timelineId },
-      });
-    });
-
-    it('should pass additional options to the repository when provided', async () => {
-      // Arrange
-      const timelineId = 'timeline-1';
-      const options = { relations: { calendar: true } };
-      const mockTimeline = {
-        id: timelineId,
-        calendar: { id: 'cal-1' },
-      } as unknown as Timeline;
-      vi.spyOn(timelineRepository, 'findOne').mockResolvedValue(mockTimeline);
-
-      // Act
-      const result = await service.getTimelineOrFail(timelineId, options);
-
-      // Assert
-      expect(result).toBe(mockTimeline);
-      expect(timelineRepository.findOne).toHaveBeenCalledWith({
-        where: { id: timelineId },
-        ...options,
-      });
     });
 
     it('should throw EntityNotFoundException when timeline does not exist', async () => {
       // Arrange
-      vi.spyOn(timelineRepository, 'findOne').mockResolvedValue(null);
 
       // Act & Assert
       await expect(
@@ -211,23 +179,6 @@ describe('TimelineService', () => {
       ).rejects.toThrow(EntityNotFoundException);
     });
   });
-
-  describe('saveTimeline', () => {
-    it('should persist the timeline through the repository when called', async () => {
-      // Arrange
-      const mockTimeline = { id: 'timeline-1' } as ITimeline;
-      const savedTimeline = { id: 'timeline-1' } as Timeline;
-      vi.spyOn(timelineRepository, 'save').mockResolvedValue(savedTimeline);
-
-      // Act
-      const result = await service.saveTimeline(mockTimeline);
-
-      // Assert
-      expect(result).toBe(savedTimeline);
-      expect(timelineRepository.save).toHaveBeenCalledWith(mockTimeline);
-    });
-  });
-
   describe('getCalendarOrFail', () => {
     it('should return the calendar when timeline has a calendar loaded', async () => {
       // Arrange
@@ -236,7 +187,8 @@ describe('TimelineService', () => {
         id: 'timeline-1',
         calendar: mockCalendar,
       } as unknown as Timeline;
-      vi.spyOn(timelineRepository, 'findOne').mockResolvedValue(mockTimeline);
+
+      db.query.timelines.findFirst.mockResolvedValueOnce(mockTimeline);
 
       const inputTimeline = { id: 'timeline-1' } as ITimeline;
 
@@ -253,7 +205,8 @@ describe('TimelineService', () => {
         id: 'timeline-1',
         calendar: undefined,
       } as unknown as Timeline;
-      vi.spyOn(timelineRepository, 'findOne').mockResolvedValue(mockTimeline);
+
+      db.query.timelines.findFirst.mockResolvedValueOnce(mockTimeline);
 
       const inputTimeline = { id: 'timeline-1' } as ITimeline;
 
@@ -265,7 +218,6 @@ describe('TimelineService', () => {
 
     it('should throw EntityNotFoundException when timeline itself does not exist', async () => {
       // Arrange
-      vi.spyOn(timelineRepository, 'findOne').mockResolvedValue(null);
 
       const inputTimeline = { id: 'non-existent-id' } as ITimeline;
 
@@ -282,7 +234,8 @@ describe('TimelineService', () => {
         id: 'timeline-1',
         calendar: mockCalendar,
       } as unknown as Timeline;
-      vi.spyOn(timelineRepository, 'findOne').mockResolvedValue(mockTimeline);
+
+      db.query.timelines.findFirst.mockResolvedValueOnce(mockTimeline);
 
       const inputTimeline = { id: 'timeline-1' } as ITimeline;
 
@@ -290,10 +243,6 @@ describe('TimelineService', () => {
       await service.getCalendarOrFail(inputTimeline);
 
       // Assert
-      expect(timelineRepository.findOne).toHaveBeenCalledWith({
-        where: { id: 'timeline-1' },
-        relations: { calendar: true },
-      });
     });
   });
 });

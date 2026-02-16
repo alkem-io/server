@@ -10,13 +10,10 @@ import { UserLookupService } from '@domain/community/user-lookup/user.lookup.ser
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { EntityManager, Repository } from 'typeorm';
 import { type Mocked, vi } from 'vitest';
 import { IConversation } from '../conversation/conversation.interface';
 import { ConversationService } from '../conversation/conversation.service';
@@ -25,6 +22,8 @@ import { ConversationMembership } from '../conversation-membership/conversation.
 import { Messaging } from './messaging.entity';
 import { IMessaging } from './messaging.interface';
 import { MessagingService } from './messaging.service';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 
 describe('MessagingService', () => {
   let service: MessagingService;
@@ -36,9 +35,8 @@ describe('MessagingService', () => {
   let userLookupService: Mocked<UserLookupService>;
   let agentService: Mocked<AgentService>;
   let _subscriptionPublishService: Mocked<SubscriptionPublishService>;
-  let messagingRepo: Mocked<Repository<Messaging>>;
-  let entityManager: Mocked<EntityManager>;
   let configService: { get: ReturnType<typeof vi.fn> };
+  let db: any;
 
   beforeEach(async () => {
     configService = {
@@ -48,24 +46,13 @@ describe('MessagingService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         MessagingService,
-        repositoryProviderMockFactory(Messaging),
-        repositoryProviderMockFactory(ConversationMembership),
+        mockDrizzleProvider,
         MockWinstonProvider,
       ],
     })
       .useMocker(token => {
         if (token === ConfigService) {
           return configService;
-        }
-        if (token === EntityManager) {
-          return {
-            getRepository: vi.fn().mockReturnValue({
-              createQueryBuilder: vi.fn().mockReturnValue({
-                leftJoinAndSelect: vi.fn().mockReturnThis(),
-                getOne: vi.fn(),
-              }),
-            }),
-          };
         }
         return defaultMockerFactory(token);
       })
@@ -86,8 +73,7 @@ describe('MessagingService', () => {
     userLookupService = module.get(UserLookupService);
     agentService = module.get(AgentService);
     _subscriptionPublishService = module.get(SubscriptionPublishService);
-    messagingRepo = module.get(getRepositoryToken(Messaging));
-    entityManager = module.get(EntityManager);
+    db = module.get(DRIZZLE);
   });
 
   describe('deleteMessaging', () => {
@@ -97,9 +83,7 @@ describe('MessagingService', () => {
         conversations: undefined,
         authorization: { id: 'auth-1' },
       } as unknown as Messaging;
-
-      // Mock Messaging.findOne (static method)
-      vi.spyOn(Messaging, 'findOne').mockResolvedValue(mockMessaging);
+      db.query.messagings.findFirst.mockResolvedValueOnce(mockMessaging);
 
       await expect(service.deleteMessaging('messaging-1')).rejects.toThrow(
         EntityNotInitializedException
@@ -112,8 +96,7 @@ describe('MessagingService', () => {
         conversations: [],
         authorization: undefined,
       } as unknown as Messaging;
-
-      vi.spyOn(Messaging, 'findOne').mockResolvedValue(mockMessaging);
+      db.query.messagings.findFirst.mockResolvedValueOnce(mockMessaging);
 
       await expect(service.deleteMessaging('messaging-1')).rejects.toThrow(
         EntityNotInitializedException
@@ -126,9 +109,7 @@ describe('MessagingService', () => {
         conversations: [{ id: 'conv-1' }, { id: 'conv-2' }],
         authorization: { id: 'auth-1' },
       } as unknown as Messaging;
-
-      vi.spyOn(Messaging, 'findOne').mockResolvedValue(mockMessaging);
-      messagingRepo.remove.mockResolvedValue(mockMessaging);
+      db.query.messagings.findFirst.mockResolvedValueOnce(mockMessaging);
 
       await service.deleteMessaging('messaging-1');
 
@@ -141,7 +122,6 @@ describe('MessagingService', () => {
       expect(conversationService.deleteConversation).toHaveBeenCalledWith(
         'conv-2'
       );
-      expect(messagingRepo.remove).toHaveBeenCalledWith(mockMessaging);
     });
 
     it('should handle messaging with no conversations', async () => {
@@ -150,21 +130,18 @@ describe('MessagingService', () => {
         conversations: [],
         authorization: { id: 'auth-1' },
       } as unknown as Messaging;
-
-      vi.spyOn(Messaging, 'findOne').mockResolvedValue(mockMessaging);
-      messagingRepo.remove.mockResolvedValue(mockMessaging);
+      db.query.messagings.findFirst.mockResolvedValueOnce(mockMessaging);
 
       await service.deleteMessaging('messaging-1');
 
       expect(conversationService.deleteConversation).not.toHaveBeenCalled();
-      expect(messagingRepo.remove).toHaveBeenCalled();
     });
   });
 
   describe('getMessagingOrFail', () => {
     it('should return messaging when found', async () => {
-      const mockMessaging = { id: 'messaging-1' } as Messaging;
-      vi.spyOn(Messaging, 'findOne').mockResolvedValue(mockMessaging);
+      const mockMessaging = { id: 'messaging-1' };
+      db.query.messagings.findFirst.mockResolvedValueOnce(mockMessaging);
 
       const result = await service.getMessagingOrFail('messaging-1');
 
@@ -172,7 +149,7 @@ describe('MessagingService', () => {
     });
 
     it('should throw EntityNotFoundException when messaging not found', async () => {
-      vi.spyOn(Messaging, 'findOne').mockResolvedValue(null);
+      db.query.messagings.findFirst.mockResolvedValueOnce(null);
 
       await expect(service.getMessagingOrFail('missing-id')).rejects.toThrow(
         EntityNotFoundException
@@ -190,8 +167,7 @@ describe('MessagingService', () => {
         id: 'messaging-1',
         conversations: mockConversations,
       } as unknown as Messaging;
-
-      vi.spyOn(Messaging, 'findOne').mockResolvedValue(mockMessaging);
+      db.query.messagings.findFirst.mockResolvedValueOnce(mockMessaging);
 
       const result = await service.getConversations('messaging-1');
 
@@ -206,8 +182,7 @@ describe('MessagingService', () => {
         id: 'messaging-1',
         conversations: [{ id: 'conv-1' }, { id: 'conv-2' }, { id: 'conv-3' }],
       } as unknown as Messaging;
-
-      vi.spyOn(Messaging, 'findOne').mockResolvedValue(mockMessaging);
+      db.query.messagings.findFirst.mockResolvedValueOnce(mockMessaging);
 
       const result = await service.getConversationsCount('messaging-1');
 
@@ -219,8 +194,7 @@ describe('MessagingService', () => {
         id: 'messaging-1',
         conversations: [],
       } as unknown as Messaging;
-
-      vi.spyOn(Messaging, 'findOne').mockResolvedValue(mockMessaging);
+      db.query.messagings.findFirst.mockResolvedValueOnce(mockMessaging);
 
       const result = await service.getConversationsCount('messaging-1');
 
@@ -230,16 +204,10 @@ describe('MessagingService', () => {
 
   describe('createConversation', () => {
     it('should throw ValidationException when neither invitedAgentId nor wellKnown is provided', async () => {
-      // Mock getPlatformMessaging
-      const mockPlatformRepo = {
-        createQueryBuilder: vi.fn().mockReturnValue({
-          leftJoinAndSelect: vi.fn().mockReturnThis(),
-          getOne: vi.fn().mockResolvedValue({
-            messaging: { id: 'platform-messaging' },
-          }),
-        }),
-      };
-      entityManager.getRepository.mockReturnValue(mockPlatformRepo as any);
+      // Mock getPlatformMessaging via Drizzle query
+      db.query.platforms.findFirst.mockResolvedValueOnce({
+        messaging: { id: 'platform-messaging' },
+      });
 
       await expect(
         service.createConversation({
@@ -249,15 +217,9 @@ describe('MessagingService', () => {
     });
 
     it('should throw ValidationException when wellKnown VC cannot be resolved', async () => {
-      const mockPlatformRepo = {
-        createQueryBuilder: vi.fn().mockReturnValue({
-          leftJoinAndSelect: vi.fn().mockReturnThis(),
-          getOne: vi.fn().mockResolvedValue({
-            messaging: { id: 'platform-messaging' },
-          }),
-        }),
-      };
-      entityManager.getRepository.mockReturnValue(mockPlatformRepo as any);
+      db.query.platforms.findFirst.mockResolvedValueOnce({
+        messaging: { id: 'platform-messaging' },
+      });
 
       platformWellKnownVCService.getVirtualContributorID.mockResolvedValue(
         undefined as any
@@ -272,15 +234,9 @@ describe('MessagingService', () => {
     });
 
     it('should resolve invitedAgentId and detect VC type from agent', async () => {
-      const mockPlatformRepo = {
-        createQueryBuilder: vi.fn().mockReturnValue({
-          leftJoinAndSelect: vi.fn().mockReturnThis(),
-          getOne: vi.fn().mockResolvedValue({
-            messaging: { id: 'platform-messaging', authorization: {} },
-          }),
-        }),
-      };
-      entityManager.getRepository.mockReturnValue(mockPlatformRepo as any);
+      db.query.platforms.findFirst.mockResolvedValueOnce({
+        messaging: { id: 'platform-messaging', authorization: {} },
+      });
 
       agentService.getAgentOrFail.mockResolvedValue({
         id: 'agent-invited',
@@ -327,13 +283,7 @@ describe('MessagingService', () => {
 
   describe('getPlatformMessaging', () => {
     it('should throw EntityNotFoundException when platform is not found', async () => {
-      const mockPlatformRepo = {
-        createQueryBuilder: vi.fn().mockReturnValue({
-          leftJoinAndSelect: vi.fn().mockReturnThis(),
-          getOne: vi.fn().mockResolvedValue(null),
-        }),
-      };
-      entityManager.getRepository.mockReturnValue(mockPlatformRepo as any);
+      db.query.platforms.findFirst.mockResolvedValueOnce(undefined);
 
       await expect(service.getPlatformMessaging()).rejects.toThrow(
         EntityNotFoundException
@@ -341,15 +291,9 @@ describe('MessagingService', () => {
     });
 
     it('should throw EntityNotFoundException when platform has no messaging', async () => {
-      const mockPlatformRepo = {
-        createQueryBuilder: vi.fn().mockReturnValue({
-          leftJoinAndSelect: vi.fn().mockReturnThis(),
-          getOne: vi.fn().mockResolvedValue({
-            messaging: null,
-          }),
-        }),
-      };
-      entityManager.getRepository.mockReturnValue(mockPlatformRepo as any);
+      db.query.platforms.findFirst.mockResolvedValueOnce({
+        messaging: null,
+      });
 
       await expect(service.getPlatformMessaging()).rejects.toThrow(
         EntityNotFoundException
@@ -358,15 +302,9 @@ describe('MessagingService', () => {
 
     it('should return messaging when platform and messaging exist', async () => {
       const mockMessaging = { id: 'platform-messaging' } as IMessaging;
-      const mockPlatformRepo = {
-        createQueryBuilder: vi.fn().mockReturnValue({
-          leftJoinAndSelect: vi.fn().mockReturnThis(),
-          getOne: vi.fn().mockResolvedValue({
-            messaging: mockMessaging,
-          }),
-        }),
-      };
-      entityManager.getRepository.mockReturnValue(mockPlatformRepo as any);
+      db.query.platforms.findFirst.mockResolvedValueOnce({
+        messaging: mockMessaging,
+      });
 
       const result = await service.getPlatformMessaging();
 

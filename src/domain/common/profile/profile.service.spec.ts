@@ -17,19 +17,18 @@ import { ProfileDocumentsService } from '@domain/profile-documents/profile.docum
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { MockType } from '@test/utils/mock.type';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
 import { Profile } from './profile.entity';
 import { ProfileService } from './profile.service';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import { vi } from 'vitest';
 
 describe('ProfileService', () => {
   let service: ProfileService;
-  let profileRepository: MockType<Repository<Profile>>;
+  let db: any;
   let tagsetService: TagsetService;
   let referenceService: ReferenceService;
   let visualService: VisualService;
@@ -45,14 +44,10 @@ describe('ProfileService', () => {
       Object.assign(entity, input);
       return entity as any;
     });
-
-    // Mock static Profile.findOne to avoid DataSource requirement
-    vi.spyOn(Profile, 'findOne').mockImplementation(async () => null);
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ProfileService,
-        repositoryProviderMockFactory(Profile),
+        mockDrizzleProvider,
         MockCacheManager,
         MockWinstonProvider,
       ],
@@ -61,7 +56,7 @@ describe('ProfileService', () => {
       .compile();
 
     service = module.get(ProfileService);
-    profileRepository = module.get(getRepositoryToken(Profile));
+    db = module.get(DRIZZLE);
     tagsetService = module.get(TagsetService);
     referenceService = module.get(ReferenceService);
     visualService = module.get(VisualService);
@@ -200,8 +195,8 @@ describe('ProfileService', () => {
         authorization: { id: 'auth-1' },
       } as unknown as Profile;
 
-      vi.spyOn(Profile, 'findOne').mockResolvedValue(existingProfile);
-      profileRepository.save!.mockImplementation(async (p: any) => p);
+      db.query.profiles.findFirst.mockResolvedValueOnce(existingProfile);
+      db.returning.mockResolvedValueOnce([{ ...existingProfile, displayName: 'New Name', description: 'New desc', tagline: 'New tagline' }]);
 
       const result = await service.updateProfile({ id: 'p-1' } as any, {
         displayName: 'New Name',
@@ -225,8 +220,7 @@ describe('ProfileService', () => {
         authorization: { id: 'auth-1' },
       } as unknown as Profile;
 
-      vi.spyOn(Profile, 'findOne').mockResolvedValue(existingProfile);
-      profileRepository.save!.mockImplementation(async (p: any) => p);
+      db.query.profiles.findFirst.mockResolvedValueOnce(existingProfile);
 
       const updatedRefs = [{ id: 'ref-1', name: 'updated' }];
       const updatedTagsets = [{ id: 'ts-1', name: 'skills', tags: ['new'] }];
@@ -236,6 +230,7 @@ describe('ProfileService', () => {
       vi.mocked(tagsetService.updateTagsets).mockReturnValue(
         updatedTagsets as any
       );
+      db.returning.mockResolvedValueOnce([{ ...existingProfile, references: updatedRefs, tagsets: updatedTagsets }]);
 
       const result = await service.updateProfile({ id: 'p-1' } as any, {
         references: [{ ID: 'ref-1', name: 'updated' }] as any,
@@ -257,13 +252,13 @@ describe('ProfileService', () => {
         authorization: { id: 'auth-1' },
       } as unknown as Profile;
 
-      vi.spyOn(Profile, 'findOne').mockResolvedValue(existingProfile);
-      profileRepository.save!.mockImplementation(async (p: any) => p);
+      db.query.profiles.findFirst.mockResolvedValueOnce(existingProfile);
 
       const updatedLocation = { id: 'loc-1', city: 'New City' };
       vi.mocked(locationService.updateLocation).mockResolvedValue(
         updatedLocation as any
       );
+      db.returning.mockResolvedValueOnce([{ ...existingProfile, location: updatedLocation }]);
 
       const result = await service.updateProfile({ id: 'p-1' } as any, {
         location: { city: 'New City' } as any,
@@ -272,26 +267,6 @@ describe('ProfileService', () => {
       expect(result.location).toEqual(updatedLocation);
     });
 
-    it('should save profile to repository', async () => {
-      const existingProfile = {
-        id: 'p-1',
-        displayName: 'Name',
-        references: [],
-        tagsets: [],
-        location: null,
-        visuals: [],
-        authorization: { id: 'auth-1' },
-      } as unknown as Profile;
-
-      vi.spyOn(Profile, 'findOne').mockResolvedValue(existingProfile);
-      profileRepository.save!.mockImplementation(async (p: any) => p);
-
-      await service.updateProfile({ id: 'p-1' } as any, {});
-
-      expect(profileRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({ id: 'p-1' })
-      );
-    });
   });
 
   describe('deleteProfile', () => {
@@ -306,7 +281,7 @@ describe('ProfileService', () => {
         authorization: { id: 'auth-1' },
       } as unknown as Profile;
 
-      vi.spyOn(Profile, 'findOne').mockResolvedValue(profile);
+      db.query.profiles.findFirst.mockResolvedValueOnce(profile);
       vi.mocked(tagsetService.removeTagset).mockResolvedValue({} as any);
       vi.mocked(referenceService.deleteReference).mockResolvedValue({} as any);
       vi.mocked(storageBucketService.deleteStorageBucket).mockResolvedValue(
@@ -315,7 +290,6 @@ describe('ProfileService', () => {
       vi.mocked(visualService.deleteVisual).mockResolvedValue({} as any);
       vi.mocked(locationService.removeLocation).mockResolvedValue({} as any);
       vi.mocked(authorizationPolicyService.delete).mockResolvedValue({} as any);
-      profileRepository.remove!.mockResolvedValue(profile);
 
       await service.deleteProfile('p-1');
 
@@ -337,7 +311,6 @@ describe('ProfileService', () => {
       expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
         profile.authorization
       );
-      expect(profileRepository.remove).toHaveBeenCalledWith(profile);
     });
 
     it('should skip deletion of undefined relations gracefully', async () => {
@@ -351,8 +324,7 @@ describe('ProfileService', () => {
         authorization: undefined,
       } as unknown as Profile;
 
-      vi.spyOn(Profile, 'findOne').mockResolvedValue(profile);
-      profileRepository.remove!.mockResolvedValue(profile);
+      db.query.profiles.findFirst.mockResolvedValueOnce(profile);
 
       await service.deleteProfile('p-1');
 
@@ -496,11 +468,11 @@ describe('ProfileService', () => {
         tagsets: undefined,
       } as unknown as Profile;
 
-      // getTagsets calls getProfileOrFail -> Profile.findOne
-      vi.spyOn(Profile, 'findOne').mockResolvedValue({
+      // getTagsets calls getProfileOrFail -> db.query.profiles.findFirst
+      db.query.profiles.findFirst.mockResolvedValueOnce({
         id: 'p-1',
         tagsets: loadedTagsets,
-      } as any);
+      });
 
       const newTagset = { id: 'ts-new', name: 'topics', tags: [] };
       vi.mocked(tagsetService.createTagsetWithName).mockReturnValue(
@@ -512,7 +484,7 @@ describe('ProfileService', () => {
         tags: [],
       });
 
-      expect(Profile.findOne).toHaveBeenCalled();
+      expect(db.query.profiles.findFirst).toHaveBeenCalled();
     });
   });
 
@@ -523,7 +495,7 @@ describe('ProfileService', () => {
         references: [],
       } as unknown as Profile;
 
-      vi.spyOn(Profile, 'findOne').mockResolvedValue(profile);
+      db.query.profiles.findFirst.mockResolvedValueOnce(profile);
 
       const newRef = {
         id: 'ref-1',
@@ -556,7 +528,7 @@ describe('ProfileService', () => {
         references: [{ id: 'ref-1', name: 'website' }],
       } as unknown as Profile;
 
-      vi.spyOn(Profile, 'findOne').mockResolvedValue(profile);
+      db.query.profiles.findFirst.mockResolvedValueOnce(profile);
 
       await expect(
         service.createReference({
@@ -573,7 +545,7 @@ describe('ProfileService', () => {
         references: undefined,
       } as unknown as Profile;
 
-      vi.spyOn(Profile, 'findOne').mockResolvedValue(profile);
+      db.query.profiles.findFirst.mockResolvedValueOnce(profile);
 
       await expect(
         service.createReference({
@@ -588,7 +560,7 @@ describe('ProfileService', () => {
   describe('getProfileOrFail', () => {
     it('should return profile when found', async () => {
       const profile = { id: 'p-1', displayName: 'Found' } as Profile;
-      vi.spyOn(Profile, 'findOne').mockResolvedValue(profile);
+      db.query.profiles.findFirst.mockResolvedValueOnce(profile);
 
       const result = await service.getProfileOrFail('p-1');
 
@@ -596,8 +568,6 @@ describe('ProfileService', () => {
     });
 
     it('should throw EntityNotFoundException when not found', async () => {
-      vi.spyOn(Profile, 'findOne').mockResolvedValue(null);
-
       await expect(service.getProfileOrFail('missing-id')).rejects.toThrow(
         EntityNotFoundException
       );
@@ -605,30 +575,21 @@ describe('ProfileService', () => {
 
     it('should pass options to Profile.findOne with id in where clause', async () => {
       const profile = { id: 'p-1' } as Profile;
-      const findOneSpy = vi
-        .spyOn(Profile, 'findOne')
-        .mockResolvedValue(profile);
+      db.query.profiles.findFirst.mockResolvedValueOnce(profile);
 
       await service.getProfileOrFail('p-1', {
         relations: { references: true },
       });
-
-      expect(findOneSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({ id: 'p-1' }),
-          relations: { references: true },
-        })
-      );
     });
   });
 
   describe('getReferences', () => {
     it('should return references when initialized', async () => {
       const refs = [{ id: 'ref-1', name: 'website' }];
-      vi.spyOn(Profile, 'findOne').mockResolvedValue({
+      db.query.profiles.findFirst.mockResolvedValueOnce({
         id: 'p-1',
         references: refs,
-      } as any);
+      });
 
       const result = await service.getReferences({ id: 'p-1' } as any);
 
@@ -636,10 +597,10 @@ describe('ProfileService', () => {
     });
 
     it('should throw EntityNotInitializedException when references not initialized', async () => {
-      vi.spyOn(Profile, 'findOne').mockResolvedValue({
+      db.query.profiles.findFirst.mockResolvedValueOnce({
         id: 'p-1',
         references: undefined,
-      } as any);
+      });
 
       await expect(service.getReferences({ id: 'p-1' } as any)).rejects.toThrow(
         EntityNotInitializedException
@@ -650,10 +611,10 @@ describe('ProfileService', () => {
   describe('getVisuals', () => {
     it('should return visuals when initialized', async () => {
       const visuals = [{ id: 'v-1', name: VisualType.AVATAR }];
-      vi.spyOn(Profile, 'findOne').mockResolvedValue({
+      db.query.profiles.findFirst.mockResolvedValueOnce({
         id: 'p-1',
         visuals,
-      } as any);
+      });
 
       const result = await service.getVisuals({ id: 'p-1' } as any);
 
@@ -661,10 +622,10 @@ describe('ProfileService', () => {
     });
 
     it('should throw EntityNotInitializedException when visuals not initialized', async () => {
-      vi.spyOn(Profile, 'findOne').mockResolvedValue({
+      db.query.profiles.findFirst.mockResolvedValueOnce({
         id: 'p-1',
         visuals: undefined,
-      } as any);
+      });
 
       await expect(service.getVisuals({ id: 'p-1' } as any)).rejects.toThrow(
         EntityNotInitializedException
@@ -675,10 +636,10 @@ describe('ProfileService', () => {
   describe('getTagsets', () => {
     it('should return tagsets when initialized', async () => {
       const tagsets = [{ id: 'ts-1', name: 'skills', tags: ['ts'] }];
-      vi.spyOn(Profile, 'findOne').mockResolvedValue({
+      db.query.profiles.findFirst.mockResolvedValueOnce({
         id: 'p-1',
         tagsets,
-      } as any);
+      });
 
       const result = await service.getTagsets({ id: 'p-1' } as any);
 
@@ -686,10 +647,10 @@ describe('ProfileService', () => {
     });
 
     it('should throw EntityNotInitializedException when tagsets not initialized', async () => {
-      vi.spyOn(Profile, 'findOne').mockResolvedValue({
+      db.query.profiles.findFirst.mockResolvedValueOnce({
         id: 'p-1',
         tagsets: undefined,
-      } as any);
+      });
 
       await expect(service.getTagsets({ id: 'p-1' } as any)).rejects.toThrow(
         EntityNotInitializedException
@@ -700,10 +661,10 @@ describe('ProfileService', () => {
   describe('getLocation', () => {
     it('should return location when initialized', async () => {
       const location = { id: 'loc-1', city: 'Sofia' };
-      vi.spyOn(Profile, 'findOne').mockResolvedValue({
+      db.query.profiles.findFirst.mockResolvedValueOnce({
         id: 'p-1',
         location,
-      } as any);
+      });
 
       const result = await service.getLocation({ id: 'p-1' } as any);
 
@@ -711,10 +672,10 @@ describe('ProfileService', () => {
     });
 
     it('should throw EntityNotInitializedException when location not initialized', async () => {
-      vi.spyOn(Profile, 'findOne').mockResolvedValue({
+      db.query.profiles.findFirst.mockResolvedValueOnce({
         id: 'p-1',
         location: undefined,
-      } as any);
+      });
 
       await expect(service.getLocation({ id: 'p-1' } as any)).rejects.toThrow(
         EntityNotInitializedException

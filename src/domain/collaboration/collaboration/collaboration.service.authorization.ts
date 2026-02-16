@@ -48,6 +48,7 @@ export class CollaborationAuthorizationService {
         collaborationInput.id,
         {
           relations: {
+            authorization: true,
             calloutsSet: true,
             innovationFlow: {
               profile: true,
@@ -55,6 +56,7 @@ export class CollaborationAuthorizationService {
             timeline: true,
             license: {
               entitlements: true,
+              authorization: true,
             },
           },
         }

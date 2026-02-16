@@ -6,20 +6,20 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { LicenseService } from '@domain/common/license/license.service';
 import { TimelineService } from '@domain/timeline/timeline/timeline.service';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getEntityManagerToken, getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
 import { CalloutsSetService } from '../callouts-set/callouts.set.service';
 import { InnovationFlowService } from '../innovation-flow/innovation.flow.service';
 import { Collaboration } from './collaboration.entity';
 import { CollaborationService } from './collaboration.service';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import { vi } from 'vitest';
 
 describe('CollaborationService', () => {
   let service: CollaborationService;
-  let repository: Repository<Collaboration>;
+  let db: any;
   let calloutsSetService: CalloutsSetService;
   let innovationFlowService: InnovationFlowService;
   let authorizationPolicyService: AuthorizationPolicyService;
@@ -37,26 +37,16 @@ describe('CollaborationService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CollaborationService,
-        repositoryProviderMockFactory(Collaboration),
+        mockDrizzleProvider,
         MockCacheManager,
         MockWinstonProvider,
-        {
-          provide: getEntityManagerToken('default'),
-          useValue: {
-            findOne: vi.fn(),
-            find: vi.fn(),
-            connection: {
-              query: vi.fn(),
-            },
-          },
-        },
       ],
     })
       .useMocker(defaultMockerFactory)
       .compile();
 
     service = module.get(CollaborationService);
-    repository = module.get(getRepositoryToken(Collaboration));
+    db = module.get(DRIZZLE);
     calloutsSetService = module.get(CalloutsSetService);
     innovationFlowService = module.get(InnovationFlowService);
     authorizationPolicyService = module.get(AuthorizationPolicyService);
@@ -228,7 +218,7 @@ describe('CollaborationService', () => {
   describe('getCollaborationOrFail', () => {
     it('should return collaboration when found', async () => {
       const collaboration = { id: 'collab-1' } as Collaboration;
-      vi.mocked(repository.findOne).mockResolvedValue(collaboration);
+      db.query.collaborations.findFirst.mockResolvedValueOnce(collaboration);
 
       const result = await service.getCollaborationOrFail('collab-1');
 
@@ -236,7 +226,7 @@ describe('CollaborationService', () => {
     });
 
     it('should throw EntityNotFoundException when collaboration is not found', async () => {
-      vi.mocked(repository.findOne).mockResolvedValue(null);
+      db.query.collaborations.findFirst.mockResolvedValueOnce(undefined);
 
       await expect(
         service.getCollaborationOrFail('nonexistent')
@@ -255,8 +245,7 @@ describe('CollaborationService', () => {
         license: { id: 'lic-1' },
       } as any;
 
-      vi.mocked(repository.findOne).mockResolvedValue(collaboration);
-      vi.mocked(repository.remove).mockResolvedValue(collaboration);
+      db.query.collaborations.findFirst.mockResolvedValueOnce(collaboration);
 
       await service.deleteCollaborationOrFail('collab-1');
 
@@ -280,7 +269,7 @@ describe('CollaborationService', () => {
         license: { id: 'lic-1' },
       } as any;
 
-      vi.mocked(repository.findOne).mockResolvedValue(collaboration);
+      db.query.collaborations.findFirst.mockResolvedValueOnce(collaboration);
 
       await expect(
         service.deleteCollaborationOrFail('collab-1')
@@ -297,8 +286,7 @@ describe('CollaborationService', () => {
         license: { id: 'lic-1' },
       } as any;
 
-      vi.mocked(repository.findOne).mockResolvedValue(collaboration);
-      vi.mocked(repository.remove).mockResolvedValue(collaboration);
+      db.query.collaborations.findFirst.mockResolvedValueOnce(collaboration);
 
       await service.deleteCollaborationOrFail('collab-1');
 
@@ -310,8 +298,7 @@ describe('CollaborationService', () => {
     it('should return timeline when it exists', async () => {
       const timeline = { id: 'tl-1' };
       const collaboration = { id: 'collab-1', timeline } as any;
-
-      vi.mocked(repository.findOne).mockResolvedValue(collaboration);
+      db.query.collaborations.findFirst.mockResolvedValueOnce(collaboration);
 
       const result = await service.getTimelineOrFail('collab-1');
 
@@ -323,8 +310,7 @@ describe('CollaborationService', () => {
         id: 'collab-1',
         timeline: undefined,
       } as any;
-
-      vi.mocked(repository.findOne).mockResolvedValue(collaboration);
+      db.query.collaborations.findFirst.mockResolvedValueOnce(collaboration);
 
       await expect(service.getTimelineOrFail('collab-1')).rejects.toThrow(
         EntityNotFoundException
@@ -336,8 +322,7 @@ describe('CollaborationService', () => {
     it('should return innovation flow when it exists', async () => {
       const innovationFlow = { id: 'flow-1' };
       const collaboration = { id: 'collab-1', innovationFlow } as any;
-
-      vi.mocked(repository.findOne).mockResolvedValue(collaboration);
+      db.query.collaborations.findFirst.mockResolvedValueOnce(collaboration);
 
       const result = await service.getInnovationFlow('collab-1');
 
@@ -349,8 +334,7 @@ describe('CollaborationService', () => {
         id: 'collab-1',
         innovationFlow: undefined,
       } as any;
-
-      vi.mocked(repository.findOne).mockResolvedValue(collaboration);
+      db.query.collaborations.findFirst.mockResolvedValueOnce(collaboration);
 
       await expect(service.getInnovationFlow('collab-1')).rejects.toThrow(
         RelationshipNotFoundException

@@ -22,7 +22,7 @@ import { RevokeCredentialInput } from './dto/agent.dto.credential.revoke';
 import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { agents } from './agent.schema';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 
 @Injectable()
 export class AgentService {
@@ -210,17 +210,17 @@ export class AgentService {
     if (missedIDs.length === 0) return result;
 
     // 3. Batch DB load for cache misses
-    const agents = await this.agentRepository.find({
-      where: { id: In(missedIDs) },
-      relations: { credentials: true },
+    const agentResults = await this.db.query.agents.findMany({
+      where: inArray(agents.id, missedIDs),
+      with: { credentials: true },
     });
 
     // 4. Populate result + warm cache
-    for (const agent of agents) {
-      if (agent.credentials) {
-        result.set(agent.id, agent.credentials);
+    for (const agentRow of agentResults) {
+      if (agentRow.credentials) {
+        result.set(agentRow.id, agentRow.credentials as unknown as ICredential[]);
       }
-      await this.setAgentCache(agent);
+      await this.setAgentCache(agentRow as unknown as IAgent);
     }
 
     // 5. For any IDs that weren't in DB either, set empty

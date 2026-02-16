@@ -7,13 +7,9 @@ import {
 } from '@common/exceptions';
 import { LicenseEntitlementNotAvailableException } from '@common/exceptions/license.entitlement.not.available.exception';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { MockType } from '@test/utils/mock.type';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
 import { type Mock } from 'vitest';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { ILicenseEntitlement } from '../license-entitlement/license.entitlement.interface';
@@ -21,10 +17,12 @@ import { LicenseEntitlementService } from '../license-entitlement/license.entitl
 import { License } from './license.entity';
 import { ILicense } from './license.interface';
 import { LicenseService } from './license.service';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 
 describe('LicenseService', () => {
   let service: LicenseService;
-  let licenseRepository: MockType<Repository<License>>;
+  let db: any;
   let entitlementService: LicenseEntitlementService;
   let _authorizationPolicyService: AuthorizationPolicyService;
 
@@ -39,7 +37,7 @@ describe('LicenseService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         LicenseService,
-        repositoryProviderMockFactory(License),
+        mockDrizzleProvider,
         MockCacheManager,
         MockWinstonProvider,
       ],
@@ -48,7 +46,7 @@ describe('LicenseService', () => {
       .compile();
 
     service = module.get(LicenseService);
-    licenseRepository = module.get(getRepositoryToken(License));
+    db = module.get(DRIZZLE);
     entitlementService = module.get(LicenseEntitlementService);
     _authorizationPolicyService = module.get(AuthorizationPolicyService);
   });
@@ -93,7 +91,7 @@ describe('LicenseService', () => {
   describe('getLicenseOrFail', () => {
     it('should return license when found', async () => {
       const license = { id: 'lic-1' } as License;
-      licenseRepository.findOne!.mockResolvedValue(license);
+      db.query.licenses.findFirst.mockResolvedValueOnce(license);
 
       const result = await service.getLicenseOrFail('lic-1');
 
@@ -101,7 +99,6 @@ describe('LicenseService', () => {
     });
 
     it('should throw EntityNotFoundException when not found', async () => {
-      licenseRepository.findOne!.mockResolvedValue(null);
 
       await expect(service.getLicenseOrFail('missing')).rejects.toThrow(
         EntityNotFoundException

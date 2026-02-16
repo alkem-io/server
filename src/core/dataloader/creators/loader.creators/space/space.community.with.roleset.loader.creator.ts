@@ -1,11 +1,13 @@
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { DataLoaderCreator } from '@core/dataloader/creators/base';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { ICommunity } from '@domain/community/community';
-import { Space } from '@domain/space/space/space.entity';
-import { Injectable } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
+import { spaceAbouts } from '@domain/space/space.about/space.about.schema';
+import { spaces } from '@domain/space/space/space.schema';
+import { Inject, Injectable } from '@nestjs/common';
 import DataLoader from 'dataloader';
-import { EntityManager, In } from 'typeorm';
+import { inArray } from 'drizzle-orm';
 
 /**
  * DataLoader creator for batching community+roleSet lookups by SpaceAbout ID.
@@ -16,7 +18,7 @@ import { EntityManager, In } from 'typeorm';
 export class SpaceCommunityWithRoleSetLoaderCreator
   implements DataLoaderCreator<ICommunity | null>
 {
-  constructor(@InjectEntityManager() private manager: EntityManager) {}
+  constructor(@Inject(DRIZZLE) private readonly db: DrizzleDb) {}
 
   public create(): ILoader<ICommunity | null> {
     return new DataLoader<string, ICommunity | null>(
@@ -32,16 +34,27 @@ export class SpaceCommunityWithRoleSetLoaderCreator
       return [];
     }
 
-    const spaces = await this.manager.find(Space, {
-      where: { about: { id: In([...spaceAboutIds]) } },
-      relations: { about: true, community: { roleSet: { roles: true } } },
+    const spaceResults = await this.db.query.spaces.findMany({
+      where: inArray(spaces.aboutId, [...spaceAboutIds]),
+      with: {
+        about: true,
+        community: {
+          with: {
+            roleSet: {
+              with: {
+                roles: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     // Map by about.id for O(1) lookup
     const byAboutId = new Map<string, ICommunity>();
-    for (const space of spaces) {
+    for (const space of spaceResults) {
       if (space.about && space.community) {
-        byAboutId.set(space.about.id, space.community);
+        byAboutId.set(space.about.id, space.community as unknown as ICommunity);
       }
     }
 

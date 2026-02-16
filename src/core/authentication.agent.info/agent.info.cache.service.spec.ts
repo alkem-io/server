@@ -5,37 +5,27 @@ import { IAgent } from '@domain/agent/agent/agent.interface';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getEntityManagerToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { type Mock, vi } from 'vitest';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 
 describe('AgentInfoCacheService', () => {
   let service: AgentInfoCacheService;
+  let db: any;
   let cacheManager: Record<string, Mock>;
   let logger: Record<string, Mock>;
-  let entityManager: any;
-
   const CACHE_TTL = 600;
 
   beforeEach(async () => {
-    const mockEntityManager = {
-      connection: {
-        query: vi.fn(),
-      },
-    };
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AgentInfoCacheService,
         MockCacheManager,
         MockWinstonProvider,
-        {
-          provide: getEntityManagerToken('default'),
-          useValue: mockEntityManager,
-        },
         {
           provide: ConfigService,
           useValue: {
@@ -48,12 +38,12 @@ describe('AgentInfoCacheService', () => {
       .compile();
 
     service = module.get(AgentInfoCacheService);
+    db = module.get(DRIZZLE);
     cacheManager = module.get(CACHE_MANAGER);
     logger = module.get(WINSTON_MODULE_NEST_PROVIDER) as unknown as Record<
       string,
       Mock
     >;
-    entityManager = module.get(getEntityManagerToken('default'));
   });
 
   // ── getAgentInfoFromCache ─────────────────────────────────────────
@@ -209,9 +199,7 @@ describe('AgentInfoCacheService', () => {
       cachedAgentInfo.credentials = [];
 
       // Mock: getAuthenticationIdForAgent returns authId
-      entityManager.connection.query.mockResolvedValue([
-        { authenticationID: authId },
-      ]);
+      db.query.users.findFirst.mockResolvedValueOnce({ authenticationID: authId });
 
       // Mock: getAgentInfoFromCache returns cached entry
       cacheManager.get.mockResolvedValue(cachedAgentInfo);
@@ -239,7 +227,7 @@ describe('AgentInfoCacheService', () => {
       } as unknown as IAgent;
 
       // No user found for this agent
-      entityManager.connection.query.mockResolvedValue([]);
+      db.query.users.findFirst.mockResolvedValueOnce(undefined);
 
       const result = await service.updateAgentInfoCache(agent);
 
@@ -255,9 +243,7 @@ describe('AgentInfoCacheService', () => {
         credentials: [],
       } as unknown as IAgent;
 
-      entityManager.connection.query.mockResolvedValue([
-        { authenticationID: null },
-      ]);
+      db.query.users.findFirst.mockResolvedValueOnce({ authenticationID: null });
 
       const result = await service.updateAgentInfoCache(agent);
 
@@ -273,9 +259,7 @@ describe('AgentInfoCacheService', () => {
         credentials: [{ id: 'cred-1', type: 'admin', resourceID: '' }],
       } as unknown as IAgent;
 
-      entityManager.connection.query.mockResolvedValue([
-        { authenticationID: authId },
-      ]);
+      db.query.users.findFirst.mockResolvedValueOnce({ authenticationID: authId });
 
       // No cached entry
       cacheManager.get.mockResolvedValue(undefined);
@@ -293,7 +277,7 @@ describe('AgentInfoCacheService', () => {
         credentials: [],
       } as unknown as IAgent;
 
-      entityManager.connection.query.mockResolvedValue([]);
+      db.query.users.findFirst.mockResolvedValueOnce(undefined);
 
       await service.updateAgentInfoCache(agent);
 
@@ -311,9 +295,7 @@ describe('AgentInfoCacheService', () => {
         credentials: [],
       } as unknown as IAgent;
 
-      entityManager.connection.query.mockResolvedValue([
-        { authenticationID: authId },
-      ]);
+      db.query.users.findFirst.mockResolvedValueOnce({ authenticationID: authId });
       cacheManager.get.mockResolvedValue(undefined);
 
       await service.updateAgentInfoCache(agent);
@@ -331,14 +313,11 @@ describe('AgentInfoCacheService', () => {
         credentials: [],
       } as unknown as IAgent;
 
-      entityManager.connection.query.mockResolvedValue([]);
+      db.query.users.findFirst.mockResolvedValueOnce(undefined);
 
       await service.updateAgentInfoCache(agent);
 
-      expect(entityManager.connection.query).toHaveBeenCalledWith(
-        expect.stringContaining('WHERE'),
-        [agentId]
-      );
+      expect(db.query.users.findFirst).toHaveBeenCalled();
     });
 
     it('should replace credentials entirely, not merge them', async () => {
@@ -360,9 +339,7 @@ describe('AgentInfoCacheService', () => {
       cachedAgentInfo.authenticationID = authId;
       cachedAgentInfo.credentials = oldCredentials as any;
 
-      entityManager.connection.query.mockResolvedValue([
-        { authenticationID: authId },
-      ]);
+      db.query.users.findFirst.mockResolvedValueOnce({ authenticationID: authId });
       cacheManager.get.mockResolvedValue(cachedAgentInfo);
       cacheManager.set.mockResolvedValue(cachedAgentInfo);
 

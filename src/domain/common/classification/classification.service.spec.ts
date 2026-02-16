@@ -4,7 +4,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
 import { type Mock } from 'vitest';
 import { CreateTagsetInput } from '../tagset/dto/tagset.dto.create';
 import { ITagsetTemplate } from '../tagset-template/tagset.template.interface';
@@ -27,7 +27,7 @@ describe('ClassificationService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ClassificationService,
-        repositoryProviderMockFactory(Classification),
+        mockDrizzleProvider,
         MockCacheManager,
         MockWinstonProvider,
       ],

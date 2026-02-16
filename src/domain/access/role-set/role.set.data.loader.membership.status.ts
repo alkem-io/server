@@ -1,17 +1,16 @@
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { RoleName } from '@common/enums/role.name';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { ICredential } from '@domain/agent/credential/credential.interface';
-import { Injectable, Scope } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { Inject, Injectable, Scope } from '@nestjs/common';
 import DataLoader from 'dataloader';
-import { Repository } from 'typeorm';
 import { InvitationService } from '../invitation/invitation.service';
 import {
   ensureRolesLoaded,
   loadAgentCredentials,
 } from './role.set.data.loader.utils';
-import { RoleSet } from './role.set.entity';
 import { IRoleSet } from './role.set.interface';
 import { RoleSetService } from './role.set.service';
 import { RoleSetCacheService } from './role.set.service.cache';
@@ -30,8 +29,8 @@ export class RoleSetMembershipStatusDataLoader {
     private readonly roleSetCacheService: RoleSetCacheService,
     private readonly roleSetService: RoleSetService,
     private readonly invitationService: InvitationService,
-    @InjectRepository(RoleSet)
-    private readonly roleSetRepository: Repository<RoleSet>
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb
   ) {
     this.loader = new DataLoader<
       AgentRoleKey,
@@ -87,7 +86,7 @@ export class RoleSetMembershipStatusDataLoader {
     // 3. Batch-load roles for any roleSets that don't have them pre-loaded.
     await ensureRolesLoaded(
       uncachedIndices.map(i => keys[i].roleSet),
-      this.roleSetRepository
+      this.db
     );
 
     // 4. In-memory membership check; split into members and non-members.

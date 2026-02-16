@@ -29,8 +29,9 @@ export class InnovationFlowAuthorizationService {
         innovationFlowID,
         {
           relations: {
+            authorization: true,
             profile: true,
-            states: true,
+            states: { authorization: true },
           },
         }
       );

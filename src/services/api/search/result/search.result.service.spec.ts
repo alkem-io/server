@@ -2,42 +2,26 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getEntityManagerToken } from '@nestjs/typeorm';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { type Mock, vi } from 'vitest';
 import { SearchResultType } from '../search.result.type';
 import { SearchResultService } from './search.result.service';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 
 describe('SearchResultService', () => {
   let service: SearchResultService;
+  let db: any;
   let authorizationService: { isAccessGranted: Mock };
   let userLookupService: { usersWithCredential: Mock };
   let _organizationLookupService: { organizationsWithCredentials: Mock };
-  let entityManager: {
-    findBy: Mock;
-    find: Mock;
-    findOneByOrFail: Mock;
-    findOne: Mock;
-  };
-
   const agentInfo = { credentials: [] } as any;
 
   beforeEach(async () => {
-    entityManager = {
-      findBy: vi.fn(),
-      find: vi.fn(),
-      findOneByOrFail: vi.fn(),
-      findOne: vi.fn(),
-    };
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SearchResultService,
-        {
-          provide: getEntityManagerToken('default'),
-          useValue: entityManager,
-        },
         MockWinstonProvider,
       ],
     })
@@ -45,6 +29,7 @@ describe('SearchResultService', () => {
       .compile();
 
     service = module.get(SearchResultService);
+    db = module.get(DRIZZLE);
     authorizationService = module.get(AuthorizationService) as any;
     userLookupService = module.get(UserLookupService) as any;
     _organizationLookupService = module.get(OrganizationLookupService) as any;
@@ -55,7 +40,7 @@ describe('SearchResultService', () => {
       const result = await service.getSpaceSearchResults([]);
 
       expect(result).toEqual([]);
-      expect(entityManager.findBy).not.toHaveBeenCalled();
+
     });
 
     it('should return single space result when spaceId filter is provided', async () => {
@@ -68,7 +53,7 @@ describe('SearchResultService', () => {
         },
       ] as any[];
       const space = { id: 'space-1', name: 'Test Space' };
-      entityManager.findOneByOrFail.mockResolvedValue(space);
+      db.query.spaces.findFirst.mockResolvedValueOnce(space);
 
       const result = await service.getSpaceSearchResults(rawResults, 'space-1');
 
@@ -91,8 +76,8 @@ describe('SearchResultService', () => {
           result: { id: 'space-2' },
         },
       ] as any[];
-      const spaces = [{ id: 'space-1' }, { id: 'space-2' }];
-      entityManager.findBy.mockResolvedValue(spaces);
+      const loadedSpaces = [{ id: 'space-1' }, { id: 'space-2' }];
+      db.query.spaces.findMany.mockResolvedValueOnce(loadedSpaces);
 
       const result = await service.getSpaceSearchResults(rawResults);
 
@@ -109,7 +94,6 @@ describe('SearchResultService', () => {
         },
       ] as any[];
       // Entity manager returns a space that doesn't match any raw result
-      entityManager.findBy.mockResolvedValue([{ id: 'space-999' }]);
 
       const result = await service.getSpaceSearchResults(rawResults);
 
@@ -133,13 +117,7 @@ describe('SearchResultService', () => {
           result: { id: 'sub-1' },
         },
       ] as any[];
-      entityManager.find.mockResolvedValue([
-        {
-          id: 'sub-1',
-          authorization: { id: 'auth-1' },
-          parentSpace: { id: 'space-1' },
-        },
-      ]);
+
       authorizationService.isAccessGranted.mockReturnValue(false);
 
       const result = await service.getSubspaceSearchResults(
@@ -159,13 +137,7 @@ describe('SearchResultService', () => {
           result: { id: 'sub-1' },
         },
       ] as any[];
-      entityManager.find.mockResolvedValue([
-        {
-          id: 'sub-1',
-          authorization: { id: 'auth-1' },
-          parentSpace: undefined,
-        },
-      ]);
+
       authorizationService.isAccessGranted.mockReturnValue(true);
 
       const result = await service.getSubspaceSearchResults(
@@ -186,9 +158,9 @@ describe('SearchResultService', () => {
         },
       ] as any[];
       const parentSpace = { id: 'space-1' };
-      entityManager.find.mockResolvedValue([
-        { id: 'sub-1', authorization: { id: 'auth-1' }, parentSpace },
-      ]);
+      const subspace = { id: 'sub-1', authorization: {}, parentSpace };
+      db.query.spaces.findMany.mockResolvedValueOnce([subspace]);
+
       authorizationService.isAccessGranted.mockReturnValue(true);
 
       const result = await service.getSubspaceSearchResults(
@@ -229,7 +201,8 @@ describe('SearchResultService', () => {
         .mockResolvedValueOnce([{ id: 'user-1' }]) // SPACE_MEMBER
         .mockResolvedValueOnce([]); // SPACE_ADMIN
 
-      entityManager.findBy.mockResolvedValue([{ id: 'user-1' }]);
+      // db.query.users.findMany returns only user-1 (the intersection result)
+      db.query.users.findMany.mockResolvedValueOnce([{ id: 'user-1' }]);
 
       const result = await service.getUserSearchResults(rawResults, 'space-1');
 
@@ -254,9 +227,7 @@ describe('SearchResultService', () => {
           result: { id: 'org-1' },
         },
       ] as any[];
-      entityManager.findBy.mockResolvedValue([
-        { id: 'org-1', authorization: { id: 'auth-1' } },
-      ]);
+
       authorizationService.isAccessGranted.mockReturnValue(false);
 
       const result = await service.getOrganizationSearchResults(

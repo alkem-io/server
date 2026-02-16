@@ -53,6 +53,7 @@ export class OrganizationAuthorizationService {
       organizationInput.id,
       {
         relations: {
+          authorization: true,
           storageAggregator: true,
           profile: true,
           agent: true,

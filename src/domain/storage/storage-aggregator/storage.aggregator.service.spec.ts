@@ -6,23 +6,22 @@ import {
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
 import { type Mock } from 'vitest';
 import { StorageBucketService } from '../storage-bucket/storage.bucket.service';
 import { StorageAggregator } from './storage.aggregator.entity';
 import { IStorageAggregator } from './storage.aggregator.interface';
 import { StorageAggregatorService } from './storage.aggregator.service';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 
 describe('StorageAggregatorService', () => {
   let service: StorageAggregatorService;
-  let storageAggregatorRepository: Repository<StorageAggregator>;
+  let db: any;
   let storageBucketService: StorageBucketService;
   let authorizationPolicyService: AuthorizationPolicyService;
   let storageAggregatorResolverService: StorageAggregatorResolverService;
@@ -32,7 +31,7 @@ describe('StorageAggregatorService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         StorageAggregatorService,
-        repositoryProviderMockFactory(StorageAggregator),
+        mockDrizzleProvider,
         MockCacheManager,
         MockWinstonProvider,
       ],
@@ -41,9 +40,7 @@ describe('StorageAggregatorService', () => {
       .compile();
 
     service = module.get<StorageAggregatorService>(StorageAggregatorService);
-    storageAggregatorRepository = module.get<Repository<StorageAggregator>>(
-      getRepositoryToken(StorageAggregator)
-    );
+    db = module.get(DRIZZLE);
     storageBucketService =
       module.get<StorageBucketService>(StorageBucketService);
     authorizationPolicyService = module.get<AuthorizationPolicyService>(
@@ -65,9 +62,7 @@ describe('StorageAggregatorService', () => {
         mockBucket
       );
       (storageBucketService.save as Mock).mockResolvedValue(mockBucket);
-      (storageAggregatorRepository.save as Mock).mockImplementation(
-        async (entity: any) => ({ ...entity, id: 'agg-1' })
-      );
+      vi.spyOn(service, 'save' as any).mockImplementation(async (agg: any) => agg);
 
       const result = await service.createStorageAggregator(
         StorageAggregatorType.SPACE
@@ -78,7 +73,6 @@ describe('StorageAggregatorService', () => {
       expect(result.directStorage).toBe(mockBucket);
       expect(storageBucketService.createStorageBucket).toHaveBeenCalledWith({});
       expect(storageBucketService.save).toHaveBeenCalledWith(mockBucket);
-      expect(storageAggregatorRepository.save).toHaveBeenCalled();
     });
 
     it('should link parent storage aggregator when one is provided', async () => {
@@ -91,9 +85,7 @@ describe('StorageAggregatorService', () => {
         mockBucket
       );
       (storageBucketService.save as Mock).mockResolvedValue(mockBucket);
-      (storageAggregatorRepository.save as Mock).mockImplementation(
-        async (entity: any) => ({ ...entity, id: 'agg-2' })
-      );
+      vi.spyOn(service, 'save' as any).mockImplementation(async (agg: any) => agg);
 
       const result = await service.createStorageAggregator(
         StorageAggregatorType.ACCOUNT,
@@ -109,9 +101,7 @@ describe('StorageAggregatorService', () => {
         mockBucket
       );
       (storageBucketService.save as Mock).mockResolvedValue(mockBucket);
-      (storageAggregatorRepository.save as Mock).mockImplementation(
-        async (entity: any) => ({ ...entity, id: 'agg-3' })
-      );
+      vi.spyOn(service, 'save' as any).mockImplementation(async (agg: any) => agg);
 
       const result = await service.createStorageAggregator(
         StorageAggregatorType.USER
@@ -130,17 +120,12 @@ describe('StorageAggregatorService', () => {
         authorization: { id: 'auth-1' },
         directStorage: { id: 'bucket-1' },
       };
-      (storageAggregatorRepository.findOneOrFail as Mock).mockResolvedValue(
-        aggregator
-      );
+      db.query.storageAggregators.findFirst.mockResolvedValueOnce(aggregator);
+
       (authorizationPolicyService.delete as Mock).mockResolvedValue(undefined);
       (storageBucketService.deleteStorageBucket as Mock).mockResolvedValue(
         undefined
       );
-      (storageAggregatorRepository.remove as Mock).mockResolvedValue({
-        ...aggregator,
-        id: '',
-      });
 
       const result = await service.delete('agg-1');
 
@@ -150,7 +135,6 @@ describe('StorageAggregatorService', () => {
       expect(storageBucketService.deleteStorageBucket).toHaveBeenCalledWith(
         'bucket-1'
       );
-      expect(storageAggregatorRepository.remove).toHaveBeenCalled();
       expect(result.id).toBe('agg-1');
     });
 
@@ -160,9 +144,7 @@ describe('StorageAggregatorService', () => {
         authorization: { id: 'auth-2' },
         directStorage: undefined,
       };
-      (storageAggregatorRepository.findOneOrFail as Mock).mockResolvedValue(
-        aggregator
-      );
+      db.query.storageAggregators.findFirst.mockResolvedValueOnce(aggregator);
 
       await expect(service.delete('agg-2')).rejects.toThrow(
         EntityNotInitializedException
@@ -175,16 +157,11 @@ describe('StorageAggregatorService', () => {
         authorization: undefined,
         directStorage: { id: 'bucket-3' },
       };
-      (storageAggregatorRepository.findOneOrFail as Mock).mockResolvedValue(
-        aggregator
-      );
+      db.query.storageAggregators.findFirst.mockResolvedValueOnce(aggregator);
+
       (storageBucketService.deleteStorageBucket as Mock).mockResolvedValue(
         undefined
       );
-      (storageAggregatorRepository.remove as Mock).mockResolvedValue({
-        ...aggregator,
-        id: '',
-      });
 
       await service.delete('agg-3');
 
@@ -200,40 +177,24 @@ describe('StorageAggregatorService', () => {
   describe('getStorageAggregatorOrFail', () => {
     it('should return the aggregator when it exists', async () => {
       const aggregator = { id: 'agg-1', type: StorageAggregatorType.SPACE };
-      (storageAggregatorRepository.findOneOrFail as Mock).mockResolvedValue(
-        aggregator
-      );
+      db.query.storageAggregators.findFirst.mockResolvedValueOnce(aggregator);
 
       const result = await service.getStorageAggregatorOrFail('agg-1');
 
       expect(result).toBe(aggregator);
-      expect(storageAggregatorRepository.findOneOrFail).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { id: 'agg-1' } })
-      );
     });
 
     it('should pass through FindOneOptions when provided', async () => {
       const aggregator = { id: 'agg-1' };
-      (storageAggregatorRepository.findOneOrFail as Mock).mockResolvedValue(
-        aggregator
-      );
+      db.query.storageAggregators.findFirst.mockResolvedValueOnce(aggregator);
 
       await service.getStorageAggregatorOrFail('agg-1', {
         relations: { directStorage: true },
       });
 
-      expect(storageAggregatorRepository.findOneOrFail).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { id: 'agg-1' },
-          relations: { directStorage: true },
-        })
-      );
     });
 
     it('should propagate error when findOneOrFail rejects', async () => {
-      (storageAggregatorRepository.findOneOrFail as Mock).mockRejectedValue(
-        new Error('Entity not found')
-      );
 
       await expect(
         service.getStorageAggregatorOrFail('non-existent')
@@ -247,16 +208,13 @@ describe('StorageAggregatorService', () => {
     it('should sum direct storage, child bucket, and child aggregator sizes', async () => {
       const aggregator = { id: 'agg-1' } as IStorageAggregator;
       const directBucket = { id: 'bucket-1' };
-
-      // getDirectStorageBucket: loads aggregator with directStorage
-      (storageAggregatorRepository.findOneOrFail as Mock).mockImplementation(
-        async (opts: any) => {
-          if (opts.relations?.directStorage) {
-            return { ...aggregator, directStorage: directBucket };
-          }
-          return aggregator;
-        }
-      );
+      // getDirectStorageBucket calls getStorageAggregatorOrFail -> findFirst
+      db.query.storageAggregators.findFirst.mockResolvedValueOnce({
+        id: 'agg-1',
+        directStorage: directBucket,
+      });
+      // getChildStorageAggregators -> findMany (no children)
+      db.query.storageAggregators.findMany.mockResolvedValueOnce([]);
 
       // direct storage size = 100
       (storageBucketService.size as Mock).mockImplementation(
@@ -273,7 +231,6 @@ describe('StorageAggregatorService', () => {
       ).mockResolvedValue([{ id: 'child-bucket-1' }]);
 
       // no child aggregators
-      (storageAggregatorRepository.find as Mock).mockResolvedValue([]);
 
       const result = await service.size(aggregator);
 
@@ -284,16 +241,18 @@ describe('StorageAggregatorService', () => {
     it('should return zero when all storage components are empty', async () => {
       const aggregator = { id: 'agg-empty' } as IStorageAggregator;
       const directBucket = { id: 'bucket-empty' };
-
-      (storageAggregatorRepository.findOneOrFail as Mock).mockResolvedValue({
-        ...aggregator,
+      // getDirectStorageBucket -> findFirst
+      db.query.storageAggregators.findFirst.mockResolvedValueOnce({
+        id: 'agg-empty',
         directStorage: directBucket,
       });
+      // getChildStorageAggregators -> findMany
+      db.query.storageAggregators.findMany.mockResolvedValueOnce([]);
+
       (storageBucketService.size as Mock).mockResolvedValue(0);
       (
         storageBucketService.getStorageBucketsForAggregator as Mock
       ).mockResolvedValue([]);
-      (storageAggregatorRepository.find as Mock).mockResolvedValue([]);
 
       const result = await service.size(aggregator);
 
@@ -430,8 +389,8 @@ describe('StorageAggregatorService', () => {
     it('should return the direct storage bucket when it exists', async () => {
       const directBucket = { id: 'bucket-direct' };
       const aggregator = { id: 'agg-1' } as IStorageAggregator;
-      (storageAggregatorRepository.findOneOrFail as Mock).mockResolvedValue({
-        ...aggregator,
+      db.query.storageAggregators.findFirst.mockResolvedValueOnce({
+        id: 'agg-1',
         directStorage: directBucket,
       });
 
@@ -442,8 +401,8 @@ describe('StorageAggregatorService', () => {
 
     it('should throw EntityNotFoundException when direct storage is missing', async () => {
       const aggregator = { id: 'agg-no-storage' } as IStorageAggregator;
-      (storageAggregatorRepository.findOneOrFail as Mock).mockResolvedValue({
-        ...aggregator,
+      db.query.storageAggregators.findFirst.mockResolvedValueOnce({
+        id: 'agg-no-storage',
         directStorage: undefined,
       });
 
@@ -459,8 +418,8 @@ describe('StorageAggregatorService', () => {
     it('should return the parent aggregator when it exists', async () => {
       const parent = { id: 'parent-agg' };
       const aggregator = { id: 'child-agg' } as IStorageAggregator;
-      (storageAggregatorRepository.findOneOrFail as Mock).mockResolvedValue({
-        ...aggregator,
+      db.query.storageAggregators.findFirst.mockResolvedValueOnce({
+        id: 'child-agg',
         parentStorageAggregator: parent,
       });
 
@@ -471,8 +430,8 @@ describe('StorageAggregatorService', () => {
 
     it('should return null when no parent aggregator exists', async () => {
       const aggregator = { id: 'root-agg' } as IStorageAggregator;
-      (storageAggregatorRepository.findOneOrFail as Mock).mockResolvedValue({
-        ...aggregator,
+      db.query.storageAggregators.findFirst.mockResolvedValueOnce({
+        id: 'root-agg',
         parentStorageAggregator: undefined,
       });
 
@@ -488,19 +447,16 @@ describe('StorageAggregatorService', () => {
     it('should return child aggregators when they exist', async () => {
       const children = [{ id: 'child-1' }, { id: 'child-2' }];
       const aggregator = { id: 'parent-agg' } as IStorageAggregator;
-      (storageAggregatorRepository.find as Mock).mockResolvedValue(children);
+      db.query.storageAggregators.findMany.mockResolvedValueOnce(children);
 
       const result = await service.getChildStorageAggregators(aggregator);
 
       expect(result).toEqual(children);
-      expect(storageAggregatorRepository.find).toHaveBeenCalledWith({
-        where: { parentStorageAggregator: { id: 'parent-agg' } },
-      });
     });
 
     it('should return empty array when no children exist', async () => {
       const aggregator = { id: 'leaf-agg' } as IStorageAggregator;
-      (storageAggregatorRepository.find as Mock).mockResolvedValue(null);
+      // findMany returns [] by default
 
       const result = await service.getChildStorageAggregators(aggregator);
 

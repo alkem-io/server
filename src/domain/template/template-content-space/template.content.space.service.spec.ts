@@ -8,24 +8,23 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { LicenseService } from '@domain/common/license/license.service';
 import { SpaceAboutService } from '@domain/space/space.about/space.about.service';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
 import { type Mocked, vi } from 'vitest';
 import { TemplateContentSpace } from './template.content.space.entity';
 import { ITemplateContentSpace } from './template.content.space.interface';
 import { TemplateContentSpaceService } from './template.content.space.service';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
 
 describe('TemplateContentSpaceService', () => {
   let service: TemplateContentSpaceService;
-  let repository: Mocked<Repository<TemplateContentSpace>>;
   let collaborationService: Mocked<CollaborationService>;
   let spaceAboutService: Mocked<SpaceAboutService>;
   let authorizationPolicyService: Mocked<AuthorizationPolicyService>;
   let licenseService: Mocked<LicenseService>;
+  let db: any;
 
   beforeEach(async () => {
     // Mock static TemplateContentSpace.create to avoid DataSource requirement
@@ -40,7 +39,7 @@ describe('TemplateContentSpaceService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TemplateContentSpaceService,
-        repositoryProviderMockFactory(TemplateContentSpace),
+        mockDrizzleProvider,
         MockCacheManager,
         MockWinstonProvider,
       ],
@@ -49,9 +48,6 @@ describe('TemplateContentSpaceService', () => {
       .compile();
 
     service = module.get(TemplateContentSpaceService);
-    repository = module.get(getRepositoryToken(TemplateContentSpace)) as Mocked<
-      Repository<TemplateContentSpace>
-    >;
     collaborationService = module.get(
       CollaborationService
     ) as Mocked<CollaborationService>;
@@ -62,12 +58,14 @@ describe('TemplateContentSpaceService', () => {
       AuthorizationPolicyService
     ) as Mocked<AuthorizationPolicyService>;
     licenseService = module.get(LicenseService) as Mocked<LicenseService>;
+    db = module.get(DRIZZLE);
   });
 
   describe('getTemplateContentSpaceOrFail', () => {
     it('should return the template content space when found', async () => {
       const expected = { id: 'tcs-1' } as TemplateContentSpace;
-      repository.findOne.mockResolvedValue(expected);
+
+      db.query.templateContentSpaces.findFirst.mockResolvedValueOnce(expected);
 
       const result = await service.getTemplateContentSpaceOrFail('tcs-1');
 
@@ -75,7 +73,6 @@ describe('TemplateContentSpaceService', () => {
     });
 
     it('should throw EntityNotFoundException when not found', async () => {
-      repository.findOne.mockResolvedValue(null);
 
       await expect(
         service.getTemplateContentSpaceOrFail('missing')
@@ -85,7 +82,6 @@ describe('TemplateContentSpaceService', () => {
 
   describe('getTemplateContentSpace', () => {
     it('should return null when not found', async () => {
-      repository.findOne.mockResolvedValue(null);
 
       const result = await service.getTemplateContentSpace('missing');
 
@@ -103,7 +99,7 @@ describe('TemplateContentSpaceService', () => {
         subspaces: [],
       } as unknown as TemplateContentSpace;
 
-      repository.findOne.mockResolvedValue(tcs);
+      db.query.templateContentSpaces.findFirst.mockResolvedValueOnce(tcs);
 
       await expect(
         service.deleteTemplateContentSpaceOrFail('tcs-1')
@@ -119,13 +115,13 @@ describe('TemplateContentSpaceService', () => {
         subspaces: [],
       } as unknown as TemplateContentSpace;
 
-      repository.findOne.mockResolvedValue(tcs);
+      db.query.templateContentSpaces.findFirst.mockResolvedValueOnce(tcs);
+
       collaborationService.deleteCollaborationOrFail.mockResolvedValue(
         {} as any
       );
       spaceAboutService.removeSpaceAbout.mockResolvedValue({} as any);
       authorizationPolicyService.delete.mockResolvedValue({} as any);
-      repository.remove.mockResolvedValue({ id: '' } as any);
 
       const result = await service.deleteTemplateContentSpaceOrFail('tcs-1');
 
@@ -138,7 +134,6 @@ describe('TemplateContentSpaceService', () => {
       expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
         tcs.authorization
       );
-      expect(repository.remove).toHaveBeenCalledWith(tcs);
       expect(result.id).toBe('tcs-1');
     });
 
@@ -160,15 +155,15 @@ describe('TemplateContentSpaceService', () => {
       } as unknown as TemplateContentSpace;
 
       // First call returns the parent, second call returns the subspace
-      repository.findOne
+      db.query.templateContentSpaces.findFirst
         .mockResolvedValueOnce(parent)
         .mockResolvedValueOnce(subspace);
+
       collaborationService.deleteCollaborationOrFail.mockResolvedValue(
         {} as any
       );
       spaceAboutService.removeSpaceAbout.mockResolvedValue({} as any);
       authorizationPolicyService.delete.mockResolvedValue({} as any);
-      repository.remove.mockResolvedValue({ id: '' } as any);
 
       await service.deleteTemplateContentSpaceOrFail('parent-1');
 
@@ -179,7 +174,6 @@ describe('TemplateContentSpaceService', () => {
       expect(
         collaborationService.deleteCollaborationOrFail
       ).toHaveBeenCalledWith('collab-parent');
-      expect(repository.remove).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -190,7 +184,7 @@ describe('TemplateContentSpaceService', () => {
         about: undefined,
       } as unknown as TemplateContentSpace;
 
-      repository.findOne.mockResolvedValue(tcs);
+      db.query.templateContentSpaces.findFirst.mockResolvedValueOnce(tcs);
 
       await expect(
         service.update({
@@ -207,13 +201,11 @@ describe('TemplateContentSpaceService', () => {
         about: existingAbout,
       } as unknown as TemplateContentSpace;
 
+      db.query.templateContentSpaces.findFirst.mockResolvedValueOnce(tcs);
+      db.returning.mockResolvedValueOnce([tcs]);
+
       const updatedAbout = { id: 'about-1', profile: { displayName: 'new' } };
-      repository.findOne.mockResolvedValue(tcs);
       spaceAboutService.updateSpaceAbout.mockResolvedValue(updatedAbout as any);
-      repository.save.mockResolvedValue({
-        ...tcs,
-        about: updatedAbout,
-      } as any);
 
       const result = await service.update({
         ID: 'tcs-1',
@@ -233,13 +225,12 @@ describe('TemplateContentSpaceService', () => {
         about: { id: 'about-1' },
       } as unknown as TemplateContentSpace;
 
-      repository.findOne.mockResolvedValue(tcs);
-      repository.save.mockResolvedValue(tcs);
+      db.query.templateContentSpaces.findFirst.mockResolvedValueOnce(tcs);
+      db.returning.mockResolvedValueOnce([tcs]);
 
       await service.update({ ID: 'tcs-1' } as any);
 
       expect(spaceAboutService.updateSpaceAbout).not.toHaveBeenCalled();
-      expect(repository.save).toHaveBeenCalledWith(tcs);
     });
   });
 
@@ -291,7 +282,7 @@ describe('TemplateContentSpaceService', () => {
       const about = { id: 'about-1' };
       const tcs = { id: 'tcs-1', about } as unknown as TemplateContentSpace;
 
-      repository.findOne.mockResolvedValue(tcs);
+      db.query.templateContentSpaces.findFirst.mockResolvedValueOnce(tcs);
 
       const result = await service.getSpaceAbout('tcs-1');
 
@@ -304,7 +295,7 @@ describe('TemplateContentSpaceService', () => {
         about: undefined,
       } as unknown as TemplateContentSpace;
 
-      repository.findOne.mockResolvedValue(tcs);
+      db.query.templateContentSpaces.findFirst.mockResolvedValueOnce(tcs);
 
       await expect(service.getSpaceAbout('tcs-1')).rejects.toThrow(
         RelationshipNotFoundException
@@ -320,7 +311,7 @@ describe('TemplateContentSpaceService', () => {
         subspaces,
       } as unknown as TemplateContentSpace;
 
-      repository.findOne.mockResolvedValue(tcs);
+      db.query.templateContentSpaces.findFirst.mockResolvedValueOnce(tcs);
 
       const result = await service.getSubspaces('tcs-1');
 
@@ -333,7 +324,7 @@ describe('TemplateContentSpaceService', () => {
         subspaces: undefined,
       } as unknown as TemplateContentSpace;
 
-      repository.findOne.mockResolvedValue(tcs);
+      db.query.templateContentSpaces.findFirst.mockResolvedValueOnce(tcs);
 
       await expect(service.getSubspaces('tcs-1')).rejects.toThrow(
         RelationshipNotFoundException

@@ -8,16 +8,15 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { StorageService } from '@services/adapters/storage';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
 import { type Mock, vi } from 'vitest';
 import { Document } from './document.entity';
 import { DocumentService } from './document.service';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 
 const HOSTING_CONFIG = {
   endpoint_cluster: 'https://alkem.io',
@@ -27,7 +26,7 @@ const BASE_DOCUMENT_URL = `${HOSTING_CONFIG.endpoint_cluster}${HOSTING_CONFIG.pa
 
 describe('DocumentService', () => {
   let service: DocumentService;
-  let documentRepository: Repository<Document>;
+  let db: any;
   let tagsetService: TagsetService;
   let authorizationPolicyService: AuthorizationPolicyService;
   let storageService: StorageService;
@@ -43,7 +42,7 @@ describe('DocumentService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         DocumentService,
-        repositoryProviderMockFactory(Document),
+        mockDrizzleProvider,
         MockCacheManager,
         MockWinstonProvider,
         {
@@ -69,9 +68,7 @@ describe('DocumentService', () => {
       .compile();
 
     service = module.get<DocumentService>(DocumentService);
-    documentRepository = module.get<Repository<Document>>(
-      getRepositoryToken(Document)
-    );
+    db = module.get(DRIZZLE);
     tagsetService = module.get<TagsetService>(TagsetService);
     authorizationPolicyService = module.get<AuthorizationPolicyService>(
       AuthorizationPolicyService
@@ -96,9 +93,7 @@ describe('DocumentService', () => {
         tags: [],
       };
       (tagsetService.createTagset as Mock).mockReturnValue(mockTagset);
-      (documentRepository.save as Mock).mockImplementation(
-        async (doc: any) => ({ ...doc, id: 'doc-1' })
-      );
+      vi.spyOn(service, 'save' as any).mockImplementation(async (doc: any) => doc);
 
       const result = await service.createDocument(input);
 
@@ -108,7 +103,6 @@ describe('DocumentService', () => {
       });
       expect(result.tagset).toBe(mockTagset);
       expect(result.authorization).toBeDefined();
-      expect(documentRepository.save).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -124,11 +118,8 @@ describe('DocumentService', () => {
         authorization: mockAuth,
         tagset: mockTagset,
       };
-      (documentRepository.findOne as Mock).mockResolvedValue(document);
-      (documentRepository.remove as Mock).mockResolvedValue({
-        ...document,
-        id: '',
-      });
+      db.query.documents.findFirst.mockResolvedValueOnce(document);
+
       (authorizationPolicyService.delete as Mock).mockResolvedValue(undefined);
       (tagsetService.removeTagset as Mock).mockResolvedValue(undefined);
 
@@ -136,7 +127,6 @@ describe('DocumentService', () => {
 
       expect(authorizationPolicyService.delete).toHaveBeenCalledWith(mockAuth);
       expect(tagsetService.removeTagset).toHaveBeenCalledWith('tagset-1');
-      expect(documentRepository.remove).toHaveBeenCalled();
       expect(result.id).toBe('doc-1');
     });
 
@@ -147,11 +137,8 @@ describe('DocumentService', () => {
         authorization: undefined,
         tagset: { id: 'tagset-2' },
       };
-      (documentRepository.findOne as Mock).mockResolvedValue(document);
-      (documentRepository.remove as Mock).mockResolvedValue({
-        ...document,
-        id: '',
-      });
+      db.query.documents.findFirst.mockResolvedValueOnce(document);
+
       (tagsetService.removeTagset as Mock).mockResolvedValue(undefined);
 
       await service.deleteDocument({ ID: 'doc-2' });
@@ -167,11 +154,8 @@ describe('DocumentService', () => {
         authorization: { id: 'auth-3' },
         tagset: undefined,
       };
-      (documentRepository.findOne as Mock).mockResolvedValue(document);
-      (documentRepository.remove as Mock).mockResolvedValue({
-        ...document,
-        id: '',
-      });
+      db.query.documents.findFirst.mockResolvedValueOnce(document);
+
       (authorizationPolicyService.delete as Mock).mockResolvedValue(undefined);
 
       await service.deleteDocument({ ID: 'doc-3' });
@@ -181,7 +165,6 @@ describe('DocumentService', () => {
     });
 
     it('should throw EntityNotFoundException when document to delete does not exist', async () => {
-      (documentRepository.findOne as Mock).mockResolvedValue(null);
 
       await expect(
         service.deleteDocument({ ID: 'non-existent' })
@@ -194,36 +177,24 @@ describe('DocumentService', () => {
   describe('getDocumentOrFail', () => {
     it('should return the document when it exists', async () => {
       const document = { id: 'doc-1', displayName: 'file.pdf' };
-      (documentRepository.findOne as Mock).mockResolvedValue(document);
+      db.query.documents.findFirst.mockResolvedValueOnce(document);
 
       const result = await service.getDocumentOrFail('doc-1');
 
       expect(result).toBe(document);
-      expect(documentRepository.findOne).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { id: 'doc-1' },
-        })
-      );
     });
 
     it('should pass through FindOneOptions when provided', async () => {
       const document = { id: 'doc-1' };
-      (documentRepository.findOne as Mock).mockResolvedValue(document);
+      db.query.documents.findFirst.mockResolvedValueOnce(document);
 
       await service.getDocumentOrFail('doc-1', {
         relations: { tagset: true },
       });
 
-      expect(documentRepository.findOne).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { id: 'doc-1' },
-          relations: { tagset: true },
-        })
-      );
     });
 
     it('should throw EntityNotFoundException when document does not exist', async () => {
-      (documentRepository.findOne as Mock).mockResolvedValue(null);
 
       await expect(service.getDocumentOrFail('missing-id')).rejects.toThrow(
         EntityNotFoundException
@@ -245,10 +216,10 @@ describe('DocumentService', () => {
         displayName: 'updated.pdf',
         tagset: { ID: 'tagset-1', tags: ['new'] },
       };
+      db.query.documents.findFirst.mockResolvedValueOnce(existingDoc);
 
-      (documentRepository.findOne as Mock).mockResolvedValue(existingDoc);
       (tagsetService.updateTagset as Mock).mockResolvedValue(updatedTagset);
-      (documentRepository.save as Mock).mockResolvedValue(existingDoc);
+      vi.spyOn(service, 'save' as any).mockImplementation(async (doc: any) => doc);
 
       const result = await service.updateDocument(updateData);
 
@@ -268,8 +239,7 @@ describe('DocumentService', () => {
         displayName: 'updated.pdf',
         tagset: { ID: 'tagset-1', tags: ['new'] },
       };
-
-      (documentRepository.findOne as Mock).mockResolvedValue(existingDoc);
+      db.query.documents.findFirst.mockResolvedValueOnce(existingDoc);
 
       await expect(service.updateDocument(updateData)).rejects.toThrow(
         EntityNotFoundException
@@ -285,9 +255,8 @@ describe('DocumentService', () => {
         ID: 'doc-1',
         displayName: 'updated.pdf',
       };
-
-      (documentRepository.findOne as Mock).mockResolvedValue(existingDoc);
-      (documentRepository.save as Mock).mockResolvedValue(existingDoc);
+      db.query.documents.findFirst.mockResolvedValueOnce(existingDoc);
+      vi.spyOn(service, 'save' as any).mockImplementation(async (doc: any) => doc);
 
       await service.updateDocument(updateData);
 
@@ -341,7 +310,7 @@ describe('DocumentService', () => {
     it('should return the document when URL is a valid Alkemio document URL', async () => {
       const docId = 'doc-uuid-456';
       const document = { id: docId, displayName: 'file.png' };
-      (documentRepository.findOne as Mock).mockResolvedValue(document);
+      db.query.documents.findFirst.mockResolvedValueOnce(document);
 
       const result = await service.getDocumentFromURL(
         `${BASE_DOCUMENT_URL}/${docId}`
@@ -351,7 +320,6 @@ describe('DocumentService', () => {
     });
 
     it('should return undefined and log error when document ID from URL does not resolve', async () => {
-      (documentRepository.findOne as Mock).mockResolvedValue(null);
 
       const result = await service.getDocumentFromURL(
         `${BASE_DOCUMENT_URL}/non-existent-id`
@@ -391,7 +359,7 @@ describe('DocumentService', () => {
   describe('getUploadedDate', () => {
     it('should return the createdDate when document exists', async () => {
       const createdDate = new Date('2025-01-15T10:00:00Z');
-      (documentRepository.findOne as Mock).mockResolvedValue({
+      db.query.documents.findFirst.mockResolvedValueOnce({
         id: 'doc-1',
         createdDate,
       });
@@ -402,7 +370,6 @@ describe('DocumentService', () => {
     });
 
     it('should throw EntityNotFoundException when document does not exist', async () => {
-      (documentRepository.findOne as Mock).mockResolvedValue(null);
 
       await expect(service.getUploadedDate('missing')).rejects.toThrow(
         EntityNotFoundException

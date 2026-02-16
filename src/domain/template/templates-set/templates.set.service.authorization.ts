@@ -21,6 +21,7 @@ export class TemplatesSetAuthorizationService {
       templatesSetInput.id,
       {
         relations: {
+          authorization: true,
           templates: true,
         },
       }

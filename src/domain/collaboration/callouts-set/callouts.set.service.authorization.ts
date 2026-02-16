@@ -38,6 +38,7 @@ export class CalloutsSetAuthorizationService {
       calloutsSetInput.id,
       {
         relations: {
+          authorization: true,
           callouts: true,
         },
       }

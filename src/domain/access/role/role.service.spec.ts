@@ -2,22 +2,19 @@ import { AuthorizationCredential } from '@common/enums';
 import { RoleName } from '@common/enums/role.name';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
 import { vi } from 'vitest';
 import { IContributorRolePolicy } from './contributor.role.policy.interface';
 import { CreateRoleInput } from './dto/role.dto.create';
 import { Role } from './role.entity';
 import { IRole } from './role.interface';
 import { RoleService } from './role.service';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
 
 describe('RoleService', () => {
   let service: RoleService;
-  let roleRepository: Repository<Role>;
 
   const defaultPolicy: IContributorRolePolicy = {
     minimum: 0,
@@ -59,7 +56,7 @@ describe('RoleService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         RoleService,
-        repositoryProviderMockFactory(Role),
+        mockDrizzleProvider,
         MockCacheManager,
         MockWinstonProvider,
       ],
@@ -67,8 +64,7 @@ describe('RoleService', () => {
       .useMocker(defaultMockerFactory)
       .compile();
 
-    service = module.get<RoleService>(RoleService);
-    roleRepository = module.get<Repository<Role>>(getRepositoryToken(Role));
+    service = module.get(RoleService);
   });
 
   describe('createRole', () => {
@@ -142,19 +138,6 @@ describe('RoleService', () => {
       expect(result.virtualContributorPolicy).toEqual(vcPolicy);
     });
   });
-
-  describe('removeRole', () => {
-    it('should call repository remove and return true', async () => {
-      const mockRole = { id: 'role-1', name: RoleName.MEMBER } as Role;
-      vi.spyOn(roleRepository, 'remove').mockResolvedValue(mockRole);
-
-      const result = await service.removeRole(mockRole);
-
-      expect(result).toBe(true);
-      expect(roleRepository.remove).toHaveBeenCalledWith(mockRole);
-    });
-  });
-
   describe('getCredentialsForRoleWithParents', () => {
     it('should return parent credentials concatenated with the role credential', () => {
       const roleCredential: ICredentialDefinition = {

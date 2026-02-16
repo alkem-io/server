@@ -1,5 +1,6 @@
 import { relations } from 'drizzle-orm';
 import { platforms } from './platform.schema';
+import { authorizationPolicies } from '@domain/common/authorization-policy/authorization.policy.schema';
 import { forums } from '@platform/forum/forum.schema';
 import { libraries } from '@library/library/library.schema';
 import { licensingFrameworks } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.schema';
@@ -9,6 +10,10 @@ import { storageAggregators } from '@domain/storage/storage-aggregator/storage.a
 import { roleSets } from '@domain/access/role-set/role.set.schema';
 
 export const platformsRelations = relations(platforms, ({ one }) => ({
+  authorization: one(authorizationPolicies, {
+    fields: [platforms.authorizationId],
+    references: [authorizationPolicies.id],
+  }),
   forum: one(forums, {
     fields: [platforms.forumId],
     references: [forums.id],

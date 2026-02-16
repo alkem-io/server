@@ -91,13 +91,21 @@ export class StorageAggregatorService {
     storageAggregatorID: string,
     options?: {
       relations?: {
-        directStorage?: boolean;
+        authorization?: boolean;
+        directStorage?: boolean | Record<string, any>;
         parentStorageAggregator?: boolean;
       };
     }
   ): Promise<IStorageAggregator | never> {
-    const withClause: Record<string, boolean> = {};
-    if (options?.relations?.directStorage) withClause.directStorage = true;
+    const withClause: Record<string, any> = {};
+    if (options?.relations?.authorization) withClause.authorization = true;
+    if (options?.relations?.directStorage) {
+      if (typeof options.relations.directStorage === 'object') {
+        withClause.directStorage = this.buildNestedWith(options.relations.directStorage);
+      } else {
+        withClause.directStorage = true;
+      }
+    }
     if (options?.relations?.parentStorageAggregator)
       withClause.parentStorageAggregator = true;
 
@@ -112,6 +120,18 @@ export class StorageAggregatorService {
         LogContext.STORAGE_BUCKET
       );
     return storageAggregator as unknown as IStorageAggregator;
+  }
+
+  private buildNestedWith(obj: Record<string, any>): any {
+    const withClause: Record<string, any> = {};
+    for (const [key, value] of Object.entries(obj)) {
+      if (value === true) {
+        withClause[key] = true;
+      } else if (typeof value === 'object' && value !== null) {
+        withClause[key] = this.buildNestedWith(value);
+      }
+    }
+    return { with: withClause };
   }
 
   async save(

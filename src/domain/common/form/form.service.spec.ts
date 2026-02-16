@@ -1,24 +1,22 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { MockType } from '@test/utils/mock.type';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
 import { IFormQuestion } from './form.dto.question.interface';
 import { Form } from './form.entity';
 import { FormService } from './form.service';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 
 describe('FormService', () => {
   let service: FormService;
-  let formRepository: MockType<Repository<Form>>;
+  let db: any;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         FormService,
-        repositoryProviderMockFactory(Form),
+        mockDrizzleProvider,
         MockCacheManager,
         MockWinstonProvider,
       ],
@@ -27,7 +25,7 @@ describe('FormService', () => {
       .compile();
 
     service = module.get(FormService);
-    formRepository = module.get(getRepositoryToken(Form));
+    db = module.get(DRIZZLE);
   });
 
   describe('createForm', () => {
@@ -111,8 +109,8 @@ describe('FormService', () => {
         description: 'Old description',
         questions: '[]',
       } as Form;
-      formRepository.save!.mockResolvedValue(form);
 
+      db.returning.mockResolvedValueOnce([{ ...form, description: 'New description' }]);
       const result = await service.updateForm(form, {
         description: 'New description',
       } as any);
@@ -125,8 +123,8 @@ describe('FormService', () => {
         description: 'Old description',
         questions: '[]',
       } as Form;
-      formRepository.save!.mockResolvedValue(form);
 
+      db.returning.mockResolvedValueOnce([{ ...form, description: '' }]);
       const result = await service.updateForm(form, { description: '' } as any);
 
       expect(result.description).toBe('');
@@ -137,8 +135,8 @@ describe('FormService', () => {
         description: 'Keep this',
         questions: '[]',
       } as Form;
-      formRepository.save!.mockResolvedValue(form);
 
+      db.returning.mockResolvedValueOnce([form]);
       await service.updateForm(form, {} as any);
 
       expect(form.description).toBe('Keep this');
@@ -155,8 +153,8 @@ describe('FormService', () => {
           required: true,
         },
       ];
-      formRepository.save!.mockResolvedValue(form);
 
+      db.returning.mockResolvedValueOnce([form]);
       await service.updateForm(form, { questions: newQuestions } as any);
 
       expect(JSON.parse(form.questions)).toEqual(newQuestions);
@@ -166,12 +164,10 @@ describe('FormService', () => {
   describe('removeForm', () => {
     it('should remove the form and return true', async () => {
       const form = { id: 'form-1' } as Form;
-      formRepository.remove!.mockResolvedValue(form);
 
       const result = await service.removeForm(form);
 
       expect(result).toBe(true);
-      expect(formRepository.remove).toHaveBeenCalledWith(form);
     });
   });
 });

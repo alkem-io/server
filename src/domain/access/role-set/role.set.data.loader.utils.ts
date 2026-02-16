@@ -1,7 +1,8 @@
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { ICredential } from '@domain/agent/credential/credential.interface';
-import { In, Repository } from 'typeorm';
-import { RoleSet } from './role.set.entity';
+import { inArray } from 'drizzle-orm';
+import { roleSets } from './role.set.schema';
 import { IRoleSet } from './role.set.interface';
 import { AgentRoleKey } from './types';
 
@@ -21,20 +22,20 @@ export async function loadAgentCredentials(
  * batch-fetch them in a single DB query and attach to the objects.
  */
 export async function ensureRolesLoaded(
-  roleSets: IRoleSet[],
-  roleSetRepository: Repository<RoleSet>
+  roleSetsList: IRoleSet[],
+  db: DrizzleDb
 ): Promise<void> {
-  const needsLoad = roleSets.filter(rs => !rs.roles);
+  const needsLoad = roleSetsList.filter(rs => !rs.roles);
   if (needsLoad.length === 0) return;
 
   const uniqueIds = [...new Set(needsLoad.map(rs => rs.id))];
-  const loaded = await roleSetRepository.find({
-    where: { id: In(uniqueIds) },
-    relations: { roles: true },
+  const loaded = await db.query.roleSets.findMany({
+    where: inArray(roleSets.id, uniqueIds),
+    with: { roles: true },
   });
   const rolesById = new Map(loaded.map(rs => [rs.id, rs.roles]));
 
   for (const rs of needsLoad) {
-    rs.roles = rolesById.get(rs.id);
+    rs.roles = rolesById.get(rs.id) as any;
   }
 }

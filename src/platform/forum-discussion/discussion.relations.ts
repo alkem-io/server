@@ -3,6 +3,7 @@ import { discussions } from './discussion.schema';
 import { forums } from '@platform/forum/forum.schema';
 import { profiles } from '@domain/common/profile/profile.schema';
 import { authorizationPolicies } from '@domain/common/authorization-policy/authorization.policy.schema';
+import { rooms } from '@domain/communication/room/room.schema';
 
 export const discussionsRelations = relations(discussions, ({ one }) => ({
   forum: one(forums, {
@@ -16,5 +17,9 @@ export const discussionsRelations = relations(discussions, ({ one }) => ({
   authorization: one(authorizationPolicies, {
     fields: [discussions.authorizationId],
     references: [authorizationPolicies.id],
+  }),
+  comments: one(rooms, {
+    fields: [discussions.commentsId],
+    references: [rooms.id],
   }),
 }));

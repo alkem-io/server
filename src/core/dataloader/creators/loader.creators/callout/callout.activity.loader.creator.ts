@@ -1,10 +1,11 @@
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { DataLoaderCreator } from '@core/dataloader/creators/base';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
-import { Injectable } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
+import { calloutContributions } from '@domain/collaboration/callout-contribution/callout.contribution.schema';
+import { Inject, Injectable } from '@nestjs/common';
 import DataLoader from 'dataloader';
-import { EntityManager } from 'typeorm';
+import { count, inArray } from 'drizzle-orm';
 
 /**
  * DataLoader creator that batches callout contribution counts.
@@ -17,7 +18,7 @@ import { EntityManager } from 'typeorm';
  */
 @Injectable()
 export class CalloutActivityLoaderCreator implements DataLoaderCreator<number> {
-  constructor(@InjectEntityManager() private manager: EntityManager) {}
+  constructor(@Inject(DRIZZLE) private readonly db: DrizzleDb) {}
 
   public create(): ILoader<number> {
     return new DataLoader<string, number>(
@@ -32,20 +33,20 @@ export class CalloutActivityLoaderCreator implements DataLoaderCreator<number> {
     }
 
     // Single grouped COUNT query for all callout IDs
-    const results = await this.manager
-      .getRepository(CalloutContribution)
-      .createQueryBuilder('contribution')
-      .select('contribution.calloutId', 'calloutId')
-      .addSelect('COUNT(*)', 'count')
-      .where('contribution.calloutId IN (:...calloutIds)', {
-        calloutIds: [...calloutIds],
+    const results = await this.db
+      .select({
+        calloutId: calloutContributions.calloutId,
+        count: count(),
       })
-      .groupBy('contribution.calloutId')
-      .getRawMany<{ calloutId: string; count: string }>();
+      .from(calloutContributions)
+      .where(inArray(calloutContributions.calloutId, [...calloutIds]))
+      .groupBy(calloutContributions.calloutId);
 
     const countsMap = new Map<string, number>();
     for (const row of results) {
-      countsMap.set(row.calloutId, parseInt(row.count, 10));
+      if (row.calloutId) {
+        countsMap.set(row.calloutId, row.count);
+      }
     }
 
     // Return in input order; 0 for callouts with no contributions

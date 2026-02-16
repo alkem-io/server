@@ -25,9 +25,10 @@ export class SpaceAboutAuthorizationService {
       spaceAboutID,
       {
         with: {
+          authorization: true,
           profile: true,
           guidelines: {
-            with: { profile: true },
+            with: { authorization: true, profile: true },
           },
         },
       }

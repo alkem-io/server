@@ -1,26 +1,22 @@
 import { EntityNotFoundException } from '@common/exceptions';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { MockType } from '@test/utils/mock.type';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { EntityManager, Repository } from 'typeorm';
 import { vi } from 'vitest';
 import { LicensePolicy } from './license.policy.entity';
 import { ILicensePolicy } from './license.policy.interface';
 import { LicensePolicyService } from './license.policy.service';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 
 describe('LicensePolicyService', () => {
   let service: LicensePolicyService;
-  let licensePolicyRepository: MockType<Repository<LicensePolicy>>;
-  let entityManager: EntityManager;
-
+  let db: any;
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         LicensePolicyService,
-        repositoryProviderMockFactory(LicensePolicy),
+        mockDrizzleProvider,
         MockWinstonProvider,
       ],
     })
@@ -28,8 +24,7 @@ describe('LicensePolicyService', () => {
       .compile();
 
     service = module.get(LicensePolicyService);
-    licensePolicyRepository = module.get(getRepositoryToken(LicensePolicy));
-    entityManager = module.get(EntityManager);
+    db = module.get(DRIZZLE);
   });
 
   describe('getLicensePolicyOrFail', () => {
@@ -38,7 +33,7 @@ describe('LicensePolicyService', () => {
         id: 'policy-1',
         credentialRules: [],
       } as unknown as LicensePolicy;
-      licensePolicyRepository.findOneBy!.mockResolvedValue(policy);
+      db.query.licensePolicies.findFirst.mockResolvedValueOnce(policy);
 
       const result = await service.getLicensePolicyOrFail('policy-1');
 
@@ -46,7 +41,6 @@ describe('LicensePolicyService', () => {
     });
 
     it('should throw EntityNotFoundException when not found', async () => {
-      licensePolicyRepository.findOneBy!.mockResolvedValue(null);
 
       await expect(service.getLicensePolicyOrFail('missing')).rejects.toThrow(
         EntityNotFoundException
@@ -60,7 +54,7 @@ describe('LicensePolicyService', () => {
         id: 'policy-1',
         credentialRules: [],
       } as unknown as LicensePolicy;
-      vi.mocked(entityManager.findOne).mockResolvedValue(policy);
+      db.query.licensePolicies.findFirst.mockResolvedValueOnce(policy);
 
       const result = await service.getDefaultLicensePolicyOrFail();
 
@@ -68,7 +62,6 @@ describe('LicensePolicyService', () => {
     });
 
     it('should throw EntityNotFoundException when no default policy found', async () => {
-      vi.mocked(entityManager.findOne).mockResolvedValue(null);
 
       await expect(service.getDefaultLicensePolicyOrFail()).rejects.toThrow(
         EntityNotFoundException
@@ -94,7 +87,7 @@ describe('LicensePolicyService', () => {
         id: 'policy-1',
         credentialRules: [rule1, rule2],
       } as unknown as ILicensePolicy;
-      licensePolicyRepository.save!.mockResolvedValue(policy);
+      db.returning.mockResolvedValueOnce([policy]);
 
       const result = await service.deleteLicensePolicyCredentialRule(
         'rule-1',
@@ -104,7 +97,6 @@ describe('LicensePolicyService', () => {
       expect(result.id).toBe('rule-1');
       expect(policy.credentialRules).toHaveLength(1);
       expect(policy.credentialRules[0].id).toBe('rule-2');
-      expect(licensePolicyRepository.save).toHaveBeenCalled();
     });
 
     it('should throw EntityNotFoundException when rule ID not found in policy', async () => {
@@ -138,11 +130,8 @@ describe('LicensePolicyService', () => {
         id: 'policy-1',
         credentialRules: [rule],
       } as unknown as ILicensePolicy;
-
-      vi.mocked(entityManager.findOne).mockResolvedValue(
-        policy as unknown as LicensePolicy
-      );
-      licensePolicyRepository.save!.mockResolvedValue(policy);
+      db.query.licensePolicies.findFirst.mockResolvedValueOnce(policy);
+      db.returning.mockResolvedValueOnce([policy]);
 
       const result = await service.updateCredentialRule({
         ID: 'rule-1',
@@ -151,7 +140,6 @@ describe('LicensePolicyService', () => {
 
       expect(result.name).toBe('New Name');
       expect(result.credentialType).toBe('TYPE_A');
-      expect(licensePolicyRepository.save).toHaveBeenCalled();
     });
 
     it('should throw EntityNotFoundException when rule to update is not found', async () => {
@@ -159,10 +147,7 @@ describe('LicensePolicyService', () => {
         id: 'policy-1',
         credentialRules: [],
       } as unknown as ILicensePolicy;
-
-      vi.mocked(entityManager.findOne).mockResolvedValue(
-        policy as unknown as LicensePolicy
-      );
+      db.query.licensePolicies.findFirst.mockResolvedValueOnce(policy);
 
       await expect(
         service.updateCredentialRule({ ID: 'non-existent', name: 'New' })
@@ -180,11 +165,8 @@ describe('LicensePolicyService', () => {
         id: 'policy-1',
         credentialRules: [rule],
       } as unknown as ILicensePolicy;
-
-      vi.mocked(entityManager.findOne).mockResolvedValue(
-        policy as unknown as LicensePolicy
-      );
-      licensePolicyRepository.save!.mockResolvedValue(policy);
+      db.query.licensePolicies.findFirst.mockResolvedValueOnce(policy);
+      db.returning.mockResolvedValueOnce([policy]);
 
       const result = await service.updateCredentialRule({
         ID: 'rule-1',

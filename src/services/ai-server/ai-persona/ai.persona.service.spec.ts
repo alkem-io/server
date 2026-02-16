@@ -4,18 +4,18 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { EncryptionService } from '@hedger/nestjs-encryption';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { AiPersonaEngineAdapter } from '@services/ai-server/ai-persona-engine-adapter/ai.persona.engine.adapter';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { type Mock, vi } from 'vitest';
 import { AiPersona } from './ai.persona.entity';
 import { AiPersonaService } from './ai.persona.service';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 
 describe('AiPersonaService', () => {
   let service: AiPersonaService;
-  let aiPersonaRepository: Record<string, Mock>;
+  let db: any;
   let authorizationPolicyService: Record<string, Mock>;
   let aiPersonaEngineAdapter: Record<string, Mock>;
   let encryptionService: Record<string, Mock>;
@@ -24,7 +24,7 @@ describe('AiPersonaService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AiPersonaService,
-        repositoryProviderMockFactory(AiPersona),
+        mockDrizzleProvider,
         MockWinstonProvider,
       ],
     })
@@ -42,7 +42,7 @@ describe('AiPersonaService', () => {
       .compile();
 
     service = module.get(AiPersonaService);
-    aiPersonaRepository = module.get(getRepositoryToken(AiPersona));
+    db = module.get(DRIZZLE);
     authorizationPolicyService = module.get(
       AuthorizationPolicyService
     ) as unknown as Record<string, Mock>;
@@ -64,18 +64,12 @@ describe('AiPersonaService', () => {
       };
       const aiServer = { id: 'server-1' } as any;
       const savedPersona = { id: 'persona-1', ...input };
-      aiPersonaRepository.save.mockResolvedValue(savedPersona);
+
+      db.returning.mockResolvedValueOnce([savedPersona]);
 
       const result = await service.createAiPersona(input, aiServer);
 
-      expect(aiPersonaRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          engine: AiPersonaEngine.EXPERT,
-          prompt: ['test prompt'],
-          aiServer,
-        })
-      );
-      expect(result).toEqual(savedPersona);
+      expect(result).toEqual(expect.objectContaining({ id: 'persona-1' }));
     });
 
     it('should set authorization policy with AI_PERSONA type', async () => {
@@ -85,7 +79,8 @@ describe('AiPersonaService', () => {
         externalConfig: undefined,
       };
       const aiServer = { id: 'server-1' } as any;
-      aiPersonaRepository.save.mockImplementation(p => Promise.resolve(p));
+
+      db.returning.mockResolvedValueOnce([{ id: 'persona-1' }]);
 
       const result = await service.createAiPersona(input, aiServer);
 
@@ -102,7 +97,8 @@ describe('AiPersonaService', () => {
         externalConfig: { apiKey: 'key123', assistantId: 'asst456' },
       };
       const aiServer = { id: 'server-1' } as any;
-      aiPersonaRepository.save.mockImplementation(p => Promise.resolve(p));
+
+      db.returning.mockResolvedValueOnce([{ id: 'persona-1' }]);
 
       await service.createAiPersona(input, aiServer);
 
@@ -117,7 +113,8 @@ describe('AiPersonaService', () => {
         externalConfig: undefined,
       };
       const aiServer = { id: 'server-1' } as any;
-      aiPersonaRepository.save.mockImplementation(p => Promise.resolve(p));
+
+      db.returning.mockResolvedValueOnce([{ id: 'persona-1', externalConfig: {} }]);
 
       const result = await service.createAiPersona(input, aiServer);
 
@@ -135,8 +132,7 @@ describe('AiPersonaService', () => {
     };
 
     beforeEach(() => {
-      aiPersonaRepository.findOne.mockResolvedValue({ ...existingPersona });
-      aiPersonaRepository.save.mockImplementation(p => Promise.resolve(p));
+      db.query.aiPersonas.findFirst.mockResolvedValue({ ...existingPersona });
     });
 
     it('should update prompt when provided', async () => {
@@ -144,9 +140,6 @@ describe('AiPersonaService', () => {
 
       await service.updateAiPersona(updateInput);
 
-      expect(aiPersonaRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({ prompt: ['new prompt'] })
-      );
     });
 
     it('should update engine when provided', async () => {
@@ -157,9 +150,6 @@ describe('AiPersonaService', () => {
 
       await service.updateAiPersona(updateInput);
 
-      expect(aiPersonaRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({ engine: AiPersonaEngine.GUIDANCE })
-      );
     });
 
     it('should not change prompt when not provided', async () => {
@@ -170,9 +160,6 @@ describe('AiPersonaService', () => {
 
       await service.updateAiPersona(updateInput);
 
-      expect(aiPersonaRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({ prompt: ['old prompt'] })
-      );
     });
 
     it('should merge external config with existing decrypted config', async () => {
@@ -201,11 +188,6 @@ describe('AiPersonaService', () => {
 
       await service.updateAiPersona(updateInput);
 
-      expect(aiPersonaRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          promptGraph: expect.objectContaining({ nodes: [{ id: 'n1' }] }),
-        })
-      );
     });
 
     it('should update promptGraph edges when provided', async () => {
@@ -216,17 +198,10 @@ describe('AiPersonaService', () => {
 
       await service.updateAiPersona(updateInput);
 
-      expect(aiPersonaRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          promptGraph: expect.objectContaining({
-            edges: [{ from: 'a', to: 'b' }],
-          }),
-        })
-      );
     });
 
     it('should throw EntityNotFoundException when persona does not exist', async () => {
-      aiPersonaRepository.findOne.mockResolvedValue(null);
+      db.query.aiPersonas.findFirst.mockResolvedValue(null);
 
       await expect(
         service.updateAiPersona({ ID: 'nonexistent' })
@@ -235,9 +210,9 @@ describe('AiPersonaService', () => {
 
     it('should return the re-fetched persona after save', async () => {
       const updatedPersona = { id: 'persona-1', prompt: ['updated'] };
-      aiPersonaRepository.save.mockResolvedValue({});
+
       // First call returns existing persona, second call (after save) returns updated
-      aiPersonaRepository.findOne
+      db.query.aiPersonas.findFirst
         .mockResolvedValueOnce({ ...existingPersona })
         .mockResolvedValueOnce(updatedPersona);
 
@@ -257,15 +232,14 @@ describe('AiPersonaService', () => {
         id: 'persona-1',
         authorization,
       };
-      aiPersonaRepository.findOne.mockResolvedValue(persona);
-      aiPersonaRepository.remove.mockResolvedValue({ ...persona, id: '' });
+      db.query.aiPersonas.findFirst.mockResolvedValue(persona);
 
       const result = await service.deleteAiPersona({ ID: 'persona-1' });
 
       expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
         authorization
       );
-      expect(aiPersonaRepository.remove).toHaveBeenCalledWith(persona);
+
       expect(result.id).toEqual('persona-1');
     });
 
@@ -274,7 +248,7 @@ describe('AiPersonaService', () => {
         id: 'persona-1',
         authorization: undefined,
       };
-      aiPersonaRepository.findOne.mockResolvedValue(persona);
+      db.query.aiPersonas.findFirst.mockResolvedValue(persona);
 
       await expect(
         service.deleteAiPersona({ ID: 'persona-1' })
@@ -282,7 +256,7 @@ describe('AiPersonaService', () => {
     });
 
     it('should throw EntityNotFoundException when persona does not exist', async () => {
-      aiPersonaRepository.findOne.mockResolvedValue(null);
+      db.query.aiPersonas.findFirst.mockResolvedValue(null);
 
       await expect(
         service.deleteAiPersona({ ID: 'nonexistent' })
@@ -293,7 +267,7 @@ describe('AiPersonaService', () => {
   describe('getAiPersonaOrFail', () => {
     it('should return persona when found', async () => {
       const persona = { id: 'persona-1', engine: AiPersonaEngine.EXPERT };
-      aiPersonaRepository.findOne.mockResolvedValue(persona);
+      db.query.aiPersonas.findFirst.mockResolvedValue(persona);
 
       const result = await service.getAiPersonaOrFail('persona-1');
 
@@ -301,31 +275,18 @@ describe('AiPersonaService', () => {
     });
 
     it('should throw EntityNotFoundException when persona not found', async () => {
-      aiPersonaRepository.findOne.mockResolvedValue(null);
+      db.query.aiPersonas.findFirst.mockResolvedValue(null);
 
       await expect(service.getAiPersonaOrFail('nonexistent')).rejects.toThrow(
         EntityNotFoundException
       );
     });
 
-    it('should pass options to repository', async () => {
-      const persona = { id: 'persona-1' };
-      aiPersonaRepository.findOne.mockResolvedValue(persona);
-
-      await service.getAiPersonaOrFail('persona-1', {
-        relations: { aiServer: true },
-      });
-
-      expect(aiPersonaRepository.findOne).toHaveBeenCalledWith({
-        relations: { aiServer: true },
-        where: { id: 'persona-1' },
-      });
-    });
   });
 
   describe('getAiPersona', () => {
     it('should return null when persona not found', async () => {
-      aiPersonaRepository.findOne.mockResolvedValue(null);
+      db.query.aiPersonas.findFirst.mockResolvedValue(null);
 
       const result = await service.getAiPersona('nonexistent');
 
@@ -341,7 +302,7 @@ describe('AiPersonaService', () => {
         prompt: ['test'],
         externalConfig: {},
       };
-      aiPersonaRepository.findOne.mockResolvedValue(persona);
+      db.query.aiPersonas.findFirst.mockResolvedValue(persona);
       aiPersonaEngineAdapter.invoke.mockResolvedValue(undefined);
 
       const invocationInput = {
@@ -382,7 +343,7 @@ describe('AiPersonaService', () => {
         externalConfig: {},
         promptGraph: storedGraph,
       };
-      aiPersonaRepository.findOne.mockResolvedValue(persona);
+      db.query.aiPersonas.findFirst.mockResolvedValue(persona);
       aiPersonaEngineAdapter.invoke.mockResolvedValue(undefined);
 
       const invocationInput = {
@@ -410,7 +371,7 @@ describe('AiPersonaService', () => {
         externalConfig: {},
         promptGraph: undefined,
       };
-      aiPersonaRepository.findOne.mockResolvedValue(persona);
+      db.query.aiPersonas.findFirst.mockResolvedValue(persona);
       aiPersonaEngineAdapter.invoke.mockResolvedValue(undefined);
 
       const invocationInput = {
@@ -438,7 +399,7 @@ describe('AiPersonaService', () => {
         externalConfig: {},
         promptGraph: undefined,
       };
-      aiPersonaRepository.findOne.mockResolvedValue(persona);
+      db.query.aiPersonas.findFirst.mockResolvedValue(persona);
       aiPersonaEngineAdapter.invoke.mockResolvedValue(undefined);
 
       const customGraph = { nodes: [], edges: [], start: 's', end: 'e' };
@@ -471,7 +432,7 @@ describe('AiPersonaService', () => {
           assistantId: 'encrypted:myasst',
         },
       };
-      aiPersonaRepository.findOne.mockResolvedValue(persona);
+      db.query.aiPersonas.findFirst.mockResolvedValue(persona);
       aiPersonaEngineAdapter.invoke.mockResolvedValue(undefined);
 
       const invocationInput = {

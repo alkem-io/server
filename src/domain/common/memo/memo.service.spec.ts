@@ -6,23 +6,21 @@ import {
 } from '@common/exceptions';
 import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { MockType } from '@test/utils/mock.type';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
 import { type Mock } from 'vitest';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { ProfileService } from '../profile/profile.service';
 import { Memo } from './memo.entity';
 import { IMemo } from './memo.interface';
 import { MemoService } from './memo.service';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 
 describe('MemoService', () => {
   let service: MemoService;
-  let memoRepository: MockType<Repository<Memo>>;
+  let db: any;
   let authorizationPolicyService: AuthorizationPolicyService;
   let profileService: ProfileService;
   let profileDocumentsService: ProfileDocumentsService;
@@ -38,7 +36,7 @@ describe('MemoService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         MemoService,
-        repositoryProviderMockFactory(Memo),
+        mockDrizzleProvider,
         MockCacheManager,
         MockWinstonProvider,
       ],
@@ -47,7 +45,7 @@ describe('MemoService', () => {
       .compile();
 
     service = module.get(MemoService);
-    memoRepository = module.get(getRepositoryToken(Memo));
+    db = module.get(DRIZZLE);
     authorizationPolicyService = module.get(AuthorizationPolicyService);
     profileService = module.get(ProfileService);
     profileDocumentsService = module.get(ProfileDocumentsService);
@@ -56,7 +54,7 @@ describe('MemoService', () => {
   describe('getMemoOrFail', () => {
     it('should return the memo when found', async () => {
       const memo = { id: 'memo-1' } as Memo;
-      memoRepository.findOne!.mockResolvedValue(memo);
+      db.query.memos.findFirst.mockResolvedValueOnce(memo);
 
       const result = await service.getMemoOrFail('memo-1');
 
@@ -64,7 +62,6 @@ describe('MemoService', () => {
     });
 
     it('should throw EntityNotFoundException when memo not found', async () => {
-      memoRepository.findOne!.mockResolvedValue(null);
 
       await expect(service.getMemoOrFail('missing')).rejects.toThrow(
         EntityNotFoundException
@@ -79,9 +76,8 @@ describe('MemoService', () => {
         profile: { id: 'profile-1' },
         authorization: { id: 'auth-1' },
       } as unknown as Memo;
+      db.query.memos.findFirst.mockResolvedValueOnce(memo);
 
-      memoRepository.findOne!.mockResolvedValue(memo);
-      memoRepository.remove!.mockResolvedValue({ ...memo, id: undefined });
       (profileService.deleteProfile as Mock).mockResolvedValue({} as any);
       (authorizationPolicyService.delete as Mock).mockResolvedValue({} as any);
 
@@ -100,8 +96,7 @@ describe('MemoService', () => {
         profile: undefined,
         authorization: { id: 'auth-1' },
       } as unknown as Memo;
-
-      memoRepository.findOne!.mockResolvedValue(memo);
+      db.query.memos.findFirst.mockResolvedValueOnce(memo);
 
       await expect(service.deleteMemo('memo-1')).rejects.toThrow(
         RelationshipNotFoundException
@@ -114,8 +109,7 @@ describe('MemoService', () => {
         profile: { id: 'profile-1' },
         authorization: undefined,
       } as unknown as Memo;
-
-      memoRepository.findOne!.mockResolvedValue(memo);
+      db.query.memos.findFirst.mockResolvedValueOnce(memo);
 
       await expect(service.deleteMemo('memo-1')).rejects.toThrow(
         RelationshipNotFoundException
@@ -142,9 +136,8 @@ describe('MemoService', () => {
         profile: { id: 'p1' },
         contentUpdatePolicy: ContentUpdatePolicy.CONTRIBUTORS,
       } as unknown as IMemo;
-
-      memoRepository.findOne!.mockResolvedValue(memo);
-      memoRepository.save!.mockResolvedValue(memo);
+      db.query.memos.findFirst.mockResolvedValueOnce(memo);
+      db.returning.mockResolvedValueOnce([memo]);
 
       await service.updateMemo('memo-1', {
         contentUpdatePolicy: ContentUpdatePolicy.ADMINS,
@@ -159,9 +152,9 @@ describe('MemoService', () => {
         profile: { id: 'p1' },
         contentUpdatePolicy: ContentUpdatePolicy.CONTRIBUTORS,
       } as unknown as IMemo;
+      db.query.memos.findFirst.mockResolvedValueOnce(memo);
+      db.returning.mockResolvedValueOnce([memo]);
 
-      memoRepository.findOne!.mockResolvedValue(memo);
-      memoRepository.save!.mockResolvedValue(memo);
       (profileService.updateProfile as Mock).mockResolvedValue({
         id: 'p1',
         displayName: 'Updated',
@@ -181,13 +174,11 @@ describe('MemoService', () => {
         id: 'memo-1',
         profile: { id: 'p1', storageBucket: { id: 'sb-1' } },
       } as unknown as IMemo;
-
-      memoRepository.findOne!.mockResolvedValue(memo);
+      db.query.memos.findFirst.mockResolvedValueOnce(memo);
 
       const result = await service.updateMemoContent('memo-1', '');
 
       expect(result).toBe(memo);
-      expect(memoRepository.save).not.toHaveBeenCalled();
     });
 
     it('should throw EntityNotInitializedException when profile is missing', async () => {
@@ -195,8 +186,7 @@ describe('MemoService', () => {
         id: 'memo-1',
         profile: undefined,
       } as unknown as IMemo;
-
-      memoRepository.findOne!.mockResolvedValue(memo);
+      db.query.memos.findFirst.mockResolvedValueOnce(memo);
 
       await expect(
         service.updateMemoContent('memo-1', 'some content')
@@ -209,9 +199,9 @@ describe('MemoService', () => {
         profile: { id: 'p1', storageBucket: { id: 'sb-1' } },
         content: undefined,
       } as unknown as IMemo;
+      db.query.memos.findFirst.mockResolvedValueOnce(memo);
+      db.returning.mockResolvedValueOnce([memo]);
 
-      memoRepository.findOne!.mockResolvedValue(memo);
-      memoRepository.save!.mockImplementation(async (m: any) => m);
       (
         profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket as Mock
       ).mockResolvedValue('reuploaded content');
@@ -232,7 +222,7 @@ describe('MemoService', () => {
     it('should return profile when present on memo', async () => {
       const profile = { id: 'profile-1' };
       const memo = { id: 'memo-1', profile } as unknown as IMemo;
-      memoRepository.findOne!.mockResolvedValue(memo);
+      db.query.memos.findFirst.mockResolvedValueOnce(memo);
 
       const result = await service.getProfile('memo-1');
 
@@ -241,7 +231,7 @@ describe('MemoService', () => {
 
     it('should throw EntityNotFoundException when profile not initialized', async () => {
       const memo = { id: 'memo-1', profile: undefined } as unknown as IMemo;
-      memoRepository.findOne!.mockResolvedValue(memo);
+      db.query.memos.findFirst.mockResolvedValueOnce(memo);
 
       await expect(service.getProfile('memo-1')).rejects.toThrow(
         EntityNotFoundException

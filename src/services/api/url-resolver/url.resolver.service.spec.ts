@@ -11,7 +11,6 @@ import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.serv
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { InnovationPackService } from '@library/innovation-pack/innovation.pack.service';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getEntityManagerToken } from '@nestjs/typeorm';
 import { ForumDiscussionLookupService } from '@platform/forum-discussion-lookup/forum.discussion.lookup.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -20,6 +19,7 @@ import { type Mock, vi } from 'vitest';
 import { UrlResolverResultState } from './dto/url.resolver.result.state';
 import { UrlResolverException } from './url.resolver.exception';
 import { UrlResolverService } from './url.resolver.service';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
 
 describe('UrlResolverService', () => {
   let service: UrlResolverService;
@@ -55,10 +55,6 @@ describe('UrlResolverService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UrlResolverService,
-        {
-          provide: getEntityManagerToken('default'),
-          useValue: entityManager,
-        },
         MockWinstonProvider,
       ],
     })

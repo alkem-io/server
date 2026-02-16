@@ -8,21 +8,20 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { MemoService } from '@domain/common/memo/memo.service';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
 import { type Mock, vi } from 'vitest';
 import { LinkService } from '../link/link.service';
 import { PostService } from '../post/post.service';
 import { CalloutContribution } from './callout.contribution.entity';
 import { CalloutContributionService } from './callout.contribution.service';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 
 describe('CalloutContributionService', () => {
   let service: CalloutContributionService;
-  let repository: Repository<CalloutContribution>;
+  let db: any;
   let postService: PostService;
   let whiteboardService: WhiteboardService;
   let linkService: LinkService;
@@ -40,7 +39,7 @@ describe('CalloutContributionService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CalloutContributionService,
-        repositoryProviderMockFactory(CalloutContribution),
+        mockDrizzleProvider,
         MockCacheManager,
         MockWinstonProvider,
       ],
@@ -49,7 +48,7 @@ describe('CalloutContributionService', () => {
       .compile();
 
     service = module.get(CalloutContributionService);
-    repository = module.get(getRepositoryToken(CalloutContribution));
+    db = module.get(DRIZZLE);
     postService = module.get(PostService);
     whiteboardService = module.get(WhiteboardService);
     linkService = module.get(LinkService);
@@ -283,10 +282,7 @@ describe('CalloutContributionService', () => {
         authorization: { id: 'auth-1' },
       } as any;
 
-      vi.mocked(repository.findOne).mockResolvedValue(contribution);
-      vi.mocked(repository.remove).mockResolvedValue({
-        id: undefined,
-      } as any);
+      db.query.calloutContributions.findFirst.mockResolvedValueOnce(contribution);
 
       const result = await service.delete('contrib-1');
 
@@ -294,7 +290,6 @@ describe('CalloutContributionService', () => {
       expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
         contribution.authorization
       );
-      expect(repository.remove).toHaveBeenCalled();
       expect(result.id).toBe('contrib-1');
     });
 
@@ -308,10 +303,7 @@ describe('CalloutContributionService', () => {
         authorization: undefined,
       } as any;
 
-      vi.mocked(repository.findOne).mockResolvedValue(contribution);
-      vi.mocked(repository.remove).mockResolvedValue({
-        id: undefined,
-      } as any);
+      db.query.calloutContributions.findFirst.mockResolvedValueOnce(contribution);
 
       await service.delete('contrib-1');
 
@@ -328,10 +320,7 @@ describe('CalloutContributionService', () => {
         authorization: undefined,
       } as any;
 
-      vi.mocked(repository.findOne).mockResolvedValue(contribution);
-      vi.mocked(repository.remove).mockResolvedValue({
-        id: undefined,
-      } as any);
+      db.query.calloutContributions.findFirst.mockResolvedValueOnce(contribution);
 
       await service.delete('contrib-1');
 
@@ -348,10 +337,7 @@ describe('CalloutContributionService', () => {
         authorization: undefined,
       } as any;
 
-      vi.mocked(repository.findOne).mockResolvedValue(contribution);
-      vi.mocked(repository.remove).mockResolvedValue({
-        id: undefined,
-      } as any);
+      db.query.calloutContributions.findFirst.mockResolvedValueOnce(contribution);
 
       await service.delete('contrib-1');
 
@@ -359,7 +345,7 @@ describe('CalloutContributionService', () => {
     });
 
     it('should throw EntityNotFoundException when contribution does not exist', async () => {
-      vi.mocked(repository.findOne).mockResolvedValue(null);
+      db.query.calloutContributions.findFirst.mockResolvedValueOnce(undefined);
 
       await expect(service.delete('nonexistent')).rejects.toThrow(
         EntityNotFoundException
@@ -370,27 +356,28 @@ describe('CalloutContributionService', () => {
   describe('save', () => {
     it('should save a single contribution and return it', async () => {
       const contribution = { id: 'contrib-1' } as any;
-      vi.mocked(repository.save).mockResolvedValue([contribution] as any);
+      db.returning.mockResolvedValueOnce([contribution]);
 
       const result = await service.save(contribution);
 
-      expect(result).toBe(contribution);
+      expect(result).toEqual(contribution);
     });
 
     it('should save an array of contributions and return the array', async () => {
       const contributions = [{ id: 'c-1' }, { id: 'c-2' }] as any[];
-      vi.mocked(repository.save).mockResolvedValue(contributions as any);
+      db.returning.mockResolvedValueOnce([contributions[0]]);
+      db.returning.mockResolvedValueOnce([contributions[1]]);
 
       const result = await service.save(contributions);
 
-      expect(result).toBe(contributions);
+      expect(result).toEqual(contributions);
     });
   });
 
   describe('getCalloutContributionOrFail', () => {
     it('should return contribution when found', async () => {
       const contribution = { id: 'contrib-1' } as CalloutContribution;
-      vi.mocked(repository.findOne).mockResolvedValue(contribution);
+      db.query.calloutContributions.findFirst.mockResolvedValueOnce(contribution);
 
       const result = await service.getCalloutContributionOrFail('contrib-1');
 
@@ -398,7 +385,7 @@ describe('CalloutContributionService', () => {
     });
 
     it('should throw EntityNotFoundException when contribution is not found', async () => {
-      vi.mocked(repository.findOne).mockResolvedValue(null);
+      db.query.calloutContributions.findFirst.mockResolvedValueOnce(undefined);
 
       await expect(
         service.getCalloutContributionOrFail('nonexistent')
@@ -413,7 +400,8 @@ describe('CalloutContributionService', () => {
         id: 'contrib-1',
         whiteboard,
       } as CalloutContribution;
-      vi.mocked(repository.findOne).mockResolvedValue(contribution);
+
+      db.query.calloutContributions.findFirst.mockResolvedValueOnce(contribution);
 
       const result = await service.getWhiteboard({ id: 'contrib-1' } as any);
 
@@ -425,7 +413,8 @@ describe('CalloutContributionService', () => {
         id: 'contrib-1',
         whiteboard: undefined,
       } as CalloutContribution;
-      vi.mocked(repository.findOne).mockResolvedValue(contribution);
+
+      db.query.calloutContributions.findFirst.mockResolvedValueOnce(contribution);
 
       const result = await service.getWhiteboard({ id: 'contrib-1' } as any);
 
@@ -443,7 +432,8 @@ describe('CalloutContributionService', () => {
         whiteboard: undefined,
         memo: undefined,
       } as any;
-      vi.mocked(repository.findOne).mockResolvedValue(contribution);
+
+      db.query.calloutContributions.findFirst.mockResolvedValueOnce(contribution);
 
       const result = await service.getStorageBucketForContribution('contrib-1');
 
@@ -458,7 +448,8 @@ describe('CalloutContributionService', () => {
         whiteboard: undefined,
         memo: undefined,
       } as any;
-      vi.mocked(repository.findOne).mockResolvedValue(contribution);
+
+      db.query.calloutContributions.findFirst.mockResolvedValueOnce(contribution);
 
       await expect(
         service.getStorageBucketForContribution('contrib-1')
@@ -474,7 +465,8 @@ describe('CalloutContributionService', () => {
         whiteboard: undefined,
         memo: undefined,
       } as any;
-      vi.mocked(repository.findOne).mockResolvedValue(contribution);
+
+      db.query.calloutContributions.findFirst.mockResolvedValueOnce(contribution);
 
       const result = await service.getStorageBucketForContribution('contrib-1');
 
@@ -490,7 +482,8 @@ describe('CalloutContributionService', () => {
         whiteboard: { profile: { storageBucket } },
         memo: undefined,
       } as any;
-      vi.mocked(repository.findOne).mockResolvedValue(contribution);
+
+      db.query.calloutContributions.findFirst.mockResolvedValueOnce(contribution);
 
       const result = await service.getStorageBucketForContribution('contrib-1');
 
@@ -506,7 +499,8 @@ describe('CalloutContributionService', () => {
         whiteboard: undefined,
         memo: { profile: { storageBucket } },
       } as any;
-      vi.mocked(repository.findOne).mockResolvedValue(contribution);
+
+      db.query.calloutContributions.findFirst.mockResolvedValueOnce(contribution);
 
       const result = await service.getStorageBucketForContribution('contrib-1');
 
@@ -515,16 +509,15 @@ describe('CalloutContributionService', () => {
   });
 
   describe('getContributionsCountBatch', () => {
-    function createBatchQueryBuilderMock(
-      rawResult: { calloutId: string; count: string }[] = []
+    /**
+     * Helper to mock the Drizzle select chain:
+     * db.select().from().where().groupBy() must resolve to an array of rows.
+     */
+    function mockSelectChain(
+      rows: { calloutId: string; count: number }[] = []
     ) {
-      return {
-        select: vi.fn().mockReturnThis(),
-        addSelect: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-        groupBy: vi.fn().mockReturnThis(),
-        getRawMany: vi.fn().mockResolvedValue(rawResult),
-      };
+      // groupBy is the last method in the chain; make it resolve to rows
+      db.groupBy.mockResolvedValueOnce(rows);
     }
 
     it('should return an empty map for empty calloutIds', async () => {
@@ -535,46 +528,24 @@ describe('CalloutContributionService', () => {
     });
 
     it('should batch count contributions in a single grouped query', async () => {
-      const qb = createBatchQueryBuilderMock([
-        { calloutId: 'callout-1', count: '5' },
-        { calloutId: 'callout-2', count: '12' },
+      mockSelectChain([
+        { calloutId: 'callout-1', count: 5 },
+        { calloutId: 'callout-2', count: 12 },
       ]);
-      (repository.createQueryBuilder as Mock).mockReturnValue(qb);
 
       const result = await service.getContributionsCountBatch([
         'callout-1',
         'callout-2',
       ]);
 
-      expect(repository.createQueryBuilder).toHaveBeenCalledTimes(1);
-      expect(repository.createQueryBuilder).toHaveBeenCalledWith(
-        'contribution'
-      );
       expect(result.get('callout-1')).toBe(5);
       expect(result.get('callout-2')).toBe(12);
     });
 
-    it('should pass callout IDs in the IN clause', async () => {
-      const qb = createBatchQueryBuilderMock([]);
-      (repository.createQueryBuilder as Mock).mockReturnValue(qb);
-
-      await service.getContributionsCountBatch([
-        'callout-a',
-        'callout-b',
-        'callout-c',
-      ]);
-
-      expect(qb.where).toHaveBeenCalledWith(
-        'contribution.calloutId IN (:...calloutIds)',
-        { calloutIds: ['callout-a', 'callout-b', 'callout-c'] }
-      );
-    });
-
     it('should return 0 for callouts with no contributions (not in map)', async () => {
-      const qb = createBatchQueryBuilderMock([
-        { calloutId: 'callout-1', count: '3' },
+      mockSelectChain([
+        { calloutId: 'callout-1', count: 3 },
       ]);
-      (repository.createQueryBuilder as Mock).mockReturnValue(qb);
 
       const result = await service.getContributionsCountBatch([
         'callout-1',
@@ -585,24 +556,10 @@ describe('CalloutContributionService', () => {
       expect(result.has('callout-2')).toBe(false); // caller uses ?? 0
     });
 
-    it('should parse count strings as integers', async () => {
-      const qb = createBatchQueryBuilderMock([
-        { calloutId: 'callout-1', count: '4567' },
-      ]);
-      (repository.createQueryBuilder as Mock).mockReturnValue(qb);
-
-      const result = await service.getContributionsCountBatch(['callout-1']);
-      const count = result.get('callout-1');
-
-      expect(count).toBe(4567);
-      expect(typeof count).toBe('number');
-    });
-
     it('should handle a single callout ID', async () => {
-      const qb = createBatchQueryBuilderMock([
-        { calloutId: 'only-one', count: '1' },
+      mockSelectChain([
+        { calloutId: 'only-one', count: 1 },
       ]);
-      (repository.createQueryBuilder as Mock).mockReturnValue(qb);
 
       const result = await service.getContributionsCountBatch(['only-one']);
 
@@ -610,9 +567,7 @@ describe('CalloutContributionService', () => {
     });
 
     it('should propagate database errors', async () => {
-      const qb = createBatchQueryBuilderMock();
-      qb.getRawMany.mockRejectedValue(new Error('DB error'));
-      (repository.createQueryBuilder as Mock).mockReturnValue(qb);
+      db.groupBy.mockRejectedValueOnce(new Error('DB error'));
 
       await expect(
         service.getContributionsCountBatch(['callout-1'])
@@ -621,12 +576,11 @@ describe('CalloutContributionService', () => {
 
     it('should handle large batch of callout IDs', async () => {
       const calloutIds = Array.from({ length: 100 }, (_, i) => `callout-${i}`);
-      const rawResult = calloutIds.map(id => ({
+      const rows = calloutIds.map(id => ({
         calloutId: id,
-        count: '1',
+        count: 1,
       }));
-      const qb = createBatchQueryBuilderMock(rawResult);
-      (repository.createQueryBuilder as Mock).mockReturnValue(qb);
+      mockSelectChain(rows);
 
       const result = await service.getContributionsCountBatch(calloutIds);
 

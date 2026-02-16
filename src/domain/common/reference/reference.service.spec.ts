@@ -1,28 +1,26 @@
 import { EntityNotFoundException } from '@common/exceptions';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { MockType } from '@test/utils/mock.type';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
 import { type Mock } from 'vitest';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { Reference } from './reference.entity';
 import { IReference } from './reference.interface';
 import { ReferenceService } from './reference.service';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 
 describe('ReferenceService', () => {
   let service: ReferenceService;
-  let referenceRepository: MockType<Repository<Reference>>;
+  let db: any;
   let authorizationPolicyService: AuthorizationPolicyService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ReferenceService,
-        repositoryProviderMockFactory(Reference),
+        mockDrizzleProvider,
         MockCacheManager,
         MockWinstonProvider,
       ],
@@ -31,7 +29,7 @@ describe('ReferenceService', () => {
       .compile();
 
     service = module.get(ReferenceService);
-    referenceRepository = module.get(getRepositoryToken(Reference));
+    db = module.get(DRIZZLE);
     authorizationPolicyService = module.get(AuthorizationPolicyService);
   });
 
@@ -60,7 +58,7 @@ describe('ReferenceService', () => {
   describe('getReferenceOrFail', () => {
     it('should return the reference when found', async () => {
       const ref = { id: 'ref-1', name: 'test' } as Reference;
-      referenceRepository.findOne!.mockResolvedValue(ref);
+      db.query.references.findFirst.mockResolvedValueOnce(ref);
 
       const result = await service.getReferenceOrFail('ref-1');
 
@@ -68,7 +66,6 @@ describe('ReferenceService', () => {
     });
 
     it('should throw EntityNotFoundException when not found', async () => {
-      referenceRepository.findOne!.mockResolvedValue(null);
 
       await expect(service.getReferenceOrFail('missing')).rejects.toThrow(
         EntityNotFoundException
@@ -180,12 +177,8 @@ describe('ReferenceService', () => {
         uri: 'uri',
         authorization: { id: 'auth-1' },
       } as unknown as Reference;
+      db.query.references.findFirst.mockResolvedValueOnce(reference);
 
-      referenceRepository.findOne!.mockResolvedValue(reference);
-      referenceRepository.remove!.mockResolvedValue({
-        name: 'test',
-        uri: 'uri',
-      });
       (authorizationPolicyService.delete as Mock).mockResolvedValue({} as any);
 
       const result = await service.deleteReference({ ID: 'ref-1' });
@@ -203,12 +196,7 @@ describe('ReferenceService', () => {
         uri: 'uri',
         authorization: undefined,
       } as unknown as Reference;
-
-      referenceRepository.findOne!.mockResolvedValue(reference);
-      referenceRepository.remove!.mockResolvedValue({
-        name: 'test',
-        uri: 'uri',
-      });
+      db.query.references.findFirst.mockResolvedValueOnce(reference);
 
       const result = await service.deleteReference({ ID: 'ref-2' });
 

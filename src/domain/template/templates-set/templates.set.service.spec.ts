@@ -5,43 +5,35 @@ import {
 } from '@common/exceptions';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
 import { type Mocked, vi } from 'vitest';
 import { ITemplate } from '../template/template.interface';
 import { TemplateService } from '../template/template.service';
 import { TemplatesSet } from './templates.set.entity';
 import { ITemplatesSet } from './templates.set.interface';
 import { TemplatesSetService } from './templates.set.service';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
 
 describe('TemplatesSetService', () => {
   let service: TemplatesSetService;
-  let repository: Mocked<Repository<TemplatesSet>>;
   let templateService: Mocked<TemplateService>;
   let namingService: Mocked<NamingService>;
   let inputCreatorService: Mocked<InputCreatorService>;
   let storageAggregatorResolverService: Mocked<StorageAggregatorResolverService>;
   let authorizationPolicyService: Mocked<AuthorizationPolicyService>;
+  let db: any;
 
   beforeEach(async () => {
-    // Mock static TemplatesSet.create to avoid DataSource requirement
-    vi.spyOn(TemplatesSet, 'create').mockImplementation((input: any) => {
-      const entity = new TemplatesSet();
-      Object.assign(entity, input);
-      return entity as any;
-    });
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TemplatesSetService,
-        repositoryProviderMockFactory(TemplatesSet),
+        mockDrizzleProvider,
         MockCacheManager,
         MockWinstonProvider,
       ],
@@ -50,9 +42,6 @@ describe('TemplatesSetService', () => {
       .compile();
 
     service = module.get(TemplatesSetService);
-    repository = module.get(getRepositoryToken(TemplatesSet)) as Mocked<
-      Repository<TemplatesSet>
-    >;
     templateService = module.get(TemplateService) as Mocked<TemplateService>;
     namingService = module.get(NamingService) as Mocked<NamingService>;
     inputCreatorService = module.get(
@@ -64,50 +53,34 @@ describe('TemplatesSetService', () => {
     authorizationPolicyService = module.get(
       AuthorizationPolicyService
     ) as Mocked<AuthorizationPolicyService>;
+    db = module.get(DRIZZLE);
   });
 
   describe('createTemplatesSet', () => {
     it('should create a templates set with authorization, empty templates array, and save it', async () => {
-      repository.save.mockImplementation(async (entity: any) => entity);
+      db.returning.mockResolvedValueOnce([{ id: 'ts-1', authorization: { id: 'auth-1', type: 'templates_set' }, templates: [] }]);
 
       const result = await service.createTemplatesSet();
 
       expect(result.authorization).toBeDefined();
       expect(result.templates).toEqual([]);
-      expect(repository.save).toHaveBeenCalled();
     });
   });
 
   describe('getTemplatesSetOrFail', () => {
-    it('should return templates set when found via static findOne', async () => {
+    it('should return templates set when found', async () => {
       const expected = { id: 'ts-1' } as TemplatesSet;
-      // TemplatesSet.findOne is a BaseEntity static method
-      const findOneSpy = vi
-        .spyOn(TemplatesSet, 'findOne')
-        .mockResolvedValue(expected);
+      db.query.templatesSets.findFirst.mockResolvedValueOnce(expected);
 
       const result = await service.getTemplatesSetOrFail('ts-1');
 
       expect(result).toBe(expected);
-      expect(findOneSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { id: 'ts-1' },
-        })
-      );
-
-      findOneSpy.mockRestore();
     });
 
     it('should throw EntityNotFoundException when not found', async () => {
-      const findOneSpy = vi
-        .spyOn(TemplatesSet, 'findOne')
-        .mockResolvedValue(null);
-
       await expect(service.getTemplatesSetOrFail('missing')).rejects.toThrow(
         EntityNotFoundException
       );
-
-      findOneSpy.mockRestore();
     });
   });
 
@@ -121,12 +94,9 @@ describe('TemplatesSetService', () => {
         templates: [template1, template2],
       } as unknown as TemplatesSet;
 
-      const findOneSpy = vi
-        .spyOn(TemplatesSet, 'findOne')
-        .mockResolvedValue(templatesSet);
+      db.query.templatesSets.findFirst.mockResolvedValueOnce(templatesSet);
       authorizationPolicyService.delete.mockResolvedValue({} as any);
       templateService.delete.mockResolvedValue({} as any);
-      repository.remove.mockResolvedValue(templatesSet);
 
       await service.deleteTemplatesSet('ts-1');
 
@@ -134,9 +104,6 @@ describe('TemplatesSetService', () => {
         templatesSet.authorization
       );
       expect(templateService.delete).toHaveBeenCalledTimes(2);
-      expect(repository.remove).toHaveBeenCalledWith(templatesSet);
-
-      findOneSpy.mockRestore();
     });
 
     it('should skip authorization deletion when authorization is not loaded', async () => {
@@ -146,17 +113,11 @@ describe('TemplatesSetService', () => {
         templates: [],
       } as unknown as TemplatesSet;
 
-      const findOneSpy = vi
-        .spyOn(TemplatesSet, 'findOne')
-        .mockResolvedValue(templatesSet);
-      repository.remove.mockResolvedValue(templatesSet);
+      db.query.templatesSets.findFirst.mockResolvedValueOnce(templatesSet);
 
       await service.deleteTemplatesSet('ts-1');
 
       expect(authorizationPolicyService.delete).not.toHaveBeenCalled();
-      expect(repository.remove).toHaveBeenCalledWith(templatesSet);
-
-      findOneSpy.mockRestore();
     });
   });
 

@@ -91,11 +91,16 @@ export class DiscussionService {
 
   async getDiscussionOrFail(
     discussionID: string,
-    options?: { relations?: Record<string, boolean> }
+    options?: { relations?: Record<string, boolean | Record<string, any>> }
   ): Promise<IDiscussion> {
     const with_ = options?.relations
       ? Object.fromEntries(
-          Object.entries(options.relations).map(([key, value]) => [key, value])
+          Object.entries(options.relations).map(([key, value]) => {
+            if (typeof value === 'object' && value !== null) {
+              return [key, { with: value }];
+            }
+            return [key, value];
+          })
         )
       : undefined;
 

@@ -218,20 +218,32 @@ export class AuthorizationPolicyService {
   }
 
   async saveAll(policies: IAuthorizationPolicy[]): Promise<void> {
-    if (policies.length > 500)
+    // Filter out policies without an ID — these were created in-memory by the
+    // inheritParentAuthorization fallback when a child entity's authorization
+    // relation was not loaded. They cannot be UPDATEd since they have no DB row.
+    const persistable = policies.filter(p => p.id);
+    const skipped = policies.length - persistable.length;
+    if (skipped > 0) {
       this.logger.warn?.(
-        `Saving ${policies.length} authorization policies of type ${policies[0].type}`,
-        LogContext.AUTH
-      );
-    else {
-      this.logger.verbose?.(
-        `Saving ${policies.length} authorization policies`,
+        `Skipped ${skipped} authorization policies without IDs (created by fallback)`,
         LogContext.AUTH
       );
     }
 
-    for (let i = 0; i < policies.length; i += this.authChunkSize) {
-      const chunk = policies.slice(i, i + this.authChunkSize);
+    if (persistable.length > 500)
+      this.logger.warn?.(
+        `Saving ${persistable.length} authorization policies of type ${persistable[0].type}`,
+        LogContext.AUTH
+      );
+    else {
+      this.logger.verbose?.(
+        `Saving ${persistable.length} authorization policies`,
+        LogContext.AUTH
+      );
+    }
+
+    for (let i = 0; i < persistable.length; i += this.authChunkSize) {
+      const chunk = persistable.slice(i, i + this.authChunkSize);
       await Promise.all(
         chunk.map((policy) =>
           this.db

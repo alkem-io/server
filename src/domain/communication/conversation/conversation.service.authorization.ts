@@ -31,7 +31,7 @@ export class ConversationAuthorizationService {
       {
         relations: {
           authorization: true,
-          room: true,
+          room: { authorization: true },
         },
       }
     );

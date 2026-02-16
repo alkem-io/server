@@ -11,6 +11,7 @@ import { vi } from 'vitest';
 export const createMockDrizzle = () => {
   const mock: any = {
     select: vi.fn().mockReturnThis(),
+    selectDistinct: vi.fn().mockReturnThis(),
     from: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
     orderBy: vi.fn().mockReturnThis(),

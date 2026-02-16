@@ -4,22 +4,22 @@ import {
   NotSupportedException,
 } from '@common/exceptions';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator/url.generator.service.cache';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
 import { Callout } from '../callout/callout.entity';
 import { CalloutContribution } from './callout.contribution.entity';
 import { CalloutContributionMoveService } from './callout.contribution.move.service';
 import { CalloutContributionService } from './callout.contribution.service';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import { vi } from 'vitest';
 
 describe('CalloutContributionMoveService', () => {
   let service: CalloutContributionMoveService;
-  let calloutRepository: Repository<Callout>;
-  let contributionRepository: Repository<CalloutContribution>;
+  let db: any;
+
   let contributionService: CalloutContributionService;
   let urlGeneratorCacheService: UrlGeneratorCacheService;
 
@@ -27,8 +27,7 @@ describe('CalloutContributionMoveService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CalloutContributionMoveService,
-        repositoryProviderMockFactory(Callout),
-        repositoryProviderMockFactory(CalloutContribution),
+        mockDrizzleProvider,
         MockCacheManager,
         MockWinstonProvider,
       ],
@@ -37,10 +36,8 @@ describe('CalloutContributionMoveService', () => {
       .compile();
 
     service = module.get(CalloutContributionMoveService);
-    calloutRepository = module.get(getRepositoryToken(Callout));
-    contributionRepository = module.get(
-      getRepositoryToken(CalloutContribution)
-    );
+    db = module.get(DRIZZLE);
+
     contributionService = module.get(CalloutContributionService);
     urlGeneratorCacheService = module.get(UrlGeneratorCacheService);
   });
@@ -90,12 +87,18 @@ describe('CalloutContributionMoveService', () => {
 
       vi.mocked(
         contributionService.getCalloutContributionOrFail
-      ).mockResolvedValue(contribution);
-      vi.mocked(calloutRepository.findOne).mockResolvedValue(targetCallout);
-      vi.mocked(contributionRepository.save).mockResolvedValue(contribution);
+      ).mockResolvedValueOnce(contribution)
+        .mockResolvedValueOnce({ ...contribution, callout: targetCallout } as any);
       vi.mocked(urlGeneratorCacheService.revokeUrlCache).mockResolvedValue(
         undefined as any
       );
+      // Mock db.query.calloutContributions.findFirst for contributionFull
+      db.query.calloutContributions.findFirst.mockResolvedValueOnce({
+        ...contribution,
+        post: { profile: { id: 'post-profile-id' } },
+      });
+      // Mock db.query.callouts.findFirst for targetCallout
+      db.query.callouts.findFirst.mockResolvedValueOnce(targetCallout);
 
       const result = await service.moveContributionToCallout(
         'contribution-1',
@@ -106,7 +109,6 @@ describe('CalloutContributionMoveService', () => {
       expect(urlGeneratorCacheService.revokeUrlCache).toHaveBeenCalledWith(
         'post-profile-id'
       );
-      expect(contributionRepository.save).toHaveBeenCalledWith(contribution);
     });
 
     it('should throw EntityNotFoundException when target callout is not found', async () => {
@@ -114,7 +116,10 @@ describe('CalloutContributionMoveService', () => {
       vi.mocked(
         contributionService.getCalloutContributionOrFail
       ).mockResolvedValue(contribution);
-      vi.mocked(calloutRepository.findOne).mockResolvedValue(null);
+      // Mock db.query.calloutContributions.findFirst for contributionFull
+      db.query.calloutContributions.findFirst.mockResolvedValueOnce(contribution);
+      // Mock db.query.callouts.findFirst returning undefined (not found)
+      db.query.callouts.findFirst.mockResolvedValueOnce(undefined);
 
       await expect(
         service.moveContributionToCallout('contribution-1', 'nonexistent')
@@ -132,7 +137,8 @@ describe('CalloutContributionMoveService', () => {
       vi.mocked(
         contributionService.getCalloutContributionOrFail
       ).mockResolvedValue(contribution);
-      vi.mocked(calloutRepository.findOne).mockResolvedValue(targetCallout);
+      db.query.calloutContributions.findFirst.mockResolvedValueOnce(contribution);
+      db.query.callouts.findFirst.mockResolvedValueOnce(targetCallout);
 
       await expect(
         service.moveContributionToCallout('contribution-1', 'target-callout')
@@ -148,7 +154,8 @@ describe('CalloutContributionMoveService', () => {
       vi.mocked(
         contributionService.getCalloutContributionOrFail
       ).mockResolvedValue(contribution);
-      vi.mocked(calloutRepository.findOne).mockResolvedValue(targetCallout);
+      db.query.calloutContributions.findFirst.mockResolvedValueOnce(contribution);
+      db.query.callouts.findFirst.mockResolvedValueOnce(targetCallout);
 
       await expect(
         service.moveContributionToCallout('contribution-1', 'target-callout')
@@ -164,7 +171,8 @@ describe('CalloutContributionMoveService', () => {
       vi.mocked(
         contributionService.getCalloutContributionOrFail
       ).mockResolvedValue(contribution);
-      vi.mocked(calloutRepository.findOne).mockResolvedValue(targetCallout);
+      db.query.calloutContributions.findFirst.mockResolvedValueOnce(contribution);
+      db.query.callouts.findFirst.mockResolvedValueOnce(targetCallout);
 
       await expect(
         service.moveContributionToCallout('contribution-1', 'target-callout')
@@ -180,7 +188,8 @@ describe('CalloutContributionMoveService', () => {
       vi.mocked(
         contributionService.getCalloutContributionOrFail
       ).mockResolvedValue(contribution);
-      vi.mocked(calloutRepository.findOne).mockResolvedValue(targetCallout);
+      db.query.calloutContributions.findFirst.mockResolvedValueOnce(contribution);
+      db.query.callouts.findFirst.mockResolvedValueOnce(targetCallout);
 
       await expect(
         service.moveContributionToCallout('contribution-1', 'target-callout')
@@ -199,7 +208,8 @@ describe('CalloutContributionMoveService', () => {
       vi.mocked(
         contributionService.getCalloutContributionOrFail
       ).mockResolvedValue(contribution);
-      vi.mocked(calloutRepository.findOne).mockResolvedValue(targetCallout);
+      db.query.calloutContributions.findFirst.mockResolvedValueOnce(contribution);
+      db.query.callouts.findFirst.mockResolvedValueOnce(targetCallout);
 
       await expect(
         service.moveContributionToCallout('contribution-1', 'target-callout')
@@ -216,12 +226,13 @@ describe('CalloutContributionMoveService', () => {
 
       vi.mocked(
         contributionService.getCalloutContributionOrFail
-      ).mockResolvedValue(contribution);
-      vi.mocked(calloutRepository.findOne).mockResolvedValue(targetCallout);
-      vi.mocked(contributionRepository.save).mockResolvedValue(contribution);
+      ).mockResolvedValueOnce(contribution)
+        .mockResolvedValueOnce(contribution);
       vi.mocked(urlGeneratorCacheService.revokeUrlCache).mockResolvedValue(
         undefined as any
       );
+      db.query.calloutContributions.findFirst.mockResolvedValueOnce(contribution);
+      db.query.callouts.findFirst.mockResolvedValueOnce(targetCallout);
 
       await service.moveContributionToCallout(
         'contribution-1',
@@ -241,12 +252,13 @@ describe('CalloutContributionMoveService', () => {
 
       vi.mocked(
         contributionService.getCalloutContributionOrFail
-      ).mockResolvedValue(contribution);
-      vi.mocked(calloutRepository.findOne).mockResolvedValue(targetCallout);
-      vi.mocked(contributionRepository.save).mockResolvedValue(contribution);
+      ).mockResolvedValueOnce(contribution)
+        .mockResolvedValueOnce(contribution);
       vi.mocked(urlGeneratorCacheService.revokeUrlCache).mockResolvedValue(
         undefined as any
       );
+      db.query.calloutContributions.findFirst.mockResolvedValueOnce(contribution);
+      db.query.callouts.findFirst.mockResolvedValueOnce(targetCallout);
 
       await service.moveContributionToCallout(
         'contribution-1',

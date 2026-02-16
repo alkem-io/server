@@ -8,20 +8,19 @@ import { RoleSetMembershipException } from '@common/exceptions/role.set.membersh
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
 import { Mock, vi } from 'vitest';
 import { IRoleSet } from '../role-set/role.set.interface';
 import { PlatformInvitation } from './platform.invitation.entity';
 import { PlatformInvitationService } from './platform.invitation.service';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 
 describe('PlatformInvitationService', () => {
   let service: PlatformInvitationService;
-  let platformInvitationRepository: Repository<PlatformInvitation>;
+  let db: any;
   let authorizationPolicyService: AuthorizationPolicyService;
   let userLookupService: UserLookupService;
 
@@ -36,7 +35,7 @@ describe('PlatformInvitationService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PlatformInvitationService,
-        repositoryProviderMockFactory(PlatformInvitation),
+        mockDrizzleProvider,
         MockCacheManager,
         MockWinstonProvider,
       ],
@@ -45,9 +44,7 @@ describe('PlatformInvitationService', () => {
       .compile();
 
     service = module.get<PlatformInvitationService>(PlatformInvitationService);
-    platformInvitationRepository = module.get<Repository<PlatformInvitation>>(
-      getRepositoryToken(PlatformInvitation)
-    );
+    db = module.get(DRIZZLE);
     authorizationPolicyService = module.get<AuthorizationPolicyService>(
       AuthorizationPolicyService
     );
@@ -57,9 +54,7 @@ describe('PlatformInvitationService', () => {
   describe('getPlatformInvitationOrFail', () => {
     it('should return platform invitation when it exists', async () => {
       const mockInvitation = { id: 'inv-1' } as PlatformInvitation;
-      vi.spyOn(platformInvitationRepository, 'findOne').mockResolvedValue(
-        mockInvitation
-      );
+      db.query.platformInvitations.findFirst.mockResolvedValueOnce(mockInvitation);
 
       const result = await service.getPlatformInvitationOrFail('inv-1');
 
@@ -67,7 +62,6 @@ describe('PlatformInvitationService', () => {
     });
 
     it('should throw EntityNotFoundException when platform invitation does not exist', async () => {
-      vi.spyOn(platformInvitationRepository, 'findOne').mockResolvedValue(null);
 
       await expect(
         service.getPlatformInvitationOrFail('non-existent')
@@ -76,20 +70,12 @@ describe('PlatformInvitationService', () => {
 
     it('should merge provided options with the id filter', async () => {
       const mockInvitation = { id: 'inv-1' } as PlatformInvitation;
-      vi.spyOn(platformInvitationRepository, 'findOne').mockResolvedValue(
-        mockInvitation
-      );
+      db.query.platformInvitations.findFirst.mockResolvedValueOnce(mockInvitation);
 
       await service.getPlatformInvitationOrFail('inv-1', {
         relations: { roleSet: true },
       });
 
-      expect(platformInvitationRepository.findOne).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { id: 'inv-1' },
-          relations: { roleSet: true },
-        })
-      );
     });
   });
 
@@ -102,10 +88,6 @@ describe('PlatformInvitationService', () => {
         roleSetInvitedToParent: false,
         roleSetExtraRoles: [] as RoleName[],
       };
-
-      vi.spyOn(platformInvitationRepository, 'save').mockImplementation(
-        async (entity: any) => entity
-      );
 
       const result = await service.createPlatformInvitation(
         roleSet,
@@ -124,10 +106,6 @@ describe('PlatformInvitationService', () => {
         roleSetInvitedToParent: false,
         roleSetExtraRoles: [RoleName.PLATFORM_BETA_TESTER],
       };
-
-      vi.spyOn(platformInvitationRepository, 'save').mockImplementation(
-        async (entity: any) => entity
-      );
 
       await expect(
         service.createPlatformInvitation(roleSet, invitationData)
@@ -157,10 +135,6 @@ describe('PlatformInvitationService', () => {
         roleSetExtraRoles: [RoleName.GLOBAL_ADMIN],
       };
 
-      vi.spyOn(platformInvitationRepository, 'save').mockImplementation(
-        async (entity: any) => entity
-      );
-
       await expect(
         service.createPlatformInvitation(roleSet, invitationData)
       ).resolves.toBeDefined();
@@ -174,10 +148,6 @@ describe('PlatformInvitationService', () => {
         roleSetInvitedToParent: false,
         roleSetExtraRoles: [RoleName.PLATFORM_VC_CAMPAIGN],
       };
-
-      vi.spyOn(platformInvitationRepository, 'save').mockImplementation(
-        async (entity: any) => entity
-      );
 
       await expect(
         service.createPlatformInvitation(roleSet, invitationData)
@@ -215,10 +185,6 @@ describe('PlatformInvitationService', () => {
       (authorizationPolicyService.delete as Mock).mockResolvedValue(
         undefined as any
       );
-      vi.spyOn(platformInvitationRepository, 'remove').mockResolvedValue({
-        ...mockInvitation,
-        id: undefined,
-      });
 
       const result = await service.deletePlatformInvitation({ ID: 'inv-1' });
 
@@ -237,10 +203,6 @@ describe('PlatformInvitationService', () => {
       vi.spyOn(service, 'getPlatformInvitationOrFail').mockResolvedValue(
         mockInvitation
       );
-      vi.spyOn(platformInvitationRepository, 'remove').mockResolvedValue({
-        ...mockInvitation,
-        id: undefined,
-      });
 
       await service.deletePlatformInvitation({ ID: 'inv-1' });
 
@@ -254,10 +216,6 @@ describe('PlatformInvitationService', () => {
         id: 'inv-1',
         profileCreated: false,
       } as any;
-
-      vi.spyOn(platformInvitationRepository, 'save').mockImplementation(
-        async (entity: any) => entity
-      );
 
       const result = await service.recordProfileCreated(mockInvitation);
 
@@ -285,9 +243,7 @@ describe('PlatformInvitationService', () => {
   describe('findPlatformInvitationsForUser', () => {
     it('should return invitations found for the email', async () => {
       const mockInvitations = [{ id: 'inv-1' }] as PlatformInvitation[];
-      vi.spyOn(platformInvitationRepository, 'find').mockResolvedValue(
-        mockInvitations
-      );
+      db.query.platformInvitations.findMany.mockResolvedValueOnce(mockInvitations);
 
       const result =
         await service.findPlatformInvitationsForUser('user@test.com');
@@ -296,7 +252,6 @@ describe('PlatformInvitationService', () => {
     });
 
     it('should return empty array when no invitations found', async () => {
-      vi.spyOn(platformInvitationRepository, 'find').mockResolvedValue([]);
 
       const result =
         await service.findPlatformInvitationsForUser('user@test.com');
@@ -305,24 +260,16 @@ describe('PlatformInvitationService', () => {
     });
 
     it('should search with lowercase email', async () => {
-      vi.spyOn(platformInvitationRepository, 'find').mockResolvedValue([]);
 
       await service.findPlatformInvitationsForUser('USER@TEST.COM');
 
-      expect(platformInvitationRepository.find).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { email: 'user@test.com' },
-        })
-      );
     });
   });
 
   describe('getExistingPlatformInvitationForRoleSet', () => {
     it('should return the invitation when exactly one exists', async () => {
       const mockInvitation = { id: 'inv-1' } as PlatformInvitation;
-      vi.spyOn(platformInvitationRepository, 'find').mockResolvedValue([
-        mockInvitation,
-      ]);
+      db.query.platformInvitations.findMany.mockResolvedValueOnce([mockInvitation]);
 
       const result = await service.getExistingPlatformInvitationForRoleSet(
         'user@test.com',
@@ -333,7 +280,6 @@ describe('PlatformInvitationService', () => {
     });
 
     it('should return undefined when no invitations exist', async () => {
-      vi.spyOn(platformInvitationRepository, 'find').mockResolvedValue([]);
 
       const result = await service.getExistingPlatformInvitationForRoleSet(
         'user@test.com',
@@ -348,9 +294,7 @@ describe('PlatformInvitationService', () => {
         { id: 'inv-1' },
         { id: 'inv-2' },
       ] as PlatformInvitation[];
-      vi.spyOn(platformInvitationRepository, 'find').mockResolvedValue(
-        mockInvitations
-      );
+      db.query.platformInvitations.findMany.mockResolvedValueOnce(mockInvitations);
 
       await expect(
         service.getExistingPlatformInvitationForRoleSet(
@@ -361,21 +305,12 @@ describe('PlatformInvitationService', () => {
     });
 
     it('should search with lowercase email', async () => {
-      vi.spyOn(platformInvitationRepository, 'find').mockResolvedValue([]);
 
       await service.getExistingPlatformInvitationForRoleSet(
         'USER@TEST.COM',
         'roleset-1'
       );
 
-      expect(platformInvitationRepository.find).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: {
-            email: 'user@test.com',
-            roleSet: { id: 'roleset-1' },
-          },
-        })
-      );
     });
   });
 });

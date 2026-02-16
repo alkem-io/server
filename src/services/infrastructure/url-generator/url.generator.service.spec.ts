@@ -11,20 +11,17 @@ import { User } from '@domain/community/user/user.entity';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getEntityManagerToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { type Mock, vi } from 'vitest';
 import { UrlGeneratorService } from './url.generator.service';
 import { UrlGeneratorCacheService } from './url.generator.service.cache';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 
 describe('UrlGeneratorService', () => {
   let service: UrlGeneratorService;
-  let entityManager: {
-    findOne: Mock;
-    connection: { query: Mock };
-  };
+  let db: any;
   let cacheService: {
     getUrlFromCache: Mock;
     setUrlCache: Mock;
@@ -33,18 +30,9 @@ describe('UrlGeneratorService', () => {
   const ENDPOINT = 'https://app.alkem.io';
 
   beforeEach(async () => {
-    entityManager = {
-      findOne: vi.fn(),
-      connection: { query: vi.fn() },
-    };
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UrlGeneratorService,
-        {
-          provide: getEntityManagerToken('default'),
-          useValue: entityManager,
-        },
         {
           provide: ConfigService,
           useValue: {
@@ -59,6 +47,7 @@ describe('UrlGeneratorService', () => {
       .compile();
 
     service = module.get(UrlGeneratorService);
+    db = module.get(DRIZZLE);
     cacheService = module.get(UrlGeneratorCacheService) as any;
   });
 
@@ -96,7 +85,7 @@ describe('UrlGeneratorService', () => {
     it('should cache the generated URL when not already cached and URL is non-empty', async () => {
       cacheService.getUrlFromCache.mockResolvedValue(undefined);
       // ProfileType.USER triggers getNameableEntityInfoForProfileOrFail('user', ...)
-      entityManager.connection.query.mockResolvedValue([
+      db.execute.mockResolvedValue([
         { entityID: 'user-1', entityNameID: 'john-doe' },
       ]);
 
@@ -182,7 +171,7 @@ describe('UrlGeneratorService', () => {
 
     it('should generate L0 space URL correctly', async () => {
       cacheService.getUrlFromCache.mockResolvedValue(undefined);
-      entityManager.findOne.mockResolvedValue({
+      db.query.spaces.findFirst.mockResolvedValueOnce({
         id: 'space-1',
         nameID: 'my-space',
         level: SpaceLevel.L0,
@@ -199,11 +188,15 @@ describe('UrlGeneratorService', () => {
 
     it('should generate L1 space URL with parent space name', async () => {
       cacheService.getUrlFromCache.mockResolvedValue(undefined);
-      entityManager.findOne.mockResolvedValue({
+      db.query.spaces.findFirst.mockResolvedValueOnce({
         id: 'sub-1',
         nameID: 'sub-space',
         level: SpaceLevel.L1,
-        parentSpace: { nameID: 'parent-space' },
+        parentSpace: {
+          id: 'parent-1',
+          nameID: 'parent-space',
+          level: SpaceLevel.L0,
+        },
       });
 
       const result = await service.getSpaceUrlPathByID('sub-1');
@@ -215,13 +208,19 @@ describe('UrlGeneratorService', () => {
 
     it('should generate L2 space URL with grandparent and parent space names', async () => {
       cacheService.getUrlFromCache.mockResolvedValue(undefined);
-      entityManager.findOne.mockResolvedValue({
+      db.query.spaces.findFirst.mockResolvedValueOnce({
         id: 'subsub-1',
         nameID: 'sub-sub-space',
         level: SpaceLevel.L2,
         parentSpace: {
+          id: 'sub-1',
           nameID: 'sub-space',
-          parentSpace: { nameID: 'root-space' },
+          level: SpaceLevel.L1,
+          parentSpace: {
+            id: 'root-1',
+            nameID: 'root-space',
+            level: SpaceLevel.L0,
+          },
         },
       });
 
@@ -234,7 +233,7 @@ describe('UrlGeneratorService', () => {
 
     it('should append spacePath when provided', async () => {
       cacheService.getUrlFromCache.mockResolvedValue(undefined);
-      entityManager.findOne.mockResolvedValue({
+      db.query.spaces.findFirst.mockResolvedValueOnce({
         id: 'space-1',
         nameID: 'my-space',
         level: SpaceLevel.L0,
@@ -252,7 +251,7 @@ describe('UrlGeneratorService', () => {
 
     it('should use combined cacheID when spacePath is provided', async () => {
       cacheService.getUrlFromCache.mockResolvedValue(undefined);
-      entityManager.findOne.mockResolvedValue({
+      db.query.spaces.findFirst.mockResolvedValueOnce({
         id: 'space-1',
         nameID: 'my-space',
         level: SpaceLevel.L0,
@@ -271,7 +270,7 @@ describe('UrlGeneratorService', () => {
 
   describe('getNameableEntityInfoForProfileOrFail', () => {
     it('should return entity info when found', async () => {
-      entityManager.connection.query.mockResolvedValue([
+      db.execute.mockResolvedValue([
         { entityID: 'user-1', entityNameID: 'john-doe' },
       ]);
 
@@ -287,7 +286,7 @@ describe('UrlGeneratorService', () => {
     });
 
     it('should throw EntityNotFoundException when entity not found', async () => {
-      entityManager.connection.query.mockResolvedValue([undefined]);
+      db.execute.mockResolvedValue([undefined]);
 
       await expect(
         service.getNameableEntityInfoForProfileOrFail('user', 'nonexistent')
@@ -297,7 +296,7 @@ describe('UrlGeneratorService', () => {
 
   describe('generateUrlForVCById', () => {
     it('should generate VC URL when virtual contributor exists', async () => {
-      entityManager.findOne.mockResolvedValue({
+      db.query.virtualContributors.findFirst.mockResolvedValueOnce({
         id: 'vc-1',
         nameID: 'my-vc',
       });
@@ -308,8 +307,6 @@ describe('UrlGeneratorService', () => {
     });
 
     it('should throw EntityNotFoundException when VC is not found', async () => {
-      entityManager.findOne.mockResolvedValue(null);
-
       await expect(service.generateUrlForVCById('nonexistent')).rejects.toThrow(
         EntityNotFoundException
       );

@@ -1,6 +1,7 @@
 import { relations } from 'drizzle-orm';
 import { invitations } from './invitation.schema';
 import { authorizationPolicies } from '@domain/common/authorization-policy/authorization.policy.schema';
+import { lifecycles } from '@domain/common/lifecycle/lifecycle.schema';
 import { roleSets } from '@domain/access/role-set/role.set.schema';
 
 export const invitationsRelations = relations(invitations, ({ one }) => ({
@@ -8,6 +9,12 @@ export const invitationsRelations = relations(invitations, ({ one }) => ({
   authorization: one(authorizationPolicies, {
     fields: [invitations.authorizationId],
     references: [authorizationPolicies.id],
+  }),
+
+  // OneToOne with @JoinColumn: Lifecycle
+  lifecycle: one(lifecycles, {
+    fields: [invitations.lifecycleId],
+    references: [lifecycles.id],
   }),
 
   // ManyToOne: RoleSet

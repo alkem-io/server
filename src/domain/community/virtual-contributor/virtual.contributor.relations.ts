@@ -4,6 +4,7 @@ import { authorizationPolicies } from '@domain/common/authorization-policy/autho
 import { profiles } from '@domain/common/profile/profile.schema';
 import { agents } from '@domain/agent/agent/agent.schema';
 import { accounts } from '@domain/space/account/account.schema';
+import { knowledgeBases } from '@domain/common/knowledge-base/knowledge.base.schema';
 
 export const virtualContributorsRelations = relations(
   virtualContributors,
@@ -30,6 +31,12 @@ export const virtualContributorsRelations = relations(
     account: one(accounts, {
       fields: [virtualContributors.accountId],
       references: [accounts.id],
+    }),
+
+    // OneToOne with @JoinColumn: KnowledgeBase
+    knowledgeBase: one(knowledgeBases, {
+      fields: [virtualContributors.knowledgeBaseId],
+      references: [knowledgeBases.id],
     }),
   })
 );

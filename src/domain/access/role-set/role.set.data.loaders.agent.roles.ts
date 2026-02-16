@@ -1,16 +1,15 @@
 import { RoleName } from '@common/enums/role.name';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { ICredential } from '@domain/agent/credential/credential.interface';
-import { Injectable, Scope } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { Inject, Injectable, Scope } from '@nestjs/common';
 import DataLoader from 'dataloader';
-import { Repository } from 'typeorm';
 import { IRole } from '../role/role.interface';
 import {
   ensureRolesLoaded,
   loadAgentCredentials,
 } from './role.set.data.loader.utils';
-import { RoleSet } from './role.set.entity';
 import { RoleSetCacheService } from './role.set.service.cache';
 import { AgentRoleKey } from './types';
 
@@ -21,8 +20,8 @@ export class RoleSetAgentRolesDataLoader {
   constructor(
     private readonly agentService: AgentService,
     private readonly roleSetCacheService: RoleSetCacheService,
-    @InjectRepository(RoleSet)
-    private readonly roleSetRepository: Repository<RoleSet>
+    @Inject(DRIZZLE)
+    private readonly db: DrizzleDb
   ) {
     this.loader = new DataLoader<AgentRoleKey, RoleName[], string>(
       async (keys: readonly AgentRoleKey[]) => this.batchLoad(keys),
@@ -76,7 +75,7 @@ export class RoleSetAgentRolesDataLoader {
     // 3. Batch-load roles for any roleSets that don't have them pre-loaded.
     await ensureRolesLoaded(
       uncachedIndices.map(i => keys[i].roleSet),
-      this.roleSetRepository
+      this.db
     );
 
     // 4. In-memory credential matching for uncached keys.
@@ -107,7 +106,7 @@ export class RoleSetAgentRolesDataLoader {
 
     // 5. Fire-and-forget: cache writes don't affect the response.
     void Promise.all(cacheWrites).catch(() => {
-      // swallowed – RoleSetCacheService already logs failures
+      // swallowed - RoleSetCacheService already logs failures
     });
 
     return results;

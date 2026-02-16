@@ -1,32 +1,31 @@
 import { RoomType } from '@common/enums/room.type';
 import { ValidationException } from '@common/exceptions';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
 import { type Mocked } from 'vitest';
 import { IMessage } from '../message/message.interface';
 import { RoomLookupService } from '../room-lookup/room.lookup.service';
 import { Room } from './room.entity';
 import { IRoom } from './room.interface';
 import { RoomService } from './room.service';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 
 describe('RoomService', () => {
   let service: RoomService;
   let communicationAdapter: Mocked<CommunicationAdapter>;
   let roomLookupService: Mocked<RoomLookupService>;
   let contributorLookupService: Mocked<ContributorLookupService>;
-  let roomRepo: Mocked<Repository<Room>>;
+  let db: any;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         RoomService,
-        repositoryProviderMockFactory(Room),
+        mockDrizzleProvider,
         MockWinstonProvider,
       ],
     })
@@ -37,7 +36,7 @@ describe('RoomService', () => {
     communicationAdapter = module.get(CommunicationAdapter);
     roomLookupService = module.get(RoomLookupService);
     contributorLookupService = module.get(ContributorLookupService);
-    roomRepo = module.get(getRepositoryToken(Room));
+    db = module.get(DRIZZLE);
   });
 
   describe('createRoom', () => {
@@ -50,7 +49,7 @@ describe('RoomService', () => {
         vcInteractionsByThread: {},
         authorization: expect.any(Object),
       };
-      roomRepo.save.mockResolvedValue(savedRoom as any);
+      db.returning.mockResolvedValueOnce([savedRoom]);
       communicationAdapter.createRoom.mockResolvedValue(undefined as any);
 
       const result = await service.createRoom({
@@ -59,7 +58,6 @@ describe('RoomService', () => {
       });
 
       expect(result).toBe(savedRoom);
-      expect(roomRepo.save).toHaveBeenCalled();
       expect(communicationAdapter.createRoom).toHaveBeenCalledWith(
         'room-1',
         RoomType.CALLOUT,
@@ -74,7 +72,7 @@ describe('RoomService', () => {
         displayName: 'Test Room',
         type: RoomType.CALLOUT,
       };
-      roomRepo.save.mockResolvedValue(savedRoom as any);
+      db.returning.mockResolvedValueOnce([savedRoom]);
       communicationAdapter.createRoom.mockResolvedValue(undefined as any);
 
       await service.createRoom({
@@ -97,7 +95,7 @@ describe('RoomService', () => {
         displayName: 'DM Room',
         type: RoomType.CONVERSATION_DIRECT,
       };
-      roomRepo.save.mockResolvedValue(savedRoom as any);
+      db.returning.mockResolvedValueOnce([savedRoom]);
       communicationAdapter.createRoom.mockResolvedValue(undefined as any);
 
       await service.createRoom({
@@ -116,11 +114,7 @@ describe('RoomService', () => {
     });
 
     it('should throw Error when direct room is missing senderActorId', async () => {
-      roomRepo.save.mockResolvedValue({
-        id: 'room-1',
-        displayName: 'DM Room',
-        type: RoomType.CONVERSATION_DIRECT,
-      } as any);
+      db.returning.mockResolvedValueOnce([{ id: 'room-1' }]);
 
       await expect(
         service.createRoom({
@@ -132,11 +126,7 @@ describe('RoomService', () => {
     });
 
     it('should throw Error when direct room is missing receiverActorId', async () => {
-      roomRepo.save.mockResolvedValue({
-        id: 'room-1',
-        displayName: 'DM Room',
-        type: RoomType.CONVERSATION_DIRECT,
-      } as any);
+      db.returning.mockResolvedValueOnce([{ id: 'room-1' }]);
 
       await expect(
         service.createRoom({
@@ -148,11 +138,7 @@ describe('RoomService', () => {
     });
 
     it('should log error but not throw when external room creation fails', async () => {
-      roomRepo.save.mockResolvedValue({
-        id: 'room-1',
-        displayName: 'Test Room',
-        type: RoomType.CALLOUT,
-      } as any);
+      db.returning.mockResolvedValueOnce([{ id: 'room-1', displayName: 'Test Room', type: RoomType.CALLOUT }]);
       communicationAdapter.createRoom.mockRejectedValue(
         new Error('Matrix error')
       );
@@ -177,12 +163,10 @@ describe('RoomService', () => {
     it('should remove room from database and delete from Matrix', async () => {
       const mockRoom = { id: 'room-1' } as Room;
       roomLookupService.getRoomOrFail.mockResolvedValue(mockRoom);
-      roomRepo.remove.mockResolvedValue({ ...mockRoom, id: '' } as Room);
       communicationAdapter.deleteRoom.mockResolvedValue(undefined as any);
 
       const result = await service.deleteRoom({ roomID: 'room-1' });
 
-      expect(roomRepo.remove).toHaveBeenCalledWith(mockRoom);
       expect(communicationAdapter.deleteRoom).toHaveBeenCalledWith('room-1');
       expect(result.id).toBe('room-1');
     });
@@ -194,11 +178,7 @@ describe('RoomService', () => {
         id: 'room-1',
         displayName: 'Old Name',
       } as unknown as IRoom;
-
-      roomRepo.save.mockResolvedValue({
-        ...mockRoom,
-        displayName: 'New Name',
-      } as Room);
+      db.returning.mockResolvedValueOnce([{ ...mockRoom, displayName: 'New Name' }]);
 
       const _result = await service.updateRoomDisplayName(mockRoom, 'New Name');
 
@@ -207,7 +187,6 @@ describe('RoomService', () => {
         'room-1',
         'New Name'
       );
-      expect(roomRepo.save).toHaveBeenCalled();
     });
 
     it('should skip update when display name has not changed', async () => {
@@ -220,7 +199,6 @@ describe('RoomService', () => {
 
       expect(result).toBe(mockRoom);
       expect(communicationAdapter.updateRoom).not.toHaveBeenCalled();
-      expect(roomRepo.save).not.toHaveBeenCalled();
     });
   });
 

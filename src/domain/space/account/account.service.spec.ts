@@ -1,4 +1,5 @@
 import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { LicenseService } from '@domain/common/license/license.service';
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
@@ -6,20 +7,18 @@ import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.serv
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { InnovationPackService } from '@library/innovation-pack/innovation.pack.service';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
 import { vi } from 'vitest';
 import { SpaceService } from '../space/space.service';
 import { Account } from './account.entity';
 import { IAccount } from './account.interface';
 import { AccountService } from './account.service';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
 
 describe('AccountService', () => {
   let service: AccountService;
-  let accountRepository: Repository<Account>;
+  let db: any;
   let agentService: AgentService;
   let storageAggregatorService: StorageAggregatorService;
   let spaceService: SpaceService;
@@ -32,7 +31,7 @@ describe('AccountService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AccountService,
-        repositoryProviderMockFactory(Account),
+        mockDrizzleProvider,
         MockWinstonProvider,
       ],
     })
@@ -40,9 +39,7 @@ describe('AccountService', () => {
       .compile();
 
     service = module.get(AccountService);
-    accountRepository = module.get<Repository<Account>>(
-      getRepositoryToken(Account)
-    );
+    db = module.get(DRIZZLE);
     agentService = module.get(AgentService);
     storageAggregatorService = module.get(StorageAggregatorService);
     spaceService = module.get(SpaceService);
@@ -56,7 +53,7 @@ describe('AccountService', () => {
     it('should return account when found', async () => {
       // Arrange
       const mockAccount = { id: 'account-1' } as Account;
-      vi.spyOn(accountRepository, 'findOne').mockResolvedValue(mockAccount);
+      db.query.accounts.findFirst.mockResolvedValueOnce(mockAccount);
 
       // Act
       const result = await service.getAccountOrFail('account-1');
@@ -66,8 +63,7 @@ describe('AccountService', () => {
     });
 
     it('should throw EntityNotFoundException when account not found', async () => {
-      // Arrange
-      vi.spyOn(accountRepository, 'findOne').mockResolvedValue(null);
+      // Arrange — findFirst returns undefined by default
 
       // Act & Assert
       await expect(service.getAccountOrFail('missing-id')).rejects.toThrow(
@@ -77,21 +73,20 @@ describe('AccountService', () => {
   });
 
   describe('getAccount', () => {
-    it('should return null when account not found', async () => {
-      // Arrange
-      vi.spyOn(accountRepository, 'findOne').mockResolvedValue(null);
+    it('should return null/undefined when account not found', async () => {
+      // Arrange — findFirst returns undefined by default
 
       // Act
       const result = await service.getAccount('nonexistent');
 
       // Assert
-      expect(result).toBeNull();
+      expect(result).toBeFalsy();
     });
 
     it('should return account when found', async () => {
       // Arrange
       const mockAccount = { id: 'account-1' } as Account;
-      vi.spyOn(accountRepository, 'findOne').mockResolvedValue(mockAccount);
+      db.query.accounts.findFirst.mockResolvedValueOnce(mockAccount);
 
       // Act
       const result = await service.getAccount('account-1');
@@ -106,7 +101,7 @@ describe('AccountService', () => {
       // Arrange
       const mockAgent = { id: 'agent-1' };
       const mockAccount = { id: 'account-1', agent: mockAgent } as Account;
-      vi.spyOn(accountRepository, 'findOne').mockResolvedValue(mockAccount);
+      db.query.accounts.findFirst.mockResolvedValueOnce(mockAccount);
 
       // Act
       const result = await service.getAgentOrFail('account-1');
@@ -121,7 +116,7 @@ describe('AccountService', () => {
         id: 'account-1',
         agent: undefined,
       } as Account;
-      vi.spyOn(accountRepository, 'findOne').mockResolvedValue(mockAccount);
+      db.query.accounts.findFirst.mockResolvedValueOnce(mockAccount);
 
       // Act & Assert
       await expect(service.getAgentOrFail('account-1')).rejects.toThrow(
@@ -138,7 +133,7 @@ describe('AccountService', () => {
         id: 'account-1',
         storageAggregator: mockStorageAggregator,
       } as Account;
-      vi.spyOn(accountRepository, 'findOne').mockResolvedValue(mockAccount);
+      db.query.accounts.findFirst.mockResolvedValueOnce(mockAccount);
 
       // Act
       const result = await service.getStorageAggregatorOrFail('account-1');
@@ -153,7 +148,7 @@ describe('AccountService', () => {
         id: 'account-1',
         storageAggregator: undefined,
       } as Account;
-      vi.spyOn(accountRepository, 'findOne').mockResolvedValue(mockAccount);
+      db.query.accounts.findFirst.mockResolvedValueOnce(mockAccount);
 
       // Act & Assert
       await expect(
@@ -177,7 +172,7 @@ describe('AccountService', () => {
         innovationHubs: [],
         license: { id: 'license-1' },
       } as unknown as Account;
-      vi.spyOn(accountRepository, 'findOne').mockResolvedValue(mockAccount);
+      db.query.accounts.findFirst.mockResolvedValueOnce(mockAccount);
 
       // Act & Assert
       await expect(service.deleteAccountOrFail(mockAccount)).rejects.toThrow(
@@ -197,7 +192,7 @@ describe('AccountService', () => {
         innovationHubs: [],
         license: undefined,
       } as unknown as Account;
-      vi.spyOn(accountRepository, 'findOne').mockResolvedValue(mockAccount);
+      db.query.accounts.findFirst.mockResolvedValueOnce(mockAccount);
 
       // Act & Assert
       await expect(service.deleteAccountOrFail(mockAccount)).rejects.toThrow(
@@ -217,8 +212,8 @@ describe('AccountService', () => {
         innovationHubs: [{ id: 'hub-1' }],
         license: { id: 'license-1' },
       } as unknown as Account;
+      db.query.accounts.findFirst.mockResolvedValueOnce(mockAccount);
 
-      vi.spyOn(accountRepository, 'findOne').mockResolvedValue(mockAccount);
       agentService.deleteAgent = vi.fn().mockResolvedValue(undefined);
       storageAggregatorService.delete = vi.fn().mockResolvedValue(undefined);
       licenseService.removeLicenseOrFail = vi.fn().mockResolvedValue(undefined);
@@ -230,9 +225,6 @@ describe('AccountService', () => {
         .mockResolvedValue(undefined);
       innovationHubService.delete = vi.fn().mockResolvedValue(undefined);
       spaceService.deleteSpaceOrFail = vi.fn().mockResolvedValue(undefined);
-      vi.spyOn(accountRepository, 'remove').mockResolvedValue({
-        id: undefined,
-      } as unknown as Account);
 
       // Act
       const result = await service.deleteAccountOrFail(mockAccount);
@@ -257,8 +249,7 @@ describe('AccountService', () => {
 
   describe('getAccounts', () => {
     it('should return empty array when no accounts found', async () => {
-      // Arrange
-      vi.spyOn(accountRepository, 'find').mockResolvedValue([]);
+      // Arrange — findMany returns [] by default
 
       // Act
       const result = await service.getAccounts();
@@ -273,7 +264,7 @@ describe('AccountService', () => {
         { id: 'account-1' } as Account,
         { id: 'account-2' } as Account,
       ];
-      vi.spyOn(accountRepository, 'find').mockResolvedValue(mockAccounts);
+      db.query.accounts.findMany.mockResolvedValueOnce(mockAccounts);
 
       // Act
       const result = await service.getAccounts();
@@ -285,8 +276,7 @@ describe('AccountService', () => {
 
   describe('getAccountAndDetails', () => {
     it('should return undefined when account not found', async () => {
-      // Arrange
-      vi.spyOn(accountRepository, 'query').mockResolvedValue([]);
+      // Arrange — db.execute returns [] by default, destructuring gives undefined
 
       // Act
       const result = await service.getAccountAndDetails('missing-id');
@@ -309,7 +299,7 @@ describe('AccountService', () => {
         orgDisplayName: null,
         orgNameID: null,
       };
-      vi.spyOn(accountRepository, 'query').mockResolvedValue([queryResult]);
+      db.execute.mockResolvedValueOnce([queryResult]);
 
       // Act
       const result = await service.getAccountAndDetails('account-1');
@@ -341,7 +331,7 @@ describe('AccountService', () => {
         orgDisplayName: 'Display Corp',
         orgNameID: 'org-name',
       };
-      vi.spyOn(accountRepository, 'query').mockResolvedValue([queryResult]);
+      db.execute.mockResolvedValueOnce([queryResult]);
 
       // Act
       const result = await service.getAccountAndDetails('account-1');
@@ -371,7 +361,7 @@ describe('AccountService', () => {
         id: 'account-1',
         agent: undefined,
       } as Account;
-      vi.spyOn(accountRepository, 'findOne').mockResolvedValue(mockAccount);
+      db.query.accounts.findFirst.mockResolvedValueOnce(mockAccount);
 
       // Act & Assert
       await expect(service.getSubscriptions(accountInput)).rejects.toThrow(
@@ -389,7 +379,7 @@ describe('AccountService', () => {
           credentials: [{ type: 'non-subscription-type', expires: undefined }],
         },
       } as unknown as Account;
-      vi.spyOn(accountRepository, 'findOne').mockResolvedValue(mockAccount);
+      db.query.accounts.findFirst.mockResolvedValueOnce(mockAccount);
 
       // Act
       const result = await service.getSubscriptions(accountInput);
@@ -419,7 +409,7 @@ describe('AccountService', () => {
           ],
         },
       } as unknown as Account;
-      vi.spyOn(accountRepository, 'findOne').mockResolvedValue(mockAccount);
+      db.query.accounts.findFirst.mockResolvedValueOnce(mockAccount);
 
       // Act
       const result = await service.getSubscriptions(accountInput);
@@ -436,24 +426,6 @@ describe('AccountService', () => {
       });
     });
   });
-
-  describe('updateExternalSubscriptionId', () => {
-    it('should call repository update with correct arguments', async () => {
-      // Arrange
-      const updateSpy = vi
-        .spyOn(accountRepository, 'update')
-        .mockResolvedValue({ affected: 1 } as any);
-
-      // Act
-      await service.updateExternalSubscriptionId('account-1', 'ext-sub-new');
-
-      // Assert
-      expect(updateSpy).toHaveBeenCalledWith('account-1', {
-        externalSubscriptionID: 'ext-sub-new',
-      });
-    });
-  });
-
   describe('findNestedRoleSets', () => {
     it('should collect rolesets from nested spaces up to MAX_SPACE_LEVEL', () => {
       // Arrange

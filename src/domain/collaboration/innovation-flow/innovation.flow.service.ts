@@ -626,7 +626,7 @@ export class InnovationFlowService {
     options?: {
       relations?: {
         profile?: boolean;
-        states?: boolean | { defaultCalloutTemplate?: boolean };
+        states?: boolean | { defaultCalloutTemplate?: boolean; authorization?: boolean };
         flowStatesTagsetTemplate?: boolean | { tagsets?: boolean };
         authorization?: boolean;
       };

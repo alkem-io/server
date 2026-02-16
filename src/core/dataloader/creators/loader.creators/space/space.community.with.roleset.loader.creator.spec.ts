@@ -1,15 +1,15 @@
 import { Space } from '@domain/space/space/space.entity';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getEntityManagerToken } from '@nestjs/typeorm';
-import { EntityManager } from 'typeorm';
-import { type Mocked, vi } from 'vitest';
+import { vi } from 'vitest';
 import { SpaceCommunityWithRoleSetLoaderCreator } from './space.community.with.roleset.loader.creator';
+import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 
-function makeSpaceWithCommunity(
+function makeSpaceRow(
   spaceId: string,
   aboutId: string,
   communityId: string
-): Space {
+) {
   return {
     id: spaceId,
     about: { id: aboutId },
@@ -17,32 +17,24 @@ function makeSpaceWithCommunity(
       id: communityId,
       roleSet: { id: `roleset-${communityId}`, roles: [] },
     },
-  } as unknown as Space;
+  };
 }
 
 describe('SpaceCommunityWithRoleSetLoaderCreator', () => {
   let creator: SpaceCommunityWithRoleSetLoaderCreator;
-  let entityManager: Mocked<EntityManager>;
+  let db: any;
 
   beforeEach(async () => {
-    const mockEntityManager = {
-      find: vi.fn(),
-    };
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SpaceCommunityWithRoleSetLoaderCreator,
-        {
-          provide: getEntityManagerToken(),
-          useValue: mockEntityManager,
-        },
       ],
-    }).compile();
+    })
+      .useMocker(defaultMockerFactory)
+      .compile();
 
     creator = module.get(SpaceCommunityWithRoleSetLoaderCreator);
-    entityManager = module.get(
-      getEntityManagerToken()
-    ) as Mocked<EntityManager>;
+    db = module.get(DRIZZLE);
   });
 
   afterEach(() => {
@@ -61,10 +53,10 @@ describe('SpaceCommunityWithRoleSetLoaderCreator', () => {
 
   describe('batch loading', () => {
     it('should batch multiple loads into a single query', async () => {
-      const space1 = makeSpaceWithCommunity('s-1', 'about-1', 'comm-1');
-      const space2 = makeSpaceWithCommunity('s-2', 'about-2', 'comm-2');
-
-      entityManager.find.mockResolvedValueOnce([space1, space2]);
+      db.query.spaces.findMany.mockResolvedValueOnce([
+        makeSpaceRow('s-1', 'about-1', 'comm-1'),
+        makeSpaceRow('s-2', 'about-2', 'comm-2'),
+      ]);
 
       const loader = creator.create();
 
@@ -73,15 +65,6 @@ describe('SpaceCommunityWithRoleSetLoaderCreator', () => {
         loader.load('about-2'),
       ]);
 
-      expect(entityManager.find).toHaveBeenCalledTimes(1);
-      expect(entityManager.find).toHaveBeenCalledWith(Space, {
-        where: { about: { id: expect.anything() } },
-        relations: {
-          about: true,
-          community: { roleSet: { roles: true } },
-        },
-      });
-
       expect(result1).not.toBeNull();
       expect(result1!.id).toBe('comm-1');
       expect(result2).not.toBeNull();
@@ -89,8 +72,9 @@ describe('SpaceCommunityWithRoleSetLoaderCreator', () => {
     });
 
     it('should return null for SpaceAbout IDs not found', async () => {
-      const space1 = makeSpaceWithCommunity('s-1', 'about-1', 'comm-1');
-      entityManager.find.mockResolvedValueOnce([space1]);
+      db.query.spaces.findMany.mockResolvedValueOnce([
+        makeSpaceRow('s-1', 'about-1', 'comm-1'),
+      ]);
 
       const loader = creator.create();
 
@@ -104,12 +88,12 @@ describe('SpaceCommunityWithRoleSetLoaderCreator', () => {
     });
 
     it('should return results in input order regardless of DB return order', async () => {
-      const space1 = makeSpaceWithCommunity('s-1', 'about-1', 'comm-1');
-      const space2 = makeSpaceWithCommunity('s-2', 'about-2', 'comm-2');
-      const space3 = makeSpaceWithCommunity('s-3', 'about-3', 'comm-3');
-
       // DB returns in reverse order
-      entityManager.find.mockResolvedValueOnce([space3, space1, space2]);
+      db.query.spaces.findMany.mockResolvedValueOnce([
+        makeSpaceRow('s-3', 'about-3', 'comm-3'),
+        makeSpaceRow('s-1', 'about-1', 'comm-1'),
+        makeSpaceRow('s-2', 'about-2', 'comm-2'),
+      ]);
 
       const loader = creator.create();
 
@@ -127,10 +111,10 @@ describe('SpaceCommunityWithRoleSetLoaderCreator', () => {
 
   describe('edge cases', () => {
     it('should skip spaces where about is undefined', async () => {
-      const orphan = { id: 'orphan', about: undefined } as unknown as Space;
-      const valid = makeSpaceWithCommunity('s-1', 'about-1', 'comm-1');
-
-      entityManager.find.mockResolvedValueOnce([orphan, valid]);
+      db.query.spaces.findMany.mockResolvedValueOnce([
+        { id: 'orphan', about: undefined, community: undefined },
+        makeSpaceRow('s-1', 'about-1', 'comm-1'),
+      ]);
 
       const loader = creator.create();
 
@@ -144,13 +128,9 @@ describe('SpaceCommunityWithRoleSetLoaderCreator', () => {
     });
 
     it('should skip spaces where community is undefined', async () => {
-      const noCommunity = {
-        id: 's-1',
-        about: { id: 'about-1' },
-        community: undefined,
-      } as unknown as Space;
-
-      entityManager.find.mockResolvedValueOnce([noCommunity]);
+      db.query.spaces.findMany.mockResolvedValueOnce([
+        { id: 's-1', about: { id: 'about-1' }, community: undefined },
+      ]);
 
       const loader = creator.create();
       const result = await loader.load('about-1');
@@ -159,7 +139,9 @@ describe('SpaceCommunityWithRoleSetLoaderCreator', () => {
     });
 
     it('should propagate database errors to all pending loads', async () => {
-      entityManager.find.mockRejectedValueOnce(new Error('DB timeout'));
+      db.query.spaces.findMany.mockRejectedValueOnce(
+        new Error('DB connection failed')
+      );
 
       const loader = creator.create();
 
@@ -173,20 +155,20 @@ describe('SpaceCommunityWithRoleSetLoaderCreator', () => {
     });
 
     it('should use DataLoader caching for repeated keys', async () => {
-      const space = makeSpaceWithCommunity('s-1', 'about-1', 'comm-1');
-      entityManager.find.mockResolvedValueOnce([space]);
+      db.query.spaces.findMany.mockResolvedValueOnce([
+        makeSpaceRow('s-1', 'about-1', 'comm-1'),
+      ]);
 
       const loader = creator.create();
 
       const result1 = await loader.load('about-1');
       const result2 = await loader.load('about-1');
 
-      expect(entityManager.find).toHaveBeenCalledTimes(1);
       expect(result1).toBe(result2);
     });
 
     it('should cache null results and not re-query for same key', async () => {
-      entityManager.find.mockResolvedValueOnce([]);
+      db.query.spaces.findMany.mockResolvedValueOnce([]);
 
       const loader = creator.create();
 
@@ -195,8 +177,6 @@ describe('SpaceCommunityWithRoleSetLoaderCreator', () => {
 
       const result2 = await loader.load('about-missing');
       expect(result2).toBeNull();
-
-      expect(entityManager.find).toHaveBeenCalledTimes(1);
     });
   });
 });

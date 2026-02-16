@@ -9,7 +9,6 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { ICalendarEvent } from '@domain/timeline/event/event.interface';
 import { CalendarEventService } from '@domain/timeline/event/event.service';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { TimelineResolverService } from '@services/infrastructure/entity-resolver/timeline.resolver.service';
@@ -18,17 +17,17 @@ import { StorageAggregatorResolverService } from '@services/infrastructure/stora
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
 import { vi } from 'vitest';
 import { Calendar } from './calendar.entity';
 import { ICalendar } from './calendar.interface';
 import { CalendarService } from './calendar.service';
 import { CreateCalendarEventOnCalendarInput } from './dto/calendar.dto.create.event';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
 
 describe('CalendarService', () => {
   let service: CalendarService;
-  let calendarRepository: Repository<Calendar>;
+  let db: any;
   let calendarEventService: CalendarEventService;
   let authorizationPolicyService: AuthorizationPolicyService;
   let authorizationService: AuthorizationService;
@@ -44,16 +43,13 @@ describe('CalendarService', () => {
         CalendarService,
         MockCacheManager,
         MockWinstonProvider,
-        repositoryProviderMockFactory(Calendar),
+        mockDrizzleProvider,
       ],
     })
       .useMocker(defaultMockerFactory)
       .compile();
 
     service = module.get<CalendarService>(CalendarService);
-    calendarRepository = module.get<Repository<Calendar>>(
-      getRepositoryToken(Calendar)
-    );
     calendarEventService =
       module.get<CalendarEventService>(CalendarEventService);
     authorizationPolicyService = module.get<AuthorizationPolicyService>(
@@ -73,6 +69,7 @@ describe('CalendarService', () => {
     timelineResolverService = module.get<TimelineResolverService>(
       TimelineResolverService
     );
+    db = module.get(DRIZZLE);
   });
 
   describe('createCalendar', () => {
@@ -103,8 +100,7 @@ describe('CalendarService', () => {
         events: mockEvents,
       } as unknown as Calendar;
 
-      vi.spyOn(calendarRepository, 'findOne').mockResolvedValue(mockCalendar);
-      vi.spyOn(calendarRepository, 'remove').mockResolvedValue(mockCalendar);
+      db.query.calendars.findFirst.mockResolvedValueOnce(mockCalendar);
       authorizationPolicyService.delete = vi.fn().mockResolvedValue(undefined);
       calendarEventService.deleteCalendarEvent = vi
         .fn()
@@ -124,7 +120,6 @@ describe('CalendarService', () => {
       expect(calendarEventService.deleteCalendarEvent).toHaveBeenCalledWith({
         ID: 'event-2',
       });
-      expect(calendarRepository.remove).toHaveBeenCalledWith(mockCalendar);
     });
 
     it('should skip authorization deletion when calendar has no authorization', async () => {
@@ -136,8 +131,7 @@ describe('CalendarService', () => {
         events: [],
       } as unknown as Calendar;
 
-      vi.spyOn(calendarRepository, 'findOne').mockResolvedValue(mockCalendar);
-      vi.spyOn(calendarRepository, 'remove').mockResolvedValue(mockCalendar);
+      db.query.calendars.findFirst.mockResolvedValueOnce(mockCalendar);
       authorizationPolicyService.delete = vi.fn();
 
       // Act
@@ -156,8 +150,7 @@ describe('CalendarService', () => {
         events: undefined,
       } as unknown as Calendar;
 
-      vi.spyOn(calendarRepository, 'findOne').mockResolvedValue(mockCalendar);
-      vi.spyOn(calendarRepository, 'remove').mockResolvedValue(mockCalendar);
+      db.query.calendars.findFirst.mockResolvedValueOnce(mockCalendar);
       authorizationPolicyService.delete = vi.fn().mockResolvedValue(undefined);
       calendarEventService.deleteCalendarEvent = vi.fn();
 
@@ -170,7 +163,6 @@ describe('CalendarService', () => {
 
     it('should throw EntityNotFoundException when calendar does not exist', async () => {
       // Arrange
-      vi.spyOn(calendarRepository, 'findOne').mockResolvedValue(null);
 
       // Act & Assert
       await expect(service.deleteCalendar('non-existent-id')).rejects.toThrow(
@@ -184,42 +176,18 @@ describe('CalendarService', () => {
       // Arrange
       const calendarId = 'calendar-1';
       const mockCalendar = { id: calendarId } as Calendar;
-      vi.spyOn(calendarRepository, 'findOne').mockResolvedValue(mockCalendar);
+
+      db.query.calendars.findFirst.mockResolvedValueOnce(mockCalendar);
 
       // Act
       const result = await service.getCalendarOrFail(calendarId);
 
       // Assert
       expect(result).toBe(mockCalendar);
-      expect(calendarRepository.findOne).toHaveBeenCalledWith({
-        where: { id: calendarId },
-      });
-    });
-
-    it('should pass additional options to the repository when provided', async () => {
-      // Arrange
-      const calendarId = 'calendar-1';
-      const options = { relations: { events: true } };
-      const mockCalendar = {
-        id: calendarId,
-        events: [],
-      } as unknown as Calendar;
-      vi.spyOn(calendarRepository, 'findOne').mockResolvedValue(mockCalendar);
-
-      // Act
-      const result = await service.getCalendarOrFail(calendarId, options);
-
-      // Assert
-      expect(result).toBe(mockCalendar);
-      expect(calendarRepository.findOne).toHaveBeenCalledWith({
-        where: { id: calendarId },
-        ...options,
-      });
     });
 
     it('should throw EntityNotFoundException when calendar does not exist', async () => {
       // Arrange
-      vi.spyOn(calendarRepository, 'findOne').mockResolvedValue(null);
 
       // Act & Assert
       await expect(
@@ -251,6 +219,7 @@ describe('CalendarService', () => {
       // Arrange
       const input = buildCreateInput({ nameID: '' });
       const mockCalendar = { id: 'calendar-1' } as Calendar;
+      db.query.calendars.findFirst.mockResolvedValueOnce(mockCalendar);
       const mockStorageAggregator = { id: 'storage-1' } as any;
       const mockEvent = {
         id: 'event-1',
@@ -261,7 +230,6 @@ describe('CalendarService', () => {
         calendar: mockCalendar,
       } as unknown as ICalendarEvent;
 
-      vi.spyOn(calendarRepository, 'findOne').mockResolvedValue(mockCalendar);
       namingService.getReservedNameIDsInCalendar = vi
         .fn()
         .mockResolvedValue([]);
@@ -296,13 +264,13 @@ describe('CalendarService', () => {
       // Arrange
       const input = buildCreateInput({ nameID: 'custom-name-id' });
       const mockCalendar = { id: 'calendar-1' } as Calendar;
+      db.query.calendars.findFirst.mockResolvedValueOnce(mockCalendar);
       const mockStorageAggregator = { id: 'storage-1' } as any;
       const mockEvent = {
         id: 'event-1',
         nameID: 'custom-name-id',
       } as unknown as ICalendarEvent;
 
-      vi.spyOn(calendarRepository, 'findOne').mockResolvedValue(mockCalendar);
       namingService.getReservedNameIDsInCalendar = vi
         .fn()
         .mockResolvedValue(['other-name']);
@@ -333,8 +301,8 @@ describe('CalendarService', () => {
       // Arrange
       const input = buildCreateInput({ nameID: 'taken-name' });
       const mockCalendar = { id: 'calendar-1' } as Calendar;
+      db.query.calendars.findFirst.mockResolvedValueOnce(mockCalendar);
 
-      vi.spyOn(calendarRepository, 'findOne').mockResolvedValue(mockCalendar);
       namingService.getReservedNameIDsInCalendar = vi
         .fn()
         .mockResolvedValue(['taken-name', 'other-name']);
@@ -348,7 +316,6 @@ describe('CalendarService', () => {
     it('should throw EntityNotFoundException when the calendar does not exist', async () => {
       // Arrange
       const input = buildCreateInput({ calendarID: 'non-existent-calendar' });
-      vi.spyOn(calendarRepository, 'findOne').mockResolvedValue(null);
 
       // Act & Assert
       await expect(
@@ -360,10 +327,10 @@ describe('CalendarService', () => {
       // Arrange
       const input = buildCreateInput({ nameID: 'test-event' });
       const mockCalendar = { id: 'calendar-1' } as Calendar;
+      db.query.calendars.findFirst.mockResolvedValueOnce(mockCalendar);
       const mockStorageAggregator = { id: 'storage-1' } as any;
       const mockEvent = { id: 'event-1' } as unknown as ICalendarEvent;
 
-      vi.spyOn(calendarRepository, 'findOne').mockResolvedValue(mockCalendar);
       namingService.getReservedNameIDsInCalendar = vi
         .fn()
         .mockResolvedValue([]);
@@ -411,7 +378,8 @@ describe('CalendarService', () => {
         events: [eventWithAccess, eventWithoutAccess],
       } as unknown as Calendar;
 
-      vi.spyOn(calendarRepository, 'findOne').mockResolvedValue(mockCalendar);
+      db.query.calendars.findFirst.mockResolvedValueOnce(mockCalendar);
+
       authorizationService.isAccessGranted = vi
         .fn()
         .mockImplementation(
@@ -447,7 +415,7 @@ describe('CalendarService', () => {
         ],
       } as unknown as Calendar;
 
-      vi.spyOn(calendarRepository, 'findOne').mockResolvedValue(mockCalendar);
+      db.query.calendars.findFirst.mockResolvedValueOnce(mockCalendar);
       authorizationService.isAccessGranted = vi.fn().mockReturnValue(false);
 
       const inputCalendar = { id: calendarId } as ICalendar;
@@ -468,7 +436,7 @@ describe('CalendarService', () => {
         events: undefined,
       } as unknown as Calendar;
 
-      vi.spyOn(calendarRepository, 'findOne').mockResolvedValue(mockCalendar);
+      db.query.calendars.findFirst.mockResolvedValueOnce(mockCalendar);
 
       const inputCalendar = { id: calendarId } as ICalendar;
 
@@ -496,7 +464,7 @@ describe('CalendarService', () => {
         events: [calendarEvent],
       } as unknown as Calendar;
 
-      vi.spyOn(calendarRepository, 'findOne').mockResolvedValue(mockCalendar);
+      db.query.calendars.findFirst.mockResolvedValueOnce(mockCalendar);
       authorizationService.isAccessGranted = vi.fn().mockReturnValue(true);
 
       // Mock the subspace events retrieval
@@ -529,7 +497,8 @@ describe('CalendarService', () => {
         events: [],
       } as unknown as Calendar;
 
-      vi.spyOn(calendarRepository, 'findOne').mockResolvedValue(mockCalendar);
+      db.query.calendars.findFirst.mockResolvedValueOnce(mockCalendar);
+
       const getSubspaceEventsSpy = vi.spyOn(
         service,
         'getCalendarEventsFromSubspaces' as any
@@ -547,7 +516,6 @@ describe('CalendarService', () => {
     it('should throw EntityNotFoundException when calendar does not exist', async () => {
       // Arrange
       const agentInfo = buildAgentInfo();
-      vi.spyOn(calendarRepository, 'findOne').mockResolvedValue(null);
 
       const inputCalendar = { id: 'non-existent-id' } as ICalendar;
 

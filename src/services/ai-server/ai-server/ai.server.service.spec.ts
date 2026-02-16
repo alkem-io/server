@@ -3,7 +3,6 @@ import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.con
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { AiPersonaService } from '@services/ai-server/ai-persona/ai.persona.service';
 import { InvocationResultAction } from '@services/ai-server/ai-persona/dto/ai.persona.invocation/invocation.result.action.dto';
 import { MessageSenderRole } from '@services/ai-server/ai-persona/dto/interaction.message';
@@ -15,15 +14,15 @@ import { RoomControllerService } from '@services/room-integration/room.controlle
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { type Mock, vi } from 'vitest';
 import { AiServer } from './ai.server.entity';
 import { AiServerService } from './ai.server.service';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 
 describe('AiServerService', () => {
   let service: AiServerService;
-  let aiServerRepository: Record<string, Mock>;
-  let vcRepository: Record<string, Mock>;
+  let db: any;
   let aiPersonaService: Record<string, Mock>;
   let roomControllerService: Record<string, Mock>;
   let subscriptionPublishService: Record<string, Mock>;
@@ -32,8 +31,7 @@ describe('AiServerService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AiServerService,
-        repositoryProviderMockFactory(AiServer),
-        repositoryProviderMockFactory(VirtualContributor),
+        mockDrizzleProvider,
         MockWinstonProvider,
       ],
     })
@@ -41,8 +39,8 @@ describe('AiServerService', () => {
       .compile();
 
     service = module.get(AiServerService);
-    aiServerRepository = module.get(getRepositoryToken(AiServer));
-    vcRepository = module.get(getRepositoryToken(VirtualContributor));
+    db = module.get(DRIZZLE);
+
     aiPersonaService = module.get(AiPersonaService) as unknown as Record<
       string,
       Mock
@@ -58,7 +56,7 @@ describe('AiServerService', () => {
   describe('getAiServerOrFail', () => {
     it('should return the AI server when one exists', async () => {
       const aiServer = { id: 'server-1', authorization: { id: 'auth-1' } };
-      aiServerRepository.findOne.mockResolvedValue(aiServer);
+      db.query.aiServers.findFirst.mockResolvedValue(aiServer);
 
       const result = await service.getAiServerOrFail();
 
@@ -66,7 +64,7 @@ describe('AiServerService', () => {
     });
 
     it('should throw EntityNotFoundException when no AI server exists', async () => {
-      aiServerRepository.findOne.mockResolvedValue(null);
+      db.query.aiServers.findFirst.mockResolvedValue(null);
 
       await expect(service.getAiServerOrFail()).rejects.toThrow(
         EntityNotFoundException
@@ -97,7 +95,7 @@ describe('AiServerService', () => {
     it('should return AI personas when they exist on the server', async () => {
       const personas = [{ id: 'persona-1' }, { id: 'persona-2' }];
       const aiServer = { id: 'server-1', aiPersonas: personas };
-      aiServerRepository.findOne.mockResolvedValue(aiServer);
+      db.query.aiServers.findFirst.mockResolvedValue(aiServer);
 
       const result = await service.getAiPersonas();
 
@@ -106,7 +104,7 @@ describe('AiServerService', () => {
 
     it('should throw EntityNotFoundException when AI personas are undefined', async () => {
       const aiServer = { id: 'server-1', aiPersonas: undefined };
-      aiServerRepository.findOne.mockResolvedValue(aiServer);
+      db.query.aiServers.findFirst.mockResolvedValue(aiServer);
 
       await expect(service.getAiPersonas()).rejects.toThrow(
         EntityNotFoundException
@@ -119,9 +117,9 @@ describe('AiServerService', () => {
       const defaultPersona = { id: 'persona-default' };
       const aiServer = {
         id: 'server-1',
-        defaultAiPersona: defaultPersona,
+        aiPersonas: [defaultPersona],
       };
-      aiServerRepository.findOne.mockResolvedValue(aiServer);
+      db.query.aiServers.findFirst.mockResolvedValue(aiServer);
 
       const result = await service.getDefaultAiPersonaOrFail();
 
@@ -129,8 +127,8 @@ describe('AiServerService', () => {
     });
 
     it('should throw EntityNotFoundException when no default persona exists', async () => {
-      const aiServer = { id: 'server-1', defaultAiPersona: undefined };
-      aiServerRepository.findOne.mockResolvedValue(aiServer);
+      const aiServer = { id: 'server-1', aiPersonas: [] };
+      db.query.aiServers.findFirst.mockResolvedValue(aiServer);
 
       await expect(service.getDefaultAiPersonaOrFail()).rejects.toThrow(
         EntityNotFoundException
@@ -144,7 +142,7 @@ describe('AiServerService', () => {
       const vc = { id: 'vc-1', aiPersonaID: 'persona-1' };
       vi.mocked(aiPersonaService.getAiPersonaOrFail).mockResolvedValue(persona);
       vi.mocked(aiPersonaService.save).mockResolvedValue(persona);
-      vcRepository.findOne.mockResolvedValue(vc);
+      db.query.virtualContributors.findFirst.mockResolvedValue(vc);
 
       const now = new Date();
       await service.updatePersonaBoKLastUpdated('persona-1', now);
@@ -159,7 +157,7 @@ describe('AiServerService', () => {
       const persona = { id: 'persona-1' };
       vi.mocked(aiPersonaService.getAiPersonaOrFail).mockResolvedValue(persona);
       vi.mocked(aiPersonaService.save).mockResolvedValue(persona);
-      vcRepository.findOne.mockResolvedValue(null);
+      db.query.virtualContributors.findFirst.mockResolvedValue(null);
 
       await service.updatePersonaBoKLastUpdated('persona-1', null);
 

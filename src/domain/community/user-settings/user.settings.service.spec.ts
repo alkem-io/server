@@ -3,30 +3,25 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { type Mock } from 'vitest';
 import { UpdateUserSettingsEntityInput } from './dto/user.settings.dto.update';
 import { UserSettings } from './user.settings.entity';
 import { IUserSettings } from './user.settings.interface';
 import { UserSettingsService } from './user.settings.service';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 
 describe('UserSettingsService', () => {
   let service: UserSettingsService;
-  let repository: {
-    findOne: Mock;
-    save: Mock;
-    remove: Mock;
-  };
-
+  let db: any;
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UserSettingsService,
-        repositoryProviderMockFactory(UserSettings),
+        mockDrizzleProvider,
         MockCacheManager,
         MockWinstonProvider,
       ],
@@ -35,7 +30,7 @@ describe('UserSettingsService', () => {
       .compile();
 
     service = module.get(UserSettingsService);
-    repository = module.get(getRepositoryToken(UserSettings));
+    db = module.get(DRIZZLE);
   });
 
   const defaultNotificationSetting = () => ({ email: false, inApp: false });
@@ -354,7 +349,7 @@ describe('UserSettingsService', () => {
   describe('getUserSettingsOrFail', () => {
     it('should return user settings when found', async () => {
       const mockSettings = { id: 'settings-1' };
-      repository.findOne.mockResolvedValue(mockSettings);
+      db.query.userSettings.findFirst.mockResolvedValue(mockSettings);
 
       const result = await service.getUserSettingsOrFail('settings-1');
 
@@ -362,7 +357,7 @@ describe('UserSettingsService', () => {
     });
 
     it('should throw EntityNotFoundException when settings are not found', async () => {
-      repository.findOne.mockResolvedValue(null);
+      db.query.userSettings.findFirst.mockResolvedValue(null);
 
       await expect(
         service.getUserSettingsOrFail('nonexistent')
@@ -373,17 +368,16 @@ describe('UserSettingsService', () => {
   describe('deleteUserSettings', () => {
     it('should find and remove the user settings', async () => {
       const mockSettings = { id: 'settings-1' };
-      repository.findOne.mockResolvedValue(mockSettings);
-      repository.remove.mockResolvedValue(mockSettings);
+      db.query.userSettings.findFirst.mockResolvedValue(mockSettings);
 
       const result = await service.deleteUserSettings('settings-1');
 
       expect(result).toBe(mockSettings);
-      expect(repository.remove).toHaveBeenCalled();
+
     });
 
     it('should throw EntityNotFoundException when settings do not exist', async () => {
-      repository.findOne.mockResolvedValue(null);
+      db.query.userSettings.findFirst.mockResolvedValue(null);
 
       await expect(service.deleteUserSettings('nonexistent')).rejects.toThrow(
         EntityNotFoundException

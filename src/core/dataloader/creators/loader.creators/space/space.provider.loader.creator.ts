@@ -1,13 +1,14 @@
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { DataLoaderCreator } from '@core/dataloader/creators/base';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { Organization } from '@domain/community/organization/organization.entity';
-import { User } from '@domain/community/user/user.entity';
-import { Space } from '@domain/space/space/space.entity';
-import { Injectable } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
+import { organizations } from '@domain/community/organization/organization.schema';
+import { users } from '@domain/community/user/user.schema';
+import { spaces } from '@domain/space/space/space.schema';
+import { Inject, Injectable } from '@nestjs/common';
 import DataLoader from 'dataloader';
-import { EntityManager, In } from 'typeorm';
+import { inArray } from 'drizzle-orm';
 
 /**
  * DataLoader creator that resolves the full provider (host) chain for spaces
@@ -21,7 +22,7 @@ import { EntityManager, In } from 'typeorm';
 export class SpaceProviderLoaderCreator
   implements DataLoaderCreator<IContributor | null>
 {
-  constructor(@InjectEntityManager() private manager: EntityManager) {}
+  constructor(@Inject(DRIZZLE) private readonly db: DrizzleDb) {}
 
   public create(): ILoader<IContributor | null> {
     return new DataLoader<string, IContributor | null>(
@@ -38,13 +39,15 @@ export class SpaceProviderLoaderCreator
     }
 
     // Step 1: Load all spaces by about.id
-    const spaces = await this.manager.find(Space, {
-      where: { about: { id: In([...spaceAboutIds]) } },
-      relations: { about: true },
+    const spaceResults = await this.db.query.spaces.findMany({
+      where: inArray(spaces.aboutId, [...spaceAboutIds]),
+      with: {
+        about: true,
+      },
     });
 
-    const spaceByAboutId = new Map<string, Space>();
-    for (const space of spaces) {
+    const spaceByAboutId = new Map<string, (typeof spaceResults)[number]>();
+    for (const space of spaceResults) {
       if (space.about) {
         spaceByAboutId.set(space.about.id, space);
       }
@@ -52,20 +55,24 @@ export class SpaceProviderLoaderCreator
 
     // Step 2: Collect unique L0 space IDs that need account loading
     const l0SpaceIds = new Set<string>();
-    for (const space of spaces) {
-      l0SpaceIds.add(space.levelZeroSpaceID);
+    for (const space of spaceResults) {
+      if (space.levelZeroSpaceID) {
+        l0SpaceIds.add(space.levelZeroSpaceID);
+      }
     }
 
     // Batch load L0 spaces with account relation
     const l0Spaces =
       l0SpaceIds.size > 0
-        ? await this.manager.find(Space, {
-            where: { id: In([...l0SpaceIds]) },
-            relations: { account: true },
+        ? await this.db.query.spaces.findMany({
+            where: inArray(spaces.id, [...l0SpaceIds]),
+            with: {
+              account: true,
+            },
           })
         : [];
 
-    const l0SpaceById = new Map<string, Space>();
+    const l0SpaceById = new Map<string, (typeof l0Spaces)[number]>();
     for (const l0Space of l0Spaces) {
       l0SpaceById.set(l0Space.id, l0Space);
     }
@@ -80,31 +87,31 @@ export class SpaceProviderLoaderCreator
 
     // Batch load users and organizations in parallel
     const accountIdArray = [...accountIds];
-    const [users, organizations] =
+    const [userResults, orgResults] =
       accountIdArray.length > 0
         ? await Promise.all([
-            this.manager.find(User, {
-              where: { accountID: In(accountIdArray) },
+            this.db.query.users.findMany({
+              where: inArray(users.accountID, accountIdArray),
             }),
-            this.manager.find(Organization, {
-              where: { accountID: In(accountIdArray) },
+            this.db.query.organizations.findMany({
+              where: inArray(organizations.accountID, accountIdArray),
             }),
           ])
         : [[], []];
 
-    // Build accountID → contributor map (user takes precedence)
+    // Build accountID -> contributor map (user takes precedence)
     const hostByAccountId = new Map<string, IContributor>();
-    for (const org of organizations) {
-      hostByAccountId.set(org.accountID, org);
+    for (const org of orgResults) {
+      hostByAccountId.set(org.accountID, org as unknown as IContributor);
     }
-    for (const user of users) {
-      hostByAccountId.set(user.accountID, user);
+    for (const user of userResults) {
+      hostByAccountId.set(user.accountID, user as unknown as IContributor);
     }
 
-    // Resolve: spaceAboutId → space → l0Space → account → host
+    // Resolve: spaceAboutId -> space -> l0Space -> account -> host
     return spaceAboutIds.map(aboutId => {
       const space = spaceByAboutId.get(aboutId);
-      if (!space) return null;
+      if (!space?.levelZeroSpaceID) return null;
 
       const l0Space = l0SpaceById.get(space.levelZeroSpaceID);
       if (!l0Space?.account) return null;

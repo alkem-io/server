@@ -5,23 +5,21 @@ import {
 } from '@common/exceptions';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { MockType } from '@test/utils/mock.type';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
 import { type Mock } from 'vitest';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { Visual } from '../visual/visual.entity';
 import { VisualService } from '../visual/visual.service';
 import { MediaGallery } from './media.gallery.entity';
 import { MediaGalleryService } from './media.gallery.service';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 
 describe('MediaGalleryService', () => {
   let service: MediaGalleryService;
-  let mediaGalleryRepository: MockType<Repository<MediaGallery>>;
+  let db: any;
   let visualService: VisualService;
   let storageBucketService: StorageBucketService;
   let authorizationPolicyService: AuthorizationPolicyService;
@@ -37,7 +35,7 @@ describe('MediaGalleryService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         MediaGalleryService,
-        repositoryProviderMockFactory(MediaGallery),
+        mockDrizzleProvider,
         MockCacheManager,
         MockWinstonProvider,
       ],
@@ -46,7 +44,7 @@ describe('MediaGalleryService', () => {
       .compile();
 
     service = module.get(MediaGalleryService);
-    mediaGalleryRepository = module.get(getRepositoryToken(MediaGallery));
+    db = module.get(DRIZZLE);
     visualService = module.get(VisualService);
     storageBucketService = module.get(StorageBucketService);
     authorizationPolicyService = module.get(AuthorizationPolicyService);
@@ -55,7 +53,7 @@ describe('MediaGalleryService', () => {
   describe('getMediaGalleryOrFail', () => {
     it('should return media gallery when found', async () => {
       const mg = { id: 'mg-1', visuals: [] } as unknown as MediaGallery;
-      mediaGalleryRepository.findOne!.mockResolvedValue(mg);
+      db.query.mediaGalleries.findFirst.mockResolvedValueOnce(mg);
 
       const result = await service.getMediaGalleryOrFail('mg-1');
 
@@ -63,7 +61,6 @@ describe('MediaGalleryService', () => {
     });
 
     it('should throw EntityNotFoundException when not found', async () => {
-      mediaGalleryRepository.findOne!.mockResolvedValue(null);
 
       await expect(service.getMediaGalleryOrFail('missing')).rejects.toThrow(
         EntityNotFoundException
@@ -79,7 +76,7 @@ describe('MediaGalleryService', () => {
           { id: 'v2', sortOrder: 2 },
         ],
       } as unknown as MediaGallery;
-      mediaGalleryRepository.findOne!.mockResolvedValue(mg);
+      db.query.mediaGalleries.findFirst.mockResolvedValueOnce(mg);
 
       const result = await service.getMediaGalleryOrFail('mg-1');
 
@@ -96,7 +93,7 @@ describe('MediaGalleryService', () => {
           { id: 'v1', sortOrder: 1 },
         ],
       } as unknown as MediaGallery;
-      mediaGalleryRepository.findOne!.mockResolvedValue(mg);
+      db.query.mediaGalleries.findFirst.mockResolvedValueOnce(mg);
 
       const result = await service.getMediaGalleryOrFail('mg-1');
 
@@ -114,8 +111,8 @@ describe('MediaGalleryService', () => {
           { id: 'v2', sortOrder: 5 } as Visual,
         ],
       } as unknown as MediaGallery;
+      db.query.mediaGalleries.findFirst.mockResolvedValueOnce(mg);
 
-      mediaGalleryRepository.findOne!.mockResolvedValue(mg);
       (visualService.createVisual as Mock).mockReturnValue({
         id: 'v-new',
         sortOrder: 6,
@@ -140,8 +137,8 @@ describe('MediaGalleryService', () => {
         id: 'mg-1',
         visuals: [],
       } as unknown as MediaGallery;
+      db.query.mediaGalleries.findFirst.mockResolvedValueOnce(mg);
 
-      mediaGalleryRepository.findOne!.mockResolvedValue(mg);
       (visualService.createVisual as Mock).mockReturnValue({
         id: 'v-new',
       } as any);
@@ -164,8 +161,8 @@ describe('MediaGalleryService', () => {
         id: 'mg-1',
         visuals: [{ id: 'v1', sortOrder: 5 } as Visual],
       } as unknown as MediaGallery;
+      db.query.mediaGalleries.findFirst.mockResolvedValueOnce(mg);
 
-      mediaGalleryRepository.findOne!.mockResolvedValue(mg);
       (visualService.createVisual as Mock).mockReturnValue({
         id: 'v-new',
       } as any);
@@ -191,8 +188,8 @@ describe('MediaGalleryService', () => {
         id: 'mg-1',
         visuals: [{ id: 'v1' } as Visual, { id: 'v2' } as Visual],
       } as unknown as MediaGallery;
+      db.query.mediaGalleries.findFirst.mockResolvedValueOnce(mg);
 
-      mediaGalleryRepository.findOne!.mockResolvedValue(mg);
       (visualService.deleteVisual as Mock).mockResolvedValue({} as any);
 
       const result = await service.deleteVisualFromMediaGallery('mg-1', 'v1');
@@ -206,8 +203,7 @@ describe('MediaGalleryService', () => {
         id: 'mg-1',
         visuals: [{ id: 'v1' } as Visual],
       } as unknown as MediaGallery;
-
-      mediaGalleryRepository.findOne!.mockResolvedValue(mg);
+      db.query.mediaGalleries.findFirst.mockResolvedValueOnce(mg);
 
       await expect(
         service.deleteVisualFromMediaGallery('mg-1', 'v-missing')
@@ -223,12 +219,8 @@ describe('MediaGalleryService', () => {
         storageBucket: { id: 'sb-1' },
         visuals: [{ id: 'v1' } as Visual, { id: 'v2' } as Visual],
       } as unknown as MediaGallery;
+      db.query.mediaGalleries.findFirst.mockResolvedValueOnce(mg);
 
-      mediaGalleryRepository.findOne!.mockResolvedValue(mg);
-      mediaGalleryRepository.remove!.mockResolvedValue({
-        ...mg,
-        id: undefined,
-      });
       (visualService.deleteVisual as Mock).mockResolvedValue({} as any);
       (storageBucketService.deleteStorageBucket as Mock).mockResolvedValue(
         {} as any
@@ -254,8 +246,7 @@ describe('MediaGalleryService', () => {
         storageBucket: undefined,
         visuals: [],
       } as unknown as MediaGallery;
-
-      mediaGalleryRepository.findOne!.mockResolvedValue(mg);
+      db.query.mediaGalleries.findFirst.mockResolvedValueOnce(mg);
 
       await expect(service.deleteMediaGallery('mg-1')).rejects.toThrow(
         RelationshipNotFoundException
@@ -269,8 +260,7 @@ describe('MediaGalleryService', () => {
         storageBucket: { id: 'sb-1' },
         visuals: [],
       } as unknown as MediaGallery;
-
-      mediaGalleryRepository.findOne!.mockResolvedValue(mg);
+      db.query.mediaGalleries.findFirst.mockResolvedValueOnce(mg);
 
       await expect(service.deleteMediaGallery('mg-1')).rejects.toThrow(
         RelationshipNotFoundException

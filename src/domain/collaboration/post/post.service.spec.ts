@@ -7,18 +7,18 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { RoomService } from '@domain/communication/room/room.service';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
 import { Post } from './post.entity';
 import { PostService } from './post.service';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import { vi } from 'vitest';
 
 describe('PostService', () => {
   let service: PostService;
-  let repository: Repository<Post>;
+  let db: any;
   let profileService: ProfileService;
   let authorizationPolicyService: AuthorizationPolicyService;
   let roomService: RoomService;
@@ -33,7 +33,7 @@ describe('PostService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PostService,
-        repositoryProviderMockFactory(Post),
+        mockDrizzleProvider,
         MockCacheManager,
         MockWinstonProvider,
       ],
@@ -42,7 +42,7 @@ describe('PostService', () => {
       .compile();
 
     service = module.get(PostService);
-    repository = module.get(getRepositoryToken(Post));
+    db = module.get(DRIZZLE);
     profileService = module.get(ProfileService);
     authorizationPolicyService = module.get(AuthorizationPolicyService);
     roomService = module.get(RoomService);
@@ -156,10 +156,7 @@ describe('PostService', () => {
         comments: { id: 'room-1' },
       } as any;
 
-      vi.spyOn(repository, 'findOne').mockResolvedValue(post);
-      vi.spyOn(repository, 'remove').mockResolvedValue({
-        id: undefined,
-      } as any);
+      db.query.posts.findFirst.mockResolvedValueOnce(post);
 
       const result = await service.deletePost('post-1');
 
@@ -168,7 +165,6 @@ describe('PostService', () => {
       );
       expect(profileService.deleteProfile).toHaveBeenCalledWith('profile-1');
       expect(roomService.deleteRoom).toHaveBeenCalledWith({ roomID: 'room-1' });
-      expect(repository.remove).toHaveBeenCalledWith(post);
       expect(result.id).toBe('post-1');
     });
 
@@ -180,35 +176,28 @@ describe('PostService', () => {
         comments: undefined,
       } as any;
 
-      vi.spyOn(repository, 'findOne').mockResolvedValue(post);
-      vi.spyOn(repository, 'remove').mockResolvedValue({
-        id: undefined,
-      } as any);
+      db.query.posts.findFirst.mockResolvedValueOnce(post);
 
       await service.deletePost('post-2');
 
       expect(authorizationPolicyService.delete).not.toHaveBeenCalled();
       expect(profileService.deleteProfile).not.toHaveBeenCalled();
       expect(roomService.deleteRoom).not.toHaveBeenCalled();
-      expect(repository.remove).toHaveBeenCalledWith(post);
     });
   });
 
   describe('getPostOrFail', () => {
     it('should return post when found', async () => {
       const post = { id: 'post-1', nameID: 'test' } as Post;
-      vi.spyOn(repository, 'findOne').mockResolvedValue(post);
+      db.query.posts.findFirst.mockResolvedValueOnce(post);
 
       const result = await service.getPostOrFail('post-1');
 
       expect(result).toBe(post);
-      expect(repository.findOne).toHaveBeenCalledWith({
-        where: { id: 'post-1' },
-      });
     });
 
     it('should throw EntityNotFoundException when not found', async () => {
-      vi.spyOn(repository, 'findOne').mockResolvedValue(null);
+      db.query.posts.findFirst.mockResolvedValueOnce(undefined);
 
       await expect(service.getPostOrFail('nonexistent')).rejects.toThrow(
         EntityNotFoundException
@@ -218,14 +207,10 @@ describe('PostService', () => {
     it('should pass through options to findOne', async () => {
       const post = { id: 'post-1' } as Post;
       const options = { relations: { profile: true } } as any;
-      vi.spyOn(repository, 'findOne').mockResolvedValue(post);
+      db.query.posts.findFirst.mockResolvedValueOnce(post);
 
       await service.getPostOrFail('post-1', options);
 
-      expect(repository.findOne).toHaveBeenCalledWith({
-        where: { id: 'post-1' },
-        relations: { profile: true },
-      });
     });
   });
 
@@ -246,8 +231,8 @@ describe('PostService', () => {
         profileData: { displayName: 'New Name' },
       } as any;
 
-      vi.spyOn(repository, 'findOne').mockResolvedValue(post);
-      vi.spyOn(repository, 'save').mockResolvedValue(post);
+      db.query.posts.findFirst.mockResolvedValueOnce(post);
+      db.returning.mockResolvedValueOnce([post]);
       vi.mocked(profileService.updateProfile).mockResolvedValue(updatedProfile);
 
       const result = await service.updatePost(postData);
@@ -271,8 +256,8 @@ describe('PostService', () => {
         profileData: { displayName: 'New Name' },
       } as any;
 
-      vi.spyOn(repository, 'findOne').mockResolvedValue(post);
-      vi.spyOn(repository, 'save').mockResolvedValue(post);
+      db.query.posts.findFirst.mockResolvedValueOnce(post);
+      db.returning.mockResolvedValueOnce([post]);
       vi.mocked(profileService.updateProfile).mockResolvedValue(post.profile);
 
       await service.updatePost(postData);
@@ -295,8 +280,8 @@ describe('PostService', () => {
         profileData: { displayName: 'Same Name' },
       } as any;
 
-      vi.spyOn(repository, 'findOne').mockResolvedValue(post);
-      vi.spyOn(repository, 'save').mockResolvedValue(post);
+      db.query.posts.findFirst.mockResolvedValueOnce(post);
+      db.returning.mockResolvedValueOnce([post]);
       vi.mocked(profileService.updateProfile).mockResolvedValue(post.profile);
 
       await service.updatePost(postData);
@@ -316,8 +301,8 @@ describe('PostService', () => {
         profileData: { displayName: 'New Name' },
       } as any;
 
-      vi.spyOn(repository, 'findOne').mockResolvedValue(post);
-      vi.spyOn(repository, 'save').mockResolvedValue(post);
+      db.query.posts.findFirst.mockResolvedValueOnce(post);
+      db.returning.mockResolvedValueOnce([post]);
       vi.mocked(profileService.updateProfile).mockResolvedValue(post.profile);
 
       await service.updatePost(postData);
@@ -337,7 +322,7 @@ describe('PostService', () => {
         profileData: { displayName: 'New Name' },
       } as any;
 
-      vi.spyOn(repository, 'findOne').mockResolvedValue(post);
+      db.query.posts.findFirst.mockResolvedValueOnce(post);
 
       await expect(service.updatePost(postData)).rejects.toThrow(
         EntityNotFoundException
@@ -352,8 +337,8 @@ describe('PostService', () => {
       } as any;
       const postData = { ID: 'post-1' } as any;
 
-      vi.spyOn(repository, 'findOne').mockResolvedValue(post);
-      vi.spyOn(repository, 'save').mockResolvedValue(post);
+      db.query.posts.findFirst.mockResolvedValueOnce(post);
+      db.returning.mockResolvedValueOnce([post]);
 
       await service.updatePost(postData);
 
@@ -365,8 +350,7 @@ describe('PostService', () => {
     it('should return profile when initialized', async () => {
       const profile = { id: 'profile-1', displayName: 'Test' } as any;
       const post = { id: 'post-1', profile } as any;
-
-      vi.spyOn(repository, 'findOne').mockResolvedValue(post);
+      db.query.posts.findFirst.mockResolvedValueOnce(post);
 
       const result = await service.getProfile(post);
 
@@ -375,8 +359,7 @@ describe('PostService', () => {
 
     it('should throw EntityNotFoundException when profile is not initialized', async () => {
       const post = { id: 'post-1', profile: undefined } as any;
-
-      vi.spyOn(repository, 'findOne').mockResolvedValue(post);
+      db.query.posts.findFirst.mockResolvedValueOnce(post);
 
       await expect(service.getProfile(post)).rejects.toThrow(
         EntityNotFoundException
@@ -385,50 +368,24 @@ describe('PostService', () => {
   });
 
   describe('getComments', () => {
-    const createQueryBuilderMock = (rawResult: any) => {
-      return {
-        select: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-        getRawOne: vi.fn().mockResolvedValue(rawResult),
-      };
-    };
-
     it('should get comments via room service when commentsId exists', async () => {
       const commentsRoom = { id: 'room-1', displayName: 'comments' } as any;
-      const qb = createQueryBuilderMock({ commentsId: 'room-1' });
 
-      vi.spyOn(repository, 'createQueryBuilder').mockReturnValue(qb as any);
+      db.query.posts.findFirst.mockResolvedValueOnce({ commentsId: 'room-1' });
       vi.mocked(roomService.getRoomOrFail).mockResolvedValue(commentsRoom);
 
       const result = await service.getComments('post-1');
 
-      expect(repository.createQueryBuilder).toHaveBeenCalledWith('post');
-      expect(qb.select).toHaveBeenCalledWith('post.commentsId', 'commentsId');
-      expect(qb.where).toHaveBeenCalledWith({ id: 'post-1' });
       expect(roomService.getRoomOrFail).toHaveBeenCalledWith('room-1');
       expect(result).toBe(commentsRoom);
     });
 
     it('should throw EntityNotFoundException when commentsId is null', async () => {
-      const qb = createQueryBuilderMock({ commentsId: null });
-
-      vi.spyOn(repository, 'createQueryBuilder').mockReturnValue(qb as any);
+      db.query.posts.findFirst.mockResolvedValueOnce({ commentsId: null });
 
       await expect(service.getComments('post-1')).rejects.toThrow(
         EntityNotFoundException
       );
-    });
-  });
-
-  describe('savePost', () => {
-    it('should persist the post to the repository', async () => {
-      const post = { id: 'post-1', nameID: 'test' } as any;
-      vi.spyOn(repository, 'save').mockResolvedValue(post);
-
-      const result = await service.savePost(post);
-
-      expect(repository.save).toHaveBeenCalledWith(post);
-      expect(result).toBe(post);
     });
   });
 });

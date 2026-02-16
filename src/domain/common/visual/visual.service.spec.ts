@@ -4,23 +4,21 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { MockType } from '@test/utils/mock.type';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
 import { type Mock } from 'vitest';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { Visual } from './visual.entity';
 import { IVisual } from './visual.interface';
 import { VisualService } from './visual.service';
+import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 
 describe('VisualService', () => {
   let service: VisualService;
-  let visualRepository: MockType<Repository<Visual>>;
   let authorizationPolicyService: AuthorizationPolicyService;
+  let db: any;
 
   beforeEach(async () => {
     // Mock static Visual.create to avoid DataSource requirement
@@ -33,7 +31,7 @@ describe('VisualService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         VisualService,
-        repositoryProviderMockFactory(Visual),
+        mockDrizzleProvider,
         MockCacheManager,
         MockWinstonProvider,
       ],
@@ -42,8 +40,8 @@ describe('VisualService', () => {
       .compile();
 
     service = module.get(VisualService);
-    visualRepository = module.get(getRepositoryToken(Visual));
     authorizationPolicyService = module.get(AuthorizationPolicyService);
+    db = module.get(DRIZZLE);
   });
 
   describe('createVisual', () => {
@@ -95,7 +93,7 @@ describe('VisualService', () => {
   describe('getVisualOrFail', () => {
     it('should return visual when found', async () => {
       const visual = { id: 'v-1' } as Visual;
-      visualRepository.findOne!.mockResolvedValue(visual);
+      db.query.visuals.findFirst.mockResolvedValueOnce(visual);
 
       const result = await service.getVisualOrFail('v-1');
 
@@ -103,7 +101,6 @@ describe('VisualService', () => {
     });
 
     it('should throw EntityNotFoundException when not found', async () => {
-      visualRepository.findOne!.mockResolvedValue(null);
 
       await expect(service.getVisualOrFail('missing')).rejects.toThrow(
         EntityNotFoundException
@@ -118,11 +115,8 @@ describe('VisualService', () => {
         uri: 'old-uri',
         alternativeText: 'old-alt',
       } as Visual;
-      visualRepository.findOne!.mockResolvedValue(visual);
-      visualRepository.save!.mockResolvedValue({
-        ...visual,
-        uri: 'new-uri',
-      });
+      db.query.visuals.findFirst.mockResolvedValueOnce(visual);
+      db.returning.mockResolvedValueOnce([{ ...visual, uri: 'new-uri' }]);
 
       const result = await service.updateVisual({
         visualID: 'v-1',
@@ -134,8 +128,8 @@ describe('VisualService', () => {
 
     it('should update alternativeText when provided', async () => {
       const visual = { id: 'v-1', uri: '', alternativeText: 'old' } as Visual;
-      visualRepository.findOne!.mockResolvedValue(visual);
-      visualRepository.save!.mockImplementation(async (v: any) => v);
+      db.query.visuals.findFirst.mockResolvedValueOnce(visual);
+      db.returning.mockResolvedValueOnce([{ ...visual, alternativeText: 'new alt text' }]);
 
       await service.updateVisual({
         visualID: 'v-1',
@@ -152,8 +146,8 @@ describe('VisualService', () => {
         uri: '',
         alternativeText: 'keep',
       } as Visual;
-      visualRepository.findOne!.mockResolvedValue(visual);
-      visualRepository.save!.mockImplementation(async (v: any) => v);
+      db.query.visuals.findFirst.mockResolvedValueOnce(visual);
+      db.returning.mockResolvedValueOnce([{ ...visual, uri: 'new' }]);
 
       await service.updateVisual({
         visualID: 'v-1',
@@ -170,10 +164,7 @@ describe('VisualService', () => {
         id: 'v-1',
         authorization: { id: 'auth-1' },
       } as unknown as Visual;
-      visualRepository.findOne!.mockResolvedValue(visual);
-      visualRepository.remove!.mockResolvedValue({
-        name: VisualType.AVATAR,
-      });
+      db.query.visuals.findFirst.mockResolvedValueOnce(visual);
       (authorizationPolicyService.delete as Mock).mockResolvedValue({} as any);
 
       const result = await service.deleteVisual({ ID: 'v-1' });
@@ -189,8 +180,7 @@ describe('VisualService', () => {
         id: 'v-1',
         authorization: undefined,
       } as unknown as Visual;
-      visualRepository.findOne!.mockResolvedValue(visual);
-      visualRepository.remove!.mockResolvedValue({});
+      db.query.visuals.findFirst.mockResolvedValueOnce(visual);
 
       await service.deleteVisual({ ID: 'v-1' });
 

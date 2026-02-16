@@ -44,6 +44,7 @@ export class VirtualContributorAuthorizationService {
     const virtualContributor =
       await this.virtualService.getVirtualContributorOrFail(virtualInput.id, {
         relations: {
+          authorization: true,
           account: {
             spaces: true,
           },
