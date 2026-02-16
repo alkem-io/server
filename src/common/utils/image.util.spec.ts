@@ -1,15 +1,19 @@
-import { getImageDimensions } from './image.util';
-
-// Mock image-size module
-vi.mock('image-size', () => ({
-  default: vi.fn(),
-}));
-
-import sizeOf from 'image-size';
-
-const mockedSizeOf = vi.mocked(sizeOf);
+import { Mock } from 'vitest';
 
 describe('getImageDimensions', () => {
+  let getImageDimensions: (
+    imageBuffer: Buffer
+  ) => Promise<{ imageHeight: number; imageWidth: number }>;
+  let mockedSizeOf: Mock;
+
+  beforeEach(async () => {
+    vi.resetModules();
+    mockedSizeOf = vi.fn();
+    vi.doMock('image-size', () => ({ default: mockedSizeOf }));
+    const mod = await import('./image.util');
+    getImageDimensions = mod.getImageDimensions;
+  });
+
   it('should return height and width from a valid image buffer', async () => {
     mockedSizeOf.mockReturnValue({
       height: 600,

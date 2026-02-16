@@ -5,6 +5,7 @@ import {
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { ContributorService } from '@domain/community/contributor/contributor.service';
+import { User } from '@domain/community/user/user.entity';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
@@ -19,10 +20,6 @@ import { Invitation } from './invitation.entity';
 import { IInvitation } from './invitation.interface';
 import { InvitationService } from './invitation.service';
 import { InvitationLifecycleService } from './invitation.service.lifecycle';
-
-vi.mock('@domain/community/contributor/get.contributor.type', () => ({
-  getContributorType: vi.fn().mockReturnValue('USER'),
-}));
 
 describe('InvitationService', () => {
   let service: InvitationService;
@@ -157,7 +154,10 @@ describe('InvitationService', () => {
         roleSetID: 'roleset-1',
         invitedToParent: false,
       };
-      const mockContributor = { id: 'contributor-1' } as any;
+      // Use a real User instance so getContributorType()'s instanceof check works
+      const mockContributor = Object.assign(new User(), {
+        id: 'contributor-1',
+      }) as any;
       const mockLifecycle = { id: 'lifecycle-1' } as any;
 
       (lifecycleService.createLifecycle as Mock).mockResolvedValue(

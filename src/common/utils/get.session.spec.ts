@@ -1,14 +1,5 @@
-import { getSession, getSessionFromJwt } from './get.session';
 import type { FrontendApi, Session } from '@ory/kratos-client';
-
-// Mock jwt-decode
-vi.mock('jwt-decode', () => ({
-  default: vi.fn(),
-}));
-
-import jwt_decode from 'jwt-decode';
-
-const mockedJwtDecode = vi.mocked(jwt_decode);
+import { Mock } from 'vitest';
 
 const createMockSession = (overrides?: Partial<Session>): Session =>
   ({
@@ -26,6 +17,19 @@ const createMockKratosClient = (
   }) as unknown as FrontendApi;
 
 describe('getSession', () => {
+  let getSession: typeof import('./get.session').getSession;
+  let getSessionFromJwt: typeof import('./get.session').getSessionFromJwt;
+  let mockedJwtDecode: Mock;
+
+  beforeEach(async () => {
+    vi.resetModules();
+    mockedJwtDecode = vi.fn();
+    vi.doMock('jwt-decode', () => ({ default: mockedJwtDecode }));
+    const mod = await import('./get.session');
+    getSession = mod.getSession;
+    getSessionFromJwt = mod.getSessionFromJwt;
+  });
+
   it('should throw when neither authorization nor cookie is provided', async () => {
     const client = createMockKratosClient();
     await expect(getSession(client, {})).rejects.toThrow(
@@ -101,8 +105,6 @@ describe('getSession', () => {
   });
 
   it('should reject with the API token error when both JWT and API token methods fail', async () => {
-    // getSessionFromAuthorizationHeader is not async, so when getSessionFromApiToken
-    // returns a rejected promise, it is returned (not caught synchronously)
     mockedJwtDecode.mockImplementation(() => {
       throw new Error('not a jwt');
     });
@@ -118,6 +120,17 @@ describe('getSession', () => {
 });
 
 describe('getSessionFromJwt', () => {
+  let getSessionFromJwt: typeof import('./get.session').getSessionFromJwt;
+  let mockedJwtDecode: Mock;
+
+  beforeEach(async () => {
+    vi.resetModules();
+    mockedJwtDecode = vi.fn();
+    vi.doMock('jwt-decode', () => ({ default: mockedJwtDecode }));
+    const mod = await import('./get.session');
+    getSessionFromJwt = mod.getSessionFromJwt;
+  });
+
   it('should throw when token is empty', () => {
     expect(() => getSessionFromJwt('')).toThrow('Token is empty!');
   });
