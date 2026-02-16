@@ -3900,6 +3900,8 @@ enum MimeType {
   DOC
   DOCX
   GIF
+  HEIC
+  HEIF
   JPEG
   JPG
   ODP
