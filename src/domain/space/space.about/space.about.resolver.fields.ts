@@ -5,10 +5,14 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { GraphqlGuard } from '@core/authorization';
 import { ProfileLoaderCreator } from '@core/dataloader/creators/loader.creators/profile.loader.creator';
 import { SpaceBySpaceAboutIdLoaderCreator } from '@core/dataloader/creators/loader.creators/space/space.by.space.about.id.loader.creator';
+import { SpaceCommunityWithRoleSetLoaderCreator } from '@core/dataloader/creators/loader.creators/space/space.community.with.roleset.loader.creator';
+import { SpaceMetricsLoaderCreator } from '@core/dataloader/creators/loader.creators/space/space.metrics.loader.creator';
+import { SpaceProviderLoaderCreator } from '@core/dataloader/creators/loader.creators/space/space.provider.loader.creator';
 import { Loader } from '@core/dataloader/decorators/data.loader.decorator';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { INVP } from '@domain/common/nvp/nvp.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
+import { ICommunity } from '@domain/community/community/community.interface';
 import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { TemplateContentSpaceLookupService } from '@domain/template/template-content-space/template-content-space.lookup/template-content-space.lookup.service';
@@ -16,7 +20,6 @@ import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { ISpace } from '../space/space.interface';
 import { SpaceAboutMembership } from '../space.about.membership/dto/space.about.membership';
-import { SpaceLookupService } from '../space.lookup/space.lookup.service';
 import { SpaceAbout } from './space.about.entity';
 import { ISpaceAbout } from './space.about.interface';
 import { SpaceAboutService } from './space.about.service';
@@ -25,7 +28,6 @@ import { SpaceAboutService } from './space.about.service';
 export class SpaceAboutResolverFields {
   constructor(
     private readonly spaceAboutService: SpaceAboutService,
-    private spaceLookupService: SpaceLookupService,
     private templateContentSpaceLookupService: TemplateContentSpaceLookupService
   ) {}
 
@@ -47,8 +49,12 @@ export class SpaceAboutResolverFields {
     nullable: true,
     description: 'Metrics about activity within this Space.',
   })
-  async metrics(@Parent() spaceAbout: ISpaceAbout) {
-    return await this.spaceAboutService.getMetrics(spaceAbout);
+  async metrics(
+    @Parent() spaceAbout: ISpaceAbout,
+    @Loader(SpaceMetricsLoaderCreator)
+    loader: ILoader<INVP[]>
+  ) {
+    return loader.load(spaceAbout.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -58,9 +64,11 @@ export class SpaceAboutResolverFields {
     description: 'The Space provider (host).',
   })
   async provider(
-    @Parent() spaceAbout: ISpaceAbout
+    @Parent() spaceAbout: ISpaceAbout,
+    @Loader(SpaceProviderLoaderCreator)
+    loader: ILoader<IContributor | null>
   ): Promise<IContributor | null> {
-    return await this.spaceLookupService.getProvider(spaceAbout);
+    return loader.load(spaceAbout.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -101,16 +109,24 @@ export class SpaceAboutResolverFields {
     description: 'The membership information for this Space.',
   })
   async membership(
-    @Parent() spaceAbout: ISpaceAbout
+    @Parent() spaceAbout: ISpaceAbout,
+    @Loader(SpaceCommunityWithRoleSetLoaderCreator)
+    loader: ILoader<ICommunity | null>
   ): Promise<SpaceAboutMembership> {
-    const community = await this.spaceAboutService.getCommunityWithRoleSet(
-      spaceAbout.id
-    );
-    const membership: SpaceAboutMembership = {
+    const community = await loader.load(spaceAbout.id);
+    if (!community || !community.roleSet) {
+      // Fallback to the original method if the DataLoader didn't find a space
+      const fallbackCommunity =
+        await this.spaceAboutService.getCommunityWithRoleSet(spaceAbout.id);
+      return {
+        community: fallbackCommunity,
+        roleSet: fallbackCommunity.roleSet,
+      };
+    }
+    return {
       community,
       roleSet: community.roleSet,
     };
-    return membership;
   }
 
   @ResolveField('guidelines', () => ICommunityGuidelines, {
