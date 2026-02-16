@@ -162,14 +162,19 @@ describe('CredentialService', () => {
 
       credentialRepository.findOneBy.mockResolvedValue(existingCredential);
       // TypeORM remove clears the id, so the service reassigns it
-      credentialRepository.remove.mockResolvedValue({ ...existingCredential, id: undefined });
+      credentialRepository.remove.mockResolvedValue({
+        ...existingCredential,
+        id: undefined,
+      });
 
       const result = await service.deleteCredential(credentialId);
 
       expect(credentialRepository.findOneBy).toHaveBeenCalledWith({
         id: credentialId,
       });
-      expect(credentialRepository.remove).toHaveBeenCalledWith(existingCredential);
+      expect(credentialRepository.remove).toHaveBeenCalledWith(
+        existingCredential
+      );
       expect(result.id).toEqual(credentialId);
     });
 
@@ -206,8 +211,13 @@ describe('CredentialService', () => {
         type: 'global-admin',
       });
 
-      expect(credentialRepository.createQueryBuilder).toHaveBeenCalledWith('credential');
-      expect(qb.leftJoinAndSelect).toHaveBeenCalledWith('credential.agent', 'agent');
+      expect(credentialRepository.createQueryBuilder).toHaveBeenCalledWith(
+        'credential'
+      );
+      expect(qb.leftJoinAndSelect).toHaveBeenCalledWith(
+        'credential.agent',
+        'agent'
+      );
       expect(qb.where).toHaveBeenCalledWith({ type: 'global-admin' });
       expect(result).toEqual(credentials);
       expect(result).toHaveLength(2);
@@ -320,6 +330,160 @@ describe('CredentialService', () => {
 
       // Empty string is falsy, so it should query by type only
       expect(qb.where).toHaveBeenCalledWith({ type: 'global-admin' });
+    });
+  });
+
+  describe('countMatchingCredentialsBatch', () => {
+    function createBatchQueryBuilderMock(
+      rawResult: { resourceID: string; count: string }[] = []
+    ) {
+      return {
+        select: vi.fn().mockReturnThis(),
+        addSelect: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        andWhere: vi.fn().mockReturnThis(),
+        groupBy: vi.fn().mockReturnThis(),
+        getRawMany: vi.fn().mockResolvedValue(rawResult),
+      };
+    }
+
+    it('should return an empty map for empty criteria list', async () => {
+      const result = await service.countMatchingCredentialsBatch([]);
+
+      expect(result).toBeInstanceOf(Map);
+      expect(result.size).toBe(0);
+      expect(credentialRepository.createQueryBuilder).not.toHaveBeenCalled();
+    });
+
+    it('should return an empty map when all criteria have undefined resourceID', async () => {
+      const result = await service.countMatchingCredentialsBatch([
+        { type: 'space-member' },
+        { type: 'space-member', resourceID: undefined },
+      ]);
+
+      expect(result.size).toBe(0);
+      expect(credentialRepository.createQueryBuilder).not.toHaveBeenCalled();
+    });
+
+    it('should batch count credentials in a single grouped query', async () => {
+      const qb = createBatchQueryBuilderMock([
+        { resourceID: 'res-1', count: '10' },
+        { resourceID: 'res-2', count: '20' },
+      ]);
+      credentialRepository.createQueryBuilder.mockReturnValue(qb);
+
+      const result = await service.countMatchingCredentialsBatch([
+        { type: 'space-member', resourceID: 'res-1' },
+        { type: 'space-member', resourceID: 'res-2' },
+      ]);
+
+      expect(credentialRepository.createQueryBuilder).toHaveBeenCalledTimes(1);
+      expect(credentialRepository.createQueryBuilder).toHaveBeenCalledWith(
+        'credential'
+      );
+      expect(result.get('res-1')).toBe(10);
+      expect(result.get('res-2')).toBe(20);
+    });
+
+    it('should use the type from the first criteria item', async () => {
+      const qb = createBatchQueryBuilderMock([]);
+      credentialRepository.createQueryBuilder.mockReturnValue(qb);
+
+      await service.countMatchingCredentialsBatch([
+        { type: 'space-member', resourceID: 'res-1' },
+        { type: 'space-member', resourceID: 'res-2' },
+      ]);
+
+      expect(qb.where).toHaveBeenCalledWith('credential.type = :type', {
+        type: 'space-member',
+      });
+    });
+
+    it('should pass all resourceIDs in the IN clause', async () => {
+      const qb = createBatchQueryBuilderMock([]);
+      credentialRepository.createQueryBuilder.mockReturnValue(qb);
+
+      await service.countMatchingCredentialsBatch([
+        { type: 'space-member', resourceID: 'res-a' },
+        { type: 'space-member', resourceID: 'res-b' },
+        { type: 'space-member', resourceID: 'res-c' },
+      ]);
+
+      expect(qb.andWhere).toHaveBeenCalledWith(
+        'credential.resourceID IN (:...resourceIDs)',
+        { resourceIDs: ['res-a', 'res-b', 'res-c'] }
+      );
+    });
+
+    it('should parse count strings from DB as integers', async () => {
+      const qb = createBatchQueryBuilderMock([
+        { resourceID: 'res-1', count: '9999' },
+      ]);
+      credentialRepository.createQueryBuilder.mockReturnValue(qb);
+
+      const result = await service.countMatchingCredentialsBatch([
+        { type: 'space-member', resourceID: 'res-1' },
+      ]);
+
+      const count = result.get('res-1');
+      expect(count).toBe(9999);
+      expect(typeof count).toBe('number');
+    });
+
+    it('should not include resourceIDs for criteria without resourceID', async () => {
+      const qb = createBatchQueryBuilderMock([
+        { resourceID: 'res-1', count: '5' },
+      ]);
+      credentialRepository.createQueryBuilder.mockReturnValue(qb);
+
+      const result = await service.countMatchingCredentialsBatch([
+        { type: 'space-member', resourceID: 'res-1' },
+        { type: 'space-member' }, // no resourceID
+      ]);
+
+      expect(qb.andWhere).toHaveBeenCalledWith(
+        'credential.resourceID IN (:...resourceIDs)',
+        { resourceIDs: ['res-1'] }
+      );
+      expect(result.get('res-1')).toBe(5);
+    });
+
+    it('should return 0 for resourceIDs with no matching credentials', async () => {
+      const qb = createBatchQueryBuilderMock([
+        { resourceID: 'res-1', count: '3' },
+        // res-2 has no results
+      ]);
+      credentialRepository.createQueryBuilder.mockReturnValue(qb);
+
+      const result = await service.countMatchingCredentialsBatch([
+        { type: 'space-member', resourceID: 'res-1' },
+        { type: 'space-member', resourceID: 'res-2' },
+      ]);
+
+      expect(result.get('res-1')).toBe(3);
+      expect(result.has('res-2')).toBe(false); // not in map → caller uses ?? 0
+    });
+
+    it('should propagate database errors', async () => {
+      const qb = createBatchQueryBuilderMock();
+      qb.getRawMany.mockRejectedValue(new Error('query timeout'));
+      credentialRepository.createQueryBuilder.mockReturnValue(qb);
+
+      await expect(
+        service.countMatchingCredentialsBatch([
+          { type: 'space-member', resourceID: 'res-1' },
+        ])
+      ).rejects.toThrow('query timeout');
+    });
+
+    it('should filter out empty string resourceIDs', async () => {
+      const result = await service.countMatchingCredentialsBatch([
+        { type: 'space-member', resourceID: '' },
+      ]);
+
+      // Empty string is falsy → filtered out → returns empty map
+      expect(result.size).toBe(0);
+      expect(credentialRepository.createQueryBuilder).not.toHaveBeenCalled();
     });
   });
 });

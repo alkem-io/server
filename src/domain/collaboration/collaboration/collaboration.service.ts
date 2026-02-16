@@ -163,7 +163,7 @@ export class CollaborationService {
     this.innovationFlowService.validateInnovationFlowDefinition(
       innovationFlowData.states
     );
-    const allowedValues = innovationFlowData.states
+    const allowedValues = [...innovationFlowData.states]
       .sort(sortBySortOrder)
       .map(state => state.displayName);
     let defaultSelectedValue = innovationFlowData.currentStateDisplayName;
@@ -339,7 +339,7 @@ export class CollaborationService {
   async getInnovationFlow(collaborationID: string): Promise<IInnovationFlow> {
     const collaboration = await this.getCollaborationOrFail(collaborationID, {
       relations: {
-        innovationFlow: true,
+        innovationFlow: { states: { defaultCalloutTemplate: true } },
       },
     });
 
