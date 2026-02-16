@@ -1,8 +1,8 @@
 import { Space } from '@domain/space/space/space.entity';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getEntityManagerToken } from '@nestjs/typeorm';
-import { type Mocked, vi } from 'vitest';
 import { EntityManager } from 'typeorm';
+import { type Mocked, vi } from 'vitest';
 import { SpaceCommunityWithRoleSetLoaderCreator } from './space.community.with.roleset.loader.creator';
 
 function makeSpaceWithCommunity(

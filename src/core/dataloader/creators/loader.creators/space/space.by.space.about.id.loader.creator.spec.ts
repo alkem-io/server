@@ -2,8 +2,8 @@ import { Space } from '@domain/space/space/space.entity';
 import { ISpace } from '@domain/space/space/space.interface';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getEntityManagerToken } from '@nestjs/typeorm';
-import { type Mocked, vi } from 'vitest';
 import { EntityManager } from 'typeorm';
+import { type Mocked, vi } from 'vitest';
 import { SpaceBySpaceAboutIdLoaderCreator } from './space.by.space.about.id.loader.creator';
 
 function makeSpace(spaceId: string, aboutId: string): Space {
@@ -152,7 +152,10 @@ describe('SpaceBySpaceAboutIdLoaderCreator', () => {
 
     it('should return null when space has undefined about property', async () => {
       const spaceWithAbout = makeSpace('s-1', 'about-1');
-      const orphanSpace = { id: 'orphan', about: undefined } as unknown as Space;
+      const orphanSpace = {
+        id: 'orphan',
+        about: undefined,
+      } as unknown as Space;
 
       entityManager.find.mockResolvedValueOnce([spaceWithAbout, orphanSpace]);
 

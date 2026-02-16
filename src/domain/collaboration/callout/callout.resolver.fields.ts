@@ -2,7 +2,10 @@ import { AuthorizationAgentPrivilege } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { GraphqlGuard } from '@core/authorization';
-import { CalloutActivityLoaderCreator, UserLoaderCreator } from '@core/dataloader/creators';
+import {
+  CalloutActivityLoaderCreator,
+  UserLoaderCreator,
+} from '@core/dataloader/creators';
 import { Loader } from '@core/dataloader/decorators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Callout } from '@domain/collaboration/callout/callout.entity';

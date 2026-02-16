@@ -1,4 +1,3 @@
-import { UUID_LENGTH } from '@common/constants';
 import { Visual } from '@domain/common/visual/visual.entity';
 import { StorageBucket } from '@domain/storage/storage-bucket/storage.bucket.entity';
 import { Column, Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';

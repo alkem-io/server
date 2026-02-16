@@ -1,9 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { ImageCompressionService } from '../image.compression.service';
 
-// Mock sharp
+// Mock sharp via vi.doMock to avoid module cache issues with isolate: false
 const mockToBuffer = vi.fn();
 const mockJpeg = vi.fn().mockReturnValue({ toBuffer: mockToBuffer });
 const mockResize = vi.fn().mockReturnValue({ jpeg: mockJpeg });
@@ -16,12 +15,20 @@ const mockSharpInstance = {
   toBuffer: mockToBuffer,
 };
 
-vi.mock('sharp', () => ({
-  default: vi.fn(() => mockSharpInstance),
-}));
+// Dynamic module-level binding resolved in beforeAll
+let ImageCompressionService: any;
+
+beforeAll(async () => {
+  vi.resetModules();
+  vi.doMock('sharp', () => ({
+    default: vi.fn(() => mockSharpInstance),
+  }));
+  const svcMod = await import('../image.compression.service');
+  ImageCompressionService = svcMod.ImageCompressionService;
+});
 
 describe('ImageCompressionService', () => {
-  let service: ImageCompressionService;
+  let service: any;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -30,7 +37,7 @@ describe('ImageCompressionService', () => {
       .useMocker(defaultMockerFactory)
       .compile();
 
-    service = module.get<ImageCompressionService>(ImageCompressionService);
+    service = module.get(ImageCompressionService);
     vi.clearAllMocks();
 
     // Reset chain: metadata → resize/jpeg → toBuffer
