@@ -189,6 +189,7 @@ export class CalloutTransferService {
           },
         },
         contributions: {
+          id: true,
           post: { id: true, profile: { id: true, } },
           link: { id: true, profile: { id: true, } },
           whiteboard: { id: true, profile: { id: true, } },
@@ -210,25 +211,25 @@ export class CalloutTransferService {
     }
 
     // Revoke URL caches for all contribution profiles
-    if (callout.contributions) {
+    if (callout?.contributions && callout.contributions.length > 0) {
       for (const contribution of callout.contributions) {
         if (contribution.post?.profile.id) {
-          await this.urlGeneratorCacheService.revokeUrlCache(
+          void this.urlGeneratorCacheService.revokeUrlCache(
             contribution.post.profile.id
           );
         }
         if (contribution.link?.profile.id) {
-          await this.urlGeneratorCacheService.revokeUrlCache(
+          void this.urlGeneratorCacheService.revokeUrlCache(
             contribution.link.profile.id
           );
         }
         if (contribution.whiteboard?.profile.id) {
-          await this.urlGeneratorCacheService.revokeUrlCache(
+          void this.urlGeneratorCacheService.revokeUrlCache(
             contribution.whiteboard.profile.id
           );
         }
         if (contribution.memo?.profile.id) {
-          await this.urlGeneratorCacheService.revokeUrlCache(
+          void this.urlGeneratorCacheService.revokeUrlCache(
             contribution.memo.profile.id
           );
         }
