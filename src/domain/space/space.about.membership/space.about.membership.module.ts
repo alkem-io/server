@@ -1,5 +1,4 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
-import { RoleSetMembershipStatusDataLoader } from '@domain/access/role-set/role.set.data.loader.membership.status';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { CommunityModule } from '@domain/community/community/community.module';
@@ -14,11 +13,7 @@ import { SpaceAboutMembershipService } from './space.about.membership.service';
     AuthorizationPolicyModule,
     AuthorizationModule,
   ],
-  providers: [
-    SpaceAboutMembershipResolverFields,
-    SpaceAboutMembershipService,
-    RoleSetMembershipStatusDataLoader,
-  ],
+  providers: [SpaceAboutMembershipResolverFields, SpaceAboutMembershipService],
   exports: [SpaceAboutMembershipService],
 })
 export class SpaceAboutMembershipModule {}

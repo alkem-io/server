@@ -1,11 +1,11 @@
-import { EntityManager, In } from 'typeorm';
-import DataLoader from 'dataloader';
-import { Injectable } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
 import { DataLoaderCreator } from '@core/dataloader/creators/base';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { ConversationMembership } from '@domain/communication/conversation-membership/conversation.membership.entity';
 import { IConversationMembership } from '@domain/communication/conversation-membership/conversation.membership.interface';
+import { Injectable } from '@nestjs/common';
+import { InjectEntityManager } from '@nestjs/typeorm';
+import DataLoader from 'dataloader';
+import { EntityManager, In } from 'typeorm';
 
 /**
  * DataLoader creator for batching conversation membership lookups.

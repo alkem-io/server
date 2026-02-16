@@ -1,10 +1,12 @@
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
+import { LogContext } from '@common/enums/logging.context';
 import { RoleName } from '@common/enums/role.name';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AlkemioConfig } from '@src/types';
 import { Cache } from 'cache-manager';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IApplication } from '../application';
 import { IInvitation } from '../invitation';
 
@@ -15,6 +17,8 @@ export class RoleSetCacheService {
   constructor(
     @Inject(CACHE_MANAGER)
     private readonly cacheManager: Cache,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
     private configService: ConfigService<AlkemioConfig, true>
   ) {
     this.cache_ttl = this.configService.get(
@@ -32,8 +36,38 @@ export class RoleSetCacheService {
    * @param key - Cache key
    * @returns Cached value of type T or undefined if not found/error.
    */
-  private cacheGet<T>(key: string): Promise<T | undefined> {
-    return this.cacheManager.get<T>(key);
+  private async cacheGet<T>(key: string): Promise<T | undefined> {
+    try {
+      return await this.cacheManager.get<T>(key);
+    } catch (error) {
+      this.logger.warn?.(
+        `RoleSet cache read failed for key ${key}: ${error}`,
+        LogContext.COMMUNITY
+      );
+      return undefined;
+    }
+  }
+
+  /**
+   * Get multiple values from cache in a single round-trip.
+   * Falls back to sequential gets if the store doesn't support mget.
+   */
+  private async cacheMget<T>(keys: string[]): Promise<(T | undefined)[]> {
+    if (keys.length === 0) return [];
+    const mget = this.cacheManager.store.mget;
+    if (mget) {
+      try {
+        return await mget<T>(...keys);
+      } catch (error) {
+        this.logger.warn?.(
+          `RoleSet cache mget failed, treating as cache miss: ${error}`,
+          LogContext.COMMUNITY
+        );
+        return new Array(keys.length).fill(undefined);
+      }
+    }
+    // Fallback: individual gets — each one is independently resilient via cacheGet
+    return Promise.all(keys.map(k => this.cacheGet<T>(k)));
   }
 
   /**
@@ -42,8 +76,18 @@ export class RoleSetCacheService {
    * @param value - Value to cache
    * @returns The cached value.
    */
-  private cacheSet<T>(key: string, value: T): Promise<T> {
-    return this.cacheManager.set<T>(key, value, { ttl: this.cache_ttl });
+  private async cacheSet<T>(key: string, value: T): Promise<T> {
+    try {
+      return await this.cacheManager.set<T>(key, value, {
+        ttl: this.cache_ttl,
+      });
+    } catch (error) {
+      this.logger.warn?.(
+        `RoleSet cache write failed for key ${key}: ${error}`,
+        LogContext.COMMUNITY
+      );
+      return value;
+    }
   }
 
   /**
@@ -169,6 +213,32 @@ export class RoleSetCacheService {
     return this.cacheGet<boolean>(
       this.getAgentIsMemberCacheKey(agentId, roleSetId)
     );
+  }
+
+  /* Batch Cache Retrieval Methods (mget) */
+
+  /**
+   * Retrieve agent roles for multiple (agentId, roleSetId) pairs in a single round-trip.
+   */
+  public async getAgentRolesBatchFromCache(
+    entries: ReadonlyArray<{ agentId: string; roleSetId: string }>
+  ): Promise<(RoleName[] | undefined)[]> {
+    const keys = entries.map(e =>
+      this.getAgentRolesCacheKey(e.agentId, e.roleSetId)
+    );
+    return this.cacheMget<RoleName[]>(keys);
+  }
+
+  /**
+   * Retrieve membership status for multiple (agentId, roleSetId) pairs in a single round-trip.
+   */
+  public async getMembershipStatusBatchFromCache(
+    entries: ReadonlyArray<{ agentId: string; roleSetId: string }>
+  ): Promise<(CommunityMembershipStatus | undefined)[]> {
+    const keys = entries.map(e =>
+      this.getMembershipStatusCacheKey(e.agentId, e.roleSetId)
+    );
+    return this.cacheMget<CommunityMembershipStatus>(keys);
   }
 
   /* Public Cache Deletion Methods */

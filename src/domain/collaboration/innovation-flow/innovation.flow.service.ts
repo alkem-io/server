@@ -168,7 +168,7 @@ export class InnovationFlowService {
       }
     );
 
-    const states = innovationFlow.states.sort(sortBySortOrder);
+    const states = [...innovationFlow.states].sort(sortBySortOrder);
     const currentStateID = innovationFlow.currentStateID;
 
     let updatedState = states.find(
@@ -271,7 +271,7 @@ export class InnovationFlowService {
 
     innovationFlow = await this.save(innovationFlow);
 
-    const tagsetAllowedValues = newStates
+    const tagsetAllowedValues = [...newStates]
       .sort(sortBySortOrder)
       .map(state => state.displayName);
 
@@ -640,7 +640,7 @@ export class InnovationFlowService {
     }
 
     // sort the states by sortOrder
-    return innovationFlow.states.sort(sortBySortOrder);
+    return [...innovationFlow.states].sort(sortBySortOrder);
   }
 
   public async getCurrentState(

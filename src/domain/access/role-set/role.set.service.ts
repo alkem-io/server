@@ -361,7 +361,7 @@ export class RoleSetService {
     const agentRoles = rolesThatAgentHas.filter(
       (role): role is RoleName => role !== undefined
     );
-    await this.roleSetCacheService.setAgentRolesCache(
+    void this.roleSetCacheService.setAgentRolesCache(
       agent.id,
       roleSet.id,
       agentRoles
@@ -386,12 +386,9 @@ export class RoleSetService {
       roleSetID
     );
     for (const application of applications) {
-      // skip any finalized applications; only want to return pending applications
-      const isFinalized = await this.applicationService.isFinalizedApplication(
-        application.id
-      );
-      if (isFinalized) continue;
-      await this.roleSetCacheService.setOpenApplicationCache(
+      // Lifecycle is eager-loaded; check in-memory without re-fetching from DB
+      if (this.applicationService.isApplicationFinalized(application)) continue;
+      void this.roleSetCacheService.setOpenApplicationCache(
         userID,
         roleSetID,
         application
@@ -420,7 +417,7 @@ export class RoleSetService {
     const agent = await this.agentService.getAgentOrFail(agentInfo.agentID);
     const isMember = await this.isMember(agent, roleSet);
     if (isMember) {
-      await this.roleSetCacheService.setMembershipStatusCache(
+      void this.roleSetCacheService.setMembershipStatusCache(
         agent.id,
         roleSet.id,
         CommunityMembershipStatus.MEMBER
@@ -434,7 +431,7 @@ export class RoleSetService {
       roleSet.id
     );
     if (openApplication) {
-      await this.roleSetCacheService.setMembershipStatusCache(
+      void this.roleSetCacheService.setMembershipStatusCache(
         agent.id,
         roleSet.id,
         CommunityMembershipStatus.APPLICATION_PENDING
@@ -450,7 +447,7 @@ export class RoleSetService {
       openInvitation &&
       (await this.invitationService.canInvitationBeAccepted(openInvitation.id))
     ) {
-      await this.roleSetCacheService.setMembershipStatusCache(
+      void this.roleSetCacheService.setMembershipStatusCache(
         agent.id,
         roleSet.id,
         CommunityMembershipStatus.INVITATION_PENDING
@@ -458,7 +455,7 @@ export class RoleSetService {
       return CommunityMembershipStatus.INVITATION_PENDING;
     }
 
-    await this.roleSetCacheService.setMembershipStatusCache(
+    void this.roleSetCacheService.setMembershipStatusCache(
       agent.id,
       roleSet.id,
       CommunityMembershipStatus.NOT_MEMBER
@@ -484,14 +481,9 @@ export class RoleSetService {
       roleSetID
     );
     for (const invitation of invitations) {
-      // skip any finalized invitations; only return pending invitations
-      const isFinalized = await this.invitationService.isFinalizedInvitation(
-        invitation.id
-      );
-      if (isFinalized) {
-        continue;
-      }
-      await this.roleSetCacheService.setOpenInvitationCache(
+      // Lifecycle is eager-loaded; check in-memory without re-fetching from DB
+      if (this.invitationService.isInvitationFinalized(invitation)) continue;
+      void this.roleSetCacheService.setOpenInvitationCache(
         contributorID,
         roleSetID,
         invitation
@@ -1598,7 +1590,7 @@ export class RoleSetService {
         resourceID: membershipCredential.resourceID,
       }
     );
-    await this.roleSetCacheService.setAgentIsMemberCache(
+    void this.roleSetCacheService.setAgentIsMemberCache(
       agent.id,
       roleSet.id,
       validCredential
@@ -1912,6 +1904,73 @@ export class RoleSetService {
       });
 
     return credentialMatches;
+  }
+
+  /**
+   * Batch-counts members for multiple roleSets in a single DB query.
+   * Returns a Map from roleSet.id to member count.
+   * Requires roleSet.roles to be pre-loaded.
+   */
+  async getMembersCountBatch(
+    roleSets: IRoleSet[]
+  ): Promise<Map<string, number>> {
+    if (roleSets.length === 0) {
+      return new Map();
+    }
+
+    // Build credential criteria for each roleSet
+    const criteriaList: {
+      roleSetId: string;
+      type: string;
+      resourceID: string;
+    }[] = [];
+    for (const roleSet of roleSets) {
+      const credential = this.getCredentialForRoleSync(
+        roleSet,
+        RoleName.MEMBER
+      );
+      if (credential) {
+        criteriaList.push({
+          roleSetId: roleSet.id,
+          type: credential.type,
+          resourceID: credential.resourceID,
+        });
+      }
+    }
+
+    if (criteriaList.length === 0) {
+      return new Map();
+    }
+
+    // Batch count credentials
+    const countsByResourceID =
+      await this.agentService.countAgentsWithMatchingCredentialsBatch(
+        criteriaList.map(c => ({ type: c.type, resourceID: c.resourceID }))
+      );
+
+    // Map back to roleSet.id
+    const result = new Map<string, number>();
+    for (const criteria of criteriaList) {
+      result.set(
+        criteria.roleSetId,
+        countsByResourceID.get(criteria.resourceID) ?? 0
+      );
+    }
+    return result;
+  }
+
+  /**
+   * Synchronous version of getCredentialForRole that works when roles are pre-loaded.
+   * Returns null if roles are not loaded.
+   */
+  private getCredentialForRoleSync(
+    roleSet: IRoleSet,
+    roleName: RoleName
+  ): ICredentialDefinition | null {
+    if (!roleSet.roles) return null;
+    const role = roleSet.roles.find(rd => rd.name === roleName);
+    if (!role) return null;
+    return role.credential;
   }
 
   async getImplicitRoles(
