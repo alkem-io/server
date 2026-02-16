@@ -1,6 +1,7 @@
-import { LogContext } from '@common/enums';
-import { EntityNotFoundException } from '@common/exceptions';
-import { RelationshipNotFoundException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  RelationshipNotFoundException,
+} from '@common/exceptions';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { NVPService } from '@domain/common/nvp/nvp.service';
@@ -61,8 +62,7 @@ describe('ApplicationService', () => {
     authorizationPolicyService = module.get<AuthorizationPolicyService>(
       AuthorizationPolicyService
     );
-    roleSetCacheService =
-      module.get<RoleSetCacheService>(RoleSetCacheService);
+    roleSetCacheService = module.get<RoleSetCacheService>(RoleSetCacheService);
   });
 
   describe('getApplicationOrFail', () => {
@@ -162,7 +162,9 @@ describe('ApplicationService', () => {
         ...mockApplication,
         id: undefined,
       });
-      (roleSetCacheService.deleteOpenApplicationFromCache as Mock).mockResolvedValue(undefined);
+      (
+        roleSetCacheService.deleteOpenApplicationFromCache as Mock
+      ).mockResolvedValue(undefined);
 
       const result = await service.deleteApplication({ ID: 'app-1' });
 
@@ -201,7 +203,9 @@ describe('ApplicationService', () => {
         ...mockApplication,
         id: undefined,
       });
-      (roleSetCacheService.deleteOpenApplicationFromCache as Mock).mockResolvedValue(undefined);
+      (
+        roleSetCacheService.deleteOpenApplicationFromCache as Mock
+      ).mockResolvedValue(undefined);
 
       await service.deleteApplication({ ID: 'app-1' });
 
@@ -228,7 +232,9 @@ describe('ApplicationService', () => {
         ...mockApplication,
         id: undefined,
       });
-      (roleSetCacheService.deleteOpenApplicationFromCache as Mock).mockResolvedValue(undefined);
+      (
+        roleSetCacheService.deleteOpenApplicationFromCache as Mock
+      ).mockResolvedValue(undefined);
 
       await service.deleteApplication({ ID: 'app-1' });
 
@@ -328,7 +334,8 @@ describe('ApplicationService', () => {
       vi.spyOn(applicationRepository, 'find').mockResolvedValue(
         mockApplications
       );
-      (applicationLifecycleService.getState as Mock).mockReturnValueOnce('new')
+      (applicationLifecycleService.getState as Mock)
+        .mockReturnValueOnce('new')
         .mockReturnValueOnce('approved');
 
       const result = await service.findApplicationsForUser('user-1', ['new']);
@@ -426,9 +433,7 @@ describe('ApplicationService', () => {
       vi.spyOn(service, 'getApplicationOrFail').mockResolvedValue(
         mockApplication
       );
-      (applicationLifecycleService.isFinalState as Mock).mockReturnValue(
-        true
-      );
+      (applicationLifecycleService.isFinalState as Mock).mockReturnValue(true);
 
       const result = await service.isFinalizedApplication('app-1');
 
@@ -444,9 +449,7 @@ describe('ApplicationService', () => {
       vi.spyOn(service, 'getApplicationOrFail').mockResolvedValue(
         mockApplication
       );
-      (applicationLifecycleService.isFinalState as Mock).mockReturnValue(
-        false
-      );
+      (applicationLifecycleService.isFinalState as Mock).mockReturnValue(false);
 
       const result = await service.isFinalizedApplication('app-1');
 
@@ -478,9 +481,9 @@ describe('ApplicationService', () => {
         questions: undefined,
       } as IApplication;
 
-      await expect(
-        service.getQuestionsSorted(mockApplication)
-      ).rejects.toThrow(RelationshipNotFoundException);
+      await expect(service.getQuestionsSorted(mockApplication)).rejects.toThrow(
+        RelationshipNotFoundException
+      );
     });
   });
 });

@@ -1,8 +1,3 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { MockCacheManager } from '@test/mocks/cache-manager.mock';
-import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
-import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TagsetType } from '@common/enums/tagset.type';
@@ -14,13 +9,18 @@ import {
 } from '@common/exceptions';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { TagsetTemplateSetService } from '@domain/common/tagset-template-set/tagset.template.set.service';
-import { CalloutService } from '../callout/callout.service';
+import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
+import { MockCacheManager } from '@test/mocks/cache-manager.mock';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
+import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { Repository } from 'typeorm';
+import { CalloutService } from '../callout/callout.service';
 import { CalloutsSet } from './callouts.set.entity';
 import { CalloutsSetService } from './callouts.set.service';
-import { Repository } from 'typeorm';
-import { getRepositoryToken } from '@nestjs/typeorm';
 
 describe('CalloutsSetService', () => {
   let service: CalloutsSetService;
@@ -99,15 +99,17 @@ describe('CalloutsSetService', () => {
       } as any;
       const tagsetInput = { name: 'custom', allowedValues: ['a'] } as any;
 
-      vi.mocked(
-        tagsetTemplateSetService.addTagsetTemplate
-      ).mockReturnValue({ id: 'tts-1', tagsetTemplates: [tagsetInput] } as any);
+      vi.mocked(tagsetTemplateSetService.addTagsetTemplate).mockReturnValue({
+        id: 'tts-1',
+        tagsetTemplates: [tagsetInput],
+      } as any);
 
-      const result = service.addTagsetTemplate(calloutsSet, tagsetInput);
+      const _result = service.addTagsetTemplate(calloutsSet, tagsetInput);
 
-      expect(
-        tagsetTemplateSetService.addTagsetTemplate
-      ).toHaveBeenCalledWith(originalTagsetTemplateSet, tagsetInput);
+      expect(tagsetTemplateSetService.addTagsetTemplate).toHaveBeenCalledWith(
+        originalTagsetTemplateSet,
+        tagsetInput
+      );
     });
 
     it('should throw EntityNotInitializedException when tagsetTemplateSet is missing', () => {
@@ -116,9 +118,9 @@ describe('CalloutsSetService', () => {
         tagsetTemplateSet: undefined,
       } as any;
 
-      expect(() =>
-        service.addTagsetTemplate(calloutsSet, {} as any)
-      ).toThrow(EntityNotInitializedException);
+      expect(() => service.addTagsetTemplate(calloutsSet, {} as any)).toThrow(
+        EntityNotInitializedException
+      );
     });
   });
 
@@ -344,7 +346,7 @@ describe('CalloutsSetService', () => {
 
       const result = await service.updateCalloutsSortOrder(calloutsSet, {
         calloutIDs: ['c-3', 'c-1', 'c-2'],
-      });
+      } as any);
 
       expect(result).toHaveLength(3);
       // The sort orders should be based on the minimum sort order of the selected callouts
@@ -364,7 +366,7 @@ describe('CalloutsSetService', () => {
       await expect(
         service.updateCalloutsSortOrder(calloutsSet, {
           calloutIDs: ['c-1', 'nonexistent'],
-        })
+        } as any)
       ).rejects.toThrow(EntityNotFoundException);
     });
   });
@@ -400,7 +402,7 @@ describe('CalloutsSetService', () => {
         framing: { profile: { displayName: 'New Callout' } },
       } as any;
 
-      const result = await service.createCalloutOnCalloutsSet(
+      const _result = await service.createCalloutOnCalloutsSet(
         calloutData,
         'user-1'
       );

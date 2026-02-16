@@ -1,16 +1,16 @@
-import { DELETED_ACTOR_ID, MATRIX_BOT_ACTOR_ID } from '@common/constants/system.actor.ids';
+import {
+  DELETED_ACTOR_ID,
+  MATRIX_BOT_ACTOR_ID,
+} from '@common/constants/system.actor.ids';
 import { EntityNotFoundException } from '@common/exceptions';
 import { InvalidUUID } from '@common/exceptions/invalid.uuid';
-import { Organization } from '@domain/community/organization/organization.entity';
-import { User } from '@domain/community/user/user.entity';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getEntityManagerToken } from '@nestjs/typeorm';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { type Mocked, vi } from 'vitest';
 import { EntityManager } from 'typeorm';
+import { type Mocked } from 'vitest';
 import { ContributorLookupService } from './contributor.lookup.service';
 
 // Valid v4 UUID for tests
@@ -38,9 +38,7 @@ describe('ContributorLookupService', () => {
       const user = { id: VALID_UUID };
       entityManager.findOne.mockResolvedValueOnce(user as any);
 
-      const result = await service.getContributorByUUID(
-        VALID_UUID
-      );
+      const result = await service.getContributorByUUID(VALID_UUID);
 
       expect(result).toBe(user);
     });
@@ -51,9 +49,7 @@ describe('ContributorLookupService', () => {
         .mockResolvedValueOnce(null) // User
         .mockResolvedValueOnce(org as any); // Organization
 
-      const result = await service.getContributorByUUID(
-        VALID_UUID
-      );
+      const result = await service.getContributorByUUID(VALID_UUID);
 
       expect(result).toBe(org);
     });
@@ -65,9 +61,7 @@ describe('ContributorLookupService', () => {
         .mockResolvedValueOnce(null) // Organization
         .mockResolvedValueOnce(vc as any); // VirtualContributor
 
-      const result = await service.getContributorByUUID(
-        VALID_UUID
-      );
+      const result = await service.getContributorByUUID(VALID_UUID);
 
       expect(result).toBe(vc);
     });
@@ -78,17 +72,15 @@ describe('ContributorLookupService', () => {
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(null);
 
-      const result = await service.getContributorByUUID(
-        VALID_UUID
-      );
+      const result = await service.getContributorByUUID(VALID_UUID);
 
       expect(result).toBeNull();
     });
 
     it('should throw InvalidUUID when ID is not a valid UUID', async () => {
-      await expect(
-        service.getContributorByUUID('not-a-uuid')
-      ).rejects.toThrow(InvalidUUID);
+      await expect(service.getContributorByUUID('not-a-uuid')).rejects.toThrow(
+        InvalidUUID
+      );
     });
   });
 
@@ -100,9 +92,7 @@ describe('ContributorLookupService', () => {
         .mockResolvedValueOnce(null);
 
       await expect(
-        service.getContributorByUuidOrFail(
-          VALID_UUID
-        )
+        service.getContributorByUuidOrFail(VALID_UUID)
       ).rejects.toThrow(EntityNotFoundException);
     });
   });
@@ -116,9 +106,7 @@ describe('ContributorLookupService', () => {
     });
 
     it('should return null for system actor IDs (MATRIX_BOT_ACTOR_ID)', async () => {
-      const result = await service.getContributorByAgentId(
-        MATRIX_BOT_ACTOR_ID
-      );
+      const result = await service.getContributorByAgentId(MATRIX_BOT_ACTOR_ID);
 
       expect(result).toBeNull();
     });
@@ -136,9 +124,7 @@ describe('ContributorLookupService', () => {
         .mockResolvedValueOnce(null) // Organization
         .mockResolvedValueOnce(vc as any); // VirtualContributor
 
-      const result = await service.getContributorByAgentId(
-        VALID_UUID
-      );
+      const result = await service.getContributorByAgentId(VALID_UUID);
 
       expect(result).toBe(vc);
       expect(entityManager.findOne).toHaveBeenCalledTimes(3);
@@ -156,9 +142,7 @@ describe('ContributorLookupService', () => {
     it('should return user ID when user is found', async () => {
       entityManager.findOne.mockResolvedValue({ id: 'user-1' } as any);
 
-      const result = await service.getUserIdByAgentId(
-        VALID_UUID
-      );
+      const result = await service.getUserIdByAgentId(VALID_UUID);
 
       expect(result).toBe('user-1');
     });
@@ -166,9 +150,7 @@ describe('ContributorLookupService', () => {
     it('should return undefined when no user is found for the agent', async () => {
       entityManager.findOne.mockResolvedValue(null);
 
-      const result = await service.getUserIdByAgentId(
-        VALID_UUID
-      );
+      const result = await service.getUserIdByAgentId(VALID_UUID);
 
       expect(result).toBeUndefined();
     });

@@ -1,10 +1,10 @@
+import { HttpService } from '@nestjs/axios';
+import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { GeoapifyService } from './geoapify.service';
-import { HttpService } from '@nestjs/axios';
-import { ConfigService } from '@nestjs/config';
 import { of, throwError } from 'rxjs';
+import { GeoapifyService } from './geoapify.service';
 
 describe('GeoapifyService', () => {
   let service: GeoapifyService;
@@ -60,7 +60,8 @@ describe('GeoapifyService', () => {
               get: vi.fn((key: string) => {
                 if (key === 'integrations.geoapify') {
                   return {
-                    geocode_rest_endpoint: 'https://api.geoapify.com/v1/geocode',
+                    geocode_rest_endpoint:
+                      'https://api.geoapify.com/v1/geocode',
                     api_key: 'test-api-key',
                   };
                 }
@@ -77,7 +78,10 @@ describe('GeoapifyService', () => {
         .compile();
 
       const disabledService = module.get(GeoapifyService);
-      const result = await disabledService.getGeoapifyGeocodeLocation('US', 'NYC');
+      const result = await disabledService.getGeoapifyGeocodeLocation(
+        'US',
+        'NYC'
+      );
       expect(result).toBeUndefined();
     });
 

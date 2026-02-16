@@ -1,17 +1,15 @@
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
-import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { AiPersonaService } from '@services/ai-server/ai-persona/ai.persona.service';
-import { AiPersonaAuthorizationService } from '@services/ai-server/ai-persona/ai.persona.service.authorization';
 import { InvocationResultAction } from '@services/ai-server/ai-persona/dto/ai.persona.invocation/invocation.result.action.dto';
 import { MessageSenderRole } from '@services/ai-server/ai-persona/dto/interaction.message';
 import {
-  InvokeEngineResult,
   InvokeEngineResponse,
+  InvokeEngineResult,
 } from '@services/infrastructure/event-bus/messages/invoke.engine.result';
 import { RoomControllerService } from '@services/room-integration/room.controller.service';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
@@ -45,9 +43,10 @@ describe('AiServerService', () => {
     service = module.get(AiServerService);
     aiServerRepository = module.get(getRepositoryToken(AiServer));
     vcRepository = module.get(getRepositoryToken(VirtualContributor));
-    aiPersonaService = module.get(
-      AiPersonaService
-    ) as unknown as Record<string, Mock>;
+    aiPersonaService = module.get(AiPersonaService) as unknown as Record<
+      string,
+      Mock
+    >;
     roomControllerService = module.get(
       RoomControllerService
     ) as unknown as Record<string, Mock>;
@@ -141,11 +140,9 @@ describe('AiServerService', () => {
 
   describe('updatePersonaBoKLastUpdated', () => {
     it('should publish subscription event when virtual contributor is found', async () => {
-      const persona = { id: 'persona-1' };
+      const persona: any = { id: 'persona-1' };
       const vc = { id: 'vc-1', aiPersonaID: 'persona-1' };
-      vi.mocked(aiPersonaService.getAiPersonaOrFail).mockResolvedValue(
-        persona
-      );
+      vi.mocked(aiPersonaService.getAiPersonaOrFail).mockResolvedValue(persona);
       vi.mocked(aiPersonaService.save).mockResolvedValue(persona);
       vcRepository.findOne.mockResolvedValue(vc);
 
@@ -160,9 +157,7 @@ describe('AiServerService', () => {
 
     it('should not publish subscription event when virtual contributor is not found', async () => {
       const persona = { id: 'persona-1' };
-      vi.mocked(aiPersonaService.getAiPersonaOrFail).mockResolvedValue(
-        persona
-      );
+      vi.mocked(aiPersonaService.getAiPersonaOrFail).mockResolvedValue(persona);
       vi.mocked(aiPersonaService.save).mockResolvedValue(persona);
       vcRepository.findOne.mockResolvedValue(null);
 
@@ -287,9 +282,7 @@ describe('AiServerService', () => {
     });
 
     it('should use room messages when threadID is not provided', async () => {
-      const roomMessages = [
-        { sender: '@user1', message: 'hello' },
-      ];
+      const roomMessages = [{ sender: '@user1', message: 'hello' }];
       vi.mocked(roomControllerService.getMessages).mockResolvedValue(
         roomMessages as any
       );

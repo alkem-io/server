@@ -1,12 +1,15 @@
-import { EntityNotFoundException, EntityNotInitializedException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  EntityNotInitializedException,
+} from '@common/exceptions';
+import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getEntityManagerToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { vi } from 'vitest';
-import { getEntityManagerToken } from '@nestjs/typeorm';
-import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { VirtualContributorLookupService } from './virtual.contributor.lookup.service';
 
 describe('VirtualContributorLookupService', () => {
@@ -113,7 +116,8 @@ describe('VirtualContributorLookupService', () => {
       const mockVC = { id: 'vc-1', agent: { id: 'agent-1' } };
       entityManager.findOne.mockResolvedValue(mockVC);
 
-      const result = await service.getVirtualContributorByAgentIdOrFail('agent-1');
+      const result =
+        await service.getVirtualContributorByAgentIdOrFail('agent-1');
       expect(result).toBe(mockVC);
     });
 
@@ -131,7 +135,8 @@ describe('VirtualContributorLookupService', () => {
       const mockVC = { id: 'vc-1', nameID: 'test-vc' };
       entityManager.findOne.mockResolvedValue(mockVC);
 
-      const result = await service.getVirtualContributorByNameIdOrFail('test-vc');
+      const result =
+        await service.getVirtualContributorByNameIdOrFail('test-vc');
       expect(result).toBe(mockVC);
     });
 
@@ -148,7 +153,9 @@ describe('VirtualContributorLookupService', () => {
     it('should default resourceID to empty string when not provided', async () => {
       entityManager.find.mockResolvedValue([]);
 
-      await service.virtualContributorsWithCredentials({ type: 'space-admin' as any });
+      await service.virtualContributorsWithCredentials({
+        type: 'space-admin' as any,
+      });
 
       expect(entityManager.find).toHaveBeenCalledWith(
         expect.anything(),

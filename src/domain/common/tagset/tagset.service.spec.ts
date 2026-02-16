@@ -1,24 +1,24 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { MockCacheManager } from '@test/mocks/cache-manager.mock';
-import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
-import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { MockType } from '@test/utils/mock.type';
-import { Repository } from 'typeorm';
-import { Tagset } from './tagset.entity';
-import { TagsetService } from './tagset.service';
+import { TagsetType } from '@common/enums/tagset.type';
 import {
   EntityNotFoundException,
   ValidationException,
 } from '@common/exceptions';
 import { TagsetNotFoundException } from '@common/exceptions/tagset.not.found.exception';
-import { TagsetType } from '@common/enums/tagset.type';
-import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { MockCacheManager } from '@test/mocks/cache-manager.mock';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
+import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { MockType } from '@test/utils/mock.type';
+import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { Repository } from 'typeorm';
+import { type Mock } from 'vitest';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
-import { ITagset } from './tagset.interface';
 import { ITagsetTemplate } from '../tagset-template/tagset.template.interface';
 import { CreateTagsetInput } from './dto/tagset.dto.create';
+import { Tagset } from './tagset.entity';
+import { ITagset } from './tagset.interface';
+import { TagsetService } from './tagset.service';
 
 describe('TagsetService', () => {
   let service: TagsetService;
@@ -106,9 +106,7 @@ describe('TagsetService', () => {
       } as unknown as Tagset;
       tagsetRepository.findOne!.mockResolvedValue(tagset);
       tagsetRepository.remove!.mockResolvedValue({ name: 'test' });
-      (authorizationPolicyService.delete as Mock).mockResolvedValue(
-        {} as any
-      );
+      (authorizationPolicyService.delete as Mock).mockResolvedValue({} as any);
 
       const result = await service.removeTagset('ts-1');
 
@@ -183,12 +181,12 @@ describe('TagsetService', () => {
     });
 
     it('should throw EntityNotFoundException when tagset ID not found', () => {
-      const tagsets = [{ id: 'ts-1', name: 'A', tags: [] }] as ITagset[];
+      const tagsets = [
+        { id: 'ts-1', name: 'A', tags: [] },
+      ] as unknown as ITagset[];
 
       expect(() =>
-        service.updateTagsets(tagsets, [
-          { ID: 'non-existent', tags: ['new'] },
-        ])
+        service.updateTagsets(tagsets, [{ ID: 'non-existent', tags: ['new'] }])
       ).toThrow(EntityNotFoundException);
     });
 
@@ -260,9 +258,9 @@ describe('TagsetService', () => {
     it('should throw TagsetNotFoundException when not found', () => {
       const tagsets = [{ name: 'skills' }] as ITagset[];
 
-      expect(() =>
-        service.getTagsetByNameOrFail(tagsets, 'missing')
-      ).toThrow(TagsetNotFoundException);
+      expect(() => service.getTagsetByNameOrFail(tagsets, 'missing')).toThrow(
+        TagsetNotFoundException
+      );
     });
   });
 
@@ -335,7 +333,7 @@ describe('TagsetService', () => {
           allowedValues: ['ts', 'js'],
           defaultSelectedValue: 'ts',
         },
-      ] as ITagsetTemplate[];
+      ] as unknown as ITagsetTemplate[];
 
       const result =
         service.convertTagsetTemplatesToCreateTagsetInput(templates);
@@ -355,7 +353,7 @@ describe('TagsetService', () => {
           allowedValues: [],
           defaultSelectedValue: undefined,
         },
-      ] as ITagsetTemplate[];
+      ] as unknown as ITagsetTemplate[];
 
       const result =
         service.convertTagsetTemplatesToCreateTagsetInput(templates);

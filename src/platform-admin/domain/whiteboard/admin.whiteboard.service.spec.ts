@@ -1,7 +1,7 @@
-import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getEntityManagerToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
@@ -91,11 +91,12 @@ describe('AdminWhiteboardService', () => {
       mockEntityManager.find.mockResolvedValue([wb]);
       mockEntityManager.save.mockResolvedValue(undefined);
 
-      const result = await service.uploadFilesFromContentToStorageBucket(
-        agentInfo
-      );
+      const result =
+        await service.uploadFilesFromContentToStorageBucket(agentInfo);
 
-      expect(storageBucketService.uploadFileAsDocumentFromBuffer).not.toHaveBeenCalled();
+      expect(
+        storageBucketService.uploadFileAsDocumentFromBuffer
+      ).not.toHaveBeenCalled();
       expect(result.results).toContain('1 Whiteboards processed');
     });
 
@@ -105,9 +106,8 @@ describe('AdminWhiteboardService', () => {
       mockEntityManager.find.mockResolvedValue([wb]);
       mockEntityManager.save.mockResolvedValue(undefined);
 
-      const result = await service.uploadFilesFromContentToStorageBucket(
-        agentInfo
-      );
+      const result =
+        await service.uploadFilesFromContentToStorageBucket(agentInfo);
 
       expect(result.errors).toEqual(
         expect.arrayContaining([
@@ -121,9 +121,8 @@ describe('AdminWhiteboardService', () => {
       mockEntityManager.find.mockResolvedValue([wb]);
       mockEntityManager.save.mockResolvedValue(undefined);
 
-      const result = await service.uploadFilesFromContentToStorageBucket(
-        agentInfo
-      );
+      const result =
+        await service.uploadFilesFromContentToStorageBucket(agentInfo);
 
       expect(result.warns).toEqual(
         expect.arrayContaining([
@@ -142,9 +141,8 @@ describe('AdminWhiteboardService', () => {
       mockEntityManager.find.mockResolvedValue([wb]);
       mockEntityManager.save.mockResolvedValue(undefined);
 
-      const result = await service.uploadFilesFromContentToStorageBucket(
-        agentInfo
-      );
+      const result =
+        await service.uploadFilesFromContentToStorageBucket(agentInfo);
 
       expect(result.warns).toEqual(
         expect.arrayContaining([
@@ -168,9 +166,8 @@ describe('AdminWhiteboardService', () => {
       mockEntityManager.save.mockResolvedValue(undefined);
       vi.mocked(base64ToBuffer).mockReturnValue(undefined);
 
-      const result = await service.uploadFilesFromContentToStorageBucket(
-        agentInfo
-      );
+      const result =
+        await service.uploadFilesFromContentToStorageBucket(agentInfo);
 
       expect(result.errors).toEqual(
         expect.arrayContaining([
@@ -211,9 +208,8 @@ describe('AdminWhiteboardService', () => {
         'https://cdn.example.com/doc-1'
       );
 
-      const result = await service.uploadFilesFromContentToStorageBucket(
-        agentInfo
-      );
+      const result =
+        await service.uploadFilesFromContentToStorageBucket(agentInfo);
 
       expect(
         storageBucketService.uploadFileAsDocumentFromBuffer
@@ -225,9 +221,7 @@ describe('AdminWhiteboardService', () => {
         'uploader-1'
       );
       expect(result.results).toEqual(
-        expect.arrayContaining([
-          expect.stringContaining('1 files processed'),
-        ])
+        expect.arrayContaining([expect.stringContaining('1 files processed')])
       );
       // Verify the dataURL was cleared and url set
       const updatedContent = JSON.parse(wb.content!);
@@ -257,9 +251,8 @@ describe('AdminWhiteboardService', () => {
         storageBucketService.uploadFileAsDocumentFromBuffer
       ).mockRejectedValue(new Error('upload failed'));
 
-      const result = await service.uploadFilesFromContentToStorageBucket(
-        agentInfo
-      );
+      const result =
+        await service.uploadFilesFromContentToStorageBucket(agentInfo);
 
       expect(result.errors).toEqual(
         expect.arrayContaining([expect.stringContaining('upload failed')])

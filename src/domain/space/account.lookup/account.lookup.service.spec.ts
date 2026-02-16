@@ -1,11 +1,11 @@
 import { Organization } from '@domain/community/organization';
 import { User } from '@domain/community/user/user.entity';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getEntityManagerToken } from '@nestjs/typeorm';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { vi } from 'vitest';
 import { EntityManager } from 'typeorm';
-import { getEntityManagerToken } from '@nestjs/typeorm';
+import { vi } from 'vitest';
 import { Account } from '../account/account.entity';
 import { IAccount } from '../account/account.interface';
 import { AccountLookupService } from './account.lookup.service';
@@ -170,7 +170,8 @@ describe('AccountLookupService', () => {
       const result = await service.getHost(mockAccount);
 
       expect(result).toBe(mockUser);
-      expect(entityManager.findOne).toHaveBeenCalledTimes(1);
+      // getHost now uses Promise.all, so both User and Organization lookups run
+      expect(entityManager.findOne).toHaveBeenCalledTimes(2);
     });
   });
 

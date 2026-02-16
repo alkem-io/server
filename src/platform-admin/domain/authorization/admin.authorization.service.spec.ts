@@ -5,8 +5,8 @@ import {
 import { ForbiddenException, ValidationException } from '@common/exceptions';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -49,9 +49,7 @@ describe('AdminAuthorizationService', () => {
     organizationLookupService = module.get(
       OrganizationLookupService
     ) as unknown as typeof organizationLookupService;
-    agentService = module.get(
-      AgentService
-    ) as unknown as typeof agentService;
+    agentService = module.get(AgentService) as unknown as typeof agentService;
     authorizationPolicyService = module.get(
       AuthorizationPolicyService
     ) as unknown as typeof authorizationPolicyService;
@@ -190,9 +188,7 @@ describe('AdminAuthorizationService', () => {
         user,
         agent,
       });
-      vi.mocked(agentService.revokeCredential).mockResolvedValue(
-        updatedAgent
-      );
+      vi.mocked(agentService.revokeCredential).mockResolvedValue(updatedAgent);
 
       const result = await service.revokeCredentialFromUser({
         userID: 'user-1',
@@ -262,9 +258,7 @@ describe('AdminAuthorizationService', () => {
       vi.mocked(
         organizationLookupService.getOrganizationAndAgent
       ).mockResolvedValue({ organization, agent });
-      vi.mocked(agentService.revokeCredential).mockResolvedValue(
-        updatedAgent
-      );
+      vi.mocked(agentService.revokeCredential).mockResolvedValue(updatedAgent);
 
       const result = await service.revokeCredentialFromOrganization({
         organizationID: 'org-1',

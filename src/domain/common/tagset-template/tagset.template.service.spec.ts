@@ -1,16 +1,16 @@
+import { TagsetType } from '@common/enums/tagset.type';
+import { EntityNotFoundException } from '@common/exceptions';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockType } from '@test/utils/mock.type';
+import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { Repository } from 'typeorm';
 import { TagsetTemplate } from './tagset.template.entity';
-import { TagsetTemplateService } from './tagset.template.service';
-import { EntityNotFoundException } from '@common/exceptions';
-import { TagsetType } from '@common/enums/tagset.type';
 import { ITagsetTemplate } from './tagset.template.interface';
+import { TagsetTemplateService } from './tagset.template.service';
 
 describe('TagsetTemplateService', () => {
   let service: TagsetTemplateService;
@@ -72,9 +72,9 @@ describe('TagsetTemplateService', () => {
     it('should throw EntityNotFoundException when not found', async () => {
       tagsetTemplateRepository.findOne!.mockResolvedValue(null);
 
-      await expect(
-        service.getTagsetTemplateOrFail('missing')
-      ).rejects.toThrow(EntityNotFoundException);
+      await expect(service.getTagsetTemplateOrFail('missing')).rejects.toThrow(
+        EntityNotFoundException
+      );
     });
   });
 
@@ -119,7 +119,7 @@ describe('TagsetTemplateService', () => {
 
       await service.updateTagsetTemplateDefinition(template, {
         defaultSelectedValue: 'b',
-      });
+      } as any);
 
       expect(template.defaultSelectedValue).toBe('b');
     });
@@ -133,7 +133,7 @@ describe('TagsetTemplateService', () => {
 
       tagsetTemplateRepository.save!.mockResolvedValue(template);
 
-      await service.updateTagsetTemplateDefinition(template, {});
+      await service.updateTagsetTemplateDefinition(template, {} as any);
 
       expect(template.allowedValues).toEqual(['x']);
       expect(template.defaultSelectedValue).toBe('x');

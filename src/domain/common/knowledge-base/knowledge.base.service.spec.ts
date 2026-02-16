@@ -1,18 +1,19 @@
+import { EntityNotFoundException } from '@common/exceptions';
+import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockType } from '@test/utils/mock.type';
+import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { Repository } from 'typeorm';
-import { KnowledgeBase } from './knowledge.base.entity';
-import { KnowledgeBaseService } from './knowledge.base.service';
-import { EntityNotFoundException } from '@common/exceptions';
-import { ProfileService } from '../profile/profile.service';
+import { type Mock } from 'vitest';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
-import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
+import { ProfileService } from '../profile/profile.service';
+import { KnowledgeBase } from './knowledge.base.entity';
 import { IKnowledgeBase } from './knowledge.base.interface';
+import { KnowledgeBaseService } from './knowledge.base.service';
 
 describe('KnowledgeBaseService', () => {
   let service: KnowledgeBaseService;
@@ -60,9 +61,9 @@ describe('KnowledgeBaseService', () => {
     it('should throw EntityNotFoundException when not found', async () => {
       knowledgeBaseRepository.findOne!.mockResolvedValue(null);
 
-      await expect(
-        service.getKnowledgeBaseOrFail('missing')
-      ).rejects.toThrow(EntityNotFoundException);
+      await expect(service.getKnowledgeBaseOrFail('missing')).rejects.toThrow(
+        EntityNotFoundException
+      );
     });
   });
 
@@ -120,9 +121,7 @@ describe('KnowledgeBaseService', () => {
       (calloutsSetService.deleteCalloutsSet as Mock).mockResolvedValue(
         {} as any
       );
-      (authorizationPolicyService.delete as Mock).mockResolvedValue(
-        {} as any
-      );
+      (authorizationPolicyService.delete as Mock).mockResolvedValue({} as any);
 
       const result = await service.delete(kb);
 
@@ -143,9 +142,7 @@ describe('KnowledgeBaseService', () => {
 
       knowledgeBaseRepository.findOne!.mockResolvedValue(kb);
 
-      await expect(service.delete(kb)).rejects.toThrow(
-        EntityNotFoundException
-      );
+      await expect(service.delete(kb)).rejects.toThrow(EntityNotFoundException);
     });
 
     it('should skip authorization deletion when authorization is not present', async () => {

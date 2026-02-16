@@ -6,16 +6,16 @@ import {
   EntityNotFoundException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
-import { User } from '@domain/community/user/user.entity';
 import { Organization } from '@domain/community/organization/organization.entity';
+import { User } from '@domain/community/user/user.entity';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
-import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
+import { Test, TestingModule } from '@nestjs/testing';
+import { getEntityManagerToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { vi, type Mock } from 'vitest';
-import { getEntityManagerToken } from '@nestjs/typeorm';
+import { type Mock, vi } from 'vitest';
 import { UrlGeneratorService } from './url.generator.service';
 import { UrlGeneratorCacheService } from './url.generator.service.cache';
 
@@ -131,9 +131,7 @@ describe('UrlGeneratorService', () => {
 
       const result = service.createUrlForContributor(orgContributor);
 
-      expect(result).toBe(
-        `${ENDPOINT}/${UrlPathBase.ORGANIZATION}/acme-corp`
-      );
+      expect(result).toBe(`${ENDPOINT}/${UrlPathBase.ORGANIZATION}/acme-corp`);
     });
 
     it('should create URL with virtual contributor path when contributor is a VirtualContributor', () => {
@@ -151,9 +149,9 @@ describe('UrlGeneratorService', () => {
     it('should throw RelationshipNotFoundException when contributor type is unknown', () => {
       const unknownContributor = { id: 'unknown-1', nameID: 'anon' } as any;
 
-      expect(() =>
-        service.createUrlForContributor(unknownContributor)
-      ).toThrow(RelationshipNotFoundException);
+      expect(() => service.createUrlForContributor(unknownContributor)).toThrow(
+        RelationshipNotFoundException
+      );
     });
   });
 
@@ -247,7 +245,9 @@ describe('UrlGeneratorService', () => {
         UrlPathElementSpace.SETTINGS
       );
 
-      expect(result).toBe(`${ENDPOINT}/my-space/${UrlPathElementSpace.SETTINGS}`);
+      expect(result).toBe(
+        `${ENDPOINT}/my-space/${UrlPathElementSpace.SETTINGS}`
+      );
     });
 
     it('should use combined cacheID when spacePath is provided', async () => {

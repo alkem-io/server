@@ -4,8 +4,8 @@ import { getEntityManagerToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { type Mocked, vi } from 'vitest';
 import { EntityManager } from 'typeorm';
+import { type Mocked, vi } from 'vitest';
 import { TemplateContentSpace } from '../template.content.space.entity';
 import { TemplateContentSpaceLookupService } from './template-content-space.lookup.service';
 

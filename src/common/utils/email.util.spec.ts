@@ -1,7 +1,7 @@
 import {
-  splitEmail,
-  getEmailName,
   getEmailDomain,
+  getEmailName,
+  splitEmail,
   validateEmail,
 } from './email.util';
 
@@ -81,10 +81,7 @@ describe('validateEmail', () => {
     { email: 'user@', description: 'missing domain' },
     { email: '@domain', description: 'missing name' },
     { email: 'user@domain', description: 'no TLD dot' },
-  ])(
-    'should return false for $description',
-    ({ email }) => {
-      expect(validateEmail(email)).toBe(false);
-    }
-  );
+  ])('should return false for $description', ({ email }) => {
+    expect(validateEmail(email)).toBe(false);
+  });
 });

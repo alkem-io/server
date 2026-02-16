@@ -1,14 +1,12 @@
+import { Timeline } from '@domain/timeline/timeline/timeline.entity';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getEntityManagerToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { vi, type Mock } from 'vitest';
-import { getEntityManagerToken } from '@nestjs/typeorm';
-import { TimelineResolverService } from './timeline.resolver.service';
-import { Timeline } from '@domain/timeline/timeline/timeline.entity';
-import { Collaboration } from '@domain/collaboration/collaboration';
-import { Space } from '@domain/space/space/space.entity';
 import { EntityNotFoundError } from 'typeorm';
+import { type Mock, vi } from 'vitest';
+import { TimelineResolverService } from './timeline.resolver.service';
 
 describe('TimelineResolverService', () => {
   let service: TimelineResolverService;
@@ -69,8 +67,7 @@ describe('TimelineResolverService', () => {
         .mockResolvedValueOnce({ id: 'timeline-1' })
         .mockResolvedValueOnce({ id: 'collab-1' });
 
-      const result =
-        await service.getCollaborationIdForCalendar('calendar-1');
+      const result = await service.getCollaborationIdForCalendar('calendar-1');
 
       expect(result).toBe('collab-1');
     });
@@ -79,8 +76,7 @@ describe('TimelineResolverService', () => {
       // Timeline not found
       entityManager.findOne.mockResolvedValue(null);
 
-      const result =
-        await service.getCollaborationIdForCalendar('calendar-1');
+      const result = await service.getCollaborationIdForCalendar('calendar-1');
 
       expect(result).toBe('');
     });
@@ -91,8 +87,7 @@ describe('TimelineResolverService', () => {
         .mockResolvedValueOnce({ id: 'timeline-1' })
         .mockResolvedValueOnce(null);
 
-      const result =
-        await service.getCollaborationIdForCalendar('calendar-1');
+      const result = await service.getCollaborationIdForCalendar('calendar-1');
 
       expect(result).toBe('');
     });
@@ -118,18 +113,18 @@ describe('TimelineResolverService', () => {
         .mockResolvedValueOnce({ id: 'collab-1' })
         .mockResolvedValueOnce(null);
 
-      await expect(
-        service.getSpaceIdForCalendar('calendar-1')
-      ).rejects.toThrow(EntityNotFoundError);
+      await expect(service.getSpaceIdForCalendar('calendar-1')).rejects.toThrow(
+        EntityNotFoundError
+      );
     });
 
     it('should throw EntityNotFoundError when collaboration resolves to empty string (timeline not found)', async () => {
       // No timeline found -> collaborationID is '' -> Space query with empty ID -> no space
       entityManager.findOne.mockResolvedValue(null);
 
-      await expect(
-        service.getSpaceIdForCalendar('calendar-1')
-      ).rejects.toThrow(EntityNotFoundError);
+      await expect(service.getSpaceIdForCalendar('calendar-1')).rejects.toThrow(
+        EntityNotFoundError
+      );
     });
   });
 });

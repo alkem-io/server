@@ -4,24 +4,24 @@ import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
+import { CalloutService } from '@domain/collaboration/callout/callout.service';
+import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { WhiteboardService } from '@domain/common/whiteboard';
 import { CommunityGuidelinesService } from '@domain/community/community-guidelines/community.guidelines.service';
-import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
-import { CalloutService } from '@domain/collaboration/callout/callout.service';
-import { TemplateContentSpaceService } from '../template-content-space/template.content.space.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getEntityManagerToken, getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { type Mocked, vi } from 'vitest';
 import { EntityManager, Repository } from 'typeorm';
-import { Template } from './template.entity';
-import { TemplateService } from './template.service';
-import { ITemplate } from './template.interface';
+import { type Mocked, vi } from 'vitest';
+import { TemplateContentSpaceService } from '../template-content-space/template.content.space.service';
 import { TemplateDefault } from '../template-default/template.default.entity';
+import { Template } from './template.entity';
+import { ITemplate } from './template.interface';
+import { TemplateService } from './template.service';
 
 describe('TemplateService', () => {
   let service: TemplateService;
@@ -63,9 +63,9 @@ describe('TemplateService', () => {
       .compile();
 
     service = module.get(TemplateService);
-    templateRepository = module.get(
-      getRepositoryToken(Template)
-    ) as Mocked<Repository<Template>>;
+    templateRepository = module.get(getRepositoryToken(Template)) as Mocked<
+      Repository<Template>
+    >;
     entityManager = module.get(
       getEntityManagerToken('default')
     ) as Mocked<EntityManager>;
@@ -136,7 +136,10 @@ describe('TemplateService', () => {
   });
 
   describe('createTemplate', () => {
-    const baseInput = (type: TemplateType, overrides: Record<string, any> = {}) => ({
+    const baseInput = (
+      type: TemplateType,
+      overrides: Record<string, any> = {}
+    ) => ({
       type,
       profileData: {
         displayName: 'Test Template',
@@ -149,7 +152,9 @@ describe('TemplateService', () => {
     const storageAggregator = {} as any;
 
     beforeEach(() => {
-      profileService.createProfile.mockResolvedValue({ id: 'profile-1' } as any);
+      profileService.createProfile.mockResolvedValue({
+        id: 'profile-1',
+      } as any);
       profileService.addOrUpdateTagsetOnProfile.mockResolvedValue({} as any);
       profileService.addVisualsOnProfile.mockResolvedValue({} as any);
       templateRepository.save.mockImplementation(async (entity: any) => entity);
@@ -157,7 +162,10 @@ describe('TemplateService', () => {
 
     it('should throw ValidationException for POST type when no description provided', async () => {
       await expect(
-        service.createTemplate(baseInput(TemplateType.POST) as any, storageAggregator)
+        service.createTemplate(
+          baseInput(TemplateType.POST) as any,
+          storageAggregator
+        )
       ).rejects.toThrow(ValidationException);
     });
 
@@ -166,7 +174,10 @@ describe('TemplateService', () => {
         postDefaultDescription: 'Default post desc',
       });
 
-      const result = await service.createTemplate(input as any, storageAggregator);
+      const result = await service.createTemplate(
+        input as any,
+        storageAggregator
+      );
 
       expect(result.postDefaultDescription).toBe('Default post desc');
     });
@@ -182,15 +193,18 @@ describe('TemplateService', () => {
 
     it('should create a COMMUNITY_GUIDELINES template with guidelines data', async () => {
       const guidelinesInput = { profile: { displayName: 'Guidelines' } };
-      communityGuidelinesService.createCommunityGuidelines.mockResolvedValue(
-        { id: 'cg-1' } as any
-      );
+      communityGuidelinesService.createCommunityGuidelines.mockResolvedValue({
+        id: 'cg-1',
+      } as any);
 
       const input = baseInput(TemplateType.COMMUNITY_GUIDELINES, {
         communityGuidelinesData: guidelinesInput,
       });
 
-      const result = await service.createTemplate(input as any, storageAggregator);
+      const result = await service.createTemplate(
+        input as any,
+        storageAggregator
+      );
 
       expect(result.communityGuidelines).toEqual({ id: 'cg-1' });
       expect(
@@ -208,9 +222,9 @@ describe('TemplateService', () => {
     });
 
     it('should create a SPACE template and mark collaboration as template', async () => {
-      templateContentSpaceService.createTemplateContentSpace.mockResolvedValue(
-        { id: 'tcs-1' } as any
-      );
+      templateContentSpaceService.createTemplateContentSpace.mockResolvedValue({
+        id: 'tcs-1',
+      } as any);
 
       const input = baseInput(TemplateType.SPACE, {
         contentSpaceData: {
@@ -223,7 +237,10 @@ describe('TemplateService', () => {
         },
       });
 
-      const result = await service.createTemplate(input as any, storageAggregator);
+      const result = await service.createTemplate(
+        input as any,
+        storageAggregator
+      );
 
       expect(result.contentSpace).toEqual({ id: 'tcs-1' });
       expect(
@@ -241,15 +258,18 @@ describe('TemplateService', () => {
     });
 
     it('should create a WHITEBOARD template', async () => {
-      whiteboardService.createWhiteboard.mockResolvedValue(
-        { id: 'wb-1' } as any
-      );
+      whiteboardService.createWhiteboard.mockResolvedValue({
+        id: 'wb-1',
+      } as any);
 
       const input = baseInput(TemplateType.WHITEBOARD, {
         whiteboard: { content: '{}', previewSettings: {} },
       });
 
-      const result = await service.createTemplate(input as any, storageAggregator);
+      const result = await service.createTemplate(
+        input as any,
+        storageAggregator
+      );
 
       expect(result.whiteboard).toEqual({ id: 'wb-1' });
     });
@@ -304,7 +324,7 @@ describe('TemplateService', () => {
       } as any);
       templateRepository.save.mockImplementation(async (entity: any) => entity);
 
-      const result = await service.updateTemplate(
+      const _result = await service.updateTemplate(
         { id: 'tpl-1', type: TemplateType.POST } as ITemplate,
         { ID: 'tpl-1', profile: { displayName: 'Updated' } } as any
       );
@@ -577,10 +597,7 @@ describe('TemplateService', () => {
       const collaboration = {
         id: 'collab-1',
         innovationFlow: {
-          states: [
-            { displayName: 'Explore' },
-            { displayName: 'Develop' },
-          ],
+          states: [{ displayName: 'Explore' }, { displayName: 'Develop' }],
         },
         calloutsSet: {
           callouts: [{ id: 'c-1' }],

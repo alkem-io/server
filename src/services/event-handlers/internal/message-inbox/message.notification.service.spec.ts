@@ -35,8 +35,7 @@ describe('MessageNotificationService', () => {
     reactions: [],
   });
 
-  const mockAgentInfo = (): AgentInfo =>
-    ({ agentID: 'actor-1' }) as AgentInfo;
+  const mockAgentInfo = (): AgentInfo => ({ agentID: 'actor-1' }) as AgentInfo;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -187,9 +186,7 @@ describe('MessageNotificationService', () => {
       expect(
         roomServiceEvents.processNotificationPostContributionComment
       ).toHaveBeenCalled();
-      expect(
-        roomServiceEvents.processActivityPostComment
-      ).toHaveBeenCalled();
+      expect(roomServiceEvents.processActivityPostComment).toHaveBeenCalled();
     });
 
     it('should process CALLOUT room type only when visibility is PUBLISHED and type is COLLABORATION', async () => {

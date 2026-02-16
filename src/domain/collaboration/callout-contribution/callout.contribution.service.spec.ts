@@ -1,8 +1,3 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { MockCacheManager } from '@test/mocks/cache-manager.mock';
-import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
-import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import {
   EntityNotFoundException,
@@ -12,13 +7,18 @@ import {
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { MemoService } from '@domain/common/memo/memo.service';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
-import { PostService } from '../post/post.service';
+import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { MockCacheManager } from '@test/mocks/cache-manager.mock';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
+import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { Repository } from 'typeorm';
+import { type Mock, vi } from 'vitest';
 import { LinkService } from '../link/link.service';
+import { PostService } from '../post/post.service';
 import { CalloutContribution } from './callout.contribution.entity';
 import { CalloutContributionService } from './callout.contribution.service';
-import { Repository } from 'typeorm';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { type Mock, vi } from 'vitest';
 
 describe('CalloutContributionService', () => {
   let service: CalloutContributionService;
@@ -31,13 +31,11 @@ describe('CalloutContributionService', () => {
 
   beforeEach(async () => {
     // Mock static CalloutContribution.create to avoid DataSource requirement
-    vi.spyOn(CalloutContribution, 'create').mockImplementation(
-      (input: any) => {
-        const entity = new CalloutContribution();
-        Object.assign(entity, input);
-        return entity as any;
-      }
-    );
+    vi.spyOn(CalloutContribution, 'create').mockImplementation((input: any) => {
+      const entity = new CalloutContribution();
+      Object.assign(entity, input);
+      return entity as any;
+    });
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -71,7 +69,7 @@ describe('CalloutContributionService', () => {
       } as any;
       const contributionSettings = {
         allowedTypes: [CalloutContributionType.POST],
-      };
+      } as any;
       const createdPost = { id: 'post-1' } as any;
 
       vi.mocked(postService.createPost).mockResolvedValue(createdPost);
@@ -101,7 +99,7 @@ describe('CalloutContributionService', () => {
       } as any;
       const contributionSettings = {
         allowedTypes: [CalloutContributionType.WHITEBOARD],
-      };
+      } as any;
       const createdWb = { id: 'wb-1' } as any;
 
       vi.mocked(whiteboardService.createWhiteboard).mockResolvedValue(
@@ -125,7 +123,7 @@ describe('CalloutContributionService', () => {
       } as any;
       const contributionSettings = {
         allowedTypes: [CalloutContributionType.LINK],
-      };
+      } as any;
       const createdLink = { id: 'link-1' } as any;
 
       vi.mocked(linkService.createLink).mockResolvedValue(createdLink);
@@ -147,7 +145,7 @@ describe('CalloutContributionService', () => {
       } as any;
       const contributionSettings = {
         allowedTypes: [CalloutContributionType.MEMO],
-      };
+      } as any;
       const createdMemo = { id: 'memo-1' } as any;
 
       vi.mocked(memoService.createMemo).mockResolvedValue(createdMemo);
@@ -169,7 +167,7 @@ describe('CalloutContributionService', () => {
       } as any;
       const contributionSettings = {
         allowedTypes: [CalloutContributionType.POST],
-      };
+      } as any;
 
       vi.mocked(postService.createPost).mockResolvedValue({} as any);
 
@@ -190,7 +188,7 @@ describe('CalloutContributionService', () => {
       } as any;
       const contributionSettings = {
         allowedTypes: [CalloutContributionType.WHITEBOARD],
-      };
+      } as any;
 
       await expect(
         service.createCalloutContribution(
@@ -209,7 +207,7 @@ describe('CalloutContributionService', () => {
       } as any;
       const contributionSettings = {
         allowedTypes: [CalloutContributionType.POST],
-      };
+      } as any;
 
       await expect(
         service.createCalloutContribution(
@@ -229,7 +227,7 @@ describe('CalloutContributionService', () => {
       } as any;
       const contributionSettings = {
         allowedTypes: [CalloutContributionType.POST],
-      };
+      } as any;
 
       await expect(
         service.createCalloutContribution(
@@ -247,7 +245,7 @@ describe('CalloutContributionService', () => {
       const storageAggregator = { id: 'agg-1' } as any;
       const contributionSettings = {
         allowedTypes: [CalloutContributionType.POST],
-      };
+      } as any;
       const contributionsData = [
         {
           type: CalloutContributionType.POST,
@@ -372,7 +370,7 @@ describe('CalloutContributionService', () => {
   describe('save', () => {
     it('should save a single contribution and return it', async () => {
       const contribution = { id: 'contrib-1' } as any;
-      vi.mocked(repository.save).mockResolvedValue([contribution]);
+      vi.mocked(repository.save).mockResolvedValue([contribution] as any);
 
       const result = await service.save(contribution);
 
@@ -381,7 +379,7 @@ describe('CalloutContributionService', () => {
 
     it('should save an array of contributions and return the array', async () => {
       const contributions = [{ id: 'c-1' }, { id: 'c-2' }] as any[];
-      vi.mocked(repository.save).mockResolvedValue(contributions);
+      vi.mocked(repository.save).mockResolvedValue(contributions as any);
 
       const result = await service.save(contributions);
 
@@ -447,8 +445,7 @@ describe('CalloutContributionService', () => {
       } as any;
       vi.mocked(repository.findOne).mockResolvedValue(contribution);
 
-      const result =
-        await service.getStorageBucketForContribution('contrib-1');
+      const result = await service.getStorageBucketForContribution('contrib-1');
 
       expect(result).toBe(storageBucket);
     });
@@ -479,8 +476,7 @@ describe('CalloutContributionService', () => {
       } as any;
       vi.mocked(repository.findOne).mockResolvedValue(contribution);
 
-      const result =
-        await service.getStorageBucketForContribution('contrib-1');
+      const result = await service.getStorageBucketForContribution('contrib-1');
 
       expect(result).toBe(storageBucket);
     });
@@ -496,8 +492,7 @@ describe('CalloutContributionService', () => {
       } as any;
       vi.mocked(repository.findOne).mockResolvedValue(contribution);
 
-      const result =
-        await service.getStorageBucketForContribution('contrib-1');
+      const result = await service.getStorageBucketForContribution('contrib-1');
 
       expect(result).toBe(storageBucket);
     });
@@ -513,8 +508,7 @@ describe('CalloutContributionService', () => {
       } as any;
       vi.mocked(repository.findOne).mockResolvedValue(contribution);
 
-      const result =
-        await service.getStorageBucketForContribution('contrib-1');
+      const result = await service.getStorageBucketForContribution('contrib-1');
 
       expect(result).toBe(storageBucket);
     });
@@ -626,11 +620,8 @@ describe('CalloutContributionService', () => {
     });
 
     it('should handle large batch of callout IDs', async () => {
-      const calloutIds = Array.from(
-        { length: 100 },
-        (_, i) => `callout-${i}`
-      );
-      const rawResult = calloutIds.map((id) => ({
+      const calloutIds = Array.from({ length: 100 }, (_, i) => `callout-${i}`);
+      const rawResult = calloutIds.map(id => ({
         calloutId: id,
         count: '1',
       }));

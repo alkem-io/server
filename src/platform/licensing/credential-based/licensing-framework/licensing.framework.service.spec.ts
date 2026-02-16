@@ -1,17 +1,16 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
-import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { MockType } from '@test/utils/mock.type';
-import { Repository } from 'typeorm';
-import { LicensingFramework } from './licensing.framework.entity';
-import { LicensingFrameworkService } from './licensing.framework.service';
-import { LicensePlanService } from '@platform/licensing/credential-based/license-plan/license.plan.service';
 import { EntityNotFoundException } from '@common/exceptions';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
-import { ILicensingFramework } from './licensing.framework.interface';
+import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { LicensePlanService } from '@platform/licensing/credential-based/license-plan/license.plan.service';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
+import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { MockType } from '@test/utils/mock.type';
+import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { Repository } from 'typeorm';
 import { vi } from 'vitest';
+import { LicensingFramework } from './licensing.framework.entity';
+import { LicensingFrameworkService } from './licensing.framework.service';
 
 describe('LicensingFrameworkService', () => {
   let service: LicensingFrameworkService;
@@ -36,7 +35,10 @@ describe('LicensingFrameworkService', () => {
 
   describe('getLicensingOrFail', () => {
     it('should return the licensing framework when found', async () => {
-      const licensing = { id: 'lic-1', plans: [] } as unknown as LicensingFramework;
+      const licensing = {
+        id: 'lic-1',
+        plans: [],
+      } as unknown as LicensingFramework;
       licensingRepo.findOne!.mockResolvedValue(licensing);
 
       const result = await service.getLicensingOrFail('lic-1');
@@ -47,9 +49,9 @@ describe('LicensingFrameworkService', () => {
     it('should throw EntityNotFoundException when licensing not found', async () => {
       licensingRepo.findOne!.mockResolvedValue(null);
 
-      await expect(
-        service.getLicensingOrFail('missing')
-      ).rejects.toThrow(EntityNotFoundException);
+      await expect(service.getLicensingOrFail('missing')).rejects.toThrow(
+        EntityNotFoundException
+      );
     });
   });
 
@@ -66,20 +68,17 @@ describe('LicensingFrameworkService', () => {
     it('should throw EntityNotFoundException when no licensing frameworks exist', async () => {
       licensingRepo.find!.mockResolvedValue([]);
 
-      await expect(
-        service.getDefaultLicensingOrFail()
-      ).rejects.toThrow(EntityNotFoundException);
+      await expect(service.getDefaultLicensingOrFail()).rejects.toThrow(
+        EntityNotFoundException
+      );
     });
 
     it('should throw EntityNotFoundException when multiple licensing frameworks exist', async () => {
-      licensingRepo.find!.mockResolvedValue([
-        { id: 'lic-1' },
-        { id: 'lic-2' },
-      ]);
+      licensingRepo.find!.mockResolvedValue([{ id: 'lic-1' }, { id: 'lic-2' }]);
 
-      await expect(
-        service.getDefaultLicensingOrFail()
-      ).rejects.toThrow(EntityNotFoundException);
+      await expect(service.getDefaultLicensingOrFail()).rejects.toThrow(
+        EntityNotFoundException
+      );
     });
   });
 
@@ -101,9 +100,9 @@ describe('LicensingFrameworkService', () => {
       } as unknown as LicensingFramework;
       licensingRepo.findOne!.mockResolvedValue(licensing);
 
-      await expect(
-        service.getLicensePlansOrFail('lic-1')
-      ).rejects.toThrow(EntityNotFoundException);
+      await expect(service.getLicensePlansOrFail('lic-1')).rejects.toThrow(
+        EntityNotFoundException
+      );
     });
   });
 

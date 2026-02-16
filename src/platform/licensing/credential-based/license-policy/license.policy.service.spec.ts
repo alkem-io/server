@@ -1,15 +1,15 @@
+import { EntityNotFoundException } from '@common/exceptions';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockType } from '@test/utils/mock.type';
+import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { EntityManager, Repository } from 'typeorm';
-import { LicensePolicy } from './license.policy.entity';
-import { LicensePolicyService } from './license.policy.service';
-import { EntityNotFoundException } from '@common/exceptions';
-import { ILicensePolicy } from './license.policy.interface';
 import { vi } from 'vitest';
+import { LicensePolicy } from './license.policy.entity';
+import { ILicensePolicy } from './license.policy.interface';
+import { LicensePolicyService } from './license.policy.service';
 
 describe('LicensePolicyService', () => {
   let service: LicensePolicyService;
@@ -48,9 +48,9 @@ describe('LicensePolicyService', () => {
     it('should throw EntityNotFoundException when not found', async () => {
       licensePolicyRepository.findOneBy!.mockResolvedValue(null);
 
-      await expect(
-        service.getLicensePolicyOrFail('missing')
-      ).rejects.toThrow(EntityNotFoundException);
+      await expect(service.getLicensePolicyOrFail('missing')).rejects.toThrow(
+        EntityNotFoundException
+      );
     });
   });
 
@@ -70,9 +70,9 @@ describe('LicensePolicyService', () => {
     it('should throw EntityNotFoundException when no default policy found', async () => {
       vi.mocked(entityManager.findOne).mockResolvedValue(null);
 
-      await expect(
-        service.getDefaultLicensePolicyOrFail()
-      ).rejects.toThrow(EntityNotFoundException);
+      await expect(service.getDefaultLicensePolicyOrFail()).rejects.toThrow(
+        EntityNotFoundException
+      );
     });
   });
 

@@ -1,10 +1,10 @@
+import { AuthenticationType } from '@common/enums/authentication.type';
+import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
+import type { Identity, Session } from '@ory/kratos-client';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { KratosService } from './kratos.service';
-import { ConfigService } from '@nestjs/config';
-import { AuthenticationType } from '@common/enums/authentication.type';
-import type { Identity, Session } from '@ory/kratos-client';
 
 describe('KratosService', () => {
   let service: KratosService;
@@ -279,8 +279,7 @@ describe('KratosService', () => {
         },
       } as unknown as Identity;
 
-      const result =
-        await service.getAuthenticationTypeFromIdentity(identity);
+      const result = await service.getAuthenticationTypeFromIdentity(identity);
       expect(result).toEqual([AuthenticationType.EMAIL]);
     });
   });

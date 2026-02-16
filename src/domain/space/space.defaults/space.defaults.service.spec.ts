@@ -8,10 +8,10 @@ import { InputCreatorService } from '@services/api/input-creator/input.creator.s
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { vi } from 'vitest';
-import { spaceCommunityRoles } from './definitions/space.community.roles';
-import { subspaceCommunityRoles } from './definitions/subspace.community.roles';
 import { spaceCommunityApplicationForm } from './definitions/space.community.role.application.form';
+import { spaceCommunityRoles } from './definitions/space.community.roles';
 import { subspaceCommunityApplicationForm } from './definitions/subspace.community.role.application.form';
+import { subspaceCommunityRoles } from './definitions/subspace.community.roles';
 import { SpaceDefaultsService } from './space.defaults.service';
 
 describe('SpaceDefaultsService', () => {
@@ -64,9 +64,9 @@ describe('SpaceDefaultsService', () => {
 
     it('should throw EntityNotInitializedException for invalid space level', () => {
       // Act & Assert
-      expect(() =>
-        service.getRoleSetCommunityRoles(99 as SpaceLevel)
-      ).toThrow('Invalid space level: 99');
+      expect(() => service.getRoleSetCommunityRoles(99 as SpaceLevel)).toThrow(
+        'Invalid space level: 99'
+      );
     });
   });
 
@@ -130,7 +130,9 @@ describe('SpaceDefaultsService', () => {
         id: 'template-1',
         collaboration: {
           id: 'collab-1',
-          innovationFlow: { settings: { maximumNumberOfStates: 8, minimumNumberOfStates: 1 } },
+          innovationFlow: {
+            settings: { maximumNumberOfStates: 8, minimumNumberOfStates: 1 },
+          },
         },
       } as any;
 
@@ -178,9 +180,7 @@ describe('SpaceDefaultsService', () => {
       // Act & Assert
       await expect(
         service.createCollaborationInput(collaborationData, templateContent)
-      ).rejects.toThrow(
-        'Innovation flow settings not found in template'
-      );
+      ).rejects.toThrow('Innovation flow settings not found in template');
     });
 
     it('should throw ValidationException when max < min number of states', async () => {
@@ -257,9 +257,9 @@ describe('SpaceDefaultsService', () => {
       );
 
       // Assert
-      expect(result.innovationFlowData.states).toHaveLength(2);
-      expect(result.innovationFlowData.states[0].displayName).toBe('s1');
-      expect(result.innovationFlowData.states[1].displayName).toBe('s2');
+      expect(result.innovationFlowData!.states).toHaveLength(2);
+      expect(result.innovationFlowData!.states[0].displayName).toBe('s1');
+      expect(result.innovationFlowData!.states[1].displayName).toBe('s2');
     });
 
     it('should throw ValidationException when states fewer than minimum after processing', async () => {
@@ -292,9 +292,7 @@ describe('SpaceDefaultsService', () => {
       // Act & Assert
       await expect(
         service.createCollaborationInput(collaborationData, templateContent)
-      ).rejects.toThrow(
-        'Innovation flow must have at least 3 states.'
-      );
+      ).rejects.toThrow('Innovation flow must have at least 3 states.');
     });
 
     it('should clear callouts data when addCallouts is false', async () => {
@@ -371,10 +369,7 @@ describe('SpaceDefaultsService', () => {
       );
 
       // Assert
-      expect(moveCalloutsSpy).toHaveBeenCalledWith(
-        ['active', 'done'],
-        []
-      );
+      expect(moveCalloutsSpy).toHaveBeenCalledWith(['active', 'done'], []);
     });
   });
 
@@ -418,9 +413,7 @@ describe('SpaceDefaultsService', () => {
           SpaceLevel.L0,
           'template-1'
         )
-      ).rejects.toThrow(
-        'Have template without template content space to use'
-      );
+      ).rejects.toThrow('Have template without template content space to use');
     });
 
     it('should use platform default for L0 when no templateID provided', async () => {
@@ -454,9 +447,7 @@ describe('SpaceDefaultsService', () => {
       // Act & Assert
       await expect(
         service.getTemplateSpaceContentToAugmentFrom(SpaceLevel.L0)
-      ).rejects.toThrow(
-        'Unable to get template content space to use'
-      );
+      ).rejects.toThrow('Unable to get template content space to use');
     });
 
     it('should try space templates manager first for L1 then fall back to platform default', async () => {

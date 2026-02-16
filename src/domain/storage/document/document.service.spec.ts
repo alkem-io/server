@@ -3,20 +3,19 @@ import { MimeFileType } from '@common/enums/mime.file.type';
 import { MimeTypeVisual } from '@common/enums/mime.file.type.visual';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { EntityNotFoundException } from '@common/exceptions';
-import { DocumentDeleteFailedException } from '@common/exceptions/document/document.delete.failed.exception';
 import { DocumentSaveFailedException } from '@common/exceptions/document/document.save.failed.exception';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
-import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
+import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { StorageService } from '@services/adapters/storage';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { type Mock, vi } from 'vitest';
 import { Repository } from 'typeorm';
+import { type Mock, vi } from 'vitest';
 import { Document } from './document.entity';
 import { DocumentService } from './document.service';
 
@@ -91,7 +90,11 @@ describe('DocumentService', () => {
         externalID: 'ext-123',
         temporaryLocation: false,
       };
-      const mockTagset = { id: 'tagset-1', name: TagsetReservedName.DEFAULT, tags: [] };
+      const mockTagset = {
+        id: 'tagset-1',
+        name: TagsetReservedName.DEFAULT,
+        tags: [],
+      };
       (tagsetService.createTagset as Mock).mockReturnValue(mockTagset);
       (documentRepository.save as Mock).mockImplementation(
         async (doc: any) => ({ ...doc, id: 'doc-1' })
@@ -122,7 +125,10 @@ describe('DocumentService', () => {
         tagset: mockTagset,
       };
       (documentRepository.findOne as Mock).mockResolvedValue(document);
-      (documentRepository.remove as Mock).mockResolvedValue({ ...document, id: '' });
+      (documentRepository.remove as Mock).mockResolvedValue({
+        ...document,
+        id: '',
+      });
       (authorizationPolicyService.delete as Mock).mockResolvedValue(undefined);
       (tagsetService.removeTagset as Mock).mockResolvedValue(undefined);
 
@@ -142,7 +148,10 @@ describe('DocumentService', () => {
         tagset: { id: 'tagset-2' },
       };
       (documentRepository.findOne as Mock).mockResolvedValue(document);
-      (documentRepository.remove as Mock).mockResolvedValue({ ...document, id: '' });
+      (documentRepository.remove as Mock).mockResolvedValue({
+        ...document,
+        id: '',
+      });
       (tagsetService.removeTagset as Mock).mockResolvedValue(undefined);
 
       await service.deleteDocument({ ID: 'doc-2' });
@@ -159,7 +168,10 @@ describe('DocumentService', () => {
         tagset: undefined,
       };
       (documentRepository.findOne as Mock).mockResolvedValue(document);
-      (documentRepository.remove as Mock).mockResolvedValue({ ...document, id: '' });
+      (documentRepository.remove as Mock).mockResolvedValue({
+        ...document,
+        id: '',
+      });
       (authorizationPolicyService.delete as Mock).mockResolvedValue(undefined);
 
       await service.deleteDocument({ ID: 'doc-3' });
@@ -240,7 +252,9 @@ describe('DocumentService', () => {
 
       const result = await service.updateDocument(updateData);
 
-      expect(tagsetService.updateTagset).toHaveBeenCalledWith(updateData.tagset);
+      expect(tagsetService.updateTagset).toHaveBeenCalledWith(
+        updateData.tagset
+      );
       expect(result.tagset).toBe(updatedTagset);
     });
 

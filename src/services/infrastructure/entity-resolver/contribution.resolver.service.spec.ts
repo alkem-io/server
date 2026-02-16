@@ -2,8 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getEntityManagerToken } from '@nestjs/typeorm';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { type Mocked } from 'vitest';
 import { EntityManager, EntityNotFoundError } from 'typeorm';
+import { type Mocked } from 'vitest';
 import { ContributionResolverService } from './contribution.resolver.service';
 
 describe('ContributionResolverService', () => {

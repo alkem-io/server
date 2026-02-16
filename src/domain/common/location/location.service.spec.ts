@@ -1,16 +1,17 @@
+import { EntityNotInitializedException } from '@common/exceptions';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { GeoapifyService } from '@services/external/geoapify/geoapify.service';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockType } from '@test/utils/mock.type';
+import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { Repository } from 'typeorm';
+import { type Mock } from 'vitest';
 import { Location } from './location.entity';
-import { LocationService } from './location.service';
-import { EntityNotInitializedException } from '@common/exceptions';
-import { GeoapifyService } from '@services/external/geoapify/geoapify.service';
 import { ILocation } from './location.interface';
+import { LocationService } from './location.service';
 
 describe('LocationService', () => {
   let service: LocationService;
@@ -54,9 +55,10 @@ describe('LocationService', () => {
     });
 
     it('should create a location with provided data', async () => {
-      (geoapifyService.getGeoapifyGeocodeLocation as Mock).mockResolvedValue(
-        { longitude: 4.9, latitude: 52.3 }
-      );
+      (geoapifyService.getGeoapifyGeocodeLocation as Mock).mockResolvedValue({
+        longitude: 4.9,
+        latitude: 52.3,
+      });
 
       const result = await service.createLocation({
         city: 'Amsterdam',
@@ -105,9 +107,10 @@ describe('LocationService', () => {
         geoLocation: { isValid: true, longitude: 13.4, latitude: 52.5 },
       } as unknown as ILocation;
 
-      (geoapifyService.getGeoapifyGeocodeLocation as Mock).mockResolvedValue(
-        { longitude: 2.3, latitude: 48.8 }
-      );
+      (geoapifyService.getGeoapifyGeocodeLocation as Mock).mockResolvedValue({
+        longitude: 2.3,
+        latitude: 48.8,
+      });
       locationRepository.save!.mockResolvedValue(location);
 
       const result = await service.updateLocation(location, { city: 'Paris' });
@@ -205,9 +208,10 @@ describe('LocationService', () => {
         geoLocation,
       } as unknown as ILocation;
 
-      (geoapifyService.getGeoapifyGeocodeLocation as Mock).mockResolvedValue(
-        { longitude: 13.4, latitude: 52.5 }
-      );
+      (geoapifyService.getGeoapifyGeocodeLocation as Mock).mockResolvedValue({
+        longitude: 13.4,
+        latitude: 52.5,
+      });
 
       const result = await service.checkAndUpdateGeoLocation(location);
 

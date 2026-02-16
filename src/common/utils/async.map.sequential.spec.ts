@@ -36,9 +36,9 @@ describe('asyncMapSequential', () => {
       return n;
     };
 
-    await expect(
-      asyncMapSequential([1, 2, 3], failingMapper)
-    ).rejects.toThrow('mapper error');
+    await expect(asyncMapSequential([1, 2, 3], failingMapper)).rejects.toThrow(
+      'mapper error'
+    );
   });
 
   it('should stop processing after first error', async () => {
@@ -57,10 +57,7 @@ describe('asyncMapSequential', () => {
   });
 
   it('should transform types correctly', async () => {
-    const result = await asyncMapSequential(
-      [1, 2, 3],
-      async n => `item-${n}`
-    );
+    const result = await asyncMapSequential([1, 2, 3], async n => `item-${n}`);
     expect(result).toEqual(['item-1', 'item-2', 'item-3']);
   });
 });

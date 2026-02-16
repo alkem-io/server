@@ -1,17 +1,20 @@
+import { CalloutContributionType } from '@common/enums/callout.contribution.type';
+import {
+  EntityNotFoundException,
+  NotSupportedException,
+} from '@common/exceptions';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator/url.generator.service.cache';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { CalloutContributionType } from '@common/enums/callout.contribution.type';
-import { EntityNotFoundException, NotSupportedException } from '@common/exceptions';
+import { Repository } from 'typeorm';
 import { Callout } from '../callout/callout.entity';
 import { CalloutContribution } from './callout.contribution.entity';
 import { CalloutContributionMoveService } from './callout.contribution.move.service';
 import { CalloutContributionService } from './callout.contribution.service';
-import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator/url.generator.service.cache';
-import { Repository } from 'typeorm';
-import { getRepositoryToken } from '@nestjs/typeorm';
 
 describe('CalloutContributionMoveService', () => {
   let service: CalloutContributionMoveService;
@@ -83,9 +86,7 @@ describe('CalloutContributionMoveService', () => {
       const contribution = createContribution({
         post: { profile: { id: 'post-profile-id' } },
       });
-      const targetCallout = createTargetCallout([
-        CalloutContributionType.POST,
-      ]);
+      const targetCallout = createTargetCallout([CalloutContributionType.POST]);
 
       vi.mocked(
         contributionService.getCalloutContributionOrFail
@@ -142,9 +143,7 @@ describe('CalloutContributionMoveService', () => {
       const contribution = createContribution({
         whiteboard: { profile: { id: 'wb-id' } },
       });
-      const targetCallout = createTargetCallout([
-        CalloutContributionType.POST,
-      ]);
+      const targetCallout = createTargetCallout([CalloutContributionType.POST]);
 
       vi.mocked(
         contributionService.getCalloutContributionOrFail
@@ -160,9 +159,7 @@ describe('CalloutContributionMoveService', () => {
       const contribution = createContribution({
         link: { profile: { id: 'link-id' } },
       });
-      const targetCallout = createTargetCallout([
-        CalloutContributionType.POST,
-      ]);
+      const targetCallout = createTargetCallout([CalloutContributionType.POST]);
 
       vi.mocked(
         contributionService.getCalloutContributionOrFail
@@ -178,9 +175,7 @@ describe('CalloutContributionMoveService', () => {
       const contribution = createContribution({
         memo: { profile: { id: 'memo-id' } },
       });
-      const targetCallout = createTargetCallout([
-        CalloutContributionType.POST,
-      ]);
+      const targetCallout = createTargetCallout([CalloutContributionType.POST]);
 
       vi.mocked(
         contributionService.getCalloutContributionOrFail
@@ -242,9 +237,7 @@ describe('CalloutContributionMoveService', () => {
       const contribution = createContribution({
         memo: { profile: { id: 'memo-profile-id' } },
       });
-      const targetCallout = createTargetCallout([
-        CalloutContributionType.MEMO,
-      ]);
+      const targetCallout = createTargetCallout([CalloutContributionType.MEMO]);
 
       vi.mocked(
         contributionService.getCalloutContributionOrFail

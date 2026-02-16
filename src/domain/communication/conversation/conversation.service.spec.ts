@@ -12,13 +12,13 @@ import { RoomAuthorizationService } from '@domain/communication/room/room.servic
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { type Mocked, vi } from 'vitest';
 import { Repository } from 'typeorm';
-import { getRepositoryToken } from '@nestjs/typeorm';
+import { type Mocked, vi } from 'vitest';
 import { ConversationMembership } from '../conversation-membership/conversation.membership.entity';
 import { IConversationMembership } from '../conversation-membership/conversation.membership.interface';
 import { Conversation } from './conversation.entity';
@@ -86,9 +86,9 @@ describe('ConversationService', () => {
     it('should throw EntityNotFoundException when conversation not found', async () => {
       conversationRepo.findOne.mockResolvedValue(null);
 
-      await expect(
-        service.getConversationOrFail('missing-id')
-      ).rejects.toThrow(EntityNotFoundException);
+      await expect(service.getConversationOrFail('missing-id')).rejects.toThrow(
+        EntityNotFoundException
+      );
     });
 
     it('should pass FindOneOptions through to repository', async () => {
@@ -410,10 +410,7 @@ describe('ConversationService', () => {
       ] as any);
       userLookupService.getUserByAgentId.mockResolvedValue(mockUser2);
 
-      const result = await service.getUserFromConversation(
-        'conv-1',
-        'agent-1'
-      );
+      const result = await service.getUserFromConversation('conv-1', 'agent-1');
 
       expect(result).toBe(mockUser2);
       expect(userLookupService.getUserByAgentId).toHaveBeenCalledWith(
@@ -434,10 +431,7 @@ describe('ConversationService', () => {
         },
       ] as any);
 
-      const result = await service.getUserFromConversation(
-        'conv-1',
-        'agent-1'
-      );
+      const result = await service.getUserFromConversation('conv-1', 'agent-1');
 
       expect(result).toBeNull();
     });
@@ -525,7 +519,7 @@ describe('ConversationService', () => {
         room: newRoom,
       } as Conversation);
 
-      const result = await service.resetConversation(
+      const _result = await service.resetConversation(
         mockConversation,
         'sender-agent',
         'receiver-agent'
@@ -594,9 +588,7 @@ describe('ConversationService', () => {
         authorization: { id: 'auth-1' },
       } as Conversation);
 
-      membershipRepo.find.mockResolvedValue([
-        { agentId: 'agent-1' },
-      ] as any);
+      membershipRepo.find.mockResolvedValue([{ agentId: 'agent-1' }] as any);
 
       const result = await service.ensureRoomExists(mockConversation);
 

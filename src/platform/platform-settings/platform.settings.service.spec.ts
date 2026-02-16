@@ -1,9 +1,9 @@
+import { EntityNotInitializedException } from '@common/exceptions';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { PlatformSettingsService } from './platform.settings.service';
 import { IPlatformSettings } from './platform.settings.interface';
-import { EntityNotInitializedException } from '@common/exceptions';
+import { PlatformSettingsService } from './platform.settings.service';
 
 describe('PlatformSettingsService', () => {
   let service: PlatformSettingsService;
@@ -50,7 +50,7 @@ describe('PlatformSettingsService', () => {
       const result = service.updateSettings(settings, {
         integration: {
           notificationEmailBlacklist: ['blocked@example.com'],
-        },
+        } as any,
       });
 
       expect(result.integration.notificationEmailBlacklist).toEqual([

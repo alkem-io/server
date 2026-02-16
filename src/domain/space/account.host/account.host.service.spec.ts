@@ -20,7 +20,7 @@ describe('AccountHostService', () => {
   let storageAggregatorService: StorageAggregatorService;
   let licensingFrameworkService: LicensingFrameworkService;
   let licenseIssuerService: LicenseIssuerService;
-  let accountRepository: any;
+  let _accountRepository: any;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -39,9 +39,7 @@ describe('AccountHostService', () => {
     storageAggregatorService = module.get(StorageAggregatorService);
     licensingFrameworkService = module.get(LicensingFrameworkService);
     licenseIssuerService = module.get(LicenseIssuerService);
-    accountRepository = module.get(
-      `${Account.name}Repository`
-    );
+    _accountRepository = module.get(`${Account.name}Repository`);
   });
 
   describe('createAccount', () => {

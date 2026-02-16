@@ -1,24 +1,18 @@
-import { AccountType } from '@common/enums/account.type';
 import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LicenseService } from '@domain/common/license/license.service';
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.service';
-import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { InnovationPackService } from '@library/innovation-pack/innovation.pack.service';
-import { InnovationPackAuthorizationService } from '@library/innovation-pack/innovation.pack.service.authorization';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { vi } from 'vitest';
 import { Repository } from 'typeorm';
+import { vi } from 'vitest';
 import { SpaceService } from '../space/space.service';
-import { AccountHostService } from '../account.host/account.host.service';
-import { AccountLookupService } from '../account.lookup/account.lookup.service';
 import { Account } from './account.entity';
 import { IAccount } from './account.interface';
 import { AccountService } from './account.service';
@@ -186,9 +180,7 @@ describe('AccountService', () => {
       vi.spyOn(accountRepository, 'findOne').mockResolvedValue(mockAccount);
 
       // Act & Assert
-      await expect(
-        service.deleteAccountOrFail(mockAccount)
-      ).rejects.toThrow(
+      await expect(service.deleteAccountOrFail(mockAccount)).rejects.toThrow(
         'Unable to load all entities for deletion of account account-1'
       );
     });
@@ -208,9 +200,7 @@ describe('AccountService', () => {
       vi.spyOn(accountRepository, 'findOne').mockResolvedValue(mockAccount);
 
       // Act & Assert
-      await expect(
-        service.deleteAccountOrFail(mockAccount)
-      ).rejects.toThrow(
+      await expect(service.deleteAccountOrFail(mockAccount)).rejects.toThrow(
         'Unable to load all entities for deletion of account account-1'
       );
     });
@@ -231,9 +221,7 @@ describe('AccountService', () => {
       vi.spyOn(accountRepository, 'findOne').mockResolvedValue(mockAccount);
       agentService.deleteAgent = vi.fn().mockResolvedValue(undefined);
       storageAggregatorService.delete = vi.fn().mockResolvedValue(undefined);
-      licenseService.removeLicenseOrFail = vi
-        .fn()
-        .mockResolvedValue(undefined);
+      licenseService.removeLicenseOrFail = vi.fn().mockResolvedValue(undefined);
       virtualContributorService.deleteVirtualContributor = vi
         .fn()
         .mockResolvedValue(undefined);
@@ -244,25 +232,23 @@ describe('AccountService', () => {
       spaceService.deleteSpaceOrFail = vi.fn().mockResolvedValue(undefined);
       vi.spyOn(accountRepository, 'remove').mockResolvedValue({
         id: undefined,
-      } as Account);
+      } as unknown as Account);
 
       // Act
       const result = await service.deleteAccountOrFail(mockAccount);
 
       // Assert
       expect(agentService.deleteAgent).toHaveBeenCalledWith('agent-1');
-      expect(storageAggregatorService.delete).toHaveBeenCalledWith(
-        'storage-1'
-      );
+      expect(storageAggregatorService.delete).toHaveBeenCalledWith('storage-1');
       expect(licenseService.removeLicenseOrFail).toHaveBeenCalledWith(
         'license-1'
       );
       expect(
         virtualContributorService.deleteVirtualContributor
       ).toHaveBeenCalledWith('vc-1');
-      expect(
-        innovationPackService.deleteInnovationPack
-      ).toHaveBeenCalledWith({ ID: 'ip-1' });
+      expect(innovationPackService.deleteInnovationPack).toHaveBeenCalledWith({
+        ID: 'ip-1',
+      });
       expect(innovationHubService.delete).toHaveBeenCalledWith('hub-1');
       expect(spaceService.deleteSpaceOrFail).toHaveBeenCalledTimes(2);
       expect(result.id).toBe('account-1');
@@ -400,9 +386,7 @@ describe('AccountService', () => {
         id: 'account-1',
         agent: {
           id: 'agent-1',
-          credentials: [
-            { type: 'non-subscription-type', expires: undefined },
-          ],
+          credentials: [{ type: 'non-subscription-type', expires: undefined }],
         },
       } as unknown as Account;
       vi.spyOn(accountRepository, 'findOne').mockResolvedValue(mockAccount);
@@ -461,10 +445,7 @@ describe('AccountService', () => {
         .mockResolvedValue({ affected: 1 } as any);
 
       // Act
-      await service.updateExternalSubscriptionId(
-        'account-1',
-        'ext-sub-new'
-      );
+      await service.updateExternalSubscriptionId('account-1', 'ext-sub-new');
 
       // Assert
       expect(updateSpy).toHaveBeenCalledWith('account-1', {

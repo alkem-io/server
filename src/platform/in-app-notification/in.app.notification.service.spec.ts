@@ -1,17 +1,16 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
-import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { MockType } from '@test/utils/mock.type';
-import { Repository } from 'typeorm';
-import { InAppNotification } from './in.app.notification.entity';
-import { InAppNotificationService } from './in.app.notification.service';
-import { EntityNotFoundException } from '@common/exceptions';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationEventInAppState } from '@common/enums/notification.event.in.app.state';
 import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
-import { vi } from 'vitest';
+import { EntityNotFoundException } from '@common/exceptions';
+import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
+import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { MockType } from '@test/utils/mock.type';
+import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { Repository } from 'typeorm';
+import { InAppNotification } from './in.app.notification.entity';
+import { InAppNotificationService } from './in.app.notification.service';
 
 describe('InAppNotificationService', () => {
   let service: InAppNotificationService;
@@ -43,7 +42,7 @@ describe('InAppNotificationService', () => {
         triggeredByID: 'user-1',
         triggeredAt: new Date(),
         receiverID: 'user-2',
-        payload,
+        payload: payload as any,
       });
 
       expect(result.spaceID).toBe('space-1');
@@ -60,7 +59,7 @@ describe('InAppNotificationService', () => {
         triggeredByID: 'user-1',
         triggeredAt: new Date(),
         receiverID: 'user-2',
-        payload,
+        payload: payload as any,
       });
 
       expect(result.roomID).toBe('room-1');
@@ -79,7 +78,7 @@ describe('InAppNotificationService', () => {
         triggeredByID: 'user-1',
         triggeredAt: new Date(),
         receiverID: 'user-2',
-        payload,
+        payload: payload as any,
       });
 
       expect(result.messageID).toBe('msg-1');
@@ -100,7 +99,7 @@ describe('InAppNotificationService', () => {
         triggeredByID: 'user-1',
         triggeredAt: new Date(),
         receiverID: 'user-2',
-        payload,
+        payload: payload as any,
       });
 
       expect(result.contributorUserID).toBe('user-contributor');
@@ -123,7 +122,7 @@ describe('InAppNotificationService', () => {
         triggeredByID: 'user-1',
         triggeredAt: new Date(),
         receiverID: 'user-2',
-        payload,
+        payload: payload as any,
       });
 
       expect(result.contributorOrganizationID).toBe('org-contributor');
@@ -145,7 +144,7 @@ describe('InAppNotificationService', () => {
         triggeredByID: 'user-1',
         triggeredAt: new Date(),
         receiverID: 'user-2',
-        payload,
+        payload: payload as any,
       });
 
       expect(result.contributorVcID).toBe('vc-contributor');
@@ -163,7 +162,7 @@ describe('InAppNotificationService', () => {
         triggeredByID: 'user-1',
         triggeredAt: new Date(),
         receiverID: 'user-2',
-        payload,
+        payload: payload as any,
       });
 
       expect(result.userID).toBe('user-new');
@@ -183,9 +182,9 @@ describe('InAppNotificationService', () => {
     it('should throw EntityNotFoundException when notification not found', async () => {
       notificationRepo.findOne!.mockResolvedValue(null);
 
-      await expect(
-        service.getRawNotificationOrFail('missing')
-      ).rejects.toThrow(EntityNotFoundException);
+      await expect(service.getRawNotificationOrFail('missing')).rejects.toThrow(
+        EntityNotFoundException
+      );
     });
   });
 

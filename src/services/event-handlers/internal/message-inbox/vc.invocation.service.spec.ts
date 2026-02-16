@@ -1,22 +1,21 @@
-import { AgentType } from '@common/enums/agent.type';
 import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
 import { Agent } from '@domain/agent/agent/agent.entity';
 import { MentionedEntityType } from '@domain/communication/messaging/mention.interface';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { VirtualContributorMessageService } from '@domain/communication/virtual.contributor.message/virtual.contributor.message.service';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getEntityManagerToken } from '@nestjs/typeorm';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { type Mocked, vi } from 'vitest';
 import { EntityManager } from 'typeorm';
-import { getEntityManagerToken } from '@nestjs/typeorm';
+import { type Mocked } from 'vitest';
+import { MessageNotificationService } from './message.notification.service';
 import {
   MessagePayload,
   VcInteractionData,
   VcInvocationService,
 } from './vc.invocation.service';
-import { MessageNotificationService } from './message.notification.service';
 
 describe('VcInvocationService', () => {
   let service: VcInvocationService;
@@ -174,9 +173,7 @@ describe('VcInvocationService', () => {
       expect(
         virtualContributorMessageService.invokeVirtualContributor
       ).not.toHaveBeenCalled();
-      expect(
-        agentInfoService.buildAgentInfoForAgent
-      ).not.toHaveBeenCalled();
+      expect(agentInfoService.buildAgentInfoForAgent).not.toHaveBeenCalled();
     });
   });
 
@@ -231,9 +228,7 @@ describe('VcInvocationService', () => {
 
       await service.processNewThread(payload, room, 'thread-1');
 
-      expect(
-        agentInfoService.buildAgentInfoForAgent
-      ).not.toHaveBeenCalled();
+      expect(agentInfoService.buildAgentInfoForAgent).not.toHaveBeenCalled();
       expect(
         messageNotificationService.processVirtualContributorMentions
       ).not.toHaveBeenCalled();

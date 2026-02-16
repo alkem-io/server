@@ -1,19 +1,19 @@
 import { VisualType } from '@common/enums/visual.type';
-import { ProfileService } from '@domain/common/profile/profile.service';
-import { CommunityGuidelinesService } from '@domain/community/community-guidelines/community.guidelines.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { ProfileService } from '@domain/common/profile/profile.service';
+import { DEFAULT_VISUAL_CONSTRAINTS } from '@domain/common/visual/visual.constraints';
+import { CommunityGuidelinesService } from '@domain/community/community-guidelines/community.guidelines.service';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { vi } from 'vitest';
 import { Repository } from 'typeorm';
+import { vi } from 'vitest';
+import { SpaceLookupService } from '../space.lookup/space.lookup.service';
 import { SpaceAbout } from './space.about.entity';
 import { ISpaceAbout } from './space.about.interface';
 import { SpaceAboutService } from './space.about.service';
-import { SpaceLookupService } from '../space.lookup/space.lookup.service';
-import { DEFAULT_VISUAL_CONSTRAINTS } from '@domain/common/visual/visual.constraints';
 
 describe('SpaceAboutService', () => {
   let service: SpaceAboutService;
@@ -62,9 +62,9 @@ describe('SpaceAboutService', () => {
       vi.spyOn(spaceAboutRepository, 'findOne').mockResolvedValue(null);
 
       // Act & Assert
-      await expect(
-        service.getSpaceAboutOrFail('missing-id')
-      ).rejects.toThrow('No SpaceAbout found with the given id: missing-id');
+      await expect(service.getSpaceAboutOrFail('missing-id')).rejects.toThrow(
+        'No SpaceAbout found with the given id: missing-id'
+      );
     });
   });
 
@@ -187,7 +187,7 @@ describe('SpaceAboutService', () => {
         id: 'about-1',
         profile: undefined,
         guidelines: { id: 'guide-1' },
-      } as SpaceAbout;
+      } as unknown as SpaceAbout;
       vi.spyOn(spaceAboutRepository, 'findOne').mockResolvedValue(
         aboutWithoutProfile
       );
@@ -295,9 +295,7 @@ describe('SpaceAboutService', () => {
       vi.spyOn(spaceAboutRepository, 'findOne').mockResolvedValue(about);
 
       // Act & Assert
-      await expect(
-        service.getCommunityGuidelines(about)
-      ).rejects.toThrow(
+      await expect(service.getCommunityGuidelines(about)).rejects.toThrow(
         'Unable to locate guidelines for community: about-1'
       );
     });
@@ -328,9 +326,7 @@ describe('SpaceAboutService', () => {
         .mockResolvedValue(mockSpace);
 
       // Act & Assert
-      await expect(
-        service.getCommunityWithRoleSet('about-1')
-      ).rejects.toThrow(
+      await expect(service.getCommunityWithRoleSet('about-1')).rejects.toThrow(
         'Unable to load community with RoleSet for space about-1'
       );
     });
@@ -346,9 +342,7 @@ describe('SpaceAboutService', () => {
         .mockResolvedValue(mockSpace);
 
       // Act & Assert
-      await expect(
-        service.getCommunityWithRoleSet('about-1')
-      ).rejects.toThrow(
+      await expect(service.getCommunityWithRoleSet('about-1')).rejects.toThrow(
         'Unable to load community with RoleSet for space about-1'
       );
     });
@@ -561,9 +555,7 @@ describe('SpaceAboutService', () => {
           description: '',
           tagline: '',
           tagsets: [],
-          visuals: [
-            { name: VisualType.AVATAR, uri: 'input-avatar.png' },
-          ],
+          visuals: [{ name: VisualType.AVATAR, uri: 'input-avatar.png' }],
         },
       } as any;
 
@@ -628,10 +620,10 @@ describe('SpaceAboutService', () => {
       const avatar = result.profileData.visuals?.find(
         v => v.name === VisualType.AVATAR
       );
-      expect(avatar?.minWidth).toBe(
+      expect((avatar as any)?.minWidth).toBe(
         DEFAULT_VISUAL_CONSTRAINTS[VisualType.AVATAR].minWidth
       );
-      expect(avatar?.maxWidth).toBe(
+      expect((avatar as any)?.maxWidth).toBe(
         DEFAULT_VISUAL_CONSTRAINTS[VisualType.AVATAR].maxWidth
       );
     });

@@ -34,7 +34,7 @@ enum NumericC {
 
 describe('compareEnums', () => {
   it('should return true for two identical string enums', () => {
-    expect(compareEnums(ColorA, ColorB)).toBe(true);
+    expect(compareEnums(ColorA, ColorB as any)).toBe(true);
   });
 
   it('should return false when enums have different number of keys', () => {
@@ -44,19 +44,19 @@ describe('compareEnums', () => {
   });
 
   it('should return true for identical numeric enums', () => {
-    expect(compareEnums(NumericA, NumericB)).toBe(true);
+    expect(compareEnums(NumericA, NumericB as any)).toBe(true);
   });
 
   it('should return false when numeric enum values differ', () => {
-    expect(
-      compareEnums(NumericA, NumericC as unknown as typeof NumericA)
-    ).toBe(false);
+    expect(compareEnums(NumericA, NumericC as unknown as typeof NumericA)).toBe(
+      false
+    );
   });
 
   it('should return false when keys are same but values differ', () => {
     const enumX = { A: 'x', B: 'y' } as const;
     const enumY = { A: 'x', B: 'z' } as const;
-    expect(compareEnums(enumX, enumY as typeof enumX)).toBe(false);
+    expect(compareEnums(enumX, enumY as any)).toBe(false);
   });
 
   it('should return true for two empty objects', () => {

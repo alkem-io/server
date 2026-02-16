@@ -1,28 +1,21 @@
-import { SpaceLevel } from '@common/enums/space.level';
 import {
   EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
-import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovation.flow.service';
-import { AccountHostService } from '@domain/space/account.host/account.host.service';
 import { SpaceService } from '@domain/space/space/space.service';
-import { TemplateService } from '@domain/template/template/template.service';
-import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
 import { Test, TestingModule } from '@nestjs/testing';
-import { PlatformService } from '@platform/platform/platform.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { type Mock, vi } from 'vitest';
-import { InputCreatorService } from '../input-creator/input.creator.service';
 import { ConversionService } from './conversion.service';
 
 describe('ConversionService', () => {
   let service: ConversionService;
   let spaceService: Record<string, Mock>;
-  let roleSetService: Record<string, Mock>;
-  let namingService: Record<string, Mock>;
+  let _roleSetService: Record<string, Mock>;
+  let _namingService: Record<string, Mock>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -33,11 +26,11 @@ describe('ConversionService', () => {
 
     service = module.get(ConversionService);
     spaceService = module.get(SpaceService) as unknown as Record<string, Mock>;
-    roleSetService = module.get(RoleSetService) as unknown as Record<
+    _roleSetService = module.get(RoleSetService) as unknown as Record<
       string,
       Mock
     >;
-    namingService = module.get(NamingService) as unknown as Record<
+    _namingService = module.get(NamingService) as unknown as Record<
       string,
       Mock
     >;

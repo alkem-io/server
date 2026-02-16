@@ -1,31 +1,32 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { MockCacheManager } from '@test/mocks/cache-manager.mock';
-import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
-import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { MockType } from '@test/utils/mock.type';
-import { Repository } from 'typeorm';
-import { License } from './license.entity';
-import { LicenseService } from './license.service';
+import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
+import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
+import { LicenseType } from '@common/enums/license.type';
 import {
   EntityNotFoundException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
 import { LicenseEntitlementNotAvailableException } from '@common/exceptions/license.entitlement.not.available.exception';
-import { LicenseEntitlementService } from '../license-entitlement/license.entitlement.service';
+import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { MockCacheManager } from '@test/mocks/cache-manager.mock';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
+import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { MockType } from '@test/utils/mock.type';
+import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { Repository } from 'typeorm';
+import { type Mock } from 'vitest';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
-import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
-import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
-import { LicenseType } from '@common/enums/license.type';
-import { ILicense } from './license.interface';
 import { ILicenseEntitlement } from '../license-entitlement/license.entitlement.interface';
+import { LicenseEntitlementService } from '../license-entitlement/license.entitlement.service';
+import { License } from './license.entity';
+import { ILicense } from './license.interface';
+import { LicenseService } from './license.service';
 
 describe('LicenseService', () => {
   let service: LicenseService;
   let licenseRepository: MockType<Repository<License>>;
   let entitlementService: LicenseEntitlementService;
-  let authorizationPolicyService: AuthorizationPolicyService;
+  let _authorizationPolicyService: AuthorizationPolicyService;
 
   beforeEach(async () => {
     // Mock static License.create to avoid DataSource requirement
@@ -49,7 +50,7 @@ describe('LicenseService', () => {
     service = module.get(LicenseService);
     licenseRepository = module.get(getRepositoryToken(License));
     entitlementService = module.get(LicenseEntitlementService);
-    authorizationPolicyService = module.get(AuthorizationPolicyService);
+    _authorizationPolicyService = module.get(AuthorizationPolicyService);
   });
 
   describe('createLicense', () => {
@@ -251,7 +252,7 @@ describe('LicenseService', () => {
 
   describe('reset', () => {
     it('should reset all entitlements to limit 0 and disabled', () => {
-      (entitlementService.reset as Mock).mockImplementation(e => {
+      (entitlementService.reset as Mock).mockImplementation((e: any) => {
         e.limit = 0;
         e.enabled = false;
         return e;
@@ -260,7 +261,11 @@ describe('LicenseService', () => {
       const license = {
         id: 'lic-1',
         entitlements: [
-          { type: LicenseEntitlementType.ACCOUNT_SPACE_FREE, limit: 5, enabled: true },
+          {
+            type: LicenseEntitlementType.ACCOUNT_SPACE_FREE,
+            limit: 5,
+            enabled: true,
+          },
         ],
       } as unknown as ILicense;
 
@@ -290,7 +295,10 @@ describe('LicenseService', () => {
         },
       ] as ILicenseEntitlement[];
 
-      service.findAndCopyParentEntitlement(childEntitlement, parentEntitlements);
+      service.findAndCopyParentEntitlement(
+        childEntitlement,
+        parentEntitlements
+      );
 
       expect(childEntitlement.limit).toBe(10);
       expect(childEntitlement.enabled).toBe(true);

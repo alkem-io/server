@@ -4,8 +4,7 @@ import {
   AmqpConnection,
   AmqpConnectionManager,
 } from '@golevelup/nestjs-rabbitmq';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { vi, type Mock } from 'vitest';
+import { type Mock, vi } from 'vitest';
 
 /**
  * Creates a mock managedConnection (EventEmitter-like) that captures
@@ -88,9 +87,7 @@ describe('RabbitMQResilienceService', () => {
       buildService([conn]);
       service.onModuleInit();
 
-      const registeredEvents = mc.on.mock.calls.map(
-        (call: any[]) => call[0]
-      );
+      const registeredEvents = mc.on.mock.calls.map((call: any[]) => call[0]);
       expect(registeredEvents).toContain('error');
       expect(registeredEvents).toContain('disconnect');
       expect(registeredEvents).toContain('connect');

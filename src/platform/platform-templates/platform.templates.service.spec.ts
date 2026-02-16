@@ -1,13 +1,13 @@
+import { RelationshipNotFoundException } from '@common/exceptions';
+import { TemplateService } from '@domain/template/template/template.service';
+import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
 import { Test, TestingModule } from '@nestjs/testing';
+import { PlatformService } from '@platform/platform/platform.service';
+import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { PlatformTemplatesService } from './platform.templates.service';
-import { PlatformService } from '@platform/platform/platform.service';
-import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
-import { TemplateService } from '@domain/template/template/template.service';
-import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
-import { RelationshipNotFoundException } from '@common/exceptions';
 import { vi } from 'vitest';
+import { PlatformTemplatesService } from './platform.templates.service';
 
 describe('PlatformTemplatesService', () => {
   let service: PlatformTemplatesService;
@@ -35,15 +35,13 @@ describe('PlatformTemplatesService', () => {
       const template = { id: 'template-1' };
       const templateManager = { id: 'tm-1' };
 
-      vi.mocked(
-        platformService.getTemplatesManagerOrFail
-      ).mockResolvedValue(templateManager as any);
+      vi.mocked(platformService.getTemplatesManagerOrFail).mockResolvedValue(
+        templateManager as any
+      );
       vi.mocked(
         templatesManagerService.getTemplateFromTemplateDefault
       ).mockResolvedValue(template as any);
-      vi.mocked(
-        templateService.getTemplateContentSpace
-      ).mockResolvedValue({
+      vi.mocked(templateService.getTemplateContentSpace).mockResolvedValue({
         id: 'cs-1',
         collaboration: undefined,
       } as any);
@@ -58,15 +56,13 @@ describe('PlatformTemplatesService', () => {
       const templateManager = { id: 'tm-1' };
       const calloutInputs = [{ displayName: 'Callout 1' }];
 
-      vi.mocked(
-        platformService.getTemplatesManagerOrFail
-      ).mockResolvedValue(templateManager as any);
+      vi.mocked(platformService.getTemplatesManagerOrFail).mockResolvedValue(
+        templateManager as any
+      );
       vi.mocked(
         templatesManagerService.getTemplateFromTemplateDefault
       ).mockResolvedValue(template as any);
-      vi.mocked(
-        templateService.getTemplateContentSpace
-      ).mockResolvedValue({
+      vi.mocked(templateService.getTemplateContentSpace).mockResolvedValue({
         id: 'cs-1',
         collaboration: { id: 'collab-1' },
       } as any);
@@ -87,15 +83,13 @@ describe('PlatformTemplatesService', () => {
       const template = { id: 'template-1' };
       const templateManager = { id: 'tm-1' };
 
-      vi.mocked(
-        platformService.getTemplatesManagerOrFail
-      ).mockResolvedValue(templateManager as any);
+      vi.mocked(platformService.getTemplatesManagerOrFail).mockResolvedValue(
+        templateManager as any
+      );
       vi.mocked(
         templatesManagerService.getTemplateFromTemplateDefault
       ).mockResolvedValue(template as any);
-      vi.mocked(
-        templateService.getTemplateContentSpace
-      ).mockResolvedValue({
+      vi.mocked(templateService.getTemplateContentSpace).mockResolvedValue({
         id: 'cs-1',
         collaboration: { id: 'collab-1' },
       } as any);

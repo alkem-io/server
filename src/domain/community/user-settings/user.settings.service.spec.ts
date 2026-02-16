@@ -1,14 +1,17 @@
-import { EntityNotFoundException, ValidationException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  ValidationException,
+} from '@common/exceptions';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { vi, type Mock } from 'vitest';
-import { getRepositoryToken } from '@nestjs/typeorm';
+import { type Mock } from 'vitest';
+import { UpdateUserSettingsEntityInput } from './dto/user.settings.dto.update';
 import { UserSettings } from './user.settings.entity';
 import { IUserSettings } from './user.settings.interface';
-import { UpdateUserSettingsEntityInput } from './dto/user.settings.dto.update';
 import { UserSettingsService } from './user.settings.service';
 
 describe('UserSettingsService', () => {
@@ -37,7 +40,9 @@ describe('UserSettingsService', () => {
 
   const defaultNotificationSetting = () => ({ email: false, inApp: false });
 
-  const buildSettings = (overrides: Partial<IUserSettings> = {}): IUserSettings => {
+  const buildSettings = (
+    overrides: Partial<IUserSettings> = {}
+  ): IUserSettings => {
     return {
       privacy: { contributionRolesPubliclyVisible: false },
       communication: { allowOtherUsersToSendMessages: false },
@@ -70,11 +75,13 @@ describe('UserSettingsService', () => {
             communityApplicationReceived: defaultNotificationSetting(),
             communityNewMember: defaultNotificationSetting(),
             communicationMessageReceived: defaultNotificationSetting(),
-            collaborationCalloutContributionCreated: defaultNotificationSetting(),
+            collaborationCalloutContributionCreated:
+              defaultNotificationSetting(),
           },
           communicationUpdates: defaultNotificationSetting(),
           collaborationCalloutContributionCreated: defaultNotificationSetting(),
-          collaborationCalloutPostContributionComment: defaultNotificationSetting(),
+          collaborationCalloutPostContributionComment:
+            defaultNotificationSetting(),
           collaborationCalloutComment: defaultNotificationSetting(),
           collaborationCalloutPublished: defaultNotificationSetting(),
           communityCalendarEvents: defaultNotificationSetting(),
@@ -219,8 +226,12 @@ describe('UserSettingsService', () => {
 
       const result = service.updateSettings(settings, updateData);
 
-      expect(result.notification.platform.forumDiscussionComment.email).toBe(true);
-      expect(result.notification.platform.forumDiscussionComment.inApp).toBe(false);
+      expect(result.notification.platform.forumDiscussionComment.email).toBe(
+        true
+      );
+      expect(result.notification.platform.forumDiscussionComment.inApp).toBe(
+        false
+      );
     });
 
     it('should update admin spaceCreated notification', () => {
@@ -257,7 +268,9 @@ describe('UserSettingsService', () => {
 
       const result = service.updateSettings(settings, updateData);
 
-      expect(result.notification.space.admin.communityApplicationReceived.email).toBe(true);
+      expect(
+        result.notification.space.admin.communityApplicationReceived.email
+      ).toBe(true);
     });
 
     it('should update communicationUpdates notification', () => {
@@ -283,7 +296,7 @@ describe('UserSettingsService', () => {
         notification: {
           user: {
             messageReceived: { email: true, inApp: true },
-          },
+          } as any,
         },
       };
 
@@ -307,7 +320,10 @@ describe('UserSettingsService', () => {
 
       const result = service.updateSettings(settings, updateData);
 
-      expect(result.notification.user.membership.spaceCommunityInvitationReceived.email).toBe(true);
+      expect(
+        result.notification.user.membership.spaceCommunityInvitationReceived
+          .email
+      ).toBe(true);
     });
   });
 
@@ -324,8 +340,14 @@ describe('UserSettingsService', () => {
 
       const result = service.updateSettings(settings, updateData);
 
-      expect(result.notification.virtualContributor.adminSpaceCommunityInvitation.email).toBe(true);
-      expect(result.notification.virtualContributor.adminSpaceCommunityInvitation.inApp).toBe(true);
+      expect(
+        result.notification.virtualContributor.adminSpaceCommunityInvitation
+          .email
+      ).toBe(true);
+      expect(
+        result.notification.virtualContributor.adminSpaceCommunityInvitation
+          .inApp
+      ).toBe(true);
     });
   });
 

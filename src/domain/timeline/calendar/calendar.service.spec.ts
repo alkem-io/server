@@ -1,21 +1,20 @@
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { ValidationException } from '@common/exceptions/validation.exception';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { CalendarEventService } from '@domain/timeline/event/event.service';
 import { ICalendarEvent } from '@domain/timeline/event/event.interface';
+import { CalendarEventService } from '@domain/timeline/event/event.service';
+import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { TimelineResolverService } from '@services/infrastructure/entity-resolver/timeline.resolver.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
-import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -84,9 +83,7 @@ describe('CalendarService', () => {
       // Assert
       expect(result).toBeDefined();
       expect(result.authorization).toBeInstanceOf(AuthorizationPolicy);
-      expect(result.authorization?.type).toBe(
-        AuthorizationPolicyType.CALENDAR
-      );
+      expect(result.authorization?.type).toBe(AuthorizationPolicyType.CALENDAR);
       expect(result.events).toEqual([]);
     });
   });
@@ -120,9 +117,7 @@ describe('CalendarService', () => {
       expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
         mockAuthorization
       );
-      expect(
-        calendarEventService.deleteCalendarEvent
-      ).toHaveBeenCalledTimes(2);
+      expect(calendarEventService.deleteCalendarEvent).toHaveBeenCalledTimes(2);
       expect(calendarEventService.deleteCalendarEvent).toHaveBeenCalledWith({
         ID: 'event-1',
       });
@@ -178,9 +173,9 @@ describe('CalendarService', () => {
       vi.spyOn(calendarRepository, 'findOne').mockResolvedValue(null);
 
       // Act & Assert
-      await expect(
-        service.deleteCalendar('non-existent-id')
-      ).rejects.toThrow(EntityNotFoundException);
+      await expect(service.deleteCalendar('non-existent-id')).rejects.toThrow(
+        EntityNotFoundException
+      );
     });
   });
 
@@ -282,15 +277,17 @@ describe('CalendarService', () => {
       calendarEventService.save = vi.fn().mockResolvedValue(savedEvent);
 
       // Act
-      const result = await service.createCalendarEvent(input, 'user-1');
+      const _result = await service.createCalendarEvent(input, 'user-1');
 
       // Assert
       expect(
         namingService.createNameIdAvoidingReservedNameIDs
       ).toHaveBeenCalledWith('Test Event', []);
-      expect(
-        calendarEventService.createCalendarEvent
-      ).toHaveBeenCalledWith(input, mockStorageAggregator, 'user-1');
+      expect(calendarEventService.createCalendarEvent).toHaveBeenCalledWith(
+        input,
+        mockStorageAggregator,
+        'user-1'
+      );
       expect(mockEvent.calendar).toBe(mockCalendar);
       expect(calendarEventService.save).toHaveBeenCalledWith(mockEvent);
     });
@@ -325,9 +322,7 @@ describe('CalendarService', () => {
       expect(
         namingService.createNameIdAvoidingReservedNameIDs
       ).not.toHaveBeenCalled();
-      expect(
-        calendarEventService.createCalendarEvent
-      ).toHaveBeenCalledWith(
+      expect(calendarEventService.createCalendarEvent).toHaveBeenCalledWith(
         expect.objectContaining({ nameID: 'custom-name-id' }),
         mockStorageAggregator,
         'user-1'
@@ -635,9 +630,7 @@ describe('CalendarService', () => {
 
       // Assert
       expect(activityAdapter.calendarEventCreated).toHaveBeenCalled();
-      expect(
-        contributionReporter.calendarEventCreated
-      ).not.toHaveBeenCalled();
+      expect(contributionReporter.calendarEventCreated).not.toHaveBeenCalled();
     });
   });
 });

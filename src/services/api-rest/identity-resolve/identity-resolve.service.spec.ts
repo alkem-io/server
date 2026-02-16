@@ -1,4 +1,3 @@
-import { AlkemioErrorStatus } from '@common/enums';
 import {
   UserAlreadyRegisteredException,
   UserRegistrationInvalidEmail,
@@ -35,18 +34,22 @@ describe('IdentityResolveService', () => {
       .compile();
 
     service = module.get(IdentityResolveService);
-    userLookupService = module.get(
-      UserLookupService
-    ) as unknown as Record<string, Mock>;
-    kratosService = module.get(
-      KratosService
-    ) as unknown as Record<string, Mock>;
-    agentInfoService = module.get(
-      AgentInfoService
-    ) as unknown as Record<string, Mock>;
-    registrationService = module.get(
-      RegistrationService
-    ) as unknown as Record<string, Mock>;
+    userLookupService = module.get(UserLookupService) as unknown as Record<
+      string,
+      Mock
+    >;
+    kratosService = module.get(KratosService) as unknown as Record<
+      string,
+      Mock
+    >;
+    agentInfoService = module.get(AgentInfoService) as unknown as Record<
+      string,
+      Mock
+    >;
+    registrationService = module.get(RegistrationService) as unknown as Record<
+      string,
+      Mock
+    >;
   });
 
   describe('resolveUser', () => {
@@ -55,9 +58,9 @@ describe('IdentityResolveService', () => {
         id: 'user-1',
         agent: { id: 'agent-1' },
       };
-      vi.mocked(
-        userLookupService.getUserByAuthenticationID
-      ).mockResolvedValue(existingUser);
+      vi.mocked(userLookupService.getUserByAuthenticationID).mockResolvedValue(
+        existingUser
+      );
 
       const result = await service.resolveUser('auth-id-1', meta);
 
@@ -70,57 +73,57 @@ describe('IdentityResolveService', () => {
         id: 'user-1',
         agent: undefined,
       };
-      vi.mocked(
-        userLookupService.getUserByAuthenticationID
-      ).mockResolvedValue(existingUser);
+      vi.mocked(userLookupService.getUserByAuthenticationID).mockResolvedValue(
+        existingUser
+      );
 
-      await expect(
-        service.resolveUser('auth-id-1', meta)
-      ).rejects.toThrow(NotFoundHttpException);
+      await expect(service.resolveUser('auth-id-1', meta)).rejects.toThrow(
+        NotFoundHttpException
+      );
     });
 
     it('should throw NotFoundHttpException when Kratos identity is not found', async () => {
-      vi.mocked(
-        userLookupService.getUserByAuthenticationID
-      ).mockResolvedValue(null);
+      vi.mocked(userLookupService.getUserByAuthenticationID).mockResolvedValue(
+        null
+      );
       vi.mocked(kratosService.getIdentityById).mockResolvedValue(null);
 
-      await expect(
-        service.resolveUser('auth-id-1', meta)
-      ).rejects.toThrow(NotFoundHttpException);
+      await expect(service.resolveUser('auth-id-1', meta)).rejects.toThrow(
+        NotFoundHttpException
+      );
     });
 
     it('should throw BadRequestHttpException when Kratos identity has no email', async () => {
-      vi.mocked(
-        userLookupService.getUserByAuthenticationID
-      ).mockResolvedValue(null);
+      vi.mocked(userLookupService.getUserByAuthenticationID).mockResolvedValue(
+        null
+      );
       vi.mocked(kratosService.getIdentityById).mockResolvedValue({
         id: 'kratos-id-1',
       });
-      vi.mocked(
-        agentInfoService.buildAgentInfoFromOryIdentity
-      ).mockReturnValue({
-        email: undefined,
-      });
+      vi.mocked(agentInfoService.buildAgentInfoFromOryIdentity).mockReturnValue(
+        {
+          email: undefined,
+        }
+      );
 
-      await expect(
-        service.resolveUser('auth-id-1', meta)
-      ).rejects.toThrow(BadRequestHttpException);
+      await expect(service.resolveUser('auth-id-1', meta)).rejects.toThrow(
+        BadRequestHttpException
+      );
     });
 
     it('should register new user and return user with agent when registration succeeds', async () => {
-      vi.mocked(
-        userLookupService.getUserByAuthenticationID
-      ).mockResolvedValue(null);
+      vi.mocked(userLookupService.getUserByAuthenticationID).mockResolvedValue(
+        null
+      );
       vi.mocked(kratosService.getIdentityById).mockResolvedValue({
         id: 'auth-id-1',
       });
-      vi.mocked(
-        agentInfoService.buildAgentInfoFromOryIdentity
-      ).mockReturnValue({
-        email: 'test@example.com',
-        emailVerified: false,
-      });
+      vi.mocked(agentInfoService.buildAgentInfoFromOryIdentity).mockReturnValue(
+        {
+          email: 'test@example.com',
+          emailVerified: false,
+        }
+      );
       vi.mocked(userLookupService.getUserByEmail).mockResolvedValue(null);
 
       const registeredUser = {
@@ -149,92 +152,92 @@ describe('IdentityResolveService', () => {
     });
 
     it('should throw BadRequestHttpException when user is already registered', async () => {
-      vi.mocked(
-        userLookupService.getUserByAuthenticationID
-      ).mockResolvedValue(null);
+      vi.mocked(userLookupService.getUserByAuthenticationID).mockResolvedValue(
+        null
+      );
       vi.mocked(kratosService.getIdentityById).mockResolvedValue({
         id: 'auth-id-1',
       });
-      vi.mocked(
-        agentInfoService.buildAgentInfoFromOryIdentity
-      ).mockReturnValue({
-        email: 'test@example.com',
-      });
+      vi.mocked(agentInfoService.buildAgentInfoFromOryIdentity).mockReturnValue(
+        {
+          email: 'test@example.com',
+        }
+      );
       vi.mocked(userLookupService.getUserByEmail).mockResolvedValue(null);
       vi.mocked(registrationService.registerNewUser).mockRejectedValue(
         new UserAlreadyRegisteredException('Already registered')
       );
 
-      await expect(
-        service.resolveUser('auth-id-1', meta)
-      ).rejects.toThrow(BadRequestHttpException);
+      await expect(service.resolveUser('auth-id-1', meta)).rejects.toThrow(
+        BadRequestHttpException
+      );
     });
 
     it('should throw BadRequestHttpException when user email is not verified', async () => {
-      vi.mocked(
-        userLookupService.getUserByAuthenticationID
-      ).mockResolvedValue(null);
+      vi.mocked(userLookupService.getUserByAuthenticationID).mockResolvedValue(
+        null
+      );
       vi.mocked(kratosService.getIdentityById).mockResolvedValue({
         id: 'auth-id-1',
       });
-      vi.mocked(
-        agentInfoService.buildAgentInfoFromOryIdentity
-      ).mockReturnValue({
-        email: 'test@example.com',
-      });
+      vi.mocked(agentInfoService.buildAgentInfoFromOryIdentity).mockReturnValue(
+        {
+          email: 'test@example.com',
+        }
+      );
       vi.mocked(userLookupService.getUserByEmail).mockResolvedValue(null);
       vi.mocked(registrationService.registerNewUser).mockRejectedValue(
         new UserNotVerifiedException('Not verified', {} as any)
       );
 
-      await expect(
-        service.resolveUser('auth-id-1', meta)
-      ).rejects.toThrow(BadRequestHttpException);
+      await expect(service.resolveUser('auth-id-1', meta)).rejects.toThrow(
+        BadRequestHttpException
+      );
     });
 
     it('should throw BadRequestHttpException when registration email is invalid', async () => {
-      vi.mocked(
-        userLookupService.getUserByAuthenticationID
-      ).mockResolvedValue(null);
+      vi.mocked(userLookupService.getUserByAuthenticationID).mockResolvedValue(
+        null
+      );
       vi.mocked(kratosService.getIdentityById).mockResolvedValue({
         id: 'auth-id-1',
       });
-      vi.mocked(
-        agentInfoService.buildAgentInfoFromOryIdentity
-      ).mockReturnValue({
-        email: 'bad-email',
-      });
+      vi.mocked(agentInfoService.buildAgentInfoFromOryIdentity).mockReturnValue(
+        {
+          email: 'bad-email',
+        }
+      );
       vi.mocked(userLookupService.getUserByEmail).mockResolvedValue(null);
       vi.mocked(registrationService.registerNewUser).mockRejectedValue(
         new UserRegistrationInvalidEmail('Invalid email')
       );
 
-      await expect(
-        service.resolveUser('auth-id-1', meta)
-      ).rejects.toThrow(BadRequestHttpException);
+      await expect(service.resolveUser('auth-id-1', meta)).rejects.toThrow(
+        BadRequestHttpException
+      );
     });
 
     it('should throw BadRequestHttpException when registered user has no authenticationID', async () => {
-      vi.mocked(
-        userLookupService.getUserByAuthenticationID
-      ).mockResolvedValue(null);
+      vi.mocked(userLookupService.getUserByAuthenticationID).mockResolvedValue(
+        null
+      );
       vi.mocked(kratosService.getIdentityById).mockResolvedValue({
         id: 'auth-id-1',
       });
-      vi.mocked(
-        agentInfoService.buildAgentInfoFromOryIdentity
-      ).mockReturnValue({
-        email: 'test@example.com',
-      });
+      vi.mocked(agentInfoService.buildAgentInfoFromOryIdentity).mockReturnValue(
+        {
+          email: 'test@example.com',
+        }
+      );
       vi.mocked(userLookupService.getUserByEmail).mockResolvedValue(null);
       vi.mocked(registrationService.registerNewUser).mockResolvedValue({
         id: 'user-new',
         authenticationID: undefined,
       } as any);
 
-      await expect(
-        service.resolveUser('auth-id-1', meta)
-      ).rejects.toThrow(BadRequestHttpException);
+      await expect(service.resolveUser('auth-id-1', meta)).rejects.toThrow(
+        BadRequestHttpException
+      );
     });
   });
 });

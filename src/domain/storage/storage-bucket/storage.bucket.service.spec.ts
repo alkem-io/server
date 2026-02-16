@@ -1,18 +1,16 @@
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import {
   DEFAULT_ALLOWED_MIME_TYPES,
   MimeFileType,
 } from '@common/enums/mime.file.type';
-import { MimeTypeVisual } from '@common/enums/mime.file.type.visual';
 import { MimeTypeDocument } from '@common/enums/mime.file.type.document';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { MimeTypeVisual } from '@common/enums/mime.file.type.visual';
 import { ValidationException } from '@common/exceptions';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Profile } from '@domain/common/profile/profile.entity';
-import { DocumentService } from '../document/document.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { AvatarCreatorService } from '@services/external/avatar-creator/avatar.creator.service';
@@ -21,13 +19,14 @@ import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { type Mock, vi } from 'vitest';
 import { Repository } from 'typeorm';
+import { type Mock } from 'vitest';
 import { Document } from '../document/document.entity';
-import { StorageBucket } from './storage.bucket.entity';
-import { StorageBucketService } from './storage.bucket.service';
-import { IStorageBucket } from './storage.bucket.interface';
 import { IDocument } from '../document/document.interface';
+import { DocumentService } from '../document/document.service';
+import { StorageBucket } from './storage.bucket.entity';
+import { IStorageBucket } from './storage.bucket.interface';
+import { StorageBucketService } from './storage.bucket.service';
 
 // ── Helpers ───────────────────────────────────────────────────────
 
@@ -46,9 +45,7 @@ const mockStorageBucket = (
   ...overrides,
 });
 
-const mockDocument = (
-  overrides?: Partial<IDocument>
-): IDocument =>
+const mockDocument = (overrides?: Partial<IDocument>): IDocument =>
   ({
     id: nextId(),
     displayName: 'test.png',
@@ -79,7 +76,7 @@ const mockDocument = (
 describe('StorageBucketService', () => {
   let service: StorageBucketService;
   let storageBucketRepository: Repository<StorageBucket>;
-  let documentRepository: Repository<Document>;
+  let _documentRepository: Repository<Document>;
   let profileRepository: Repository<Profile>;
   let documentService: DocumentService;
   let authorizationPolicyService: AuthorizationPolicyService;
@@ -107,7 +104,7 @@ describe('StorageBucketService', () => {
     storageBucketRepository = module.get<Repository<StorageBucket>>(
       getRepositoryToken(StorageBucket)
     );
-    documentRepository = module.get<Repository<Document>>(
+    _documentRepository = module.get<Repository<Document>>(
       getRepositoryToken(Document)
     );
     profileRepository = module.get<Repository<Profile>>(
@@ -137,7 +134,10 @@ describe('StorageBucketService', () => {
     });
 
     it('should use custom allowed MIME types when provided', () => {
-      const customTypes = [MimeTypeVisual.PNG, MimeTypeVisual.JPEG] as MimeFileType[];
+      const customTypes = [
+        MimeTypeVisual.PNG,
+        MimeTypeVisual.JPEG,
+      ] as MimeFileType[];
 
       const result = service.createStorageBucket({
         allowedMimeTypes: customTypes,
@@ -278,9 +278,9 @@ describe('StorageBucketService', () => {
 
       (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
       (documentService.uploadFile as Mock).mockResolvedValue('ext-new');
-      (
-        documentService.getDocumentByExternalIdOrFail as Mock
-      ).mockRejectedValue(new Error('not found'));
+      (documentService.getDocumentByExternalIdOrFail as Mock).mockRejectedValue(
+        new Error('not found')
+      );
       (documentService.createDocument as Mock).mockResolvedValue(createdDoc);
       (documentService.save as Mock).mockResolvedValue(createdDoc);
 
@@ -319,9 +319,9 @@ describe('StorageBucketService', () => {
 
       (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
       (documentService.uploadFile as Mock).mockResolvedValue('ext-existing');
-      (
-        documentService.getDocumentByExternalIdOrFail as Mock
-      ).mockResolvedValue(existingDoc);
+      (documentService.getDocumentByExternalIdOrFail as Mock).mockResolvedValue(
+        existingDoc
+      );
 
       const result = await service.uploadFileAsDocumentFromBuffer(
         'bucket-dup',
@@ -381,9 +381,9 @@ describe('StorageBucketService', () => {
 
       (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
       (documentService.uploadFile as Mock).mockResolvedValue('ext-temp');
-      (
-        documentService.getDocumentByExternalIdOrFail as Mock
-      ).mockRejectedValue(new Error('not found'));
+      (documentService.getDocumentByExternalIdOrFail as Mock).mockRejectedValue(
+        new Error('not found')
+      );
       (documentService.createDocument as Mock).mockResolvedValue(createdDoc);
       (documentService.save as Mock).mockResolvedValue(createdDoc);
 
@@ -423,11 +423,7 @@ describe('StorageBucketService', () => {
       });
       (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
 
-      const result = await service.getFilteredDocuments(
-        bucket,
-        {},
-        agentInfo
-      );
+      const result = await service.getFilteredDocuments(bucket, {}, agentInfo);
 
       expect(result).toEqual([doc1, doc2]);
     });
@@ -447,11 +443,7 @@ describe('StorageBucketService', () => {
         }
       );
 
-      const result = await service.getFilteredDocuments(
-        bucket,
-        {},
-        agentInfo
-      );
+      const result = await service.getFilteredDocuments(bucket, {}, agentInfo);
 
       expect(result).toEqual([doc1]);
     });
@@ -625,9 +617,9 @@ describe('StorageBucketService', () => {
       // uploadFileAsDocumentFromBuffer internals
       (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
       (documentService.uploadFile as Mock).mockResolvedValue('ext-avatar');
-      (
-        documentService.getDocumentByExternalIdOrFail as Mock
-      ).mockRejectedValue(new Error('not found'));
+      (documentService.getDocumentByExternalIdOrFail as Mock).mockRejectedValue(
+        new Error('not found')
+      );
       (documentService.createDocument as Mock).mockResolvedValue(uploadedDoc);
       (documentService.save as Mock).mockResolvedValue(uploadedDoc);
       (documentService.saveDocument as Mock).mockResolvedValue(savedDoc);
@@ -659,9 +651,9 @@ describe('StorageBucketService', () => {
 
       (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
       (documentService.uploadFile as Mock).mockResolvedValue('ext-fallback');
-      (
-        documentService.getDocumentByExternalIdOrFail as Mock
-      ).mockRejectedValue(new Error('not found'));
+      (documentService.getDocumentByExternalIdOrFail as Mock).mockRejectedValue(
+        new Error('not found')
+      );
       (documentService.createDocument as Mock).mockResolvedValue(uploadedDoc);
       (documentService.save as Mock).mockResolvedValue(uploadedDoc);
       (documentService.saveDocument as Mock).mockResolvedValue(uploadedDoc);

@@ -53,7 +53,9 @@ describe('AdminLicensingService', () => {
 
   describe('assignLicensePlanToSpace', () => {
     it('should throw ValidationException when license plan type is not for spaces', async () => {
-      vi.mocked(licensingFrameworkService.getLicensePlanOrFail).mockResolvedValue({
+      vi.mocked(
+        licensingFrameworkService.getLicensePlanOrFail
+      ).mockResolvedValue({
         type: LicensingCredentialBasedPlanType.ACCOUNT_PLAN,
       });
 
@@ -66,7 +68,9 @@ describe('AdminLicensingService', () => {
     });
 
     it('should throw EntityNotInitializedException when space has no agent', async () => {
-      vi.mocked(licensingFrameworkService.getLicensePlanOrFail).mockResolvedValue({
+      vi.mocked(
+        licensingFrameworkService.getLicensePlanOrFail
+      ).mockResolvedValue({
         type: LicensingCredentialBasedPlanType.SPACE_PLAN,
       });
       vi.mocked(spaceService.getSpaceOrFail).mockResolvedValue({
@@ -88,9 +92,9 @@ describe('AdminLicensingService', () => {
       };
       const agent = { id: 'agent-1' };
       const updatedAgent = { id: 'agent-1', credentials: ['cred'] };
-      vi.mocked(licensingFrameworkService.getLicensePlanOrFail).mockResolvedValue(
-        licensePlan
-      );
+      vi.mocked(
+        licensingFrameworkService.getLicensePlanOrFail
+      ).mockResolvedValue(licensePlan);
       vi.mocked(spaceService.getSpaceOrFail).mockResolvedValue({
         id: 'space-1',
         agent,
@@ -113,7 +117,9 @@ describe('AdminLicensingService', () => {
     });
 
     it('should accept SPACE_FEATURE_FLAG type as valid for spaces', async () => {
-      vi.mocked(licensingFrameworkService.getLicensePlanOrFail).mockResolvedValue({
+      vi.mocked(
+        licensingFrameworkService.getLicensePlanOrFail
+      ).mockResolvedValue({
         type: LicensingCredentialBasedPlanType.SPACE_FEATURE_FLAG,
       });
       vi.mocked(spaceService.getSpaceOrFail).mockResolvedValue({
@@ -135,7 +141,9 @@ describe('AdminLicensingService', () => {
 
   describe('revokeLicensePlanFromSpace', () => {
     it('should throw ValidationException when license plan type is not for spaces', async () => {
-      vi.mocked(licensingFrameworkService.getLicensePlanOrFail).mockResolvedValue({
+      vi.mocked(
+        licensingFrameworkService.getLicensePlanOrFail
+      ).mockResolvedValue({
         type: LicensingCredentialBasedPlanType.ACCOUNT_FEATURE_FLAG,
       });
 
@@ -148,7 +156,9 @@ describe('AdminLicensingService', () => {
     });
 
     it('should throw EntityNotInitializedException when space has no agent', async () => {
-      vi.mocked(licensingFrameworkService.getLicensePlanOrFail).mockResolvedValue({
+      vi.mocked(
+        licensingFrameworkService.getLicensePlanOrFail
+      ).mockResolvedValue({
         type: LicensingCredentialBasedPlanType.SPACE_PLAN,
       });
       vi.mocked(spaceService.getSpaceOrFail).mockResolvedValue({
@@ -170,9 +180,9 @@ describe('AdminLicensingService', () => {
       };
       const agent = { id: 'agent-1' };
       const updatedAgent = { id: 'agent-1', credentials: [] };
-      vi.mocked(licensingFrameworkService.getLicensePlanOrFail).mockResolvedValue(
-        licensePlan
-      );
+      vi.mocked(
+        licensingFrameworkService.getLicensePlanOrFail
+      ).mockResolvedValue(licensePlan);
       vi.mocked(spaceService.getSpaceOrFail).mockResolvedValue({
         id: 'space-1',
         agent,
@@ -197,7 +207,9 @@ describe('AdminLicensingService', () => {
 
   describe('assignLicensePlanToAccount', () => {
     it('should throw ValidationException when license plan type is not for accounts', async () => {
-      vi.mocked(licensingFrameworkService.getLicensePlanOrFail).mockResolvedValue({
+      vi.mocked(
+        licensingFrameworkService.getLicensePlanOrFail
+      ).mockResolvedValue({
         type: LicensingCredentialBasedPlanType.SPACE_PLAN,
       });
 
@@ -210,7 +222,9 @@ describe('AdminLicensingService', () => {
     });
 
     it('should throw EntityNotInitializedException when account has no agent', async () => {
-      vi.mocked(licensingFrameworkService.getLicensePlanOrFail).mockResolvedValue({
+      vi.mocked(
+        licensingFrameworkService.getLicensePlanOrFail
+      ).mockResolvedValue({
         type: LicensingCredentialBasedPlanType.ACCOUNT_PLAN,
       });
       vi.mocked(accountLookupService.getAccountOrFail).mockResolvedValue({
@@ -232,9 +246,9 @@ describe('AdminLicensingService', () => {
       };
       const agent = { id: 'agent-1' };
       const updatedAgent = { id: 'agent-1', credentials: ['cred'] };
-      vi.mocked(licensingFrameworkService.getLicensePlanOrFail).mockResolvedValue(
-        licensePlan
-      );
+      vi.mocked(
+        licensingFrameworkService.getLicensePlanOrFail
+      ).mockResolvedValue(licensePlan);
       vi.mocked(accountLookupService.getAccountOrFail).mockResolvedValue({
         id: 'acc-1',
         agent,
@@ -252,7 +266,9 @@ describe('AdminLicensingService', () => {
     });
 
     it('should accept ACCOUNT_FEATURE_FLAG type as valid for accounts', async () => {
-      vi.mocked(licensingFrameworkService.getLicensePlanOrFail).mockResolvedValue({
+      vi.mocked(
+        licensingFrameworkService.getLicensePlanOrFail
+      ).mockResolvedValue({
         type: LicensingCredentialBasedPlanType.ACCOUNT_FEATURE_FLAG,
       });
       vi.mocked(accountLookupService.getAccountOrFail).mockResolvedValue({
@@ -274,7 +290,9 @@ describe('AdminLicensingService', () => {
 
   describe('revokeLicensePlanFromAccount', () => {
     it('should throw ValidationException when license plan type is not for accounts', async () => {
-      vi.mocked(licensingFrameworkService.getLicensePlanOrFail).mockResolvedValue({
+      vi.mocked(
+        licensingFrameworkService.getLicensePlanOrFail
+      ).mockResolvedValue({
         type: LicensingCredentialBasedPlanType.SPACE_FEATURE_FLAG,
       });
 
@@ -287,7 +305,9 @@ describe('AdminLicensingService', () => {
     });
 
     it('should throw EntityNotInitializedException when account has no agent', async () => {
-      vi.mocked(licensingFrameworkService.getLicensePlanOrFail).mockResolvedValue({
+      vi.mocked(
+        licensingFrameworkService.getLicensePlanOrFail
+      ).mockResolvedValue({
         type: LicensingCredentialBasedPlanType.ACCOUNT_PLAN,
       });
       vi.mocked(accountLookupService.getAccountOrFail).mockResolvedValue({
@@ -309,9 +329,9 @@ describe('AdminLicensingService', () => {
       };
       const agent = { id: 'agent-1' };
       const updatedAgent = { id: 'agent-1', credentials: [] };
-      vi.mocked(licensingFrameworkService.getLicensePlanOrFail).mockResolvedValue(
-        licensePlan
-      );
+      vi.mocked(
+        licensingFrameworkService.getLicensePlanOrFail
+      ).mockResolvedValue(licensePlan);
       vi.mocked(accountLookupService.getAccountOrFail).mockResolvedValue({
         id: 'acc-1',
         agent,

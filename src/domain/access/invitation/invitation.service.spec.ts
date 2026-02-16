@@ -63,8 +63,7 @@ describe('InvitationService', () => {
     );
     contributorService = module.get<ContributorService>(ContributorService);
     userLookupService = module.get<UserLookupService>(UserLookupService);
-    roleSetCacheService =
-      module.get<RoleSetCacheService>(RoleSetCacheService);
+    roleSetCacheService = module.get<RoleSetCacheService>(RoleSetCacheService);
   });
 
   describe('getInvitationOrFail', () => {
@@ -82,9 +81,9 @@ describe('InvitationService', () => {
     it('should throw EntityNotFoundException when invitation does not exist', async () => {
       vi.spyOn(invitationRepository, 'findOne').mockResolvedValue(null);
 
-      await expect(
-        service.getInvitationOrFail('non-existent')
-      ).rejects.toThrow(EntityNotFoundException);
+      await expect(service.getInvitationOrFail('non-existent')).rejects.toThrow(
+        EntityNotFoundException
+      );
     });
 
     it('should merge provided options with the id filter', async () => {
@@ -116,10 +115,7 @@ describe('InvitationService', () => {
         mockInvitations
       );
 
-      const result = await service.getInvitationsOrFail([
-        'inv-1',
-        'inv-2',
-      ]);
+      const result = await service.getInvitationsOrFail(['inv-1', 'inv-2']);
 
       expect(result).toHaveLength(2);
     });
@@ -136,13 +132,11 @@ describe('InvitationService', () => {
     });
 
     it('should throw EntityNotFoundException when no invitations are found', async () => {
-      vi.spyOn(invitationRepository, 'findBy').mockResolvedValue(
-        null as any
-      );
+      vi.spyOn(invitationRepository, 'findBy').mockResolvedValue(null as any);
 
-      await expect(
-        service.getInvitationsOrFail(['inv-1'])
-      ).rejects.toThrow(EntityNotFoundException);
+      await expect(service.getInvitationsOrFail(['inv-1'])).rejects.toThrow(
+        EntityNotFoundException
+      );
     });
   });
 
@@ -205,11 +199,15 @@ describe('InvitationService', () => {
         ...mockInvitation,
         id: undefined,
       });
-      (roleSetCacheService.deleteOpenInvitationFromCache as Mock).mockResolvedValue(undefined);
+      (
+        roleSetCacheService.deleteOpenInvitationFromCache as Mock
+      ).mockResolvedValue(undefined);
       (contributorService.getContributor as Mock).mockResolvedValue(
         mockContributor
       );
-      (roleSetCacheService.deleteMembershipStatusCache as Mock).mockResolvedValue(undefined);
+      (
+        roleSetCacheService.deleteMembershipStatusCache as Mock
+      ).mockResolvedValue(undefined);
 
       const result = await service.deleteInvitation({ ID: 'inv-1' });
 
@@ -299,7 +297,9 @@ describe('InvitationService', () => {
         ...mockInvitation,
         id: undefined,
       });
-      (roleSetCacheService.deleteOpenInvitationFromCache as Mock).mockResolvedValue(undefined);
+      (
+        roleSetCacheService.deleteOpenInvitationFromCache as Mock
+      ).mockResolvedValue(undefined);
       (contributorService.getContributor as Mock).mockResolvedValue(
         null as any
       );
@@ -320,7 +320,9 @@ describe('InvitationService', () => {
         invitedContributorID: 'contributor-1',
       } as IInvitation;
 
-      (contributorService.getContributorByUuidOrFail as Mock).mockResolvedValue(mockContributor);
+      (contributorService.getContributorByUuidOrFail as Mock).mockResolvedValue(
+        mockContributor
+      );
 
       const result = await service.getInvitedContributor(mockInvitation);
 
@@ -333,7 +335,9 @@ describe('InvitationService', () => {
         invitedContributorID: 'contributor-1',
       } as IInvitation;
 
-      (contributorService.getContributorByUuidOrFail as Mock).mockResolvedValue(null as any);
+      (contributorService.getContributorByUuidOrFail as Mock).mockResolvedValue(
+        null as any
+      );
 
       await expect(
         service.getInvitedContributor(mockInvitation)
@@ -349,9 +353,7 @@ describe('InvitationService', () => {
         createdBy: 'user-1',
       } as IInvitation;
 
-      (userLookupService.getUserOrFail as Mock).mockResolvedValue(
-        mockUser
-      );
+      (userLookupService.getUserOrFail as Mock).mockResolvedValue(mockUser);
 
       const result = await service.getCreatedByOrFail(mockInvitation);
 
@@ -364,22 +366,18 @@ describe('InvitationService', () => {
         createdBy: 'user-1',
       } as IInvitation;
 
-      (userLookupService.getUserOrFail as Mock).mockResolvedValue(
-        null as any
-      );
+      (userLookupService.getUserOrFail as Mock).mockResolvedValue(null as any);
 
-      await expect(
-        service.getCreatedByOrFail(mockInvitation)
-      ).rejects.toThrow(RelationshipNotFoundException);
+      await expect(service.getCreatedByOrFail(mockInvitation)).rejects.toThrow(
+        RelationshipNotFoundException
+      );
     });
   });
 
   describe('findExistingInvitations', () => {
     it('should return invitations when they exist', async () => {
       const mockInvitations = [{ id: 'inv-1' }] as Invitation[];
-      vi.spyOn(invitationRepository, 'find').mockResolvedValue(
-        mockInvitations
-      );
+      vi.spyOn(invitationRepository, 'find').mockResolvedValue(mockInvitations);
 
       const result = await service.findExistingInvitations(
         'contributor-1',
@@ -407,9 +405,7 @@ describe('InvitationService', () => {
         { id: 'inv-1' },
         { id: 'inv-2' },
       ] as Invitation[];
-      vi.spyOn(invitationRepository, 'find').mockResolvedValue(
-        mockInvitations
-      );
+      vi.spyOn(invitationRepository, 'find').mockResolvedValue(mockInvitations);
 
       const result =
         await service.findInvitationsForContributor('contributor-1');
@@ -426,9 +422,7 @@ describe('InvitationService', () => {
     it('should include lifecycle relation when states filter is provided', async () => {
       vi.spyOn(invitationRepository, 'find').mockResolvedValue([]);
 
-      await service.findInvitationsForContributor('contributor-1', [
-        'invited',
-      ]);
+      await service.findInvitationsForContributor('contributor-1', ['invited']);
 
       expect(invitationRepository.find).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -448,9 +442,7 @@ describe('InvitationService', () => {
       vi.spyOn(service, 'getInvitationOrFail').mockResolvedValue(
         mockInvitation
       );
-      (invitationLifecycleService.getState as Mock).mockReturnValue(
-        'invited'
-      );
+      (invitationLifecycleService.getState as Mock).mockReturnValue('invited');
 
       const result = await service.getLifecycleState('inv-1');
 
@@ -471,9 +463,7 @@ describe('InvitationService', () => {
       vi.spyOn(service, 'getInvitationOrFail').mockResolvedValue(
         mockInvitation
       );
-      (invitationLifecycleService.isFinalState as Mock).mockReturnValue(
-        true
-      );
+      (invitationLifecycleService.isFinalState as Mock).mockReturnValue(true);
 
       const result = await service.isFinalizedInvitation('inv-1');
 
@@ -489,9 +479,7 @@ describe('InvitationService', () => {
       vi.spyOn(service, 'getInvitationOrFail').mockResolvedValue(
         mockInvitation
       );
-      (invitationLifecycleService.isFinalState as Mock).mockReturnValue(
-        false
-      );
+      (invitationLifecycleService.isFinalState as Mock).mockReturnValue(false);
 
       const result = await service.isFinalizedInvitation('inv-1');
 
@@ -547,9 +535,7 @@ describe('InvitationService', () => {
       vi.spyOn(service, 'getInvitationOrFail').mockResolvedValue(
         mockInvitation
       );
-      (invitationLifecycleService.getNextEvents as Mock).mockReturnValue(
-        []
-      );
+      (invitationLifecycleService.getNextEvents as Mock).mockReturnValue([]);
 
       const result = await service.canInvitationBeAccepted('inv-1');
 

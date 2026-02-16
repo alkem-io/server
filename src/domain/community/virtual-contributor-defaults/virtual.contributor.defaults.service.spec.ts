@@ -1,12 +1,12 @@
 import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
+import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
 import { Test, TestingModule } from '@nestjs/testing';
+import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { vi, type Mock } from 'vitest';
-import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
+import { type Mock } from 'vitest';
 import { VirtualContributorDefaultsService } from './virtual.contributor.defaults.service';
-import { NamingService } from '@services/infrastructure/naming/naming.service';
 
 describe('VirtualContributorDefaultsService', () => {
   let service: VirtualContributorDefaultsService;
@@ -32,16 +32,21 @@ describe('VirtualContributorDefaultsService', () => {
 
   describe('createVirtualContributorNameID', () => {
     it('should generate a nameID based on the display name and reserved names', async () => {
-      namingService.getReservedNameIDsInVirtualContributors.mockResolvedValue(['reserved-1']);
-      namingService.createNameIdAvoidingReservedNameIDs.mockReturnValue('my-vc');
+      namingService.getReservedNameIDsInVirtualContributors.mockResolvedValue([
+        'reserved-1',
+      ]);
+      namingService.createNameIdAvoidingReservedNameIDs.mockReturnValue(
+        'my-vc'
+      );
 
       const result = await service.createVirtualContributorNameID('My VC');
 
-      expect(namingService.getReservedNameIDsInVirtualContributors).toHaveBeenCalled();
-      expect(namingService.createNameIdAvoidingReservedNameIDs).toHaveBeenCalledWith(
-        'My VC',
-        ['reserved-1']
-      );
+      expect(
+        namingService.getReservedNameIDsInVirtualContributors
+      ).toHaveBeenCalled();
+      expect(
+        namingService.createNameIdAvoidingReservedNameIDs
+      ).toHaveBeenCalledWith('My VC', ['reserved-1']);
       expect(result).toBe('my-vc');
     });
   });

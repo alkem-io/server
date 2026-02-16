@@ -1,14 +1,14 @@
 import { RoomType } from '@common/enums/room.type';
 import { ValidationException } from '@common/exceptions';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { type Mocked, vi } from 'vitest';
 import { Repository } from 'typeorm';
-import { getRepositoryToken } from '@nestjs/typeorm';
+import { type Mocked } from 'vitest';
 import { IMessage } from '../message/message.interface';
 import { RoomLookupService } from '../room-lookup/room.lookup.service';
 import { Room } from './room.entity';
@@ -169,9 +169,9 @@ describe('RoomService', () => {
 
   describe('deleteRoom', () => {
     it('should throw ValidationException when roomID is not provided', async () => {
-      await expect(
-        service.deleteRoom({ roomID: '' })
-      ).rejects.toThrow(ValidationException);
+      await expect(service.deleteRoom({ roomID: '' })).rejects.toThrow(
+        ValidationException
+      );
     });
 
     it('should remove room from database and delete from Matrix', async () => {
@@ -200,10 +200,7 @@ describe('RoomService', () => {
         displayName: 'New Name',
       } as Room);
 
-      const result = await service.updateRoomDisplayName(
-        mockRoom,
-        'New Name'
-      );
+      const _result = await service.updateRoomDisplayName(mockRoom, 'New Name');
 
       expect(mockRoom.displayName).toBe('New Name');
       expect(communicationAdapter.updateRoom).toHaveBeenCalledWith(
@@ -219,10 +216,7 @@ describe('RoomService', () => {
         displayName: 'Same Name',
       } as unknown as IRoom;
 
-      const result = await service.updateRoomDisplayName(
-        mockRoom,
-        'Same Name'
-      );
+      const result = await service.updateRoomDisplayName(mockRoom, 'Same Name');
 
       expect(result).toBe(mockRoom);
       expect(communicationAdapter.updateRoom).not.toHaveBeenCalled();
@@ -245,9 +239,7 @@ describe('RoomService', () => {
       );
 
       expect(result).toBe('msg-1');
-      expect(
-        communicationAdapter.getMessageSenderActor
-      ).toHaveBeenCalledWith({
+      expect(communicationAdapter.getMessageSenderActor).toHaveBeenCalledWith({
         alkemioRoomId: 'room-1',
         messageId: 'msg-1',
       });
@@ -260,9 +252,7 @@ describe('RoomService', () => {
 
     it('should throw ValidationException when sender cannot be identified', async () => {
       const mockRoom = { id: 'room-1' } as unknown as IRoom;
-      communicationAdapter.getMessageSenderActor.mockResolvedValue(
-        '' as any
-      );
+      communicationAdapter.getMessageSenderActor.mockResolvedValue('' as any);
 
       await expect(
         service.removeRoomMessage(
@@ -298,9 +288,7 @@ describe('RoomService', () => {
 
     it('should throw ValidationException when reaction sender cannot be identified', async () => {
       const mockRoom = { id: 'room-1' } as unknown as IRoom;
-      communicationAdapter.getReactionSenderActor.mockResolvedValue(
-        '' as any
-      );
+      communicationAdapter.getReactionSenderActor.mockResolvedValue('' as any);
 
       await expect(
         service.removeReactionToMessage(
@@ -361,10 +349,7 @@ describe('RoomService', () => {
         'user-uuid-1'
       );
 
-      const result = await service.getUserIdForReaction(
-        mockRoom,
-        'reaction-1'
-      );
+      const result = await service.getUserIdForReaction(mockRoom, 'reaction-1');
 
       expect(result).toBe('user-uuid-1');
     });
@@ -438,9 +423,7 @@ describe('RoomService', () => {
   describe('markMessageAsRead', () => {
     it('should delegate to communication adapter and return true', async () => {
       const mockRoom = { id: 'room-1' } as unknown as IRoom;
-      communicationAdapter.markMessageRead.mockResolvedValue(
-        undefined as any
-      );
+      communicationAdapter.markMessageRead.mockResolvedValue(undefined as any);
 
       const result = await service.markMessageAsRead(mockRoom, 'agent-1', {
         roomID: 'room-1',

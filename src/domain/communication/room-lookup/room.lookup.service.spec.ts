@@ -1,12 +1,12 @@
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { type Mocked, vi } from 'vitest';
 import { Repository } from 'typeorm';
-import { getRepositoryToken } from '@nestjs/typeorm';
+import { type Mocked, vi } from 'vitest';
 import { IMessage } from '../message/message.interface';
 import { Room } from '../room/room.entity';
 import { IRoom } from '../room/room.interface';
@@ -127,10 +127,7 @@ describe('RoomLookupService', () => {
 
       communicationAdapter.getThreadMessages.mockResolvedValue(mockMessages);
 
-      const result = await service.getMessagesInThread(
-        mockRoom,
-        'thread-1'
-      );
+      const result = await service.getMessagesInThread(mockRoom, 'thread-1');
 
       expect(result).toBe(mockMessages);
       expect(communicationAdapter.getThreadMessages).toHaveBeenCalledWith(

@@ -10,13 +10,12 @@ import { InAppNotificationService } from '@platform/in-app-notification/in.app.n
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { type Mocked, vi } from 'vitest';
+import { type Mocked } from 'vitest';
 import { MessageEditedEvent } from './message.edited.event';
 import { MessageInboxService } from './message.inbox.service';
 import { MessageNotificationService } from './message.notification.service';
 import { MessageReceivedEvent } from './message.received.event';
 import { MessageRedactedEvent } from './message.redacted.event';
-import { ReactionAddedEvent } from './reaction.added.event';
 import { RoomReceiptUpdatedEvent } from './room.receipt.updated.event';
 import { VcInvocationService } from './vc.invocation.service';
 
@@ -49,16 +48,13 @@ describe('MessageInboxService', () => {
     conversationService = module.get(ConversationService);
   });
 
-  const makeRoom = (
-    overrides: Partial<IRoom> = {}
-  ): IRoom =>
-    ({
-      id: 'room-1',
-      type: RoomType.CALLOUT,
-      messagesCount: 5,
-      vcInteractionsByThread: {},
-      ...overrides,
-    }) as unknown as IRoom;
+  const makeRoom = (overrides: Partial<IRoom> = {}): any => ({
+    id: 'room-1',
+    type: RoomType.CALLOUT,
+    messagesCount: 5,
+    vcInteractionsByThread: {},
+    ...overrides,
+  });
 
   describe('handleMessageReceived', () => {
     const basePayload = {
@@ -75,7 +71,9 @@ describe('MessageInboxService', () => {
     it('should increment message count and publish subscription event for non-conversation rooms', async () => {
       const room = makeRoom({ type: RoomType.CALLOUT });
       roomLookupService.getRoomOrFail.mockResolvedValue(room);
-      roomLookupService.incrementMessagesCount.mockResolvedValue(undefined as any);
+      roomLookupService.incrementMessagesCount.mockResolvedValue(
+        undefined as any
+      );
       agentInfoService.buildAgentInfoForAgent.mockResolvedValue({} as any);
       messageNotificationService.processMessageNotifications.mockResolvedValue(
         undefined
@@ -99,7 +97,9 @@ describe('MessageInboxService', () => {
     it('should process notifications for non-conversation rooms', async () => {
       const room = makeRoom({ type: RoomType.POST });
       roomLookupService.getRoomOrFail.mockResolvedValue(room);
-      roomLookupService.incrementMessagesCount.mockResolvedValue(undefined as any);
+      roomLookupService.incrementMessagesCount.mockResolvedValue(
+        undefined as any
+      );
       agentInfoService.buildAgentInfoForAgent.mockResolvedValue({
         agentID: 'actor-1',
       } as any);
@@ -125,7 +125,9 @@ describe('MessageInboxService', () => {
     it('should skip notifications and publish conversation event for conversation rooms', async () => {
       const room = makeRoom({ type: RoomType.CONVERSATION });
       roomLookupService.getRoomOrFail.mockResolvedValue(room);
-      roomLookupService.incrementMessagesCount.mockResolvedValue(undefined as any);
+      roomLookupService.incrementMessagesCount.mockResolvedValue(
+        undefined as any
+      );
       conversationService.findConversationByRoomId.mockResolvedValue({
         id: 'conv-1',
       } as any);
@@ -157,7 +159,9 @@ describe('MessageInboxService', () => {
     it('should delegate to VC direct conversation processing for conversation rooms', async () => {
       const room = makeRoom({ type: RoomType.CONVERSATION_DIRECT });
       roomLookupService.getRoomOrFail.mockResolvedValue(room);
-      roomLookupService.incrementMessagesCount.mockResolvedValue(undefined as any);
+      roomLookupService.incrementMessagesCount.mockResolvedValue(
+        undefined as any
+      );
       conversationService.findConversationByRoomId.mockResolvedValue({
         id: 'conv-1',
       } as any);
@@ -189,7 +193,9 @@ describe('MessageInboxService', () => {
       };
 
       roomLookupService.getRoomOrFail.mockResolvedValue(room);
-      roomLookupService.incrementMessagesCount.mockResolvedValue(undefined as any);
+      roomLookupService.incrementMessagesCount.mockResolvedValue(
+        undefined as any
+      );
       agentInfoService.buildAgentInfoForAgent.mockResolvedValue({} as any);
       messageNotificationService.processMessageNotifications.mockResolvedValue(
         undefined
@@ -211,7 +217,9 @@ describe('MessageInboxService', () => {
     it('should invoke processNewThread when no vcInteraction exists for the thread', async () => {
       const room = makeRoom({ type: RoomType.CALLOUT });
       roomLookupService.getRoomOrFail.mockResolvedValue(room);
-      roomLookupService.incrementMessagesCount.mockResolvedValue(undefined as any);
+      roomLookupService.incrementMessagesCount.mockResolvedValue(
+        undefined as any
+      );
       agentInfoService.buildAgentInfoForAgent.mockResolvedValue({} as any);
       messageNotificationService.processMessageNotifications.mockResolvedValue(
         undefined
@@ -295,7 +303,9 @@ describe('MessageInboxService', () => {
     it('should decrement message count, delete notifications, and publish DELETE event', async () => {
       const room = makeRoom({ type: RoomType.CALLOUT });
       roomLookupService.getRoomOrFail.mockResolvedValue(room);
-      roomLookupService.decrementMessagesCount.mockResolvedValue(undefined as any);
+      roomLookupService.decrementMessagesCount.mockResolvedValue(
+        undefined as any
+      );
       inAppNotificationService.deleteAllByMessageId.mockResolvedValue(
         undefined as any
       );
@@ -330,7 +340,9 @@ describe('MessageInboxService', () => {
     it('should publish conversation event when redacting message in conversation room', async () => {
       const room = makeRoom({ type: RoomType.CONVERSATION });
       roomLookupService.getRoomOrFail.mockResolvedValue(room);
-      roomLookupService.decrementMessagesCount.mockResolvedValue(undefined as any);
+      roomLookupService.decrementMessagesCount.mockResolvedValue(
+        undefined as any
+      );
       inAppNotificationService.deleteAllByMessageId.mockResolvedValue(
         undefined as any
       );
@@ -385,7 +397,10 @@ describe('MessageInboxService', () => {
 
       expect(
         subscriptionPublishService.publishRoomReceiptEvent
-      ).toHaveBeenCalledWith(room, expect.objectContaining({ actorId: 'actor-1' }));
+      ).toHaveBeenCalledWith(
+        room,
+        expect.objectContaining({ actorId: 'actor-1' })
+      );
       expect(
         subscriptionPublishService.publishConversationEvent
       ).toHaveBeenCalledWith(

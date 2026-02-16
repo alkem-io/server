@@ -1,11 +1,11 @@
+import { IAgent } from '@domain/agent/agent/agent.interface';
+import { AgentService } from '@domain/agent/agent/agent.service';
 import { Test, TestingModule } from '@nestjs/testing';
+import { ILicensePlan } from '@platform/licensing/credential-based/license-plan/license.plan.interface';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { LicenseIssuerService } from './license.issuer.service';
-import { AgentService } from '@domain/agent/agent/agent.service';
-import { IAgent } from '@domain/agent/agent/agent.interface';
-import { ILicensePlan } from '@platform/licensing/credential-based/license-plan/license.plan.interface';
 import { vi } from 'vitest';
+import { LicenseIssuerService } from './license.issuer.service';
 
 describe('LicenseIssuerService', () => {
   let service: LicenseIssuerService;
@@ -30,7 +30,10 @@ describe('LicenseIssuerService', () => {
         trialEnabled: false,
         licenseCredential: 'SPACE_LICENSE' as any,
       } as ILicensePlan;
-      const updatedAgent = { id: 'agent-1', credentials: [] } as unknown as IAgent;
+      const updatedAgent = {
+        id: 'agent-1',
+        credentials: [],
+      } as unknown as IAgent;
 
       vi.mocked(agentService.grantCredentialOrFail).mockResolvedValue(
         updatedAgent

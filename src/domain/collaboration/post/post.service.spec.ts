@@ -1,20 +1,20 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { MockCacheManager } from '@test/mocks/cache-manager.mock';
-import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
-import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { EntityNotFoundException } from '@common/exceptions';
 import { ProfileType } from '@common/enums';
 import { RoomType } from '@common/enums/room.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { VisualType } from '@common/enums/visual.type';
+import { EntityNotFoundException } from '@common/exceptions';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { ProfileService } from '@domain/common/profile/profile.service';
+import { RoomService } from '@domain/communication/room/room.service';
+import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { MockCacheManager } from '@test/mocks/cache-manager.mock';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
+import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { Repository } from 'typeorm';
 import { Post } from './post.entity';
 import { PostService } from './post.service';
-import { ProfileService } from '@domain/common/profile/profile.service';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { RoomService } from '@domain/communication/room/room.service';
-import { Repository } from 'typeorm';
-import { getRepositoryToken } from '@nestjs/typeorm';
 
 describe('PostService', () => {
   let service: PostService;
@@ -61,15 +61,26 @@ describe('PostService', () => {
     } as any;
 
     it('should create post with profile, visuals, tagset, authorization and comments room', async () => {
-      const createdProfile = { id: 'profile-1', displayName: 'Test Post' } as any;
+      const createdProfile = {
+        id: 'profile-1',
+        displayName: 'Test Post',
+      } as any;
       const createdRoom = { id: 'room-1' } as any;
 
       vi.mocked(profileService.createProfile).mockResolvedValue(createdProfile);
-      vi.mocked(profileService.addVisualsOnProfile).mockResolvedValue(undefined as any);
-      vi.mocked(profileService.addOrUpdateTagsetOnProfile).mockResolvedValue(undefined as any);
+      vi.mocked(profileService.addVisualsOnProfile).mockResolvedValue(
+        undefined as any
+      );
+      vi.mocked(profileService.addOrUpdateTagsetOnProfile).mockResolvedValue(
+        undefined as any
+      );
       vi.mocked(roomService.createRoom).mockResolvedValue(createdRoom);
 
-      const result = await service.createPost(postInput, storageAggregator, userID);
+      const result = await service.createPost(
+        postInput,
+        storageAggregator,
+        userID
+      );
 
       expect(profileService.createProfile).toHaveBeenCalledWith(
         postInput.profileData,
@@ -95,11 +106,19 @@ describe('PostService', () => {
 
     it('should set createdBy to the provided userID', async () => {
       vi.mocked(profileService.createProfile).mockResolvedValue({} as any);
-      vi.mocked(profileService.addVisualsOnProfile).mockResolvedValue(undefined as any);
-      vi.mocked(profileService.addOrUpdateTagsetOnProfile).mockResolvedValue(undefined as any);
+      vi.mocked(profileService.addVisualsOnProfile).mockResolvedValue(
+        undefined as any
+      );
+      vi.mocked(profileService.addOrUpdateTagsetOnProfile).mockResolvedValue(
+        undefined as any
+      );
       vi.mocked(roomService.createRoom).mockResolvedValue({} as any);
 
-      const result = await service.createPost(postInput, storageAggregator, userID);
+      const result = await service.createPost(
+        postInput,
+        storageAggregator,
+        userID
+      );
 
       expect(result.createdBy).toBe(userID);
     });
@@ -111,8 +130,12 @@ describe('PostService', () => {
       } as any;
 
       vi.mocked(profileService.createProfile).mockResolvedValue({} as any);
-      vi.mocked(profileService.addVisualsOnProfile).mockResolvedValue(undefined as any);
-      vi.mocked(profileService.addOrUpdateTagsetOnProfile).mockResolvedValue(undefined as any);
+      vi.mocked(profileService.addVisualsOnProfile).mockResolvedValue(
+        undefined as any
+      );
+      vi.mocked(profileService.addOrUpdateTagsetOnProfile).mockResolvedValue(
+        undefined as any
+      );
       vi.mocked(roomService.createRoom).mockResolvedValue({} as any);
 
       await service.createPost(inputNoTags, storageAggregator, userID);
@@ -134,11 +157,15 @@ describe('PostService', () => {
       } as any;
 
       vi.spyOn(repository, 'findOne').mockResolvedValue(post);
-      vi.spyOn(repository, 'remove').mockResolvedValue({ id: undefined } as any);
+      vi.spyOn(repository, 'remove').mockResolvedValue({
+        id: undefined,
+      } as any);
 
       const result = await service.deletePost('post-1');
 
-      expect(authorizationPolicyService.delete).toHaveBeenCalledWith(post.authorization);
+      expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
+        post.authorization
+      );
       expect(profileService.deleteProfile).toHaveBeenCalledWith('profile-1');
       expect(roomService.deleteRoom).toHaveBeenCalledWith({ roomID: 'room-1' });
       expect(repository.remove).toHaveBeenCalledWith(post);
@@ -154,7 +181,9 @@ describe('PostService', () => {
       } as any;
 
       vi.spyOn(repository, 'findOne').mockResolvedValue(post);
-      vi.spyOn(repository, 'remove').mockResolvedValue({ id: undefined } as any);
+      vi.spyOn(repository, 'remove').mockResolvedValue({
+        id: undefined,
+      } as any);
 
       await service.deletePost('post-2');
 
@@ -208,7 +237,10 @@ describe('PostService', () => {
         profile: { id: 'profile-1', displayName: 'Old Name' },
         comments: { id: 'room-1' },
       } as any;
-      const updatedProfile = { id: 'profile-1', displayName: 'New Name' } as any;
+      const updatedProfile = {
+        id: 'profile-1',
+        displayName: 'New Name',
+      } as any;
       const postData = {
         ID: 'post-1',
         profileData: { displayName: 'New Name' },

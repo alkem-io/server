@@ -1,14 +1,3 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { MockCacheManager } from '@test/mocks/cache-manager.mock';
-import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
-import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { MockType } from '@test/utils/mock.type';
-import { Repository } from 'typeorm';
-import { ConfigService } from '@nestjs/config';
-import { AuthorizationPolicy } from './authorization.policy.entity';
-import { AuthorizationPolicyService } from './authorization.policy.service';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
@@ -20,7 +9,18 @@ import {
   ForbiddenException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
+import { ConfigService } from '@nestjs/config';
+import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { MockCacheManager } from '@test/mocks/cache-manager.mock';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
+import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { MockType } from '@test/utils/mock.type';
+import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { Repository } from 'typeorm';
+import { AuthorizationPolicy } from './authorization.policy.entity';
 import { IAuthorizationPolicy } from './authorization.policy.interface';
+import { AuthorizationPolicyService } from './authorization.policy.service';
 
 const ConfigServiceMock = {
   get: vi.fn().mockReturnValue(500),
@@ -169,9 +169,7 @@ describe('AuthorizationPolicyService', () => {
 
   describe('cloneAuthorizationPolicy', () => {
     it('should create a deep copy of the authorization policy', () => {
-      const original = new AuthorizationPolicy(
-        AuthorizationPolicyType.PROFILE
-      );
+      const original = new AuthorizationPolicy(AuthorizationPolicyType.PROFILE);
       original.credentialRules = [{ name: 'rule1' } as any];
 
       const cloned = service.cloneAuthorizationPolicy(original);

@@ -1,17 +1,16 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
-import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { vi, type Mock } from 'vitest';
-import { ConfigService } from '@nestjs/config';
 import { AuthorizationPrivilege } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions';
-import { CollaborativeDocumentIntegrationService } from './collaborative-document-integration.service';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AuthenticationService } from '@core/authentication/authentication.service';
 import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { MemoService } from '@domain/common/memo';
+import { ConfigService } from '@nestjs/config';
+import { Test, TestingModule } from '@nestjs/testing';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
+import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { type Mock, vi } from 'vitest';
+import { CollaborativeDocumentIntegrationService } from './collaborative-document-integration.service';
 import {
   FetchContentData,
   FetchErrorData,
@@ -24,9 +23,17 @@ describe('CollaborativeDocumentIntegrationService', () => {
   let service: CollaborativeDocumentIntegrationService;
   let authorizationService: { isAccessGranted: Mock };
   let agentInfoService: { buildAgentInfoForUser: Mock };
-  let memoService: { getMemoOrFail: Mock; saveContent: Mock; isMultiUser: Mock; getProfile: Mock };
+  let memoService: {
+    getMemoOrFail: Mock;
+    saveContent: Mock;
+    isMultiUser: Mock;
+    getProfile: Mock;
+  };
   let contributionReporter: { memoContribution: Mock };
-  let communityResolver: { getCommunityForMemoOrFail: Mock; getLevelZeroSpaceIdForCommunity: Mock };
+  let communityResolver: {
+    getCommunityForMemoOrFail: Mock;
+    getLevelZeroSpaceIdForCommunity: Mock;
+  };
 
   const configServiceMock = {
     get: vi.fn((key: string) => {
@@ -117,8 +124,8 @@ describe('CollaborativeDocumentIntegrationService', () => {
       agentInfoService.buildAgentInfoForUser.mockResolvedValue({});
       // First call: READ -> true, Second call: UPDATE_CONTENT -> true
       authorizationService.isAccessGranted
-        .mockReturnValueOnce(true)   // READ check in first accessGranted call
-        .mockReturnValueOnce(true);  // UPDATE_CONTENT check in second accessGranted call
+        .mockReturnValueOnce(true) // READ check in first accessGranted call
+        .mockReturnValueOnce(true); // UPDATE_CONTENT check in second accessGranted call
       memoService.isMultiUser.mockResolvedValue(true);
 
       const result = await service.info({
@@ -176,7 +183,9 @@ describe('CollaborativeDocumentIntegrationService', () => {
       } as any);
 
       expect(result.data).toBeInstanceOf(SaveErrorData);
-      expect((result.data as SaveErrorData).code).toBe(SaveErrorCodes.NOT_FOUND);
+      expect((result.data as SaveErrorData).code).toBe(
+        SaveErrorCodes.NOT_FOUND
+      );
     });
 
     it('should return SaveErrorData with INTERNAL_ERROR code for generic errors', async () => {
@@ -188,7 +197,9 @@ describe('CollaborativeDocumentIntegrationService', () => {
       } as any);
 
       expect(result.data).toBeInstanceOf(SaveErrorData);
-      expect((result.data as SaveErrorData).code).toBe(SaveErrorCodes.INTERNAL_ERROR);
+      expect((result.data as SaveErrorData).code).toBe(
+        SaveErrorCodes.INTERNAL_ERROR
+      );
     });
   });
 
@@ -228,7 +239,9 @@ describe('CollaborativeDocumentIntegrationService', () => {
       const result = await service.fetch({ documentId: 'nonexistent' } as any);
 
       expect(result.data).toBeInstanceOf(FetchErrorData);
-      expect((result.data as FetchErrorData).code).toBe(FetchErrorCodes.NOT_FOUND);
+      expect((result.data as FetchErrorData).code).toBe(
+        FetchErrorCodes.NOT_FOUND
+      );
     });
 
     it('should return FetchErrorData with INTERNAL_ERROR code for generic errors', async () => {
@@ -237,14 +250,20 @@ describe('CollaborativeDocumentIntegrationService', () => {
       const result = await service.fetch({ documentId: 'memo-1' } as any);
 
       expect(result.data).toBeInstanceOf(FetchErrorData);
-      expect((result.data as FetchErrorData).code).toBe(FetchErrorCodes.INTERNAL_ERROR);
+      expect((result.data as FetchErrorData).code).toBe(
+        FetchErrorCodes.INTERNAL_ERROR
+      );
     });
   });
 
   describe('memoContributions', () => {
     it('should report contributions for each user', async () => {
-      communityResolver.getCommunityForMemoOrFail.mockResolvedValue({ id: 'community-1' });
-      communityResolver.getLevelZeroSpaceIdForCommunity.mockResolvedValue('space-root');
+      communityResolver.getCommunityForMemoOrFail.mockResolvedValue({
+        id: 'community-1',
+      });
+      communityResolver.getLevelZeroSpaceIdForCommunity.mockResolvedValue(
+        'space-root'
+      );
       memoService.getProfile.mockResolvedValue({ displayName: 'My Memo' });
       contributionReporter.memoContribution.mockReturnValue(undefined);
 
@@ -254,7 +273,7 @@ describe('CollaborativeDocumentIntegrationService', () => {
           { id: 'user-1', email: 'user1@test.com' },
           { id: 'user-2', email: 'user2@test.com' },
         ],
-      });
+      } as any);
 
       expect(contributionReporter.memoContribution).toHaveBeenCalledTimes(2);
       expect(contributionReporter.memoContribution).toHaveBeenCalledWith(

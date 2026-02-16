@@ -1,22 +1,19 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { MockCacheManager } from '@test/mocks/cache-manager.mock';
-import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
-import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import {
-  AuthorizationCredential,
-  AuthorizationPrivilege,
-} from '@common/enums';
+import { AuthorizationCredential } from '@common/enums';
 import { NotificationEvent } from '@common/enums/notification.event';
-import { NotificationEventException } from '@common/exceptions/notification.event.exception';
 import { ValidationException } from '@common/exceptions';
-import { NotificationRecipientsService } from './notification.recipients.service';
+import { NotificationEventException } from '@common/exceptions/notification.event.exception';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
+import { IUser } from '@domain/community/user/user.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
-import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
-import { AuthorizationService } from '@core/authorization/authorization.service';
+import { Test, TestingModule } from '@nestjs/testing';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
-import { IUser } from '@domain/community/user/user.interface';
+import { MockCacheManager } from '@test/mocks/cache-manager.mock';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
+import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { NotificationRecipientsService } from './notification.recipients.service';
 
 describe('NotificationRecipientsService', () => {
   let service: NotificationRecipientsService;
@@ -122,9 +119,7 @@ describe('NotificationRecipientsService', () => {
       vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue([
         mockUser,
       ]);
-      vi.mocked(userLookupService.getUsersByUUID).mockResolvedValue([
-        mockUser,
-      ]);
+      vi.mocked(userLookupService.getUsersByUUID).mockResolvedValue([mockUser]);
 
       const result = await service.getRecipients({
         eventType: NotificationEvent.PLATFORM_FORUM_DISCUSSION_CREATED,
@@ -528,8 +523,7 @@ describe('NotificationRecipientsService', () => {
       );
 
       const result = await service.getRecipients({
-        eventType:
-          NotificationEvent.SPACE_COMMUNITY_INVITATION_USER_PLATFORM,
+        eventType: NotificationEvent.SPACE_COMMUNITY_INVITATION_USER_PLATFORM,
         userID: 'user-invite',
       });
 
@@ -584,9 +578,9 @@ describe('NotificationRecipientsService', () => {
         organizationID: 'org-1',
       });
 
-      expect(organizationLookupService.getOrganizationOrFail).toHaveBeenCalledWith(
-        'org-1'
-      );
+      expect(
+        organizationLookupService.getOrganizationOrFail
+      ).toHaveBeenCalledWith('org-1');
       expect(result.emailRecipients).toHaveLength(1);
     });
 
@@ -622,9 +616,7 @@ describe('NotificationRecipientsService', () => {
       vi.mocked(userLookupService.getUsersByUUID).mockResolvedValue([
         memberUser,
       ]);
-      vi.mocked(spaceLookupService.getSpaceOrFail).mockResolvedValue(
-        mockSpace
-      );
+      vi.mocked(spaceLookupService.getSpaceOrFail).mockResolvedValue(mockSpace);
       vi.mocked(
         authorizationService.isAccessGrantedForCredentials
       ).mockReturnValue(true);
@@ -634,9 +626,7 @@ describe('NotificationRecipientsService', () => {
         spaceID: 'space-1',
       });
 
-      expect(spaceLookupService.getSpaceOrFail).toHaveBeenCalledWith(
-        'space-1'
-      );
+      expect(spaceLookupService.getSpaceOrFail).toHaveBeenCalledWith('space-1');
       expect(result.emailRecipients).toHaveLength(1);
     });
 

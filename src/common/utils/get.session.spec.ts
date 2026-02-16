@@ -18,7 +18,7 @@ const createMockKratosClient = (
 
 describe('getSession', () => {
   let getSession: typeof import('./get.session').getSession;
-  let getSessionFromJwt: typeof import('./get.session').getSessionFromJwt;
+  let _getSessionFromJwt: typeof import('./get.session').getSessionFromJwt;
   let mockedJwtDecode: Mock;
 
   beforeEach(async () => {
@@ -27,7 +27,7 @@ describe('getSession', () => {
     vi.doMock('jwt-decode', () => ({ default: mockedJwtDecode }));
     const mod = await import('./get.session');
     getSession = mod.getSession;
-    getSessionFromJwt = mod.getSessionFromJwt;
+    _getSessionFromJwt = mod.getSessionFromJwt;
   });
 
   it('should throw when neither authorization nor cookie is provided', async () => {
@@ -55,9 +55,9 @@ describe('getSession', () => {
       toSession: vi.fn().mockRejectedValue(new Error('invalid cookie')),
     });
 
-    await expect(
-      getSession(client, { cookie: 'bad-cookie' })
-    ).rejects.toThrow('invalid cookie');
+    await expect(getSession(client, { cookie: 'bad-cookie' })).rejects.toThrow(
+      'invalid cookie'
+    );
   });
 
   it('should prefer authorization over cookie when both are provided', async () => {

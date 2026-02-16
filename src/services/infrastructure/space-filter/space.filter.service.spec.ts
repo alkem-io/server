@@ -1,9 +1,9 @@
+import { SpaceVisibility } from '@common/enums/space.visibility';
+import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { SpaceFilterService } from './space.filter.service';
-import { SpaceVisibility } from '@common/enums/space.visibility';
-import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 
 describe('SpaceFilterService', () => {
   let service: SpaceFilterService;
@@ -38,7 +38,10 @@ describe('SpaceFilterService', () => {
       const result = service.getAllowedVisibilities({
         visibilities: [SpaceVisibility.ACTIVE, SpaceVisibility.ARCHIVED],
       });
-      expect(result).toEqual([SpaceVisibility.ACTIVE, SpaceVisibility.ARCHIVED]);
+      expect(result).toEqual([
+        SpaceVisibility.ACTIVE,
+        SpaceVisibility.ARCHIVED,
+      ]);
     });
 
     it('should return single visibility from filter', () => {

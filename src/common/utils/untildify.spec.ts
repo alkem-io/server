@@ -13,9 +13,7 @@ describe('untildify', () => {
   });
 
   it('should replace tilde followed by backslash', () => {
-    expect(untildify('~\\Windows\\path')).toBe(
-      `${homeDir}\\Windows\\path`
-    );
+    expect(untildify('~\\Windows\\path')).toBe(`${homeDir}\\Windows\\path`);
   });
 
   it('should not replace tilde in the middle of a path', () => {

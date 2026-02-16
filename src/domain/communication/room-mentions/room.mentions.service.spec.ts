@@ -1,8 +1,5 @@
 import { RoomType } from '@common/enums/room.type';
-import {
-  EntityNotFoundException,
-  EntityNotInitializedException,
-} from '@common/exceptions';
+import { EntityNotInitializedException } from '@common/exceptions';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
@@ -285,9 +282,7 @@ describe('RoomMentionsService', () => {
         mockRoom
       );
 
-      expect(
-        roomLookupService.addVcInteractionToRoom
-      ).toHaveBeenCalledWith({
+      expect(roomLookupService.addVcInteractionToRoom).toHaveBeenCalledWith({
         virtualContributorActorID: 'vc-agent-1',
         roomID: 'room-1',
         threadID: 'thread-1',
@@ -360,9 +355,7 @@ describe('RoomMentionsService', () => {
       );
 
       // Should NOT create a new interaction
-      expect(
-        roomLookupService.addVcInteractionToRoom
-      ).not.toHaveBeenCalled();
+      expect(roomLookupService.addVcInteractionToRoom).not.toHaveBeenCalled();
       // Should still invoke the VC
       expect(
         virtualContributorMessageService.invokeVirtualContributor

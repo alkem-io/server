@@ -1,13 +1,13 @@
 import { AuthorizationCredential } from '@common/enums';
 import { ValidationException } from '@common/exceptions';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { vi, type Mock } from 'vitest';
+import { type Mock } from 'vitest';
 import { UserSettingsHomeSpaceValidationService } from './user.settings.home.space.validation.service';
-import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 
 describe('UserSettingsHomeSpaceValidationService', () => {
   let service: UserSettingsHomeSpaceValidationService;
@@ -31,7 +31,10 @@ describe('UserSettingsHomeSpaceValidationService', () => {
   });
 
   const buildAgentInfo = (
-    credentialOverrides: Array<{ type: AuthorizationCredential; resourceID: string }> = []
+    credentialOverrides: Array<{
+      type: AuthorizationCredential;
+      resourceID: string;
+    }> = []
   ): AgentInfo => {
     const agentInfo = new AgentInfo();
     agentInfo.credentials = credentialOverrides.map(c => ({
@@ -60,7 +63,10 @@ describe('UserSettingsHomeSpaceValidationService', () => {
       spaceLookupService.getSpaceOrFail.mockResolvedValue({ id: spaceID });
 
       const agentInfo = buildAgentInfo([
-        { type: AuthorizationCredential.SPACE_MEMBER, resourceID: 'other-space' },
+        {
+          type: AuthorizationCredential.SPACE_MEMBER,
+          resourceID: 'other-space',
+        },
       ]);
 
       await expect(
@@ -165,7 +171,10 @@ describe('UserSettingsHomeSpaceValidationService', () => {
       spaceLookupService.getSpaceOrFail.mockResolvedValue({ id: spaceID });
 
       const agentInfo = buildAgentInfo([
-        { type: AuthorizationCredential.SPACE_MEMBER, resourceID: 'other-space' },
+        {
+          type: AuthorizationCredential.SPACE_MEMBER,
+          resourceID: 'other-space',
+        },
       ]);
 
       const result = await service.isHomeSpaceValid(spaceID, agentInfo);

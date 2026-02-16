@@ -1,17 +1,17 @@
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { InvalidUUID } from '@common/exceptions/invalid.uuid';
+import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
+import { NotImplementedException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getEntityManagerToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { vi, type Mock } from 'vitest';
-import { getEntityManagerToken } from '@nestjs/typeorm';
-import { NotImplementedException } from '@nestjs/common';
-import { StorageAggregatorResolverService } from './storage.aggregator.resolver.service';
-import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
-import { Repository } from 'typeorm';
 import type { MockType } from '@test/utils/mock.type';
+import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { Repository } from 'typeorm';
+import { type Mock, vi } from 'vitest';
+import { StorageAggregatorResolverService } from './storage.aggregator.resolver.service';
 
 describe('StorageAggregatorResolverService', () => {
   let service: StorageAggregatorResolverService;
@@ -51,10 +51,9 @@ describe('StorageAggregatorResolverService', () => {
   describe('getStorageAggregatorOrFail', () => {
     it('should return storage aggregator when found', async () => {
       const mockAggregator = { id: 'sa-1' };
-      vi.spyOn(
-        storageAggregatorRepository,
-        'findOneOrFail'
-      ).mockResolvedValue(mockAggregator);
+      vi.spyOn(storageAggregatorRepository, 'findOneOrFail').mockResolvedValue(
+        mockAggregator
+      );
 
       const result = await service.getStorageAggregatorOrFail('sa-1');
 
@@ -125,10 +124,9 @@ describe('StorageAggregatorResolverService', () => {
         storageAggregator: { id: 'sa-1' },
       });
       // getStorageAggregatorOrFail call
-      vi.spyOn(
-        storageAggregatorRepository,
-        'findOneOrFail'
-      ).mockResolvedValue(mockAggregator);
+      vi.spyOn(storageAggregatorRepository, 'findOneOrFail').mockResolvedValue(
+        mockAggregator
+      );
 
       const result =
         await service.getStorageAggregatorForTemplatesManager(validUuid);
@@ -145,10 +143,9 @@ describe('StorageAggregatorResolverService', () => {
       entityManager.findOne.mockResolvedValueOnce({
         storageAggregator: { id: 'sa-2' },
       });
-      vi.spyOn(
-        storageAggregatorRepository,
-        'findOneOrFail'
-      ).mockResolvedValue(mockAggregator);
+      vi.spyOn(storageAggregatorRepository, 'findOneOrFail').mockResolvedValue(
+        mockAggregator
+      );
 
       const result =
         await service.getStorageAggregatorForTemplatesManager(validUuid);
@@ -179,10 +176,9 @@ describe('StorageAggregatorResolverService', () => {
       entityManager.findOne.mockResolvedValueOnce({
         storageAggregator: { id: 'sa-1' },
       });
-      vi.spyOn(
-        storageAggregatorRepository,
-        'findOneOrFail'
-      ).mockResolvedValue(mockAggregator);
+      vi.spyOn(storageAggregatorRepository, 'findOneOrFail').mockResolvedValue(
+        mockAggregator
+      );
 
       const result =
         await service.getStorageAggregatorForCalloutsSet(validUuid);
@@ -199,10 +195,9 @@ describe('StorageAggregatorResolverService', () => {
       entityManager.findOne.mockResolvedValueOnce({
         account: { storageAggregator: { id: 'sa-vc' } },
       });
-      vi.spyOn(
-        storageAggregatorRepository,
-        'findOneOrFail'
-      ).mockResolvedValue(mockAggregator);
+      vi.spyOn(storageAggregatorRepository, 'findOneOrFail').mockResolvedValue(
+        mockAggregator
+      );
 
       const result =
         await service.getStorageAggregatorForCalloutsSet(validUuid);

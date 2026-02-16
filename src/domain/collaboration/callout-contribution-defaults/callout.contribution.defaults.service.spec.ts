@@ -1,14 +1,14 @@
+import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { Repository } from 'typeorm';
 import { CalloutContributionDefaults } from './callout.contribution.defaults.entity';
 import { CalloutContributionDefaultsService } from './callout.contribution.defaults.service';
-import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
-import { Repository } from 'typeorm';
-import { getRepositoryToken } from '@nestjs/typeorm';
 
 describe('CalloutContributionDefaultsService', () => {
   let service: CalloutContributionDefaultsService;
@@ -81,7 +81,10 @@ describe('CalloutContributionDefaultsService', () => {
 
       expect(
         profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket
-      ).toHaveBeenCalledWith('markdown with ![image](http://old-url)', storageBucket);
+      ).toHaveBeenCalledWith(
+        'markdown with ![image](http://old-url)',
+        storageBucket
+      );
       expect(result.postDescription).toBe(reuploadedMarkdown);
     });
 

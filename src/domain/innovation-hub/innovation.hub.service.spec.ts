@@ -91,9 +91,7 @@ describe('InnovationHubService', () => {
     profile: Record<string, unknown> = { id: 'profile-1' }
   ) => {
     setupNamingServiceMocks({
-      isInnovationHubSubdomainAvailable: vi
-        .fn()
-        .mockResolvedValue(true),
+      isInnovationHubSubdomainAvailable: vi.fn().mockResolvedValue(true),
       getReservedNameIDsInHubs: vi.fn().mockResolvedValue([]),
       createNameIdAvoidingReservedNameIDs: vi
         .fn()
@@ -146,9 +144,7 @@ describe('InnovationHubService', () => {
       };
       const createNameIdSpy = vi.fn().mockReturnValue('generated-name-id');
       setupNamingServiceMocks({
-        isInnovationHubSubdomainAvailable: vi
-          .fn()
-          .mockResolvedValue(true),
+        isInnovationHubSubdomainAvailable: vi.fn().mockResolvedValue(true),
         getReservedNameIDsInHubs: vi.fn().mockResolvedValue([]),
         createNameIdAvoidingReservedNameIDs: createNameIdSpy,
       });
@@ -182,9 +178,7 @@ describe('InnovationHubService', () => {
     it('should throw ValidationException when subdomain is already taken', async () => {
       // Arrange
       setupNamingServiceMocks({
-        isInnovationHubSubdomainAvailable: vi
-          .fn()
-          .mockResolvedValue(false),
+        isInnovationHubSubdomainAvailable: vi.fn().mockResolvedValue(false),
         getReservedNameIDsInHubs: vi.fn().mockResolvedValue([]),
         createNameIdAvoidingReservedNameIDs: vi
           .fn()
@@ -204,12 +198,8 @@ describe('InnovationHubService', () => {
         nameID: 'taken-name',
       };
       setupNamingServiceMocks({
-        isInnovationHubSubdomainAvailable: vi
-          .fn()
-          .mockResolvedValue(true),
-        getReservedNameIDsInHubs: vi
-          .fn()
-          .mockResolvedValue(['taken-name']),
+        isInnovationHubSubdomainAvailable: vi.fn().mockResolvedValue(true),
+        getReservedNameIDsInHubs: vi.fn().mockResolvedValue(['taken-name']),
       });
 
       // Act & Assert
@@ -426,9 +416,7 @@ describe('InnovationHubService', () => {
     it('should throw ValidationException when new nameID is already taken', async () => {
       // Arrange
       setupNamingServiceMocks({
-        getReservedNameIDsInHubs: vi
-          .fn()
-          .mockResolvedValue(['taken-name']),
+        getReservedNameIDsInHubs: vi.fn().mockResolvedValue(['taken-name']),
       });
 
       const input: UpdateInnovationHubInput = {
@@ -753,9 +741,7 @@ describe('InnovationHubService', () => {
 
     it('should throw Error when no criteria are provided', async () => {
       // Act & Assert
-      await expect(
-        service.getInnovationHubFlexOrFail({})
-      ).rejects.toThrow(
+      await expect(service.getInnovationHubFlexOrFail({})).rejects.toThrow(
         'No criteria provided for fetching the Innovation Hub'
       );
     });

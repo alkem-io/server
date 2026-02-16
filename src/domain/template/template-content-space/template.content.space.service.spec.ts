@@ -3,21 +3,21 @@ import {
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
+import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { LicenseService } from '@domain/common/license/license.service';
+import { SpaceAboutService } from '@domain/space/space.about/space.about.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { type Mocked, vi } from 'vitest';
 import { Repository } from 'typeorm';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
-import { SpaceAboutService } from '@domain/space/space.about/space.about.service';
-import { LicenseService } from '@domain/common/license/license.service';
+import { type Mocked, vi } from 'vitest';
 import { TemplateContentSpace } from './template.content.space.entity';
-import { TemplateContentSpaceService } from './template.content.space.service';
 import { ITemplateContentSpace } from './template.content.space.interface';
+import { TemplateContentSpaceService } from './template.content.space.service';
 
 describe('TemplateContentSpaceService', () => {
   let service: TemplateContentSpaceService;
@@ -29,11 +29,13 @@ describe('TemplateContentSpaceService', () => {
 
   beforeEach(async () => {
     // Mock static TemplateContentSpace.create to avoid DataSource requirement
-    vi.spyOn(TemplateContentSpace, 'create').mockImplementation((input: any) => {
-      const entity = new TemplateContentSpace();
-      Object.assign(entity, input);
-      return entity as any;
-    });
+    vi.spyOn(TemplateContentSpace, 'create').mockImplementation(
+      (input: any) => {
+        const entity = new TemplateContentSpace();
+        Object.assign(entity, input);
+        return entity as any;
+      }
+    );
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -47,9 +49,9 @@ describe('TemplateContentSpaceService', () => {
       .compile();
 
     service = module.get(TemplateContentSpaceService);
-    repository = module.get(
-      getRepositoryToken(TemplateContentSpace)
-    ) as Mocked<Repository<TemplateContentSpace>>;
+    repository = module.get(getRepositoryToken(TemplateContentSpace)) as Mocked<
+      Repository<TemplateContentSpace>
+    >;
     collaborationService = module.get(
       CollaborationService
     ) as Mocked<CollaborationService>;
@@ -207,9 +209,7 @@ describe('TemplateContentSpaceService', () => {
 
       const updatedAbout = { id: 'about-1', profile: { displayName: 'new' } };
       repository.findOne.mockResolvedValue(tcs);
-      spaceAboutService.updateSpaceAbout.mockResolvedValue(
-        updatedAbout as any
-      );
+      spaceAboutService.updateSpaceAbout.mockResolvedValue(updatedAbout as any);
       repository.save.mockResolvedValue({
         ...tcs,
         about: updatedAbout,

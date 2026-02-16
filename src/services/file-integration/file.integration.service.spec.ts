@@ -1,13 +1,13 @@
+import { STORAGE_SERVICE } from '@common/constants';
+import { AuthenticationService } from '@core/authentication/authentication.service';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { DocumentService } from '@domain/storage/document/document.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { FileIntegrationService } from './file.integration.service';
-import { AuthenticationService } from '@core/authentication/authentication.service';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { DocumentService } from '@domain/storage/document/document.service';
-import { STORAGE_SERVICE } from '@common/constants';
-import { ReadOutputErrorCode } from './outputs';
 import { FileInfoInputData } from './inputs';
+import { ReadOutputErrorCode } from './outputs';
 
 describe('FileIntegrationService', () => {
   let service: FileIntegrationService;
@@ -40,12 +40,16 @@ describe('FileIntegrationService', () => {
 
   describe('fileInfo', () => {
     it('should return FILE_NOT_FOUND error when docId is empty', async () => {
-      const input = new FileInfoInputData('', { authorization: 'Bearer token' });
+      const input = new FileInfoInputData('', {
+        authorization: 'Bearer token',
+      });
 
       const result = await service.fileInfo(input);
 
       expect(result.data.read).toBe(false);
-      expect((result.data as any).errorCode).toBe(ReadOutputErrorCode.FILE_NOT_FOUND);
+      expect((result.data as any).errorCode).toBe(
+        ReadOutputErrorCode.FILE_NOT_FOUND
+      );
     });
 
     it('should return NO_AUTH_PROVIDED error when auth is empty object', async () => {
@@ -54,11 +58,15 @@ describe('FileIntegrationService', () => {
       const result = await service.fileInfo(input);
 
       expect(result.data.read).toBe(false);
-      expect((result.data as any).errorCode).toBe(ReadOutputErrorCode.NO_AUTH_PROVIDED);
+      expect((result.data as any).errorCode).toBe(
+        ReadOutputErrorCode.NO_AUTH_PROVIDED
+      );
     });
 
     it('should return DOCUMENT_NOT_FOUND error when document not found', async () => {
-      const input = new FileInfoInputData('doc-1', { authorization: 'Bearer token' });
+      const input = new FileInfoInputData('doc-1', {
+        authorization: 'Bearer token',
+      });
 
       vi.mocked(authenticationService.getAgentInfo).mockResolvedValue({
         agentID: 'agent-1',
@@ -70,11 +78,15 @@ describe('FileIntegrationService', () => {
       const result = await service.fileInfo(input);
 
       expect(result.data.read).toBe(false);
-      expect((result.data as any).errorCode).toBe(ReadOutputErrorCode.DOCUMENT_NOT_FOUND);
+      expect((result.data as any).errorCode).toBe(
+        ReadOutputErrorCode.DOCUMENT_NOT_FOUND
+      );
     });
 
     it('should return FILE_NOT_FOUND error when file does not exist in storage', async () => {
-      const input = new FileInfoInputData('doc-1', { authorization: 'Bearer token' });
+      const input = new FileInfoInputData('doc-1', {
+        authorization: 'Bearer token',
+      });
 
       vi.mocked(authenticationService.getAgentInfo).mockResolvedValue({
         agentID: 'agent-1',
@@ -89,11 +101,15 @@ describe('FileIntegrationService', () => {
       const result = await service.fileInfo(input);
 
       expect(result.data.read).toBe(false);
-      expect((result.data as any).errorCode).toBe(ReadOutputErrorCode.FILE_NOT_FOUND);
+      expect((result.data as any).errorCode).toBe(
+        ReadOutputErrorCode.FILE_NOT_FOUND
+      );
     });
 
     it('should return NO_READ_ACCESS error when user lacks read privilege', async () => {
-      const input = new FileInfoInputData('doc-1', { authorization: 'Bearer token' });
+      const input = new FileInfoInputData('doc-1', {
+        authorization: 'Bearer token',
+      });
 
       vi.mocked(authenticationService.getAgentInfo).mockResolvedValue({
         agentID: 'agent-1',
@@ -109,11 +125,15 @@ describe('FileIntegrationService', () => {
       const result = await service.fileInfo(input);
 
       expect(result.data.read).toBe(false);
-      expect((result.data as any).errorCode).toBe(ReadOutputErrorCode.NO_READ_ACCESS);
+      expect((result.data as any).errorCode).toBe(
+        ReadOutputErrorCode.NO_READ_ACCESS
+      );
     });
 
     it('should return success with file info when all checks pass', async () => {
-      const input = new FileInfoInputData('doc-1', { authorization: 'Bearer token' });
+      const input = new FileInfoInputData('doc-1', {
+        authorization: 'Bearer token',
+      });
 
       vi.mocked(authenticationService.getAgentInfo).mockResolvedValue({
         agentID: 'agent-1',

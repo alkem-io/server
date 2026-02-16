@@ -1,31 +1,31 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { MockCacheManager } from '@test/mocks/cache-manager.mock';
-import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
-import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { ProfileType } from '@common/enums';
+import { TagsetType } from '@common/enums/tagset.type';
+import { VisualType } from '@common/enums/visual.type';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
   NotSupportedException,
   ValidationException,
 } from '@common/exceptions';
-import { VisualType } from '@common/enums/visual.type';
-import { ProfileType } from '@common/enums';
-import { TagsetType } from '@common/enums/tagset.type';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { LocationService } from '@domain/common/location/location.service';
+import { ReferenceService } from '@domain/common/reference/reference.service';
+import { TagsetService } from '@domain/common/tagset/tagset.service';
+import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.interface';
+import { VisualService } from '@domain/common/visual/visual.service';
+import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
+import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { MockCacheManager } from '@test/mocks/cache-manager.mock';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
+import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { MockType } from '@test/utils/mock.type';
+import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { Repository } from 'typeorm';
 import { Profile } from './profile.entity';
 import { ProfileService } from './profile.service';
-import { TagsetService } from '@domain/common/tagset/tagset.service';
-import { ReferenceService } from '@domain/common/reference/reference.service';
-import { VisualService } from '@domain/common/visual/visual.service';
-import { LocationService } from '@domain/common/location/location.service';
-import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
-import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { Repository } from 'typeorm';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { MockType } from '@test/utils/mock.type';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.interface';
 
 describe('ProfileService', () => {
   let service: ProfileService;
@@ -127,12 +127,12 @@ describe('ProfileService', () => {
         id: 'sa-1',
       } as unknown as IStorageAggregator;
 
-      vi.mocked(storageBucketService.createStorageBucket).mockReturnValue(
-        { id: 'sb-1' } as any
-      );
-      vi.mocked(locationService.createLocation).mockResolvedValue(
-        { id: 'loc-1' } as any
-      );
+      vi.mocked(storageBucketService.createStorageBucket).mockReturnValue({
+        id: 'sb-1',
+      } as any);
+      vi.mocked(locationService.createLocation).mockResolvedValue({
+        id: 'loc-1',
+      } as any);
       vi.mocked(
         profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket
       ).mockResolvedValue('');
@@ -142,7 +142,7 @@ describe('ProfileService', () => {
 
       const result = await service.createProfile(
         { displayName: 'Minimal Profile' },
-        ProfileType.SPACE,
+        ProfileType.SPACE_ABOUT,
         storageAggregator
       );
 
@@ -154,12 +154,12 @@ describe('ProfileService', () => {
         id: 'sa-1',
       } as unknown as IStorageAggregator;
 
-      vi.mocked(storageBucketService.createStorageBucket).mockReturnValue(
-        { id: 'sb-1' } as any
-      );
-      vi.mocked(locationService.createLocation).mockResolvedValue(
-        { id: 'loc-1' } as any
-      );
+      vi.mocked(storageBucketService.createStorageBucket).mockReturnValue({
+        id: 'sb-1',
+      } as any);
+      vi.mocked(locationService.createLocation).mockResolvedValue({
+        id: 'loc-1',
+      } as any);
       vi.mocked(
         profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket
       ).mockResolvedValue('');
@@ -203,14 +203,11 @@ describe('ProfileService', () => {
       vi.spyOn(Profile, 'findOne').mockResolvedValue(existingProfile);
       profileRepository.save!.mockImplementation(async (p: any) => p);
 
-      const result = await service.updateProfile(
-        { id: 'p-1' } as any,
-        {
-          displayName: 'New Name',
-          description: 'New desc',
-          tagline: 'New tagline',
-        }
-      );
+      const result = await service.updateProfile({ id: 'p-1' } as any, {
+        displayName: 'New Name',
+        description: 'New desc',
+        tagline: 'New tagline',
+      });
 
       expect(result.displayName).toBe('New Name');
       expect(result.description).toBe('New desc');
@@ -240,13 +237,10 @@ describe('ProfileService', () => {
         updatedTagsets as any
       );
 
-      const result = await service.updateProfile(
-        { id: 'p-1' } as any,
-        {
-          references: [{ ID: 'ref-1', name: 'updated' }] as any,
-          tagsets: [{ ID: 'ts-1', tags: ['new'] }] as any,
-        }
-      );
+      const result = await service.updateProfile({ id: 'p-1' } as any, {
+        references: [{ ID: 'ref-1', name: 'updated' }] as any,
+        tagsets: [{ ID: 'ts-1', tags: ['new'] }] as any,
+      });
 
       expect(result.references).toEqual(updatedRefs);
       expect(result.tagsets).toEqual(updatedTagsets);
@@ -271,10 +265,9 @@ describe('ProfileService', () => {
         updatedLocation as any
       );
 
-      const result = await service.updateProfile(
-        { id: 'p-1' } as any,
-        { location: { city: 'New City' } as any }
-      );
+      const result = await service.updateProfile({ id: 'p-1' } as any, {
+        location: { city: 'New City' } as any,
+      });
 
       expect(result.location).toEqual(updatedLocation);
     });
@@ -321,9 +314,7 @@ describe('ProfileService', () => {
       );
       vi.mocked(visualService.deleteVisual).mockResolvedValue({} as any);
       vi.mocked(locationService.removeLocation).mockResolvedValue({} as any);
-      vi.mocked(authorizationPolicyService.delete).mockResolvedValue(
-        {} as any
-      );
+      vi.mocked(authorizationPolicyService.delete).mockResolvedValue({} as any);
       profileRepository.remove!.mockResolvedValue(profile);
 
       await service.deleteProfile('p-1');
@@ -650,9 +641,9 @@ describe('ProfileService', () => {
         references: undefined,
       } as any);
 
-      await expect(
-        service.getReferences({ id: 'p-1' } as any)
-      ).rejects.toThrow(EntityNotInitializedException);
+      await expect(service.getReferences({ id: 'p-1' } as any)).rejects.toThrow(
+        EntityNotInitializedException
+      );
     });
   });
 
@@ -675,9 +666,9 @@ describe('ProfileService', () => {
         visuals: undefined,
       } as any);
 
-      await expect(
-        service.getVisuals({ id: 'p-1' } as any)
-      ).rejects.toThrow(EntityNotInitializedException);
+      await expect(service.getVisuals({ id: 'p-1' } as any)).rejects.toThrow(
+        EntityNotInitializedException
+      );
     });
   });
 
@@ -700,9 +691,9 @@ describe('ProfileService', () => {
         tagsets: undefined,
       } as any);
 
-      await expect(
-        service.getTagsets({ id: 'p-1' } as any)
-      ).rejects.toThrow(EntityNotInitializedException);
+      await expect(service.getTagsets({ id: 'p-1' } as any)).rejects.toThrow(
+        EntityNotInitializedException
+      );
     });
   });
 
@@ -725,9 +716,9 @@ describe('ProfileService', () => {
         location: undefined,
       } as any);
 
-      await expect(
-        service.getLocation({ id: 'p-1' } as any)
-      ).rejects.toThrow(EntityNotInitializedException);
+      await expect(service.getLocation({ id: 'p-1' } as any)).rejects.toThrow(
+        EntityNotInitializedException
+      );
     });
   });
 

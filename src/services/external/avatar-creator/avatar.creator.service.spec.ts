@@ -1,3 +1,4 @@
+import { MimeFileType } from '@common/enums/mime.file.type';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -5,7 +6,6 @@ import {
   AvatarCreatorService,
   DEFAULT_AVATAR_SERVICE_URL,
 } from './avatar.creator.service';
-import { MimeFileType } from '@common/enums/mime.file.type';
 
 describe('AvatarCreatorService', () => {
   let service: AvatarCreatorService;

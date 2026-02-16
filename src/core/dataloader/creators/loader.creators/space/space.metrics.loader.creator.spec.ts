@@ -1,10 +1,9 @@
 import { RoleName } from '@common/enums/role.name';
-import { Credential } from '@domain/agent/credential/credential.entity';
 import { Space } from '@domain/space/space/space.entity';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getEntityManagerToken } from '@nestjs/typeorm';
-import { type Mocked, vi } from 'vitest';
 import { EntityManager } from 'typeorm';
+import { type Mocked, vi } from 'vitest';
 import { SpaceMetricsLoaderCreator } from './space.metrics.loader.creator';
 
 /**
@@ -29,7 +28,10 @@ function makeSpaceWithMemberRole(
           },
           {
             name: RoleName.LEAD,
-            credential: { resourceID: `lead-${resourceID}`, type: 'space-lead' },
+            credential: {
+              resourceID: `lead-${resourceID}`,
+              type: 'space-lead',
+            },
           },
         ],
       },
@@ -227,9 +229,7 @@ describe('SpaceMetricsLoaderCreator', () => {
         about: { id: 'about-1' },
         community: {
           roleSet: {
-            roles: [
-              { name: RoleName.MEMBER, credential: undefined },
-            ],
+            roles: [{ name: RoleName.MEMBER, credential: undefined }],
           },
         },
       } as unknown as Space;
@@ -269,7 +269,12 @@ describe('SpaceMetricsLoaderCreator', () => {
     });
 
     it('should filter by credential type so non-member credentials are excluded', async () => {
-      const space = makeSpaceWithMemberRole('s-1', 'about-1', 'res-1', 'space-member');
+      const space = makeSpaceWithMemberRole(
+        's-1',
+        'about-1',
+        'res-1',
+        'space-member'
+      );
       entityManager.find.mockResolvedValueOnce([space]);
 
       const qb = mockCredentialQueryBuilder(entityManager, [
@@ -290,8 +295,18 @@ describe('SpaceMetricsLoaderCreator', () => {
 
     it('should include all distinct credential types in the type filter', async () => {
       // L0 space uses 'space-member', subspace uses 'subspace-member'
-      const l0Space = makeSpaceWithMemberRole('s-1', 'about-1', 'res-1', 'space-member');
-      const subSpace = makeSpaceWithMemberRole('s-2', 'about-2', 'res-2', 'subspace-member');
+      const l0Space = makeSpaceWithMemberRole(
+        's-1',
+        'about-1',
+        'res-1',
+        'space-member'
+      );
+      const subSpace = makeSpaceWithMemberRole(
+        's-2',
+        'about-2',
+        'res-2',
+        'subspace-member'
+      );
 
       entityManager.find.mockResolvedValueOnce([l0Space, subSpace]);
 
@@ -320,8 +335,18 @@ describe('SpaceMetricsLoaderCreator', () => {
 
     it('should deduplicate both resourceIDs and types when subspaces share credentials', async () => {
       // Two spaces sharing the same resourceID and credential type
-      const space1 = makeSpaceWithMemberRole('s-1', 'about-1', 'shared-res', 'space-member');
-      const space2 = makeSpaceWithMemberRole('s-2', 'about-2', 'shared-res', 'space-member');
+      const space1 = makeSpaceWithMemberRole(
+        's-1',
+        'about-1',
+        'shared-res',
+        'space-member'
+      );
+      const space2 = makeSpaceWithMemberRole(
+        's-2',
+        'about-2',
+        'shared-res',
+        'space-member'
+      );
 
       entityManager.find.mockResolvedValueOnce([space1, space2]);
 

@@ -1,16 +1,16 @@
+import { TagsetType } from '@common/enums/tagset.type';
+import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Classification } from './classification.entity';
-import { ClassificationService } from './classification.service';
-import { TagsetService } from '@domain/common/tagset/tagset.service';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { IClassification } from './classification.interface';
-import { ITagsetTemplate } from '../tagset-template/tagset.template.interface';
-import { TagsetType } from '@common/enums/tagset.type';
+import { type Mock } from 'vitest';
 import { CreateTagsetInput } from '../tagset/dto/tagset.dto.create';
+import { ITagsetTemplate } from '../tagset-template/tagset.template.interface';
+import { Classification } from './classification.entity';
+import { IClassification } from './classification.interface';
+import { ClassificationService } from './classification.service';
 
 describe('ClassificationService', () => {
   let service: ClassificationService;
@@ -50,7 +50,9 @@ describe('ClassificationService', () => {
         } as ITagsetTemplate,
       ];
 
-      (tagsetService.convertTagsetTemplatesToCreateTagsetInput as Mock).mockReturnValue([
+      (
+        tagsetService.convertTagsetTemplatesToCreateTagsetInput as Mock
+      ).mockReturnValue([
         { name: 'skills', type: TagsetType.SELECT_MANY, tags: [] },
       ]);
       (tagsetService.createTagsetWithName as Mock).mockReturnValue({
@@ -76,10 +78,14 @@ describe('ClassificationService', () => {
         } as ITagsetTemplate,
       ];
 
-      (tagsetService.convertTagsetTemplatesToCreateTagsetInput as Mock).mockReturnValue([
+      (
+        tagsetService.convertTagsetTemplatesToCreateTagsetInput as Mock
+      ).mockReturnValue([
         { name: 'skills', type: TagsetType.SELECT_MANY, tags: [] },
       ]);
-      (tagsetService.updatedTagsetInputUsingProvidedData as Mock).mockReturnValue([
+      (
+        tagsetService.updatedTagsetInputUsingProvidedData as Mock
+      ).mockReturnValue([
         { name: 'skills', type: TagsetType.SELECT_MANY, tags: ['ts'] },
       ]);
       (tagsetService.createTagsetWithName as Mock).mockReturnValue({
@@ -95,7 +101,9 @@ describe('ClassificationService', () => {
         ],
       });
 
-      expect(tagsetService.updatedTagsetInputUsingProvidedData).toHaveBeenCalled();
+      expect(
+        tagsetService.updatedTagsetInputUsingProvidedData
+      ).toHaveBeenCalled();
       expect(result.tagsets![0].tags).toEqual(['ts']);
     });
   });

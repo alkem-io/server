@@ -129,9 +129,8 @@ describe('ActivityLogBuilderService', () => {
         resourceID: 'post-1',
       } as unknown as IActivity;
 
-      const result = await builder[ActivityEventType.CALLOUT_POST_CREATED](
-        activity
-      );
+      const result =
+        await builder[ActivityEventType.CALLOUT_POST_CREATED](activity);
 
       expect(result.callout).toEqual(callout);
       expect(result.post).toEqual(post);
@@ -149,9 +148,8 @@ describe('ActivityLogBuilderService', () => {
         resourceID: 'callout-1',
       } as unknown as IActivity;
 
-      const result = await builder[ActivityEventType.CALLOUT_PUBLISHED](
-        activity
-      );
+      const result =
+        await builder[ActivityEventType.CALLOUT_PUBLISHED](activity);
 
       expect(result.callout).toEqual(callout);
     });
@@ -285,9 +283,8 @@ describe('ActivityLogBuilderService', () => {
         resourceID: 'event-1',
       } as unknown as IActivity;
 
-      const result = await builder[ActivityEventType.CALENDAR_EVENT_CREATED](
-        activity
-      );
+      const result =
+        await builder[ActivityEventType.CALENDAR_EVENT_CREATED](activity);
 
       expect(result.calendar).toEqual(calendar);
       expect(result.calendarEvent).toEqual(calendarEvent);

@@ -1,23 +1,24 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { MockCacheManager } from '@test/mocks/cache-manager.mock';
-import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
-import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { MockType } from '@test/utils/mock.type';
-import { Repository } from 'typeorm';
-import { Memo } from './memo.entity';
-import { MemoService } from './memo.service';
+import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
+import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
+import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { MockCacheManager } from '@test/mocks/cache-manager.mock';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
+import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { MockType } from '@test/utils/mock.type';
+import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { Repository } from 'typeorm';
+import { type Mock } from 'vitest';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { ProfileService } from '../profile/profile.service';
-import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
+import { Memo } from './memo.entity';
 import { IMemo } from './memo.interface';
-import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
+import { MemoService } from './memo.service';
 
 describe('MemoService', () => {
   let service: MemoService;
@@ -82,9 +83,7 @@ describe('MemoService', () => {
       memoRepository.findOne!.mockResolvedValue(memo);
       memoRepository.remove!.mockResolvedValue({ ...memo, id: undefined });
       (profileService.deleteProfile as Mock).mockResolvedValue({} as any);
-      (authorizationPolicyService.delete as Mock).mockResolvedValue(
-        {} as any
-      );
+      (authorizationPolicyService.delete as Mock).mockResolvedValue({} as any);
 
       const result = await service.deleteMemo('memo-1');
 
@@ -213,7 +212,9 @@ describe('MemoService', () => {
 
       memoRepository.findOne!.mockResolvedValue(memo);
       memoRepository.save!.mockImplementation(async (m: any) => m);
-      (profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket as Mock).mockResolvedValue('reuploaded content');
+      (
+        profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket as Mock
+      ).mockResolvedValue('reuploaded content');
 
       const result = await service.updateMemoContent(
         'memo-1',

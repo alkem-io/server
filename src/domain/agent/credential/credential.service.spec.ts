@@ -2,11 +2,11 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { Credential } from '@domain/agent/credential/credential.entity';
 import { CredentialService } from '@domain/agent/credential/credential.service';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { type Mock, vi } from 'vitest';
 
 describe('CredentialService', () => {
@@ -136,18 +136,18 @@ describe('CredentialService', () => {
       const credentialId = 'nonexistent-uuid';
       credentialRepository.findOneBy.mockResolvedValue(null);
 
-      await expect(
-        service.getCredentialOrFail(credentialId)
-      ).rejects.toThrow(EntityNotFoundException);
+      await expect(service.getCredentialOrFail(credentialId)).rejects.toThrow(
+        EntityNotFoundException
+      );
     });
 
     it('should include the credential ID in the exception message when not found', async () => {
       const credentialId = 'missing-cred-uuid';
       credentialRepository.findOneBy.mockResolvedValue(null);
 
-      await expect(
-        service.getCredentialOrFail(credentialId)
-      ).rejects.toThrow(credentialId);
+      await expect(service.getCredentialOrFail(credentialId)).rejects.toThrow(
+        credentialId
+      );
     });
   });
 
@@ -182,9 +182,9 @@ describe('CredentialService', () => {
       const credentialId = 'nonexistent-uuid';
       credentialRepository.findOneBy.mockResolvedValue(null);
 
-      await expect(
-        service.deleteCredential(credentialId)
-      ).rejects.toThrow(EntityNotFoundException);
+      await expect(service.deleteCredential(credentialId)).rejects.toThrow(
+        EntityNotFoundException
+      );
     });
   });
 

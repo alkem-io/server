@@ -1,18 +1,18 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { MockCacheManager } from '@test/mocks/cache-manager.mock';
-import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
-import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { TemplateType } from '@common/enums/template.type';
 import {
   EntityNotFoundException,
   ValidationException,
 } from '@common/exceptions';
 import { Template } from '@domain/template/template/template.entity';
+import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { MockCacheManager } from '@test/mocks/cache-manager.mock';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
+import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { Repository } from 'typeorm';
 import { InnovationFlowState } from './innovation.flow.state.entity';
 import { InnovationFlowStateService } from './innovation.flow.state.service';
-import { Repository } from 'typeorm';
-import { getRepositoryToken } from '@nestjs/typeorm';
 
 describe('InnovationFlowStateService', () => {
   let service: InnovationFlowStateService;
@@ -97,10 +97,10 @@ describe('InnovationFlowStateService', () => {
         description: 'New Desc',
       } as any);
 
-      const result = await service.update(state, {
+      const _result = await service.update(state, {
         displayName: 'New Name',
         description: 'New Desc',
-      });
+      } as any);
 
       expect(state.displayName).toBe('New Name');
       expect(state.description).toBe('New Desc');
@@ -119,7 +119,7 @@ describe('InnovationFlowStateService', () => {
       await service.update(state, {
         displayName: 'Name',
         settings: { allowNewCallouts: false },
-      });
+      } as any);
 
       expect(state.settings.allowNewCallouts).toBe(false);
     });
@@ -137,7 +137,7 @@ describe('InnovationFlowStateService', () => {
       await service.update(state, {
         displayName: 'Name',
         description: undefined,
-      });
+      } as any);
 
       expect(state.description).toBe('');
     });

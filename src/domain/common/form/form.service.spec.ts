@@ -1,14 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockType } from '@test/utils/mock.type';
+import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { Repository } from 'typeorm';
+import { IFormQuestion } from './form.dto.question.interface';
 import { Form } from './form.entity';
 import { FormService } from './form.service';
-import { IFormQuestion } from './form.dto.question.interface';
 
 describe('FormService', () => {
   let service: FormService;
@@ -115,7 +115,7 @@ describe('FormService', () => {
 
       const result = await service.updateForm(form, {
         description: 'New description',
-      });
+      } as any);
 
       expect(result.description).toBe('New description');
     });
@@ -127,7 +127,7 @@ describe('FormService', () => {
       } as Form;
       formRepository.save!.mockResolvedValue(form);
 
-      const result = await service.updateForm(form, { description: '' });
+      const result = await service.updateForm(form, { description: '' } as any);
 
       expect(result.description).toBe('');
     });
@@ -139,7 +139,7 @@ describe('FormService', () => {
       } as Form;
       formRepository.save!.mockResolvedValue(form);
 
-      await service.updateForm(form, {});
+      await service.updateForm(form, {} as any);
 
       expect(form.description).toBe('Keep this');
     });
@@ -157,7 +157,7 @@ describe('FormService', () => {
       ];
       formRepository.save!.mockResolvedValue(form);
 
-      await service.updateForm(form, { questions: newQuestions });
+      await service.updateForm(form, { questions: newQuestions } as any);
 
       expect(JSON.parse(form.questions)).toEqual(newQuestions);
     });

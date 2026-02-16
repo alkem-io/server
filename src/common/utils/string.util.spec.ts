@@ -27,12 +27,9 @@ describe('ensureMaxLength', () => {
         expected: 'T...',
         description: 'very short maxLength',
       },
-    ])(
-      'should return $description',
-      ({ input, maxLength, expected }) => {
-        expect(ensureMaxLength(input, maxLength)).toBe(expected);
-      }
-    );
+    ])('should return $description', ({ input, maxLength, expected }) => {
+      expect(ensureMaxLength(input, maxLength)).toBe(expected);
+    });
   });
 
   describe('with custom ellipsis', () => {

@@ -1,12 +1,12 @@
-import { UserService } from '@domain/community/user/user.service';
 import { AgentInfoCacheService } from '@core/authentication.agent.info/agent.info.cache.service';
 import { User } from '@domain/community/user/user.entity';
+import { UserService } from '@domain/community/user/user.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getEntityManagerToken } from '@nestjs/typeorm';
+import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { type Mock, vi } from 'vitest';
 import { AdminAuthenticationIDBackfillService } from './authentication-id-backfill.service';
 
@@ -27,11 +27,7 @@ describe('AdminAuthenticationIDBackfillService', () => {
       ...overrides,
     }) as User;
 
-  const makeIdentity = (
-    id: string,
-    email: string,
-    verified = true
-  ) => ({
+  const makeIdentity = (id: string, email: string, verified = true) => ({
     id,
     traits: { email, name: { first: 'F', last: 'L' } },
     verifiable_addresses: [{ via: 'email', verified }],
@@ -107,7 +103,11 @@ describe('AdminAuthenticationIDBackfillService', () => {
     });
 
     it('should update user when identity is found and backfill succeeds', async () => {
-      const user = makeUser({ id: 'user-1', email: 'u@t.com', authenticationID: '' });
+      const user = makeUser({
+        id: 'user-1',
+        email: 'u@t.com',
+        authenticationID: '',
+      });
       const identity = makeIdentity('kratos-1', 'u@t.com');
       setupQueryBuilder([[user], []]);
       vi.mocked(kratosService.getIdentityByEmail).mockResolvedValue(
@@ -123,13 +123,17 @@ describe('AdminAuthenticationIDBackfillService', () => {
       const result = await service.backfillAuthenticationIDs();
 
       expect(result.updated).toBe(1);
-      expect(agentInfoCacheService.deleteAgentInfoFromCache).toHaveBeenCalledWith(
-        'kratos-1'
-      );
+      expect(
+        agentInfoCacheService.deleteAgentInfoFromCache
+      ).toHaveBeenCalledWith('kratos-1');
     });
 
     it('should skip when createOrLinkUserFromAgentInfo returns a different user ID', async () => {
-      const user = makeUser({ id: 'user-1', email: 'u@t.com', authenticationID: '' });
+      const user = makeUser({
+        id: 'user-1',
+        email: 'u@t.com',
+        authenticationID: '',
+      });
       const identity = makeIdentity('kratos-1', 'u@t.com');
       setupQueryBuilder([[user], []]);
       vi.mocked(kratosService.getIdentityByEmail).mockResolvedValue(
@@ -146,7 +150,11 @@ describe('AdminAuthenticationIDBackfillService', () => {
     });
 
     it('should skip when authenticationID does not match identity after backfill', async () => {
-      const user = makeUser({ id: 'user-1', email: 'u@t.com', authenticationID: '' });
+      const user = makeUser({
+        id: 'user-1',
+        email: 'u@t.com',
+        authenticationID: '',
+      });
       const identity = makeIdentity('kratos-1', 'u@t.com');
       setupQueryBuilder([[user], []]);
       vi.mocked(kratosService.getIdentityByEmail).mockResolvedValue(
@@ -163,7 +171,11 @@ describe('AdminAuthenticationIDBackfillService', () => {
     });
 
     it('should handle createOrLinkUserFromAgentInfo error by skipping user', async () => {
-      const user = makeUser({ id: 'user-1', email: 'u@t.com', authenticationID: '' });
+      const user = makeUser({
+        id: 'user-1',
+        email: 'u@t.com',
+        authenticationID: '',
+      });
       const identity = makeIdentity('kratos-1', 'u@t.com');
       setupQueryBuilder([[user], []]);
       vi.mocked(kratosService.getIdentityByEmail).mockResolvedValue(
@@ -190,7 +202,11 @@ describe('AdminAuthenticationIDBackfillService', () => {
     });
 
     it('should retry a failed batch once and increment retriedBatches on success', async () => {
-      const user = makeUser({ id: 'user-1', email: 'u@t.com', authenticationID: 'existing' });
+      const user = makeUser({
+        id: 'user-1',
+        email: 'u@t.com',
+        authenticationID: 'existing',
+      });
       let callCount = 0;
 
       // First call for the batch returns users, second call (retry uses same batch)
@@ -208,15 +224,16 @@ describe('AdminAuthenticationIDBackfillService', () => {
       // processBatch: first call throws, second call succeeds
       const originalProcessBatch = (service as any).processBatch.bind(service);
       let processCallCount = 0;
-      vi.spyOn(service as any, 'processBatch').mockImplementation(
-        async (batch: User[], outcome: any) => {
-          processCallCount++;
-          if (processCallCount === 1) {
-            throw new Error('transient error');
-          }
-          return originalProcessBatch(batch, outcome);
+      vi.spyOn(service as any, 'processBatch').mockImplementation((async (
+        batch: User[],
+        outcome: any
+      ) => {
+        processCallCount++;
+        if (processCallCount === 1) {
+          throw new Error('transient error');
         }
-      );
+        return originalProcessBatch(batch, outcome);
+      }) as any);
 
       const result = await service.backfillAuthenticationIDs();
 

@@ -68,7 +68,11 @@ describe('RoomControllerService', () => {
       const event = {
         original: {
           resultHandler: {
-            roomDetails: { roomID: 'room-1', threadID: undefined, actorId: 'actor-1' },
+            roomDetails: {
+              roomID: 'room-1',
+              threadID: undefined,
+              actorId: 'actor-1',
+            },
           },
         },
         response: { result: 'Answer', sources: [] },
@@ -80,7 +84,10 @@ describe('RoomControllerService', () => {
     });
 
     it('should send reply and update externalThreadId when VC data exists without one', async () => {
-      const vcData = { virtualContributorActorID: 'vc-1', externalThreadId: undefined };
+      const vcData = {
+        virtualContributorActorID: 'vc-1',
+        externalThreadId: undefined,
+      };
       const room = {
         id: 'room-1',
         vcInteractionsByThread: { 'thread-1': vcData },

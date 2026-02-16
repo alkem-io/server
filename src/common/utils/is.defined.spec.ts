@@ -9,22 +9,16 @@ describe('isDefined', () => {
     { value: 42, expected: true },
     { value: [], expected: true },
     { value: {}, expected: true },
-  ])(
-    'should return true for defined value: $value',
-    ({ value, expected }) => {
-      expect(isDefined(value)).toBe(expected);
-    }
-  );
+  ])('should return true for defined value: $value', ({ value, expected }) => {
+    expect(isDefined(value)).toBe(expected);
+  });
 
   it.each([
     { value: undefined, description: 'undefined' },
     { value: null, description: 'null' },
-  ])(
-    'should return false for $description',
-    ({ value }) => {
-      expect(isDefined(value)).toBe(false);
-    }
-  );
+  ])('should return false for $description', ({ value }) => {
+    expect(isDefined(value)).toBe(false);
+  });
 
   it('should act as a type guard when filtering arrays', () => {
     const input: (number | undefined | null)[] = [1, undefined, 2, null, 3];

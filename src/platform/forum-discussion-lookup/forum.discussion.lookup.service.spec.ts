@@ -1,10 +1,10 @@
+import { EntityNotFoundException } from '@common/exceptions';
 import { Test, TestingModule } from '@nestjs/testing';
+import { Discussion } from '@platform/forum-discussion/discussion.entity';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { EntityManager } from 'typeorm';
 import { ForumDiscussionLookupService } from './forum.discussion.lookup.service';
-import { Discussion } from '@platform/forum-discussion/discussion.entity';
-import { EntityNotFoundException } from '@common/exceptions';
 
 describe('ForumDiscussionLookupService', () => {
   let service: ForumDiscussionLookupService;

@@ -84,7 +84,7 @@ describe('SpaceSettingsService', () => {
       };
       const updateData: UpdateSpaceSettingsEntityInput = {
         membership: newMembership,
-      };
+      } as any;
 
       // Act
       const result = service.updateSettings(settings, updateData);
@@ -148,7 +148,7 @@ describe('SpaceSettingsService', () => {
         },
         membership: {
           policy: CommunityMembershipPolicy.INVITATIONS,
-          trustedOrganizations: ['org-x'],
+          trustedOrganizations: ['org-x'] as any,
           allowSubspaceAdminsToInviteMembers: true,
         },
         collaboration: {

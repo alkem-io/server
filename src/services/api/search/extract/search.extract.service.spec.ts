@@ -1,13 +1,12 @@
+import { ELASTICSEARCH_CLIENT_PROVIDER } from '@common/constants';
+import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
-import { MockElasticsearchClientProvider } from '@test/mocks/elasticsearch.client.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { vi, type Mock } from 'vitest';
-import { ConfigService } from '@nestjs/config';
-import { ELASTICSEARCH_CLIENT_PROVIDER } from '@common/constants';
-import { SearchExtractService } from './search.extract.service';
+import { type Mock, vi } from 'vitest';
 import { SearchCategory } from '../search.category';
 import { SearchResultType } from '../search.result.type';
+import { SearchExtractService } from './search.extract.service';
 
 describe('SearchExtractService', () => {
   let service: SearchExtractService;

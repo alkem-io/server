@@ -8,20 +8,20 @@ import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
-import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
+import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { type Mocked, vi } from 'vitest';
 import { EntityManager, Repository } from 'typeorm';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { ConversationMembership } from '../conversation-membership/conversation.membership.entity';
+import { type Mocked, vi } from 'vitest';
+import { IConversation } from '../conversation/conversation.interface';
 import { ConversationService } from '../conversation/conversation.service';
 import { ConversationAuthorizationService } from '../conversation/conversation.service.authorization';
-import { IConversation } from '../conversation/conversation.interface';
+import { ConversationMembership } from '../conversation-membership/conversation.membership.entity';
 import { Messaging } from './messaging.entity';
 import { IMessaging } from './messaging.interface';
 import { MessagingService } from './messaging.service';
@@ -29,13 +29,13 @@ import { MessagingService } from './messaging.service';
 describe('MessagingService', () => {
   let service: MessagingService;
   let conversationService: Mocked<ConversationService>;
-  let conversationAuthorizationService: Mocked<ConversationAuthorizationService>;
+  let _conversationAuthorizationService: Mocked<ConversationAuthorizationService>;
   let authorizationPolicyService: Mocked<AuthorizationPolicyService>;
   let platformWellKnownVCService: Mocked<PlatformWellKnownVirtualContributorsService>;
-  let virtualContributorLookupService: Mocked<VirtualContributorLookupService>;
+  let _virtualContributorLookupService: Mocked<VirtualContributorLookupService>;
   let userLookupService: Mocked<UserLookupService>;
   let agentService: Mocked<AgentService>;
-  let subscriptionPublishService: Mocked<SubscriptionPublishService>;
+  let _subscriptionPublishService: Mocked<SubscriptionPublishService>;
   let messagingRepo: Mocked<Repository<Messaging>>;
   let entityManager: Mocked<EntityManager>;
   let configService: { get: ReturnType<typeof vi.fn> };
@@ -73,19 +73,19 @@ describe('MessagingService', () => {
 
     service = module.get(MessagingService);
     conversationService = module.get(ConversationService);
-    conversationAuthorizationService = module.get(
+    _conversationAuthorizationService = module.get(
       ConversationAuthorizationService
     );
     authorizationPolicyService = module.get(AuthorizationPolicyService);
     platformWellKnownVCService = module.get(
       PlatformWellKnownVirtualContributorsService
     );
-    virtualContributorLookupService = module.get(
+    _virtualContributorLookupService = module.get(
       VirtualContributorLookupService
     );
     userLookupService = module.get(UserLookupService);
     agentService = module.get(AgentService);
-    subscriptionPublishService = module.get(SubscriptionPublishService);
+    _subscriptionPublishService = module.get(SubscriptionPublishService);
     messagingRepo = module.get(getRepositoryToken(Messaging));
     entityManager = module.get(EntityManager);
   });
@@ -156,9 +156,7 @@ describe('MessagingService', () => {
 
       await service.deleteMessaging('messaging-1');
 
-      expect(
-        conversationService.deleteConversation
-      ).not.toHaveBeenCalled();
+      expect(conversationService.deleteConversation).not.toHaveBeenCalled();
       expect(messagingRepo.remove).toHaveBeenCalled();
     });
   });
@@ -305,9 +303,7 @@ describe('MessagingService', () => {
         invitedAgentId: 'agent-invited',
       });
 
-      expect(agentService.getAgentOrFail).toHaveBeenCalledWith(
-        'agent-invited'
-      );
+      expect(agentService.getAgentOrFail).toHaveBeenCalledWith('agent-invited');
     });
   });
 
@@ -385,9 +381,9 @@ describe('MessagingService', () => {
         agent: undefined,
       } as any);
 
-      await expect(
-        service.getConversationsForUser('user-1')
-      ).rejects.toThrow(EntityNotInitializedException);
+      await expect(service.getConversationsForUser('user-1')).rejects.toThrow(
+        EntityNotInitializedException
+      );
     });
   });
 });

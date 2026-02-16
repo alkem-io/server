@@ -1,25 +1,24 @@
+import { VisualType } from '@common/enums/visual.type';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
-import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
-import { VisualType } from '@common/enums/visual.type';
+import { ProfileService } from '@domain/common/profile/profile.service';
+import { DocumentService } from '@domain/storage/document/document.service';
+import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getEntityManagerToken } from '@nestjs/typeorm';
+import { AvatarCreatorService } from '@services/external/avatar-creator/avatar.creator.service';
+import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { vi, type Mock } from 'vitest';
-import { getEntityManagerToken } from '@nestjs/typeorm';
-import { User } from '../user/user.entity';
+import { type Mock, vi } from 'vitest';
 import { Organization } from '../organization/organization.entity';
+import { User } from '../user/user.entity';
 import { VirtualContributor } from '../virtual-contributor/virtual.contributor.entity';
 import { ContributorService } from './contributor.service';
-import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
-import { ProfileService } from '@domain/common/profile/profile.service';
-import { AvatarCreatorService } from '@services/external/avatar-creator/avatar.creator.service';
-import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
-import { DocumentService } from '@domain/storage/document/document.service';
 
 describe('ContributorService', () => {
   let service: ContributorService;
@@ -74,19 +73,25 @@ describe('ContributorService', () => {
   describe('getContributor', () => {
     it('should delegate to contributorLookupService.getContributorByUUID', async () => {
       const mockContributor = { id: 'c-1' };
-      contributorLookupService.getContributorByUUID.mockResolvedValue(mockContributor);
+      contributorLookupService.getContributorByUUID.mockResolvedValue(
+        mockContributor
+      );
 
       const result = await service.getContributor('c-1');
 
       expect(result).toBe(mockContributor);
-      expect(contributorLookupService.getContributorByUUID).toHaveBeenCalledWith('c-1', undefined);
+      expect(
+        contributorLookupService.getContributorByUUID
+      ).toHaveBeenCalledWith('c-1', undefined);
     });
   });
 
   describe('getContributorByUuidOrFail', () => {
     it('should return contributor when found', async () => {
       const mockContributor = { id: 'c-1' };
-      contributorLookupService.getContributorByUUID.mockResolvedValue(mockContributor);
+      contributorLookupService.getContributorByUUID.mockResolvedValue(
+        mockContributor
+      );
 
       const result = await service.getContributorByUuidOrFail('c-1');
       expect(result).toBe(mockContributor);
@@ -105,7 +110,9 @@ describe('ContributorService', () => {
     it('should return contributor and agent when agent is initialized', async () => {
       const mockAgent = { id: 'agent-1' };
       const mockContributor = { id: 'c-1', agent: mockAgent };
-      contributorLookupService.getContributorByUUID.mockResolvedValue(mockContributor);
+      contributorLookupService.getContributorByUUID.mockResolvedValue(
+        mockContributor
+      );
 
       const result = await service.getContributorAndAgent('c-1');
 
@@ -115,11 +122,13 @@ describe('ContributorService', () => {
 
     it('should throw EntityNotInitializedException when agent is not initialized', async () => {
       const mockContributor = { id: 'c-1', agent: undefined };
-      contributorLookupService.getContributorByUUID.mockResolvedValue(mockContributor);
+      contributorLookupService.getContributorByUUID.mockResolvedValue(
+        mockContributor
+      );
 
-      await expect(
-        service.getContributorAndAgent('c-1')
-      ).rejects.toThrow(EntityNotInitializedException);
+      await expect(service.getContributorAndAgent('c-1')).rejects.toThrow(
+        EntityNotInitializedException
+      );
     });
 
     it('should throw EntityNotFoundException when contributor does not exist', async () => {
@@ -136,7 +145,9 @@ describe('ContributorService', () => {
       const profile = { id: 'profile-1' } as any;
       const profileData = {
         displayName: 'Test',
-        visuals: [{ name: VisualType.AVATAR, uri: 'https://example.com/avatar.png' }],
+        visuals: [
+          { name: VisualType.AVATAR, uri: 'https://example.com/avatar.png' },
+        ],
       } as any;
       profileService.addVisualsOnProfile.mockResolvedValue(undefined);
 
@@ -163,7 +174,11 @@ describe('ContributorService', () => {
       const agentInfo = { avatarURL: 'https://agent.com/avatar.png' } as any;
       profileService.addVisualsOnProfile.mockResolvedValue(undefined);
 
-      await service.addAvatarVisualToContributorProfile(profile, profileData, agentInfo);
+      await service.addAvatarVisualToContributorProfile(
+        profile,
+        profileData,
+        agentInfo
+      );
 
       expect(profileService.addVisualsOnProfile).toHaveBeenCalledWith(
         profile,
@@ -182,7 +197,9 @@ describe('ContributorService', () => {
         displayName: 'Test User',
         visuals: [],
       } as any;
-      avatarCreatorService.generateRandomAvatarURL.mockReturnValue('https://generated.com/avatar.png');
+      avatarCreatorService.generateRandomAvatarURL.mockReturnValue(
+        'https://generated.com/avatar.png'
+      );
       profileService.addVisualsOnProfile.mockResolvedValue(undefined);
 
       await service.addAvatarVisualToContributorProfile(profile, profileData);
@@ -199,11 +216,17 @@ describe('ContributorService', () => {
         displayName: 'Display Name',
         visuals: [],
       } as any;
-      avatarCreatorService.generateRandomAvatarURL.mockReturnValue('https://generated.com/avatar.png');
+      avatarCreatorService.generateRandomAvatarURL.mockReturnValue(
+        'https://generated.com/avatar.png'
+      );
       profileService.addVisualsOnProfile.mockResolvedValue(undefined);
 
       await service.addAvatarVisualToContributorProfile(
-        profile, profileData, undefined, 'John', 'Doe'
+        profile,
+        profileData,
+        undefined,
+        'John',
+        'Doe'
       );
 
       expect(avatarCreatorService.generateRandomAvatarURL).toHaveBeenCalledWith(
@@ -215,7 +238,10 @@ describe('ContributorService', () => {
 
   describe('ensureAvatarIsStoredInLocalStorageBucket', () => {
     it('should update avatar visual URI and save profile when storage succeeds', async () => {
-      const avatarVisual = { name: VisualType.AVATAR, uri: 'https://old.com/avatar.png' };
+      const avatarVisual = {
+        name: VisualType.AVATAR,
+        uri: 'https://old.com/avatar.png',
+      };
       const mockProfile = {
         id: 'profile-1',
         visuals: [avatarVisual],
@@ -223,11 +249,18 @@ describe('ContributorService', () => {
       };
       profileService.getProfileOrFail.mockResolvedValue(mockProfile);
       const mockDocument = { id: 'doc-1' };
-      storageBucketService.ensureAvatarUrlIsDocument.mockResolvedValue(mockDocument);
-      documentService.getPubliclyAccessibleURL.mockReturnValue('https://local.com/avatar.png');
+      storageBucketService.ensureAvatarUrlIsDocument.mockResolvedValue(
+        mockDocument
+      );
+      documentService.getPubliclyAccessibleURL.mockReturnValue(
+        'https://local.com/avatar.png'
+      );
       profileService.save.mockResolvedValue(mockProfile);
 
-      const result = await service.ensureAvatarIsStoredInLocalStorageBucket('profile-1', 'user-1');
+      const result = await service.ensureAvatarIsStoredInLocalStorageBucket(
+        'profile-1',
+        'user-1'
+      );
 
       expect(avatarVisual.uri).toBe('https://local.com/avatar.png');
       expect(profileService.save).toHaveBeenCalledWith(mockProfile);
@@ -244,7 +277,8 @@ describe('ContributorService', () => {
       profileService.save.mockResolvedValue(mockProfile);
 
       // No avatar visual found - will throw internally but catch it
-      const result = await service.ensureAvatarIsStoredInLocalStorageBucket('profile-1');
+      const result =
+        await service.ensureAvatarIsStoredInLocalStorageBucket('profile-1');
 
       expect(profileService.save).toHaveBeenCalledWith(mockProfile);
       expect(result).toBe(mockProfile);
@@ -259,7 +293,8 @@ describe('ContributorService', () => {
       profileService.getProfileOrFail.mockResolvedValue(mockProfile);
       profileService.save.mockResolvedValue(mockProfile);
 
-      const result = await service.ensureAvatarIsStoredInLocalStorageBucket('profile-1');
+      const result =
+        await service.ensureAvatarIsStoredInLocalStorageBucket('profile-1');
 
       expect(profileService.save).toHaveBeenCalled();
       expect(result).toBe(mockProfile);

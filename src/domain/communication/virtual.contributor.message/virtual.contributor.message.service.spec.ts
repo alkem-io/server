@@ -9,7 +9,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { type Mocked, vi } from 'vitest';
+import { type Mocked } from 'vitest';
 import { IRoom } from '../room/room.interface';
 import { RoomLookupService } from '../room-lookup/room.lookup.service';
 import { VirtualContributorMessageService } from './virtual.contributor.message.service';

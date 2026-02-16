@@ -1,6 +1,9 @@
 import { RoleName } from '@common/enums/role.name';
 import { RoleSetType } from '@common/enums/role.set.type';
-import { EntityNotFoundException, ValidationException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  ValidationException,
+} from '@common/exceptions';
 import { RoleSetMembershipException } from '@common/exceptions/role.set.membership.exception';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
@@ -64,9 +67,7 @@ describe('PlatformInvitationService', () => {
     });
 
     it('should throw EntityNotFoundException when platform invitation does not exist', async () => {
-      vi.spyOn(platformInvitationRepository, 'findOne').mockResolvedValue(
-        null
-      );
+      vi.spyOn(platformInvitationRepository, 'findOne').mockResolvedValue(null);
 
       await expect(
         service.getPlatformInvitationOrFail('non-existent')
@@ -272,9 +273,7 @@ describe('PlatformInvitationService', () => {
         createdBy: 'user-1',
       } as any;
 
-      (userLookupService.getUserOrFail as Mock).mockResolvedValue(
-        mockUser
-      );
+      (userLookupService.getUserOrFail as Mock).mockResolvedValue(mockUser);
 
       const result = await service.getCreatedBy(mockInvitation);
 

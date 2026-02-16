@@ -1,5 +1,5 @@
-import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { RelationshipNotFoundException } from '@common/exceptions';
+import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
@@ -11,9 +11,9 @@ import { InputCreatorService } from './input.creator.service';
 
 describe('InputCreatorService', () => {
   let service: InputCreatorService;
-  let calloutService: Record<string, Mock>;
+  let _calloutService: Record<string, Mock>;
   let collaborationService: Record<string, Mock>;
-  let spaceLookupService: Record<string, Mock>;
+  let _spaceLookupService: Record<string, Mock>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -30,16 +30,17 @@ describe('InputCreatorService', () => {
       .compile();
 
     service = module.get(InputCreatorService);
-    calloutService = module.get(CalloutService) as unknown as Record<
+    _calloutService = module.get(CalloutService) as unknown as Record<
       string,
       Mock
     >;
     collaborationService = module.get(
       CollaborationService
     ) as unknown as Record<string, Mock>;
-    spaceLookupService = module.get(
-      SpaceLookupService
-    ) as unknown as Record<string, Mock>;
+    _spaceLookupService = module.get(SpaceLookupService) as unknown as Record<
+      string,
+      Mock
+    >;
   });
 
   describe('buildCreateInnovationFlowStateInputFromInnovationFlowState', () => {
@@ -99,9 +100,7 @@ describe('InputCreatorService', () => {
       } as any;
 
       expect(() =>
-        service.buildCreateInnovationFlowInputFromInnovationFlow(
-          innovationFlow
-        )
+        service.buildCreateInnovationFlowInputFromInnovationFlow(innovationFlow)
       ).toThrow(EntityNotInitializedException);
     });
 
@@ -114,9 +113,7 @@ describe('InputCreatorService', () => {
       } as any;
 
       expect(() =>
-        service.buildCreateInnovationFlowInputFromInnovationFlow(
-          innovationFlow
-        )
+        service.buildCreateInnovationFlowInputFromInnovationFlow(innovationFlow)
       ).toThrow(EntityNotInitializedException);
     });
 
@@ -129,16 +126,26 @@ describe('InputCreatorService', () => {
       } as any;
 
       expect(() =>
-        service.buildCreateInnovationFlowInputFromInnovationFlow(
-          innovationFlow
-        )
+        service.buildCreateInnovationFlowInputFromInnovationFlow(innovationFlow)
       ).toThrow(EntityNotInitializedException);
     });
 
     it('should set currentStateDisplayName from matching state', () => {
       const states = [
-        { id: 'state-1', displayName: 'Active', description: '', settings: {}, sortOrder: 0 },
-        { id: 'state-2', displayName: 'Closed', description: '', settings: {}, sortOrder: 1 },
+        {
+          id: 'state-1',
+          displayName: 'Active',
+          description: '',
+          settings: {},
+          sortOrder: 0,
+        },
+        {
+          id: 'state-2',
+          displayName: 'Closed',
+          description: '',
+          settings: {},
+          sortOrder: 1,
+        },
       ];
       const innovationFlow = {
         id: 'flow-1',
@@ -158,7 +165,13 @@ describe('InputCreatorService', () => {
 
     it('should set currentStateDisplayName to empty string when no matching state found', () => {
       const states = [
-        { id: 'state-1', displayName: 'Active', description: '', settings: {}, sortOrder: 0 },
+        {
+          id: 'state-1',
+          displayName: 'Active',
+          description: '',
+          settings: {},
+          sortOrder: 0,
+        },
       ];
       const innovationFlow = {
         id: 'flow-1',

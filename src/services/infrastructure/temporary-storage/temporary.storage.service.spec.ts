@@ -1,10 +1,10 @@
+import { DocumentService } from '@domain/storage/document/document.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { vi, type Mock } from 'vitest';
+import { type Mock } from 'vitest';
 import { TemporaryStorageService } from './temporary.storage.service';
-import { DocumentService } from '@domain/storage/document/document.service';
 
 describe('TemporaryStorageService', () => {
   let service: TemporaryStorageService;

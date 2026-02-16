@@ -1,5 +1,8 @@
 import { RoomType } from '@common/enums/room.type';
-import { EntityNotFoundException, NotSupportedException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  NotSupportedException,
+} from '@common/exceptions';
 import { Test, TestingModule } from '@nestjs/testing';
 import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';

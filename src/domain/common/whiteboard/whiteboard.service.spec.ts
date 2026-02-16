@@ -1,6 +1,7 @@
+import { ProfileType } from '@common/enums';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
-import { ProfileType } from '@common/enums';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { VisualType } from '@common/enums/visual.type';
 import { WhiteboardPreviewMode } from '@common/enums/whiteboard.preview.mode';
@@ -8,25 +9,24 @@ import {
   EntityNotFoundException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
-import { LicenseService } from '../license/license.service';
-import { ProfileService } from '../profile/profile.service';
-import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
-import { Whiteboard } from './whiteboard.entity';
-import { WhiteboardService } from './whiteboard.service';
+import { ILicense } from '@domain/common/license/license.interface';
+import { IProfile } from '@domain/common/profile/profile.interface';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockType } from '@test/utils/mock.type';
+import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { Repository } from 'typeorm';
+import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
+import { LicenseService } from '../license/license.service';
+import { ProfileService } from '../profile/profile.service';
+import { Whiteboard } from './whiteboard.entity';
 import { IWhiteboard } from './whiteboard.interface';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { ILicense } from '@domain/common/license/license.interface';
-import { IProfile } from '@domain/common/profile/profile.interface';
+import { WhiteboardService } from './whiteboard.service';
 
 describe('WhiteboardService', () => {
   let service: WhiteboardService;
@@ -231,18 +231,16 @@ describe('WhiteboardService', () => {
       vi.mocked(profileService.deleteProfile).mockResolvedValue(
         whiteboard.profile as any
       );
-      vi.mocked(authorizationPolicyService.delete).mockResolvedValue(
-        {} as any
-      );
+      vi.mocked(authorizationPolicyService.delete).mockResolvedValue({} as any);
 
       const result = await service.deleteWhiteboard('wb-1');
 
       expect(vi.mocked(profileService.deleteProfile)).toHaveBeenCalledWith(
         'profile-1'
       );
-      expect(
-        vi.mocked(authorizationPolicyService.delete)
-      ).toHaveBeenCalledWith(whiteboard.authorization);
+      expect(vi.mocked(authorizationPolicyService.delete)).toHaveBeenCalledWith(
+        whiteboard.authorization
+      );
       expect(whiteboardRepository.remove).toHaveBeenCalledWith(whiteboard);
       expect(result.id).toBe('wb-1');
     });

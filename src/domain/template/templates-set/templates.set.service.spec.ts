@@ -4,22 +4,22 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
-import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { type Mocked, vi } from 'vitest';
 import { Repository } from 'typeorm';
-import { TemplateService } from '../template/template.service';
+import { type Mocked, vi } from 'vitest';
 import { ITemplate } from '../template/template.interface';
+import { TemplateService } from '../template/template.service';
 import { TemplatesSet } from './templates.set.entity';
-import { TemplatesSetService } from './templates.set.service';
 import { ITemplatesSet } from './templates.set.interface';
+import { TemplatesSetService } from './templates.set.service';
 
 describe('TemplatesSetService', () => {
   let service: TemplatesSetService;
@@ -50,9 +50,9 @@ describe('TemplatesSetService', () => {
       .compile();
 
     service = module.get(TemplatesSetService);
-    repository = module.get(
-      getRepositoryToken(TemplatesSet)
-    ) as Mocked<Repository<TemplatesSet>>;
+    repository = module.get(getRepositoryToken(TemplatesSet)) as Mocked<
+      Repository<TemplatesSet>
+    >;
     templateService = module.get(TemplateService) as Mocked<TemplateService>;
     namingService = module.get(NamingService) as Mocked<NamingService>;
     inputCreatorService = module.get(
@@ -103,9 +103,9 @@ describe('TemplatesSetService', () => {
         .spyOn(TemplatesSet, 'findOne')
         .mockResolvedValue(null);
 
-      await expect(
-        service.getTemplatesSetOrFail('missing')
-      ).rejects.toThrow(EntityNotFoundException);
+      await expect(service.getTemplatesSetOrFail('missing')).rejects.toThrow(
+        EntityNotFoundException
+      );
 
       findOneSpy.mockRestore();
     });
@@ -336,10 +336,10 @@ describe('TemplatesSetService', () => {
   describe('getTemplatesCount', () => {
     it('should sum counts across all template types', async () => {
       templateService.getCountInTemplatesSet
-        .mockResolvedValueOnce(3)  // WHITEBOARD
-        .mockResolvedValueOnce(2)  // POST
-        .mockResolvedValueOnce(1)  // SPACE
-        .mockResolvedValueOnce(4)  // CALLOUT
+        .mockResolvedValueOnce(3) // WHITEBOARD
+        .mockResolvedValueOnce(2) // POST
+        .mockResolvedValueOnce(1) // SPACE
+        .mockResolvedValueOnce(4) // CALLOUT
         .mockResolvedValueOnce(0); // COMMUNITY_GUIDELINES
 
       const result = await service.getTemplatesCount('ts-1');
@@ -394,7 +394,9 @@ describe('TemplatesSetService', () => {
       const expected = [{ id: 'tpl-1' }] as any;
       templateService.getTemplatesInTemplatesSet.mockResolvedValue(expected);
 
-      const result = await service.getTemplates({ id: 'ts-1' } as ITemplatesSet);
+      const result = await service.getTemplates({
+        id: 'ts-1',
+      } as ITemplatesSet);
 
       expect(result).toBe(expected);
       expect(templateService.getTemplatesInTemplatesSet).toHaveBeenCalledWith(

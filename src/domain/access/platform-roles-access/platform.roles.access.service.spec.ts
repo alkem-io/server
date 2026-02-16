@@ -1,7 +1,4 @@
-import {
-  AuthorizationCredential,
-  AuthorizationPrivilege,
-} from '@common/enums';
+import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { RoleName } from '@common/enums/role.name';
 import { NotImplementedException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -80,9 +77,7 @@ describe('PlatformRolesAccessService', () => {
       expect(result).toHaveLength(2);
       const credentialTypes = result.map(c => c.type);
       expect(credentialTypes).toContain(AuthorizationCredential.GLOBAL_ADMIN);
-      expect(credentialTypes).toContain(
-        AuthorizationCredential.GLOBAL_SUPPORT
-      );
+      expect(credentialTypes).toContain(AuthorizationCredential.GLOBAL_SUPPORT);
     });
 
     it('should return empty array when no roles match the allowed privileges', () => {
@@ -102,9 +97,10 @@ describe('PlatformRolesAccessService', () => {
     });
 
     it('should return empty array when there are no platform access roles', () => {
-      const result = service.getCredentialsForRolesWithAccess([], [
-        AuthorizationPrivilege.READ,
-      ]);
+      const result = service.getCredentialsForRolesWithAccess(
+        [],
+        [AuthorizationPrivilege.READ]
+      );
 
       expect(result).toEqual([]);
     });
@@ -133,10 +129,7 @@ describe('PlatformRolesAccessService', () => {
           RoleName.GLOBAL_SPACES_READER,
           AuthorizationCredential.GLOBAL_SPACES_READER,
         ],
-        [
-          RoleName.PLATFORM_BETA_TESTER,
-          AuthorizationCredential.BETA_TESTER,
-        ],
+        [RoleName.PLATFORM_BETA_TESTER, AuthorizationCredential.BETA_TESTER],
         [RoleName.PLATFORM_VC_CAMPAIGN, AuthorizationCredential.VC_CAMPAIGN],
         [RoleName.REGISTERED, AuthorizationCredential.GLOBAL_REGISTERED],
         [RoleName.GUEST, AuthorizationCredential.GLOBAL_GUEST],

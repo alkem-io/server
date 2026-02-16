@@ -1,10 +1,10 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
-import { MockCacheManager } from '@test/mocks/cache-manager.mock';
-import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { DomainPlatformSettingsService } from './domain.platform.settings.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
+import { Test, TestingModule } from '@nestjs/testing';
+import { MockCacheManager } from '@test/mocks/cache-manager.mock';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
+import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { type Mock, vi } from 'vitest';
+import { DomainPlatformSettingsService } from './domain.platform.settings.service';
 
 describe('DomainPlatformSettingsService', () => {
   let service: DomainPlatformSettingsService;
@@ -12,13 +12,20 @@ describe('DomainPlatformSettingsService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [DomainPlatformSettingsService, MockWinstonProvider, MockCacheManager],
+      providers: [
+        DomainPlatformSettingsService,
+        MockWinstonProvider,
+        MockCacheManager,
+      ],
     })
       .useMocker(defaultMockerFactory)
       .compile();
 
     service = module.get(DomainPlatformSettingsService);
-    organizationService = module.get(OrganizationService) as unknown as Record<string, Mock>;
+    organizationService = module.get(OrganizationService) as unknown as Record<
+      string,
+      Mock
+    >;
   });
 
   describe('updateOrganizationPlatformSettings', () => {
@@ -26,12 +33,22 @@ describe('DomainPlatformSettingsService', () => {
       const organization = { nameID: 'old-name', id: 'org-1' } as any;
       const inputData = { nameID: 'new-name' } as any;
 
-      vi.mocked(organizationService.checkNameIdOrFail).mockResolvedValue(undefined);
-      vi.mocked(organizationService.save).mockResolvedValue({ ...organization, nameID: 'new-name' });
+      vi.mocked(organizationService.checkNameIdOrFail).mockResolvedValue(
+        undefined
+      );
+      vi.mocked(organizationService.save).mockResolvedValue({
+        ...organization,
+        nameID: 'new-name',
+      });
 
-      const result = await service.updateOrganizationPlatformSettings(organization, inputData);
+      const result = await service.updateOrganizationPlatformSettings(
+        organization,
+        inputData
+      );
 
-      expect(organizationService.checkNameIdOrFail).toHaveBeenCalledWith('new-name');
+      expect(organizationService.checkNameIdOrFail).toHaveBeenCalledWith(
+        'new-name'
+      );
       expect(organization.nameID).toBe('new-name');
       expect(organizationService.save).toHaveBeenCalledWith(organization);
       expect(result.nameID).toBe('new-name');
@@ -79,8 +96,13 @@ describe('DomainPlatformSettingsService', () => {
       const organization = { nameID: 'ABC', id: 'org-1' } as any;
       const inputData = { nameID: 'XYZ' } as any;
 
-      vi.mocked(organizationService.checkNameIdOrFail).mockResolvedValue(undefined);
-      vi.mocked(organizationService.save).mockResolvedValue({ ...organization, nameID: 'XYZ' });
+      vi.mocked(organizationService.checkNameIdOrFail).mockResolvedValue(
+        undefined
+      );
+      vi.mocked(organizationService.save).mockResolvedValue({
+        ...organization,
+        nameID: 'XYZ',
+      });
 
       await service.updateOrganizationPlatformSettings(organization, inputData);
 

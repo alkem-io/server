@@ -1,18 +1,18 @@
 import { SpaceLevel } from '@common/enums/space.level';
-import { SpaceService } from '@domain/space/space/space.service';
-import { UserService } from '@domain/community/user/user.service';
+import { PaginationArgs } from '@core/pagination/pagination.args';
 import { OrganizationService } from '@domain/community/organization/organization.service';
+import { UserService } from '@domain/community/user/user.service';
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
+import { SpaceService } from '@domain/space/space/space.service';
 import { LibraryService } from '@library/library/library.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getEntityManagerToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { In } from 'typeorm';
 import { type Mock, vi } from 'vitest';
 import { PlatformAdminService } from './platform.admin.service';
-import { PaginationArgs } from '@core/pagination/pagination.args';
-import { In } from 'typeorm';
 
 describe('PlatformAdminService', () => {
   let service: PlatformAdminService;
@@ -146,7 +146,9 @@ describe('PlatformAdminService', () => {
       paginationArgs.first = 10;
       vi.mocked(userService.getPaginatedUsers).mockResolvedValue({} as any);
 
-      await service.getAllUsers(paginationArgs, true, { email: 'test@x.com' } as any);
+      await service.getAllUsers(paginationArgs, true, {
+        email: 'test@x.com',
+      } as any);
 
       expect(userService.getPaginatedUsers).toHaveBeenCalledWith(
         paginationArgs,
@@ -158,7 +160,9 @@ describe('PlatformAdminService', () => {
 
   describe('getAllVirtualContributors', () => {
     it('should create new ContributorQueryArgs when none provided', async () => {
-      vi.mocked(virtualContributorService.getVirtualContributors).mockResolvedValue([]);
+      vi.mocked(
+        virtualContributorService.getVirtualContributors
+      ).mockResolvedValue([]);
 
       await service.getAllVirtualContributors();
 
@@ -169,7 +173,9 @@ describe('PlatformAdminService', () => {
 
     it('should forward args when provided', async () => {
       const args = { first: 5 } as any;
-      vi.mocked(virtualContributorService.getVirtualContributors).mockResolvedValue([]);
+      vi.mocked(
+        virtualContributorService.getVirtualContributors
+      ).mockResolvedValue([]);
 
       await service.getAllVirtualContributors(args);
 
@@ -197,7 +203,9 @@ describe('PlatformAdminService', () => {
 
     it('should pass undefined limit and orderBy when args are not provided', async () => {
       mockEntityManager.find.mockResolvedValue([]);
-      vi.mocked(libraryService.sortAndFilterInnovationPacks).mockResolvedValue([]);
+      vi.mocked(libraryService.sortAndFilterInnovationPacks).mockResolvedValue(
+        []
+      );
 
       await service.getAllInnovationPacks();
 

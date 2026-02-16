@@ -303,9 +303,9 @@ describe('AiPersonaService', () => {
     it('should throw EntityNotFoundException when persona not found', async () => {
       aiPersonaRepository.findOne.mockResolvedValue(null);
 
-      await expect(
-        service.getAiPersonaOrFail('nonexistent')
-      ).rejects.toThrow(EntityNotFoundException);
+      await expect(service.getAiPersonaOrFail('nonexistent')).rejects.toThrow(
+        EntityNotFoundException
+      );
     });
 
     it('should pass options to repository', async () => {
@@ -484,9 +484,7 @@ describe('AiPersonaService', () => {
 
       await service.invoke(invocationInput, []);
 
-      expect(encryptionService.decrypt).toHaveBeenCalledWith(
-        'encrypted:mykey'
-      );
+      expect(encryptionService.decrypt).toHaveBeenCalledWith('encrypted:mykey');
       expect(encryptionService.decrypt).toHaveBeenCalledWith(
         'encrypted:myasst'
       );

@@ -1,8 +1,3 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { MockCacheManager } from '@test/mocks/cache-manager.mock';
-import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
-import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
@@ -12,21 +7,26 @@ import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { ClassificationService } from '@domain/common/classification/classification.service';
+import { RoomService } from '@domain/communication/room/room.service';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { NamingService } from '@services/infrastructure/naming/naming.service';
+import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
+import { MockCacheManager } from '@test/mocks/cache-manager.mock';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
+import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { Repository } from 'typeorm';
+import { type Mock, vi } from 'vitest';
+import { CalloutContributionService } from '../callout-contribution/callout.contribution.service';
+import { CalloutContributionDefaultsService } from '../callout-contribution-defaults/callout.contribution.defaults.service';
+import { CalloutFramingService } from '../callout-framing/callout.framing.service';
 import { Callout } from './callout.entity';
 import { ICallout } from './callout.interface';
 import { CalloutService } from './callout.service';
-import { CalloutFramingService } from '../callout-framing/callout.framing.service';
-import { CalloutContributionDefaultsService } from '../callout-contribution-defaults/callout.contribution.defaults.service';
-import { CalloutContributionService } from '../callout-contribution/callout.contribution.service';
-import { RoomService } from '@domain/communication/room/room.service';
-import { NamingService } from '@services/infrastructure/naming/naming.service';
-import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { ClassificationService } from '@domain/common/classification/classification.service';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
-import { Repository } from 'typeorm';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { type Mock, vi } from 'vitest';
 
 describe('CalloutService', () => {
   let service: CalloutService;
@@ -35,11 +35,11 @@ describe('CalloutService', () => {
   let contributionDefaultsService: CalloutContributionDefaultsService;
   let contributionService: CalloutContributionService;
   let roomService: RoomService;
-  let namingService: NamingService;
+  let _namingService: NamingService;
   let userLookupService: UserLookupService;
   let classificationService: ClassificationService;
   let authorizationPolicyService: AuthorizationPolicyService;
-  let storageAggregatorResolverService: StorageAggregatorResolverService;
+  let _storageAggregatorResolverService: StorageAggregatorResolverService;
 
   beforeEach(async () => {
     // Mock static Callout.create to avoid DataSource requirement
@@ -68,11 +68,11 @@ describe('CalloutService', () => {
     );
     contributionService = module.get(CalloutContributionService);
     roomService = module.get(RoomService);
-    namingService = module.get(NamingService);
+    _namingService = module.get(NamingService);
     userLookupService = module.get(UserLookupService);
     classificationService = module.get(ClassificationService);
     authorizationPolicyService = module.get(AuthorizationPolicyService);
-    storageAggregatorResolverService = module.get(
+    _storageAggregatorResolverService = module.get(
       StorageAggregatorResolverService
     );
   });
@@ -182,9 +182,7 @@ describe('CalloutService', () => {
         'user-1'
       );
 
-      expect(
-        contributionService.createCalloutContributions
-      ).toHaveBeenCalled();
+      expect(contributionService.createCalloutContributions).toHaveBeenCalled();
       expect(result.contributions).toHaveLength(1);
     });
 
@@ -197,7 +195,7 @@ describe('CalloutService', () => {
         id: 'room-1',
       } as any);
 
-      const result = await service.createCallout(
+      const _result = await service.createCallout(
         calloutData,
         tagsetTemplates,
         storageAggregator,
@@ -220,11 +218,7 @@ describe('CalloutService', () => {
       });
 
       await expect(
-        service.createCallout(
-          calloutData,
-          tagsetTemplates,
-          storageAggregator
-        )
+        service.createCallout(calloutData, tagsetTemplates, storageAggregator)
       ).rejects.toThrow(ValidationException);
     });
 
@@ -239,11 +233,7 @@ describe('CalloutService', () => {
       });
 
       await expect(
-        service.createCallout(
-          calloutData,
-          tagsetTemplates,
-          storageAggregator
-        )
+        service.createCallout(calloutData, tagsetTemplates, storageAggregator)
       ).rejects.toThrow(ValidationException);
     });
 
@@ -258,11 +248,7 @@ describe('CalloutService', () => {
       });
 
       await expect(
-        service.createCallout(
-          calloutData,
-          tagsetTemplates,
-          storageAggregator
-        )
+        service.createCallout(calloutData, tagsetTemplates, storageAggregator)
       ).rejects.toThrow(ValidationException);
     });
   });
@@ -298,7 +284,7 @@ describe('CalloutService', () => {
       await service.updateCalloutVisibility({
         calloutID: 'callout-1',
         visibility: CalloutVisibility.PUBLISHED,
-      });
+      } as any);
 
       expect(callout.settings.visibility).toBe(CalloutVisibility.PUBLISHED);
       expect(repository.save).toHaveBeenCalled();
@@ -339,11 +325,7 @@ describe('CalloutService', () => {
 
       vi.mocked(repository.save).mockResolvedValue(callout);
 
-      await service.updateCalloutPublishInfo(
-        callout,
-        undefined,
-        timestamp
-      );
+      await service.updateCalloutPublishInfo(callout, undefined, timestamp);
 
       expect(callout.publishedDate).toBeInstanceOf(Date);
       expect(callout.publishedDate?.getTime()).toBe(timestamp);
@@ -494,7 +476,7 @@ describe('CalloutService', () => {
 
       const result = await service.updateContributionCalloutsSortOrder(
         'callout-1',
-        { contributionIDs: ['c-3', 'c-1', 'c-2'] }
+        { contributionIDs: ['c-3', 'c-1', 'c-2'] } as any
       );
 
       expect(result[0].sortOrder).toBe(1);
@@ -513,7 +495,7 @@ describe('CalloutService', () => {
       await expect(
         service.updateContributionCalloutsSortOrder('callout-1', {
           contributionIDs: ['c-1', 'nonexistent'],
-        })
+        } as any)
       ).rejects.toThrow(EntityNotFoundException);
     });
   });
@@ -603,11 +585,7 @@ describe('CalloutService', () => {
         ...callout,
         comments: { id: 'room-1' },
       });
-      vi.mocked(roomService.getMessages).mockResolvedValue([
-        {},
-        {},
-        {},
-      ] as any);
+      vi.mocked(roomService.getMessages).mockResolvedValue([{}, {}, {}] as any);
 
       const result = await service.getActivityCount(callout);
 
@@ -782,7 +760,7 @@ describe('CalloutService', () => {
       const comment2 = makeCommentCallout('c-2');
 
       (roomService.getMessages as Mock).mockImplementation(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 10));
+        await new Promise(resolve => setTimeout(resolve, 10));
         return [{ id: 'msg' }];
       });
 

@@ -1,17 +1,17 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
-import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { MockType } from '@test/utils/mock.type';
-import { Repository } from 'typeorm';
-import { Discussion } from './discussion.entity';
-import { DiscussionService } from './discussion.service';
 import { EntityNotFoundException } from '@common/exceptions';
 import { ProfileService } from '@domain/common/profile/profile.service';
-import { RoomService } from '../../domain/communication/room/room.service';
-import { IDiscussion } from './discussion.interface';
+import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
+import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { MockType } from '@test/utils/mock.type';
+import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { Repository } from 'typeorm';
 import { vi } from 'vitest';
+import { RoomService } from '../../domain/communication/room/room.service';
+import { Discussion } from './discussion.entity';
+import { IDiscussion } from './discussion.interface';
+import { DiscussionService } from './discussion.service';
 
 describe('DiscussionService', () => {
   let service: DiscussionService;
@@ -178,7 +178,10 @@ describe('DiscussionService', () => {
   describe('getComments', () => {
     it('should return the comments room when present', async () => {
       const room = { id: 'room-1' };
-      const discussion = { id: 'disc-1', comments: room } as unknown as Discussion;
+      const discussion = {
+        id: 'disc-1',
+        comments: room,
+      } as unknown as Discussion;
       discussionRepository.findOne!.mockResolvedValue(discussion);
 
       const result = await service.getComments('disc-1');
@@ -187,7 +190,10 @@ describe('DiscussionService', () => {
     });
 
     it('should throw EntityNotFoundException when comments room is missing', async () => {
-      const discussion = { id: 'disc-1', comments: undefined } as unknown as Discussion;
+      const discussion = {
+        id: 'disc-1',
+        comments: undefined,
+      } as unknown as Discussion;
       discussionRepository.findOne!.mockResolvedValue(discussion);
 
       await expect(service.getComments('disc-1')).rejects.toThrow(

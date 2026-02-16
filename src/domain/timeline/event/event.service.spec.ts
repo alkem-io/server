@@ -1,9 +1,9 @@
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { CalendarEventType } from '@common/enums/calendar.event.type';
 import { ProfileType } from '@common/enums/profile.type';
 import { RoomType } from '@common/enums/room.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
@@ -94,8 +94,8 @@ describe('CalendarEventService', () => {
         .fn()
         .mockResolvedValue(undefined);
       roomService.createRoom = vi.fn().mockResolvedValue(mockRoom);
-      vi.spyOn(calendarEventRepository, 'save').mockImplementation(
-        entity => Promise.resolve(entity as CalendarEvent)
+      vi.spyOn(calendarEventRepository, 'save').mockImplementation(entity =>
+        Promise.resolve(entity as CalendarEvent)
       );
 
       // Act
@@ -126,8 +126,8 @@ describe('CalendarEventService', () => {
         .fn()
         .mockResolvedValue(undefined);
       roomService.createRoom = vi.fn().mockResolvedValue({ id: 'room-1' });
-      vi.spyOn(calendarEventRepository, 'save').mockImplementation(
-        entity => Promise.resolve(entity as CalendarEvent)
+      vi.spyOn(calendarEventRepository, 'save').mockImplementation(entity =>
+        Promise.resolve(entity as CalendarEvent)
       );
 
       // Act
@@ -152,8 +152,8 @@ describe('CalendarEventService', () => {
         .fn()
         .mockResolvedValue(undefined);
       roomService.createRoom = vi.fn().mockResolvedValue({ id: 'room-1' });
-      vi.spyOn(calendarEventRepository, 'save').mockImplementation(
-        entity => Promise.resolve(entity as CalendarEvent)
+      vi.spyOn(calendarEventRepository, 'save').mockImplementation(entity =>
+        Promise.resolve(entity as CalendarEvent)
       );
 
       // Act
@@ -180,8 +180,8 @@ describe('CalendarEventService', () => {
         .fn()
         .mockResolvedValue(undefined);
       roomService.createRoom = vi.fn().mockResolvedValue({ id: 'room-1' });
-      vi.spyOn(calendarEventRepository, 'save').mockImplementation(
-        entity => Promise.resolve(entity as CalendarEvent)
+      vi.spyOn(calendarEventRepository, 'save').mockImplementation(entity =>
+        Promise.resolve(entity as CalendarEvent)
       );
 
       // Act
@@ -208,8 +208,8 @@ describe('CalendarEventService', () => {
         .fn()
         .mockResolvedValue(undefined);
       roomService.createRoom = vi.fn().mockResolvedValue({ id: 'room-1' });
-      vi.spyOn(calendarEventRepository, 'save').mockImplementation(
-        entity => Promise.resolve(entity as CalendarEvent)
+      vi.spyOn(calendarEventRepository, 'save').mockImplementation(entity =>
+        Promise.resolve(entity as CalendarEvent)
       );
 
       // Act
@@ -233,8 +233,8 @@ describe('CalendarEventService', () => {
         .fn()
         .mockResolvedValue(undefined);
       roomService.createRoom = vi.fn().mockResolvedValue({ id: 'room-1' });
-      vi.spyOn(calendarEventRepository, 'save').mockImplementation(
-        entity => Promise.resolve(entity as CalendarEvent)
+      vi.spyOn(calendarEventRepository, 'save').mockImplementation(entity =>
+        Promise.resolve(entity as CalendarEvent)
       );
 
       // Act
@@ -259,9 +259,7 @@ describe('CalendarEventService', () => {
         comments: mockComments,
       } as unknown as CalendarEvent;
 
-      vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(
-        mockEvent
-      );
+      vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(mockEvent);
       vi.spyOn(calendarEventRepository, 'remove').mockResolvedValue({
         ...mockEvent,
         id: undefined as any,
@@ -277,9 +275,7 @@ describe('CalendarEventService', () => {
       expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
         mockAuthorization
       );
-      expect(profileService.deleteProfile).toHaveBeenCalledWith(
-        mockProfile.id
-      );
+      expect(profileService.deleteProfile).toHaveBeenCalledWith(mockProfile.id);
       expect(roomService.deleteRoom).toHaveBeenCalledWith({
         roomID: mockComments.id,
       });
@@ -297,9 +293,7 @@ describe('CalendarEventService', () => {
         comments: undefined,
       } as unknown as CalendarEvent;
 
-      vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(
-        mockEvent
-      );
+      vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(mockEvent);
       vi.spyOn(calendarEventRepository, 'remove').mockResolvedValue({
         ...mockEvent,
         id: undefined as any,
@@ -322,12 +316,8 @@ describe('CalendarEventService', () => {
         comments: { id: 'room-1' },
       } as unknown as CalendarEvent;
 
-      vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(
-        mockEvent
-      );
-      vi.spyOn(calendarEventRepository, 'remove').mockResolvedValue(
-        mockEvent
-      );
+      vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(mockEvent);
+      vi.spyOn(calendarEventRepository, 'remove').mockResolvedValue(mockEvent);
       authorizationPolicyService.delete = vi.fn();
       profileService.deleteProfile = vi.fn().mockResolvedValue(undefined);
       roomService.deleteRoom = vi.fn().mockResolvedValue(undefined);
@@ -349,12 +339,8 @@ describe('CalendarEventService', () => {
         comments: { id: 'room-1' },
       } as unknown as CalendarEvent;
 
-      vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(
-        mockEvent
-      );
-      vi.spyOn(calendarEventRepository, 'remove').mockResolvedValue(
-        mockEvent
-      );
+      vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(mockEvent);
+      vi.spyOn(calendarEventRepository, 'remove').mockResolvedValue(mockEvent);
       authorizationPolicyService.delete = vi.fn().mockResolvedValue(undefined);
       profileService.deleteProfile = vi.fn();
       roomService.deleteRoom = vi.fn().mockResolvedValue(undefined);
@@ -376,12 +362,8 @@ describe('CalendarEventService', () => {
         comments: undefined,
       } as unknown as CalendarEvent;
 
-      vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(
-        mockEvent
-      );
-      vi.spyOn(calendarEventRepository, 'remove').mockResolvedValue(
-        mockEvent
-      );
+      vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(mockEvent);
+      vi.spyOn(calendarEventRepository, 'remove').mockResolvedValue(mockEvent);
       authorizationPolicyService.delete = vi.fn().mockResolvedValue(undefined);
       profileService.deleteProfile = vi.fn().mockResolvedValue(undefined);
       roomService.deleteRoom = vi.fn();
@@ -409,9 +391,7 @@ describe('CalendarEventService', () => {
       // Arrange
       const eventId = 'event-1';
       const mockEvent = { id: eventId } as CalendarEvent;
-      vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(
-        mockEvent
-      );
+      vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(mockEvent);
 
       // Act
       const result = await service.getCalendarEventOrFail(eventId);
@@ -432,9 +412,7 @@ describe('CalendarEventService', () => {
         profile: { id: 'p-1' },
         comments: { id: 'r-1' },
       } as unknown as CalendarEvent;
-      vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(
-        mockEvent
-      );
+      vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(mockEvent);
 
       // Act
       const result = await service.getCalendarEventOrFail(eventId, options);
@@ -494,11 +472,9 @@ describe('CalendarEventService', () => {
         comments: { id: 'room-1' },
       } as unknown as CalendarEvent;
 
-      vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(
-        mockEvent
-      );
-      vi.spyOn(calendarEventRepository, 'save').mockImplementation(
-        entity => Promise.resolve(entity as CalendarEvent)
+      vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(mockEvent);
+      vi.spyOn(calendarEventRepository, 'save').mockImplementation(entity =>
+        Promise.resolve(entity as CalendarEvent)
       );
 
       // Act
@@ -536,11 +512,9 @@ describe('CalendarEventService', () => {
         comments: { id: 'room-1' },
       } as unknown as CalendarEvent;
 
-      vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(
-        mockEvent
-      );
-      vi.spyOn(calendarEventRepository, 'save').mockImplementation(
-        entity => Promise.resolve(entity as CalendarEvent)
+      vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(mockEvent);
+      vi.spyOn(calendarEventRepository, 'save').mockImplementation(entity =>
+        Promise.resolve(entity as CalendarEvent)
       );
       profileService.updateProfile = vi.fn().mockResolvedValue(updatedProfile);
 
@@ -567,14 +541,12 @@ describe('CalendarEventService', () => {
         comments: { id: 'room-1' },
       } as unknown as CalendarEvent;
 
-      vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(
-        mockEvent
-      );
+      vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(mockEvent);
 
       // Act & Assert
-      await expect(
-        service.updateCalendarEvent(updateInput)
-      ).rejects.toThrow(EntityNotFoundException);
+      await expect(service.updateCalendarEvent(updateInput)).rejects.toThrow(
+        EntityNotFoundException
+      );
     });
 
     it('should sync room display name when displayName changes and comments room exists', async () => {
@@ -596,11 +568,9 @@ describe('CalendarEventService', () => {
         comments: { id: 'room-1' },
       } as unknown as CalendarEvent;
 
-      vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(
-        mockEvent
-      );
-      vi.spyOn(calendarEventRepository, 'save').mockImplementation(
-        entity => Promise.resolve(entity as CalendarEvent)
+      vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(mockEvent);
+      vi.spyOn(calendarEventRepository, 'save').mockImplementation(entity =>
+        Promise.resolve(entity as CalendarEvent)
       );
       roomService.updateRoomDisplayName = vi.fn().mockResolvedValue(undefined);
       profileService.updateProfile = vi
@@ -636,11 +606,9 @@ describe('CalendarEventService', () => {
         comments: { id: 'room-1' },
       } as unknown as CalendarEvent;
 
-      vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(
-        mockEvent
-      );
-      vi.spyOn(calendarEventRepository, 'save').mockImplementation(
-        entity => Promise.resolve(entity as CalendarEvent)
+      vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(mockEvent);
+      vi.spyOn(calendarEventRepository, 'save').mockImplementation(entity =>
+        Promise.resolve(entity as CalendarEvent)
       );
       roomService.updateRoomDisplayName = vi.fn();
       profileService.updateProfile = vi
@@ -673,11 +641,9 @@ describe('CalendarEventService', () => {
         comments: undefined,
       } as unknown as CalendarEvent;
 
-      vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(
-        mockEvent
-      );
-      vi.spyOn(calendarEventRepository, 'save').mockImplementation(
-        entity => Promise.resolve(entity as CalendarEvent)
+      vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(mockEvent);
+      vi.spyOn(calendarEventRepository, 'save').mockImplementation(entity =>
+        Promise.resolve(entity as CalendarEvent)
       );
       roomService.updateRoomDisplayName = vi.fn();
       profileService.updateProfile = vi
@@ -710,11 +676,9 @@ describe('CalendarEventService', () => {
         comments: { id: 'room-1' },
       } as unknown as CalendarEvent;
 
-      vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(
-        mockEvent
-      );
-      vi.spyOn(calendarEventRepository, 'save').mockImplementation(
-        entity => Promise.resolve(entity as CalendarEvent)
+      vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(mockEvent);
+      vi.spyOn(calendarEventRepository, 'save').mockImplementation(entity =>
+        Promise.resolve(entity as CalendarEvent)
       );
 
       // Act
@@ -741,11 +705,9 @@ describe('CalendarEventService', () => {
         comments: { id: 'room-1' },
       } as unknown as CalendarEvent;
 
-      vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(
-        mockEvent
-      );
-      vi.spyOn(calendarEventRepository, 'save').mockImplementation(
-        entity => Promise.resolve(entity as CalendarEvent)
+      vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(mockEvent);
+      vi.spyOn(calendarEventRepository, 'save').mockImplementation(entity =>
+        Promise.resolve(entity as CalendarEvent)
       );
 
       // Act
@@ -761,9 +723,9 @@ describe('CalendarEventService', () => {
       vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(null);
 
       // Act & Assert
-      await expect(
-        service.updateCalendarEvent(updateInput)
-      ).rejects.toThrow(EntityNotFoundException);
+      await expect(service.updateCalendarEvent(updateInput)).rejects.toThrow(
+        EntityNotFoundException
+      );
     });
   });
 
@@ -776,9 +738,7 @@ describe('CalendarEventService', () => {
         profile: mockProfile,
       } as unknown as CalendarEvent;
 
-      vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(
-        mockEvent
-      );
+      vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(mockEvent);
 
       const inputEvent = { id: 'event-1' } as ICalendarEvent;
 
@@ -796,9 +756,7 @@ describe('CalendarEventService', () => {
         profile: undefined,
       } as unknown as CalendarEvent;
 
-      vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(
-        mockEvent
-      );
+      vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(mockEvent);
 
       const inputEvent = { id: 'event-1' } as ICalendarEvent;
 
@@ -818,9 +776,7 @@ describe('CalendarEventService', () => {
         comments: mockComments,
       } as unknown as CalendarEvent;
 
-      vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(
-        mockEvent
-      );
+      vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(mockEvent);
 
       // Act
       const result = await service.getComments('event-1');
@@ -836,9 +792,7 @@ describe('CalendarEventService', () => {
         comments: undefined,
       } as unknown as CalendarEvent;
 
-      vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(
-        mockEvent
-      );
+      vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(mockEvent);
 
       // Act & Assert
       await expect(service.getComments('event-1')).rejects.toThrow(

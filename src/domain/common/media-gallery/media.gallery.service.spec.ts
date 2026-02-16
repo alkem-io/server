@@ -1,23 +1,23 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { MockCacheManager } from '@test/mocks/cache-manager.mock';
-import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
-import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { MockType } from '@test/utils/mock.type';
-import { Repository } from 'typeorm';
-import { MediaGallery } from './media.gallery.entity';
-import { MediaGalleryService } from './media.gallery.service';
+import { VisualType } from '@common/enums/visual.type';
 import {
   EntityNotFoundException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
-import { VisualType } from '@common/enums/visual.type';
-import { VisualService } from '../visual/visual.service';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
+import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { MockCacheManager } from '@test/mocks/cache-manager.mock';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
+import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { MockType } from '@test/utils/mock.type';
+import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { Repository } from 'typeorm';
+import { type Mock } from 'vitest';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
-import { IMediaGallery } from './media.gallery.interface';
 import { Visual } from '../visual/visual.entity';
+import { VisualService } from '../visual/visual.service';
+import { MediaGallery } from './media.gallery.entity';
+import { MediaGalleryService } from './media.gallery.service';
 
 describe('MediaGalleryService', () => {
   let service: MediaGalleryService;
@@ -65,9 +65,9 @@ describe('MediaGalleryService', () => {
     it('should throw EntityNotFoundException when not found', async () => {
       mediaGalleryRepository.findOne!.mockResolvedValue(null);
 
-      await expect(
-        service.getMediaGalleryOrFail('missing')
-      ).rejects.toThrow(EntityNotFoundException);
+      await expect(service.getMediaGalleryOrFail('missing')).rejects.toThrow(
+        EntityNotFoundException
+      );
     });
 
     it('should sort visuals by sortOrder ascending', async () => {
@@ -233,9 +233,7 @@ describe('MediaGalleryService', () => {
       (storageBucketService.deleteStorageBucket as Mock).mockResolvedValue(
         {} as any
       );
-      (authorizationPolicyService.delete as Mock).mockResolvedValue(
-        {} as any
-      );
+      (authorizationPolicyService.delete as Mock).mockResolvedValue({} as any);
 
       const result = await service.deleteMediaGallery('mg-1');
 

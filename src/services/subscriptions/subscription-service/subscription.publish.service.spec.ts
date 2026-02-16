@@ -1,10 +1,6 @@
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { MutationType } from '@common/enums/subscriptions';
 import { Test, TestingModule } from '@nestjs/testing';
-import { MockCacheManager } from '@test/mocks/cache-manager.mock';
-import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
-import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { vi, type Mock } from 'vitest';
 import {
   SUBSCRIPTION_ACTIVITY_CREATED,
   SUBSCRIPTION_CONVERSATION_EVENT,
@@ -13,6 +9,10 @@ import {
   SUBSCRIPTION_ROOM_EVENT,
   SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED,
 } from '@src/common/constants';
+import { MockCacheManager } from '@test/mocks/cache-manager.mock';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
+import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { type Mock, vi } from 'vitest';
 import { SubscriptionPublishService } from './subscription.publish.service';
 
 describe('SubscriptionPublishService', () => {
@@ -90,11 +90,7 @@ describe('SubscriptionPublishService', () => {
       const room = { id: 'room-1' } as any;
       const messageData = { id: 'msg-1', message: 'Hello world' } as any;
 
-      await service.publishRoomEvent(
-        room,
-        MutationType.CREATE,
-        messageData
-      );
+      await service.publishRoomEvent(room, MutationType.CREATE, messageData);
 
       expect(roomPubSub.publish).toHaveBeenCalledWith(
         SubscriptionType.ROOM_EVENTS,
@@ -114,7 +110,11 @@ describe('SubscriptionPublishService', () => {
 
     it('should publish a reaction event when data is an IMessageReaction (no message property)', async () => {
       const room = { id: 'room-1' } as any;
-      const reactionData = { id: 'react-1', emoji: '1F44D', type: 'emoji' } as any;
+      const reactionData = {
+        id: 'react-1',
+        emoji: '1F44D',
+        type: 'emoji',
+      } as any;
 
       await service.publishRoomEvent(
         room,

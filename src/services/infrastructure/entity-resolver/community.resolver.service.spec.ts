@@ -2,22 +2,20 @@ import { RoomType } from '@common/enums/room.type';
 import { EntityNotFoundException } from '@common/exceptions';
 import { Communication } from '@domain/communication/communication/communication.entity';
 import { Community } from '@domain/community/community';
-import { Space } from '@domain/space/space/space.entity';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getEntityManagerToken } from '@nestjs/typeorm';
+import { getEntityManagerToken, getRepositoryToken } from '@nestjs/typeorm';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { EntityManager } from 'typeorm';
 import { type Mock, type Mocked } from 'vitest';
-import { EntityManager, Repository } from 'typeorm';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { CommunityResolverService } from './community.resolver.service';
 
 describe('CommunityResolverService', () => {
   let service: CommunityResolverService;
   let entityManager: Mocked<EntityManager>;
-  let communityRepository: Record<string, Mock>;
-  let communicationRepository: Record<string, Mock>;
+  let _communityRepository: Record<string, Mock>;
+  let _communicationRepository: Record<string, Mock>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -33,8 +31,8 @@ describe('CommunityResolverService', () => {
 
     service = module.get(CommunityResolverService);
     entityManager = module.get(getEntityManagerToken());
-    communityRepository = module.get(getRepositoryToken(Community));
-    communicationRepository = module.get(getRepositoryToken(Communication));
+    _communityRepository = module.get(getRepositoryToken(Community));
+    _communicationRepository = module.get(getRepositoryToken(Communication));
   });
 
   describe('getLevelZeroSpaceIdForRoleSet', () => {
@@ -190,8 +188,7 @@ describe('CommunityResolverService', () => {
         .mockResolvedValueOnce(null) // contributions check
         .mockResolvedValueOnce({ community } as any); // framing check
 
-      const result =
-        await service.getCommunityFromWhiteboardOrFail('wb-1');
+      const result = await service.getCommunityFromWhiteboardOrFail('wb-1');
 
       expect(result).toBe(community);
       expect(entityManager.findOne).toHaveBeenCalledTimes(2);
@@ -212,9 +209,9 @@ describe('CommunityResolverService', () => {
     it('should throw when no space found for memo', async () => {
       entityManager.findOne.mockResolvedValue(null);
 
-      await expect(
-        service.getCommunityForMemoOrFail('memo-1')
-      ).rejects.toThrow(EntityNotFoundException);
+      await expect(service.getCommunityForMemoOrFail('memo-1')).rejects.toThrow(
+        EntityNotFoundException
+      );
     });
 
     it('should throw when space found but community is null', async () => {
@@ -223,9 +220,9 @@ describe('CommunityResolverService', () => {
         community: null,
       } as any);
 
-      await expect(
-        service.getCommunityForMemoOrFail('memo-1')
-      ).rejects.toThrow(EntityNotFoundException);
+      await expect(service.getCommunityForMemoOrFail('memo-1')).rejects.toThrow(
+        EntityNotFoundException
+      );
     });
   });
 });

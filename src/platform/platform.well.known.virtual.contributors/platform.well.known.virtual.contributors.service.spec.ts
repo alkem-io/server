@@ -1,14 +1,14 @@
+import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
+import { EntityNotFoundException } from '@common/exceptions';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { Platform } from '@platform/platform/platform.entity';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockType } from '@test/utils/mock.type';
+import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { Repository } from 'typeorm';
-import { Platform } from '@platform/platform/platform.entity';
 import { PlatformWellKnownVirtualContributorsService } from './platform.well.known.virtual.contributors.service';
-import { EntityNotFoundException } from '@common/exceptions';
-import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
 
 describe('PlatformWellKnownVirtualContributorsService', () => {
   let service: PlatformWellKnownVirtualContributorsService;
@@ -102,19 +102,16 @@ describe('PlatformWellKnownVirtualContributorsService', () => {
         'vc-steward'
       );
 
-      expect(
-        result[VirtualContributorWellKnown.STEWARD_OWNERSHIP_EXPERT]
-      ).toBe('vc-steward');
+      expect(result[VirtualContributorWellKnown.STEWARD_OWNERSHIP_EXPERT]).toBe(
+        'vc-steward'
+      );
     });
 
     it('should throw EntityNotFoundException when platform not found', async () => {
       platformRepository.findOne!.mockResolvedValue(null);
 
       await expect(
-        service.setMapping(
-          VirtualContributorWellKnown.CHAT_GUIDANCE,
-          'vc-1'
-        )
+        service.setMapping(VirtualContributorWellKnown.CHAT_GUIDANCE, 'vc-1')
       ).rejects.toThrow(EntityNotFoundException);
     });
   });

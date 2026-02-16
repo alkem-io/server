@@ -1,11 +1,13 @@
-import { EntityNotFoundException, EntityNotInitializedException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  EntityNotInitializedException,
+} from '@common/exceptions';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getEntityManagerToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { vi } from 'vitest';
-import { EntityManager } from 'typeorm';
-import { getEntityManagerToken } from '@nestjs/typeorm';
 import { UserLookupService } from './user.lookup.service';
 
 describe('UserLookupService', () => {
@@ -48,10 +50,15 @@ describe('UserLookupService', () => {
     });
 
     it('should query the entity manager and return the user when a valid UUID is provided', async () => {
-      const mockUser = { id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', email: 'test@example.com' };
+      const mockUser = {
+        id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+        email: 'test@example.com',
+      };
       entityManager.findOne.mockResolvedValue(mockUser);
 
-      const result = await service.getUserByUUID('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11');
+      const result = await service.getUserByUUID(
+        'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'
+      );
 
       expect(result).toBe(mockUser);
       expect(entityManager.findOne).toHaveBeenCalledWith(
@@ -65,7 +72,9 @@ describe('UserLookupService', () => {
     it('should return null when the entity manager finds no user', async () => {
       entityManager.findOne.mockResolvedValue(null);
 
-      const result = await service.getUserByUUID('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11');
+      const result = await service.getUserByUUID(
+        'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'
+      );
 
       expect(result).toBeNull();
     });
@@ -73,7 +82,10 @@ describe('UserLookupService', () => {
 
   describe('getUsersByUUID', () => {
     it('should return an empty array when all provided IDs are invalid UUIDs', async () => {
-      const result = await service.getUsersByUUID(['not-a-uuid', 'also-invalid']);
+      const result = await service.getUsersByUUID([
+        'not-a-uuid',
+        'also-invalid',
+      ]);
       expect(result).toEqual([]);
       expect(entityManager.find).not.toHaveBeenCalled();
     });
@@ -149,15 +161,18 @@ describe('UserLookupService', () => {
     it('should throw EntityNotFoundException when no user matches the nameID', async () => {
       entityManager.findOne.mockResolvedValue(null);
 
-      await expect(service.getUserByNameIdOrFail('nonexistent')).rejects.toThrow(
-        EntityNotFoundException
-      );
+      await expect(
+        service.getUserByNameIdOrFail('nonexistent')
+      ).rejects.toThrow(EntityNotFoundException);
     });
   });
 
   describe('isRegisteredUser', () => {
     it('should return true when a user with the given email exists', async () => {
-      entityManager.findOne.mockResolvedValue({ id: 'user-1', email: 'test@example.com' });
+      entityManager.findOne.mockResolvedValue({
+        id: 'user-1',
+        email: 'test@example.com',
+      });
 
       const result = await service.isRegisteredUser('test@example.com');
       expect(result).toBe(true);
@@ -180,7 +195,9 @@ describe('UserLookupService', () => {
       };
       entityManager.findOne.mockResolvedValue(mockUser);
 
-      const result = await service.getUserAndCredentials('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11');
+      const result = await service.getUserAndCredentials(
+        'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'
+      );
       expect(result.user).toBe(mockUser);
       expect(result.credentials).toBe(mockCredentials);
     });
@@ -213,16 +230,24 @@ describe('UserLookupService', () => {
   describe('getUserAndAgent', () => {
     it('should return user and agent when agent is initialized', async () => {
       const mockAgent = { id: 'agent-1' };
-      const mockUser = { id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', agent: mockAgent };
+      const mockUser = {
+        id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+        agent: mockAgent,
+      };
       entityManager.findOne.mockResolvedValue(mockUser);
 
-      const result = await service.getUserAndAgent('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11');
+      const result = await service.getUserAndAgent(
+        'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'
+      );
       expect(result.user).toBe(mockUser);
       expect(result.agent).toBe(mockAgent);
     });
 
     it('should throw EntityNotInitializedException when the user agent is not initialized', async () => {
-      const mockUser = { id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', agent: undefined };
+      const mockUser = {
+        id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+        agent: undefined,
+      };
       entityManager.findOne.mockResolvedValue(mockUser);
 
       await expect(
@@ -239,12 +264,17 @@ describe('UserLookupService', () => {
       };
       entityManager.findOne.mockResolvedValue(mockUser);
 
-      const result = await service.getUserWithAgent('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11');
+      const result = await service.getUserWithAgent(
+        'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'
+      );
       expect(result).toBe(mockUser);
     });
 
     it('should throw EntityNotInitializedException when agent is missing', async () => {
-      const mockUser = { id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', agent: undefined };
+      const mockUser = {
+        id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+        agent: undefined,
+      };
       entityManager.findOne.mockResolvedValue(mockUser);
 
       await expect(
@@ -255,7 +285,11 @@ describe('UserLookupService', () => {
 
   describe('usersWithCredentials', () => {
     it('should return an empty array when no credential criteria are provided', async () => {
-      const result = await service.usersWithCredentials([], undefined, undefined);
+      const result = await service.usersWithCredentials(
+        [],
+        undefined,
+        undefined
+      );
       expect(result).toEqual([]);
       expect(entityManager.find).not.toHaveBeenCalled();
     });

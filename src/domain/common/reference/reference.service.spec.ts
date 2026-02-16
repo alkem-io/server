@@ -1,16 +1,17 @@
+import { EntityNotFoundException } from '@common/exceptions';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockType } from '@test/utils/mock.type';
+import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { Repository } from 'typeorm';
-import { Reference } from './reference.entity';
-import { ReferenceService } from './reference.service';
-import { EntityNotFoundException } from '@common/exceptions';
+import { type Mock } from 'vitest';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
+import { Reference } from './reference.entity';
 import { IReference } from './reference.interface';
+import { ReferenceService } from './reference.service';
 
 describe('ReferenceService', () => {
   let service: ReferenceService;
@@ -93,7 +94,11 @@ describe('ReferenceService', () => {
     });
 
     it('should update name when provided', () => {
-      const reference = { uri: 'uri', name: 'old', description: 'desc' } as IReference;
+      const reference = {
+        uri: 'uri',
+        name: 'old',
+        description: 'desc',
+      } as IReference;
 
       service.updateReferenceValues(reference, {
         ID: 'ref-1',
@@ -181,9 +186,7 @@ describe('ReferenceService', () => {
         name: 'test',
         uri: 'uri',
       });
-      (authorizationPolicyService.delete as Mock).mockResolvedValue(
-        {} as any
-      );
+      (authorizationPolicyService.delete as Mock).mockResolvedValue({} as any);
 
       const result = await service.deleteReference({ ID: 'ref-1' });
 

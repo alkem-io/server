@@ -11,11 +11,7 @@ describe('asyncReduce', () => {
   });
 
   it('should return initial value for an empty array', async () => {
-    const result = await asyncReduce(
-      [],
-      async (acc, _cur) => acc,
-      'initial'
-    );
+    const result = await asyncReduce([], async (acc, _cur) => acc, 'initial');
     expect(result).toBe('initial');
   });
 
@@ -58,11 +54,7 @@ describe('asyncReduce', () => {
   });
 
   it('should handle a single-element array', async () => {
-    const result = await asyncReduce(
-      [7],
-      async (acc, cur) => acc * cur,
-      3
-    );
+    const result = await asyncReduce([7], async (acc, cur) => acc * cur, 3);
     expect(result).toBe(21);
   });
 

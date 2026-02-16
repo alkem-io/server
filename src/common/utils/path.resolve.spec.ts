@@ -1,5 +1,5 @@
-import pathLib from 'path';
 import os from 'os';
+import pathLib from 'path';
 import { pathResolve } from './path.resolve';
 
 describe('pathResolve', () => {
@@ -23,9 +23,7 @@ describe('pathResolve', () => {
 
   it('should handle relative paths with parent directory references', () => {
     const result = pathResolve('../sibling/file.txt');
-    expect(result).toBe(
-      pathLib.resolve(process.cwd(), '../sibling/file.txt')
-    );
+    expect(result).toBe(pathLib.resolve(process.cwd(), '../sibling/file.txt'));
   });
 
   it('should handle tilde-only path', () => {

@@ -1,16 +1,16 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
-import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { MockType } from '@test/utils/mock.type';
-import { Repository } from 'typeorm';
-import { Platform } from '@platform/platform/platform.entity';
-import { PlatformAuthorizationPolicyService } from './platform.authorization.policy.service';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { EntityNotFoundException } from '@common/exceptions';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { Platform } from '@platform/platform/platform.entity';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
+import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { MockType } from '@test/utils/mock.type';
+import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { Repository } from 'typeorm';
 import { vi } from 'vitest';
+import { PlatformAuthorizationPolicyService } from './platform.authorization.policy.service';
 
 describe('PlatformAuthorizationPolicyService', () => {
   let service: PlatformAuthorizationPolicyService;
@@ -47,18 +47,18 @@ describe('PlatformAuthorizationPolicyService', () => {
     it('should throw EntityNotFoundException when platform is not found', async () => {
       platformRepository.findOne!.mockResolvedValue(null);
 
-      await expect(
-        service.getPlatformAuthorizationPolicy()
-      ).rejects.toThrow(EntityNotFoundException);
+      await expect(service.getPlatformAuthorizationPolicy()).rejects.toThrow(
+        EntityNotFoundException
+      );
     });
 
     it('should throw EntityNotFoundException when platform has no authorization', async () => {
       const platform = { authorization: undefined } as unknown as Platform;
       platformRepository.findOne!.mockResolvedValue(platform);
 
-      await expect(
-        service.getPlatformAuthorizationPolicy()
-      ).rejects.toThrow(EntityNotFoundException);
+      await expect(service.getPlatformAuthorizationPolicy()).rejects.toThrow(
+        EntityNotFoundException
+      );
     });
   });
 

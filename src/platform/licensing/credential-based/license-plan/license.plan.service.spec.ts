@@ -1,14 +1,14 @@
+import { EntityNotFoundException } from '@common/exceptions';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockType } from '@test/utils/mock.type';
+import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { Repository } from 'typeorm';
+import { vi } from 'vitest';
 import { LicensePlan } from './license.plan.entity';
 import { LicensePlanService } from './license.plan.service';
-import { EntityNotFoundException } from '@common/exceptions';
-import { vi } from 'vitest';
 
 describe('LicensePlanService', () => {
   let service: LicensePlanService;
@@ -46,9 +46,9 @@ describe('LicensePlanService', () => {
     it('should throw EntityNotFoundException when not found', async () => {
       licensePlanRepository.findOne!.mockResolvedValue(null);
 
-      await expect(
-        service.getLicensePlanOrFail('missing')
-      ).rejects.toThrow(EntityNotFoundException);
+      await expect(service.getLicensePlanOrFail('missing')).rejects.toThrow(
+        EntityNotFoundException
+      );
     });
   });
 

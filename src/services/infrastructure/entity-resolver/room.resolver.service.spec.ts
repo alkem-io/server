@@ -1,17 +1,17 @@
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
+import { Callout } from '@domain/collaboration/callout/callout.entity';
+import { Conversation } from '@domain/communication/conversation/conversation.entity';
+import { Space } from '@domain/space/space/space.entity';
+import { CalendarEvent } from '@domain/timeline/event/event.entity';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getEntityManagerToken } from '@nestjs/typeorm';
+import { Discussion } from '@platform/forum-discussion/discussion.entity';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { vi, type Mock } from 'vitest';
-import { getEntityManagerToken } from '@nestjs/typeorm';
+import { type Mock, vi } from 'vitest';
 import { RoomResolverService } from './room.resolver.service';
-import { Space } from '@domain/space/space/space.entity';
-import { Callout } from '@domain/collaboration/callout/callout.entity';
-import { CalendarEvent } from '@domain/timeline/event/event.entity';
-import { Discussion } from '@platform/forum-discussion/discussion.entity';
-import { Conversation } from '@domain/communication/conversation/conversation.entity';
 
 describe('RoomResolverService', () => {
   let service: RoomResolverService;
@@ -100,7 +100,9 @@ describe('RoomResolverService', () => {
       });
 
       await expect(
-        service.getRoleSetAndSettingsForCollaborationCalloutsSet('callouts-set-1')
+        service.getRoleSetAndSettingsForCollaborationCalloutsSet(
+          'callouts-set-1'
+        )
       ).rejects.toThrow(EntityNotInitializedException);
     });
   });
@@ -240,9 +242,9 @@ describe('RoomResolverService', () => {
     it('should throw EntityNotFoundException when no discussion found', async () => {
       entityManager.findOne.mockResolvedValue(null);
 
-      await expect(
-        service.getDiscussionForRoom('nonexistent')
-      ).rejects.toThrow(EntityNotFoundException);
+      await expect(service.getDiscussionForRoom('nonexistent')).rejects.toThrow(
+        EntityNotFoundException
+      );
     });
   });
 

@@ -80,9 +80,9 @@ describe('LifecycleService', () => {
     it('should throw EntityNotFoundException when lifecycle not found', async () => {
       vi.spyOn(lifecycleRepository, 'findOne').mockResolvedValue(null);
 
-      await expect(
-        service.getLifecycleOrFail('nonexistent')
-      ).rejects.toThrow(EntityNotFoundException);
+      await expect(service.getLifecycleOrFail('nonexistent')).rejects.toThrow(
+        EntityNotFoundException
+      );
     });
 
     it('should pass options to repository findOne', async () => {

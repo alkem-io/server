@@ -2,10 +2,10 @@ import { IdentityVerificationStatusFilter } from '@common/enums/identity.verific
 import { UserService } from '@domain/community/user/user.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { Test, TestingModule } from '@nestjs/testing';
+import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { type Mock, vi } from 'vitest';
 import { AdminIdentityService } from './admin.identity.service';
 
@@ -131,7 +131,10 @@ describe('AdminIdentityService', () => {
       const identity = {
         id: 'id-1',
         created_at: '2024-01-01T00:00:00Z',
-        traits: { email: 'fallback@email.com', name: { first: 'F', last: 'L' } },
+        traits: {
+          email: 'fallback@email.com',
+          name: { first: 'F', last: 'L' },
+        },
         verifiable_addresses: [],
       };
       vi.mocked(kratosService.getUnverifiedIdentities).mockResolvedValue([
@@ -266,9 +269,9 @@ describe('AdminIdentityService', () => {
       const result = await service.deleteIdentity('kratos-id');
 
       expect(result).toBe(true);
-      expect(
-        userLookupService.getUserByAuthenticationID
-      ).toHaveBeenCalledWith('kratos-id');
+      expect(userLookupService.getUserByAuthenticationID).toHaveBeenCalledWith(
+        'kratos-id'
+      );
     });
   });
 });

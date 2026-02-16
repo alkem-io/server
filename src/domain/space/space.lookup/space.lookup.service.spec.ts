@@ -1,15 +1,15 @@
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getEntityManagerToken, getRepositoryToken } from '@nestjs/typeorm';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { getEntityManagerToken, getRepositoryToken } from '@nestjs/typeorm';
-import { vi } from 'vitest';
 import { Repository } from 'typeorm';
+import { vi } from 'vitest';
+import { AccountLookupService } from '../account.lookup/account.lookup.service';
 import { Space } from '../space/space.entity';
 import { ISpace } from '../space/space.interface';
 import { SpaceLookupService } from './space.lookup.service';
-import { AccountLookupService } from '../account.lookup/account.lookup.service';
 
 describe('SpaceLookupService', () => {
   let service: SpaceLookupService;
@@ -98,9 +98,7 @@ describe('SpaceLookupService', () => {
 
       await expect(
         service.getSpaceByNameIdOrFail('nonexistent')
-      ).rejects.toThrow(
-        'Unable to find L0 Space with nameID: nonexistent'
-      );
+      ).rejects.toThrow('Unable to find L0 Space with nameID: nonexistent');
     });
   });
 
@@ -162,9 +160,7 @@ describe('SpaceLookupService', () => {
       } as ISpace;
       entityManager.findOne.mockResolvedValue(mockSpace);
 
-      await expect(
-        service.getCollaborationOrFail('space-1')
-      ).rejects.toThrow(
+      await expect(service.getCollaborationOrFail('space-1')).rejects.toThrow(
         'Unable to load collaboration for space space-1'
       );
     });
@@ -174,9 +170,7 @@ describe('SpaceLookupService', () => {
 
       await expect(
         service.getCollaborationOrFail('missing-id')
-      ).rejects.toThrow(
-        'Unable to find Space on Host with ID: missing-id'
-      );
+      ).rejects.toThrow('Unable to find Space on Host with ID: missing-id');
     });
   });
 
@@ -370,16 +364,12 @@ describe('SpaceLookupService', () => {
         ],
       } as unknown as ISpace;
 
-      entityManager.findOne.mockImplementation(
-        (_entity: any, options: any) => {
-          if (options.where.id === 'space-1') return mockSpace;
-          if (options.where.id === 'sub-1')
-            return { id: 'sub-1', subspaces: [] };
-          if (options.where.id === 'sub-2')
-            return { id: 'sub-2', subspaces: [] };
-          return null;
-        }
-      );
+      entityManager.findOne.mockImplementation((_entity: any, options: any) => {
+        if (options.where.id === 'space-1') return mockSpace;
+        if (options.where.id === 'sub-1') return { id: 'sub-1', subspaces: [] };
+        if (options.where.id === 'sub-2') return { id: 'sub-2', subspaces: [] };
+        return null;
+      });
 
       const result = await service.getAllDescendantSpaceIDs('space-1');
 
@@ -389,18 +379,15 @@ describe('SpaceLookupService', () => {
     });
 
     it('should return nested descendant IDs recursively', async () => {
-      entityManager.findOne.mockImplementation(
-        (_entity: any, options: any) => {
-          const id = options.where.id;
-          if (id === 'space-1')
-            return { id: 'space-1', subspaces: [{ id: 'sub-1' }] };
-          if (id === 'sub-1')
-            return { id: 'sub-1', subspaces: [{ id: 'sub-1-1' }] };
-          if (id === 'sub-1-1')
-            return { id: 'sub-1-1', subspaces: [] };
-          return null;
-        }
-      );
+      entityManager.findOne.mockImplementation((_entity: any, options: any) => {
+        const id = options.where.id;
+        if (id === 'space-1')
+          return { id: 'space-1', subspaces: [{ id: 'sub-1' }] };
+        if (id === 'sub-1')
+          return { id: 'sub-1', subspaces: [{ id: 'sub-1-1' }] };
+        if (id === 'sub-1-1') return { id: 'sub-1-1', subspaces: [] };
+        return null;
+      });
 
       const result = await service.getAllDescendantSpaceIDs('space-1');
 

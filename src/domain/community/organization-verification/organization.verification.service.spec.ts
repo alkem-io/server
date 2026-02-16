@@ -1,16 +1,16 @@
 import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
 import { EntityNotFoundException } from '@common/exceptions';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { vi, type Mock } from 'vitest';
-import { getRepositoryToken } from '@nestjs/typeorm';
+import { type Mock, vi } from 'vitest';
 import { OrganizationVerification } from './organization.verification.entity';
 import { OrganizationVerificationService } from './organization.verification.service';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 
 describe('OrganizationVerificationService', () => {
   let service: OrganizationVerificationService;
@@ -29,11 +29,13 @@ describe('OrganizationVerificationService', () => {
 
   beforeEach(async () => {
     // Mock static OrganizationVerification.create to avoid DataSource requirement
-    vi.spyOn(OrganizationVerification, 'create').mockImplementation((input: any) => {
-      const entity = new OrganizationVerification();
-      Object.assign(entity, input);
-      return entity as any;
-    });
+    vi.spyOn(OrganizationVerification, 'create').mockImplementation(
+      (input: any) => {
+        const entity = new OrganizationVerification();
+        Object.assign(entity, input);
+        return entity as any;
+      }
+    );
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -56,7 +58,9 @@ describe('OrganizationVerificationService', () => {
     it('should create a verification with NOT_VERIFIED status and lifecycle', async () => {
       const mockLifecycle = { id: 'lifecycle-1' };
       lifecycleService.createLifecycle.mockResolvedValue(mockLifecycle);
-      repository.save.mockImplementation((entity: any) => Promise.resolve(entity));
+      repository.save.mockImplementation((entity: any) =>
+        Promise.resolve(entity)
+      );
 
       const result = await service.createOrganizationVerification({
         organizationID: 'org-1',
@@ -72,10 +76,14 @@ describe('OrganizationVerificationService', () => {
 
   describe('getOrganizationVerificationOrFail', () => {
     it('should return the verification when found', async () => {
-      const mockVerification = { id: 'verification-1', status: OrganizationVerificationEnum.NOT_VERIFIED };
+      const mockVerification = {
+        id: 'verification-1',
+        status: OrganizationVerificationEnum.NOT_VERIFIED,
+      };
       repository.findOne.mockResolvedValue(mockVerification);
 
-      const result = await service.getOrganizationVerificationOrFail('verification-1');
+      const result =
+        await service.getOrganizationVerificationOrFail('verification-1');
 
       expect(result).toBe(mockVerification);
     });
@@ -99,14 +107,19 @@ describe('OrganizationVerificationService', () => {
       repository.findOne.mockResolvedValue(mockVerification);
       authorizationPolicyService.delete.mockResolvedValue(undefined);
       lifecycleService.deleteLifecycle.mockResolvedValue(undefined);
-      repository.remove.mockResolvedValue({ ...mockVerification, id: undefined });
+      repository.remove.mockResolvedValue({
+        ...mockVerification,
+        id: undefined,
+      });
 
       const result = await service.delete('verification-1');
 
       expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
         mockVerification.authorization
       );
-      expect(lifecycleService.deleteLifecycle).toHaveBeenCalledWith('lifecycle-1');
+      expect(lifecycleService.deleteLifecycle).toHaveBeenCalledWith(
+        'lifecycle-1'
+      );
       expect(repository.remove).toHaveBeenCalled();
       expect(result.id).toBe('verification-1');
     });
@@ -119,7 +132,10 @@ describe('OrganizationVerificationService', () => {
       };
       repository.findOne.mockResolvedValue(mockVerification);
       lifecycleService.deleteLifecycle.mockResolvedValue(undefined);
-      repository.remove.mockResolvedValue({ ...mockVerification, id: undefined });
+      repository.remove.mockResolvedValue({
+        ...mockVerification,
+        id: undefined,
+      });
 
       await service.delete('verification-1');
 
@@ -134,7 +150,10 @@ describe('OrganizationVerificationService', () => {
       };
       repository.findOne.mockResolvedValue(mockVerification);
       authorizationPolicyService.delete.mockResolvedValue(undefined);
-      repository.remove.mockResolvedValue({ ...mockVerification, id: undefined });
+      repository.remove.mockResolvedValue({
+        ...mockVerification,
+        id: undefined,
+      });
 
       await service.delete('verification-1');
 

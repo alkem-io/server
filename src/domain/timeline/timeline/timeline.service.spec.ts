@@ -55,9 +55,7 @@ describe('TimelineService', () => {
       // Assert
       expect(result).toBeDefined();
       expect(result.authorization).toBeInstanceOf(AuthorizationPolicy);
-      expect(result.authorization?.type).toBe(
-        AuthorizationPolicyType.TIMELINE
-      );
+      expect(result.authorization?.type).toBe(AuthorizationPolicyType.TIMELINE);
     });
 
     it('should delegate calendar creation to CalendarService when called', () => {
@@ -159,9 +157,9 @@ describe('TimelineService', () => {
       vi.spyOn(timelineRepository, 'findOne').mockResolvedValue(null);
 
       // Act & Assert
-      await expect(
-        service.deleteTimeline('non-existent-id')
-      ).rejects.toThrow(EntityNotFoundException);
+      await expect(service.deleteTimeline('non-existent-id')).rejects.toThrow(
+        EntityNotFoundException
+      );
     });
   });
 

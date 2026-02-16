@@ -1,21 +1,21 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { MockCacheManager } from '@test/mocks/cache-manager.mock';
-import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
-import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import {
   EntityNotFoundException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
-import { Collaboration } from './collaboration.entity';
-import { CollaborationService } from './collaboration.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { LicenseService } from '@domain/common/license/license.service';
+import { TimelineService } from '@domain/timeline/timeline/timeline.service';
+import { Test, TestingModule } from '@nestjs/testing';
+import { getEntityManagerToken, getRepositoryToken } from '@nestjs/typeorm';
+import { MockCacheManager } from '@test/mocks/cache-manager.mock';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
+import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { Repository } from 'typeorm';
 import { CalloutsSetService } from '../callouts-set/callouts.set.service';
 import { InnovationFlowService } from '../innovation-flow/innovation.flow.service';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { TimelineService } from '@domain/timeline/timeline/timeline.service';
-import { LicenseService } from '@domain/common/license/license.service';
-import { Repository, EntityManager } from 'typeorm';
-import { getRepositoryToken, getEntityManagerToken } from '@nestjs/typeorm';
+import { Collaboration } from './collaboration.entity';
+import { CollaborationService } from './collaboration.service';
 
 describe('CollaborationService', () => {
   let service: CollaborationService;
@@ -131,9 +131,9 @@ describe('CollaborationService', () => {
       vi.mocked(licenseService.createLicense).mockReturnValue({
         id: 'license-1',
       } as any);
-      vi.mocked(
-        innovationFlowService.createInnovationFlow
-      ).mockResolvedValue({ id: 'flow-1' } as any);
+      vi.mocked(innovationFlowService.createInnovationFlow).mockResolvedValue({
+        id: 'flow-1',
+      } as any);
 
       const result = await service.createCollaboration(
         collaborationData,
@@ -166,9 +166,7 @@ describe('CollaborationService', () => {
       );
       vi.mocked(calloutsSetService.addTagsetTemplate).mockReturnValue({
         id: 'tts-1',
-        tagsetTemplates: [
-          { name: 'flow-state', allowedValues: ['State A'] },
-        ],
+        tagsetTemplates: [{ name: 'flow-state', allowedValues: ['State A'] }],
       } as any);
       vi.mocked(calloutsSetService.save).mockResolvedValue(calloutsSet);
       vi.mocked(calloutsSetService.getTagsetTemplate).mockReturnValue({
@@ -178,9 +176,9 @@ describe('CollaborationService', () => {
       vi.mocked(licenseService.createLicense).mockReturnValue({
         id: 'license-1',
       } as any);
-      vi.mocked(
-        innovationFlowService.createInnovationFlow
-      ).mockResolvedValue({ id: 'flow-1' } as any);
+      vi.mocked(innovationFlowService.createInnovationFlow).mockResolvedValue({
+        id: 'flow-1',
+      } as any);
 
       const result = await service.createCollaboration(
         collaborationData,
@@ -262,19 +260,15 @@ describe('CollaborationService', () => {
 
       await service.deleteCollaborationOrFail('collab-1');
 
-      expect(calloutsSetService.deleteCalloutsSet).toHaveBeenCalledWith(
-        'cs-1'
-      );
+      expect(calloutsSetService.deleteCalloutsSet).toHaveBeenCalledWith('cs-1');
       expect(timelineService.deleteTimeline).toHaveBeenCalledWith('tl-1');
       expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
         collaboration.authorization
       );
-      expect(
-        innovationFlowService.deleteInnovationFlow
-      ).toHaveBeenCalledWith('flow-1');
-      expect(licenseService.removeLicenseOrFail).toHaveBeenCalledWith(
-        'lic-1'
+      expect(innovationFlowService.deleteInnovationFlow).toHaveBeenCalledWith(
+        'flow-1'
       );
+      expect(licenseService.removeLicenseOrFail).toHaveBeenCalledWith('lic-1');
     });
 
     it('should throw RelationshipNotFoundException when missing child entities', async () => {
@@ -358,9 +352,9 @@ describe('CollaborationService', () => {
 
       vi.mocked(repository.findOne).mockResolvedValue(collaboration);
 
-      await expect(
-        service.getInnovationFlow('collab-1')
-      ).rejects.toThrow(RelationshipNotFoundException);
+      await expect(service.getInnovationFlow('collab-1')).rejects.toThrow(
+        RelationshipNotFoundException
+      );
     });
   });
 });

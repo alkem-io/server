@@ -1,25 +1,25 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { MockCacheManager } from '@test/mocks/cache-manager.mock';
-import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
-import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import {
   EntityNotFoundException,
   ValidationException,
 } from '@common/exceptions';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { ProfileService } from '@domain/common/profile/profile.service';
-import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
-import { LinkService } from '../link/link.service';
-import { MemoService } from '@domain/common/memo/memo.service';
 import { MediaGalleryService } from '@domain/common/media-gallery/media.gallery.service';
+import { MemoService } from '@domain/common/memo/memo.service';
+import { ProfileService } from '@domain/common/profile/profile.service';
+import { TagsetService } from '@domain/common/tagset/tagset.service';
+import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
+import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
+import { MockCacheManager } from '@test/mocks/cache-manager.mock';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
+import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { Repository } from 'typeorm';
+import { LinkService } from '../link/link.service';
 import { CalloutFraming } from './callout.framing.entity';
 import { CalloutFramingService } from './callout.framing.service';
-import { Repository } from 'typeorm';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { TagsetService } from '@domain/common/tagset/tagset.service';
 
 describe('CalloutFramingService', () => {
   let service: CalloutFramingService;
@@ -102,7 +102,9 @@ describe('CalloutFramingService', () => {
       vi.mocked(profileService.createProfile).mockResolvedValue({
         id: 'profile-1',
       } as any);
-      vi.mocked(namingService.createNameIdAvoidingReservedNameIDs).mockReturnValue('my-whiteboard');
+      vi.mocked(
+        namingService.createNameIdAvoidingReservedNameIDs
+      ).mockReturnValue('my-whiteboard');
       vi.mocked(whiteboardService.createWhiteboard).mockResolvedValue({
         id: 'wb-1',
       } as any);
@@ -206,7 +208,9 @@ describe('CalloutFramingService', () => {
       vi.mocked(profileService.createProfile).mockResolvedValue({
         id: 'profile-1',
       } as any);
-      vi.mocked(namingService.createNameIdAvoidingReservedNameIDs).mockReturnValue('a-memo');
+      vi.mocked(
+        namingService.createNameIdAvoidingReservedNameIDs
+      ).mockReturnValue('a-memo');
       vi.mocked(memoService.createMemo).mockResolvedValue({
         id: 'memo-1',
         profile: { id: 'memo-profile' },
@@ -267,7 +271,7 @@ describe('CalloutFramingService', () => {
         displayName: 'Updated',
       } as any);
 
-      const result = await service.updateCalloutFraming(
+      const _result = await service.updateCalloutFraming(
         framing,
         updateData,
         storageAggregator,
@@ -336,7 +340,7 @@ describe('CalloutFramingService', () => {
         id: 'wb-1',
       } as any);
 
-      const result = await service.updateCalloutFraming(
+      const _result = await service.updateCalloutFraming(
         framing,
         updateData,
         storageAggregator,
@@ -360,12 +364,14 @@ describe('CalloutFramingService', () => {
         whiteboardContent: '{"elements":[]}',
       } as any;
 
-      vi.mocked(namingService.createNameIdAvoidingReservedNameIDs).mockReturnValue('wb-name');
+      vi.mocked(
+        namingService.createNameIdAvoidingReservedNameIDs
+      ).mockReturnValue('wb-name');
       vi.mocked(whiteboardService.createWhiteboard).mockResolvedValue({
         id: 'new-wb',
       } as any);
 
-      const result = await service.updateCalloutFraming(
+      const _result = await service.updateCalloutFraming(
         framing,
         updateData,
         storageAggregator,
@@ -412,7 +418,7 @@ describe('CalloutFramingService', () => {
         uri: 'https://updated.com',
       } as any);
 
-      const result = await service.updateCalloutFraming(
+      const _result = await service.updateCalloutFraming(
         framing,
         updateData,
         storageAggregator,

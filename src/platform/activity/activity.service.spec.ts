@@ -1,14 +1,14 @@
+import { EntityNotFoundException } from '@common/exceptions';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockType } from '@test/utils/mock.type';
-import { EntityManager, Repository } from 'typeorm';
+import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { Repository } from 'typeorm';
+import { vi } from 'vitest';
 import { Activity } from './activity.entity';
 import { ActivityService } from './activity.service';
-import { EntityNotFoundException } from '@common/exceptions';
-import { vi } from 'vitest';
 
 describe('ActivityService', () => {
   let service: ActivityService;
@@ -38,7 +38,10 @@ describe('ActivityService', () => {
   describe('createActivity', () => {
     it('should truncate description to SMALL_TEXT_LENGTH and save activity', async () => {
       const longDescription = 'a'.repeat(300);
-      const savedActivity = { id: 'act-1', description: longDescription.substring(0, 256) } as Activity;
+      const savedActivity = {
+        id: 'act-1',
+        description: longDescription.substring(0, 256),
+      } as Activity;
       activityRepository.save!.mockResolvedValue(savedActivity);
 
       const result = await service.createActivity({
@@ -99,7 +102,10 @@ describe('ActivityService', () => {
   describe('updateActivityVisibility', () => {
     it('should set visibility on the activity and save it', async () => {
       const activity = { id: 'act-1', visibility: true } as Activity;
-      activityRepository.save!.mockResolvedValue({ ...activity, visibility: false });
+      activityRepository.save!.mockResolvedValue({
+        ...activity,
+        visibility: false,
+      });
 
       const result = await service.updateActivityVisibility(activity, false);
 

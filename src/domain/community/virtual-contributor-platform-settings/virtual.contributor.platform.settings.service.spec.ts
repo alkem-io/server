@@ -1,6 +1,6 @@
-import { VirtualContributorPlatformSettingsService } from './virtual.contributor.platform.settings.service';
-import { IVirtualContributorPlatformSettings } from './virtual.contributor.platform.settings.interface';
 import { UpdateVirtualContributorPlatformSettingsEntityInput } from './dto/virtual.contributor.platform.settings.dto.update';
+import { IVirtualContributorPlatformSettings } from './virtual.contributor.platform.settings.interface';
+import { VirtualContributorPlatformSettingsService } from './virtual.contributor.platform.settings.service';
 
 describe('VirtualContributorPlatformSettingsService', () => {
   let service: VirtualContributorPlatformSettingsService;

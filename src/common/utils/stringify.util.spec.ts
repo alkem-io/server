@@ -14,18 +14,15 @@ describe('stringifyWithoutAuthorizationMetaInfo', () => {
     'expires',
   ] as const;
 
-  it.each(filteredKeys.map(key => ({ key })))(
-    'should exclude the "$key" key from the output',
-    ({ key }) => {
-      const input = { id: '1', name: 'test', [key]: 'secret-value' };
-      const result = JSON.parse(
-        stringifyWithoutAuthorizationMetaInfo(input)
-      );
-      expect(result).not.toHaveProperty(key);
-      expect(result).toHaveProperty('id', '1');
-      expect(result).toHaveProperty('name', 'test');
-    }
-  );
+  it.each(
+    filteredKeys.map(key => ({ key }))
+  )('should exclude the "$key" key from the output', ({ key }) => {
+    const input = { id: '1', name: 'test', [key]: 'secret-value' };
+    const result = JSON.parse(stringifyWithoutAuthorizationMetaInfo(input));
+    expect(result).not.toHaveProperty(key);
+    expect(result).toHaveProperty('id', '1');
+    expect(result).toHaveProperty('name', 'test');
+  });
 
   it('should preserve non-filtered keys', () => {
     const input = {

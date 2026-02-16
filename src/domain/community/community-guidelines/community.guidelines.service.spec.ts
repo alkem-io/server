@@ -1,15 +1,15 @@
 import { EntityNotFoundException } from '@common/exceptions';
+import { ProfileService } from '@domain/common/profile/profile.service';
+import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { vi, type Mock } from 'vitest';
-import { getRepositoryToken } from '@nestjs/typeorm';
+import { type Mock } from 'vitest';
 import { CommunityGuidelines } from './community.guidelines.entity';
 import { CommunityGuidelinesService } from './community.guidelines.service';
-import { ProfileService } from '@domain/common/profile/profile.service';
-import { TagsetService } from '@domain/common/tagset/tagset.service';
 
 describe('CommunityGuidelinesService', () => {
   let service: CommunityGuidelinesService;
@@ -99,7 +99,9 @@ describe('CommunityGuidelinesService', () => {
 
       const guidelines = { id: 'cg-1', profile: { id: 'profile-1' } } as any;
       const updateData = { profile: { displayName: 'Updated' } } as any;
-      repository.save.mockImplementation((entity: any) => Promise.resolve(entity));
+      repository.save.mockImplementation((entity: any) =>
+        Promise.resolve(entity)
+      );
 
       const result = await service.update(guidelines, updateData);
 
@@ -114,14 +116,28 @@ describe('CommunityGuidelinesService', () => {
 
   describe('eraseContent', () => {
     it('should clear display name and description and delete all references', async () => {
-      const mockProfile = { id: 'profile-1', displayName: '', description: '', references: [{ id: 'ref-1' }] };
+      const mockProfile = {
+        id: 'profile-1',
+        displayName: '',
+        description: '',
+        references: [{ id: 'ref-1' }],
+      };
       profileService.updateProfile.mockResolvedValue(mockProfile);
-      profileService.deleteAllReferencesFromProfile.mockResolvedValue(undefined);
-      repository.save.mockImplementation((entity: any) => Promise.resolve(entity));
+      profileService.deleteAllReferencesFromProfile.mockResolvedValue(
+        undefined
+      );
+      repository.save.mockImplementation((entity: any) =>
+        Promise.resolve(entity)
+      );
 
       const guidelines = {
         id: 'cg-1',
-        profile: { id: 'profile-1', displayName: 'Old', description: 'Old desc', references: [{ id: 'ref-1' }] },
+        profile: {
+          id: 'profile-1',
+          displayName: 'Old',
+          description: 'Old desc',
+          references: [{ id: 'ref-1' }],
+        },
       } as any;
 
       const result = await service.eraseContent(guidelines);
@@ -130,7 +146,9 @@ describe('CommunityGuidelinesService', () => {
         expect.objectContaining({ id: 'profile-1' }),
         { displayName: '', description: '' }
       );
-      expect(profileService.deleteAllReferencesFromProfile).toHaveBeenCalledWith('profile-1');
+      expect(
+        profileService.deleteAllReferencesFromProfile
+      ).toHaveBeenCalledWith('profile-1');
       expect(result.profile.references).toEqual([]);
     });
   });

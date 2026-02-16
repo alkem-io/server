@@ -1,13 +1,13 @@
 import { ValidationException } from '@common/exceptions';
+import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { CommunicationService } from '@domain/communication/communication/communication.service';
 import { ConversationService } from '@domain/communication/conversation/conversation.service';
 import { CommunityService } from '@domain/community/community/community.service';
-import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { Test, TestingModule } from '@nestjs/testing';
+import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { type Mock, vi } from 'vitest';
 import { AdminCommunicationService } from './admin.communication.service';
 
@@ -72,9 +72,9 @@ describe('AdminCommunicationService', () => {
       vi.mocked(communicationService.getCommunicationIDsUsed).mockResolvedValue(
         ['comm-1']
       );
-      vi.mocked(
-        communicationService.getCommunicationOrFail
-      ).mockResolvedValue({ id: 'comm-1' } as any);
+      vi.mocked(communicationService.getCommunicationOrFail).mockResolvedValue({
+        id: 'comm-1',
+      } as any);
       vi.mocked(communicationService.getRoomIds).mockReturnValue(['room-1']);
 
       await expect(
@@ -86,12 +86,10 @@ describe('AdminCommunicationService', () => {
       vi.mocked(communicationService.getCommunicationIDsUsed).mockResolvedValue(
         ['comm-1']
       );
-      vi.mocked(
-        communicationService.getCommunicationOrFail
-      ).mockResolvedValue({ id: 'comm-1' } as any);
-      vi.mocked(communicationService.getRoomIds).mockReturnValue([
-        'room-used',
-      ]);
+      vi.mocked(communicationService.getCommunicationOrFail).mockResolvedValue({
+        id: 'comm-1',
+      } as any);
+      vi.mocked(communicationService.getRoomIds).mockReturnValue(['room-used']);
       vi.mocked(communicationAdapter.deleteRoom).mockResolvedValue(true);
 
       const result = await service.removeOrphanedRoom({
@@ -110,9 +108,9 @@ describe('AdminCommunicationService', () => {
       vi.mocked(communicationService.getCommunicationIDsUsed).mockResolvedValue(
         ['comm-1']
       );
-      vi.mocked(
-        communicationService.getCommunicationOrFail
-      ).mockResolvedValue({ id: 'comm-1' } as any);
+      vi.mocked(communicationService.getCommunicationOrFail).mockResolvedValue({
+        id: 'comm-1',
+      } as any);
       vi.mocked(communicationService.getRoomIds).mockReturnValue([
         'room-used-1',
       ]);
@@ -136,9 +134,9 @@ describe('AdminCommunicationService', () => {
       vi.mocked(communicationService.getCommunicationIDsUsed).mockResolvedValue(
         ['comm-1']
       );
-      vi.mocked(
-        communicationService.getCommunicationOrFail
-      ).mockResolvedValue({ id: 'comm-1' } as any);
+      vi.mocked(communicationService.getCommunicationOrFail).mockResolvedValue({
+        id: 'comm-1',
+      } as any);
       vi.mocked(communicationService.getRoomIds).mockReturnValue([
         'room-1',
         'room-2',
@@ -158,10 +156,7 @@ describe('AdminCommunicationService', () => {
     it('should increment migrated count for each successful room creation', async () => {
       vi.mocked(
         conversationService.findConversationsWithoutRooms
-      ).mockResolvedValue([
-        { id: 'conv-1' } as any,
-        { id: 'conv-2' } as any,
-      ]);
+      ).mockResolvedValue([{ id: 'conv-1' } as any, { id: 'conv-2' } as any]);
       vi.mocked(conversationService.ensureRoomExists)
         .mockResolvedValueOnce({ id: 'room-1' } as any)
         .mockResolvedValueOnce({ id: 'room-2' } as any);
@@ -191,10 +186,7 @@ describe('AdminCommunicationService', () => {
     it('should handle errors during room creation and continue processing', async () => {
       vi.mocked(
         conversationService.findConversationsWithoutRooms
-      ).mockResolvedValue([
-        { id: 'conv-1' } as any,
-        { id: 'conv-2' } as any,
-      ]);
+      ).mockResolvedValue([{ id: 'conv-1' } as any, { id: 'conv-2' } as any]);
       vi.mocked(conversationService.ensureRoomExists)
         .mockRejectedValueOnce(new Error('room creation failed'))
         .mockResolvedValueOnce({ id: 'room-2' } as any);

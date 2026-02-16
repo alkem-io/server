@@ -1,21 +1,21 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { MockCacheManager } from '@test/mocks/cache-manager.mock';
-import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
-import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { MockType } from '@test/utils/mock.type';
-import { Repository } from 'typeorm';
-import { Visual } from './visual.entity';
-import { VisualService } from './visual.service';
+import { VisualType } from '@common/enums/visual.type';
 import {
   EntityNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { VisualType } from '@common/enums/visual.type';
+import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { MockCacheManager } from '@test/mocks/cache-manager.mock';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
+import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { MockType } from '@test/utils/mock.type';
+import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { Repository } from 'typeorm';
+import { type Mock } from 'vitest';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
+import { Visual } from './visual.entity';
 import { IVisual } from './visual.interface';
-import { VISUAL_ALLOWED_TYPES } from './visual.constraints';
+import { VisualService } from './visual.service';
 
 describe('VisualService', () => {
   let service: VisualService;
@@ -55,7 +55,6 @@ describe('VisualService', () => {
         minHeight: 100,
         maxHeight: 400,
         aspectRatio: 1,
-        allowedTypes: [...VISUAL_ALLOWED_TYPES],
       });
 
       expect(result.name).toBe(VisualType.AVATAR);
@@ -72,7 +71,6 @@ describe('VisualService', () => {
           minHeight: 64,
           maxHeight: 256,
           aspectRatio: 6,
-          allowedTypes: [...VISUAL_ALLOWED_TYPES],
         },
         'https://example.com/image.png'
       );
@@ -83,13 +81,12 @@ describe('VisualService', () => {
     it('should throw ValidationException when name is not provided', () => {
       expect(() =>
         service.createVisual({
-          name: '',
+          name: '' as any,
           minWidth: 100,
           maxWidth: 400,
           minHeight: 100,
           maxHeight: 400,
           aspectRatio: 1,
-          allowedTypes: [...VISUAL_ALLOWED_TYPES],
         })
       ).toThrow(ValidationException);
     });
@@ -177,9 +174,7 @@ describe('VisualService', () => {
       visualRepository.remove!.mockResolvedValue({
         name: VisualType.AVATAR,
       });
-      (authorizationPolicyService.delete as Mock).mockResolvedValue(
-        {} as any
-      );
+      (authorizationPolicyService.delete as Mock).mockResolvedValue({} as any);
 
       const result = await service.deleteVisual({ ID: 'v-1' });
 
@@ -209,17 +204,15 @@ describe('VisualService', () => {
         allowedTypes: ['image/png', 'image/jpeg'],
       } as IVisual;
 
-      expect(() =>
-        service.validateMimeType(visual, 'image/png')
-      ).not.toThrow();
+      expect(() => service.validateMimeType(visual, 'image/png')).not.toThrow();
     });
 
     it('should throw ValidationException when mime type is not allowed', () => {
       const visual = { allowedTypes: ['image/png'] } as IVisual;
 
-      expect(() =>
-        service.validateMimeType(visual, 'image/gif')
-      ).toThrow(ValidationException);
+      expect(() => service.validateMimeType(visual, 'image/gif')).toThrow(
+        ValidationException
+      );
     });
   });
 

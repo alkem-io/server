@@ -1,14 +1,14 @@
 import { ValidationException } from '@common/exceptions';
-import { InAppNotification } from '@platform/in-app-notification/in.app.notification.entity';
-import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
+import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { InAppNotification } from '@platform/in-app-notification/in.app.notification.entity';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { type Mock, vi } from 'vitest';
 import { Repository } from 'typeorm';
+import { type Mock, vi } from 'vitest';
 import { InAppNotificationAdminService } from './in.app.notification.admin.service';
 
 describe('InAppNotificationAdminService', () => {
@@ -32,13 +32,15 @@ describe('InAppNotificationAdminService', () => {
     repo = module.get<Repository<InAppNotification>>(
       getRepositoryToken(InAppNotification)
     );
-    configService = module.get(ConfigService) as unknown as typeof configService;
+    configService = module.get(
+      ConfigService
+    ) as unknown as typeof configService;
   });
 
   describe('pruneInAppNotifications', () => {
     it('should throw ValidationException when retentionDays is zero', async () => {
       vi.mocked(configService.get)
-        .mockReturnValueOnce(0)   // retentionDays
+        .mockReturnValueOnce(0) // retentionDays
         .mockReturnValueOnce(100); // maxPerUser
 
       await expect(service.pruneInAppNotifications()).rejects.toThrow(
@@ -48,7 +50,7 @@ describe('InAppNotificationAdminService', () => {
 
     it('should throw ValidationException when retentionDays is negative', async () => {
       vi.mocked(configService.get)
-        .mockReturnValueOnce(-5)  // retentionDays
+        .mockReturnValueOnce(-5) // retentionDays
         .mockReturnValueOnce(100); // maxPerUser
 
       await expect(service.pruneInAppNotifications()).rejects.toThrow(
@@ -58,7 +60,7 @@ describe('InAppNotificationAdminService', () => {
 
     it('should throw ValidationException when retentionDays is not an integer', async () => {
       vi.mocked(configService.get)
-        .mockReturnValueOnce(2.5)  // retentionDays
+        .mockReturnValueOnce(2.5) // retentionDays
         .mockReturnValueOnce(100); // maxPerUser
 
       await expect(service.pruneInAppNotifications()).rejects.toThrow(
@@ -68,8 +70,8 @@ describe('InAppNotificationAdminService', () => {
 
     it('should throw ValidationException when maxPerUser is zero', async () => {
       vi.mocked(configService.get)
-        .mockReturnValueOnce(30)  // retentionDays
-        .mockReturnValueOnce(0);  // maxPerUser
+        .mockReturnValueOnce(30) // retentionDays
+        .mockReturnValueOnce(0); // maxPerUser
 
       await expect(service.pruneInAppNotifications()).rejects.toThrow(
         ValidationException
@@ -78,7 +80,7 @@ describe('InAppNotificationAdminService', () => {
 
     it('should throw ValidationException when maxPerUser is negative', async () => {
       vi.mocked(configService.get)
-        .mockReturnValueOnce(30)  // retentionDays
+        .mockReturnValueOnce(30) // retentionDays
         .mockReturnValueOnce(-1); // maxPerUser
 
       await expect(service.pruneInAppNotifications()).rejects.toThrow(
@@ -88,7 +90,7 @@ describe('InAppNotificationAdminService', () => {
 
     it('should delete old notifications and return counts on valid config', async () => {
       vi.mocked(configService.get)
-        .mockReturnValueOnce(30)  // retentionDays
+        .mockReturnValueOnce(30) // retentionDays
         .mockReturnValueOnce(50); // maxPerUser
 
       vi.spyOn(repo, 'delete').mockResolvedValue({ affected: 5 } as any);
@@ -117,7 +119,7 @@ describe('InAppNotificationAdminService', () => {
 
     it('should prune excess notifications per user and sum the total', async () => {
       vi.mocked(configService.get)
-        .mockReturnValueOnce(30)  // retentionDays
+        .mockReturnValueOnce(30) // retentionDays
         .mockReturnValueOnce(10); // maxPerUser
 
       // Step 1: delete old notifications
@@ -134,14 +136,12 @@ describe('InAppNotificationAdminService', () => {
         where: vi.fn().mockReturnThis(),
         orderBy: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
-        getRawMany: vi.fn().mockResolvedValue([
-          { receiverID: 'user-1', count: '15' },
-        ]),
-        getMany: vi.fn().mockResolvedValue([
-          { id: 'n-1' },
-          { id: 'n-2' },
-          { id: 'n-3' },
-        ]),
+        getRawMany: vi
+          .fn()
+          .mockResolvedValue([{ receiverID: 'user-1', count: '15' }]),
+        getMany: vi
+          .fn()
+          .mockResolvedValue([{ id: 'n-1' }, { id: 'n-2' }, { id: 'n-3' }]),
       };
       vi.spyOn(repo, 'createQueryBuilder').mockReturnValue(
         mockQueryBuilder as any
@@ -155,7 +155,7 @@ describe('InAppNotificationAdminService', () => {
 
     it('should rethrow when repo.delete throws during pruning', async () => {
       vi.mocked(configService.get)
-        .mockReturnValueOnce(30)  // retentionDays
+        .mockReturnValueOnce(30) // retentionDays
         .mockReturnValueOnce(50); // maxPerUser
 
       vi.spyOn(repo, 'delete').mockRejectedValue(new Error('db error'));
