@@ -180,7 +180,8 @@ Key rules:
 - Underscore prefix (`_param`) ignores unused parameters
 
 ## Active Technologies
-- TypeScript 5.3, Node.js 22 LTS (Volta pins 22.21.1) + NestJS 10, Vitest 4.x, Biome for linting/formatting
+- TypeScript 5.3, Node.js 22 LTS (Volta pins 22.21.1) + NestJS 10, Vitest 4.x, Biome for linting/formatting, TypeORM 0.3, Apollo Server 4, dataloaders
+- PostgreSQL 17.5
 
 ## Recent Changes
 - 028-migrate-biome-linting: Migrated from ESLint + Prettier to Biome for linting and formatting
