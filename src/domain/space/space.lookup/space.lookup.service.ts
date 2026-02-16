@@ -227,17 +227,38 @@ export class SpaceLookupService {
       );
       return null;
     }
-    const l0Space = await this.spaceRepository.findOne({
-      where: {
-        id: space.levelZeroSpaceID,
-      },
-      relations: {
-        account: true,
-      },
-    });
+    return this.getProviderForSpace(space);
+  }
+
+  /**
+   * Gets the provider for a space that has already been loaded.
+   * For L0 spaces (levelZeroSpaceID === space.id), skips the redundant L0 lookup.
+   */
+  public async getProviderForSpace(
+    space: ISpace
+  ): Promise<IContributor | null> {
+    let l0Space: ISpace | null;
+
+    if (space.levelZeroSpaceID === space.id) {
+      // This is already the L0 space; just need to load account if not present
+      if (space.account) {
+        l0Space = space;
+      } else {
+        l0Space = await this.spaceRepository.findOne({
+          where: { id: space.id },
+          relations: { account: true },
+        });
+      }
+    } else {
+      l0Space = await this.spaceRepository.findOne({
+        where: { id: space.levelZeroSpaceID },
+        relations: { account: true },
+      });
+    }
+
     if (!l0Space || !l0Space.account) {
       this.logger.warn(
-        `Unable to load Space with account to get Provider for SpaceAbout: ${spaceAbout.id}`,
+        `Unable to load Space with account to get Provider for Space: ${space.id}`,
         LogContext.SPACES
       );
       return null;
