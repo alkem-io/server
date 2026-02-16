@@ -11,7 +11,9 @@
       "Bash(bash .scripts/register-user.sh:*)",
       "Bash(git stash:*)",
       "Bash(git worktree add:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(.specify/scripts/bash/check-prerequisites.sh:*)",
+      "Bash(bash restore_latest_backup_set.sh acc)"
     ]
   }
 }

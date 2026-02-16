@@ -29,6 +29,8 @@ export * from './profile/profile.references.loader.creator';
 export * from './profile/profile.storage.bucket.loader.creator';
 export * from './profile/profile.tagsets.loader.creator';
 export * from './profile.loader.creator';
+export * from './roleset/lead.organizations.by.role.set.loader.creator';
+export * from './roleset/lead.users.by.role.set.loader.creator';
 export * from './roleset.application.loader.creator';
 export * from './space/space.about.loader.creator';
 export * from './space/space.by.space.about.id.loader.creator';

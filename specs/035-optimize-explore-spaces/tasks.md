@@ -21,7 +21,7 @@
 
 **CRITICAL**: Phase 2 cannot start until T001 is complete
 
-- [ ] T001 Add `organizationsWithCredentialsBatch(credentialCriteriaArray: CredentialsSearchInput[])` method to `src/domain/community/organization/organization.lookup.service.ts`. Mirror the existing `UserLookupService.usersWithCredentials()` pattern: accept an array of `CredentialsSearchInput`, build OR-based WHERE conditions, execute a single TypeORM `find()` with `relations: { agent: { credentials: true } }`, return flat `IOrganization[]` array. Reference implementation: `src/domain/community/user/user.lookup.service.ts:157-203`.
+- [x] T001 Add `organizationsWithCredentialsBatch(credentialCriteriaArray: CredentialsSearchInput[])` method to `src/domain/community/organization/organization.lookup.service.ts`. Mirror the existing `UserLookupService.usersWithCredentials()` pattern: accept an array of `CredentialsSearchInput`, build OR-based WHERE conditions, execute a single TypeORM `find()` with `relations: { agent: { credentials: true } }`, return flat `IOrganization[]` array. Reference implementation: `src/domain/community/user/user.lookup.service.ts:157-203`.
 
 **Checkpoint**: OrganizationLookupService now supports batched credential queries
 
@@ -35,13 +35,13 @@
 
 ### Implementation
 
-- [ ] T002 [P] [US1] Create `LeadUsersByRoleSetLoaderCreator` in `src/core/dataloader/creators/loader.creators/roleset/lead.users.by.role.set.loader.creator.ts`. Implement `DataLoaderCreator<IUser[]>` following the `SpaceCommunityWithRoleSetLoaderCreator` pattern. Batch function: accept composite string keys (`credentialType|resourceID`), parse into `CredentialsSearchInput[]`, call `UserLookupService.usersWithCredentials()` once, group returned users by matching `agent.credentials[].type` and `resourceID` against original keys, return `IUser[][]` in input order (empty arrays for keys with no matches). Inject `UserLookupService` via constructor. Use `{ cache: true, name: 'LeadUsersByRoleSetLoader' }` DataLoader options.
+- [x] T002 [P] [US1] Create `LeadUsersByRoleSetLoaderCreator` in `src/core/dataloader/creators/loader.creators/roleset/lead.users.by.role.set.loader.creator.ts`. Implement `DataLoaderCreator<IUser[]>` following the `SpaceCommunityWithRoleSetLoaderCreator` pattern. Batch function: accept composite string keys (`credentialType|resourceID`), parse into `CredentialsSearchInput[]`, call `UserLookupService.usersWithCredentials()` once, group returned users by matching `agent.credentials[].type` and `resourceID` against original keys, return `IUser[][]` in input order (empty arrays for keys with no matches). Inject `UserLookupService` via constructor. Use `{ cache: true, name: 'LeadUsersByRoleSetLoader' }` DataLoader options.
 
-- [ ] T003 [P] [US1] Create `LeadOrganizationsByRoleSetLoaderCreator` in `src/core/dataloader/creators/loader.creators/roleset/lead.organizations.by.role.set.loader.creator.ts`. Same pattern as T002 but for organizations: inject `OrganizationLookupService`, call `organizationsWithCredentialsBatch()` (from T001), group by `agent.credentials` match. Use `{ cache: true, name: 'LeadOrganizationsByRoleSetLoader' }`.
+- [x] T003 [P] [US1] Create `LeadOrganizationsByRoleSetLoaderCreator` in `src/core/dataloader/creators/loader.creators/roleset/lead.organizations.by.role.set.loader.creator.ts`. Same pattern as T002 but for organizations: inject `OrganizationLookupService`, call `organizationsWithCredentialsBatch()` (from T001), group by `agent.credentials` match. Use `{ cache: true, name: 'LeadOrganizationsByRoleSetLoader' }`.
 
-- [ ] T004 [US1] Export both new loader creators from `src/core/dataloader/creators/loader.creators/index.ts`. Add two lines: `export * from './roleset/lead.users.by.role.set.loader.creator';` and `export * from './roleset/lead.organizations.by.role.set.loader.creator';`. They will be auto-registered by `LoaderCreatorModule` which uses `Object.values(creators)`.
+- [x] T004 [US1] Export both new loader creators from `src/core/dataloader/creators/loader.creators/index.ts`. Add two lines: `export * from './roleset/lead.users.by.role.set.loader.creator';` and `export * from './roleset/lead.organizations.by.role.set.loader.creator';`. They will be auto-registered by `LoaderCreatorModule` which uses `Object.values(creators)`.
 
-- [ ] T005 [US1] Update `src/domain/space/space.about.membership/space.about.membership.resolver.fields.ts`: Replace `leadUsers()` resolver — add `@Loader(LeadUsersByRoleSetLoaderCreator) loader: ILoader<IUser[]>` parameter, extract credential via `membership.roleSet.roles?.find(r => r.name === RoleName.LEAD)?.credential`, return `[]` if no credential found, otherwise `loader.load(\`${credential.type}|${credential.resourceID}\`)`. Apply the same pattern to `leadOrganizations()` using `LeadOrganizationsByRoleSetLoaderCreator`. Import `Loader` decorator from `@core/dataloader`, `ILoader` from `@core/dataloader/loader.interface`, and both new loader creators. The `RoleSetService` import can be removed if no other methods in this resolver use it (check `applicationForm` — it still uses `roleSetService`, so keep the import).
+- [x] T005 [US1] Update `src/domain/space/space.about.membership/space.about.membership.resolver.fields.ts`: Replace `leadUsers()` resolver — add `@Loader(LeadUsersByRoleSetLoaderCreator) loader: ILoader<IUser[]>` parameter, extract credential via `membership.roleSet.roles?.find(r => r.name === RoleName.LEAD)?.credential`, return `[]` if no credential found, otherwise `loader.load(\`${credential.type}|${credential.resourceID}\`)`. Apply the same pattern to `leadOrganizations()` using `LeadOrganizationsByRoleSetLoaderCreator`. Import `Loader` decorator from `@core/dataloader`, `ILoader` from `@core/dataloader/loader.interface`, and both new loader creators. The `RoleSetService` import can be removed if no other methods in this resolver use it (check `applicationForm` — it still uses `roleSetService`, so keep the import).
 
 **Checkpoint**: US1 and US2 complete. Lead user and organization resolution now batched. Verify by running ExploreAllSpaces query and checking DB logs.
 
@@ -53,7 +53,7 @@
 
 **Independent Test**: Execute `ExploreAllSpaces` with different `limit` values (10, 20, 30) and verify the credential query count stays at 2.
 
-- [ ] T006 [US3] Verify constant query count by running `ExploreAllSpaces` query with `options: { limit: 10 }`, `{ limit: 20 }`, and `{ limit: 30 }` with `DATABASE_LOGGING=true`. Confirm: (a) credential-related SELECT statements remain at exactly 2 regardless of limit, (b) all response data is correct for each limit value, (c) no new N+1 patterns appear in logs. Document results inline as a code comment in `lead.users.by.role.set.loader.creator.ts` explaining the batching optimization per constitution principle 5.
+- [x] T006 [US3] Verify constant query count by running `ExploreAllSpaces` query with `options: { limit: 10 }`, `{ limit: 20 }`, and `{ limit: 30 }` with `DATABASE_LOGGING=true`. Confirm: (a) credential-related SELECT statements remain at exactly 2 regardless of limit, (b) all response data is correct for each limit value, (c) no new N+1 patterns appear in logs. Document results inline as a code comment in `lead.users.by.role.set.loader.creator.ts` explaining the batching optimization per constitution principle 5.
 
 **Checkpoint**: All user stories verified. Performance scales O(1) for credential lookups.
 
@@ -63,9 +63,9 @@
 
 **Purpose**: Final verification before PR
 
-- [ ] T007 Run `pnpm build` to verify TypeScript compilation succeeds with no errors
-- [ ] T008 Run `pnpm lint` to verify Biome linting passes (no unused imports, proper formatting)
-- [ ] T009 Execute full quickstart.md validation: run the `ExploreAllSpaces` query from `specs/035-optimize-explore-spaces/quickstart.md`, compare response data pre/post optimization, verify no regressions
+- [x] T007 Run `pnpm build` to verify TypeScript compilation succeeds with no errors
+- [x] T008 Run `pnpm lint` to verify Biome linting passes (no unused imports, proper formatting)
+- [x] T009 Execute full quickstart.md validation: run the `ExploreAllSpaces` query from `specs/035-optimize-explore-spaces/quickstart.md`, compare response data pre/post optimization, verify no regressions
 
 ---
 

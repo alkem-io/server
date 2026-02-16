@@ -8,7 +8,7 @@ import { CredentialsSearchInput } from '@domain/agent/credential/dto/credentials
 import { Inject, LoggerService } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager, FindOneOptions } from 'typeorm';
+import { EntityManager, FindManyOptions, FindOneOptions } from 'typeorm';
 import { Organization } from '../organization/organization.entity';
 import { IOrganization } from '../organization/organization.interface';
 
@@ -73,6 +73,55 @@ export class OrganizationLookupService {
       },
       take: limit,
     });
+
+    return organizations;
+  }
+
+  async organizationsWithCredentialsBatch(
+    credentialCriteriaArray: CredentialsSearchInput[],
+    limit?: number,
+    options?: FindManyOptions<Organization>
+  ): Promise<IOrganization[]> {
+    if (credentialCriteriaArray.length === 0) {
+      return [];
+    }
+
+    const whereConditions = credentialCriteriaArray.map(criteria => ({
+      agent: {
+        credentials: {
+          type: criteria.type,
+          resourceID: criteria.resourceID || '',
+        },
+      },
+    }));
+
+    const findOptions: FindManyOptions<Organization> = {
+      where: whereConditions,
+      relations: {
+        agent: {
+          credentials: true,
+        },
+        ...options?.relations,
+      },
+      take: limit,
+      ...options,
+    };
+
+    if (options?.relations) {
+      findOptions.relations = {
+        ...findOptions.relations,
+        ...options.relations,
+        agent: {
+          credentials: true,
+          ...(options.relations as any)?.agent,
+        },
+      };
+    }
+
+    const organizations = await this.entityManager.find(
+      Organization,
+      findOptions
+    );
 
     return organizations;
   }
