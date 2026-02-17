@@ -10,6 +10,7 @@ import {
 } from '@config/graphql';
 import { AuthenticationModule } from '@core/authentication/authentication.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { GraphqlGuardModule } from '@core/authorization/graphql.guard.module';
 import { BootstrapModule } from '@core/bootstrap/bootstrap.module';
 import { LoaderCreatorModule } from '@core/dataloader/creators/loader.creator.module';
 import { DataLoaderInterceptor } from '@core/dataloader/interceptors';
@@ -244,6 +245,7 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
     ScalarsModule,
     AuthenticationModule,
     AuthorizationModule,
+    GraphqlGuardModule,
     SpaceModule,
     MetadataModule,
     BootstrapModule,
