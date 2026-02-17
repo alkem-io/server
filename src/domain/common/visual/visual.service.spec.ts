@@ -210,7 +210,7 @@ describe('VisualService', () => {
     it('should throw ValidationException when mime type is not allowed', () => {
       const visual = { allowedTypes: ['image/png'] } as IVisual;
 
-      expect(() => service.validateMimeType(visual, 'image/gif')).toThrow(
+      expect(() => service.validateMimeType(visual, 'application/pdf')).toThrow(
         ValidationException
       );
     });

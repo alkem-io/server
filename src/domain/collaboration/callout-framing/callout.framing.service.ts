@@ -24,9 +24,10 @@ import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { ILink } from '../link/link.interface';
 import { CalloutFraming } from './callout.framing.entity';
@@ -46,6 +47,8 @@ export class CalloutFramingService {
     private namingService: NamingService,
     private tagsetService: TagsetService,
     private mediaGalleryService: MediaGalleryService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
     @InjectRepository(CalloutFraming)
     private calloutFramingRepository: Repository<CalloutFraming>
   ) {}
@@ -219,20 +222,31 @@ export class CalloutFramingService {
         calloutFraming.mediaGallery.visuals = [];
       }
       for (const visualData of visuals) {
-        const newUrl =
-          await this.profileDocumentsService.reuploadFileOnStorageBucket(
-            visualData.uri,
-            calloutFraming.mediaGallery.storageBucket
+        try {
+          const newUrl =
+            await this.profileDocumentsService.reuploadFileOnStorageBucket(
+              visualData.uri,
+              calloutFraming.mediaGallery.storageBucket
+            );
+          if (newUrl) {
+            const visual =
+              await this.mediaGalleryService.addVisualToMediaGallery(
+                calloutFraming.mediaGallery.id,
+                visualData.name,
+                visualData.sortOrder
+              );
+            visual.uri = newUrl;
+            calloutFraming.mediaGallery.visuals.push(visual);
+            await this.mediaGalleryService.saveVisual(visual);
+          }
+        } catch (error: unknown) {
+          const stackTrace =
+            error instanceof Error ? error.stack : String(error);
+          this.logger.error?.(
+            'Failed to add visual to media gallery during callout creation, skipping',
+            stackTrace,
+            LogContext.COLLABORATION
           );
-        if (newUrl) {
-          const visual = await this.mediaGalleryService.addVisualToMediaGallery(
-            calloutFraming.mediaGallery.id,
-            visualData.name,
-            visualData.sortOrder
-          );
-          visual.uri = newUrl;
-          calloutFraming.mediaGallery.visuals.push(visual);
-          await this.mediaGalleryService.saveVisual(visual);
         }
       }
     }
