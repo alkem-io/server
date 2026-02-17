@@ -253,6 +253,32 @@ export class CalloutContributionService {
     });
   }
 
+  /**
+   * Batch-loads contribution counts for multiple callouts in a single query.
+   * Returns a Map from calloutId to count (defaults to 0 for callouts with no contributions).
+   */
+  public async getContributionsCountBatch(
+    calloutIds: string[]
+  ): Promise<Map<string, number>> {
+    if (calloutIds.length === 0) {
+      return new Map();
+    }
+
+    const results = await this.contributionRepository
+      .createQueryBuilder('contribution')
+      .select('contribution.calloutId', 'calloutId')
+      .addSelect('COUNT(*)', 'count')
+      .where('contribution.calloutId IN (:...calloutIds)', { calloutIds })
+      .groupBy('contribution.calloutId')
+      .getRawMany<{ calloutId: string; count: string }>();
+
+    const countsMap = new Map<string, number>();
+    for (const row of results) {
+      countsMap.set(row.calloutId, parseInt(row.count, 10));
+    }
+    return countsMap;
+  }
+
   public async getWhiteboard(
     calloutContributionInput: ICalloutContribution,
     relations?: FindOptionsRelations<ICalloutContribution>
