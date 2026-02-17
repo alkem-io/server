@@ -69,7 +69,7 @@ describe('TemplateContentSpaceLookupService', () => {
       db.query.templateContentSpaces.findFirst.mockResolvedValueOnce(expected);
 
       await service.getTemplateContentSpaceOrFail('tcs-1', {
-        where: { level: 0 } as any,
+        relations: { about: true },
       });
 
     });

@@ -67,7 +67,7 @@ import { keyBy } from 'lodash';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
-import { eq, and, inArray, desc, sql } from 'drizzle-orm';
+import { eq, and, inArray, desc, sql, gte } from 'drizzle-orm';
 import { spaces } from './space.schema';
 import { IAccount } from '../account/account.interface';
 import { ISpaceAbout } from '../space.about/space.about.interface';
@@ -711,7 +711,7 @@ export class SpaceService {
         and(
           eq(spaces.level, SpaceLevel.L0),
           eq(spaces.visibility, SpaceVisibility.ACTIVE),
-          sql`${Activity.createdDate} >= ${daysAgo}`
+          gte(Activity.createdDate, daysAgo)
         )
       )
       .groupBy(spaces.id)

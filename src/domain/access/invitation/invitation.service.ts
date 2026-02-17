@@ -67,6 +67,7 @@ export class InvitationService {
     const invitation = await this.getInvitationOrFail(invitationID, {
       with: {
         roleSet: true,
+        lifecycle: true,
       },
     });
     await this.lifecycleService.deleteLifecycle(invitation.lifecycle.id);
@@ -181,7 +182,9 @@ export class InvitationService {
   }
 
   async getLifecycleState(invitationID: string): Promise<string> {
-    const invitation = await this.getInvitationOrFail(invitationID);
+    const invitation = await this.getInvitationOrFail(invitationID, {
+      with: { lifecycle: true },
+    });
     const lifecycle = invitation.lifecycle;
 
     return this.invitationLifecycleService.getState(lifecycle);
@@ -255,14 +258,18 @@ export class InvitationService {
   }
 
   async isFinalizedInvitation(invitationID: string): Promise<boolean> {
-    const invitation = await this.getInvitationOrFail(invitationID);
+    const invitation = await this.getInvitationOrFail(invitationID, {
+      with: { lifecycle: true },
+    });
     const lifecycle = invitation.lifecycle;
 
     return this.invitationLifecycleService.isFinalState(lifecycle);
   }
 
   async canInvitationBeAccepted(invitationID: string): Promise<boolean> {
-    const invitation = await this.getInvitationOrFail(invitationID);
+    const invitation = await this.getInvitationOrFail(invitationID, {
+      with: { lifecycle: true },
+    });
     return this.canAcceptInvitation(invitation);
   }
 

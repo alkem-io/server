@@ -23,7 +23,7 @@ export class SpaceAboutLoaderCreator implements DataLoaderCreator<ISpaceAbout> {
     return createTypedRelationDataLoader(
       this.db,
       tableName,
-      { about: true },
+      { about: { with: { authorization: true } } },
       this.constructor.name,
       options
     );

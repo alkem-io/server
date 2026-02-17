@@ -13,6 +13,8 @@ export class PlatformResolverQueries {
     description: 'Alkemio Platform',
   })
   async platform(): Promise<IPlatform> {
-    return await this.platformService.getPlatformOrFail();
+    return await this.platformService.getPlatformOrFail({
+      relations: { authorization: true },
+    });
   }
 }

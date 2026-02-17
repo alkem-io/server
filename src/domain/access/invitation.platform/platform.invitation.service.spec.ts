@@ -73,7 +73,7 @@ describe('PlatformInvitationService', () => {
       db.query.platformInvitations.findFirst.mockResolvedValueOnce(mockInvitation);
 
       await service.getPlatformInvitationOrFail('inv-1', {
-        relations: { roleSet: true },
+        with: { roleSet: true },
       });
 
     });

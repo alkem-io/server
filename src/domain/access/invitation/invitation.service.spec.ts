@@ -85,7 +85,7 @@ describe('InvitationService', () => {
       db.query.invitations.findFirst.mockResolvedValueOnce(mockInvitation);
 
       await service.getInvitationOrFail('inv-1', {
-        relations: { roleSet: true },
+        with: { roleSet: true },
       });
 
     });

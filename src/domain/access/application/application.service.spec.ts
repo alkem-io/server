@@ -84,7 +84,7 @@ describe('ApplicationService', () => {
       db.query.applications.findFirst.mockResolvedValueOnce(mockApplication);
 
       await service.getApplicationOrFail('app-1', {
-        relations: { user: true },
+        with: { user: true },
       });
 
     });

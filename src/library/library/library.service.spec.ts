@@ -55,7 +55,7 @@ describe('LibraryService', () => {
       db.query.libraries.findFirst.mockResolvedValueOnce(library);
 
       await service.getLibraryOrFail({
-        relations: { authorization: true },
+        with: { authorization: true },
       });
 
     });

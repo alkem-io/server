@@ -209,7 +209,7 @@ describe('PostService', () => {
       const options = { relations: { profile: true } } as any;
       db.query.posts.findFirst.mockResolvedValueOnce(post);
 
-      await service.getPostOrFail('post-1', options);
+      await service.getPostOrFail('post-1');
 
     });
   });

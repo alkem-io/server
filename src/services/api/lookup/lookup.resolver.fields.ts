@@ -153,7 +153,9 @@ export class LookupResolverFields {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IAccount> {
-    const account = await this.accountService.getAccountOrFail(id);
+    const account = await this.accountService.getAccountOrFail(id, {
+      with: { authorization: true },
+    });
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       account.authorization,
