@@ -23,6 +23,8 @@ export class AuthorizationService {
   /**
    * @returns _true_ if access is granted, otherwise throws {@link ForbiddenAuthorizationPolicyException}
    * @throws ForbiddenAuthorizationPolicyException
+   * @throws ForbiddenException
+   * @throws AuthorizationInvalidPolicyException
    */
   grantAccessOrFail(
     agentInfo: AgentInfo,

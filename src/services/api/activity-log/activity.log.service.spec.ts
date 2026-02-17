@@ -526,7 +526,7 @@ describe('ActivityLogService', () => {
       // First activity fails in builder, second succeeds
       calloutService.getCalloutOrFail
         .mockRejectedValueOnce(new Error('fail'))
-        .mockResolvedValueOnce({ id: 'callout-1' });
+        .mockResolvedValueOnce({ id: 'callout-1' } as any);
 
       const results = await service.convertRawActivityToResults(rawActivities);
 
@@ -549,7 +549,7 @@ describe('ActivityLogService', () => {
       userLookupService.getUsersByUUID.mockResolvedValueOnce([user1]);
       calloutService.getCalloutOrFail.mockResolvedValueOnce({
         id: 'callout-1',
-      });
+      } as any);
 
       const results = await service.convertRawActivityToResults(rawActivities);
 

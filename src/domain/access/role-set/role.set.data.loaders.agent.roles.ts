@@ -107,7 +107,7 @@ export class RoleSetAgentRolesDataLoader {
 
     // 5. Fire-and-forget: cache writes don't affect the response.
     void Promise.all(cacheWrites).catch(() => {
-    // swallowed – RoleSetCacheService already logs failures
+      // swallowed – RoleSetCacheService already logs failures
     });
 
     return results;

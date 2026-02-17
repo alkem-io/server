@@ -18,9 +18,7 @@ import { EntityManager, In } from 'typeorm';
  * Instead of 2N queries (N role lookups + N credential counts).
  */
 @Injectable()
-export class SpaceMetricsLoaderCreator
-  implements DataLoaderCreator<INVP[]>
-{
+export class SpaceMetricsLoaderCreator implements DataLoaderCreator<INVP[]> {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
   public create(): ILoader<INVP[]> {
@@ -30,9 +28,7 @@ export class SpaceMetricsLoaderCreator
     );
   }
 
-  private async batchLoad(
-    spaceAboutIds: readonly string[]
-  ): Promise<INVP[][]> {
+  private async batchLoad(spaceAboutIds: readonly string[]): Promise<INVP[][]> {
     if (spaceAboutIds.length === 0) {
       return [];
     }

@@ -175,6 +175,7 @@
           {
             "name": "human_language",
             "type": "string",
+            "optional": false,
             "description": "ISO-639-1 language code of the human's most recent message (e.g., 'en', 'es', 'fr', 'de'). Detect from message content; for ambiguous cases use conversation context, defaulting to 'en' if unclear."
           }
         ],
