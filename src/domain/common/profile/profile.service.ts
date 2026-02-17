@@ -10,6 +10,7 @@ import {
 import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { authorizationPolicies } from '@domain/common/authorization-policy/authorization.policy.schema';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ILocation, LocationService } from '@domain/common/location';
 import { Profile } from '@domain/common/profile/profile.entity';
@@ -25,7 +26,7 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { DEFAULT_AVATAR_SERVICE_URL } from '@services/external/avatar-creator/avatar.creator.service';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CreateReferenceInput } from '../reference';
 import { CreateTagsetInput } from '../tagset';
@@ -412,14 +413,16 @@ export class ProfileService {
     profileID: string,
     options?: ProfileFindOptions & { loadEagerRelations?: boolean; select?: any }
   ): Promise<IProfile | never> {
+    // Use flat `with` to avoid Drizzle 0.45.x mapColumnsInSQLToAlias bug
+    // with nested `{ relation: { with: { authorization: true } } }` patterns
     const withClause: any = {};
 
     if (options?.relations) {
       if (options.relations.references) {
-        withClause.references = { with: { authorization: true } };
+        withClause.references = true;
       }
       if (options.relations.tagsets) {
-        withClause.tagsets = { with: { authorization: true } };
+        withClause.tagsets = true;
       }
       if (options.relations.authorization) {
         withClause.authorization = true;
@@ -428,16 +431,14 @@ export class ProfileService {
         withClause.location = true;
       }
       if (options.relations.visuals) {
-        withClause.visuals = { with: { authorization: true } };
+        withClause.visuals = true;
       }
       if (options.relations.storageBucket) {
         withClause.storageBucket = {
           with: {
-            authorization: true,
             documents: {
               with: {
-                authorization: true,
-                tagset: { with: { authorization: true } },
+                tagset: true,
               },
             },
           },
@@ -464,6 +465,82 @@ export class ProfileService {
         `Profile with id(${profileID}) not found!`,
         LogContext.COMMUNITY
       );
+
+    // Batch-load authorization policies for child entities
+    if (options?.relations) {
+      const authIds = new Set<string>();
+      const profileAny = profile as any;
+
+      if (options.relations.references && profileAny.references) {
+        for (const ref of profileAny.references) {
+          if (ref.authorizationId) authIds.add(ref.authorizationId);
+        }
+      }
+      if (options.relations.tagsets && profileAny.tagsets) {
+        for (const ts of profileAny.tagsets) {
+          if (ts.authorizationId) authIds.add(ts.authorizationId);
+        }
+      }
+      if (options.relations.visuals && profileAny.visuals) {
+        for (const vis of profileAny.visuals) {
+          if (vis.authorizationId) authIds.add(vis.authorizationId);
+        }
+      }
+      if (options.relations.storageBucket && profileAny.storageBucket) {
+        const sb = profileAny.storageBucket;
+        if (sb.authorizationId) authIds.add(sb.authorizationId);
+        if (sb.documents) {
+          for (const doc of sb.documents) {
+            if (doc.authorizationId) authIds.add(doc.authorizationId);
+            if (doc.tagset?.authorizationId)
+              authIds.add(doc.tagset.authorizationId);
+          }
+        }
+      }
+
+      if (authIds.size > 0) {
+        const authPoliciesResult =
+          await this.db.query.authorizationPolicies.findMany({
+            where: inArray(authorizationPolicies.id, [...authIds]),
+          });
+        const authMap = new Map(authPoliciesResult.map(a => [a.id, a]));
+
+        if (options.relations.references && profileAny.references) {
+          for (const ref of profileAny.references) {
+            if (ref.authorizationId)
+              ref.authorization = authMap.get(ref.authorizationId);
+          }
+        }
+        if (options.relations.tagsets && profileAny.tagsets) {
+          for (const ts of profileAny.tagsets) {
+            if (ts.authorizationId)
+              ts.authorization = authMap.get(ts.authorizationId);
+          }
+        }
+        if (options.relations.visuals && profileAny.visuals) {
+          for (const vis of profileAny.visuals) {
+            if (vis.authorizationId)
+              vis.authorization = authMap.get(vis.authorizationId);
+          }
+        }
+        if (options.relations.storageBucket && profileAny.storageBucket) {
+          const sb = profileAny.storageBucket;
+          if (sb.authorizationId)
+            sb.authorization = authMap.get(sb.authorizationId);
+          if (sb.documents) {
+            for (const doc of sb.documents) {
+              if (doc.authorizationId)
+                doc.authorization = authMap.get(doc.authorizationId);
+              if (doc.tagset?.authorizationId)
+                doc.tagset.authorization = authMap.get(
+                  doc.tagset.authorizationId
+                );
+            }
+          }
+        }
+      }
+    }
+
     return profile as unknown as IProfile;
   }
 

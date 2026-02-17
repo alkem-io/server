@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  drizzle-orm@0.45.1:
+    hash: 21b39581e7e692c6b45e36283d70248f4680857efef1d73039eaddcd938a1e8a
+    path: patches/drizzle-orm@0.45.1.patch
+
 importers:
 
   .:
@@ -130,7 +135,7 @@ importers:
         version: 16.4.5
       drizzle-orm:
         specifier: ^0.45.1
-        version: 0.45.1(@opentelemetry/api@1.9.0)(@types/pg@8.15.5)(mysql2@3.15.1)(pg@8.16.3)(postgres@3.4.8)
+        version: 0.45.1(patch_hash=21b39581e7e692c6b45e36283d70248f4680857efef1d73039eaddcd938a1e8a)(@opentelemetry/api@1.9.0)(@types/pg@8.15.5)(mysql2@3.15.1)(pg@8.16.3)(postgres@3.4.8)
       elastic-apm-node:
         specifier: ^4.11.0
         version: 4.14.0
@@ -9341,7 +9346,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  drizzle-orm@0.45.1(@opentelemetry/api@1.9.0)(@types/pg@8.15.5)(mysql2@3.15.1)(pg@8.16.3)(postgres@3.4.8):
+  drizzle-orm@0.45.1(patch_hash=21b39581e7e692c6b45e36283d70248f4680857efef1d73039eaddcd938a1e8a)(@opentelemetry/api@1.9.0)(@types/pg@8.15.5)(mysql2@3.15.1)(pg@8.16.3)(postgres@3.4.8):
     optionalDependencies:
       '@opentelemetry/api': 1.9.0
       '@types/pg': 8.15.5

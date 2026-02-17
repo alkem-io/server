@@ -47,7 +47,10 @@ export class OrganizationVerificationService {
     organizationVerificationID: string
   ): Promise<IOrganizationVerification> {
     const orgVerification =
-      await this.getOrganizationVerificationOrFail(organizationVerificationID);
+      await this.getOrganizationVerificationOrFail(
+        organizationVerificationID,
+        { with: { lifecycle: true, authorization: true } }
+      );
 
     if (orgVerification.authorization)
       await this.authorizationPolicyService.delete(

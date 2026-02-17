@@ -41,9 +41,7 @@ export class LicensePolicyService {
   // TODO: a work around, need to look at how to make the license policy more readily available
   // in all contexts
   public async getDefaultLicensePolicyOrFail(): Promise<ILicensePolicy> {
-    const licensePolicy = await this.db.query.licensePolicies.findFirst({
-      where: undefined,
-    });
+    const licensePolicy = await this.db.query.licensePolicies.findFirst();
 
     if (!licensePolicy) {
       throw new EntityNotFoundException(

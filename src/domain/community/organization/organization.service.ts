@@ -662,7 +662,7 @@ export class OrganizationService {
     const organization = await this.getOrganizationOrFail(
       organizationParent.id,
       {
-        relations: { verification: true },
+        relations: { verification: { with: { lifecycle: true } } },
       }
     );
     if (!organization.verification) {

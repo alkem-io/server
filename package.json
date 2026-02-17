@@ -188,7 +188,10 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "sharp"
-    ]
+    ],
+    "patchedDependencies": {
+      "drizzle-orm@0.45.1": "patches/drizzle-orm@0.45.1.patch"
+    }
   },
   "volta": {
     "node": "22.21.1"

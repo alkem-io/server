@@ -41,8 +41,7 @@ export class PlatformService {
       : undefined;
 
     const platform = await this.db.query.platforms.findFirst({
-      where: undefined,
-      with: with_ as any,
+      ...(with_ ? { with: with_ as any } : {}),
     });
 
     if (!platform) {

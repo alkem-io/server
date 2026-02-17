@@ -10,6 +10,8 @@ import {
   LogContext,
 } from '@common/enums';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { DRIZZLE } from '@config/drizzle/drizzle.constants';
+import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { ApplicationAuthorizationService } from '@domain/access/application/application.service.authorization';
@@ -17,10 +19,12 @@ import { InvitationAuthorizationService } from '@domain/access/invitation/invita
 import { PlatformInvitationAuthorizationService } from '@domain/access/invitation.platform/platform.invitation.service.authorization';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { authorizationPolicies } from '@domain/common/authorization-policy/authorization.policy.schema';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
+import { inArray } from 'drizzle-orm';
 import { IRoleSet } from './role.set.interface';
 import { RoleSetService } from './role.set.service';
 
@@ -33,7 +37,8 @@ export class RoleSetAuthorizationService {
     private invitationAuthorizationService: InvitationAuthorizationService,
     private virtualContributorLookupService: VirtualContributorLookupService,
     private platformInvitationAuthorizationService: PlatformInvitationAuthorizationService,
-    private licenseAuthorizationService: LicenseAuthorizationService
+    private licenseAuthorizationService: LicenseAuthorizationService,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb
   ) {}
 
   async applyAuthorizationPolicy(
@@ -42,16 +47,71 @@ export class RoleSetAuthorizationService {
     credentialRulesFromParent: IAuthorizationPolicyRuleCredential[] = [],
     privilegeRulesFromParent: AuthorizationPolicyRulePrivilege[] = []
   ): Promise<IAuthorizationPolicy[]> {
+    // Use flat `with` to avoid Drizzle 0.45.x mapColumnsInSQLToAlias bug
+    // with nested `{ relation: { with: { authorization: true } } }` patterns
     const roleSet = await this.roleSetService.getRoleSetOrFail(roleSetID, {
       with: {
         authorization: true,
         roles: true,
-        applications: { with: { authorization: true } },
-        invitations: { with: { authorization: true } },
-        platformInvitations: { with: { authorization: true } },
-        license: { with: { authorization: true } },
+        applications: true,
+        invitations: true,
+        platformInvitations: true,
+        license: true,
       },
     });
+
+    // Batch-load authorization policies for child entities
+    const childAuthIds = new Set<string>();
+    for (const app of roleSet.applications ?? []) {
+      if ((app as any).authorizationId)
+        childAuthIds.add((app as any).authorizationId);
+    }
+    for (const inv of roleSet.invitations ?? []) {
+      if ((inv as any).authorizationId)
+        childAuthIds.add((inv as any).authorizationId);
+    }
+    for (const pi of roleSet.platformInvitations ?? []) {
+      if ((pi as any).authorizationId)
+        childAuthIds.add((pi as any).authorizationId);
+    }
+    if ((roleSet.license as any)?.authorizationId) {
+      childAuthIds.add((roleSet.license as any).authorizationId);
+    }
+
+    if (childAuthIds.size > 0) {
+      const childAuthPolicies =
+        await this.db.query.authorizationPolicies.findMany({
+          where: inArray(authorizationPolicies.id, [...childAuthIds]),
+        });
+      const authMap = new Map(childAuthPolicies.map(a => [a.id, a]));
+
+      for (const app of roleSet.applications ?? []) {
+        if ((app as any).authorizationId) {
+          (app as any).authorization = authMap.get(
+            (app as any).authorizationId
+          );
+        }
+      }
+      for (const inv of roleSet.invitations ?? []) {
+        if ((inv as any).authorizationId) {
+          (inv as any).authorization = authMap.get(
+            (inv as any).authorizationId
+          );
+        }
+      }
+      for (const pi of roleSet.platformInvitations ?? []) {
+        if ((pi as any).authorizationId) {
+          (pi as any).authorization = authMap.get(
+            (pi as any).authorizationId
+          );
+        }
+      }
+      if ((roleSet.license as any)?.authorizationId) {
+        (roleSet.license as any).authorization = authMap.get(
+          (roleSet.license as any).authorizationId
+        );
+      }
+    }
     if (
       !roleSet.roles ||
       !roleSet.applications ||

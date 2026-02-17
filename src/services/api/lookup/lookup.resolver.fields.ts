@@ -134,7 +134,9 @@ export class LookupResolverFields {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<ISpace> {
-    const space = await this.spaceService.getSpaceOrFail(id);
+    const space = await this.spaceService.getSpaceOrFail(id, {
+      with: { authorization: true },
+    });
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       space.authorization,
@@ -269,7 +271,9 @@ export class LookupResolverFields {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID, nullable: false }) id: string
   ): Promise<IUser> {
-    const user = await this.userLookupService.getUserOrFail(id);
+    const user = await this.userLookupService.getUserOrFail(id, {
+      with: { authorization: true },
+    });
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       user.authorization,

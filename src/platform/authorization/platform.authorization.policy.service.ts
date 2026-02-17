@@ -28,7 +28,6 @@ export class PlatformAuthorizationPolicyService {
 
   public async getPlatformAuthorizationPolicy(): Promise<IAuthorizationPolicy> {
     const platform = await this.db.query.platforms.findFirst({
-      where: undefined,
       with: {
         authorization: true,
       } as any,

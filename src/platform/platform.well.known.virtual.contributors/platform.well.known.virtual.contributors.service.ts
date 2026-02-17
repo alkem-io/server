@@ -21,9 +21,7 @@ export class PlatformWellKnownVirtualContributorsService {
   ) {}
 
   async getMappings(): Promise<WellKnownVCMappingsRecord> {
-    const platform = await this.db.query.platforms.findFirst({
-      where: undefined,
-    });
+    const platform = await this.db.query.platforms.findFirst();
 
     if (!platform) {
       throw new EntityNotFoundException(
@@ -39,9 +37,7 @@ export class PlatformWellKnownVirtualContributorsService {
     wellKnown: VirtualContributorWellKnown,
     virtualContributorID: string
   ): Promise<WellKnownVCMappingsRecord> {
-    const platform = await this.db.query.platforms.findFirst({
-      where: undefined,
-    });
+    const platform = await this.db.query.platforms.findFirst();
 
     if (!platform) {
       throw new EntityNotFoundException(

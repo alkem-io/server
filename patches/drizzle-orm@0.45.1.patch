@@ -1,0 +1,24 @@
+diff --git a/alias.cjs b/alias.cjs
+index a5d58d647bba6809f04bd62c6a9d72ec64d4f2b4..3ffa40a2ea7aa618686e37d40ff273ef80dc4b52 100644
+--- a/alias.cjs
++++ b/alias.cjs
+@@ -117,6 +117,7 @@ function mapColumnsInAliasedSQLToAlias(query, alias) {
+   return new import_sql.SQL.Aliased(mapColumnsInSQLToAlias(query.sql, alias), query.fieldAlias);
+ }
+ function mapColumnsInSQLToAlias(query, alias) {
++  if (!query || !query.queryChunks) return query;
+   return import_sql.sql.join(query.queryChunks.map((c) => {
+     if ((0, import_entity.is)(c, import_column.Column)) {
+       return aliasedTableColumn(c, alias);
+diff --git a/alias.js b/alias.js
+index a2e9dddc6b19e5668d23b2b25a0718ee2a201c37..f770b6dc15347cb2d21cbd552b66563b7fd2c601 100644
+--- a/alias.js
++++ b/alias.js
+@@ -87,6 +87,7 @@ function mapColumnsInAliasedSQLToAlias(query, alias) {
+   return new SQL.Aliased(mapColumnsInSQLToAlias(query.sql, alias), query.fieldAlias);
+ }
+ function mapColumnsInSQLToAlias(query, alias) {
++  if (!query || !query.queryChunks) return query;
+   return sql.join(query.queryChunks.map((c) => {
+     if (is(c, Column)) {
+       return aliasedTableColumn(c, alias);

@@ -9,6 +9,7 @@ import { PaginationArgs } from '@core/pagination';
 import { ActivityFeed } from '@domain/activity-feed/activity.feed.interface';
 import { ActivityFeedRoles } from '@domain/activity-feed/activity.feed.roles.enum';
 import { Space } from '@domain/space/space/space.entity';
+import { authorizationPolicies } from '@domain/common/authorization-policy/authorization.policy.schema';
 import { spaces } from '@domain/space/space/space.schema';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -256,19 +257,67 @@ export class ActivityFeedService {
       return [];
     }
 
-    // Step A: Batch-load all spaces with their collaboration (1 query instead of N)
+    // Step A: Batch-load all spaces with their collaboration (flat, no nested with)
     const loadedSpaces = (await this.db.query.spaces.findMany({
       where: inArray(spaces.id, spaceIds),
-      with: { collaboration: { with: { authorization: true } } },
+      with: { collaboration: true },
     })) as unknown as Space[];
 
+    // Step B: Batch-load child spaces based on level
+    const l0SpaceIds = loadedSpaces
+      .filter(s => s.level === SpaceLevel.L0)
+      .map(s => s.id);
+    const l1SpaceIds = loadedSpaces
+      .filter(s => s.level === SpaceLevel.L1)
+      .map(s => s.id);
+
+    const childSpaces: Space[] = [];
+    if (l0SpaceIds.length > 0) {
+      const accountChildren = (await this.db.query.spaces.findMany({
+        where: inArray(spaces.levelZeroSpaceID, l0SpaceIds),
+        with: { collaboration: true },
+      })) as unknown as Space[];
+      childSpaces.push(...accountChildren);
+    }
+
+    if (l1SpaceIds.length > 0) {
+      const subspaces = (await this.db.query.spaces.findMany({
+        where: inArray(spaces.parentSpaceId, l1SpaceIds),
+        with: { collaboration: true },
+      })) as unknown as Space[];
+      childSpaces.push(...subspaces);
+    }
+
+    // Step C: Batch-load authorization policies for all collaborations
+    const allSpaces = [...loadedSpaces, ...childSpaces];
+    const collabAuthIds = new Set<string>();
+    for (const space of allSpaces) {
+      if ((space.collaboration as any)?.authorizationId) {
+        collabAuthIds.add((space.collaboration as any).authorizationId);
+      }
+    }
+
+    if (collabAuthIds.size > 0) {
+      const authPoliciesResult =
+        await this.db.query.authorizationPolicies.findMany({
+          where: inArray(authorizationPolicies.id, [...collabAuthIds]),
+        });
+      const authMap = new Map(authPoliciesResult.map(a => [a.id, a]));
+
+      for (const space of allSpaces) {
+        if ((space.collaboration as any)?.authorizationId) {
+          (space.collaboration as any).authorization = authMap.get(
+            (space.collaboration as any).authorizationId
+          );
+        }
+      }
+    }
+
+    // Step D: Filter by read access (in-memory)
     const readableCollaborationIds: string[] = [];
 
-    // Check read access on each space's collaboration (in-memory, no DB)
     for (const space of loadedSpaces) {
-      if (!space.collaboration) {
-        continue;
-      }
+      if (!space.collaboration) continue;
       if (
         this.authorizationService.isAccessGranted(
           agentInfo,
@@ -280,42 +329,10 @@ export class ActivityFeedService {
       }
     }
 
-    // Step B: Batch-load child spaces based on level
-    const l0SpaceIds = loadedSpaces
-      .filter(s => s.level === SpaceLevel.L0)
-      .map(s => s.id);
-    const l1SpaceIds = loadedSpaces
-      .filter(s => s.level === SpaceLevel.L1)
-      .map(s => s.id);
-
-    // For L0 spaces: load all spaces in the account (1 query)
-    const childSpaces: Space[] = [];
-    if (l0SpaceIds.length > 0) {
-      const accountChildren = (await this.db.query.spaces.findMany({
-        where: inArray(spaces.levelZeroSpaceID, l0SpaceIds),
-        with: { collaboration: { with: { authorization: true } } },
-      })) as unknown as Space[];
-      childSpaces.push(...accountChildren);
-    }
-
-    // For L1 spaces: load all L2 subspaces (1 query)
-    if (l1SpaceIds.length > 0) {
-      const subspaces = (await this.db.query.spaces.findMany({
-        where: inArray(spaces.parentSpaceId, l1SpaceIds),
-        with: { collaboration: { with: { authorization: true } } },
-      })) as unknown as Space[];
-      childSpaces.push(...subspaces);
-    }
-
-    // Filter child collaborations by read access (in-memory)
     for (const childSpace of childSpaces) {
-      if (!childSpace.collaboration) {
+      if (!childSpace.collaboration) continue;
+      if (readableCollaborationIds.includes(childSpace.collaboration.id))
         continue;
-      }
-      // Avoid duplicates (L0 query may include the L0 space itself)
-      if (readableCollaborationIds.includes(childSpace.collaboration.id)) {
-        continue;
-      }
       if (
         this.authorizationService.isAccessGranted(
           agentInfo,

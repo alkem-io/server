@@ -36,7 +36,8 @@ export class OrganizationVerificationResolverMutations {
   ): Promise<IOrganizationVerification> {
     let organizationVerification =
       await this.organizationVerificationService.getOrganizationVerificationOrFail(
-        organizationVerificationEventData.organizationVerificationID
+        organizationVerificationEventData.organizationVerificationID,
+        { with: { lifecycle: true, authorization: true } }
       );
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -64,7 +65,8 @@ export class OrganizationVerificationResolverMutations {
 
     organizationVerification =
       await this.organizationVerificationService.getOrganizationVerificationOrFail(
-        organizationVerification.id
+        organizationVerification.id,
+        { with: { lifecycle: true, authorization: true } }
       );
 
     // Ensure the cached state is synced with the lifecycle state
