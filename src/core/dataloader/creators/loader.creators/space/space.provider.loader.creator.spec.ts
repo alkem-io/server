@@ -1,10 +1,10 @@
-import { Space } from '@domain/space/space/space.entity';
-import { User } from '@domain/community/user/user.entity';
 import { Organization } from '@domain/community/organization/organization.entity';
+import { User } from '@domain/community/user/user.entity';
+import { Space } from '@domain/space/space/space.entity';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getEntityManagerToken } from '@nestjs/typeorm';
+import { EntityManager } from 'typeorm';
 import { type Mocked, vi } from 'vitest';
-import { EntityManager, In } from 'typeorm';
 import { SpaceProviderLoaderCreator } from './space.provider.loader.creator';
 
 /** Builds a space stub with about and levelZeroSpaceID. */
@@ -117,7 +117,10 @@ describe('SpaceProviderLoaderCreator', () => {
       const space = makeSpace('s-1', 'about-1', 'l0-1');
       const l0Space = makeL0Space('l0-1', 'acc-1');
       const user = { id: 'user-1', accountID: 'acc-1' } as unknown as User;
-      const org = { id: 'org-1', accountID: 'acc-1' } as unknown as Organization;
+      const org = {
+        id: 'org-1',
+        accountID: 'acc-1',
+      } as unknown as Organization;
 
       entityManager.find.mockResolvedValueOnce([space]);
       entityManager.find.mockResolvedValueOnce([l0Space]);

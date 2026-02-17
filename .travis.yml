@@ -1,4 +1,4 @@
-dist: focal
+dist: jammy
 language: node_js
 node_js:
   - v22.21.1
@@ -8,11 +8,11 @@ env:
 
 cache:
   directories:
-    - node_modules
-    - ~/.pnpm-store
+    - ~/.local/share/pnpm/store
 before_install:
-  - npm install -g pnpm@10.17.1
+  - corepack enable
+  - corepack prepare pnpm@10.17.1 --activate
 install:
-  - pnpm install
+  - pnpm install --frozen-lockfile
 script:
   - pnpm run test:ci:no:coverage

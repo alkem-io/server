@@ -1,16 +1,13 @@
 import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.interface';
-import { IInnovationFlowState } from '@domain/collaboration/innovation-flow-state/innovation.flow.state.interface';
 import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovation.flow.service';
+import { IInnovationFlowState } from '@domain/collaboration/innovation-flow-state/innovation.flow.state.interface';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { type Mocked } from 'vitest';
 import { InnovationFlowResolverFields } from './innovation.flow.resolver.fields';
 
-function makeState(
-  id: string,
-  sortOrder: number
-): IInnovationFlowState {
+function makeState(id: string, sortOrder: number): IInnovationFlowState {
   return { id, sortOrder } as unknown as IInnovationFlowState;
 }
 
@@ -83,9 +80,7 @@ describe('InnovationFlowResolverFields', () => {
       const result = await resolver.currentState(flow);
 
       expect(result).toBeNull();
-      expect(
-        innovationFlowService.getCurrentState
-      ).not.toHaveBeenCalled();
+      expect(innovationFlowService.getCurrentState).not.toHaveBeenCalled();
     });
 
     it('should find matching state from eagerly-loaded states', async () => {
@@ -96,9 +91,7 @@ describe('InnovationFlowResolverFields', () => {
       const result = await resolver.currentState(flow);
 
       expect(result).toBe(s2);
-      expect(
-        innovationFlowService.getCurrentState
-      ).not.toHaveBeenCalled();
+      expect(innovationFlowService.getCurrentState).not.toHaveBeenCalled();
     });
 
     it('should return null when currentStateID not found in states array', async () => {
@@ -118,9 +111,7 @@ describe('InnovationFlowResolverFields', () => {
       const result = await resolver.currentState(flow);
 
       expect(result).toBe(expectedState);
-      expect(
-        innovationFlowService.getCurrentState
-      ).toHaveBeenCalledWith('s-1');
+      expect(innovationFlowService.getCurrentState).toHaveBeenCalledWith('s-1');
     });
 
     it('should delegate to service when states is empty array with currentStateID set', async () => {
@@ -131,9 +122,7 @@ describe('InnovationFlowResolverFields', () => {
       const result = await resolver.currentState(flow);
 
       expect(result).toBe(expectedState);
-      expect(
-        innovationFlowService.getCurrentState
-      ).toHaveBeenCalledWith('s-1');
+      expect(innovationFlowService.getCurrentState).toHaveBeenCalledWith('s-1');
     });
   });
 });

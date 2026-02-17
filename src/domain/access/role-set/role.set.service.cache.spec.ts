@@ -5,7 +5,15 @@ import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Cache } from 'cache-manager';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { type Mocked, vi, describe, it, expect, beforeEach } from 'vitest';
+import {
+  beforeEach,
+  describe,
+  expect,
+  it,
+  type Mock,
+  type Mocked,
+  vi,
+} from 'vitest';
 import { RoleSetCacheService } from './role.set.service.cache';
 
 /* ───────── helpers ───────── */
@@ -103,7 +111,7 @@ describe('RoleSetCacheService', () => {
         { agentId: 'a2', roleSetId: 'rs-2' },
       ];
 
-      cacheManager.store.mget!.mockResolvedValue([
+      (cacheManager.store.mget as Mock).mockResolvedValue([
         [RoleName.MEMBER],
         undefined,
       ]);
@@ -123,13 +131,12 @@ describe('RoleSetCacheService', () => {
         { agentId: 'a2', roleSetId: 'rs-2' },
       ];
 
-      cacheManager.store.mget!.mockResolvedValue([
+      (cacheManager.store.mget as Mock).mockResolvedValue([
         CommunityMembershipStatus.MEMBER,
         CommunityMembershipStatus.NOT_MEMBER,
       ]);
 
-      const results =
-        await service.getMembershipStatusBatchFromCache(entries);
+      const results = await service.getMembershipStatusBatchFromCache(entries);
 
       expect(results).toEqual([
         CommunityMembershipStatus.MEMBER,
@@ -206,7 +213,10 @@ describe('RoleSetCacheService', () => {
     });
 
     it('should not duplicate an already-existing role', async () => {
-      cacheManager.get.mockResolvedValue([RoleName.MEMBER, RoleName.LEAD] as any);
+      cacheManager.get.mockResolvedValue([
+        RoleName.MEMBER,
+        RoleName.LEAD,
+      ] as any);
 
       const result = await service.appendAgentRoleCache(
         'agent-1',
@@ -230,12 +240,8 @@ describe('RoleSetCacheService', () => {
       expect(cacheManager.del).toHaveBeenCalledWith(
         'membershipStatus:agent-1:rs-1'
       );
-      expect(cacheManager.del).toHaveBeenCalledWith(
-        'agentRoles:agent-1:rs-1'
-      );
-      expect(cacheManager.del).toHaveBeenCalledWith(
-        'isMember:agent-1:rs-1'
-      );
+      expect(cacheManager.del).toHaveBeenCalledWith('agentRoles:agent-1:rs-1');
+      expect(cacheManager.del).toHaveBeenCalledWith('isMember:agent-1:rs-1');
     });
   });
 
@@ -263,14 +269,19 @@ describe('RoleSetCacheService', () => {
     it('should return undefined and log when a single cache get fails', async () => {
       cacheManager.get.mockRejectedValue(new Error('Redis down'));
 
-      const result = await service.getMembershipStatusFromCache('agent-1', 'rs-1');
+      const result = await service.getMembershipStatusFromCache(
+        'agent-1',
+        'rs-1'
+      );
 
       expect(result).toBeUndefined();
       expect(loggerMock.warn).toHaveBeenCalledOnce();
     });
 
     it('should return all undefined and log when mget fails', async () => {
-      cacheManager.store.mget!.mockRejectedValue(new Error('Redis down'));
+      (cacheManager.store.mget as Mock).mockRejectedValue(
+        new Error('Redis down')
+      );
 
       const results = await service.getAgentRolesBatchFromCache([
         { agentId: 'a1', roleSetId: 'rs-1' },
@@ -327,7 +338,9 @@ describe('RoleSetCacheService', () => {
 
   describe('individual cache operations', () => {
     it('should get membership status from cache', async () => {
-      cacheManager.get.mockResolvedValue(CommunityMembershipStatus.MEMBER as any);
+      cacheManager.get.mockResolvedValue(
+        CommunityMembershipStatus.MEMBER as any
+      );
 
       const result = await service.getMembershipStatusFromCache(
         'agent-1',

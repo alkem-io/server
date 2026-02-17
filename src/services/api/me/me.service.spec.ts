@@ -12,10 +12,7 @@ import { ActivityLogService } from '../activity-log';
 import { IActivityLogEntry } from '../activity-log/dto/activity.log.entry.interface';
 import { MeService } from './me.service';
 
-function makeAgentInfo(
-  userId: string,
-  memberSpaceIds: string[]
-): AgentInfo {
+function makeAgentInfo(userId: string, memberSpaceIds: string[]): AgentInfo {
   const agentInfo = new AgentInfo();
   agentInfo.userID = userId;
   agentInfo.credentials = memberSpaceIds.map(spaceId => ({
@@ -222,9 +219,7 @@ describe('MeService', () => {
     });
 
     it('should include latestActivity in results', async () => {
-      const rawActivities = [
-        makeRawActivity('act-1', 'collab-1', 'user-1'),
-      ];
+      const rawActivities = [makeRawActivity('act-1', 'collab-1', 'user-1')];
       const activityLogEntry = makeActivityLogEntry('act-1', 'space-1')!;
 
       activityService.getMySpacesActivity.mockResolvedValueOnce(rawActivities);

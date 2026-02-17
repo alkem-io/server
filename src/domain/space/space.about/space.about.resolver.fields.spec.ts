@@ -57,7 +57,9 @@ describe('SpaceAboutResolverFields', () => {
     it('should return true when Space has PUBLIC privacy mode', async () => {
       const spaceAbout = makeSpaceAbout('about-1');
       const space = makeSpace('space-1', SpacePrivacyMode.PUBLIC);
-      const loader = { load: vi.fn().mockResolvedValue(space) } as unknown as ILoader<ISpace | null>;
+      const loader = {
+        load: vi.fn().mockResolvedValue(space),
+      } as unknown as ILoader<ISpace | null>;
 
       const result = await resolver.isContentPublic(spaceAbout, loader);
 
@@ -70,7 +72,9 @@ describe('SpaceAboutResolverFields', () => {
     it('should return false when Space has PRIVATE privacy mode', async () => {
       const spaceAbout = makeSpaceAbout('about-1');
       const space = makeSpace('space-1', SpacePrivacyMode.PRIVATE);
-      const loader = { load: vi.fn().mockResolvedValue(space) } as unknown as ILoader<ISpace | null>;
+      const loader = {
+        load: vi.fn().mockResolvedValue(space),
+      } as unknown as ILoader<ISpace | null>;
 
       const result = await resolver.isContentPublic(spaceAbout, loader);
 
@@ -82,7 +86,9 @@ describe('SpaceAboutResolverFields', () => {
 
     it('should fall back to TemplateContentSpace when loader returns null and return true for PUBLIC', async () => {
       const spaceAbout = makeSpaceAbout('about-tpl');
-      const loader = { load: vi.fn().mockResolvedValue(null) } as unknown as ILoader<ISpace | null>;
+      const loader = {
+        load: vi.fn().mockResolvedValue(null),
+      } as unknown as ILoader<ISpace | null>;
       const templateSpace = makeSpace('tpl-1', SpacePrivacyMode.PUBLIC);
 
       templateContentSpaceLookupService.getTemplateContentSpaceForSpaceAbout.mockResolvedValueOnce(
@@ -99,7 +105,9 @@ describe('SpaceAboutResolverFields', () => {
 
     it('should fall back to TemplateContentSpace when loader returns null and return false for PRIVATE', async () => {
       const spaceAbout = makeSpaceAbout('about-tpl');
-      const loader = { load: vi.fn().mockResolvedValue(null) } as unknown as ILoader<ISpace | null>;
+      const loader = {
+        load: vi.fn().mockResolvedValue(null),
+      } as unknown as ILoader<ISpace | null>;
       const templateSpace = makeSpace('tpl-1', SpacePrivacyMode.PRIVATE);
 
       templateContentSpaceLookupService.getTemplateContentSpaceForSpaceAbout.mockResolvedValueOnce(
@@ -113,7 +121,9 @@ describe('SpaceAboutResolverFields', () => {
 
     it('should throw EntityNotFoundException when neither Space nor TemplateContentSpace is found', async () => {
       const spaceAbout = makeSpaceAbout('about-missing');
-      const loader = { load: vi.fn().mockResolvedValue(null) } as unknown as ILoader<ISpace | null>;
+      const loader = {
+        load: vi.fn().mockResolvedValue(null),
+      } as unknown as ILoader<ISpace | null>;
 
       templateContentSpaceLookupService.getTemplateContentSpaceForSpaceAbout.mockResolvedValue(
         null
@@ -143,9 +153,7 @@ describe('SpaceAboutResolverFields', () => {
       const result = await resolver.membership(spaceAbout, loader);
 
       expect(result).toEqual({ community, roleSet });
-      expect(
-        spaceAboutService.getCommunityWithRoleSet
-      ).not.toHaveBeenCalled();
+      expect(spaceAboutService.getCommunityWithRoleSet).not.toHaveBeenCalled();
     });
 
     it('should fall back to service when DataLoader returns null', async () => {
@@ -169,9 +177,9 @@ describe('SpaceAboutResolverFields', () => {
         community: fallbackCommunity,
         roleSet,
       });
-      expect(
-        spaceAboutService.getCommunityWithRoleSet
-      ).toHaveBeenCalledWith('about-2');
+      expect(spaceAboutService.getCommunityWithRoleSet).toHaveBeenCalledWith(
+        'about-2'
+      );
     });
 
     it('should fall back to service when community has no roleSet', async () => {
@@ -199,9 +207,9 @@ describe('SpaceAboutResolverFields', () => {
         community: serviceCommunity,
         roleSet,
       });
-      expect(
-        spaceAboutService.getCommunityWithRoleSet
-      ).toHaveBeenCalledWith('about-3');
+      expect(spaceAboutService.getCommunityWithRoleSet).toHaveBeenCalledWith(
+        'about-3'
+      );
     });
   });
 });

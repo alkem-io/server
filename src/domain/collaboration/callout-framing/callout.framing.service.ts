@@ -19,7 +19,6 @@ import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { CreateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.create';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
-import { IVisual } from '@domain/common/visual';
 import { CreateWhiteboardInput } from '@domain/common/whiteboard/types';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';

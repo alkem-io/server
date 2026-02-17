@@ -1,8 +1,8 @@
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getEntityManagerToken } from '@nestjs/typeorm';
-import { type Mocked, vi } from 'vitest';
 import { EntityManager } from 'typeorm';
+import { type Mocked, vi } from 'vitest';
 import { CalloutActivityLoaderCreator } from './callout.activity.loader.creator';
 
 /**
@@ -89,9 +89,7 @@ describe('CalloutActivityLoaderCreator', () => {
 
     it('should return 0 for callouts with no contributions', async () => {
       // DB only returns a row for callout-1; callout-2 has no contributions
-      mockQueryBuilder(entityManager, [
-        { calloutId: 'callout-1', count: '3' },
-      ]);
+      mockQueryBuilder(entityManager, [{ calloutId: 'callout-1', count: '3' }]);
 
       const loader = creator.create();
 
@@ -140,9 +138,7 @@ describe('CalloutActivityLoaderCreator', () => {
 
   describe('caching', () => {
     it('should use DataLoader caching for repeated keys', async () => {
-      mockQueryBuilder(entityManager, [
-        { calloutId: 'callout-1', count: '7' },
-      ]);
+      mockQueryBuilder(entityManager, [{ calloutId: 'callout-1', count: '7' }]);
 
       const loader = creator.create();
 
@@ -197,9 +193,7 @@ describe('CalloutActivityLoaderCreator', () => {
     });
 
     it('should handle a single callout load', async () => {
-      mockQueryBuilder(entityManager, [
-        { calloutId: 'solo', count: '42' },
-      ]);
+      mockQueryBuilder(entityManager, [{ calloutId: 'solo', count: '42' }]);
 
       const loader = creator.create();
       const count = await loader.load('solo');
