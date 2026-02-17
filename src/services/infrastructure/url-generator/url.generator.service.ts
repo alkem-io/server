@@ -18,11 +18,13 @@ import { IProfile } from '@domain/common/profile/profile.interface';
 import { whiteboards } from '@domain/common/whiteboard/whiteboard.schema';
 import { communityGuidelines } from '@domain/community/community-guidelines/community.guidelines.schema';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { Organization } from '@domain/community/organization/organization.entity';
+import {
+  isUser,
+  isOrganization,
+  isVirtualContributor,
+} from '@domain/community/contributor/get.contributor.type';
 import { organizations } from '@domain/community/organization/organization.schema';
-import { User } from '@domain/community/user/user.entity';
 import { users } from '@domain/community/user/user.schema';
-import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { virtualContributors } from '@domain/community/virtual-contributor/virtual.contributor.schema';
 import { spaces } from '@domain/space/space/space.schema';
 import { ISpace } from '@domain/space/space/space.interface';
@@ -252,10 +254,10 @@ export class UrlGeneratorService {
   }
 
   private getContributorType(contributor: IContributor) {
-    if (contributor instanceof User) return RoleSetContributorType.USER;
-    if (contributor instanceof Organization)
+    if (isUser(contributor)) return RoleSetContributorType.USER;
+    if (isOrganization(contributor))
       return RoleSetContributorType.ORGANIZATION;
-    if (contributor instanceof VirtualContributor)
+    if (isVirtualContributor(contributor))
       return RoleSetContributorType.VIRTUAL;
     throw new RelationshipNotFoundException(
       `Unable to determine contributor type for ${contributor.id}`,

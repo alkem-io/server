@@ -1,4 +1,3 @@
-import { Community } from '@domain/community/community/community.entity';
 import { ICommunity } from '@domain/community/community/community.interface';
 import { IOrganization } from '@domain/community/organization/organization.interface';
 import { IUserGroup } from '@domain/community/user-group/user-group.interface';
@@ -6,7 +5,8 @@ import { Field, InterfaceType } from '@nestjs/graphql';
 
 @InterfaceType('Groupable', {
   resolveType(groupable) {
-    if (groupable instanceof Community) return ICommunity;
+    if ('communicationId' in groupable || 'parentID' in groupable)
+      return ICommunity;
     return IOrganization;
   },
 })

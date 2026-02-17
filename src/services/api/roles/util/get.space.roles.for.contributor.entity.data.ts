@@ -27,6 +27,7 @@ export const getSpaceRolesForContributorEntityData = async (
     const result = await db.query.spaces.findMany({
       where: and(...conditions),
       with: {
+        authorization: true,
         about: {
           with: {
             profile: true,

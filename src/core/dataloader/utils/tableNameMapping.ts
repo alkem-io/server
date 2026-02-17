@@ -74,6 +74,9 @@ export const ENTITY_TO_TABLE_NAME: Record<string, string> = {
   // Innovation Hub
   InnovationHub: 'innovationHubs',
 
+  // Innovation Pack
+  InnovationPack: 'innovationPacks',
+
   // Storage
   StorageAggregator: 'storageAggregators',
   StorageBucket: 'storageBuckets',

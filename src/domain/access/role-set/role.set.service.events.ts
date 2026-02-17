@@ -3,10 +3,12 @@ import { SpaceLevel } from '@common/enums/space.level';
 import { RoleSetMembershipException } from '@common/exceptions/role.set.membership.exception';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { getContributorType } from '@domain/community/contributor/get.contributor.type';
-import { Organization } from '@domain/community/organization/organization.entity';
-import { User } from '@domain/community/user/user.entity';
-import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
+import {
+  getContributorType,
+  isUser,
+  isOrganization,
+  isVirtualContributor,
+} from '@domain/community/contributor/get.contributor.type';
 import { Injectable } from '@nestjs/common';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { ActivityInputMemberJoined } from '@services/adapters/activity-adapter/dto/activity.dto.input.member.joined';
@@ -109,24 +111,17 @@ export class RoleSetEventsService {
   private resolveAuthorDetailsFromContributor(
     contributor: IContributor
   ): AuthorDetails {
-    if (contributor instanceof User) {
+    if (isUser(contributor)) {
       return {
         id: contributor.id,
-        email: contributor.email,
+        email: (contributor as any).email,
       };
     }
 
-    if (contributor instanceof Organization) {
+    if (isOrganization(contributor)) {
       return {
         id: contributor.id,
-        email: contributor.contactEmail ?? '',
-      };
-    }
-
-    if (contributor instanceof VirtualContributor) {
-      return {
-        id: contributor.id,
-        email: '',
+        email: (contributor as any).contactEmail ?? '',
       };
     }
 

@@ -20,8 +20,8 @@ import { LicenseService } from '@domain/common/license/license.service';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { ContributorService } from '@domain/community/contributor/contributor.service';
+import { isVirtualContributor } from '@domain/community/contributor/get.contributor.type';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { Inject, LoggerService } from '@nestjs/common';
@@ -270,7 +270,7 @@ export class RoleSetResolverMutationsMembership {
     // Check if any of the contributors are VCs and if so check if the entitlement is on
     if (roleSet.type === RoleSetType.SPACE) {
       for (const contributor of contributors) {
-        if (contributor instanceof VirtualContributor) {
+        if (isVirtualContributor(contributor)) {
           this.licenseService.isEntitlementEnabledOrFail(
             roleSet.license,
             LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS
@@ -619,10 +619,9 @@ export class RoleSetResolverMutationsMembership {
 
       // Send notification if invitation was declined/rejected for Virtual Contributor
       if (invitationState === InvitationLifecycleState.REJECTED) {
-        const isVirtualContributor =
-          invitedContributor instanceof VirtualContributor;
+        const isVC = isVirtualContributor(invitedContributor);
 
-        if (isVirtualContributor) {
+        if (isVC) {
           const community =
             await this.communityResolverService.getCommunityForRoleSet(
               invitation.roleSet.id

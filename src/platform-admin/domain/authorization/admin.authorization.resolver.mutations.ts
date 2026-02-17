@@ -187,9 +187,9 @@ export class AdminAuthorizationResolverMutations {
       `reset platformRolesAccess on all Spaces: ${agentInfo.email}`
     );
 
-    const spaceResults = await this.db.query.spaces.findMany({
-      where: eq(spaces.level, SpaceLevel.L0),
-    });
+    const spaceResults = await this.db.select().from(spaces).where(
+      eq(spaces.level, SpaceLevel.L0)
+    );
     for (const space of spaceResults) {
       await this.spaceService.updatePlatformRolesAccessRecursively(space as unknown as Space);
     }

@@ -60,7 +60,7 @@ describe('PlatformAdminService', () => {
 
       expect(spaceService.getAllSpaces).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.any(Array),
+          where: expect.anything(),
         })
       );
     });
@@ -72,7 +72,7 @@ describe('PlatformAdminService', () => {
 
       expect(spaceService.getAllSpaces).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.any(Array),
+          where: expect.anything(),
         })
       );
     });
@@ -84,7 +84,7 @@ describe('PlatformAdminService', () => {
 
       expect(spaceService.getAllSpaces).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.any(Array),
+          where: expect.anything(),
         })
       );
     });

@@ -450,12 +450,12 @@ export class SpaceService {
         );
       }
 
-      const result = await this.db.query.spaces.findMany({
-        where: and(
+      const result = await this.db.select().from(spaces).where(
+        and(
           eq(spaces.visibility, spaceVisibilityFilter),
           eq(spaces.level, SpaceLevel.L0)
-        ),
-      });
+        )
+      );
       return result as unknown as Space[];
     }
 
@@ -467,9 +467,9 @@ export class SpaceService {
         );
       }
 
-      const unsortedSpaces = await this.db.query.spaces.findMany({
-        where: inArray(spaces.id, spaceListFilter),
-      }) as unknown as Space[];
+      const unsortedSpaces = await this.db.select().from(spaces).where(
+        inArray(spaces.id, spaceListFilter)
+      ) as unknown as Space[];
       // sort according to the order of the space list filter
       return unsortedSpaces.sort(
         (a, b) => spaceListFilter.indexOf(a.id) - spaceListFilter.indexOf(b.id)
@@ -671,9 +671,9 @@ export class SpaceService {
       conditions.push(inArray(spaces.visibility, visibilities));
     }
 
-    const result = await this.db.query.spaces.findMany({
-      where: and(...conditions),
-    });
+    const result = await this.db.select().from(spaces).where(
+      and(...conditions)
+    );
     return result as unknown as ISpace[];
   }
 
@@ -752,6 +752,12 @@ export class SpaceService {
   public async getAllSpaces(
     options?: { where?: any; with?: Record<string, boolean | object> }
   ): Promise<ISpace[]> {
+    // When only a where clause is provided (no relations), use the SQL-style API
+    // to avoid Drizzle relational query builder table aliasing issues
+    if (options?.where && !options?.with) {
+      const result = await this.db.select().from(spaces).where(options.where);
+      return result as unknown as ISpace[];
+    }
     const result = await this.db.query.spaces.findMany(options);
     return result as unknown as ISpace[];
   }

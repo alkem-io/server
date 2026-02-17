@@ -6,9 +6,6 @@ import {
   EntityNotFoundException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
-import { Organization } from '@domain/community/organization/organization.entity';
-import { User } from '@domain/community/user/user.entity';
-import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
@@ -104,9 +101,12 @@ describe('UrlGeneratorService', () => {
 
   describe('createUrlForContributor', () => {
     it('should create URL with user path when contributor is a User instance', () => {
-      const userContributor = Object.create(User.prototype);
-      userContributor.nameID = 'john-doe';
-      userContributor.id = 'user-1';
+      const userContributor = {
+        id: 'user-1',
+        nameID: 'john-doe',
+        email: 'john@example.com',
+        firstName: 'John',
+      } as any;
 
       const result = service.createUrlForContributor(userContributor);
 
@@ -114,9 +114,11 @@ describe('UrlGeneratorService', () => {
     });
 
     it('should create URL with organization path when contributor is an Organization instance', () => {
-      const orgContributor = Object.create(Organization.prototype);
-      orgContributor.nameID = 'acme-corp';
-      orgContributor.id = 'org-1';
+      const orgContributor = {
+        id: 'org-1',
+        nameID: 'acme-corp',
+        legalEntityName: 'Acme Corp',
+      } as any;
 
       const result = service.createUrlForContributor(orgContributor);
 
@@ -124,9 +126,11 @@ describe('UrlGeneratorService', () => {
     });
 
     it('should create URL with virtual contributor path when contributor is a VirtualContributor', () => {
-      const vcContributor = Object.create(VirtualContributor.prototype);
-      vcContributor.nameID = 'my-vc';
-      vcContributor.id = 'vc-1';
+      const vcContributor = {
+        id: 'vc-1',
+        nameID: 'my-vc',
+        aiPersonaID: 'persona-1',
+      } as any;
 
       const result = service.createUrlForContributor(vcContributor);
 

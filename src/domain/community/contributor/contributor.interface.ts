@@ -5,18 +5,20 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { NameID, UUID } from '@domain/common/scalars';
 import { Field, InterfaceType } from '@nestjs/graphql';
-import { Organization } from '../organization/organization.entity';
 import { IOrganization } from '../organization/organization.interface';
-import { User } from '../user/user.entity';
 import { IUser } from '../user/user.interface';
-import { VirtualContributor } from '../virtual-contributor/virtual.contributor.entity';
 import { IVirtualContributor } from '../virtual-contributor/virtual.contributor.interface';
+import {
+  isUser,
+  isOrganization,
+  isVirtualContributor,
+} from './get.contributor.type';
 
 @InterfaceType('Contributor', {
   resolveType(contributor) {
-    if (contributor instanceof User) return IUser;
-    if (contributor instanceof Organization) return IOrganization;
-    if (contributor instanceof VirtualContributor) return IVirtualContributor;
+    if (isUser(contributor)) return IUser;
+    if (isOrganization(contributor)) return IOrganization;
+    if (isVirtualContributor(contributor)) return IVirtualContributor;
 
     throw new RelationshipNotFoundException(
       `Unable to determine contributor type for ${contributor.id}`,

@@ -14,9 +14,6 @@ import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { type Mock, vi } from 'vitest';
-import { Organization } from '../organization/organization.entity';
-import { User } from '../user/user.entity';
-import { VirtualContributor } from '../virtual-contributor/virtual.contributor.entity';
 import { ContributorService } from './contributor.service';
 import { mockDrizzleProvider } from '@test/utils/drizzle.mock.factory';
 import { DRIZZLE } from '@config/drizzle/drizzle.constants';
@@ -294,8 +291,11 @@ describe('ContributorService', () => {
 
   describe('getContributorWithRelations', () => {
     it('should query the User entity when contributor is a User instance', async () => {
-      const userContributor = Object.create(User.prototype);
-      userContributor.id = 'user-1';
+      const userContributor = {
+        id: 'user-1',
+        email: 'user@test.com',
+        firstName: 'Test',
+      } as any;
 
       const mockUser = { id: 'user-1', profile: { id: 'p-1' } };
       db.query.users.findFirst.mockResolvedValueOnce(mockUser);
@@ -307,8 +307,10 @@ describe('ContributorService', () => {
     });
 
     it('should query the Organization entity when contributor is an Organization instance', async () => {
-      const orgContributor = Object.create(Organization.prototype);
-      orgContributor.id = 'org-1';
+      const orgContributor = {
+        id: 'org-1',
+        legalEntityName: 'Test Org',
+      } as any;
 
       const mockOrg = { id: 'org-1' };
       db.query.organizations.findFirst.mockResolvedValueOnce(mockOrg);
@@ -320,8 +322,10 @@ describe('ContributorService', () => {
     });
 
     it('should query the VirtualContributor entity when contributor is a VirtualContributor instance', async () => {
-      const vcContributor = Object.create(VirtualContributor.prototype);
-      vcContributor.id = 'vc-1';
+      const vcContributor = {
+        id: 'vc-1',
+        aiPersonaID: 'persona-1',
+      } as any;
 
       const mockVC = { id: 'vc-1' };
       db.query.virtualContributors.findFirst.mockResolvedValueOnce(mockVC);
@@ -333,8 +337,11 @@ describe('ContributorService', () => {
     });
 
     it('should throw RelationshipNotFoundException when entity is not found after query', async () => {
-      const userContributor = Object.create(User.prototype);
-      userContributor.id = 'user-1';
+      const userContributor = {
+        id: 'user-1',
+        email: 'user@test.com',
+        firstName: 'Test',
+      } as any;
 
       await expect(
         service.getContributorWithRelations(userContributor)

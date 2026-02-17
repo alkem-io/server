@@ -1913,14 +1913,18 @@ export class RoleSetService {
 
   async getApplications(roleSet: IRoleSet): Promise<IApplication[]> {
     const roleSetApplications = await this.getRoleSetOrFail(roleSet.id, {
-      with: { applications: true },
+      with: {
+        applications: { with: { authorization: true } },
+      },
     });
     return roleSetApplications?.applications || [];
   }
 
   async getInvitations(roleSet: IRoleSet): Promise<IInvitation[]> {
     const roleSetInvitations = await this.getRoleSetOrFail(roleSet.id, {
-      with: { invitations: true },
+      with: {
+        invitations: { with: { authorization: true } },
+      },
     });
     return roleSetInvitations?.invitations || [];
   }
@@ -1929,7 +1933,9 @@ export class RoleSetService {
     roleSet: IRoleSet
   ): Promise<IPlatformInvitation[]> {
     const roleSetInvs = await this.getRoleSetOrFail(roleSet.id, {
-      with: { platformInvitations: true },
+      with: {
+        platformInvitations: { with: { authorization: true } },
+      },
     });
     return roleSetInvs?.platformInvitations || [];
   }

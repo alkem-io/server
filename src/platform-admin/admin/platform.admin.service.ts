@@ -21,7 +21,7 @@ import { InnovationPacksInput } from '@library/library/dto/library.dto.innovatio
 import { LibraryService } from '@library/library/library.service';
 import { Inject, Injectable } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDb } from '@config/drizzle/drizzle.constants';
-import { inArray, eq } from 'drizzle-orm';
+import { inArray, eq, and } from 'drizzle-orm';
 import { innovationHubs } from '@domain/innovation-hub/innovation.hub.schema';
 import { innovationPacks } from '@library/innovation-pack/innovation.pack.schema';
 import { spaces } from '@domain/space/space/space.schema';
@@ -60,7 +60,7 @@ export class PlatformAdminService {
     conditions.push(eq(spaces.level, SpaceLevel.L0));
 
     return this.spaceService.getAllSpaces({
-      where: conditions.length > 0 ? conditions : undefined,
+      where: conditions.length > 0 ? and(...conditions) : undefined,
     });
   }
 
