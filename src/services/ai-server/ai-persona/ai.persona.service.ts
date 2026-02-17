@@ -81,22 +81,28 @@ export class AiPersonaService {
       });
     }
     if (aiPersonaData.promptGraph !== undefined) {
-      aiPersona.promptGraph = aiPersona.promptGraph || {};
-      const promptGraphData = aiPersonaData.promptGraph;
-      if (promptGraphData.nodes !== undefined) {
-        aiPersona.promptGraph.nodes = promptGraphData.nodes;
-      }
-      if (promptGraphData.edges !== undefined) {
-        aiPersona.promptGraph.edges = promptGraphData.edges;
-      }
-      if (promptGraphData.start !== undefined) {
-        aiPersona.promptGraph.start = promptGraphData.start;
-      }
-      if (promptGraphData.end !== undefined) {
-        aiPersona.promptGraph.end = promptGraphData.end;
-      }
-      if (promptGraphData.state !== undefined) {
-        aiPersona.promptGraph.state = promptGraphData.state;
+      // If explicitly set to null, clear the entire promptGraph
+      if (aiPersonaData.promptGraph === null) {
+        aiPersona.promptGraph = null;
+      } else {
+        // Otherwise do partial updates
+        aiPersona.promptGraph = aiPersona.promptGraph || {};
+        const promptGraphData = aiPersonaData.promptGraph;
+        if (promptGraphData.nodes !== undefined) {
+          aiPersona.promptGraph.nodes = promptGraphData.nodes;
+        }
+        if (promptGraphData.edges !== undefined) {
+          aiPersona.promptGraph.edges = promptGraphData.edges;
+        }
+        if (promptGraphData.start !== undefined) {
+          aiPersona.promptGraph.start = promptGraphData.start;
+        }
+        if (promptGraphData.end !== undefined) {
+          aiPersona.promptGraph.end = promptGraphData.end;
+        }
+        if (promptGraphData.state !== undefined) {
+          aiPersona.promptGraph.state = promptGraphData.state;
+        }
       }
     }
 
@@ -200,7 +206,10 @@ export class AiPersonaService {
         invocationGraph = processedGraph;
       }
 
-      input.promptGraph = invocationGraph;
+      // Only assign if we have a valid graph (not null/undefined)
+      if (invocationGraph) {
+        input.promptGraph = invocationGraph;
+      }
     }
 
     return this.aiPersonaEngineAdapter.invoke(input);
