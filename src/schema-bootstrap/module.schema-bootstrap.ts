@@ -8,6 +8,7 @@ import { IS_SCHEMA_BOOTSTRAP } from '@common/constants';
 import configuration from '@config/configuration';
 import { AuthenticationModule } from '@core/authentication/authentication.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { GraphqlGuardModule } from '@core/authorization/graphql.guard.module';
 import { BootstrapModule } from '@core/bootstrap/bootstrap.module';
 import { LoaderCreatorModule } from '@core/dataloader/creators/loader.creator.module';
 import { ActivityFeedModule } from '@domain/activity-feed';
@@ -201,6 +202,7 @@ class SchemaBootstrapStubModule {}
     BootstrapModule,
     AuthenticationModule,
     AuthorizationModule,
+    GraphqlGuardModule,
     ActivityLogModule,
     AdminContributorsModule,
     AdminUsersModule,
