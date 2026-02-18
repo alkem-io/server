@@ -36,7 +36,8 @@ _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 | 9. Container & Deployment | PASS | No infrastructure changes. |
 | 10. Simplicity & Incremental | PASS | Minimal change — 2 new loaders following existing patterns. No caching layers or CQRS. |
 
-**Post-Phase 1 re-check**: No violations. The design adds two injectable DataLoader creators following the exact pattern of `SpaceCommunityWithRoleSetLoaderCreator`.
+**Post-Phase 1 re-check**: No violations. The design adds two injectable DataLoader creators following existing patterns.
+**Post-Phase 5 re-check**: No violations. Loader consolidation reduces moving parts (fewer loader classes) while maintaining the same DataLoader architecture.
 
 ## Project Structure
 
@@ -211,6 +212,52 @@ async organizationsWithCredentialsBatch(
 }
 ```
 
+## Phase 5: Post-Implementation Analysis & Loader Consolidation
+
+### Context
+
+After Phase 4, a query-by-query analysis of the `ExploreAllSpaces` execution was performed by comparing raw SQL logs before (34 queries) and after (14 queries) the initial optimization. This revealed further redundancies within the 14-query result set.
+
+### Executed: Merge `SpaceBySpaceAboutIdLoaderCreator` + `SpaceCommunityWithRoleSetLoaderCreator`
+
+Two DataLoaders on `SpaceAbout` were loading the same Space entity by `spaceAbout.id`:
+- `SpaceBySpaceAboutIdLoaderCreator` — loaded `{ about: true }` for `isContentPublic`
+- `SpaceCommunityWithRoleSetLoaderCreator` — loaded `{ about: true, community: { roleSet: { roles: true } } }` for `membership`
+
+Since the interceptor shares a single DataLoader instance per `creatorName` per request, consolidating them into one loader means the second resolver gets a cache hit.
+
+**Files changed**:
+```text
+# MODIFIED
+src/core/dataloader/creators/loader.creators/space/space.by.space.about.id.loader.creator.ts
+  → Extended relations to include community.roleSet.roles
+src/core/dataloader/creators/loader.creators/space/space.by.space.about.id.loader.creator.spec.ts
+  → Updated relations assertion
+src/domain/space/space.about/space.about.resolver.fields.ts
+  → membership resolver now uses SpaceBySpaceAboutIdLoaderCreator (ISpace | null)
+src/domain/space/space.about/space.about.resolver.fields.spec.ts
+  → Updated membership tests for ISpace return type, added "no community" edge case test
+src/core/dataloader/creators/loader.creators/index.ts
+  → Removed barrel export for deleted loader
+
+# DELETED
+src/core/dataloader/creators/loader.creators/space/space.community.with.roleset.loader.creator.ts
+src/core/dataloader/creators/loader.creators/space/space.community.with.roleset.loader.creator.spec.ts
+```
+
+**Result**: 14 → 13 queries.
+
+### Evaluated and Deferred
+
+Four additional optimizations were analyzed and deemed not worth the architectural cost:
+
+1. **Fold `about` into `getExploreSpaces()`** — would break uniform DataLoader pattern (25+ loaders use `findByBatchIds`)
+2. **Lightweight stubs from seed query** — would break field resolvers that access `@Parent()` directly (`platformAccess`, `settings`, `createdDate`)
+3. **Merge visual batches** — fights DataLoader's event-loop-tick batching model
+4. **Share cache with `SpaceMetricsLoaderCreator`** — metrics loader does additional credential counting work
+
+See `research.md` Decision 6 for full evaluation.
+
 ## Complexity Tracking
 
 > No constitution violations. No complexity justifications needed.
@@ -218,8 +265,10 @@ async organizationsWithCredentialsBatch(
 | Metric | Value |
 | --- | --- |
 | Files created | 2 |
-| Files modified | 3 |
+| Files modified | 6 (3 original + 3 in Phase 5) |
+| Files deleted | 2 (Phase 5 loader consolidation) |
 | Estimated LOC | ~150 net |
 | New dependencies | 0 |
 | Schema changes | 0 |
 | Migration needed | No |
+| Query reduction | 34 → 13 (62% reduction) |

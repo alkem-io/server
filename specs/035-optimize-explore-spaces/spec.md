@@ -109,11 +109,23 @@ As the number of active spaces grows on the platform, the Explore page query per
 - **SC-003**: The Explore page loads in under 2 seconds for unauthenticated users on standard connections (p95).
 - **SC-004**: No regression in data correctness — all fields in the ExploreSpaces fragment return identical values pre- and post-optimization.
 
+### Actual Results (measured 2026-02-18)
+
+| Metric | Baseline | After Phase 4 | After Phase 5 |
+| --- | --- | --- | --- |
+| Total SQL queries per request | 34 | 14 | 13 |
+| Query reduction | — | 59% | 62% |
+| Credential-lookup queries | 60 (N+1) | 2 (batched) | 2 (batched) |
+| Redundant queries remaining | — | 3 (N2, N3, N7) | 2 (N2, N3) |
+| Theoretical minimum | — | 9 | 9 |
+
+**Note**: The remaining 2 redundant queries (N2, N3) are the cost of the uniform DataLoader architecture. Eliminating them would require modifying shared infrastructure (`findByBatchIds`) or breaking resolver independence. See `research.md` Decision 6 for full analysis.
+
 ## Assumptions
 
 - The default `limit` for `exploreSpaces` is 30 spaces, and `daysOld` is 30 days.
 - The query is exclusively called by unauthenticated users, meaning authorization checks will consistently evaluate against public/anonymous privileges.
-- The existing DataLoader infrastructure (request-scoped, using Facebook's DataLoader library) is the correct mechanism for batching — no new caching layer is needed. New DataLoaders follow existing patterns (e.g., `SpaceCommunityWithRoleSetLoaderCreator`) and are registered generically in `LoaderCreatorModule`.
+- The existing DataLoader infrastructure (request-scoped, using Facebook's DataLoader library) is the correct mechanism for batching — no new caching layer is needed. New DataLoaders follow existing patterns (e.g., `SpaceBySpaceAboutIdLoaderCreator`) and are registered generically via `@Injectable()` and the `DataLoaderInterceptor`. _(Note: `SpaceCommunityWithRoleSetLoaderCreator` was consolidated into `SpaceBySpaceAboutIdLoaderCreator` during Phase 5 — see research.md Decision 5.)_
 - The `myMembershipStatus` field already short-circuits for unauthenticated users (returns `NOT_MEMBER` with 0 DB queries). Confirmed via code review.
 - Redis is already used for other purposes in the system and is acceptable for auxiliary caching, but the primary optimization must happen at the query-batching level.
 - No GraphQL schema changes are required — this is a pure backend optimization.
