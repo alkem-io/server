@@ -164,6 +164,10 @@ export class InvitationService {
         .returning();
       return { ...invitation, ...updated } as unknown as IInvitation;
     }
+    invitation.authorization =
+      await this.authorizationPolicyService.ensureSaved(
+        invitation.authorization
+      );
     const [inserted] = await this.db
       .insert(invitations)
       .values({

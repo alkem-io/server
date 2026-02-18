@@ -85,6 +85,10 @@ export class OrganizationVerificationService {
         .returning();
       return { ...organizationVerification, ...updated } as unknown as IOrganizationVerification;
     }
+    organizationVerification.authorization =
+      await this.authorizationPolicyService.ensureSaved(
+        organizationVerification.authorization
+      );
     const [inserted] = await this.db
       .insert(organizationVerifications)
       .values({

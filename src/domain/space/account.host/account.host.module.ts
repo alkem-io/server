@@ -1,4 +1,5 @@
 import { AgentModule } from '@domain/agent/agent/agent.module';
+import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { LicenseModule } from '@domain/common/license/license.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 import { Module } from '@nestjs/common';
@@ -9,6 +10,7 @@ import { AccountHostService } from './account.host.service';
 @Module({
   imports: [
     AgentModule,
+    AuthorizationPolicyModule,
     LicenseIssuerModule,
     LicensingFrameworkModule,
     LicenseModule,

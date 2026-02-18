@@ -119,6 +119,10 @@ export class ApplicationService {
         .returning();
       return { ...application, ...updated } as unknown as IApplication;
     }
+    application.authorization =
+      await this.authorizationPolicyService.ensureSaved(
+        application.authorization
+      );
     const [inserted] = await this.db
       .insert(applications)
       .values({

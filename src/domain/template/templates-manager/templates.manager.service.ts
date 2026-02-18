@@ -49,6 +49,12 @@ export class TemplatesManagerService {
       templatesManager.templateDefaults.push(templateDefault);
     }
 
+    templatesManager.authorization =
+      await this.authorizationPolicyService.ensureSaved(
+        templatesManager.authorization
+      );
+    (templatesManager as any).authorizationId =
+      templatesManager.authorization?.id;
     const [inserted] = await this.db
       .insert(templatesManagers)
       .values(templatesManager as any)
@@ -177,6 +183,12 @@ export class TemplatesManagerService {
     templatesManager: ITemplatesManager
   ): Promise<ITemplatesManager> {
     if (!templatesManager.id) {
+      templatesManager.authorization =
+        await this.authorizationPolicyService.ensureSaved(
+          templatesManager.authorization
+        );
+      (templatesManager as any).authorizationId =
+        templatesManager.authorization?.id;
       const [inserted] = await this.db
         .insert(templatesManagers)
         .values(templatesManager as any)

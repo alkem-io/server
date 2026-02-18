@@ -59,6 +59,7 @@ export class CommunityAuthorizationService {
       communityID,
       {
         relations: {
+          authorization: true,
           communication: {
             updates: true,
           },

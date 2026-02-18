@@ -357,6 +357,11 @@ export class CalloutService {
   }
 
   async save(callout: ICallout): Promise<ICallout> {
+    callout.authorization =
+      await this.authorizationPolicyService.ensureSaved(
+        callout.authorization
+      );
+    (callout as any).authorizationId = callout.authorization?.id;
     const [result] = await this.db
       .insert(callouts)
       .values(callout as any)

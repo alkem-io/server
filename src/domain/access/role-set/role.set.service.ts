@@ -226,6 +226,10 @@ export class RoleSetService {
         .returning();
       return { ...roleSet, ...updated } as unknown as IRoleSet;
     }
+    roleSet.authorization =
+      await this.authorizationPolicyService.ensureSaved(
+        roleSet.authorization
+      );
     const [inserted] = await this.db
       .insert(roleSets)
       .values({

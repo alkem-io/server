@@ -59,6 +59,7 @@ export class AccountAuthorizationService {
       accountInput.id,
       {
         with: {
+          authorization: true,
           agent: true,
           spaces: {
             with: { templatesManager: true },

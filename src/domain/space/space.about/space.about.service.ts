@@ -142,6 +142,11 @@ export class SpaceAboutService {
       return result as unknown as ISpaceAbout;
     } else {
       // Insert new spaceAbout
+      spaceAbout.authorization =
+        await this.authorizationPolicyService.ensureSaved(
+          spaceAbout.authorization
+        );
+      (spaceAbout as any).authorizationId = spaceAbout.authorization?.id;
       const [result] = await this.db
         .insert(spaceAbouts)
         .values(spaceAbout as any)

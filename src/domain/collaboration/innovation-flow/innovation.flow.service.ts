@@ -11,6 +11,7 @@ import {
 import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
@@ -47,6 +48,7 @@ export class InnovationFlowService {
     private tagsetTemplateService: TagsetTemplateService,
     private innovationFlowStateService: InnovationFlowStateService,
     private calloutsSetService: CalloutsSetService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     @Inject(DRIZZLE) private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -101,7 +103,8 @@ export class InnovationFlowService {
       innovationFlow.states.push(state);
       sortOrder = state.sortOrder;
     }
-    await this.save(innovationFlow);
+    const saved = await this.save(innovationFlow);
+    innovationFlow.id = saved.id;
 
     innovationFlow.currentStateID = innovationFlow.states[0].id;
     if (innovationFlowData.currentStateDisplayName) {
@@ -136,6 +139,10 @@ export class InnovationFlowService {
         ...updated,
       } as unknown as IInnovationFlow;
     }
+    innovationFlow.authorization =
+      await this.authorizationPolicyService.ensureSaved(
+        innovationFlow.authorization
+      );
     const [inserted] = await this.db
       .insert(innovationFlows)
       .values({

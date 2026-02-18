@@ -147,6 +147,10 @@ export class DocumentService {
         .returning();
       return updated as unknown as IDocument;
     }
+    document.authorization =
+      await this.authorizationPolicyService.ensureSaved(
+        document.authorization
+      );
     const [inserted] = await this.db
       .insert(documents)
       .values({

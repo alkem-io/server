@@ -103,6 +103,10 @@ export class AgentService {
       // Preserve in-memory relations not in DB
       return { ...agent, ...updated } as unknown as IAgent;
     } else {
+      agent.authorization =
+        await this.authorizationPolicyService.ensureSaved(
+          agent.authorization
+        );
       const [created] = await this.db
         .insert(agents)
         .values({

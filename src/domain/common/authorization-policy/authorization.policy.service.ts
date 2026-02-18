@@ -217,6 +217,23 @@ export class AuthorizationPolicyService {
     return result as unknown as IAuthorizationPolicy;
   }
 
+  /**
+   * Ensures an authorization policy is persisted to the database.
+   * If it has no id (not yet saved), it will be inserted.
+   * Returns the persisted authorization policy with a valid id.
+   *
+   * Useful during entity creation to cascade-save the authorization
+   * policy before the parent entity is inserted (Drizzle does not
+   * cascade-save related entities like TypeORM did).
+   */
+  async ensureSaved(
+    authorizationPolicy: IAuthorizationPolicy | undefined
+  ): Promise<IAuthorizationPolicy | undefined> {
+    if (!authorizationPolicy) return undefined;
+    if (authorizationPolicy.id) return authorizationPolicy;
+    return this.save(authorizationPolicy);
+  }
+
   async saveAll(policies: IAuthorizationPolicy[]): Promise<void> {
     // Filter out policies without an ID — these were created in-memory by the
     // inheritParentAuthorization fallback when a child entity's authorization

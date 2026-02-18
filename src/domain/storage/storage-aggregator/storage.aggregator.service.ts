@@ -113,7 +113,7 @@ export class StorageAggregatorService {
       await this.db.query.storageAggregators.findFirst({
         where: eq(storageAggregators.id, storageAggregatorID),
         with: Object.keys(withClause).length > 0 ? withClause : undefined,
-      });
+      } as any);
     if (!storageAggregator)
       throw new EntityNotFoundException(
         `StorageAggregator not found: ${storageAggregatorID}`,
@@ -151,6 +151,10 @@ export class StorageAggregatorService {
         .returning();
       return updated as unknown as IStorageAggregator;
     }
+    storageAggregator.authorization =
+      await this.authorizationPolicyService.ensureSaved(
+        storageAggregator.authorization
+      );
     const [inserted] = await this.db
       .insert(storageAggregators)
       .values({

@@ -50,13 +50,13 @@ export class PlatformAuthorizationService {
     const platform = await this.platformService.getPlatformOrFail({
       relations: {
         authorization: true,
-        forum: true,
-        library: true,
-        storageAggregator: true,
-        licensingFramework: true,
-        templatesManager: true,
-        roleSet: true,
-        messaging: true,
+        forum: { with: { authorization: true } },
+        library: { with: { authorization: true } },
+        storageAggregator: { with: { authorization: true } },
+        licensingFramework: { with: { authorization: true } },
+        templatesManager: { with: { authorization: true } },
+        roleSet: { with: { authorization: true } },
+        messaging: { with: { authorization: true } },
       },
     });
 

@@ -137,6 +137,10 @@ export class UserGroupService {
         .returning();
       return { ...group, ...updated } as unknown as IUserGroup;
     }
+    group.authorization =
+      await this.authorizationPolicyService.ensureSaved(
+        group.authorization
+      );
     const [inserted] = await this.db
       .insert(userGroups)
       .values({

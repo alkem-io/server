@@ -232,6 +232,11 @@ export class CalloutContributionService {
 
     const results: ICalloutContribution[] = [];
     for (const contribution of contributionsArray) {
+      contribution.authorization =
+        await this.authorizationPolicyService.ensureSaved(
+          contribution.authorization
+        );
+      (contribution as any).authorizationId = contribution.authorization?.id;
       const [saved] = await this.db
         .insert(calloutContributions)
         .values(contribution as any)

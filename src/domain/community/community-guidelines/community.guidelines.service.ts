@@ -7,6 +7,7 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { CreateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.create';
@@ -25,6 +26,7 @@ export class CommunityGuidelinesService {
   constructor(
     private profileService: ProfileService,
     private tagsetService: TagsetService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     @Inject(DRIZZLE) private readonly db: DrizzleDb
   ) {}
 
@@ -77,6 +79,10 @@ export class CommunityGuidelinesService {
         .returning();
       return { ...guidelinesInput, ...updated } as unknown as ICommunityGuidelines;
     }
+    guidelinesInput.authorization =
+      await this.authorizationPolicyService.ensureSaved(
+        guidelinesInput.authorization
+      );
     const [inserted] = await this.db
       .insert(communityGuidelines)
       .values({

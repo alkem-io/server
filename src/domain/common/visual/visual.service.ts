@@ -208,6 +208,10 @@ export class VisualService {
         .returning();
       return updated as unknown as IVisual;
     } else {
+      visual.authorization =
+        await this.authorizationPolicyService.ensureSaved(
+          visual.authorization
+        );
       const [inserted] = await this.db
         .insert(visuals)
         .values({

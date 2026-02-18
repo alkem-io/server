@@ -6,6 +6,7 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
@@ -28,6 +29,7 @@ export class DiscussionService {
     private readonly db: DrizzleDb,
     private readonly profileService: ProfileService,
     private readonly roomService: RoomService,
+    private readonly authorizationPolicyService: AuthorizationPolicyService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -148,6 +150,11 @@ export class DiscussionService {
   }
 
   async save(discussion: IDiscussion): Promise<IDiscussion> {
+    discussion.authorization =
+      await this.authorizationPolicyService.ensureSaved(
+        discussion.authorization
+      );
+    (discussion as any).authorizationId = discussion.authorization?.id;
     const [saved] = await this.db
       .insert(discussions)
       .values(discussion as any)

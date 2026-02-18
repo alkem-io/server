@@ -1,6 +1,7 @@
 import { relations } from 'drizzle-orm';
 import { roleSets } from './role.set.schema';
 import { authorizationPolicies } from '@domain/common/authorization-policy/authorization.policy.schema';
+import { licenses } from '@domain/common/license/license.schema';
 import { roles } from '@domain/access/role/role.schema';
 import { applications } from '@domain/access/application/application.schema';
 import { invitations } from '@domain/access/invitation/invitation.schema';

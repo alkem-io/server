@@ -24,6 +24,7 @@ export class CommunicationAuthorizationService {
         communicationInput.id,
         {
           relations: {
+            authorization: true,
             updates: {
               authorization: true,
             },

@@ -333,6 +333,11 @@ export class SpaceService {
       return result as unknown as ISpace;
     } else {
       // Insert new space
+      space.authorization =
+        await this.authorizationPolicyService.ensureSaved(
+          space.authorization
+        );
+      (space as any).authorizationId = space.authorization?.id;
       const [result] = await this.db
         .insert(spaces)
         .values(space as any)

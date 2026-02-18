@@ -11,6 +11,7 @@ import { ForumDiscussionCategoryException } from '@common/exceptions/forum.discu
 import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IUser } from '@domain/community/user/user.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
@@ -33,6 +34,7 @@ export class ForumService {
     private communicationAdapter: CommunicationAdapter,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
     private namingService: NamingService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     @Inject(DRIZZLE)
     private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -53,6 +55,11 @@ export class ForumService {
   }
 
   async save(forum: IForum): Promise<IForum> {
+    forum.authorization =
+      await this.authorizationPolicyService.ensureSaved(
+        forum.authorization
+      );
+    (forum as any).authorizationId = forum.authorization?.id;
     const [saved] = await this.db
       .insert(forums)
       .values(forum as any)

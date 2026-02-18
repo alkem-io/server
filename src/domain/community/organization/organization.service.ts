@@ -341,6 +341,11 @@ export class OrganizationService {
         .returning();
       return updated as unknown as IOrganization;
     } else {
+      organization.authorization =
+        await this.authorizationPolicyService.ensureSaved(
+          organization.authorization
+        );
+      (organization as any).authorizationId = organization.authorization?.id;
       const [inserted] = await this.db
         .insert(organizations)
         .values(organization as any)
@@ -594,6 +599,11 @@ export class OrganizationService {
         .returning();
       return updated as unknown as IOrganization;
     } else {
+      organization.authorization =
+        await this.authorizationPolicyService.ensureSaved(
+          organization.authorization
+        );
+      (organization as any).authorizationId = organization.authorization?.id;
       const [inserted] = await this.db
         .insert(organizations)
         .values(organization as any)

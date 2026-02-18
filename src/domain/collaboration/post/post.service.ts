@@ -163,6 +163,11 @@ export class PostService {
   }
 
   public async savePost(post: IPost): Promise<IPost> {
+    post.authorization =
+      await this.authorizationPolicyService.ensureSaved(
+        post.authorization
+      );
+    (post as any).authorizationId = post.authorization?.id;
     const [result] = await this.db
       .insert(posts)
       .values(post as any)

@@ -487,6 +487,11 @@ export class CalloutFramingService {
   }
 
   async save(calloutFraming: ICalloutFraming): Promise<ICalloutFraming> {
+    calloutFraming.authorization =
+      await this.authorizationPolicyService.ensureSaved(
+        calloutFraming.authorization
+      );
+    (calloutFraming as any).authorizationId = calloutFraming.authorization?.id;
     const [result] = await this.db
       .insert(calloutFramings)
       .values(calloutFraming as any)

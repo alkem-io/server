@@ -89,6 +89,10 @@ export class CalendarEventService {
         .returning();
       return updated as unknown as ICalendarEvent;
     }
+    calendarEvent.authorization =
+      await this.authorizationPolicyService.ensureSaved(
+        calendarEvent.authorization
+      );
     const [inserted] = await this.db
       .insert(calendarEvents)
       .values({
@@ -139,10 +143,11 @@ export class CalendarEventService {
   public async getCalendarEventOrFail(
     calendarEventID: string,
     options?: {
-      relations?: { profile?: boolean; comments?: boolean; calendar?: boolean };
+      relations?: { authorization?: boolean; profile?: boolean; comments?: boolean; calendar?: boolean };
     }
   ): Promise<ICalendarEvent | never> {
     const withClause: Record<string, boolean> = {};
+    if (options?.relations?.authorization) withClause.authorization = true;
     if (options?.relations?.profile) withClause.profile = true;
     if (options?.relations?.comments) withClause.comments = true;
     if (options?.relations?.calendar) withClause.calendar = true;

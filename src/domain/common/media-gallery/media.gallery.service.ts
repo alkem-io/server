@@ -50,6 +50,10 @@ export class MediaGalleryService {
     // Create visuals using Media Gallery mutations
     mediaGallery.visuals = [] as Visual[];
 
+    mediaGallery.authorization =
+      await this.authorizationPolicyService.ensureSaved(
+        mediaGallery.authorization
+      );
     const [saved] = await this.db
       .insert(mediaGalleries)
       .values({

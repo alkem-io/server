@@ -595,6 +595,12 @@ export class VirtualContributorService {
         .returning();
       return updated as unknown as IVirtualContributor;
     } else {
+      virtualContributor.authorization =
+        await this.authorizationPolicyService.ensureSaved(
+          virtualContributor.authorization
+        );
+      (virtualContributor as any).authorizationId =
+        virtualContributor.authorization?.id;
       const [inserted] = await this.db
         .insert(virtualContributors)
         .values(virtualContributor as any)

@@ -40,9 +40,11 @@ export class AiPersonaService {
     aiPersonaData: CreateAiPersonaInput,
     aiServer: IAiServer
   ): Promise<IAiPersona> {
-    const authorization = new AuthorizationPolicy(
+    let authorization: any = new AuthorizationPolicy(
       AuthorizationPolicyType.AI_PERSONA
     );
+    authorization =
+      await this.authorizationPolicyService.ensureSaved(authorization);
 
     const [savedAiPersona] = await this.db
       .insert(aiPersonas)
@@ -53,6 +55,7 @@ export class AiPersonaService {
           aiPersonaData.externalConfig
         ),
         aiServerId: aiServer.id,
+        authorizationId: authorization?.id,
       })
       .returning();
 
@@ -186,6 +189,10 @@ export class AiPersonaService {
         .returning();
       return updated as unknown as IAiPersona;
     }
+    aiPersona.authorization =
+      await this.authorizationPolicyService.ensureSaved(
+        aiPersona.authorization
+      );
     const [created] = await this.db
       .insert(aiPersonas)
       .values({
@@ -195,6 +202,7 @@ export class AiPersonaService {
         bodyOfKnowledgeLastUpdated: aiPersona.bodyOfKnowledgeLastUpdated,
         promptGraph: aiPersona.promptGraph,
         aiServerId: aiPersona.aiServer?.id,
+        authorizationId: aiPersona.authorization?.id,
       })
       .returning();
     return created as unknown as IAiPersona;

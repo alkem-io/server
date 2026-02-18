@@ -194,6 +194,11 @@ export class CommunityService {
         .returning();
       return updated as unknown as ICommunity;
     } else {
+      community.authorization =
+        await this.authorizationPolicyService.ensureSaved(
+          community.authorization
+        );
+      (community as any).authorizationId = community.authorization?.id;
       const [inserted] = await this.db
         .insert(communities)
         .values(community as any)

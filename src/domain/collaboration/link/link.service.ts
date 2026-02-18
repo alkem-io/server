@@ -87,6 +87,11 @@ export class LinkService {
   }
 
   async save(link: ILink): Promise<ILink> {
+    link.authorization =
+      await this.authorizationPolicyService.ensureSaved(
+        link.authorization
+      );
+    (link as any).authorizationId = link.authorization?.id;
     const [result] = await this.db
       .insert(links)
       .values(link as any)

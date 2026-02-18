@@ -32,7 +32,7 @@ export class CalendarEventAuthorizationService {
       await this.calendarEventService.getCalendarEventOrFail(
         calendarEventInput.id,
         {
-          relations: { comments: true, profile: true },
+          relations: { authorization: true, comments: true, profile: true },
         }
       );
     if (!calendarEvent.profile) {

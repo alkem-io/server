@@ -123,6 +123,10 @@ export class PlatformInvitationService {
         .returning();
       return { ...platformInvitation, ...updated } as unknown as IPlatformInvitation;
     }
+    platformInvitation.authorization =
+      await this.authorizationPolicyService.ensureSaved(
+        platformInvitation.authorization
+      );
     const [inserted] = await this.db
       .insert(platformInvitations)
       .values({

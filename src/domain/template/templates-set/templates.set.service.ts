@@ -44,6 +44,11 @@ export class TemplatesSetService {
     );
     templatesSet.templates = [];
 
+    templatesSet.authorization =
+      await this.authorizationPolicyService.ensureSaved(
+        templatesSet.authorization
+      );
+    (templatesSet as any).authorizationId = templatesSet.authorization?.id;
     const [inserted] = await this.db
       .insert(templatesSets)
       .values(templatesSet as any)
@@ -193,6 +198,11 @@ export class TemplatesSetService {
 
   public async save(templatesSet: ITemplatesSet): Promise<ITemplatesSet> {
     if (!templatesSet.id) {
+      templatesSet.authorization =
+        await this.authorizationPolicyService.ensureSaved(
+          templatesSet.authorization
+        );
+      (templatesSet as any).authorizationId = templatesSet.authorization?.id;
       const [inserted] = await this.db
         .insert(templatesSets)
         .values(templatesSet as any)

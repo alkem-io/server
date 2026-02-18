@@ -573,6 +573,11 @@ export class UserService {
       return updated as unknown as IUser;
     } else {
       // Insert new
+      user.authorization =
+        await this.authorizationPolicyService.ensureSaved(
+          user.authorization
+        );
+      (user as any).authorizationId = user.authorization?.id;
       const [inserted] = await this.db
         .insert(users)
         .values(user as any)

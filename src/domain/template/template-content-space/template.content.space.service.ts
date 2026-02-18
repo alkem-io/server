@@ -83,6 +83,12 @@ export class TemplateContentSpaceService {
     templateContentSpace: ITemplateContentSpace
   ): Promise<ITemplateContentSpace> {
     if (!templateContentSpace.id) {
+      templateContentSpace.authorization =
+        await this.authorizationPolicyService.ensureSaved(
+          templateContentSpace.authorization
+        );
+      (templateContentSpace as any).authorizationId =
+        templateContentSpace.authorization?.id;
       const [inserted] = await this.db
         .insert(templateContentSpaces)
         .values(templateContentSpace as any)

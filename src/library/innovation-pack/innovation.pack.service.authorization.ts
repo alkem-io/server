@@ -30,6 +30,7 @@ export class InnovationPackAuthorizationService {
         innovationPackInput.id,
         {
           with: {
+            authorization: true,
             profile: true,
             templatesSet: true,
           },

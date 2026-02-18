@@ -175,11 +175,16 @@ export class ConversationService {
         .returning();
       return result as unknown as IConversation;
     } else {
+      conversation.authorization =
+        await this.authorizationPolicyService.ensureSaved(
+          conversation.authorization
+        );
       const [result] = await this.db
         .insert(conversations)
         .values({
           messagingId: conversation.messaging?.id,
           roomId: conversation.room?.id,
+          authorizationId: conversation.authorization?.id,
         })
         .returning();
       return result as unknown as IConversation;

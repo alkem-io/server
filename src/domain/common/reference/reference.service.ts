@@ -49,6 +49,10 @@ export class ReferenceService {
         .returning();
       return updated as unknown as IReference;
     } else {
+      reference.authorization =
+        await this.authorizationPolicyService.ensureSaved(
+          reference.authorization
+        );
       const [inserted] = await this.db
         .insert(references)
         .values({
@@ -160,6 +164,10 @@ export class ReferenceService {
         .returning();
       return updated as unknown as IReference;
     } else {
+      reference.authorization =
+        await this.authorizationPolicyService.ensureSaved(
+          reference.authorization
+        );
       const [inserted] = await this.db
         .insert(references)
         .values({

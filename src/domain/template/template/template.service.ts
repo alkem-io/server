@@ -17,6 +17,7 @@ import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.
 import { ICollaboration } from '@domain/collaboration/collaboration';
 import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovation.flow.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { WhiteboardService } from '@domain/common/whiteboard';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
@@ -58,6 +59,7 @@ export class TemplateService {
     private templateContentSpaceService: TemplateContentSpaceService,
     private calloutsSetService: CalloutsSetService,
     private spaceLookupService: SpaceLookupService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     @Inject(DRIZZLE)
     private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -206,6 +208,11 @@ export class TemplateService {
         );
     }
 
+    template.authorization =
+      await this.authorizationPolicyService.ensureSaved(
+        template.authorization
+      );
+    (template as any).authorizationId = template.authorization?.id;
     const [result] = await this.db.insert(templates).values(template as any).returning();
     return result as unknown as ITemplate;
   }

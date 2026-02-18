@@ -11,6 +11,7 @@ import {
 import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
@@ -36,6 +37,7 @@ export class InnovationPackService {
     private templatesSetService: TemplatesSetService,
     private accountLookupService: AccountLookupService,
     private innovationPackDefaultsService: InnovationPackDefaultsService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     @Inject(DRIZZLE) private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -119,6 +121,10 @@ export class InnovationPackService {
         .returning();
       return updated as unknown as IInnovationPack;
     }
+    innovationPack.authorization =
+      await this.authorizationPolicyService.ensureSaved(
+        innovationPack.authorization
+      );
     const [created] = await this.db
       .insert(innovationPacks)
       .values({

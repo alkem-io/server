@@ -130,6 +130,10 @@ export class InnovationHubService {
         .returning();
       return updated as unknown as IInnovationHub;
     }
+    hub.authorization =
+      await this.authorizationPolicyService.ensureSaved(
+        hub.authorization
+      );
     const [inserted] = await this.db
       .insert(innovationHubs)
       .values({

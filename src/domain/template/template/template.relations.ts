@@ -6,6 +6,7 @@ import { communityGuidelines } from '@domain/community/community-guidelines/comm
 import { callouts } from '@domain/collaboration/callout/callout.schema';
 import { whiteboards } from '@domain/common/whiteboard/whiteboard.schema';
 import { templatesSets } from '@domain/template/templates-set/templates.set.schema';
+import { whiteboards } from '@domain/common/whiteboard/whiteboard.schema';
 import { templateContentSpaces } from '@domain/template/template-content-space/template.content.space.schema';
 
 export const templatesRelations = relations(templates, ({ one }) => ({
@@ -43,6 +44,12 @@ export const templatesRelations = relations(templates, ({ one }) => ({
   contentSpace: one(templateContentSpaces, {
     fields: [templates.contentSpaceId],
     references: [templateContentSpaces.id],
+  }),
+
+  // OneToOne with @JoinColumn: Whiteboard
+  whiteboard: one(whiteboards, {
+    fields: [templates.whiteboardId],
+    references: [whiteboards.id],
   }),
 
   // ManyToOne: TemplatesSet

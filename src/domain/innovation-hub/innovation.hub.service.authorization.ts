@@ -27,6 +27,7 @@ export class InnovationHubAuthorizationService {
       hubInput.id,
       {
         with: {
+          authorization: true,
           profile: true,
         },
       }

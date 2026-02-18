@@ -6,6 +6,7 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Template } from '@domain/template/template/template.entity';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -21,6 +22,7 @@ import { IInnovationFlowState } from './innovation.flow.state.interface';
 @Injectable()
 export class InnovationFlowStateService {
   constructor(
+    private authorizationPolicyService: AuthorizationPolicyService,
     @Inject(DRIZZLE)
     private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -48,6 +50,12 @@ export class InnovationFlowStateService {
   async save(
     innovationFlowState: IInnovationFlowState
   ): Promise<IInnovationFlowState> {
+    innovationFlowState.authorization =
+      await this.authorizationPolicyService.ensureSaved(
+        innovationFlowState.authorization
+      );
+    (innovationFlowState as any).authorizationId =
+      innovationFlowState.authorization?.id;
     const [result] = await this.db
       .insert(innovationFlowStates)
       .values(innovationFlowState as any)

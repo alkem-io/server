@@ -3,6 +3,7 @@ import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type
 import { RoomType } from '@common/enums/room.type';
 import { ValidationException } from '@common/exceptions';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
@@ -31,6 +32,7 @@ export class RoomService {
     private readonly communicationAdapter: CommunicationAdapter,
     private readonly roomLookupService: RoomLookupService,
     private readonly contributorLookupService: ContributorLookupService,
+    private readonly authorizationPolicyService: AuthorizationPolicyService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -109,6 +111,10 @@ export class RoomService {
         .returning();
       return result as unknown as IRoom;
     } else {
+      room.authorization =
+        await this.authorizationPolicyService.ensureSaved(
+          room.authorization
+        );
       const [result] = await this.db
         .insert(rooms)
         .values({
@@ -116,6 +122,7 @@ export class RoomService {
           type: room.type,
           messagesCount: room.messagesCount,
           vcInteractionsByThread: room.vcInteractionsByThread,
+          authorizationId: room.authorization?.id,
         })
         .returning();
       return result as unknown as IRoom;

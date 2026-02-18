@@ -51,13 +51,15 @@ export class TimelineService {
 
   async getTimelineOrFail(
     timelineID: string,
-    options?: { relations?: { calendar?: boolean; authorization?: boolean } }
+    options?: { relations?: { authorization?: boolean; calendar?: boolean } }
   ): Promise<ITimeline | never> {
-    const withClause: any = { authorization: true };
+    const withClause: Record<string, boolean> = {};
+    if (options?.relations?.authorization) withClause.authorization = true;
     if (options?.relations?.calendar) withClause.calendar = true;
+
     const timeline = await this.db.query.timelines.findFirst({
       where: eq(timelines.id, timelineID),
-      with: withClause,
+      with: Object.keys(withClause).length > 0 ? withClause : undefined,
     });
     if (!timeline)
       throw new EntityNotFoundException(
@@ -79,6 +81,10 @@ export class TimelineService {
         .returning();
       return updated as unknown as ITimeline;
     }
+    timeline.authorization =
+      await this.authorizationPolicyService.ensureSaved(
+        timeline.authorization
+      );
     const [inserted] = await this.db
       .insert(timelines)
       .values({

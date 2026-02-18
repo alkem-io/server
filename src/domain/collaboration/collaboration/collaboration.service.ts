@@ -198,6 +198,10 @@ export class CollaborationService {
         .returning();
       return updated as unknown as ICollaboration;
     }
+    collaboration.authorization =
+      await this.authorizationPolicyService.ensureSaved(
+        collaboration.authorization
+      );
     const [inserted] = await this.db
       .insert(collaborations)
       .values({

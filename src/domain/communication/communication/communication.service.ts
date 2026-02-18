@@ -6,6 +6,7 @@ import {
   EntityNotInitializedException,
 } from '@common/exceptions';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import {
   Communication,
   ICommunication,
@@ -25,6 +26,7 @@ export class CommunicationService {
   constructor(
     private readonly roomService: RoomService,
     private readonly communicationAdapter: CommunicationAdapter,
+    private readonly authorizationPolicyService: AuthorizationPolicyService,
     @Inject(DRIZZLE) private readonly db: DrizzleDb
   ) {}
 
@@ -62,12 +64,17 @@ export class CommunicationService {
         .returning();
       return result as unknown as ICommunication;
     } else {
+      communication.authorization =
+        await this.authorizationPolicyService.ensureSaved(
+          communication.authorization
+        );
       const [result] = await this.db
         .insert(communications)
         .values({
           displayName: communication.displayName,
           spaceID: communication.spaceID,
           updatesId: communication.updates?.id,
+          authorizationId: communication.authorization?.id,
         })
         .returning();
       return result as unknown as ICommunication;
@@ -86,7 +93,7 @@ export class CommunicationService {
 
   async getCommunicationOrFail(
     communicationID: string,
-    options?: { relations?: { updates?: boolean | { authorization?: boolean } } }
+    options?: { relations?: { authorization?: boolean; updates?: boolean | { authorization?: boolean } } }
   ): Promise<ICommunication | never> {
     let updatesWith: any = undefined;
     if (options?.relations?.updates) {
@@ -98,9 +105,14 @@ export class CommunicationService {
         updatesWith = { updates: true };
       }
     }
+    const withClause: any = {
+      ...updatesWith,
+      authorization: options?.relations?.authorization || undefined,
+    };
+    const hasWith = Object.values(withClause).some(v => v !== undefined);
     const communication = await this.db.query.communications.findFirst({
       where: eq(communications.id, communicationID),
-      with: updatesWith,
+      with: hasWith ? withClause : undefined,
     });
     if (!communication)
       throw new EntityNotFoundException(

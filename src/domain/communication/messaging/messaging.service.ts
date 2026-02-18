@@ -56,7 +56,17 @@ export class MessagingService {
       AuthorizationPolicyType.COMMUNICATION_MESSAGING
     );
 
-    const [result] = await this.db.insert(messagings).values({}).returning();
+    messaging.authorization =
+      await this.authorizationPolicyService.ensureSaved(
+        messaging.authorization
+      );
+
+    const [result] = await this.db
+      .insert(messagings)
+      .values({
+        authorizationId: messaging.authorization?.id,
+      })
+      .returning();
     return result as unknown as IMessaging;
   }
 
@@ -230,7 +240,16 @@ export class MessagingService {
         .returning();
       return result as unknown as IMessaging;
     } else {
-      const [result] = await this.db.insert(messagings).values({}).returning();
+      messaging.authorization =
+        await this.authorizationPolicyService.ensureSaved(
+          messaging.authorization
+        );
+      const [result] = await this.db
+        .insert(messagings)
+        .values({
+          authorizationId: messaging.authorization?.id,
+        })
+        .returning();
       return result as unknown as IMessaging;
     }
   }

@@ -7,6 +7,7 @@ import {
 import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -22,6 +23,7 @@ export class TemplateDefaultService {
   constructor(
     @Inject(DRIZZLE) private readonly db: DrizzleDb,
     private templateService: TemplateService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -90,6 +92,12 @@ export class TemplateDefaultService {
     templateDefault: ITemplateDefault
   ): Promise<ITemplateDefault> {
     if (!templateDefault.id) {
+      templateDefault.authorization =
+        await this.authorizationPolicyService.ensureSaved(
+          templateDefault.authorization
+        );
+      (templateDefault as any).authorizationId =
+        templateDefault.authorization?.id;
       const [inserted] = await this.db
         .insert(templateDefaults)
         .values(templateDefault as any)

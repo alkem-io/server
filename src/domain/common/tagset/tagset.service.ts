@@ -306,6 +306,10 @@ export class TagsetService {
         .returning();
       return updated as unknown as ITagset;
     } else {
+      tagset.authorization =
+        await this.authorizationPolicyService.ensureSaved(
+          tagset.authorization
+        );
       const [inserted] = await this.db
         .insert(tagsetsTable)
         .values({

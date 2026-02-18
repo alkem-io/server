@@ -411,6 +411,11 @@ export class CalloutsSetService {
   }
 
   public async save(calloutsSet: ICalloutsSet): Promise<ICalloutsSet> {
+    calloutsSet.authorization =
+      await this.authorizationPolicyService.ensureSaved(
+        calloutsSet.authorization
+      );
+    (calloutsSet as any).authorizationId = calloutsSet.authorization?.id;
     const [result] = await this.db
       .insert(calloutsSets)
       .values(calloutsSet as any)

@@ -8,6 +8,7 @@ import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LicenseService } from '@domain/common/license/license.service';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -31,6 +32,7 @@ export class AccountHostService {
     private licensingFrameworkService: LicensingFrameworkService,
     private licenseService: LicenseService,
     private storageAggregatorService: StorageAggregatorService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     @Inject(DRIZZLE)
     private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -94,6 +96,10 @@ export class AccountHostService {
       ],
     });
 
+    account.authorization =
+      await this.authorizationPolicyService.ensureSaved(
+        account.authorization
+      );
     const [inserted] = await this.db
       .insert(accounts)
       .values({

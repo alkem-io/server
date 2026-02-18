@@ -379,6 +379,10 @@ export class AiServerService {
         .returning();
       return updated as unknown as IAiServer;
     }
+    aiServer.authorization =
+      await this.authorizationPolicyService.ensureSaved(
+        aiServer.authorization
+      );
     const [created] = await this.db
       .insert(aiServers)
       .values({

@@ -109,6 +109,10 @@ export class StorageBucketService {
         .returning();
       return updated as unknown as IStorageBucket;
     }
+    storage.authorization =
+      await this.authorizationPolicyService.ensureSaved(
+        storage.authorization
+      );
     const [inserted] = await this.db
       .insert(storageBuckets)
       .values({

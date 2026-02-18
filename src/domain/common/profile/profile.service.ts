@@ -246,6 +246,9 @@ export class ProfileService {
         .returning();
       return updated as unknown as IProfile;
     } else {
+      profile.authorization = await this.authorizationPolicyService.ensureSaved(
+        profile.authorization
+      );
       const [inserted] = await this.db
         .insert(profiles)
         .values({

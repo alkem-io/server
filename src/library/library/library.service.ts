@@ -5,6 +5,7 @@ import { RelationshipNotFoundException } from '@common/exceptions';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { virtualContributors } from '@domain/community/virtual-contributor/virtual.contributor.schema';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { innovationHubs } from '@domain/innovation-hub/innovation.hub.schema';
@@ -24,6 +25,7 @@ import { ILibrary } from './library.interface';
 export class LibraryService {
   constructor(
     private innovationPackService: InnovationPackService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     @Inject(DRIZZLE) private readonly db: DrizzleDb,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -50,6 +52,10 @@ export class LibraryService {
         .returning();
       return updated as unknown as ILibrary;
     }
+    library.authorization =
+      await this.authorizationPolicyService.ensureSaved(
+        library.authorization
+      );
     const [created] = await this.db
       .insert(libraries)
       .values({
