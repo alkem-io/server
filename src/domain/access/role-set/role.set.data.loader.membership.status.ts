@@ -168,7 +168,10 @@ export class RoleSetMembershipStatusDataLoader {
     }
 
     // Lifecycle is already eager-loaded; check in-memory without re-fetching
-    if (openInvitation && this.invitationService.canAcceptInvitation(openInvitation)) {
+    if (
+      openInvitation &&
+      this.invitationService.canAcceptInvitation(openInvitation)
+    ) {
       return CommunityMembershipStatus.INVITATION_PENDING;
     }
 

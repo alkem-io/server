@@ -1919,9 +1919,16 @@ export class RoleSetService {
     }
 
     // Build credential criteria for each roleSet
-    const criteriaList: { roleSetId: string; type: string; resourceID: string }[] = [];
+    const criteriaList: {
+      roleSetId: string;
+      type: string;
+      resourceID: string;
+    }[] = [];
     for (const roleSet of roleSets) {
-      const credential = this.getCredentialForRoleSync(roleSet, RoleName.MEMBER);
+      const credential = this.getCredentialForRoleSync(
+        roleSet,
+        RoleName.MEMBER
+      );
       if (credential) {
         criteriaList.push({
           roleSetId: roleSet.id,

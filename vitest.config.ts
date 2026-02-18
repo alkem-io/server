@@ -4,7 +4,7 @@ import swc from 'unplugin-swc';
 import tsconfigPaths from 'vite-tsconfig-paths';
 import { defineConfig } from 'vitest/config';
 
-// @ts-ignore
+// @ts-expect-error
 const require = createRequire(import.meta.url);
 
 export default defineConfig({
@@ -27,8 +27,15 @@ export default defineConfig({
     dedupe: ['graphql'],
   },
   test: {
-    // Use 'forks' pool for better compatibility with CJS dependencies
-    pool: 'forks',
+    // Use 'threads' pool for shared module cache across tests in the same worker
+    // This reduces import time vs 'forks' which does cold imports per file
+    pool: 'threads',
+    // Vitest 4: pool options are now top-level (poolOptions was removed)
+    maxWorkers: 4,
+    minWorkers: 2,
+    // Reuse module cache across tests - avoids re-importing per test file
+    // Requires tests to not leak state (clearMocks: true handles mock call data)
+    isolate: false,
     // Enable global test APIs (describe, it, expect, beforeEach, etc.)
     // This provides Jest-like API without explicit imports
     globals: true,

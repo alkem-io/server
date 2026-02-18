@@ -3,11 +3,11 @@ import { RoleName } from '@common/enums/role.name';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { ICredential } from '@domain/agent/credential/credential.interface';
 import { Repository } from 'typeorm';
-import { type Mocked, vi, describe, it, expect, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, type Mocked, vi } from 'vitest';
 import { InvitationService } from '../invitation/invitation.service';
+import { RoleSetMembershipStatusDataLoader } from './role.set.data.loader.membership.status';
 import { RoleSet } from './role.set.entity';
 import { IRoleSet } from './role.set.interface';
-import { RoleSetMembershipStatusDataLoader } from './role.set.data.loader.membership.status';
 import { RoleSetService } from './role.set.service';
 import { RoleSetCacheService } from './role.set.service.cache';
 import { AgentRoleKey } from './types';
@@ -20,7 +20,10 @@ function makeCredential(type: string, resourceID: string): ICredential {
 
 function makeRoleSet(
   id: string,
-  roles?: Array<{ name: RoleName; credential: { type: string; resourceID: string } }>
+  roles?: Array<{
+    name: RoleName;
+    credential: { type: string; resourceID: string };
+  }>
 ): IRoleSet {
   return {
     id,
@@ -112,7 +115,10 @@ describe('RoleSetMembershipStatusDataLoader', () => {
   describe('empty agentID handling', () => {
     it('should return NOT_MEMBER immediately for empty agentID', async () => {
       const roleSet = makeRoleSet('rs-1', [
-        { name: RoleName.MEMBER, credential: { type: 'space-member', resourceID: 'space-1' } },
+        {
+          name: RoleName.MEMBER,
+          credential: { type: 'space-member', resourceID: 'space-1' },
+        },
       ]);
       const key = makeKey('', 'user-1', roleSet);
 
@@ -134,9 +140,7 @@ describe('RoleSetMembershipStatusDataLoader', () => {
       const roleSet = makeRoleSet('rs-1');
       const key = makeKey('agent-1', 'user-1', roleSet);
 
-      mocks.agentService.getAgentCredentialsBatch.mockResolvedValue(
-        new Map()
-      );
+      mocks.agentService.getAgentCredentialsBatch.mockResolvedValue(new Map());
       mocks.roleSetCacheService.getMembershipStatusBatchFromCache.mockResolvedValue(
         [CommunityMembershipStatus.MEMBER]
       );
@@ -331,9 +335,7 @@ describe('RoleSetMembershipStatusDataLoader', () => {
       const key = makeKey('agent-1', 'user-1', roleSet);
 
       // Agent not in the map at all
-      mocks.agentService.getAgentCredentialsBatch.mockResolvedValue(
-        new Map()
-      );
+      mocks.agentService.getAgentCredentialsBatch.mockResolvedValue(new Map());
       mocks.roleSetCacheService.getMembershipStatusBatchFromCache.mockResolvedValue(
         [undefined]
       );
@@ -446,10 +448,16 @@ describe('RoleSetMembershipStatusDataLoader', () => {
   describe('batching', () => {
     it('should process multiple keys in a single batch', async () => {
       const rs1 = makeRoleSet('rs-1', [
-        { name: RoleName.MEMBER, credential: { type: 'space-member', resourceID: 'space-1' } },
+        {
+          name: RoleName.MEMBER,
+          credential: { type: 'space-member', resourceID: 'space-1' },
+        },
       ]);
       const rs2 = makeRoleSet('rs-2', [
-        { name: RoleName.MEMBER, credential: { type: 'space-member', resourceID: 'space-2' } },
+        {
+          name: RoleName.MEMBER,
+          credential: { type: 'space-member', resourceID: 'space-2' },
+        },
       ]);
 
       const cred1 = makeCredential('space-member', 'space-1');
@@ -471,17 +479,23 @@ describe('RoleSetMembershipStatusDataLoader', () => {
       expect(result1).toBe(CommunityMembershipStatus.MEMBER);
       expect(result2).toBe(CommunityMembershipStatus.MEMBER);
       // Credentials loaded only once
-      expect(
-        mocks.agentService.getAgentCredentialsBatch
-      ).toHaveBeenCalledTimes(1);
+      expect(mocks.agentService.getAgentCredentialsBatch).toHaveBeenCalledTimes(
+        1
+      );
     });
 
     it('should mix cached and uncached results in the same batch', async () => {
       const rs1 = makeRoleSet('rs-1', [
-        { name: RoleName.MEMBER, credential: { type: 'space-member', resourceID: 'space-1' } },
+        {
+          name: RoleName.MEMBER,
+          credential: { type: 'space-member', resourceID: 'space-1' },
+        },
       ]);
       const rs2 = makeRoleSet('rs-2', [
-        { name: RoleName.MEMBER, credential: { type: 'space-member', resourceID: 'space-2' } },
+        {
+          name: RoleName.MEMBER,
+          credential: { type: 'space-member', resourceID: 'space-2' },
+        },
       ]);
 
       const cred = makeCredential('space-member', 'space-2');
@@ -509,10 +523,16 @@ describe('RoleSetMembershipStatusDataLoader', () => {
   describe('DataLoader cache key', () => {
     it('should differentiate keys by agentID + roleSetID', async () => {
       const rs1 = makeRoleSet('rs-1', [
-        { name: RoleName.MEMBER, credential: { type: 'space-member', resourceID: 'space-1' } },
+        {
+          name: RoleName.MEMBER,
+          credential: { type: 'space-member', resourceID: 'space-1' },
+        },
       ]);
       const rs2 = makeRoleSet('rs-2', [
-        { name: RoleName.MEMBER, credential: { type: 'space-member', resourceID: 'space-2' } },
+        {
+          name: RoleName.MEMBER,
+          credential: { type: 'space-member', resourceID: 'space-2' },
+        },
       ]);
 
       const cred1 = makeCredential('space-member', 'space-1');

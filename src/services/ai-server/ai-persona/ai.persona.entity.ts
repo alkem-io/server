@@ -36,5 +36,5 @@ export class AiPersona extends AuthorizableEntity implements IAiPersona {
   bodyOfKnowledgeLastUpdated: Date | null = null;
 
   @Column('jsonb', { nullable: true, transformer: PromptGraphTransformer })
-  promptGraph?: PromptGraph;
+  promptGraph?: PromptGraph | null;
 }

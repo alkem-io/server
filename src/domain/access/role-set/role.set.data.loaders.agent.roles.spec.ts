@@ -2,10 +2,10 @@ import { RoleName } from '@common/enums/role.name';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { ICredential } from '@domain/agent/credential/credential.interface';
 import { Repository } from 'typeorm';
-import { type Mocked, vi, describe, it, expect, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, type Mocked, vi } from 'vitest';
+import { RoleSetAgentRolesDataLoader } from './role.set.data.loaders.agent.roles';
 import { RoleSet } from './role.set.entity';
 import { IRoleSet } from './role.set.interface';
-import { RoleSetAgentRolesDataLoader } from './role.set.data.loaders.agent.roles';
 import { RoleSetCacheService } from './role.set.service.cache';
 import { AgentRoleKey } from './types';
 
@@ -46,9 +46,7 @@ function makeKey(
 /* ───────── mocks ───────── */
 
 function createMocks() {
-  const agentService: Mocked<
-    Pick<AgentService, 'getAgentCredentialsBatch'>
-  > = {
+  const agentService: Mocked<Pick<AgentService, 'getAgentCredentialsBatch'>> = {
     getAgentCredentialsBatch: vi.fn().mockResolvedValue(new Map()),
   };
 
@@ -244,9 +242,7 @@ describe('RoleSetAgentRolesDataLoader', () => {
       ]);
 
       // Agent not in the credentials map
-      mocks.agentService.getAgentCredentialsBatch.mockResolvedValue(
-        new Map()
-      );
+      mocks.agentService.getAgentCredentialsBatch.mockResolvedValue(new Map());
       mocks.roleSetCacheService.getAgentRolesBatchFromCache.mockResolvedValue([
         undefined,
       ]);
@@ -335,9 +331,11 @@ describe('RoleSetAgentRolesDataLoader', () => {
       const loader = createLoader(mocks);
       await loader.loader.load(makeKey('agent-1', 'user-1', roleSet));
 
-      expect(
-        mocks.roleSetCacheService.setAgentRolesCache
-      ).toHaveBeenCalledWith('agent-1', 'rs-1', [RoleName.MEMBER]);
+      expect(mocks.roleSetCacheService.setAgentRolesCache).toHaveBeenCalledWith(
+        'agent-1',
+        'rs-1',
+        [RoleName.MEMBER]
+      );
     });
   });
 
@@ -378,9 +376,9 @@ describe('RoleSetAgentRolesDataLoader', () => {
 
       expect(roles1).toEqual([RoleName.MEMBER]);
       expect(roles2).toEqual([RoleName.LEAD]);
-      expect(
-        mocks.agentService.getAgentCredentialsBatch
-      ).toHaveBeenCalledTimes(1);
+      expect(mocks.agentService.getAgentCredentialsBatch).toHaveBeenCalledTimes(
+        1
+      );
     });
 
     it('should handle mixed empty and valid agentIDs in one batch', async () => {

@@ -180,7 +180,9 @@ Key rules:
 - Underscore prefix (`_param`) ignores unused parameters
 
 ## Active Technologies
-- TypeScript 5.3, Node.js 22 LTS (Volta pins 22.21.1) + NestJS 10, Vitest 4.x, Biome for linting/formatting, TypeORM 0.3, Apollo Server 4, dataloaders
+- TypeScript 5.3, Node.js 22 LTS (Volta pins 22.21.1) + NestJS 10, Vitest 4.x, Biome for linting/formatting
+- TypeScript 5.3, Node.js 22 LTS (Volta pins 22.21.1) + NestJS 10, TypeORM 0.3, Apollo Server 4, GraphQL 16 (034-unit-tests)
+- N/A (no data model changes — test-only feature) (034-unit-tests)
 - PostgreSQL 17.5
 
 ## Recent Changes

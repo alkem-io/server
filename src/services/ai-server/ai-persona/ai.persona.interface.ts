@@ -37,5 +37,5 @@ export abstract class IAiPersona extends IAuthorizable {
     nullable: true,
     description: 'The prompt graph for this AI Persona.',
   })
-  promptGraph?: PromptGraph;
+  promptGraph?: PromptGraph | null;
 }

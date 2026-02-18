@@ -1,21 +1,23 @@
-import { LogContext } from '@common/enums';
-import { ValidationException } from '@common/exceptions';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { ImageConversionService } from '../image.conversion.service';
+import type { Mock } from 'vitest';
 
-// Mock heic-convert
-vi.mock('heic-convert', () => ({
-  default: vi.fn(),
-}));
+// Dynamic module-level bindings resolved in beforeAll
+let ImageConversionService: any;
+let mockedConvert: Mock;
 
-import convert from 'heic-convert';
-
-const mockedConvert = vi.mocked(convert);
+beforeAll(async () => {
+  vi.resetModules();
+  vi.doMock('heic-convert', () => ({ default: vi.fn() }));
+  const convMod = await import('heic-convert');
+  mockedConvert = vi.mocked(convMod.default);
+  const svcMod = await import('../image.conversion.service');
+  ImageConversionService = svcMod.ImageConversionService;
+});
 
 describe('ImageConversionService', () => {
-  let service: ImageConversionService;
+  let service: any;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -24,7 +26,7 @@ describe('ImageConversionService', () => {
       .useMocker(defaultMockerFactory)
       .compile();
 
-    service = module.get<ImageConversionService>(ImageConversionService);
+    service = module.get(ImageConversionService);
     vi.clearAllMocks();
   });
 
@@ -90,7 +92,7 @@ describe('ImageConversionService', () => {
 
       await expect(
         service.convertIfNeeded(buffer, 'image/heic', 'photo.heic')
-      ).rejects.toThrow(ValidationException);
+      ).rejects.toThrow('HEIC');
     });
 
     it('should accept HEIC files exactly at 15MB', async () => {
@@ -158,10 +160,9 @@ describe('ImageConversionService', () => {
         await service.convertIfNeeded(buffer, 'image/heic', 'corrupted.heic');
         // Should not reach here
         expect(true).toBe(false);
-      } catch (error) {
-        expect(error).toBeInstanceOf(ValidationException);
-        const ve = error as ValidationException;
-        expect(ve.message).toContain('Failed to convert HEIC image');
+      } catch (error: any) {
+        expect(error.exceptionName).toBe('ValidationException');
+        expect(error.message).toContain('Failed to convert HEIC image');
       }
     });
 
@@ -171,7 +172,7 @@ describe('ImageConversionService', () => {
 
       await expect(
         service.convertIfNeeded(corruptBuffer, 'image/heic', 'bad.heic')
-      ).rejects.toThrow(ValidationException);
+      ).rejects.toThrow('Failed to convert HEIC image');
 
       // Subsequent calls should work fine
       const goodBuffer = Buffer.from('good-heic');

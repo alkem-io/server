@@ -3,13 +3,12 @@ import { ICredential } from '@domain/agent/credential/credential.interface';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
-import { Cache } from 'cache-manager';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { type Mocked, vi, describe, it, expect, beforeEach } from 'vitest';
 import { Repository } from 'typeorm';
-import { getRepositoryToken } from '@nestjs/typeorm';
+import { beforeEach, describe, expect, it, type Mocked, vi } from 'vitest';
 import { AgentService } from './agent.service';
 
 /* ───────── helpers ───────── */
@@ -29,9 +28,9 @@ function makeCredential(type: string, resourceID: string): ICredential {
 function createCacheManagerWithMget() {
   return {
     get: vi.fn().mockResolvedValue(undefined),
-    set: vi.fn().mockImplementation((_key: string, value: any) =>
-      Promise.resolve(value)
-    ),
+    set: vi
+      .fn()
+      .mockImplementation((_key: string, value: any) => Promise.resolve(value)),
     del: vi.fn().mockResolvedValue(undefined),
     reset: vi.fn().mockResolvedValue(undefined),
     wrap: vi.fn(),
@@ -69,9 +68,9 @@ describe('AgentService.getAgentCredentialsBatch', () => {
       .compile();
 
     service = module.get(AgentService);
-    agentRepository = module.get(
-      getRepositoryToken(Agent)
-    ) as Mocked<Repository<Agent>>;
+    agentRepository = module.get(getRepositoryToken(Agent)) as Mocked<
+      Repository<Agent>
+    >;
   });
 
   it('should return empty map for empty input', async () => {
