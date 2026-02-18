@@ -79,7 +79,8 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
 
   async [ActivityEventType.CALLOUT_PUBLISHED](rawActivity: IActivity) {
     const callout = await this.calloutService.getCalloutOrFail(
-      rawActivity.resourceID
+      rawActivity.resourceID,
+      { relations: { framing: true, authorization: true } }
     );
     const activityCalloutPublished: IActivityLogEntryCalloutPublished = {
       ...this.activityLogEntryBase,
@@ -101,7 +102,8 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
     }
 
     const calloutPostCreated = await this.calloutService.getCalloutOrFail(
-      rawActivity.parentID
+      rawActivity.parentID,
+      { relations: { framing: true, authorization: true } }
     );
     const postCreated = await this.postService.getPostOrFail(
       rawActivity.resourceID
@@ -127,7 +129,8 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
     }
 
     const calloutPostCreated = await this.calloutService.getCalloutOrFail(
-      rawActivity.parentID
+      rawActivity.parentID,
+      { relations: { framing: true, authorization: true } }
     );
     const linkCreated = await this.linkService.getLinkOrFail(
       rawActivity.resourceID
@@ -153,7 +156,8 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
     }
 
     const calloutWhiteboardCreated = await this.calloutService.getCalloutOrFail(
-      rawActivity.parentID
+      rawActivity.parentID,
+      { relations: { framing: true, authorization: true } }
     );
     const whiteboardCreated = await this.whiteboardService.getWhiteboardOrFail(
       rawActivity.resourceID
@@ -180,7 +184,8 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
     }
 
     const calloutMemoCreated = await this.calloutService.getCalloutOrFail(
-      rawActivity.parentID
+      rawActivity.parentID,
+      { relations: { framing: true, authorization: true } }
     );
     const memoCreated = await this.memoService.getMemoOrFail(
       rawActivity.resourceID
@@ -208,7 +213,8 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
     }
 
     const parentCallout = await this.calloutService.getCalloutOrFail(
-      rawActivity.parentID
+      rawActivity.parentID,
+      { relations: { framing: true, authorization: true } }
     );
     const updatedWhiteboard = await this.whiteboardService.getWhiteboardOrFail(
       rawActivity.resourceID
@@ -235,7 +241,8 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
     }
 
     const calloutPostComment = await this.calloutService.getCalloutOrFail(
-      rawActivity.parentID
+      rawActivity.parentID,
+      { relations: { framing: true, authorization: true } }
     );
     const postCommentedOn = await this.postService.getPostOrFail(
       rawActivity.resourceID
@@ -262,7 +269,8 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
 
   async [ActivityEventType.DISCUSSION_COMMENT](rawActivity: IActivity) {
     const calloutDiscussionComment = await this.calloutService.getCalloutOrFail(
-      rawActivity.resourceID
+      rawActivity.resourceID,
+      { relations: { framing: true, authorization: true } }
     );
     const activityCalloutDiscussionComment: IActivityLogEntryCalloutDiscussionComment =
       {

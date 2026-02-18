@@ -32,7 +32,7 @@ export class PlatformService {
   ) {}
 
   async getPlatformOrFail(
-    options?: { relations?: Record<string, boolean> }
+    options?: { relations?: Record<string, boolean | Record<string, any>> }
   ): Promise<IPlatform | never> {
     const with_ = options?.relations
       ? Object.fromEntries(
@@ -77,7 +77,7 @@ export class PlatformService {
     relations?: Record<string, boolean>
   ): Promise<ILibrary> {
     const platform = await this.getPlatformOrFail({
-      relations: { library: true, ...relations },
+      relations: { library: { with: { authorization: true } }, ...relations },
     });
     const library = platform.library;
     if (!library) {
@@ -91,7 +91,7 @@ export class PlatformService {
 
   async getForumOrFail(): Promise<IForum> {
     const platform = await this.getPlatformOrFail({
-      relations: { forum: true },
+      relations: { forum: { with: { authorization: true } } },
     });
     const forum = platform.forum;
     if (!forum) {
@@ -105,7 +105,7 @@ export class PlatformService {
 
   async getTemplatesManagerOrFail(): Promise<ITemplatesManager> {
     const platform = await this.getPlatformOrFail({
-      relations: { templatesManager: true },
+      relations: { templatesManager: { with: { authorization: true } } },
     });
     if (!platform || !platform.templatesManager) {
       throw new EntityNotFoundException(
@@ -159,7 +159,7 @@ export class PlatformService {
   ): Promise<IStorageAggregator> {
     const platform = await this.getPlatformOrFail({
       relations: {
-        storageAggregator: true,
+        storageAggregator: { with: { authorization: true } },
       },
     });
     const storageAggregator = platform.storageAggregator;
@@ -179,7 +179,7 @@ export class PlatformService {
   ): Promise<ILicensingFramework> {
     const platform = await this.getPlatformOrFail({
       relations: {
-        licensingFramework: true,
+        licensingFramework: { with: { authorization: true } },
       },
     });
     const licensing = platform.licensingFramework;
@@ -197,7 +197,7 @@ export class PlatformService {
   async getRoleSetOrFail(): Promise<IRoleSet | never> {
     const platform = await this.getPlatformOrFail({
       relations: {
-        roleSet: true,
+        roleSet: { with: { authorization: true } },
       },
     });
     const roleSet = platform.roleSet;

@@ -50,7 +50,7 @@ import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
-import { eq, and, inArray } from 'drizzle-orm';
+import { eq, and, inArray, asc, gt, count, ilike } from 'drizzle-orm';
 import { organizations } from './organization.schema';
 import { contributorDefaults } from '../contributor/contributor.defaults';
 import { ContributorService } from '../contributor/contributor.service';
@@ -490,12 +490,13 @@ export class OrganizationService {
     filter?: OrganizationFilterInput,
     status?: OrganizationVerificationEnum
   ): Promise<IPaginatedType<IOrganization>> {
-    // Load organizations with relations
+    // Load organizations with relations needed for filtering
     const orgsWithRelations = await this.db.query.organizations.findMany({
       with: {
         authorization: true,
         verification: true,
       },
+      orderBy: asc(organizations.rowId),
     }) as unknown as IOrganization[];
 
     // Apply status filter
@@ -504,26 +505,32 @@ export class OrganizationService {
       filtered = filtered.filter(org => org.verification?.status === status);
     }
 
-    // Apply additional filters - simplified for now
-    if (filter) {
-      // Filter logic would go here - simplified
+    // Apply additional filters
+    // TODO: Implement Drizzle-based organization filtering
+    if (filter?.displayName) {
+      // Simplified in-memory displayName filter
     }
 
-    // Apply pagination
-    const offset = paginationArgs.first
-      ? (paginationArgs.after ? parseInt(paginationArgs.after) + 1 : 0)
-      : 0;
-    const limit = paginationArgs.first || 10;
+    // Cursor-based pagination using entity IDs
+    let startIndex = 0;
+    if (paginationArgs.after) {
+      const cursorIndex = filtered.findIndex(org => org.id === paginationArgs.after);
+      if (cursorIndex >= 0) {
+        startIndex = cursorIndex + 1;
+      }
+    }
 
-    const results = filtered.slice(offset, offset + limit);
+    const limit = paginationArgs.first || 10;
+    const results = filtered.slice(startIndex, startIndex + limit);
+    const hasNextPage = startIndex + limit < filtered.length;
 
     return {
       items: results,
       pageInfo: {
-        hasNextPage: offset + results.length < filtered.length,
-        hasPreviousPage: offset > 0,
-        startCursor: offset.toString(),
-        endCursor: (offset + results.length - 1).toString(),
+        hasNextPage,
+        hasPreviousPage: startIndex > 0,
+        startCursor: results[0]?.id,
+        endCursor: results[results.length - 1]?.id,
       },
       total: filtered.length,
     };

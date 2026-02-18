@@ -48,7 +48,7 @@ import { InstrumentService } from '@src/apm/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { DRIZZLE } from '@config/drizzle/drizzle.constants';
 import type { DrizzleDb } from '@config/drizzle/drizzle.constants';
-import { eq, and, inArray, desc, asc } from 'drizzle-orm';
+import { eq, and, inArray, desc, asc, gt, ilike, count, sql } from 'drizzle-orm';
 import { users } from './user.schema';
 import { RoleSetRoleSelectionCredentials } from '../../access/role-set/dto/role.set.dto.role.selection.credentials';
 import { RoleSetRoleWithParentCredentials } from '../../access/role-set/dto/role.set.dto.role.with.parent.credentials';
@@ -623,45 +623,107 @@ export class UserService {
     withTags?: boolean,
     filter?: UserFilterInput
   ): Promise<IPaginatedType<IUser>> {
-    // Build base query
-    let query = this.db.select().from(users);
+    const filterConditions: ReturnType<typeof eq>[] = [];
 
-    const conditions = [];
-
-    if (withTags !== undefined) {
-      // Join profile and tagset tables for tag filtering
-      // This is a complex join that needs raw SQL - simplified approach: load all and filter
-      // For production, this would need optimization
+    // Apply text filters
+    if (filter?.firstName) {
+      filterConditions.push(ilike(users.firstName, `%${filter.firstName}%`));
+    }
+    if (filter?.lastName) {
+      filterConditions.push(ilike(users.lastName, `%${filter.lastName}%`));
+    }
+    if (filter?.email) {
+      filterConditions.push(ilike(users.email, `%${filter.email}%`));
     }
 
-    if (filter) {
-      // Apply filter conditions - convert TypeORM filter to Drizzle conditions
-      // For now, simplified: load all and filter
+    // Cursor-based pagination: find rowId of cursor item
+    const cursorConditions = [...filterConditions];
+    if (paginationArgs.after) {
+      const cursorItem = await this.db.query.users.findFirst({
+        where: eq(users.id, paginationArgs.after),
+        columns: { rowId: true },
+      });
+      if (cursorItem?.rowId) {
+        cursorConditions.push(gt(users.rowId, cursorItem.rowId));
+      }
     }
 
-    // Apply pagination
-    const offset = paginationArgs.first
-      ? (paginationArgs.after ? parseInt(paginationArgs.after) + 1 : 0)
-      : 0;
     const limit = paginationArgs.first || 10;
+    const filterWhere = filterConditions.length > 0 ? and(...filterConditions) : undefined;
+    const cursorWhere = cursorConditions.length > 0 ? and(...cursorConditions) : undefined;
 
-    query = query.limit(limit).offset(offset) as any;
+    // Fetch IDs with cursor + filter (SQL API avoids table aliasing issues)
+    const idRows = await this.db
+      .select({ id: users.id })
+      .from(users)
+      .where(cursorWhere)
+      .orderBy(asc(users.rowId))
+      .limit(limit + 1);
 
-    const results = await query;
+    const hasNextPage = idRows.length > limit;
+    if (hasNextPage) idRows.pop();
 
-    // Get total count
-    const totalResults = await this.db.select().from(users);
-    const totalCount = totalResults.length;
+    // Batch-load full user objects with authorization
+    let items: IUser[] = [];
+    if (idRows.length > 0) {
+      const userIds = idRows.map(r => r.id);
+      const loaded = await this.db.query.users.findMany({
+        where: inArray(users.id, userIds),
+        with: { authorization: true },
+      });
+      // Preserve order from the ID query
+      const byId = new Map(loaded.map(u => [u.id, u]));
+      items = userIds
+        .map(id => byId.get(id))
+        .filter((u): u is NonNullable<typeof u> => !!u) as unknown as IUser[];
+    }
+
+    // Total count with filters only (no cursor)
+    const [{ total }] = await this.db
+      .select({ total: count() })
+      .from(users)
+      .where(filterWhere);
 
     return {
-      items: results as unknown as IUser[],
+      items,
       pageInfo: {
-        hasNextPage: offset + results.length < totalCount,
-        hasPreviousPage: offset > 0,
-        startCursor: offset.toString(),
-        endCursor: (offset + results.length - 1).toString(),
+        hasNextPage,
+        hasPreviousPage: !!paginationArgs.after,
+        startCursor: items[0]?.id,
+        endCursor: items[items.length - 1]?.id,
       },
-      total: totalCount,
+      total,
+    };
+  }
+
+  /**
+   * UUID-cursor pagination for in-memory arrays.
+   * Uses entity IDs as cursors instead of integer offsets.
+   */
+  private paginateInMemory<T extends { id: string }>(
+    items: T[],
+    paginationArgs: PaginationArgs
+  ): IPaginatedType<T> {
+    let startIndex = 0;
+    if (paginationArgs.after) {
+      const cursorIndex = items.findIndex(item => item.id === paginationArgs.after);
+      if (cursorIndex >= 0) {
+        startIndex = cursorIndex + 1;
+      }
+    }
+    const limit = paginationArgs.first || 10;
+    const results = items.slice(startIndex, startIndex + limit);
+    const hasNextPage = startIndex + limit < items.length;
+
+    return {
+      items: results,
+      pageInfo: {
+        hasNextPage,
+        hasPreviousPage: startIndex > 0,
+        startCursor: results[0]?.id,
+        endCursor: results[results.length - 1]?.id,
+      },
+      total: items.length,
     };
   }
 
@@ -701,37 +763,10 @@ export class UserService {
       if (currentEntryRoleUsers.length > 0) {
         const memberUserIds = currentEntryRoleUsers.map(u => u.id);
         const available = filtered.filter(u => !memberUserIds.includes(u.id));
-
-        // Apply pagination
-        const offset = paginationArgs.first
-          ? (paginationArgs.after ? parseInt(paginationArgs.after) + 1 : 0)
-          : 0;
-        const limit = paginationArgs.first || 10;
-
-        const results = available.slice(offset, offset + limit);
-
-        return {
-          items: results,
-          pageInfo: {
-            hasNextPage: offset + results.length < available.length,
-            hasPreviousPage: offset > 0,
-            startCursor: offset.toString(),
-            endCursor: (offset + results.length - 1).toString(),
-          },
-          total: available.length,
-        };
+        return this.paginateInMemory(available, paginationArgs);
       }
 
-      return {
-        items: filtered,
-        pageInfo: {
-          hasNextPage: false,
-          hasPreviousPage: false,
-          startCursor: '0',
-          endCursor: filtered.length ? (filtered.length - 1).toString() : '0',
-        },
-        total: filtered.length,
-      };
+      return this.paginateInMemory(filtered, paginationArgs);
     }
 
     // Fallback to all users excluding current members
@@ -739,23 +774,7 @@ export class UserService {
     const memberUserIds = currentEntryRoleUsers.map(u => u.id);
     const available = allUsers.filter(u => !memberUserIds.includes(u.id));
 
-    const offset = paginationArgs.first
-      ? (paginationArgs.after ? parseInt(paginationArgs.after) + 1 : 0)
-      : 0;
-    const limit = paginationArgs.first || 10;
-
-    const results = available.slice(offset, offset + limit);
-
-    return {
-      items: results,
-      pageInfo: {
-        hasNextPage: offset + results.length < available.length,
-        hasPreviousPage: offset > 0,
-        startCursor: offset.toString(),
-        endCursor: (offset + results.length - 1).toString(),
-      },
-      total: available.length,
-    };
+    return this.paginateInMemory(available, paginationArgs);
   }
 
   public async getPaginatedAvailableElevatedRoleUsers(
@@ -790,24 +809,7 @@ export class UserService {
     const leadUserIds = currentElevatedRoleUsers.map(u => u.id);
     const available = filtered.filter(u => !leadUserIds.includes(u.id));
 
-    // Apply pagination
-    const offset = paginationArgs.first
-      ? (paginationArgs.after ? parseInt(paginationArgs.after) + 1 : 0)
-      : 0;
-    const limit = paginationArgs.first || 10;
-
-    const results = available.slice(offset, offset + limit);
-
-    return {
-      items: results,
-      pageInfo: {
-        hasNextPage: offset + results.length < available.length,
-        hasPreviousPage: offset > 0,
-        startCursor: offset.toString(),
-        endCursor: (offset + results.length - 1).toString(),
-      },
-      total: available.length,
-    };
+    return this.paginateInMemory(available, paginationArgs);
   }
 
   async updateUser(userInput: UpdateUserInput): Promise<IUser> {

@@ -563,6 +563,7 @@ export class VirtualContributorService {
     if (credentialsFilter) {
       const vcsWithCredentials = await this.db.query.virtualContributors.findMany({
         with: {
+          authorization: true,
           agent: {
             with: {
               credentials: true,
@@ -575,7 +576,9 @@ export class VirtualContributorService {
         vc.agent?.credentials?.some(c => credentialsFilter.includes(c.type as AuthorizationCredential))
       );
     } else {
-      vcResults = await this.db.query.virtualContributors.findMany() as unknown as IVirtualContributor[];
+      vcResults = await this.db.query.virtualContributors.findMany({
+        with: { authorization: true },
+      }) as unknown as IVirtualContributor[];
     }
 
     return limitAndShuffle(vcResults, limit, shuffle);
