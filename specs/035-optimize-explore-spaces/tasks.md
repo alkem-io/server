@@ -132,6 +132,102 @@ Task: "Update resolver to use @Loader() pattern"
 
 ---
 
+## Phase 5: Post-Implementation Analysis & Loader Consolidation
+
+**Purpose**: Analyze remaining query redundancies after Phase 4 and implement safe optimizations.
+
+**Context**: Raw SQL log comparison showed 34 queries (old) reduced to 14 queries (new). Analysis identified 3 redundant queries and 2 mergeable batches. Only one optimization had a favorable complexity/benefit tradeoff.
+
+### Analysis
+
+- [x] T010 Compare raw SQL query logs before and after optimization. Map each of the 14 remaining queries to its source code (resolver → DataLoader → TypeORM call). Identify redundancies by classifying queries into overlap chains. Document in `research.md`.
+
+### Implementation
+
+- [x] T011 Consolidate `SpaceBySpaceAboutIdLoaderCreator` and `SpaceCommunityWithRoleSetLoaderCreator` into a single loader. Expand `SpaceBySpaceAboutIdLoaderCreator` relations from `{ about: true }` to `{ about: true, community: { roleSet: { roles: true } } }`. Update `membership` resolver in `space.about.resolver.fields.ts` to use `SpaceBySpaceAboutIdLoaderCreator` (returns `ISpace | null`) instead of `SpaceCommunityWithRoleSetLoaderCreator` (returned `ICommunity | null`). Delete `SpaceCommunityWithRoleSetLoaderCreator` and its spec. Remove barrel export from `index.ts`.
+
+- [x] T012 Update tests: adjust `space.by.space.about.id.loader.creator.spec.ts` relations assertion. Update `space.about.resolver.fields.spec.ts` membership tests to pass mock `ISpace` objects instead of `ICommunity`. Add new test case for intermediate state: Space exists but `community` is undefined (triggers fallback to service).
+
+### Evaluated and Deferred
+
+- [ ] T013 _(Deferred)_ Fold `about` relation into `getExploreSpaces()` to eliminate N3. **Reason for deferral**: Breaks uniform DataLoader pattern. The generic `findByBatchIds` utility (used by 25+ loaders) always queries fresh. Adding "skip if already loaded" would modify shared infrastructure with high blast radius.
+
+- [ ] T014 _(Rejected)_ Return lightweight stubs from `getExploreSpaces()` to eliminate N2. **Reason for rejection**: Field resolvers `platformAccess`, `settings`, `createdDate`, `subscriptions` access `@Parent()` properties directly. Stubs would silently break them.
+
+- [ ] T015 _(Deferred)_ Merge visual batches (N5+N13+N14) into one query. **Reason for deferral**: DataLoader batches per event-loop tick. These queries resolve at different depths in the GraphQL tree (depth 3 vs 4), producing separate ticks. Fixing requires custom batching scheduler or pre-computing all profile IDs upfront — both break the lazy resolution model.
+
+- [ ] T016 _(Deferred)_ Share cache between `SpaceMetricsLoaderCreator` and `SpaceBySpaceAboutIdLoaderCreator`. **Reason for deferral**: Metrics loader does additional credential counting beyond just loading the Space. Sharing would require restructuring its batch function to consume another loader's output.
+
+**Checkpoint**: Query count at 13. Remaining redundancies are the natural cost of the uniform DataLoader architecture. Further reductions require architectural changes that hurt maintainability.
+
+---
+
+## Dependencies & Execution Order
+
+### Phase Dependencies
+
+- **Foundational (Phase 1)**: No dependencies — start immediately
+- **US1/US2 (Phase 2)**: Depends on T001 (org batch method). T002 and T003 can run in parallel once T001 is done.
+- **US3 (Phase 3)**: Depends on Phase 2 completion (needs loaders integrated to verify)
+- **Polish (Phase 4)**: Depends on all phases complete
+- **Analysis & Consolidation (Phase 5)**: Depends on Phase 4. Analysis (T010) informs implementation (T011-T012).
+
+### Task Dependency Graph
+
+```
+T001 (org batch method)
+  ├── T002 [P] (user loader)
+  ├── T003 [P] (org loader)
+  │     └── depends on T001
+  └── T004 (index exports)
+        └── depends on T002, T003
+              └── T005 (resolver update)
+                    └── T006 (US3 verification)
+                          └── T007, T008, T009 (polish)
+                                └── T010 (query analysis)
+                                      └── T011, T012 (loader consolidation)
+```
+
+### Parallel Opportunities
+
+- **T002 + T003**: Both DataLoader creator files are independent and can be written simultaneously (different files, no shared code except pattern)
+- **T007 + T008**: Build and lint can run in parallel
+
+---
+
+## Parallel Example: Phase 2
+
+```bash
+# After T001 (org batch method) is complete, launch both DataLoaders in parallel:
+Task: "Create LeadUsersByRoleSetLoaderCreator in src/core/dataloader/creators/loader.creators/roleset/lead.users.by.role.set.loader.creator.ts"
+Task: "Create LeadOrganizationsByRoleSetLoaderCreator in src/core/dataloader/creators/loader.creators/roleset/lead.organizations.by.role.set.loader.creator.ts"
+
+# Then sequentially:
+Task: "Export both loaders in index.ts"
+Task: "Update resolver to use @Loader() pattern"
+```
+
+---
+
+## Implementation Strategy
+
+### MVP First (Phase 1 + Phase 2)
+
+1. Complete T001 (foundational batch method)
+2. Complete T002-T005 (both DataLoaders + resolver integration)
+3. **STOP and VALIDATE**: Run ExploreAllSpaces query, verify credential queries drop from 60 to 2
+4. Deploy/demo — immediate APM improvement visible
+
+### Incremental Delivery
+
+1. T001 → Foundation ready
+2. T002-T005 → US1+US2 complete → Validate (MVP!)
+3. T006 → US3 verified → Document scaling behavior
+4. T007-T009 → Polish → PR ready
+5. T010-T012 → Post-implementation analysis → Loader consolidation (34 → 14 → 13)
+
+---
+
 ## Notes
 
 - No schema changes — `pnpm run schema:print` / `schema:diff` not needed
@@ -139,3 +235,4 @@ Task: "Update resolver to use @Loader() pattern"
 - The `RoleSetService` import stays in the resolver (still used by `applicationForm` method)
 - Composite key separator `|` is safe because neither credential type nor UUID contain pipe characters
 - Both loaders are generic — any resolver that has a loaded `roleSet.roles` can use them, not just `exploreSpaces`
+- `SpaceCommunityWithRoleSetLoaderCreator` has been deleted and replaced by `SpaceBySpaceAboutIdLoaderCreator` (Phase 5)

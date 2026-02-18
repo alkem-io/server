@@ -85,3 +85,14 @@ After applying changes:
 After deployment, compare `transaction.span_count.started` for the `ExploreAllSpaces` transaction:
 - Baseline: 494 average spans
 - Target: ~436 or lower (58 credential spans eliminated)
+
+### 5. Query Count Verification (measured 2026-02-18)
+
+| Stage | SQL queries | Notes |
+| --- | --- | --- |
+| Baseline (old) | 34 | N+1 credential lookups: 60 queries for 30 spaces |
+| After Phases 1–4 | 14 | Credential lookups batched into 2 queries |
+| After Phase 5 | 13 | `SpaceCommunityWithRoleSetLoaderCreator` merged into `SpaceBySpaceAboutIdLoaderCreator` |
+| Theoretical minimum | 9 | Requires architectural changes (deferred) |
+
+To verify the current query count, run with `DATABASE_LOGGING=true` and count lines starting with `query: SELECT`.
