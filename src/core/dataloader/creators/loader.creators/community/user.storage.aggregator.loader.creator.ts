@@ -15,7 +15,7 @@ export class UserStorageAggregatorLoaderCreator
     return createTypedRelationDataLoader(
       this.db,
       'users',
-      { storageAggregator: true },
+      { storageAggregator: { with: { authorization: true } } },
       this.constructor.name,
       options
     );

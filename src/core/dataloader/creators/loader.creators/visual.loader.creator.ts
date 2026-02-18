@@ -28,7 +28,7 @@ export class VisualLoaderCreator implements DataLoaderCreator<IVisual> {
     return createTypedRelationDataLoader(
       this.db,
       tableName,
-      { visuals: true },
+      { visuals: { with: { authorization: true } } },
       this.constructor.name,
       options
     );

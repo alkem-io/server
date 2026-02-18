@@ -25,7 +25,7 @@ export class UserSettingsLoaderCreator
     return createTypedRelationDataLoader(
       this.db,
       tableName,
-      { settings: true },
+      { settings: { with: { authorization: true } } },
       this.constructor.name,
       options
     );

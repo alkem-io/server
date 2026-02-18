@@ -15,7 +15,7 @@ export class ClassificationTagsetsLoaderCreator
     return createTypedRelationDataLoader(
       this.db,
       'classifications',
-      { tagsets: true },
+      { tagsets: { with: { authorization: true } } },
       this.constructor.name,
       options
     );

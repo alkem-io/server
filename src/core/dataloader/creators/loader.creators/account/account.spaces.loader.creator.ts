@@ -13,7 +13,7 @@ export class AccountSpacesLoaderCreator implements DataLoaderCreator<ISpace[]> {
     return createTypedRelationDataLoader(
       this.db,
       'accounts',
-      { spaces: true },
+      { spaces: { with: { authorization: true } } },
       this.constructor.name,
       options
     );

@@ -15,7 +15,7 @@ export class KnowledgeBaseCalloutsSetLoaderCreator
     return createTypedRelationDataLoader(
       this.db,
       'knowledgeBases',
-      { calloutsSet: true },
+      { calloutsSet: { with: { authorization: true } } },
       this.constructor.name,
       options
     );

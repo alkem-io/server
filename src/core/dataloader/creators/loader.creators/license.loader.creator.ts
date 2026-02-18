@@ -29,7 +29,7 @@ export class LicenseLoaderCreator implements DataLoaderCreator<ILicense> {
       this.db,
       tableName,
       {
-        license: true,
+        license: { with: { authorization: true } },
       },
       this.constructor.name,
       options

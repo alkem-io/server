@@ -212,7 +212,7 @@ export class InnovationPackService {
   ): Promise<IInnovationPack | never> {
     const innovationPack = await this.db.query.innovationPacks.findFirst({
       where: eq(innovationPacks.id, innovationPackID),
-      with: options?.with,
+      with: { authorization: true, ...options?.with },
     });
 
     if (!innovationPack)
@@ -229,7 +229,7 @@ export class InnovationPackService {
   ): Promise<IInnovationPack | never> {
     const innovationPack = await this.db.query.innovationPacks.findFirst({
       where: eq(innovationPacks.nameID, innovationPackNameID),
-      with: options?.with,
+      with: { authorization: true, ...options?.with },
     });
 
     if (!innovationPack)

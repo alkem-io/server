@@ -15,7 +15,7 @@ export class CollaborationCalloutsSetLoaderCreator
     return createTypedRelationDataLoader(
       this.db,
       'collaborations',
-      { calloutsSet: true },
+      { calloutsSet: { with: { authorization: true } } },
       this.constructor.name,
       options
     );

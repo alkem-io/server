@@ -25,7 +25,7 @@ export class SpaceCollaborationLoaderCreator
     return createTypedRelationDataLoader(
       this.db,
       tableName,
-      { collaboration: true },
+      { collaboration: { with: { authorization: true } } },
       this.constructor.name,
       options
     );

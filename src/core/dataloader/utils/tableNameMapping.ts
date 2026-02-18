@@ -83,8 +83,13 @@ export const ENTITY_TO_TABLE_NAME: Record<string, string> = {
   Document: 'documents',
 
   // Template
+  Template: 'templates',
   TemplateContentSpace: 'templateContentSpaces',
+  TemplatesManager: 'templatesManagers',
   TemplatesSet: 'templatesSets',
+
+  // Platform
+  Discussion: 'discussions',
 
   // Communication additional
   Conversation: 'conversations',

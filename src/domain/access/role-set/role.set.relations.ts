@@ -6,7 +6,6 @@ import { roles } from '@domain/access/role/role.schema';
 import { applications } from '@domain/access/application/application.schema';
 import { invitations } from '@domain/access/invitation/invitation.schema';
 import { platformInvitations } from '@domain/access/invitation.platform/platform.invitation.schema';
-import { licenses } from '@domain/common/license/license.schema';
 import { forms } from '@domain/common/form/form.schema';
 
 export const roleSetsRelations = relations(roleSets, ({ one, many }) => ({

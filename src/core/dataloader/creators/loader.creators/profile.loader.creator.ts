@@ -29,7 +29,7 @@ export class ProfileLoaderCreator implements DataLoaderCreator<IProfile> {
       this.db,
       tableName,
       {
-        profile: true,
+        profile: { with: { authorization: true } },
       },
       this.constructor.name,
       options

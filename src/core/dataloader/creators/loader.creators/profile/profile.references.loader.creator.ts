@@ -15,7 +15,7 @@ export class ProfileReferencesLoaderCreator
     return createTypedRelationDataLoader(
       this.db,
       'profiles',
-      { references: true },
+      { references: { with: { authorization: true } } },
       this.constructor.name,
       options
     );

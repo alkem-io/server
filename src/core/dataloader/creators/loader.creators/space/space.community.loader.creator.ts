@@ -25,7 +25,7 @@ export class SpaceCommunityLoaderCreator
     return createTypedRelationDataLoader(
       this.db,
       tableName,
-      { community: true },
+      { community: { with: { authorization: true } } },
       this.constructor.name,
       options
     );

@@ -40,6 +40,7 @@ export class SpaceCommunityWithRoleSetLoaderCreator
         about: true,
         community: {
           with: {
+            authorization: true,
             roleSet: {
               with: {
                 roles: true,

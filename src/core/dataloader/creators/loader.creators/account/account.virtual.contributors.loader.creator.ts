@@ -15,7 +15,7 @@ export class AccountVirtualContributorsLoaderCreator
     return createTypedRelationDataLoader(
       this.db,
       'accounts',
-      { virtualContributors: true },
+      { virtualContributors: { with: { authorization: true } } },
       this.constructor.name,
       options
     );

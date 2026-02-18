@@ -79,7 +79,14 @@ describe('AiPersonaService', () => {
         externalConfig: undefined,
       };
       const aiServer = { id: 'server-1' } as any;
+      const savedAuth = {
+        id: 'auth-1',
+        type: AuthorizationPolicyType.AI_PERSONA,
+      };
 
+      (authorizationPolicyService.ensureSaved as Mock).mockResolvedValueOnce(
+        savedAuth
+      );
       db.returning.mockResolvedValueOnce([{ id: 'persona-1' }]);
 
       const result = await service.createAiPersona(input, aiServer);

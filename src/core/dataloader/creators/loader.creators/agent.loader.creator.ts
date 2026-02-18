@@ -26,7 +26,7 @@ export class AgentLoaderCreator implements DataLoaderCreator<IAgent> {
       this.db,
       tableName,
       {
-        agent: true,
+        agent: { with: { authorization: true } },
       },
       this.constructor.name,
       options

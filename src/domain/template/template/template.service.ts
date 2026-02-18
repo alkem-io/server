@@ -704,7 +704,7 @@ export class TemplateService {
     const template = await this.getTemplateOrFail(templateID, {
       relations: {
         contentSpace: {
-          collaboration: true,
+          with: { authorization: true, collaboration: true },
         },
       },
     });
@@ -720,7 +720,7 @@ export class TemplateService {
   async getSpaceContent(templateID: string): Promise<ITemplateContentSpace> {
     const template = await this.getTemplateOrFail(templateID, {
       relations: {
-        contentSpace: true,
+        contentSpace: { with: { authorization: true } },
       },
     });
     if (!template.contentSpace) {

@@ -25,7 +25,7 @@ export class CommunityRoleSetLoaderCreator
     return createTypedRelationDataLoader(
       this.db,
       tableName,
-      { roleSet: { roles: true } },
+      { roleSet: { with: { roles: true, authorization: true } } },
       this.constructor.name,
       options
     );

@@ -13,7 +13,7 @@ export class ProfileAvatarsLoaderCreator implements DataLoaderCreator<IVisual> {
     return createTypedRelationDataLoader(
       this.db,
       'profiles',
-      { avatar: true },
+      { avatar: { with: { authorization: true } } },
       this.constructor.name,
       options
     );

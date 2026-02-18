@@ -15,7 +15,7 @@ export class ProfileTagsetsLoaderCreator
     return createTypedRelationDataLoader(
       this.db,
       'profiles',
-      { tagsets: true },
+      { tagsets: { with: { authorization: true } } },
       this.constructor.name,
       options
     );

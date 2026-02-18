@@ -95,6 +95,7 @@ export class LibraryService {
         eq(innovationPacks.searchVisibility, SearchVisibility.PUBLIC)
       ),
       with: {
+        authorization: true,
         templatesSet: true,
       },
     });
@@ -144,6 +145,7 @@ export class LibraryService {
         eq(innovationPacks.searchVisibility, SearchVisibility.PUBLIC)
       ),
       with: {
+        authorization: true,
         templatesSet: {
           with: {
             templates: {

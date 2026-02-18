@@ -29,7 +29,7 @@ export class AccountLoaderCreator implements DataLoaderCreator<IAccount> {
       this.db,
       tableName,
       {
-        account: true,
+        account: { with: { authorization: true } },
       },
       this.constructor.name,
       options

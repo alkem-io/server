@@ -77,7 +77,7 @@ export class PlatformService {
     relations?: Record<string, boolean>
   ): Promise<ILibrary> {
     const platform = await this.getPlatformOrFail({
-      relations: { library: { with: { authorization: true } }, ...relations },
+      relations: { ...relations, library: { with: { authorization: true } } },
     });
     const library = platform.library;
     if (!library) {

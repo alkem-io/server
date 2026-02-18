@@ -15,7 +15,7 @@ export class ProfileStorageBucketLoaderCreator
     return createTypedRelationDataLoader(
       this.db,
       'profiles',
-      { storageBucket: true },
+      { storageBucket: { with: { authorization: true } } },
       this.constructor.name,
       options
     );

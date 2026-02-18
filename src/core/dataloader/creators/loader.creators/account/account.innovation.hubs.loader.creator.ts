@@ -15,7 +15,7 @@ export class AccountInnovationHubsLoaderCreator
     return createTypedRelationDataLoader(
       this.db,
       'accounts',
-      { innovationHubs: true },
+      { innovationHubs: { with: { authorization: true } } },
       this.constructor.name,
       options
     );

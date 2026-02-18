@@ -15,7 +15,7 @@ export class CollaborationTimelineLoaderCreator
     return createTypedRelationDataLoader(
       this.db,
       'collaborations',
-      { timeline: true },
+      { timeline: { with: { authorization: true } } },
       this.constructor.name,
       options
     );

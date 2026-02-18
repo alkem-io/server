@@ -53,8 +53,7 @@ export class TimelineService {
     timelineID: string,
     options?: { relations?: { authorization?: boolean; calendar?: boolean } }
   ): Promise<ITimeline | never> {
-    const withClause: Record<string, boolean> = {};
-    if (options?.relations?.authorization) withClause.authorization = true;
+    const withClause: any = { authorization: true };
     if (options?.relations?.calendar) withClause.calendar = true;
 
     const timeline = await this.db.query.timelines.findFirst({

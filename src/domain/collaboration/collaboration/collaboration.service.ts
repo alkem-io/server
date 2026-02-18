@@ -248,7 +248,7 @@ export class CollaborationService {
     if (options?.relations) {
       if (options.relations.calloutsSet) {
         if (typeof options.relations.calloutsSet === 'object') {
-          const csNested: any = {};
+          const csNested: any = { authorization: true };
           if (options.relations.calloutsSet.tagsetTemplateSet) csNested.tagsetTemplateSet = true;
           if (options.relations.calloutsSet.callouts) {
             if (typeof options.relations.calloutsSet.callouts === 'object') {
@@ -265,15 +265,15 @@ export class CollaborationService {
               csNested.callouts = true;
             }
           }
-          withClause.calloutsSet = Object.keys(csNested).length > 0 ? { with: csNested } : true;
+          withClause.calloutsSet = { with: csNested };
         } else {
-          withClause.calloutsSet = true;
+          withClause.calloutsSet = { with: { authorization: true } };
         }
       }
-      if (options.relations.timeline) withClause.timeline = true;
+      if (options.relations.timeline) withClause.timeline = { with: { authorization: true } };
       if (options.relations.innovationFlow) {
         if (typeof options.relations.innovationFlow === 'object') {
-          const nested: any = {};
+          const nested: any = { authorization: true };
           if (options.relations.innovationFlow.profile) nested.profile = true;
           if (options.relations.innovationFlow.states) {
             if (typeof options.relations.innovationFlow.states === 'object') {
@@ -285,20 +285,19 @@ export class CollaborationService {
             }
           }
           if (options.relations.innovationFlow.flowStatesTagsetTemplate) nested.flowStatesTagsetTemplate = true;
-          withClause.innovationFlow = Object.keys(nested).length > 0 ? { with: nested } : true;
+          withClause.innovationFlow = { with: nested };
         } else {
-          withClause.innovationFlow = true;
+          withClause.innovationFlow = { with: { authorization: true } };
         }
       }
       if (options.relations.authorization) withClause.authorization = true;
       if (options.relations.license) {
         if (typeof options.relations.license === 'object') {
-          const nested: any = {};
+          const nested: any = { authorization: true };
           if (options.relations.license.entitlements) nested.entitlements = true;
-          if (options.relations.license.authorization) nested.authorization = true;
           withClause.license = { with: nested };
         } else {
-          withClause.license = true;
+          withClause.license = { with: { authorization: true } };
         }
       }
     }
