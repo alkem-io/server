@@ -80,12 +80,11 @@ export class CalendarService {
     calendarID: string,
     options?: { relations?: { authorization?: boolean; events?: boolean } }
   ): Promise<ICalendar | never> {
-    const withClause: Record<string, boolean> = {};
-    if (options?.relations?.authorization) withClause.authorization = true;
+    const withClause: Record<string, boolean> = { authorization: true };
     if (options?.relations?.events) withClause.events = true;
     const calendar = await this.db.query.calendars.findFirst({
       where: eq(calendars.id, calendarID),
-      with: Object.keys(withClause).length > 0 ? withClause : undefined,
+      with: withClause,
     });
     if (!calendar)
       throw new EntityNotFoundException(

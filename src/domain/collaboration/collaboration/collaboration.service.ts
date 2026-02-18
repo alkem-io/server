@@ -299,12 +299,15 @@ export class CollaborationService {
       }
     }
 
+    // Always load authorization (was eager in TypeORM)
+    if (!withClause.authorization) {
+      withClause.authorization = true;
+    }
+
     const queryOptions: any = {
       where: eq(collaborations.id, collaborationID),
+      with: withClause,
     };
-    if (Object.keys(withClause).length > 0) {
-      queryOptions.with = withClause;
-    }
 
     const collaboration =
       await this.db.query.collaborations.findFirst(queryOptions);

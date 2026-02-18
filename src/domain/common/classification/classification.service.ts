@@ -138,15 +138,17 @@ export class ClassificationService {
   ): Promise<IClassification | never> {
     const classification = await this.db.query.classifications.findFirst({
       where: eq(classifications.id, classificationID),
-      with: options?.relations
-        ? {
-            authorization: options.relations.authorization || undefined,
-            tagsets:
-              typeof options.relations.tagsets === 'object'
-                ? { with: { authorization: options.relations.tagsets.authorization || undefined } }
-                : options.relations.tagsets || undefined,
-          }
-        : undefined,
+      with: {
+        authorization: true,
+        ...(options?.relations?.tagsets
+          ? {
+              tagsets:
+                typeof options.relations.tagsets === 'object'
+                  ? { with: { authorization: options.relations.tagsets.authorization || undefined } }
+                  : true,
+            }
+          : {}),
+      },
     });
     if (!classification)
       throw new EntityNotFoundException(

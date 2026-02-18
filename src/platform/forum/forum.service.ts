@@ -174,15 +174,15 @@ export class ForumService {
     forumID: string,
     options?: { relations?: Record<string, boolean> }
   ): Promise<IForum | never> {
-    const with_ = options?.relations
+    const relationsEntries = options?.relations
       ? Object.fromEntries(
           Object.entries(options.relations).map(([key, value]) => [key, value])
         )
-      : undefined;
+      : {};
 
     const forum = await this.db.query.forums.findFirst({
       where: eq(forums.id, forumID),
-      with: with_ as any,
+      with: { authorization: true, ...relationsEntries } as any,
     });
     if (!forum)
       throw new EntityNotFoundException(

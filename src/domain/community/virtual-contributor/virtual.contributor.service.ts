@@ -436,7 +436,7 @@ export class VirtualContributorService {
   ): Promise<IVirtualContributor | null> {
     const virtualContributor = await this.db.query.virtualContributors.findFirst({
       where: eq(virtualContributors.id, virtualContributorID),
-      with: options?.relations as any,
+      with: { authorization: true, ...options?.relations } as any,
     });
 
     return virtualContributor as unknown as IVirtualContributor | null;

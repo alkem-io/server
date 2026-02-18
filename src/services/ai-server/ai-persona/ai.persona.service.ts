@@ -151,7 +151,7 @@ export class AiPersonaService {
   ): Promise<IAiPersona | null> {
     const aiPersona = await this.db.query.aiPersonas.findFirst({
       where: eq(aiPersonas.id, aiPersonaID),
-      with: options?.with,
+      with: { authorization: true, ...options?.with },
     });
 
     return (aiPersona as unknown as IAiPersona) ?? null;

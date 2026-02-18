@@ -134,7 +134,7 @@ export class CommunityService {
   ): Promise<ICommunity | never> {
     const community = await this.db.query.communities.findFirst({
       where: eq(communities.id, communityID),
-      with: options?.relations as any,
+      with: { authorization: true, ...options?.relations } as any,
     });
     if (!community)
       throw new EntityNotFoundException(

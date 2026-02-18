@@ -743,7 +743,7 @@ export class SpaceService {
   ): Promise<ISpace | null> {
     const space = await this.db.query.spaces.findFirst({
       where: eq(spaces.id, spaceID),
-      ...options,
+      with: { authorization: true, ...options?.with },
     });
 
     return space as unknown as ISpace | null;

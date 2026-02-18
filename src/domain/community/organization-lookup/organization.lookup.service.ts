@@ -35,9 +35,9 @@ export class OrganizationLookupService {
   ) {}
 
   private buildWithClause(options?: OrganizationFindOptions): Record<string, any> {
-    const withClause: any = {};
+    // Always load authorization (was eager in TypeORM)
+    const withClause: any = { authorization: true };
     if (options?.relations) {
-      if (options.relations.authorization) withClause.authorization = true;
       if (options.relations.profile) withClause.profile = true;
       if (options.relations.agent) {
         if (typeof options.relations.agent === 'object') {
@@ -113,6 +113,7 @@ export class OrganizationLookupService {
     const foundOrgs = await this.db.query.organizations.findMany({
       where: inArray(organizations.id, orgIds),
       with: {
+        authorization: true,
         agent: {
           with: {
             credentials: true,

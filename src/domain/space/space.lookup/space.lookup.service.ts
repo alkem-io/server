@@ -61,8 +61,9 @@ export class SpaceLookupService {
    * Nested objects are wrapped in `{ with: { ... } }` for Drizzle's relational query syntax.
    */
   private buildWithClause(options?: SpaceFindOptions): Record<string, any> {
-    if (!options?.relations) return {};
-    return this.convertRelationsToWith(options.relations);
+    const base: Record<string, any> = { authorization: true };
+    if (!options?.relations) return base;
+    return { ...base, ...this.convertRelationsToWith(options.relations) };
   }
 
   private convertRelationsToWith(relations: Record<string, any>): Record<string, any> {

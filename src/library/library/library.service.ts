@@ -30,7 +30,7 @@ export class LibraryService {
 
   async getLibraryOrFail(options?: { with?: Record<string, boolean | object> }): Promise<ILibrary> {
     const library = await this.db.query.libraries.findFirst({
-      with: options?.with,
+      with: { authorization: true, ...options?.with },
     });
     if (!library)
       throw new EntityNotFoundException(

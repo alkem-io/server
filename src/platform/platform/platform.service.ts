@@ -34,14 +34,14 @@ export class PlatformService {
   async getPlatformOrFail(
     options?: { relations?: Record<string, boolean | Record<string, any>> }
   ): Promise<IPlatform | never> {
-    const with_ = options?.relations
+    const relationsEntries = options?.relations
       ? Object.fromEntries(
           Object.entries(options.relations).map(([key, value]) => [key, value])
         )
-      : undefined;
+      : {};
 
     const platform = await this.db.query.platforms.findFirst({
-      ...(with_ ? { with: with_ as any } : {}),
+      with: { authorization: true, ...relationsEntries } as any,
     });
 
     if (!platform) {

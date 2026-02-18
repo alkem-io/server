@@ -44,9 +44,17 @@ export const findByBatchIds = async <
     throw new Error(`Table ${tableName} not found in Drizzle schema`);
   }
 
+  // When checkParentPrivilege is set, the authorize callback needs
+  // parent.authorization to be present. In TypeORM this was eager-loaded;
+  // in Drizzle we must request it explicitly.
+  const queryRelations =
+    options.checkParentPrivilege && !relations['authorization']
+      ? { ...relations, authorization: true }
+      : relations;
+
   const unsortedResults = await table.findMany({
     where: (t: any) => inArray(t.id, ids),
-    with: relations,
+    with: queryRelations,
     limit: limit,
   }) as TParent[];
   const topLevelRelation = relationKeys[0];

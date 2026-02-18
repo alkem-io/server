@@ -557,7 +557,7 @@ export class UserService {
 
     const result = await this.db.query.users.findFirst({
       where: eq(users.email, email.toLowerCase()),
-      with: options?.relations as any,
+      with: { authorization: true, ...options?.relations } as any,
     });
     return result as unknown as IUser | null;
   }

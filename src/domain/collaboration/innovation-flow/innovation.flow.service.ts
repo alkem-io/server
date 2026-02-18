@@ -632,7 +632,7 @@ export class InnovationFlowService {
       };
     }
   ): Promise<IInnovationFlow | never> {
-    const withClause: Record<string, any> = {};
+    const withClause: Record<string, any> = { authorization: true };
     if (options?.relations?.profile) {
       withClause.profile = true;
     }
@@ -647,9 +647,6 @@ export class InnovationFlowService {
         typeof options.relations.flowStatesTagsetTemplate === 'object'
           ? { with: options.relations.flowStatesTagsetTemplate }
           : true;
-    }
-    if (options?.relations?.authorization) {
-      withClause.authorization = true;
     }
 
     const innovationFlow =

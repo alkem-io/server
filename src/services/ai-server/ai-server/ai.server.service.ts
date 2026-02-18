@@ -356,7 +356,7 @@ export class AiServerService {
     options?: { with?: Record<string, boolean | object> }
   ): Promise<IAiServer | never> {
     const aiServer = await this.db.query.aiServers.findFirst({
-      with: options?.with,
+      with: { authorization: true, ...options?.with },
     });
 
     if (!aiServer) {

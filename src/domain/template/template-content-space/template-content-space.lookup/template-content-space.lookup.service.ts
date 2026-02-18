@@ -38,7 +38,7 @@ export class TemplateContentSpaceLookupService {
   ): Promise<ITemplateContentSpace | null> {
     const space = await this.db.query.templateContentSpaces.findFirst({
       where: eq(templateContentSpaces.id, spaceID),
-      with: options?.relations,
+      with: { authorization: true, ...options?.relations },
     });
     return (space as unknown as ITemplateContentSpace) ?? null;
   }
@@ -49,7 +49,7 @@ export class TemplateContentSpaceLookupService {
   ): Promise<ITemplateContentSpace | null> {
     const space = await this.db.query.templateContentSpaces.findFirst({
       where: eq(templateContentSpaces.aboutId, spaceAboutID),
-      with: options?.relations,
+      with: { authorization: true, ...options?.relations },
     });
     return (space as unknown as ITemplateContentSpace) ?? null;
   }

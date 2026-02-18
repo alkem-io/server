@@ -1067,6 +1067,7 @@ export class UrlResolverService {
 
   private spaceRelations = {
     relations: {
+      authorization: true,
       collaboration: true,
       community: true,
     },

@@ -57,7 +57,7 @@ export class TemplatesSetService {
   ): Promise<ITemplatesSet | never> {
     const templatesSet = await this.db.query.templatesSets.findFirst({
       where: eq(templatesSets.id, templatesSetID),
-      with: options?.relations,
+      with: { authorization: true, ...options?.relations },
     });
     if (!templatesSet)
       throw new EntityNotFoundException(

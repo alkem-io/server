@@ -26,7 +26,7 @@ export class LicensingFrameworkService {
     licensingID: string,
     options?: { relations?: Record<string, boolean | Record<string, any>> }
   ): Promise<ILicensingFramework> {
-    const with_ = options?.relations
+    const relationsEntries = options?.relations
       ? Object.fromEntries(
           Object.entries(options.relations).map(([key, value]) => {
             if (typeof value === 'object' && value !== null) {
@@ -35,11 +35,11 @@ export class LicensingFrameworkService {
             return [key, value];
           })
         )
-      : undefined;
+      : {};
 
     const licensing = await this.db.query.licensingFrameworks.findFirst({
       where: eq(licensingFrameworks.id, licensingID),
-      with: with_ as any,
+      with: { authorization: true, ...relationsEntries } as any,
     });
 
     if (!licensing) {
@@ -54,14 +54,14 @@ export class LicensingFrameworkService {
   async getDefaultLicensingOrFail(
     options?: { relations?: Record<string, boolean> }
   ): Promise<ILicensingFramework | never> {
-    const with_ = options?.relations
+    const relationsEntries = options?.relations
       ? Object.fromEntries(
           Object.entries(options.relations).map(([key, value]) => [key, value])
         )
-      : undefined;
+      : {};
 
     const allFrameworks = await this.db.query.licensingFrameworks.findMany({
-      with: with_ as any,
+      with: { authorization: true, ...relationsEntries } as any,
     });
 
     if (allFrameworks.length !== 1) {

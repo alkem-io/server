@@ -429,7 +429,7 @@ export class OrganizationService {
   ): Promise<IOrganization | null> {
     const organization = await this.db.query.organizations.findFirst({
       where: eq(organizations.id, organizationID),
-      with: options?.relations as any,
+      with: { authorization: true, ...options?.relations } as any,
     });
 
     return organization as unknown as IOrganization | null;

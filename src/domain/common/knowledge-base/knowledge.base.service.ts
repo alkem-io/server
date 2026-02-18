@@ -161,10 +161,9 @@ export class KnowledgeBaseService {
       };
     }
   ): Promise<IKnowledgeBase | never> {
-    const withClause: any = {};
+    const withClause: any = { authorization: true };
     if (options?.relations) {
       if (options.relations.profile) withClause.profile = true;
-      if (options.relations.authorization) withClause.authorization = true;
       if (options.relations.calloutsSet) {
         if (typeof options.relations.calloutsSet === 'object') {
           const nested: any = {};
@@ -178,7 +177,7 @@ export class KnowledgeBaseService {
     }
     const knowledgeBase = await this.db.query.knowledgeBases.findFirst({
       where: eq(knowledgeBases.id, knowledgeBaseID),
-      ...(Object.keys(withClause).length > 0 ? { with: withClause } : {}),
+      with: withClause,
     } as any);
 
     if (!knowledgeBase)

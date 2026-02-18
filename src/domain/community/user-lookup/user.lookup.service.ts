@@ -38,9 +38,9 @@ export class UserLookupService {
   ) {}
 
   private buildWithClause(options?: UserFindOptions): Record<string, any> {
-    const withClause: any = {};
+    // Always load authorization (was eager in TypeORM)
+    const withClause: any = { authorization: true };
     if (options?.with) {
-      if (options.with.authorization) withClause.authorization = true;
       if (options.with.profile) {
         if (typeof options.with.profile === 'object') {
           const profileWith: any = {};
@@ -260,6 +260,7 @@ export class UserLookupService {
     const foundUsers = await this.db.query.users.findMany({
       where: inArray(users.id, userIds),
       with: {
+        authorization: true,
         agent: {
           with: {
             credentials: true,
@@ -295,6 +296,7 @@ export class UserLookupService {
     const foundUsers = await this.db.query.users.findMany({
       where: inArray(users.id, ids),
       with: {
+        authorization: true,
         agent: true,
       },
     });

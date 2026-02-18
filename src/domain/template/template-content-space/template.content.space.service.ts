@@ -245,7 +245,7 @@ export class TemplateContentSpaceService {
     const templateContentSpace =
       await this.db.query.templateContentSpaces.findFirst({
         where: eq(templateContentSpaces.id, templateContentSpaceID),
-        with: options?.relations,
+        with: { authorization: true, ...options?.relations },
       });
 
     return (templateContentSpace as unknown as ITemplateContentSpace) ?? null;

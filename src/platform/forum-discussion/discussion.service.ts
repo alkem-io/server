@@ -93,7 +93,7 @@ export class DiscussionService {
     discussionID: string,
     options?: { relations?: Record<string, boolean | Record<string, any>> }
   ): Promise<IDiscussion> {
-    const with_ = options?.relations
+    const relationsEntries = options?.relations
       ? Object.fromEntries(
           Object.entries(options.relations).map(([key, value]) => {
             if (typeof value === 'object' && value !== null) {
@@ -102,11 +102,11 @@ export class DiscussionService {
             return [key, value];
           })
         )
-      : undefined;
+      : {};
 
     const discussion = await this.db.query.discussions.findFirst({
       where: eq(discussions.id, discussionID),
-      with: with_ as any,
+      with: { authorization: true, ...relationsEntries } as any,
     });
 
     if (!discussion)

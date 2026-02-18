@@ -64,7 +64,7 @@ export class TemplatesManagerService {
   ): Promise<ITemplatesManager | never> {
     const templatesManager = await this.db.query.templatesManagers.findFirst({
       where: eq(templatesManagers.id, templatesManagerID),
-      with: options?.relations,
+      with: { authorization: true, ...options?.relations },
     });
     if (!templatesManager)
       throw new EntityNotFoundException(

@@ -52,7 +52,7 @@ describe('OrganizationLookupService', () => {
 
       expect(db.query.organizations.findFirst).toHaveBeenCalledWith(
         expect.objectContaining({
-          with: { agent: true },
+          with: { authorization: true, agent: true },
         })
       );
     });

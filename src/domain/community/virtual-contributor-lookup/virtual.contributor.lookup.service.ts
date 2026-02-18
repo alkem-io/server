@@ -41,24 +41,25 @@ export class VirtualContributorLookupService {
   ) {}
 
   private buildWithClause(options?: VcFindOptions): Record<string, any> {
-    const withClause: any = {};
+    // Always load authorization (was eager in TypeORM)
+    const withClause: any = { authorization: true };
     if (options?.with) {
-      if (options.with.authorization) withClause.authorization = true;
-      if (options.with.profile) withClause.profile = true;
+      // Pass through any raw keys (e.g., knowledgeBase from URL resolver)
+      for (const [key, value] of Object.entries(options.with as any)) {
+        if (key === 'authorization') continue; // Already included above
+        withClause[key] = value;
+      }
+      // Process known nested keys that need special handling
       if (options.with.account) {
         if (typeof options.with.account === 'object') {
           const nested: any = {};
-          if (options.with.account.with?.authorization) nested.authorization = true;
+          if ((options.with.account as any).with?.authorization) nested.authorization = true;
           withClause.account = Object.keys(nested).length > 0 ? { with: nested } : true;
-        } else {
-          withClause.account = true;
         }
       }
       if (options.with.agent) {
-        if (typeof options.with.agent === 'object' && options.with.agent.credentials) {
+        if (typeof options.with.agent === 'object' && (options.with.agent as any).credentials) {
           withClause.agent = { with: { credentials: true } };
-        } else {
-          withClause.agent = true;
         }
       }
     }
@@ -193,6 +194,7 @@ export class VirtualContributorLookupService {
     const foundVcs = await this.db.query.virtualContributors.findMany({
       where: inArray(virtualContributors.id, vcIds),
       with: {
+        authorization: true,
         agent: {
           with: {
             credentials: true,

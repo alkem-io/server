@@ -217,10 +217,12 @@ export class CalloutService {
       };
     }
   ): Promise<ICallout | never> {
-    const withClause = this.buildWithClause(options?.relations);
+    const withClause = this.buildWithClause(options?.relations) ?? {};
+    // Always load authorization (was eager in TypeORM)
+    if (!withClause.authorization) withClause.authorization = true;
     const callout = await this.db.query.callouts.findFirst({
       where: eq(callouts.id, calloutID),
-      ...(withClause ? { with: withClause } : {}),
+      with: withClause,
     }) as unknown as ICallout;
 
     if (!callout)

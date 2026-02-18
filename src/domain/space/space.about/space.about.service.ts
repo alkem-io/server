@@ -96,7 +96,7 @@ export class SpaceAboutService {
   ): Promise<ISpaceAbout | never> {
     const spaceAbout = await this.db.query.spaceAbouts.findFirst({
       where: eq(spaceAbouts.id, spaceAboutID),
-      ...options,
+      with: { authorization: true, ...options?.with },
     });
     if (!spaceAbout)
       throw new EntityNotFoundException(

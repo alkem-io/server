@@ -184,35 +184,41 @@ export class MediaGalleryService {
   ): Promise<IMediaGallery> {
     const mediaGallery = await this.db.query.mediaGalleries.findFirst({
       where: eq(mediaGalleries.id, mediaGalleryID),
-      with: options?.relations
-        ? {
-            authorization: options.relations.authorization || undefined,
-            storageBucket:
-              typeof options.relations.storageBucket === 'object'
-                ? {
-                    with: {
-                      authorization: options.relations.storageBucket.authorization || undefined,
-                      documents:
-                        typeof options.relations.storageBucket.documents === 'object'
-                          ? {
-                              with: {
-                                authorization: options.relations.storageBucket.documents.authorization || undefined,
-                                tagset:
-                                  typeof options.relations.storageBucket.documents.tagset === 'object'
-                                    ? { with: { authorization: options.relations.storageBucket.documents.tagset.authorization || undefined } }
-                                    : (options.relations.storageBucket.documents.tagset || undefined),
-                              },
-                            }
-                          : (options.relations.storageBucket.documents || undefined),
-                    },
-                  }
-                : (options.relations.storageBucket || undefined),
-            visuals:
-              typeof options.relations.visuals === 'object'
-                ? { with: { authorization: options.relations.visuals.authorization || undefined } }
-                : (options.relations.visuals || undefined),
-          }
-        : undefined,
+      with: {
+        authorization: true,
+        ...(options?.relations?.storageBucket
+          ? {
+              storageBucket:
+                typeof options.relations.storageBucket === 'object'
+                  ? {
+                      with: {
+                        authorization: options.relations.storageBucket.authorization || undefined,
+                        documents:
+                          typeof options.relations.storageBucket.documents === 'object'
+                            ? {
+                                with: {
+                                  authorization: options.relations.storageBucket.documents.authorization || undefined,
+                                  tagset:
+                                    typeof options.relations.storageBucket.documents.tagset === 'object'
+                                      ? { with: { authorization: options.relations.storageBucket.documents.tagset.authorization || undefined } }
+                                      : (options.relations.storageBucket.documents.tagset || undefined),
+                                },
+                              }
+                            : (options.relations.storageBucket.documents || undefined),
+                      },
+                    }
+                  : true,
+            }
+          : {}),
+        ...(options?.relations?.visuals
+          ? {
+              visuals:
+                typeof options.relations.visuals === 'object'
+                  ? { with: { authorization: options.relations.visuals.authorization || undefined } }
+                  : true,
+            }
+          : {}),
+      },
     });
 
     if (!mediaGallery) {

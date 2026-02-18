@@ -309,7 +309,7 @@ export class AccountService {
   ): Promise<IAccount | null> {
     const account = await this.db.query.accounts.findFirst({
       where: eq(accounts.id, accountID),
-      ...options,
+      with: { authorization: true, ...options?.with },
     });
     return account as unknown as IAccount | null;
   }

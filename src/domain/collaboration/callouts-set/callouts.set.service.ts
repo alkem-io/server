@@ -106,10 +106,12 @@ export class CalloutsSetService {
       };
     }
   ): Promise<ICalloutsSet | never> {
-    const withClause = this.buildWithClause(options?.relations);
+    const withClause = this.buildWithClause(options?.relations) ?? {};
+    // Always load authorization (was eager in TypeORM)
+    if (!withClause.authorization) withClause.authorization = true;
     const calloutsSet = await this.db.query.calloutsSets.findFirst({
       where: eq(calloutsSets.id, calloutsSetID),
-      ...(withClause ? { with: withClause } : {}),
+      with: withClause,
     }) as unknown as ICalloutsSet;
     if (!calloutsSet)
       throw new EntityNotFoundException(

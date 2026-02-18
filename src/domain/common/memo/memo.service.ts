@@ -90,20 +90,22 @@ export class MemoService {
   ): Promise<IMemo | never> {
     const memo = await this.db.query.memos.findFirst({
       where: eq(memos.id, memoID),
-      with: options?.relations
-        ? {
-            authorization: options.relations.authorization || undefined,
-            profile:
-              typeof options.relations.profile === 'object'
-                ? {
-                    with: {
-                      authorization: options.relations.profile.authorization || undefined,
-                      storageBucket: options.relations.profile.storageBucket || undefined,
-                    },
-                  }
-                : (options.relations.profile || undefined),
-          }
-        : undefined,
+      with: {
+        authorization: true,
+        ...(options?.relations?.profile
+          ? {
+              profile:
+                typeof options.relations.profile === 'object'
+                  ? {
+                      with: {
+                        authorization: options.relations.profile.authorization || undefined,
+                        storageBucket: options.relations.profile.storageBucket || undefined,
+                      },
+                    }
+                  : true,
+            }
+          : {}),
+      },
     });
 
     if (!memo)
