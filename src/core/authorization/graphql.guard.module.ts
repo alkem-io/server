@@ -6,7 +6,7 @@ import { GraphqlGuard } from './graphql.guard';
 /**
  * Global module that provides GraphqlGuard with its dependencies resolved.
  * This avoids every module that uses @UseGuards(GraphqlGuard) needing to
- * import AuthenticationAgentInfoModule explicitly.
+ * import it explicitly.
  */
 @Global()
 @Module({
