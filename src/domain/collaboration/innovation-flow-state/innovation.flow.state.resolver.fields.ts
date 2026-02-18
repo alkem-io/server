@@ -1,4 +1,4 @@
-import { AuthorizationAgentPrivilege } from '@common/decorators/authorization.agent.privilege';
+import { AuthorizationActorPrivilege } from '@common/decorators/authorization.actor.privilege';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { ITemplate } from '@domain/template/template/template.interface';
@@ -14,7 +14,7 @@ export class InnovationFlowStateResolverFields {
     private readonly innovationFlowStateService: InnovationFlowStateService
   ) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('defaultCalloutTemplate', () => ITemplate, {
     nullable: true,

@@ -1,5 +1,5 @@
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { CalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.entity';
@@ -7,7 +7,7 @@ import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { InstrumentResolver } from '@src/apm/decorators';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EntityManager } from 'typeorm';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
@@ -33,13 +33,13 @@ export class MemoResolverMutations {
     description: 'Updates the specified Memo.',
   })
   async updateMemo(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('memoData') memoData: UpdateMemoEntityInput
   ): Promise<IMemo> {
     const memo = await this.memoService.getMemoOrFail(memoData.ID);
     const originalContentPolicy = memo.contentUpdatePolicy;
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       memo.authorization,
       AuthorizationPrivilege.UPDATE,
       `update Memo: ${memo.id}`
@@ -96,12 +96,12 @@ export class MemoResolverMutations {
     description: 'Deletes the specified Memo.',
   })
   async deleteMemo(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('memoData') memoData: DeleteMemoInput
   ): Promise<IMemo> {
     const memo = await this.memoService.getMemoOrFail(memoData.ID);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       memo.authorization,
       AuthorizationPrivilege.DELETE,
       `delete Memo: ${memo.id}`

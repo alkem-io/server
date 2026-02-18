@@ -47,7 +47,7 @@ describe('CalloutTransferService', () => {
   });
 
   describe('transferCallout', () => {
-    const agentInfo = { userID: 'user-1' } as any;
+    const actorContext = { actorId: 'user-1' } as any;
     const targetCalloutsSet = { id: 'target-cs' } as any;
     const storageAggregator = { id: 'agg-1' } as any;
 
@@ -117,7 +117,7 @@ describe('CalloutTransferService', () => {
       const result = await service.transferCallout(
         callout,
         targetCalloutsSet,
-        agentInfo
+        actorContext
       );
 
       expect(
@@ -187,7 +187,7 @@ describe('CalloutTransferService', () => {
         profileService.convertTagsetTemplatesToCreateTagsetInput
       ).mockReturnValue([]);
 
-      await service.transferCallout(callout, targetCalloutsSet, agentInfo);
+      await service.transferCallout(callout, targetCalloutsSet, actorContext);
 
       // Verify storage buckets were updated
       expect(storageBucketService.save).toHaveBeenCalled();
@@ -212,7 +212,7 @@ describe('CalloutTransferService', () => {
       } as any);
 
       await expect(
-        service.transferCallout(callout, targetCalloutsSet, agentInfo)
+        service.transferCallout(callout, targetCalloutsSet, actorContext)
       ).rejects.toThrow(EntityNotInitializedException);
     });
 
@@ -269,7 +269,7 @@ describe('CalloutTransferService', () => {
         name: 'new-tagset',
       } as any);
 
-      await service.transferCallout(callout, targetCalloutsSet, agentInfo);
+      await service.transferCallout(callout, targetCalloutsSet, actorContext);
 
       // Should remove non-default tagset
       expect(tagsetService.removeTagset).toHaveBeenCalledWith('ts-custom');
@@ -312,7 +312,7 @@ describe('CalloutTransferService', () => {
       } as any);
 
       await expect(
-        service.transferCallout(callout, targetCalloutsSet, agentInfo)
+        service.transferCallout(callout, targetCalloutsSet, actorContext)
       ).rejects.toThrow(RelationshipNotFoundException);
     });
   });

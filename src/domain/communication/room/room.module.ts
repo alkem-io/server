@@ -1,7 +1,8 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
-import { VirtualContributorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
+import { VirtualActorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { InAppNotificationModule } from '@platform/in-app-notification/in.app.notification.module';
@@ -9,7 +10,6 @@ import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activ
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
-import { ContributorLookupModule } from '@services/infrastructure/contributor-lookup/contributor.lookup.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
@@ -27,7 +27,7 @@ import { RoomServiceEvents } from './room.service.events';
 
 @Module({
   imports: [
-    ContributorLookupModule,
+    ActorLookupModule,
     ContributionReporterModule,
     ActivityAdapterModule,
     NotificationAdapterModule,
@@ -37,7 +37,7 @@ import { RoomServiceEvents } from './room.service.events';
     CommunicationAdapterModule,
     EntityResolverModule,
     MessageModule,
-    VirtualContributorLookupModule,
+    VirtualActorLookupModule,
     VirtualContributorMessageModule,
     UserLookupModule,
     RoomLookupModule,

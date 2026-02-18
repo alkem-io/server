@@ -1,4 +1,3 @@
-import { Agent } from '@domain/agent/agent/agent.entity';
 import {
   CreateDateColumn,
   Entity,
@@ -14,9 +13,10 @@ export class ConversationMembership implements IConversationMembership {
   @PrimaryColumn('uuid')
   conversationId!: string;
 
+  // actorId - the actor participating in this conversation
   @Index()
   @PrimaryColumn('uuid')
-  agentId!: string;
+  actorId!: string;
 
   @Index()
   @ManyToOne(
@@ -29,13 +29,6 @@ export class ConversationMembership implements IConversationMembership {
     }
   )
   conversation!: Conversation;
-
-  @ManyToOne(() => Agent, {
-    eager: false,
-    cascade: false,
-    onDelete: 'CASCADE',
-  })
-  agent!: Agent;
 
   @CreateDateColumn()
   createdAt!: Date;

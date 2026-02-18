@@ -12,7 +12,7 @@ export abstract class InAppNotificationPayloadVirtualContributor
     nullable: false,
     description: 'The payload type.',
   })
-  type!: NotificationEventPayload.VIRTUAL_CONTRIBUTOR;
+  type!: NotificationEventPayload.VIRTUAL;
 
   virtualContributorID!: string;
 

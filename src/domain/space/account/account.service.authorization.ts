@@ -20,8 +20,7 @@ import {
   RelationshipNotFoundException,
 } from '@common/exceptions';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
@@ -40,7 +39,6 @@ import { AccountService } from './account.service';
 export class AccountAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    private agentAuthorizationService: AgentAuthorizationService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private spaceAuthorizationService: SpaceAuthorizationService,
     private virtualContributorAuthorizationService: VirtualContributorAuthorizationService,
@@ -59,7 +57,6 @@ export class AccountAuthorizationService {
       accountInput.id,
       {
         relations: {
-          agent: true,
           spaces: {
             templatesManager: true,
           },
@@ -71,7 +68,7 @@ export class AccountAuthorizationService {
         },
       }
     );
-    if (!account.storageAggregator || !account.agent || !account.license) {
+    if (!account.storageAggregator || !account.license) {
       throw new RelationshipNotFoundException(
         `Unable to load Account with entities at start of auth reset: ${account.id} `,
         LogContext.ACCOUNT
@@ -138,7 +135,6 @@ export class AccountAuthorizationService {
     account: IAccount
   ): Promise<IAuthorizationPolicy[]> {
     if (
-      !account.agent ||
       !account.spaces ||
       !account.virtualContributors ||
       !account.innovationPacks ||
@@ -162,13 +158,6 @@ export class AccountAuthorizationService {
       );
       updatedAuthorizations.push(...spaceAuthorizations);
     }
-
-    const agentAuthorization =
-      this.agentAuthorizationService.applyAuthorizationPolicy(
-        account.agent,
-        account.authorization
-      );
-    updatedAuthorizations.push(agentAuthorization);
 
     const licenseAuthorizations =
       this.licenseAuthorizationService.applyAuthorizationPolicy(
@@ -247,7 +236,7 @@ export class AccountAuthorizationService {
           AuthorizationPrivilege.CREATE_SPACE,
           AuthorizationPrivilege.CREATE_INNOVATION_HUB,
           AuthorizationPrivilege.CREATE_INNOVATION_PACK,
-          AuthorizationPrivilege.CREATE_VIRTUAL_CONTRIBUTOR,
+          AuthorizationPrivilege.CREATE_VIRTUAL,
         ],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
@@ -331,7 +320,7 @@ export class AccountAuthorizationService {
     newRules.push(createSpace);
 
     const createVC = this.authorizationPolicyService.createCredentialRule(
-      [AuthorizationPrivilege.CREATE_VIRTUAL_CONTRIBUTOR],
+      [AuthorizationPrivilege.CREATE_VIRTUAL],
       [accountAdminCredential],
       CREDENTIAL_RULE_PLATFORM_CREATE_VC
     );

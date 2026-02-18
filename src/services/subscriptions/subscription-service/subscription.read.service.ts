@@ -6,7 +6,7 @@ import {
   SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER,
   SUBSCRIPTION_IN_APP_NOTIFICATION_RECEIVED,
   SUBSCRIPTION_ROOM_EVENT,
-  SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED,
+  SUBSCRIPTION_VIRTUAL_UPDATED,
 } from '@src/common/constants';
 import { TypedPubSubEngine } from './typed.pub.sub.engine';
 
@@ -17,7 +17,7 @@ export class SubscriptionReadService {
     private activityCreatedSubscription: TypedPubSubEngine,
     @Inject(SUBSCRIPTION_ROOM_EVENT)
     private roomEventsSubscription: TypedPubSubEngine,
-    @Inject(SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED)
+    @Inject(SUBSCRIPTION_VIRTUAL_UPDATED)
     private subscriptionVirtualContributorUpdated: TypedPubSubEngine,
     @Inject(SUBSCRIPTION_IN_APP_NOTIFICATION_RECEIVED)
     private subscriptionInAppNotificationReceived: TypedPubSubEngine,
@@ -41,7 +41,7 @@ export class SubscriptionReadService {
 
   public subscribeToVirtualContributorUpdated() {
     return this.subscriptionVirtualContributorUpdated.asyncIterableIterator(
-      SubscriptionType.VIRTUAL_CONTRIBUTOR_UPDATED
+      SubscriptionType.VIRTUAL_UPDATED
     );
   }
 

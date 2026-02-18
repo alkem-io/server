@@ -7,7 +7,7 @@ import { IProfile } from '@domain/common/profile/profile.interface';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
+import { AuthorizationActorPrivilege, Profiling } from '@src/common/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IRoom } from '../../domain/communication/room/room.interface';
 import { Discussion } from './discussion.entity';
@@ -50,7 +50,7 @@ export class DiscussionResolverFields {
     return createdBy;
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('comments', () => IRoom, {
     nullable: false,

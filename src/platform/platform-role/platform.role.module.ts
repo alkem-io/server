@@ -1,6 +1,6 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
-import { AgentModule } from '@domain/agent/agent/agent.module';
+import { ActorModule } from '@domain/actor/actor/actor.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { LicenseModule } from '@domain/common/license/license.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
@@ -20,7 +20,7 @@ import { PlatformRoleResolverMutations } from './platform.role.resolver.mutation
     AuthorizationPolicyModule,
     NotificationAdapterModule,
     UserLookupModule,
-    AgentModule,
+    ActorModule,
     RoleSetModule,
     PlatformModule,
   ],

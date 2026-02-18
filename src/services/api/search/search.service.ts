@@ -1,6 +1,6 @@
 import { LogContext } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { Space } from '@domain/space/space/space.entity';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -32,7 +32,7 @@ export class SearchService {
 
   public async search(
     searchData: SearchInput,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ): Promise<ISearchResults> {
     // set default filters if not provided
     // this will ensure straight forward way of processing of the search parameters without much branching
@@ -58,14 +58,14 @@ export class SearchService {
       }
     }
     // search only in the public available data if the user is not authenticated
-    const onlyPublicResults = !agentInfo.email;
+    const onlyPublicResults = !actorContext.actorId;
     const searchResults = await this.searchExtractService.search(
       searchData,
       onlyPublicResults
     );
     return this.searchResultService.resolveSearchResults(
       searchResults,
-      agentInfo,
+      actorContext,
       searchData.filters,
       searchData.searchInSpaceFilter
     );

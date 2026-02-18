@@ -68,8 +68,8 @@ describe('FileIntegrationService', () => {
         authorization: 'Bearer token',
       });
 
-      vi.mocked(authenticationService.getAgentInfo).mockResolvedValue({
-        agentID: 'agent-1',
+      vi.mocked(authenticationService.getActorContext).mockResolvedValue({
+        actorId: 'agent-1',
       } as any);
       vi.mocked(documentService.getDocumentOrFail).mockRejectedValue(
         new Error('Not found')
@@ -88,8 +88,8 @@ describe('FileIntegrationService', () => {
         authorization: 'Bearer token',
       });
 
-      vi.mocked(authenticationService.getAgentInfo).mockResolvedValue({
-        agentID: 'agent-1',
+      vi.mocked(authenticationService.getActorContext).mockResolvedValue({
+        actorId: 'agent-1',
       } as any);
       vi.mocked(documentService.getDocumentOrFail).mockResolvedValue({
         id: 'doc-1',
@@ -111,8 +111,8 @@ describe('FileIntegrationService', () => {
         authorization: 'Bearer token',
       });
 
-      vi.mocked(authenticationService.getAgentInfo).mockResolvedValue({
-        agentID: 'agent-1',
+      vi.mocked(authenticationService.getActorContext).mockResolvedValue({
+        actorId: 'agent-1',
       } as any);
       vi.mocked(documentService.getDocumentOrFail).mockResolvedValue({
         id: 'doc-1',
@@ -135,8 +135,8 @@ describe('FileIntegrationService', () => {
         authorization: 'Bearer token',
       });
 
-      vi.mocked(authenticationService.getAgentInfo).mockResolvedValue({
-        agentID: 'agent-1',
+      vi.mocked(authenticationService.getActorContext).mockResolvedValue({
+        actorId: 'agent-1',
       } as any);
       vi.mocked(documentService.getDocumentOrFail).mockResolvedValue({
         id: 'doc-1',

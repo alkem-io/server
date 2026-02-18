@@ -1,7 +1,7 @@
 import { GLOBAL_POLICY_ADMIN_COMMUNICATION_GRANT } from '@common/constants/authorization/global.policy.constants';
-import { CurrentUser, Profiling } from '@common/decorators';
+import { CurrentActor, Profiling } from '@common/decorators';
 import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -40,13 +40,13 @@ export class AdminCommunicationResolverMutations {
   async adminCommunicationEnsureAccessToCommunications(
     @Args('communicationData')
     ensureAccessData: CommunicationAdminEnsureAccessInput,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ): Promise<boolean> {
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       this.communicationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT,
-      `grant community members access to communications: ${agentInfo.email}`
+      `grant community members access to communications: ${actorContext.actorId}`
     );
     return await this.adminCommunicationService.ensureCommunityAccessToCommunications(
       ensureAccessData
@@ -60,13 +60,13 @@ export class AdminCommunicationResolverMutations {
   async adminCommunicationRemoveOrphanedRoom(
     @Args('orphanedRoomData')
     orphanedRoomData: CommunicationAdminRemoveOrphanedRoomInput,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ): Promise<boolean> {
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       this.communicationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT,
-      `communications admin remove orphaned room: ${agentInfo.email}`
+      `communications admin remove orphaned room: ${actorContext.actorId}`
     );
     return await this.adminCommunicationService.removeOrphanedRoom(
       orphanedRoomData
@@ -80,13 +80,13 @@ export class AdminCommunicationResolverMutations {
   async adminCommunicationUpdateRoomState(
     @Args('roomStateData')
     roomStateData: CommunicationAdminUpdateRoomStateInput,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ): Promise<CommunicationRoomResult> {
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       this.communicationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT,
-      `communications admin update join rule on all rooms: ${agentInfo.email}`
+      `communications admin update join rule on all rooms: ${actorContext.actorId}`
     );
     return await this.adminCommunicationService.updateRoomState(
       roomStateData.roomID,
@@ -101,13 +101,13 @@ export class AdminCommunicationResolverMutations {
   })
   @Profiling.api
   async adminCommunicationMigrateOrphanedConversations(
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ): Promise<CommunicationAdminMigrateRoomsResult> {
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       this.communicationGlobalAdminPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `communications admin migrate orphaned conversations: ${agentInfo.email}`
+      `communications admin migrate orphaned conversations: ${actorContext.actorId}`
     );
     return await this.adminCommunicationService.migrateConversationRooms();
   }

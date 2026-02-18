@@ -1,7 +1,7 @@
 import { LogContext } from '@common/enums';
 import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
-import { AgentService } from '@domain/agent/agent/agent.service';
+import { ActorService } from '@domain/actor/actor/actor.service';
 import { ILicense } from '@domain/common/license/license.interface';
 import { LicenseService } from '@domain/common/license/license.service';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -37,7 +37,7 @@ describe('AccountLicenseService', () => {
         AccountLicenseService,
         { provide: LicenseService, useValue: mockLicenseService },
         { provide: AccountService, useValue: {} },
-        { provide: AgentService, useValue: {} },
+        { provide: ActorService, useValue: {} },
         { provide: SpaceLicenseService, useValue: {} },
         { provide: LicensingCredentialBasedService, useValue: {} },
         { provide: LicensingWingbackSubscriptionService, useValue: {} },
@@ -193,7 +193,7 @@ describe('AccountLicenseService', () => {
           },
           {
             id: '6',
-            type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
+            type: LicenseEntitlementType.ACCOUNT_VIRTUAL,
             dataType: LicenseEntitlementDataType.LIMIT,
             limit: 0, // Will be disabled
             enabled: false,
@@ -236,7 +236,7 @@ describe('AccountLicenseService', () => {
             enabled: false,
           }),
           expect.objectContaining({
-            type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
+            type: LicenseEntitlementType.ACCOUNT_VIRTUAL,
             limit: 0,
             enabled: false,
           }),
@@ -320,7 +320,7 @@ describe('AccountLicenseService', () => {
           },
           {
             id: '3',
-            type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
+            type: LicenseEntitlementType.ACCOUNT_VIRTUAL,
             dataType: LicenseEntitlementDataType.LIMIT,
             limit: 2,
             enabled: false,
@@ -359,8 +359,7 @@ describe('AccountLicenseService', () => {
       expect(spaceFreeEntitlement?.enabled).toBe(true);
 
       const virtualContributorEntitlement = result.entitlements!.find(
-        (e: any) =>
-          e.type === LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR
+        (e: any) => e.type === LicenseEntitlementType.ACCOUNT_VIRTUAL
       );
       expect(virtualContributorEntitlement?.limit).toBe(5); // Updated to baseline
       expect(virtualContributorEntitlement?.enabled).toBe(true);
@@ -415,7 +414,7 @@ describe('AccountLicenseService', () => {
         entitlements: [
           {
             id: '1',
-            type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
+            type: LicenseEntitlementType.ACCOUNT_VIRTUAL,
             dataType: LicenseEntitlementDataType.LIMIT,
             limit: 1,
             enabled: false,
@@ -460,7 +459,7 @@ describe('AccountLicenseService', () => {
       mockLicense = {
         entitlements: [
           {
-            type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
+            type: LicenseEntitlementType.ACCOUNT_VIRTUAL,
             limit: 1,
             enabled: true,
           },
@@ -474,7 +473,7 @@ describe('AccountLicenseService', () => {
 
       mockCredentialBasedService.getEntitlementIfGranted
         .mockResolvedValueOnce({
-          type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
+          type: LicenseEntitlementType.ACCOUNT_VIRTUAL,
           limit: 5,
         })
         .mockResolvedValueOnce(undefined);
@@ -491,10 +490,7 @@ describe('AccountLicenseService', () => {
       ).toHaveBeenCalledTimes(2);
       expect(
         mockCredentialBasedService.getEntitlementIfGranted
-      ).toHaveBeenCalledWith(
-        LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
-        mockAgent
-      );
+      ).toHaveBeenCalledWith(LicenseEntitlementType.ACCOUNT_VIRTUAL, mockAgent);
       expect(
         mockCredentialBasedService.getEntitlementIfGranted
       ).toHaveBeenCalledWith(
@@ -503,8 +499,7 @@ describe('AccountLicenseService', () => {
       );
 
       const virtualContributorEntitlement = result.entitlements!.find(
-        (e: any) =>
-          e.type === LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR
+        (e: any) => e.type === LicenseEntitlementType.ACCOUNT_VIRTUAL
       );
       expect(virtualContributorEntitlement?.limit).toBe(6);
       expect(virtualContributorEntitlement?.enabled).toBe(true);
@@ -546,7 +541,7 @@ describe('AccountLicenseService', () => {
         entitlements: [
           {
             id: '1',
-            type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
+            type: LicenseEntitlementType.ACCOUNT_VIRTUAL,
             dataType: LicenseEntitlementDataType.LIMIT,
             limit: 1,
             enabled: false,
@@ -666,7 +661,7 @@ describe('AccountLicenseService', () => {
         entitlements: [
           {
             id: '1',
-            type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
+            type: LicenseEntitlementType.ACCOUNT_VIRTUAL,
             dataType: LicenseEntitlementDataType.LIMIT,
             limit: 1,
             enabled: true,
@@ -684,7 +679,7 @@ describe('AccountLicenseService', () => {
 
       mockWingbackService.getEntitlements.mockResolvedValue([
         {
-          type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
+          type: LicenseEntitlementType.ACCOUNT_VIRTUAL,
           limit: 10,
         },
         {
@@ -705,8 +700,7 @@ describe('AccountLicenseService', () => {
       );
 
       const virtualContributorEntitlement = result.entitlements!.find(
-        (e: any) =>
-          e.type === LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR
+        (e: any) => e.type === LicenseEntitlementType.ACCOUNT_VIRTUAL
       );
       expect(virtualContributorEntitlement?.limit).toBe(10);
       expect(virtualContributorEntitlement?.enabled).toBe(true);
@@ -723,7 +717,7 @@ describe('AccountLicenseService', () => {
         entitlements: [
           {
             id: '1',
-            type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
+            type: LicenseEntitlementType.ACCOUNT_VIRTUAL,
             dataType: LicenseEntitlementDataType.LIMIT,
             limit: 5, // Credential-based value
             enabled: true,
@@ -742,7 +736,7 @@ describe('AccountLicenseService', () => {
       // Wingback provides a different (higher) value - should override
       mockWingbackService.getEntitlements.mockResolvedValue([
         {
-          type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
+          type: LicenseEntitlementType.ACCOUNT_VIRTUAL,
           limit: 15,
         },
       ]);
@@ -755,8 +749,7 @@ describe('AccountLicenseService', () => {
 
       // Assert
       const virtualContributorEntitlement = result.entitlements!.find(
-        (e: any) =>
-          e.type === LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR
+        (e: any) => e.type === LicenseEntitlementType.ACCOUNT_VIRTUAL
       );
 
       // Should use Wingback value (15), not credential-based value (5)
@@ -780,7 +773,7 @@ describe('AccountLicenseService', () => {
       // Wingback only provides virtual contributor entitlement
       mockWingbackService.getEntitlements.mockResolvedValue([
         {
-          type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
+          type: LicenseEntitlementType.ACCOUNT_VIRTUAL,
           limit: 8,
         },
       ]);

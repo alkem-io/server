@@ -21,7 +21,7 @@ describe('SearchResultService', () => {
     findOne: Mock;
   };
 
-  const agentInfo = { credentials: [] } as any;
+  const actorContext = { credentials: [] } as any;
 
   beforeEach(async () => {
     entityManager = {
@@ -119,7 +119,7 @@ describe('SearchResultService', () => {
 
   describe('getSubspaceSearchResults', () => {
     it('should return empty array when no raw results are provided', async () => {
-      const result = await service.getSubspaceSearchResults([], agentInfo);
+      const result = await service.getSubspaceSearchResults([], actorContext);
 
       expect(result).toEqual([]);
     });
@@ -144,7 +144,7 @@ describe('SearchResultService', () => {
 
       const result = await service.getSubspaceSearchResults(
         rawResults,
-        agentInfo
+        actorContext
       );
 
       expect(result).toHaveLength(0);
@@ -170,7 +170,7 @@ describe('SearchResultService', () => {
 
       const result = await service.getSubspaceSearchResults(
         rawResults,
-        agentInfo
+        actorContext
       );
 
       expect(result).toHaveLength(0);
@@ -193,7 +193,7 @@ describe('SearchResultService', () => {
 
       const result = await service.getSubspaceSearchResults(
         rawResults,
-        agentInfo
+        actorContext
       );
 
       expect(result).toHaveLength(1);
@@ -240,7 +240,10 @@ describe('SearchResultService', () => {
 
   describe('getOrganizationSearchResults', () => {
     it('should return empty array when no raw results are provided', async () => {
-      const result = await service.getOrganizationSearchResults([], agentInfo);
+      const result = await service.getOrganizationSearchResults(
+        [],
+        actorContext
+      );
 
       expect(result).toEqual([]);
     });
@@ -261,7 +264,7 @@ describe('SearchResultService', () => {
 
       const result = await service.getOrganizationSearchResults(
         rawResults,
-        agentInfo
+        actorContext
       );
 
       expect(result).toHaveLength(0);

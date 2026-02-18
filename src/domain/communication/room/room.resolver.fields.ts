@@ -1,13 +1,13 @@
 import { AuthorizationPrivilege } from '@common/enums';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { MessageID } from '@domain/common/scalars';
 import { UseGuards } from '@nestjs/common';
 import { Args, Int, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import {
-  AuthorizationAgentPrivilege,
-  CurrentUser,
+  AuthorizationActorPrivilege,
+  CurrentActor,
 } from '@src/common/decorators';
 import { IMessage } from '../message/message.interface';
 import { IVcInteraction } from '../vc-interaction/vc.interaction.interface';
@@ -24,7 +24,7 @@ export class RoomResolverFields {
     private readonly roomDataLoader: RoomDataLoader
   ) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('messages', () => [IMessage], {
     nullable: false,
@@ -42,11 +42,11 @@ export class RoomResolverFields {
   })
   async vcInteractions(
     @Parent() room: IRoom,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ): Promise<IVcInteraction[]> {
     const reloadedRoom = await this.roomService.getRoomOrFail(room.id);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       reloadedRoom.authorization,
       AuthorizationPrivilege.READ,
       `resolve vc interactions for: ${reloadedRoom.id}`
@@ -67,7 +67,7 @@ export class RoomResolverFields {
   })
   async unreadCounts(
     @Parent() room: IRoom,
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('threadIds', {
       type: () => [MessageID],
       nullable: true,
@@ -78,7 +78,7 @@ export class RoomResolverFields {
   ): Promise<RoomUnreadCounts> {
     const reloadedRoom = await this.roomService.getRoomOrFail(room.id);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       reloadedRoom.authorization,
       AuthorizationPrivilege.READ,
       `resolve unread counts for: ${reloadedRoom.id}`
@@ -86,7 +86,7 @@ export class RoomResolverFields {
 
     return this.roomService.getUnreadCounts(
       reloadedRoom,
-      agentInfo.agentID,
+      actorContext.actorId,
       threadIds
     );
   }
@@ -99,12 +99,12 @@ export class RoomResolverFields {
   })
   async unreadCount(
     @Parent() room: IRoom,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ): Promise<number> {
-    return this.roomDataLoader.loadUnreadCount(room.id, agentInfo.agentID);
+    return this.roomDataLoader.loadUnreadCount(room.id, actorContext.actorId);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('lastMessage', () => IMessage, {
     nullable: true,

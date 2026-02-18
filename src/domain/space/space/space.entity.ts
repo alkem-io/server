@@ -1,18 +1,18 @@
 import { ENUM_LENGTH, NAMEID_MAX_LENGTH_SCHEMA } from '@common/constants';
+import { ActorType } from '@common/enums/actor.type';
 import { SpaceLevel } from '@common/enums/space.level';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
-import { Agent } from '@domain/agent/agent/agent.entity';
+import { Actor } from '@domain/actor/actor/actor.entity';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
-import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { License } from '@domain/common/license/license.entity';
 import { Community } from '@domain/community/community/community.entity';
 import { ISpace } from '@domain/space/space/space.interface';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
 import { TemplatesManager } from '@domain/template/templates-manager';
 import {
+  ChildEntity,
   Column,
-  Entity,
   Generated,
   JoinColumn,
   ManyToOne,
@@ -22,8 +22,11 @@ import {
 import { Account } from '../account/account.entity';
 import { SpaceAbout } from '../space.about';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
-@Entity()
-export class Space extends AuthorizableEntity implements ISpace {
+
+@ChildEntity(ActorType.SPACE)
+export class Space extends Actor implements ISpace {
+  // Space uses SpaceAbout instead of Profile, so profile will be null
+
   @Column('varchar', { length: NAMEID_MAX_LENGTH_SCHEMA, nullable: false })
   nameID!: string;
 
@@ -87,10 +90,6 @@ export class Space extends AuthorizableEntity implements ISpace {
   })
   @JoinColumn()
   community?: Community;
-
-  @OneToOne(() => Agent, { eager: false, cascade: true, onDelete: 'SET NULL' })
-  @JoinColumn()
-  agent?: Agent;
 
   @Column('jsonb', { nullable: false })
   settings: ISpaceSettings;

@@ -1,7 +1,7 @@
 import { LogContext } from '@common/enums';
 import { RoomType } from '@common/enums/room.type';
 import { MutationType } from '@common/enums/subscriptions';
-import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
+import { ActorContextService } from '@core/actor-context/actor.context.service';
 import { ConversationService } from '@domain/communication/conversation/conversation.service';
 import { IMessage } from '@domain/communication/message/message.interface';
 import { IRoom } from '@domain/communication/room/room.interface';
@@ -50,7 +50,7 @@ export class MessageInboxService {
   constructor(
     private readonly roomLookupService: RoomLookupService,
     private readonly subscriptionPublishService: SubscriptionPublishService,
-    private readonly agentInfoService: AgentInfoService,
+    private readonly actorContextService: ActorContextService,
     private readonly roomServiceEvents: RoomServiceEvents,
     private readonly inAppNotificationService: InAppNotificationService,
     private readonly messageNotificationService: MessageNotificationService,
@@ -103,14 +103,14 @@ export class MessageInboxService {
 
     // Process notifications (skip for conversation rooms)
     if (!isConversationRoom(room)) {
-      const agentInfo = await this.agentInfoService.buildAgentInfoForAgent(
+      const actorContext = await this.actorContextService.buildForActor(
         payload.actorID
       );
 
       await this.messageNotificationService.processMessageNotifications(
         room,
         message,
-        agentInfo,
+        actorContext,
         payload.message.threadID
       );
     }
@@ -210,12 +210,12 @@ export class MessageInboxService {
     );
 
     // Process activity event
-    const agentInfo = await this.agentInfoService.buildAgentInfoForAgent(
+    const actorContext = await this.actorContextService.buildForActor(
       payload.redactorActorId
     );
     await this.roomServiceEvents.processActivityMessageRemoved(
       payload.redactedMessageId,
-      agentInfo
+      actorContext
     );
 
     // Publish room subscription

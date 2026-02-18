@@ -1,16 +1,16 @@
-import { CurrentUser } from '@common/decorators';
-import { AgentType } from '@common/enums/agent.type';
+import { CurrentActor } from '@common/decorators';
+import { ActorType } from '@common/enums/actor.type';
 import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import {
   ContributorByAgentIdLoaderCreator,
   ConversationMembershipsLoaderCreator,
 } from '@core/dataloader/creators/loader.creators';
+import { IConversationMembershipWithActorType } from '@core/dataloader/creators/loader.creators/conversation/conversation.memberships.loader.creator';
 import { Loader } from '@core/dataloader/decorators/data.loader.decorator';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { IConversationMembership } from '@domain/communication/conversation-membership/conversation.membership.interface';
+import { IActor } from '@domain/actor/actor/actor.interface';
 import { IRoom } from '@domain/communication/room/room.interface';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { IUser } from '@domain/community/user/user.interface';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
@@ -43,7 +43,7 @@ export class ConversationResolverFields {
   async type(
     @Parent() conversation: IConversation,
     @Loader(ConversationMembershipsLoaderCreator)
-    convoMembershipsLoader: ILoader<IConversationMembership[]>
+    convoMembershipsLoader: ILoader<IConversationMembershipWithActorType[]>
   ): Promise<CommunicationConversationType> {
     const memberships = await convoMembershipsLoader.load(conversation.id);
 
@@ -57,11 +57,11 @@ export class ConversationResolverFields {
   })
   async user(
     @Parent() conversation: IConversation,
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Loader(ConversationMembershipsLoaderCreator)
-    convoMembershipsLoader: ILoader<IConversationMembership[]>,
+    convoMembershipsLoader: ILoader<IConversationMembershipWithActorType[]>,
     @Loader(ContributorByAgentIdLoaderCreator, { resolveToNull: true })
-    contributorByAgentLoader: ILoader<IContributor | null>
+    contributorByAgentLoader: ILoader<IActor | null>
   ): Promise<IUser | null> {
     // Check for pre-resolved value (used in subscription events for personalized delivery)
     if (conversation._resolvedUser !== undefined) {
@@ -72,7 +72,7 @@ export class ConversationResolverFields {
 
     // Find a user member, excluding the current user's agent
     const userMembership = memberships.find(
-      m => m.agent?.type === AgentType.USER && m.agentId !== agentInfo.agentID
+      m => m.actorType === ActorType.USER && m.actorId !== actorContext.actorId
     );
 
     if (!userMembership) {
@@ -81,7 +81,7 @@ export class ConversationResolverFields {
 
     // Use the contributor loader to batch load the user
     const contributor = await contributorByAgentLoader.load(
-      userMembership.agentId
+      userMembership.actorId
     );
     return contributor as IUser | null;
   }
@@ -94,9 +94,9 @@ export class ConversationResolverFields {
   async virtualContributor(
     @Parent() conversation: IConversation,
     @Loader(ConversationMembershipsLoaderCreator)
-    convoMembershipsLoader: ILoader<IConversationMembership[]>,
+    convoMembershipsLoader: ILoader<IConversationMembershipWithActorType[]>,
     @Loader(ContributorByAgentIdLoaderCreator, { resolveToNull: true })
-    contributorByAgentLoader: ILoader<IContributor | null>
+    contributorByAgentLoader: ILoader<IActor | null>
   ): Promise<IVirtualContributor | null> {
     // Check for pre-resolved value (used in subscription events)
     if (conversation._resolvedVirtualContributor !== undefined) {
@@ -107,16 +107,16 @@ export class ConversationResolverFields {
 
     // Find the virtual contributor agent among members
     const vcMembership = memberships.find(
-      m => m.agent?.type === AgentType.VIRTUAL_CONTRIBUTOR
+      m => m.actorType === ActorType.VIRTUAL
     );
 
-    if (!vcMembership?.agentId) {
+    if (!vcMembership?.actorId) {
       return null;
     }
 
     // Use the contributor loader to batch load the virtual contributor
     const contributor = await contributorByAgentLoader.load(
-      vcMembership.agentId
+      vcMembership.actorId
     );
     return contributor as IVirtualContributor | null;
   }

@@ -107,7 +107,7 @@ interface RpcOptions<T extends CommandTopic> {
  * - Compatible with Watermill-based Go adapter via Direct Reply-To queue
  * - Uses Alkemio UUIDs exclusively (AlkemioActorID, AlkemioRoomID, AlkemioContextID)
  * - No Matrix ID management - adapter handles mapping internally
- * - Unified Actor Pattern: actorId = contributor.agent.id
+ * - Unified Actor Pattern: actorId = contributor.actor.id
  */
 @Injectable()
 export class CommunicationAdapter {

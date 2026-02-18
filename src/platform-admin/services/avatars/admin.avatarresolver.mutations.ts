@@ -1,18 +1,18 @@
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { RelationshipNotFoundException } from '@common/exceptions';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { ProfileAvatarService } from '@domain/common/profile/profile.avatar.service';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
-import { ContributorService } from '@domain/community/contributor/contributor.service';
 import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.bucket.service.authorization';
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { InstrumentResolver } from '@src/apm/decorators';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @InstrumentResolver()
@@ -22,7 +22,7 @@ export class AdminSearchContributorsMutations {
     private authorizationService: AuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService,
-    private contributorService: ContributorService,
+    private profileAvatarService: ProfileAvatarService,
     private profileService: ProfileService,
     private storageBucketAuthorizationService: StorageBucketAuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService
@@ -33,22 +33,22 @@ export class AdminSearchContributorsMutations {
       'Update the Avatar on the Profile with the spedified profileID to be stored as a Document.',
   })
   async adminUpdateContributorAvatars(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('profileID', { type: () => UUID }) profileID: string
   ): Promise<IProfile> {
     const platformPolicy =
       await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       platformPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `Update contributor avatars to be stored as Documents: ${agentInfo.email}`
+      `Update contributor avatars to be stored as Documents: ${actorContext.actorId}`
     );
 
     let profile =
-      await this.contributorService.ensureAvatarIsStoredInLocalStorageBucket(
+      await this.profileAvatarService.ensureAvatarIsStoredInLocalStorageBucket(
         profileID,
-        agentInfo.userID
+        actorContext.actorId
       );
     profile = await this.profileService.getProfileOrFail(profile.id, {
       relations: {

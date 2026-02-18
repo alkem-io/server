@@ -1,10 +1,10 @@
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import {
   InvocationResultAction,
   VirtualContributorInvocationInput,
 } from '@domain/community/virtual-contributor/dto/virtual.contributor.dto.invocation.input';
-import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { VirtualActorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -17,7 +17,7 @@ import { VirtualContributorMessageService } from './virtual.contributor.message.
 describe('VirtualContributorMessageService', () => {
   let service: VirtualContributorMessageService;
   let roomLookupService: Mocked<RoomLookupService>;
-  let virtualContributorLookupService: Mocked<VirtualContributorLookupService>;
+  let virtualActorLookupService: Mocked<VirtualActorLookupService>;
   let aiServerAdapter: Mocked<AiServerAdapter>;
 
   beforeEach(async () => {
@@ -29,15 +29,13 @@ describe('VirtualContributorMessageService', () => {
 
     service = module.get(VirtualContributorMessageService);
     roomLookupService = module.get(RoomLookupService);
-    virtualContributorLookupService = module.get(
-      VirtualContributorLookupService
-    );
+    virtualActorLookupService = module.get(VirtualActorLookupService);
     aiServerAdapter = module.get(AiServerAdapter);
   });
 
   describe('invokeVirtualContributor', () => {
     const mockRoom = { id: 'room-1' } as unknown as IRoom;
-    const mockAgentInfo = { userID: 'user-1' } as AgentInfo;
+    const mockActorContext = { actorId: 'user-1' } as ActorContext;
 
     it('should resolve VC by agent ID and call invoke with correct input', async () => {
       const mockVC = {
@@ -51,12 +49,12 @@ describe('VirtualContributorMessageService', () => {
         bodyOfKnowledgeID: 'bok-1',
       } as any;
 
-      virtualContributorLookupService.getVirtualContributorByAgentIdOrFail.mockResolvedValue(
+      virtualActorLookupService.getVirtualContributorByIdOrFail.mockResolvedValue(
         mockVC
       );
 
       // Mock the full invoke chain
-      virtualContributorLookupService.getVirtualContributorOrFail.mockResolvedValue(
+      virtualActorLookupService.getVirtualContributorByIdOrFail.mockResolvedValue(
         mockVC
       );
       roomLookupService.getRoomOrFail.mockResolvedValue({
@@ -71,13 +69,13 @@ describe('VirtualContributorMessageService', () => {
         'vc-agent-1',
         'Hello VC',
         'thread-1',
-        mockAgentInfo,
+        mockActorContext,
         'space-1',
         mockRoom
       );
 
       expect(
-        virtualContributorLookupService.getVirtualContributorByAgentIdOrFail
+        virtualActorLookupService.getVirtualContributorByIdOrFail
       ).toHaveBeenCalledWith('vc-agent-1');
     });
 
@@ -89,7 +87,7 @@ describe('VirtualContributorMessageService', () => {
         agent: { id: 'vc-agent-1' },
       } as any;
 
-      virtualContributorLookupService.getVirtualContributorByAgentIdOrFail.mockResolvedValue(
+      virtualActorLookupService.getVirtualContributorByIdOrFail.mockResolvedValue(
         mockVC
       );
 
@@ -98,7 +96,7 @@ describe('VirtualContributorMessageService', () => {
           'vc-agent-1',
           'Hello',
           'thread-1',
-          mockAgentInfo,
+          mockActorContext,
           'space-1',
           mockRoom
         )
@@ -107,33 +105,6 @@ describe('VirtualContributorMessageService', () => {
   });
 
   describe('invoke', () => {
-    it('should throw EntityNotInitializedException when VC agent is not initialized', async () => {
-      const mockVC = {
-        id: 'vc-entity-1',
-        agent: undefined,
-        profile: { displayName: 'Test VC', description: '' },
-        authorization: {},
-      } as any;
-
-      virtualContributorLookupService.getVirtualContributorOrFail.mockResolvedValue(
-        mockVC
-      );
-
-      const input: VirtualContributorInvocationInput = {
-        virtualContributorID: 'vc-entity-1',
-        message: 'Hello',
-        contextSpaceID: 'space-1',
-        userID: 'user-1',
-        resultHandler: {
-          action: InvocationResultAction.NONE,
-        },
-      };
-
-      await expect(service.invoke(input)).rejects.toThrow(
-        EntityNotInitializedException
-      );
-    });
-
     it('should invoke AI server adapter with correct input for POST_REPLY action', async () => {
       const mockVC = {
         id: 'vc-entity-1',
@@ -144,7 +115,7 @@ describe('VirtualContributorMessageService', () => {
         aiPersonaID: 'ai-persona-1',
       } as any;
 
-      virtualContributorLookupService.getVirtualContributorOrFail.mockResolvedValue(
+      virtualActorLookupService.getVirtualContributorByIdOrFail.mockResolvedValue(
         mockVC
       );
 
@@ -204,7 +175,7 @@ describe('VirtualContributorMessageService', () => {
         aiPersonaID: 'ai-persona-1',
       } as any;
 
-      virtualContributorLookupService.getVirtualContributorOrFail.mockResolvedValue(
+      virtualActorLookupService.getVirtualContributorByIdOrFail.mockResolvedValue(
         mockVC
       );
 
@@ -249,7 +220,7 @@ describe('VirtualContributorMessageService', () => {
         aiPersonaID: 'ai-persona-1',
       } as any;
 
-      virtualContributorLookupService.getVirtualContributorOrFail.mockResolvedValue(
+      virtualActorLookupService.getVirtualContributorByIdOrFail.mockResolvedValue(
         mockVC
       );
 
@@ -280,7 +251,7 @@ describe('VirtualContributorMessageService', () => {
         aiPersonaID: 'ai-persona-1',
       } as any;
 
-      virtualContributorLookupService.getVirtualContributorOrFail.mockResolvedValue(
+      virtualActorLookupService.getVirtualContributorByIdOrFail.mockResolvedValue(
         mockVC
       );
 
@@ -313,7 +284,7 @@ describe('VirtualContributorMessageService', () => {
         aiPersonaID: 'ai-persona-1',
       } as any;
 
-      virtualContributorLookupService.getVirtualContributorOrFail.mockResolvedValue(
+      virtualActorLookupService.getVirtualContributorByIdOrFail.mockResolvedValue(
         mockVC
       );
 

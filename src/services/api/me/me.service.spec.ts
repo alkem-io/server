@@ -1,5 +1,5 @@
 import { AuthorizationCredential } from '@common/enums';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { ISpace } from '@domain/space/space/space.interface';
 import { Test, TestingModule } from '@nestjs/testing';
 import { IActivity } from '@platform/activity/activity.interface';
@@ -12,14 +12,17 @@ import { ActivityLogService } from '../activity-log';
 import { IActivityLogEntry } from '../activity-log/dto/activity.log.entry.interface';
 import { MeService } from './me.service';
 
-function makeAgentInfo(userId: string, memberSpaceIds: string[]): AgentInfo {
-  const agentInfo = new AgentInfo();
-  agentInfo.userID = userId;
-  agentInfo.credentials = memberSpaceIds.map(spaceId => ({
+function makeActorContext(
+  userId: string,
+  memberSpaceIds: string[]
+): ActorContext {
+  const actorContext = new ActorContext();
+  actorContext.actorId = userId;
+  actorContext.credentials = memberSpaceIds.map(spaceId => ({
     type: AuthorizationCredential.SPACE_MEMBER,
     resourceID: spaceId,
   }));
-  return agentInfo;
+  return actorContext;
 }
 
 function makeRawActivity(
@@ -97,8 +100,8 @@ describe('MeService', () => {
         makeActivityLogEntry('act-2', 'space-2'),
       ]);
 
-      const agentInfo = makeAgentInfo('user-1', ['space-1', 'space-2']);
-      await service.getMySpaces(agentInfo, 20);
+      const actorContext = makeActorContext('user-1', ['space-1', 'space-2']);
+      await service.getMySpaces(actorContext, 20);
 
       // Should use batch method
       expect(
@@ -121,8 +124,8 @@ describe('MeService', () => {
         makeActivityLogEntry('act-2', 'space-2'),
       ]);
 
-      const agentInfo = makeAgentInfo('user-1', ['space-1', 'space-2']);
-      const results = await service.getMySpaces(agentInfo, 20);
+      const actorContext = makeActorContext('user-1', ['space-1', 'space-2']);
+      const results = await service.getMySpaces(actorContext, 20);
 
       expect(results).toHaveLength(2);
       expect(results[0].space.id).toBe('space-1');
@@ -144,8 +147,8 @@ describe('MeService', () => {
       ]);
 
       // User only has membership in space-1 and space-3
-      const agentInfo = makeAgentInfo('user-1', ['space-1', 'space-3']);
-      const results = await service.getMySpaces(agentInfo, 20);
+      const actorContext = makeActorContext('user-1', ['space-1', 'space-3']);
+      const results = await service.getMySpaces(actorContext, 20);
 
       expect(results).toHaveLength(2);
       expect(results[0].space.id).toBe('space-1');
@@ -166,8 +169,8 @@ describe('MeService', () => {
         makeActivityLogEntry('act-3', 'space-3'),
       ]);
 
-      const agentInfo = makeAgentInfo('user-1', ['space-1', 'space-3']);
-      const results = await service.getMySpaces(agentInfo, 20);
+      const actorContext = makeActorContext('user-1', ['space-1', 'space-3']);
+      const results = await service.getMySpaces(actorContext, 20);
 
       expect(results).toHaveLength(2);
       expect(logger.warn).toHaveBeenCalledWith(
@@ -189,8 +192,8 @@ describe('MeService', () => {
       );
 
       const spaceIds = rawActivities.map((_, i) => `space-${i}`);
-      const agentInfo = makeAgentInfo('user-1', spaceIds);
-      const results = await service.getMySpaces(agentInfo, 3);
+      const actorContext = makeActorContext('user-1', spaceIds);
+      const results = await service.getMySpaces(actorContext, 3);
 
       expect(results).toHaveLength(3);
     });
@@ -199,8 +202,8 @@ describe('MeService', () => {
       activityService.getMySpacesActivity.mockResolvedValueOnce([]);
       activityLogService.convertRawActivityToResults.mockResolvedValueOnce([]);
 
-      const agentInfo = makeAgentInfo('user-1', ['space-1']);
-      const results = await service.getMySpaces(agentInfo, 20);
+      const actorContext = makeActorContext('user-1', ['space-1']);
+      const results = await service.getMySpaces(actorContext, 20);
 
       expect(results).toHaveLength(0);
     });
@@ -209,8 +212,8 @@ describe('MeService', () => {
       activityService.getMySpacesActivity.mockResolvedValueOnce([]);
       activityLogService.convertRawActivityToResults.mockResolvedValueOnce([]);
 
-      const agentInfo = makeAgentInfo('user-1', ['space-1']);
-      await service.getMySpaces(agentInfo, 15);
+      const actorContext = makeActorContext('user-1', ['space-1']);
+      await service.getMySpaces(actorContext, 15);
 
       expect(activityService.getMySpacesActivity).toHaveBeenCalledWith(
         'user-1',
@@ -227,8 +230,8 @@ describe('MeService', () => {
         activityLogEntry,
       ]);
 
-      const agentInfo = makeAgentInfo('user-1', ['space-1']);
-      const results = await service.getMySpaces(agentInfo, 20);
+      const actorContext = makeActorContext('user-1', ['space-1']);
+      const results = await service.getMySpaces(actorContext, 20);
 
       expect(results).toHaveLength(1);
       expect(results[0].latestActivity).toBe(activityLogEntry);
@@ -250,8 +253,8 @@ describe('MeService', () => {
           makeActivityLogEntry('act-2', 'space-2'),
         ]);
 
-        const agentInfo = makeAgentInfo('user-1', []);
-        const results = await service.getMySpaces(agentInfo, 20);
+        const actorContext = makeActorContext('user-1', []);
+        const results = await service.getMySpaces(actorContext, 20);
 
         expect(results).toHaveLength(0);
         expect(
@@ -275,8 +278,8 @@ describe('MeService', () => {
           makeActivityLogEntry('act-3', 'space-2'),
         ]);
 
-        const agentInfo = makeAgentInfo('user-1', ['space-1', 'space-2']);
-        const results = await service.getMySpaces(agentInfo, 20);
+        const actorContext = makeActorContext('user-1', ['space-1', 'space-2']);
+        const results = await service.getMySpaces(actorContext, 20);
 
         expect(results).toHaveLength(3);
         expect(results[0].space.id).toBe('space-1');
@@ -306,8 +309,8 @@ describe('MeService', () => {
           makeActivityLogEntry('act-3', 'space-3'),
         ]);
 
-        const agentInfo = makeAgentInfo('user-1', ['space-1', 'space-3']);
-        const results = await service.getMySpaces(agentInfo, 20);
+        const actorContext = makeActorContext('user-1', ['space-1', 'space-3']);
+        const results = await service.getMySpaces(actorContext, 20);
 
         expect(results).toHaveLength(2);
         expect(logger.warn).toHaveBeenCalledWith(
@@ -331,13 +334,13 @@ describe('MeService', () => {
         );
 
         // User only has membership in 4 of the 10 spaces
-        const agentInfo = makeAgentInfo('user-1', [
+        const actorContext = makeActorContext('user-1', [
           'space-0',
           'space-3',
           'space-5',
           'space-9',
         ]);
-        const results = await service.getMySpaces(agentInfo, 10);
+        const results = await service.getMySpaces(actorContext, 10);
 
         expect(results).toHaveLength(4);
       });
@@ -348,8 +351,8 @@ describe('MeService', () => {
           []
         );
 
-        const agentInfo = makeAgentInfo('user-1', ['space-1']);
-        await service.getMySpaces(agentInfo);
+        const actorContext = makeActorContext('user-1', ['space-1']);
+        await service.getMySpaces(actorContext);
 
         expect(activityService.getMySpacesActivity).toHaveBeenCalledWith(
           'user-1',
@@ -373,8 +376,8 @@ describe('MeService', () => {
           undefined,
         ]);
 
-        const agentInfo = makeAgentInfo('user-1', ['space-1']);
-        const results = await service.getMySpaces(agentInfo, 20);
+        const actorContext = makeActorContext('user-1', ['space-1']);
+        const results = await service.getMySpaces(actorContext, 20);
 
         expect(results).toHaveLength(0);
         expect(logger.warn).toHaveBeenCalledTimes(3);

@@ -51,10 +51,10 @@ export class ConversationArchitectureRefactor1764897584127
   public async up(queryRunner: QueryRunner): Promise<void> {
     // 1. Create conversation_membership pivot table
     await queryRunner.query(
-      `CREATE TABLE "conversation_membership" ("conversationId" uuid NOT NULL, "agentId" uuid NOT NULL, "createdAt" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_42dca6e5549063cb4cee1ee1308" PRIMARY KEY ("conversationId", "agentId"))`
+      `CREATE TABLE "conversation_membership" ("conversationId" uuid NOT NULL, "actorId" uuid NOT NULL, "createdAt" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_42dca6e5549063cb4cee1ee1308" PRIMARY KEY ("conversationId", "actorId"))`
     );
     await queryRunner.query(
-      `CREATE INDEX "IDX_d348791d10e1f31c61d7f5bd2a" ON "conversation_membership" ("agentId") `
+      `CREATE INDEX "IDX_d348791d10e1f31c61d7f5bd2a" ON "conversation_membership" ("actorId") `
     );
     await queryRunner.query(
       `CREATE INDEX "IDX_285a9958dbcd10748d4470054d" ON "conversation_membership" ("conversationId") `
@@ -63,7 +63,7 @@ export class ConversationArchitectureRefactor1764897584127
       `ALTER TABLE "conversation_membership" ADD CONSTRAINT "FK_285a9958dbcd10748d4470054d5" FOREIGN KEY ("conversationId") REFERENCES "conversation"("id") ON DELETE CASCADE ON UPDATE NO ACTION`
     );
     await queryRunner.query(
-      `ALTER TABLE "conversation_membership" ADD CONSTRAINT "FK_d348791d10e1f31c61d7f5bd2a7" FOREIGN KEY ("agentId") REFERENCES "agent"("id") ON DELETE CASCADE ON UPDATE NO ACTION`
+      `ALTER TABLE "conversation_membership" ADD CONSTRAINT "FK_d348791d10e1f31c61d7f5bd2a7" FOREIGN KEY ("actorId") REFERENCES "agent"("id") ON DELETE CASCADE ON UPDATE NO ACTION`
     );
 
     // 2. Migrate conversation participants to conversation_membership
@@ -77,8 +77,8 @@ export class ConversationArchitectureRefactor1764897584127
 
     // 2A. USER_VC conversations: insert user agent + VC agent
     const userVcUserResult = await queryRunner.query(`
-      INSERT INTO conversation_membership ("conversationId", "agentId")
-      SELECT c.id, u."agentId"
+      INSERT INTO conversation_membership ("conversationId", "actorId")
+      SELECT c.id, u."actorId"
       FROM conversation c
       JOIN "user" u ON c."userID" = u.id
       WHERE c."virtualContributorID" IS NOT NULL
@@ -88,8 +88,8 @@ export class ConversationArchitectureRefactor1764897584127
     );
 
     const userVcVcResult = await queryRunner.query(`
-      INSERT INTO conversation_membership ("conversationId", "agentId")
-      SELECT c.id, vc."agentId"
+      INSERT INTO conversation_membership ("conversationId", "actorId")
+      SELECT c.id, vc."actorId"
       FROM conversation c
       JOIN virtual_contributor vc ON c."virtualContributorID" = vc.id
       WHERE c."virtualContributorID" IS NOT NULL
@@ -101,8 +101,8 @@ export class ConversationArchitectureRefactor1764897584127
     // 2A'. USER_VC conversations using wellKnownVirtualContributor (resolved via platform mapping)
     // User membership first
     const wellKnownUserResult = await queryRunner.query(`
-      INSERT INTO conversation_membership ("conversationId", "agentId")
-      SELECT c.id, u."agentId"
+      INSERT INTO conversation_membership ("conversationId", "actorId")
+      SELECT c.id, u."actorId"
       FROM conversation c
       JOIN "user" u ON c."userID" = u.id
       JOIN (
@@ -118,8 +118,8 @@ export class ConversationArchitectureRefactor1764897584127
 
     // VC membership via wellKnownVirtualContributor
     const wellKnownVcResult = await queryRunner.query(`
-      INSERT INTO conversation_membership ("conversationId", "agentId")
-      SELECT c.id, vc."agentId"
+      INSERT INTO conversation_membership ("conversationId", "actorId")
+      SELECT c.id, vc."actorId"
       FROM conversation c
       JOIN (
         SELECT key as wk_name, (value)::uuid as vc_id
@@ -155,8 +155,8 @@ export class ConversationArchitectureRefactor1764897584127
         GROUP BY "externalRoomID"
         HAVING COUNT(*) = 2
       )
-      INSERT INTO conversation_membership ("conversationId", "agentId")
-      SELECT DISTINCT p1.conv_id, u."agentId"
+      INSERT INTO conversation_membership ("conversationId", "actorId")
+      SELECT DISTINCT p1.conv_id, u."actorId"
       FROM paired p1
       JOIN pairs_only po ON p1."externalRoomID" = po."externalRoomID"
       JOIN paired p2 ON p1."externalRoomID" = p2."externalRoomID"
@@ -232,8 +232,8 @@ export class ConversationArchitectureRefactor1764897584127
 
     // 2C. Standalone USER_USER: insert single user agent (those not yet in conversation_membership)
     const standaloneResult = await queryRunner.query(`
-      INSERT INTO conversation_membership ("conversationId", "agentId")
-      SELECT c.id, u."agentId"
+      INSERT INTO conversation_membership ("conversationId", "actorId")
+      SELECT c.id, u."actorId"
       FROM conversation c
       JOIN "user" u ON c."userID" = u.id
       WHERE c."virtualContributorID" IS NULL
@@ -298,7 +298,7 @@ export class ConversationArchitectureRefactor1764897584127
           )
           FROM vc_interaction vi
           JOIN virtual_contributor vc ON vi."virtualContributorID" = vc.id
-          JOIN agent a ON vc."agentId" = a.id
+          JOIN agent a ON vc."actorId" = a.id
           WHERE vi."roomId" = r.id
         ),
         '{}'::jsonb
@@ -445,7 +445,7 @@ export class ConversationArchitectureRefactor1764897584127
       FROM room r
       CROSS JOIN LATERAL jsonb_each(r."vcInteractionsByThread") AS thread_data(key, value)
       JOIN agent a ON a.id = (thread_data.value->>'virtualContributorActorID')::uuid
-      JOIN virtual_contributor vc ON vc."agentId" = a.id
+      JOIN virtual_contributor vc ON vc."actorId" = a.id
       WHERE r."vcInteractionsByThread" IS NOT NULL
         AND r."vcInteractionsByThread" != '{}'::jsonb
     `);

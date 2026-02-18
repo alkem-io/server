@@ -1,5 +1,4 @@
-import { AlkemioErrorStatus, LogContext } from '@common/enums';
-import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
+import { LogContext } from '@common/enums';
 import { HttpExceptionFilter } from '@core/error-handling/http.exception.filter';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import {
@@ -46,19 +45,8 @@ describe('IdentityResolveController (REST)', () => {
   const userLookupService = {
     getUserByAuthenticationID: vi.fn(),
     getUserByEmail: vi.fn(),
-    getUserOrFail: vi.fn(),
+    getUserByIdOrFail: vi.fn(),
   } as unknown as UserLookupService;
-  const agentInfoService = {
-    buildAgentInfoFromOryIdentity: vi
-      .fn()
-      .mockImplementation((identity, options) => ({
-        authenticationID: options?.authenticationId || identity.id,
-        email: identity.traits?.email || '',
-        firstName: identity.traits?.name?.first || '',
-        lastName: identity.traits?.name?.last || '',
-        avatarURL: identity.traits?.picture || '',
-      })),
-  } as unknown as AgentInfoService;
   const loggerMock: LoggerService & {
     log: Mock;
     warn: Mock;
@@ -85,7 +73,6 @@ describe('IdentityResolveController (REST)', () => {
         { provide: RegistrationService, useValue: registrationService },
         { provide: KratosService, useValue: kratosService },
         { provide: UserLookupService, useValue: userLookupService },
-        { provide: AgentInfoService, useValue: agentInfoService },
         { provide: WINSTON_MODULE_NEST_PROVIDER, useValue: loggerMock },
       ],
     }).compile();
@@ -107,7 +94,6 @@ describe('IdentityResolveController (REST)', () => {
       {
         id: 'user-existing',
         authenticationID: authenticationId,
-        agent: { id: 'agent-existing' },
       }
     );
 
@@ -115,7 +101,7 @@ describe('IdentityResolveController (REST)', () => {
       .post('/rest/internal/identity/resolve')
       .send({ authenticationId })
       .expect(200)
-      .expect({ userId: 'user-existing', agentId: 'agent-existing' });
+      .expect({ userId: 'user-existing', actorId: 'user-existing' });
 
     expect(kratosService.getIdentityById).not.toHaveBeenCalled();
     expect(registrationService.registerNewUser).not.toHaveBeenCalled();
@@ -148,22 +134,21 @@ describe('IdentityResolveController (REST)', () => {
     (kratosService.getIdentityById as Mock).mockResolvedValueOnce(identity);
 
     (registrationService.registerNewUser as Mock).mockImplementationOnce(
-      async agentInfo => ({
+      async kratosData => ({
         id: 'user-new',
-        authenticationID: agentInfo.authenticationID,
+        authenticationID: kratosData.authenticationID,
       })
     );
 
-    (userLookupService.getUserOrFail as Mock).mockResolvedValueOnce({
+    (userLookupService.getUserByIdOrFail as Mock).mockResolvedValueOnce({
       id: 'user-new',
-      agent: { id: 'agent-new' },
     });
 
     await request(app.getHttpServer())
       .post('/rest/internal/identity/resolve')
       .send({ authenticationId })
       .expect(200)
-      .expect({ userId: 'user-new', agentId: 'agent-new' });
+      .expect({ userId: 'user-new', actorId: 'user-new' });
 
     expect(registrationService.registerNewUser).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -175,54 +160,6 @@ describe('IdentityResolveController (REST)', () => {
       expect.stringContaining('Identity resolve'),
       LogContext.AUTH
     );
-  });
-
-  it('returns an error when an existing user lacks an agent', async () => {
-    (userLookupService.getUserByAuthenticationID as Mock).mockResolvedValueOnce(
-      {
-        id: 'user-existing',
-        authenticationID: authenticationId,
-        agent: null,
-      }
-    );
-
-    const response = await request(app.getHttpServer())
-      .post('/rest/internal/identity/resolve')
-      .send({ authenticationId })
-      .expect(404);
-
-    expect(response.body.code).toBe(AlkemioErrorStatus.NO_AGENT_FOR_USER);
-    expect(response.body.message).toContain('Agent not found');
-    expect(kratosService.getIdentityById).not.toHaveBeenCalled();
-  });
-
-  it('returns an error when the newly registered user lacks an agent', async () => {
-    (userLookupService.getUserByAuthenticationID as Mock).mockResolvedValueOnce(
-      null
-    );
-    (userLookupService.getUserByEmail as Mock).mockResolvedValueOnce(null);
-
-    const identity = buildIdentity();
-    (kratosService.getIdentityById as Mock).mockResolvedValueOnce(identity);
-
-    (registrationService.registerNewUser as Mock).mockResolvedValueOnce({
-      id: 'user-new',
-      authenticationID: authenticationId,
-    });
-
-    (userLookupService.getUserOrFail as Mock).mockResolvedValueOnce({
-      id: 'user-new',
-      agent: undefined,
-    });
-
-    const response = await request(app.getHttpServer())
-      .post('/rest/internal/identity/resolve')
-      .send({ authenticationId })
-      .expect(404);
-
-    expect(response.body.code).toBe(AlkemioErrorStatus.NO_AGENT_FOR_USER);
-    expect(response.body.message).toContain('Agent not found');
-    expect(registrationService.registerNewUser).toHaveBeenCalled();
   });
 
   it('rejects malformed authentication IDs', async () => {

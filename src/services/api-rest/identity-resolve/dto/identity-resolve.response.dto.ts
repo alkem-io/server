@@ -5,5 +5,5 @@ export class IdentityResolveResponseDto {
   userId!: string;
 
   @IsUUID('4')
-  agentId!: string;
+  actorId!: string;
 }

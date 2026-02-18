@@ -1,12 +1,12 @@
 import { AuthorizationPrivilege } from '@common/enums';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { LicensingGrantedEntitlement } from '@platform/licensing/dto/licensing.dto.granted.entitlement';
 import { InstrumentResolver } from '@src/apm/decorators';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { randomUUID } from 'crypto';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LicensingWingbackSubscriptionService } from './licensing.wingback.subscription.service';
@@ -26,15 +26,15 @@ export class LicensingWingbackSubscriptionServiceResolverMutations {
     description: 'Create a test customer on wingback.',
   })
   public async adminWingbackCreateTestCustomer(
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ) {
     const platformPolicy =
       await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       platformPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `licensing wingback subscription create test customer: ${agentInfo.email}`
+      `licensing wingback subscription create test customer: ${actorContext.actorId}`
     );
     const res = await this.licensingWingbackSubscriptionService.createCustomer({
       name: `Test User ${randomUUID()}`,
@@ -57,15 +57,15 @@ export class LicensingWingbackSubscriptionServiceResolverMutations {
   })
   public async adminWingbackGetCustomerEntitlements(
     @Args('customerID') customerId: string,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ) {
     const platformPolicy =
       await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       platformPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `licensing wingback subscription entitlements: ${agentInfo.email}`
+      `licensing wingback subscription entitlements: ${actorContext.actorId}`
     );
     return this.licensingWingbackSubscriptionService.getEntitlements(
       customerId

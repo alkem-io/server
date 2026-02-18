@@ -1,32 +1,32 @@
-import { LogContext, ProfileType } from '@common/enums';
+import { ActorType, LogContext, ProfileType } from '@common/enums';
 import { AccountType } from '@common/enums/account.type';
-import { AgentType } from '@common/enums/agent.type';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
-import { VisualType } from '@common/enums/visual.type';
 import {
   EntityNotFoundException,
   ForbiddenException,
   RelationshipNotFoundException,
-  UserRegistrationInvalidEmail,
+  UserAlreadyRegisteredException,
   ValidationException,
 } from '@common/exceptions';
 import { FormatNotSupportedException } from '@common/exceptions/format.not.supported.exception';
 import { validateEmail } from '@common/utils';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { AgentInfoCacheService } from '@core/authentication.agent.info/agent.info.cache.service';
+import { ActorContextCacheService } from '@core/actor-context/actor.context.cache.service';
+import { KratosSessionData } from '@core/authentication/kratos.session';
 import { applyUserFilter } from '@core/filtering/filters';
 import { UserFilterInput } from '@core/filtering/input-types';
 import { PaginationArgs } from '@core/pagination';
 import { IPaginatedType } from '@core/pagination/paginated.type';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
-import { AgentService } from '@domain/agent/agent/agent.service';
+import { actorDefaults } from '@domain/actor/actor/actor.defaults';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
+import { ProfileAvatarService } from '@domain/common/profile/profile.avatar.service';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { MessagingService } from '@domain/communication/messaging/messaging.service';
@@ -50,9 +50,6 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { RoleSetRoleSelectionCredentials } from '../../access/role-set/dto/role.set.dto.role.selection.credentials';
 import { RoleSetRoleWithParentCredentials } from '../../access/role-set/dto/role.set.dto.role.with.parent.credentials';
-import { contributorDefaults } from '../contributor/contributor.defaults';
-import { ContributorService } from '../contributor/contributor.service';
-import { UserAuthenticationLinkService } from '../user-authentication-link/user.authentication.link.service';
 import { UserLookupService } from '../user-lookup/user.lookup.service';
 import { CreateUserSettingsInput } from '../user-settings/dto/user.settings.dto.create';
 import { UpdateUserSettingsEntityInput } from '../user-settings/dto/user.settings.dto.update';
@@ -69,16 +66,15 @@ export class UserService {
     private profileService: ProfileService,
     private communicationAdapter: CommunicationAdapter,
     private namingService: NamingService,
-    private agentService: AgentService,
-    private agentInfoCacheService: AgentInfoCacheService,
-    private readonly userAuthenticationLinkService: UserAuthenticationLinkService,
+    private actorContextCacheService: ActorContextCacheService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private storageAggregatorService: StorageAggregatorService,
     private accountLookupService: AccountLookupService,
     private userLookupService: UserLookupService,
+    private actorLookupService: ActorLookupService,
     private accountHostService: AccountHostService,
     private userSettingsService: UserSettingsService,
-    private contributorService: ContributorService,
+    private profileAvatarService: ProfileAvatarService,
     private kratosService: KratosService,
     private readonly messagingService: MessagingService,
     @InjectRepository(User)
@@ -87,17 +83,13 @@ export class UserService {
     private readonly logger: LoggerService
   ) {}
 
-  private async invalidateAgentInfoCache(user: IUser): Promise<void> {
-    if (user.authenticationID) {
-      await this.agentInfoCacheService.deleteAgentInfoFromCache(
-        user.authenticationID
-      );
-    }
+  private async invalidateActorContextCache(user: IUser): Promise<void> {
+    await this.actorContextCacheService.deleteByActorId(user.id);
   }
 
   async createUser(
     userData: CreateUserInput,
-    agentInfo?: AgentInfo
+    kratosData?: KratosSessionData
   ): Promise<IUser> {
     if (userData.nameID) {
       // Convert nameID to lower case
@@ -144,26 +136,29 @@ export class UserService {
       name: TagsetReservedName.KEYWORDS,
       tags: [],
     });
-    await this.contributorService.addAvatarVisualToContributorProfile(
+    await this.profileAvatarService.addAvatarVisualToProfile(
       user.profile,
       userData.profileData,
-      agentInfo,
+      kratosData,
       userData.firstName,
       userData.lastName
     );
 
-    user.agent = await this.agentService.createAgent({
-      type: AgentType.USER,
-    });
-
     // Note: Conversations now belong to the single platform Messaging.
     // User conversations are tracked via the conversation_membership pivot table.
 
-    const authenticationID = agentInfo?.authenticationID;
+    const authenticationID = kratosData?.authenticationID;
     if (authenticationID) {
-      await this.userAuthenticationLinkService.ensureAuthenticationIdAvailable(
-        authenticationID
-      );
+      // Check that authentication ID is not already in use
+      const existingUser =
+        await this.userLookupService.getUserByAuthenticationID(
+          authenticationID
+        );
+      if (existingUser) {
+        throw new UserAlreadyRegisteredException(
+          'Kratos identity already linked to another user'
+        );
+      }
       user.authenticationID = authenticationID;
     }
 
@@ -179,29 +174,27 @@ export class UserService {
 
     user = await this.save(user);
 
-    await this.contributorService.ensureAvatarIsStoredInLocalStorageBucket(
+    await this.profileAvatarService.ensureAvatarIsStoredInLocalStorageBucket(
       user.profile.id,
       user.id
     );
     // Reload to ensure have the updated avatar URL
-    user = await this.getUserOrFail(user.id, {
-      relations: { agent: true },
-    });
+    user = await this.getUserByIdOrFail(user.id);
 
-    // Sync the user's agent to the communication adapter
-    // The agent.id is used as the AlkemioActorID for all communication operations
+    // Sync the user to the communication adapter
+    // User.id (which is Actor.id) is used as the AlkemioActorID for all communication operations
     const displayName =
       `${user.firstName} ${user.lastName}`.trim() || user.email;
 
     try {
-      await this.communicationAdapter.syncActor(user.agent.id, displayName);
+      await this.communicationAdapter.syncActor(user.id, displayName);
       this.logger.verbose?.(
-        `Synced user actor to communication adapter: ${user.agent.id}`,
+        `Synced user actor to communication adapter: ${user.id}`,
         LogContext.COMMUNITY
       );
     } catch (e: any) {
       this.logger.error(
-        `Failed to sync user actor to communication adapter: ${user.agent.id}`,
+        `Failed to sync user actor to communication adapter: ${user.id}`,
         e?.stack,
         LogContext.COMMUNITY
       );
@@ -216,15 +209,8 @@ export class UserService {
 
   private async createGuidanceConversation(userID: string): Promise<void> {
     try {
-      // Get user's agent ID for the new internal API
-      const user = await this.userLookupService.getUserOrFail(userID, {
-        relations: { agent: true },
-      });
-      const callerAgentId = user.agent.id;
-
-      // wellKnownVirtualContributor will be resolved to agent ID by the service
       await this.messagingService.createConversation({
-        callerAgentId,
+        callerAgentId: userID, // user.id = actorId in the new model
         wellKnownVirtualContributor: VirtualContributorWellKnown.CHAT_GUIDANCE,
       });
 
@@ -337,7 +323,7 @@ export class UserService {
       result.referencesData = [];
     }
     // Get the template to populate with
-    const referenceTemplates = contributorDefaults.references;
+    const referenceTemplates = actorDefaults.references;
     if (referenceTemplates) {
       for (const referenceTemplate of referenceTemplates) {
         const existingRef = result.referencesData?.find(
@@ -359,57 +345,15 @@ export class UserService {
     return result;
   }
 
-  async createOrLinkUserFromAgentInfo(
-    agentInfo: AgentInfo
-  ): Promise<{ user: IUser; isNew: boolean }> {
-    // Extra check that there is valid data + no user with the email
-    const email = agentInfo.email;
-    if (!email || email.length === 0) {
-      throw new UserRegistrationInvalidEmail(
-        `Invalid email provided: ${email}`
-      );
-    }
-
-    const resolvedUser =
-      await this.userAuthenticationLinkService.resolveExistingUser(agentInfo, {
-        conflictMode: 'error',
-      });
-
-    if (resolvedUser) {
-      return { user: resolvedUser.user, isNew: false };
-    }
-
-    const userData: CreateUserInput = {
-      email: email,
-      firstName: agentInfo.firstName,
-      lastName: agentInfo.lastName,
-      profileData: {
-        visuals: [
-          {
-            name: VisualType.AVATAR,
-            uri: agentInfo.avatarURL,
-          },
-        ],
-        displayName: `${agentInfo.firstName} ${agentInfo.lastName}`,
-      },
-    };
-
-    const user = await this.createUser(userData, agentInfo);
-    return { user, isNew: true };
-  }
-
   async clearAuthenticationIDForUser(user: IUser): Promise<IUser> {
     if (!user.authenticationID) {
       return user;
     }
 
-    const oldAuthId = user.authenticationID;
     user.authenticationID = null;
     const updatedUser = await this.save(user);
-    // Invalidate cache using old authenticationID before it was cleared
-    if (oldAuthId) {
-      await this.agentInfoCacheService.deleteAgentInfoFromCache(oldAuthId);
-    }
+    // Invalidate cache by actorId
+    await this.actorContextCacheService.deleteByActorId(user.id);
     this.logger.verbose?.(
       `Cleared authentication ID for user ${updatedUser.id}`,
       LogContext.AUTH
@@ -418,7 +362,7 @@ export class UserService {
   }
 
   async clearAuthenticationIDById(userId: string): Promise<IUser> {
-    const user = await this.getUserOrFail(userId);
+    const user = await this.getUserByIdOrFail(userId);
     return this.clearAuthenticationIDForUser(user);
   }
 
@@ -451,10 +395,9 @@ export class UserService {
 
   async deleteUser(deleteData: DeleteUserInput): Promise<IUser> {
     const userID = deleteData.ID;
-    const user = await this.getUserOrFail(userID, {
+    const user = await this.getUserByIdOrFail(userID, {
       relations: {
         profile: true,
-        agent: true,
         storageAggregator: true,
         settings: true,
       },
@@ -463,7 +406,6 @@ export class UserService {
     if (
       !user.profile ||
       !user.storageAggregator ||
-      !user.agent ||
       !user.authorization ||
       !user.settings
     ) {
@@ -484,12 +426,11 @@ export class UserService {
     }
     const { id } = user;
 
-    await this.invalidateAgentInfoCache(user);
+    await this.invalidateActorContextCache(user);
 
     await this.profileService.deleteProfile(user.profile.id);
 
-    await this.agentService.deleteAgent(user.agent.id);
-
+    // Note: Credentials are on Actor (which User extends), will be deleted via cascade
     await this.authorizationPolicyService.delete(user.authorization);
 
     await this.storageAggregatorService.delete(user.storageAggregator.id);
@@ -518,7 +459,7 @@ export class UserService {
     return await this.accountLookupService.getAccountOrFail(user.accountID);
   }
 
-  async getUserOrFail(
+  async getUserByIdOrFail(
     userID: string,
     options?: FindOneOptions<User>
   ): Promise<IUser | never> {
@@ -528,7 +469,7 @@ export class UserService {
         LogContext.COMMUNITY
       );
     }
-    const user = await this.userLookupService.getUserByUUID(userID, options);
+    const user = await this.userLookupService.getUserById(userID, options);
 
     if (!user) {
       throw new EntityNotFoundException(
@@ -572,10 +513,10 @@ export class UserService {
     const credentialsFilter = args.filter?.credentials;
     let users: User[] = [];
     if (credentialsFilter) {
+      // User extends Actor which has the credentials relationship
       users = await this.userRepository
         .createQueryBuilder('user')
-        .leftJoinAndSelect('user.agent', 'agent')
-        .leftJoinAndSelect('agent.credentials', 'credential')
+        .leftJoinAndSelect('user.credentials', 'credential')
         .where('credential.type IN (:...credentialsFilter)')
         .setParameters({
           credentialsFilter: credentialsFilter,
@@ -619,15 +560,16 @@ export class UserService {
     paginationArgs: PaginationArgs,
     filter?: UserFilterInput
   ): Promise<IPaginatedType<IUser>> {
-    const currentEntryRoleUsers =
-      await this.userLookupService.usersWithCredential(
-        entryRoleCredentials.role
+    const currentEntryRoleUserIds =
+      await this.actorLookupService.getActorIdsWithCredential(
+        entryRoleCredentials.role,
+        [ActorType.USER]
       );
     const qb = this.userRepository.createQueryBuilder('user').select();
 
     if (entryRoleCredentials.parentRoleSetRole) {
-      qb.leftJoin('user.agent', 'agent')
-        .leftJoin('agent.credentials', 'credential')
+      // User extends Actor which has the credentials relationship
+      qb.leftJoin('user.credentials', 'credential')
         .addSelect(['credential.type', 'credential.resourceID'])
         .where('credential.type = :type')
         .andWhere('credential.resourceID = :resourceID')
@@ -637,14 +579,14 @@ export class UserService {
         });
     }
 
-    if (currentEntryRoleUsers.length > 0) {
+    if (currentEntryRoleUserIds.length > 0) {
       const hasWhere =
         qb.expressionMap.wheres && qb.expressionMap.wheres.length > 0;
 
       qb[hasWhere ? 'andWhere' : 'where'](
         'NOT user.id IN (:...memberUsers)'
       ).setParameters({
-        memberUsers: currentEntryRoleUsers.map(user => user.id),
+        memberUsers: currentEntryRoleUserIds,
       });
     }
 
@@ -660,15 +602,16 @@ export class UserService {
     paginationArgs: PaginationArgs,
     filter?: UserFilterInput
   ): Promise<IPaginatedType<IUser>> {
-    const currentElevatedRoleUsers =
-      await this.userLookupService.usersWithCredential(
-        roleSetCredentials.elevatedRole
+    const currentElevatedRoleUserIds =
+      await this.actorLookupService.getActorIdsWithCredential(
+        roleSetCredentials.elevatedRole,
+        [ActorType.USER]
       );
+    // User extends Actor which has the credentials relationship
     const qb = this.userRepository
       .createQueryBuilder('user')
       .select()
-      .leftJoin('user.agent', 'agent')
-      .leftJoin('agent.credentials', 'credential')
+      .leftJoin('user.credentials', 'credential')
       .addSelect(['credential.type', 'credential.resourceID'])
       .where('credential.type = :type')
       .andWhere('credential.resourceID = :resourceID')
@@ -677,9 +620,9 @@ export class UserService {
         resourceID: roleSetCredentials.entryRole.resourceID,
       });
 
-    if (currentElevatedRoleUsers.length > 0) {
+    if (currentElevatedRoleUserIds.length > 0) {
       qb.andWhere('NOT user.id IN (:...leadUsers)').setParameters({
-        leadUsers: currentElevatedRoleUsers.map(user => user.id),
+        leadUsers: currentElevatedRoleUserIds,
       });
     }
 
@@ -691,7 +634,7 @@ export class UserService {
   }
 
   async updateUser(userInput: UpdateUserInput): Promise<IUser> {
-    const user = await this.getUserOrFail(userInput.ID, {
+    const user = await this.getUserByIdOrFail(userInput.ID, {
       relations: { profile: true },
     });
 
@@ -725,14 +668,14 @@ export class UserService {
     }
 
     const response = await this.save(user);
-    await this.invalidateAgentInfoCache(response);
+    await this.invalidateActorContextCache(response);
     return response;
   }
 
   public async updateUserPlatformSettings(
     updateData: UpdateUserPlatformSettingsInput
   ): Promise<IUser> {
-    const user = await this.getUserOrFail(updateData.userID);
+    const user = await this.getUserByIdOrFail(updateData.userID);
 
     if (updateData.nameID) {
       if (updateData.nameID !== user.nameID) {
@@ -763,7 +706,7 @@ export class UserService {
   }
 
   async getProfile(user: IUser): Promise<IProfile> {
-    const userWithProfile = await this.getUserOrFail(user.id, {
+    const userWithProfile = await this.getUserByIdOrFail(user.id, {
       relations: { profile: true },
     });
     const profile = userWithProfile.profile;
@@ -779,7 +722,7 @@ export class UserService {
   async getStorageAggregatorOrFail(
     userID: string
   ): Promise<IStorageAggregator> {
-    const userWithStorage = await this.getUserOrFail(userID, {
+    const userWithStorage = await this.getUserByIdOrFail(userID, {
       relations: {
         storageAggregator: true,
       },

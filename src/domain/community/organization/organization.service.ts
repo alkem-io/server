@@ -1,10 +1,9 @@
 import { LogContext, ProfileType } from '@common/enums';
 import { AccountType } from '@common/enums/account.type';
-import { AgentType } from '@common/enums/agent.type';
+import { ActorType } from '@common/enums/actor.type';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
 import { RoleName } from '@common/enums/role.name';
-import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
 import { RoleSetType } from '@common/enums/role.set.type';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
@@ -16,7 +15,7 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { OrganizationFilterInput } from '@core/filtering';
 import { applyOrganizationFilter } from '@core/filtering/filters/organizationFilter';
 import { PaginationArgs } from '@core/pagination';
@@ -25,12 +24,13 @@ import { getPaginationResults } from '@core/pagination/pagination.fn';
 import { CreateRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.create';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
-import { IAgent } from '@domain/agent/agent';
-import { AgentService } from '@domain/agent/agent/agent.service';
+import { actorDefaults } from '@domain/actor/actor/actor.defaults';
+import { ActorQueryArgs } from '@domain/actor/actor/dto/actor.query.args';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { NVP } from '@domain/common/nvp/nvp.entity';
 import { INVP } from '@domain/common/nvp/nvp.interface';
+import { ProfileAvatarService } from '@domain/common/profile/profile.avatar.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { CreateReferenceInput } from '@domain/common/reference';
 import {
@@ -50,9 +50,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
-import { contributorDefaults } from '../contributor/contributor.defaults';
-import { ContributorService } from '../contributor/contributor.service';
-import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
 import { UpdateOrganizationSettingsEntityInput } from '../organization-settings/dto/organization.settings.dto.update';
 import { IOrganizationSettings } from '../organization-settings/organization.settings.interface';
 import { OrganizationSettingsService } from '../organization-settings/organization.settings.service';
@@ -72,12 +69,11 @@ export class OrganizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private organizationVerificationService: OrganizationVerificationService,
     private organizationSettingsService: OrganizationSettingsService,
-    private agentService: AgentService,
     private userGroupService: UserGroupService,
     private profileService: ProfileService,
     private namingService: NamingService,
     private storageAggregatorService: StorageAggregatorService,
-    private contributorService: ContributorService,
+    private profileAvatarService: ProfileAvatarService,
     private roleSetService: RoleSetService,
     @InjectRepository(Organization)
     private organizationRepository: Repository<Organization>,
@@ -86,7 +82,7 @@ export class OrganizationService {
 
   async createOrganization(
     organizationData: CreateOrganizationInput,
-    agentInfo?: AgentInfo
+    actorContext?: ActorContext
   ): Promise<IOrganization> {
     if (organizationData.nameID) {
       // Convert nameID to lower case
@@ -138,18 +134,15 @@ export class OrganizationService {
       tags: [],
     });
 
-    this.contributorService.addAvatarVisualToContributorProfile(
+    await this.profileAvatarService.addAvatarVisualToProfile(
       organization.profile,
       organizationData.profileData,
-      agentInfo,
+      undefined,
       organizationData.profileData.displayName
     );
 
     organization.groups = [];
 
-    organization.agent = await this.agentService.createAgent({
-      type: AgentType.ORGANIZATION,
-    });
     const account = await this.accountHostService.createAccount(
       AccountType.ORGANIZATION
     );
@@ -187,27 +180,27 @@ export class OrganizationService {
       );
     }
 
-    // Assign the creating agent as both a member and admin
-    if (agentInfo) {
-      await this.roleSetService.assignUserToRole(
+    // Assign the creating actor as both a member and admin
+    if (actorContext) {
+      await this.roleSetService.assignActorToRole(
         organization.roleSet,
         RoleName.ASSOCIATE,
-        agentInfo.userID,
-        agentInfo,
+        actorContext.actorId,
+        actorContext,
         false
       );
 
-      await this.roleSetService.assignUserToRole(
+      await this.roleSetService.assignActorToRole(
         organization.roleSet,
         RoleName.ADMIN,
-        agentInfo.userID,
-        agentInfo,
+        actorContext.actorId,
+        actorContext,
         false
       );
     }
 
-    const userID = agentInfo?.userID;
-    await this.contributorService.ensureAvatarIsStoredInLocalStorageBucket(
+    const userID = actorContext?.actorId;
+    await this.profileAvatarService.ensureAvatarIsStoredInLocalStorageBucket(
       organization.profile.id,
       userID
     );
@@ -335,7 +328,6 @@ export class OrganizationService {
     const organization = await this.getOrganizationOrFail(orgID, {
       relations: {
         profile: true,
-        agent: true,
         verification: true,
         groups: true,
         storageAggregator: true,
@@ -346,8 +338,7 @@ export class OrganizationService {
     if (
       !organization.roleSet ||
       !organization.profile ||
-      !organization.verification ||
-      !organization.agent
+      !organization.verification
     ) {
       throw new RelationshipNotFoundException(
         `Unable to delete org, missing relations: ${organization.id}`,
@@ -386,7 +377,7 @@ export class OrganizationService {
       await this.authorizationPolicyService.delete(organization.authorization);
     }
 
-    await this.agentService.deleteAgent(organization.agent.id);
+    // Note: Credentials are on Actor (which Organization extends), will be deleted via cascade
 
     await this.organizationVerificationService.delete(
       organization.verification.id
@@ -432,7 +423,7 @@ export class OrganizationService {
     );
   }
 
-  async getOrganizations(args: ContributorQueryArgs): Promise<IOrganization[]> {
+  async getOrganizations(args: ActorQueryArgs): Promise<IOrganization[]> {
     const limit = args.limit;
     const shuffle = args.shuffle || false;
     this.logger.verbose?.(
@@ -443,10 +434,10 @@ export class OrganizationService {
     const credentialsFilter = args.filter?.credentials;
     let organizations: IOrganization[] = [];
     if (credentialsFilter) {
+      // Organization extends Actor which has the credentials relationship
       organizations = await this.organizationRepository
         .createQueryBuilder('organization')
-        .leftJoinAndSelect('organization.agent', 'agent')
-        .leftJoinAndSelect('agent.credentials', 'credential')
+        .leftJoinAndSelect('organization.credentials', 'credential')
         .where('credential.type IN (:...credentialsFilter)')
         .setParameters({
           credentialsFilter: credentialsFilter,
@@ -485,10 +476,10 @@ export class OrganizationService {
     const activity: INVP[] = [];
     const roleSet = await this.getRoleSet(organization);
 
-    const membersCount = await this.roleSetService.countContributorsPerRole(
+    const membersCount = await this.roleSetService.countActorsWithRole(
       roleSet,
       RoleName.ASSOCIATE,
-      RoleSetContributorType.USER
+      [ActorType.USER]
     );
     const membersTopic = new NVP('associates', membersCount.toString());
     membersTopic.id = `associates-${organization.id}`;
@@ -532,23 +523,6 @@ export class OrganizationService {
 
   async save(organization: IOrganization): Promise<IOrganization> {
     return await this.organizationRepository.save(organization);
-  }
-
-  async getAgent(organization: IOrganization): Promise<IAgent> {
-    const organizationWithAgent = await this.getOrganizationOrFail(
-      organization.id,
-      {
-        relations: { agent: true },
-      }
-    );
-    const agent = organizationWithAgent.agent;
-    if (!agent)
-      throw new EntityNotInitializedException(
-        `User Agent not initialized: ${organization.id}`,
-        LogContext.AUTH
-      );
-
-    return agent;
   }
 
   async getUserGroups(organization: IOrganization): Promise<IUserGroup[]> {
@@ -625,7 +599,7 @@ export class OrganizationService {
 
   private getDefaultContributorProfileReferences(): CreateReferenceInput[] {
     const references: CreateReferenceInput[] = [];
-    const referenceTemplates = contributorDefaults.references;
+    const referenceTemplates = actorDefaults.references;
 
     if (referenceTemplates) {
       for (const referenceTemplate of referenceTemplates) {

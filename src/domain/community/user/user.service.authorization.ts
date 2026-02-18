@@ -19,9 +19,11 @@ import {
 } from '@common/exceptions';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
-import { AgentService } from '@domain/agent/agent/agent.service';
-import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import {
+  ActorService,
+  AgentAuthorizationService,
+} from '@domain/actor/actor/actor.service';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
@@ -41,18 +43,17 @@ export class UserAuthorizationService {
     private readonly platformAuthorizationService: PlatformAuthorizationPolicyService,
     private readonly storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
     private readonly userSettingsAuthorizationService: UserSettingsAuthorizationService,
-    private readonly agentService: AgentService,
+    private readonly actorService: ActorService,
     private readonly userLookupService: UserLookupService
   ) {}
 
   async applyAuthorizationPolicy(
     userID: string
   ): Promise<IAuthorizationPolicy[]> {
-    const user = await this.userLookupService.getUserOrFail(userID, {
+    const user = await this.userLookupService.getUserByIdOrFail(userID, {
       loadEagerRelations: false,
       relations: {
         authorization: true,
-        agent: { authorization: true },
         profile: { authorization: true },
         storageAggregator: {
           authorization: true,
@@ -66,11 +67,6 @@ export class UserAuthorizationService {
         id: true,
         authorization:
           this.authorizationPolicyService.authorizationSelectOptions,
-        agent: {
-          id: true,
-          authorization:
-            this.authorizationPolicyService.authorizationSelectOptions,
-        },
         profile: {
           id: true,
           authorization:
@@ -93,12 +89,7 @@ export class UserAuthorizationService {
         },
       },
     });
-    if (
-      !user.agent ||
-      !user.profile ||
-      !user.storageAggregator ||
-      !user.settings
-    )
+    if (!user.profile || !user.storageAggregator || !user.settings)
       throw new RelationshipNotFoundException(
         `Unable to load agent or profile or preferences or storage for User ${user.id} `,
         LogContext.COMMUNITY
@@ -145,7 +136,7 @@ export class UserAuthorizationService {
 
     const agentAuthorization =
       this.agentAuthorizationService.applyAuthorizationPolicy(
-        user.agent,
+        user,
         user.authorization
       );
     updatedAuthorizations.push(agentAuthorization);
@@ -171,25 +162,21 @@ export class UserAuthorizationService {
   }
 
   async grantCredentialsAllUsersReceive(userID: string): Promise<IUser> {
-    const { user, agent } =
-      await this.userLookupService.getUserAndAgent(userID);
+    const user = await this.userLookupService.getUserByIdOrFail(userID);
 
-    await this.agentService.grantCredentialOrFail({
+    await this.actorService.grantCredentialOrFail(userID, {
       type: AuthorizationCredential.GLOBAL_REGISTERED,
-      agentID: agent.id,
     });
-    await this.agentService.grantCredentialOrFail({
+    await this.actorService.grantCredentialOrFail(userID, {
       type: AuthorizationCredential.USER_SELF_MANAGEMENT,
-      agentID: agent.id,
       resourceID: userID,
     });
-    await this.agentService.grantCredentialOrFail({
+    await this.actorService.grantCredentialOrFail(userID, {
       type: AuthorizationCredential.ACCOUNT_ADMIN,
-      agentID: agent.id,
       resourceID: user.accountID,
     });
 
-    return await this.userLookupService.getUserOrFail(userID);
+    return await this.userLookupService.getUserByIdOrFail(userID);
   }
 
   private appendGlobalCredentialRules(

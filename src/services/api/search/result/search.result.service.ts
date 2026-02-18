@@ -8,7 +8,7 @@ import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import { BaseException } from '@common/exceptions/base.exception';
 import { isDefined } from '@common/utils';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { Post } from '@domain/collaboration/post';
@@ -80,13 +80,13 @@ export class SearchResultService {
   /**
    * Resolves search results by authorizing and enriching them with data.
    * @param rawSearchResults The raw search results from the search engine.
-   * @param agentInfo The agent info of the user making the search request.
+   * @param actorContext The agent info of the user making the search request.
    * @param filters Used to filter the end results.
    * @param spaceId The space ID to filter the search results by.
    */
   public async resolveSearchResults(
     rawSearchResults: ISearchResult[],
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     filters: SearchFilterInput[],
     spaceId?: string
   ): Promise<ISearchResults> {
@@ -106,20 +106,23 @@ export class SearchResultService {
       memos,
     ] = await Promise.all([
       this.getSpaceSearchResults(groupedResults.space ?? [], spaceId),
-      this.getSubspaceSearchResults(groupedResults.subspace ?? [], agentInfo),
+      this.getSubspaceSearchResults(
+        groupedResults.subspace ?? [],
+        actorContext
+      ),
       this.getUserSearchResults(groupedResults.user ?? [], spaceId),
       this.getOrganizationSearchResults(
         groupedResults.organization ?? [],
-        agentInfo,
+        actorContext,
         spaceId
       ),
-      this.getCalloutSearchResult(groupedResults.callout ?? [], agentInfo),
-      this.getPostSearchResults(groupedResults.post ?? [], agentInfo),
+      this.getCalloutSearchResult(groupedResults.callout ?? [], actorContext),
+      this.getPostSearchResults(groupedResults.post ?? [], actorContext),
       this.getWhiteboardSearchResults(
         groupedResults.whiteboard ?? [],
-        agentInfo
+        actorContext
       ),
-      this.getMemoSearchResults(groupedResults.memo ?? [], agentInfo),
+      this.getMemoSearchResults(groupedResults.memo ?? [], actorContext),
     ]);
     const filtersByCategory = groupBy(filters, 'category') as Record<
       SearchCategory,
@@ -213,7 +216,7 @@ export class SearchResultService {
 
   public async getSubspaceSearchResults(
     rawSearchResults: ISearchResult[],
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ): Promise<ISearchResultSpace[]> {
     if (rawSearchResults.length === 0) {
       return [];
@@ -245,7 +248,7 @@ export class SearchResultService {
 
         if (
           !this.authorizationService.isAccessGranted(
-            agentInfo,
+            actorContext,
             subspace.authorization,
             AuthorizationPrivilege.READ
           )
@@ -321,7 +324,7 @@ export class SearchResultService {
 
   public async getOrganizationSearchResults(
     rawSearchResults: ISearchResult[],
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     spaceId?: string
   ): Promise<ISearchResultOrganization[]> {
     if (rawSearchResults.length === 0) {
@@ -357,7 +360,7 @@ export class SearchResultService {
 
         if (
           !this.authorizationService.isAccessGranted(
-            agentInfo,
+            actorContext,
             org.authorization,
             AuthorizationPrivilege.READ
           )
@@ -375,7 +378,7 @@ export class SearchResultService {
 
   public async getPostSearchResults(
     rawSearchResults: ISearchResult[],
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ): Promise<ISearchResultPost[]> {
     if (rawSearchResults.length === 0) {
       return [];
@@ -391,7 +394,7 @@ export class SearchResultService {
     // find the authorized post first, then get the parents, and map the results
     const authorizedPosts = posts.filter(post =>
       this.authorizationService.isAccessGranted(
-        agentInfo,
+        actorContext,
         post.authorization,
         AuthorizationPrivilege.READ
       )
@@ -427,7 +430,7 @@ export class SearchResultService {
 
   private async getWhiteboardSearchResults(
     rawSearchResults: ISearchResult[],
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ): Promise<ISearchResultWhiteboard[]> {
     if (rawSearchResults.length === 0) {
       return [];
@@ -443,7 +446,7 @@ export class SearchResultService {
     // find the authorized whiteboard first, then get the parents, and map the results
     const authorizedWhiteboards = whiteboards.filter(whiteboard =>
       this.authorizationService.isAccessGranted(
-        agentInfo,
+        actorContext,
         whiteboard.authorization,
         AuthorizationPrivilege.READ
       )
@@ -484,7 +487,7 @@ export class SearchResultService {
 
   private async getMemoSearchResults(
     rawSearchResults: ISearchResult[],
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ): Promise<ISearchResultMemo[]> {
     if (rawSearchResults.length === 0) {
       return [];
@@ -500,7 +503,7 @@ export class SearchResultService {
     // find the authorized memo first, then get the parents, and map the results
     const authorizedMemos = memos.filter(memo =>
       this.authorizationService.isAccessGranted(
-        agentInfo,
+        actorContext,
         memo.authorization,
         AuthorizationPrivilege.READ
       )
@@ -539,7 +542,7 @@ export class SearchResultService {
 
   private async getCalloutSearchResult(
     rawSearchResults: ISearchResult[],
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ): Promise<ISearchResultCallout[]> {
     if (rawSearchResults.length === 0) {
       return [];
@@ -591,7 +594,7 @@ export class SearchResultService {
     // find the authorized post first, then get the parents, and map the results
     const authorizedCallouts = callouts.filter(callout =>
       this.authorizationService.isAccessGranted(
-        agentInfo,
+        actorContext,
         callout.authorization,
         AuthorizationPrivilege.READ
       )

@@ -2,7 +2,7 @@ import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { ForbiddenException } from '@common/exceptions';
 import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -110,17 +110,17 @@ describe('WhiteboardGuestAccessService', () => {
       const whiteboard = createWhiteboard(authorization);
       whiteboardService.getWhiteboardOrFail.mockResolvedValue(whiteboard);
 
-      const agentInfo = new AgentInfo();
-      agentInfo.userID = 'user-1';
+      const actorContext = new ActorContext();
+      actorContext.actorId = 'user-1';
 
       const result = await service.updateGuestAccess(
-        agentInfo,
+        actorContext,
         whiteboard.id,
         true
       );
 
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
-        agentInfo,
+        actorContext,
         authorization,
         AuthorizationPrivilege.PUBLIC_SHARE,
         expect.stringContaining(whiteboard.id)
@@ -153,7 +153,7 @@ describe('WhiteboardGuestAccessService', () => {
 
       authorizationPolicyService.save.mockClear();
       const secondResult = await service.updateGuestAccess(
-        agentInfo,
+        actorContext,
         whiteboard.id,
         true
       );
@@ -203,16 +203,16 @@ describe('WhiteboardGuestAccessService', () => {
       const whiteboard = createWhiteboard(authorization);
       whiteboardService.getWhiteboardOrFail.mockResolvedValue(whiteboard);
 
-      const agentInfo = new AgentInfo();
-      agentInfo.userID = 'user-1';
+      const actorContext = new ActorContext();
+      actorContext.actorId = 'user-1';
 
       const result = await service.updateGuestAccess(
-        agentInfo,
+        actorContext,
         whiteboard.id,
         false
       );
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
-        agentInfo,
+        actorContext,
         authorization,
         AuthorizationPrivilege.PUBLIC_SHARE,
         expect.stringContaining(whiteboard.id)
@@ -236,7 +236,7 @@ describe('WhiteboardGuestAccessService', () => {
 
       authorizationPolicyService.save.mockClear();
       const secondResult = await service.updateGuestAccess(
-        agentInfo,
+        actorContext,
         whiteboard.id,
         false
       );
@@ -264,13 +264,13 @@ describe('WhiteboardGuestAccessService', () => {
       const whiteboard = createWhiteboard(authorization);
       whiteboardService.getWhiteboardOrFail.mockResolvedValue(whiteboard);
 
-      const agentInfo = new AgentInfo();
-      agentInfo.userID = 'user-2';
+      const actorContext = new ActorContext();
+      actorContext.actorId = 'user-2';
 
-      await service.updateGuestAccess(agentInfo, whiteboard.id, true);
+      await service.updateGuestAccess(actorContext, whiteboard.id, true);
 
       const disableResult = await service.updateGuestAccess(
-        agentInfo,
+        actorContext,
         whiteboard.id,
         false
       );
@@ -296,20 +296,20 @@ describe('WhiteboardGuestAccessService', () => {
       const whiteboard = createWhiteboard(authorization);
       whiteboardService.getWhiteboardOrFail.mockResolvedValue(whiteboard);
 
-      const agentInfo = new AgentInfo();
-      agentInfo.userID = 'user-3';
+      const actorContext = new ActorContext();
+      actorContext.actorId = 'user-3';
 
       authorizationService.grantAccessOrFail.mockImplementationOnce(() => {
         throw new ForbiddenAuthorizationPolicyException(
           'missing PUBLIC_SHARE',
           AuthorizationPrivilege.PUBLIC_SHARE,
           authorization.id,
-          agentInfo.userID
+          actorContext.actorId
         );
       });
 
       await expect(
-        service.updateGuestAccess(agentInfo, whiteboard.id, true)
+        service.updateGuestAccess(actorContext, whiteboard.id, true)
       ).rejects.toBeInstanceOf(ForbiddenAuthorizationPolicyException);
       expect(authorizationPolicyService.save).not.toHaveBeenCalled();
       expect(
@@ -334,11 +334,11 @@ describe('WhiteboardGuestAccessService', () => {
         .mockResolvedValueOnce(thinWhiteboard)
         .mockResolvedValueOnce(hydratedWhiteboard);
 
-      const agentInfo = new AgentInfo();
-      agentInfo.userID = 'user-4';
+      const actorContext = new ActorContext();
+      actorContext.actorId = 'user-4';
 
       const result = await service.updateGuestAccess(
-        agentInfo,
+        actorContext,
         thinWhiteboard.id,
         true
       );
@@ -361,11 +361,11 @@ describe('WhiteboardGuestAccessService', () => {
         createSpace(false)
       );
 
-      const agentInfo = new AgentInfo();
-      agentInfo.userID = 'user-1';
+      const actorContext = new ActorContext();
+      actorContext.actorId = 'user-1';
 
       await expect(
-        service.updateGuestAccess(agentInfo, whiteboard.id, true)
+        service.updateGuestAccess(actorContext, whiteboard.id, true)
       ).rejects.toBeInstanceOf(ForbiddenException);
       expect(authorizationPolicyService.save).not.toHaveBeenCalled();
     });

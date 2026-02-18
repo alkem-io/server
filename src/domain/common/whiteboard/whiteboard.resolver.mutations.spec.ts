@@ -5,7 +5,7 @@ import {
   ForbiddenException,
 } from '@common/exceptions';
 import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { UpdateWhiteboardGuestAccessInput } from '@domain/common/whiteboard/dto/whiteboard.dto.guest-access.toggle';
@@ -76,8 +76,8 @@ const createResolver = () => {
 describe('WhiteboardResolverMutations - updateWhiteboardGuestAccess', () => {
   it('returns success payload when toggle completes', async () => {
     const { resolver, whiteboardGuestAccessService } = createResolver();
-    const agentInfo = new AgentInfo();
-    agentInfo.userID = 'user-1';
+    const actorContext = new ActorContext();
+    actorContext.actorId = 'user-1';
     const whiteboard = { id: 'wb-1' } as IWhiteboard;
     whiteboardGuestAccessService.updateGuestAccess.mockResolvedValueOnce(
       whiteboard
@@ -88,10 +88,13 @@ describe('WhiteboardResolverMutations - updateWhiteboardGuestAccess', () => {
       guestAccessEnabled: true,
     };
 
-    const result = await resolver.updateWhiteboardGuestAccess(agentInfo, input);
+    const result = await resolver.updateWhiteboardGuestAccess(
+      actorContext,
+      input
+    );
 
     expect(whiteboardGuestAccessService.updateGuestAccess).toHaveBeenCalledWith(
-      agentInfo,
+      actorContext,
       'wb-1',
       true
     );
@@ -101,8 +104,8 @@ describe('WhiteboardResolverMutations - updateWhiteboardGuestAccess', () => {
 
   it('returns success payload when disabling guest access', async () => {
     const { resolver, whiteboardGuestAccessService } = createResolver();
-    const agentInfo = new AgentInfo();
-    agentInfo.userID = 'user-1';
+    const actorContext = new ActorContext();
+    actorContext.actorId = 'user-1';
     const whiteboard = {
       id: 'wb-1',
       guestContributionsAllowed: false,
@@ -111,13 +114,13 @@ describe('WhiteboardResolverMutations - updateWhiteboardGuestAccess', () => {
       whiteboard
     );
 
-    const result = await resolver.updateWhiteboardGuestAccess(agentInfo, {
+    const result = await resolver.updateWhiteboardGuestAccess(actorContext, {
       whiteboardId: 'wb-1',
       guestAccessEnabled: false,
     });
 
     expect(whiteboardGuestAccessService.updateGuestAccess).toHaveBeenCalledWith(
-      agentInfo,
+      actorContext,
       'wb-1',
       false
     );
@@ -127,8 +130,8 @@ describe('WhiteboardResolverMutations - updateWhiteboardGuestAccess', () => {
 
   it('rethrows authorization failure so GraphQL surfaces the error', async () => {
     const { resolver, whiteboardGuestAccessService } = createResolver();
-    const agentInfo = new AgentInfo();
-    agentInfo.userID = 'user-2';
+    const actorContext = new ActorContext();
+    actorContext.actorId = 'user-2';
     const exception = new ForbiddenAuthorizationPolicyException(
       'missing PUBLIC_SHARE',
       AuthorizationPrivilege.PUBLIC_SHARE,
@@ -145,14 +148,14 @@ describe('WhiteboardResolverMutations - updateWhiteboardGuestAccess', () => {
     };
 
     await expect(
-      resolver.updateWhiteboardGuestAccess(agentInfo, input)
+      resolver.updateWhiteboardGuestAccess(actorContext, input)
     ).rejects.toThrow(ForbiddenAuthorizationPolicyException);
   });
 
   it('rethrows forbidden errors for GraphQL handling', async () => {
     const { resolver, whiteboardGuestAccessService } = createResolver();
-    const agentInfo = new AgentInfo();
-    agentInfo.userID = 'user-3';
+    const actorContext = new ActorContext();
+    actorContext.actorId = 'user-3';
     const exception = new ForbiddenException(
       'Guest contributions are disabled for the space',
       LogContext.COLLABORATION
@@ -162,7 +165,7 @@ describe('WhiteboardResolverMutations - updateWhiteboardGuestAccess', () => {
     );
 
     await expect(
-      resolver.updateWhiteboardGuestAccess(agentInfo, {
+      resolver.updateWhiteboardGuestAccess(actorContext, {
         whiteboardId: 'wb-3',
         guestAccessEnabled: true,
       })
@@ -171,8 +174,8 @@ describe('WhiteboardResolverMutations - updateWhiteboardGuestAccess', () => {
 
   it('rethrows not found exceptions', async () => {
     const { resolver, whiteboardGuestAccessService } = createResolver();
-    const agentInfo = new AgentInfo();
-    agentInfo.userID = 'user-4';
+    const actorContext = new ActorContext();
+    actorContext.actorId = 'user-4';
     const exception = new EntityNotFoundException(
       'missing whiteboard',
       LogContext.COLLABORATION
@@ -182,7 +185,7 @@ describe('WhiteboardResolverMutations - updateWhiteboardGuestAccess', () => {
     );
 
     await expect(
-      resolver.updateWhiteboardGuestAccess(agentInfo, {
+      resolver.updateWhiteboardGuestAccess(actorContext, {
         whiteboardId: 'wb-unknown',
         guestAccessEnabled: true,
       })
@@ -191,15 +194,15 @@ describe('WhiteboardResolverMutations - updateWhiteboardGuestAccess', () => {
 
   it('propagates unexpected errors to preserve stack traces', async () => {
     const { resolver, whiteboardGuestAccessService } = createResolver();
-    const agentInfo = new AgentInfo();
-    agentInfo.userID = 'user-5';
+    const actorContext = new ActorContext();
+    actorContext.actorId = 'user-5';
     const exception = new Error('boom');
     whiteboardGuestAccessService.updateGuestAccess.mockRejectedValueOnce(
       exception
     );
 
     await expect(
-      resolver.updateWhiteboardGuestAccess(agentInfo, {
+      resolver.updateWhiteboardGuestAccess(actorContext, {
         whiteboardId: 'wb-err',
         guestAccessEnabled: false,
       })

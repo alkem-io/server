@@ -1,7 +1,7 @@
-import { CurrentUser } from '@common/decorators';
+import { CurrentActor } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
 import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
@@ -25,15 +25,15 @@ export class PlatformWellKnownVirtualContributorsResolverMutations {
       'Set the mapping of a well-known Virtual Contributor to a specific Virtual Contributor UUID.',
   })
   async setPlatformWellKnownVirtualContributor(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('mappingData')
     mappingData: SetPlatformWellKnownVirtualContributorInput
   ): Promise<IPlatformWellKnownVirtualContributors> {
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `set Platform well-known Virtual Contributor: ${agentInfo.email}`
+      `set Platform well-known Virtual Contributor: ${actorContext.actorId}`
     );
 
     const mappingsRecord =

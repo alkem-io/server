@@ -1,21 +1,37 @@
-import { MID_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@common/constants';
+import {
+  MID_TEXT_LENGTH,
+  NAMEID_MAX_LENGTH_SCHEMA,
+  SMALL_TEXT_LENGTH,
+} from '@common/constants';
+import { ActorType } from '@common/enums/actor.type';
 import { Application } from '@domain/access/application/application.entity';
+import { Actor } from '@domain/actor/actor/actor.entity';
+import { Profile } from '@domain/common/profile/profile.entity';
 import { IUser } from '@domain/community/user/user.interface';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
 import {
+  ChildEntity,
   Column,
-  Entity,
   Generated,
   Index,
   JoinColumn,
   OneToMany,
   OneToOne,
 } from 'typeorm';
-import { ContributorBase } from '../contributor/contributor.base.entity';
 import { UserSettings } from '../user-settings/user.settings.entity';
 
-@Entity()
-export class User extends ContributorBase implements IUser {
+@ChildEntity(ActorType.USER)
+export class User extends Actor implements IUser {
+  // Override Actor.profile to be non-optional (required for IUser)
+  declare profile: Profile;
+
+  @Column('varchar', {
+    length: NAMEID_MAX_LENGTH_SCHEMA,
+    nullable: false,
+    unique: true,
+  })
+  nameID!: string;
+
   @Column('uuid', { nullable: false })
   accountID!: string;
 

@@ -8,7 +8,7 @@ export enum UrlType {
   CONTRIBUTION_POST = 'post',
   ORGANIZATION = 'organization',
   USER = 'user',
-  VIRTUAL_CONTRIBUTOR = 'vc',
+  VIRTUAL = 'vc',
   CONTRIBUTION_WHITEBOARD = 'whiteboard',
   CONTRIBUTION_MEMO = 'memo',
   FORUM = 'forum',

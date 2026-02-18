@@ -1,13 +1,13 @@
 import { LogContext } from '@common/enums';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { InstrumentResolver } from '@src/apm/decorators';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { CurrentActor, Profiling } from '@src/common/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ActivityLogService } from './activity.log.service';
 import { ActivityLogInput } from './dto/activity.log.dto.collaboration.input';
@@ -31,16 +31,16 @@ export class ActivityLogResolverQueries {
   })
   @Profiling.api
   async activityLogOnCollaboration(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('queryData', { type: () => ActivityLogInput, nullable: false })
     queryData: ActivityLogInput
   ): Promise<IActivityLogEntry[]> {
     // can agent read users
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
-      `Collaboration activity query READ_USERS: ${agentInfo.email}`
+      `Collaboration activity query READ_USERS: ${actorContext.actorId}`
     );
     // does collaboration exist
     const collaboration =
@@ -49,10 +49,10 @@ export class ActivityLogResolverQueries {
       );
     // can agent read the collaboration
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       collaboration.authorization,
       AuthorizationPrivilege.READ,
-      `Collaboration activity query: ${agentInfo.email}`
+      `Collaboration activity query: ${actorContext.actorId}`
     );
 
     if (queryData.includeChild) {
@@ -67,10 +67,10 @@ export class ActivityLogResolverQueries {
         childCollaboration => {
           try {
             return this.authorizationService.grantAccessOrFail(
-              agentInfo,
+              actorContext,
               childCollaboration.authorization,
               AuthorizationPrivilege.READ,
-              `Collaboration activity query: ${agentInfo.email}`
+              `Collaboration activity query: ${actorContext.actorId}`
             );
           } catch {
             return false;
@@ -90,7 +90,7 @@ export class ActivityLogResolverQueries {
 
     this.logger.verbose?.(
       `Querying activityLog by user ${
-        agentInfo.userID
+        actorContext.actorId
       } + terms: ${JSON.stringify(queryData)}`,
       LogContext.ACTIVITY
     );

@@ -12,9 +12,9 @@ export * from './space/in.app.notification.payload.space.collaboration.callout.p
 export * from './space/in.app.notification.payload.space.collaboration.callout.resolver.fields';
 export * from './space/in.app.notification.payload.space.communication.message.direct.resolver.fields';
 export * from './space/in.app.notification.payload.space.communication.update.resolver.fields';
+export * from './space/in.app.notification.payload.space.community.actor.resolver.fields';
 export * from './space/in.app.notification.payload.space.community.application.resolver.fields';
 export * from './space/in.app.notification.payload.space.community.calendar.event.resolver.fields';
-export * from './space/in.app.notification.payload.space.community.contributor.resolver.fields';
 export * from './space/in.app.notification.payload.space.community.invitation.platform.resolver.fields';
 export * from './space/in.app.notification.payload.space.community.invitation.resolver.fields';
 export * from './space/in.app.notification.payload.space.resolver.fields';

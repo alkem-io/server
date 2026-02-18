@@ -8,7 +8,7 @@ import {
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -42,7 +42,7 @@ export class TemplateContentSpaceService {
   public async createTemplateContentSpace(
     templateContentSpaceData: CreateTemplateContentSpaceInput,
     storageAggregator: IStorageAggregator,
-    agentInfo?: AgentInfo
+    actorContext?: ActorContext
   ): Promise<ITemplateContentSpace> {
     const templateContentSpace: ITemplateContentSpace =
       TemplateContentSpace.create(templateContentSpaceData);
@@ -63,14 +63,14 @@ export class TemplateContentSpaceService {
       await this.collaborationService.createCollaboration(
         templateContentSpaceData.collaborationData,
         storageAggregator,
-        agentInfo
+        actorContext
       );
 
     for (const subspace of templateContentSpaceData.subspaces) {
       const subspaceContent = await this.createTemplateContentSpace(
         subspace,
         storageAggregator,
-        agentInfo
+        actorContext
       );
       templateContentSpace.subspaces.push(subspaceContent);
     }
@@ -293,7 +293,7 @@ export class TemplateContentSpaceService {
           enabled: false,
         },
         {
-          type: LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS,
+          type: LicenseEntitlementType.SPACE_FLAG_VIRTUAL_ACCESS,
           dataType: LicenseEntitlementDataType.FLAG,
           limit: 0,
           enabled: false,

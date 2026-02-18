@@ -2,7 +2,7 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { AuthorizationAgentPrivilege } from '@src/common/decorators';
+import { AuthorizationActorPrivilege } from '@src/common/decorators';
 import { IStorageBucket } from '../storage-bucket/storage.bucket.interface';
 import { IStorageAggregatorParent } from './dto/storage.aggregator.dto.parent';
 import { IStorageAggregator } from './storage.aggregator.interface';
@@ -12,7 +12,7 @@ import { StorageAggregatorService } from './storage.aggregator.service';
 export class StorageAggregatorResolverFields {
   constructor(private storageAggregatorService: StorageAggregatorService) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('size', () => Number, {
     nullable: false,
@@ -23,7 +23,7 @@ export class StorageAggregatorResolverFields {
     return await this.storageAggregatorService.size(storageAggregator);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('storageAggregators', () => [IStorageAggregator], {
     nullable: false,
@@ -38,7 +38,7 @@ export class StorageAggregatorResolverFields {
     );
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('directStorageBucket', () => IStorageBucket, {
     nullable: false,
@@ -53,7 +53,7 @@ export class StorageAggregatorResolverFields {
     );
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('storageBuckets', () => [IStorageBucket], {
     nullable: false,
@@ -68,7 +68,7 @@ export class StorageAggregatorResolverFields {
     );
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('parentEntity', () => IStorageAggregatorParent, {
     nullable: true,

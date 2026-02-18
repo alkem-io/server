@@ -1,7 +1,7 @@
-import { vi } from 'vitest';
-import { ValueProvider } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { ValueProvider } from '@nestjs/common';
 import { Cache } from 'cache-manager';
+import { vi } from 'vitest';
 import { PublicPart } from '../utils/public-part';
 
 export const MockCacheManager: ValueProvider<PublicPart<Cache>> = {

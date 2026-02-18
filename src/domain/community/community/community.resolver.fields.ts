@@ -10,13 +10,13 @@ import { Community, ICommunity } from '@domain/community/community';
 import { IUserGroup } from '@domain/community/user-group';
 import { UseGuards } from '@nestjs/common';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
+import { AuthorizationActorPrivilege, Profiling } from '@src/common/decorators';
 import { CommunityService } from './community.service';
 @Resolver(() => ICommunity)
 export class CommunityResolverFields {
   constructor(private communityService: CommunityService) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('groups', () => [IUserGroup], {
     nullable: false,
@@ -27,7 +27,7 @@ export class CommunityResolverFields {
     return await this.communityService.getUserGroups(community);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('group', () => IUserGroup, {
     nullable: false,
@@ -40,7 +40,7 @@ export class CommunityResolverFields {
     return await this.communityService.getUserGroup(community, groupID);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('communication', () => ICommunication, {
     nullable: false,

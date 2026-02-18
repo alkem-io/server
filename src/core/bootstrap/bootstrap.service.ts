@@ -16,8 +16,8 @@ import { VirtualContributorDataAccessMode } from '@common/enums/virtual.contribu
 import { VirtualContributorInteractionMode } from '@common/enums/virtual.contributor.interaction.mode';
 import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
 import { BootstrapException } from '@common/exceptions/bootstrap.exception';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { ActorContextService } from '@core/actor-context/actor.context.service';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LicenseService } from '@domain/common/license/license.service';
@@ -64,7 +64,7 @@ export class BootstrapService {
   constructor(
     private accountService: AccountService,
     private accountAuthorizationService: AccountAuthorizationService,
-    private agentInfoService: AgentInfoService,
+    private actorContextService: ActorContextService,
     private spaceService: SpaceService,
     private userService: UserService,
     private userLookupService: UserLookupService,
@@ -110,8 +110,7 @@ export class BootstrapService {
         Profiling.profilingEnabled = profilingEnabled;
       }
 
-      const anonymousAgentInfo =
-        this.agentInfoService.createAnonymousAgentInfo();
+      const anonymousActorContext = this.actorContextService.createAnonymous();
 
       // Order matters:
       // 1. Infrastructure: Forum, Messaging
@@ -142,7 +141,7 @@ export class BootstrapService {
 
       await this.bootstrapLicensePlans();
       await this.ensureAuthorizationsPopulated();
-      await this.ensureSpaceSingleton(anonymousAgentInfo);
+      await this.ensureSpaceSingleton(anonymousActorContext);
       // reset auth as last in the actions
       // await this.ensureSpaceNamesInElastic();
     } catch (error: any) {
@@ -393,14 +392,14 @@ export class BootstrapService {
     }
   }
 
-  private async ensureOrganizationSingleton(agentInfo?: AgentInfo) {
+  private async ensureOrganizationSingleton(actorContext?: ActorContext) {
     // create a default host org
     let hostOrganization =
       await this.organizationLookupService.getOrganizationByNameId(
         DEFAULT_HOST_ORG_NAMEID
       );
     if (!hostOrganization) {
-      // If agentInfo is not provided, we create without an admin initially
+      // If actorContext is not provided, we create without an admin initially
       // The admin will be linked later
       hostOrganization = await this.organizationService.createOrganization(
         {
@@ -409,7 +408,7 @@ export class BootstrapService {
             displayName: DEFAULT_HOST_ORG_DISPLAY_NAME,
           },
         },
-        agentInfo
+        actorContext
       );
       const orgAuthorizations =
         await this.organizationAuthorizationService.applyAuthorizationPolicy(
@@ -432,7 +431,7 @@ export class BootstrapService {
   }
 
   private async ensureAdminUserLinkedToOrganization() {
-    const adminAgentInfo = await this.getAdminAgentInfo();
+    const adminActorContext = await this.getAdminActorContext();
     const hostOrganization =
       await this.organizationLookupService.getOrganizationByNameIdOrFail(
         DEFAULT_HOST_ORG_NAMEID
@@ -441,19 +440,19 @@ export class BootstrapService {
     const roleSet = await this.organizationService.getRoleSet(hostOrganization);
 
     // Assign Admin as Associate and Admin
-    await this.roleSetService.assignUserToRole(
+    await this.roleSetService.assignActorToRole(
       roleSet,
       RoleName.ASSOCIATE,
-      adminAgentInfo.userID,
-      adminAgentInfo,
+      adminActorContext.actorId,
+      adminActorContext,
       false
     );
 
-    await this.roleSetService.assignUserToRole(
+    await this.roleSetService.assignActorToRole(
       roleSet,
       RoleName.ADMIN,
-      adminAgentInfo.userID,
-      adminAgentInfo,
+      adminActorContext.actorId,
+      adminActorContext,
       false
     );
 
@@ -463,11 +462,11 @@ export class BootstrapService {
     );
   }
 
-  private async getAdminAgentInfo(): Promise<AgentInfo> {
+  private async getAdminActorContext(): Promise<ActorContext> {
     const adminUserEmail = 'admin@alkem.io';
     const adminUser = await this.userService.getUserByEmail(adminUserEmail, {
       relations: {
-        agent: true,
+        credentials: true,
       },
     });
     if (!adminUser) {
@@ -475,22 +474,18 @@ export class BootstrapService {
         `Unable to load fixed admin user for creating organization: ${adminUserEmail}`
       );
     }
-    return {
-      isAnonymous: false,
-      userID: adminUser.id,
-      email: adminUser.email,
-      emailVerified: true,
-      firstName: adminUser.firstName,
-      lastName: adminUser.lastName,
-      guestName: '',
-      avatarURL: '',
-      credentials: adminUser.agent?.credentials || [],
-      agentID: adminUser.agent?.id,
-      authenticationID: adminUser.authenticationID ?? '',
-    };
+    const ctx = new ActorContext();
+    ctx.actorId = adminUser.id;
+    ctx.isAnonymous = false;
+    ctx.credentials = (adminUser.credentials || []).map(c => ({
+      type: c.type,
+      resourceID: c.resourceID,
+    }));
+    ctx.authenticationID = adminUser.authenticationID ?? undefined;
+    return ctx;
   }
 
-  private async ensureSpaceSingleton(agentInfo: AgentInfo) {
+  private async ensureSpaceSingleton(actorContext: ActorContext) {
     this.logger.verbose?.(
       '=== Ensuring at least one Account with a space is present ===',
       LogContext.BOOTSTRAP
@@ -527,7 +522,7 @@ export class BootstrapService {
 
       const space = await this.accountService.createSpaceOnAccount(
         spaceInput,
-        agentInfo
+        actorContext
       );
       const spaceAuthorizations =
         await this.spaceAuthorizationService.applyAuthorizationPolicy(space.id);

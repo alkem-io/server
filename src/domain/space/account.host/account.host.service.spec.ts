@@ -1,5 +1,4 @@
 import { AccountType } from '@common/enums/account.type';
-import { AgentService } from '@domain/agent/agent/agent.service';
 import { LicenseService } from '@domain/common/license/license.service';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -15,7 +14,6 @@ import { AccountHostService } from './account.host.service';
 
 describe('AccountHostService', () => {
   let service: AccountHostService;
-  let agentService: AgentService;
   let licenseService: LicenseService;
   let storageAggregatorService: StorageAggregatorService;
   let licensingFrameworkService: LicensingFrameworkService;
@@ -34,7 +32,6 @@ describe('AccountHostService', () => {
       .compile();
 
     service = module.get(AccountHostService);
-    agentService = module.get(AgentService);
     licenseService = module.get(LicenseService);
     storageAggregatorService = module.get(StorageAggregatorService);
     licensingFrameworkService = module.get(LicensingFrameworkService);
@@ -46,13 +43,13 @@ describe('AccountHostService', () => {
     it('should create an account with correct type and baseline license plan', async () => {
       // Arrange
       const mockStorageAggregator = { id: 'storage-1' };
-      const mockAgent = { id: 'agent-1' };
+      const _mockAgent = { id: 'agent-1' };
       const mockLicense = { id: 'license-1' };
 
       storageAggregatorService.createStorageAggregator = vi
         .fn()
         .mockResolvedValue(mockStorageAggregator);
-      agentService.createAgent = vi.fn().mockResolvedValue(mockAgent);
+      // Account IS the Actor now - no separate agent creation
       licenseService.createLicense = vi.fn().mockReturnValue(mockLicense);
 
       const saveSpy = vi.fn().mockImplementation(account => ({
@@ -65,12 +62,11 @@ describe('AccountHostService', () => {
       const result = await service.createAccount(AccountType.USER);
 
       // Assert
-      expect(result.type).toBe(AccountType.USER);
+      expect(result.accountType).toBe(AccountType.USER);
       expect(result.baselineLicensePlan).toEqual(
         DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN
       );
       expect(result.storageAggregator).toBe(mockStorageAggregator);
-      expect(result.agent).toBe(mockAgent);
       expect(result.license).toBe(mockLicense);
       expect(saveSpy).toHaveBeenCalled();
     });
@@ -80,7 +76,6 @@ describe('AccountHostService', () => {
       storageAggregatorService.createStorageAggregator = vi
         .fn()
         .mockResolvedValue({});
-      agentService.createAgent = vi.fn().mockResolvedValue({});
       const createLicenseSpy = vi.fn().mockReturnValue({});
       licenseService.createLicense = createLicenseSpy;
       service['accountRepository'] = {
@@ -103,7 +98,6 @@ describe('AccountHostService', () => {
   describe('assignLicensePlansToSpace', () => {
     it('should assign auto-assign plans for user account type', async () => {
       // Arrange
-      const mockAgent = { id: 'agent-1' };
       const mockLicensingFramework = { id: 'framework-1' };
       const mockPlans = [
         {
@@ -125,30 +119,21 @@ describe('AccountHostService', () => {
         .fn()
         .mockResolvedValue(mockPlans);
       licenseIssuerService.assignLicensePlan = vi.fn().mockResolvedValue({});
-      agentService.getAgentOrFail = vi
-        .fn()
-        .mockResolvedValue({ id: 'agent-1-updated' });
 
-      // Act
-      const result = await service.assignLicensePlansToSpace(
-        mockAgent as any,
-        'space-1',
-        AccountType.USER
-      );
+      // Act - new signature: (spaceId, type, licensePlanID?)
+      await service.assignLicensePlansToSpace('space-1', AccountType.USER);
 
       // Assert
       expect(licenseIssuerService.assignLicensePlan).toHaveBeenCalledTimes(1);
       expect(licenseIssuerService.assignLicensePlan).toHaveBeenCalledWith(
-        mockAgent,
+        'space-1',
         mockPlans[0],
         'space-1'
       );
-      expect(result.id).toBe('agent-1-updated');
     });
 
     it('should assign auto-assign plans for organization account type', async () => {
       // Arrange
-      const mockAgent = { id: 'agent-1' };
       const mockLicensingFramework = { id: 'framework-1' };
       const mockPlans = [
         {
@@ -170,13 +155,9 @@ describe('AccountHostService', () => {
         .fn()
         .mockResolvedValue(mockPlans);
       licenseIssuerService.assignLicensePlan = vi.fn().mockResolvedValue({});
-      agentService.getAgentOrFail = vi
-        .fn()
-        .mockResolvedValue({ id: 'agent-1-updated' });
 
       // Act
       await service.assignLicensePlansToSpace(
-        mockAgent as any,
         'space-1',
         AccountType.ORGANIZATION
       );
@@ -184,7 +165,7 @@ describe('AccountHostService', () => {
       // Assert
       expect(licenseIssuerService.assignLicensePlan).toHaveBeenCalledTimes(1);
       expect(licenseIssuerService.assignLicensePlan).toHaveBeenCalledWith(
-        mockAgent,
+        'space-1',
         mockPlans[1],
         'space-1'
       );
@@ -192,7 +173,6 @@ describe('AccountHostService', () => {
 
     it('should add additional license plan when licensePlanID is provided and not already assigned', async () => {
       // Arrange
-      const mockAgent = { id: 'agent-1' };
       const mockLicensingFramework = { id: 'framework-1' };
       const autoAssignPlan = {
         id: 'plan-auto',
@@ -211,13 +191,9 @@ describe('AccountHostService', () => {
         .fn()
         .mockResolvedValue(additionalPlan);
       licenseIssuerService.assignLicensePlan = vi.fn().mockResolvedValue({});
-      agentService.getAgentOrFail = vi
-        .fn()
-        .mockResolvedValue({ id: 'agent-1-updated' });
 
       // Act
       await service.assignLicensePlansToSpace(
-        mockAgent as any,
         'space-1',
         AccountType.USER,
         'plan-additional'
@@ -229,7 +205,6 @@ describe('AccountHostService', () => {
 
     it('should not duplicate license plan when licensePlanID matches auto-assigned plan', async () => {
       // Arrange
-      const mockAgent = { id: 'agent-1' };
       const mockLicensingFramework = { id: 'framework-1' };
       const autoAssignPlan = {
         id: 'plan-auto',
@@ -244,13 +219,9 @@ describe('AccountHostService', () => {
         .fn()
         .mockResolvedValue([autoAssignPlan]);
       licenseIssuerService.assignLicensePlan = vi.fn().mockResolvedValue({});
-      agentService.getAgentOrFail = vi
-        .fn()
-        .mockResolvedValue({ id: 'agent-1-updated' });
 
       // Act
       await service.assignLicensePlansToSpace(
-        mockAgent as any,
         'space-1',
         AccountType.USER,
         'plan-auto' // Same as auto-assigned
@@ -265,7 +236,6 @@ describe('AccountHostService', () => {
 
     it('should assign no plans when none match the account type and no licensePlanID given', async () => {
       // Arrange
-      const mockAgent = { id: 'agent-1' };
       const mockLicensingFramework = { id: 'framework-1' };
       const orgOnlyPlan = {
         id: 'plan-org',
@@ -280,13 +250,9 @@ describe('AccountHostService', () => {
         .fn()
         .mockResolvedValue([orgOnlyPlan]);
       licenseIssuerService.assignLicensePlan = vi.fn().mockResolvedValue({});
-      agentService.getAgentOrFail = vi
-        .fn()
-        .mockResolvedValue({ id: 'agent-1-updated' });
 
       // Act
       await service.assignLicensePlansToSpace(
-        mockAgent as any,
         'space-1',
         AccountType.USER // No user-matching plans
       );

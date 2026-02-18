@@ -2,11 +2,11 @@ import { LogContext } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { RoomType } from '@common/enums/room.type';
 import { ValidationException } from '@common/exceptions';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
-import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { IMessage } from '../message/message.interface';
@@ -29,7 +29,7 @@ export class RoomService {
     private readonly roomRepository: Repository<Room>,
     private readonly communicationAdapter: CommunicationAdapter,
     private readonly roomLookupService: RoomLookupService,
-    private readonly contributorLookupService: ContributorLookupService,
+    private readonly actorLookupService: ActorLookupService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -120,9 +120,9 @@ export class RoomService {
    *
    * TODO: Implement proper Matrix admin rights reflection so that Alkemio admins
    * are granted moderator power levels in Matrix rooms. Once implemented:
-   *   - Use the `agentId` parameter (the actual deleting user) instead of sender
+   *   - Use the `actorId` parameter (the actual deleting user) instead of sender
    *   - Remove the `getMessageSenderActor` call
-   *   - The `agentId` param is kept in the signature to avoid interface changes later
+   *   - The `actorId` param is kept in the signature to avoid interface changes later
    *
    * See: docs/matrix-admin-reflection.md for requirements and findings.
    */
@@ -293,10 +293,8 @@ export class RoomService {
       );
       return '';
     }
-    const userId =
-      await this.contributorLookupService.getUserIdByAgentId(senderActorId);
-
-    return userId ?? '';
+    // In the Actor model, actorId IS the userId for user actors
+    return senderActorId ?? '';
   }
 
   /**
@@ -305,11 +303,11 @@ export class RoomService {
    */
   async markMessageAsRead(
     room: IRoom,
-    agentId: string,
+    actorId: string,
     messageData: RoomMarkMessageReadInput
   ): Promise<boolean> {
     await this.communicationAdapter.markMessageRead(
-      agentId,
+      actorId,
       room.id,
       messageData.messageID,
       messageData.threadID
@@ -331,18 +329,18 @@ export class RoomService {
    * Returns room-level unread count and optionally per-thread unread counts.
    *
    * @param room - The room to get unread counts for
-   * @param agentId - The agent ID of the requesting user
+   * @param actorId - The agent ID of the requesting user
    * @param threadIds - Optional thread IDs to get per-thread unread counts.
    *   - undefined: only room-level count returned, threadUnreadCounts is null
    *   - empty array or array with IDs: threadUnreadCounts is an array (possibly empty)
    */
   async getUnreadCounts(
     room: IRoom,
-    agentId: string,
+    actorId: string,
     threadIds?: string[]
   ): Promise<RoomUnreadCounts> {
     const result = await this.communicationAdapter.getUnreadCounts(
-      agentId,
+      actorId,
       room.id,
       threadIds
     );

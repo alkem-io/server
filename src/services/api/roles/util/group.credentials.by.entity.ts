@@ -1,7 +1,7 @@
 import { AuthorizationCredential } from '@common/enums';
 import { RoleName } from '@common/enums/role.name';
 import { RoleSetRoleImplicit } from '@common/enums/role.set.role.implicit';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 
 export type CredentialRole = RoleName | RoleSetRoleImplicit;
 

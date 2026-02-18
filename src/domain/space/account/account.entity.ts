@@ -1,20 +1,31 @@
-import { ENUM_LENGTH } from '@common/constants';
+import { ENUM_LENGTH, NAMEID_MAX_LENGTH_SCHEMA } from '@common/constants';
 import { AccountType } from '@common/enums/account.type';
-import { Agent } from '@domain/agent/agent/agent.entity';
-import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
+import { ActorType } from '@common/enums/actor.type';
+import { Actor } from '@domain/actor/actor/actor.entity';
 import { License } from '@domain/common/license/license.entity';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
 import { IAccount } from '@domain/space/account/account.interface';
+import { IAccountLicensePlan } from '@domain/space/account.license.plan';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
 import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
-import { Column, Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
-import { IAccountLicensePlan } from '../account.license.plan/account.license.plan.interface';
+import { ChildEntity, Column, JoinColumn, OneToMany, OneToOne } from 'typeorm';
 import { Space } from '../space/space.entity';
-@Entity()
-export class Account extends AuthorizableEntity implements IAccount {
-  @Column('varchar', { length: ENUM_LENGTH, nullable: true })
-  type!: AccountType;
+
+@ChildEntity(ActorType.ACCOUNT)
+export class Account extends Actor implements IAccount {
+  // Account uses License instead of Profile, so profile will be null
+
+  @Column('varchar', {
+    length: NAMEID_MAX_LENGTH_SCHEMA,
+    nullable: false,
+    unique: true,
+  })
+  nameID!: string;
+
+  // Renamed from 'type' to avoid conflict with Actor.type discriminator column
+  @Column('varchar', { length: ENUM_LENGTH, nullable: true, name: 'type' })
+  accountType!: AccountType;
 
   @Column('varchar', { length: ENUM_LENGTH, nullable: true })
   externalSubscriptionID?: string;
@@ -24,21 +35,13 @@ export class Account extends AuthorizableEntity implements IAccount {
     space => space.account,
     {
       eager: false,
-      cascade: false, // important: each space looks after saving itself! Same as space.subspaces field
+      cascade: false,
     }
   )
   spaces!: Space[];
 
   @Column('jsonb', { nullable: false })
   baselineLicensePlan!: IAccountLicensePlan;
-
-  @OneToOne(() => Agent, {
-    eager: false,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
-  agent?: Agent;
 
   @OneToOne(() => License, {
     eager: false,

@@ -63,7 +63,7 @@ export class RoleSetLicenseService {
     }
     for (const entitlement of license.entitlements) {
       switch (entitlement.type) {
-        case LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS:
+        case LicenseEntitlementType.SPACE_FLAG_VIRTUAL_ACCESS:
           this.licenseService.findAndCopyParentEntitlement(
             entitlement,
             parentLicenseEntitlements

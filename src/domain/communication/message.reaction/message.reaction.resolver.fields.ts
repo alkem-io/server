@@ -2,7 +2,7 @@ import { LogContext } from '@common/enums/logging.context';
 import { ContributorByAgentIdLoaderCreator } from '@core/dataloader/creators/loader.creators';
 import { Loader } from '@core/dataloader/decorators/data.loader.decorator';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { IActor } from '@domain/actor/actor/actor.interface';
 import { IUser } from '@domain/community/user/user.interface';
 import { Inject } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
@@ -23,11 +23,11 @@ export class MessageReactionResolverFields {
   async sender(
     @Parent() messageReaction: IMessageReaction,
     @Loader(ContributorByAgentIdLoaderCreator, { resolveToNull: true })
-    loader: ILoader<IContributor | null>
+    loader: ILoader<IActor | null>
   ): Promise<IUser | null> {
     // sender contains the agent ID (actorId from the communication adapter)
-    const senderAgentId = messageReaction.sender;
-    if (!senderAgentId) {
+    const senderActorId = messageReaction.sender;
+    if (!senderActorId) {
       return null;
     }
 
@@ -39,7 +39,7 @@ export class MessageReactionResolverFields {
         {
           message:
             'Sender unable to be resolved when resolving message reaction.',
-          senderAgentId,
+          senderActorId,
           messageReactionId: messageReaction.id,
         },
         LogContext.COMMUNICATION

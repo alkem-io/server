@@ -9,7 +9,7 @@ import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto';
@@ -289,7 +289,7 @@ export class TemplateService {
   public async updateTemplateFromSpace(
     templateInput: ITemplate,
     templateData: UpdateTemplateFromSpaceInput,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ): Promise<ITemplate> {
     if (
       !templateInput.contentSpace ||
@@ -361,14 +361,14 @@ export class TemplateService {
     await this.updateTemplateContentSubspacesFromSpace(
       templateInput,
       sourceSpace.subspaces,
-      agentInfo
+      actorContext
     );
 
     templateInput.contentSpace = await this.updateTemplateContentSpaceFromSpace(
       sourceSpace,
       templateInput.contentSpace,
       true,
-      agentInfo.userID
+      actorContext.actorId
     );
 
     return await this.getTemplateOrFail(templateInput.id);
@@ -377,7 +377,7 @@ export class TemplateService {
   private async updateTemplateContentSubspacesFromSpace(
     templateInput: ITemplate,
     sourceSpaceSubspaces: ISpace[] | undefined,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ): Promise<void> {
     const currentSubspaces = templateInput.contentSpace?.subspaces ?? [];
     const storageAggregator =
@@ -409,7 +409,7 @@ export class TemplateService {
               subspace.id
             ),
             storageAggregator,
-            agentInfo
+            actorContext
           );
         templateInput.contentSpace?.subspaces?.push(subspaceContent);
       }

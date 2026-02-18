@@ -141,9 +141,7 @@ describe('UrlGeneratorService', () => {
 
       const result = service.createUrlForContributor(vcContributor);
 
-      expect(result).toBe(
-        `${ENDPOINT}/${UrlPathBase.VIRTUAL_CONTRIBUTOR}/my-vc`
-      );
+      expect(result).toBe(`${ENDPOINT}/${UrlPathBase.VIRTUAL}/my-vc`);
     });
 
     it('should throw RelationshipNotFoundException when contributor type is unknown', () => {

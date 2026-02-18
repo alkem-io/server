@@ -82,17 +82,17 @@ describe('RoleSetCacheService', () => {
     });
 
     it('should generate distinct keys for agent roles', async () => {
-      await service.setAgentRolesCache('agent-1', 'rs-1', [RoleName.MEMBER]);
+      await service.setActorRolesCache('agent-1', 'rs-1', [RoleName.MEMBER]);
 
       expect(cacheManager.set).toHaveBeenCalledWith(
-        'agentRoles:agent-1:rs-1',
+        'actorRoles:agent-1:rs-1',
         [RoleName.MEMBER],
         { ttl: 300 }
       );
     });
 
     it('should generate distinct keys for isMember', async () => {
-      await service.setAgentIsMemberCache('agent-1', 'rs-1', true);
+      await service.setActorIsMemberCache('agent-1', 'rs-1', true);
 
       expect(cacheManager.set).toHaveBeenCalledWith(
         'isMember:agent-1:rs-1',
@@ -107,8 +107,8 @@ describe('RoleSetCacheService', () => {
   describe('batch cache retrieval (mget available)', () => {
     it('should use mget for agent roles batch', async () => {
       const entries = [
-        { agentId: 'a1', roleSetId: 'rs-1' },
-        { agentId: 'a2', roleSetId: 'rs-2' },
+        { actorId: 'a1', roleSetId: 'rs-1' },
+        { actorId: 'a2', roleSetId: 'rs-2' },
       ];
 
       (cacheManager.store.mget as Mock).mockResolvedValue([
@@ -116,19 +116,19 @@ describe('RoleSetCacheService', () => {
         undefined,
       ]);
 
-      const results = await service.getAgentRolesBatchFromCache(entries);
+      const results = await service.getActorRolesBatchFromCache(entries);
 
       expect(cacheManager.store.mget).toHaveBeenCalledWith(
-        'agentRoles:a1:rs-1',
-        'agentRoles:a2:rs-2'
+        'actorRoles:a1:rs-1',
+        'actorRoles:a2:rs-2'
       );
       expect(results).toEqual([[RoleName.MEMBER], undefined]);
     });
 
     it('should use mget for membership status batch', async () => {
       const entries = [
-        { agentId: 'a1', roleSetId: 'rs-1' },
-        { agentId: 'a2', roleSetId: 'rs-2' },
+        { actorId: 'a1', roleSetId: 'rs-1' },
+        { actorId: 'a2', roleSetId: 'rs-2' },
       ];
 
       (cacheManager.store.mget as Mock).mockResolvedValue([
@@ -145,7 +145,7 @@ describe('RoleSetCacheService', () => {
     });
 
     it('should return empty array for empty entries', async () => {
-      const results = await service.getAgentRolesBatchFromCache([]);
+      const results = await service.getActorRolesBatchFromCache([]);
 
       expect(cacheManager.store.mget).not.toHaveBeenCalled();
       expect(results).toEqual([]);
@@ -161,30 +161,30 @@ describe('RoleSetCacheService', () => {
 
     it('should fall back to sequential gets', async () => {
       const entries = [
-        { agentId: 'a1', roleSetId: 'rs-1' },
-        { agentId: 'a2', roleSetId: 'rs-2' },
+        { actorId: 'a1', roleSetId: 'rs-1' },
+        { actorId: 'a2', roleSetId: 'rs-2' },
       ];
 
       cacheManager.get
         .mockResolvedValueOnce([RoleName.LEAD] as any)
         .mockResolvedValueOnce(undefined as any);
 
-      const results = await service.getAgentRolesBatchFromCache(entries);
+      const results = await service.getActorRolesBatchFromCache(entries);
 
       expect(cacheManager.get).toHaveBeenCalledTimes(2);
-      expect(cacheManager.get).toHaveBeenCalledWith('agentRoles:a1:rs-1');
-      expect(cacheManager.get).toHaveBeenCalledWith('agentRoles:a2:rs-2');
+      expect(cacheManager.get).toHaveBeenCalledWith('actorRoles:a1:rs-1');
+      expect(cacheManager.get).toHaveBeenCalledWith('actorRoles:a2:rs-2');
       expect(results).toEqual([[RoleName.LEAD], undefined]);
     });
   });
 
-  /* ─── appendAgentRoleCache ─── */
+  /* ─── appendActorRoleCache ─── */
 
-  describe('appendAgentRoleCache', () => {
+  describe('appendActorRoleCache', () => {
     it('should return undefined when no cached roles exist', async () => {
       cacheManager.get.mockResolvedValue(undefined as any);
 
-      const result = await service.appendAgentRoleCache(
+      const result = await service.appendActorRoleCache(
         'agent-1',
         'rs-1',
         RoleName.LEAD
@@ -198,7 +198,7 @@ describe('RoleSetCacheService', () => {
     it('should append a new role to existing cached roles', async () => {
       cacheManager.get.mockResolvedValue([RoleName.MEMBER] as any);
 
-      const result = await service.appendAgentRoleCache(
+      const result = await service.appendActorRoleCache(
         'agent-1',
         'rs-1',
         RoleName.LEAD
@@ -206,7 +206,7 @@ describe('RoleSetCacheService', () => {
 
       expect(result).toEqual([RoleName.MEMBER, RoleName.LEAD]);
       expect(cacheManager.set).toHaveBeenCalledWith(
-        'agentRoles:agent-1:rs-1',
+        'actorRoles:agent-1:rs-1',
         [RoleName.MEMBER, RoleName.LEAD],
         { ttl: 300 }
       );
@@ -218,7 +218,7 @@ describe('RoleSetCacheService', () => {
         RoleName.LEAD,
       ] as any);
 
-      const result = await service.appendAgentRoleCache(
+      const result = await service.appendActorRoleCache(
         'agent-1',
         'rs-1',
         RoleName.MEMBER
@@ -230,17 +230,17 @@ describe('RoleSetCacheService', () => {
     });
   });
 
-  /* ─── cleanAgentMembershipCache ─── */
+  /* ─── cleanActorMembershipCache ─── */
 
-  describe('cleanAgentMembershipCache', () => {
+  describe('cleanActorMembershipCache', () => {
     it('should delete all three related cache keys', async () => {
-      await service.cleanAgentMembershipCache('agent-1', 'rs-1');
+      await service.cleanActorMembershipCache('agent-1', 'rs-1');
 
       expect(cacheManager.del).toHaveBeenCalledTimes(3);
       expect(cacheManager.del).toHaveBeenCalledWith(
         'membershipStatus:agent-1:rs-1'
       );
-      expect(cacheManager.del).toHaveBeenCalledWith('agentRoles:agent-1:rs-1');
+      expect(cacheManager.del).toHaveBeenCalledWith('actorRoles:agent-1:rs-1');
       expect(cacheManager.del).toHaveBeenCalledWith('isMember:agent-1:rs-1');
     });
   });
@@ -283,9 +283,9 @@ describe('RoleSetCacheService', () => {
         new Error('Redis down')
       );
 
-      const results = await service.getAgentRolesBatchFromCache([
-        { agentId: 'a1', roleSetId: 'rs-1' },
-        { agentId: 'a2', roleSetId: 'rs-2' },
+      const results = await service.getActorRolesBatchFromCache([
+        { actorId: 'a1', roleSetId: 'rs-1' },
+        { actorId: 'a2', roleSetId: 'rs-2' },
       ]);
 
       expect(results).toEqual([undefined, undefined]);
@@ -323,10 +323,10 @@ describe('RoleSetCacheService', () => {
         .mockRejectedValueOnce(new Error('transient'))
         .mockResolvedValueOnce([RoleName.LEAD] as any);
 
-      const results = await service.getAgentRolesBatchFromCache([
-        { agentId: 'a1', roleSetId: 'rs-1' },
-        { agentId: 'a2', roleSetId: 'rs-2' },
-        { agentId: 'a3', roleSetId: 'rs-3' },
+      const results = await service.getActorRolesBatchFromCache([
+        { actorId: 'a1', roleSetId: 'rs-1' },
+        { actorId: 'a2', roleSetId: 'rs-2' },
+        { actorId: 'a3', roleSetId: 'rs-3' },
       ]);
 
       expect(results).toEqual([[RoleName.MEMBER], undefined, [RoleName.LEAD]]);
@@ -356,7 +356,7 @@ describe('RoleSetCacheService', () => {
     it('should return undefined for cache miss', async () => {
       cacheManager.get.mockResolvedValue(undefined as any);
 
-      const result = await service.getAgentRolesFromCache('agent-1', 'rs-1');
+      const result = await service.getActorRolesFromCache('agent-1', 'rs-1');
 
       expect(result).toBeUndefined();
     });

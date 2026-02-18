@@ -45,7 +45,7 @@ export class LicenseEntitlementUsageService {
           },
         };
         break;
-      case LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR:
+      case LicenseEntitlementType.ACCOUNT_VIRTUAL:
         relations.virtualContributors = true;
         break;
       case LicenseEntitlementType.ACCOUNT_INNOVATION_HUB:
@@ -87,7 +87,7 @@ export class LicenseEntitlementUsageService {
           account.spaces,
           LicenseEntitlementType.SPACE_PREMIUM
         );
-      case LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR:
+      case LicenseEntitlementType.ACCOUNT_VIRTUAL:
         return account.virtualContributors.length;
       case LicenseEntitlementType.ACCOUNT_INNOVATION_HUB:
         return account.innovationHubs.length;

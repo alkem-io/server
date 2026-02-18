@@ -1,13 +1,13 @@
 import { AuthorizationPrivilege } from '@common/enums';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { GraphqlGuard } from '@core/authorization';
 import { UUID } from '@domain/common/scalars';
 import { SpaceSettingsService } from '@domain/space/space.settings/space.settings.service';
 import { UseGuards } from '@nestjs/common';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import {
-  AuthorizationAgentPrivilege,
-  CurrentUser,
+  AuthorizationActorPrivilege,
+  CurrentActor,
 } from '@src/common/decorators';
 import { ICalendarEvent } from '../event/event.interface';
 import { ICalendar } from './calendar.interface';
@@ -20,7 +20,7 @@ export class CalendarResolverFields {
     private spaceSettingsService: SpaceSettingsService
   ) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('event', () => ICalendarEvent, {
     nullable: true,
@@ -28,7 +28,7 @@ export class CalendarResolverFields {
   })
   async event(
     @Parent() calendar: ICalendar,
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args({
       name: 'ID',
       nullable: false,
@@ -40,7 +40,7 @@ export class CalendarResolverFields {
     return this.calendarService.getCalendarEvent(calendar.id, idOrNameId);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('events', () => [ICalendarEvent], {
     nullable: false,
@@ -48,7 +48,7 @@ export class CalendarResolverFields {
   })
   public async events(
     @Parent() calendar: ICalendar,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ) {
     const space = await this.calendarService.getSpaceFromCalendarOrFail(
       calendar.id
@@ -60,7 +60,7 @@ export class CalendarResolverFields {
 
     return this.calendarService.getCalendarEvents(
       calendar,
-      agentInfo,
+      actorContext,
       shouldSubspaceEventsBubble ? space.id : undefined
     );
   }

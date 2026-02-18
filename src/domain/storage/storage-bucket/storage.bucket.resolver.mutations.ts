@@ -1,10 +1,10 @@
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { CurrentActor, Profiling } from '@src/common/decorators';
 import { FileUpload, GraphQLUpload } from 'graphql-upload';
 import { DocumentService } from '../document/document.service';
 import { DocumentAuthorizationService } from '../document/document.service.authorization';
@@ -31,7 +31,7 @@ export class StorageBucketResolverMutations {
   })
   @Profiling.api
   async uploadFileOnStorageBucket(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('uploadData') uploadData: StorageBucketUploadFileInput,
     @Args({ name: 'file', type: () => GraphQLUpload })
     { createReadStream, filename, mimetype }: FileUpload
@@ -42,7 +42,7 @@ export class StorageBucketResolverMutations {
       );
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       storageBucket.authorization,
       AuthorizationPrivilege.FILE_UPLOAD,
       `create document on storage: ${storageBucket.id}`
@@ -55,7 +55,7 @@ export class StorageBucketResolverMutations {
       readStream,
       filename,
       mimetype,
-      agentInfo.userID,
+      actorContext.actorId,
       uploadData.temporaryLocation
     );
     document = await this.documentService.saveDocument(document);
@@ -78,14 +78,14 @@ export class StorageBucketResolverMutations {
   })
   @Profiling.api
   async deleteStorageBucket(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteStorageBucketInput
   ): Promise<IStorageBucket> {
     const storageBucket =
       await this.storageBucketService.getStorageBucketOrFail(deleteData.ID);
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       storageBucket.authorization,
       AuthorizationPrivilege.DELETE,
       `Delete storage bucket: ${storageBucket.id}`

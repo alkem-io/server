@@ -2,7 +2,7 @@ import { RoleChangeType } from '@alkemio/notifications-lib';
 import { GLOBAL_POLICY_AUTHORIZATION_GRANT_GLOBAL_ADMIN } from '@common/constants/authorization/global.policy.constants';
 import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
 import { SpaceLevel } from '@common/enums/space.level';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -18,7 +18,7 @@ import { NotificationInputPlatformGlobalRoleChange } from '@services/adapters/no
 import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
 import { AuthResetService } from '@services/auth-reset/publisher/auth-reset.service';
 import { InstrumentResolver } from '@src/apm/decorators';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { CurrentActor, Profiling } from '@src/common/decorators';
 import { EntityManager } from 'typeorm';
 import { AdminAuthorizationService } from './admin.authorization.service';
 import { GrantAuthorizationCredentialInput } from './dto/authorization.dto.credential.grant';
@@ -57,13 +57,13 @@ export class AdminAuthorizationResolverMutations {
   async grantCredentialToUser(
     @Args('grantCredentialData')
     grantCredentialData: GrantAuthorizationCredentialInput,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ): Promise<IUser> {
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
-      `grant credential: ${agentInfo.email}`
+      `grant credential: ${actorContext.actorId}`
     );
 
     const user =
@@ -73,7 +73,7 @@ export class AdminAuthorizationResolverMutations {
 
     // Send the notification
     this.notifyPlatformGlobalRoleChange(
-      agentInfo.userID,
+      actorContext.actorId,
       user,
       RoleChangeType.ADDED,
       grantCredentialData.type
@@ -88,20 +88,20 @@ export class AdminAuthorizationResolverMutations {
   async revokeCredentialFromUser(
     @Args('revokeCredentialData')
     credentialRemoveData: RevokeAuthorizationCredentialInput,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ): Promise<IUser> {
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
-      `revoke credential: ${agentInfo.email}`
+      `revoke credential: ${actorContext.actorId}`
     );
     const user =
       await this.adminAuthorizationService.revokeCredentialFromUser(
         credentialRemoveData
       );
     this.notifyPlatformGlobalRoleChange(
-      agentInfo.userID,
+      actorContext.actorId,
       user,
       RoleChangeType.REMOVED,
       credentialRemoveData.type
@@ -116,13 +116,13 @@ export class AdminAuthorizationResolverMutations {
   async grantCredentialToOrganization(
     @Args('grantCredentialData')
     grantCredentialData: GrantOrganizationAuthorizationCredentialInput,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ): Promise<IOrganization> {
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
-      `grant credential: ${agentInfo.email}`
+      `grant credential: ${actorContext.actorId}`
     );
     return await this.adminAuthorizationService.grantCredentialToOrganization(
       grantCredentialData
@@ -136,13 +136,13 @@ export class AdminAuthorizationResolverMutations {
   async revokeCredentialFromOrganization(
     @Args('revokeCredentialData')
     credentialRemoveData: RevokeOrganizationAuthorizationCredentialInput,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ): Promise<IOrganization> {
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
-      `revoke credential: ${agentInfo.email}`
+      `revoke credential: ${actorContext.actorId}`
     );
     return await this.adminAuthorizationService.revokeCredentialFromOrganization(
       credentialRemoveData
@@ -153,16 +153,16 @@ export class AdminAuthorizationResolverMutations {
     description: 'Reset the Authorization Policy on all entities',
   })
   public async authorizationPolicyResetAll(
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ): Promise<string> {
     const platformPolicy =
       await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       platformPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN, // todo: replace with AUTHORIZATION_RESET once that has been granted
-      `reset authorization on platform: ${agentInfo.email}`
+      `reset authorization on platform: ${actorContext.actorId}`
     );
 
     return this.authResetService.publishResetAll();
@@ -173,16 +173,16 @@ export class AdminAuthorizationResolverMutations {
       'Ensure all access privileges for the platform roles are re-calculated',
   })
   public async authorizationPlatformRolesAccessReset(
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ): Promise<boolean> {
     const platformPolicy =
       await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       platformPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN, // todo: replace with AUTHORIZATION_RESET once that has been granted
-      `reset platformRolesAccess on all Spaces: ${agentInfo.email}`
+      `reset platformRolesAccess on all Spaces: ${actorContext.actorId}`
     );
 
     const spaces = await this.entityManager.find(Space, {
@@ -201,7 +201,7 @@ export class AdminAuthorizationResolverMutations {
       'Reset the specified Authorization Policy to global admin privileges',
   })
   public async authorizationPolicyResetToGlobalAdminsAccess(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('authorizationID') authorizationID: string
   ): Promise<IAuthorizationPolicy> {
     const platformPolicy =
@@ -211,10 +211,10 @@ export class AdminAuthorizationResolverMutations {
         platformPolicy
       );
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       platformPolicyUpdated,
       AuthorizationPrivilege.AUTHORIZATION_RESET,
-      `reset authorization on a single authorization policy: ${agentInfo.email}`
+      `reset authorization on a single authorization policy: ${actorContext.actorId}`
     );
 
     return this.adminAuthorizationService.resetAuthorizationPolicy(
@@ -226,20 +226,20 @@ export class AdminAuthorizationResolverMutations {
     description: 'Refresh the Bodies of Knowledge on All VCs',
   })
   public async refreshAllBodiesOfKnowledge(
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ): Promise<boolean> {
     const platformPolicy =
       await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       platformPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `reset authorization on platform: ${agentInfo.email}`
+      `reset authorization on platform: ${actorContext.actorId}`
     );
 
     return this.virtualContributorService.refreshAllBodiesOfKnowledge(
-      agentInfo
+      actorContext
     );
   }
 

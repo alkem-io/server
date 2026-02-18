@@ -15,7 +15,7 @@ import {
   SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER,
   SUBSCRIPTION_IN_APP_NOTIFICATION_RECEIVED,
   SUBSCRIPTION_ROOM_EVENT,
-  SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED,
+  SUBSCRIPTION_VIRTUAL_UPDATED,
 } from '@src/common/constants';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -35,7 +35,7 @@ export class SubscriptionPublishService {
     private activityCreatedSubscription: PubSubEngine,
     @Inject(SUBSCRIPTION_ROOM_EVENT)
     private roomEventsSubscription: PubSubEngine,
-    @Inject(SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED)
+    @Inject(SUBSCRIPTION_VIRTUAL_UPDATED)
     private virtualContributorUpdatedSubscription: PubSubEngine,
     @Inject(SUBSCRIPTION_IN_APP_NOTIFICATION_RECEIVED)
     private inAppNotificationReceivedSubscription: TypedPubSubEngine<IInAppNotification>,
@@ -133,7 +133,7 @@ export class SubscriptionPublishService {
     };
 
     this.virtualContributorUpdatedSubscription.publish(
-      SubscriptionType.VIRTUAL_CONTRIBUTOR_UPDATED,
+      SubscriptionType.VIRTUAL_UPDATED,
       payload
     );
 

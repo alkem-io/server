@@ -18,8 +18,8 @@ import {
 } from '@common/exceptions';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { RoleSetAuthorizationService } from '@domain/access/role-set/role.set.service.authorization';
-import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { AgentAuthorizationService } from '@domain/actor/actor/actor.service';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
@@ -55,7 +55,7 @@ export class OrganizationAuthorizationService {
         relations: {
           storageAggregator: true,
           profile: true,
-          agent: true,
+          credentials: true,
           groups: true,
           verification: true,
           roleSet: true,
@@ -65,7 +65,7 @@ export class OrganizationAuthorizationService {
     if (
       !organization.profile ||
       !organization.storageAggregator ||
-      !organization.agent ||
+      !organization.credentials ||
       !organization.groups ||
       !organization.verification ||
       !organization.roleSet
@@ -141,7 +141,7 @@ export class OrganizationAuthorizationService {
 
     const agentAuthorization =
       this.agentAuthorizationService.applyAuthorizationPolicy(
-        organization.agent,
+        organization,
         organization.authorization
       );
     updatedAuthorizations.push(agentAuthorization);

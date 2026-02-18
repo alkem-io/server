@@ -1,5 +1,6 @@
 import { AuthorizationPrivilege, ProfileType } from '@common/enums';
 import { AccountType } from '@common/enums/account.type';
+import { ActorType } from '@common/enums/actor.type';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
@@ -502,6 +503,7 @@ const getSubspacesMock = (
   const result: Space[] = [];
   for (let i = 0; i < count; i++) {
     result.push({
+      type: ActorType.SPACE,
       id: `${spaceId}.${i}`,
       rowId: i,
       nameID: `challenge-${spaceId}.${i}`,
@@ -513,12 +515,14 @@ const getSubspacesMock = (
       },
       account: {
         id: `account-${spaceId}.${i}`,
+        nameID: `account-nameid-${spaceId}.${i}`,
+        accountType: AccountType.ORGANIZATION,
         virtualContributors: [],
         innovationHubs: [],
         innovationPacks: [],
         spaces: [],
         externalSubscriptionID: '',
-        type: AccountType.ORGANIZATION,
+        type: ActorType.ORGANIZATION,
         ...getEntityMock<Account>(),
         baselineLicensePlan: DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN,
       },
@@ -627,6 +631,7 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
   const result: Space[] = [];
   for (let i = 0; i < count; i++) {
     result.push({
+      type: ActorType.SPACE,
       id: `${subsubspaceId}.${i}`,
       rowId: i,
       nameID: `subsubspace-${subsubspaceId}.${i}`,
@@ -638,12 +643,14 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
       },
       account: {
         id: `account-${subsubspaceId}.${i}`,
+        nameID: `account-nameid-${subsubspaceId}.${i}`,
+        accountType: AccountType.ORGANIZATION,
         virtualContributors: [],
         innovationHubs: [],
         innovationPacks: [],
         spaces: [],
         externalSubscriptionID: '',
-        type: AccountType.ORGANIZATION,
+        type: ActorType.ORGANIZATION,
         ...getEntityMock<Account>(),
         baselineLicensePlan: DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN,
       },
@@ -758,6 +765,7 @@ const getSpaceMock = ({
   settings: ISpaceSettings;
 }): Space => {
   return {
+    type: ActorType.SPACE,
     id,
     rowId: parseInt(id),
     nameID: `space-${id}`,
@@ -783,12 +791,14 @@ const getSpaceMock = ({
     visibility,
     account: {
       id: `account-${id}`,
+      nameID: `account-nameid-${id}`,
+      accountType: AccountType.ORGANIZATION,
       virtualContributors: [],
       innovationHubs: [],
       innovationPacks: [],
       spaces: [],
       externalSubscriptionID: '',
-      type: AccountType.ORGANIZATION,
+      type: ActorType.ORGANIZATION,
       ...getEntityMock<Account>(),
       baselineLicensePlan: DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN,
     },

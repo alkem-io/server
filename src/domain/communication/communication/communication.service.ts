@@ -10,7 +10,6 @@ import {
   Communication,
   ICommunication,
 } from '@domain/communication/communication';
-import { IUser } from '@domain/community/user/user.interface';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
@@ -131,14 +130,10 @@ export class CommunicationService {
 
   async removeUserFromCommunications(
     communication: ICommunication,
-    user: IUser
+    actorId: string
   ): Promise<boolean> {
-    if (!user.agent?.id) {
-      // no agent ID to manage, just return
-      return true;
-    }
     const roomIds = this.getRoomIds(communication);
-    await this.communicationAdapter.batchRemoveMember(user.agent.id, roomIds);
+    await this.communicationAdapter.batchRemoveMember(actorId, roomIds);
     return true;
   }
 }

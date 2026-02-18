@@ -1,9 +1,9 @@
 export enum MentionedEntityType {
   USER = 'user',
   ORGANIZATION = 'organization',
-  VIRTUAL_CONTRIBUTOR = 'vc',
+  VIRTUAL = 'vc',
 }
 export abstract class Mention {
-  contributorID!: string;
-  contributorType!: MentionedEntityType;
+  actorId!: string;
+  actorType!: MentionedEntityType;
 }

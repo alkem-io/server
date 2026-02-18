@@ -1,4 +1,5 @@
 import { AccountType } from '@common/enums/account.type';
+import { ActorType } from '@common/enums/actor.type';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { ProfileType } from '@common/enums/profile.type';
 import { SpaceLevel } from '@common/enums/space.level';
@@ -21,17 +22,17 @@ import {
   MockEntityManagerProvider,
   MockSpaceService,
 } from '@test/mocks';
+import { MockActorLookupService } from '@test/mocks/actor.lookup.service.mock';
 import { MockApplicationService } from '@test/mocks/application.service.mock';
 import { MockCommunityResolverService } from '@test/mocks/community.resolver.service.mock';
 import { MockCommunityService } from '@test/mocks/community.service.mock';
-import { MockContributorLookupService } from '@test/mocks/contributor.lookup.service.mock';
 import { MockInvitationService } from '@test/mocks/invitation.service.mock';
 import { MockOrganizationLookupService } from '@test/mocks/organization.lookup.service.mock';
 import { MockOrganizationService } from '@test/mocks/organization.service.mock';
 import { MockSpaceFilterService } from '@test/mocks/space.filter.service.mock';
 import { MockUserLookupService } from '@test/mocks/user.lookup.service.mock';
 import { MockUserService } from '@test/mocks/user.service.mock';
-import { MockVirtualContributorLookupService } from '@test/mocks/virtual.contributor.lookup.service.mock';
+import { MockVirtualActorLookupService } from '@test/mocks/virtual.contributor.lookup.service.mock';
 import { MockVirtualContributorService } from '@test/mocks/virtual.contributor.service.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { testData } from '@test/utils';
@@ -60,7 +61,7 @@ describe('RolesService', () => {
         MockSpaceFilterService,
         MockOrganizationService,
         MockCommunityResolverService,
-        MockVirtualContributorLookupService,
+        MockVirtualActorLookupService,
         MockOrganizationLookupService,
         MockAuthorizationService,
         MockWinstonProvider,
@@ -68,7 +69,7 @@ describe('RolesService', () => {
         MockSpaceService,
         MockUserLookupService,
         MockVirtualContributorService,
-        MockContributorLookupService,
+        MockActorLookupService,
         RolesService,
       ],
     }).compile();
@@ -105,7 +106,7 @@ describe('RolesService', () => {
       }
       spaceRolesMock.subspaces = subspaceRolesMocks;
       const spacesRolesMock: RolesResultSpace[] = [spaceRolesMock];
-      vi.spyOn(userLookupService, 'getUserWithAgent').mockResolvedValue(user);
+      vi.spyOn(userLookupService, 'getUserByIdOrFail').mockResolvedValue(user);
 
       vi.spyOn(spaceFilterService, 'getAllowedVisibilities').mockReturnValue([
         SpaceVisibility.ACTIVE,
@@ -141,14 +142,14 @@ describe('RolesService', () => {
 
     it('Should get user roles', async () => {
       const roles = await rolesService.getRolesForUser({
-        userID: testData.user.id,
+        actorId: testData.user.id,
       });
 
       const organizationRoles =
         await rolesService.getOrganizationRolesForUser(roles);
       const spaceRoles = await rolesService.getSpaceRolesForContributor(
         roles,
-        testData.agentInfo
+        testData.actorContext
       );
 
       expect(organizationRoles).toEqual(
@@ -186,21 +187,19 @@ describe('RolesService', () => {
 
   describe('Organization Roles', () => {
     it('Should get organization roles', async () => {
+      // Organization IS the Actor - credentials are directly on the entity
       vi.spyOn(
         organizationLookupService,
-        'getOrganizationAndAgent'
-      ).mockResolvedValue({
-        organization: testData.organization,
-        agent: testData.agent,
-      } as any);
+        'getOrganizationByIdOrFail'
+      ).mockResolvedValue(testData.organization as any);
 
       const roles = await rolesService.getRolesForOrganization({
-        organizationID: testData.organization.id,
+        actorId: testData.organization.id,
       });
 
       const spaces = await rolesService.getSpaceRolesForContributor(
         roles,
-        testData.agentInfo
+        testData.actorContext
       );
 
       expect(spaces).toEqual(
@@ -252,6 +251,7 @@ const getSpaceRoleResultMock = ({
     visibility: SpaceVisibility.ACTIVE,
     roles,
     space: {
+      type: ActorType.SPACE,
       id,
       platformRolesAccess: {
         roles: [],
@@ -277,12 +277,14 @@ const getSpaceRoleResultMock = ({
       visibility: SpaceVisibility.ACTIVE,
       account: {
         id: `account-${id}`,
+        nameID: `account-nameid-${id}`,
+        accountType: AccountType.ORGANIZATION,
         virtualContributors: [],
         innovationHubs: [],
         innovationPacks: [],
         externalSubscriptionID: '',
         spaces: [],
-        type: AccountType.ORGANIZATION,
+        type: ActorType.ORGANIZATION,
         ...getEntityMock<Account>(),
         baselineLicensePlan: DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN,
       },

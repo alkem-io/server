@@ -260,7 +260,7 @@ describe('LicenseEntitlementUsageService', () => {
     });
 
     describe('non-space entitlements', () => {
-      it('should count ACCOUNT_VIRTUAL_CONTRIBUTOR correctly', async () => {
+      it('should count ACCOUNT_VIRTUAL correctly', async () => {
         const mockAccount = {
           virtualContributors: [{}, {}, {}], // 3 virtual contributors
         } as unknown as Account;
@@ -268,7 +268,7 @@ describe('LicenseEntitlementUsageService', () => {
 
         const result = await service.getEntitlementUsageForAccount(
           licenseID,
-          LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR
+          LicenseEntitlementType.ACCOUNT_VIRTUAL
         );
 
         expect(result).toBe(3);

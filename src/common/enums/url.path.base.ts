@@ -2,7 +2,7 @@ export enum UrlPathBase {
   HOME = 'home',
   USER = 'user',
   ADMIN = 'admin',
-  VIRTUAL_CONTRIBUTOR = 'vc',
+  VIRTUAL = 'vc',
   ORGANIZATION = 'organization',
   DOCUMENTATION = 'documentation',
   INNOVATION_LIBRARY = 'innovation-library',

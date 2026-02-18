@@ -1,14 +1,24 @@
 import { ActivityEventType } from '@common/enums/activity.event.type';
+import { ActorType } from '@common/enums/actor.type';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
-import { User } from '@domain/community/user/user.entity';
 import { IActivity } from '@platform/activity';
 import { vi } from 'vitest';
 import ActivityLogBuilderService from './activity.log.builder.service';
 import { IActivityLogEntry } from './dto/activity.log.entry.interface';
 
+// Mock getContributorType to avoid lazy require() that fails in vitest
+vi.mock('@domain/actor/actor/actor.service', async importOriginal => {
+  const original =
+    await importOriginal<typeof import('@domain/actor/actor/actor.service')>();
+  return {
+    ...original,
+    getContributorType: vi.fn().mockReturnValue(ActorType.USER),
+  };
+});
+
 describe('ActivityLogBuilderService', () => {
   let builder: ActivityLogBuilderService;
-  let contributorLookupService: Record<string, any>;
+  let actorLookupService: Record<string, any>;
   let calloutService: Record<string, any>;
   let postService: Record<string, any>;
   let whiteboardService: Record<string, any>;
@@ -33,8 +43,8 @@ describe('ActivityLogBuilderService', () => {
   } as any;
 
   beforeEach(() => {
-    contributorLookupService = {
-      getContributorByUuidOrFail: vi.fn(),
+    actorLookupService = {
+      getActorByIdOrFail: vi.fn(),
     };
     calloutService = { getCalloutOrFail: vi.fn() };
     postService = { getPostOrFail: vi.fn() };
@@ -50,7 +60,7 @@ describe('ActivityLogBuilderService', () => {
 
     builder = new ActivityLogBuilderService(
       baseEntry,
-      contributorLookupService as any,
+      actorLookupService as any,
       calloutService as any,
       postService as any,
       whiteboardService as any,
@@ -81,12 +91,9 @@ describe('ActivityLogBuilderService', () => {
 
     it('should return member joined entry with community and contributor', async () => {
       const community = { id: 'community-1' };
-      const contributor = new User();
-      contributor.id = 'contributor-1';
+      const contributor = { id: 'contributor-1' };
       communityService.getCommunityOrFail.mockResolvedValue(community);
-      contributorLookupService.getContributorByUuidOrFail.mockResolvedValue(
-        contributor
-      );
+      actorLookupService.getActorByIdOrFail.mockResolvedValue(contributor);
 
       const activity = {
         id: 'act-1',
@@ -179,7 +186,7 @@ describe('ActivityLogBuilderService', () => {
       const entryWithSpace = { ...baseEntry, space };
       const builderWithSpace = new ActivityLogBuilderService(
         entryWithSpace as any,
-        contributorLookupService as any,
+        actorLookupService as any,
         calloutService as any,
         postService as any,
         whiteboardService as any,
@@ -222,7 +229,7 @@ describe('ActivityLogBuilderService', () => {
       const entryWithSpace = { ...baseEntry, space };
       const builderWithSpace = new ActivityLogBuilderService(
         entryWithSpace as any,
-        contributorLookupService as any,
+        actorLookupService as any,
         calloutService as any,
         postService as any,
         whiteboardService as any,

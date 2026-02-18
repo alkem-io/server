@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { Controller } from '@nestjs/common';
 import {
   Ctx,
@@ -34,7 +35,8 @@ import { WhiteboardIntegrationService } from './whiteboard.integration.service';
 @Controller()
 export class WhiteboardIntegrationController {
   constructor(
-    private readonly integrationService: WhiteboardIntegrationService
+    private readonly integrationService: WhiteboardIntegrationService,
+    private readonly userLookupService: UserLookupService
   ) {}
 
   @MessagePattern(WhiteboardIntegrationMessagePattern.INFO, Transport.RMQ)
@@ -52,30 +54,30 @@ export class WhiteboardIntegrationController {
     @Ctx() context: RmqContext
   ): Promise<UserInfo> {
     ack(context);
-    return this.integrationService.who(data).then(result => {
-      if (!result.isAnonymous) {
-        const { userID, email } = result;
-        if (result.guestName) {
-          const { guestName } = result;
-          // Sanitize guestName for email local part - use Unicode-aware regex
-          // \p{L} matches any Unicode letter, \p{N} matches any Unicode number
-          const sanitizedName = guestName
-            .toLowerCase()
-            .replace(/[^\p{L}\p{N}-]/gu, '-')
-            .replace(/-+/g, '-')
-            .replace(/^-|-$/g, '')
-            .substring(0, 64);
-          const guestEmail = `${sanitizedName || 'guest'}-guest@alkem.io`;
-          return {
-            id: randomUUID(),
-            email: guestEmail,
-            guestName: guestName,
-          };
-        }
-        return { id: userID, email };
+    const result = await this.integrationService.who(data);
+    if (!result.isAnonymous) {
+      if (result.guestName) {
+        const { guestName } = result;
+        // Sanitize guestName for email local part - use Unicode-aware regex
+        // \p{L} matches any Unicode letter, \p{N} matches any Unicode number
+        const sanitizedName = guestName
+          .toLowerCase()
+          .replace(/[^\p{L}\p{N}-]/gu, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '')
+          .substring(0, 64);
+        const guestEmail = `${sanitizedName || 'guest'}-guest@alkem.io`;
+        return {
+          id: randomUUID(),
+          email: guestEmail,
+        };
       }
-      return { id: '', email: '' };
-    });
+      const user = await this.userLookupService.getUserByIdOrFail(
+        result.actorId
+      );
+      return { id: result.actorId, email: user.email };
+    }
+    return { id: '', email: '' };
   }
 
   @EventPattern(WhiteboardIntegrationEventPattern.CONTRIBUTION, Transport.RMQ)

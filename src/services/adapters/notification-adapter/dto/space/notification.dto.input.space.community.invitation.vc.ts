@@ -1,7 +1,7 @@
-import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { IActor } from '@domain/actor/actor/actor.interface';
 import { NotificationInputCommunityInvitation } from './notification.dto.input.space.community.invitation';
 
 export interface NotificationInputCommunityInvitationVirtualContributor
   extends NotificationInputCommunityInvitation {
-  accountHost: IContributor;
+  accountHost: IActor;
 }

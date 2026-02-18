@@ -2,7 +2,7 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { RoomModule } from '@domain/communication/room/room.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
-import { VirtualContributorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
+import { VirtualActorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PlatformWellKnownVirtualContributorsModule } from '@platform/platform.well.known.virtual.contributors';
@@ -21,7 +21,7 @@ import { ConversationAuthorizationService } from './conversation.service.authori
     AuthorizationModule,
     RoomModule,
     UserLookupModule,
-    VirtualContributorLookupModule,
+    VirtualActorLookupModule,
     PlatformWellKnownVirtualContributorsModule,
     ConversationMembershipModule,
     SubscriptionServiceModule,

@@ -1,4 +1,4 @@
-import { AuthorizationAgentPrivilege } from '@common/decorators/authorization.agent.privilege';
+import { AuthorizationActorPrivilege } from '@common/decorators/authorization.actor.privilege';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { ProfileLoaderCreator } from '@core/dataloader/creators';
@@ -17,7 +17,7 @@ import { InnovationFlowService } from './innovation.flow.service';
 export class InnovationFlowResolverFields {
   constructor(private innovationFlowService: InnovationFlowService) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('states', () => [IInnovationFlowState], {
     nullable: false,
@@ -33,7 +33,7 @@ export class InnovationFlowResolverFields {
     return await this.innovationFlowService.getStates(innovationFlow.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('currentState', () => IInnovationFlowState, {
     nullable: true,

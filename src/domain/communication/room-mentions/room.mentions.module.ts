@@ -1,6 +1,6 @@
 import { OrganizationLookupModule } from '@domain/community/organization-lookup/organization.lookup.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
-import { VirtualContributorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
+import { VirtualActorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
 import { Module } from '@nestjs/common';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
@@ -14,7 +14,7 @@ import { RoomMentionsService } from './room.mentions.service';
     EntityResolverModule,
     NotificationAdapterModule,
     VirtualContributorMessageModule,
-    VirtualContributorLookupModule,
+    VirtualActorLookupModule,
     UserLookupModule,
     OrganizationLookupModule,
   ],

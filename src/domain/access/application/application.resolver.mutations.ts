@@ -1,11 +1,11 @@
 import { AuthorizationPrivilege } from '@common/enums';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IApplication } from '@domain/access/application';
 import { ApplicationService } from '@domain/access/application/application.service';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { DeleteApplicationInput } from './dto/application.dto.delete';
 
 @InstrumentResolver()
@@ -20,14 +20,14 @@ export class ApplicationResolverMutations {
     description: 'Removes the specified User Application.',
   })
   async deleteUserApplication(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteApplicationInput
   ): Promise<IApplication> {
     const application = await this.applicationService.getApplicationOrFail(
       deleteData.ID
     );
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       application.authorization,
       AuthorizationPrivilege.DELETE,
       `delete application on RoleSet: ${application.id}`

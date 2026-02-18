@@ -1,25 +1,25 @@
-import { AgentService } from '@domain/agent/agent/agent.service';
-import { ICredential } from '@domain/agent/credential/credential.interface';
+import { ActorService } from '@domain/actor/actor/actor.service';
+import { ICredential } from '@domain/actor/credential/credential.interface';
 import { In, Repository } from 'typeorm';
 import { beforeEach, describe, expect, it, type Mocked, vi } from 'vitest';
 import {
   ensureRolesLoaded,
-  loadAgentCredentials,
+  loadActorCredentials,
 } from './role.set.data.loader.utils';
 import { RoleSet } from './role.set.entity';
 import { IRoleSet } from './role.set.interface';
-import { AgentRoleKey } from './types';
+import { ActorRoleKey } from './types';
 
 /* ───────── helpers ───────── */
 
-function makeAgentRoleKey(
-  agentID: string,
+function makeActorRoleKey(
+  actorId: string,
   userID: string,
   roleSetId: string,
   roles?: any[]
-): AgentRoleKey {
+): ActorRoleKey {
   return {
-    agentInfo: { agentID, userID } as any,
+    actorContext: { actorId, userID } as any,
     roleSet: { id: roleSetId, roles } as unknown as IRoleSet,
   };
 }
@@ -29,94 +29,99 @@ function makeCredential(type: string, resourceID: string): ICredential {
 }
 
 /* ═══════════════════════════════════════════════
-   loadAgentCredentials
+   loadActorCredentials
    ═══════════════════════════════════════════════ */
 
-describe('loadAgentCredentials', () => {
-  let agentService: Mocked<Pick<AgentService, 'getAgentCredentialsBatch'>>;
+describe('loadActorCredentials', () => {
+  let actorService: Mocked<Pick<ActorService, 'getActorCredentials'>>;
 
   beforeEach(() => {
-    agentService = {
-      getAgentCredentialsBatch: vi.fn().mockResolvedValue(new Map()),
+    actorService = {
+      getActorCredentials: vi
+        .fn()
+        .mockImplementation(async (actorId: string) => ({
+          actor: { id: actorId },
+          credentials: [],
+        })),
     };
   });
 
   it('should deduplicate agent IDs across keys', async () => {
-    const keys: AgentRoleKey[] = [
-      makeAgentRoleKey('agent-1', 'user-1', 'rs-1'),
-      makeAgentRoleKey('agent-1', 'user-1', 'rs-2'),
-      makeAgentRoleKey('agent-1', 'user-1', 'rs-3'),
+    const keys: ActorRoleKey[] = [
+      makeActorRoleKey('agent-1', 'user-1', 'rs-1'),
+      makeActorRoleKey('agent-1', 'user-1', 'rs-2'),
+      makeActorRoleKey('agent-1', 'user-1', 'rs-3'),
     ];
 
-    await loadAgentCredentials(keys, agentService as unknown as AgentService);
+    await loadActorCredentials(keys, actorService as unknown as ActorService);
 
-    expect(agentService.getAgentCredentialsBatch).toHaveBeenCalledTimes(1);
-    expect(agentService.getAgentCredentialsBatch).toHaveBeenCalledWith([
-      'agent-1',
-    ]);
+    expect(actorService.getActorCredentials).toHaveBeenCalledTimes(1);
+    expect(actorService.getActorCredentials).toHaveBeenCalledWith('agent-1');
   });
 
   it('should pass multiple unique agent IDs', async () => {
-    const keys: AgentRoleKey[] = [
-      makeAgentRoleKey('agent-1', 'user-1', 'rs-1'),
-      makeAgentRoleKey('agent-2', 'user-2', 'rs-2'),
-      makeAgentRoleKey('agent-1', 'user-1', 'rs-3'),
+    const keys: ActorRoleKey[] = [
+      makeActorRoleKey('agent-1', 'user-1', 'rs-1'),
+      makeActorRoleKey('agent-2', 'user-2', 'rs-2'),
+      makeActorRoleKey('agent-1', 'user-1', 'rs-3'),
     ];
 
-    await loadAgentCredentials(keys, agentService as unknown as AgentService);
+    await loadActorCredentials(keys, actorService as unknown as ActorService);
 
-    const passedIds = agentService.getAgentCredentialsBatch.mock.calls[0][0];
-    expect(passedIds).toHaveLength(2);
-    expect(passedIds).toContain('agent-1');
-    expect(passedIds).toContain('agent-2');
+    expect(actorService.getActorCredentials).toHaveBeenCalledTimes(2);
+    const calledWith = actorService.getActorCredentials.mock.calls.map(
+      c => c[0]
+    );
+    expect(calledWith).toContain('agent-1');
+    expect(calledWith).toContain('agent-2');
   });
 
   it('should filter out empty agent IDs', async () => {
-    const keys: AgentRoleKey[] = [
-      makeAgentRoleKey('', 'user-1', 'rs-1'),
-      makeAgentRoleKey('agent-2', 'user-2', 'rs-2'),
-      makeAgentRoleKey('', 'user-3', 'rs-3'),
+    const keys: ActorRoleKey[] = [
+      makeActorRoleKey('', 'user-1', 'rs-1'),
+      makeActorRoleKey('agent-2', 'user-2', 'rs-2'),
+      makeActorRoleKey('', 'user-3', 'rs-3'),
     ];
 
-    await loadAgentCredentials(keys, agentService as unknown as AgentService);
+    await loadActorCredentials(keys, actorService as unknown as ActorService);
 
-    expect(agentService.getAgentCredentialsBatch).toHaveBeenCalledWith([
-      'agent-2',
-    ]);
+    expect(actorService.getActorCredentials).toHaveBeenCalledTimes(1);
+    expect(actorService.getActorCredentials).toHaveBeenCalledWith('agent-2');
   });
 
   it('should return empty map when all agent IDs are empty', async () => {
-    const keys: AgentRoleKey[] = [
-      makeAgentRoleKey('', 'user-1', 'rs-1'),
-      makeAgentRoleKey('', 'user-2', 'rs-2'),
+    const keys: ActorRoleKey[] = [
+      makeActorRoleKey('', 'user-1', 'rs-1'),
+      makeActorRoleKey('', 'user-2', 'rs-2'),
     ];
 
-    // When no valid IDs, getAgentCredentialsBatch([]) returns empty map
-    agentService.getAgentCredentialsBatch.mockResolvedValue(new Map());
-
-    const result = await loadAgentCredentials(
+    const result = await loadActorCredentials(
       keys,
-      agentService as unknown as AgentService
+      actorService as unknown as ActorService
     );
 
     expect(result.size).toBe(0);
+    expect(actorService.getActorCredentials).not.toHaveBeenCalled();
   });
 
-  it('should return the map from agentService', async () => {
+  it('should return the map from actorService', async () => {
     const cred = makeCredential('space-member', 'space-123');
-    const expected = new Map([['agent-1', [cred]]]);
-    agentService.getAgentCredentialsBatch.mockResolvedValue(expected);
-
-    const keys: AgentRoleKey[] = [
-      makeAgentRoleKey('agent-1', 'user-1', 'rs-1'),
-    ];
-
-    const result = await loadAgentCredentials(
-      keys,
-      agentService as unknown as AgentService
+    actorService.getActorCredentials.mockImplementation(
+      async (actorId: string) => ({
+        actor: { id: actorId } as any,
+        credentials: [cred],
+      })
     );
 
-    expect(result).toBe(expected);
+    const keys: ActorRoleKey[] = [
+      makeActorRoleKey('agent-1', 'user-1', 'rs-1'),
+    ];
+
+    const result = await loadActorCredentials(
+      keys,
+      actorService as unknown as ActorService
+    );
+
     expect(result.get('agent-1')).toEqual([cred]);
   });
 });

@@ -1,9 +1,9 @@
 import { AuthorizationPrivilege } from '@common/enums';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { IAiPersona } from './ai.persona.interface';
 import { AiPersonaService } from './ai.persona.service';
 import { DeleteAiPersonaInput, UpdateAiPersonaInput } from './dto';
@@ -20,7 +20,7 @@ export class AiPersonaResolverMutations {
     description: 'Updates the specified AI Persona.',
   })
   async aiServerUpdateAiPersona(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('aiPersonaData')
     aiPersonaServiceData: UpdateAiPersonaInput
   ): Promise<IAiPersona> {
@@ -28,7 +28,7 @@ export class AiPersonaResolverMutations {
       aiPersonaServiceData.ID
     );
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       aiPersonaService.authorization,
       AuthorizationPrivilege.UPDATE,
       `orgUpdate: ${aiPersonaService.id}`
@@ -41,14 +41,14 @@ export class AiPersonaResolverMutations {
     description: 'Deletes the specified AiPersona.',
   })
   async aiServerDeleteAiPersona(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteAiPersonaInput
   ): Promise<IAiPersona> {
     const aiPersonaService = await this.aiPersonaService.getAiPersonaOrFail(
       deleteData.ID
     );
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       aiPersonaService.authorization,
       AuthorizationPrivilege.DELETE,
       `deleteOrg: ${aiPersonaService.id}`

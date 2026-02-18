@@ -1,7 +1,7 @@
-import { CurrentUser } from '@common/decorators';
+import { CurrentActor } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
 import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
@@ -133,13 +133,13 @@ export class PlatformResolverFields {
   )
   async wellKnownVirtualContributors(
     @Parent() platform: IPlatform,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ): Promise<IPlatformWellKnownVirtualContributors> {
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ,
-      `get Platform well-known Virtual Contributors: ${agentInfo.email}`
+      `get Platform well-known Virtual Contributors: ${actorContext.actorId}`
     );
 
     // Convert from JSON storage format to DTO array format

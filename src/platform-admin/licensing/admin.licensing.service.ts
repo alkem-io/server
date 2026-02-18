@@ -1,7 +1,6 @@
 import { LicensingCredentialBasedPlanType } from '@common/enums/licensing.credential.based.plan.type';
 import { LogContext } from '@common/enums/logging.context';
 import { ValidationException } from '@common/exceptions';
-import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { IAccount } from '@domain/space/account/account.interface';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { ISpace } from '@domain/space/space/space.interface';
@@ -54,18 +53,13 @@ export class AdminLicensingService {
       licensePlanData.spaceID,
       {
         relations: {
-          agent: true,
+          credentials: true,
         },
       }
     );
-    if (!space.agent) {
-      throw new EntityNotInitializedException(
-        `Space (${space}) does not have an agent`,
-        LogContext.LICENSE
-      );
-    }
-    space.agent = await this.licenseIssuerService.assignLicensePlan(
-      space.agent,
+    // Space IS the Actor - pass space.id as actorId
+    await this.licenseIssuerService.assignLicensePlan(
+      space.id,
       licensePlan,
       space.id
     );
@@ -98,18 +92,13 @@ export class AdminLicensingService {
       licensePlanData.spaceID,
       {
         relations: {
-          agent: true,
+          credentials: true,
         },
       }
     );
-    if (!space.agent) {
-      throw new EntityNotInitializedException(
-        `Account (${space}) does not have an agent`,
-        LogContext.LICENSE
-      );
-    }
-    space.agent = await this.licenseIssuerService.revokeLicensePlan(
-      space.agent,
+    // Space IS the Actor - pass space.id as actorId
+    await this.licenseIssuerService.revokeLicensePlan(
+      space.id,
       licensePlan,
       space.id
     );
@@ -141,18 +130,13 @@ export class AdminLicensingService {
       licensePlanData.accountID,
       {
         relations: {
-          agent: true,
+          credentials: true,
         },
       }
     );
-    if (!account.agent) {
-      throw new EntityNotInitializedException(
-        `Account (${account}) does not have an agent`,
-        LogContext.LICENSE
-      );
-    }
-    account.agent = await this.licenseIssuerService.assignLicensePlan(
-      account.agent,
+    // Account IS the Actor - pass account.id as actorId
+    await this.licenseIssuerService.assignLicensePlan(
+      account.id,
       licensePlan,
       account.id
     );
@@ -185,18 +169,13 @@ export class AdminLicensingService {
       licensePlanData.accountID,
       {
         relations: {
-          agent: true,
+          credentials: true,
         },
       }
     );
-    if (!account.agent) {
-      throw new EntityNotInitializedException(
-        `Account (${account}) does not have an agent`,
-        LogContext.LICENSE
-      );
-    }
-    account.agent = await this.licenseIssuerService.revokeLicensePlan(
-      account.agent,
+    // Account IS the Actor - pass account.id as actorId
+    await this.licenseIssuerService.revokeLicensePlan(
+      account.id,
       licensePlan,
       account.id
     );

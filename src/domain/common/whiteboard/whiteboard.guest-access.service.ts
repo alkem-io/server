@@ -7,7 +7,7 @@ import {
   EntityNotInitializedException,
   ForbiddenException,
 } from '@common/exceptions';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -62,11 +62,11 @@ export class WhiteboardGuestAccessService {
   }
 
   async updateGuestAccess(
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     whiteboardId: string,
     guestAccessEnabled: boolean
   ): Promise<IWhiteboard> {
-    const baseLogMeta = this.buildLogMetadata(agentInfo, whiteboardId, {
+    const baseLogMeta = this.buildLogMetadata(actorContext, whiteboardId, {
       guestAccessEnabled,
     });
     this.logger.debug?.(
@@ -92,7 +92,7 @@ export class WhiteboardGuestAccessService {
     const authorization = this.ensureAuthorization(whiteboard);
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       authorization,
       AuthorizationPrivilege.PUBLIC_SHARE,
       `toggle guest access on whiteboard: ${whiteboard.id}`
@@ -103,7 +103,7 @@ export class WhiteboardGuestAccessService {
     if (guestAccessEnabled && !this.isGuestToggleAllowed(space)) {
       this.logger.debug?.(
         'Whiteboard guest access toggle rejected: space disallows guest contributions',
-        this.buildLogMetadata(agentInfo, whiteboardId, {
+        this.buildLogMetadata(actorContext, whiteboardId, {
           guestAccessEnabled,
           spaceId: space.id,
         })
@@ -114,7 +114,7 @@ export class WhiteboardGuestAccessService {
         {
           spaceId: space.id,
           whiteboardId,
-          userId: agentInfo.userID,
+          userId: actorContext.actorId,
         }
       );
     }
@@ -316,15 +316,16 @@ export class WhiteboardGuestAccessService {
   }
 
   private buildLogMetadata(
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     whiteboardId: string,
     extra?: Record<string, unknown>
   ) {
     const metadata = {
       whiteboardId,
       userId:
-        agentInfo.userID || (agentInfo.isAnonymous ? 'anonymous' : 'unknown'),
-      actorId: agentInfo.agentID || agentInfo.userID || 'unknown',
+        actorContext.actorId ||
+        (actorContext.isAnonymous ? 'anonymous' : 'unknown'),
+      actorId: actorContext.actorId || actorContext.actorId || 'unknown',
       context: LogContext.COLLABORATION,
     };
 

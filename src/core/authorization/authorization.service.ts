@@ -6,8 +6,8 @@ import {
 } from '@common/exceptions';
 import { AuthorizationInvalidPolicyException } from '@common/exceptions/authorization.invalid.policy.exception';
 import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -27,7 +27,7 @@ export class AuthorizationService {
    * @throws AuthorizationInvalidPolicyException
    */
   grantAccessOrFail(
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     authorization: IAuthorizationPolicy | undefined,
     privilegeRequired: AuthorizationPrivilege,
     msg: string
@@ -38,37 +38,38 @@ export class AuthorizationService {
       privilegeRequired
     );
 
-    if (this.isAccessGranted(agentInfo, auth, privilegeRequired)) return true;
+    if (this.isAccessGranted(actorContext, auth, privilegeRequired))
+      return true;
 
-    const errorMsg = `Authorization: unable to grant '${privilegeRequired}' privilege: ${msg} user: ${agentInfo.userID} on authorization ${auth.id} of type '${auth.type}'`;
-    this.logCredentialCheckFailDetails(errorMsg, agentInfo, auth);
+    const errorMsg = `Authorization: unable to grant '${privilegeRequired}' privilege: ${msg} user: ${actorContext.actorId} on authorization ${auth.id} of type '${auth.type}'`;
+    this.logCredentialCheckFailDetails(errorMsg, actorContext, auth);
     // If you get to here then no match was found
     throw new ForbiddenAuthorizationPolicyException(
       errorMsg,
       privilegeRequired,
       auth.id,
-      agentInfo.userID
+      actorContext.actorId
     );
   }
 
   logCredentialCheckFailDetails(
     errorMsg: string,
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     authorization: IAuthorizationPolicy
   ) {
-    const msg = `${errorMsg}; agentInfo: ${
-      agentInfo.email
+    const msg = `${errorMsg}; actorContext: ${
+      actorContext.actorId
     } has credentials '${JSON.stringify(
-      agentInfo.credentials,
+      actorContext.credentials,
       this.replacer
     )}'; authorization definition: rules: ${authorization?.credentialRules}`;
     this.logger.debug?.(msg, LogContext.AUTH_POLICY);
   }
 
-  logAgentInfo(agentInfo: AgentInfo) {
+  logActorContext(actorContext: ActorContext) {
     this.logger.debug?.(
-      `AgentInfo: '${agentInfo.email}' has credentials '${JSON.stringify(
-        agentInfo.credentials,
+      `ActorContext: '${actorContext.actorId}' has credentials '${JSON.stringify(
+        actorContext.credentials,
         this.replacer
       )}'`,
       LogContext.AUTH
@@ -104,12 +105,12 @@ export class AuthorizationService {
   }
 
   isAccessGranted(
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     authorization: IAuthorizationPolicy | undefined,
     privilegeRequired: AuthorizationPrivilege
   ): boolean {
     return this.isAccessGrantedForCredentials(
-      agentInfo.credentials,
+      actorContext.credentials,
       authorization,
       privilegeRequired
     );

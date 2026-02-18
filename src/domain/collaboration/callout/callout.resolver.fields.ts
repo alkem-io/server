@@ -1,4 +1,4 @@
-import { AuthorizationAgentPrivilege } from '@common/decorators';
+import { AuthorizationActorPrivilege } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { GraphqlGuard } from '@core/authorization';
@@ -31,7 +31,7 @@ export class CalloutResolverFields {
     private calloutService: CalloutService
   ) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('contributions', () => [ICalloutContribution], {
     nullable: false,
@@ -71,7 +71,7 @@ export class CalloutResolverFields {
       shuffle
     );
   }
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('contributionsCount', () => CalloutContributionsCountOutput, {
     nullable: false,
@@ -83,7 +83,7 @@ export class CalloutResolverFields {
     return await this.calloutService.getContributionsCount(callout);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('comments', () => IRoom, {
     nullable: true,
@@ -93,7 +93,7 @@ export class CalloutResolverFields {
     return await this.calloutService.getComments(callout.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('classification', () => IClassification, {
     nullable: true,
@@ -129,7 +129,7 @@ export class CalloutResolverFields {
     return await this.calloutService.getActivityCount(callout);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('contributionDefaults', () => ICalloutContributionDefaults, {
     nullable: false,

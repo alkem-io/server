@@ -22,18 +22,16 @@ export class OrganizationLicenseService {
 
   async applyLicensePolicy(organizationID: string): Promise<ILicense[]> {
     const organization =
-      await this.organizationLookupService.getOrganizationOrFail(
+      await this.organizationLookupService.getOrganizationByIdOrFail(
         organizationID,
         {
           relations: {
-            agent: {
-              credentials: true,
-            },
+            credentials: true,
             roleSet: true,
           },
         }
       );
-    if (!organization.agent || !organization.roleSet) {
+    if (!organization.credentials || !organization.roleSet) {
       throw new RelationshipNotFoundException(
         `Unable to load Organization with entities at start of license reset: ${organization.id} `,
         LogContext.ACCOUNT
@@ -55,7 +53,7 @@ export class OrganizationLicenseService {
 
   private createOrganizationEntitlements(): ILicenseEntitlement[] {
     const createLicenseInput: CreateLicenseEntitlementInput = {
-      type: LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS,
+      type: LicenseEntitlementType.SPACE_FLAG_VIRTUAL_ACCESS,
       dataType: LicenseEntitlementDataType.FLAG,
       limit: 0,
       enabled: false,

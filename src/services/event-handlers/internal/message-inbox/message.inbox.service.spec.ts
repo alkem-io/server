@@ -1,6 +1,6 @@
 import { RoomType } from '@common/enums/room.type';
 import { MutationType } from '@common/enums/subscriptions';
-import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
+import { ActorContextService } from '@core/actor-context/actor.context.service';
 import { ConversationService } from '@domain/communication/conversation/conversation.service';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { RoomServiceEvents } from '@domain/communication/room/room.service.events';
@@ -23,7 +23,7 @@ describe('MessageInboxService', () => {
   let service: MessageInboxService;
   let roomLookupService: Mocked<RoomLookupService>;
   let subscriptionPublishService: Mocked<SubscriptionPublishService>;
-  let agentInfoService: Mocked<AgentInfoService>;
+  let actorContextService: Mocked<ActorContextService>;
   let roomServiceEvents: Mocked<RoomServiceEvents>;
   let inAppNotificationService: Mocked<InAppNotificationService>;
   let messageNotificationService: Mocked<MessageNotificationService>;
@@ -40,7 +40,7 @@ describe('MessageInboxService', () => {
     service = module.get(MessageInboxService);
     roomLookupService = module.get(RoomLookupService);
     subscriptionPublishService = module.get(SubscriptionPublishService);
-    agentInfoService = module.get(AgentInfoService);
+    actorContextService = module.get(ActorContextService);
     roomServiceEvents = module.get(RoomServiceEvents);
     inAppNotificationService = module.get(InAppNotificationService);
     messageNotificationService = module.get(MessageNotificationService);
@@ -74,7 +74,7 @@ describe('MessageInboxService', () => {
       roomLookupService.incrementMessagesCount.mockResolvedValue(
         undefined as any
       );
-      agentInfoService.buildAgentInfoForAgent.mockResolvedValue({} as any);
+      actorContextService.buildForActor.mockResolvedValue({} as any);
       messageNotificationService.processMessageNotifications.mockResolvedValue(
         undefined
       );
@@ -100,8 +100,8 @@ describe('MessageInboxService', () => {
       roomLookupService.incrementMessagesCount.mockResolvedValue(
         undefined as any
       );
-      agentInfoService.buildAgentInfoForAgent.mockResolvedValue({
-        agentID: 'actor-1',
+      actorContextService.buildForActor.mockResolvedValue({
+        actorId: 'actor-1',
       } as any);
       messageNotificationService.processMessageNotifications.mockResolvedValue(
         undefined
@@ -117,7 +117,7 @@ describe('MessageInboxService', () => {
       ).toHaveBeenCalledWith(
         room,
         expect.objectContaining({ id: 'msg-1' }),
-        expect.objectContaining({ agentID: 'actor-1' }),
+        expect.objectContaining({ actorId: 'actor-1' }),
         undefined
       );
     });
@@ -196,7 +196,7 @@ describe('MessageInboxService', () => {
       roomLookupService.incrementMessagesCount.mockResolvedValue(
         undefined as any
       );
-      agentInfoService.buildAgentInfoForAgent.mockResolvedValue({} as any);
+      actorContextService.buildForActor.mockResolvedValue({} as any);
       messageNotificationService.processMessageNotifications.mockResolvedValue(
         undefined
       );
@@ -220,7 +220,7 @@ describe('MessageInboxService', () => {
       roomLookupService.incrementMessagesCount.mockResolvedValue(
         undefined as any
       );
-      agentInfoService.buildAgentInfoForAgent.mockResolvedValue({} as any);
+      actorContextService.buildForActor.mockResolvedValue({} as any);
       messageNotificationService.processMessageNotifications.mockResolvedValue(
         undefined
       );
@@ -309,7 +309,7 @@ describe('MessageInboxService', () => {
       inAppNotificationService.deleteAllByMessageId.mockResolvedValue(
         undefined as any
       );
-      agentInfoService.buildAgentInfoForAgent.mockResolvedValue({} as any);
+      actorContextService.buildForActor.mockResolvedValue({} as any);
       roomServiceEvents.processActivityMessageRemoved.mockResolvedValue(
         undefined as any
       );
@@ -346,7 +346,7 @@ describe('MessageInboxService', () => {
       inAppNotificationService.deleteAllByMessageId.mockResolvedValue(
         undefined as any
       );
-      agentInfoService.buildAgentInfoForAgent.mockResolvedValue({} as any);
+      actorContextService.buildForActor.mockResolvedValue({} as any);
       roomServiceEvents.processActivityMessageRemoved.mockResolvedValue(
         undefined as any
       );
