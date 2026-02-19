@@ -1,14 +1,11 @@
 import { LogContext } from '@common/enums';
-import {
-  EntityNotFoundException,
-  EntityNotInitializedException,
-} from '@common/exceptions';
+import { EntityNotFoundException, EntityNotInitializedException } from '@common/exceptions';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { CredentialsSearchInput } from '@domain/agent/credential/dto/credentials.dto.search';
 import { Inject, LoggerService } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager, FindManyOptions, FindOneOptions } from 'typeorm';
+import { EntityManager, FindOneOptions } from 'typeorm';
 import { Organization } from '../organization/organization.entity';
 import { IOrganization } from '../organization/organization.interface';
 
@@ -24,15 +21,13 @@ export class OrganizationLookupService {
     organizationID: string,
     options?: FindOneOptions<Organization>
   ): Promise<IOrganization | null> {
-    const organization: IOrganization | null = await this.entityManager.findOne(
+    return this.entityManager.findOne(
       Organization,
       {
         ...options,
         where: { ...options?.where, id: organizationID },
       }
     );
-
-    return organization;
   }
 
   async getOrganizationAndAgent(
@@ -57,7 +52,7 @@ export class OrganizationLookupService {
   ): Promise<IOrganization[]> {
     const credResourceID = credentialCriteria.resourceID || '';
 
-    const organizations = await this.entityManager.find(Organization, {
+    return this.entityManager.find(Organization, {
       where: {
         agent: {
           credentials: {
@@ -73,50 +68,6 @@ export class OrganizationLookupService {
       },
       take: limit,
     });
-
-    return organizations;
-  }
-
-  async organizationsWithCredentialsBatch(
-    credentialCriteriaArray: CredentialsSearchInput[],
-    limit?: number,
-    options?: FindManyOptions<Organization>
-  ): Promise<IOrganization[]> {
-    if (credentialCriteriaArray.length === 0) {
-      return [];
-    }
-
-    const whereConditions = credentialCriteriaArray.map(criteria => ({
-      agent: {
-        credentials: {
-          type: criteria.type,
-          resourceID: criteria.resourceID || '',
-        },
-      },
-    }));
-
-    // Spread options first so our critical values (where, relations, take) always win
-    const optionsRelations = options?.relations as
-      | Record<string, unknown>
-      | undefined;
-
-    const findOptions: FindManyOptions<Organization> = {
-      ...options,
-      where: whereConditions,
-      relations: {
-        ...optionsRelations,
-        agent: {
-          credentials: true,
-          ...(optionsRelations?.agent as Record<string, unknown>),
-        },
-      },
-      take: limit,
-    };
-
-    return this.entityManager.find(
-      Organization,
-      findOptions
-    );;
   }
 
   async countOrganizationsWithCredentials(
@@ -124,7 +75,7 @@ export class OrganizationLookupService {
   ): Promise<number> {
     const credResourceID = credentialCriteria.resourceID || '';
 
-    const orgContributorsCount = await this.entityManager.count(Organization, {
+    return this.entityManager.count(Organization, {
       where: {
         agent: {
           credentials: {
@@ -134,37 +85,32 @@ export class OrganizationLookupService {
         },
       },
     });
-    return orgContributorsCount;
   }
 
-  async getOrganizationByDomain(
+  getOrganizationByDomain(
     domain: string,
     options?: FindOneOptions<Organization>
   ): Promise<IOrganization | null> {
-    const organization: IOrganization | null = await this.entityManager.findOne(
+    return this.entityManager.findOne(
       Organization,
       {
         ...options,
         where: { ...options?.where, domain: domain },
       }
     );
-
-    return organization;
   }
 
-  async getOrganizationByNameId(
+  getOrganizationByNameId(
     organizationNameID: string,
     options?: FindOneOptions<Organization>
   ): Promise<IOrganization | null> {
-    const organization: IOrganization | null = await this.entityManager.findOne(
+    return this.entityManager.findOne(
       Organization,
       {
         ...options,
         where: { ...options?.where, nameID: organizationNameID },
       }
     );
-
-    return organization;
   }
 
   async getOrganizationByNameIdOrFail(
