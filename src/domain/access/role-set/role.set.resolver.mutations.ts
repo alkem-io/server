@@ -194,11 +194,11 @@ export class RoleSetResolverMutations {
       `assign virtual community role: ${roleSet.id}`
     );
 
-    // Also require SPACE_FLAG_VIRTUAL_ACCESS entitlement for the RoleSet
+    // Also require SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS entitlement for the RoleSet
     if (roleSet.type === RoleSetType.SPACE) {
       this.licenseService.isEntitlementEnabledOrFail(
         roleSet.license,
-        LicenseEntitlementType.SPACE_FLAG_VIRTUAL_ACCESS
+        LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS
       );
     }
 
@@ -581,7 +581,7 @@ export class RoleSetResolverMutations {
     if (roleSet.type === RoleSetType.SPACE) {
       this.licenseService.isEntitlementEnabledOrFail(
         roleSet.license,
-        LicenseEntitlementType.SPACE_FLAG_VIRTUAL_ACCESS
+        LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS
       );
     }
   }

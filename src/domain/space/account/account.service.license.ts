@@ -295,7 +295,7 @@ export class AccountLicenseService {
         case LicenseEntitlementType.ACCOUNT_SPACE_PREMIUM:
           baselineValue = baselinePlan.spacePremium;
           break;
-        case LicenseEntitlementType.ACCOUNT_VIRTUAL:
+        case LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR:
           baselineValue = baselinePlan.virtualContributor;
           break;
         case LicenseEntitlementType.ACCOUNT_INNOVATION_PACK:

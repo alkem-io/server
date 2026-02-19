@@ -265,7 +265,7 @@ export class RoleSetResolverMutationsMembership {
       if (hasVirtualContributor) {
         this.licenseService.isEntitlementEnabledOrFail(
           roleSet.license,
-          LicenseEntitlementType.SPACE_FLAG_VIRTUAL_ACCESS
+          LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS
         );
       }
     }

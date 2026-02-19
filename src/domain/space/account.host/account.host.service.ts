@@ -71,7 +71,7 @@ export class AccountHostService {
           enabled: false,
         },
         {
-          type: LicenseEntitlementType.ACCOUNT_VIRTUAL,
+          type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
           dataType: LicenseEntitlementDataType.LIMIT,
           limit: 0,
           enabled: false,

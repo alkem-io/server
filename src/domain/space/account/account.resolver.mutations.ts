@@ -203,7 +203,7 @@ export class AccountResolverMutations {
       account,
       actorContext,
       AuthorizationPrivilege.CREATE_VIRTUAL,
-      LicenseEntitlementType.ACCOUNT_VIRTUAL
+      LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR
     );
 
     const virtual = await this.accountService.createVirtualContributorOnAccount(

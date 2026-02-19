@@ -159,10 +159,10 @@ export class SpaceLicenseService {
           }
           break;
         }
-        case LicenseEntitlementType.SPACE_FLAG_VIRTUAL_ACCESS: {
+        case LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS: {
           const createVirtualContributor =
             await this.licenseEngineService.isEntitlementGranted(
-              LicenseEntitlementType.SPACE_FLAG_VIRTUAL_ACCESS,
+              LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS,
               levelZeroSpaceAgent
             );
           if (createVirtualContributor) {

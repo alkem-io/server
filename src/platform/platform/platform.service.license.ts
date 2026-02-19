@@ -37,7 +37,7 @@ export class PlatformLicenseService {
 
   private createPlatformEntitlements(): ILicenseEntitlement[] {
     const createLicenseInput: CreateLicenseEntitlementInput = {
-      type: LicenseEntitlementType.SPACE_FLAG_VIRTUAL_ACCESS,
+      type: LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS,
       dataType: LicenseEntitlementDataType.FLAG,
       limit: 999,
       enabled: true,

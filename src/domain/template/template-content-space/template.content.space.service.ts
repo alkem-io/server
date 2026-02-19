@@ -293,7 +293,7 @@ export class TemplateContentSpaceService {
           enabled: false,
         },
         {
-          type: LicenseEntitlementType.SPACE_FLAG_VIRTUAL_ACCESS,
+          type: LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS,
           dataType: LicenseEntitlementDataType.FLAG,
           limit: 0,
           enabled: false,
