@@ -3,11 +3,13 @@ import {
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
+import { ClassificationService } from '@domain/common/classification/classification.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
+import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator/url.generator.service.cache';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -23,6 +25,8 @@ describe('CalloutTransferService', () => {
   let profileService: ProfileService;
   let tagsetService: TagsetService;
   let storageAggregatorResolverService: StorageAggregatorResolverService;
+  let classificationService: ClassificationService;
+  let urlGeneratorCacheService: UrlGeneratorCacheService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -44,12 +48,29 @@ describe('CalloutTransferService', () => {
     storageAggregatorResolverService = module.get(
       StorageAggregatorResolverService
     );
+    classificationService = module.get(ClassificationService);
+    urlGeneratorCacheService = module.get(UrlGeneratorCacheService);
   });
 
   describe('transferCallout', () => {
-    const agentInfo = { userID: 'user-1' } as any;
     const targetCalloutsSet = { id: 'target-cs' } as any;
     const storageAggregator = { id: 'agg-1' } as any;
+
+    // Mock return for revokeUrlCaches getCalloutOrFail call
+    const calloutForUrlCaches = {
+      id: 'callout-1',
+      framing: {
+        profile: { id: 'profile-framing' },
+        whiteboard: undefined,
+      },
+      contributions: [],
+    };
+
+    // Mock return for updateClassificationFromTemplates getCalloutOrFail call
+    const calloutForClassification = {
+      id: 'callout-1',
+      classification: { id: 'classification-1' },
+    };
 
     it('should transfer a callout to the target callouts set', async () => {
       const callout = {
@@ -98,12 +119,11 @@ describe('CalloutTransferService', () => {
       ).mockResolvedValue(storageAggregator);
       vi.mocked(calloutService.save).mockResolvedValue(savedCallout);
 
-      // updateStorageAggregator calls getCalloutOrFail
-      // updateTagsetsFromTemplates calls getCalloutOrFail
-      // final call to getCalloutOrFail
       vi.mocked(calloutService.getCalloutOrFail)
-        .mockResolvedValueOnce(updatedCallout as any) // for updateStorageAggregator
-        .mockResolvedValueOnce(calloutWithTagsets as any) // for updateTagsetsFromTemplates
+        .mockResolvedValueOnce(updatedCallout as any) // updateStorageAggregator
+        .mockResolvedValueOnce(calloutForUrlCaches as any) // revokeUrlCaches
+        .mockResolvedValueOnce(calloutWithTagsets as any) // updateTagsetsFromTemplates
+        .mockResolvedValueOnce(calloutForClassification as any) // updateClassificationFromTemplates
         .mockResolvedValueOnce(finalCallout as any); // final return
 
       vi.mocked(calloutsSetService.getTagsetTemplatesSet).mockResolvedValue(
@@ -116,15 +136,13 @@ describe('CalloutTransferService', () => {
 
       const result = await service.transferCallout(
         callout,
-        targetCalloutsSet,
-        agentInfo
+        targetCalloutsSet
       );
 
       expect(
         calloutsSetService.validateNameIDNotInUseOrFail
       ).toHaveBeenCalledWith('target-cs', 'my-callout');
       expect(callout.calloutsSet).toBe(targetCalloutsSet);
-      expect(callout.createdBy).toBe('user-1');
       expect(calloutService.save).toHaveBeenCalledWith(callout);
       expect(result).toBe(finalCallout);
     });
@@ -168,6 +186,7 @@ describe('CalloutTransferService', () => {
       vi.mocked(calloutService.save).mockResolvedValue(callout);
       vi.mocked(calloutService.getCalloutOrFail)
         .mockResolvedValueOnce(calloutWithRelations as any) // updateStorageAggregator
+        .mockResolvedValueOnce(calloutForUrlCaches as any) // revokeUrlCaches
         .mockResolvedValueOnce({
           id: 'callout-1',
           framing: {
@@ -178,6 +197,7 @@ describe('CalloutTransferService', () => {
             },
           },
         } as any) // updateTagsetsFromTemplates
+        .mockResolvedValueOnce(calloutForClassification as any) // updateClassificationFromTemplates
         .mockResolvedValueOnce(callout); // final return
 
       vi.mocked(calloutsSetService.getTagsetTemplatesSet).mockResolvedValue({
@@ -187,7 +207,7 @@ describe('CalloutTransferService', () => {
         profileService.convertTagsetTemplatesToCreateTagsetInput
       ).mockReturnValue([]);
 
-      await service.transferCallout(callout, targetCalloutsSet, agentInfo);
+      await service.transferCallout(callout, targetCalloutsSet);
 
       // Verify storage buckets were updated
       expect(storageBucketService.save).toHaveBeenCalled();
@@ -211,8 +231,8 @@ describe('CalloutTransferService', () => {
         contributions: undefined, // not initialized
       } as any);
 
-      await expect(
-        service.transferCallout(callout, targetCalloutsSet, agentInfo)
+      expect(
+        service.transferCallout(callout, targetCalloutsSet)
       ).rejects.toThrow(EntityNotInitializedException);
     });
 
@@ -249,12 +269,14 @@ describe('CalloutTransferService', () => {
       };
 
       vi.mocked(calloutService.getCalloutOrFail)
-        .mockResolvedValueOnce(calloutWithRelations as any)
+        .mockResolvedValueOnce(calloutWithRelations as any) // updateStorageAggregator
+        .mockResolvedValueOnce(calloutForUrlCaches as any) // revokeUrlCaches
         .mockResolvedValueOnce({
           id: 'callout-1',
           framing: { profile: profileWithTagsets },
-        } as any)
-        .mockResolvedValueOnce(callout);
+        } as any) // updateTagsetsFromTemplates
+        .mockResolvedValueOnce(calloutForClassification as any) // updateClassificationFromTemplates
+        .mockResolvedValueOnce(callout); // final return
 
       vi.mocked(calloutsSetService.getTagsetTemplatesSet).mockResolvedValue({
         tagsetTemplates: [{ name: 'new-tagset', allowedValues: ['x'] }],
@@ -269,7 +291,7 @@ describe('CalloutTransferService', () => {
         name: 'new-tagset',
       } as any);
 
-      await service.transferCallout(callout, targetCalloutsSet, agentInfo);
+      await service.transferCallout(callout, targetCalloutsSet);
 
       // Should remove non-default tagset
       expect(tagsetService.removeTagset).toHaveBeenCalledWith('ts-custom');
@@ -299,20 +321,21 @@ describe('CalloutTransferService', () => {
             whiteboard: undefined,
           },
           contributions: [],
-        } as any)
+        } as any) // updateStorageAggregator
+        .mockResolvedValueOnce(calloutForUrlCaches as any) // revokeUrlCaches
         .mockResolvedValueOnce({
           id: 'callout-1',
           framing: {
             profile: { id: 'profile-1', tagsets: undefined },
           },
-        } as any);
+        } as any); // updateTagsetsFromTemplates
 
       vi.mocked(calloutsSetService.getTagsetTemplatesSet).mockResolvedValue({
         tagsetTemplates: [],
       } as any);
 
       await expect(
-        service.transferCallout(callout, targetCalloutsSet, agentInfo)
+        service.transferCallout(callout, targetCalloutsSet)
       ).rejects.toThrow(RelationshipNotFoundException);
     });
   });

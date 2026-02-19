@@ -190,16 +190,47 @@ export class ClassificationService {
     });
   }
 
+  async updateTagsetTemplateOnSelectTagset(
+    classificationID: string,
+    tagsetTemplate: ITagsetTemplate
+  ): Promise<ITagset> {
+    const tagsets = await this.getTagsets(classificationID);
+    const existingTagset = this.tagsetService.getTagsetByName(
+      tagsets,
+      tagsetTemplate.name
+    );
+
+    const defaultTags = tagsetTemplate.defaultSelectedValue
+      ? [tagsetTemplate.defaultSelectedValue]
+      : [];
+
+    if (existingTagset) {
+      existingTagset.tagsetTemplate = tagsetTemplate;
+      existingTagset.tags = defaultTags;
+      return await this.tagsetService.save(existingTagset);
+    }
+
+    // Target callouts set has a template not present in the source classification;
+    // create a new tagset for it
+    const classification = await this.getClassificationOrFail(classificationID);
+    return await this.addTagsetOnClassification(classification, {
+      name: tagsetTemplate.name,
+      type: tagsetTemplate.type,
+      tags: defaultTags,
+      tagsetTemplate,
+    });
+  }
+
   // Note: provided data has priority when it comes to tags
   public updateClassificationTagsetInputs(
-    tagsetInputDtata: CreateTagsetInput[] | undefined,
+    tagsetInputData: CreateTagsetInput[] | undefined,
     additionalTagsetInputs: CreateTagsetInput[]
   ): CreateTagsetInput[] {
     const result: CreateTagsetInput[] = [...additionalTagsetInputs];
 
-    if (!tagsetInputDtata) return result;
+    if (!tagsetInputData) return result;
 
-    for (const tagsetInput of tagsetInputDtata) {
+    for (const tagsetInput of tagsetInputData) {
       const existingInput = result.find(t => t.name === tagsetInput.name);
       if (existingInput) {
         // Do not change type, name etc - only tags
