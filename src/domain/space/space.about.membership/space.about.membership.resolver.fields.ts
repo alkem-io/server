@@ -3,6 +3,12 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { RoleName } from '@common/enums/role.name';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import {
+  LeadOrganizationsByRoleSetLoaderCreator,
+  LeadUsersByRoleSetLoaderCreator,
+} from '@core/dataloader/creators/loader.creators';
+import { Loader } from '@core/dataloader/decorators';
+import { ILoader } from '@core/dataloader/loader.interface';
 import { RoleSetMembershipStatusDataLoader } from '@domain/access/role-set/role.set.data.loader.membership.status';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -85,10 +91,16 @@ export class SpaceAboutMembershipResolverFields {
     description: 'The Lead Users that are associated with this Space.',
   })
   public async leadUsers(
-    @Parent() membership: SpaceAboutMembership
+    @Parent() membership: SpaceAboutMembership,
+    @Loader(LeadUsersByRoleSetLoaderCreator) loader: ILoader<IUser[]>
   ): Promise<IUser[]> {
-    const roleSet = membership.roleSet;
-    return await this.roleSetService.getUsersWithRole(roleSet, RoleName.LEAD);
+    const credential = membership.roleSet.roles?.find(
+      r => r.name === RoleName.LEAD
+    )?.credential;
+    if (!credential) {
+      return [];
+    }
+    return loader.load(`${credential.type}|${credential.resourceID}`);
   }
 
   @ResolveField('leadOrganizations', () => [IOrganization], {
@@ -96,12 +108,16 @@ export class SpaceAboutMembershipResolverFields {
     description: 'The Lead Organizations that are associated with this Space.',
   })
   public async leadOrganizations(
-    @Parent() membership: SpaceAboutMembership
+    @Parent() membership: SpaceAboutMembership,
+    @Loader(LeadOrganizationsByRoleSetLoaderCreator)
+    loader: ILoader<IOrganization[]>
   ): Promise<IOrganization[]> {
-    const roleSet = membership.roleSet;
-    return await this.roleSetService.getOrganizationsWithRole(
-      roleSet,
-      RoleName.LEAD
-    );
+    const credential = membership.roleSet.roles?.find(
+      r => r.name === RoleName.LEAD
+    )?.credential;
+    if (!credential) {
+      return [];
+    }
+    return loader.load(`${credential.type}|${credential.resourceID}`);
   }
 }
