@@ -84,8 +84,7 @@ export class CalloutTransferResolverMutations {
     // Transfer is authorized, now try to execute it
     await this.calloutTransferService.transferCallout(
       callout,
-      targetCalloutsSet,
-      agentInfo
+      targetCalloutsSet
     );
 
     const { platformRolesAccess } =
@@ -97,7 +96,7 @@ export class CalloutTransferResolverMutations {
     const authorizations =
       await this.calloutAuthorizationService.applyAuthorizationPolicy(
         callout.id,
-        sourceCalloutsSet.authorization,
+        targetCalloutsSet.authorization,
         platformRolesAccess
       );
 
