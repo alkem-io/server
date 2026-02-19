@@ -21,7 +21,7 @@ DEV_SERVER_PID=""
 cleanup() {
   if [ -n "$DEV_SERVER_PID" ]; then
     info "Stopping dev server (PID $DEV_SERVER_PID)"
-    kill -- -"$DEV_SERVER_PID" 2>/dev/null || kill "$DEV_SERVER_PID" 2>/dev/null || true
+    kill "$DEV_SERVER_PID" 2>/dev/null || true
     wait "$DEV_SERVER_PID" 2>/dev/null || true
   fi
 }
@@ -57,7 +57,7 @@ pnpm run migration:run
 # ---------- Step 5: Start dev server in background ----------
 info "Step 5/6: Starting dev server"
 : > "$SERVER_LOG"
-setsid pnpm start:dev >> "$SERVER_LOG" 2>&1 &
+pnpm start:dev >> "$SERVER_LOG" 2>&1 &
 DEV_SERVER_PID=$!
 echo "  PID: $DEV_SERVER_PID | log: $SERVER_LOG"
 
