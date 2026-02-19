@@ -7,13 +7,16 @@
       "Bash(npx biome check*)",
       "Bash(npx biome*)",
       "Bash(npx vitest*)",
+
       "Bash(bash .scripts/reset-db.sh)",
       "Bash(bash .scripts/register-user.sh:*)",
+      "Bash(.specify/scripts/bash/check-prerequisites.sh:*)",
+      "Bash(bash restore_latest_backup_set.sh acc)",
+      "Bash(bash restore_latest_backup_set.sh acc true true)",
+
       "Bash(git stash:*)",
       "Bash(git worktree add:*)",
       "Bash(npx tsc:*)",
-      "Bash(.specify/scripts/bash/check-prerequisites.sh:*)",
-      "Bash(bash restore_latest_backup_set.sh acc)",
       "mcp__ide__getDiagnostics"
     ]
   }
