@@ -1,16 +1,12 @@
-import {
-  AuthorizationCredential,
-  AuthorizationPrivilege,
-  LogContext,
-} from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { AuthenticationException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
+import { ActorContextService } from '@core/actor-context/actor.context.service';
 import {
   AUTH_STRATEGY_OATHKEEPER_API_TOKEN,
   AUTH_STRATEGY_OATHKEEPER_JWT,
 } from '@core/authentication';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import {
   ContextType,
@@ -37,6 +33,7 @@ export class GraphqlGuard extends AuthGuard([
   constructor(
     private reflector: Reflector,
     private authorizationService: AuthorizationService,
+    private actorContextService: ActorContextService,
     @InjectEntityManager('default')
     private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -99,7 +96,7 @@ export class GraphqlGuard extends AuthGuard([
         LogContext.AUTH
       );
       // Create anonymous actor context as fallback
-      resultActorContext = this.createAnonymous();
+      resultActorContext = this.actorContextService.createAnonymous();
     }
 
     // Apply any rules
@@ -170,13 +167,4 @@ export class GraphqlGuard extends AuthGuard([
     rule.execute(resultActorContext);
   }
 
-  public createAnonymous(): ActorContext {
-    const actorContext = new ActorContext();
-    const anonymousCredential: ICredentialDefinition = {
-      type: AuthorizationCredential.GLOBAL_ANONYMOUS,
-      resourceID: '',
-    };
-    actorContext.credentials = [anonymousCredential];
-    return actorContext;
-  }
 }

@@ -58,16 +58,9 @@ export abstract class IActor extends IAuthorizable {
   resolveType(actor) {
     // Use lazy imports to avoid circular dependencies
     // These imports are resolved at runtime when the function is called
+    // Using the discriminator type field (not instanceof) so this works
+    // even if TypeORM materialises a base Actor instance rather than a child class.
     /* eslint-disable @typescript-eslint/no-require-imports */
-    const { User } = require('@domain/community/user/user.entity');
-    const {
-      Organization,
-    } = require('@domain/community/organization/organization.entity');
-    const {
-      VirtualContributor,
-    } = require('@domain/community/virtual-contributor/virtual.contributor.entity');
-    const { Space } = require('@domain/space/space/space.entity');
-    const { Account } = require('@domain/space/account/account.entity');
     const { IUser } = require('@domain/community/user/user.interface');
     const {
       IOrganization,
@@ -79,16 +72,23 @@ export abstract class IActor extends IAuthorizable {
     const { IAccount } = require('@domain/space/account/account.interface');
     /* eslint-enable @typescript-eslint/no-require-imports */
 
-    if (actor instanceof User) return IUser;
-    if (actor instanceof Organization) return IOrganization;
-    if (actor instanceof VirtualContributor) return IVirtualContributor;
-    if (actor instanceof Space) return ISpace;
-    if (actor instanceof Account) return IAccount;
-
-    throw new RelationshipNotFoundException(
-      `Unable to determine actor type for ${actor.id}`,
-      LogContext.COMMUNITY
-    );
+    switch (actor.type) {
+      case ActorType.USER:
+        return IUser;
+      case ActorType.ORGANIZATION:
+        return IOrganization;
+      case ActorType.VIRTUAL:
+        return IVirtualContributor;
+      case ActorType.SPACE:
+        return ISpace;
+      case ActorType.ACCOUNT:
+        return IAccount;
+      default:
+        throw new RelationshipNotFoundException(
+          `Unable to determine actor type for ${actor.id}`,
+          LogContext.COMMUNITY
+        );
+    }
   },
 })
 export abstract class IActorFull {

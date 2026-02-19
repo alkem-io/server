@@ -11,7 +11,6 @@ import { AccountModule } from '@domain/space/account/account.module';
 import { Module } from '@nestjs/common';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
-import { KratosModule } from '@services/infrastructure/kratos/kratos.module';
 import { RegistrationResolverMutations } from './registration.resolver.mutations';
 import { RegistrationService } from './registration.service';
 
@@ -29,7 +28,6 @@ import { RegistrationService } from './registration.service';
     PlatformInvitationModule,
     PlatformAuthorizationPolicyModule,
     ApplicationModule,
-    KratosModule,
   ],
   providers: [RegistrationService, RegistrationResolverMutations],
   exports: [RegistrationService, RegistrationResolverMutations],

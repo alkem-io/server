@@ -1,5 +1,6 @@
 import { AuthorizationCredential, LogContext } from '@common/enums';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
+import { Actor } from '@domain/actor/actor/actor.entity';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import { ICredential } from '@domain/actor/credential/credential.interface';
@@ -75,7 +76,7 @@ export class ActorContextService {
     if (!user.credentials) {
       throw new EntityNotInitializedException(
         'Credentials not loaded for User',
-        LogContext.WHITEBOARD_INTEGRATION,
+        LogContext.AUTH,
         { userId }
       );
     }
@@ -102,42 +103,27 @@ export class ActorContextService {
 
   /**
    * Builds an ActorContext from an actor ID.
-   * Actor ID = entity ID (user.id, org.id, etc.)
+   * Works for all actor types (User, Organization, VirtualContributor, Space, Account).
+   * Credentials are loaded eagerly from the base actor table.
    */
-  public async buildForActor(
-    actorId: string,
-    options?: { includeCredentials?: boolean }
-  ): Promise<ActorContext> {
-    const user = await this.entityManager.findOne(User, {
+  public async buildForActor(actorId: string): Promise<ActorContext> {
+    const actor = await this.entityManager.findOne(Actor, {
       where: { id: actorId },
-      relations: options?.includeCredentials ? { credentials: true } : {},
     });
 
-    if (user) {
-      const ctx = new ActorContext();
-      ctx.actorId = user.id;
-      ctx.isAnonymous = false;
-      ctx.authenticationID = user.authenticationID || undefined;
-
-      if (options?.includeCredentials && user.credentials) {
-        ctx.credentials = user.credentials.map(
-          (credential: ICredential): ICredentialDefinition => ({
-            type: credential.type,
-            resourceID: credential.resourceID,
-          })
-        );
-      } else {
-        ctx.credentials = [];
-      }
-
-      return ctx;
+    if (!actor) {
+      return this.createAnonymous();
     }
 
-    // Actor is not a user, return anonymous context with the actorId
     const ctx = new ActorContext();
-    ctx.actorId = actorId;
-    ctx.isAnonymous = true;
-    ctx.credentials = [];
+    ctx.actorId = actor.id;
+    ctx.isAnonymous = false;
+    ctx.credentials = (actor.credentials ?? []).map(
+      (credential: ICredential): ICredentialDefinition => ({
+        type: credential.type,
+        resourceID: credential.resourceID,
+      })
+    );
     return ctx;
   }
 }

@@ -1,6 +1,5 @@
-import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { AuthorizationPrivilege } from '@common/enums';
 import { ActorContext } from '@core/actor-context/actor.context';
-import { KratosSessionData } from '@core/authentication/kratos.session';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CreateOrganizationInput } from '@domain/community/organization/dto/organization.dto.create';
@@ -18,8 +17,6 @@ import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { NotificationInputPlatformUserRemoved } from '@services/adapters/notification-adapter/dto/platform/notification.dto.input.platform.user.removed';
 import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
-import { KratosService } from '@services/infrastructure/kratos/kratos.service';
-import { OryDefaultIdentitySchema } from '@services/infrastructure/kratos/types/ory.default.identity.schema';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentActor, Profiling } from '@src/common/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -38,50 +35,9 @@ export class RegistrationResolverMutations {
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private accountAuthorizationService: AccountAuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    private kratosService: KratosService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
-
-  @Mutation(() => IUser, {
-    description:
-      'Creates a new User profile on the platform for a user that has a valid Authentication session.',
-  })
-  async createUserNewRegistration(
-    @CurrentActor() actorContext: ActorContext
-  ): Promise<IUser> {
-    if (!actorContext.authenticationID) {
-      throw new Error('Authentication ID is required for user registration');
-    }
-
-    // Fetch identity from Kratos to get email, name, etc.
-    const identity = await this.kratosService.getIdentityById(
-      actorContext.authenticationID
-    );
-    if (!identity) {
-      throw new Error('Unable to find Kratos identity for registration');
-    }
-    const oryIdentity = identity as OryDefaultIdentitySchema;
-    const kratosData: KratosSessionData = {
-      authenticationID: actorContext.authenticationID,
-      email: oryIdentity.traits?.email ?? '',
-      emailVerified: true,
-      firstName: oryIdentity.traits?.name?.first ?? '',
-      lastName: oryIdentity.traits?.name?.last ?? '',
-      avatarURL: oryIdentity.traits?.picture ?? '',
-      expiry: actorContext.expiry,
-    };
-
-    this.logger.verbose?.(
-      `Creating new user registration for authenticationID: ${actorContext.authenticationID}`,
-      LogContext.AUTH
-    );
-
-    // registerNewUser handles: creation + org assignment + authorization + invitations + notification
-    const user = await this.registrationService.registerNewUser(kratosData);
-
-    return await this.userService.getUserByIdOrFail(user.id);
-  }
 
   @Mutation(() => IUser, {
     description: 'Creates a new User on the platform.',
