@@ -104,7 +104,6 @@ export class CalloutsSetAuthorizationService {
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_SUPPORT_MANAGER,
         ],
-
         CREDENTIAL_RULE_CALLOUTS_SET_TRANSFER_ACCEPT
       );
     globalAdminTransferCalloutAccept.cascade = false;

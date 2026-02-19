@@ -185,17 +185,17 @@ export class CalloutTransferService {
           profile: { id: true },
           whiteboard: {
             id: true,
-            profile: {  id: true },
+            profile: { id: true },
           },
         },
         contributions: {
           id: true,
-          post: { id: true, profile: { id: true, } },
-          link: { id: true, profile: { id: true, } },
-          whiteboard: { id: true, profile: { id: true, } },
-          memo: { id: true, profile: { id: true, } },
+          post: { id: true, profile: { id: true } },
+          link: { id: true, profile: { id: true } },
+          whiteboard: { id: true, profile: { id: true } },
+          memo: { id: true, profile: { id: true } },
         },
-      }
+      },
     });
 
     // Revoke the framing profile URL cache
@@ -214,22 +214,22 @@ export class CalloutTransferService {
     if (callout?.contributions && callout.contributions.length > 0) {
       for (const contribution of callout.contributions) {
         if (contribution.post?.profile.id) {
-          void this.urlGeneratorCacheService.revokeUrlCache(
+          await this.urlGeneratorCacheService.revokeUrlCache(
             contribution.post.profile.id
           );
         }
         if (contribution.link?.profile.id) {
-          void this.urlGeneratorCacheService.revokeUrlCache(
+          await this.urlGeneratorCacheService.revokeUrlCache(
             contribution.link.profile.id
           );
         }
         if (contribution.whiteboard?.profile.id) {
-          void this.urlGeneratorCacheService.revokeUrlCache(
+          await this.urlGeneratorCacheService.revokeUrlCache(
             contribution.whiteboard.profile.id
           );
         }
         if (contribution.memo?.profile.id) {
-          void this.urlGeneratorCacheService.revokeUrlCache(
+          await this.urlGeneratorCacheService.revokeUrlCache(
             contribution.memo.profile.id
           );
         }
@@ -280,13 +280,14 @@ export class CalloutTransferService {
     tagsetTemplates: ITagsetTemplate[]
   ): Promise<void> {
     const callout = await this.calloutService.getCalloutOrFail(calloutID, {
+      loadEagerRelations: false,
       relations: {
         classification: true,
       },
       select: {
         id: true,
         classification: { id: true },
-      }
+      },
     });
 
     if (!callout.classification) {
