@@ -445,7 +445,7 @@ services:
       - DATABASE_USERNAME
       - DATABASE_PASSWORD
       - DATABASE_NAME=alkemio
-      - ACTOR_ID_MAPPER_ENABLED=true
+      - ACTOR_ID_MAPPER_ENABLED=false
     restart: always
     networks:
       - alkemio_dev_net
