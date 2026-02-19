@@ -23,7 +23,7 @@ export class AuthorizationRuleActorPrivilege {
     this.priority = priority ?? 1000;
     if (!this.fieldParent) {
       throw new ForbiddenException(
-        `Error: Unable to identify field parent for priviilege check: ${privilege}`,
+        `Error: Unable to identify field parent for privilege check: ${privilege}`,
         LogContext.AUTH
       );
     }

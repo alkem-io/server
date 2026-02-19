@@ -30,7 +30,7 @@ export class ActorLoaderCreator implements DataLoaderCreator<IActor> {
   // Actor.type is used to resolve the actual entity type (User, Organization, VirtualContributor)
   private actorsInBatch = async (
     keys: ReadonlyArray<string>
-  ): Promise<IActor[]> => {
+  ): Promise<(IActor | null)[]> => {
     // Query Actor directly - only load contributor types (User, Organization, VirtualContributor)
     const actors = await this.manager.find(Actor, {
       where: {
@@ -39,6 +39,7 @@ export class ActorLoaderCreator implements DataLoaderCreator<IActor> {
       },
     });
 
-    return actors;
+    const actorMap = new Map(actors.map(a => [a.id, a]));
+    return keys.map(key => actorMap.get(key) ?? null);
   };
 }
