@@ -44,7 +44,7 @@ export const getContributorType = (actor: IActor): ActorType => {
     return ActorType.ORGANIZATION;
   }
   if (actor instanceof VirtualContributor) {
-    return ActorType.VIRTUAL;
+    return ActorType.VIRTUAL_CONTRIBUTOR;
   }
 
   throw new Error(`Unable to determine contributor type for ${actor.id}`);

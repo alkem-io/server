@@ -50,7 +50,7 @@ export class RemoveInvitationContributorType1771000010000
         SET "contributorType" = CASE a."type"
           WHEN 'user' THEN 'user'
           WHEN 'organization' THEN 'organization'
-          WHEN 'virtual' THEN 'virtual'
+          WHEN 'virtual-contributor' THEN 'virtual-contributor'
           ELSE 'user'
         END
         FROM "actor" a

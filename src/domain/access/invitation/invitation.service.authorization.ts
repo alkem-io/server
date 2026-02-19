@@ -78,7 +78,7 @@ export class InvitationAuthorizationService {
       case ActorType.ORGANIZATION:
         accountID = (actor as Organization).accountID;
         break;
-      case ActorType.VIRTUAL: {
+      case ActorType.VIRTUAL_CONTRIBUTOR: {
         const account =
           await this.virtualContributorLookupService.getAccountOrFail(actor.id);
         accountID = account.id;

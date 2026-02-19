@@ -48,7 +48,7 @@ export class CommunityTypeLoaderCreator
       if (item instanceof Organization) {
         return { id: item.id, type: ActorType.ORGANIZATION };
       }
-      return { id: item.id, type: ActorType.VIRTUAL };
+      return { id: item.id, type: ActorType.VIRTUAL_CONTRIBUTOR };
     });
   }
 }

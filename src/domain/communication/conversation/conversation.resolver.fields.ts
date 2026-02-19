@@ -107,7 +107,7 @@ export class ConversationResolverFields {
 
     // Find the virtual contributor agent among members
     const vcMembership = memberships.find(
-      m => m.actorType === ActorType.VIRTUAL
+      m => m.actorType === ActorType.VIRTUAL_CONTRIBUTOR
     );
 
     if (!vcMembership?.actorID) {

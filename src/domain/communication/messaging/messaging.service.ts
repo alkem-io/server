@@ -154,7 +154,7 @@ export class MessagingService {
       const actor = await this.actorService.getActorOrFail(
         conversationData.invitedAgentId
       );
-      isUserVc = actor.type === ActorType.VIRTUAL;
+      isUserVc = actor.type === ActorType.VIRTUAL_CONTRIBUTOR;
     } else {
       throw new ValidationException(
         'Either invitedAgentId or wellKnownVirtualContributor must be provided',
@@ -417,7 +417,7 @@ export class MessagingService {
         // USER_USER: No VC members
         queryBuilder.andWhere(`NOT EXISTS (${vcExistsSubquery.getQuery()})`);
       }
-      queryBuilder.setParameter('vcType', ActorType.VIRTUAL);
+      queryBuilder.setParameter('vcType', ActorType.VIRTUAL_CONTRIBUTOR);
     }
 
     const memberships = await queryBuilder.getMany();

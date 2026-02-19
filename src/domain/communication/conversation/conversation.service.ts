@@ -478,7 +478,9 @@ export class ConversationService {
     }
 
     // Check if any agent is a virtual contributor using actorType field
-    const hasVC = memberships.some(m => m.actorType === ActorType.VIRTUAL);
+    const hasVC = memberships.some(
+      m => m.actorType === ActorType.VIRTUAL_CONTRIBUTOR
+    );
 
     return hasVC
       ? CommunicationConversationType.USER_VC
@@ -497,7 +499,9 @@ export class ConversationService {
     conversationId: string
   ): Promise<IVirtualContributor | null> {
     const members = await this.getConversationMembers(conversationId);
-    const vcMember = members.find(m => m.actorType === ActorType.VIRTUAL);
+    const vcMember = members.find(
+      m => m.actorType === ActorType.VIRTUAL_CONTRIBUTOR
+    );
 
     if (!vcMember) {
       return null;
@@ -554,7 +558,7 @@ export class ConversationService {
       if (member.actorType === ActorType.USER) {
         const user = await this.userLookupService.getUserById(member.actorID);
         if (user) users.push(user);
-      } else if (member.actorType === ActorType.VIRTUAL) {
+      } else if (member.actorType === ActorType.VIRTUAL_CONTRIBUTOR) {
         const vc =
           await this.virtualActorLookupService.getVirtualContributorById(
             member.actorID

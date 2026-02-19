@@ -147,7 +147,7 @@ See [tasks.md](./tasks.md) — all phases implemented.
 | Aspect | Design | Actual |
 |--------|--------|--------|
 | GraphQL types | Single `IActor` interface | `Actor` ObjectType (lightweight) + `ActorFull` InterfaceType (polymorphic) |
-| VIRTUAL type value | `VIRTUAL_CONTRIBUTOR = 'virtual-contributor'` | `VIRTUAL = 'virtual'` |
+| VIRTUAL type value | `VIRTUAL_CONTRIBUTOR = 'virtual-contributor'` | Initially `VIRTUAL = 'virtual'`; renamed back to `VIRTUAL_CONTRIBUTOR = 'virtual-contributor'` in migration 1771000020000 |
 | `actorsWithCredential` | Public `Query` type | Admin query (AdminAuthorizationResolverQueries), gated by `READ_USERS` |
 | `grantCredentialToActor` args | `GrantCredentialToActorInput` wrapper | Flat args: `actorID`, `credentialType`, `resourceID?` |
 | `revokeCredentialFromActor` args | `RevokeCredentialFromActorInput` wrapper | Flat args: `actorID`, `credentialType`, `resourceID?` |

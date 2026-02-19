@@ -30,7 +30,7 @@ export enum NotificationEventPayload {
   USER_MESSAGE_ROOM = 'USER_MESSAGE_ROOM',
 
   // Virtual Contributor related payloads
-  VIRTUAL = 'VIRTUAL',
+  VIRTUAL_CONTRIBUTOR = 'VIRTUAL_CONTRIBUTOR',
 }
 
 registerEnumType(NotificationEventPayload, {

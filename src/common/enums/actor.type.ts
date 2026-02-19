@@ -3,7 +3,7 @@ import { registerEnumType } from '@nestjs/graphql';
 export enum ActorType {
   USER = 'user',
   ORGANIZATION = 'organization',
-  VIRTUAL = 'virtual',
+  VIRTUAL_CONTRIBUTOR = 'virtual-contributor',
   SPACE = 'space',
   ACCOUNT = 'account',
 }

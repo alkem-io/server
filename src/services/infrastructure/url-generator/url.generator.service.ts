@@ -194,7 +194,7 @@ export class UrlGeneratorService {
       case ActorType.ORGANIZATION:
         path = UrlPathBase.ORGANIZATION;
         break;
-      case ActorType.VIRTUAL:
+      case ActorType.VIRTUAL_CONTRIBUTOR:
         path = UrlPathBase.VIRTUAL;
         break;
     }
@@ -254,7 +254,8 @@ export class UrlGeneratorService {
   private getContributorType(contributor: { id: string }) {
     if (contributor instanceof User) return ActorType.USER;
     if (contributor instanceof Organization) return ActorType.ORGANIZATION;
-    if (contributor instanceof VirtualContributor) return ActorType.VIRTUAL;
+    if (contributor instanceof VirtualContributor)
+      return ActorType.VIRTUAL_CONTRIBUTOR;
     throw new RelationshipNotFoundException(
       `Unable to determine contributor type for ${contributor.id}`,
       LogContext.COMMUNITY

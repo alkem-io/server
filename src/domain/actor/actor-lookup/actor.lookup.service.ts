@@ -118,7 +118,7 @@ export class ActorLookupService {
           ...options,
           where: { ...options?.where, id: actorID },
         });
-      case ActorType.VIRTUAL:
+      case ActorType.VIRTUAL_CONTRIBUTOR:
         return this.entityManager.findOne(VirtualContributor, {
           ...options,
           where: { ...options?.where, id: actorID },

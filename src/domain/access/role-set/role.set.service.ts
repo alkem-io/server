@@ -526,7 +526,7 @@ export class RoleSetService {
     roleType: RoleName
   ): Promise<IVirtualContributor[]> {
     return (await this.getActorsWithRole(roleSet, roleType, [
-      ActorType.VIRTUAL,
+      ActorType.VIRTUAL_CONTRIBUTOR,
     ])) as IVirtualContributor[];
   }
 
@@ -712,7 +712,10 @@ export class RoleSetService {
     );
 
     // 8. Type-specific extensions (can be moved to events later)
-    if (actorType === ActorType.VIRTUAL && roleSet.type === RoleSetType.SPACE) {
+    if (
+      actorType === ActorType.VIRTUAL_CONTRIBUTOR &&
+      roleSet.type === RoleSetType.SPACE
+    ) {
       const space =
         await this.communityResolverService.getSpaceForRoleSetOrFail(
           roleSet.id
@@ -1178,7 +1181,7 @@ export class RoleSetService {
         return roleDefinition.userPolicy;
       case ActorType.ORGANIZATION:
         return roleDefinition.organizationPolicy;
-      case ActorType.VIRTUAL:
+      case ActorType.VIRTUAL_CONTRIBUTOR:
         return roleDefinition.virtualContributorPolicy;
       default:
         throw new ValidationException(

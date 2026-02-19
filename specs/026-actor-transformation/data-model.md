@@ -69,7 +69,7 @@ export class Actor extends AuthorizableEntity implements IActor {
 export enum ActorType {
   USER = 'user',
   ORGANIZATION = 'organization',
-  VIRTUAL = 'virtual',       // NOTE: shortened from VIRTUAL_CONTRIBUTOR for brevity
+  VIRTUAL_CONTRIBUTOR = 'virtual-contributor',
   SPACE = 'space',
   ACCOUNT = 'account',
 }
@@ -81,7 +81,7 @@ export enum ActorType {
 CREATE TYPE "actor_type_enum" AS ENUM(
   'user',
   'organization',
-  'virtual',
+  'virtual-contributor',
   'space',
   'account'
 );
@@ -273,7 +273,7 @@ import { IVirtualContributor } from './virtual.contributor.interface';
 import { Account } from '@domain/space/account/account.entity';
 // ... other imports
 
-@ChildEntity(ActorType.VIRTUAL)
+@ChildEntity(ActorType.VIRTUAL_CONTRIBUTOR)
 export class VirtualContributor extends Actor implements IVirtualContributor {
   @Column('varchar', {
     length: NAMEID_MAX_LENGTH_SCHEMA,

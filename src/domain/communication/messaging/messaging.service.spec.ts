@@ -286,7 +286,7 @@ describe('MessagingService', () => {
 
       actorService.getActorOrFail.mockResolvedValue({
         id: 'agent-invited',
-        type: ActorType.VIRTUAL,
+        type: ActorType.VIRTUAL_CONTRIBUTOR,
       } as any);
 
       const existingConversation = {

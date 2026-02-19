@@ -268,7 +268,7 @@ describe('ConversationService', () => {
         {
           conversationId: 'conv-1',
           actorID: 'agent-2',
-          actorType: ActorType.VIRTUAL,
+          actorType: ActorType.VIRTUAL_CONTRIBUTOR,
         },
       ] as any;
 
@@ -338,7 +338,7 @@ describe('ConversationService', () => {
       ] as any);
       mockManagerFind.mockResolvedValue([
         { id: 'agent-user', type: ActorType.USER },
-        { id: 'agent-vc', type: ActorType.VIRTUAL },
+        { id: 'agent-vc', type: ActorType.VIRTUAL_CONTRIBUTOR },
       ]);
       virtualActorLookupService.getVirtualContributorById.mockResolvedValue(
         mockVC
@@ -380,7 +380,7 @@ describe('ConversationService', () => {
       ] as any);
       mockManagerFind.mockResolvedValue([
         { id: 'agent-user', type: ActorType.USER },
-        { id: 'agent-vc', type: ActorType.VIRTUAL },
+        { id: 'agent-vc', type: ActorType.VIRTUAL_CONTRIBUTOR },
       ]);
       userLookupService.getUserById.mockResolvedValue(mockUser);
 
@@ -414,7 +414,7 @@ describe('ConversationService', () => {
       ] as any);
       mockManagerFind.mockResolvedValue([
         { id: 'agent-1', type: ActorType.USER },
-        { id: 'agent-vc', type: ActorType.VIRTUAL },
+        { id: 'agent-vc', type: ActorType.VIRTUAL_CONTRIBUTOR },
       ]);
 
       const result = await service.getUserFromConversation('conv-1', 'agent-1');
@@ -434,7 +434,7 @@ describe('ConversationService', () => {
       ] as any);
       mockManagerFind.mockResolvedValue([
         { id: 'agent-user', type: ActorType.USER },
-        { id: 'agent-vc', type: ActorType.VIRTUAL },
+        { id: 'agent-vc', type: ActorType.VIRTUAL_CONTRIBUTOR },
       ]);
 
       userLookupService.getUserById.mockResolvedValue(mockUser);

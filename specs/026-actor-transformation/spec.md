@@ -121,7 +121,7 @@ The system must migrate all existing Agent data to the Actor model without data 
 #### Core Actor Model
 
 - **FR-001**: System MUST create an Actor table with columns: id (UUID PK), type (PostgreSQL ENUM `actor_type_enum`), profile_id (UUID FK nullable), authorization_id (UUID FK), created_date, updated_date, version. Note: TypeORM entity uses camelCase (`profileId`, `authorizationId`); database columns use snake_case per PostgreSQL convention
-- **FR-002**: System MUST support five ActorTypes: USER, ORGANIZATION, VIRTUAL, SPACE, ACCOUNT. *(Note: VIRTUAL_CONTRIBUTOR was shortened to VIRTUAL — DB enum value is `'virtual'`)*
+- **FR-002**: System MUST support five ActorTypes: USER, ORGANIZATION, VIRTUAL_CONTRIBUTOR, SPACE, ACCOUNT. DB enum value is `'virtual-contributor'`.
 - **FR-003**: Actor ID MUST be the same as the corresponding entity ID (User.id = Actor.id for that user's actor)
 - **FR-004**: System MUST store credentials with a direct reference to Actor (actor_id column) instead of Agent
 - **FR-005**: System MUST support nullable profile_id on Actor, where null indicates the actor type does not have a profile

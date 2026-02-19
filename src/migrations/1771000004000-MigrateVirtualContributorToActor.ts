@@ -17,7 +17,7 @@ export class MigrateVirtualContributorToActor1771000004000
         vc."createdDate",
         vc."updatedDate",
         vc."version",
-        'virtual'::"actor_type_enum",
+        'virtual-contributor'::"actor_type_enum",
         vc."profileId",
         vc."authorizationId"
       FROM "virtual_contributor" vc
@@ -27,7 +27,7 @@ export class MigrateVirtualContributorToActor1771000004000
   public async down(queryRunner: QueryRunner): Promise<void> {
     // Remove VirtualContributor actors from Actor table
     await queryRunner.query(`
-      DELETE FROM "actor" WHERE "type" = 'virtual'
+      DELETE FROM "actor" WHERE "type" = 'virtual-contributor'
     `);
   }
 }

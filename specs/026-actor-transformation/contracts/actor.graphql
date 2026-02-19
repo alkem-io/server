@@ -10,8 +10,9 @@
 #    - `ActorFull` – polymorphic InterfaceType for full actor data (resolves to concrete types)
 #    Types that need polymorphic resolution implement ActorFull, not Actor.
 #
-# 2. ActorType.VIRTUAL_CONTRIBUTOR was simplified to ActorType.VIRTUAL ('virtual')
-#    to avoid verbosity. The DB enum value is 'virtual'.
+# 2. ActorType enum uses VIRTUAL_CONTRIBUTOR = 'virtual-contributor'.
+#    The DB enum value was initially 'virtual' and renamed to 'virtual-contributor'
+#    in migration 1771000020000-RenameVirtualToVirtualContributor.
 #
 # 3. actorsWithCredential is admin-only (AdminQuery, gated by READ_USERS privilege).
 #    It is NOT in the public Query type.
@@ -36,7 +37,7 @@ NOTE: VIRTUAL_CONTRIBUTOR was shortened to VIRTUAL to reduce verbosity.
 enum ActorType {
   USER
   ORGANIZATION
-  VIRTUAL
+  VIRTUAL_CONTRIBUTOR
   SPACE
   ACCOUNT
 }

@@ -43,7 +43,9 @@ export class ConversationResolverMutations {
     );
 
     // Validate type: must be USER_VC
-    const hasVC = members.some(m => m.actorType === ActorType.VIRTUAL);
+    const hasVC = members.some(
+      m => m.actorType === ActorType.VIRTUAL_CONTRIBUTOR
+    );
     if (!hasVC) {
       throw new ValidationException(
         `Conversation is not a USER_VC type: ${conversation.id}`,
@@ -60,7 +62,9 @@ export class ConversationResolverMutations {
     );
 
     // Get VC's agent ID from already-fetched members
-    const vcMember = members.find(m => m.actorType === ActorType.VIRTUAL);
+    const vcMember = members.find(
+      m => m.actorType === ActorType.VIRTUAL_CONTRIBUTOR
+    );
     if (!vcMember) {
       throw new ValidationException(
         `Conversation does not have a virtual contributor: ${conversation.id}`,

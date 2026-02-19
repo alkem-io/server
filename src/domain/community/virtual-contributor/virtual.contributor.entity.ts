@@ -26,7 +26,7 @@ import { PromptGraphDefinition } from './dto/prompt-graph-definition/prompt.grap
 import { PromptGraphTransformer } from './transformers/prompt.graph.transformer';
 import { IVirtualContributor } from './virtual.contributor.interface';
 
-@ChildEntity(ActorType.VIRTUAL)
+@ChildEntity(ActorType.VIRTUAL_CONTRIBUTOR)
 export class VirtualContributor extends Actor implements IVirtualContributor {
   // Override Actor.profile to be non-optional (required for IVirtualContributor)
   declare profile: Profile;

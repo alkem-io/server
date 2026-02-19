@@ -36,7 +36,11 @@ export class ActorLoaderCreator implements DataLoaderCreator<IActor> {
     return this.manager.find(Actor, {
       where: {
         id: In([...keys]),
-        type: In([ActorType.USER, ActorType.ORGANIZATION, ActorType.VIRTUAL]),
+        type: In([
+          ActorType.USER,
+          ActorType.ORGANIZATION,
+          ActorType.VIRTUAL_CONTRIBUTOR,
+        ]),
       },
     });
   };

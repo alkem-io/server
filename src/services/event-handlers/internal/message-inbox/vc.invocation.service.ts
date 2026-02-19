@@ -94,7 +94,7 @@ export class VcInvocationService {
     const vcAgents = await this.entityManager.find(Actor, {
       where: {
         id: In(otherMembers),
-        type: ActorType.VIRTUAL,
+        type: ActorType.VIRTUAL_CONTRIBUTOR,
       },
       select: ['id'],
     });

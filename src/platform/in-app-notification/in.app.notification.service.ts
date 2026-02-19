@@ -504,7 +504,7 @@ export class InAppNotificationService {
             ? typedPayload.actorID
             : undefined;
         result.contributorVcID =
-          typedPayload.actorType === ActorType.VIRTUAL
+          typedPayload.actorType === ActorType.VIRTUAL_CONTRIBUTOR
             ? typedPayload.actorID
             : undefined;
 

@@ -260,7 +260,7 @@ export class RoleSetResolverMutationsMembership {
     // Check if any of the contributors are VCs and if so check if the entitlement is on
     if (roleSet.type === RoleSetType.SPACE) {
       const hasVirtualContributor = [...actorTypes.values()].some(
-        type => type === ActorType.VIRTUAL
+        type => type === ActorType.VIRTUAL_CONTRIBUTOR
       );
       if (hasVirtualContributor) {
         this.licenseService.isEntitlementEnabledOrFail(
@@ -605,7 +605,7 @@ export class RoleSetResolverMutationsMembership {
 
       // Send notification if invitation was declined/rejected for Virtual Contributor
       if (invitationState === InvitationLifecycleState.REJECTED) {
-        if (invitedActorType === ActorType.VIRTUAL) {
+        if (invitedActorType === ActorType.VIRTUAL_CONTRIBUTOR) {
           const community =
             await this.communityResolverService.getCommunityForRoleSet(
               invitation.roleSet.id
@@ -819,7 +819,7 @@ export class RoleSetResolverMutationsMembership {
             );
 
           switch (contributorType) {
-            case ActorType.VIRTUAL: {
+            case ActorType.VIRTUAL_CONTRIBUTOR: {
               const account =
                 await this.virtualContributorLookupService.getAccountOrFail(
                   invitation.invitedActorID

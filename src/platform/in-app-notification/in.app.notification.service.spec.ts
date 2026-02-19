@@ -133,7 +133,7 @@ describe('InAppNotificationService', () => {
     it('should extract contributorVcID for SPACE_ADMIN_COMMUNITY_NEW_MEMBER with VIRTUAL type', () => {
       const payload = {
         spaceID: 'space-1',
-        actorType: ActorType.VIRTUAL,
+        actorType: ActorType.VIRTUAL_CONTRIBUTOR,
         actorID: 'vc-contributor',
       };
       notificationRepo.create!.mockImplementation((input: any) => input);

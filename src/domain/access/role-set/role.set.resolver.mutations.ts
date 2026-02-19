@@ -399,7 +399,7 @@ export class RoleSetResolverMutations {
       case ActorType.ORGANIZATION:
         await this.authorizeAssignOrganization(actorContext, roleSet);
         break;
-      case ActorType.VIRTUAL:
+      case ActorType.VIRTUAL_CONTRIBUTOR:
         await this.authorizeAssignVirtualContributor(
           actorContext,
           roleSet,
@@ -463,7 +463,7 @@ export class RoleSetResolverMutations {
       case ActorType.ORGANIZATION:
         await this.authorizeRemoveOrganization(actorContext, roleSet);
         break;
-      case ActorType.VIRTUAL:
+      case ActorType.VIRTUAL_CONTRIBUTOR:
         await this.authorizeRemoveVirtualContributor(
           actorContext,
           roleSet,

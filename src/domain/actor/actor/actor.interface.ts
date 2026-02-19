@@ -77,7 +77,7 @@ export abstract class IActor extends IAuthorizable {
         return IUser;
       case ActorType.ORGANIZATION:
         return IOrganization;
-      case ActorType.VIRTUAL:
+      case ActorType.VIRTUAL_CONTRIBUTOR:
         return IVirtualContributor;
       case ActorType.SPACE:
         return ISpace;

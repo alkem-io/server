@@ -79,7 +79,7 @@ import { InAppNotificationPayloadSpaceCommunityCalendarEventComment } from './dt
         return InAppNotificationPayloadUserMessageDirect;
 
       // Virtual Contributor notifications
-      case NotificationEventPayload.VIRTUAL:
+      case NotificationEventPayload.VIRTUAL_CONTRIBUTOR:
         return InAppNotificationPayloadVirtualContributor;
     }
 

@@ -144,7 +144,7 @@ export class VirtualContributorLookupService {
     const currentEntryRoleVCIds =
       await this.actorLookupService.getActorIDsWithCredential(
         entryRoleCredentials.role,
-        [ActorType.VIRTUAL]
+        [ActorType.VIRTUAL_CONTRIBUTOR]
       );
     const qb = this.virtualContributorRepository
       .createQueryBuilder('virtual_contributor')

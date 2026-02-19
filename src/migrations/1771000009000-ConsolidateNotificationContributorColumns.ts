@@ -142,7 +142,7 @@ export class ConsolidateNotificationContributorColumns1771000009000
       SET "contributorVcID" = n."contributorActorId"
       FROM "actor" a
       WHERE n."contributorActorId" = a."id"
-        AND a."type" = 'virtual'
+        AND a."type" = 'virtual-contributor'
     `);
 
     // Step 3: Drop index and FK constraint

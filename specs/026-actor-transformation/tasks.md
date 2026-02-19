@@ -31,7 +31,7 @@ These foundational tasks must be completed before any user story work begins.
 export enum ActorType {
   USER = 'user',
   ORGANIZATION = 'organization',
-  VIRTUAL = 'virtual',           // NOTE: shortened from VIRTUAL_CONTRIBUTOR
+  VIRTUAL_CONTRIBUTOR = 'virtual-contributor',
   SPACE = 'space',
   ACCOUNT = 'account',
 }

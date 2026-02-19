@@ -648,7 +648,7 @@ export class NotificationSpaceAdapter {
         type: NotificationEventPayload.SPACE_COMMUNITY_ACTOR,
         spaceID: space.id,
         actorID: eventData.virtualContributorID,
-        actorType: ActorType.VIRTUAL,
+        actorType: ActorType.VIRTUAL_CONTRIBUTOR,
       };
 
       await this.notificationInAppAdapter.sendInAppNotifications(

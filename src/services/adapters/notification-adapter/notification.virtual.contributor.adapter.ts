@@ -56,7 +56,7 @@ export class NotificationVirtualContributorAdapter {
     );
     if (inAppReceiverIDs.length > 0) {
       const inAppPayload: InAppNotificationPayloadVirtualContributor = {
-        type: NotificationEventPayload.VIRTUAL,
+        type: NotificationEventPayload.VIRTUAL_CONTRIBUTOR,
         virtualContributorID: eventData.invitedContributorID,
         space,
       };
