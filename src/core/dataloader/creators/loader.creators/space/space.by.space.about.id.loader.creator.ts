@@ -32,7 +32,20 @@ export class SpaceBySpaceAboutIdLoaderCreator
 
     const spacesList = await this.db.query.spaces.findMany({
       where: (table, { inArray }) => inArray(table.aboutId, [...spaceAboutIds]),
-      with: { about: true },
+      with: {
+        about: true,
+        community: {
+          with: {
+            authorization: true,
+            roleSet: {
+              with: {
+                roles: true,
+                authorization: true,
+              },
+            },
+          },
+        },
+      },
     }) as unknown as ISpace[];
 
     // Map by about.id for O(1) lookup
